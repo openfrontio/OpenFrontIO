@@ -1,6 +1,6 @@
 ﻿import { Game, PlayerInfo, PlayerType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { simpleHash } from "../Util";
 import { SpawnExecution } from "./SpawnExecution";
 import { TRIBE_NAME_PREFIXES, TRIBE_NAME_SUFFIXES } from "./utils/TribeNames";

@@ -1,7 +1,7 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { UserSubscription } from "core-public/ApiSchemas";
-import { Subscription } from "core-public/CosmeticSchemas";
+import { UserSubscription } from "engine-public/ApiSchemas";
+import { Subscription } from "engine-public/CosmeticSchemas";
 import {
   cancelSubscription,
   invalidateUserMe,

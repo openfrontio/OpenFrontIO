@@ -2,7 +2,7 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
-import { isAdminRole } from "core-public/ApiSchemas";
+import { isAdminRole } from "engine-public/ApiSchemas";
 import { GameEnv } from "engine/configuration/Config";
 import { GameType } from "engine/game/Game";
 import {
@@ -23,7 +23,7 @@ import {
   ServerTurnMessage,
   StampedIntent,
   Turn,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { createPartialGameRecord } from "engine/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";

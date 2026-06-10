@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("core-public/Schemas", async () => {
-  const actual = (await vi.importActual("core-public/Schemas")) as any;
+vi.mock("engine-public/Schemas", async () => {
+  const actual = (await vi.importActual("engine-public/Schemas")) as any;
   return {
     ...actual,
     GameStartInfoSchema: {

@@ -8,7 +8,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameStartInfo, Turn } from "core-public/Schemas";
+import { ClientID, GameStartInfo, Turn } from "engine-public/Schemas";
 
 export type WorkerMessageType =
   | "init"

@@ -6,7 +6,7 @@ import {
   GameRecordSchema,
   ID,
   PartialGameRecord,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { replacer } from "engine/Util";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";

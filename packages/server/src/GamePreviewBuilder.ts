@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { buildAssetUrl } from "engine/AssetUrls";
-import { ClanTagSchema, GameInfo, UsernameSchema } from "core-public/Schemas";
+import { ClanTagSchema, GameInfo, UsernameSchema } from "engine-public/Schemas";
 import { formatPlayerDisplayName } from "engine/Util";
 import { GameMode } from "engine/game/Game";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";

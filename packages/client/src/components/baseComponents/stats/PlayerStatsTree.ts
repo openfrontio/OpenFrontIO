@@ -1,6 +1,6 @@
 import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { PlayerStatsLeaf, PlayerStatsTree } from "core-public/ApiSchemas";
+import { PlayerStatsLeaf, PlayerStatsTree } from "engine-public/ApiSchemas";
 import {
   Difficulty,
   GameMode,
@@ -10,7 +10,7 @@ import {
   isGameMode,
   isGameType,
 } from "engine/game/Game";
-import { PlayerStats } from "core-public/StatsSchemas";
+import { PlayerStats } from "engine-public/StatsSchemas";
 import { renderNumber, translateText } from "../../../Utils";
 import "./PlayerStatsGrid";
 import "./PlayerStatsTable";

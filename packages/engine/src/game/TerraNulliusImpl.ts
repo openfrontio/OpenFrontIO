@@ -1,4 +1,4 @@
-import { ClientID } from "core-public/Schemas";
+import { ClientID } from "engine-public/Schemas";
 import { TerraNullius } from "./Game";
 
 export class TerraNulliusImpl implements TerraNullius {

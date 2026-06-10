@@ -1,6 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { PlayerLeaderboardEntry } from "core-public/ApiSchemas";
+import { PlayerLeaderboardEntry } from "engine-public/ApiSchemas";
 import { RankedType } from "engine/game/Game";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";

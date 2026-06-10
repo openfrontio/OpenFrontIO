@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import {
   ClanLeaderboardEntry,
   ClanLeaderboardResponse,
-} from "core-public/ClanApiSchemas";
+} from "engine-public/ClanApiSchemas";
 import { fetchClanLeaderboard } from "../../ClanApi";
 import { translateText } from "../../Utils";
 

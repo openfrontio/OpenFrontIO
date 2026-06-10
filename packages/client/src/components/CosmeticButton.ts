@@ -6,8 +6,8 @@ import {
   Pattern,
   Skin,
   Subscription,
-} from "core-public/CosmeticSchemas";
-import { PlayerPattern } from "core-public/Schemas";
+} from "engine-public/CosmeticSchemas";
+import { PlayerPattern } from "engine-public/Schemas";
 import {
   PaymentMethod,
   ResolvedCosmetic,

@@ -1,7 +1,7 @@
-// Type contracts live in core-public so the public schema layer can reference
+// Type contracts live in engine-public so the public schema layer can reference
 // GameEvent without depending on the engine. Re-exported here for existing
 // `engine/EventBus` consumers.
-import type { EventConstructor, GameEvent } from "core-public/EventBus";
+import type { EventConstructor, GameEvent } from "engine-public/EventBus";
 export type { EventConstructor, GameEvent };
 
 export class EventBus {

@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { FlagName } from "core-public/Schemas";
+import { FlagName } from "engine-public/Schemas";
 import {
   FLAG_KEY,
   USER_SETTINGS_CHANGED_EVENT,

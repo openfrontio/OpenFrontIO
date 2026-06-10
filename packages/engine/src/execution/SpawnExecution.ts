@@ -9,7 +9,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { simpleHash } from "../Util";
 import { PlayerExecution } from "./PlayerExecution";
 import { TribeExecution } from "./TribeExecution";

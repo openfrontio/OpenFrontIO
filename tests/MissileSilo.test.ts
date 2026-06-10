@@ -9,7 +9,7 @@ import {
   UnitType,
 } from "engine/game/Game";
 import { TileRef } from "engine/game/GameMap";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { setup } from "./util/Setup";
 import { constructionExecution, executeTicks } from "./util/utils";
 

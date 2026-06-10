@@ -6,6 +6,6 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@openfront/core-public": "*"
+    "@openfront/engine-public": "*"
   }
 }

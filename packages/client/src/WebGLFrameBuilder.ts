@@ -1,7 +1,7 @@
 import { Colord } from "colord";
 import { base64url } from "jose";
 import { assetUrl } from "engine/AssetUrls";
-import { decodePatternData } from "core-public/PatternDecoder";
+import { decodePatternData } from "engine-public/PatternDecoder";
 import { PlayerType } from "engine/game/Game";
 import { GameView } from "client/view";
 import { uploadFrameData } from "./render/frame/Upload";

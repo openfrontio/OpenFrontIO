@@ -1,6 +1,6 @@
 import { SpawnExecution } from "engine/execution/SpawnExecution";
 import { Player, PlayerInfo, PlayerType } from "engine/game/Game";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { setup } from "./util/Setup";
 
 describe("Territory management", () => {

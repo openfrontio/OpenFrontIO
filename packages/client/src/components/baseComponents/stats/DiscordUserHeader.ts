@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { DiscordUser } from "core-public/ApiSchemas";
+import type { DiscordUser } from "engine-public/ApiSchemas";
 import { getDiscordAvatarUrl, translateText } from "../../../Utils";
 
 @customElement("discord-user-header")

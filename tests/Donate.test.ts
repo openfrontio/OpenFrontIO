@@ -2,7 +2,7 @@ import { DonateGoldExecution } from "engine/execution/DonateGoldExecution";
 import { DonateTroopsExecution } from "engine/execution/DonateTroopExecution";
 import { SpawnExecution } from "engine/execution/SpawnExecution";
 import { PlayerInfo, PlayerType } from "engine/game/Game";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { setup } from "./util/Setup";
 
 describe("Donate troops to an ally", () => {

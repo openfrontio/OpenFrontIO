@@ -5,7 +5,7 @@ import {
   FriendsListResponseSchema,
   type SendFriendRequestResponse,
   SendFriendRequestResponseSchema,
-} from "core-public/ApiSchemas";
+} from "engine-public/ApiSchemas";
 import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
 

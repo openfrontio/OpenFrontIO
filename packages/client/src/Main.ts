@@ -1,6 +1,6 @@
 import version from "resources/version.txt?raw";
 import { ClientEnv } from "client/ClientEnv";
-import { UserMeResponse } from "core-public/ApiSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
 import { assetUrl } from "engine/AssetUrls";
 import { EventBus } from "engine/EventBus";
 import {
@@ -9,7 +9,7 @@ import {
   GameRecord,
   GameStartInfo,
   PublicGameInfo,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { GameEnv } from "engine/configuration/Config";
 import { GameType } from "engine/game/Game";
 import {

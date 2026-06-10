@@ -1,4 +1,4 @@
-import { AnalyticsRecord, PlayerRecord } from "core-public/Schemas";
+import { AnalyticsRecord, PlayerRecord } from "engine-public/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -8,7 +8,7 @@ import {
   PLAYER_INDEX_BOT,
   PLAYER_INDEX_HUMAN,
   PLAYER_INDEX_NATION,
-} from "core-public/StatsSchemas";
+} from "engine-public/StatsSchemas";
 
 export enum RankType {
   ConquestHumans = "ConquestHumans",

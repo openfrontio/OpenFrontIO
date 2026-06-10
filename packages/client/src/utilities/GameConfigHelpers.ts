@@ -1,5 +1,5 @@
 import { GameMapType, UnitType } from "engine/game/Game";
-import { GameConfig } from "core-public/Schemas";
+import { GameConfig } from "engine-public/Schemas";
 
 /**
  * Maps a slider value (0-400) to the nations config value.

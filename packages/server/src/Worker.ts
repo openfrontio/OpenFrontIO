@@ -14,9 +14,9 @@ import {
   GameID,
   PartialGameRecordSchema,
   ServerErrorMessage,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { generateID, replacer } from "engine/Util";
-import { CreateGameInputSchema } from "core-public/WorkerSchemas";
+import { CreateGameInputSchema } from "engine-public/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";

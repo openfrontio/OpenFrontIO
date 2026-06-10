@@ -9,7 +9,7 @@ import {
   PlayerType,
   UnitType,
 } from "engine/game/Game";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
 

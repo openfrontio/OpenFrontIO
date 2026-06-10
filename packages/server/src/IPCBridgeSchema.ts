@@ -4,7 +4,7 @@ import {
   PublicGameInfoSchema,
   PublicGamesSchema,
   PublicGameTypeSchema,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 
 export type WorkerLobbyList = z.infer<typeof WorkerLobbyListSchema>;
 export type WorkerReady = z.infer<typeof WorkerReadySchema>;

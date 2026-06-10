@@ -9,7 +9,7 @@ import {
   Quads,
   Trios,
 } from "engine/game/Game";
-import { PublicGameInfo, PublicGames } from "core-public/Schemas";
+import { PublicGameInfo, PublicGames } from "engine-public/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";

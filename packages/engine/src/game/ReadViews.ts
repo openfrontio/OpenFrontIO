@@ -10,7 +10,7 @@
 // Player-vs-PlayerView / Unit-vs-UnitView distinction.
 import { Player, type PlayerID, Unit } from "./Game";
 import { GameMap, type TileRef } from "./GameMap";
-import { UnitType } from "core-public/game/GameTypes";
+import { UnitType } from "engine-public/game/GameTypes";
 
 /** Player members read by Config gold/troop calculations. */
 export type PlayerLike = Pick<

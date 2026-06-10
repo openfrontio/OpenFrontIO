@@ -20,7 +20,7 @@ import {
   fetchClanRequests,
   fetchClans,
 } from "client/ClanApi";
-import type { UserMeResponse } from "core-public/ApiSchemas";
+import type { UserMeResponse } from "engine-public/ApiSchemas";
 
 const userWithClans = (tags: string[]): UserMeResponse =>
   ({

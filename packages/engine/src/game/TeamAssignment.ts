@@ -1,5 +1,5 @@
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID } from "core-public/Schemas";
+import { ClientID } from "engine-public/Schemas";
 import { simpleHash } from "../Util";
 import { PlayerInfo, PlayerType, Team } from "./Game";
 

@@ -19,7 +19,7 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
   PublicGameInfo,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import {
   Difficulty,
   GameMapSize,

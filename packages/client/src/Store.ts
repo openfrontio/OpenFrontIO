@@ -1,8 +1,8 @@
 import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { UserMeResponse } from "core-public/ApiSchemas";
-import { Cosmetics } from "core-public/CosmeticSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
+import { Cosmetics } from "engine-public/CosmeticSchemas";
 import { UserSettings } from "engine/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";

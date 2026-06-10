@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, state } from "lit/decorators.js";
-import type { NewsItem } from "core-public/ApiSchemas";
+import type { NewsItem } from "engine-public/ApiSchemas";
 import { getNews } from "../Api";
 import { translateText } from "../Utils";
 

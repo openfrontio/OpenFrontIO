@@ -1,10 +1,10 @@
-import { renderNumber } from "shared/format";
+import { renderNumber } from "engine-public/format";
 import { Config } from "../configuration/Config";
 import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
-import { AllPlayersStats, ClientID, Winner } from "core-public/Schemas";
-import { ATTACK_INDEX_SENT } from "core-public/StatsSchemas";
+import { AllPlayersStats, ClientID, Winner } from "engine-public/Schemas";
+import { ATTACK_INDEX_SENT } from "engine-public/StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";

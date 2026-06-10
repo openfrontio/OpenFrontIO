@@ -1,6 +1,6 @@
 import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID, GameID, StampedIntent, Turn } from "core-public/Schemas";
+import { ClientID, GameID, StampedIntent, Turn } from "engine-public/Schemas";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRejectExecution } from "./alliance/AllianceRejectExecution";

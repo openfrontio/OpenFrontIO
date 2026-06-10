@@ -1,7 +1,7 @@
 import { JWK } from "jose";
 import { z } from "zod";
 import { GameEnv, parseGameEnv } from "engine/configuration/Config";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { simpleHash } from "engine/Util";
 
 const JwksSchema = z.object({

@@ -1,8 +1,8 @@
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
-import { ColorPalette } from "core-public/CosmeticSchemas";
-import { PatternDecoder } from "core-public/PatternDecoder";
-import { ClientID, PlayerCosmetics } from "core-public/Schemas";
+import { ColorPalette } from "engine-public/CosmeticSchemas";
+import { PatternDecoder } from "engine-public/PatternDecoder";
+import { ClientID, PlayerCosmetics } from "engine-public/Schemas";
 import { createRandomName } from "engine/Util";
 import {
   BuildableUnit,

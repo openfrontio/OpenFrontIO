@@ -9,7 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
-import { NukeType } from "core-public/StatsSchemas";
+import { NukeType } from "engine-public/StatsSchemas";
 
 export class SAMMissileExecution implements Execution {
   private active = true;

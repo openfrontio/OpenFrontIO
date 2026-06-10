@@ -11,15 +11,15 @@ import {
 } from "obscenity";
 import countries from "resources/countries.json";
 
-import { Cosmetics } from "core-public/CosmeticSchemas";
-import { decodePatternData } from "core-public/PatternDecoder";
+import { Cosmetics } from "engine-public/CosmeticSchemas";
+import { decodePatternData } from "engine-public/PatternDecoder";
 import {
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerPattern,
   PlayerSkin,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { simpleHash } from "engine/Util";
 
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);

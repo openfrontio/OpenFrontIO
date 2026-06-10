@@ -1,12 +1,12 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-// The emoji table moved to core-public; re-exported so existing `engine/Util`
+// The emoji table moved to engine-public; re-exported so existing `engine/Util`
 // imports of these symbols keep working.
 export {
   emojiTable,
   flattenedEmojiTable,
   type Emoji,
-} from "core-public/Emojis";
+} from "engine-public/Emojis";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
@@ -17,7 +17,7 @@ import {
   PlayerRecord,
   Turn,
   Winner,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 
 import {
   TRIBE_NAME_PREFIXES,

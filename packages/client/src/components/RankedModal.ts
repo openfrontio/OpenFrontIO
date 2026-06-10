@@ -1,6 +1,6 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "core-public/ApiSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
 import { getUserMe, hasLinkedAccount } from "../Api";
 import { userAuth } from "../Auth";
 import { translateText } from "../Utils";

@@ -1,6 +1,6 @@
 import { resolveCosmetics } from "client/Cosmetics";
-import { UserMeResponse } from "core-public/ApiSchemas";
-import { Cosmetics } from "core-public/CosmeticSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
+import { Cosmetics } from "engine-public/CosmeticSchemas";
 
 const product = { productId: "prod_1", priceId: "price_1", price: "$4.99" };
 

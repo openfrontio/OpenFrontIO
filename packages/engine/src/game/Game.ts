@@ -1,7 +1,7 @@
 import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
-import { AllPlayersStats, ClientID } from "core-public/Schemas";
+import { AllPlayersStats, ClientID } from "engine-public/Schemas";
 import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -14,7 +14,7 @@ import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
-// Enums/consts now live in core-public so the public schema layer can use them
+// Enums/consts now live in engine-public so the public schema layer can use them
 // without depending on the engine. Re-exported here so existing
 // `engine/game/Game` imports keep working.
 import {
@@ -30,7 +30,7 @@ import {
   RankedType,
   Trios,
   UnitType,
-} from "core-public/game/GameTypes";
+} from "engine-public/game/GameTypes";
 export {
   AllPlayers,
   Difficulty,

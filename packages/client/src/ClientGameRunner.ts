@@ -10,7 +10,7 @@ import {
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "engine/Util";
 import {
   BuildableUnit,

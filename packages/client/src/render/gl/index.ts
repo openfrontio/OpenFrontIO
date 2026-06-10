@@ -9,8 +9,8 @@ export type {
   RadialMenuSelectEvent,
 } from "./Events";
 export { GameView } from "./GameView";
-export { GraphicsOverridesSchema } from "core-public/GraphicsOverrides";
-export type { GraphicsOverrides } from "core-public/GraphicsOverrides";
+export { GraphicsOverridesSchema } from "engine-public/GraphicsOverrides";
+export type { GraphicsOverrides } from "engine-public/GraphicsOverrides";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
 export {
   applyDarkModeOverride,

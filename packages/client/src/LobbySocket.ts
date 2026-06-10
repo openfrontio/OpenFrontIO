@@ -1,5 +1,5 @@
 import { ClientEnv } from "client/ClientEnv";
-import { PublicGames, PublicLobbyMessageSchema } from "core-public/Schemas";
+import { PublicGames, PublicLobbyMessageSchema } from "engine-public/Schemas";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;

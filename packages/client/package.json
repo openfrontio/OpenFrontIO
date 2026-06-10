@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/Main.ts",
   "dependencies": {
-    "@openfront/core-public": "*",
+    "@openfront/engine-public": "*",
     "@openfront/engine": "*"
   }
 }

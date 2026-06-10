@@ -4,7 +4,7 @@ import {
   PublicGameInfo,
   PublicGames,
   PublicGameType,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 
 function lobby(
   gameID: string,

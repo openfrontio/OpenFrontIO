@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { z } from "zod";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { simpleHash } from "engine/Util";
 import {
   GameEnv,

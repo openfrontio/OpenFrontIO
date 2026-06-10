@@ -24,7 +24,7 @@ import {
 import { TerrainMapData } from "engine/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "engine/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "engine/game/UnitGrid";
-import { ClientID, GameID, Player, PlayerCosmetics } from "core-public/Schemas";
+import { ClientID, GameID, Player, PlayerCosmetics } from "engine-public/Schemas";
 import { formatPlayerDisplayName } from "engine/Util";
 import { WorkerClient } from "engine/worker/WorkerClient";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";

@@ -1,5 +1,5 @@
 import { PseudoRandom } from "../PseudoRandom";
-import { GameStartInfo } from "core-public/Schemas";
+import { GameStartInfo } from "engine-public/Schemas";
 import {
   Cell,
   GameMapSize,

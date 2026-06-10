@@ -1,6 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Product } from "core-public/CosmeticSchemas";
+import { Product } from "engine-public/CosmeticSchemas";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import "./PlutoniumIcon";

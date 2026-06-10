@@ -1,9 +1,9 @@
 import { Colord } from "colord";
 import { base64url } from "jose";
 import { html, TemplateResult } from "lit";
-import { DefaultPattern } from "core-public/CosmeticSchemas";
-import { PatternDecoder } from "core-public/PatternDecoder";
-import { PlayerPattern } from "core-public/Schemas";
+import { DefaultPattern } from "engine-public/CosmeticSchemas";
+import { PatternDecoder } from "engine-public/PatternDecoder";
+import { PlayerPattern } from "engine-public/Schemas";
 import { translateText } from "../Utils";
 
 export function renderPatternPreview(

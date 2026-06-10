@@ -1,7 +1,7 @@
 import { base64url } from "jose";
 import { Logger } from "winston";
-import { ReservedClanTagsResponseSchema } from "core-public/ClanApiSchemas";
-import { CosmeticsSchema } from "core-public/CosmeticSchemas";
+import { ReservedClanTagsResponseSchema } from "engine-public/ClanApiSchemas";
+import { CosmeticsSchema } from "engine-public/CosmeticSchemas";
 import { startPolling } from "./PollingLoop";
 import {
   FailOpenPrivilegeChecker,

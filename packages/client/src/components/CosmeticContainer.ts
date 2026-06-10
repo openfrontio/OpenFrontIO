@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Product } from "core-public/CosmeticSchemas";
+import { Product } from "engine-public/CosmeticSchemas";
 import "./PurchaseButton";
 import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 

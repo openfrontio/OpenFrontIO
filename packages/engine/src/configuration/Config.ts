@@ -18,8 +18,8 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PlayerLike } from "../game/ReadViews";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, TeamCountConfig } from "core-public/Schemas";
-import { NukeType } from "core-public/StatsSchemas";
+import { GameConfig, TeamCountConfig } from "engine-public/Schemas";
+import { NukeType } from "engine-public/StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
 
 declare global {

@@ -17,7 +17,7 @@ import {
   Trios,
   UnitType,
 } from "engine/game/Game";
-import { TeamCountConfig } from "core-public/Schemas";
+import { TeamCountConfig } from "engine-public/Schemas";
 import { translateText } from "../Utils";
 import "./Difficulties";
 import "./FluentSlider";

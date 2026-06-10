@@ -9,8 +9,7 @@
     "moduleResolution": "bundler",
     "paths": {
       "resources/*": ["./resources/*"],
-      "core-public/*": ["./packages/core-public/src/*"],
-      "shared/*": ["./packages/shared/src/*"],
+      "engine-public/*": ["./packages/engine-public/src/*"],
       "engine/*": ["./packages/engine/src/*"],
       "client/*": ["./packages/client/src/*"],
       "server/*": ["./packages/server/src/*"]

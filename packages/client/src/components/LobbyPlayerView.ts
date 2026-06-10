@@ -14,7 +14,7 @@ import {
 } from "engine/game/Game";
 import { assignTeamsLobbyPreview } from "engine/game/TeamAssignment";
 import { UserSettings } from "engine/game/UserSettings";
-import { ClientInfo, TeamCountConfig } from "core-public/Schemas";
+import { ClientInfo, TeamCountConfig } from "engine-public/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "engine/Util";
 import { Theme } from "../theme/Theme";
 import { themeProvider } from "../theme/ThemeProvider";

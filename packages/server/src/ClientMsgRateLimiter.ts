@@ -1,5 +1,5 @@
 import { RateLimiter } from "limiter";
-import { ClientID } from "core-public/Schemas";
+import { ClientID } from "engine-public/Schemas";
 
 const INTENTS_PER_SECOND = 10;
 const INTENTS_PER_MINUTE = 150;

@@ -1,14 +1,14 @@
 import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "core-public/ApiSchemas";
-import { Cosmetics, Skin } from "core-public/CosmeticSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
+import { Cosmetics, Skin } from "engine-public/CosmeticSchemas";
 import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "engine/game/UserSettings";
-import { PlayerPattern } from "core-public/Schemas";
+import { PlayerPattern } from "engine-public/Schemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";

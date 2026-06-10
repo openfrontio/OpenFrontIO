@@ -25,7 +25,7 @@ import {
   UnitUpdate,
 } from "engine/game/GameUpdates";
 import { TerrainMapData } from "engine/game/TerrainMapLoader";
-import { Player, PlayerCosmetics } from "core-public/Schemas";
+import { Player, PlayerCosmetics } from "engine-public/Schemas";
 import { WorkerClient } from "engine/worker/WorkerClient";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */

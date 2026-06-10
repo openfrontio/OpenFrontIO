@@ -1,6 +1,6 @@
 // Pure enum/const declarations shared between the engine and clients.
 // Extracted from engine/game/Game.ts so the public schema layer
-// (core-public) can reference them without importing engine.
+// (engine-public) can reference them without importing engine.
 
 export const AllPlayers = "AllPlayers" as const;
 

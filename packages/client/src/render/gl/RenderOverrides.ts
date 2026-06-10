@@ -1,4 +1,4 @@
-import type { GraphicsOverrides } from "core-public/GraphicsOverrides";
+import type { GraphicsOverrides } from "engine-public/GraphicsOverrides";
 import type { RenderSettings } from "./RenderSettings";
 
 const DARK_AMBIENT = 0.35;

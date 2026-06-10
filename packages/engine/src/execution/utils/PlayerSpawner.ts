@@ -1,5 +1,5 @@
 import { Game, PlayerType } from "../../game/Game";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { SpawnExecution } from "../SpawnExecution";
 
 export class PlayerSpawner {

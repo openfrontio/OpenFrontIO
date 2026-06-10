@@ -5,9 +5,9 @@ import {
   TokenPayloadSchema,
   UserMeResponse,
   UserMeResponseSchema,
-} from "core-public/ApiSchemas";
+} from "engine-public/ApiSchemas";
 import { GameEnv } from "engine/configuration/Config";
-import { PersistentIdSchema } from "core-public/Schemas";
+import { PersistentIdSchema } from "engine-public/Schemas";
 import { ServerEnv } from "./ServerEnv";
 
 type TokenVerificationResult =

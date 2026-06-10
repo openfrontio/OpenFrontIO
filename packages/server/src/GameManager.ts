@@ -7,7 +7,7 @@ import {
   GameMode,
   GameType,
 } from "engine/game/Game";
-import { GameConfig, GameID, PublicGameType } from "core-public/Schemas";
+import { GameConfig, GameID, PublicGameType } from "engine-public/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 

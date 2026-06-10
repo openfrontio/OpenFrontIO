@@ -1,7 +1,7 @@
 import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "client/Utils";
-import { UserMeResponse } from "core-public/ApiSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
 import { assetUrl } from "engine/AssetUrls";
 import {
   Difficulty,
@@ -11,7 +11,7 @@ import {
   GameType,
   UnitType,
 } from "engine/game/Game";
-import { TeamCountConfig } from "core-public/Schemas";
+import { TeamCountConfig } from "engine-public/Schemas";
 import { generateID } from "engine/Util";
 import { hasLinkedAccount } from "./Api";
 import "./components/baseComponents/Button";

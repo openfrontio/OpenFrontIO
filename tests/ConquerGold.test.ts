@@ -1,6 +1,6 @@
 import { SpawnExecution } from "engine/execution/SpawnExecution";
 import { Game, Player, PlayerInfo, PlayerType } from "engine/game/Game";
-import { GameID } from "core-public/Schemas";
+import { GameID } from "engine-public/Schemas";
 import { setup } from "./util/Setup";
 
 const gameID: GameID = "test_game";

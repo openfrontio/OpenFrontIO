@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID, Winner } from "core-public/Schemas";
+import { AllPlayersStats, ClientID, Winner } from "engine-public/Schemas";
 import {
   EmojiMessage,
   GameUpdates,

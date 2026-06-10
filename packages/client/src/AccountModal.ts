@@ -5,9 +5,9 @@ import {
   PlayerGame,
   PlayerStatsTree,
   UserMeResponse,
-} from "core-public/ApiSchemas";
+} from "engine-public/ApiSchemas";
 import { assetUrl } from "engine/AssetUrls";
-import { Cosmetics } from "core-public/CosmeticSchemas";
+import { Cosmetics } from "engine-public/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";

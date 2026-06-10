@@ -16,7 +16,7 @@ import {
   mapCategories,
 } from "engine/game/Game";
 import { PseudoRandom } from "engine/PseudoRandom";
-import { GameConfig, PublicGameType, TeamCountConfig } from "core-public/Schemas";
+import { GameConfig, PublicGameType, TeamCountConfig } from "engine-public/Schemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 

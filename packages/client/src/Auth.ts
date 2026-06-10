@@ -1,8 +1,8 @@
 import { decodeJwt } from "jose";
 import { UserSettings } from "engine/game/UserSettings";
 import { z } from "zod";
-import { TokenPayload, TokenPayloadSchema } from "core-public/ApiSchemas";
-import { base64urlToUuid } from "core-public/Base64";
+import { TokenPayload, TokenPayloadSchema } from "engine-public/ApiSchemas";
+import { base64urlToUuid } from "engine-public/Base64";
 import { getApiBase, getAudience } from "./Api";
 import { generateCryptoRandomUUID } from "./Utils";
 

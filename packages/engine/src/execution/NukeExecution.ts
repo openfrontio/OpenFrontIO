@@ -14,7 +14,7 @@ import { UniversalPathFinding } from "../pathfinding/PathFinder";
 import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
-import { NukeType } from "core-public/StatsSchemas";
+import { NukeType } from "engine-public/StatsSchemas";
 import { listNukeBreakAlliance } from "./Util";
 
 const SPRITE_RADIUS = 16;

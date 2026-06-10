@@ -7,7 +7,7 @@ import { Gold } from "engine/game/Game";
 import { GameUpdateType } from "engine/game/GameUpdates";
 import { GameView } from "client/view";
 import { UserSettings } from "engine/game/UserSettings";
-import { ClientID } from "core-public/Schemas";
+import { ClientID } from "engine-public/Schemas";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";

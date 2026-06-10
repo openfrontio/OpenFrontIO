@@ -1,5 +1,5 @@
 import { assetUrl } from "engine/AssetUrls";
-import { UserMeResponse } from "core-public/ApiSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
 import {
   ColorPalette,
   Cosmetics,
@@ -10,12 +10,12 @@ import {
   Product,
   Skin,
   Subscription,
-} from "core-public/CosmeticSchemas";
+} from "engine-public/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerPattern,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { UserSettings } from "engine/game/UserSettings";
 import {
   changeSubscriptionTier,

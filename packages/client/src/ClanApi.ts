@@ -15,7 +15,7 @@ import {
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
   JoinClanResponseSchema,
-} from "core-public/ClanApiSchemas";
+} from "engine-public/ClanApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
 
@@ -36,7 +36,7 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
-} from "core-public/ClanApiSchemas";
+} from "engine-public/ClanApiSchemas";
 
 async function clanFetch(
   path: string,

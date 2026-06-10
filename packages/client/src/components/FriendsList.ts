@@ -1,6 +1,6 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { FriendEntry } from "core-public/ApiSchemas";
+import type { FriendEntry } from "engine-public/ApiSchemas";
 import {
   acceptFriendRequest,
   deleteFriendRequest,

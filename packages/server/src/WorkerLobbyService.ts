@@ -4,7 +4,7 @@ import {
   PublicGameInfo,
   PublicGames,
   PublicLobbyMessage,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { GameManager } from "./GameManager";
 import {
   MasterMessageSchema,

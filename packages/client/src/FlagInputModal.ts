@@ -1,9 +1,9 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
-import { UserMeResponse } from "core-public/ApiSchemas";
+import { UserMeResponse } from "engine-public/ApiSchemas";
 import { assetUrl } from "engine/AssetUrls";
-import { Cosmetics, Flag } from "core-public/CosmeticSchemas";
+import { Cosmetics, Flag } from "engine-public/CosmeticSchemas";
 import { UserSettings } from "engine/game/UserSettings";
 import { getUserMe } from "./Api";
 import {

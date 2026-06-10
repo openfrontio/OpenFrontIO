@@ -5,7 +5,7 @@ import {
   TEAM_BREAKDOWN_KEYS,
   type ClanMemberStats,
   type ClanMemberWL,
-} from "core-public/ClanApiSchemas";
+} from "engine-public/ClanApiSchemas";
 import { translateText } from "../../Utils";
 import { renderWLBarRow } from "./ClanShared";
 

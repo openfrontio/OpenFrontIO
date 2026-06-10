@@ -4,7 +4,7 @@ import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
 } from "engine/game/UserSettings";
-import { PlayerPattern, PlayerSkin } from "core-public/Schemas";
+import { PlayerPattern, PlayerSkin } from "engine-public/Schemas";
 import { renderPatternPreview } from "./components/PatternPreview";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";

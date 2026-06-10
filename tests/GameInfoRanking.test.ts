@@ -9,14 +9,14 @@ import {
   GameMode,
   GameType,
 } from "engine/game/Game";
-import { AnalyticsRecord, GameConfig } from "core-public/Schemas";
+import { AnalyticsRecord, GameConfig } from "engine-public/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
-} from "core-public/StatsSchemas";
+} from "engine-public/StatsSchemas";
 
 describe("Ranking class", () => {
   const mockConfig: GameConfig = {

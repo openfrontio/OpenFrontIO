@@ -16,7 +16,7 @@ import {
   MapManifest,
 } from "engine/game/TerrainMapLoader";
 import { UserSettings } from "engine/game/UserSettings";
-import { GameConfig } from "core-public/Schemas";
+import { GameConfig } from "engine-public/Schemas";
 import { TestConfig } from "./TestConfig";
 
 export async function setup(

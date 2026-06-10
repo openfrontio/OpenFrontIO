@@ -12,7 +12,7 @@ import {
   ServerStartGameMessage,
   StampedIntent,
   Turn,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import {
   createPartialGameRecord,
   decompressGameRecord,

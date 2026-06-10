@@ -15,7 +15,7 @@ import {
 } from "engine/game/Game";
 import { Cluster, TrainStation } from "engine/game/TrainStation";
 import { UserSettings } from "engine/game/UserSettings";
-import { GameConfig } from "core-public/Schemas";
+import { GameConfig } from "engine-public/Schemas";
 
 vi.mock("engine/game/Game");
 vi.mock("engine/execution/TrainExecution");

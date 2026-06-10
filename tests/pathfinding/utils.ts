@@ -27,7 +27,7 @@ import {
   PathStatus,
   SteppingPathFinder,
 } from "engine/pathfinding/types";
-import { GameConfig } from "core-public/Schemas";
+import { GameConfig } from "engine-public/Schemas";
 import { TestConfig } from "../util/TestConfig";
 
 export type BenchmarkRoute = {

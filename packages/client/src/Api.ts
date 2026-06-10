@@ -1,6 +1,6 @@
 import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
-import type { NewsItem } from "core-public/ApiSchemas";
+import type { NewsItem } from "engine-public/ApiSchemas";
 import {
   NewsItemSchema,
   PlayerProfile,
@@ -9,8 +9,8 @@ import {
   RankedLeaderboardResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
-} from "core-public/ApiSchemas";
-import { AnalyticsRecord, AnalyticsRecordSchema } from "core-public/Schemas";
+} from "engine-public/ApiSchemas";
+import { AnalyticsRecord, AnalyticsRecordSchema } from "engine-public/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
 
 export async function fetchPlayerById(

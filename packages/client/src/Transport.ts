@@ -25,7 +25,7 @@ import {
   ServerMessage,
   ServerMessageSchema,
   Winner,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { replacer } from "engine/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";

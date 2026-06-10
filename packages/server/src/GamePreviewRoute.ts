@@ -4,7 +4,7 @@ import { parse } from "node-html-parser";
 import path from "path";
 import type { Logger } from "winston";
 import { z } from "zod";
-import { GAME_ID_REGEX, GameInfo } from "core-public/Schemas";
+import { GAME_ID_REGEX, GameInfo } from "engine-public/Schemas";
 import { replacer } from "engine/Util";
 import type { GameManager } from "./GameManager";
 import {

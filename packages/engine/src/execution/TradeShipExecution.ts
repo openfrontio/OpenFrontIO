@@ -1,4 +1,4 @@
-import { renderNumber } from "shared/format";
+import { renderNumber } from "engine-public/format";
 import {
   Execution,
   Game,

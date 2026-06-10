@@ -12,7 +12,7 @@ import {
   Nation as ManifestNation,
 } from "engine/game/TerrainMapLoader";
 import { PseudoRandom } from "engine/PseudoRandom";
-import { GameConfig, GameStartInfo } from "core-public/Schemas";
+import { GameConfig, GameStartInfo } from "engine-public/Schemas";
 
 function makeManifestNations(count: number): ManifestNation[] {
   const result: ManifestNation[] = [];

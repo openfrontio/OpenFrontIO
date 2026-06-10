@@ -9,7 +9,7 @@ import {
   Team,
   Trios,
 } from "engine/game/Game";
-import { GameConfig } from "core-public/Schemas";
+import { GameConfig } from "engine-public/Schemas";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
 
@@ -272,7 +272,7 @@ export async function copyToClipboard(
 
 // Moved to the shared package; re-exported so existing `client/Utils` importers
 // keep working.
-export { renderNumber, renderTroops } from "shared/format";
+export { renderNumber, renderTroops } from "engine-public/format";
 
 export function formatPercentage(value: number): string {
   const perc = value * 100;

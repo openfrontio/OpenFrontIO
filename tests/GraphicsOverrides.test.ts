@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
-} from "core-public/GraphicsOverrides";
+} from "engine-public/GraphicsOverrides";
 import { applyGraphicsOverrides } from "client/render/gl/RenderOverrides";
 import { createRenderSettings } from "client/render/gl/RenderSettings";
 

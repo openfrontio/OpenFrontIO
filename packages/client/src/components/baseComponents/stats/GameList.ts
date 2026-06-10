@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { PlayerGame } from "core-public/ApiSchemas";
+import { PlayerGame } from "engine-public/ApiSchemas";
 import { GameMode } from "engine/game/Game";
 import { GameInfoModal } from "../../../GameInfoModal";
 import { translateText } from "../../../Utils";

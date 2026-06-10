@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { GameEndInfo } from "core-public/Schemas";
+import { GameEndInfo } from "engine-public/Schemas";
 import { GameMapType } from "engine/game/Game";
 import { fetchGameById } from "./Api";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";

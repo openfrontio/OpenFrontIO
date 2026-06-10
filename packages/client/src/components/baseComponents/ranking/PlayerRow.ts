@@ -4,7 +4,7 @@ import {
   GOLD_INDEX_TRADE,
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
-} from "core-public/StatsSchemas";
+} from "engine-public/StatsSchemas";
 import { assetUrl } from "engine/AssetUrls";
 import { renderNumber } from "../../../Utils";
 import { PlayerInfo, RankType } from "./GameInfoRanking";

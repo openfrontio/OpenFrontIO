@@ -20,8 +20,8 @@ vi.mock("server/Logger", () => ({
   },
 }));
 
-vi.mock("core-public/Schemas", async () => {
-  const actual = (await vi.importActual("core-public/Schemas")) as any;
+vi.mock("engine-public/Schemas", async () => {
+  const actual = (await vi.importActual("engine-public/Schemas")) as any;
   return {
     ...actual,
     GameRecordSchema: {
@@ -31,7 +31,7 @@ vi.mock("core-public/Schemas", async () => {
 });
 
 import { GameType } from "engine/game/Game";
-import type { GameRecord } from "core-public/Schemas";
+import type { GameRecord } from "engine-public/Schemas";
 import { archive } from "server/Archive";
 
 function buildRecord(gameType: GameType, flag: string | undefined): GameRecord {

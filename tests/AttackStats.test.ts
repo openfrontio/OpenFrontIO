@@ -1,6 +1,6 @@
 import { AttackExecution } from "engine/execution/AttackExecution";
 import { Game, Player, PlayerInfo, PlayerType } from "engine/game/Game";
-import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "core-public/StatsSchemas";
+import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "engine-public/StatsSchemas";
 import { setup } from "./util/Setup";
 
 let game: Game;

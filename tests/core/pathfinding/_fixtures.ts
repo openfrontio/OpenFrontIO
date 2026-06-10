@@ -11,7 +11,7 @@ import {
 import { createGame as createGameImpl } from "engine/game/GameImpl";
 import { GameMapImpl } from "engine/game/GameMap";
 import { UserSettings } from "engine/game/UserSettings";
-import { GameConfig } from "core-public/Schemas";
+import { GameConfig } from "engine-public/Schemas";
 import { TestConfig } from "../../util/TestConfig";
 
 export const W = "W"; // Water

@@ -18,7 +18,7 @@ import {
   LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
-} from "core-public/Schemas";
+} from "engine-public/Schemas";
 import { generateID } from "engine/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";

@@ -1,6 +1,6 @@
 import { Worker } from "cluster";
 import winston from "winston";
-import { PublicGameInfo, PublicGameType } from "core-public/Schemas";
+import { PublicGameInfo, PublicGameType } from "engine-public/Schemas";
 import { generateID } from "engine/Util";
 import {
   MasterCreateGame,

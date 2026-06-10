@@ -1,4 +1,4 @@
-import { renderTroops } from "shared/format";
+import { renderTroops } from "engine-public/format";
 import {
   Execution,
   Game,
