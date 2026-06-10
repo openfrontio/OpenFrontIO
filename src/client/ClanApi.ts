@@ -150,10 +150,9 @@ export async function fetchClanExists(tag: string): Promise<boolean | null> {
  * Privilege.ts), for instant inline feedback. Returns the tag to submit (null
  * if dropped) and an i18n error key. The server re-checks authoritatively.
  */
-export async function checkClanTagOwnership(tag: string): Promise<{
-  tag: string | null;
-  error: string | null;
-}> {
+export async function checkClanTagOwnership(
+  tag: string,
+): Promise<{ tag: string | null; error: string | null }> {
   const me = await getUserMe();
   const myTags = me
     ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
@@ -164,16 +163,8 @@ export async function checkClanTagOwnership(tag: string): Promise<{
 
   const exists = await fetchClanExists(tag);
   if (exists === false) return { tag, error: null };
-  if (exists === true) {
-    return {
-      tag: null,
-      error: "username.tag_not_member",
-    };
-  }
-  return {
-    tag: null,
-    error: "username.tag_check_failed",
-  };
+  if (exists === true) return { tag: null, error: "username.tag_not_member" };
+  return { tag: null, error: "username.tag_check_failed" };
 }
 
 export type ClanMemberSort =
