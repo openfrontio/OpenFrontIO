@@ -70,6 +70,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private donateTroops: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
+  @state() private startDelay: boolean = true;
+  @state() private startDelayValue: number | undefined = 3;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
@@ -77,8 +79,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
-  @state() private startDelay: boolean = true;
-  @state() private startDelayValue: number | undefined = 3;
   @state() private disableAlliances: boolean = false;
   @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
@@ -759,6 +759,15 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleStartDelayToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.startDelay = checked;
+    this.startDelayValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
   private handleSpawnImmunityToggle = (
     checked: boolean,
     value: number | string | undefined,
@@ -783,15 +792,6 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.startingGold = checked;
     this.startingGoldValue = toOptionalNumber(value);
-    this.putGameConfig();
-  };
-
-  private handleStartDelayToggle = (
-    checked: boolean,
-    value: number | string | undefined,
-  ) => {
-    this.startDelay = checked;
-    this.startDelayValue = toOptionalNumber(value);
     this.putGameConfig();
   };
 
@@ -830,10 +830,6 @@ export class HostLobbyModal extends BaseModal {
     preventDisallowedKeys(e, ["-", "+", "e", "E"]);
   };
 
-  private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
-    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
-  };
-
   private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const value = parseBoundedFloatFromInput(input, {
@@ -846,22 +842,6 @@ export class HostLobbyModal extends BaseModal {
       input.value = "";
     } else {
       this.startingGoldValue = value;
-    }
-    this.putGameConfig();
-  };
-
-  private handleStartDelayValueChanges = (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, {
-      min: 0,
-      max: 600,
-    });
-
-    if (value === undefined) {
-      this.startDelayValue = undefined;
-      input.value = "";
-    } else {
-      this.startDelayValue = value;
     }
     this.putGameConfig();
   };
@@ -973,6 +953,26 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.maxTimerValue = value;
+    this.putGameConfig();
+  };
+
+  private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleStartDelayValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 600,
+    });
+
+    if (value === undefined) {
+      this.startDelayValue = undefined;
+      input.value = "";
+    } else {
+      this.startDelayValue = value;
+    }
     this.putGameConfig();
   };
 
