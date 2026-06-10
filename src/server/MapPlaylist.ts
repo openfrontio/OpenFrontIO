@@ -59,6 +59,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Didier: 1,
   DidierFrance: 1,
   Dyslexdria: 8,
+  Dungeon: 8,
   EastAsia: 5,
   Europe: 7,
   FalklandIslands: 4,
