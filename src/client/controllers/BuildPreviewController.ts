@@ -281,9 +281,16 @@ export class BuildPreviewController implements Controller {
       return;
     }
 
+    // Mirror PlayerImpl.nukeSpawn (the source NukeExecution actually fires
+    // from): only silos that are active, not reloading, and not under
+    // construction are eligible, and the nearest is chosen by Manhattan
+    // distance. Keeping these in sync prevents the preview arc from
+    // originating from a silo the game wouldn't use.
     const silos = myPlayer
       .units(UnitType.MissileSilo)
-      .filter((u) => u.isActive());
+      .filter(
+        (u) => u.isActive() && !u.isInCooldown() && !u.isUnderConstruction(),
+      );
     if (silos.length === 0) {
       this.clearNukeTrajectory();
       return;
@@ -292,15 +299,13 @@ export class BuildPreviewController implements Controller {
     const dstX = this.game.x(tileRef);
     const dstY = this.game.y(tileRef);
     let bestSilo = silos[0];
-    let bestDistSq = Infinity;
+    let bestDist = Infinity;
     for (const s of silos) {
       const sx = this.game.x(s.tile());
       const sy = this.game.y(s.tile());
-      const dx = sx - dstX;
-      const dy = sy - dstY;
-      const d = dx * dx + dy * dy;
-      if (d < bestDistSq) {
-        bestDistSq = d;
+      const d = Math.abs(sx - dstX) + Math.abs(sy - dstY);
+      if (d < bestDist) {
+        bestDist = d;
         bestSilo = s;
       }
     }
