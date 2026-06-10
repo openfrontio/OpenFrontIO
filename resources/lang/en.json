@@ -1135,8 +1135,6 @@
     "received_troops_from_player": "Received {troops} troops from {name}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "received_gold_from_player": "Received {gold} gold from {name}",
-    "unit_captured_by_enemy": "Your {unit} was captured by {name}",
-    "captured_enemy_unit": "Captured {unit} from {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "no_boats_available": "No boats available, max {max}"
   },

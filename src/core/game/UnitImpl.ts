@@ -213,22 +213,6 @@ export class UnitImpl implements Unit {
     this._owner = newOwner;
     this._owner._units.push(this);
     this.mg.addUpdate(this.toUpdate());
-    this.mg.displayMessage(
-      "events_display.unit_captured_by_enemy",
-      MessageType.UNIT_CAPTURED_BY_ENEMY,
-      this._lastOwner.id(),
-      undefined,
-      { unit: this.type(), name: newOwner.displayName() },
-      this.id(),
-    );
-    this.mg.displayMessage(
-      "events_display.captured_enemy_unit",
-      MessageType.CAPTURED_ENEMY_UNIT,
-      newOwner.id(),
-      undefined,
-      { unit: this.type(), name: this._lastOwner.displayName() },
-      this.id(),
-    );
   }
 
   modifyHealth(delta: number, attacker?: Player): void {
