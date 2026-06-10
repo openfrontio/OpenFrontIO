@@ -1,7 +1,10 @@
 {
   "passEnabled": {
     "terrain": true,
-    "mapOverlay": true,
+    "territory": true,
+    "borderCompute": true,
+    "borderStamp": true,
+    "trail": true,
     "territoryPatterns": true,
     "structure": true,
     "unit": true,
@@ -63,6 +66,7 @@
   "mapOverlay": {
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
+    "territoryDefenseDarken": 0.85,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,
@@ -176,7 +180,13 @@
     "flickerSpeed": 0.3,
     "angryR": 0.784,
     "angryG": 0,
-    "angryB": 0
+    "angryB": 0,
+    "hBombGlowScale": 2.2,
+    "hBombGlowR": 1.0,
+    "hBombGlowG": 0.72,
+    "hBombGlowB": 0.15,
+    "hBombGlowStrength": 0.5,
+    "hBombGlowInner": 0.45
   },
   "name": {
     "lerpSpeed": 10,
@@ -276,11 +286,11 @@
   "spawnOverlay": {
     "highlightRadius": 9,
     "highlightAlpha": 1.0,
-    "selfMinRad": 8,
-    "selfMaxRad": 24,
+    "selfMinRad": 10,
+    "selfMaxRad": 30,
     "mateMinRad": 5,
     "mateMaxRad": 14,
-    "animSpeed": 0.0035,
+    "animSpeed": 0.005,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },

@@ -21,7 +21,10 @@ uniform float uStaleNukeVariation;
 uniform float uStaleNukeAlpha;
 uniform vec3 uStaleNukeColor;
 uniform uint uHighlightOwner;      // 0 = no highlight; otherwise smallID of hovered owner
-uniform float uHighlightBrighten;  // mix amount toward white for highlighted tiles
+uniform float uHighlightBrighten;  // hover contrast boost strength; 0 = disabled
+uniform sampler2D uDefenseCoverageTex; // R8 — 1.0 = tile defended by same-owner post
+uniform float uDefenseDarken;      // multiplier applied to fill on defended tiles
+uniform sampler2D uBorderTex;      // RGBA8 — border flags; R > 0.25 = border tile
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -101,11 +104,21 @@ void main() {
     }
   }
 
-  // Hover highlight: boost saturation on the hovered player's tiles.
-  // luma = grayscale equivalent; mixing past 1.0 pushes color away from gray.
-  if (uHighlightOwner != 0u && owner == uHighlightOwner) {
-    float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    color.rgb = clamp(mix(vec3(luma), color.rgb, 1.6), 0.0, 1.0);
+  // Hover highlight: boost contrast on the hovered player's tiles, pushing
+  // channels away from mid-gray. uHighlightBrighten is the strength; 0 disables.
+  if (uHighlightOwner != 0u && owner == uHighlightOwner && uHighlightBrighten > 0.0) {
+    float contrast = 1.0 + uHighlightBrighten;
+    color.rgb = clamp((color.rgb - 0.5) * contrast + 0.5, 0.0, 1.0);
+  }
+
+  // Defense bonus: darken the fill on interior tiles defended by a same-owner
+  // post. Border tiles are skipped — they get the checkerboard overlay from
+  // BorderStampPass instead. Coverage is tested first so the (rarer) defended
+  // tiles are the only ones that pay for the extra border fetch (&& short-
+  // circuits in GLSL ES 3.00; texelFetch is derivative-free so this is safe).
+  if (texelFetch(uDefenseCoverageTex, tc, 0).r > 0.5 &&
+      texelFetch(uBorderTex, tc, 0).r <= 0.25) {
+    color.rgb *= uDefenseDarken;
   }
 
   fragColor = color;

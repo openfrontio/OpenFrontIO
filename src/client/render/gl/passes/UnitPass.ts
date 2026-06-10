@@ -4,9 +4,9 @@
  * Renders all mobile (non-structure) units: boats, nukes, shells, SAM
  * missiles, and MIRV warheads. All unit types are rotationally symmetric
  * — no rotation needed. Sprites are tiny grayscale PNGs colorized on the
- * GPU using the standard 3-band gray replacement (180/130/70). Shell and
- * MIRV Warhead use programmatic 3×3 white squares (colorized to border
- * color).
+ * GPU using the standard 3-band gray replacement (180/130/70). MIRV
+ * Warhead uses a programmatic 3×3 white square (colorized to border
+ * color); Shell is a single white pixel.
  *
  * Two instanced draw calls per frame — ground units and missiles are
  * split into separate buffers for correct layer ordering:
@@ -21,7 +21,7 @@
  *   Col 4: Hydrogen Bomb (9×9)
  *   Col 5: MIRV (13×13, grayscale colorized)
  *   Col 6: SAM Missile (3×3)
- *   Col 7: Shell (3×3 white square)
+ *   Col 7: Shell (1×1 white pixel)
  *   Col 8: MIRV Warhead (3×3 white square)
  *   Col 9: Train Engine (5×5)
  *   Col 10: Train Carriage (5×5)
@@ -82,6 +82,9 @@ const UNIT_ORDER = [
 
 const ATLAS_COLS = UNIT_ORDER.length;
 
+/** Atlas column of the hydrogen bomb — drives the GPU glow halo. */
+const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
+
 // ---------------------------------------------------------------------------
 // Instance data layout
 // ---------------------------------------------------------------------------
@@ -90,7 +93,7 @@ const ATLAS_COLS = UNIT_ORDER.length;
  * Per-instance data (16 bytes):
  *   float x, y, ownerID   — 12 bytes (3 floats)
  *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
- *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry)
+ *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating)
  *   2 bytes padding        — aligns to 4-byte boundary
  */
 const FLOATS_PER_INSTANCE = 4;
@@ -101,6 +104,7 @@ const FLAG_NORMAL = 0;
 const FLAG_FLICKER = 1;
 const FLAG_ANGRY = 2;
 const FLAG_TRADE_FRIENDLY = 3;
+const FLAG_RETREATING = 4;
 
 /** Atlas column indices for train sub-types (resolved from trainType + loaded) */
 const TRAIN_ENGINE_COL = UNIT_ORDER.indexOf("TrainEngine");
@@ -175,6 +179,10 @@ export class UnitPass {
   private uFlickerSpeed: WebGLUniformLocation;
   private uAngryColor: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
+  private uHBombGlowScale: WebGLUniformLocation;
+  private uHBombGlowColor: WebGLUniformLocation;
+  private uHBombGlowStrength: WebGLUniformLocation;
+  private uHBombGlowInner: WebGLUniformLocation;
 
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
@@ -229,8 +237,8 @@ export class UnitPass {
     // Compile shaders
     this.program = createProgram(
       gl,
-      shaderSrc(unitVertSrc, { ATLAS_COLS }),
-      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize() }),
+      shaderSrc(unitVertSrc, { ATLAS_COLS, HYDROGEN_BOMB_COL }),
+      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize(), ATLAS_COLS }),
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTick = gl.getUniformLocation(this.program, "uTick")!;
@@ -239,6 +247,22 @@ export class UnitPass {
     this.uAngryColor = gl.getUniformLocation(this.program, "uAngryColor")!;
 
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
+    this.uHBombGlowScale = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowScale",
+    )!;
+    this.uHBombGlowColor = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowColor",
+    )!;
+    this.uHBombGlowStrength = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowStrength",
+    )!;
+    this.uHBombGlowInner = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowInner",
+    )!;
 
     // Texture unit bindings
     gl.useProgram(this.program);
@@ -372,6 +396,8 @@ export class UnitPass {
 
       if (atlasIdx === undefined) continue;
 
+      const isRetreatingWarship =
+        unit.unitType === UT_WARSHIP && unit.retreating;
       const isAngryWarship =
         unit.unitType === UT_WARSHIP && unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
@@ -393,13 +419,16 @@ export class UnitPass {
         }
       }
 
-      const flags = isTradeFriendly
-        ? FLAG_TRADE_FRIENDLY
-        : isAngryWarship
-          ? FLAG_ANGRY
-          : isFlicker
-            ? FLAG_FLICKER
-            : FLAG_NORMAL;
+      let flags = FLAG_NORMAL;
+      if (isTradeFriendly) {
+        flags = FLAG_TRADE_FRIENDLY;
+      } else if (isRetreatingWarship) {
+        flags = FLAG_RETREATING;
+      } else if (isAngryWarship) {
+        flags = FLAG_ANGRY;
+      } else if (isFlicker) {
+        flags = FLAG_FLICKER;
+      }
       const isMissile = MISSILE_TYPES.has(unit.unitType);
 
       const x = unit.pos % this.mapW;
@@ -470,6 +499,15 @@ export class UnitPass {
     gl.uniform1f(this.uFlickerSpeed, us.flickerSpeed);
     gl.uniform3f(this.uAngryColor, us.angryR, us.angryG, us.angryB);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
+    gl.uniform1f(this.uHBombGlowScale, us.hBombGlowScale);
+    gl.uniform3f(
+      this.uHBombGlowColor,
+      us.hBombGlowR,
+      us.hBombGlowG,
+      us.hBombGlowB,
+    );
+    gl.uniform1f(this.uHBombGlowStrength, us.hBombGlowStrength);
+    gl.uniform1f(this.uHBombGlowInner, us.hBombGlowInner);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);

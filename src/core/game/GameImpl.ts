@@ -89,7 +89,6 @@ export class GameImpl implements Game {
   _terraNullius: TerraNulliusImpl;
 
   allianceRequests: AllianceRequestImpl[] = [];
-  alliances_: AllianceImpl[] = [];
 
   private nextPlayerID = 1;
   private _nextUnitID = 1;
@@ -225,10 +224,6 @@ export class GameImpl implements Game {
 
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
-  }
-
-  alliances(): MutableAlliance[] {
-    return this.alliances_;
   }
 
   playerBySmallID(id: number): Player | TerraNullius {
@@ -367,7 +362,8 @@ export class GameImpl implements Game {
       this._ticks,
       this.nextAllianceID++,
     );
-    this.alliances_.push(alliance);
+    (alliance.requestor() as PlayerImpl)._alliances.push(alliance);
+    (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -794,7 +790,7 @@ export class GameImpl implements Game {
       breaker.markTraitor();
     }
 
-    this.alliances_ = this.alliances_.filter((a) => a !== alliance);
+    this.detachAlliance(alliance);
 
     this.addUpdate({
       type: GameUpdateType.BrokeAlliance,
@@ -815,7 +811,7 @@ export class GameImpl implements Game {
         `cannot expire alliance: must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
+    this.detachAlliance(alliances[0]);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
@@ -824,9 +820,17 @@ export class GameImpl implements Game {
   }
 
   public removeAlliancesByPlayerSilently(player: Player): void {
-    this.alliances_ = this.alliances_.filter(
-      (a) => a.requestor() !== player && a.recipient() !== player,
-    );
+    // Snapshot — detachAlliance reassigns the player's _alliances as it goes.
+    const removed = [...(player as PlayerImpl)._alliances];
+    for (const alliance of removed) this.detachAlliance(alliance);
+  }
+
+  /** Remove an alliance from both participants' per-player alliance lists. */
+  private detachAlliance(alliance: Alliance): void {
+    const requestor = alliance.requestor() as PlayerImpl;
+    const recipient = alliance.recipient() as PlayerImpl;
+    requestor._alliances = requestor._alliances.filter((a) => a !== alliance);
+    recipient._alliances = recipient._alliances.filter((a) => a !== alliance);
   }
 
   public isSpawnImmunityActive(): boolean {

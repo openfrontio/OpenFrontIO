@@ -34,8 +34,8 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     moveLeft: "KeyA",
     moveDown: "KeyS",
     moveRight: "KeyD",
-    modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-    altKey: "AltLeft",
+    buildMenuModifier: isMac ? "MetaLeft" : "ControlLeft",
+    emojiMenuModifier: "AltLeft",
     shiftKey: "ShiftLeft",
     resetGfx: "KeyR",
     selectAllWarships: "KeyF",
@@ -154,10 +154,6 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
-  fxLayer() {
-    return this.getBool("settings.specialEffects", true);
-  }
-
   darkMode() {
     return this.getBool(DARK_MODE_KEY, false);
   }
@@ -217,10 +213,6 @@ export class UserSettings {
 
   toggleLobbyIdVisibility() {
     this.setBool("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
-  }
-
-  toggleFxLayer() {
-    this.setBool("settings.specialEffects", !this.fxLayer());
   }
 
   toggleCursorCostLabel() {

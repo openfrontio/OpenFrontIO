@@ -33,6 +33,7 @@ import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
 import { CoordinateGridPass } from "./passes/CoordinateGridPass";
 import { CrosshairPass } from "./passes/CrosshairPass";
+import { DefenseCoveragePass } from "./passes/DefenseCoveragePass";
 import { FalloutBloomPass } from "./passes/FalloutBloomPass";
 import { FalloutLightPass } from "./passes/FalloutLightPass";
 import { FxPass } from "./passes/fx-pass";
@@ -101,6 +102,7 @@ export class GPURenderer {
   private trailPass: TrailPass;
   private borderStampPass: BorderStampPass;
   private borderPass: BorderComputePass;
+  private defenseCoveragePass: DefenseCoveragePass;
   private bloomPass: FalloutBloomPass;
   private pointLightPass: PointLightPass;
   private falloutLightPass: FalloutLightPass;
@@ -308,6 +310,17 @@ export class GPURenderer {
     );
     this.res.borderTex = this.borderPass.getBorderTex();
 
+    // --- Defense coverage (needs tileTex) — per-tile "defended by same-owner
+    // post" flag, stamped one instanced circle per post. Replaces the old
+    // 64-cap uniform loop; consumed by BorderStampPass. ---
+    this.defenseCoveragePass = new DefenseCoveragePass(
+      gl,
+      mapW,
+      mapH,
+      this.res.tileTex,
+      this.settings,
+    );
+
     // --- Heat manager (needs tileTex, heatTexA/B) ---
     this.heatManager = new HeatManager(
       gl,
@@ -333,6 +346,20 @@ export class GPURenderer {
       this.skinAnchorTex,
       this.settings,
     );
+    // Route per-tile changes to the border pass so it can scatter-recompute
+    // just the affected tiles instead of rebuilding the whole map. A tile
+    // changing owner can also flip its defense-coverage flag (same-owner test),
+    // so mark the coverage stale too — one coalesced re-stamp happens per frame.
+    this.territoryPass.setBorderPatchConsumer((x, y) => {
+      this.borderPass.patchTile(x, y);
+      this.defenseCoveragePass.markTileDirty(x, y);
+    });
+    // Territory fill darkens on interior tiles defended by a same-owner post;
+    // borderTex lets the fill skip border tiles (those get the checkerboard).
+    this.territoryPass.setDefenseCoverageTex(
+      this.defenseCoveragePass.getCoverageTex(),
+    );
+    this.territoryPass.setBorderTex(this.res.borderTex);
 
     // --- Spawn overlay (needs tileTex) ---
     this.spawnOverlayPass = new SpawnOverlayPass(
@@ -362,6 +389,9 @@ export class GPURenderer {
       this.paletteTex,
       this.res.borderTex,
       this.settings,
+    );
+    this.borderStampPass.setDefenseCoverageTex(
+      this.defenseCoveragePass.getCoverageTex(),
     );
 
     // --- Fallout bloom (needs tileTex, heatManager) ---
@@ -817,7 +847,7 @@ export class GPURenderer {
         });
       }
     }
-    this.borderPass.updateDefensePosts(posts);
+    this.defenseCoveragePass.updateDefensePosts(posts);
   }
 
   applyDeadUnits(deadUnits: DeadUnitFx[]): void {
@@ -1194,14 +1224,21 @@ export class GPURenderer {
     } else {
       this.territoryPass.drainDripBucket();
     }
-    if (this.territoryPass.flushTileTexture())
-      this.borderPass.notifyTilesChanged();
+    // Full uploads need a full border recompute; scatter uploads already
+    // pushed per-tile border patches via the wired `borderPatchConsumer`.
+    if (this.territoryPass.flushTileTexture() === "full") {
+      this.borderPass.markGlobalDirty();
+      this.defenseCoveragePass.markDirty();
+    }
     this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }
 
   private computeTextures(): void {
-    if (this.settings.passEnabled.mapOverlay) this.borderPass.draw();
+    if (this.settings.passEnabled.borderCompute) this.borderPass.draw();
+    // Re-stamp defense coverage if posts/territory changed (dirty-gated).
+    // Leaves the default framebuffer bound; renderFrame resets the viewport.
+    this.defenseCoveragePass.draw();
   }
 
   private renderFrame(): void {
@@ -1259,7 +1296,7 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    if (pe.mapOverlay) this.territoryPass.draw(cam);
+    if (pe.territory) this.territoryPass.draw(cam);
   }
 
   private renderOverlays(cam: Float32Array, zoom: number): void {
@@ -1270,7 +1307,7 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.spawnOverlayPass.draw(cam);
-    if (pe.mapOverlay) this.borderStampPass.draw(cam);
+    if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
     this.samRadiusPass.draw(cam);
@@ -1285,7 +1322,7 @@ export class GPURenderer {
     this.moveIndicatorPass.draw(cam, zoom);
     this.nukeTelegraphPass.draw(cam);
     if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
-    if (pe.mapOverlay) this.trailPass.draw(cam);
+    if (pe.trail) this.trailPass.draw(cam);
     if (pe.unit) this.unitPass.drawMissiles(cam);
 
     if (pe.fx) {
@@ -1320,6 +1357,7 @@ export class GPURenderer {
     this.trailPass.dispose();
     this.borderStampPass.dispose();
     this.borderPass.dispose();
+    this.defenseCoveragePass.dispose();
     this.bloomPass.dispose();
     this.pointLightPass.dispose();
     this.falloutLightPass.dispose();

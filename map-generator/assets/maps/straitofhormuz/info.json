@@ -4,102 +4,107 @@
     {
       "coordinates": [837, 356],
       "name": "Hormozgan",
-      "flag": ""
+      "flag": "ir"
     },
     {
       "coordinates": [717, 162],
       "name": "Fars",
-      "flag": ""
+      "flag": "ir"
     },
     {
       "coordinates": [97, 939],
       "name": "Ash Sharqiyah",
-      "flag": ""
+      "flag": "sa"
     },
     {
       "coordinates": [1725, 360],
       "name": "Sistan and Baluchestan",
-      "flag": ""
+      "flag": "ir"
     },
     {
       "coordinates": [745, 1003],
       "name": "Abu Dhabi",
-      "flag": ""
+      "flag": "ae"
     },
     {
       "coordinates": [1513, 289],
       "name": "Kerman",
-      "flag": ""
+      "flag": "ir"
     },
     {
       "coordinates": [311, 147],
       "name": "Bushehr",
-      "flag": ""
+      "flag": "ir"
     },
     {
       "coordinates": [1165, 1092],
       "name": "Al Dhahira",
-      "flag": ""
+      "flag": "om"
     },
     {
       "coordinates": [1219, 959],
       "name": "Al Batnah North",
-      "flag": ""
+      "flag": "om"
     },
     {
       "coordinates": [1114, 956],
       "name": "Al Buraymi",
-      "flag": ""
+      "flag": "om"
     },
     {
       "coordinates": [1316, 1141],
       "name": "Ad Dakhliyah",
-      "flag": ""
+      "flag": "om"
     },
     {
       "coordinates": [1431, 1111],
       "name": "Al Batnah South",
-      "flag": ""
+      "flag": "om"
     },
     {
-      "coordinates": [979, 807],
+      "coordinates": [926, 849],
       "name": "Dubay",
-      "flag": ""
+      "flag": "ae"
     },
     {
       "coordinates": [1615, 1134],
       "name": "Muscat",
-      "flag": ""
+      "flag": "om"
     },
     {
       "coordinates": [1070, 774],
       "name": "Sharjah",
-      "flag": ""
+      "flag": "ae"
     },
     {
       "coordinates": [1166, 583],
       "name": "Musandam",
-      "flag": ""
+      "flag": "om"
     },
     {
       "coordinates": [159, 756],
       "name": "Ar Rayyan",
-      "flag": ""
+      "flag": "qa"
     },
     {
       "coordinates": [1103, 647],
       "name": "Ras Al Khaymah",
-      "flag": ""
+      "flag": "ae"
     },
     {
       "coordinates": [1155, 703],
       "name": "Fujayrah",
-      "flag": ""
+      "flag": "ae"
     },
     {
       "coordinates": [216, 815],
       "name": "Al Wakrah",
-      "flag": ""
+      "flag": "qa"
+    },
+    {
+      "coordinates": [56, 554],
+      "name": "Bahrain",
+      "flag": "bh"
     }
   ],
   "teamGameSpawnAreas": {
