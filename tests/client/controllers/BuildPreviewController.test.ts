@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { shouldPreserveGhostAfterBuild } from "../../../src/client/controllers/BuildPreviewController";
-import { UnitType } from "../../../src/core/game/Game";
+import { shouldPreserveGhostAfterBuild } from "client/controllers/BuildPreviewController";
+import { UnitType } from "engine/game/Game";
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
   describe("shouldPreserveGhostAfterBuild", () => {

@@ -4,12 +4,12 @@ import type {
   ClanJoinRequest,
   ClanMember,
   ClanMemberStats,
-} from "../../../src/client/ClanApi";
+} from "client/ClanApi";
 import {
   filterMembersBySearch,
   filterRequestsBySearch,
   renderMemberStats,
-} from "../../../src/client/components/clan/ClanShared";
+} from "client/components/clan/ClanShared";
 
 const members: ClanMember[] = [
   { publicId: "Alice123", role: "leader", joinedAt: "2024-01-01T00:00:00Z" },

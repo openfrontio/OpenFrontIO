@@ -1,4 +1,4 @@
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "engine/game/Game";
 
 describe("PlayerInfo", () => {
   describe("clanTag from explicit clanTag parameter", () => {

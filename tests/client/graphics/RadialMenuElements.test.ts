@@ -6,20 +6,20 @@ import {
   MenuElementParams,
   rootMenuElement,
   Slot,
-} from "../../../src/client/hud/layers/RadialMenuElements";
-import { UnitType } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { GameView, PlayerView } from "../../../src/core/game/GameView";
+} from "client/hud/layers/RadialMenuElements";
+import { UnitType } from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { GameView, PlayerView } from "client/view";
 
-vi.mock("../../../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderNumber: vi.fn((num: number) => num.toString()),
 }));
 
-vi.mock("../../../src/client/hud/layers/BuildMenu", async () => {
+vi.mock("client/hud/layers/BuildMenu", async () => {
   const { UnitType } = await vi.importActual<
-    typeof import("../../../src/core/game/Game")
-  >("../../../src/core/game/Game");
+    typeof import("engine/game/Game")
+  >("engine/game/Game");
   return {
     flattenedBuildTable: [
       {
@@ -600,8 +600,8 @@ describe("RadialMenuElements", () => {
   describe("Translation integration", () => {
     it("should use translateText for tooltip items in build menu", async () => {
       const { translateText } = await vi.importMock<
-        typeof import("../../../src/client/Utils")
-      >("../../../src/client/Utils");
+        typeof import("client/Utils")
+      >("client/Utils");
 
       (translateText as Mock).mockClear();
 
@@ -615,8 +615,8 @@ describe("RadialMenuElements", () => {
 
     it("should use translateText for tooltip items in attack menu", async () => {
       const { translateText } = await vi.importMock<
-        typeof import("../../../src/client/Utils")
-      >("../../../src/client/Utils");
+        typeof import("client/Utils")
+      >("client/Utils");
 
       (translateText as Mock).mockClear();
 

@@ -1,6 +1,6 @@
-import { MissileSiloExecution } from "../src/core/execution/MissileSiloExecution";
-import { NationExecution } from "../src/core/execution/NationExecution";
-import { SAMLauncherExecution } from "../src/core/execution/SAMLauncherExecution";
+import { MissileSiloExecution } from "engine/execution/MissileSiloExecution";
+import { NationExecution } from "engine/execution/NationExecution";
+import { SAMLauncherExecution } from "engine/execution/SAMLauncherExecution";
 import {
   Cell,
   Difficulty,
@@ -8,7 +8,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

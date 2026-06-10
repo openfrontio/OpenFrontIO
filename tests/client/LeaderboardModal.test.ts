@@ -7,7 +7,7 @@ vi.mock("@lit-labs/virtualizer/virtualize.js", async () => {
   };
 });
 
-vi.mock("../../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: vi.fn((key: string) => {
     const translations: Record<string, string> = {
       "leaderboard_modal.win_score_tooltip":
@@ -39,7 +39,7 @@ vi.mock("../../src/client/Utils", () => ({
   }),
 }));
 
-vi.mock("../../src/client/Api", () => {
+vi.mock("client/Api", () => {
   const getApiBase = () => "http://localhost:3000";
   return {
     getApiBase: vi.fn(getApiBase),
@@ -64,7 +64,7 @@ vi.mock("../../src/client/Api", () => {
   };
 });
 
-vi.mock("../../src/client/ClanApi", () => {
+vi.mock("client/ClanApi", () => {
   const getApiBase = () => "http://localhost:3000";
   return {
     fetchClanLeaderboard: vi.fn(async () => {
@@ -101,8 +101,8 @@ beforeEach(() => {
   );
 });
 
-import "../../src/client/components/baseComponents/Modal";
-import { LeaderboardModal } from "../../src/client/LeaderboardModal";
+import "client/components/baseComponents/Modal";
+import { LeaderboardModal } from "client/LeaderboardModal";
 
 describe("LeaderboardModal", () => {
   let modal: LeaderboardModal;
@@ -210,7 +210,7 @@ describe("LeaderboardModal", () => {
 
     it("should use translateText for tooltip internationalization", async () => {
       // Verify translation keys are correct
-      const { translateText } = await import("../../src/client/Utils");
+      const { translateText } = await import("client/Utils");
 
       expect(translateText("leaderboard_modal.win_score_tooltip")).toBe(
         "Weighted wins based on clan participation and match difficulty",
@@ -223,7 +223,7 @@ describe("LeaderboardModal", () => {
 
   describe("Player Data Mapping", () => {
     it("should map ranked leaderboard data and set current user entry", async () => {
-      const { getUserMe } = await import("../../src/client/Api");
+      const { getUserMe } = await import("client/Api");
       (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         player: { publicId: "player-2" },
       });

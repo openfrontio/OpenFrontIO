@@ -7,26 +7,26 @@
  */
 
 import { colord } from "colord";
-import { Theme } from "../../src/client/theme/Theme";
-import { GameView } from "../../src/client/view/GameView";
-import { PlayerView } from "../../src/client/view/PlayerView";
-import { Config } from "../../src/core/configuration/Config";
+import { Theme } from "client/theme/Theme";
+import { GameView } from "client/view/GameView";
+import { PlayerView } from "client/view/PlayerView";
+import { Config } from "engine/configuration/Config";
 import {
   NameViewData,
   PlayerType,
   Team,
   UnitType,
-} from "../../src/core/game/Game";
-import { GameMapImpl } from "../../src/core/game/GameMap";
+} from "engine/game/Game";
+import { GameMapImpl } from "engine/game/GameMap";
 import {
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
-} from "../../src/core/game/GameUpdates";
-import { TerrainMapData } from "../../src/core/game/TerrainMapLoader";
-import { Player, PlayerCosmetics } from "../../src/core/Schemas";
-import { WorkerClient } from "../../src/core/worker/WorkerClient";
+} from "engine/game/GameUpdates";
+import { TerrainMapData } from "engine/game/TerrainMapLoader";
+import { Player, PlayerCosmetics } from "core-public/Schemas";
+import { WorkerClient } from "engine/worker/WorkerClient";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */
 export function stubTheme(): Theme {

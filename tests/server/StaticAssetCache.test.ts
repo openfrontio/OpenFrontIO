@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { getStaticAssetCacheControl } from "../../src/server/StaticAssetCache";
+import { getStaticAssetCacheControl } from "server/StaticAssetCache";
 
 describe("StaticAssetCache", () => {
   test("marks Vite asset namespace as immutable", () => {

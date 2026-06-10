@@ -5,14 +5,14 @@ import {
   GameMode,
   GameType,
   Nation,
-} from "../src/core/game/Game";
-import { createNationsForGame } from "../src/core/game/NationCreation";
+} from "engine/game/Game";
+import { createNationsForGame } from "engine/game/NationCreation";
 import {
   AdditionalNation,
   Nation as ManifestNation,
-} from "../src/core/game/TerrainMapLoader";
-import { PseudoRandom } from "../src/core/PseudoRandom";
-import { GameConfig, GameStartInfo } from "../src/core/Schemas";
+} from "engine/game/TerrainMapLoader";
+import { PseudoRandom } from "engine/PseudoRandom";
+import { GameConfig, GameStartInfo } from "core-public/Schemas";
 
 function makeManifestNations(count: number): ManifestNation[] {
   const result: ManifestNation[] = [];

@@ -1,12 +1,12 @@
-import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
+import { MoveWarshipExecution } from "engine/execution/MoveWarshipExecution";
+import { WarshipExecution } from "engine/execution/WarshipExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

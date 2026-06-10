@@ -1,5 +1,5 @@
-import { WarshipSelectionController } from "../../../src/client/controllers/WarshipSelectionController";
-import { UnitSelectionEvent } from "../../../src/client/InputHandler";
+import { WarshipSelectionController } from "client/controllers/WarshipSelectionController";
+import { UnitSelectionEvent } from "client/InputHandler";
 
 describe("WarshipSelectionController", () => {
   let game: any;

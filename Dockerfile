@@ -5,19 +5,22 @@ WORKDIR /usr/src/app
 # Build stage - install ALL dependencies and build
 FROM base AS build
 ENV HUSKY=0
-# Copy package files first for better caching
+# Copy package files first for better caching. The per-package package.json
+# files are required for the workspace install, so packages/ must be present
+# before `npm ci`.
 COPY package*.json ./
+COPY packages ./packages
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
 # Copy only what's needed for build
 COPY tsconfig.json ./
+COPY tsconfig.base.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
 COPY resources ./resources
 COPY proprietary ./proprietary
-COPY src ./src
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
@@ -28,6 +31,7 @@ FROM base AS prod-deps
 ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 COPY package*.json ./
+COPY packages ./packages
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev
 
@@ -66,7 +70,8 @@ COPY resources ./resources
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
-COPY src ./src
+COPY tsconfig.base.json ./
+COPY packages ./packages
 
 
 ARG GIT_COMMIT=unknown

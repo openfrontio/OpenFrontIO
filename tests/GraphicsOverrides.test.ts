@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
-} from "../src/client/render/gl/GraphicsOverrides";
-import { applyGraphicsOverrides } from "../src/client/render/gl/RenderOverrides";
-import { createRenderSettings } from "../src/client/render/gl/RenderSettings";
+} from "core-public/GraphicsOverrides";
+import { applyGraphicsOverrides } from "client/render/gl/RenderOverrides";
+import { createRenderSettings } from "client/render/gl/RenderSettings";
 
 function gen(overrides: GraphicsOverrides) {
   const settings = createRenderSettings();

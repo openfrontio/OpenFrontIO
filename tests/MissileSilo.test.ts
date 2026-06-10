@@ -1,15 +1,15 @@
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
+import { NukeExecution } from "engine/execution/NukeExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "engine/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { GameID } from "../src/core/Schemas";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { GameID } from "core-public/Schemas";
 import { setup } from "./util/Setup";
 import { constructionExecution, executeTicks } from "./util/utils";
 

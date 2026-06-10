@@ -3,7 +3,7 @@ import {
   Game,
   GameMode,
   PlayerType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../src/client/Api", () => ({
+vi.mock("client/Api", () => ({
   getApiBase: vi.fn(() => "http://localhost:3000"),
 }));
 
-vi.mock("../../../src/client/Auth", () => ({
+vi.mock("client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
 
@@ -12,7 +12,7 @@ import {
   banClanMember,
   fetchClanBans,
   unbanClanMember,
-} from "../../../src/client/ClanApi";
+} from "client/ClanApi";
 
 const okJson = (data: unknown, status = 200) => ({
   ok: true,

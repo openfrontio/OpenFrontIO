@@ -10,8 +10,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { UnitType } from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
+import { UnitType } from "engine/game/Game";
+import { GameUpdateType } from "engine/game/GameUpdates";
 import {
   makeEmptyGu,
   makeGameView,

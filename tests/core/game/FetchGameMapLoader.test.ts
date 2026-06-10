@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import { FetchGameMapLoader } from "../../../src/core/game/FetchGameMapLoader";
-import { GameMapType } from "../../../src/core/game/Game";
+import { FetchGameMapLoader } from "engine/game/FetchGameMapLoader";
+import { GameMapType } from "engine/game/Game";
 
 describe("FetchGameMapLoader", () => {
   test("resolves each map file through the provided path resolver", async () => {

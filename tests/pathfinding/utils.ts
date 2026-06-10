@@ -9,25 +9,25 @@ import {
   GameMode,
   GameType,
   PlayerInfo,
-} from "../../src/core/game/Game";
-import { createGame, GameImpl } from "../../src/core/game/GameImpl";
-import { TileRef } from "../../src/core/game/GameMap";
+} from "engine/game/Game";
+import { createGame, GameImpl } from "engine/game/GameImpl";
+import { TileRef } from "engine/game/GameMap";
 import {
   genTerrainFromBin,
   MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
-import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
-import { PathFinding } from "../../src/core/pathfinding/PathFinder";
-import { PathFinderBuilder } from "../../src/core/pathfinding/PathFinderBuilder";
-import { StepperConfig } from "../../src/core/pathfinding/PathFinderStepper";
-import { MiniMapTransformer } from "../../src/core/pathfinding/transformers/MiniMapTransformer";
+} from "engine/game/TerrainMapLoader";
+import { UserSettings } from "engine/game/UserSettings";
+import { AStarWater } from "engine/pathfinding/algorithms/AStar.Water";
+import { AStarWaterHierarchical } from "engine/pathfinding/algorithms/AStar.WaterHierarchical";
+import { PathFinding } from "engine/pathfinding/PathFinder";
+import { PathFinderBuilder } from "engine/pathfinding/PathFinderBuilder";
+import { StepperConfig } from "engine/pathfinding/PathFinderStepper";
+import { MiniMapTransformer } from "engine/pathfinding/transformers/MiniMapTransformer";
 import {
   PathStatus,
   SteppingPathFinder,
-} from "../../src/core/pathfinding/types";
-import { GameConfig } from "../../src/core/Schemas";
+} from "engine/pathfinding/types";
+import { GameConfig } from "core-public/Schemas";
 import { TestConfig } from "../util/TestConfig";
 
 export type BenchmarkRoute = {

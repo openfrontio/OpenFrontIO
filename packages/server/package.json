@@ -1,0 +1,11 @@
+{
+  "name": "@openfront/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/Server.ts",
+  "dependencies": {
+    "@openfront/core-public": "*",
+    "@openfront/engine": "*"
+  }
+}

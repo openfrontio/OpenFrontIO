@@ -1,11 +1,15 @@
 {
   "name": "openfront-client",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\"",
     "start:client": "vite",
-    "start:server": "tsx src/server/Server.ts",
-    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
+    "start:server": "tsx packages/server/src/Server.ts",
+    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx packages/server/src/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:host": "cross-env GAME_ENV=dev VITE_HOST=lan concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:staging": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",

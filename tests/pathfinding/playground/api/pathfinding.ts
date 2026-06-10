@@ -1,7 +1,7 @@
-import { TileRef } from "../../../../src/core/game/GameMap.js";
-import { PathFinding } from "../../../../src/core/pathfinding/PathFinder.js";
-import { SteppingPathFinder } from "../../../../src/core/pathfinding/types.js";
-import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
+import { TileRef } from "engine/game/GameMap.js";
+import { PathFinding } from "engine/pathfinding/PathFinder.js";
+import { SteppingPathFinder } from "engine/pathfinding/types.js";
+import { DebugSpan } from "engine/utilities/DebugSpan.js";
 import { getAdapter } from "../../utils.js";
 import { COMPARISON_ADAPTERS, loadMap } from "./maps.js";
 

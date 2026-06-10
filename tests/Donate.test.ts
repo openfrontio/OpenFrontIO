@@ -1,8 +1,8 @@
-import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
-import { DonateTroopsExecution } from "../src/core/execution/DonateTroopExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { GameID } from "../src/core/Schemas";
+import { DonateGoldExecution } from "engine/execution/DonateGoldExecution";
+import { DonateTroopsExecution } from "engine/execution/DonateTroopExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+import { PlayerInfo, PlayerType } from "engine/game/Game";
+import { GameID } from "core-public/Schemas";
 import { setup } from "./util/Setup";
 
 describe("Donate troops to an ally", () => {

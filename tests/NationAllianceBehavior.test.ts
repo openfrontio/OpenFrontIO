@@ -1,5 +1,5 @@
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
+import { NationAllianceBehavior } from "engine/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "engine/execution/nation/NationEmojiBehavior";
 import {
   AllianceRequest,
   Game,
@@ -7,8 +7,8 @@ import {
   PlayerInfo,
   PlayerType,
   Tick,
-} from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "engine/game/Game";
+import { PseudoRandom } from "engine/PseudoRandom";
 import { setup } from "./util/Setup";
 
 let game: Game;

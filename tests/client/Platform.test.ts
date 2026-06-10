@@ -25,7 +25,7 @@ const loadPlatform = async ({
     userAgentData,
     maxTouchPoints,
   });
-  const { Platform } = await import("../../src/client/Platform");
+  const { Platform } = await import("client/Platform");
   return Platform;
 };
 

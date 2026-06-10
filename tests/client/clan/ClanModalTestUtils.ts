@@ -1,6 +1,6 @@
 import { vi } from "vitest";
-import type { ClanInfo } from "../../../src/client/ClanApi";
-import type { ClanModal } from "../../../src/client/ClanModal";
+import type { ClanInfo } from "client/ClanApi";
+import type { ClanModal } from "client/ClanModal";
 
 // ─── Mock factories ─────────────────────────────────────────────────────────
 // Each factory returns a fresh object of vi.fn()s. Test files pass these to

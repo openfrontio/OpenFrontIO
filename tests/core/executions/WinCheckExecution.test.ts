@@ -1,11 +1,11 @@
-import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution";
+import { WinCheckExecution } from "engine/execution/WinCheckExecution";
 import {
   ColoredTeams,
   GameMode,
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../../../src/core/game/Game";
+} from "engine/game/Game";
 import { playerInfo, setup } from "../../util/Setup";
 
 describe("WinCheckExecution", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
+import { GameMapImpl } from "engine/game/GameMap";
 
 describe("GameMap.tileStateBuffer", () => {
   it("returns a Uint16Array sized to width * height", () => {

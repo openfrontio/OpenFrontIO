@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { Game } from "../../../../src/core/game/Game.js";
-import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
+import { Game } from "engine/game/Game.js";
+import { DebugSpan } from "engine/utilities/DebugSpan.js";
 import { setupFromPath } from "../../utils.js";
 
 // Available comparison adapters
@@ -42,7 +42,7 @@ const cache = new Map<string, MapCache>();
 function getMapsDirectory(): string {
   return join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../../resources/maps",
+    "resources/maps",
   );
 }
 

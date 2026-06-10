@@ -1,12 +1,12 @@
 import Benchmark from "benchmark";
-import { PlayerType } from "../../src/core/game/Game";
-import { diffPlayerUpdate } from "../../src/core/game/GameUpdateUtils";
+import { PlayerType } from "engine/game/Game";
+import { diffPlayerUpdate } from "engine/game/GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
-} from "../../src/core/game/GameUpdates";
+} from "engine/game/GameUpdates";
 
 /**
  * Benchmark for diffPlayerUpdate, which runs once per player per tick on the

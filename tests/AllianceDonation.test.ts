@@ -1,6 +1,6 @@
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { AllianceRequestExecution } from "engine/execution/alliance/AllianceRequestExecution";
+import { DonateGoldExecution } from "engine/execution/DonateGoldExecution";
+import { Game, Player, PlayerType } from "engine/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;

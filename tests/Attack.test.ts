@@ -1,15 +1,15 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
+import { AttackExecution } from "engine/execution/AttackExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+import { TransportShipExecution } from "engine/execution/TransportShipExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { GameID } from "../src/core/Schemas";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { GameID } from "core-public/Schemas";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 import { constructionExecution } from "./util/utils";

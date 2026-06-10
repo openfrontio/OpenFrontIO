@@ -1,4 +1,4 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
+import { NukeExecution } from "engine/execution/NukeExecution";
 import {
   Game,
   MessageType,
@@ -6,7 +6,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";

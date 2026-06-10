@@ -1,8 +1,8 @@
-import newsItems from "../../../resources/news.json";
+import newsItems from "resources/news.json";
 import {
   getVisibleNewsItems,
   NewsItem,
-} from "../../../src/client/components/NewsBox";
+} from "client/components/NewsBox";
 
 const DISMISSED_NEWS_KEY = "dismissedNewsItems";
 const allItems = newsItems as NewsItem[];

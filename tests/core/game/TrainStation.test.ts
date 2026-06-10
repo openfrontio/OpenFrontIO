@@ -1,7 +1,7 @@
-import { GameUpdateType } from "src/core/game/GameUpdates";
+import { GameUpdateType } from "engine/game/GameUpdates";
 import { vi, type Mocked } from "vitest";
-import { Config } from "../../../src/core/configuration/Config";
-import { TrainExecution } from "../../../src/core/execution/TrainExecution";
+import { Config } from "engine/configuration/Config";
+import { TrainExecution } from "engine/execution/TrainExecution";
 import {
   Difficulty,
   Game,
@@ -12,14 +12,14 @@ import {
   Player,
   Unit,
   UnitType,
-} from "../../../src/core/game/Game";
-import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import { GameConfig } from "../../../src/core/Schemas";
+} from "engine/game/Game";
+import { Cluster, TrainStation } from "engine/game/TrainStation";
+import { UserSettings } from "engine/game/UserSettings";
+import { GameConfig } from "core-public/Schemas";
 
-vi.mock("../../../src/core/game/Game");
-vi.mock("../../../src/core/execution/TrainExecution");
-vi.mock("../../../src/core/PseudoRandom");
+vi.mock("engine/game/Game");
+vi.mock("engine/execution/TrainExecution");
+vi.mock("engine/PseudoRandom");
 
 describe("TrainStation", () => {
   let game: Mocked<Game>;

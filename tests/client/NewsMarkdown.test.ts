@@ -1,4 +1,4 @@
-import { normalizeNewsMarkdown } from "../../src/client/NewsMarkdown";
+import { normalizeNewsMarkdown } from "client/NewsMarkdown";
 
 describe("normalizeNewsMarkdown", () => {
   it("converts openfront pull request URLs to short markdown links", () => {

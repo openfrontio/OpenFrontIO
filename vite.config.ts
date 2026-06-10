@@ -9,7 +9,7 @@ import {
   type AssetManifest,
   buildAssetUrl,
   rewriteAssetsForCdn,
-} from "./src/core/AssetUrls";
+} from "./packages/engine/src/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,
@@ -17,7 +17,7 @@ import {
   getProprietaryDir,
   getResourcesDir,
   writePublicAssetManifest,
-} from "./src/server/PublicAssetManifest";
+} from "./packages/server/src/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
@@ -175,7 +175,7 @@ export default defineConfig(({ mode }) => {
         : [
             createHtmlPlugin({
               minify: false,
-              entry: "/src/client/Main.ts",
+              entry: "/packages/client/src/Main.ts",
               template: "index.html",
               inject: {
                 data: {

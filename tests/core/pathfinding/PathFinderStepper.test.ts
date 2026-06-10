@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PathFinderStepper } from "../../../src/core/pathfinding/PathFinderStepper";
-import { PathFinder, PathStatus } from "../../../src/core/pathfinding/types";
+import { PathFinderStepper } from "engine/pathfinding/PathFinderStepper";
+import { PathFinder, PathStatus } from "engine/pathfinding/types";
 
 describe("PathFinderStepper", () => {
   function createMockFinder(

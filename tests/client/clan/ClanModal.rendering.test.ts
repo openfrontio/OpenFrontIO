@@ -15,15 +15,15 @@ import {
 } from "./ClanModalTestUtils";
 
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
-vi.mock("../../../src/client/Api", () => apiMockFactory());
-vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
-vi.mock("../../../src/client/Utils", () => utilsMockFactory());
-vi.mock("../../../src/client/Auth", () => authMockFactory());
-vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
+vi.mock("client/Api", () => apiMockFactory());
+vi.mock("client/ClanApi", () => clanApiMockFactory());
+vi.mock("client/Utils", () => utilsMockFactory());
+vi.mock("client/Auth", () => authMockFactory());
+vi.mock("client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
 
 stubLocalStorage();
 
-import { ClanModal } from "../../../src/client/ClanModal";
+import { ClanModal } from "client/ClanModal";
 
 describe("ClanModal — rendering", () => {
   let modal: ClanModal;
@@ -51,7 +51,7 @@ describe("ClanModal — rendering", () => {
       // Directly invoke renderClanCard via the instance and insert the result
       // into a container so we can query it. We do this by populating myClans
       // and myClanRoles state so the list view renders real cards.
-      const { getUserMe } = await import("../../../src/client/Api");
+      const { getUserMe } = await import("client/Api");
       (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValue({
         player: {
           publicId: "test-player",
@@ -88,7 +88,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("shows 'clan_modal.open' badge when clan is open and user has no role", async () => {
-      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const { fetchClans } = await import("client/ClanApi");
       (fetchClans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [makeClan({ tag: "OTH", name: "Other Clan", isOpen: true })],
         total: 1,
@@ -107,7 +107,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("shows 'clan_modal.invite_only' badge when clan is closed and user has no role", async () => {
-      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const { fetchClans } = await import("client/ClanApi");
       (fetchClans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [makeClan({ tag: "INV", name: "Invite Clan", isOpen: false })],
         total: 1,
@@ -187,7 +187,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("does NOT show a role badge when myClanRoles has no entry for the clan", async () => {
-      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const { fetchClans } = await import("client/ClanApi");
       (fetchClans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [makeClan({ tag: "INV", name: "Invite Clan", isOpen: false })],
         total: 1,
@@ -227,7 +227,7 @@ describe("ClanModal — rendering", () => {
       expect(modal.textContent).not.toContain("undefined");
       // translateText mock swallows args and returns the key, so verify it
       // was called with count: 0 (the fallback) rather than count: undefined.
-      const { translateText } = await import("../../../src/client/Utils");
+      const { translateText } = await import("client/Utils");
       const calls = (translateText as ReturnType<typeof vi.fn>).mock.calls;
       const memberCountCall = calls.find(
         (c) => c[0] === "clan_modal.member_count",
@@ -237,7 +237,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("shows 0 in the stats row of the detail view when memberCount is undefined", async () => {
-      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchClanDetail } = await import("client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan({ memberCount: undefined }),
       );
@@ -251,7 +251,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("shows 0 in the manage members header when memberCount is undefined", async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [],
         total: 0,
@@ -277,7 +277,7 @@ describe("ClanModal — rendering", () => {
 
   describe("Open/Closed toggle ARIA attributes in manage view", () => {
     beforeEach(async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [],
         total: 0,
@@ -355,7 +355,7 @@ describe("ClanModal — rendering", () => {
 
   describe("Ban feature — bans view", () => {
     it("renders Banned Players button in manage view", async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [],
         total: 0,
@@ -374,7 +374,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("renders ban list with unban button in bans view", async () => {
-      const { fetchClanBans } = await import("../../../src/client/ClanApi");
+      const { fetchClanBans } = await import("client/ClanApi");
       (fetchClanBans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
           {
@@ -400,7 +400,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("renders empty state when no bans", async () => {
-      const { fetchClanBans } = await import("../../../src/client/ClanApi");
+      const { fetchClanBans } = await import("client/ClanApi");
       (fetchClanBans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [],
         total: 0,

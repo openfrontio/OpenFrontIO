@@ -1,9 +1,9 @@
 import { vi } from "vitest";
-import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
-import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import { Difficulty, PlayerType } from "../src/core/game/Game";
-import { Cluster } from "../src/core/game/TrainStation";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+import { ConstructionExecution } from "engine/execution/ConstructionExecution";
+import { NationStructureBehavior } from "engine/execution/nation/NationStructureBehavior";
+import { Difficulty, PlayerType } from "engine/game/Game";
+import { Cluster } from "engine/game/TrainStation";
+import { PseudoRandom } from "engine/PseudoRandom";
 
 // ── Fixed trade-gold values matching DefaultConfig ──────────────────────────
 

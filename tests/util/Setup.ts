@@ -9,14 +9,14 @@ import {
   GameType,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/Game";
-import { createGame } from "../../src/core/game/GameImpl";
+} from "engine/game/Game";
+import { createGame } from "engine/game/GameImpl";
 import {
   genTerrainFromBin,
   MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { GameConfig } from "../../src/core/Schemas";
+} from "engine/game/TerrainMapLoader";
+import { UserSettings } from "engine/game/UserSettings";
+import { GameConfig } from "core-public/Schemas";
 import { TestConfig } from "./TestConfig";
 
 export async function setup(

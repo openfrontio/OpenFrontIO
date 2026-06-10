@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { SpatialQuery } from "../../../src/core/pathfinding/spatial/SpatialQuery";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { SpatialQuery } from "engine/pathfinding/spatial/SpatialQuery";
 import { createGame, L, W } from "./_fixtures";
 
 // Spawns player and **expands territory** via getSpawnTiles (euclidean dist 4)

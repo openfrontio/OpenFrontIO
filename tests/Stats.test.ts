@@ -4,10 +4,10 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { Stats } from "../src/core/game/Stats";
-import { StatsImpl } from "../src/core/game/StatsImpl";
-import { replacer } from "../src/core/Util";
+} from "engine/game/Game";
+import { Stats } from "engine/game/Stats";
+import { StatsImpl } from "engine/game/StatsImpl";
+import { replacer } from "engine/Util";
 import { setup } from "./util/Setup";
 
 let stats: Stats;

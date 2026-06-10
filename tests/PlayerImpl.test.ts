@@ -4,7 +4,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;

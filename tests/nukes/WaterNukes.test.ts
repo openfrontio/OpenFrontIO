@@ -1,12 +1,12 @@
-import { NukeExecution } from "../../src/core/execution/NukeExecution";
+import { NukeExecution } from "engine/execution/NukeExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
 import { setup } from "../util/Setup";
 import { constructionExecution } from "../util/utils";
 

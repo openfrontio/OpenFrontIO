@@ -1,6 +1,6 @@
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+import { AiAttackBehavior } from "engine/execution/utils/AiAttackBehavior";
+import { Game, Player, PlayerInfo, PlayerType } from "engine/game/Game";
+import { PseudoRandom } from "engine/PseudoRandom";
 import { setup } from "./util/Setup";
 
 describe("Ai Attack Behavior", () => {

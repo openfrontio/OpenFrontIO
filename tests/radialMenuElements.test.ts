@@ -1,13 +1,13 @@
 import { vi } from "vitest";
 
 // Mock BuildMenu to avoid importing lit and other ESM-heavy deps in this unit test
-vi.mock("../src/client/hud/layers/BuildMenu", () => ({
+vi.mock("client/hud/layers/BuildMenu", () => ({
   BuildMenu: class {},
   flattenedBuildTable: [],
 }));
 
 // Mock Utils to avoid touching DOM (document) during tests
-vi.mock("../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: (k: string) => k,
   getSvgAspectRatio: async () => 1,
 }));
@@ -16,7 +16,7 @@ import {
   COLORS,
   rootMenuElement,
   type MenuElementParams,
-} from "../src/client/hud/layers/RadialMenuElements";
+} from "client/hud/layers/RadialMenuElements";
 
 // Minimal stubs to satisfy types used in rootMenuElement.subMenu and allyBreak actions
 const makePlayer = (
@@ -31,7 +31,7 @@ const makePlayer = (
         : true,
     isTraitor: () => opts?.isTraitor ?? false,
     isDisconnected: () => opts?.isDisconnected ?? false,
-  }) as unknown as import("../src/core/game/GameView").PlayerView;
+  }) as unknown as import("client/view").PlayerView;
 
 const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
   const myPlayer = (opts?.myPlayer as any) ?? makePlayer("p1");

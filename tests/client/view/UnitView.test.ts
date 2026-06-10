@@ -6,13 +6,13 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { UnitView } from "../../../src/client/view/UnitView";
+import { UnitView } from "client/view/UnitView";
 import {
   TrainType,
   TransportShipState,
   UnitType,
   WarshipState,
-} from "../../../src/core/game/Game";
+} from "engine/game/Game";
 import { makeGameView, makeUnitUpdate, stubConfig } from "../../util/viewStubs";
 
 describe("UnitView accessors", () => {

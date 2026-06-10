@@ -4,7 +4,7 @@ import { flushAsync } from "./ClanModalTestUtils";
 
 // ─── Mocks (defined before imports so vi.mock hoisting applies) ─────────────
 
-vi.mock("../../../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   // Echo the key so we can assert on translation slugs.
   translateText: vi.fn((key: string) => key),
   showToast: vi.fn(),
@@ -13,22 +13,22 @@ vi.mock("../../../src/client/Utils", () => ({
   getMapName: vi.fn((m: string | undefined) => m ?? null),
 }));
 
-vi.mock("../../../src/client/Auth", () => ({
+vi.mock("client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
   userAuth: vi.fn(),
 }));
 
-vi.mock("../../../src/client/ClanApi", () => ({
+vi.mock("client/ClanApi", () => ({
   fetchClanGames: vi.fn(async () => ({ results: [], nextCursor: null })),
 }));
 
-vi.mock("../../../src/client/TerrainMapFileLoader", () => ({
+vi.mock("client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {
     getMapData: vi.fn(() => ({ webpPath: "/maps/test.webp" })),
   },
 }));
 
-vi.mock("../../../src/client/ClientEnv", () => ({
+vi.mock("client/ClientEnv", () => ({
   ClientEnv: {
     workerPath: vi.fn(() => "w0"),
   },
@@ -36,7 +36,7 @@ vi.mock("../../../src/client/ClientEnv", () => ({
 
 // ClanShared re-exports from BaseModal; stub it directly so we don't pull
 // BaseModal's dependency graph into this unit test.
-vi.mock("../../../src/client/components/clan/ClanShared", async () => {
+vi.mock("client/components/clan/ClanShared", async () => {
   const { html } = await import("lit");
   return {
     renderLoadingSpinner: vi.fn(() => html`<div data-testid="spinner"></div>`),
@@ -46,7 +46,7 @@ vi.mock("../../../src/client/components/clan/ClanShared", async () => {
 
 // CopyButton is a custom element; stub it so its dependency graph (Auth,
 // API, etc.) doesn't get pulled in transitively.
-vi.mock("../../../src/client/components/CopyButton", () => ({}));
+vi.mock("client/components/CopyButton", () => ({}));
 
 // jsdom doesn't ship IntersectionObserver — provide the minimum surface
 // the component touches (observe / disconnect). Tests below trigger the
@@ -75,12 +75,12 @@ vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 
 // ─── Imports under test ──────────────────────────────────────────────────────
 
-import type { ClanGame, ClanGamesResponse } from "../../../src/client/ClanApi";
-import { fetchClanGames } from "../../../src/client/ClanApi";
+import type { ClanGame, ClanGamesResponse } from "client/ClanApi";
+import { fetchClanGames } from "client/ClanApi";
 import {
   ClanGameHistoryView,
   type ClanGameHistoryCache,
-} from "../../../src/client/components/clan/ClanGameHistoryView";
+} from "client/components/clan/ClanGameHistoryView";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

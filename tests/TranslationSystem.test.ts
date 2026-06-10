@@ -518,7 +518,7 @@ describe("Translation System", () => {
     const enKeySet = new Set(allKeys);
     const rootKeys = new Set(Object.keys(enJson as Record<string, unknown>));
 
-    const srcDir = path.join(PROJECT_ROOT, "src");
+    const srcDir = path.join(PROJECT_ROOT, "packages");
     const sourceFiles = getAllFiles(srcDir, [".ts", ".tsx", ".js", ".jsx"]);
 
     const usedKeys = new Set<string>();

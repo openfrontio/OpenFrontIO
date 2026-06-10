@@ -1,10 +1,10 @@
-import { Unit, UnitType } from "../../../src/core/game/Game";
+import { Unit, UnitType } from "engine/game/Game";
 import {
   RailNetworkImpl,
   StationManagerImpl,
-} from "../../../src/core/game/RailNetworkImpl";
-import { Railroad } from "../../../src/core/game/Railroad";
-import { Cluster } from "../../../src/core/game/TrainStation";
+} from "engine/game/RailNetworkImpl";
+import { Railroad } from "engine/game/Railroad";
+import { Cluster } from "engine/game/TrainStation";
 
 // Mock types
 const createMockStation = (unitId: number): any => {

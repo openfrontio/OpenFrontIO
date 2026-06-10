@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ClientMsgRateLimiter } from "../../src/server/ClientMsgRateLimiter";
+import { ClientMsgRateLimiter } from "server/ClientMsgRateLimiter";
 
 const CLIENT_A = "clientA" as any;
 const CLIENT_B = "clientB" as any;

@@ -1,6 +1,6 @@
-import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import { MissileSiloExecution } from "../src/core/execution/MissileSiloExecution";
-import { NationExecution } from "../src/core/execution/NationExecution";
+import { MirvExecution } from "engine/execution/MIRVExecution";
+import { MissileSiloExecution } from "engine/execution/MissileSiloExecution";
+import { NationExecution } from "engine/execution/NationExecution";
 import {
   Cell,
   GameMode,
@@ -8,7 +8,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

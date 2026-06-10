@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PublicLobbySocket } from "../src/client/LobbySocket";
+import { PublicLobbySocket } from "client/LobbySocket";
 import {
   PublicGameInfo,
   PublicGames,
   PublicGameType,
-} from "../src/core/Schemas";
+} from "core-public/Schemas";
 
 function lobby(
   gameID: string,

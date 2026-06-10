@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { ServerEnv } from "../../src/server/ServerEnv";
+import { ServerEnv } from "server/ServerEnv";
 
 describe("ServerEnv.numWorkers", () => {
   afterEach(() => {

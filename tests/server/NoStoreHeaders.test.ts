@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { setNoStoreHeaders } from "../../src/server/NoStoreHeaders";
+import { setNoStoreHeaders } from "server/NoStoreHeaders";
 
 describe("NoStoreHeaders", () => {
   test("sets explicit no-store headers", () => {

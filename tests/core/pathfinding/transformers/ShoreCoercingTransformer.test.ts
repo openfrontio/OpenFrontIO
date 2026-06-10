@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ShoreCoercingTransformer } from "../../../../src/core/pathfinding/transformers/ShoreCoercingTransformer";
-import { PathFinder } from "../../../../src/core/pathfinding/types";
+import { ShoreCoercingTransformer } from "engine/pathfinding/transformers/ShoreCoercingTransformer";
+import { PathFinder } from "engine/pathfinding/types";
 import { createGameMap, createIslandMap, L, W } from "../_fixtures";
 
 describe("ShoreCoercingTransformer", () => {

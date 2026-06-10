@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
-import { UniversalPathFinding } from "../../../src/core/pathfinding/PathFinder";
-import { PathStatus } from "../../../src/core/pathfinding/types";
+import { GameMapImpl } from "engine/game/GameMap";
+import { UniversalPathFinding } from "engine/pathfinding/PathFinder";
+import { PathStatus } from "engine/pathfinding/types";
 
 describe("UniversalPathFinding.Parabola", () => {
   function createLargeMap() {

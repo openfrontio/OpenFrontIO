@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../../src/core/game/GameMap";
-import { MiniMapTransformer } from "../../../../src/core/pathfinding/transformers/MiniMapTransformer";
-import { PathFinder } from "../../../../src/core/pathfinding/types";
+import { GameMapImpl } from "engine/game/GameMap";
+import { MiniMapTransformer } from "engine/pathfinding/transformers/MiniMapTransformer";
+import { PathFinder } from "engine/pathfinding/types";
 
 describe("MiniMapTransformer", () => {
   // Create test maps: main map is 10x10, minimap is 5x5 (2x downscale)

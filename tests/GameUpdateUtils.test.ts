@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { PlayerState } from "../src/client/render/types";
-import { PlayerType } from "../src/core/game/Game";
-import {
-  applyStateUpdate,
-  diffPlayerUpdate,
-} from "../src/core/game/GameUpdateUtils";
-import { GameUpdateType, PlayerUpdate } from "../src/core/game/GameUpdates";
+import type { PlayerState } from "client/render/types";
+import { PlayerType } from "engine/game/Game";
+import { applyStateUpdate } from "client/render/applyStateUpdate";
+import { diffPlayerUpdate } from "engine/game/GameUpdateUtils";
+import { GameUpdateType, PlayerUpdate } from "engine/game/GameUpdates";
 import { makePlayerUpdate } from "./util/viewStubs";
 
 function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {

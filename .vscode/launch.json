@@ -19,7 +19,7 @@
         "--loader",
         "ts-node/esm",
         "--experimental-specifier-resolution=node",
-        "${workspaceFolder}/src/server/Server.ts"
+        "${workspaceFolder}/packages/server/src/Server.ts"
       ],
       "env": {
         "GAME_ENV": "dev"

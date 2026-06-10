@@ -1,22 +1,22 @@
 import {
   Ranking,
   RankType,
-} from "../src/client/components/baseComponents/ranking/GameInfoRanking";
+} from "client/components/baseComponents/ranking/GameInfoRanking";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../src/core/game/Game";
-import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
+} from "engine/game/Game";
+import { AnalyticsRecord, GameConfig } from "core-public/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
-} from "../src/core/StatsSchemas";
+} from "core-public/StatsSchemas";
 
 describe("Ranking class", () => {
   const mockConfig: GameConfig = {

@@ -15,23 +15,23 @@ vi.mock("lit/decorators.js", () => ({
   query: () => () => {},
 }));
 
-vi.mock("../../../../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(),
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
 }));
 
-vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
+vi.mock("client/components/ui/ActionButton", () => ({
   actionButton: vi.fn((props: unknown) => props),
 }));
 
-import { actionButton } from "../../../../src/client/components/ui/ActionButton";
-import { PlayerModerationModal } from "../../../../src/client/hud/layers/PlayerModerationModal";
-import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
-import { SendKickPlayerIntentEvent } from "../../../../src/client/Transport";
-import { PlayerType } from "../../../../src/core/game/Game";
-import { PlayerView } from "../../../../src/core/game/GameView";
+import { actionButton } from "client/components/ui/ActionButton";
+import { PlayerModerationModal } from "client/hud/layers/PlayerModerationModal";
+import { PlayerPanel } from "client/hud/layers/PlayerPanel";
+import { SendKickPlayerIntentEvent } from "client/Transport";
+import { PlayerType } from "engine/game/Game";
+import { PlayerView } from "client/view";
 
 describe("PlayerPanel - kick player moderation", () => {
   let panel: PlayerPanel;

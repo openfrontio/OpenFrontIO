@@ -1,5 +1,5 @@
-import { PlayerStatsLeafSchema } from "../src/core/ApiSchemas";
-import { PlayerStatsSchema } from "../src/core/StatsSchemas";
+import { PlayerStatsLeafSchema } from "core-public/ApiSchemas";
+import { PlayerStatsSchema } from "core-public/StatsSchemas";
 
 function testPlayerSchema(
   json: string,

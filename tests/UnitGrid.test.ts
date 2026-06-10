@@ -1,5 +1,5 @@
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/Game";
-import { UnitGrid } from "../src/core/game/UnitGrid";
+import { PlayerInfo, PlayerType, UnitType } from "engine/game/Game";
+import { UnitGrid } from "engine/game/UnitGrid";
 import { setup } from "./util/Setup";
 
 async function checkRange(

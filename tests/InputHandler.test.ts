@@ -5,12 +5,12 @@ import {
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
-} from "../src/client/InputHandler";
-import { UIState } from "../src/client/UIState";
-import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
-import { GameView, PlayerView } from "../src/core/game/GameView";
-import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
+} from "client/InputHandler";
+import { UIState } from "client/UIState";
+import { EventBus } from "engine/EventBus";
+import { UnitType } from "engine/game/Game";
+import { GameView, PlayerView } from "client/view";
+import { KEYBINDS_KEY, UserSettings } from "engine/game/UserSettings";
 
 class MockPointerEvent {
   button: number;

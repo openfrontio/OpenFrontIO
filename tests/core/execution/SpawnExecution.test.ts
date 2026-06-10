@@ -1,5 +1,5 @@
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { PlayerInfo, PlayerType } from "../../../src/core/game/Game";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+import { PlayerInfo, PlayerType } from "engine/game/Game";
 import { setup } from "../../util/Setup";
 
 describe("Spawn execution", () => {

@@ -1,5 +1,5 @@
-import { DeleteUnitExecution } from "../src/core/execution/DeleteUnitExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { DeleteUnitExecution } from "engine/execution/DeleteUnitExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -7,9 +7,9 @@ import {
   PlayerType,
   Unit,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { GameID } from "../src/core/Schemas";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { GameID } from "core-public/Schemas";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

@@ -1,5 +1,5 @@
 // Mocks the output of translation functions to return predictable values.
-vi.mock("../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: (key: string, vars?: any) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
@@ -9,7 +9,7 @@ import {
   MAX_USERNAME_LENGTH,
   validateClanTag,
   validateUsername,
-} from "../src/core/validations/username";
+} from "engine/validations/username";
 
 describe("username.ts functions", () => {
   describe("validateUsername", () => {

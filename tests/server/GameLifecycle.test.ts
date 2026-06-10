@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
+vi.mock("core-public/Schemas", async () => {
+  const actual = (await vi.importActual("core-public/Schemas")) as any;
   return {
     ...actual,
     GameStartInfoSchema: {
@@ -13,8 +13,8 @@ vi.mock("../../src/core/Schemas", async () => {
   };
 });
 
-import { GameType } from "../../src/core/game/Game";
-import { GameServer } from "../../src/server/GameServer";
+import { GameType } from "engine/game/Game";
+import { GameServer } from "server/GameServer";
 
 describe("GameLifecycle", () => {
   let mockLogger: any;

@@ -12,15 +12,15 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { computePlayerStatus } from "../../../../../src/client/render/frame/derive/PlayerStatus";
+import { computePlayerStatus } from "client/render/frame/derive/PlayerStatus";
 import type {
   PlayerState,
   UnitState,
-} from "../../../../../src/client/render/types";
+} from "client/render/types";
 import {
   UT_ATOM_BOMB,
   UT_WARSHIP,
-} from "../../../../../src/client/render/types";
+} from "client/render/types";
 
 function ps(overrides: Partial<PlayerState> = {}): PlayerState {
   return {

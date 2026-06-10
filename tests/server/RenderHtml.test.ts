@@ -6,7 +6,7 @@ import {
   clearAppShellContentCache,
   getAppShellContent,
   setAppShellCacheHeaders,
-} from "../../src/server/RenderHtml";
+} from "server/RenderHtml";
 
 describe("RenderHtml", () => {
   const originalGitCommit = process.env.GIT_COMMIT;

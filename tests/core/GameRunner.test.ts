@@ -1,7 +1,7 @@
-import { NationExecution } from "../../src/core/execution/NationExecution";
-import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Cell, Nation, PlayerInfo, PlayerType } from "../../src/core/game/Game";
-import { GameConfig, GameID } from "../../src/core/Schemas";
+import { NationExecution } from "engine/execution/NationExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+import { Cell, Nation, PlayerInfo, PlayerType } from "engine/game/Game";
+import { GameConfig, GameID } from "core-public/Schemas";
 import { setup } from "../util/Setup";
 import { executeTicks } from "../util/utils";
 

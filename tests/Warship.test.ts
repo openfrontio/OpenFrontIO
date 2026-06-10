@@ -1,14 +1,14 @@
-import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
+import { MoveWarshipExecution } from "engine/execution/MoveWarshipExecution";
+import { WarshipExecution } from "engine/execution/WarshipExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { PathStatus } from "../src/core/pathfinding/types";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { PathStatus } from "engine/pathfinding/types";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

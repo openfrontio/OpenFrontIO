@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { GameMapName, GameMapType, mapCategories } from "../src/core/game/Game";
+import { GameMapName, GameMapType, mapCategories } from "engine/game/Game";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -14,7 +14,13 @@ const MAP_GEN_MAPS = path.join(ROOT, "map-generator", "assets", "maps");
 const RESOURCES_MAPS = path.join(ROOT, "resources", "maps");
 const MAIN_GO = path.join(ROOT, "map-generator", "main.go");
 const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
-const MAP_PLAYLIST = path.join(ROOT, "src", "server", "MapPlaylist.ts");
+const MAP_PLAYLIST = path.join(
+  ROOT,
+  "packages",
+  "server",
+  "src",
+  "MapPlaylist.ts",
+);
 
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 

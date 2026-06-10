@@ -1,7 +1,7 @@
-import { FluentSlider } from "../../../src/client/components/FluentSlider";
+import { FluentSlider } from "client/components/FluentSlider";
 
 // Mock the translateText function
-vi.mock("../../../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
 }));
 

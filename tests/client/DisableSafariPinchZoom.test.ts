@@ -1,4 +1,4 @@
-import { installSafariPinchZoomBlocker } from "../../src/client/utilities/DisableSafariPinchZoom";
+import { installSafariPinchZoomBlocker } from "client/utilities/DisableSafariPinchZoom";
 
 const GESTURE_EVENTS = ["gesturestart", "gesturechange", "gestureend"] as const;
 

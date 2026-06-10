@@ -1,9 +1,9 @@
 import EventEmitter from "events";
 import { describe, expect, it, vi } from "vitest";
-import { MasterLobbyService } from "../../src/server/MasterLobbyService";
-import { ServerEnv } from "../../src/server/ServerEnv";
+import { MasterLobbyService } from "server/MasterLobbyService";
+import { ServerEnv } from "server/ServerEnv";
 
-vi.mock("../../src/server/Logger", () => ({
+vi.mock("server/Logger", () => ({
   logger: {
     child: () => ({
       error: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock("../../src/server/Logger", () => ({
   },
 }));
 
-vi.mock("../../src/server/PollingLoop", () => ({
+vi.mock("server/PollingLoop", () => ({
   startPolling: vi.fn(),
 }));
 

@@ -1,4 +1,4 @@
-import { NationExecution } from "../src/core/execution/NationExecution";
+import { NationExecution } from "engine/execution/NationExecution";
 import {
   Cell,
   Difficulty,
@@ -7,7 +7,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "./util/Setup";
 
 // The half_land_half_ocean map is 16x16:

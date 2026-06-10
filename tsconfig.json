@@ -1,34 +1,13 @@
-// https://www.typescriptlang.org/tsconfig/
+// Root project config: type-checks the entire workspace in one pass
+// (used by `tsc --noEmit` in the build). Per-package tsconfigs live under
+// packages/*/tsconfig.json for independent builds.
 {
-  "compilerOptions": {
-    // Language and Environment
-    "target": "ES2020",
-    // Modules
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "paths": {
-      "resources/*": ["./resources/*"],
-      "src/*": ["./src/*"]
-    },
-    // Emit
-    "sourceMap": true,
-    // Type Checking
-    "allowUnusedLabels": false,
-    "experimentalDecorators": true,
-    "resolveJsonModule": true,
-    "strictNullChecks": true,
-    "useDefineForClassFields": false,
-    "strictPropertyInitialization": false,
-    "skipLibCheck": true,
-    "types": ["vitest/globals", "node"]
-  },
+  "extends": "./tsconfig.base.json",
   "include": [
-    "src/**/*",
+    "packages/**/*",
     "resources/**/*",
     "proprietary/**/*",
-    "generated/**/*",
     "tests/**/*",
-    "src/scripts",
     "vite.config.ts"
   ],
   "exclude": ["node_modules"]

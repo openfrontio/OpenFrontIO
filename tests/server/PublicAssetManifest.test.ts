@@ -2,12 +2,12 @@ import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import { afterEach, describe, expect, test } from "vitest";
-import { normalizeAssetPath } from "../../src/core/AssetUrls";
+import { normalizeAssetPath } from "engine/AssetUrls";
 import {
   buildPublicAssetManifest,
   clearPublicAssetManifestCache,
   createHashedPublicAssetFiles,
-} from "../../src/server/PublicAssetManifest";
+} from "server/PublicAssetManifest";
 
 describe("PublicAssetManifest", () => {
   let tempDir: string | null = null;

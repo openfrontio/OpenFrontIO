@@ -3,7 +3,7 @@ import {
   FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
   shadowNames,
-} from "../src/server/Privilege";
+} from "server/Privilege";
 
 const bannedWords = [
   "hitler",

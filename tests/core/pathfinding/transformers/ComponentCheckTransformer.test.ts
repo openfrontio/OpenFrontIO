@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ComponentCheckTransformer } from "../../../../src/core/pathfinding/transformers/ComponentCheckTransformer";
-import { PathFinder } from "../../../../src/core/pathfinding/types";
+import { ComponentCheckTransformer } from "engine/pathfinding/transformers/ComponentCheckTransformer";
+import { PathFinder } from "engine/pathfinding/types";
 
 describe("ComponentCheckTransformer", () => {
   // Mock PathFinder that records calls and returns a simple path

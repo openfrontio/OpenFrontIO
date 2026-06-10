@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { startPolling } from "../../src/server/PollingLoop";
+import { startPolling } from "server/PollingLoop";
 
-vi.mock("../../src/server/Logger", () => ({
+vi.mock("server/Logger", () => ({
   logger: {
     child: () => ({
       error: vi.fn(),

@@ -1,12 +1,12 @@
-import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { NukeExecution } from "../../src/core/execution/NukeExecution";
+import { ConstructionExecution } from "engine/execution/ConstructionExecution";
+import { NukeExecution } from "engine/execution/NukeExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {

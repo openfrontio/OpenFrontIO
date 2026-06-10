@@ -9,7 +9,7 @@ import {
   ClanInfoSchema,
   ClanJoinRequestSchema,
   ClanMemberSchema,
-} from "../../../src/core/ClanApiSchemas";
+} from "core-public/ClanApiSchemas";
 
 describe("ClanInfoSchema", () => {
   const base = {

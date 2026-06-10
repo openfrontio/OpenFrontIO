@@ -1,5 +1,5 @@
-import { cosmeticRelationship } from "../src/client/Cosmetics";
-import { UserMeResponse } from "../src/core/ApiSchemas";
+import { cosmeticRelationship } from "client/Cosmetics";
+import { UserMeResponse } from "core-public/ApiSchemas";
 
 const product = { productId: "prod_123", priceId: "price_123", price: "$4.99" };
 

@@ -17,16 +17,16 @@ import {
 } from "./ClanModalTestUtils";
 
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
-vi.mock("../../../src/client/Api", () => apiMockFactory());
-vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
-vi.mock("../../../src/client/Utils", () => utilsMockFactory());
-vi.mock("../../../src/client/Auth", () => authMockFactory());
-vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
+vi.mock("client/Api", () => apiMockFactory());
+vi.mock("client/ClanApi", () => clanApiMockFactory());
+vi.mock("client/Utils", () => utilsMockFactory());
+vi.mock("client/Auth", () => authMockFactory());
+vi.mock("client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
 
 stubLocalStorage();
 
-import type { ClanInfo } from "../../../src/client/ClanApi";
-import { ClanModal } from "../../../src/client/ClanModal";
+import type { ClanInfo } from "client/ClanApi";
+import { ClanModal } from "client/ClanModal";
 
 describe("ClanModal — handlers", () => {
   let modal: ClanModal;
@@ -50,7 +50,7 @@ describe("ClanModal — handlers", () => {
   describe("handleApprove increments selectedClan.memberCount", () => {
     it("increments memberCount by 1 after successful approveClanRequest", async () => {
       const { approveClanRequest, fetchClanRequests } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (approveClanRequest as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       (fetchClanRequests as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
@@ -86,7 +86,7 @@ describe("ClanModal — handlers", () => {
 
     it("does not increment memberCount when approveClanRequest fails", async () => {
       const { approveClanRequest, fetchClanRequests } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (approveClanRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
         error: "clan_modal.error_generic",
       });
@@ -120,7 +120,7 @@ describe("ClanModal — handlers", () => {
 
     it("treats undefined memberCount as 0 and increments to 1", async () => {
       const { approveClanRequest, fetchClanRequests } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (approveClanRequest as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       (fetchClanRequests as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
@@ -154,7 +154,7 @@ describe("ClanModal — handlers", () => {
     let manageView: Element;
 
     beforeEach(async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
           {
@@ -188,7 +188,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("handleBan calls banClanMember after confirm-dialog confirm", async () => {
-      const { banClanMember } = await import("../../../src/client/ClanApi");
+      const { banClanMember } = await import("client/ClanApi");
       (banClanMember as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       // Step 1: Click Ban button to open confirm dialog
@@ -216,7 +216,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("handleBan aborts when confirm-dialog cancel is clicked", async () => {
-      const { banClanMember } = await import("../../../src/client/ClanApi");
+      const { banClanMember } = await import("client/ClanApi");
 
       // Step 1: Click Ban button to open confirm dialog
       const banButton = Array.from(modal.querySelectorAll("button")).find(
@@ -237,7 +237,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("handleBan sends undefined reason when confirm text is empty", async () => {
-      const { banClanMember } = await import("../../../src/client/ClanApi");
+      const { banClanMember } = await import("client/ClanApi");
       (banClanMember as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       // Step 1: Click Ban button
@@ -265,7 +265,7 @@ describe("ClanModal — handlers", () => {
 
     it("handleBan syncs memberCount via clan-updated event on success", async () => {
       const { banClanMember, fetchClanMembers } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (banClanMember as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       // Server returns the post-ban member total (was 5, now 4).
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -303,7 +303,7 @@ describe("ClanModal — handlers", () => {
   describe("handleUnban", () => {
     it("removes ban from list and decrements total on success", async () => {
       const { unbanClanMember, fetchClanBans } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (unbanClanMember as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       (fetchClanBans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
@@ -341,7 +341,7 @@ describe("ClanModal — handlers", () => {
     let manageView: Element;
 
     beforeEach(async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
           {
@@ -369,7 +369,7 @@ describe("ClanModal — handlers", () => {
 
     it("calls kickMember and syncs memberCount on success", async () => {
       const { kickMember, fetchClanMembers } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (kickMember as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [],
@@ -402,7 +402,7 @@ describe("ClanModal — handlers", () => {
 
     it("does not mutate state when kickMember fails", async () => {
       const { kickMember, fetchClanMembers } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (kickMember as ReturnType<typeof vi.fn>).mockResolvedValue({
         error: "clan_modal.error_generic",
       });
@@ -436,7 +436,7 @@ describe("ClanModal — handlers", () => {
     let manageView: Element;
 
     beforeEach(async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [],
         total: 3,
@@ -467,7 +467,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("calls disbandClan, clears selection, and returns to list on success", async () => {
-      const { disbandClan } = await import("../../../src/client/ClanApi");
+      const { disbandClan } = await import("client/ClanApi");
       (disbandClan as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       // Open the disband confirm dialog on the manage view.
@@ -495,7 +495,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("preserves selection when disbandClan fails", async () => {
-      const { disbandClan } = await import("../../../src/client/ClanApi");
+      const { disbandClan } = await import("client/ClanApi");
       (disbandClan as ReturnType<typeof vi.fn>).mockResolvedValue({
         error: "clan_modal.error_generic",
       });
@@ -525,7 +525,7 @@ describe("ClanModal — handlers", () => {
     let requestsView: Element;
 
     beforeEach(async () => {
-      const { fetchClanRequests } = await import("../../../src/client/ClanApi");
+      const { fetchClanRequests } = await import("client/ClanApi");
       (fetchClanRequests as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
           { publicId: "applicant-1", createdAt: "2024-06-01T00:00:00Z" },
@@ -543,7 +543,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("removes the request and decrements totals on success", async () => {
-      const { denyClanRequest } = await import("../../../src/client/ClanApi");
+      const { denyClanRequest } = await import("client/ClanApi");
       (denyClanRequest as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const denyButton = Array.from(modal.querySelectorAll("button")).find(
@@ -564,7 +564,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("does not mutate state when denyClanRequest fails", async () => {
-      const { denyClanRequest } = await import("../../../src/client/ClanApi");
+      const { denyClanRequest } = await import("client/ClanApi");
       (denyClanRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
         error: "clan_modal.error_generic",
       });
@@ -589,7 +589,7 @@ describe("ClanModal — handlers", () => {
 
   describe("handleJoin", () => {
     beforeEach(async () => {
-      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchClanDetail } = await import("client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan({ isOpen: true, memberCount: 5 }),
       );
@@ -602,7 +602,7 @@ describe("ClanModal — handlers", () => {
 
     it("switches detail view into member mode immediately after open-clan join", async () => {
       const { joinClan, fetchClanMembers } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (joinClan as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         status: "joined",
       });
@@ -651,7 +651,7 @@ describe("ClanModal — handlers", () => {
   describe("handleLeave", () => {
     beforeEach(async () => {
       const { fetchClanDetail, fetchClanMembers } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan(),
       );
@@ -680,7 +680,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("calls leaveClan, removes role, and returns to list on success", async () => {
-      const { leaveClan } = await import("../../../src/client/ClanApi");
+      const { leaveClan } = await import("client/ClanApi");
       (leaveClan as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const leaveButton = Array.from(modal.querySelectorAll("button")).find(
@@ -704,7 +704,7 @@ describe("ClanModal — handlers", () => {
     });
 
     it("preserves selection when leaveClan fails", async () => {
-      const { leaveClan } = await import("../../../src/client/ClanApi");
+      const { leaveClan } = await import("client/ClanApi");
       (leaveClan as ReturnType<typeof vi.fn>).mockResolvedValue({
         error: "clan_modal.error_generic",
       });
@@ -732,7 +732,7 @@ describe("ClanModal — handlers", () => {
     let transferView: Element;
 
     beforeEach(async () => {
-      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      const { fetchClanMembers } = await import("client/ClanApi");
       (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         results: [
           {
@@ -766,7 +766,7 @@ describe("ClanModal — handlers", () => {
 
     it("clears confirmAction and removes the dialog after confirming", async () => {
       const { transferLeadership } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
       (transferLeadership as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const dialog = modal.querySelector("confirm-dialog");
@@ -786,7 +786,7 @@ describe("ClanModal — handlers", () => {
 
     it("clears confirmAction when cancel is clicked, without calling the API", async () => {
       const { transferLeadership } =
-        await import("../../../src/client/ClanApi");
+        await import("client/ClanApi");
 
       const dialog = modal.querySelector("confirm-dialog");
       expect(dialog).toBeTruthy();

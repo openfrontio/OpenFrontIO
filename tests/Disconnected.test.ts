@@ -1,9 +1,9 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnectedExecution";
-import { PlayerExecution } from "../src/core/execution/PlayerExecution";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import { getSpawnTiles } from "../src/core/execution/Util";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
+import { AttackExecution } from "engine/execution/AttackExecution";
+import { MarkDisconnectedExecution } from "engine/execution/MarkDisconnectedExecution";
+import { PlayerExecution } from "engine/execution/PlayerExecution";
+import { TransportShipExecution } from "engine/execution/TransportShipExecution";
+import { getSpawnTiles } from "engine/execution/Util";
+import { WarshipExecution } from "engine/execution/WarshipExecution";
 import {
   Game,
   GameMode,
@@ -12,8 +12,8 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { toInt } from "../src/core/Util";
+} from "engine/game/Game";
+import { toInt } from "engine/Util";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";

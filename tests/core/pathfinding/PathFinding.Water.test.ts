@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { Game } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { PathFinding } from "../../../src/core/pathfinding/PathFinder";
+import { Game } from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { PathFinding } from "engine/pathfinding/PathFinder";
 import {
   PathStatus,
   SteppingPathFinder,
-} from "../../../src/core/pathfinding/types";
+} from "engine/pathfinding/types";
 import { setup } from "../../util/Setup";
 import { createGame, L, W } from "./_fixtures";
 

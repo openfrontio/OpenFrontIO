@@ -1,4 +1,4 @@
-import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
+import { MirvExecution } from "engine/execution/MIRVExecution";
 import {
   Game,
   MessageType,
@@ -6,7 +6,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
 

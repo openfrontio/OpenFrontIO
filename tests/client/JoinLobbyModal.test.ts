@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
+import { JoinLobbyModal } from "client/JoinLobbyModal";
 
 describe("JoinLobbyModal server time offset", () => {
   let nowMs = 0;

@@ -80,7 +80,7 @@ app.get(
       const { name } = req.params;
       const thumbnailPath = join(
         dirname(fileURLToPath(import.meta.url)),
-        "../../../resources/maps",
+        "resources/maps",
         name,
         "thumbnail.webp",
       );

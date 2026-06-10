@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/server/ServerEnv", () => ({
+vi.mock("server/ServerEnv", () => ({
   ServerEnv: {
     jwtIssuer: () => "https://archive.test.invalid",
     apiKey: () => "test-key",
@@ -10,7 +10,7 @@ vi.mock("../../src/server/ServerEnv", () => ({
   },
 }));
 
-vi.mock("../../src/server/Logger", () => ({
+vi.mock("server/Logger", () => ({
   logger: {
     child: () => ({
       info: vi.fn(),
@@ -20,8 +20,8 @@ vi.mock("../../src/server/Logger", () => ({
   },
 }));
 
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
+vi.mock("core-public/Schemas", async () => {
+  const actual = (await vi.importActual("core-public/Schemas")) as any;
   return {
     ...actual,
     GameRecordSchema: {
@@ -30,9 +30,9 @@ vi.mock("../../src/core/Schemas", async () => {
   };
 });
 
-import { GameType } from "../../src/core/game/Game";
-import type { GameRecord } from "../../src/core/Schemas";
-import { archive } from "../../src/server/Archive";
+import { GameType } from "engine/game/Game";
+import type { GameRecord } from "core-public/Schemas";
+import { archive } from "server/Archive";
 
 function buildRecord(gameType: GameType, flag: string | undefined): GameRecord {
   return {

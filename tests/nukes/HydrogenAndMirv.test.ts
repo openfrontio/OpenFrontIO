@@ -1,11 +1,11 @@
-import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
+import { ConstructionExecution } from "engine/execution/ConstructionExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Hydrogen Bomb and MIRV flows", () => {

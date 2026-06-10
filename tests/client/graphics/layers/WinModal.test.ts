@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RankedType } from "../../../../src/core/game/Game";
+import { RankedType } from "engine/game/Game";
 
-vi.mock("../../../../src/client/Utils", () => ({
+vi.mock("client/Utils", () => ({
   translateText: vi.fn((key: string) => {
     const translations: Record<string, string> = {
       "win_modal.exit": "Exit",
@@ -16,17 +16,17 @@ vi.mock("../../../../src/client/Utils", () => ({
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 
-vi.mock("../../../../src/client/Api", () => ({
+vi.mock("client/Api", () => ({
   getUserMe: vi.fn(async () => null),
 }));
 
-vi.mock("../../../../src/client/Cosmetics", () => ({
+vi.mock("client/Cosmetics", () => ({
   fetchCosmetics: vi.fn(async () => []),
   handlePurchase: vi.fn(),
   patternRelationship: vi.fn(() => ({})),
 }));
 
-vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
+vi.mock("client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {
     happytime: vi.fn(),
     requestAd: vi.fn(),

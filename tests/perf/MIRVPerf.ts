@@ -1,8 +1,8 @@
 import Benchmark from "benchmark";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { MirvExecution } from "../../src/core/execution/MIRVExecution";
-import { PlayerInfo, PlayerType, UnitType } from "../../src/core/game/Game";
+import { MirvExecution } from "engine/execution/MIRVExecution";
+import { PlayerInfo, PlayerType, UnitType } from "engine/game/Game";
 import { setup } from "../util/Setup";
 
 // Setup sparse territory scenario (small target area)

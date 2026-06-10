@@ -40,9 +40,9 @@ vi.mock("howler", () => {
 });
 
 // Mock the Sounds module so tests don't depend on actual asset paths
-vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
+vi.mock("client/sound/Sounds", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../src/client/sound/Sounds")>();
+    await importOriginal<typeof import("client/sound/Sounds")>();
   return {
     ...actual,
     soundEffectUrls: new Map([
@@ -62,14 +62,14 @@ vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
 import {
   MAX_CONCURRENT_SOUNDS,
   SoundManager,
-} from "../../../src/client/sound/SoundManager";
+} from "client/sound/SoundManager";
 import {
   PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
-} from "../../../src/client/sound/Sounds";
-import { EventBus } from "../../../src/core/EventBus";
-import { UserSettings } from "../../../src/core/game/UserSettings";
+} from "client/sound/Sounds";
+import { EventBus } from "engine/EventBus";
+import { UserSettings } from "engine/game/UserSettings";
 
 function createUserSettings(musicVolume = 0, sfxVolume = 1): UserSettings {
   const settings = new UserSettings();

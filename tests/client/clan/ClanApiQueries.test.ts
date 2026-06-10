@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../src/client/Api", () => ({
+vi.mock("client/Api", () => ({
   getApiBase: vi.fn(() => "http://localhost:3000"),
   getUserMe: vi.fn(),
 }));
 
-vi.mock("../../../src/client/Auth", () => ({
+vi.mock("client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
 
-import { getUserMe } from "../../../src/client/Api";
+import { getUserMe } from "client/Api";
 import {
   checkClanTagOwnership,
   fetchClanDetail,
@@ -19,8 +19,8 @@ import {
   fetchClanMembers,
   fetchClanRequests,
   fetchClans,
-} from "../../../src/client/ClanApi";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
+} from "client/ClanApi";
+import type { UserMeResponse } from "core-public/ApiSchemas";
 
 const userWithClans = (tags: string[]): UserMeResponse =>
   ({

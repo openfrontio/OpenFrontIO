@@ -1,5 +1,5 @@
-import { AutoUpgradeEvent } from "../src/client/InputHandler";
-import { EventBus } from "../src/core/EventBus";
+import { AutoUpgradeEvent } from "client/InputHandler";
+import { EventBus } from "engine/EventBus";
 
 describe("AutoUpgrade Feature", () => {
   let eventBus: EventBus;

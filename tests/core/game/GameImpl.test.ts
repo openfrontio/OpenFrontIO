@@ -1,17 +1,17 @@
-import { GameID } from "../../../src/core/Schemas";
-import { AttackExecution } from "../../../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-//import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
-import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
+import { GameID } from "core-public/Schemas";
+import { AttackExecution } from "engine/execution/AttackExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+//import { TransportShipExecution } from "engine/execution/TransportShipExecution";
+import { AllianceRequestExecution } from "engine/execution/alliance/AllianceRequestExecution";
 import {
   Game,
   GameType,
   Player,
   PlayerInfo,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
+} from "engine/game/Game";
+import { TileRef } from "engine/game/GameMap";
+import { GameUpdateType } from "engine/game/GameUpdates";
 import { setup } from "../../util/Setup";
 
 const gameID: GameID = "game_id";

@@ -1,15 +1,15 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
+import { NukeExecution } from "engine/execution/NukeExecution";
+import { SAMLauncherExecution } from "engine/execution/SAMLauncherExecution";
+import { SpawnExecution } from "engine/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "engine/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
-import { GameID } from "../../../src/core/Schemas";
+} from "engine/game/Game";
+import { GameID } from "core-public/Schemas";
 import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
 

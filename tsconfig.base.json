@@ -1,0 +1,30 @@
+// Shared compiler options for all workspace packages.
+// https://www.typescriptlang.org/tsconfig/
+{
+  "compilerOptions": {
+    // Language and Environment
+    "target": "ES2020",
+    // Modules
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "resources/*": ["./resources/*"],
+      "core-public/*": ["./packages/core-public/src/*"],
+      "shared/*": ["./packages/shared/src/*"],
+      "engine/*": ["./packages/engine/src/*"],
+      "client/*": ["./packages/client/src/*"],
+      "server/*": ["./packages/server/src/*"]
+    },
+    // Emit
+    "sourceMap": true,
+    // Type Checking
+    "allowUnusedLabels": false,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "strictNullChecks": true,
+    "useDefineForClassFields": false,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "types": ["vitest/globals", "node"]
+  }
+}

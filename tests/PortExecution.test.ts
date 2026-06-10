@@ -1,11 +1,11 @@
-import { PortExecution } from "../src/core/execution/PortExecution";
+import { PortExecution } from "engine/execution/PortExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;
