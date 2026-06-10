@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { MessageType, Tick } from "../../../core/game/Game";
 import {
   AllianceExtensionUpdate,
+  AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
   GameUpdateType,
@@ -51,6 +52,10 @@ export class ActionableEvents extends LitElement implements Controller {
 
   private updateMap = [
     [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
+    [
+      GameUpdateType.AllianceRequestReply,
+      this.onAllianceRequestReplyEvent.bind(this),
+    ],
     [GameUpdateType.BrokeAlliance, this.onBrokeAllianceEvent.bind(this)],
     [
       GameUpdateType.AllianceExtension,
@@ -246,6 +251,27 @@ export class ActionableEvents extends LitElement implements Controller {
       focusID: update.requestorID,
       requestorID: update.requestorID,
     });
+  }
+
+  private onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || update.request.recipientID !== myPlayer.smallID()) {
+      return;
+    }
+    // The incoming alliance request was resolved (accepted or rejected), so
+    // remove any pending request card from that player.
+    const requestorID = update.request.requestorID;
+    const remaining = this.events.filter(
+      (event) =>
+        !(
+          event.type === MessageType.ALLIANCE_REQUEST &&
+          event.focusID === requestorID
+        ),
+    );
+    if (remaining.length !== this.events.length) {
+      this.events = remaining;
+      this.requestUpdate();
+    }
   }
 
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
