@@ -34,6 +34,7 @@ interface ActionableEvent {
   priority?: number;
   allianceID?: number;
   duration?: Tick;
+  requestorID: number;
 }
 
 @customElement("actionable-events")
@@ -111,8 +112,13 @@ export class ActionableEvents extends LitElement implements Controller {
 
     const remainingEvents = this.events.filter(
       (event) =>
-        event.duration === undefined ||
-        this.game.ticks() - event.createdAt < event.duration,
+        (event.duration === undefined ||
+          this.game.ticks() - event.createdAt < event.duration) &&
+        (event.type !== MessageType.ALLIANCE_REQUEST ||
+          // We remove Alliance Requests if the requestor is no longer requesting an alliance with us.
+          (
+            this.game.playerBySmallID(event.requestorID) as PlayerView
+          ).isRequestingAllianceWith(this.game.myPlayer() as PlayerView)),
     );
 
     if (this.events.length !== remainingEvents.length) {
@@ -178,6 +184,7 @@ export class ActionableEvents extends LitElement implements Controller {
         createdAt: this.game.ticks(),
         focusID: other.smallID(),
         allianceID: alliance.id,
+        requestorID: other.smallID(),
       });
     }
 
@@ -237,6 +244,7 @@ export class ActionableEvents extends LitElement implements Controller {
       priority: 0,
       duration: this.game.config().allianceRequestDuration(),
       focusID: update.requestorID,
+      requestorID: update.requestorID,
     });
   }
 
