@@ -136,6 +136,11 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private onToggleHelpMessagesButtonClick() {
+    this.userSettings.toggleHelpMessages();
+    this.requestUpdate();
+  }
+
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.eventBus.emit(new RefreshGraphicsEvent());
@@ -388,6 +393,47 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.alertFrame()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onToggleHelpMessagesButtonClick}"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="10"
+                  cy="10"
+                  r="9"
+                  stroke="white"
+                  stroke-width="1.5"
+                />
+                <path
+                  d="M10 9V14"
+                  stroke="white"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+                <circle cx="10" cy="6.5" r="1" fill="white" />
+              </svg>
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.help_messages_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.help_messages_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.helpMessages()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
