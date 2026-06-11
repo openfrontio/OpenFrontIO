@@ -466,7 +466,13 @@ export class GPURenderer {
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
     this.unitPass = new UnitPass(gl, header, this.paletteTex, this.settings);
-    this.namePass = new NamePass(gl, header, paletteData, this.settings);
+    this.namePass = new NamePass(
+      gl,
+      header,
+      paletteData,
+      this.settings,
+      config,
+    );
     this.fxPass = new FxPass(gl, header, this.settings, config);
     this.barPass = new BarPass(gl, header, this.settings, config);
     this.worldTextPass = new WorldTextPass(gl, this.settings, config);

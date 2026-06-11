@@ -145,6 +145,7 @@ export interface PlayerStatusData {
   nukeTargetsMe: boolean;
   traitorRemainingTicks: number;
   allianceFraction: number;
+  allianceRemainingTicks: number;
 }
 
 /** Ghost structure preview data for build-mode visualization. */

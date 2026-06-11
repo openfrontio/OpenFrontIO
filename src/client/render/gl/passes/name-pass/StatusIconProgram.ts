@@ -46,6 +46,7 @@ export class StatusIconProgram {
     atlas: ParsedAtlas,
     playerDataTex: WebGLTexture,
     maxPlayers: number,
+    allianceFlashWindowTicks: number,
   ) {
     this.gl = gl;
     this.playerDataTex = playerDataTex;
@@ -81,6 +82,11 @@ export class StatusIconProgram {
     gl.uniform1f(
       gl.getUniformLocation(this.program, "uStatusPad")!,
       sm.pad ?? 0,
+    );
+    // Flash window matches the alliance renewal prompt (10 ticks/sec)
+    gl.uniform1f(
+      gl.getUniformLocation(this.program, "uAllianceFlashWindowSec")!,
+      allianceFlashWindowTicks / 10,
     );
 
     // Dynamic uniform locations
