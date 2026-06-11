@@ -7,6 +7,10 @@ import { toggle } from "./props/Toggle";
 
 export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
   return [
+    folder("Display", [
+      slider(s.display, "dprScale", d.display, 0.25, 1, 0.05, "DPR Scale"),
+    ]),
+
     folder("Pass Enables", [
       toggle(s.passEnabled, "terrain", d.passEnabled),
       toggle(s.passEnabled, "territory", d.passEnabled),

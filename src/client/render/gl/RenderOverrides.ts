@@ -48,6 +48,9 @@ export function applyGraphicsOverrides(
   if (overrides.railroad?.railThickness !== undefined) {
     settings.railroad.railThickness = overrides.railroad.railThickness;
   }
+  if (overrides.display?.dprScale !== undefined) {
+    settings.display.dprScale = overrides.display.dprScale;
+  }
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
   }

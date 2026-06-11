@@ -960,6 +960,9 @@
     "rail_distance_desc": "How far zoomed out train tracks remain visible",
     "rail_thickness_label": "Train track thickness",
     "rail_thickness_desc": "How wide train tracks are drawn",
+    "section_display": "Display",
+    "dpr_scale_label": "Render resolution",
+    "dpr_scale_desc": "Scales the render resolution — lower improves performance",
     "section_effects": "Effects",
     "reset_label": "Reset to defaults",
     "reset_desc": "Clear all graphics overrides"

@@ -102,6 +102,9 @@
     "enemyG": 0,
     "enemyB": 0
   },
+  "display": {
+    "dprScale": 1
+  },
   "railroad": {
     "railMinZoom": 4,
     "railFadeRange": 2,

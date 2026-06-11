@@ -15,6 +15,9 @@
  *   ty = -offsetY * sy
  */
 
+import type { RenderSettings } from "./RenderSettings";
+import { getDpr } from "./utils/Dpr";
+
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 20;
 const DBLCLICK_MIN_ZOOM = 0.7;
@@ -34,7 +37,11 @@ export class Camera {
   /** True until fitMap() has been called with valid canvas dimensions. */
   private needsInitialFit = true;
 
-  constructor(mapWidth: number, mapHeight: number) {
+  constructor(
+    mapWidth: number,
+    mapHeight: number,
+    private settings: RenderSettings,
+  ) {
     this.mapW = mapWidth;
     this.mapH = mapHeight;
     this.offsetX = mapWidth / 2;
@@ -44,7 +51,7 @@ export class Camera {
 
   /** Update canvas pixel dimensions. Triggers initial fitMap on first call. */
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
     this.canvasW = Math.round(cssWidth * dpr);
     this.canvasH = Math.round(cssHeight * dpr);
     if (this.needsInitialFit) {
@@ -163,7 +170,7 @@ export class Camera {
 
   /** Convert screen pixel position to world coordinates. */
   screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
     const ndcX = ((screenX * dpr) / this.canvasW) * 2 - 1;
     const ndcY = -(((screenY * dpr) / this.canvasH) * 2 - 1);
     const sx = (this.zoom * 2) / this.canvasW;
@@ -176,7 +183,7 @@ export class Camera {
 
   /** Convert world coordinates to screen pixel position (CSS pixels). */
   worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
     return {
       x: (this.zoom * (worldX - this.offsetX)) / dpr + this.canvasW / (2 * dpr),
       y: (this.zoom * (worldY - this.offsetY)) / dpr + this.canvasH / (2 * dpr),

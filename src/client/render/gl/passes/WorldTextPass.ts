@@ -10,6 +10,7 @@
 import type { Config } from "../../../../core/configuration/Config";
 import type { BonusEvent, ConquestFx } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
+import { getDpr } from "../utils/Dpr";
 import { createProgram } from "../utils/GlUtils";
 import type { GlyphTables } from "./name-pass/AtlasData";
 import { buildGlyphTables, parseAtlasData } from "./name-pass/AtlasData";
@@ -399,7 +400,7 @@ export class WorldTextPass {
     let count = 0;
     // canvasW in Camera is cssWidth*dpr, so `zoom` is device-px-per-world-unit.
     // Multiply screen-relative scales by dpr to keep a constant CSS-pixel size.
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
 
     for (const popup of this.active) {
       const elapsed = now - popup.startMs;
@@ -541,7 +542,7 @@ export class WorldTextPass {
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uZoom, zoom);
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
     gl.uniform1f(
       this.uMinScreenScale,
       this.settings.bonusPopup.minScreenScale * dpr,

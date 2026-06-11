@@ -74,6 +74,7 @@ import {
   createDebugGui,
   createRenderSettings,
   deepAssign,
+  getDpr,
   GameView as WebGLGameView,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
@@ -351,7 +352,7 @@ function mountWebGLFrameLoop(
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(view.getSettings());
     const centerX =
       transformHandler.offsetX +
       mapWidth / 2 +

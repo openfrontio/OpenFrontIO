@@ -29,6 +29,11 @@ export const GraphicsOverridesSchema = z
         railThickness: z.number(),
       })
       .partial(),
+    display: z
+      .object({
+        dprScale: z.number(),
+      })
+      .partial(),
     passEnabled: z
       .object({
         fx: z.boolean(),

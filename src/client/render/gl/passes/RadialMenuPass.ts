@@ -13,6 +13,8 @@
  */
 
 import type { RadialMenuItem } from "../Events";
+import type { RenderSettings } from "../RenderSettings";
+import { getDpr } from "../utils/Dpr";
 import { createProgram } from "../utils/GlUtils";
 
 import arcFragSrc from "../shaders/radial-menu/arcs.frag.glsl?raw";
@@ -150,7 +152,10 @@ export class RadialMenuPass {
   private savedItems: RadialMenuItem[] = [];
   private savedCenterItem: RadialMenuItem | null = null;
 
-  constructor(gl: WebGL2RenderingContext) {
+  constructor(
+    gl: WebGL2RenderingContext,
+    private settings: RenderSettings,
+  ) {
     this.gl = gl;
     this.emojiMap = buildEmojiMap();
 
@@ -437,7 +442,7 @@ export class RadialMenuPass {
     if (this.items.length === 0 && !this.centerItem) return;
 
     const gl = this.gl;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
     const vw = gl.drawingBufferWidth;
     const vh = gl.drawingBufferHeight;
     const ax = this.anchorX * dpr;
@@ -491,7 +496,7 @@ export class RadialMenuPass {
     centerHovered: boolean,
   ): void {
     const gl = this.gl;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDpr(this.settings);
     const n = items.length;
     const hasCenter = centerItem !== null;
     const outerR = cfg.outerR * dpr;

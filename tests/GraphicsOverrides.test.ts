@@ -66,6 +66,17 @@ describe("GraphicsOverridesSchema", () => {
     }
   });
 
+  test("accepts partial display overrides", () => {
+    const cases = [
+      { display: {} },
+      { display: { dprScale: 0.5 } },
+      { display: { dprScale: 2 } },
+    ];
+    for (const c of cases) {
+      expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
+    }
+  });
+
   test("rejects wrong field types", () => {
     expect(
       GraphicsOverridesSchema.safeParse({ name: { nameScaleFactor: "big" } })
@@ -92,6 +103,11 @@ describe("GraphicsOverridesSchema", () => {
     expect(
       GraphicsOverridesSchema.safeParse({
         railroad: { railThickness: "wide" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        display: { dprScale: "retina" },
       }).success,
     ).toBe(false);
   });
@@ -259,6 +275,14 @@ describe("applyGraphicsOverrides", () => {
     expect(r.railAlpha).toBe(defaults.railAlpha);
     const z = gen({ railroad: { railMinZoom: 1 } }).railroad;
     expect(z.railThickness).toBe(defaults.railThickness);
+  });
+
+  test("applies dprScale override (including values below 1)", () => {
+    expect(gen({ display: { dprScale: 0.5 } }).display.dprScale).toBe(0.5);
+    expect(gen({ display: { dprScale: 2 } }).display.dprScale).toBe(2);
+    expect(gen({ display: {} }).display.dprScale).toBe(
+      createRenderSettings().display.dprScale,
+    );
   });
 
   test("classicIcons + name overrides compose independently", () => {

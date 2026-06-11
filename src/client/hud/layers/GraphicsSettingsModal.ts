@@ -50,6 +50,10 @@ const RAIL_THICKNESS_MIN = 0.5;
 const RAIL_THICKNESS_MAX = 3;
 const RAIL_THICKNESS_STEP = 0.1;
 
+const DPR_SCALE_MIN = 0.25;
+const DPR_SCALE_MAX = 1;
+const DPR_SCALE_STEP = 0.05;
+
 export class ShowGraphicsSettingsModalEvent {
   constructor(
     public readonly isVisible: boolean = true,
@@ -233,6 +237,27 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentDprScale(): number {
+    return (
+      this.userSettings.graphicsOverrides().display?.dprScale ??
+      renderDefaults.display.dprScale
+    );
+  }
+
+  private patchDisplay(patch: Partial<GraphicsOverrides["display"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      display: { ...current.display, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private onDprScaleChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchDisplay({ dprScale: value });
+  }
+
   private onHighlightFillChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchMapOverlay({ highlightFillBrighten: value });
@@ -339,6 +364,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const territoryAlpha = this.currentTerritoryAlpha();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
+    const dprScale = this.currentDprScale();
 
     return html`
       <div
@@ -647,6 +673,37 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${railThickness.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_display")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.dpr_scale_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.dpr_scale_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${DPR_SCALE_MIN}
+                  max=${DPR_SCALE_MAX}
+                  step=${DPR_SCALE_STEP}
+                  .value=${String(dprScale)}
+                  @input=${this.onDprScaleChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${dprScale.toFixed(2)}
               </div>
             </div>
 

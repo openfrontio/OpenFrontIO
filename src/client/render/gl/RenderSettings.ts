@@ -107,6 +107,13 @@ export interface RenderSettings {
     enemyG: number;
     enemyB: number;
   };
+  display: {
+    /**
+     * Multiplier on the native devicePixelRatio for the canvas backing
+     * store. Below 1 renders fewer pixels (faster); above 1 supersamples.
+     */
+    dprScale: number;
+  };
   railroad: {
     railMinZoom: number;
     railFadeRange: number;

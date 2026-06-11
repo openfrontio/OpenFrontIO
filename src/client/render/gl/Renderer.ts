@@ -62,6 +62,7 @@ import { WorldTextPass } from "./passes/WorldTextPass";
 import { createRenderSettings, type RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
+import { getDpr } from "./utils/Dpr";
 import {
   createTexture2D,
   toScreen,
@@ -168,6 +169,12 @@ export class GPURenderer {
   private localPlayerID = 0;
   private playerTeams = new Map<number, string>(); // smallID → team
 
+  // Last CSS size pushed via resize(), kept so a dprScale settings change can
+  // re-create the canvas backing store at the new resolution mid-game.
+  private cssWidth = 0;
+  private cssHeight = 0;
+  private appliedDprScale = 1;
+
   // Alt-view: affiliation recoloring (space hold)
   private altView = false;
   // Grid-view: coordinate grid overlay (M toggle)
@@ -215,7 +222,7 @@ export class GPURenderer {
     this.mapW = mapW;
     this.mapH = mapH;
 
-    this.camera = new Camera(mapW, mapH);
+    this.camera = new Camera(mapW, mapH, this.settings);
 
     // --- Terrain (static) ---
     const terrainRGBA = buildTerrainRGBA(terrainBytes, mapW, mapH);
@@ -471,7 +478,7 @@ export class GPURenderer {
     this.barPass = new BarPass(gl, header, this.settings, config);
     this.worldTextPass = new WorldTextPass(gl, this.settings, config);
     this.worldTextPass.setMapWidth(this.mapW);
-    this.radialMenuPass = new RadialMenuPass(gl);
+    this.radialMenuPass = new RadialMenuPass(gl, this.settings);
     this.selectionBoxPass = new SelectionBoxPass(gl);
     this.moveIndicatorPass = new MoveIndicatorPass(gl, this.settings);
     this.nukeTrajectoryPass = new NukeTrajectoryPass(gl, this.settings);
@@ -552,7 +559,10 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    this.cssWidth = cssWidth;
+    this.cssHeight = cssHeight;
+    this.appliedDprScale = this.settings.display.dprScale;
+    const dpr = getDpr(this.settings);
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
     this.camera.resize(cssWidth, cssHeight);
@@ -1201,6 +1211,12 @@ export class GPURenderer {
   draw(): void {
     const now = performance.now();
     this.trackFps(now);
+    if (
+      this.appliedDprScale !== this.settings.display.dprScale &&
+      this.cssWidth > 0
+    ) {
+      this.resize(this.cssWidth, this.cssHeight);
+    }
     this.uploadTextures();
     this.computeTextures();
     this.renderFrame();
