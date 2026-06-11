@@ -483,7 +483,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
         "markerXRadius",
         d.nukeTrajectory,
         2,
-        16,
+        64,
         1,
         "X Marker (px)",
       ),

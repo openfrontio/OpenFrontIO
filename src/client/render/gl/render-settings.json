@@ -242,7 +242,7 @@
     "interceptOutlineG": 0.353,
     "interceptOutlineB": 0.353,
     "markerCircleRadius": 6,
-    "markerXRadius": 8
+    "markerXRadius": 40
   },
   "nukeTelegraph": {
     "strokeWidth": 1.5,
