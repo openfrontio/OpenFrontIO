@@ -31,9 +31,13 @@ uniform float uEmojiAtlasH;  // emoji atlas texture height
 // Row offset (multiples of uFontBase * nameWorldScale)
 uniform float uEmojiRowOffset;
 
+uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor is over (0 = none)
+uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
+
 out vec2 vUV;
 flat out int vIconType;  // 0 = flag, 1 = emoji, -1 = discard
 flat out int vFlagLayer; // valid when vIconType == 0
+out float vHoverAlpha;
 
 void main() {
   // Decode instance ID → playerIdx + iconType (0=flag, 1=emoji)
@@ -44,7 +48,7 @@ void main() {
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, isHuman, nameHalfWidth
-  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayer, emojiIdx, [free], [free]
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayer, emojiIdx, smallID, [free]
 
   // Early out: dead player
   if (pd1.w <= 0.0) {
@@ -52,6 +56,7 @@ void main() {
     vUV = vec2(0.0);
     vIconType = -1;
     vFlagLayer = 0;
+    vHoverAlpha = 1.0;
     return;
   }
 
@@ -62,6 +67,7 @@ void main() {
     vUV = vec2(0.0);
     vIconType = -1;
     vFlagLayer = 0;
+    vHoverAlpha = 1.0;
     return;
   }
 
@@ -86,6 +92,7 @@ void main() {
     vUV = vec2(0.0);
     vIconType = -1;
     vFlagLayer = 0;
+    vHoverAlpha = 1.0;
     return;
   }
 
@@ -137,6 +144,11 @@ void main() {
     vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
     vFlagLayer = 0;
   }
+
+  // Fade the icon along with the rest of the name plate when the cursor is
+  // over any part of it. Hit test runs on the CPU (NamePass).
+  vHoverAlpha = (uFadeOwnerID > 0.0 && pd4.z == uFadeOwnerID)
+    ? uHoverFadeAlpha : 1.0;
 
   // Quad world position
   vec2 worldPos = iconOrigin + aPos * vec2(iconW, iconH);

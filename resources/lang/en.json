@@ -938,6 +938,8 @@
     "name_scale_label": "Name Scale",
     "name_cull_label": "Minimum name size",
     "name_cull_desc": "Hide names smaller than this size",
+    "hover_fade_label": "Name opacity under cursor",
+    "hover_fade_desc": "How visible names are while your cursor is over them (1 to disable fading)",
     "colored_names_label": "Name color",
     "colored_names_desc": "Show player names in their player color or in black",
     "colored": "Colored",

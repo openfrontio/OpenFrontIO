@@ -20,6 +20,10 @@ const NAME_CULL_MIN = 0;
 const NAME_CULL_MAX = 0.05;
 const NAME_CULL_STEP = 0.001;
 
+const HOVER_FADE_MIN = 0;
+const HOVER_FADE_MAX = 1;
+const HOVER_FADE_STEP = 0.05;
+
 const HIGHLIGHT_FILL_MIN = 0;
 const HIGHLIGHT_FILL_MAX = 1;
 const HIGHLIGHT_FILL_STEP = 0.01;
@@ -145,6 +149,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     return (
       this.userSettings.graphicsOverrides().name?.cullThreshold ??
       renderDefaults.name.cullThreshold
+    );
+  }
+
+  private currentHoverFade(): number {
+    return (
+      this.userSettings.graphicsOverrides().name?.hoverFadeAlpha ??
+      renderDefaults.name.hoverFadeAlpha
     );
   }
 
@@ -309,6 +320,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchName({ cullThreshold: value });
   }
 
+  private onHoverFadeChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchName({ hoverFadeAlpha: value });
+  }
+
   private currentDarkNames(): boolean {
     return (
       this.userSettings.graphicsOverrides().name?.darkNames ??
@@ -330,6 +346,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
     const nameScale = this.currentNameScale();
     const nameCull = this.currentNameCull();
+    const hoverFade = this.currentHoverFade();
     const namesColored = !this.currentDarkNames();
     const classicIcons = this.currentClassicIcons();
     const highlightFill = this.currentHighlightFill();
@@ -422,6 +439,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${nameCull.toFixed(3)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.hover_fade_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.hover_fade_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HOVER_FADE_MIN}
+                  max=${HOVER_FADE_MAX}
+                  step=${HOVER_FADE_STEP}
+                  .value=${String(hoverFade)}
+                  @input=${this.onHoverFadeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${hoverFade.toFixed(2)}
               </div>
             </div>
 

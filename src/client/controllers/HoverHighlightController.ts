@@ -31,6 +31,9 @@ export class HoverHighlightController implements Controller {
   }
 
   private onMouseMove(e: MouseMoveEvent): void {
+    const world = this.transformHandler.screenToWorldCoordinatesFloat(e.x, e.y);
+    this.view.setMouseWorldPos(world.x, world.y);
+
     const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     let ownerID = 0;
     if (this.game.isValidCoord(cell.x, cell.y)) {

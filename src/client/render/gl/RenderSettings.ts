@@ -201,6 +201,8 @@ export interface RenderSettings {
     nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Alpha multiplier applied to a name while the cursor is over it. */
+    hoverFadeAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;

@@ -325,6 +325,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       toggle(s.name, "fillUsePlayerColor", d.name, "Fill = Player Color"),
       slider(s.name, "emojiRowOffset", d.name, 0, 5, 0.1, "Emoji Row Offset"),
       slider(s.name, "statusRowOffset", d.name, 0, 5, 0.1, "Status Row Offset"),
+      slider(s.name, "hoverFadeAlpha", d.name, 0, 1, 0.05, "Hover Fade Alpha"),
     ]),
 
     folder("FX", [

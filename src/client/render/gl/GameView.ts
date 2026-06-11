@@ -400,6 +400,9 @@ export class GameView {
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);
   }
+  setMouseWorldPos(x: number, y: number): void {
+    this.renderer?.setMouseWorldPos(x, y);
+  }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.renderer?.setHighlightStructureTypes(unitTypes);
   }
