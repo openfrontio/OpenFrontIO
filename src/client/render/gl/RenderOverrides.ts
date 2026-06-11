@@ -35,8 +35,18 @@ export function applyGraphicsOverrides(
     settings.mapOverlay.highlightThicken =
       overrides.mapOverlay.highlightThicken;
   }
+  if (overrides.mapOverlay?.territorySaturation !== undefined) {
+    settings.mapOverlay.territorySaturation =
+      overrides.mapOverlay.territorySaturation;
+  }
+  if (overrides.mapOverlay?.territoryAlpha !== undefined) {
+    settings.mapOverlay.territoryAlpha = overrides.mapOverlay.territoryAlpha;
+  }
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
+  }
+  if (overrides.railroad?.railThickness !== undefined) {
+    settings.railroad.railThickness = overrides.railroad.railThickness;
   }
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;

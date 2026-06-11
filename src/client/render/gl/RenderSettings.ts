@@ -69,6 +69,10 @@ export interface RenderSettings {
     trailAlpha: number;
     defenseCheckerDarken: number;
     territoryDefenseDarken: number;
+    /** Saturation of the territory fill. 1 = full color, 0 = grayscale. */
+    territorySaturation: number;
+    /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
+    territoryAlpha: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;
@@ -108,6 +112,8 @@ export interface RenderSettings {
     railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
+    /** Track width multiplier (1 = default width). */
+    railThickness: number;
   };
   structure: {
     iconSize: number;
@@ -190,6 +196,9 @@ export interface RenderSettings {
     outlineB: number;
     outlineUsePlayerColor: boolean;
     fillUsePlayerColor: boolean;
+    /** Name fill grayscale shade by player type (0 = black). Human is always 0. */
+    nameShadeNation: number;
+    nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
   };

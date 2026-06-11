@@ -207,6 +207,14 @@ export class UserSettings {
     this.setBool("settings.alertFrame", !this.alertFrame());
   }
 
+  helpMessages() {
+    return this.getBool("settings.helpMessages", true);
+  }
+
+  toggleHelpMessages() {
+    this.setBool("settings.helpMessages", !this.helpMessages());
+  }
+
   toggleRandomName() {
     this.setBool("settings.anonymousNames", !this.anonymousNames());
   }

@@ -263,7 +263,7 @@ export class Config {
     const decayRate = Math.LN2 / 50;
 
     // Approaches 0 as numTradeShips increase
-    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 200);
+    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 400);
 
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
@@ -538,6 +538,9 @@ export class Config {
       return 95;
     }
     return 80;
+  }
+  armyLimitWarningThreshold(): number {
+    return 0.8;
   }
   boatMaxNumber(): number {
     if (this.isUnitDisabled(UnitType.TransportShip)) {

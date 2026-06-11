@@ -107,6 +107,7 @@ export class PlayerView {
 
   private _territoryColor: Colord;
   private _borderColor: Colord;
+  private _railColor: Colord;
   // Update here to include structure light and dark colors
   private _structureColors: { light: Colord; dark: Colord };
 
@@ -172,6 +173,17 @@ export class PlayerView {
         this.cosmetics.color?.color ??
         maybeFocusedBorderColor.toHex(),
     );
+
+    // Rail color (only used for the local player's rails): white for
+    // visibility, flipped to black when the territory is too light for white
+    // to read against it. Patterns paint both colors, so average them.
+    const railBackdropBrightness = pattern
+      ? (this._territoryColor.brightness() + this._borderColor.brightness()) / 2
+      : this._territoryColor.brightness();
+    this._railColor =
+      railBackdropBrightness > 0.8
+        ? colord("rgb(0,0,0)")
+        : theme.focusedBorderColor();
 
     const baseRgb = this._borderColor.toRgb();
 
@@ -251,6 +263,10 @@ export class PlayerView {
 
   structureColors(): { light: Colord; dark: Colord } {
     return this._structureColors;
+  }
+
+  railColor(): Colord {
+    return this._railColor;
   }
 
   /**

@@ -25,6 +25,8 @@ uniform float uHighlightBrighten;  // hover contrast boost strength; 0 = disable
 uniform sampler2D uDefenseCoverageTex; // R8 — 1.0 = tile defended by same-owner post
 uniform float uDefenseDarken;      // multiplier applied to fill on defended tiles
 uniform sampler2D uBorderTex;      // RGBA8 — border flags; R > 0.25 = border tile
+uniform float uSaturation;         // 1 = full color, 0 = grayscale
+uniform float uTerritoryAlpha;     // absolute fill opacity; 1 = fully opaque
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -120,6 +122,14 @@ void main() {
       texelFetch(uBorderTex, tc, 0).r <= 0.25) {
     color.rgb *= uDefenseDarken;
   }
+
+  // Adjust how saturated the fill is by blending toward its luminance.
+  if (uSaturation != 1.0) {
+    float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = mix(vec3(luma), color.rgb, uSaturation);
+  }
+
+  color.a = uTerritoryAlpha;
 
   fragColor = color;
 }

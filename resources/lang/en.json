@@ -521,6 +521,7 @@
     "map": "Map",
     "featured": "Featured",
     "all": "All",
+    "favorites": "Favourites",
     "world": "World",
     "worldinverted": "World Inverted",
     "giantworldmap": "Giant World Map",
@@ -615,6 +616,7 @@
     "mississippiriver": "Mississippi River",
     "titan": "Titan",
     "hongkong": "Hong Kong"
+    "juandefucastrait": "Juan De Fuca Strait"
   },
   "map_categories": {
     "featured": "Featured",
@@ -624,11 +626,15 @@
     "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
-    "arcade": "Arcade"
+    "arcade": "Arcade",
+    "favorites": "Favourites"
   },
   "map_component": {
     "loading": "Loading...",
-    "error": "Error"
+    "error": "Error",
+    "favorite": "Add to favourites",
+    "unfavorite": "Remove from favourites",
+    "favorites_empty": "Click the star on any map to favourite it"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -676,7 +682,7 @@
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",
-    "tag_not_member": "Join the {tag} clan before using its tag.",
+    "tag_not_member": "Join the {tag} clan before using its tag. Click this message to join it.",
     "tag_check_failed": "Couldn't verify clan tag. Try again or remove it."
   },
   "host_modal": {
@@ -810,6 +816,8 @@
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
+    "help_messages_label": "Help Messages",
+    "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "cursor_cost_label_label": "Cursor Build Cost",
@@ -947,8 +955,14 @@
     "highlight_brighten_desc": "How strongly the border brightens on hover (0 to disable)",
     "highlight_thicken_label": "Border highlight thickness",
     "highlight_thicken_desc": "How much the border thickens on hover",
+    "territory_sat_label": "Territory saturation",
+    "territory_sat_desc": "How vivid the territory fill colors are (lower mutes them)",
+    "territory_alpha_label": "Territory opacity",
+    "territory_alpha_desc": "How opaque the territory fill is (lower lets terrain show through)",
     "rail_distance_label": "Train track draw distance",
     "rail_distance_desc": "How far zoomed out train tracks remain visible",
+    "rail_thickness_label": "Train track thickness",
+    "rail_thickness_desc": "How wide train tracks are drawn",
     "section_effects": "Effects",
     "reset_label": "Reset to defaults",
     "reset_desc": "Clear all graphics overrides"
@@ -1128,8 +1142,6 @@
     "received_troops_from_player": "Received {troops} troops from {name}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "received_gold_from_player": "Received {gold} gold from {name}",
-    "unit_captured_by_enemy": "Your {unit} was captured by {name}",
-    "captured_enemy_unit": "Captured {unit} from {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "no_boats_available": "No boats available, max {max}"
   },
@@ -1385,6 +1397,13 @@
     "dismiss": "Dismiss",
     "go_to_item": "Go to item {num}",
     "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
+  },
+  "control_panel": {
+    "army_limit_warning": "You're near your army limit! Consider sending troops to teammates.",
+    "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself.",
+    "allied_afk_neighbor_info": "You can attack disconnected players even if you are allied with them.",
+    "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
+    "low_troops_warning": "You are very low on troops - You should always keep some troops for defense."
   },
   "ios_banner": {
     "text": "For fullscreen, add OpenFront to your Home Screen",

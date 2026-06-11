@@ -145,6 +145,12 @@ export class EventsDisplay extends LitElement implements Controller {
     if (!myPlayer || e.requestor.id() !== myPlayer.id()) {
       return;
     }
+    // If the recipient already has a pending alliance request to us, this
+    // action accepts that request instead of sending a new one, so don't
+    // show the "alliance request sent" confirmation.
+    if (e.recipient.isRequestingAllianceWith(e.requestor)) {
+      return;
+    }
     this.addEvent({
       description: translateText("events_display.alliance_request_sent", {
         name: e.recipient.name(),

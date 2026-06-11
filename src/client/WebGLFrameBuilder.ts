@@ -109,10 +109,15 @@ export class WebGLFrameBuilder {
   }
 
   private syncLocalPlayer(gameView: GameView): void {
-    const sid = gameView.myPlayer()?.smallID() ?? 0;
+    const me = gameView.myPlayer();
+    const sid = me?.smallID() ?? 0;
     if (sid === this.localPlayerSmallID) return;
     this.localPlayerSmallID = sid;
     this.view.setLocalPlayerID(sid);
+    if (me) {
+      const rail = me.railColor().toRgb();
+      this.view.setLocalRailColor(rail.r / 255, rail.g / 255, rail.b / 255);
+    }
   }
 
   /**
@@ -134,12 +139,9 @@ export class WebGLFrameBuilder {
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
-      // myPlayer reads as a near-white with a faint gold/silver tint so the
-      // local-player ring is visually distinct from any team color; everyone
-      // else uses their territory tint.
-      const c = isSelf
-        ? { r: 248, g: 218, b: 140 }
-        : p.territoryColor().toRgb();
+      // myPlayer's ring color is overridden in SpawnOverlayPass (animated
+      // white→gold pulse); everyone else uses their territory tint.
+      const c = p.territoryColor().toRgb();
       centers.push({
         // spawnTile tracks the player's currently-selected spawn directly —
         // updates the same tick the player picks a new location (faster than
