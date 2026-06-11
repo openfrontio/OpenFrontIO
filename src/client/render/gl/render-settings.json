@@ -189,7 +189,8 @@
     "hBombGlowG": 0.72,
     "hBombGlowB": 0.15,
     "hBombGlowStrength": 0.5,
-    "hBombGlowInner": 0.45
+    "hBombGlowInner": 0.45,
+    "untargetableAlpha": 0.6
   },
   "name": {
     "lerpSpeed": 10,

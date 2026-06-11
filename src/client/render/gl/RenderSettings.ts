@@ -223,6 +223,7 @@ export interface RenderSettings {
     hBombGlowB: number;
     hBombGlowStrength: number; // peak opacity of the glow
     hBombGlowInner: number; // radial falloff start (0..1, quad-space)
+    untargetableAlpha: number; // alpha for nukes SAMs can't target (0..1)
   };
   name: {
     lerpSpeed: number;
