@@ -1218,7 +1218,7 @@
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
-    "ffa_collusion": "Collusion (pre-game agreement) is not allowed in FFA",
+    "ffa_collusion": "Reminder: teaming up before the game is not allowed in FFA",
     "dont_show_again": "Don't show again",
     "singleplayer_game_paused": "Game paused",
     "multiplayer_game_paused": "Game paused by Lobby Creator",
