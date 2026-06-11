@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import {
   Difficulty,
@@ -9,10 +10,10 @@ import {
 } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
-import { getFavoriteMaps, toggleFavoriteMap } from "./MapFavorites";
+import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
 const randomMap = assetUrl("images/RandomMap.webp");
 
-type MapTab = "featured" | "all";
+type MapTab = "featured" | "all" | "favorites";
 
 @customElement("map-picker")
 export class MapPicker extends LitElement {
@@ -85,10 +86,17 @@ export class MapPicker extends LitElement {
   }
 
   private renderMapGrid(maps: GameMapType[]) {
+    // Keyed by map so cards keep their identity when the list shifts
+    // (e.g. the selected map gets prepended to the featured grid) —
+    // positional reuse would leave stale thumbnails behind.
     return html`<div
       class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
     >
-      ${maps.map((mapValue) => this.renderMapCard(mapValue))}
+      ${repeat(
+        maps,
+        (mapValue) => mapValue,
+        (mapValue) => this.renderMapCard(mapValue),
+      )}
     </div>`;
   }
 
@@ -140,19 +148,9 @@ export class MapPicker extends LitElement {
     if (!this.useRandomMap && !featured.includes(this.selectedMap)) {
       featuredMapList = [this.selectedMap, ...featured];
     }
-    return html`<div class="space-y-8">
-      <div class="w-full">
-        ${this.renderSectionHeading(translateText("map_categories.featured"))}
-        ${this.renderMapGrid(featuredMapList)}
-      </div>
-      ${this.favorites.length > 0
-        ? html`<div class="w-full">
-            ${this.renderSectionHeading(
-              translateText("map_categories.favorites"),
-            )}
-            ${this.renderMapGrid(this.favorites)}
-          </div>`
-        : null}
+    return html`<div class="w-full">
+      ${this.renderSectionHeading(translateText("map_categories.featured"))}
+      ${this.renderMapGrid(featuredMapList)}
     </div>`;
   }
 
@@ -164,6 +162,34 @@ export class MapPicker extends LitElement {
           this.renderCategoryBar(categoryKey, maps),
         )}
     </div>`;
+  }
+
+  private renderFavoritesTab() {
+    if (this.favorites.length === 0) {
+      return html`<div
+        class="w-full flex flex-col items-center justify-center gap-3 py-12 px-4 text-center rounded-xl border border-dashed border-white/10 bg-black/20"
+      >
+        <div class="text-white/30">${starIcon(false, "w-8 h-8")}</div>
+        <p class="text-sm text-white/50 leading-relaxed max-w-xs">
+          ${translateText("map_component.favorites_empty")}
+        </p>
+      </div>`;
+    }
+    return html`<div class="w-full">
+      ${this.renderSectionHeading(translateText("map_categories.favorites"))}
+      ${this.renderMapGrid(this.favorites)}
+    </div>`;
+  }
+
+  private renderActiveTab() {
+    switch (this.activeTab) {
+      case "all":
+        return this.renderAllTab();
+      case "favorites":
+        return this.renderFavoritesTab();
+      default:
+        return this.renderFeaturedTab();
+    }
   }
 
   private renderTabButton(tab: MapTab, label: string) {
@@ -188,15 +214,14 @@ export class MapPicker extends LitElement {
           <div
             role="tablist"
             aria-label="${translateText("map.map")}"
-            class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+            class="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
           >
             ${this.renderTabButton("featured", translateText("map.featured"))}
             ${this.renderTabButton("all", translateText("map.all"))}
+            ${this.renderTabButton("favorites", translateText("map.favorites"))}
           </div>
         </div>
-        ${this.activeTab === "all"
-          ? this.renderAllTab()
-          : this.renderFeaturedTab()}
+        ${this.renderActiveTab()}
         <div
           class="w-full ${this.randomMapDivider
             ? "pt-4 border-t border-white/5"

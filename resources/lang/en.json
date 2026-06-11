@@ -638,7 +638,8 @@
     "loading": "Loading...",
     "error": "Error",
     "favorite": "Add to favourites",
-    "unfavorite": "Remove from favourites"
+    "unfavorite": "Remove from favourites",
+    "favorites_empty": "Click the star on any map to favourite it"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
