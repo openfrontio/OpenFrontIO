@@ -614,6 +614,7 @@
     "choppingblock": "Chopping Block",
     "southeastasia": "Southeast Asia",
     "mississippiriver": "Mississippi River",
+    "titan": "Titan",
     "hongkong": "Hong Kong",
     "juandefucastrait": "Juan De Fuca Strait"
   },
@@ -621,6 +622,7 @@
     "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
+    "cosmic": "Cosmic",
     "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
