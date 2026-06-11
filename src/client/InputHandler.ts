@@ -303,20 +303,42 @@ export class InputHandler {
       this.alternateView = false;
       this.eventBus.emit(new AlternateViewEvent(false));
     });
-      const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      this.addKeybindAndEvent(resetKey, () => {
+    const resetKey = this.keybinds.resetGfx ?? "KeyR";
+    this.addKeybindAndEvent(
+      resetKey,
+      () => {
         this.eventBus.emit(new RefreshGraphicsEvent());
-      }, (e: KeyboardEvent) => (this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight")));
+      },
+      (e: KeyboardEvent) =>
+        this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight"),
+    );
 
-     const buildKeybinds = ["buildCity", "buildFactory", "buildPort", "buildDefensePost", "buildMissileSilo", "buildSamLauncher", "buildAtomBomb", "buildHydrogenBomb", "buildWarship", "buildMIRV"]
-      for (const i of buildKeybinds) {
-        this.addKeybindAndEvent(this.keybinds[i], (e: KeyboardEvent) => {
+    const buildKeybinds = [
+      "buildCity",
+      "buildFactory",
+      "buildPort",
+      "buildDefensePost",
+      "buildMissileSilo",
+      "buildSamLauncher",
+      "buildAtomBomb",
+      "buildHydrogenBomb",
+      "buildWarship",
+      "buildMIRV",
+    ];
+    for (const i of buildKeybinds) {
+      this.addKeybindAndEvent(
+        this.keybinds[i],
+        (e: KeyboardEvent) => {
           const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
           if (matchedBuild !== null) {
             this.setGhostStructure(matchedBuild);
           }
-        }, this.canUseBuildKeybinds, (e: KeyboardEvent) => (this.resolveBuildKeybind(e.code, e.shiftKey) !== null))
-      }
+        },
+        () => this.canUseBuildKeybinds(),
+        (e: KeyboardEvent) =>
+          this.resolveBuildKeybind(e.code, e.shiftKey) !== null,
+      );
+    }
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
       if (e.isSelected && (e.units ?? []).length > 0) {
@@ -554,13 +576,13 @@ export class InputHandler {
         this.activeKeys.delete(this.keybinds.zoomIn);
         this.activeKeys.delete(this.keybinds.zoomOut);
       }
-      
-      for(const item of this.keybindAndEvent) {
+
+      for (const item of this.keybindAndEvent) {
         if (this.keybindMatchesEvent(e, item[0])) {
           let allConditionsFullfiled = true;
           for (const i of item[1].slice(1)) {
             if (!i(e)) {
-              allConditionsFullfiled = false
+              allConditionsFullfiled = false;
             }
           }
           if (!allConditionsFullfiled) continue;
@@ -862,7 +884,10 @@ export class InputHandler {
    * Returns true if the keyboard event matches the given keybind value,
    * including optional Shift+ prefix support.
    */
-  private keybindMatchesEvent(e: KeyboardEvent | { shiftKey: boolean; code: string }, keybindValue: string): boolean {
+  private keybindMatchesEvent(
+    e: KeyboardEvent | { shiftKey: boolean; code: string },
+    keybindValue: string,
+  ): boolean {
     const parsed = this.parseKeybind(keybindValue);
     return e.code === parsed.code && e.shiftKey === parsed.shift;
   }
@@ -939,7 +964,7 @@ export class InputHandler {
       { key: "buildMIRV", type: UnitType.MIRV },
     ];
     for (const { key, type } of buildKeybinds) {
-      if (this.keybindMatchesEvent({code, shiftKey}, this.keybinds[key]))
+      if (this.keybindMatchesEvent({ code, shiftKey }, this.keybinds[key]))
         return type;
     }
     for (const { key, type } of buildKeybinds) {
