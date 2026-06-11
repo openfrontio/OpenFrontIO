@@ -13,6 +13,9 @@ export function applyGraphicsOverrides(
   if (overrides.name?.cullThreshold !== undefined) {
     settings.name.cullThreshold = overrides.name.cullThreshold;
   }
+  if (overrides.name?.hoverFadeAlpha !== undefined) {
+    settings.name.hoverFadeAlpha = overrides.name.hoverFadeAlpha;
+  }
   if (overrides.structure?.classicIcons === true) {
     // Classic look: lighter player-colored shape behind a dark icon glyph,
     // with a touch of translucency.

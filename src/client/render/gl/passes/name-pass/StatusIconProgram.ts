@@ -38,6 +38,8 @@ export class StatusIconProgram {
   private uNameScaleFactor: WebGLUniformLocation;
   private uNameScaleCap: WebGLUniformLocation;
   private uStatusRowOffset: WebGLUniformLocation;
+  private uFadeOwnerID: WebGLUniformLocation;
+  private uHoverFadeAlpha: WebGLUniformLocation;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -98,6 +100,11 @@ export class StatusIconProgram {
       this.program,
       "uStatusRowOffset",
     )!;
+    this.uFadeOwnerID = gl.getUniformLocation(this.program, "uFadeOwnerID")!;
+    this.uHoverFadeAlpha = gl.getUniformLocation(
+      this.program,
+      "uHoverFadeAlpha",
+    )!;
 
     this.loadAtlas();
   }
@@ -129,6 +136,7 @@ export class StatusIconProgram {
     cameraMatrix: Float32Array,
     settings: RenderSettings,
     vao: WebGLVertexArrayObject,
+    fadeOwnerID: number,
   ): void {
     if (!this.atlasReady) return;
 
@@ -143,6 +151,8 @@ export class StatusIconProgram {
     gl.uniform1f(this.uNameScaleFactor, ns.nameScaleFactor);
     gl.uniform1f(this.uNameScaleCap, ns.nameScaleCap);
     gl.uniform1f(this.uStatusRowOffset, ns.statusRowOffset);
+    gl.uniform1f(this.uFadeOwnerID, fadeOwnerID);
+    gl.uniform1f(this.uHoverFadeAlpha, ns.hoverFadeAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.playerDataTex);

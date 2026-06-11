@@ -8,6 +8,7 @@ uniform sampler2D      uEmojiAtlas;
 in vec2 vUV;
 flat in int vIconType;  // 0 = flag, 1 = emoji, -1 = discard
 flat in int vFlagLayer;
+in float vHoverAlpha;
 
 out vec4 fragColor;
 
@@ -22,5 +23,5 @@ void main() {
   }
 
   if (texel.a < 0.01) discard;
-  fragColor = texel;
+  fragColor = vec4(texel.rgb, texel.a * vHoverAlpha);
 }
