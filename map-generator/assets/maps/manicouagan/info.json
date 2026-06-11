@@ -1,5 +1,8 @@
 {
+  "id": "Manicouagan",
   "name": "Manicouagan",
+  "translation_key": "map.manicouagan",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [784, 1034],

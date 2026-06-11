@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "MareNostrum",
   "map": {
     "height": 1448,
     "num_land_tiles": 2644620,
@@ -206,5 +208,6 @@
       "flag": "Amazigh flag",
       "name": "Numidia"
     }
-  ]
+  ],
+  "translation_key": "map.marenostrum"
 }

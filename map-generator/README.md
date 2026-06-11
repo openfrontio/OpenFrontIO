@@ -96,7 +96,10 @@ Example:
 
 ```json
 {
-  "name": "MySampleMap",
+  "id": "MySampleMap",
+  "name": "My Sample Map",
+  "translation_key": "map.mysamplemap",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [396, 364],
@@ -109,7 +112,13 @@ Example:
 
 `coordinates` is x/y position of the nation spawn on the map. Origin is at top left, with x extending right and y extending down
 
-`name` is a `CamelCaseName` of your map. It is used to enable the map in-game.
+`id` is the `CamelCaseName` of your map. It must match the `assets/maps/<map_name>` folder name (lowercased) and becomes the `GameMapType` enum key.
+
+`name` is the map's canonical name — the `GameMapType` enum value. It must never change once the map ships (it is part of the wire format and stored in game records).
+
+`translation_key` is the key of the map's display name in `../resources/lang/en.json` (`map.<map_name>`).
+
+`categories` groups the map in the map picker. Each entry must be one of: `featured`, `europe`, `asia`, `north_america`, `africa`, `south_america`, `oceania`, `antarctica`, `cosmic`, `other`. Maps that straddle regions (e.g. Black Sea, Bering Strait) can list more than one. Add `featured` to show the map in the featured section of the map picker.
 
 `flag` is the code for a country
 
@@ -130,11 +139,12 @@ The country will need to be added to `../src/client/data/countries.json`
 
 ## To Enable In-Game
 
-Using the `name` from your json:
+`GameMapType`, `mapCategories`, and `mapTranslationKeys` are generated from
+the info.json files into `../src/core/game/Maps.gen.ts` when the
+map-generator runs — do not edit that file by hand. You still need to:
 
-- Add to GameMapType and mapCategories in `../src/core/game/Game.ts`
 - Add to the map playlist in `../src/server/MapPlaylist.ts`
-- Add to the `map` translation object in `../resources/lang/en.json`
+- Add to the `map` translation object in `../resources/lang/en.json` (using your `translation_key`)
 
 ## Notes
 

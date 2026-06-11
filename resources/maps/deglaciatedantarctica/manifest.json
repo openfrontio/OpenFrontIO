@@ -1,4 +1,6 @@
 {
+  "categories": ["antarctica"],
+  "id": "DeglaciatedAntarctica",
   "map": {
     "height": 1840,
     "num_land_tiles": 1079790,
@@ -61,5 +63,6 @@
       "flag": "fr",
       "name": "French Claim"
     }
-  ]
+  ],
+  "translation_key": "map.deglaciatedantarctica"
 }

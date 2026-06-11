@@ -1,5 +1,8 @@
 {
+  "id": "Yenisei",
   "name": "Yenisei",
+  "translation_key": "map.yenisei",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [1050, 535],

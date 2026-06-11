@@ -1,5 +1,8 @@
 {
+  "id": "AmazonRiver",
   "name": "Amazon River",
+  "translation_key": "map.amazonriver",
+  "categories": ["south_america"],
   "nations": [
     {
       "coordinates": [524, 60],

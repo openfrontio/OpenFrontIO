@@ -1,5 +1,8 @@
 {
+  "id": "Britannia",
   "name": "Britannia",
+  "translation_key": "map.britannia",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [1539, 1915],

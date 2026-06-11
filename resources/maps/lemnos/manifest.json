@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Lemnos",
   "map": {
     "height": 1420,
     "num_land_tiles": 874763,
@@ -61,5 +63,6 @@
       "flag": "gr",
       "name": "Pyrgos"
     }
-  ]
+  ],
+  "translation_key": "map.lemnos"
 }

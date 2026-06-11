@@ -1,5 +1,8 @@
 {
-  "name": "SanFrancisco",
+  "id": "SanFrancisco",
+  "name": "San Francisco",
+  "translation_key": "map.sanfrancisco",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [996, 990],

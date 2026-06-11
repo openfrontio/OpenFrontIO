@@ -1,4 +1,6 @@
 {
+  "categories": ["oceania"],
+  "id": "Australia",
   "map": {
     "height": 1500,
     "num_land_tiles": 1319763,
@@ -51,5 +53,6 @@
       "flag": "aus_tas",
       "name": "Tasmania"
     }
-  ]
+  ],
+  "translation_key": "map.australia"
 }

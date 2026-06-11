@@ -1,5 +1,8 @@
 {
+  "id": "Svalmel",
   "name": "Svalmel",
+  "translation_key": "map.svalmel",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [900, 850],

@@ -1,5 +1,8 @@
 {
+  "id": "Titan",
   "name": "Titan",
+  "translation_key": "map.titan",
+  "categories": ["cosmic"],
   "nations": [
     {
       "name": "Stone-Keeping Purple Aliens",

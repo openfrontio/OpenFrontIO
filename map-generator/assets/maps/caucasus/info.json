@@ -1,5 +1,8 @@
 {
+  "id": "Caucasus",
   "name": "Caucasus",
+  "translation_key": "map.caucasus",
+  "categories": ["europe", "asia"],
   "nations": [
     {
       "coordinates": [624, 581],

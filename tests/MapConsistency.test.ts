@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
-import { GameMapName, GameMapType, mapCategories } from "../src/core/game/Game";
+import {
+  GameMapName,
+  GameMapType,
+  mapCategories,
+  mapTranslationKeys,
+} from "../src/core/game/Game";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,15 +61,22 @@ function getEnJsonMapKeys(): Set<string> {
   return new Set(Object.keys(mapSection).filter((k) => !metaKeys.has(k)));
 }
 
-/** Get all maps listed in the mapCategories from Game.ts. */
-function getCategorizedMaps(): Set<string> {
-  const result = new Set<string>();
-  for (const maps of Object.values(mapCategories)) {
+/** Map each GameMapType value to the mapCategories keys that contain it. */
+function getMapCategoryKeys(): Map<GameMapType, string[]> {
+  const result = new Map<GameMapType, string[]>();
+  for (const [categoryKey, maps] of Object.entries(mapCategories)) {
     for (const map of maps) {
-      result.add(map as string);
+      result.set(map, [...(result.get(map) ?? []), categoryKey]);
     }
   }
   return result;
+}
+
+/** Read the parsed info.json for a map, or null if missing. */
+function readInfoJson(key: GameMapName): Record<string, unknown> | null {
+  const infoPath = path.join(MAP_GEN_MAPS, toFolderName(key), "info.json");
+  if (!fs.existsSync(infoPath)) return null;
+  return JSON.parse(fs.readFileSync(infoPath, "utf8"));
 }
 
 /** Parse the frequency record keys from MapPlaylist.ts. */
@@ -151,18 +163,60 @@ describe("Map consistency", () => {
   });
 
   test("Every GameMapType is listed in at least one mapCategories group", () => {
-    const categorized = getCategorizedMaps();
+    const categoryKeys = getMapCategoryKeys();
     const errors: string[] = [];
     for (const key of allMapKeys) {
+      const categories = categoryKeys.get(GameMapType[key]) ?? [];
+      if (categories.length === 0) {
+        errors.push(`${key} is not listed in any mapCategories group`);
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error("mapCategories violations:\n" + errors.join("\n"));
+    }
+  });
+
+  // Maps.gen.ts is generated from the info.json files by the map-generator.
+  // If this test fails, run `npm run gen-maps` to regenerate it.
+  test("info.json metadata matches the generated Maps.gen.ts", () => {
+    const categoryKeys = getMapCategoryKeys();
+    const errors: string[] = [];
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      if (info === null) {
+        continue; // Other tests catch missing files.
+      }
       const value = GameMapType[key];
-      if (!categorized.has(value)) {
+      if (info.id !== key) {
+        errors.push(`${key}: info.json id is "${info.id}", expected "${key}"`);
+      }
+      if (info.name !== value) {
         errors.push(
-          `${key} ("${value}") is not listed in any mapCategories group`,
+          `${key}: info.json name is "${info.name}", but GameMapType.${key} is "${value}"`,
+        );
+      }
+      const expectedCategories = [...(categoryKeys.get(value) ?? [])].sort();
+      const infoCategories = Array.isArray(info.categories)
+        ? [...info.categories].sort()
+        : [];
+      if (
+        JSON.stringify(infoCategories) !== JSON.stringify(expectedCategories)
+      ) {
+        errors.push(
+          `${key}: info.json categories are ${JSON.stringify(info.categories)}, but mapCategories has it under ${JSON.stringify(expectedCategories)}`,
+        );
+      }
+      if (info.translation_key !== mapTranslationKeys[value]) {
+        errors.push(
+          `${key}: info.json translation_key is "${info.translation_key}", but mapTranslationKeys has "${mapTranslationKeys[value]}"`,
         );
       }
     }
     if (errors.length > 0) {
-      throw new Error("Maps missing from mapCategories:\n" + errors.join("\n"));
+      throw new Error(
+        "info.json and Maps.gen.ts are out of sync (run `npm run gen-maps`):\n" +
+          errors.join("\n"),
+      );
     }
   });
 
@@ -364,6 +418,38 @@ describe("Map consistency", () => {
     if (errors.length > 0) {
       throw new Error(
         "Nation data mismatches between info.json and manifest.json:\n" +
+          errors.join("\n"),
+      );
+    }
+  });
+
+  test("Map metadata in info.json and manifest.json should match", () => {
+    const metadataKeys = ["id", "name", "translation_key", "categories"];
+    const errors: string[] = [];
+
+    for (const key of allMapKeys) {
+      const info = readInfoJson(key);
+      const manifestPath = path.join(
+        RESOURCES_MAPS,
+        toFolderName(key),
+        "manifest.json",
+      );
+      if (info === null || !fs.existsSync(manifestPath)) {
+        continue; // Other tests catch missing files.
+      }
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
+      for (const field of metadataKeys) {
+        if (JSON.stringify(info[field]) !== JSON.stringify(manifest[field])) {
+          errors.push(
+            `${key}: "${field}" mismatch — info.json ${JSON.stringify(info[field])} vs manifest.json ${JSON.stringify(manifest[field])}`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Metadata mismatches between info.json and manifest.json (run `npm run gen-maps`):\n" +
           errors.join("\n"),
       );
     }

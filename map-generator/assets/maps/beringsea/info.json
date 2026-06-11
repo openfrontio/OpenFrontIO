@@ -1,5 +1,8 @@
 {
+  "id": "BeringSea",
   "name": "Bering Sea",
+  "translation_key": "map.beringsea",
+  "categories": ["asia", "north_america"],
   "nations": [
     {
       "coordinates": [1043, 121],

@@ -1,5 +1,8 @@
 {
+  "id": "Lemnos",
   "name": "Lemnos",
+  "translation_key": "map.lemnos",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [550, 317],

@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "GatewayToTheAtlantic",
   "map": {
     "height": 1968,
     "num_land_tiles": 2239824,
@@ -14,7 +16,7 @@
     "num_land_tiles": 554984,
     "width": 1108
   },
-  "name": "GatewayToTheAtlantic",
+  "name": "Gateway to the Atlantic",
   "nations": [
     {
       "coordinates": [2161, 420],
@@ -151,5 +153,6 @@
       "flag": "Holy Roman Empire",
       "name": "Holy Roman Empire"
     }
-  ]
+  ],
+  "translation_key": "map.gatewaytotheatlantic"
 }

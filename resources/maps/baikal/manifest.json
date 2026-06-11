@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "Baikal",
   "map": {
     "height": 1564,
     "num_land_tiles": 2181746,
@@ -87,5 +89,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.baikal"
 }

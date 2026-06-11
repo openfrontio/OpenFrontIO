@@ -1,4 +1,6 @@
 {
+  "categories": ["africa"],
+  "id": "NileDelta",
   "map": {
     "height": 1280,
     "num_land_tiles": 1363238,
@@ -71,5 +73,6 @@
       "flag": "eg",
       "name": "El Mansoura"
     }
-  ]
+  ],
+  "translation_key": "map.niledelta"
 }

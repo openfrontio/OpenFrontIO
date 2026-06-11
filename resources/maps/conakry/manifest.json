@@ -1,4 +1,6 @@
 {
+  "categories": ["africa"],
+  "id": "Conakry",
   "map": {
     "height": 1000,
     "num_land_tiles": 1108371,
@@ -132,5 +134,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.conakry"
 }

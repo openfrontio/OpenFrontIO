@@ -1,5 +1,8 @@
 {
-  "name": "japan",
+  "id": "Japan",
+  "name": "Japan",
+  "translation_key": "map.japan",
+  "categories": ["featured", "asia"],
   "nations": [
     {
       "coordinates": [1895, 288],

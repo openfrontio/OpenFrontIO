@@ -1,5 +1,8 @@
 {
-  "name": "Southeast Asia",
+  "id": "SoutheastAsia",
+  "name": "SoutheastAsia",
+  "translation_key": "map.southeastasia",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [1319, 76],

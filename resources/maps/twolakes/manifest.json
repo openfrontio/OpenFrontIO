@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "TwoLakes",
   "map": {
     "height": 1840,
     "num_land_tiles": 3423870,
@@ -41,5 +43,6 @@
       "flag": "gr",
       "name": "Prespa"
     }
-  ]
+  ],
+  "translation_key": "map.twolakes"
 }

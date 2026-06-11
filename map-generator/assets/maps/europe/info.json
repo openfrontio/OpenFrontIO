@@ -1,5 +1,8 @@
 {
+  "id": "Europe",
   "name": "Europe",
+  "translation_key": "map.europe",
+  "categories": ["featured", "europe"],
   "nations": [
     {
       "coordinates": [634, 781],

@@ -1,5 +1,8 @@
 {
-  "name": "Archipelago Sea",
+  "id": "ArchipelagoSea",
+  "name": "ArchipelagoSea",
+  "translation_key": "map.archipelagosea",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [145, 767],

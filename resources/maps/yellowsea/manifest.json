@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "YellowSea",
   "map": {
     "height": 1152,
     "num_land_tiles": 1042745,
@@ -56,5 +58,6 @@
       "flag": "cn",
       "name": "Jilin"
     }
-  ]
+  ],
+  "translation_key": "map.yellowsea"
 }

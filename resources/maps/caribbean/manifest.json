@@ -141,6 +141,8 @@
       "name": "Tobago"
     }
   ],
+  "categories": ["north_america"],
+  "id": "Caribbean",
   "map": {
     "height": 1808,
     "num_land_tiles": 577573,
@@ -256,7 +258,7 @@
     {
       "coordinates": [3007, 1361],
       "flag": "vc",
-      "name": "St Vincent \u0026 the Grenadines"
+      "name": "St Vincent & the Grenadines"
     },
     {
       "coordinates": [3015, 1291],
@@ -328,5 +330,6 @@
       "flag": "co",
       "name": "San Andres"
     }
-  ]
+  ],
+  "translation_key": "map.caribbean"
 }

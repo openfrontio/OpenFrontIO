@@ -1,4 +1,6 @@
 {
+  "categories": ["featured", "europe"],
+  "id": "Europe",
   "map": {
     "height": 1672,
     "num_land_tiles": 2345907,
@@ -276,5 +278,6 @@
       "flag": "mc",
       "name": "Monaco"
     }
-  ]
+  ],
+  "translation_key": "map.europe"
 }

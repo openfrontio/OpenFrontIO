@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Pluto",
   "map": {
     "height": 1300,
     "num_land_tiles": 1987279,
@@ -112,5 +114,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.pluto"
 }

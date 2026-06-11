@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "GreatLakes",
   "map": {
     "height": 1300,
     "num_land_tiles": 1938066,
@@ -186,5 +188,6 @@
       "flag": "ca",
       "name": "Rouyn-Noranda"
     }
-  ]
+  ],
+  "translation_key": "map.greatlakes"
 }

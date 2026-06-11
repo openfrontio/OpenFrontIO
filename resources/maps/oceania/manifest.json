@@ -1,4 +1,6 @@
 {
+  "categories": ["oceania"],
+  "id": "Oceania",
   "map": {
     "height": 1000,
     "num_land_tiles": 194648,
@@ -126,5 +128,6 @@
       "flag": "Hawaii",
       "name": "Hawaii"
     }
-  ]
+  ],
+  "translation_key": "map.oceania"
 }

@@ -1,5 +1,8 @@
 {
-  "name": "Milky Way",
+  "id": "MilkyWay",
+  "name": "MilkyWay",
+  "translation_key": "map.milkyway",
+  "categories": ["cosmic"],
   "nations": [
     {
       "coordinates": [775, 757],

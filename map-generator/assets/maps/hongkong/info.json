@@ -1,5 +1,8 @@
 {
+  "id": "HongKong",
   "name": "Hong Kong",
+  "translation_key": "map.hongkong",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [1592, 1147],

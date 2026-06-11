@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "north_america"],
+  "id": "Arctic",
   "map": {
     "height": 1828,
     "num_land_tiles": 1679064,
@@ -236,5 +238,6 @@
       "flag": "fr",
       "name": "France"
     }
-  ]
+  ],
+  "translation_key": "map.arctic"
 }

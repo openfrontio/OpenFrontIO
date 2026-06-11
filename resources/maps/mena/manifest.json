@@ -1,4 +1,6 @@
 {
+  "categories": ["asia", "africa"],
+  "id": "Mena",
   "map": {
     "height": 964,
     "num_land_tiles": 1621317,
@@ -14,7 +16,7 @@
     "num_land_tiles": 400304,
     "width": 1100
   },
-  "name": "MENA",
+  "name": "Mena",
   "nations": [
     {
       "coordinates": [257, 82],
@@ -191,5 +193,6 @@
       "flag": "kz",
       "name": "Kazakhstan"
     }
-  ]
+  ],
+  "translation_key": "map.mena"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["antarctica"],
+  "id": "Antarctica",
   "map": {
     "height": 2000,
     "num_land_tiles": 1292228,
@@ -14,7 +16,7 @@
     "num_land_tiles": 320356,
     "width": 1000
   },
-  "name": "antarctica",
+  "name": "Antarctica",
   "nations": [
     {
       "coordinates": [1159, 1261],
@@ -66,5 +68,6 @@
       "flag": "Cthulhu Republic",
       "name": "Ancient Aliens"
     }
-  ]
+  ],
+  "translation_key": "map.antarctica"
 }

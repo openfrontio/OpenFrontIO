@@ -1,5 +1,8 @@
 {
+  "id": "SouthAmerica",
   "name": "South America",
+  "translation_key": "map.southamerica",
+  "categories": ["featured", "south_america"],
   "nations": [
     {
       "coordinates": [438, 58],

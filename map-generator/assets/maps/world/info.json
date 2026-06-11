@@ -1,5 +1,8 @@
 {
+  "id": "World",
   "name": "World",
+  "translation_key": "map.world",
+  "categories": ["featured", "other"],
   "nations": [
     {
       "coordinates": [484, 284],

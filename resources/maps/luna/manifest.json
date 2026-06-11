@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Luna",
   "map": {
     "height": 3508,
     "num_land_tiles": 1517614,
@@ -157,5 +159,6 @@
         "y": 1754
       }
     ]
-  }
+  },
+  "translation_key": "map.luna"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Britannia",
   "map": {
     "height": 2088,
     "num_land_tiles": 1183898,
@@ -115,5 +117,6 @@
       "coordinates": [404, 1146],
       "name": "Fermanagh"
     }
-  ]
+  ],
+  "translation_key": "map.britannia"
 }

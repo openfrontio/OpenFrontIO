@@ -1,5 +1,8 @@
 {
+  "id": "Lisbon",
   "name": "Lisbon",
+  "translation_key": "map.lisbon",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [750, 630],

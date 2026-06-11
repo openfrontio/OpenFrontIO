@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "BaikalNukeWars",
   "map": {
     "height": 1564,
     "num_land_tiles": 1968430,
@@ -14,7 +16,7 @@
     "num_land_tiles": 488323,
     "width": 1250
   },
-  "name": "Baikal (Nuke Wars)",
+  "name": "Baikal Nuke Wars",
   "nations": [],
   "teamGameSpawnAreas": {
     "2": [
@@ -31,5 +33,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.baikalnukewars"
 }

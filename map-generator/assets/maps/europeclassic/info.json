@@ -1,5 +1,8 @@
 {
-  "name": "Europe",
+  "id": "EuropeClassic",
+  "name": "Europe Classic",
+  "translation_key": "map.europeclassic",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [171, 171],

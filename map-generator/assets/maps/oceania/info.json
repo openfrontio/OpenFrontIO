@@ -1,5 +1,8 @@
 {
+  "id": "Oceania",
   "name": "Oceania",
+  "translation_key": "map.oceania",
+  "categories": ["oceania"],
   "nations": [
     {
       "coordinates": [515, 690],

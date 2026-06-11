@@ -1,5 +1,8 @@
 {
+  "id": "GreatLakes",
   "name": "Great Lakes",
+  "translation_key": "map.greatlakes",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [38, 326],

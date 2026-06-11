@@ -1,5 +1,8 @@
 {
+  "id": "BosphorusStraits",
   "name": "Bosphorus Straits",
+  "translation_key": "map.bosphorusstraits",
+  "categories": ["europe", "asia"],
   "nations": [
     {
       "coordinates": [564, 245],

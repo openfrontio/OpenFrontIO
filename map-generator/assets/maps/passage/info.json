@@ -1,5 +1,8 @@
 {
+  "id": "Passage",
   "name": "Passage",
+  "translation_key": "map.passage",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [256, 80],

@@ -1,5 +1,8 @@
 {
+  "id": "FaroeIslands",
   "name": "Faroe Islands",
+  "translation_key": "map.faroeislands",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [920, 1780],

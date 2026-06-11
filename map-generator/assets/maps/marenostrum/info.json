@@ -1,5 +1,8 @@
 {
+  "id": "MareNostrum",
   "name": "Mare Nostrum",
+  "translation_key": "map.marenostrum",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [141, 574],

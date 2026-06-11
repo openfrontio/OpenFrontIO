@@ -1,5 +1,8 @@
 {
+  "id": "Halkidiki",
   "name": "Halkidiki",
+  "translation_key": "map.halkidiki",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [1798, 984],

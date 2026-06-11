@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "IndianSubcontinent",
   "map": {
     "height": 2220,
     "num_land_tiles": 2113509,
@@ -64,7 +66,7 @@
     {
       "coordinates": [1799, 1466],
       "flag": "in",
-      "name": "Andaman \u0026 Nicobar Islands"
+      "name": "Andaman & Nicobar Islands"
     },
     {
       "coordinates": [632, 1566],
@@ -276,5 +278,6 @@
       "flag": "in",
       "name": "Puducherry"
     }
-  ]
+  ],
+  "translation_key": "map.indiansubcontinent"
 }

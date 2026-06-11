@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Achiran",
   "map": {
     "height": 1700,
     "num_land_tiles": 1149943,
@@ -36,5 +38,6 @@
       "flag": "ie",
       "name": "Achill"
     }
-  ]
+  ],
+  "translation_key": "map.achiran"
 }

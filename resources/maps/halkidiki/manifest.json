@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Halkidiki",
   "map": {
     "height": 1760,
     "num_land_tiles": 1728899,
@@ -56,5 +58,6 @@
       "flag": "gr",
       "name": "Thrace"
     }
-  ]
+  ],
+  "translation_key": "map.halkidiki"
 }

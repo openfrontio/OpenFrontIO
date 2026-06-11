@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "GiantWorldMap",
   "map": {
     "height": 1948,
     "num_land_tiles": 2333974,
@@ -14,7 +16,7 @@
     "num_land_tiles": 563340,
     "width": 2054
   },
-  "name": "Giant_World_Map",
+  "name": "Giant World Map",
   "nations": [
     {
       "coordinates": [2309, 535],
@@ -551,5 +553,6 @@
       "flag": "northwestterritories",
       "name": "Northwest Territories"
     }
-  ]
+  ],
+  "translation_key": "map.giantworldmap"
 }

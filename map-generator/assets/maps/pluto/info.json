@@ -1,5 +1,8 @@
 {
+  "id": "Pluto",
   "name": "Pluto",
+  "translation_key": "map.pluto",
+  "categories": ["cosmic"],
   "nations": [
     {
       "coordinates": [396, 364],

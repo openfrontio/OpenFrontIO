@@ -13,7 +13,6 @@ import {
   RankedType,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
@@ -22,7 +21,16 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-const ARCADE_MAPS = new Set(mapCategories.arcade);
+// Arcade-style maps only appear in the "special" playlist.
+const ARCADE_MAPS = new Set<GameMapType>([
+  GameMapType.TheBox,
+  GameMapType.ChoppingBlock,
+  GameMapType.Didier,
+  GameMapType.DidierFrance,
+  GameMapType.Labyrinth,
+  GameMapType.Sierpinski,
+  GameMapType.Onion,
+]);
 const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.

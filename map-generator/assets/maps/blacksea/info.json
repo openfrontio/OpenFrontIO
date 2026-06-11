@@ -1,5 +1,8 @@
 {
-  "name": "BlackSea",
+  "id": "BlackSea",
+  "name": "Black Sea",
+  "translation_key": "map.blacksea",
+  "categories": ["europe", "asia"],
   "nations": [
     {
       "coordinates": [122, 647],

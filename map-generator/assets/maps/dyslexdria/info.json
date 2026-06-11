@@ -1,5 +1,8 @@
 {
+  "id": "Dyslexdria",
   "name": "Dyslexdria",
+  "translation_key": "map.dyslexdria",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [2380, 400],

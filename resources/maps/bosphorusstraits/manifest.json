@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "BosphorusStraits",
   "map": {
     "height": 612,
     "num_land_tiles": 382332,
@@ -142,5 +144,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.bosphorusstraits"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Venice",
   "map": {
     "height": 1500,
     "num_land_tiles": 823860,
@@ -91,5 +93,6 @@
       "flag": "venice",
       "name": "Sant'Elena"
     }
-  ]
+  ],
+  "translation_key": "map.venice"
 }

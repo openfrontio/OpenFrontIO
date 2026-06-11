@@ -951,6 +951,8 @@
       "name": "Reykjanes Delta"
     }
   ],
+  "categories": ["other"],
+  "id": "WorldInverted",
   "map": {
     "height": 1248,
     "num_land_tiles": 1561762,
@@ -1426,5 +1428,6 @@
       "flag": "",
       "name": "Emerald"
     }
-  ]
+  ],
+  "translation_key": "map.worldinverted"
 }

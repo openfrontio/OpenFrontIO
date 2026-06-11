@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "africa"],
+  "id": "StraitOfGibraltar",
   "map": {
     "height": 1476,
     "num_land_tiles": 1957694,
@@ -64,5 +66,6 @@
         "y": 651
       }
     ]
-  }
+  },
+  "translation_key": "map.straitofgibraltar"
 }

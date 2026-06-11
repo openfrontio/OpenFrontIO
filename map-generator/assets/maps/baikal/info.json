@@ -1,5 +1,8 @@
 {
+  "id": "Baikal",
   "name": "Baikal",
+  "translation_key": "map.baikal",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [695, 665],

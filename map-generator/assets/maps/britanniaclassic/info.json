@@ -1,5 +1,8 @@
 {
+  "id": "BritanniaClassic",
   "name": "Britannia Classic",
+  "translation_key": "map.britanniaclassic",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [960, 1258],

@@ -1,5 +1,8 @@
 {
+  "id": "Korea",
   "name": "Korea",
+  "translation_key": "map.korea",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [849, 1523],

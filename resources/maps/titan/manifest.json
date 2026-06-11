@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Titan",
   "map": {
     "height": 2160,
     "num_land_tiles": 1627144,
@@ -128,5 +130,6 @@
       "flag": "un",
       "name": "UNOOSA"
     }
-  ]
+  ],
+  "translation_key": "map.titan"
 }

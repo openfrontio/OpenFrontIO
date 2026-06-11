@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Mars",
   "map": {
     "height": 1000,
     "num_land_tiles": 1354047,
@@ -46,5 +48,6 @@
       "flag": "cn",
       "name": "China"
     }
-  ]
+  ],
+  "translation_key": "map.mars"
 }

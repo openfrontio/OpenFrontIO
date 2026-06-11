@@ -1,5 +1,8 @@
 {
+  "id": "NileDelta",
   "name": "Nile Delta",
+  "translation_key": "map.niledelta",
+  "categories": ["africa"],
   "nations": [
     {
       "coordinates": [305, 414],

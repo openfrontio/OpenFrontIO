@@ -1,5 +1,8 @@
 {
+  "id": "Hawaii",
   "name": "Hawaii",
+  "translation_key": "map.hawaii",
+  "categories": ["north_america", "oceania"],
   "nations": [
     {
       "coordinates": [283, 281],

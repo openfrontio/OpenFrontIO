@@ -1,5 +1,8 @@
 {
+  "id": "StraitOfGibraltar",
   "name": "Strait of Gibraltar",
+  "translation_key": "map.straitofgibraltar",
+  "categories": ["europe", "africa"],
   "nations": [
     {
       "coordinates": [1941, 1031],

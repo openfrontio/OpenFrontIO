@@ -1,5 +1,8 @@
 {
-  "name": "onion",
+  "id": "Onion",
+  "name": "Onion",
+  "translation_key": "map.onion",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [51, 188],

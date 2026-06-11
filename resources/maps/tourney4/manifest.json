@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Tourney4",
   "map": {
     "height": 1500,
     "num_land_tiles": 905705,
@@ -14,7 +16,7 @@
     "num_land_tiles": 224342,
     "width": 750
   },
-  "name": "Tourney4",
+  "name": "Tourney 8 Teams",
   "nations": [
     {
       "coordinates": [568, 309],
@@ -48,5 +50,6 @@
       "coordinates": [315, 927],
       "name": "West South West"
     }
-  ]
+  ],
+  "translation_key": "map.tourney4"
 }

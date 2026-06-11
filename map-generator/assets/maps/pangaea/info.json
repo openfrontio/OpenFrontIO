@@ -1,5 +1,8 @@
 {
+  "id": "Pangaea",
   "name": "Pangaea",
+  "translation_key": "map.pangaea",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [389, 800],

@@ -221,6 +221,8 @@
       "name": "Sudden Valley"
     }
   ],
+  "categories": ["north_america"],
+  "id": "JuanDeFucaStrait",
   "map": {
     "height": 1100,
     "num_land_tiles": 1666141,
@@ -340,5 +342,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.juandefucastrait"
 }

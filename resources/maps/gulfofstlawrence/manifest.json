@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "GulfOfStLawrence",
   "map": {
     "height": 1348,
     "num_land_tiles": 874011,
@@ -168,5 +170,6 @@
         "y": 500
       }
     ]
-  }
+  },
+  "translation_key": "map.gulfofstlawrence"
 }

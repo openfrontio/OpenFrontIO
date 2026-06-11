@@ -1,5 +1,8 @@
 {
+  "id": "Africa",
   "name": "Africa",
+  "translation_key": "map.africa",
+  "categories": ["featured", "africa"],
   "nations": [
     {
       "coordinates": [1144, 1894],

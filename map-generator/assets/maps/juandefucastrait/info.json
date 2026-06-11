@@ -1,5 +1,8 @@
 {
+  "id": "JuanDeFucaStrait",
   "name": "Juan De Fuca Strait",
+  "translation_key": "map.juandefucastrait",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [1812, 445],

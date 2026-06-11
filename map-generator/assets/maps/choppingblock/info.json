@@ -1,5 +1,8 @@
 {
+  "id": "ChoppingBlock",
   "name": "Chopping Block",
+  "translation_key": "map.choppingblock",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [230, 230],
@@ -307,14 +310,44 @@
   ],
   "teamGameSpawnAreas": {
     "2": [
-      { "x": 0, "y": 0, "width": 800, "height": 1610 },
-      { "x": 809, "y": 0, "width": 800, "height": 1610 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 800,
+        "height": 1610
+      },
+      {
+        "x": 809,
+        "y": 0,
+        "width": 800,
+        "height": 1610
+      }
     ],
     "4": [
-      { "x": 0, "y": 0, "width": 800, "height": 800 },
-      { "x": 809, "y": 0, "width": 800, "height": 800 },
-      { "x": 0, "y": 809, "width": 800, "height": 800 },
-      { "x": 809, "y": 809, "width": 800, "height": 800 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 800,
+        "height": 800
+      },
+      {
+        "x": 809,
+        "y": 0,
+        "width": 800,
+        "height": 800
+      },
+      {
+        "x": 0,
+        "y": 809,
+        "width": 800,
+        "height": 800
+      },
+      {
+        "x": 809,
+        "y": 809,
+        "width": 800,
+        "height": 800
+      }
     ]
   }
 }

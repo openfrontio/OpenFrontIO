@@ -1,5 +1,8 @@
 {
+  "id": "NewYorkCity",
   "name": "New York City",
+  "translation_key": "map.newyorkcity",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [127, 1323],

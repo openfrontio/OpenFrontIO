@@ -1,5 +1,8 @@
 {
+  "id": "Italia",
   "name": "Italia",
+  "translation_key": "map.italia",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [1038, 993],

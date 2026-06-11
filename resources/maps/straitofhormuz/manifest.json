@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "StraitOfHormuz",
   "map": {
     "height": 1200,
     "num_land_tiles": 1255327,
@@ -137,5 +139,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.straitofhormuz"
 }

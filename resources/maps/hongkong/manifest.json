@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "HongKong",
   "map": {
     "height": 1996,
     "num_land_tiles": 2260689,
@@ -371,5 +373,6 @@
       "flag": "hk",
       "name": "Tai Mo Shan"
     }
-  ]
+  ],
+  "translation_key": "map.hongkong"
 }

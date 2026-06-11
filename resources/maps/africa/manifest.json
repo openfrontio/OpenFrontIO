@@ -1,4 +1,6 @@
 {
+  "categories": ["featured", "africa"],
+  "id": "Africa",
   "map": {
     "height": 2032,
     "num_land_tiles": 2183186,
@@ -196,5 +198,6 @@
       "flag": "ga",
       "name": "Gabon"
     }
-  ]
+  ],
+  "translation_key": "map.africa"
 }

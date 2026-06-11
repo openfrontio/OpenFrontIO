@@ -1,5 +1,8 @@
 {
+  "id": "TradersDream",
   "name": "Traders Dream",
+  "translation_key": "map.tradersdream",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [1010, 120],

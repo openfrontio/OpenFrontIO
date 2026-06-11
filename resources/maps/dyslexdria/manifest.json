@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Dyslexdria",
   "map": {
     "height": 1344,
     "num_land_tiles": 1893664,
@@ -366,5 +368,6 @@
       "flag": "Republic of Pirates",
       "name": "Biosphere Conmune"
     }
-  ]
+  ],
+  "translation_key": "map.dyslexdria"
 }

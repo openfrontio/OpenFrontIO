@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "BlackSea",
   "map": {
     "height": 1100,
     "num_land_tiles": 1165868,
@@ -14,7 +16,7 @@
     "num_land_tiles": 285772,
     "width": 750
   },
-  "name": "BlackSea",
+  "name": "Black Sea",
   "nations": [
     {
       "coordinates": [122, 647],
@@ -61,5 +63,6 @@
       "flag": "Circassia",
       "name": "Circassia"
     }
-  ]
+  ],
+  "translation_key": "map.blacksea"
 }

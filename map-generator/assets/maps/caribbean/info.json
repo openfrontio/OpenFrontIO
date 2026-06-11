@@ -1,5 +1,8 @@
 {
+  "id": "Caribbean",
   "name": "Caribbean",
+  "translation_key": "map.caribbean",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [538, 200],

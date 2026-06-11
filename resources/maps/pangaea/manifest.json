@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Pangaea",
   "map": {
     "height": 1000,
     "num_land_tiles": 420335,
@@ -161,5 +163,6 @@
       "flag": "gb",
       "name": "United Kingdom"
     }
-  ]
+  ],
+  "translation_key": "map.pangaea"
 }

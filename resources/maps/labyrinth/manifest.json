@@ -226,6 +226,8 @@
       "name": "Zapopan"
     }
   ],
+  "categories": ["other"],
+  "id": "Labyrinth",
   "map": {
     "height": 1360,
     "num_land_tiles": 1524448,
@@ -549,5 +551,6 @@
         "y": 920
       }
     ]
-  }
+  },
+  "translation_key": "map.labyrinth"
 }

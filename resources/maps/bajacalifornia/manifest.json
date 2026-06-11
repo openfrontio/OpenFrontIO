@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "BajaCalifornia",
   "map": {
     "height": 2120,
     "num_land_tiles": 1345295,
@@ -56,5 +58,6 @@
       "flag": "New_Mexico",
       "name": "New Mexico"
     }
-  ]
+  ],
+  "translation_key": "map.bajacalifornia"
 }

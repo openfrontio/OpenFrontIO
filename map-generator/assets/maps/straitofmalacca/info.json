@@ -1,5 +1,8 @@
 {
+  "id": "StraitOfMalacca",
   "name": "Strait Of Malacca",
+  "translation_key": "map.straitofmalacca",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [1268, 730],

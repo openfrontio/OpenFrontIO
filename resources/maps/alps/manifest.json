@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Alps",
   "map": {
     "height": 1836,
     "num_land_tiles": 3672000,
@@ -56,5 +58,6 @@
       "flag": "li",
       "name": "Liechtenstein"
     }
-  ]
+  ],
+  "translation_key": "map.alps"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "StraitOfMalacca",
   "map": {
     "height": 1644,
     "num_land_tiles": 865820,
@@ -81,5 +83,6 @@
       "flag": "id",
       "name": "Riau Islands"
     }
-  ]
+  ],
+  "translation_key": "map.straitofmalacca"
 }

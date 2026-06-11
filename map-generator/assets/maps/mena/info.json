@@ -1,5 +1,8 @@
 {
-  "name": "MENA",
+  "id": "Mena",
+  "name": "Mena",
+  "translation_key": "map.mena",
+  "categories": ["asia", "africa"],
   "nations": [
     {
       "coordinates": [257, 82],

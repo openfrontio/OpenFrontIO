@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Svalmel",
   "map": {
     "height": 1580,
     "num_land_tiles": 1011623,
@@ -41,5 +43,6 @@
       "flag": "no",
       "name": "Nordaustlandet"
     }
-  ]
+  ],
+  "translation_key": "map.svalmel"
 }

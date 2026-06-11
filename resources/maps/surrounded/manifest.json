@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Surrounded",
   "map": {
     "height": 1976,
     "num_land_tiles": 767607,
@@ -98,5 +100,6 @@
         "y": 988
       }
     ]
-  }
+  },
+  "translation_key": "map.surrounded"
 }

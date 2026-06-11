@@ -1,4 +1,6 @@
 {
+  "categories": ["asia", "north_america"],
+  "id": "BeringSea",
   "map": {
     "height": 1600,
     "num_land_tiles": 1615723,
@@ -152,5 +154,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.beringsea"
 }

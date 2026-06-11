@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america", "oceania"],
+  "id": "Hawaii",
   "map": {
     "height": 2076,
     "num_land_tiles": 408264,
@@ -61,5 +63,6 @@
       "flag": "us",
       "name": "Hilo"
     }
-  ]
+  ],
+  "translation_key": "map.hawaii"
 }

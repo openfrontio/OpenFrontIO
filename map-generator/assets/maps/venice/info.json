@@ -1,5 +1,8 @@
 {
+  "id": "Venice",
   "name": "Venice",
+  "translation_key": "map.venice",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [760, 593],

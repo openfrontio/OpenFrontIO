@@ -344,5 +344,9 @@ func main() {
 		log.Fatalf("Error generating terrain maps: %v", err)
 	}
 
+	if err := generateMapsTS(); err != nil {
+		log.Fatalf("Error generating Maps.gen.ts: %v", err)
+	}
+
 	fmt.Println("Terrain maps generated successfully")
 }

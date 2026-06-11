@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "Manicouagan",
   "map": {
     "height": 1600,
     "num_land_tiles": 1992029,
@@ -71,5 +73,6 @@
       "flag": "Quebec",
       "name": "Lamontagne"
     }
-  ]
+  ],
+  "translation_key": "map.manicouagan"
 }

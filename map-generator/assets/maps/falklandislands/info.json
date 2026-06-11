@@ -1,5 +1,8 @@
 {
+  "id": "FalklandIslands",
   "name": "Falkland Islands",
+  "translation_key": "map.falklandislands",
+  "categories": ["south_america"],
   "nations": [
     {
       "coordinates": [484, 987],

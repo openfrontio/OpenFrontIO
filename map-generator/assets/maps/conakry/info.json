@@ -1,5 +1,8 @@
 {
+  "id": "Conakry",
   "name": "Conakry",
+  "translation_key": "map.conakry",
+  "categories": ["africa"],
   "nations": [
     {
       "coordinates": [510, 420],

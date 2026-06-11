@@ -196,6 +196,8 @@
       "name": "Western Macedonia"
     }
   ],
+  "categories": ["europe"],
+  "id": "Balkans",
   "map": {
     "height": 2048,
     "num_land_tiles": 2478822,
@@ -328,5 +330,6 @@
       "flag": "Sicily",
       "name": "Sicily"
     }
-  ]
+  ],
+  "translation_key": "map.balkans"
 }

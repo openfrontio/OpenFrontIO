@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "Korea",
   "map": {
     "height": 2148,
     "num_land_tiles": 1193914,
@@ -191,5 +193,6 @@
       "flag": "jp",
       "name": "Saga"
     }
-  ]
+  ],
+  "translation_key": "map.korea"
 }

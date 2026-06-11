@@ -1,5 +1,8 @@
 {
+  "id": "Arctic",
   "name": "Arctic",
+  "translation_key": "map.arctic",
+  "categories": ["europe", "north_america"],
   "nations": [
     {
       "coordinates": [622, 1171],

@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Sierpinski",
   "map": {
     "height": 1400,
     "num_land_tiles": 582988,
@@ -61,5 +63,6 @@
       "flag": "",
       "name": "Center"
     }
-  ]
+  ],
+  "translation_key": "map.sierpinski"
 }

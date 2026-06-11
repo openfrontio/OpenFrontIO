@@ -1,5 +1,8 @@
 {
+  "id": "MiddleEast",
   "name": "Middle East",
+  "translation_key": "map.middleeast",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [300, 65],

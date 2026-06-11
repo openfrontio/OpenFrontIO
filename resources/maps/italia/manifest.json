@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Italia",
   "map": {
     "height": 1272,
     "num_land_tiles": 775663,
@@ -70,5 +72,6 @@
       "coordinates": [1238, 349],
       "name": "Ottoman Empire"
     }
-  ]
+  ],
+  "translation_key": "map.italia"
 }

@@ -1,5 +1,8 @@
 {
+  "id": "TaiwanStrait",
   "name": "Taiwan Strait",
+  "translation_key": "map.taiwanstrait",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [694, 26],

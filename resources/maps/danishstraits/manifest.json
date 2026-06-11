@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "DanishStraits",
   "map": {
     "height": 1224,
     "num_land_tiles": 587312,
@@ -146,5 +148,6 @@
       "flag": "dk",
       "name": "Bornholm"
     }
-  ]
+  ],
+  "translation_key": "map.danishstraits"
 }

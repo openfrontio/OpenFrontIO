@@ -1,5 +1,8 @@
 {
+  "id": "Labyrinth",
   "name": "Labyrinth",
+  "translation_key": "map.labyrinth",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [50, 50],
@@ -361,43 +364,178 @@
   ],
   "teamGameSpawnAreas": {
     "2": [
-      { "x": 0, "y": 0, "width": 680, "height": 1355 },
-      { "x": 680, "y": 0, "width": 680, "height": 1355 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 680,
+        "height": 1355
+      },
+      {
+        "x": 680,
+        "y": 0,
+        "width": 680,
+        "height": 1355
+      }
     ],
     "3": [
-      { "x": 1020, "y": 680, "width": 340, "height": 680 },
-      { "x": 0, "y": 680, "width": 340, "height": 680 },
-      { "x": 340, "y": 0, "width": 680, "height": 680 }
+      {
+        "x": 1020,
+        "y": 680,
+        "width": 340,
+        "height": 680
+      },
+      {
+        "x": 0,
+        "y": 680,
+        "width": 340,
+        "height": 680
+      },
+      {
+        "x": 340,
+        "y": 0,
+        "width": 680,
+        "height": 680
+      }
     ],
     "4": [
-      { "x": 0, "y": 0, "width": 676, "height": 676 },
-      { "x": 680, "y": 0, "width": 676, "height": 676 },
-      { "x": 0, "y": 680, "width": 676, "height": 676 },
-      { "x": 680, "y": 680, "width": 676, "height": 676 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 676,
+        "height": 676
+      },
+      {
+        "x": 680,
+        "y": 0,
+        "width": 676,
+        "height": 676
+      },
+      {
+        "x": 0,
+        "y": 680,
+        "width": 676,
+        "height": 676
+      },
+      {
+        "x": 680,
+        "y": 680,
+        "width": 676,
+        "height": 676
+      }
     ],
     "5": [
-      { "x": 1088, "y": 453, "width": 272, "height": 453 },
-      { "x": 0, "y": 816, "width": 453, "height": 272 },
-      { "x": 580, "y": 0, "width": 453, "height": 272 },
-      { "x": 580, "y": 1088, "width": 453, "height": 272 },
-      { "x": 0, "y": 272, "width": 453, "height": 272 }
+      {
+        "x": 1088,
+        "y": 453,
+        "width": 272,
+        "height": 453
+      },
+      {
+        "x": 0,
+        "y": 816,
+        "width": 453,
+        "height": 272
+      },
+      {
+        "x": 580,
+        "y": 0,
+        "width": 453,
+        "height": 272
+      },
+      {
+        "x": 580,
+        "y": 1088,
+        "width": 453,
+        "height": 272
+      },
+      {
+        "x": 0,
+        "y": 272,
+        "width": 453,
+        "height": 272
+      }
     ],
     "6": [
-      { "x": 226, "y": 0, "width": 453, "height": 680 },
-      { "x": 679, "y": 680, "width": 453, "height": 680 },
-      { "x": 226, "y": 680, "width": 453, "height": 680 },
-      { "x": 679, "y": 0, "width": 453, "height": 680 },
-      { "x": 0, "y": 0, "width": 226, "height": 1360 },
-      { "x": 1132, "y": 0, "width": 226, "height": 1360 }
+      {
+        "x": 226,
+        "y": 0,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 679,
+        "y": 680,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 226,
+        "y": 680,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 679,
+        "y": 0,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "width": 226,
+        "height": 1360
+      },
+      {
+        "x": 1132,
+        "y": 0,
+        "width": 226,
+        "height": 1360
+      }
     ],
     "7": [
-      { "x": 510, "y": 1088, "width": 340, "height": 272 },
-      { "x": 272, "y": 0, "width": 272, "height": 340 },
-      { "x": 816, "y": 0, "width": 272, "height": 340 },
-      { "x": 0, "y": 340, "width": 272, "height": 340 },
-      { "x": 50, "y": 920, "width": 272, "height": 340 },
-      { "x": 1088, "y": 340, "width": 272, "height": 340 },
-      { "x": 1038, "y": 920, "width": 272, "height": 340 }
+      {
+        "x": 510,
+        "y": 1088,
+        "width": 340,
+        "height": 272
+      },
+      {
+        "x": 272,
+        "y": 0,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 816,
+        "y": 0,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 0,
+        "y": 340,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 50,
+        "y": 920,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 1088,
+        "y": 340,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 1038,
+        "y": 920,
+        "width": 272,
+        "height": 340
+      }
     ]
   }
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "FourIslands",
   "map": {
     "height": 1500,
     "num_land_tiles": 517044,
@@ -78,5 +80,6 @@
         "y": 750
       }
     ]
-  }
+  },
+  "translation_key": "map.fourislands"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "EastAsia",
   "map": {
     "height": 1644,
     "num_land_tiles": 879264,
@@ -126,5 +128,6 @@
       "flag": "jp",
       "name": "Kinki"
     }
-  ]
+  ],
+  "translation_key": "map.eastasia"
 }

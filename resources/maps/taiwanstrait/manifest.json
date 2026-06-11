@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "TaiwanStrait",
   "map": {
     "height": 1600,
     "num_land_tiles": 907469,
@@ -157,5 +159,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.taiwanstrait"
 }

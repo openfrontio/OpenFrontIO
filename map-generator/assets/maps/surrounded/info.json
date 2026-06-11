@@ -1,5 +1,8 @@
 {
+  "id": "Surrounded",
   "name": "Surrounded",
+  "translation_key": "map.surrounded",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [1043, 910],

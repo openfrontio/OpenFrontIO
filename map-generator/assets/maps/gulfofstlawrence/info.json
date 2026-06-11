@@ -1,5 +1,8 @@
 {
+  "id": "GulfOfStLawrence",
   "name": "Gulf of St. Lawrence",
+  "translation_key": "map.gulfofstlawrence",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [88, 364],

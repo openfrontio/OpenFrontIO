@@ -1,5 +1,8 @@
 {
+  "id": "Mars",
   "name": "Mars",
+  "translation_key": "map.mars",
+  "categories": ["cosmic"],
   "nations": [
     {
       "coordinates": [650, 415],

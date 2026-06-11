@@ -1,5 +1,8 @@
 {
+  "id": "Montreal",
   "name": "Montreal",
+  "translation_key": "map.montreal",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [800, 430],

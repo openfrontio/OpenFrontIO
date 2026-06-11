@@ -1,5 +1,8 @@
 {
+  "id": "LosAngeles",
   "name": "Los Angeles",
+  "translation_key": "map.losangeles",
+  "categories": ["north_america"],
   "nations": [
     {
       "coordinates": [546, 16],

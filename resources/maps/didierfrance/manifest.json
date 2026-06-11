@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "DidierFrance",
   "map": {
     "height": 2248,
     "num_land_tiles": 2303633,
@@ -14,7 +16,7 @@
     "num_land_tiles": 571849,
     "width": 1050
   },
-  "name": "Didier (France)",
+  "name": "Didier France",
   "nations": [
     {
       "coordinates": [120, 680],
@@ -222,5 +224,6 @@
       "coordinates": [2012, 2198],
       "name": "Arryn"
     }
-  ]
+  ],
+  "translation_key": "map.didierfrance"
 }

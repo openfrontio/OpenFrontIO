@@ -1,5 +1,8 @@
 {
+  "id": "Balkans",
   "name": "Balkans",
+  "translation_key": "map.balkans",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [122, 281],

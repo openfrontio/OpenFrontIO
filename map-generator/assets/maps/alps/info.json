@@ -1,5 +1,8 @@
 {
+  "id": "Alps",
   "name": "Alps",
+  "translation_key": "map.alps",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [740, 620],

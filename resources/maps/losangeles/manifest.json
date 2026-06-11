@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "LosAngeles",
   "map": {
     "height": 2276,
     "num_land_tiles": 2066156,
@@ -146,5 +148,6 @@
       "flag": "California",
       "name": "Encino"
     }
-  ]
+  ],
+  "translation_key": "map.losangeles"
 }

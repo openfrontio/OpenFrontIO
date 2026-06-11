@@ -1,5 +1,8 @@
 {
+  "id": "Australia",
   "name": "Australia",
+  "translation_key": "map.australia",
+  "categories": ["oceania"],
   "nations": [
     {
       "coordinates": [460, 720],

@@ -1,4 +1,6 @@
 {
+  "categories": ["featured", "asia"],
+  "id": "Asia",
   "map": {
     "height": 1200,
     "num_land_tiles": 1079855,
@@ -141,5 +143,6 @@
       "flag": "ua",
       "name": "Ukraine"
     }
-  ]
+  ],
+  "translation_key": "map.asia"
 }

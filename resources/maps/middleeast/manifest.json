@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "MiddleEast",
   "map": {
     "height": 2060,
     "num_land_tiles": 3449078,
@@ -151,5 +153,6 @@
       "flag": "ru",
       "name": "Russian State"
     }
-  ]
+  ],
+  "translation_key": "map.middleeast"
 }

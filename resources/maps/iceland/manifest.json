@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Iceland",
   "map": {
     "height": 1500,
     "num_land_tiles": 1069645,
@@ -56,5 +58,6 @@
       "flag": "is",
       "name": "Eastern Region"
     }
-  ]
+  ],
+  "translation_key": "map.iceland"
 }

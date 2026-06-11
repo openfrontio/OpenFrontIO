@@ -1,5 +1,8 @@
 {
-  "name": "Tourney3",
+  "id": "Tourney3",
+  "name": "Tourney 4 Teams",
+  "translation_key": "map.tourney3",
+  "categories": ["other"],
   "nations": [
     {
       "coordinates": [437, 410],

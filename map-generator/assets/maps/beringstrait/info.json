@@ -1,5 +1,8 @@
 {
-  "name": "BeringStrait",
+  "id": "BeringStrait",
+  "name": "Bering Strait",
+  "translation_key": "map.beringstrait",
+  "categories": ["asia", "north_america"],
   "nations": [
     {
       "coordinates": [1297, 287],

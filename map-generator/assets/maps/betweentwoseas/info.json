@@ -1,5 +1,8 @@
 {
-  "name": "BetweenTwoSeas",
+  "id": "BetweenTwoSeas",
+  "name": "Between Two Seas",
+  "translation_key": "map.betweentwoseas",
+  "categories": ["europe", "asia"],
   "nations": [
     {
       "coordinates": [40, 674],

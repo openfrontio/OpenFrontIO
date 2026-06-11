@@ -1,5 +1,8 @@
 {
+  "id": "DanishStraits",
   "name": "Danish Straits",
+  "translation_key": "map.danishstraits",
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [37, 227],
@@ -94,7 +97,6 @@
     {
       "coordinates": [219, 1205],
       "name": "Hanover",
-
       "flag": "prussia"
     },
     {

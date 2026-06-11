@@ -142,6 +142,8 @@
       "name": "Honeycomb"
     }
   ],
+  "categories": ["other"],
+  "id": "ChoppingBlock",
   "map": {
     "height": 1616,
     "num_land_tiles": 1485703,
@@ -361,5 +363,6 @@
         "y": 809
       }
     ]
-  }
+  },
+  "translation_key": "map.choppingblock"
 }

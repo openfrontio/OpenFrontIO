@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Didier",
   "map": {
     "height": 1348,
     "num_land_tiles": 1122321,
@@ -64,5 +66,6 @@
       "coordinates": [622, 1220],
       "name": "Mell Confederation"
     }
-  ]
+  ],
+  "translation_key": "map.didier"
 }

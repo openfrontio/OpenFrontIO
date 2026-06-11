@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Passage",
   "map": {
     "height": 400,
     "num_land_tiles": 803994,
@@ -80,5 +82,6 @@
       "coordinates": [5906, 364],
       "name": "Eastos"
     }
-  ]
+  ],
+  "translation_key": "map.passage"
 }

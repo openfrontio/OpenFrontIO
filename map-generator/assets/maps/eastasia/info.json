@@ -1,5 +1,8 @@
 {
+  "id": "EastAsia",
   "name": "East Asia",
+  "translation_key": "map.eastasia",
+  "categories": ["asia"],
   "nations": [
     {
       "coordinates": [1150, 660],

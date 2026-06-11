@@ -620,21 +620,23 @@
   },
   "map_categories": {
     "featured": "Featured",
-    "continental": "Continental",
-    "regional": "Regional",
+    "europe": "Europe",
+    "asia": "Asia",
+    "north_america": "North America",
+    "africa": "Africa",
+    "south_america": "South America",
+    "oceania": "Oceania",
+    "antarctica": "Antarctica",
     "cosmic": "Cosmic",
-    "tournament": "Tournament",
-    "fantasy": "Other",
+    "other": "Other",
     "special": "Special",
-    "arcade": "Arcade",
     "favorites": "Favourites"
   },
   "map_component": {
     "loading": "Loading...",
     "error": "Error",
     "favorite": "Add to favourites",
-    "unfavorite": "Remove from favourites",
-    "favorites_empty": "Click the star on any map to favourite it"
+    "unfavorite": "Remove from favourites"
   },
   "private_lobby": {
     "title": "Join Private Lobby",

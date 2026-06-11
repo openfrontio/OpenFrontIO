@@ -1,4 +1,6 @@
 {
+  "categories": ["featured", "south_america"],
+  "id": "SouthAmerica",
   "map": {
     "height": 2376,
     "num_land_tiles": 1411064,
@@ -141,5 +143,6 @@
       "flag": "Sao Paulo",
       "name": "São Paulo"
     }
-  ]
+  ],
+  "translation_key": "map.southamerica"
 }
