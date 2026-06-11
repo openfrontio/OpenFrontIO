@@ -384,6 +384,10 @@ export class GameView {
   setLocalPlayerID(id: number): void {
     this.renderer?.setLocalPlayerID(id);
   }
+  /** Rail color for the local player (0–1 RGB). */
+  setLocalRailColor(r: number, g: number, b: number): void {
+    this.renderer?.setLocalRailColor(r, g, b);
+  }
   setAltView(active: boolean): void {
     this.renderer?.setAltView(active);
   }

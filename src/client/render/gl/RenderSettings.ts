@@ -112,6 +112,8 @@ export interface RenderSettings {
     railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
+    /** Track width multiplier (1 = default width). */
+    railThickness: number;
   };
   structure: {
     iconSize: number;

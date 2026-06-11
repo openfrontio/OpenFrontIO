@@ -201,6 +201,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
           "Detail Zoom",
         ),
         slider(s.railroad, "railAlpha", d.railroad, 0, 1, 0.01, "Alpha"),
+        slider(
+          s.railroad,
+          "railThickness",
+          d.railroad,
+          0.5,
+          3,
+          0.1,
+          "Thickness",
+        ),
       ]),
     ]),
 

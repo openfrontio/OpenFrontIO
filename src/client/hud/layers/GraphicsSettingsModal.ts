@@ -46,6 +46,10 @@ const RAIL_ZOOM_MIN = 0;
 const RAIL_ZOOM_MAX = 10;
 const RAIL_ZOOM_STEP = 0.1;
 
+const RAIL_THICKNESS_MIN = 0.5;
+const RAIL_THICKNESS_MAX = 3;
+const RAIL_THICKNESS_STEP = 0.1;
+
 export class ShowGraphicsSettingsModalEvent {
   constructor(
     public readonly isVisible: boolean = true,
@@ -222,6 +226,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentRailThickness(): number {
+    return (
+      this.userSettings.graphicsOverrides().railroad?.railThickness ??
+      renderDefaults.railroad.railThickness
+    );
+  }
+
   private onHighlightFillChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchMapOverlay({ highlightFillBrighten: value });
@@ -251,6 +262,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const drawDistance = parseFloat((event.target as HTMLInputElement).value);
     // Invert: higher draw distance => tracks visible when more zoomed out.
     this.patchRailroad({ railMinZoom: RAIL_ZOOM_MAX - drawDistance });
+  }
+
+  private onRailThicknessChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchRailroad({ railThickness: value });
   }
 
   private currentClassicIcons(): boolean {
@@ -322,6 +338,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const territorySat = this.currentTerritorySat();
     const territoryAlpha = this.currentTerritoryAlpha();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
+    const railThickness = this.currentRailThickness();
 
     return html`
       <div
@@ -605,6 +622,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${railDrawDistance.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.rail_thickness_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.rail_thickness_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${RAIL_THICKNESS_MIN}
+                  max=${RAIL_THICKNESS_MAX}
+                  step=${RAIL_THICKNESS_STEP}
+                  .value=${String(railThickness)}
+                  @input=${this.onRailThicknessChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${railThickness.toFixed(1)}
               </div>
             </div>
 

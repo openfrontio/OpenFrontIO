@@ -26,6 +26,7 @@ export const GraphicsOverridesSchema = z
     railroad: z
       .object({
         railMinZoom: z.number(),
+        railThickness: z.number(),
       })
       .partial(),
     passEnabled: z

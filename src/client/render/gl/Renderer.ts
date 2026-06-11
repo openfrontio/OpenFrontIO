@@ -1026,6 +1026,11 @@ export class GPURenderer {
     this.samRadiusPass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
+    this.railroadPass.setLocalPlayer(id);
+  }
+
+  setLocalRailColor(r: number, g: number, b: number): void {
+    this.railroadPass.setLocalRailColor(r, g, b);
   }
 
   setSAMRadiusVisible(visible: boolean): void {
