@@ -353,7 +353,8 @@ export interface RenderSettings {
 
 export type ThemeName = "default" | "colorblind";
 
-const THEMES: Record<ThemeName, unknown> = {
+// Typed so tsc validates each theme JSON against the ThemeSettings shape.
+const THEMES: Record<ThemeName, ThemeSettings> = {
   default: defaultTheme,
   colorblind: colorblindTheme,
 };
