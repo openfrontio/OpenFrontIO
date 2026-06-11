@@ -146,7 +146,7 @@ etc.) at construct time and use it in `draw`. The debug GUI in `gl/debug/`
 gives a live-editable view of the same object during development.
 
 Theme data (player/team palettes, color-derivation knobs) lives in sibling
-theme JSONs (`gl/pastel-theme.json`, `gl/colorblind-theme.json`);
+theme JSONs (`gl/default-theme.json`, `gl/colorblind-theme.json`);
 `createRenderSettings()` combines the active one with `render-settings.json`
 into the `settings.theme` slice (the colorblind graphics override swaps the
 slice in `applyGraphicsOverrides`). The theme module in `src/client/theme/`

@@ -1,5 +1,5 @@
 import { colord, Colord } from "colord";
-import pastelTheme from "../src/client/render/gl/pastel-theme.json";
+import defaultTheme from "../src/client/render/gl/default-theme.json";
 import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
   ColorAllocator,
@@ -75,12 +75,12 @@ describe("ColorAllocator", () => {
   });
 });
 
-describe("pastel theme team colors", () => {
-  const teamBase = (team: keyof typeof pastelTheme.teamColors): Colord =>
-    colord(pastelTheme.teamColors[team]);
+describe("default theme team colors", () => {
+  const teamBase = (team: keyof typeof defaultTheme.teamColors): Colord =>
+    colord(defaultTheme.teamColors[team]);
 
   test("teamColor returns the base color from the theme JSON", () => {
-    const theme = new SettingsTheme(createThemeSettings("pastel"));
+    const theme = new SettingsTheme(createThemeSettings("default"));
     expect(theme.teamColor(ColoredTeams.Blue)).toEqual(teamBase("Blue"));
     expect(theme.teamColor(ColoredTeams.Red)).toEqual(teamBase("Red"));
     expect(theme.teamColor(ColoredTeams.Teal)).toEqual(teamBase("Teal"));
@@ -94,14 +94,14 @@ describe("pastel theme team colors", () => {
   });
 
   test("teamColorForPlayer is stable for the same playerID", () => {
-    const theme = new SettingsTheme(createThemeSettings("pastel"));
+    const theme = new SettingsTheme(createThemeSettings("default"));
     const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
     const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
     expect(a.isEqual(b)).toBe(true);
   });
 
   test("teamColorForPlayer differs for different playerIDs", () => {
-    const theme = new SettingsTheme(createThemeSettings("pastel"));
+    const theme = new SettingsTheme(createThemeSettings("default"));
     const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player1");
     const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player2");
     expect(a.isEqual(b)).toBe(false);
@@ -109,8 +109,8 @@ describe("pastel theme team colors", () => {
 });
 
 describe("colorblind theme", () => {
-  test("applies a palette distinct from the pastel theme", () => {
-    const pastel = new SettingsTheme(createThemeSettings("pastel"));
+  test("applies a palette distinct from the default theme", () => {
+    const defaultTheme = new SettingsTheme(createThemeSettings("default"));
     const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
 
     // At least one team's base color should differ — the colorblind theme
@@ -125,7 +125,8 @@ describe("colorblind theme", () => {
       ColoredTeams.Green,
     ];
     const anyDifferent = teams.some(
-      (team) => !pastel.teamColor(team).isEqual(colorblind.teamColor(team)),
+      (team) =>
+        !defaultTheme.teamColor(team).isEqual(colorblind.teamColor(team)),
     );
     expect(anyDifferent).toBe(true);
   });

@@ -11,7 +11,7 @@ import { ColorAllocator } from "./ColorAllocator";
 
 /**
  * The color surface consumed by PlayerView and HUD components. Built from
- * `ThemeSettings` (a theme JSON like pastel-theme.json, combined with
+ * `ThemeSettings` (a theme JSON like default-theme.json, combined with
  * render-settings.json into the graphics-configuration pipeline).
  */
 export interface Theme {
@@ -105,7 +105,9 @@ export class SettingsTheme implements Theme {
   /** Per-team color variations; index 0 is the team's base color. */
   private teamColorVariations(team: Team): Colord[] {
     return (
-      this.teamPalettes.get(team) ?? [this.humanColorAllocator.assignColor(team)]
+      this.teamPalettes.get(team) ?? [
+        this.humanColorAllocator.assignColor(team),
+      ]
     );
   }
 
@@ -257,7 +259,7 @@ export class SettingsTheme implements Theme {
  */
 class ThemeProvider {
   private readonly userSettings = new UserSettings();
-  private pastel = new SettingsTheme(createThemeSettings("pastel"));
+  private defaultTheme = new SettingsTheme(createThemeSettings("default"));
   private colorblind = new SettingsTheme(createThemeSettings("colorblind"));
 
   /** The active theme, selected from the colorblind-mode preference. */
@@ -265,7 +267,7 @@ class ThemeProvider {
     if (this.userSettings.graphicsOverrides().accessibility?.colorblind) {
       return this.colorblind;
     }
-    return this.pastel;
+    return this.defaultTheme;
   }
 
   /**
@@ -274,7 +276,7 @@ class ThemeProvider {
    * colour-pool depletion across games in a single session.
    */
   reset(): void {
-    this.pastel = new SettingsTheme(createThemeSettings("pastel"));
+    this.defaultTheme = new SettingsTheme(createThemeSettings("default"));
     this.colorblind = new SettingsTheme(createThemeSettings("colorblind"));
   }
 }

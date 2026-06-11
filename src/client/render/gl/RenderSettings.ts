@@ -1,10 +1,10 @@
 import colorblindTheme from "./colorblind-theme.json";
-import pastelTheme from "./pastel-theme.json";
+import defaultTheme from "./default-theme.json";
 import defaults from "./render-settings.json";
 
 /**
  * Theme data — player/team palettes and color-derivation knobs. Loaded from a
- * theme JSON file (pastel-theme.json or colorblind-theme.json) and combined
+ * theme JSON file (default-theme.json or colorblind-theme.json) and combined
  * with render-settings.json at runtime so all graphics configuration flows
  * through one pipeline. Colors are hex strings; palettes are consumed by the
  * theme module (src/client/theme/), which generates team variations and
@@ -351,15 +351,17 @@ export interface RenderSettings {
   lightConfigs: Record<string, { radius: number; intensity: number }>;
 }
 
-export type ThemeName = "pastel" | "colorblind";
+export type ThemeName = "default" | "colorblind";
 
 const THEMES: Record<ThemeName, unknown> = {
-  pastel: pastelTheme,
+  default: defaultTheme,
   colorblind: colorblindTheme,
 };
 
 /** Create fresh theme settings with defaults from the named theme JSON. */
-export function createThemeSettings(name: ThemeName = "pastel"): ThemeSettings {
+export function createThemeSettings(
+  name: ThemeName = "default",
+): ThemeSettings {
   return JSON.parse(JSON.stringify(THEMES[name])) as ThemeSettings;
 }
 
