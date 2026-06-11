@@ -75,7 +75,7 @@ export class CoordinateGridPass {
     gl.uniform1f(this.uCellSize, this.cellSize);
     gl.uniform1f(this.uZoom, zoom);
     gl.uniform1f(this.uFontSize, this.settings.altView.gridFontSize);
-    gl.uniform1f(this.uOpacity, 0.5);
+    gl.uniform1f(this.uOpacity, this.settings.mapOverlay.coordinateGridOpacity);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.glyphTex);

@@ -45,6 +45,10 @@ export function applyGraphicsOverrides(
   if (overrides.mapOverlay?.territoryAlpha !== undefined) {
     settings.mapOverlay.territoryAlpha = overrides.mapOverlay.territoryAlpha;
   }
+  if (overrides.mapOverlay?.coordinateGridOpacity !== undefined) {
+    settings.mapOverlay.coordinateGridOpacity =
+      overrides.mapOverlay.coordinateGridOpacity;
+  }
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
   }

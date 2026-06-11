@@ -73,6 +73,7 @@ export interface RenderSettings {
     territorySaturation: number;
     /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
     territoryAlpha: number;
+    coordinateGridOpacity: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;

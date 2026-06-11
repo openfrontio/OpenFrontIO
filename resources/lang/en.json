@@ -959,6 +959,8 @@
     "territory_sat_desc": "How vivid the territory fill colors are (lower mutes them)",
     "territory_alpha_label": "Territory opacity",
     "territory_alpha_desc": "How opaque the territory fill is (lower lets terrain show through)",
+    "coordinate_grid_opacity_label": "Coordinate grid opacity",
+    "coordinate_grid_opacity_desc": "How opaque the coordinate grid is (lower lets more things show through)",
     "rail_distance_label": "Train track draw distance",
     "rail_distance_desc": "How far zoomed out train tracks remain visible",
     "rail_thickness_label": "Train track thickness",

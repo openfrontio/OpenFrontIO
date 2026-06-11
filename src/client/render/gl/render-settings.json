@@ -69,6 +69,7 @@
     "territoryDefenseDarken": 0.85,
     "territorySaturation": 1,
     "territoryAlpha": 0.588,
+    "coordinateGridOpacity": 0.5,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,
