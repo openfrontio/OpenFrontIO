@@ -59,6 +59,19 @@ export class WebGLFrameBuilder {
     this.skinsInitialized = false;
   }
 
+  /**
+   * Re-write every player's palette entry from their current (possibly re-themed)
+   * colors and re-upload just the palette texture. Used after a mid-game theme
+   * change (e.g. toggling colorblind mode) so existing territories re-color
+   * without re-syncing players, skins, or spawns.
+   */
+  refreshPalette(gameView: GameView): void {
+    for (const p of gameView.players()) {
+      this.writePaletteEntry(p.smallID(), p.territoryColor(), p.borderColor());
+    }
+    this.view.updatePalette(this.palette);
+  }
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncPlayerSpawns(gameView);

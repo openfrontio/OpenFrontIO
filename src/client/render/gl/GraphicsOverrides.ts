@@ -35,6 +35,11 @@ export const GraphicsOverridesSchema = z
         fx: z.boolean(),
       })
       .partial(),
+    accessibility: z
+      .object({
+        colorblind: z.boolean(),
+      })
+      .partial(),
   })
   .partial();
 

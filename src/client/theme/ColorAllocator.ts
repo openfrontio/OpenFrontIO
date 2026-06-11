@@ -1,61 +1,35 @@
-import { colord, Colord, extend } from "colord";
+import { Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import Color from "colorjs.io";
-import { ColoredTeams, Team } from "../../core/game/Game";
 import { PseudoRandom } from "../../core/PseudoRandom";
 import { simpleHash } from "../../core/Util";
-import {
-  blueTeamColors,
-  botTeamColors,
-  greenTeamColors,
-  orangeTeamColors,
-  purpleTeamColors,
-  redTeamColors,
-  tealTeamColors,
-  yellowTeamColors,
-} from "./Colors";
 extend([lchPlugin]);
 extend([labPlugin]);
 
+/**
+ * Assigns a stable, visually distinct color to each id from a pool, falling
+ * back to a larger list once the pool is exhausted. Theme-agnostic: it knows
+ * nothing about teams or palettes — a theme supplies the pool and owns any
+ * team-color logic.
+ */
 export class ColorAllocator {
   private availableColors: Colord[];
   private fallbackColors: Colord[];
   private assigned = new Map<string, Colord>();
-  private teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
     this.fallbackColors = [...colors, ...fallback];
   }
 
-  private getTeamColorVariations(team: Team): Colord[] {
-    switch (team) {
-      case ColoredTeams.Blue:
-        return blueTeamColors;
-      case ColoredTeams.Red:
-        return redTeamColors;
-      case ColoredTeams.Teal:
-        return tealTeamColors;
-      case ColoredTeams.Purple:
-        return purpleTeamColors;
-      case ColoredTeams.Yellow:
-        return yellowTeamColors;
-      case ColoredTeams.Orange:
-        return orangeTeamColors;
-      case ColoredTeams.Green:
-        return greenTeamColors;
-      case ColoredTeams.Bot:
-        return botTeamColors;
-      case ColoredTeams.Humans:
-        return blueTeamColors;
-      case ColoredTeams.Nations:
-        return redTeamColors;
-      default:
-        return [this.assignColor(team)];
-    }
-  }
-
+  /**
+   * Return the color assigned to `id`, allocating one on first request. New
+   * colors are chosen to be as visually distinct as possible from those already
+   * handed out (falling back to random selection once the pool is large or
+   * exhausted, for performance). Assignments are stable for the allocator's
+   * lifetime.
+   */
   assignColor(id: string): Colord {
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
@@ -76,46 +50,27 @@ export class ColorAllocator {
       selectedIndex = rand.nextInt(0, this.availableColors.length);
     } else {
       const assignedColors = Array.from(this.assigned.values());
-      selectedIndex =
-        selectDistinctColorIndex(this.availableColors, assignedColors) ?? 0;
+      selectedIndex = selectDistinctColorIndex(
+        this.availableColors,
+        assignedColors,
+      );
     }
 
     const color = this.availableColors.splice(selectedIndex, 1)[0];
     this.assigned.set(id, color);
     return color;
   }
-
-  assignTeamColor(team: Team): Colord {
-    const teamColors = this.getTeamColorVariations(team);
-    const rgb = teamColors[0].toRgb();
-    rgb.r = Math.round(rgb.r);
-    rgb.g = Math.round(rgb.g);
-    rgb.b = Math.round(rgb.b);
-    return colord(rgb);
-  }
-
-  assignTeamPlayerColor(team: Team, playerId: string): Colord {
-    if (this.teamPlayerColors.has(playerId)) {
-      return this.teamPlayerColors.get(playerId)!;
-    }
-
-    const teamColors = this.getTeamColorVariations(team);
-    const hashValue = simpleHash(playerId);
-    const colorIndex = hashValue % teamColors.length;
-    const color = teamColors[colorIndex];
-
-    this.teamPlayerColors.set(playerId, color);
-
-    return color;
-  }
 }
 
-// Select a distinct color index from the available colors that
-// is most different from the assigned colors
+/**
+ * Index of the available color that is most perceptually different from the
+ * already-assigned colors (the one whose nearest assigned neighbor is farthest
+ * away, by delta-E 2000). Throws if no colors have been assigned yet.
+ */
 export function selectDistinctColorIndex(
   availableColors: Colord[],
   assignedColors: Colord[],
-): number | null {
+): number {
   if (assignedColors.length === 0) {
     throw new Error("No assigned colors");
   }
@@ -136,16 +91,19 @@ export function selectDistinctColorIndex(
   return maxIndex;
 }
 
+/** Smallest delta-E 2000 distance from `lab1` to any of the assigned colors. */
 function minDeltaE(lab1: Color, assignedLabColors: Color[]) {
   return assignedLabColors.reduce((min, assigned) => {
     return Math.min(min, deltaE2000(lab1, assigned));
   }, Infinity);
 }
 
+/** Perceptual distance between two colors using the CIEDE2000 formula. */
 function deltaE2000(c1: Color, c2: Color): number {
   return c1.deltaE(c2, "2000");
 }
 
+/** Convert a colord color to a colorjs.io LAB color for delta-E math. */
 function toColor(colord: Colord): Color {
   const lab = colord.toLab();
   return new Color("lab", [lab.l, lab.a, lab.b]);
