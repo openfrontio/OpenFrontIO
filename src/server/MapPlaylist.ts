@@ -74,6 +74,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   IndianSubcontinent: 8,
   Italia: 6,
   Japan: 6,
+  JuanDeFucaStrait: 4,
   Korea: 5,
   Labyrinth: 6,
   Lemnos: 3,
@@ -151,6 +152,7 @@ const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
   [GameMapType.Surrounded, 4],
   [GameMapType.GulfOfStLawrence, 3],
   [GameMapType.ChoppingBlock, 4],
+  [GameMapType.JuanDeFucaStrait, 3],
 ]);
 
 type ModifierKey =

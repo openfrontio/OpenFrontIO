@@ -20,6 +20,10 @@ const NAME_CULL_MIN = 0;
 const NAME_CULL_MAX = 0.05;
 const NAME_CULL_STEP = 0.001;
 
+const HOVER_FADE_MIN = 0;
+const HOVER_FADE_MAX = 1;
+const HOVER_FADE_STEP = 0.05;
+
 const HIGHLIGHT_FILL_MIN = 0;
 const HIGHLIGHT_FILL_MAX = 1;
 const HIGHLIGHT_FILL_STEP = 0.01;
@@ -45,6 +49,10 @@ const TERRITORY_ALPHA_STEP = 0.01;
 const RAIL_ZOOM_MIN = 0;
 const RAIL_ZOOM_MAX = 10;
 const RAIL_ZOOM_STEP = 0.1;
+
+const RAIL_THICKNESS_MIN = 0.5;
+const RAIL_THICKNESS_MAX = 3;
+const RAIL_THICKNESS_STEP = 0.1;
 
 export class ShowGraphicsSettingsModalEvent {
   constructor(
@@ -144,6 +152,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentHoverFade(): number {
+    return (
+      this.userSettings.graphicsOverrides().name?.hoverFadeAlpha ??
+      renderDefaults.name.hoverFadeAlpha
+    );
+  }
+
   private patchName(patch: Partial<GraphicsOverrides["name"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -222,6 +237,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentRailThickness(): number {
+    return (
+      this.userSettings.graphicsOverrides().railroad?.railThickness ??
+      renderDefaults.railroad.railThickness
+    );
+  }
+
   private onHighlightFillChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchMapOverlay({ highlightFillBrighten: value });
@@ -253,6 +275,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchRailroad({ railMinZoom: RAIL_ZOOM_MAX - drawDistance });
   }
 
+  private onRailThicknessChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchRailroad({ railThickness: value });
+  }
+
   private currentClassicIcons(): boolean {
     return (
       this.userSettings.graphicsOverrides().structure?.classicIcons ?? false
@@ -272,6 +299,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  /** Merge a patch into the accessibility graphics overrides and persist it. */
+  private patchAccessibility(
+    patch: Partial<GraphicsOverrides["accessibility"]>,
+  ) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      accessibility: { ...current.accessibility, ...patch },
+    });
+    this.requestUpdate();
+  }
+
   private currentSpecialEffects(): boolean {
     return (
       this.userSettings.graphicsOverrides().passEnabled?.fx ??
@@ -283,6 +322,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
   }
 
+  /** Whether colorblind mode is currently enabled. */
+  private currentColorblind(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
+
+  /** Toggle colorblind-friendly colors. */
+  private onToggleColorblind() {
+    this.patchAccessibility({ colorblind: !this.currentColorblind() });
+  }
+
   private onNameScaleChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ nameScaleFactor: value });
@@ -291,6 +342,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private onNameCullChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ cullThreshold: value });
+  }
+
+  private onHoverFadeChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchName({ hoverFadeAlpha: value });
   }
 
   private currentDarkNames(): boolean {
@@ -314,6 +370,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
     const nameScale = this.currentNameScale();
     const nameCull = this.currentNameCull();
+    const hoverFade = this.currentHoverFade();
     const namesColored = !this.currentDarkNames();
     const classicIcons = this.currentClassicIcons();
     const highlightFill = this.currentHighlightFill();
@@ -322,6 +379,8 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const territorySat = this.currentTerritorySat();
     const territoryAlpha = this.currentTerritoryAlpha();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
+    const railThickness = this.currentRailThickness();
+    const colorblind = this.currentColorblind();
 
     return html`
       <div
@@ -405,6 +464,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${nameCull.toFixed(3)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.hover_fade_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.hover_fade_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HOVER_FADE_MIN}
+                  max=${HOVER_FADE_MAX}
+                  step=${HOVER_FADE_STEP}
+                  .value=${String(hoverFade)}
+                  @input=${this.onHoverFadeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${hoverFade.toFixed(2)}
               </div>
             </div>
 
@@ -609,6 +693,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             </div>
 
             <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.rail_thickness_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.rail_thickness_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${RAIL_THICKNESS_MIN}
+                  max=${RAIL_THICKNESS_MAX}
+                  step=${RAIL_THICKNESS_STEP}
+                  .value=${String(railThickness)}
+                  @input=${this.onRailThicknessChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${railThickness.toFixed(1)}
+              </div>
+            </div>
+
+            <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
             >
               ${translateText("graphics_setting.section_effects")}
@@ -628,6 +737,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_accessibility")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleColorblind}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.colorblind_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.colorblind_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${colorblind
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

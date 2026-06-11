@@ -3,6 +3,11 @@ import type { RenderSettings } from "./RenderSettings";
 
 const DARK_AMBIENT = 0.35;
 
+/**
+ * Apply the user's graphics overrides onto a RenderSettings in place: name
+ * scaling, classic/dark structure and name styling, and the colorblind-safe
+ * affiliation/tint palette.
+ */
 export function applyGraphicsOverrides(
   settings: RenderSettings,
   overrides: GraphicsOverrides,
@@ -12,6 +17,9 @@ export function applyGraphicsOverrides(
   }
   if (overrides.name?.cullThreshold !== undefined) {
     settings.name.cullThreshold = overrides.name.cullThreshold;
+  }
+  if (overrides.name?.hoverFadeAlpha !== undefined) {
+    settings.name.hoverFadeAlpha = overrides.name.hoverFadeAlpha;
   }
   if (overrides.structure?.classicIcons === true) {
     // Classic look: lighter player-colored shape behind a dark icon glyph,
@@ -45,6 +53,9 @@ export function applyGraphicsOverrides(
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
   }
+  if (overrides.railroad?.railThickness !== undefined) {
+    settings.railroad.railThickness = overrides.railroad.railThickness;
+  }
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
   }
@@ -61,8 +72,36 @@ export function applyGraphicsOverrides(
     settings.name.outlineG = channel;
     settings.name.outlineB = channel;
   }
+  if (overrides.accessibility?.colorblind === true) {
+    // Swap the red/green friend-foe encoding (the most common confusion axis)
+    // for a colorblind-safe blue/orange pairing (Okabe-Ito).
+    // Alt-view affiliation borders: self/ally in the blue family, enemy orange.
+    settings.affiliation.selfR = 0;
+    settings.affiliation.selfG = 0.447;
+    settings.affiliation.selfB = 0.698;
+    settings.affiliation.allyR = 0.337;
+    settings.affiliation.allyG = 0.706;
+    settings.affiliation.allyB = 0.914;
+    settings.affiliation.enemyR = 0.835;
+    settings.affiliation.enemyG = 0.369;
+    settings.affiliation.enemyB = 0;
+    // Normal-view relationship border tints: friendly blue, enemy orange,
+    // applied strongly so the cue doesn't rely on subtle hue.
+    settings.mapOverlay.friendlyTintR = 0;
+    settings.mapOverlay.friendlyTintG = 0.447;
+    settings.mapOverlay.friendlyTintB = 0.698;
+    settings.mapOverlay.embargoTintR = 0.835;
+    settings.mapOverlay.embargoTintG = 0.369;
+    settings.mapOverlay.embargoTintB = 0;
+    // Strong ratio so the friend/foe tint dominates the darkened territory
+    // border — neutral keeps its (darkened) fill hue, ally reads blue, enemy
+    // reads orange.
+    settings.mapOverlay.friendlyTintRatio = 0.85;
+    settings.mapOverlay.embargoTintRatio = 0.85;
+  }
 }
 
+/** Apply dark-mode lighting (ambient + enabled) onto settings when active. */
 export function applyDarkModeOverride(
   settings: RenderSettings,
   isDark: boolean,

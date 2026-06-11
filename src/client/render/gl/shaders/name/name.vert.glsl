@@ -28,6 +28,8 @@ uniform float uNameScaleFactor;
 uniform float uNameScaleCap;
 uniform float uTroopSizeMultiplier;
 uniform float uHighlightOwnerID;
+uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor is over (0 = none)
+uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
 
 out vec2 vUV;
 out vec4 vPlayerColor;  // player territory color (rgb) + alpha
@@ -155,8 +157,13 @@ void main() {
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 
-  // 10. UV interpolation across quad
+  // 10. Fade the whole name plate when the cursor is on top of any part of it
+  // so units underneath stay visible. Hit test runs on the CPU (NamePass).
+  float hoverAlpha = (uFadeOwnerID > 0.0 && smallID == uFadeOwnerID)
+    ? uHoverFadeAlpha : 1.0;
+
+  // 11. UV interpolation across quad
   vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
-  vPlayerColor = pd2;       // player territory color (rgb) + alpha
+  vPlayerColor = vec4(pd2.rgb, pd2.a * hoverAlpha); // player territory color + alpha
   vNameShade = pd3.z;         // name fill grayscale shade (0.0 = black)
 }

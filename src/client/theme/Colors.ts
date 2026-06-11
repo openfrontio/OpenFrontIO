@@ -23,6 +23,41 @@ export const orangeTeamColors: Colord[] = generateTeamColors(orange);
 export const greenTeamColors: Colord[] = generateTeamColors(green);
 export const botTeamColors: Colord[] = [botColor];
 
+// High-contrast, lightness-varied palette for colorblind mode. Hue is spread by
+// the golden angle and lightness walks across a wide range so colors differ in
+// brightness (the cue all colorblindness types retain), not just hue. The
+// allocator's greedy max-ΔE pick then keeps neighbors as distinct as possible.
+export const colorblindColors: Colord[] = Array.from({ length: 32 }, (_, i) => {
+  const h = (i * 137.508) % 360;
+  const l = 35 + ((i * 7) % 50); // 35..84, spread across entries
+  const c = 78;
+  return colord({ l, c, h });
+});
+
+// Colorblind-safe team base colors (Okabe-Ito), expanded into per-player
+// variations the same way the pastel teams are.
+export const cbBlueTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(0,114,178)"),
+);
+export const cbRedTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(213,94,0)"), // vermillion
+);
+export const cbTealTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(0,158,115)"), // bluish green
+);
+export const cbPurpleTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(204,121,167)"), // reddish purple
+);
+export const cbYellowTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(240,228,66)"),
+);
+export const cbOrangeTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(230,159,0)"),
+);
+export const cbGreenTeamColors: Colord[] = generateTeamColors(
+  colord("rgb(86,180,233)"), // sky blue (green is hard for CVD)
+);
+
 function generateTeamColors(baseColor: Colord): Colord[] {
   const lch = baseColor.toLch();
   const colorCount = 64;

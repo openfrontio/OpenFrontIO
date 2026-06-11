@@ -7,6 +7,7 @@ export const GraphicsOverridesSchema = z
         nameScaleFactor: z.number(),
         cullThreshold: z.number(),
         darkNames: z.boolean(),
+        hoverFadeAlpha: z.number(),
       })
       .partial(),
     structure: z
@@ -26,11 +27,17 @@ export const GraphicsOverridesSchema = z
     railroad: z
       .object({
         railMinZoom: z.number(),
+        railThickness: z.number(),
       })
       .partial(),
     passEnabled: z
       .object({
         fx: z.boolean(),
+      })
+      .partial(),
+    accessibility: z
+      .object({
+        colorblind: z.boolean(),
       })
       .partial(),
   })

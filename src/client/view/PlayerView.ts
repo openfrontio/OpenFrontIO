@@ -105,18 +105,20 @@ export class PlayerView {
   /** Static header data — set once at construction, never mutated. */
   public static: PlayerStatic;
 
-  private _territoryColor: Colord;
-  private _borderColor: Colord;
+  // Assigned via computeColors() in the constructor; re-assignable on theme change.
+  private _territoryColor!: Colord;
+  private _borderColor!: Colord;
+  private _railColor!: Colord;
   // Update here to include structure light and dark colors
-  private _structureColors: { light: Colord; dark: Colord };
+  private _structureColors!: { light: Colord; dark: Colord };
 
   // Pre-computed border color variants
-  private _borderColorNeutral: Colord;
-  private _borderColorFriendly: Colord;
-  private _borderColorEmbargo: Colord;
-  private _borderColorDefendedNeutral: { light: Colord; dark: Colord };
-  private _borderColorDefendedFriendly: { light: Colord; dark: Colord };
-  private _borderColorDefendedEmbargo: { light: Colord; dark: Colord };
+  private _borderColorNeutral!: Colord;
+  private _borderColorFriendly!: Colord;
+  private _borderColorEmbargo!: Colord;
+  private _borderColorDefendedNeutral!: { light: Colord; dark: Colord };
+  private _borderColorDefendedFriendly!: { light: Colord; dark: Colord };
+  private _borderColorDefendedEmbargo!: { light: Colord; dark: Colord };
 
   constructor(
     private game: GameView,
@@ -134,6 +136,23 @@ export class PlayerView {
       this.anonymousName = createRandomName(data.name!, data.playerType!);
     }
 
+    this.computeColors();
+
+    const pattern = userSettings.territoryPatterns()
+      ? this.cosmetics.pattern
+      : undefined;
+    this.decoder =
+      pattern === undefined
+        ? undefined
+        : new PatternDecoder(pattern, base64url.decode);
+  }
+
+  /**
+   * Compute every theme-derived color (fill, border, structure, and the
+   * neutral/friendly/embargo border variants) from the active theme. Re-callable
+   * so a mid-game theme change — e.g. toggling colorblind mode — can refresh them.
+   */
+  private computeColors(): void {
     const theme = themeProvider.current();
 
     const defaultTerritoryColor = theme.territoryColor(this);
@@ -163,7 +182,7 @@ export class PlayerView {
     this._structureColors = theme.structureColors(this._territoryColor);
 
     const maybeFocusedBorderColor =
-      this.game.myClientID() === data.clientID
+      this.game.myClientID() === this.static.clientID
         ? theme.focusedBorderColor()
         : defaultBorderColor;
 
@@ -172,6 +191,17 @@ export class PlayerView {
         this.cosmetics.color?.color ??
         maybeFocusedBorderColor.toHex(),
     );
+
+    // Rail color (only used for the local player's rails): white for
+    // visibility, flipped to black when the territory is too light for white
+    // to read against it. Patterns paint both colors, so average them.
+    const railBackdropBrightness = pattern
+      ? (this._territoryColor.brightness() + this._borderColor.brightness()) / 2
+      : this._territoryColor.brightness();
+    this._railColor =
+      railBackdropBrightness > 0.8
+        ? colord("rgb(0,0,0)")
+        : theme.focusedBorderColor();
 
     const baseRgb = this._borderColor.toRgb();
 
@@ -218,11 +248,11 @@ export class PlayerView {
     this._borderColorDefendedEmbargo = theme.defendedBorderColors(
       this._borderColorEmbargo,
     );
+  }
 
-    this.decoder =
-      pattern === undefined
-        ? undefined
-        : new PatternDecoder(pattern, base64url.decode);
+  /** Recompute colors after the active theme changes (e.g. colorblind toggle). */
+  refreshColors(): void {
+    this.computeColors();
   }
 
   /**
@@ -251,6 +281,10 @@ export class PlayerView {
 
   structureColors(): { light: Colord; dark: Colord } {
     return this._structureColors;
+  }
+
+  railColor(): Colord {
+    return this._railColor;
   }
 
   /**

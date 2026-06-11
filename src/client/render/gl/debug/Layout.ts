@@ -201,6 +201,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
           "Detail Zoom",
         ),
         slider(s.railroad, "railAlpha", d.railroad, 0, 1, 0.01, "Alpha"),
+        slider(
+          s.railroad,
+          "railThickness",
+          d.railroad,
+          0.5,
+          3,
+          0.1,
+          "Thickness",
+        ),
       ]),
     ]),
 
@@ -316,6 +325,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       toggle(s.name, "fillUsePlayerColor", d.name, "Fill = Player Color"),
       slider(s.name, "emojiRowOffset", d.name, 0, 5, 0.1, "Emoji Row Offset"),
       slider(s.name, "statusRowOffset", d.name, 0, 5, 0.1, "Status Row Offset"),
+      slider(s.name, "hoverFadeAlpha", d.name, 0, 1, 0.05, "Hover Fade Alpha"),
     ]),
 
     folder("FX", [

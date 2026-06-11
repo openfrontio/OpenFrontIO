@@ -303,7 +303,7 @@ export class ActionableEvents extends LitElement implements Controller {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
       if (aPrior === bPrior) {
-        return a.createdAt - b.createdAt;
+        return b.createdAt - a.createdAt;
       }
       return bPrior - aPrior;
     });

@@ -99,7 +99,10 @@ export class RailroadPass {
   private uRailDetailZoom: WebGLUniformLocation;
   private uRailAlpha: WebGLUniformLocation;
   private uRailFade: WebGLUniformLocation;
+  private uRailThickness: WebGLUniformLocation;
   private uGhostOwnerID: WebGLUniformLocation;
+  private uLocalPlayerID: WebGLUniformLocation;
+  private uLocalRailColor: WebGLUniformLocation;
 
   private mapW: number;
   private mapH: number;
@@ -111,6 +114,9 @@ export class RailroadPass {
   private cpuGhostRailState: Uint8Array;
   private ghostRailDirty = false;
   private ghostOwnerID = 0;
+
+  private localPlayerID = 0;
+  private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -147,7 +153,19 @@ export class RailroadPass {
     )!;
     this.uRailAlpha = gl.getUniformLocation(this.program, "uRailAlpha")!;
     this.uRailFade = gl.getUniformLocation(this.program, "uRailFade")!;
+    this.uRailThickness = gl.getUniformLocation(
+      this.program,
+      "uRailThickness",
+    )!;
     this.uGhostOwnerID = gl.getUniformLocation(this.program, "uGhostOwnerID")!;
+    this.uLocalPlayerID = gl.getUniformLocation(
+      this.program,
+      "uLocalPlayerID",
+    )!;
+    this.uLocalRailColor = gl.getUniformLocation(
+      this.program,
+      "uLocalRailColor",
+    )!;
 
     // Texture unit bindings + ghost defaults
     gl.useProgram(this.program);
@@ -197,6 +215,15 @@ export class RailroadPass {
   uploadRailroadState(railroadState: Uint8Array): void {
     this.cpuRailroadState.set(railroadState);
     this.railroadDirty = true;
+  }
+
+  setLocalPlayer(smallID: number): void {
+    this.localPlayerID = smallID;
+  }
+
+  /** Rail color for the local player (0–1 RGB). */
+  setLocalRailColor(r: number, g: number, b: number): void {
+    this.localRailColor = [r, g, b];
   }
 
   /**
@@ -321,7 +348,15 @@ export class RailroadPass {
     gl.uniform1f(this.uRailDetailZoom, rs.railDetailZoom);
     gl.uniform1f(this.uRailAlpha, rs.railAlpha);
     gl.uniform1f(this.uRailFade, fade);
+    gl.uniform1f(this.uRailThickness, rs.railThickness);
     gl.uniform1f(this.uGhostOwnerID, this.ghostOwnerID);
+    gl.uniform1f(this.uLocalPlayerID, this.localPlayerID);
+    gl.uniform3f(
+      this.uLocalRailColor,
+      this.localRailColor[0],
+      this.localRailColor[1],
+      this.localRailColor[2],
+    );
 
     // Bind textures: 0=railroad, 1=tile, 2=palette, 3=terrain, 4=ghostRail
     gl.activeTexture(gl.TEXTURE0);

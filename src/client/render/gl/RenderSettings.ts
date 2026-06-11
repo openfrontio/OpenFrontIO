@@ -112,6 +112,8 @@ export interface RenderSettings {
     railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
+    /** Track width multiplier (1 = default width). */
+    railThickness: number;
   };
   structure: {
     iconSize: number;
@@ -199,6 +201,8 @@ export interface RenderSettings {
     nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Alpha multiplier applied to a name while the cursor is over it. */
+    hoverFadeAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;
