@@ -522,7 +522,11 @@ export class GPURenderer {
       mapH,
       this.settings,
     );
-    this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
+    try {
+      this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
+    } catch {
+      this.setGridView(false);
+    }
 
     for (const p of header.players) {
       if (p.team !== null) this.playerTeams.set(p.smallID, p.team);
@@ -1073,7 +1077,11 @@ export class GPURenderer {
 
   setGridView(active: boolean): void {
     this.gridView = active;
-    window.localStorage.setItem(GRID_VIEW_KEY, active ? "true" : "false");
+    try {
+      window.localStorage.setItem(GRID_VIEW_KEY, active ? "true" : "false");
+    } catch {
+      // Ignore if we are unanble to use localstorage.
+    }
   }
 
   getSettings(): RenderSettings {
