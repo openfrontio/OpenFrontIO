@@ -673,6 +673,8 @@ export class GPURenderer {
     );
     // SAM radius pass stores its own copy
     this.samRadiusPass.setPaletteData(this.paletteData);
+    // Name pass caches per-player colors and bakes them into slot rows
+    this.namePass.refreshPlayerColors(this.paletteData);
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
