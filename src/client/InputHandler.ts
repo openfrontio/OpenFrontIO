@@ -222,7 +222,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
-  private keybindAndEvent: Map<string, Function[]> = new Map();
+  private keybindAndEvent: Map<string, ((type: KeyboardEvent) => any)[]> = new Map();
   private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
@@ -934,8 +934,8 @@ export class InputHandler {
    */
   private addKeybindAndEvent(
     keybind: string,
-    event: Function,
-    ...conditions: Function[]
+    event: (type: KeyboardEvent) => any,
+    ...conditions: ((type: KeyboardEvent) => any)[]
   ) {
     this.keybindAndEvent.set(keybind, [event, ...conditions]);
   }
