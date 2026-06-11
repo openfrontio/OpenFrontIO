@@ -2,6 +2,30 @@
   "name": "Dyslexdria",
   "nations": [
     {
+      "name": "ZOMIBES",
+      "flag": ""
+    },
+    {
+      "name": "The Plack Plaque",
+      "flag": ""
+    },
+    {
+      "name": "Glabol Wraming",
+      "flag": ""
+    },
+    {
+      "name": "Glabol Clooing",
+      "flag": ""
+    },
+    {
+      "name": "Maltiplying Rappits",
+      "flag": ""
+    },
+    {
+      "name": "sdrawkcaB",
+      "flag": ""
+    },
+    {
       "coordinates": [2380, 400],
       "flag": "de",
       "name": "Jermaine"
@@ -164,12 +188,12 @@
     {
       "coordinates": [1000, 950],
       "flag": "vn",
-      "name": "North Vitamen"
+      "name": "Vitamen"
     },
     {
-      "coordinates": [976, 996],
-      "flag": "South Vietnam",
-      "name": "South Vitamen"
+      "coordinates": [915, 1042],
+      "name": "Cuda",
+      "flag": "cu"
     },
     {
       "coordinates": [255, 945],
@@ -350,6 +374,577 @@
       "coordinates": [2950, 50],
       "flag": "Republic of Pirates",
       "name": "Biosphere Conmune"
+    }
+  ],
+
+  "additionalNations": [
+    {
+      "name": "Angolala",
+      "flag": "ao"
+    },
+    {
+      "name": "Benny",
+      "flag": "bj"
+    },
+    {
+      "name": "Boswatsa",
+      "flag": "bw"
+    },
+    {
+      "name": "Burkino Fasho",
+      "flag": "bf"
+    },
+    {
+      "name": "Burndinni",
+      "flag": "bi"
+    },
+    {
+      "name": "Cabover Verte",
+      "flag": "cv"
+    },
+    {
+      "name": "Cameroom",
+      "flag": "cm"
+    },
+    {
+      "name": "Chad",
+      "flag": "td"
+    },
+    {
+      "name": "Cosmoros",
+      "flag": "km"
+    },
+    {
+      "name": "Depublic of Congo",
+      "flag": "cd"
+    },
+    {
+      "name": "Republic of Congo",
+      "flag": "cg"
+    },
+    {
+      "name": "Djiboutit",
+      "flag": "dj"
+    },
+    {
+      "name": "Eychpt",
+      "flag": "eg"
+    },
+    {
+      "name": "Equational Guinae",
+      "flag": "gq"
+    },
+    {
+      "name": "Eritree",
+      "flag": "er"
+    },
+    {
+      "name": "Watesini",
+      "flag": "sz"
+    },
+    {
+      "name": "Ethiobia",
+      "flag": "et"
+    },
+    {
+      "name": "Gadon",
+      "flag": "ga"
+    },
+    {
+      "name": "Gambinie",
+      "flag": "gm"
+    },
+    {
+      "name": "Ghinha",
+      "flag": "gh"
+    },
+    {
+      "name": "Guinae",
+      "flag": "gn"
+    },
+    {
+      "name": "Guinae-Bissaw",
+      "flag": "gw"
+    },
+    {
+      "name": "Canya",
+      "flag": "ke"
+    },
+    {
+      "name": "Lesstho",
+      "flag": "ls"
+    },
+    {
+      "name": "Mallawi",
+      "flag": "mw"
+    },
+    {
+      "name": "Malli",
+      "flag": "ml"
+    },
+    {
+      "name": "Marstionus",
+      "flag": "mu"
+    },
+    {
+      "name": "Morcocco",
+      "flag": "ma"
+    },
+    {
+      "name": "Montzambique",
+      "flag": "mz"
+    },
+    {
+      "name": "Namebia",
+      "flag": "na"
+    },
+    {
+      "name": "Rowanda",
+      "flag": "rw"
+    },
+    {
+      "name": "Say Tom and Prince",
+      "flag": "st"
+    },
+    {
+      "name": "Seagull",
+      "flag": "sn"
+    },
+    {
+      "name": "Saycharles",
+      "flag": "sc"
+    },
+    {
+      "name": "Sierra Leone",
+      "flag": "sl"
+    },
+    {
+      "name": "Suedan",
+      "flag": "sd"
+    },
+    {
+      "name": "Tansaknee",
+      "flag": "tz"
+    },
+    {
+      "name": "Tago",
+      "flag": "tg"
+    },
+    {
+      "name": "Tunasia",
+      "flag": "tn"
+    },
+    {
+      "name": "Ugotta",
+      "flag": "ug"
+    },
+    {
+      "name": "Zambee",
+      "flag": "zm"
+    },
+    {
+      "name": "Zambobwe",
+      "flag": "zw"
+    },
+    {
+      "name": "Armean",
+      "flag": "am"
+    },
+    {
+      "name": "Azkerbaijan",
+      "flag": "az"
+    },
+    {
+      "name": "Byrain",
+      "flag": "bh"
+    },
+    {
+      "name": "Butane",
+      "flag": "bt"
+    },
+    {
+      "name": "Bruno",
+      "flag": "bn"
+    },
+    {
+      "name": "Cantbodia",
+      "flag": "kh"
+    },
+    {
+      "name": "Sypruc",
+      "flag": "cy"
+    },
+    {
+      "name": "Isntrael",
+      "flag": "il"
+    },
+    {
+      "name": "Jokean",
+      "flag": "jo"
+    },
+    {
+      "name": "Kuwlant",
+      "flag": "kw"
+    },
+    {
+      "name": "Kringyzstan",
+      "flag": "kg"
+    },
+    {
+      "name": "Lass",
+      "flag": "la"
+    },
+    {
+      "name": "Lebannonna",
+      "flag": "lb"
+    },
+    {
+      "name": "Mailasia",
+      "flag": "my"
+    },
+    {
+      "name": "Maildives",
+      "flag": "mv"
+    },
+    {
+      "name": "Mymar",
+      "flag": "mm"
+    },
+    {
+      "name": "Nipal",
+      "flag": "np"
+    },
+    {
+      "name": "Ohman",
+      "flag": "om"
+    },
+    {
+      "name": "Pailestine",
+      "flag": "ps"
+    },
+    {
+      "name": "Phlippines",
+      "flag": "ph"
+    },
+    {
+      "name": "Qatart",
+      "flag": "qa"
+    },
+    {
+      "name": "Salty Abria",
+      "flag": "sa"
+    },
+    {
+      "name": "Slingapore",
+      "flag": "sg"
+    },
+    {
+      "name": "Siri Lanka",
+      "flag": "lk"
+    },
+    {
+      "name": "Siria",
+      "flag": "sy"
+    },
+    {
+      "name": "Tragistan",
+      "flag": "tj"
+    },
+    {
+      "name": "Thyland",
+      "flag": "th"
+    },
+    {
+      "name": "Teamor-Lee",
+      "flag": "tl"
+    },
+    {
+      "name": "Turkme",
+      "flag": "tm"
+    },
+    {
+      "name": "Uzbeckandstan",
+      "flag": "uz"
+    },
+    {
+      "name": "Yoman",
+      "flag": "ye"
+    },
+    {
+      "name": "Albandana",
+      "flag": "al"
+    },
+    {
+      "name": "Andorrea",
+      "flag": "ad"
+    },
+    {
+      "name": "Antique and Barbota",
+      "flag": "ag"
+    },
+    {
+      "name": "Bahammocs",
+      "flag": "bs"
+    },
+    {
+      "name": "Bartbados",
+      "flag": "bb"
+    },
+    {
+      "name": "Beltarus",
+      "flag": "by"
+    },
+    {
+      "name": "Believgium",
+      "flag": "be"
+    },
+    {
+      "name": "Bonisa and Herzgoniva",
+      "flag": "ba"
+    },
+    {
+      "name": "Boltgaria",
+      "flag": "bg"
+    },
+    {
+      "name": "Coastria",
+      "flag": "hr"
+    },
+    {
+      "name": "Check Repubilc",
+      "flag": "cz"
+    },
+    {
+      "name": "Damnark",
+      "flag": "dk"
+    },
+    {
+      "name": "Eastonia",
+      "flag": "ee"
+    },
+    {
+      "name": "Holy Shi",
+      "flag": "va"
+    },
+    {
+      "name": "Austin-Hungry",
+      "flag": "austria-hungary"
+    },
+    {
+      "name": "Areland",
+      "flag": "ie"
+    },
+    {
+      "name": "Kostovo",
+      "flag": "xk"
+    },
+    {
+      "name": "Lateiva",
+      "flag": "lv"
+    },
+    {
+      "name": "Lietenestein",
+      "flag": "li"
+    },
+    {
+      "name": "Lithulanila",
+      "flag": "lt"
+    },
+    {
+      "name": "Luxborgor",
+      "flag": "lu"
+    },
+    {
+      "name": "Nalta",
+      "flag": "mt"
+    },
+    {
+      "name": "Meltova",
+      "flag": "md"
+    },
+    {
+      "name": "Monica",
+      "flag": "mc"
+    },
+    {
+      "name": "Montrogen",
+      "flag": "me"
+    },
+    {
+      "name": "Neitherlands",
+      "flag": "nl"
+    },
+    {
+      "name": "Nort Macadamia",
+      "flag": "mk"
+    },
+    {
+      "name": "Polend",
+      "flag": "pl"
+    },
+    {
+      "name": "Porjuggle",
+      "flag": "pt"
+    },
+    {
+      "name": "Saint Mario",
+      "flag": "sm"
+    },
+    {
+      "name": "Slowakia",
+      "flag": "sk"
+    },
+    {
+      "name": "Slowenia",
+      "flag": "si"
+    },
+    {
+      "name": "Witzerland",
+      "flag": "ch"
+    },
+    {
+      "name": "Belizee",
+      "flag": "bz"
+    },
+    {
+      "name": "Coasta Rica",
+      "flag": "cr"
+    },
+    {
+      "name": "Dominicant",
+      "flag": "dm"
+    },
+    {
+      "name": "Dominican",
+      "flag": "do"
+    },
+    {
+      "name": "Le Salphador",
+      "flag": "sv"
+    },
+    {
+      "name": "Greendaa",
+      "flag": "gd"
+    },
+    {
+      "name": "Gotomala",
+      "flag": "gt"
+    },
+    {
+      "name": "Haitea",
+      "flag": "ht"
+    },
+    {
+      "name": "Hondooras",
+      "flag": "hn"
+    },
+    {
+      "name": "Jamerica",
+      "flag": "jm"
+    },
+    {
+      "name": "Panmea",
+      "flag": "pa"
+    },
+    {
+      "name": "Saint Kittens and Knevis",
+      "flag": "kn"
+    },
+    {
+      "name": "Saint Lucca",
+      "flag": "lc"
+    },
+    {
+      "name": "Saint Vince and the Grenades",
+      "flag": "vc"
+    },
+    {
+      "name": "Triniti and Tobacco",
+      "flag": "tt"
+    },
+    {
+      "name": "Beleivia",
+      "flag": "bo"
+    },
+    {
+      "name": "Colombo",
+      "flag": "co"
+    },
+    {
+      "name": "Ecuator",
+      "flag": "ec"
+    },
+    {
+      "name": "Guyanna",
+      "flag": "gy"
+    },
+    {
+      "name": "Paraway",
+      "flag": "py"
+    },
+    {
+      "name": "Perdu",
+      "flag": "pe"
+    },
+    {
+      "name": "Surname",
+      "flag": "sr"
+    },
+    {
+      "name": "Urugway",
+      "flag": "uy"
+    },
+    {
+      "name": "Venisuela",
+      "flag": "ve"
+    },
+    {
+      "name": "Fjij",
+      "flag": "fj"
+    },
+    {
+      "name": "Kirabatti",
+      "flag": "ki"
+    },
+    {
+      "name": "March Islands",
+      "flag": "mh"
+    },
+    {
+      "name": "Federal States of Mikeasia",
+      "flag": "fm"
+    },
+    {
+      "name": "Norau",
+      "flag": "nr"
+    },
+    {
+      "name": "Plateu",
+      "flag": "pw"
+    },
+    {
+      "name": "Sammon",
+      "flag": "ws"
+    },
+    {
+      "name": "Soloman Island",
+      "flag": "sb"
+    },
+    {
+      "name": "Tango",
+      "flag": "to"
+    },
+    {
+      "name": "Tuvolt",
+      "flag": "tv"
+    },
+    {
+      "name": "Vantu",
+      "flag": "vu"
+    },
+    {
+      "name": "Patrick Plays Badly",
+      "flag": ""
     }
   ]
 }
