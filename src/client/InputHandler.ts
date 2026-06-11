@@ -222,6 +222,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
+  private keybindAndEvent: Map<string, Function[]> = new Map();
   private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
@@ -239,6 +240,69 @@ export class InputHandler {
 
   initialize() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
+
+    this.addKeybindAndEvent(this.keybinds.boatAttack, () => {
+      this.eventBus.emit(new DoBoatAttackEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.groundAttack, () => {
+      this.eventBus.emit(new DoGroundAttackEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.retaliateAttack, () => {
+      this.eventBus.emit(new DoRetaliateAttackEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.centerCamera, () => {
+      this.eventBus.emit(new CenterCameraEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.selectAllWarships, () => {
+      this.eventBus.emit(new SelectAllWarshipsEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.requestAlliance, () => {
+      this.eventBus.emit(new DoRequestAllianceEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.breakAlliance, () => {
+      this.eventBus.emit(new DoBreakAllianceEvent());
+    });
+    this.addKeybindAndEvent(
+      this.keybinds.pauseGame,
+      () => {
+        this.eventBus.emit(new TogglePauseIntentEvent());
+      },
+      (e: KeyboardEvent) => !e.repeat,
+    );
+    this.addKeybindAndEvent(
+      this.keybinds.gameSpeedUp,
+      () => {
+        this.eventBus.emit(new GameSpeedUpIntentEvent());
+      },
+      (e: KeyboardEvent) => !e.repeat,
+    );
+    this.addKeybindAndEvent(
+      this.keybinds.gameSpeedDown,
+      () => {
+        this.eventBus.emit(new GameSpeedDownIntentEvent());
+      },
+      (e: KeyboardEvent) => !e.repeat,
+    );
+    this.addKeybindAndEvent(this.keybinds.attackRatioDown, () => {
+      const increment = this.userSettings.attackRatioIncrement();
+      this.eventBus.emit(new AttackRatioEvent(-increment));
+    });
+    this.addKeybindAndEvent(this.keybinds.attackRatioUp, () => {
+      const increment = this.userSettings.attackRatioIncrement();
+      this.eventBus.emit(new AttackRatioEvent(increment));
+    });
+    this.addKeybindAndEvent(this.keybinds.swapDirection, () => {
+      const nextDirection = !this.uiState.rocketDirectionUp;
+      this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
+    });
+    this.addKeybindAndEvent("Shift+KeyD", () => {
+      console.log("TogglePerformanceOverlayEvent");
+      this.eventBus.emit(new TogglePerformanceOverlayEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.toggleView, () => {
+      this.alternateView = false;
+      this.eventBus.emit(new AlternateViewEvent(false));
+    });
 
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
@@ -438,6 +502,8 @@ export class InputHandler {
           this.keybinds.shiftKey,
           this.keybinds.emojiMenuModifier,
           this.keybinds.buildMenuModifier,
+          "AltLeft",
+          "AltRight",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -475,7 +541,21 @@ export class InputHandler {
         this.activeKeys.delete(this.keybinds.zoomIn);
         this.activeKeys.delete(this.keybinds.zoomOut);
       }
-
+      
+      for(const item of this.keybindAndEvent) {
+        if (this.keybindMatchesEvent(e, item[0])) {
+          let allConditionsFullfiled = true;
+          for (const i of item[1].slice(1)) {
+            if (!i(e)) {
+              allConditionsFullfiled = false
+            }
+          }
+          if (!allConditionsFullfiled) continue;
+          e.preventDefault();
+          item[1][0]()
+        }
+      }
+      /*
       if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
         e.preventDefault();
         this.alternateView = false;
@@ -483,7 +563,10 @@ export class InputHandler {
       }
 
       const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      if (e.code === resetKey && this.isAltKeyHeld(e)) {
+      if (
+        e.code === resetKey &&
+        (this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight"))
+      ) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
@@ -524,7 +607,7 @@ export class InputHandler {
         e.preventDefault();
         this.eventBus.emit(new SelectAllWarshipsEvent());
       }
-
+*/
       // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
       if (this.canUseBuildKeybinds()) {
         const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
@@ -533,7 +616,7 @@ export class InputHandler {
           this.setGhostStructure(matchedBuild);
         }
       }
-
+/*
       if (this.keybindMatchesEvent(e, this.keybinds.requestAlliance)) {
         e.preventDefault();
         this.eventBus.emit(new DoRequestAllianceEvent());
@@ -572,7 +655,7 @@ export class InputHandler {
         console.log("TogglePerformanceOverlayEvent");
         this.eventBus.emit(new TogglePerformanceOverlayEvent());
       }
-
+*/
       this.activeKeys.delete(e.code);
 
       // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
@@ -917,6 +1000,20 @@ export class InputHandler {
   }
 
   /**
+   * Add a keybind that activates on one press
+   * @param keybind The keybind that is being activated
+   * @param event The code to be exectued when this keybind is pressed
+   * @param conditions Optional conditions that can be added, they get the keyboard up event passed to them
+   */
+  private addKeybindAndEvent(
+    keybind: string,
+    event: Function,
+    ...conditions: Function[]
+  ) {
+    this.keybindAndEvent.set(keybind, [event, ...conditions]);
+  }
+
+  /**
    * Resolves a keyup code to a build action: exact code match first, then digit/Numpad alias.
    * Returns the UnitType to set as ghost, or null if no build keybind matched.
    */
@@ -991,33 +1088,5 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
-  }
-
-  private isAltKeyHeld(event: KeyboardEvent): boolean {
-    if (
-      this.keybinds.altKey === "AltLeft" ||
-      this.keybinds.altKey === "AltRight"
-    ) {
-      return event.altKey && !event.ctrlKey;
-    }
-    if (
-      this.keybinds.altKey === "ControlLeft" ||
-      this.keybinds.altKey === "ControlRight"
-    ) {
-      return event.ctrlKey;
-    }
-    if (
-      this.keybinds.altKey === "ShiftLeft" ||
-      this.keybinds.altKey === "ShiftRight"
-    ) {
-      return event.shiftKey;
-    }
-    if (
-      this.keybinds.altKey === "MetaLeft" ||
-      this.keybinds.altKey === "MetaRight"
-    ) {
-      return event.metaKey;
-    }
-    return false;
   }
 }
