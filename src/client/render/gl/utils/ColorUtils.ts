@@ -2,7 +2,7 @@
  * GPU-ready color utilities.
  *
  * Terrain RGBA: Uint8Array(w × h × 4) — one RGBA pixel per tile, computed
- * from PastelTheme rules applied to the raw terrain byte layout.
+ * from the pastel terrain rules applied to the raw terrain byte layout.
  *
  * Player palette is NOT built here — consumers provide a pre-built
  * Float32Array(PALETTE_SIZE × 2 × 4) to the GPURenderer constructor.
@@ -19,7 +19,7 @@ export function getPaletteSize(): number {
 
 /**
  * Compute a static RGBA8 texture from raw terrain bytes.
- * Replicates PastelTheme.terrainColor() on the CPU.
+ * The single source of truth for pastel terrain colors.
  *
  * Terrain byte layout per tile:
  *   bit 7: isLand

@@ -1,20 +1,11 @@
 import { colord, Colord } from "colord";
+import pastelTheme from "../src/client/render/gl/pastel-theme.json";
+import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
-import { ColorblindTheme } from "../src/client/theme/ColorblindTheme";
-import {
-  blue,
-  botColor,
-  green,
-  orange,
-  purple,
-  red,
-  teal,
-  yellow,
-} from "../src/client/theme/Colors";
-import { PastelTheme } from "../src/client/theme/PastelTheme";
+import { SettingsTheme } from "../src/client/theme/ThemeProvider";
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
@@ -84,40 +75,43 @@ describe("ColorAllocator", () => {
   });
 });
 
-describe("PastelTheme team colors", () => {
-  test("teamColor returns the base color from the team", () => {
-    const theme = new PastelTheme();
-    expect(theme.teamColor(ColoredTeams.Blue)).toEqual(blue);
-    expect(theme.teamColor(ColoredTeams.Red)).toEqual(red);
-    expect(theme.teamColor(ColoredTeams.Teal)).toEqual(teal);
-    expect(theme.teamColor(ColoredTeams.Purple)).toEqual(purple);
-    expect(theme.teamColor(ColoredTeams.Yellow)).toEqual(yellow);
-    expect(theme.teamColor(ColoredTeams.Orange)).toEqual(orange);
-    expect(theme.teamColor(ColoredTeams.Green)).toEqual(green);
-    expect(theme.teamColor(ColoredTeams.Bot)).toEqual(botColor);
-    expect(theme.teamColor(ColoredTeams.Humans)).toEqual(blue);
-    expect(theme.teamColor(ColoredTeams.Nations)).toEqual(red);
+describe("pastel theme team colors", () => {
+  const teamBase = (team: keyof typeof pastelTheme.teamColors): Colord =>
+    colord(pastelTheme.teamColors[team]);
+
+  test("teamColor returns the base color from the theme JSON", () => {
+    const theme = new SettingsTheme(createThemeSettings("pastel"));
+    expect(theme.teamColor(ColoredTeams.Blue)).toEqual(teamBase("Blue"));
+    expect(theme.teamColor(ColoredTeams.Red)).toEqual(teamBase("Red"));
+    expect(theme.teamColor(ColoredTeams.Teal)).toEqual(teamBase("Teal"));
+    expect(theme.teamColor(ColoredTeams.Purple)).toEqual(teamBase("Purple"));
+    expect(theme.teamColor(ColoredTeams.Yellow)).toEqual(teamBase("Yellow"));
+    expect(theme.teamColor(ColoredTeams.Orange)).toEqual(teamBase("Orange"));
+    expect(theme.teamColor(ColoredTeams.Green)).toEqual(teamBase("Green"));
+    expect(theme.teamColor(ColoredTeams.Bot)).toEqual(teamBase("Bot"));
+    expect(theme.teamColor(ColoredTeams.Humans)).toEqual(teamBase("Humans"));
+    expect(theme.teamColor(ColoredTeams.Nations)).toEqual(teamBase("Nations"));
   });
 
   test("teamColorForPlayer is stable for the same playerID", () => {
-    const theme = new PastelTheme();
+    const theme = new SettingsTheme(createThemeSettings("pastel"));
     const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
     const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
     expect(a.isEqual(b)).toBe(true);
   });
 
   test("teamColorForPlayer differs for different playerIDs", () => {
-    const theme = new PastelTheme();
+    const theme = new SettingsTheme(createThemeSettings("pastel"));
     const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player1");
     const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player2");
     expect(a.isEqual(b)).toBe(false);
   });
 });
 
-describe("ColorblindTheme", () => {
-  test("applies a palette distinct from PastelTheme", () => {
-    const pastel = new PastelTheme();
-    const colorblind = new ColorblindTheme();
+describe("colorblind theme", () => {
+  test("applies a palette distinct from the pastel theme", () => {
+    const pastel = new SettingsTheme(createThemeSettings("pastel"));
+    const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
 
     // At least one team's base color should differ — the colorblind theme
     // swaps the team palettes for CVD-safe (Okabe-Ito) colors.
@@ -134,6 +128,13 @@ describe("ColorblindTheme", () => {
       (team) => !pastel.teamColor(team).isEqual(colorblind.teamColor(team)),
     );
     expect(anyDifferent).toBe(true);
+  });
+
+  test("scales border lightness relative to the fill", () => {
+    const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+    const fill = colord("#0072b2");
+    const border = colorblind.borderColor(fill);
+    expect(border.toHsl().l).toBeCloseTo(fill.toHsl().l * 0.6, 0);
   });
 });
 

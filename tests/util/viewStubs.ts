@@ -7,7 +7,7 @@
  */
 
 import { colord } from "colord";
-import { Theme } from "../../src/client/theme/Theme";
+import { Theme } from "../../src/client/theme/ThemeProvider";
 import { GameView } from "../../src/client/view/GameView";
 import { PlayerView } from "../../src/client/view/PlayerView";
 import { Config } from "../../src/core/configuration/Config";
@@ -40,15 +40,7 @@ export function stubTheme(): Theme {
     borderColor: () => grey,
     defendedBorderColors: () => defended,
     focusedBorderColor: () => grey,
-    terrainColor: () => white,
-    backgroundColor: () => white,
-    falloutColor: () => white,
-    font: () => "Arial",
-    textColor: () => "#000000",
     spawnHighlightColor: () => white,
-    spawnHighlightSelfColor: () => white,
-    spawnHighlightTeamColor: () => white,
-    spawnHighlightEnemyColor: () => white,
   };
 }
 
