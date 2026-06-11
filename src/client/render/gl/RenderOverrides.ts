@@ -1,5 +1,5 @@
 import type { GraphicsOverrides } from "./GraphicsOverrides";
-import type { RenderSettings } from "./RenderSettings";
+import { createThemeSettings, type RenderSettings } from "./RenderSettings";
 
 const DARK_AMBIENT = 0.35;
 
@@ -73,6 +73,9 @@ export function applyGraphicsOverrides(
     settings.name.outlineB = channel;
   }
   if (overrides.accessibility?.colorblind === true) {
+    // Swap the active theme slice for the colorblind palette (replaced
+    // wholesale — palette arrays differ in length between themes).
+    settings.theme = createThemeSettings("colorblind");
     // Swap the red/green friend-foe encoding (the most common confusion axis)
     // for a colorblind-safe blue/orange pairing (Okabe-Ito).
     // Alt-view affiliation borders: self/ally in the blue family, enemy orange.

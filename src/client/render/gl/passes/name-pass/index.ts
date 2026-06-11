@@ -223,6 +223,25 @@ export class NamePass {
   }
 
   /**
+   * Re-read every known player's territory color from the palette and rewrite
+   * the live slot rows. Called after a mid-game palette refresh (e.g. toggling
+   * colorblind mode) so name fills/outlines pick up the re-themed colors.
+   */
+  refreshPlayerColors(paletteData: Float32Array): void {
+    for (const [id, p] of this.playerByID) {
+      const off = p.smallID * 4;
+      this.playerColors.set(id, [
+        paletteData[off],
+        paletteData[off + 1],
+        paletteData[off + 2],
+      ]);
+    }
+    for (const slot of this.slots.values()) {
+      this.writePlayerDataRow(slot);
+    }
+  }
+
+  /**
    * Request the texture layer for a slot's flag (called once at slot creation).
    * If the image is already loaded the layer index is set immediately; otherwise
    * the slot joins a wait list and is updated when the image arrives.
