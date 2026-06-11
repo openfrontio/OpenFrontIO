@@ -16,6 +16,7 @@
     "num_land_tiles": 143268,
     "width": 700
   },
+  "multiplayer_frequency": 10,
   "name": "Sierpinski",
   "nations": [
     {

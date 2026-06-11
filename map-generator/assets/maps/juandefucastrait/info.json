@@ -3,6 +3,7 @@
   "name": "Juan De Fuca Strait",
   "translation_key": "map.juandefucastrait",
   "categories": ["north_america"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1812, 445],

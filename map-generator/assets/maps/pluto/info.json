@@ -3,6 +3,7 @@
   "name": "Pluto",
   "translation_key": "map.pluto",
   "categories": ["cosmic"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [396, 364],

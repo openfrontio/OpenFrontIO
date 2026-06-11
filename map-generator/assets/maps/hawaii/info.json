@@ -3,6 +3,7 @@
   "name": "Hawaii",
   "translation_key": "map.hawaii",
   "categories": ["north_america", "oceania"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [283, 281],

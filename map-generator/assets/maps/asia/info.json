@@ -3,6 +3,7 @@
   "name": "Asia",
   "translation_key": "map.asia",
   "categories": ["featured", "asia"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [165, 422],

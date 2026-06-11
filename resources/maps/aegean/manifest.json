@@ -16,6 +16,7 @@
     "num_land_tiles": 284992,
     "width": 850
   },
+  "multiplayer_frequency": 6,
   "name": "Aegean",
   "nations": [
     {

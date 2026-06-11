@@ -3,6 +3,7 @@
   "name": "Faroe Islands",
   "translation_key": "map.faroeislands",
   "categories": ["europe"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [920, 1780],

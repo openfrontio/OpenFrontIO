@@ -158,6 +158,7 @@
     "num_land_tiles": 138280,
     "width": 1600
   },
+  "multiplayer_frequency": 5,
   "name": "Caribbean",
   "nations": [
     {

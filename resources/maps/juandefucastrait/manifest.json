@@ -238,6 +238,7 @@
     "num_land_tiles": 410851,
     "width": 1500
   },
+  "multiplayer_frequency": 4,
   "name": "Juan De Fuca Strait",
   "nations": [
     {

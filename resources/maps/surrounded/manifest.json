@@ -16,6 +16,7 @@
     "num_land_tiles": 188986,
     "width": 988
   },
+  "multiplayer_frequency": 4,
   "name": "Surrounded",
   "nations": [
     {

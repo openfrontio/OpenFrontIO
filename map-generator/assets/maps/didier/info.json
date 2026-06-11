@@ -3,6 +3,7 @@
   "name": "Didier",
   "translation_key": "map.didier",
   "categories": ["other"],
+  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [478, 163],

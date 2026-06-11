@@ -3,6 +3,7 @@
   "name": "Surrounded",
   "translation_key": "map.surrounded",
   "categories": ["other"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1043, 910],

@@ -2,7 +2,8 @@
   "id": "Dyslexdria",
   "name": "Dyslexdria",
   "translation_key": "map.dyslexdria",
-  "categories": ["other"],
+  "categories": ["world"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [2380, 400],

@@ -3,6 +3,7 @@
   "name": "Baikal",
   "translation_key": "map.baikal",
   "categories": ["asia"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [695, 665],

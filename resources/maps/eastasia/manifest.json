@@ -16,6 +16,7 @@
     "num_land_tiles": 214937,
     "width": 780
   },
+  "multiplayer_frequency": 5,
   "name": "East Asia",
   "nations": [
     {

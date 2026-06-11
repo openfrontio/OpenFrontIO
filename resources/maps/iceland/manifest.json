@@ -16,6 +16,7 @@
     "num_land_tiles": 264736,
     "width": 1000
   },
+  "multiplayer_frequency": 4,
   "name": "Iceland",
   "nations": [
     {

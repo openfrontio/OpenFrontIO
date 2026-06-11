@@ -16,6 +16,7 @@
     "num_land_tiles": 240669,
     "width": 1100
   },
+  "multiplayer_frequency": 4,
   "name": "Traders Dream",
   "nations": [
     {

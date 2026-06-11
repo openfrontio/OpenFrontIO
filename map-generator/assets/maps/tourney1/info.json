@@ -2,7 +2,8 @@
   "id": "Tourney1",
   "name": "Tourney 2 Teams",
   "translation_key": "map.tourney1",
-  "categories": ["other"],
+  "categories": ["tournament"],
+  "multiplayer_frequency": 0,
   "nations": [
     {
       "coordinates": [177, 510],

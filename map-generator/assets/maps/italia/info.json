@@ -3,6 +3,7 @@
   "name": "Italia",
   "translation_key": "map.italia",
   "categories": ["europe"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [1038, 993],

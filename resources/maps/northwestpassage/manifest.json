@@ -213,6 +213,7 @@
     "num_land_tiles": 379907,
     "width": 1250
   },
+  "multiplayer_frequency": 5,
   "name": "Northwest Passage",
   "nations": [
     {

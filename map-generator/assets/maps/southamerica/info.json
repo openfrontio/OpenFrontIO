@@ -3,6 +3,7 @@
   "name": "South America",
   "translation_key": "map.southamerica",
   "categories": ["featured", "south_america"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [438, 58],

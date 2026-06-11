@@ -16,6 +16,7 @@
     "num_land_tiles": 103090,
     "width": 800
   },
+  "multiplayer_frequency": 4,
   "name": "Faroe Islands",
   "nations": [
     {

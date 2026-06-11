@@ -16,6 +16,7 @@
     "num_land_tiles": 335749,
     "width": 1000
   },
+  "multiplayer_frequency": 3,
   "name": "Mars",
   "nations": [
     {

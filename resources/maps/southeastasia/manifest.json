@@ -173,6 +173,7 @@
     "num_land_tiles": 235008,
     "width": 1406
   },
+  "multiplayer_frequency": 5,
   "name": "SoutheastAsia",
   "nations": [
     {

@@ -16,6 +16,7 @@
     "num_land_tiles": 489070,
     "width": 1050
   },
+  "multiplayer_frequency": 6,
   "name": "Pluto",
   "nations": [
     {

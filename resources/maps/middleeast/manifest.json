@@ -16,6 +16,7 @@
     "num_land_tiles": 856603,
     "width": 1100
   },
+  "multiplayer_frequency": 8,
   "name": "Middle East",
   "nations": [
     {

@@ -16,6 +16,7 @@
     "num_land_tiles": 400304,
     "width": 1100
   },
+  "multiplayer_frequency": 6,
   "name": "Mena",
   "nations": [
     {

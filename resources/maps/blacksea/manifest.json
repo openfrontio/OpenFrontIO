@@ -16,6 +16,7 @@
     "num_land_tiles": 285772,
     "width": 750
   },
+  "multiplayer_frequency": 6,
   "name": "Black Sea",
   "nations": [
     {

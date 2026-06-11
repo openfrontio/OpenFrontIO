@@ -3,6 +3,7 @@
   "name": "Bering Strait",
   "translation_key": "map.beringstrait",
   "categories": ["asia", "north_america"],
+  "multiplayer_frequency": 2,
   "nations": [
     {
       "coordinates": [1297, 287],

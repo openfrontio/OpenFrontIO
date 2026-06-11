@@ -3,6 +3,7 @@
   "name": "Middle East",
   "translation_key": "map.middleeast",
   "categories": ["asia"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [300, 65],

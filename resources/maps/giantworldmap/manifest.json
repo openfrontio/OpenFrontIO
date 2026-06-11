@@ -1,5 +1,5 @@
 {
-  "categories": ["other"],
+  "categories": ["world"],
   "id": "GiantWorldMap",
   "map": {
     "height": 1948,
@@ -16,6 +16,7 @@
     "num_land_tiles": 563340,
     "width": 2054
   },
+  "multiplayer_frequency": 0,
   "name": "Giant World Map",
   "nations": [
     {

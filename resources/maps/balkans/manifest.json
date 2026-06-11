@@ -213,6 +213,7 @@
     "num_land_tiles": 610636,
     "width": 1024
   },
+  "multiplayer_frequency": 6,
   "name": "Balkans",
   "nations": [
     {

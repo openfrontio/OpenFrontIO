@@ -16,6 +16,7 @@
     "num_land_tiles": 93711,
     "width": 500
   },
+  "multiplayer_frequency": 3,
   "name": "Bosphorus Straits",
   "nations": [
     {

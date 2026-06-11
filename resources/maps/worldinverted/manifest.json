@@ -951,7 +951,7 @@
       "name": "Reykjanes Delta"
     }
   ],
-  "categories": ["other"],
+  "categories": ["world"],
   "id": "WorldInverted",
   "map": {
     "height": 1248,
@@ -968,6 +968,7 @@
     "num_land_tiles": 381499,
     "width": 1250
   },
+  "multiplayer_frequency": 8,
   "name": "World Inverted",
   "nations": [
     {

@@ -16,6 +16,7 @@
     "num_land_tiles": 209226,
     "width": 624
   },
+  "multiplayer_frequency": 5,
   "name": "Caucasus",
   "nations": [
     {

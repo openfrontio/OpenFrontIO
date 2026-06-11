@@ -273,6 +273,7 @@
     "num_land_tiles": 369917,
     "width": 200
   },
+  "multiplayer_frequency": 3,
   "name": "Mississippi River",
   "nations": [
     {

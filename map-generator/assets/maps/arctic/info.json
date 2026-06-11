@@ -3,6 +3,7 @@
   "name": "Arctic",
   "translation_key": "map.arctic",
   "categories": ["europe", "north_america"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [622, 1171],

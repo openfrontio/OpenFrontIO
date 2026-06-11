@@ -3,6 +3,7 @@
   "name": "Baja California",
   "translation_key": "map.bajacalifornia",
   "categories": ["north_america"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [513, 44],

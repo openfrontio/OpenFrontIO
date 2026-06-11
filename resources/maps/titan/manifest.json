@@ -16,6 +16,7 @@
     "num_land_tiles": 398688,
     "width": 616
   },
+  "multiplayer_frequency": 3,
   "name": "Titan",
   "nations": [
     {

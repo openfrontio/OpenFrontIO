@@ -3,6 +3,7 @@
   "name": "Falkland Islands",
   "translation_key": "map.falklandislands",
   "categories": ["south_america"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [484, 987],

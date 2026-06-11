@@ -16,6 +16,7 @@
     "num_land_tiles": 342275,
     "width": 872
   },
+  "multiplayer_frequency": 5,
   "name": "South America",
   "nations": [
     {

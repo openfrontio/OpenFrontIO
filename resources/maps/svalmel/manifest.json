@@ -16,6 +16,7 @@
     "num_land_tiles": 248032,
     "width": 850
   },
+  "multiplayer_frequency": 8,
   "name": "Svalmel",
   "nations": [
     {

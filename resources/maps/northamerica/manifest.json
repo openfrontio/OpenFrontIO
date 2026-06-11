@@ -16,6 +16,7 @@
     "num_land_tiles": 294494,
     "width": 1400
   },
+  "multiplayer_frequency": 5,
   "name": "North America",
   "nations": [
     {

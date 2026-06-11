@@ -3,6 +3,7 @@
   "name": "Yenisei",
   "translation_key": "map.yenisei",
   "categories": ["asia"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [1050, 535],

@@ -3,6 +3,7 @@
   "name": "Pangaea",
   "translation_key": "map.pangaea",
   "categories": ["other"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [389, 800],

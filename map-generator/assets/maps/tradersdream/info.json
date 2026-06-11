@@ -3,6 +3,7 @@
   "name": "Traders Dream",
   "translation_key": "map.tradersdream",
   "categories": ["other"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1010, 120],

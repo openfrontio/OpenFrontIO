@@ -3,6 +3,7 @@
   "name": "The Box",
   "translation_key": "map.thebox",
   "categories": ["other"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [10, 10],

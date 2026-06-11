@@ -16,6 +16,7 @@
     "num_land_tiles": 261659,
     "width": 1150
   },
+  "multiplayer_frequency": 4,
   "name": "Deglaciated Antarctica",
   "nations": [
     {

@@ -3,6 +3,7 @@
   "name": "Venice",
   "translation_key": "map.venice",
   "categories": ["europe"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [760, 593],

@@ -3,6 +3,7 @@
   "name": "Europe",
   "translation_key": "map.europe",
   "categories": ["featured", "europe"],
+  "multiplayer_frequency": 7,
   "nations": [
     {
       "coordinates": [634, 781],

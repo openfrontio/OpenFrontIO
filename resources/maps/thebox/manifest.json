@@ -16,6 +16,7 @@
     "num_land_tiles": 1048576,
     "width": 1024
   },
+  "multiplayer_frequency": 3,
   "name": "The Box",
   "nations": [
     {

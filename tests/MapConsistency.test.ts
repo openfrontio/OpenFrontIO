@@ -5,6 +5,7 @@ import {
   GameMapType,
   mapCategories,
   mapTranslationKeys,
+  multiplayerFrequency,
 } from "../src/core/game/Game";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -17,9 +18,7 @@ function toFolderName(key: GameMapName): string {
 const ROOT = path.resolve(__dirname, "..");
 const MAP_GEN_MAPS = path.join(ROOT, "map-generator", "assets", "maps");
 const RESOURCES_MAPS = path.join(ROOT, "resources", "maps");
-const MAIN_GO = path.join(ROOT, "map-generator", "main.go");
 const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
-const MAP_PLAYLIST = path.join(ROOT, "src", "server", "MapPlaylist.ts");
 
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 
@@ -35,22 +34,6 @@ const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
   "EuropeClassic",
   "BritanniaClassic",
 ]);
-
-/** Parse the main.go maps registry and return the set of non-test map folder names. */
-function getMainGoMaps(): Set<string> {
-  const content = fs.readFileSync(MAIN_GO, "utf8");
-  const names = new Set<string>();
-  // Match lines like {Name: "africa"} or {Name: "africa", IsTest: true}
-  const re = /\{Name:\s*"([^"]+)"(?:,\s*IsTest:\s*true)?\}/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(content)) !== null) {
-    // Check if it's a test map
-    if (!m[0].includes("IsTest: true")) {
-      names.add(m[1]);
-    }
-  }
-  return names;
-}
 
 /** Get the en.json map translation keys. */
 function getEnJsonMapKeys(): Set<string> {
@@ -79,60 +62,9 @@ function readInfoJson(key: GameMapName): Record<string, unknown> | null {
   return JSON.parse(fs.readFileSync(infoPath, "utf8"));
 }
 
-/** Parse the frequency record keys from MapPlaylist.ts. */
-function getFrequencyKeys(): Set<string> {
-  const content = fs.readFileSync(MAP_PLAYLIST, "utf8");
-  // Extract the frequency block
-  const freqMatch = content.match(/const FREQUENCY[\s\S]*?\{([\s\S]*?)\};/);
-  if (!freqMatch) {
-    throw new Error(
-      `Failed to parse frequency record from MapPlaylist.ts (first 200 chars: ${content.slice(0, 200)})`,
-    );
-  }
-  const keys = new Set<string>();
-  const re = /(\w+):/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(freqMatch[1])) !== null) {
-    keys.add(m[1]);
-  }
-  return keys;
-}
-
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Map consistency", () => {
-  test("Every GameMapType is registered in main.go", () => {
-    const mainGoMaps = getMainGoMaps();
-    const errors: string[] = [];
-    for (const key of allMapKeys) {
-      const folder = toFolderName(key);
-      if (!mainGoMaps.has(folder)) {
-        errors.push(`${key} (folder "${folder}") is missing from main.go`);
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error("Maps missing from main.go:\n" + errors.join("\n"));
-    }
-  });
-
-  test("Every main.go map has a GameMapType entry", () => {
-    const mainGoMaps = getMainGoMaps();
-    const folderToKey = new Map(allMapKeys.map((k) => [toFolderName(k), k]));
-    const errors: string[] = [];
-    for (const folder of mainGoMaps) {
-      if (!folderToKey.has(folder)) {
-        errors.push(
-          `main.go map "${folder}" has no matching GameMapType entry`,
-        );
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "main.go maps missing from GameMapType:\n" + errors.join("\n"),
-      );
-    }
-  });
-
   test("Every GameMapType has map-generator assets (image.png + info.json only)", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
@@ -211,6 +143,11 @@ describe("Map consistency", () => {
           `${key}: info.json translation_key is "${info.translation_key}", but mapTranslationKeys has "${mapTranslationKeys[value]}"`,
         );
       }
+      if ((info.multiplayer_frequency ?? 0) !== multiplayerFrequency[key]) {
+        errors.push(
+          `${key}: info.json multiplayer_frequency is ${JSON.stringify(info.multiplayer_frequency)}, but multiplayerFrequency has ${multiplayerFrequency[key]}`,
+        );
+      }
     }
     if (errors.length > 0) {
       throw new Error(
@@ -220,36 +157,23 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Every GameMapType (except exemptions) has a frequency entry", () => {
-    const freqKeys = getFrequencyKeys();
+  test("Every GameMapType (except exemptions) has a positive multiplayer_frequency", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
       if (FREQUENCY_EXEMPTIONS.has(key)) continue;
-      if (!freqKeys.has(key)) {
+      const info = readInfoJson(key);
+      if (info === null) continue; // Other tests catch missing files.
+      const freq = info.multiplayer_frequency;
+      if (typeof freq !== "number" || freq <= 0) {
         errors.push(
-          `${key} is missing from the frequency record in MapPlaylist.ts`,
+          `${key} has multiplayer_frequency ${JSON.stringify(freq)} in info.json (must be > 0, or add the map to FREQUENCY_EXEMPTIONS)`,
         );
       }
     }
     if (errors.length > 0) {
       throw new Error(
-        "Maps missing from frequency (not exempted):\n" + errors.join("\n"),
-      );
-    }
-  });
-
-  test("No unknown keys in frequency record", () => {
-    const freqKeys = getFrequencyKeys();
-    const validKeys = new Set(allMapKeys);
-    const errors: string[] = [];
-    for (const key of freqKeys) {
-      if (!validKeys.has(key as GameMapName)) {
-        errors.push(`"${key}" in frequency is not a valid GameMapName`);
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "Unknown keys in frequency record:\n" + errors.join("\n"),
+        "Maps missing a multiplayer frequency (not exempted):\n" +
+          errors.join("\n"),
       );
     }
   });
@@ -424,7 +348,13 @@ describe("Map consistency", () => {
   });
 
   test("Map metadata in info.json and manifest.json should match", () => {
-    const metadataKeys = ["id", "name", "translation_key", "categories"];
+    const metadataKeys = [
+      "id",
+      "name",
+      "translation_key",
+      "categories",
+      "multiplayer_frequency",
+    ];
     const errors: string[] = [];
 
     for (const key of allMapKeys) {

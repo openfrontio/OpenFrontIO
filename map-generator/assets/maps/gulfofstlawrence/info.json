@@ -3,6 +3,7 @@
   "name": "Gulf of St. Lawrence",
   "translation_key": "map.gulfofstlawrence",
   "categories": ["north_america"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [88, 364],

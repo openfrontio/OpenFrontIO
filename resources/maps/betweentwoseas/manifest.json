@@ -16,6 +16,7 @@
     "num_land_tiles": 364078,
     "width": 888
   },
+  "multiplayer_frequency": 5,
   "name": "Between Two Seas",
   "nations": [
     {

@@ -3,6 +3,7 @@
   "name": "Britannia Classic",
   "translation_key": "map.britanniaclassic",
   "categories": ["europe"],
+  "multiplayer_frequency": 0,
   "nations": [
     {
       "coordinates": [960, 1258],

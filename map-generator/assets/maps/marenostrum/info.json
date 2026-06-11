@@ -3,6 +3,7 @@
   "name": "Mare Nostrum",
   "translation_key": "map.marenostrum",
   "categories": ["europe"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [141, 574],

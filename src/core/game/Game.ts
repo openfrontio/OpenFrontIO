@@ -93,13 +93,15 @@ export const ColoredTeams: Record<string, Team> = {
   Nations: "Nations",
 } as const;
 
-// GameMapType, GameMapName, mapCategories, and mapTranslationKeys are
-// generated from map-generator/assets/maps/<map>/info.json by the
-// map-generator (`npm run gen-maps`).
+// GameMapType, GameMapName, mapCategories, mapTranslationKeys, and
+// multiplayerFrequency are generated from
+// map-generator/assets/maps/<map>/info.json by the map-generator
+// (`npm run gen-maps`).
 export {
   GameMapType,
   mapCategories,
   mapTranslationKeys,
+  multiplayerFrequency,
   type GameMapName,
 } from "./Maps.gen";
 

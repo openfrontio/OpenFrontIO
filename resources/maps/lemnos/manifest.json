@@ -16,6 +16,7 @@
     "num_land_tiles": 216496,
     "width": 874
   },
+  "multiplayer_frequency": 3,
   "name": "Lemnos",
   "nations": [
     {

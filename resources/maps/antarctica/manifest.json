@@ -16,6 +16,7 @@
     "num_land_tiles": 320356,
     "width": 1000
   },
+  "multiplayer_frequency": 1,
   "name": "Antarctica",
   "nations": [
     {

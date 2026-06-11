@@ -3,6 +3,7 @@
   "name": "Oceania",
   "translation_key": "map.oceania",
   "categories": ["oceania"],
+  "multiplayer_frequency": 0,
   "nations": [
     {
       "coordinates": [515, 690],

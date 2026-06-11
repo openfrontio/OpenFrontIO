@@ -3,6 +3,7 @@
   "name": "Antarctica",
   "translation_key": "map.antarctica",
   "categories": ["antarctica"],
+  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [1159, 1261],

@@ -16,6 +16,7 @@
     "num_land_tiles": 427883,
     "width": 1100
   },
+  "multiplayer_frequency": 4,
   "name": "Halkidiki",
   "nations": [
     {

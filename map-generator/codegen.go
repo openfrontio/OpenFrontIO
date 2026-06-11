@@ -12,6 +12,7 @@ import (
 // the display order of map categories in the generated TypeScript.
 var categoryOrder = []string{
 	"featured",
+	"world",
 	"europe",
 	"asia",
 	"north_america",
@@ -20,6 +21,7 @@ var categoryOrder = []string{
 	"oceania",
 	"antarctica",
 	"cosmic",
+	"tournament",
 	"other",
 }
 
@@ -29,6 +31,9 @@ type mapInfo struct {
 	Name           string   `json:"name"`
 	TranslationKey string   `json:"translation_key"`
 	Categories     []string `json:"categories"`
+	// How many times the map appears in the multiplayer playlist.
+	// 0 (or omitted) keeps the map out of the regular rotation.
+	MultiplayerFrequency int `json:"multiplayer_frequency"`
 }
 
 // hasCategory reports whether the map lists the given category.
@@ -77,6 +82,9 @@ func generateMapsTS() error {
 		}
 		if info.TranslationKey == "" {
 			return fmt.Errorf("map %s: info.json is missing \"translation_key\"", m.Name)
+		}
+		if info.MultiplayerFrequency < 0 {
+			return fmt.Errorf("map %s: info.json \"multiplayer_frequency\" (%d) must be >= 0", m.Name, info.MultiplayerFrequency)
 		}
 		if len(info.Categories) == 0 {
 			return fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
@@ -129,6 +137,13 @@ func generateMapsTS() error {
 	b.WriteString("export const mapTranslationKeys: Record<GameMapType, string> = {\n")
 	for _, info := range infos {
 		b.WriteString(fmt.Sprintf("  [GameMapType.%s]: %q,\n", info.ID, info.TranslationKey))
+	}
+	b.WriteString("};\n\n")
+
+	b.WriteString("// How many times each map appears in the multiplayer playlist.\n")
+	b.WriteString("export const multiplayerFrequency: Record<GameMapName, number> = {\n")
+	for _, info := range infos {
+		b.WriteString(fmt.Sprintf("  %s: %d,\n", info.ID, info.MultiplayerFrequency))
 	}
 	b.WriteString("};\n")
 

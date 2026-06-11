@@ -3,6 +3,7 @@
   "name": "Mars",
   "translation_key": "map.mars",
   "categories": ["cosmic"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [650, 415],

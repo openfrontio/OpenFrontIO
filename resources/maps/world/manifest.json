@@ -1,5 +1,5 @@
 {
-  "categories": ["featured", "other"],
+  "categories": ["featured", "world"],
   "id": "World",
   "map": {
     "height": 1000,
@@ -16,6 +16,7 @@
     "num_land_tiles": 158086,
     "width": 1000
   },
+  "multiplayer_frequency": 20,
   "name": "World",
   "nations": [
     {

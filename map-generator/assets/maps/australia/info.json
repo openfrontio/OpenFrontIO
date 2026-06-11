@@ -3,6 +3,7 @@
   "name": "Australia",
   "translation_key": "map.australia",
   "categories": ["oceania"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [460, 720],

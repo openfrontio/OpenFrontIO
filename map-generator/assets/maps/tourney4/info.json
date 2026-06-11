@@ -2,7 +2,8 @@
   "id": "Tourney4",
   "name": "Tourney 8 Teams",
   "translation_key": "map.tourney4",
-  "categories": ["other"],
+  "categories": ["tournament"],
+  "multiplayer_frequency": 0,
   "nations": [
     {
       "coordinates": [568, 309],

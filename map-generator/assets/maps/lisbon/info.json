@@ -3,6 +3,7 @@
   "name": "Lisbon",
   "translation_key": "map.lisbon",
   "categories": ["europe"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [750, 630],

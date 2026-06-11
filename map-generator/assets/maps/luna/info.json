@@ -3,6 +3,7 @@
   "name": "Luna",
   "translation_key": "map.luna",
   "categories": ["cosmic"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [265, 662],

@@ -3,6 +3,7 @@
   "name": "Europe Classic",
   "translation_key": "map.europeclassic",
   "categories": ["europe"],
+  "multiplayer_frequency": 0,
   "nations": [
     {
       "coordinates": [171, 171],

@@ -16,6 +16,7 @@
     "num_land_tiles": 409202,
     "width": 914
   },
+  "multiplayer_frequency": 6,
   "name": "Arctic",
   "nations": [
     {

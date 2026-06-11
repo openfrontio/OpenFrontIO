@@ -16,6 +16,7 @@
     "num_land_tiles": 258545,
     "width": 750
   },
+  "multiplayer_frequency": 5,
   "name": "Yellow Sea",
   "nations": [
     {

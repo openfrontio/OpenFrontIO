@@ -3,6 +3,7 @@
   "name": "Indian Subcontinent",
   "translation_key": "map.indiansubcontinent",
   "categories": ["asia"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [1601, 840],

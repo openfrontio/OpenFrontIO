@@ -159,6 +159,7 @@
     "num_land_tiles": 364395,
     "width": 808
   },
+  "multiplayer_frequency": 5,
   "name": "Chopping Block",
   "nations": [
     {

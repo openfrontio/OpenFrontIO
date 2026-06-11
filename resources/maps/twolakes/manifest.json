@@ -16,6 +16,7 @@
     "num_land_tiles": 852792,
     "width": 1050
   },
+  "multiplayer_frequency": 6,
   "name": "Two Lakes",
   "nations": [
     {

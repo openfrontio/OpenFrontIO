@@ -2,7 +2,8 @@
   "id": "World",
   "name": "World",
   "translation_key": "map.world",
-  "categories": ["featured", "other"],
+  "categories": ["featured", "world"],
+  "multiplayer_frequency": 20,
   "nations": [
     {
       "coordinates": [484, 284],

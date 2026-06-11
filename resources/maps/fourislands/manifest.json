@@ -16,6 +16,7 @@
     "num_land_tiles": 127635,
     "width": 750
   },
+  "multiplayer_frequency": 4,
   "name": "Four Islands",
   "nations": [
     {

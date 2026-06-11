@@ -620,6 +620,7 @@
   },
   "map_categories": {
     "featured": "Featured",
+    "world": "World",
     "europe": "Europe",
     "asia": "Asia",
     "north_america": "North America",
@@ -628,6 +629,7 @@
     "oceania": "Oceania",
     "antarctica": "Antarctica",
     "cosmic": "Cosmic",
+    "tournament": "Tournament",
     "other": "Other",
     "special": "Special",
     "favorites": "Favourites"

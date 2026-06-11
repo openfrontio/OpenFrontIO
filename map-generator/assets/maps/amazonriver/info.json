@@ -3,6 +3,7 @@
   "name": "Amazon River",
   "translation_key": "map.amazonriver",
   "categories": ["south_america"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [524, 60],

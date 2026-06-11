@@ -16,6 +16,7 @@
     "num_land_tiles": 508420,
     "width": 900
   },
+  "multiplayer_frequency": 8,
   "name": "Los Angeles",
   "nations": [
     {

@@ -3,6 +3,7 @@
   "name": "Balkans",
   "translation_key": "map.balkans",
   "categories": ["europe"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [122, 281],

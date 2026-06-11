@@ -16,6 +16,7 @@
     "num_land_tiles": 336925,
     "width": 778
   },
+  "multiplayer_frequency": 4,
   "name": "Nile Delta",
   "nations": [
     {

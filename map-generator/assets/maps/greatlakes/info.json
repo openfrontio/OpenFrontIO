@@ -3,6 +3,7 @@
   "name": "Great Lakes",
   "translation_key": "map.greatlakes",
   "categories": ["north_america"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [38, 326],

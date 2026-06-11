@@ -3,6 +3,7 @@
   "name": "Black Sea",
   "translation_key": "map.blacksea",
   "categories": ["europe", "asia"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [122, 647],

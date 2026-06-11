@@ -16,6 +16,7 @@
     "num_land_tiles": 102211,
     "width": 500
   },
+  "multiplayer_frequency": 5,
   "name": "Pangaea",
   "nations": [
     {

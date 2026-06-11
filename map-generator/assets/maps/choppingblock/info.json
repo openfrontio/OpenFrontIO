@@ -3,6 +3,7 @@
   "name": "Chopping Block",
   "translation_key": "map.choppingblock",
   "categories": ["other"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [230, 230],

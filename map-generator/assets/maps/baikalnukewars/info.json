@@ -3,6 +3,7 @@
   "name": "Baikal Nuke Wars",
   "translation_key": "map.baikalnukewars",
   "categories": ["other"],
+  "multiplayer_frequency": 0,
   "nations": [],
   "teamGameSpawnAreas": {
     "2": [

@@ -243,6 +243,7 @@
     "num_land_tiles": 372162,
     "width": 680
   },
+  "multiplayer_frequency": 6,
   "name": "Labyrinth",
   "nations": [
     {

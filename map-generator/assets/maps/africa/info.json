@@ -3,6 +3,7 @@
   "name": "Africa",
   "translation_key": "map.africa",
   "categories": ["featured", "africa"],
+  "multiplayer_frequency": 7,
   "nations": [
     {
       "coordinates": [1144, 1894],

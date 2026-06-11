@@ -3,6 +3,7 @@
   "name": "San Francisco",
   "translation_key": "map.sanfrancisco",
   "categories": ["north_america"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [996, 990],

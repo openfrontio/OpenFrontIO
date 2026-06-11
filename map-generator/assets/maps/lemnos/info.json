@@ -3,6 +3,7 @@
   "name": "Lemnos",
   "translation_key": "map.lemnos",
   "categories": ["europe"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [550, 317],

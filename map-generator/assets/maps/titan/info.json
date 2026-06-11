@@ -3,6 +3,7 @@
   "name": "Titan",
   "translation_key": "map.titan",
   "categories": ["cosmic"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "name": "Stone-Keeping Purple Aliens",
