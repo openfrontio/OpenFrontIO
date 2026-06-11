@@ -243,6 +243,10 @@ export interface RenderSettings {
     statusRowOffset: number;
     /** Alpha multiplier applied to a name while the cursor is over it. */
     hoverFadeAlpha: number;
+    /** White glow behind the hovered player's name: px past the outline. */
+    hoverGlowWidth: number;
+    /** Peak opacity of the hover glow (0 disables it). */
+    hoverGlowAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;

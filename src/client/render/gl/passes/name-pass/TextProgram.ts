@@ -49,6 +49,8 @@ export class TextProgram {
   private uOutlineColor: WebGLUniformLocation;
   private uOutlineUsePlayerColor: WebGLUniformLocation;
   private uFillUsePlayerColor: WebGLUniformLocation;
+  private uHoverGlowWidth: WebGLUniformLocation;
+  private uHoverGlowAlpha: WebGLUniformLocation;
 
   private distanceRange: number;
 
@@ -128,6 +130,14 @@ export class TextProgram {
       this.program,
       "uFillUsePlayerColor",
     )!;
+    this.uHoverGlowWidth = gl.getUniformLocation(
+      this.program,
+      "uHoverGlowWidth",
+    )!;
+    this.uHoverGlowAlpha = gl.getUniformLocation(
+      this.program,
+      "uHoverGlowAlpha",
+    )!;
 
     this.loadAtlas();
   }
@@ -188,6 +198,8 @@ export class TextProgram {
       ns.outlineUsePlayerColor ? 1.0 : 0.0,
     );
     gl.uniform1f(this.uFillUsePlayerColor, ns.fillUsePlayerColor ? 1.0 : 0.0);
+    gl.uniform1f(this.uHoverGlowWidth, ns.hoverGlowWidth);
+    gl.uniform1f(this.uHoverGlowAlpha, ns.hoverGlowAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex!);

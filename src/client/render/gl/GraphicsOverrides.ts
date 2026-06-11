@@ -8,6 +8,8 @@ export const GraphicsOverridesSchema = z
         cullThreshold: z.number(),
         darkNames: z.boolean(),
         hoverFadeAlpha: z.number(),
+        hoverGlowWidth: z.number(),
+        hoverGlowAlpha: z.number(),
       })
       .partial(),
     structure: z

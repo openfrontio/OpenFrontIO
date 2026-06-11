@@ -207,7 +207,9 @@
     "nameShadeBot": 0.4,
     "emojiRowOffset": 1.4,
     "statusRowOffset": 1.4,
-    "hoverFadeAlpha": 0.25
+    "hoverFadeAlpha": 0.5,
+    "hoverGlowWidth": 5,
+    "hoverGlowAlpha": 0.75
   },
   "fx": {
     "shockwaveRingWidth": 0.04,

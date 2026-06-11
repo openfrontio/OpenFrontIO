@@ -23,7 +23,10 @@ describe("GraphicsOverridesSchema", () => {
       { name: { nameScaleFactor: 0.8 } },
       { name: { cullThreshold: 0.02 } },
       { name: { darkNames: true } },
+      { name: { hoverGlowWidth: 5 } },
+      { name: { hoverGlowAlpha: 0.6 } },
       { name: { nameScaleFactor: 1.2, cullThreshold: 0, darkNames: false } },
+      { name: { hoverGlowWidth: 0, hoverGlowAlpha: 0 } },
     ];
     for (const c of cases) {
       expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
@@ -73,6 +76,14 @@ describe("GraphicsOverridesSchema", () => {
     ).toBe(false);
     expect(
       GraphicsOverridesSchema.safeParse({ name: { darkNames: "yes" } }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({ name: { hoverGlowWidth: "wide" } })
+        .success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({ name: { hoverGlowAlpha: true } })
+        .success,
     ).toBe(false);
     expect(
       GraphicsOverridesSchema.safeParse({
@@ -130,6 +141,28 @@ describe("applyGraphicsOverrides", () => {
       0.03,
     );
     expect(gen({ name: { cullThreshold: 0 } }).name.cullThreshold).toBe(0);
+  });
+
+  test("applies hoverGlowWidth override (including 0)", () => {
+    expect(gen({ name: { hoverGlowWidth: 6 } }).name.hoverGlowWidth).toBe(6);
+    expect(gen({ name: { hoverGlowWidth: 0 } }).name.hoverGlowWidth).toBe(0);
+  });
+
+  test("applies hoverGlowAlpha override (including 0)", () => {
+    expect(gen({ name: { hoverGlowAlpha: 0.9 } }).name.hoverGlowAlpha).toBe(
+      0.9,
+    );
+    expect(gen({ name: { hoverGlowAlpha: 0 } }).name.hoverGlowAlpha).toBe(0);
+  });
+
+  test("hover glow overrides leave other name fields at defaults", () => {
+    const defaults = createRenderSettings().name;
+    const s = gen({
+      name: { hoverGlowWidth: 7, hoverGlowAlpha: 0.1 },
+    }).name;
+    expect(s.hoverFadeAlpha).toBe(defaults.hoverFadeAlpha);
+    expect(s.nameScaleFactor).toBe(defaults.nameScaleFactor);
+    expect(s.cullThreshold).toBe(defaults.cullThreshold);
   });
 
   test("darkNames=true → black fill + player-colored outline + outline RGB 0", () => {
