@@ -417,6 +417,12 @@
     "sub_renews_on": "Renews {date}",
     "sub_price_monthly": "{price}/mo",
     "stats_overview": "Stats Overview",
+    "achievements": "Achievements",
+    "achieved_on": "Achieved on",
+    "status": "Status",
+    "no_achievements": "No player achievements unlocked yet.",
+    "not_unlocked_yet": "Not unlocked yet",
+    "unknown_difficulty": "Unknown",
     "link_discord": "Link Discord Account",
     "log_out": "Log Out",
     "sign_in_desc": "Sign in to save your stats and progress",
@@ -434,6 +440,7 @@
     "tab_account": "Account",
     "tab_stats": "Stats",
     "tab_games": "Games",
+    "tab_achievements": "Achievements",
     "tab_friends": "Friends",
     "no_stats": "No stats available yet. Play some games to start tracking.",
     "no_games": "No games played yet."
@@ -467,6 +474,10 @@
     "error_conflict": "Already friends or request already sent",
     "error_bad_request": "Invalid request",
     "error_generic": "Something went wrong. Please try again."
+  },
+  "achievements": {
+    "win_no_nukes": "Win Without Nukes",
+    "win_no_nukes_desc": "Win a free-for-all match without launching any nukes."
   },
   "leaderboard_modal": {
     "title": "Leaderboard",
