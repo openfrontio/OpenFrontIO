@@ -1080,7 +1080,7 @@ export class GPURenderer {
     try {
       window.localStorage.setItem(GRID_VIEW_KEY, active ? "true" : "false");
     } catch {
-      // Ignore if we are unanble to use localstorage.
+      // Ignore if we are unable to use localstorage.
     }
   }
 
