@@ -673,6 +673,8 @@ export class GPURenderer {
     );
     // SAM radius pass stores its own copy
     this.samRadiusPass.setPaletteData(this.paletteData);
+    // Name pass caches per-player colors and bakes them into slot rows
+    this.namePass.refreshPlayerColors(this.paletteData);
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
@@ -951,6 +953,9 @@ export class GPURenderer {
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
   }
+  setMouseWorldPos(x: number, y: number): void {
+    this.namePass.setMouseWorldPos(x, y);
+  }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.structurePass.setHighlightTypes(unitTypes);
     this.structureLevelPass.setHighlightTypes(unitTypes);
@@ -1026,6 +1031,11 @@ export class GPURenderer {
     this.samRadiusPass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
+    this.railroadPass.setLocalPlayer(id);
+  }
+
+  setLocalRailColor(r: number, g: number, b: number): void {
+    this.railroadPass.setLocalRailColor(r, g, b);
   }
 
   setSAMRadiusVisible(visible: boolean): void {

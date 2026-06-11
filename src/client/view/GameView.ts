@@ -872,6 +872,17 @@ export class GameView implements GameMap {
     return Array.from(this._players.values());
   }
 
+  /**
+   * Recompute every player's theme-derived colors. Call when the active theme
+   * changes mid-game (e.g. toggling colorblind mode) so existing territories
+   * re-color; the renderer palette must be refreshed afterwards.
+   */
+  refreshPlayerColors(): void {
+    for (const p of this._players.values()) {
+      p.refreshColors();
+    }
+  }
+
   playerBySmallID(id: number): PlayerView | TerraNullius {
     if (id === 0) {
       return new TerraNulliusImpl();
@@ -1056,9 +1067,6 @@ export class GameView implements GameMap {
   }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
-  }
-  isLake(ref: TileRef): boolean {
-    return this._map.isLake(ref);
   }
   isShore(ref: TileRef): boolean {
     return this._map.isShore(ref);

@@ -56,6 +56,8 @@ export interface PlayerSlot {
   nameLen: number;
   troopLen: number;
   lastTroopStr: string;
+  /** Last 500ms bucket this slot's troop string was refreshed in (staggered per slot). */
+  lastTroopBucket: number;
   /** URL identifying which flag this player wants (dedup key). undefined = none. */
   flagUrl: string | undefined;
   /** Layer index in FlagAtlasArray, or -1 if not loaded yet / no flag. */

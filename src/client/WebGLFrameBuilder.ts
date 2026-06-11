@@ -59,6 +59,19 @@ export class WebGLFrameBuilder {
     this.skinsInitialized = false;
   }
 
+  /**
+   * Re-write every player's palette entry from their current (possibly re-themed)
+   * colors and re-upload just the palette texture. Used after a mid-game theme
+   * change (e.g. toggling colorblind mode) so existing territories re-color
+   * without re-syncing players, skins, or spawns.
+   */
+  refreshPalette(gameView: GameView): void {
+    for (const p of gameView.players()) {
+      this.writePaletteEntry(p.smallID(), p.territoryColor(), p.borderColor());
+    }
+    this.view.updatePalette(this.palette);
+  }
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncPlayerSpawns(gameView);
@@ -109,10 +122,15 @@ export class WebGLFrameBuilder {
   }
 
   private syncLocalPlayer(gameView: GameView): void {
-    const sid = gameView.myPlayer()?.smallID() ?? 0;
+    const me = gameView.myPlayer();
+    const sid = me?.smallID() ?? 0;
     if (sid === this.localPlayerSmallID) return;
     this.localPlayerSmallID = sid;
     this.view.setLocalPlayerID(sid);
+    if (me) {
+      const rail = me.railColor().toRgb();
+      this.view.setLocalRailColor(rail.r / 255, rail.g / 255, rail.b / 255);
+    }
   }
 
   /**
@@ -134,11 +152,9 @@ export class WebGLFrameBuilder {
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
-      // myPlayer reads as plain white so the local-player ring is visually
-      // distinct from any team color; everyone else uses their territory tint.
-      const c = isSelf
-        ? { r: 255, g: 255, b: 255 }
-        : p.territoryColor().toRgb();
+      // myPlayer's ring color is overridden in SpawnOverlayPass (animated
+      // white→gold pulse); everyone else uses their territory tint.
+      const c = p.territoryColor().toRgb();
       centers.push({
         // spawnTile tracks the player's currently-selected spawn directly —
         // updates the same tick the player picks a new location (faster than

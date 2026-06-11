@@ -123,6 +123,24 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       slider(s.mapOverlay, "trailAlpha", d.mapOverlay, 0, 1, 0.01),
       slider(s.mapOverlay, "defenseCheckerDarken", d.mapOverlay, 0, 1, 0.01),
       slider(s.mapOverlay, "territoryDefenseDarken", d.mapOverlay, 0, 1, 0.01),
+      slider(
+        s.mapOverlay,
+        "territorySaturation",
+        d.mapOverlay,
+        0,
+        1,
+        0.01,
+        "Territory Saturation",
+      ),
+      slider(
+        s.mapOverlay,
+        "territoryAlpha",
+        d.mapOverlay,
+        0,
+        1,
+        0.01,
+        "Territory Alpha",
+      ),
       slider(s.mapOverlay, "staleNukeBase", d.mapOverlay, 0, 0.3, 0.005),
       slider(s.mapOverlay, "staleNukeVariation", d.mapOverlay, 0, 0.3, 0.005),
       slider(s.mapOverlay, "staleNukeAlpha", d.mapOverlay, 0, 1, 0.01),
@@ -183,6 +201,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
           "Detail Zoom",
         ),
         slider(s.railroad, "railAlpha", d.railroad, 0, 1, 0.01, "Alpha"),
+        slider(
+          s.railroad,
+          "railThickness",
+          d.railroad,
+          0.5,
+          3,
+          0.1,
+          "Thickness",
+        ),
       ]),
     ]),
 
@@ -298,6 +325,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       toggle(s.name, "fillUsePlayerColor", d.name, "Fill = Player Color"),
       slider(s.name, "emojiRowOffset", d.name, 0, 5, 0.1, "Emoji Row Offset"),
       slider(s.name, "statusRowOffset", d.name, 0, 5, 0.1, "Status Row Offset"),
+      slider(s.name, "hoverFadeAlpha", d.name, 0, 1, 0.05, "Hover Fade Alpha"),
     ]),
 
     folder("FX", [

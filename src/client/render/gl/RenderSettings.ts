@@ -1,6 +1,46 @@
+import colorblindTheme from "./colorblind-theme.json";
+import defaultTheme from "./default-theme.json";
 import defaults from "./render-settings.json";
 
+/**
+ * Theme data — player/team palettes and color-derivation knobs. Loaded from a
+ * theme JSON file (default-theme.json or colorblind-theme.json) and combined
+ * with render-settings.json at runtime so all graphics configuration flows
+ * through one pipeline. Colors are hex strings; palettes are consumed by the
+ * theme module (src/client/theme/), which generates team variations and
+ * allocates player colors at runtime.
+ */
+export interface ThemeSettings {
+  /**
+   * Base color per colored team (keys match ColoredTeams). Per-player
+   * variations are generated at runtime; Bot stays a single flat color.
+   */
+  teamColors: Record<string, string>;
+  humanColors: string[];
+  nationColors: string[];
+  botColors: string[];
+  /** Used when the primary palettes are exhausted. */
+  fallbackColors: string[];
+  /** Border = territory color darkened by this absolute amount. */
+  borderDarken: number;
+  /**
+   * Border HSL lightness multiplier, applied before borderDarken. 1 = no-op.
+   * Scaling keeps every border the same proportion darker than its fill
+   * (used by the colorblind theme so dark fills don't collapse to black).
+   */
+  borderLightnessScale: number;
+  defendedBorderDarkenLight: number;
+  defendedBorderDarkenDark: number;
+  /** Minimum LAB delta between structure fill and border colors. */
+  structureContrastTarget: number;
+  /** Border color of the local player's territory. */
+  focusedBorderColor: string;
+  /** Tint applied to unit sprites during spawn highlight. */
+  spawnHighlightColor: string;
+}
+
 export interface RenderSettings {
+  theme: ThemeSettings;
   passEnabled: {
     terrain: boolean;
     territory: boolean;
@@ -69,6 +109,10 @@ export interface RenderSettings {
     trailAlpha: number;
     defenseCheckerDarken: number;
     territoryDefenseDarken: number;
+    /** Saturation of the territory fill. 1 = full color, 0 = grayscale. */
+    territorySaturation: number;
+    /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
+    territoryAlpha: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;
@@ -108,6 +152,8 @@ export interface RenderSettings {
     railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
+    /** Track width multiplier (1 = default width). */
+    railThickness: number;
   };
   structure: {
     iconSize: number;
@@ -190,8 +236,13 @@ export interface RenderSettings {
     outlineB: number;
     outlineUsePlayerColor: boolean;
     fillUsePlayerColor: boolean;
+    /** Name fill grayscale shade by player type (0 = black). Human is always 0. */
+    nameShadeNation: number;
+    nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Alpha multiplier applied to a name while the cursor is over it. */
+    hoverFadeAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;
@@ -300,9 +351,30 @@ export interface RenderSettings {
   lightConfigs: Record<string, { radius: number; intensity: number }>;
 }
 
-/** Create a fresh settings object with defaults from render-settings.json. */
+export type ThemeName = "default" | "colorblind";
+
+// Typed so tsc validates each theme JSON against the ThemeSettings shape.
+const THEMES: Record<ThemeName, ThemeSettings> = {
+  default: defaultTheme,
+  colorblind: colorblindTheme,
+};
+
+/** Create fresh theme settings with defaults from the named theme JSON. */
+export function createThemeSettings(
+  name: ThemeName = "default",
+): ThemeSettings {
+  return JSON.parse(JSON.stringify(THEMES[name])) as ThemeSettings;
+}
+
+/**
+ * Create a fresh settings object: render-settings.json combined with the
+ * active theme JSON.
+ */
 export function createRenderSettings(): RenderSettings {
-  return JSON.parse(JSON.stringify(defaults)) as RenderSettings;
+  return {
+    ...(JSON.parse(JSON.stringify(defaults)) as Omit<RenderSettings, "theme">),
+    theme: createThemeSettings(),
+  };
 }
 
 /** Dump current settings to a downloadable JSON file. */

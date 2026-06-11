@@ -53,7 +53,9 @@ function unitStateFromUpdate(u: UnitUpdate): UnitState {
     lastPos: u.lastPos,
     isActive: u.isActive,
     reachedTarget: u.reachedTarget,
-    retreating: u.transportShipState?.isRetreating ?? false,
+    retreating:
+      (u.transportShipState?.isRetreating ?? false) ||
+      u.warshipState?.state === "retreating",
     targetable: u.targetable,
     markedForDeletion: u.markedForDeletion,
     health: u.health ?? null,
@@ -79,7 +81,9 @@ function applyUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.lastPos = u.lastPos;
   target.isActive = u.isActive;
   target.reachedTarget = u.reachedTarget;
-  target.retreating = u.transportShipState?.isRetreating ?? false;
+  target.retreating =
+    (u.transportShipState?.isRetreating ?? false) ||
+    u.warshipState?.state === "retreating";
   target.targetable = u.targetable;
   target.markedForDeletion = u.markedForDeletion;
   target.health = u.health ?? null;
@@ -221,6 +225,9 @@ export class UnitView {
   }
   isUnderConstruction(): boolean {
     return this.state.underConstruction;
+  }
+  isInCooldown(): boolean {
+    return this.state.missileTimerQueue.length === this.state.level;
   }
   targetUnitId(): number | undefined {
     return this.state.targetUnitId ?? undefined;

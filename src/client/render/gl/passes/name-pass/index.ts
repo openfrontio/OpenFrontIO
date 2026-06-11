@@ -27,6 +27,7 @@ import { PlayerTypeEnum } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
+import { renderTroops } from "../../../../Utils";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
@@ -44,10 +45,13 @@ import { DebugProgram } from "./DebugProgram";
 import { FlagAtlasArray } from "./FlagAtlasArray";
 import { IconProgram } from "./IconProgram";
 import { StatusIconProgram } from "./StatusIconProgram";
-import { formatTroops, layoutString } from "./TextLayout";
+import { layoutString } from "./TextLayout";
 import { TextProgram } from "./TextProgram";
 import type { PlayerSlot } from "./Types";
 import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
+
+// Flag quad aspect ratio — must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts.
+const FLAG_ASPECT = 128 / 85;
 
 export class NamePass {
   private gl: WebGL2RenderingContext;
@@ -71,6 +75,8 @@ export class NamePass {
   // Atlas + glyph data
   private glyph: GlyphTables;
   private kernTable: Int8Array;
+  private fontSize: number;
+  private fontBase: number;
 
   // Player management
   private playerByID: Map<string, PlayerStatic>;
@@ -101,6 +107,9 @@ export class NamePass {
 
   // Hovered player's small ID (0 = no highlight, matches TerritoryPass).
   private highlightOwnerID = 0;
+  // Cursor in world coords — fades names under it (far off-map = no fade).
+  private mouseWorldX = -1e9;
+  private mouseWorldY = -1e9;
   private playerStateByID = new Map<string, PlayerState>();
 
   constructor(
@@ -115,6 +124,8 @@ export class NamePass {
 
     // Parse atlas + build CPU lookup tables
     const atlas = parseAtlasData();
+    this.fontSize = atlas.fontSize;
+    this.fontBase = atlas.base;
     this.glyph = buildGlyphTables(atlas.chars);
     this.kernTable = buildKernTable(atlas.kernings);
     this.emojiCharToIndex = buildEmojiLookup();
@@ -212,6 +223,25 @@ export class NamePass {
   }
 
   /**
+   * Re-read every known player's territory color from the palette and rewrite
+   * the live slot rows. Called after a mid-game palette refresh (e.g. toggling
+   * colorblind mode) so name fills/outlines pick up the re-themed colors.
+   */
+  refreshPlayerColors(paletteData: Float32Array): void {
+    for (const [id, p] of this.playerByID) {
+      const off = p.smallID * 4;
+      this.playerColors.set(id, [
+        paletteData[off],
+        paletteData[off + 1],
+        paletteData[off + 2],
+      ]);
+    }
+    for (const slot of this.slots.values()) {
+      this.writePlayerDataRow(slot);
+    }
+  }
+
+  /**
    * Request the texture layer for a slot's flag (called once at slot creation).
    * If the image is already loaded the layer index is set immediately; otherwise
    * the slot joins a wait list and is updated when the image arrives.
@@ -279,6 +309,7 @@ export class NamePass {
           nameLen: 0,
           troopLen: 0,
           lastTroopStr: "",
+          lastTroopBucket: -1,
           flagUrl: p.flag,
           flagLayerIdx: -1,
           emojiAtlasIdx: -1,
@@ -336,14 +367,19 @@ export class NamePass {
         dirty = true;
       }
 
-      // Write troop count string (only if changed)
-      const troops = troopsByPlayerID.get(playerID) ?? 0;
-      const troopStr = formatTroops(troops);
-      if (troopStr !== slot.lastTroopStr) {
-        slot.troopLen = Math.min(troopStr.length, MAX_CHARS);
-        slot.lastTroopStr = troopStr;
-        this.uploadStringRow(slot.index * LINES_PER_PLAYER + 1, troopStr);
-        dirty = true;
+      // Write troop count string (refreshed per slot every 500ms, staggered by
+      // slot index so updates spread across the window instead of bursting).
+      const troopBucket = Math.floor((now + (slot.index % 5) * 0.1) / 0.5);
+      if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
+        slot.lastTroopBucket = troopBucket;
+        const troops = troopsByPlayerID.get(playerID) ?? 0;
+        const troopStr = renderTroops(troops);
+        if (troopStr !== slot.lastTroopStr) {
+          slot.troopLen = Math.min(troopStr.length, MAX_CHARS);
+          slot.lastTroopStr = troopStr;
+          this.uploadStringRow(slot.index * LINES_PER_PLAYER + 1, troopStr);
+          dirty = true;
+        }
       }
 
       // Check if target position changed — only then recompute lerp source
@@ -492,10 +528,18 @@ export class NamePass {
     d[off + 10] = color[2];
     d[off + 11] = 1.0;
 
-    // Column 3: nameLen, troopLen, isHuman, nameHalfWidth
+    // Column 3: nameLen, troopLen, nameShade, nameHalfWidth
+    // Name fill darkens by type: human black, nation a bit gray, bot greyer.
+    const ns = this.settings.name;
+    let nameShade = 0.0;
+    if (slot.static.playerType === PlayerTypeEnum.Nation) {
+      nameShade = ns.nameShadeNation;
+    } else if (slot.static.playerType === PlayerTypeEnum.Bot) {
+      nameShade = ns.nameShadeBot;
+    }
     d[off + 12] = slot.nameLen;
     d[off + 13] = slot.troopLen;
-    d[off + 14] = slot.static.playerType === PlayerTypeEnum.Human ? 1.0 : 0.0;
+    d[off + 14] = nameShade;
     d[off + 15] = slot.nameHalfWidth;
 
     // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]
@@ -531,6 +575,65 @@ export class NamePass {
 
   setHighlightOwner(ownerID: number): void {
     this.highlightOwnerID = ownerID;
+  }
+
+  setMouseWorldPos(x: number, y: number): void {
+    this.mouseWorldX = x;
+    this.mouseWorldY = y;
+  }
+
+  /**
+   * Find the player whose name plate (name + troops + flag + emoji/status row)
+   * is under the cursor, so the whole plate can fade as a unit. Mirrors the
+   * lerp + sizing math in name.vert.glsl. Returns the smallID, or 0 for none.
+   */
+  private hitTestNamePlate(now: number): number {
+    const mx = this.mouseWorldX;
+    const my = this.mouseWorldY;
+    const ns = this.settings.name;
+    for (const slot of this.slots.values()) {
+      if (!slot.alive) continue;
+      const t = Math.min(
+        1 - Math.exp(-ns.lerpSpeed * (now - slot.startTime)),
+        1,
+      );
+      const wx = slot.srcX + (slot.tgtX - slot.srcX) * t;
+      const wy = slot.srcY + (slot.tgtY - slot.srcY) * t;
+      const ws = slot.srcScale + (slot.tgtScale - slot.srcScale) * t;
+      const baseSize = Math.max(1, Math.floor(ws));
+      const nameSize = Math.max(4, Math.floor(baseSize * ns.nameScaleFactor));
+      const nameScale = Math.min(baseSize * 0.25, ns.nameScaleCap);
+      const lineH = this.fontBase * ((nameSize * nameScale) / this.fontSize);
+
+      const halfW =
+        slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
+      let left = wx - halfW;
+      const right = wx + halfW;
+      if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
+
+      // Name line (flag is slightly taller); emoji/status rows sit above it.
+      let top = wy - lineH * 0.6;
+      const hasStatus =
+        slot.crown ||
+        slot.traitor ||
+        slot.disconnected ||
+        slot.alliance ||
+        slot.allianceReq ||
+        slot.target ||
+        slot.embargo ||
+        slot.nukeActive;
+      if (slot.emojiAtlasIdx >= 0) {
+        top = wy - lineH * ns.emojiRowOffset;
+      } else if (hasStatus) {
+        top = wy - lineH * ns.statusRowOffset;
+      }
+      const bottom = wy + lineH * (1.1 + 0.5 * ns.troopSizeMultiplier);
+
+      if (mx >= left && mx <= right && my >= top && my <= bottom) {
+        return slot.static.smallID;
+      }
+    }
+    return 0;
   }
 
   draw(cameraMatrix: Float32Array, ambient: number): void {
@@ -584,6 +687,8 @@ export class NamePass {
       this.playerDataDirty = false;
     }
 
+    const fadeOwnerID = this.hitTestNamePlate(performance.now() / 1000);
+
     this.textProgram.draw(
       cameraMatrix,
       this.settings,
@@ -591,9 +696,15 @@ export class NamePass {
       this.maxPlayers,
       ambient,
       this.highlightOwnerID,
+      fadeOwnerID,
     );
-    this.statusIconProgram.draw(cameraMatrix, this.settings, this.vao);
-    this.iconProgram.draw(cameraMatrix, this.settings, this.vao);
+    this.statusIconProgram.draw(
+      cameraMatrix,
+      this.settings,
+      this.vao,
+      fadeOwnerID,
+    );
+    this.iconProgram.draw(cameraMatrix, this.settings, this.vao, fadeOwnerID);
 
     if (this.settings.passEnabled.nameDebug) {
       this.debugProgram.draw(cameraMatrix, this.settings, this.vao);

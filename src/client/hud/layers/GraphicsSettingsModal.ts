@@ -20,6 +20,40 @@ const NAME_CULL_MIN = 0;
 const NAME_CULL_MAX = 0.05;
 const NAME_CULL_STEP = 0.001;
 
+const HOVER_FADE_MIN = 0;
+const HOVER_FADE_MAX = 1;
+const HOVER_FADE_STEP = 0.05;
+
+const HIGHLIGHT_FILL_MIN = 0;
+const HIGHLIGHT_FILL_MAX = 1;
+const HIGHLIGHT_FILL_STEP = 0.01;
+
+const HIGHLIGHT_BRIGHTEN_MIN = 0;
+const HIGHLIGHT_BRIGHTEN_MAX = 1;
+const HIGHLIGHT_BRIGHTEN_STEP = 0.01;
+
+const HIGHLIGHT_THICKEN_MIN = 0;
+const HIGHLIGHT_THICKEN_MAX = 5;
+const HIGHLIGHT_THICKEN_STEP = 1;
+
+const TERRITORY_SAT_MIN = 0;
+const TERRITORY_SAT_MAX = 1;
+const TERRITORY_SAT_STEP = 0.01;
+
+const TERRITORY_ALPHA_MIN = 0;
+const TERRITORY_ALPHA_MAX = 1;
+const TERRITORY_ALPHA_STEP = 0.01;
+
+// Train track "draw distance" is presented inverted: a higher slider value means
+// tracks stay visible when more zoomed out, i.e. a lower railMinZoom.
+const RAIL_ZOOM_MIN = 0;
+const RAIL_ZOOM_MAX = 10;
+const RAIL_ZOOM_STEP = 0.1;
+
+const RAIL_THICKNESS_MIN = 0.5;
+const RAIL_THICKNESS_MAX = 3;
+const RAIL_THICKNESS_STEP = 0.1;
+
 export class ShowGraphicsSettingsModalEvent {
   constructor(
     public readonly isVisible: boolean = true,
@@ -118,6 +152,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentHoverFade(): number {
+    return (
+      this.userSettings.graphicsOverrides().name?.hoverFadeAlpha ??
+      renderDefaults.name.hoverFadeAlpha
+    );
+  }
+
   private patchName(patch: Partial<GraphicsOverrides["name"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -136,6 +177,109 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private patchMapOverlay(patch: Partial<GraphicsOverrides["mapOverlay"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      mapOverlay: { ...current.mapOverlay, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private patchRailroad(patch: Partial<GraphicsOverrides["railroad"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      railroad: { ...current.railroad, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentHighlightFill(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.highlightFillBrighten ??
+      renderDefaults.mapOverlay.highlightFillBrighten
+    );
+  }
+
+  private currentHighlightBrighten(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.highlightBrighten ??
+      renderDefaults.mapOverlay.highlightBrighten
+    );
+  }
+
+  private currentHighlightThicken(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.highlightThicken ??
+      renderDefaults.mapOverlay.highlightThicken
+    );
+  }
+
+  private currentTerritorySat(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.territorySaturation ??
+      renderDefaults.mapOverlay.territorySaturation
+    );
+  }
+
+  private currentTerritoryAlpha(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.territoryAlpha ??
+      renderDefaults.mapOverlay.territoryAlpha
+    );
+  }
+
+  private currentRailMinZoom(): number {
+    return (
+      this.userSettings.graphicsOverrides().railroad?.railMinZoom ??
+      renderDefaults.railroad.railMinZoom
+    );
+  }
+
+  private currentRailThickness(): number {
+    return (
+      this.userSettings.graphicsOverrides().railroad?.railThickness ??
+      renderDefaults.railroad.railThickness
+    );
+  }
+
+  private onHighlightFillChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ highlightFillBrighten: value });
+  }
+
+  private onHighlightBrightenChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ highlightBrighten: value });
+  }
+
+  private onHighlightThickenChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ highlightThicken: value });
+  }
+
+  private onTerritorySatChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ territorySaturation: value });
+  }
+
+  private onTerritoryAlphaChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ territoryAlpha: value });
+  }
+
+  private onRailDrawDistanceChange(event: Event) {
+    const drawDistance = parseFloat((event.target as HTMLInputElement).value);
+    // Invert: higher draw distance => tracks visible when more zoomed out.
+    this.patchRailroad({ railMinZoom: RAIL_ZOOM_MAX - drawDistance });
+  }
+
+  private onRailThicknessChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchRailroad({ railThickness: value });
+  }
+
   private currentClassicIcons(): boolean {
     return (
       this.userSettings.graphicsOverrides().structure?.classicIcons ?? false
@@ -146,6 +290,50 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchStructure({ classicIcons: !this.currentClassicIcons() });
   }
 
+  private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      passEnabled: { ...current.passEnabled, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  /** Merge a patch into the accessibility graphics overrides and persist it. */
+  private patchAccessibility(
+    patch: Partial<GraphicsOverrides["accessibility"]>,
+  ) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      accessibility: { ...current.accessibility, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentSpecialEffects(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().passEnabled?.fx ??
+      renderDefaults.passEnabled.fx
+    );
+  }
+
+  private onToggleSpecialEffects() {
+    this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
+  }
+
+  /** Whether colorblind mode is currently enabled. */
+  private currentColorblind(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
+
+  /** Toggle colorblind-friendly colors. */
+  private onToggleColorblind() {
+    this.patchAccessibility({ colorblind: !this.currentColorblind() });
+  }
+
   private onNameScaleChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ nameScaleFactor: value });
@@ -154,6 +342,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private onNameCullChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ cullThreshold: value });
+  }
+
+  private onHoverFadeChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchName({ hoverFadeAlpha: value });
   }
 
   private currentDarkNames(): boolean {
@@ -177,8 +370,17 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
     const nameScale = this.currentNameScale();
     const nameCull = this.currentNameCull();
+    const hoverFade = this.currentHoverFade();
     const namesColored = !this.currentDarkNames();
     const classicIcons = this.currentClassicIcons();
+    const highlightFill = this.currentHighlightFill();
+    const highlightBrighten = this.currentHighlightBrighten();
+    const highlightThicken = this.currentHighlightThicken();
+    const territorySat = this.currentTerritorySat();
+    const territoryAlpha = this.currentTerritoryAlpha();
+    const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
+    const railThickness = this.currentRailThickness();
+    const colorblind = this.currentColorblind();
 
     return html`
       <div
@@ -265,6 +467,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
             </div>
 
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.hover_fade_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.hover_fade_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HOVER_FADE_MIN}
+                  max=${HOVER_FADE_MAX}
+                  step=${HOVER_FADE_STEP}
+                  .value=${String(hoverFade)}
+                  @input=${this.onHoverFadeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${hoverFade.toFixed(2)}
+              </div>
+            </div>
+
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click=${this.onToggleNamesColored}
@@ -304,6 +531,237 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${classicIcons
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_map")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.highlight_fill_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.highlight_fill_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HIGHLIGHT_FILL_MIN}
+                  max=${HIGHLIGHT_FILL_MAX}
+                  step=${HIGHLIGHT_FILL_STEP}
+                  .value=${String(highlightFill)}
+                  @input=${this.onHighlightFillChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${highlightFill.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.highlight_brighten_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.highlight_brighten_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HIGHLIGHT_BRIGHTEN_MIN}
+                  max=${HIGHLIGHT_BRIGHTEN_MAX}
+                  step=${HIGHLIGHT_BRIGHTEN_STEP}
+                  .value=${String(highlightBrighten)}
+                  @input=${this.onHighlightBrightenChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${highlightBrighten.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.highlight_thicken_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.highlight_thicken_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HIGHLIGHT_THICKEN_MIN}
+                  max=${HIGHLIGHT_THICKEN_MAX}
+                  step=${HIGHLIGHT_THICKEN_STEP}
+                  .value=${String(highlightThicken)}
+                  @input=${this.onHighlightThickenChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${highlightThicken.toFixed(0)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.territory_sat_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.territory_sat_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${TERRITORY_SAT_MIN}
+                  max=${TERRITORY_SAT_MAX}
+                  step=${TERRITORY_SAT_STEP}
+                  .value=${String(territorySat)}
+                  @input=${this.onTerritorySatChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${territorySat.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.territory_alpha_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.territory_alpha_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${TERRITORY_ALPHA_MIN}
+                  max=${TERRITORY_ALPHA_MAX}
+                  step=${TERRITORY_ALPHA_STEP}
+                  .value=${String(territoryAlpha)}
+                  @input=${this.onTerritoryAlphaChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${territoryAlpha.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.rail_distance_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.rail_distance_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${RAIL_ZOOM_MIN}
+                  max=${RAIL_ZOOM_MAX}
+                  step=${RAIL_ZOOM_STEP}
+                  .value=${String(railDrawDistance)}
+                  @input=${this.onRailDrawDistanceChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${railDrawDistance.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.rail_thickness_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.rail_thickness_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${RAIL_THICKNESS_MIN}
+                  max=${RAIL_THICKNESS_MAX}
+                  step=${RAIL_THICKNESS_STEP}
+                  .value=${String(railThickness)}
+                  @input=${this.onRailThicknessChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${railThickness.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_effects")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleSpecialEffects}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.special_effects_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.special_effects_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_accessibility")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleColorblind}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.colorblind_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.colorblind_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${colorblind
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

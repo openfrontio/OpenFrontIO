@@ -42,6 +42,8 @@ export class TextProgram {
   private uNameScaleCap: WebGLUniformLocation;
   private uTroopSizeMultiplier: WebGLUniformLocation;
   private uHighlightOwnerID: WebGLUniformLocation;
+  private uFadeOwnerID: WebGLUniformLocation;
+  private uHoverFadeAlpha: WebGLUniformLocation;
   private uOutlineWidth: WebGLUniformLocation;
   private uNightAmbient: WebGLUniformLocation;
   private uOutlineColor: WebGLUniformLocation;
@@ -110,6 +112,11 @@ export class TextProgram {
       this.program,
       "uHighlightOwnerID",
     )!;
+    this.uFadeOwnerID = gl.getUniformLocation(this.program, "uFadeOwnerID")!;
+    this.uHoverFadeAlpha = gl.getUniformLocation(
+      this.program,
+      "uHoverFadeAlpha",
+    )!;
     this.uOutlineWidth = gl.getUniformLocation(this.program, "uOutlineWidth")!;
     this.uNightAmbient = gl.getUniformLocation(this.program, "uNightAmbient")!;
     this.uOutlineColor = gl.getUniformLocation(this.program, "uOutlineColor")!;
@@ -154,6 +161,7 @@ export class TextProgram {
     maxPlayers: number,
     ambient: number,
     highlightOwnerID: number,
+    fadeOwnerID: number,
   ): void {
     if (!this.atlasReady) return;
 
@@ -170,6 +178,8 @@ export class TextProgram {
     gl.uniform1f(this.uNameScaleCap, ns.nameScaleCap);
     gl.uniform1f(this.uTroopSizeMultiplier, ns.troopSizeMultiplier);
     gl.uniform1f(this.uHighlightOwnerID, highlightOwnerID);
+    gl.uniform1f(this.uFadeOwnerID, fadeOwnerID);
+    gl.uniform1f(this.uHoverFadeAlpha, ns.hoverFadeAlpha);
     gl.uniform1f(this.uOutlineWidth, ns.outlineWidth);
     gl.uniform1f(this.uNightAmbient, ambient);
     gl.uniform3f(this.uOutlineColor, ns.outlineR, ns.outlineG, ns.outlineB);

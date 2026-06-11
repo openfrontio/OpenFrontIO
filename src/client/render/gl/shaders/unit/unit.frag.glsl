@@ -26,6 +26,7 @@ out vec4 fragColor;
 const float FLAG_FLICKER        = 1.0;
 const float FLAG_ANGRY          = 2.0;
 const float FLAG_TRADE_FRIENDLY = 3.0;
+const float FLAG_RETREATING     = 4.0;
 
 // Ally color for trade-friendly override (yellow — matches affiliation.ts ALLY)
 const vec3 ALLY_COLOR = vec3(1.0, 1.0, 0.0);
@@ -83,10 +84,15 @@ void main() {
   // Flag states (uint8 passed as float via vertex attribute):
   //   0 = normal
   //   1 = flicker (nukes/warheads — cycling hot colors)
-  //   2 = angry (warships attacking — solid red territory band)
+  //   2 = angry (warships attacking — outer ring (180 band) solid red)
+  //   4 = retreating (warships fleeing to port — blinking black center)
+  float retreatBlink = 0.0;
   if (abs(vFlags - FLAG_ANGRY) < 0.1) {
-    // Angry: solid red territory band
+    // Angry: the outer ring (180) and center (100) go red via territoryColor
     territoryColor = uAngryColor;
+  } else if (abs(vFlags - FLAG_RETREATING) < 0.1) {
+    // Retreating: slowly blink the center (100 band) black so the ship reads as fleeing
+    retreatBlink = step(0.5, fract(uTick * 0.07));
   } else if (abs(vFlags - FLAG_FLICKER) < 0.1) {
     // Flicker: cycle through hot colors, offset by position hash
     float phase = fract(uTick * uFlickerSpeed + vHash);
@@ -95,19 +101,24 @@ void main() {
     borderColor = FLICKER_COLORS[(idx + 2) % 4];
   }
 
-  // Three-band gray replacement:
+  // Four-band gray replacement:
   //   180/255 ~ 0.706 -> territory color (light band)
-  //   130/255 ~ 0.510 -> spawn/mid color (interpolated)
+  //   130/255 ~ 0.510 -> spawn/mid color (interpolated; used by missiles)
+  //   100/255 ~ 0.392 -> center accent (warship center — tracks ring, blinks black)
   //   70/255  ~ 0.275 -> border color (dark band)
   vec3 spawnColor = mix(territoryColor, borderColor, 0.5);
+  vec3 centerColor = mix(territoryColor, vec3(0.0), retreatBlink);
 
   vec3 color;
   if (gray > 0.6) {
     // Light band (180) -> territory color
     color = territoryColor;
-  } else if (gray > 0.4) {
+  } else if (gray > 0.45) {
     // Mid band (130) -> spawn color
     color = spawnColor;
+  } else if (gray > 0.34) {
+    // Center accent band (100) -> center color
+    color = centerColor;
   } else {
     // Dark band (70) -> border color
     color = borderColor;

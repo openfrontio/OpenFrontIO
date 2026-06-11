@@ -67,6 +67,8 @@
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
     "territoryDefenseDarken": 0.85,
+    "territorySaturation": 1,
+    "territoryAlpha": 0.588,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,
@@ -104,7 +106,8 @@
     "railMinZoom": 4,
     "railFadeRange": 2,
     "railDetailZoom": 6,
-    "railAlpha": 1
+    "railAlpha": 1,
+    "railThickness": 1
   },
   "structure": {
     "iconSize": 50,
@@ -200,8 +203,11 @@
     "outlineB": 0.0,
     "outlineUsePlayerColor": true,
     "fillUsePlayerColor": false,
+    "nameShadeNation": 0.3,
+    "nameShadeBot": 0.4,
     "emojiRowOffset": 1.4,
-    "statusRowOffset": 1.4
+    "statusRowOffset": 1.4,
+    "hoverFadeAlpha": 0.25
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
@@ -286,11 +292,11 @@
   "spawnOverlay": {
     "highlightRadius": 9,
     "highlightAlpha": 1.0,
-    "selfMinRad": 8,
-    "selfMaxRad": 24,
+    "selfMinRad": 10,
+    "selfMaxRad": 30,
     "mateMinRad": 5,
     "mateMaxRad": 14,
-    "animSpeed": 0.0035,
+    "animSpeed": 0.005,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },

@@ -3,15 +3,23 @@ import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
+import { ClientID } from "../../../core/Schemas";
+import { Config } from "../../../core/configuration/Config";
+import { GameMode, GameType, Gold } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { ClientID } from "../../../core/Schemas";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, renderTroops } from "../../Utils";
+import {
+  getGamesPlayed,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
+import { PlayerView } from "../../view/PlayerView";
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
@@ -39,6 +47,10 @@ export class ControlPanel extends LitElement implements Controller {
   private _isVisible = false;
 
   @state()
+  private _notification: { type: "warning" | "info"; message: string } | null =
+    null;
+
+  @state()
   private _gold: Gold;
 
   @state()
@@ -53,6 +65,15 @@ export class ControlPanel extends LitElement implements Controller {
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
+
+  // Border detection cache
+  private _nearbyPlayerIDs: Set<number> = new Set();
+  private _borderRefreshCounter: number = 0;
+  private _borderTilesPromise: Promise<void> | null = null;
+  // Track last attack tick per target player (for 15-second threshold)
+  private _lastAttackTickByTarget: Map<number, number> = new Map();
+  private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
+  private static readonly ATTACK_THRESHOLD_TICKS = 15 * 10; // 15 seconds
 
   init() {
     this.attackRatio = new UserSettings().attackRatio();
@@ -91,14 +112,29 @@ export class ControlPanel extends LitElement implements Controller {
 
     this.updateTroopIncrease();
 
-    this._maxTroops = this.game.config().maxTroops(player);
+    const config = this.game.config();
+    this._maxTroops = config.maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();
     this._attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
-    this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+    this.troopRate = config.troopIncreaseRate(player) * 10;
+
+    const helpEnabled = new UserSettings().helpMessages();
+
+    // Don't target veteran players
+    if (helpEnabled && getGamesPlayed() < 20) {
+      // Track outgoing attacks for 15-second threshold
+      this.trackOutgoingAttacks(player);
+
+      // Refresh border detection cache periodically
+      this.refreshNearbyPlayers(player);
+
+      // Compute notification
+      this._notification = this.computeNotification(player, config);
+    }
 
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
@@ -149,6 +185,109 @@ export class ControlPanel extends LitElement implements Controller {
       this._goldGainTimeoutId = null;
       this.requestUpdate();
     }, 2000);
+  }
+
+  private trackOutgoingAttacks(player: PlayerView) {
+    const currentTick = this.game.ticks();
+    for (const attack of player.outgoingAttacks()) {
+      if (attack.targetID !== 0 && !attack.retreating) {
+        this._lastAttackTickByTarget.set(attack.targetID, currentTick);
+      }
+    }
+    // Clean up old entries
+    for (const [playerID, tick] of this._lastAttackTickByTarget.entries()) {
+      if (currentTick - tick > ControlPanel.ATTACK_THRESHOLD_TICKS * 2) {
+        this._lastAttackTickByTarget.delete(playerID);
+      }
+    }
+  }
+
+  private refreshNearbyPlayers(player: PlayerView) {
+    this._borderRefreshCounter++;
+    if (
+      this._borderRefreshCounter < ControlPanel.BORDER_REFRESH_INTERVAL ||
+      this._borderTilesPromise !== null
+    ) {
+      return;
+    }
+    this._borderRefreshCounter = 0;
+    this._borderTilesPromise = player.borderTiles().then((bt) => {
+      this._borderTilesPromise = null;
+      const myID = player.smallID();
+      const nearby = new Set<number>();
+      for (const tile of bt.borderTiles) {
+        for (const neighbor of this.game.neighbors(tile as TileRef)) {
+          const ownerID = this.game.ownerID(neighbor);
+          if (ownerID !== 0 && ownerID !== myID) {
+            nearby.add(ownerID);
+          }
+        }
+      }
+      this._nearbyPlayerIDs = nearby;
+    });
+  }
+
+  private computeNotification(
+    player: PlayerView,
+    config: Config,
+  ): { type: "warning" | "info"; message: string } | null {
+    const currentTick = this.game.ticks();
+
+    // Army limit warning
+    const { gameMode, gameType } = config.gameConfig();
+    const isPublicTeamGame =
+      gameMode === GameMode.Team && gameType === GameType.Public;
+    const canDonateTroops = config.donateTroops();
+    if (isPublicTeamGame && canDonateTroops) {
+      const ratio = this._troops / Math.max(this._maxTroops, 1);
+      if (ratio >= config.armyLimitWarningThreshold()) {
+        return {
+          type: "warning",
+          message: "control_panel.army_limit_warning",
+        };
+      }
+    }
+
+    // Low troops (Less than 1k) warning
+    if (this._troops < 10000 && this._troops > 0) {
+      return { type: "warning", message: "control_panel.low_troops_warning" };
+    }
+
+    // Info messages: check nearby players for traitors, AFK allies, AFK teammates
+    for (const nearbyID of this._nearbyPlayerIDs) {
+      let other;
+      try {
+        other = this.game.playerBySmallID(nearbyID);
+      } catch {
+        continue;
+      }
+      if (!other.isPlayer() || !other.isAlive()) continue;
+
+      const lastAttackTick = this._lastAttackTickByTarget.get(nearbyID) ?? -1;
+      const secondsSinceAttack = (currentTick - lastAttackTick) / 10;
+      const hasNotAttackedRecently =
+        lastAttackTick < 0 || secondsSinceAttack > 15;
+
+      if (!hasNotAttackedRecently) continue;
+
+      if (other.isTraitor() && player.isAlliedWith(other)) {
+        return { type: "info", message: "control_panel.traitor_neighbor_info" };
+      }
+      if (other.isDisconnected() && player.isAlliedWith(other)) {
+        return {
+          type: "info",
+          message: "control_panel.allied_afk_neighbor_info",
+        };
+      }
+      if (other.isDisconnected() && player.isOnSameTeam(other)) {
+        return {
+          type: "info",
+          message: "control_panel.teammate_afk_neighbor_info",
+        };
+      }
+    }
+
+    return null;
   }
 
   disconnectedCallback() {
@@ -311,8 +450,24 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private renderNotification() {
+    if (!this._notification) return html``;
+    const isWarning = this._notification.type === "warning";
+    return html`
+      <div
+        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border text-xs font-medium mb-1 ${isWarning
+          ? "border-orange-400/60 bg-orange-400/10 text-orange-300"
+          : "border-blue-400/60 bg-blue-400/10 text-blue-300"}"
+      >
+        <span class="shrink-0">${isWarning ? "⚠" : "ℹ"}</span>
+        <span>${translateText(this._notification.message)}</span>
+      </div>
+    `;
+  }
+
   private renderDesktop() {
     return html`
+      ${this.renderNotification()}
       <!-- Row 1: troop rate | troop bar | gold -->
       <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
@@ -396,6 +551,7 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderMobile() {
     return html`
+      ${this.renderNotification()}
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div

@@ -95,6 +95,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  WorldInverted = "World Inverted",
   GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
@@ -184,6 +185,9 @@ export enum GameMapType {
   ChoppingBlock = "Chopping Block",
   SoutheastAsia = "SoutheastAsia",
   MississippiRiver = "Mississippi River",
+  Titan = "Titan",
+  HongKong = "Hong Kong",
+  JuanDeFucaStrait = "Juan De Fuca Strait",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -257,11 +261,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Caribbean,
     GameMapType.SoutheastAsia,
     GameMapType.MississippiRiver,
+    GameMapType.HongKong,
+    GameMapType.JuanDeFucaStrait,
   ],
   fantasy: [
     GameMapType.Pangaea,
-    GameMapType.Pluto,
-    GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
@@ -270,9 +274,15 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
-    GameMapType.MilkyWay,
     GameMapType.Dyslexdria,
+    GameMapType.WorldInverted,
+  ],
+  cosmic: [
     GameMapType.Luna,
+    GameMapType.Mars,
+    GameMapType.Titan,
+    GameMapType.Pluto,
+    GameMapType.MilkyWay,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -519,7 +529,6 @@ export enum TerrainType {
   Plains,
   Highland,
   Mountain,
-  Lake,
   Ocean,
 }
 
@@ -1060,7 +1069,6 @@ export enum MessageType {
   SAM_MISS,
   SAM_HIT,
   CAPTURED_ENEMY_UNIT,
-  UNIT_CAPTURED_BY_ENEMY,
   UNIT_DESTROYED,
   ALLIANCE_ACCEPTED,
   ALLIANCE_REJECTED,
@@ -1096,7 +1104,6 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
   [MessageType.SAM_HIT]: MessageCategory.ATTACK,
   [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
-  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
   [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
   [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,

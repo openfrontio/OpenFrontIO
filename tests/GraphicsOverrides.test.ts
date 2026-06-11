@@ -42,6 +42,30 @@ describe("GraphicsOverridesSchema", () => {
     }
   });
 
+  test("accepts partial mapOverlay overrides", () => {
+    const cases = [
+      { mapOverlay: {} },
+      { mapOverlay: { territorySaturation: 0.5 } },
+      { mapOverlay: { territoryAlpha: 0.8 } },
+      { mapOverlay: { territorySaturation: 0, territoryAlpha: 1 } },
+    ];
+    for (const c of cases) {
+      expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
+    }
+  });
+
+  test("accepts partial railroad overrides", () => {
+    const cases = [
+      { railroad: {} },
+      { railroad: { railMinZoom: 2 } },
+      { railroad: { railThickness: 1.5 } },
+      { railroad: { railMinZoom: 0, railThickness: 3 } },
+    ];
+    for (const c of cases) {
+      expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
+    }
+  });
+
   test("rejects wrong field types", () => {
     expect(
       GraphicsOverridesSchema.safeParse({ name: { nameScaleFactor: "big" } })
@@ -53,6 +77,21 @@ describe("GraphicsOverridesSchema", () => {
     expect(
       GraphicsOverridesSchema.safeParse({
         structure: { classicIcons: "yes" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        mapOverlay: { territorySaturation: "full" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        railroad: { railMinZoom: "far" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        railroad: { railThickness: "wide" },
       }).success,
     ).toBe(false);
   });
@@ -168,6 +207,58 @@ describe("applyGraphicsOverrides", () => {
     expect(absent.fillDarken).toBe(defaults.fillDarken);
     expect(absent.iconR).toBe(defaults.iconR);
     expect(absent.iconAlpha).toBe(1);
+  });
+
+  test("applies territorySaturation override (including 0)", () => {
+    expect(
+      gen({ mapOverlay: { territorySaturation: 0.4 } }).mapOverlay
+        .territorySaturation,
+    ).toBe(0.4);
+    expect(
+      gen({ mapOverlay: { territorySaturation: 0 } }).mapOverlay
+        .territorySaturation,
+    ).toBe(0);
+  });
+
+  test("applies territoryAlpha override (including 0)", () => {
+    expect(
+      gen({ mapOverlay: { territoryAlpha: 0.3 } }).mapOverlay.territoryAlpha,
+    ).toBe(0.3);
+    expect(
+      gen({ mapOverlay: { territoryAlpha: 0 } }).mapOverlay.territoryAlpha,
+    ).toBe(0);
+  });
+
+  test("mapOverlay override leaves other mapOverlay fields at defaults", () => {
+    const defaults = createRenderSettings().mapOverlay;
+    const mo = gen({ mapOverlay: { territorySaturation: 0.2 } }).mapOverlay;
+    expect(mo.territoryAlpha).toBe(defaults.territoryAlpha);
+    expect(mo.territoryDefenseDarken).toBe(defaults.territoryDefenseDarken);
+  });
+
+  test("applies railMinZoom override (including 0)", () => {
+    expect(gen({ railroad: { railMinZoom: 7 } }).railroad.railMinZoom).toBe(7);
+    expect(gen({ railroad: { railMinZoom: 0 } }).railroad.railMinZoom).toBe(0);
+  });
+
+  test("applies railThickness override (including values below 1)", () => {
+    expect(
+      gen({ railroad: { railThickness: 2.5 } }).railroad.railThickness,
+    ).toBe(2.5);
+    expect(
+      gen({ railroad: { railThickness: 0.5 } }).railroad.railThickness,
+    ).toBe(0.5);
+  });
+
+  test("railroad override leaves other railroad fields at defaults", () => {
+    const defaults = createRenderSettings().railroad;
+    const r = gen({ railroad: { railThickness: 2 } }).railroad;
+    expect(r.railMinZoom).toBe(defaults.railMinZoom);
+    expect(r.railFadeRange).toBe(defaults.railFadeRange);
+    expect(r.railDetailZoom).toBe(defaults.railDetailZoom);
+    expect(r.railAlpha).toBe(defaults.railAlpha);
+    const z = gen({ railroad: { railMinZoom: 1 } }).railroad;
+    expect(z.railThickness).toBe(defaults.railThickness);
   });
 
   test("classicIcons + name overrides compose independently", () => {
