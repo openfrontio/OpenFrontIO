@@ -303,6 +303,10 @@ export class InputHandler {
       this.alternateView = false;
       this.eventBus.emit(new AlternateViewEvent(false));
     });
+      const resetKey = this.keybinds.resetGfx ?? "KeyR";
+      this.addKeybindAndEvent(resetKey, () => {
+        this.eventBus.emit(new RefreshGraphicsEvent());
+      }, (e: KeyboardEvent) => (this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight")));
 
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
@@ -555,59 +559,6 @@ export class InputHandler {
           item[1][0]()
         }
       }
-      /*
-      if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
-        e.preventDefault();
-        this.alternateView = false;
-        this.eventBus.emit(new AlternateViewEvent(false));
-      }
-
-      const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      if (
-        e.code === resetKey &&
-        (this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight"))
-      ) {
-        e.preventDefault();
-        this.eventBus.emit(new RefreshGraphicsEvent());
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.boatAttack)) {
-        e.preventDefault();
-        this.eventBus.emit(new DoBoatAttackEvent());
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.groundAttack)) {
-        e.preventDefault();
-        this.eventBus.emit(new DoGroundAttackEvent());
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.retaliateAttack)) {
-        e.preventDefault();
-        this.eventBus.emit(new DoRetaliateAttackEvent());
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.attackRatioDown)) {
-        e.preventDefault();
-        const increment = this.userSettings.attackRatioIncrement();
-        this.eventBus.emit(new AttackRatioEvent(-increment));
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.attackRatioUp)) {
-        e.preventDefault();
-        const increment = this.userSettings.attackRatioIncrement();
-        this.eventBus.emit(new AttackRatioEvent(increment));
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.centerCamera)) {
-        e.preventDefault();
-        this.eventBus.emit(new CenterCameraEvent());
-      }
-
-      if (e.code === this.keybinds.selectAllWarships) {
-        e.preventDefault();
-        this.eventBus.emit(new SelectAllWarshipsEvent());
-      }
-*/
       // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
       if (this.canUseBuildKeybinds()) {
         const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
@@ -616,46 +567,6 @@ export class InputHandler {
           this.setGhostStructure(matchedBuild);
         }
       }
-/*
-      if (this.keybindMatchesEvent(e, this.keybinds.requestAlliance)) {
-        e.preventDefault();
-        this.eventBus.emit(new DoRequestAllianceEvent());
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.breakAlliance)) {
-        e.preventDefault();
-        this.eventBus.emit(new DoBreakAllianceEvent());
-      }
-
-      if (this.keybindMatchesEvent(e, this.keybinds.swapDirection)) {
-        e.preventDefault();
-        const nextDirection = !this.uiState.rocketDirectionUp;
-        this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
-      }
-
-      if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.pauseGame)) {
-        e.preventDefault();
-        this.eventBus.emit(new TogglePauseIntentEvent());
-      }
-      if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.gameSpeedUp)) {
-        e.preventDefault();
-        this.eventBus.emit(new GameSpeedUpIntentEvent());
-      }
-      if (
-        !e.repeat &&
-        this.keybindMatchesEvent(e, this.keybinds.gameSpeedDown)
-      ) {
-        e.preventDefault();
-        this.eventBus.emit(new GameSpeedDownIntentEvent());
-      }
-
-      // Shift-D to toggle performance overlay
-      if (e.code === "KeyD" && e.shiftKey) {
-        e.preventDefault();
-        console.log("TogglePerformanceOverlayEvent");
-        this.eventBus.emit(new TogglePerformanceOverlayEvent());
-      }
-*/
       this.activeKeys.delete(e.code);
 
       // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
