@@ -308,6 +308,15 @@ export class InputHandler {
         this.eventBus.emit(new RefreshGraphicsEvent());
       }, (e: KeyboardEvent) => (this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight")));
 
+     const buildKeybinds = ["buildCity", "buildFactory", "buildPort", "buildDefensePost", "buildMissileSilo", "buildSamLauncher", "buildAtomBomb", "buildHydrogenBomb", "buildWarship", "buildMIRV"]
+      for (const i of buildKeybinds) {
+        this.addKeybindAndEvent(this.keybinds[i], (e: KeyboardEvent) => {
+          const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
+          if (matchedBuild !== null) {
+            this.setGhostStructure(matchedBuild);
+          }
+        }, this.canUseBuildKeybinds, (e: KeyboardEvent) => (this.resolveBuildKeybind(e.code, e.shiftKey) !== null))
+      }
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
       if (e.isSelected && (e.units ?? []).length > 0) {
@@ -556,15 +565,7 @@ export class InputHandler {
           }
           if (!allConditionsFullfiled) continue;
           e.preventDefault();
-          item[1][0]()
-        }
-      }
-      // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
-      if (this.canUseBuildKeybinds()) {
-        const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
-        if (matchedBuild !== null) {
-          e.preventDefault();
-          this.setGhostStructure(matchedBuild);
+          item[1][0](e);
         }
       }
       this.activeKeys.delete(e.code);
@@ -861,7 +862,7 @@ export class InputHandler {
    * Returns true if the keyboard event matches the given keybind value,
    * including optional Shift+ prefix support.
    */
-  private keybindMatchesEvent(e: KeyboardEvent, keybindValue: string): boolean {
+  private keybindMatchesEvent(e: KeyboardEvent | { shiftKey: boolean; code: string }, keybindValue: string): boolean {
     const parsed = this.parseKeybind(keybindValue);
     return e.code === parsed.code && e.shiftKey === parsed.shift;
   }
@@ -885,16 +886,6 @@ export class InputHandler {
     )
       return code[6];
     return null;
-  }
-
-  /** Strict equality only: used for first-pass exact KeyboardEvent.code match. */
-  private buildKeybindMatches(
-    code: string,
-    shiftKey: boolean,
-    keybindValue: string,
-  ): boolean {
-    const parsed = this.parseKeybind(keybindValue);
-    return code === parsed.code && shiftKey === parsed.shift;
   }
 
   /** Digit/Numpad alias match: used only when no exact match was found. */
@@ -948,7 +939,7 @@ export class InputHandler {
       { key: "buildMIRV", type: UnitType.MIRV },
     ];
     for (const { key, type } of buildKeybinds) {
-      if (this.buildKeybindMatches(code, shiftKey, this.keybinds[key]))
+      if (this.keybindMatchesEvent({code, shiftKey}, this.keybinds[key]))
         return type;
     }
     for (const { key, type } of buildKeybinds) {
