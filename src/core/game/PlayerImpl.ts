@@ -41,7 +41,12 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { diffPlayerUpdate, packAttackTroopDeltas } from "./GameUpdateUtils";
+import {
+  ATTACK_DELTA_INCOMING,
+  ATTACK_DELTA_OUTGOING,
+  diffPlayerUpdate,
+  packAttackTroopDeltas,
+} from "./GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -190,14 +195,14 @@ export class PlayerImpl implements Player {
         prev.outgoingAttacks,
         full.outgoingAttacks,
         full.smallID!,
-        0,
+        ATTACK_DELTA_OUTGOING,
         attackTroopsOut,
       );
       packAttackTroopDeltas(
         prev.incomingAttacks,
         full.incomingAttacks,
         full.smallID!,
-        1,
+        ATTACK_DELTA_INCOMING,
         attackTroopsOut,
       );
     }

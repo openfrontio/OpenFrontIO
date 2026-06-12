@@ -219,6 +219,83 @@ describe("GameView.update — packed channels", () => {
     expect(() => game.update(gu)).not.toThrow();
   });
 
+  it("same-tick array resend and patch on different directions both apply", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({
+          id: "alice",
+          smallID: 1,
+          outgoingAttacks: [
+            {
+              attackerID: 1,
+              targetID: 2,
+              troops: 500,
+              id: "a1",
+              retreating: false,
+            },
+          ],
+          incomingAttacks: [
+            {
+              attackerID: 4,
+              targetID: 1,
+              troops: 80,
+              id: "a3",
+              retreating: false,
+            },
+          ],
+        }),
+      ]),
+    );
+
+    // Outgoing membership changed → full array resent with fresh troops;
+    // incoming membership unchanged → troops arrive as a patch. The patch
+    // must land on the long-lived incoming array and not interfere with the
+    // resent outgoing array (a tick resends or patches each array, never
+    // both — but different directions can mix on one tick).
+    const gu = makeEmptyGu(2);
+    gu.updates[GameUpdateType.Player] = [
+      {
+        type: GameUpdateType.Player,
+        id: "alice",
+        outgoingAttacks: [
+          {
+            attackerID: 1,
+            targetID: 2,
+            troops: 450,
+            id: "a1",
+            retreating: false,
+          },
+          {
+            attackerID: 1,
+            targetID: 3,
+            troops: 100,
+            id: "a2",
+            retreating: false,
+          },
+        ],
+      },
+    ];
+    gu.packedAttackUpdates = new Float64Array([1, 1, 0, 75]);
+    game.update(gu);
+
+    const alice = game.player("alice");
+    expect(alice.outgoingAttacks().map((a) => a.troops)).toEqual([450, 100]);
+    expect(alice.incomingAttacks().map((a) => a.troops)).toEqual([75]);
+  });
+
+  it("gold survives the float64 quad exactly, including > 2^32 values", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })]),
+    );
+    const bigGold = 2 ** 52 + 11; // integer, exactly representable in f64
+    const gu = makeEmptyGu(2);
+    gu.packedPlayerUpdates = new Float64Array([1, 0, bigGold, 0]);
+    game.update(gu);
+    expect(game.player("alice").gold()).toBe(BigInt(bigGold));
+  });
+
   it("nameData persists across ticks without a playerNameViewData record", () => {
     const game = makeGameView();
     game.update(
@@ -264,6 +341,86 @@ describe("GameView.update — packed channels", () => {
     gu3.playerNameViewData = { alice: { x: 0, y: 0, size: 0 } };
     game.update(gu3);
     expect(game.frameData().names.get("alice")).toMatchObject({ x: 7, y: 9 });
+  });
+});
+
+describe("GameView.update — derived-data dirty flags", () => {
+  function twoPlayers() {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({ id: "alice", smallID: 1 }),
+        makePlayerUpdate({ id: "bob", smallID: 2 }),
+      ]),
+    );
+    return game;
+  }
+
+  it("relationMatrix recomputes when allies arrive on a partial update", () => {
+    const game = twoPlayers();
+    const size = game.frameData().relationSize;
+    expect(game.frameData().relationMatrix[1 * size + 2]).toBe(0); // neutral
+
+    const gu = makeEmptyGu(2);
+    gu.updates[GameUpdateType.Player] = [
+      { type: GameUpdateType.Player, id: "alice", allies: [2] },
+    ];
+    game.update(gu);
+    // friendly, both directions
+    expect(game.frameData().relationMatrix[1 * size + 2]).toBe(1);
+    expect(game.frameData().relationMatrix[2 * size + 1]).toBe(1);
+  });
+
+  it("relationMatrix recomputes when embargoes arrive on a partial update", () => {
+    const game = twoPlayers();
+    const size = game.frameData().relationSize;
+
+    const gu = makeEmptyGu(2);
+    gu.updates[GameUpdateType.Player] = [
+      {
+        type: GameUpdateType.Player,
+        id: "alice",
+        embargoes: new Set(["bob"]),
+      },
+    ];
+    game.update(gu);
+    expect(game.frameData().relationMatrix[1 * size + 2]).toBe(2); // embargo
+  });
+
+  it("allianceClusters keep identity on clean ticks and recompute on allies change", () => {
+    const game = twoPlayers();
+    const before = game.frameData().allianceClusters;
+    expect(before.get(1)).not.toBe(before.get(2)); // separate clusters
+
+    // Clean tick: no relation inputs changed → cached object, untouched.
+    game.update(makeEmptyGu(2));
+    expect(game.frameData().allianceClusters).toBe(before);
+
+    // Alliance forms → recomputed: alice and bob share a cluster root.
+    const gu = makeEmptyGu(3);
+    gu.updates[GameUpdateType.Player] = [
+      { type: GameUpdateType.Player, id: "alice", allies: [2] },
+      { type: GameUpdateType.Player, id: "bob", allies: [1] },
+    ];
+    game.update(gu);
+    const after = game.frameData().allianceClusters;
+    expect(after).not.toBe(before);
+    expect(after.get(1)).toBe(after.get(2));
+  });
+
+  it("names map keeps identity and content on ticks without a record", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })], {
+        alice: { x: 7, y: 9, size: 3 },
+      }),
+    );
+    const names = game.frameData().names;
+    const entry = names.get("alice");
+
+    game.update(makeEmptyGu(2));
+    expect(game.frameData().names).toBe(names); // long-lived map
+    expect(game.frameData().names.get("alice")).toBe(entry); // not rebuilt
   });
 });
 

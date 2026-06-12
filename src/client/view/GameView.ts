@@ -16,6 +16,7 @@ import {
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
+import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
 import {
   MotionPlanRecord,
   unpackMotionPlans,
@@ -419,7 +420,7 @@ export class GameView implements GameMap {
         const state = this._playerStates.get(packedAttacks[i]);
         if (state === undefined) continue;
         const attacks =
-          packedAttacks[i + 1] === 0
+          packedAttacks[i + 1] === ATTACK_DELTA_OUTGOING
             ? state.outgoingAttacks
             : state.incomingAttacks;
         const attack = attacks[packedAttacks[i + 2]];

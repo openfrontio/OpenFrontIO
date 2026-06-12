@@ -213,6 +213,21 @@ describe("packAttackTroopDeltas", () => {
     expect(out).toEqual([]);
   });
 
+  it("a retreat flip suppresses quads even when troops also changed", () => {
+    // retreating is part of membership equality, so the whole array resends
+    // (with fresh troops) and patches must NOT be emitted — a tick resends
+    // or patches, never both.
+    const out: number[] = [];
+    packAttackTroopDeltas(
+      [attack(10, "a", false)],
+      [attack(5, "a", true)],
+      7,
+      0,
+      out,
+    );
+    expect(out).toEqual([]);
+  });
+
   it("emits nothing for identical references or missing arrays", () => {
     const out: number[] = [];
     const arr = [attack(10)];

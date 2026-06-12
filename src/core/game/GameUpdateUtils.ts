@@ -197,6 +197,15 @@ function attackArrayMembershipEqual(
 }
 
 /**
+ * Direction lane of a `packedAttackUpdates` quad: which of the owner's attack
+ * arrays the index addresses. Encoder (PlayerImpl.toUpdate →
+ * packAttackTroopDeltas) and decoder (client GameView.update) must both use
+ * these.
+ */
+export const ATTACK_DELTA_OUTGOING = 0;
+export const ATTACK_DELTA_INCOMING = 1;
+
+/**
  * Push a `[ownerSmallID, direction, index, troops]` quad onto `out` for each
  * attack whose troop count changed between `prev` and `next`. No-op when the
  * arrays are not membership-equal — diffPlayerUpdate resends the whole array
@@ -207,7 +216,7 @@ export function packAttackTroopDeltas(
   prev: AttackUpdate[] | undefined,
   next: AttackUpdate[] | undefined,
   ownerSmallID: number,
-  direction: 0 | 1,
+  direction: typeof ATTACK_DELTA_OUTGOING | typeof ATTACK_DELTA_INCOMING,
   out: number[],
 ): void {
   if (prev === next || !prev || !next) return;
