@@ -143,9 +143,14 @@ export class MapPicker extends LitElement {
   }
 
   private renderFeaturedTab() {
+    const featured = mapCategories.featured ?? [];
+    let featuredMapList = featured;
+    if (!this.useRandomMap && !featured.includes(this.selectedMap)) {
+      featuredMapList = [this.selectedMap, ...featured];
+    }
     return html`<div class="w-full">
       ${this.renderSectionHeading(translateText("map_categories.featured"))}
-      ${this.renderMapGrid(mapCategories.featured ?? [])}
+      ${this.renderMapGrid(featuredMapList)}
     </div>`;
   }
 
@@ -187,16 +192,6 @@ export class MapPicker extends LitElement {
     }
   }
 
-  private selectTab(tab: MapTab) {
-    if (tab === this.activeTab) return;
-    this.activeTab = tab;
-    // Unselect on tab switch (back to the default map) so the selection
-    // never points at a map hidden on another tab.
-    if (!this.useRandomMap && this.selectedMap !== GameMapType.World) {
-      this.onSelectMap?.(GameMapType.World);
-    }
-  }
-
   private renderTabButton(tab: MapTab, label: string) {
     const isActive = this.activeTab === tab;
     return html`<button
@@ -206,7 +201,7 @@ export class MapPicker extends LitElement {
       class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${isActive
         ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
         : "text-white/60 hover:text-white"}"
-      @click=${() => this.selectTab(tab)}
+      @click=${() => (this.activeTab = tab)}
     >
       ${label}
     </button>`;
