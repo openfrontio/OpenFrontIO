@@ -889,7 +889,7 @@ export class AiAttackBehavior {
       if (
         n.isPlayer() &&
         !this.player.isFriendly(n) &&
-        this.player.type() !== PlayerType.Bot &&
+        n.type() !== PlayerType.Bot &&
         n.troops() > maxNeighborTroops
       ) {
         maxNeighborTroops = n.troops();
