@@ -21,7 +21,7 @@ import "./components/Difficulties";
 import "./components/FriendsList";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { fetchCosmetics } from "./Cosmetics";
+import { fetchCosmetics, SUBSCRIPTIONS_ENABLED } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -32,9 +32,9 @@ export class AccountModal extends BaseModal {
   @state() private isLoadingUser: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
+  private cosmetics: Cosmetics | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
-  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -225,6 +225,7 @@ export class AccountModal extends BaseModal {
   }
 
   private renderSubscriptionPanel(): TemplateResult | "" {
+    if (!SUBSCRIPTIONS_ENABLED) return "";
     const sub = this.userMeResponse?.player?.subscription;
     if (!sub) return "";
     const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
@@ -419,10 +420,12 @@ export class AccountModal extends BaseModal {
   protected onOpen(): void {
     this.isLoadingUser = true;
 
-    void fetchCosmetics().then((cosmetics) => {
-      this.cosmetics = cosmetics;
-      this.requestUpdate();
-    });
+    if (SUBSCRIPTIONS_ENABLED) {
+      void fetchCosmetics().then((cosmetics) => {
+        this.cosmetics = cosmetics;
+        this.requestUpdate();
+      });
+    }
 
     void getUserMe()
       .then((userMe) => {
