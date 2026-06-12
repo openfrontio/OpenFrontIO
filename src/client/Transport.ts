@@ -574,11 +574,18 @@ export class Transport {
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      this.sendMsg({
-        type: "winner",
-        winner: event.winner,
-        allPlayersStats: event.allPlayersStats,
-      } satisfies ClientSendWinnerMessage);
+      // allPlayersStats is stripped on the multiplayer path: the server does
+      // not trust client-reported stats (prevents fake stat injection).
+      // For local (singleplayer) games allPlayersStats must be kept — it is
+      // the only source of stats that LocalServer.endGame() archives.
+      const msg: ClientSendWinnerMessage = this.isLocal
+        ? {
+            type: "winner",
+            winner: event.winner,
+            allPlayersStats: event.allPlayersStats,
+          }
+        : { type: "winner", winner: event.winner };
+      this.sendMsg(msg);
     } else {
       console.log(
         "WebSocket is not open. Current state:",

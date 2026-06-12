@@ -18,7 +18,7 @@ import {
   decompressGameRecord,
   replacer,
 } from "../core/Util";
-import { getPersistentID } from "./Auth";
+import { getAuthHeader, getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,
@@ -228,7 +228,7 @@ export class LocalServer {
     }
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
-      this.allPlayersStats = clientMsg.allPlayersStats;
+      this.allPlayersStats = clientMsg.allPlayersStats ?? {};
     }
   }
 
@@ -303,16 +303,23 @@ export class LocalServer {
 
     const jsonString = JSON.stringify(result.data, replacer);
 
-    compress(jsonString)
-      .then((compressedData) => {
+    getAuthHeader()
+      .then(async (authHeader) => {
+        // Anonymous users have no JWT. The archive endpoint requires auth to
+        // prevent spoofing, so skip silently rather than sending a request
+        // that would be rejected with 401. Logged-in singleplayer archiving
+        // is intentionally preserved; anonymous singleplayer is not archived.
+        if (!authHeader) return;
+        const compressedData = await compress(jsonString);
         return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Content-Encoding": "gzip",
+            Authorization: authHeader,
           },
           body: compressedData,
-          keepalive: true, // Ensures request completes even if page unloads
+          keepalive: true,
         });
       })
       .catch((error) => {
