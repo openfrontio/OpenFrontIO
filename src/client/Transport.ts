@@ -174,7 +174,9 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
 
-export class SendStartGameEvent implements GameEvent {}
+export class SendToggleGameStartTimer implements GameEvent {
+  constructor() {}
+}
 
 export class Transport {
   private socket: WebSocket | null = null;
@@ -266,7 +268,9 @@ export class Transport {
       this.onSendUpdateGameConfigIntent(e),
     );
 
-    this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
+    this.eventBus.on(SendToggleGameStartTimer, (e) =>
+      this.onSendToggleGameStartTimer(e),
+    );
   }
 
   private startPing() {
@@ -647,8 +651,8 @@ export class Transport {
     });
   }
 
-  private onSendStartGame() {
-    this.sendIntent({ type: "start_game" });
+  private onSendToggleGameStartTimer(event: SendToggleGameStartTimer) {
+    this.sendIntent({ type: "toggle_game_start_timer" });
   }
 
   private sendIntent(intent: Intent) {

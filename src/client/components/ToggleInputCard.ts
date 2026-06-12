@@ -1,19 +1,7 @@
 import { LitElement, PropertyValues, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../Utils";
-
-const ACTIVE_CARD =
-  "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue)]";
-const INACTIVE_CARD =
-  "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
-const INPUT_CLASS =
-  "w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-malibu-blue p-1 my-1";
-const CARD_LABEL_CLASS =
-  "text-xs uppercase font-bold tracking-wider leading-tight break-words hyphens-auto";
-
-function cardClass(active: boolean, extra = ""): string {
-  return `w-full h-full rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 ${extra} ${active ? ACTIVE_CARD : INACTIVE_CARD}`;
-}
+import { CARD_LABEL_CLASS, INPUT_CLASS, cardClass } from "./InputCardStyles";
 
 @customElement("toggle-input-card")
 export class ToggleInputCard extends LitElement {
@@ -103,7 +91,7 @@ export class ToggleInputCard extends LitElement {
 
   render() {
     return html`
-      <div class="${cardClass(this.checked, "relative overflow-hidden")}">
+      <div class="${cardClass(this.checked)}">
         <button
           type="button"
           aria-pressed=${this.checked}
