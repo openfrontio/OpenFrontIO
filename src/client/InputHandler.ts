@@ -343,6 +343,11 @@ export class InputHandler {
         "Numpad9",
       ],
     );
+    buildKeybinds.push(
+      ...buildKeybinds.map((t) => {
+        return "Shift+" + t;
+      }),
+    );
     for (const i of buildKeybinds) {
       this.addKeybindAndEvent(
         i,
