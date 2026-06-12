@@ -39,6 +39,16 @@ export function documentStylesSheet(): CSSStyleSheet {
   if (sheet === null) {
     sheet = new CSSStyleSheet();
     void populate(sheet);
+    // In dev this module evaluates before Vite injects the page's <style>
+    // tags, so the read above sees almost nothing — re-read once the page
+    // has fully loaded (constructed sheets are live, so components pick up
+    // the styles without re-rendering).
+    if (document.readyState !== "complete") {
+      const populated = sheet;
+      window.addEventListener("load", () => void populate(populated), {
+        once: true,
+      });
+    }
   }
   return sheet;
 }
