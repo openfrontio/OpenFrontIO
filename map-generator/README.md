@@ -40,6 +40,8 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
    This rewrites ALL files in place. Git figures out which files are actually changed, don't worry.
    Alternatively, you can either run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
 
+Alternatively, `npm run gen-maps` (from the root directory) runs the generator for all maps and formats the output in one step.
+
 ## Output Files
 
 - `../resources/maps/<map_name>/manifest.json` - JSON metadata containing map dimensions and land tile counts for all scales.
@@ -47,6 +49,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 - `../resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
+- `../src/core/game/Maps.gen.ts` - Generated TypeScript (`GameMapType`, `mapCategories`, `mapTranslationKeys`, `multiplayerFrequency`) built from every map's info.json. Regenerated on every run, even with `--maps`.
 
 ## Command Line Flags
 
