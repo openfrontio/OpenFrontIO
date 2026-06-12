@@ -228,7 +228,7 @@
     "conquestFadeOut": 0.6
   },
   "nukeTrajectory": {
-    "lineWidth": 1.25,
+    "lineWidth": 2.5,
     "outlineWidth": 1.5,
     "dashTargetable": 8,
     "gapTargetable": 4,
