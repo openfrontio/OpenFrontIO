@@ -4,6 +4,7 @@
   "translation_key": "map.bosphorusstraits",
   "categories": ["europe", "asia"],
   "multiplayer_frequency": 3,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [564, 245],

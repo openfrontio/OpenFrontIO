@@ -4,6 +4,7 @@
   "translation_key": "map.gulfofstlawrence",
   "categories": ["north_america"],
   "multiplayer_frequency": 4,
+  "special_team_count": 3,
   "nations": [
     {
       "coordinates": [88, 364],

@@ -1,6 +1,7 @@
 {
   "id": "Mena",
   "name": "Mena",
+  "display_name": "MENA",
   "translation_key": "map.mena",
   "categories": ["asia", "africa"],
   "multiplayer_frequency": 6,

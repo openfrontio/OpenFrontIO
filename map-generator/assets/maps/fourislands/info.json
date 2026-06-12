@@ -4,6 +4,7 @@
   "translation_key": "map.fourislands",
   "categories": ["other"],
   "multiplayer_frequency": 4,
+  "special_team_count": 4,
   "nations": [
     {
       "coordinates": [403, 1296],

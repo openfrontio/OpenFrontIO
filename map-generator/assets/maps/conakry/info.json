@@ -4,6 +4,7 @@
   "translation_key": "map.conakry",
   "categories": ["africa"],
   "multiplayer_frequency": 3,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [510, 420],

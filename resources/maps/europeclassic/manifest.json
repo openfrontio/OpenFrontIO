@@ -1,5 +1,6 @@
 {
   "categories": ["europe"],
+  "display_name": "Europe (Classic)",
   "id": "EuropeClassic",
   "map": {
     "height": 1000,

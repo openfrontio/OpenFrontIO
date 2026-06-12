@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -26,18 +26,24 @@ var categoryOrder = []string{
 	"other",
 }
 
-// mapInfo is the subset of info.json fields used for TypeScript generation.
+// mapInfo is the subset of info.json fields used for code generation.
 type mapInfo struct {
 	ID             string   `json:"id"`
 	Name           string   `json:"name"`
 	TranslationKey string   `json:"translation_key"`
 	Categories     []string `json:"categories"`
+	// English display name written to en.json. Defaults to Name; set it when
+	// the display name differs from the canonical (wire-format) name.
+	DisplayName string `json:"display_name"`
 	// How many times the map appears in the multiplayer playlist.
 	// 0 (or omitted) keeps the map out of the regular rotation.
 	MultiplayerFrequency int `json:"multiplayer_frequency"`
 	// Position in the featured grid (1 = first). Featured maps without a
 	// rank sort after ranked ones, alphabetically.
 	FeaturedRank int `json:"featured_rank"`
+	// Preferred team count in team/special games (see MapPlaylist).
+	// 0 (or omitted) means no preference.
+	SpecialTeamCount int `json:"special_team_count"`
 }
 
 // hasCategory reports whether the map lists the given category.
@@ -50,20 +56,21 @@ func (m mapInfo) hasCategory(category string) bool {
 	return false
 }
 
-// generateMapsTS reads every non-test map's info.json and writes the
-// GameMapType enum, mapCategories, and mapTranslationKeys to
-// src/core/game/Maps.gen.ts.
-// Maps appear in registry (alphabetical) order; categories in categoryOrder.
-func generateMapsTS() error {
+// displayName returns the English display name for the map.
+func (m mapInfo) displayName() string {
+	if m.DisplayName != "" {
+		return m.DisplayName
+	}
+	return m.Name
+}
+
+// loadMapInfos reads and validates every non-test map's info.json, in
+// registry (alphabetical) order.
+func loadMapInfos() ([]mapInfo, error) {
 	inputDir, err := inputMapDir(false)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
-	}
-	outPath := filepath.Join(cwd, "..", "src", "core", "game", "Maps.gen.ts")
 
 	infos := make([]mapInfo, 0, len(maps))
 	for _, m := range maps {
@@ -72,32 +79,35 @@ func generateMapsTS() error {
 		}
 		buf, err := os.ReadFile(filepath.Join(inputDir, m.Name, "info.json"))
 		if err != nil {
-			return fmt.Errorf("failed to read info.json for %s: %w", m.Name, err)
+			return nil, fmt.Errorf("failed to read info.json for %s: %w", m.Name, err)
 		}
 		var info mapInfo
 		if err := json.Unmarshal(buf, &info); err != nil {
-			return fmt.Errorf("failed to parse info.json for %s: %w", m.Name, err)
+			return nil, fmt.Errorf("failed to parse info.json for %s: %w", m.Name, err)
 		}
 		if info.ID == "" || strings.ToLower(info.ID) != m.Name {
-			return fmt.Errorf("map %s: info.json \"id\" (%q) must be the folder name in UpperCamelCase", m.Name, info.ID)
+			return nil, fmt.Errorf("map %s: info.json \"id\" (%q) must be the folder name in UpperCamelCase", m.Name, info.ID)
 		}
 		if info.Name == "" {
-			return fmt.Errorf("map %s: info.json is missing \"name\"", m.Name)
+			return nil, fmt.Errorf("map %s: info.json is missing \"name\"", m.Name)
 		}
-		if info.TranslationKey == "" {
-			return fmt.Errorf("map %s: info.json is missing \"translation_key\"", m.Name)
+		if info.TranslationKey != "map."+m.Name {
+			return nil, fmt.Errorf("map %s: info.json \"translation_key\" (%q) must be %q", m.Name, info.TranslationKey, "map."+m.Name)
 		}
 		if info.MultiplayerFrequency < 0 {
-			return fmt.Errorf("map %s: info.json \"multiplayer_frequency\" (%d) must be >= 0", m.Name, info.MultiplayerFrequency)
+			return nil, fmt.Errorf("map %s: info.json \"multiplayer_frequency\" (%d) must be >= 0", m.Name, info.MultiplayerFrequency)
 		}
 		if info.FeaturedRank < 0 {
-			return fmt.Errorf("map %s: info.json \"featured_rank\" (%d) must be >= 1", m.Name, info.FeaturedRank)
+			return nil, fmt.Errorf("map %s: info.json \"featured_rank\" (%d) must be >= 1", m.Name, info.FeaturedRank)
 		}
 		if info.FeaturedRank > 0 && !info.hasCategory("featured") {
-			return fmt.Errorf("map %s: info.json sets \"featured_rank\" but \"categories\" does not include \"featured\"", m.Name)
+			return nil, fmt.Errorf("map %s: info.json sets \"featured_rank\" but \"categories\" does not include \"featured\"", m.Name)
+		}
+		if info.SpecialTeamCount < 0 || info.SpecialTeamCount == 1 {
+			return nil, fmt.Errorf("map %s: info.json \"special_team_count\" (%d) must be >= 2", m.Name, info.SpecialTeamCount)
 		}
 		if len(info.Categories) == 0 {
-			return fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
+			return nil, fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
 		}
 		seen := make(map[string]bool)
 		for _, category := range info.Categories {
@@ -109,15 +119,26 @@ func generateMapsTS() error {
 				}
 			}
 			if !valid {
-				return fmt.Errorf("map %s: info.json category %q must be one of: %s", m.Name, category, strings.Join(categoryOrder, ", "))
+				return nil, fmt.Errorf("map %s: info.json category %q must be one of: %s", m.Name, category, strings.Join(categoryOrder, ", "))
 			}
 			if seen[category] {
-				return fmt.Errorf("map %s: info.json lists category %q more than once", m.Name, category)
+				return nil, fmt.Errorf("map %s: info.json lists category %q more than once", m.Name, category)
 			}
 			seen[category] = true
 		}
 		infos = append(infos, info)
 	}
+	return infos, nil
+}
+
+// generateMapsTS writes the GameMapType enum, the MapCategory union, the
+// MapInfo interface, and the maps list to src/core/game/Maps.gen.ts.
+func generateMapsTS(infos []mapInfo) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	outPath := filepath.Join(cwd, "..", "src", "core", "game", "Maps.gen.ts")
 
 	var b strings.Builder
 	b.WriteString("// Code generated by map-generator; DO NOT EDIT.\n")
@@ -134,49 +155,121 @@ func generateMapsTS() error {
 
 	b.WriteString("export type GameMapName = keyof typeof GameMapType;\n\n")
 
-	b.WriteString("export const mapCategories: Record<string, GameMapType[]> = {\n")
+	b.WriteString("export type MapCategory =\n")
+	for i, category := range categoryOrder {
+		sep := "\n"
+		if i == len(categoryOrder)-1 {
+			sep = ";\n\n"
+		}
+		b.WriteString(fmt.Sprintf("  | %q%s", category, sep))
+	}
+
+	b.WriteString("// Category display order in the map picker.\n")
+	b.WriteString("export const mapCategoryOrder: readonly MapCategory[] = [\n")
 	for _, category := range categoryOrder {
-		members := make([]mapInfo, 0, len(infos))
-		for _, info := range infos {
-			if info.hasCategory(category) {
-				members = append(members, info)
+		b.WriteString(fmt.Sprintf("  %q,\n", category))
+	}
+	b.WriteString("];\n\n")
+
+	b.WriteString("export interface MapInfo {\n")
+	b.WriteString("  /** GameMapType enum key — the UpperCamelCase folder name. */\n")
+	b.WriteString("  id: GameMapName;\n")
+	b.WriteString("  /** Canonical map name (wire format) — the GameMapType enum value. */\n")
+	b.WriteString("  type: GameMapType;\n")
+	b.WriteString("  /** Key of the map's display name in resources/lang/en.json. */\n")
+	b.WriteString("  translationKey: string;\n")
+	b.WriteString("  /** Map picker categories. */\n")
+	b.WriteString("  categories: MapCategory[];\n")
+	b.WriteString("  /** How many times the map appears in the multiplayer playlist. */\n")
+	b.WriteString("  multiplayerFrequency: number;\n")
+	b.WriteString("  /** Position in the featured grid (1 = first); unranked featured maps sort last. */\n")
+	b.WriteString("  featuredRank?: number;\n")
+	b.WriteString("  /** Preferred team count in team/special games (see MapPlaylist). */\n")
+	b.WriteString("  specialTeamCount?: number;\n")
+	b.WriteString("}\n\n")
+
+	b.WriteString("export const maps: readonly MapInfo[] = [\n")
+	for _, info := range infos {
+		b.WriteString("  {\n")
+		b.WriteString(fmt.Sprintf("    id: %q,\n", info.ID))
+		b.WriteString(fmt.Sprintf("    type: GameMapType.%s,\n", info.ID))
+		b.WriteString(fmt.Sprintf("    translationKey: %q,\n", info.TranslationKey))
+		b.WriteString("    categories: [")
+		for i, category := range info.Categories {
+			if i > 0 {
+				b.WriteString(", ")
 			}
+			b.WriteString(fmt.Sprintf("%q", category))
 		}
-		if category == "featured" {
-			sort.SliceStable(members, func(i, j int) bool {
-				ri, rj := members[i].FeaturedRank, members[j].FeaturedRank
-				if ri == 0 {
-					ri = len(infos) + 1
-				}
-				if rj == 0 {
-					rj = len(infos) + 1
-				}
-				return ri < rj
-			})
+		b.WriteString("],\n")
+		b.WriteString(fmt.Sprintf("    multiplayerFrequency: %d,\n", info.MultiplayerFrequency))
+		if info.FeaturedRank > 0 {
+			b.WriteString(fmt.Sprintf("    featuredRank: %d,\n", info.FeaturedRank))
 		}
-		b.WriteString(fmt.Sprintf("  %s: [\n", category))
-		for _, info := range members {
-			b.WriteString(fmt.Sprintf("    GameMapType.%s,\n", info.ID))
+		if info.SpecialTeamCount > 0 {
+			b.WriteString(fmt.Sprintf("    specialTeamCount: %d,\n", info.SpecialTeamCount))
 		}
-		b.WriteString("  ],\n")
+		b.WriteString("  },\n")
 	}
-	b.WriteString("};\n\n")
-
-	b.WriteString("export const mapTranslationKeys: Record<GameMapType, string> = {\n")
-	for _, info := range infos {
-		b.WriteString(fmt.Sprintf("  [GameMapType.%s]: %q,\n", info.ID, info.TranslationKey))
-	}
-	b.WriteString("};\n\n")
-
-	b.WriteString("// How many times each map appears in the multiplayer playlist.\n")
-	b.WriteString("export const multiplayerFrequency: Record<GameMapName, number> = {\n")
-	for _, info := range infos {
-		b.WriteString(fmt.Sprintf("  %s: %d,\n", info.ID, info.MultiplayerFrequency))
-	}
-	b.WriteString("};\n")
+	b.WriteString("];\n")
 
 	if err := os.WriteFile(outPath, []byte(b.String()), 0644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", outPath, err)
+	}
+	return nil
+}
+
+// generateEnJSON rewrites the "map" section of resources/lang/en.json with
+// each map's display name, keyed by folder name. Existing keys in the
+// section that are not maps (e.g. "featured", "random") are preserved.
+//
+// The whole file is round-tripped through encoding/json, which marshals
+// object keys in sorted order — a no-op for everything but the map section
+// because en.json is kept sorted (see tests/EnJsonSorted.test.ts).
+func generateEnJSON(infos []mapInfo) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	enPath := filepath.Join(cwd, "..", "resources", "lang", "en.json")
+	content, err := os.ReadFile(enPath)
+	if err != nil {
+		return fmt.Errorf("failed to read en.json: %w", err)
+	}
+
+	var root map[string]interface{}
+	if err := json.Unmarshal(content, &root); err != nil {
+		return fmt.Errorf("failed to parse en.json: %w", err)
+	}
+	oldSection, ok := root["map"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("en.json has no top-level \"map\" object")
+	}
+
+	mapFolders := make(map[string]bool, len(infos))
+	for _, info := range infos {
+		mapFolders[strings.ToLower(info.ID)] = true
+	}
+	section := make(map[string]interface{}, len(oldSection))
+	for key, value := range oldSection {
+		if !mapFolders[key] {
+			section[key] = value
+		}
+	}
+	for _, info := range infos {
+		section[strings.ToLower(info.ID)] = info.displayName()
+	}
+	root["map"] = section
+
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(root); err != nil {
+		return fmt.Errorf("failed to serialize en.json: %w", err)
+	}
+	if err := os.WriteFile(enPath, b.Bytes(), 0644); err != nil {
+		return fmt.Errorf("failed to write en.json: %w", err)
 	}
 	return nil
 }

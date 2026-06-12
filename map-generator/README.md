@@ -49,7 +49,8 @@ Alternatively, `npm run gen-maps` (from the root directory) runs the generator f
 - `../resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
-- `../src/core/game/Maps.gen.ts` - Generated TypeScript (`GameMapType`, `mapCategories`, `mapTranslationKeys`, `multiplayerFrequency`) built from every map's info.json. Regenerated on every run, even with `--maps`.
+- `../src/core/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
+- `../resources/lang/en.json` - The `map` section is rewritten with each map's display name. Regenerated on every run, even with `--maps`.
 
 ## Command Line Flags
 
@@ -121,13 +122,17 @@ Example:
 
 `name` is the map's canonical name — the `GameMapType` enum value. It must never change once the map ships (it is part of the wire format and stored in game records).
 
-`translation_key` is the key of the map's display name in `../resources/lang/en.json` (`map.<map_name>`).
+`display_name` (optional) is the English display name written to the `map` section of `../resources/lang/en.json`. It defaults to `name` — set it only when the display name should differ from the canonical name (e.g. `MENA`, `Europe (Classic)`).
+
+`translation_key` is the key of the map's display name in `../resources/lang/en.json`. It must be `map.<map_name>`.
 
 `categories` groups the map in the map picker. Each entry must be one of: `featured`, `world`, `europe`, `asia`, `north_america`, `africa`, `south_america`, `oceania`, `antarctica`, `cosmic`, `tournament`, `other`. Maps that straddle regions (e.g. Black Sea, Bering Strait) can list more than one. Add `featured` to show the map in the featured section of the map picker.
 
 `multiplayer_frequency` is how many times the map appears in the public multiplayer playlist. Use 0 (or omit) to keep the map out of the regular rotation.
 
 `featured_rank` (optional, featured maps only) is the map's position in the featured grid (1 = first). Featured maps without a rank sort after ranked ones, alphabetically.
+
+`special_team_count` (optional) is the map's preferred team count in team / special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Omit it for no preference.
 
 `flag` is the code for a country
 
@@ -148,12 +153,14 @@ The country will need to be added to `../src/client/data/countries.json`
 
 ## To Enable In-Game
 
-`GameMapType`, `mapCategories`, `mapTranslationKeys`, and
-`multiplayerFrequency` are generated from the info.json files into
-`../src/core/game/Maps.gen.ts` when the map-generator runs — do not edit that
-file by hand. The only step outside info.json is:
+Everything is generated from the info.json files when the map-generator runs —
+there are no manual steps:
 
-- Add the map's display name to the `map` translation object in `../resources/lang/en.json` (using your `translation_key`)
+- The `GameMapType` enum and the `maps` list (one `MapInfo` per map) are
+  written to `../src/core/game/Maps.gen.ts`. Do not edit that file by hand.
+- The `map` section of `../resources/lang/en.json` is rewritten with each
+  map's `display_name` (or `name`). Translations to other languages are
+  managed via Crowdin.
 
 ## Notes
 

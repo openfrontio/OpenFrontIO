@@ -4,6 +4,7 @@
   "translation_key": "map.surrounded",
   "categories": ["other"],
   "multiplayer_frequency": 4,
+  "special_team_count": 4,
   "nations": [
     {
       "coordinates": [1043, 910],

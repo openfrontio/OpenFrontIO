@@ -1,14 +1,13 @@
 import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/Config";
 import {
+  maps as allMaps,
   Difficulty,
   Duos,
-  GameMapName,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
   HumansVsNations,
-  multiplayerFrequency,
   PublicGameModifiers,
   Quads,
   RankedType,
@@ -50,30 +49,17 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: HumansVsNations, weight: 20 },
 ];
 
-// Maps with a preferred team count in team / special games.
+// Maps with a preferred team count in team / special games, declared via
+// "special_team_count" in each map's info.json.
 // For these maps: team-playlist frequency is doubled, and the preferred
 // team count overrides the random TEAM_WEIGHTS roll with SPECIAL_TEAM_FORCE_CHANCE.
 const SPECIAL_TEAM_FORCE_CHANCE = 0.75;
 const SPECIAL_TEAM_FREQ_MULTIPLIER = 2;
-const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
-  [GameMapType.Baikal, 2],
-  [GameMapType.FourIslands, 4],
-  [GameMapType.Luna, 2],
-  [GameMapType.StraitOfGibraltar, 2],
-  [GameMapType.StraitOfHormuz, 2],
-  [GameMapType.Aegean, 2],
-  [GameMapType.BeringSea, 2],
-  [GameMapType.BeringStrait, 2],
-  [GameMapType.BosphorusStraits, 2],
-  [GameMapType.Conakry, 2],
-  [GameMapType.Pluto, 2],
-  [GameMapType.FalklandIslands, 2],
-  [GameMapType.TradersDream, 2],
-  [GameMapType.Surrounded, 4],
-  [GameMapType.GulfOfStLawrence, 3],
-  [GameMapType.ChoppingBlock, 4],
-  [GameMapType.JuanDeFucaStrait, 3],
-]);
+const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map(
+  allMaps
+    .filter((m) => m.specialTeamCount !== undefined)
+    .map((m) => [m.type, m.specialTeamCount!]),
+);
 
 type ModifierKey =
   | "isRandomSpawn"
@@ -498,15 +484,15 @@ export class MapPlaylist {
 
   private buildMapsList(type: PublicGameType): GameMapType[] {
     const maps: GameMapType[] = [];
-    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
-      const map = GameMapType[key];
+    allMaps.forEach((mapInfo) => {
+      const map = mapInfo.type;
       if (
         type !== "special" &&
         (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
       ) {
         return;
       }
-      let freq = multiplayerFrequency[key];
+      let freq = mapInfo.multiplayerFrequency;
       // Boost frequency for special team maps in the team playlist
       if (type === "team" && SPECIAL_TEAM_MAPS.has(map)) {
         freq *= SPECIAL_TEAM_FREQ_MULTIPLIER;

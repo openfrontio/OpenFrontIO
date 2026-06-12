@@ -1,5 +1,6 @@
 {
   "categories": ["cosmic"],
+  "display_name": "Milky Way",
   "id": "MilkyWay",
   "map": {
     "height": 1500,
