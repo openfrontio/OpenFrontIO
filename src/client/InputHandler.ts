@@ -331,7 +331,6 @@ export class InputHandler {
     })
     buildKeybinds.push(...["Numpad0", "Numpad1", "Numpad2", "Numpad3", "Numpad4", "Numpad5", "Numpad6", "Numpad7", "Numpad8", "Numpad9"])
     for (const i of buildKeybinds) {
-      console.log(i)
       this.addKeybindAndEvent(
         i,
         (e: KeyboardEvent) => {
