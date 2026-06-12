@@ -205,7 +205,7 @@ export class HostLobbyModal extends BaseModal {
         ? this.clients.length === 1
           ? translateText("host_modal.waiting")
           : translateText("host_modal.start")
-        : translateText("private_lobby.starting_in", {
+        : translateText("host_modal.starting_in", {
             time: renderDuration(secondsRemaining),
           });
 
