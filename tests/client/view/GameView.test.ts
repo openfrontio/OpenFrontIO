@@ -466,4 +466,24 @@ describe("GameView.frameData() — renderer contract", () => {
     game.update(makeEmptyGu(2));
     expect(game.frameData().structuresDirty).toBe(false);
   });
+
+  it("frame.relationMatrix marks same-team players as friendly (team games)", () => {
+    const RELATION_FRIENDLY = 1;
+    const RELATION_NEUTRAL = 0;
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({ id: "alice", smallID: 1, team: "red" }),
+        makePlayerUpdate({ id: "bob", smallID: 2, team: "red" }),
+        makePlayerUpdate({ id: "carol", smallID: 3, team: "blue" }),
+      ]),
+    );
+    const { relationMatrix, relationSize } = game.frameData();
+    // Teammates (no explicit alliance) are friendly both ways.
+    expect(relationMatrix[1 * relationSize + 2]).toBe(RELATION_FRIENDLY);
+    expect(relationMatrix[2 * relationSize + 1]).toBe(RELATION_FRIENDLY);
+    // Cross-team players stay neutral.
+    expect(relationMatrix[1 * relationSize + 3]).toBe(RELATION_NEUTRAL);
+    expect(relationMatrix[3 * relationSize + 1]).toBe(RELATION_NEUTRAL);
+  });
 });
