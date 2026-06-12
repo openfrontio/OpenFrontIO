@@ -17,6 +17,8 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
+// CSS imports must come before component imports so that Tailwind styles
+// are in the DOM when shadow-DOM components call documentStylesSheet().
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -66,6 +68,12 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./styles.css";
+import "./styles/core/typography.css";
+import "./styles/core/variables.css";
+import "./styles/layout/container.css";
+import "./styles/layout/header.css";
+import "./styles/modal/chat.css";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
@@ -76,12 +84,6 @@ import "./components/PlayPage";
 import "./components/RankedModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import "./styles.css";
-import "./styles/core/typography.css";
-import "./styles/core/variables.css";
-import "./styles/layout/container.css";
-import "./styles/layout/header.css";
-import "./styles/modal/chat.css";
 
 function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const button = document.getElementById("nav-account-button");
