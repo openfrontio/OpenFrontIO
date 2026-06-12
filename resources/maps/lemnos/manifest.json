@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Lemnos",
   "map": {
     "height": 1420,
     "num_land_tiles": 874763,
@@ -14,6 +16,7 @@
     "num_land_tiles": 216496,
     "width": 874
   },
+  "multiplayer_frequency": 3,
   "name": "Lemnos",
   "nations": [
     {
@@ -61,5 +64,6 @@
       "flag": "gr",
       "name": "Pyrgos"
     }
-  ]
+  ],
+  "translation_key": "map.lemnos"
 }

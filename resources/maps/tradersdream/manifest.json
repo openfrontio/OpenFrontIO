@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "TradersDream",
   "map": {
     "height": 1920,
     "num_land_tiles": 972041,
@@ -14,6 +16,7 @@
     "num_land_tiles": 240669,
     "width": 1100
   },
+  "multiplayer_frequency": 4,
   "name": "Traders Dream",
   "nations": [
     {
@@ -97,5 +100,6 @@
         "y": 960
       }
     ]
-  }
+  },
+  "translation_key": "map.tradersdream"
 }

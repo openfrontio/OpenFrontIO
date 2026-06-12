@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "ArchipelagoSea",
   "map": {
     "height": 1508,
     "num_land_tiles": 287155,
@@ -14,7 +16,8 @@
     "num_land_tiles": 52779,
     "width": 1550
   },
-  "name": "Archipelago Sea",
+  "multiplayer_frequency": 3,
+  "name": "ArchipelagoSea",
   "nations": [
     {
       "coordinates": [145, 767],
@@ -116,5 +119,6 @@
       "flag": "fi",
       "name": "Hammarsboda"
     }
-  ]
+  ],
+  "translation_key": "map.archipelagosea"
 }

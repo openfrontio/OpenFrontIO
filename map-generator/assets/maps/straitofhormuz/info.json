@@ -1,5 +1,9 @@
 {
+  "id": "StraitOfHormuz",
   "name": "Strait of Hormuz",
+  "translation_key": "map.straitofhormuz",
+  "categories": ["asia"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [837, 356],

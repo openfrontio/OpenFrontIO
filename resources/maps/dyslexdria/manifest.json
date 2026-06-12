@@ -1,4 +1,6 @@
 {
+  "categories": ["world"],
+  "id": "Dyslexdria",
   "map": {
     "height": 1344,
     "num_land_tiles": 1893664,
@@ -14,6 +16,7 @@
     "num_land_tiles": 458342,
     "width": 1540
   },
+  "multiplayer_frequency": 8,
   "name": "Dyslexdria",
   "nations": [
     {
@@ -366,5 +369,6 @@
       "flag": "Republic of Pirates",
       "name": "Biosphere Conmune"
     }
-  ]
+  ],
+  "translation_key": "map.dyslexdria"
 }

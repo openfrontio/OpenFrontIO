@@ -620,13 +620,18 @@
   },
   "map_categories": {
     "featured": "Featured",
-    "continental": "Continental",
-    "regional": "Regional",
+    "world": "World",
+    "europe": "Europe",
+    "asia": "Asia",
+    "north_america": "North America",
+    "africa": "Africa",
+    "south_america": "South America",
+    "oceania": "Oceania",
+    "antarctica": "Antarctica",
     "cosmic": "Cosmic",
     "tournament": "Tournament",
-    "fantasy": "Other",
+    "other": "Other",
     "special": "Special",
-    "arcade": "Arcade",
     "favorites": "Favourites"
   },
   "map_component": {

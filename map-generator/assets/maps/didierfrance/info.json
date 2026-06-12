@@ -1,5 +1,9 @@
 {
-  "name": "Didier (France)",
+  "id": "DidierFrance",
+  "name": "Didier France",
+  "translation_key": "map.didierfrance",
+  "categories": ["other"],
+  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [120, 680],

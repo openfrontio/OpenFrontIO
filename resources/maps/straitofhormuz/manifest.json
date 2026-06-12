@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "StraitOfHormuz",
   "map": {
     "height": 1200,
     "num_land_tiles": 1255327,
@@ -14,6 +16,7 @@
     "num_land_tiles": 312041,
     "width": 900
   },
+  "multiplayer_frequency": 4,
   "name": "Strait of Hormuz",
   "nations": [
     {
@@ -137,5 +140,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.straitofhormuz"
 }

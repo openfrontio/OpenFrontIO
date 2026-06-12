@@ -1,5 +1,9 @@
 {
-  "name": "Southeast Asia",
+  "id": "SoutheastAsia",
+  "name": "SoutheastAsia",
+  "translation_key": "map.southeastasia",
+  "categories": ["asia"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1319, 76],

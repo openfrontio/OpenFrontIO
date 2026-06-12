@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "Baikal",
   "map": {
     "height": 1564,
     "num_land_tiles": 2181746,
@@ -14,6 +16,7 @@
     "num_land_tiles": 540826,
     "width": 1250
   },
+  "multiplayer_frequency": 5,
   "name": "Baikal",
   "nations": [
     {
@@ -87,5 +90,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.baikal"
 }

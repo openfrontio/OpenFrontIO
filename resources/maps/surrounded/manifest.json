@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Surrounded",
   "map": {
     "height": 1976,
     "num_land_tiles": 767607,
@@ -14,6 +16,7 @@
     "num_land_tiles": 188986,
     "width": 988
   },
+  "multiplayer_frequency": 4,
   "name": "Surrounded",
   "nations": [
     {
@@ -98,5 +101,6 @@
         "y": 988
       }
     ]
-  }
+  },
+  "translation_key": "map.surrounded"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "GulfOfStLawrence",
   "map": {
     "height": 1348,
     "num_land_tiles": 874011,
@@ -14,6 +16,7 @@
     "num_land_tiles": 212526,
     "width": 810
   },
+  "multiplayer_frequency": 4,
   "name": "Gulf of St. Lawrence",
   "nations": [
     {
@@ -168,5 +171,6 @@
         "y": 500
       }
     ]
-  }
+  },
+  "translation_key": "map.gulfofstlawrence"
 }

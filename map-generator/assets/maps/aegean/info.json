@@ -1,5 +1,9 @@
 {
-  "name": "aegean",
+  "id": "Aegean",
+  "name": "Aegean",
+  "translation_key": "map.aegean",
+  "categories": ["europe"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [786, 1860],

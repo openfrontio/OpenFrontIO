@@ -1,4 +1,6 @@
 {
+  "categories": ["africa"],
+  "id": "NileDelta",
   "map": {
     "height": 1280,
     "num_land_tiles": 1363238,
@@ -14,6 +16,7 @@
     "num_land_tiles": 336925,
     "width": 778
   },
+  "multiplayer_frequency": 4,
   "name": "Nile Delta",
   "nations": [
     {
@@ -71,5 +74,6 @@
       "flag": "eg",
       "name": "El Mansoura"
     }
-  ]
+  ],
+  "translation_key": "map.niledelta"
 }
