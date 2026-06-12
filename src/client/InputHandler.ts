@@ -327,9 +327,22 @@ export class InputHandler {
       "buildMIRV",
     ];
     buildKeybinds = buildKeybinds.map((i: string): string => {
-      return this.keybinds[i]
-    })
-    buildKeybinds.push(...["Numpad0", "Numpad1", "Numpad2", "Numpad3", "Numpad4", "Numpad5", "Numpad6", "Numpad7", "Numpad8", "Numpad9"])
+      return this.keybinds[i];
+    });
+    buildKeybinds.push(
+      ...[
+        "Numpad0",
+        "Numpad1",
+        "Numpad2",
+        "Numpad3",
+        "Numpad4",
+        "Numpad5",
+        "Numpad6",
+        "Numpad7",
+        "Numpad8",
+        "Numpad9",
+      ],
+    );
     for (const i of buildKeybinds) {
       this.addKeybindAndEvent(
         i,
