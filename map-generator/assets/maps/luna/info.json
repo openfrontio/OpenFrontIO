@@ -4,6 +4,7 @@
   "translation_key": "map.luna",
   "categories": ["cosmic"],
   "multiplayer_frequency": 6,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [265, 662],

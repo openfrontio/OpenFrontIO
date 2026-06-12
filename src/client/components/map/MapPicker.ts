@@ -5,8 +5,10 @@ import { assetUrl } from "../../../core/AssetUrls";
 import {
   Difficulty,
   GameMapType,
-  mapCategories,
-  mapTranslationKeys,
+  MapCategory,
+  mapCategoryOrder,
+  MapInfo,
+  maps,
 } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
@@ -14,6 +16,19 @@ import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
 const randomMap = assetUrl("images/RandomMap.webp");
 
 type MapTab = "featured" | "all" | "favorites";
+
+// Featured grid order: ranked maps first (1 = first), unranked alphabetical.
+const featuredMaps: MapInfo[] = maps
+  .filter((m) => m.categories.includes("featured"))
+  .sort(
+    (a, b) =>
+      (a.featuredRank ?? Number.MAX_SAFE_INTEGER) -
+      (b.featuredRank ?? Number.MAX_SAFE_INTEGER),
+  );
+
+function mapsInCategory(category: MapCategory): MapInfo[] {
+  return maps.filter((m) => m.categories.includes(category));
+}
 
 @customElement("map-picker")
 export class MapPicker extends LitElement {
@@ -63,29 +78,26 @@ export class MapPicker extends LitElement {
     return this.mapWins?.get(mapValue) ?? new Set();
   }
 
-  private renderMapCard(mapValue: GameMapType) {
-    const mapKey = Object.entries(GameMapType).find(
-      ([_, value]) => value === mapValue,
-    )?.[0];
+  private renderMapCard(map: MapInfo) {
     return html`
       <div
-        @click=${() => this.handleMapSelection(mapValue)}
+        @click=${() => this.handleMapSelection(map.type)}
         class="cursor-pointer"
       >
         <map-display
-          .mapKey=${mapKey}
-          .selected=${!this.useRandomMap && this.selectedMap === mapValue}
+          .mapKey=${map.id}
+          .selected=${!this.useRandomMap && this.selectedMap === map.type}
           .showMedals=${this.showMedals}
-          .wins=${this.getWins(mapValue)}
-          .favorite=${this.favorites.includes(mapValue)}
-          .onToggleFavorite=${() => this.handleToggleFavorite(mapValue)}
-          .translation=${translateText(mapTranslationKeys[mapValue])}
+          .wins=${this.getWins(map.type)}
+          .favorite=${this.favorites.includes(map.type)}
+          .onToggleFavorite=${() => this.handleToggleFavorite(map.type)}
+          .translation=${translateText(map.translationKey)}
         ></map-display>
       </div>
     `;
   }
 
-  private renderMapGrid(maps: GameMapType[]) {
+  private renderMapGrid(mapList: MapInfo[]) {
     // Keyed by map so cards keep their identity when the list shifts
     // (e.g. the selected map gets prepended to the featured grid) —
     // positional reuse would leave stale thumbnails behind.
@@ -93,9 +105,9 @@ export class MapPicker extends LitElement {
       class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
     >
       ${repeat(
-        maps,
-        (mapValue) => mapValue,
-        (mapValue) => this.renderMapCard(mapValue),
+        mapList,
+        (map) => map.id,
+        (map) => this.renderMapCard(map),
       )}
     </div>`;
   }
@@ -108,7 +120,7 @@ export class MapPicker extends LitElement {
     </h4>`;
   }
 
-  private renderCategoryBar(categoryKey: string, maps: GameMapType[]) {
+  private renderCategoryBar(categoryKey: MapCategory, mapList: MapInfo[]) {
     const expanded = this.expandedCategories.has(categoryKey);
     return html`<div class="w-full">
       <button
@@ -134,19 +146,23 @@ export class MapPicker extends LitElement {
           </svg>
           ${translateText(`map_categories.${categoryKey}`)}
         </span>
-        <span class="text-xs font-bold text-white/40">${maps.length}</span>
+        <span class="text-xs font-bold text-white/40">${mapList.length}</span>
       </button>
       ${expanded
-        ? html`<div class="mt-4">${this.renderMapGrid(maps)}</div>`
+        ? html`<div class="mt-4">${this.renderMapGrid(mapList)}</div>`
         : null}
     </div>`;
   }
 
   private renderFeaturedTab() {
-    const featured = mapCategories.featured ?? [];
-    let featuredMapList = featured;
-    if (!this.useRandomMap && !featured.includes(this.selectedMap)) {
-      featuredMapList = [this.selectedMap, ...featured];
+    let featuredMapList = featuredMaps;
+    const selected = maps.find((m) => m.type === this.selectedMap);
+    if (
+      !this.useRandomMap &&
+      selected !== undefined &&
+      !featuredMaps.includes(selected)
+    ) {
+      featuredMapList = [selected, ...featuredMaps];
     }
     return html`<div class="w-full">
       ${this.renderSectionHeading(translateText("map_categories.featured"))}
@@ -156,10 +172,10 @@ export class MapPicker extends LitElement {
 
   private renderAllTab() {
     return html`<div class="space-y-3">
-      ${Object.entries(mapCategories)
-        .filter(([categoryKey]) => categoryKey !== "featured")
-        .map(([categoryKey, maps]) =>
-          this.renderCategoryBar(categoryKey, maps),
+      ${mapCategoryOrder
+        .filter((categoryKey) => categoryKey !== "featured")
+        .map((categoryKey) =>
+          this.renderCategoryBar(categoryKey, mapsInCategory(categoryKey)),
         )}
     </div>`;
   }
@@ -175,9 +191,12 @@ export class MapPicker extends LitElement {
         </p>
       </div>`;
     }
+    const favoriteMaps = this.favorites
+      .map((favorite) => maps.find((m) => m.type === favorite))
+      .filter((m) => m !== undefined);
     return html`<div class="w-full">
       ${this.renderSectionHeading(translateText("map_categories.favorites"))}
-      ${this.renderMapGrid(this.favorites)}
+      ${this.renderMapGrid(favoriteMaps)}
     </div>`;
   }
 

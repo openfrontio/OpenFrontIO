@@ -1,6 +1,7 @@
 {
   "id": "EuropeClassic",
   "name": "Europe Classic",
+  "display_name": "Europe (Classic)",
   "translation_key": "map.europeclassic",
   "categories": ["europe"],
   "multiplayer_frequency": 0,

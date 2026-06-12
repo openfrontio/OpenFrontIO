@@ -1,12 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {
-  GameMapName,
-  GameMapType,
-  mapCategories,
-  mapTranslationKeys,
-  multiplayerFrequency,
-} from "../src/core/game/Game";
+import { GameMapName, GameMapType, MapInfo, maps } from "../src/core/game/Game";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,25 +29,22 @@ const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
   "BritanniaClassic",
 ]);
 
-/** Get the en.json map translation keys. */
-function getEnJsonMapKeys(): Set<string> {
+// Keys in the en.json "map" section that are UI strings, not map names.
+const EN_JSON_META_KEYS = new Set([
+  "map",
+  "featured",
+  "all",
+  "favorites",
+  "random",
+]);
+
+/** Get the en.json "map" section. */
+function getEnJsonMapSection(): Record<string, string> {
   const content = JSON.parse(fs.readFileSync(EN_JSON, "utf8"));
-  const mapSection = content.map as Record<string, string>;
-  // Exclude meta keys that aren't actual maps.
-  const metaKeys = new Set(["map", "featured", "all", "random"]);
-  return new Set(Object.keys(mapSection).filter((k) => !metaKeys.has(k)));
+  return content.map as Record<string, string>;
 }
 
-/** Map each GameMapType value to the mapCategories keys that contain it. */
-function getMapCategoryKeys(): Map<GameMapType, string[]> {
-  const result = new Map<GameMapType, string[]>();
-  for (const [categoryKey, maps] of Object.entries(mapCategories)) {
-    for (const map of maps) {
-      result.set(map, [...(result.get(map) ?? []), categoryKey]);
-    }
-  }
-  return result;
-}
+const mapsById = new Map<GameMapName, MapInfo>(maps.map((m) => [m.id, m]));
 
 /** Read the parsed info.json for a map, or null if missing. */
 function readInfoJson(key: GameMapName): Record<string, unknown> | null {
@@ -94,29 +85,35 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Every GameMapType is listed in at least one mapCategories group", () => {
-    const categoryKeys = getMapCategoryKeys();
+  test("The maps list and GameMapType match one-to-one", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
-      const categories = categoryKeys.get(GameMapType[key]) ?? [];
-      if (categories.length === 0) {
-        errors.push(`${key} is not listed in any mapCategories group`);
+      if (!mapsById.has(key)) {
+        errors.push(`${key} has no entry in the generated maps list`);
       }
     }
+    for (const m of maps) {
+      if (!(m.id in GameMapType)) {
+        errors.push(`maps list entry "${m.id}" is not a GameMapType key`);
+      }
+    }
+    if (maps.length !== mapsById.size) {
+      errors.push("maps list contains duplicate ids");
+    }
     if (errors.length > 0) {
-      throw new Error("mapCategories violations:\n" + errors.join("\n"));
+      throw new Error("maps list violations:\n" + errors.join("\n"));
     }
   });
 
   // Maps.gen.ts is generated from the info.json files by the map-generator.
   // If this test fails, run `npm run gen-maps` to regenerate it.
   test("info.json metadata matches the generated Maps.gen.ts", () => {
-    const categoryKeys = getMapCategoryKeys();
     const errors: string[] = [];
     for (const key of allMapKeys) {
       const info = readInfoJson(key);
-      if (info === null) {
-        continue; // Other tests catch missing files.
+      const map = mapsById.get(key);
+      if (info === null || map === undefined) {
+        continue; // Other tests catch missing files/entries.
       }
       const value = GameMapType[key];
       if (info.id !== key) {
@@ -127,26 +124,23 @@ describe("Map consistency", () => {
           `${key}: info.json name is "${info.name}", but GameMapType.${key} is "${value}"`,
         );
       }
-      const expectedCategories = [...(categoryKeys.get(value) ?? [])].sort();
-      const infoCategories = Array.isArray(info.categories)
-        ? [...info.categories].sort()
-        : [];
-      if (
-        JSON.stringify(infoCategories) !== JSON.stringify(expectedCategories)
-      ) {
-        errors.push(
-          `${key}: info.json categories are ${JSON.stringify(info.categories)}, but mapCategories has it under ${JSON.stringify(expectedCategories)}`,
-        );
-      }
-      if (info.translation_key !== mapTranslationKeys[value]) {
-        errors.push(
-          `${key}: info.json translation_key is "${info.translation_key}", but mapTranslationKeys has "${mapTranslationKeys[value]}"`,
-        );
-      }
-      if ((info.multiplayer_frequency ?? 0) !== multiplayerFrequency[key]) {
-        errors.push(
-          `${key}: info.json multiplayer_frequency is ${JSON.stringify(info.multiplayer_frequency)}, but multiplayerFrequency has ${multiplayerFrequency[key]}`,
-        );
+      const fields: [string, unknown, unknown][] = [
+        ["categories", info.categories, map.categories],
+        ["translation_key", info.translation_key, map.translationKey],
+        [
+          "multiplayer_frequency",
+          info.multiplayer_frequency ?? 0,
+          map.multiplayerFrequency,
+        ],
+        ["featured_rank", info.featured_rank, map.featuredRank],
+        ["special_team_count", info.special_team_count, map.specialTeamCount],
+      ];
+      for (const [field, infoValue, mapValue] of fields) {
+        if (JSON.stringify(infoValue) !== JSON.stringify(mapValue)) {
+          errors.push(
+            `${key}: info.json ${field} is ${JSON.stringify(infoValue)}, but the maps list has ${JSON.stringify(mapValue)}`,
+          );
+        }
       }
     }
     if (errors.length > 0) {
@@ -178,19 +172,37 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Every GameMapType is registered in en.json map translations", () => {
-    const enKeys = getEnJsonMapKeys();
+  // The en.json "map" section is generated from the info.json files.
+  // If this test fails, run `npm run gen-maps` to regenerate it.
+  test("en.json map translations match info.json display names", () => {
+    const enMapSection = getEnJsonMapSection();
     const errors: string[] = [];
     for (const key of allMapKeys) {
       const folder = toFolderName(key);
-      if (!enKeys.has(folder)) {
+      const info = readInfoJson(key);
+      if (info === null) continue; // Other tests catch missing files.
+      const expected = info.display_name ?? info.name;
+      if (enMapSection[folder] === undefined) {
         errors.push(
           `${key} (key "${folder}") is missing from en.json map translations`,
         );
+      } else if (enMapSection[folder] !== expected) {
+        errors.push(
+          `${key}: en.json map.${folder} is "${enMapSection[folder]}", but info.json says "${expected}"`,
+        );
+      }
+    }
+    const validKeys = new Set(allMapKeys.map((k) => toFolderName(k)));
+    for (const enKey of Object.keys(enMapSection)) {
+      if (!EN_JSON_META_KEYS.has(enKey) && !validKeys.has(enKey)) {
+        errors.push(`en.json map.${enKey} does not match any map`);
       }
     }
     if (errors.length > 0) {
-      throw new Error("Maps missing from en.json:\n" + errors.join("\n"));
+      throw new Error(
+        "en.json map section is out of sync (run `npm run gen-maps`):\n" +
+          errors.join("\n"),
+      );
     }
   });
 
@@ -351,10 +363,12 @@ describe("Map consistency", () => {
     const metadataKeys = [
       "id",
       "name",
+      "display_name",
       "translation_key",
       "categories",
       "multiplayer_frequency",
       "featured_rank",
+      "special_team_count",
     ];
     const errors: string[] = [];
 

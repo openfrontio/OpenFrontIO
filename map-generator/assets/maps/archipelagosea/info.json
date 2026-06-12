@@ -1,6 +1,7 @@
 {
   "id": "ArchipelagoSea",
   "name": "ArchipelagoSea",
+  "display_name": "Archipelago Sea",
   "translation_key": "map.archipelagosea",
   "categories": ["europe"],
   "multiplayer_frequency": 3,

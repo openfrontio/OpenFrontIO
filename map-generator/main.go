@@ -274,8 +274,15 @@ func main() {
 		log.Fatalf("Error generating terrain maps: %v", err)
 	}
 
-	if err := generateMapsTS(); err != nil {
+	infos, err := loadMapInfos()
+	if err != nil {
+		log.Fatalf("Error loading map info: %v", err)
+	}
+	if err := generateMapsTS(infos); err != nil {
 		log.Fatalf("Error generating Maps.gen.ts: %v", err)
+	}
+	if err := generateEnJSON(infos); err != nil {
+		log.Fatalf("Error generating en.json map section: %v", err)
 	}
 
 	fmt.Println("Terrain maps generated successfully")

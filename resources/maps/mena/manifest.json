@@ -1,5 +1,6 @@
 {
   "categories": ["asia", "africa"],
+  "display_name": "MENA",
   "id": "Mena",
   "map": {
     "height": 964,

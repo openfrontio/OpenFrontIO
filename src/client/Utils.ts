@@ -1,10 +1,9 @@
 import IntlMessageFormat from "intl-messageformat";
 import {
   Duos,
-  GameMapType,
   GameMode,
   HumansVsNations,
-  mapTranslationKeys,
+  maps,
   MessageType,
   PublicGameModifiers,
   Quads,
@@ -24,7 +23,7 @@ export function normaliseMapKey(mapName: string): string {
 export function getMapName(mapName: string | undefined): string | null {
   if (!mapName) return null;
   const translationKey =
-    mapTranslationKeys[mapName as GameMapType] ??
+    maps.find((m) => m.type === mapName)?.translationKey ??
     `map.${normaliseMapKey(mapName)}`;
   return translateText(translationKey);
 }

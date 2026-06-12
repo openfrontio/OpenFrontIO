@@ -1,6 +1,7 @@
 {
   "id": "BaikalNukeWars",
   "name": "Baikal Nuke Wars",
+  "display_name": "Baikal (Nuke Wars)",
   "translation_key": "map.baikalnukewars",
   "categories": ["other"],
   "multiplayer_frequency": 0,

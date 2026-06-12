@@ -1,6 +1,7 @@
 {
   "id": "DidierFrance",
   "name": "Didier France",
+  "display_name": "Didier (France)",
   "translation_key": "map.didierfrance",
   "categories": ["other"],
   "multiplayer_frequency": 1,
