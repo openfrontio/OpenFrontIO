@@ -46,8 +46,10 @@ export class HeatManager {
   private pendingDecay = 0;
   /**
    * True when heat may be non-zero anywhere — gates the decay pass.
-   * Set true on each game tick (shader may detect new fallout transitions).
-   * Set false once accumulated decay since last activation exceeds 255 (fully drained).
+   * Set true via activate() whenever a tile's fallout bit flips (or a full
+   * state replacement happens). Set false once accumulated decay since last
+   * activation exceeds 255 (fully drained). While false, updateHeat() does no
+   * GPU work at all.
    */
   private heatActive = false;
   /** Accumulated decay since heatActive was last set true. */
@@ -164,15 +166,13 @@ export class HeatManager {
       return;
     }
 
-    // 2. Skip decay pass when nothing to do — no pending decay and heat already settled.
-    // Still blit tileTex→prevTileTex when a tick fired (pendingDecay > 0) so transition
-    // detection stays accurate if heat activates later.
-    if (!this.heatActive && this.pendingDecay === 0) return;
+    // 2. Inactive: no heat anywhere, and no fallout bits can change without
+    // activate() being called first (TerritoryPass flags every fallout-bit
+    // flip before the tile flush reaches the GPU). prevTileTex can go stale
+    // in owner bits only, which the transition test ignores — so skip all GPU
+    // work, including the prev-tile blit.
     if (!this.heatActive) {
-      // Tick fired but no heat — just keep prevTileTex in sync and bail.
-      this.blitTileToPrev();
       this.pendingDecay = 0;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       return;
     }
 
@@ -226,11 +226,16 @@ export class HeatManager {
   /** Accumulate heat decay for one game tick. */
   decayHeat(): void {
     this.pendingDecay += this.settings.falloutBloom.heatDecayPerTick;
-    // A tick fired — the shader may detect new fallout transitions, so heat is potentially active.
-    if (!this.heatActive) {
-      this.heatActive = true;
-      this.decayAccumulated = 0;
-    }
+  }
+
+  /**
+   * Activate the heat pipeline: a fallout bit flipped, so the decay pass must
+   * run (transition detection stamps fresh heat / clears recaptured tiles).
+   * Resets the drain window — fresh heat needs a full 255 of decay again.
+   */
+  activate(): void {
+    this.heatActive = true;
+    this.decayAccumulated = 0;
   }
 
   // ---------------------------------------------------------------------------
