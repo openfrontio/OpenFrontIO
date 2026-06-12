@@ -229,7 +229,7 @@ export class HostLobbyModal extends BaseModal {
         .inputId=${"start-delay-value"}
         .inputMin=${0}
         .inputMax=${600}
-        .inputStep=${"any"}
+        .inputStep=${"1"}
         .inputValue=${this.startDelayValue}
         .inputAriaLabel=${translateText("host_modal.start_delay")}
         .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
@@ -438,9 +438,8 @@ export class HostLobbyModal extends BaseModal {
             @bots-changed=${this.handleBotsChange}
             @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
-            @host-cheat-toggle-changed=${
-              this.handleConfigHostCheatToggleChanged
-            }
+            @host-cheat-toggle-changed=${this
+              .handleConfigHostCheatToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
@@ -467,7 +466,6 @@ export class HostLobbyModal extends BaseModal {
             @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
-      </div>
       </div>
     `;
   }
