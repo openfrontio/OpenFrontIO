@@ -30,6 +30,7 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
+import "./components/InputCard";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -70,7 +71,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private donateTroops: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
-  @state() private startDelay: boolean = true;
   @state() private startDelayValue: number | undefined = 3;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
@@ -224,9 +224,8 @@ export class HostLobbyModal extends BaseModal {
         .onInput=${this.handleMaxTimerValueChanges}
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
       ></toggle-input-card>`,
-      html`<toggle-input-card
+      html`<input-card
         .labelKey=${"host_modal.start_delay"}
-        .checked=${this.startDelay}
         .inputId=${"start-delay-value"}
         .inputMin=${0}
         .inputMax=${600}
@@ -235,11 +234,9 @@ export class HostLobbyModal extends BaseModal {
         .inputAriaLabel=${translateText("host_modal.start_delay")}
         .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
         .defaultInputValue=${3}
-        .minValidOnEnable=${1}
-        .onToggle=${this.handleStartDelayToggle}
         .onChange=${this.handleStartDelayValueChanges}
         .onKeyDown=${this.handleStartDelayValueKeyDown}
-      ></toggle-input-card>`,
+      ></input-card>`,
       html`<toggle-input-card
         .labelKey=${"host_modal.player_immunity_duration"}
         .checked=${this.spawnImmunity}
@@ -574,7 +571,6 @@ export class HostLobbyModal extends BaseModal {
     this.donateTroops = false;
     this.maxTimer = false;
     this.maxTimerValue = undefined;
-    this.startDelay = true;
     this.startDelayValue = 3;
     this.instantBuild = false;
     this.randomSpawn = false;
@@ -756,15 +752,6 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.maxTimer = checked;
     this.maxTimerValue = toOptionalNumber(value);
-    this.putGameConfig();
-  };
-
-  private handleStartDelayToggle = (
-    checked: boolean,
-    value: number | string | undefined,
-  ) => {
-    this.startDelay = checked;
-    this.startDelayValue = toOptionalNumber(value);
     this.putGameConfig();
   };
 
@@ -1043,7 +1030,7 @@ export class HostLobbyModal extends BaseModal {
               this.defaultNationCount,
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
-            startDelay: this.startDelay === true ? this.startDelayValue : null,
+            startDelay: this.startDelayValue,
             goldMultiplier:
               this.goldMultiplier === true ? this.goldMultiplierValue : null,
             startingGold:
