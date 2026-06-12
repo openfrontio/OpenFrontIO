@@ -942,7 +942,7 @@ export class HostLobbyModal extends BaseModal {
   };
 
   private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
-    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+    preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
   };
 
   private handleStartDelayValueChanges = (e: Event) => {
