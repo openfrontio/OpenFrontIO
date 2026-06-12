@@ -5,7 +5,9 @@ import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
 import { uploadFrameData } from "./render/frame/Upload";
-import {
+// Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
+// imports into any non-Vite consumer (e.g. the Node perf harness).
+import type {
   PlayerStatic,
   SpawnCenter,
   GameView as WebGLGameView,
