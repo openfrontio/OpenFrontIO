@@ -189,7 +189,8 @@
     "hBombGlowG": 0.72,
     "hBombGlowB": 0.15,
     "hBombGlowStrength": 0.5,
-    "hBombGlowInner": 0.45
+    "hBombGlowInner": 0.45,
+    "untargetableAlpha": 0.6
   },
   "name": {
     "lerpSpeed": 10,
@@ -207,7 +208,9 @@
     "nameShadeBot": 0.4,
     "emojiRowOffset": 1.4,
     "statusRowOffset": 1.4,
-    "hoverFadeAlpha": 0.25
+    "hoverFadeAlpha": 0.5,
+    "hoverGlowWidth": 5,
+    "hoverGlowAlpha": 0.75
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
@@ -242,7 +245,7 @@
     "interceptOutlineG": 0.353,
     "interceptOutlineB": 0.353,
     "markerCircleRadius": 6,
-    "markerXRadius": 8
+    "markerXRadius": 40
   },
   "nukeTelegraph": {
     "strokeWidth": 1.5,

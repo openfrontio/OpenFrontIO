@@ -333,4 +333,30 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
     expect(status.get(2)?.allianceReq).toBe(false);
     expect(status.get(2)?.allianceFraction).toBe(0);
   });
+
+  it("allianceFraction and allianceRemainingTicks come from the alliance expiry", () => {
+    const players = playersMap(
+      ps({ smallID: 1, allies: [2] }),
+      ps({
+        smallID: 2,
+        alliances: [
+          {
+            id: 1,
+            other: "me",
+            createdAt: 100,
+            expiresAt: 700,
+            hasExtensionRequest: false,
+          },
+        ],
+      }),
+    );
+    const status = computePlayerStatus(players, unitsMap(), {
+      localPlayerSmallID: 1,
+      localPlayerID: "me",
+      tick: 400,
+      allianceDuration: 600,
+    });
+    expect(status.get(2)?.allianceFraction).toBe(0.5);
+    expect(status.get(2)?.allianceRemainingTicks).toBe(300);
+  });
 });

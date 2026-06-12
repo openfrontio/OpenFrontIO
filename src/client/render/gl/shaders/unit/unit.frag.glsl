@@ -11,6 +11,7 @@ uniform int   uAltView;
 uniform vec3  uHBombGlowColor;
 uniform float uHBombGlowStrength;
 uniform float uHBombGlowInner;
+uniform float uUntargetableAlpha;
 
 in vec2  vQuadPos;
 in vec2  vCellUV;
@@ -27,6 +28,7 @@ const float FLAG_FLICKER        = 1.0;
 const float FLAG_ANGRY          = 2.0;
 const float FLAG_TRADE_FRIENDLY = 3.0;
 const float FLAG_RETREATING     = 4.0;
+const float FLAG_FLICKER_UNTARGETABLE = 5.0; // nuke out of SAM range — dimmed
 
 // Ally color for trade-friendly override (yellow — matches affiliation.ts ALLY)
 const vec3 ALLY_COLOR = vec3(1.0, 1.0, 0.0);
@@ -40,6 +42,11 @@ const vec3 FLICKER_COLORS[4] = vec3[4](
 );
 
 void main() {
+  // Untargetable nukes render translucent so players know SAMs can't hit them
+  float alphaMul = abs(vFlags - FLAG_FLICKER_UNTARGETABLE) < 0.1
+    ? uUntargetableAlpha
+    : 1.0;
+
   // The sprite lives in the central cell-space region [0,1]; for the enlarged
   // hydrogen-bomb quad, anything outside that range is glow-only margin.
   vec4 texel = vec4(0.0);
@@ -57,7 +64,7 @@ void main() {
       float d = length(vQuadPos - 0.5) * 2.0; // 0 at center → ~1 at quad edge
       float g = (1.0 - smoothstep(uHBombGlowInner, 1.0, d)) * uHBombGlowStrength;
       if (g > 0.001) {
-        fragColor = vec4(uHBombGlowColor, g);
+        fragColor = vec4(uHBombGlowColor, g * alphaMul);
         return;
       }
     }
@@ -69,10 +76,10 @@ void main() {
   // Alt-view: solid affiliation color, no gray-replacement bands
   if (uAltView != 0) {
     // Enemy trade ships heading to a self/allied port render as yellow (ally)
-    vec3 ac = vFlags > 2.5
+    vec3 ac = abs(vFlags - FLAG_TRADE_FRIENDLY) < 0.1
       ? ALLY_COLOR
       : texelFetch(uAffiliation, ivec2(int(vOwnerID), 1), 0).rgb;
-    fragColor = vec4(ac, texel.a);
+    fragColor = vec4(ac, texel.a * alphaMul);
     return;
   }
 
@@ -93,7 +100,8 @@ void main() {
   } else if (abs(vFlags - FLAG_RETREATING) < 0.1) {
     // Retreating: slowly blink the center (100 band) black so the ship reads as fleeing
     retreatBlink = step(0.5, fract(uTick * 0.07));
-  } else if (abs(vFlags - FLAG_FLICKER) < 0.1) {
+  } else if (abs(vFlags - FLAG_FLICKER) < 0.1 ||
+             abs(vFlags - FLAG_FLICKER_UNTARGETABLE) < 0.1) {
     // Flicker: cycle through hot colors, offset by position hash
     float phase = fract(uTick * uFlickerSpeed + vHash);
     int idx = int(phase * 4.0) % 4;
@@ -124,5 +132,5 @@ void main() {
     color = borderColor;
   }
 
-  fragColor = vec4(color, texel.a);
+  fragColor = vec4(color, texel.a * alphaMul);
 }

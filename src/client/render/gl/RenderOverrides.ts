@@ -21,6 +21,12 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverFadeAlpha !== undefined) {
     settings.name.hoverFadeAlpha = overrides.name.hoverFadeAlpha;
   }
+  if (overrides.name?.hoverGlowWidth !== undefined) {
+    settings.name.hoverGlowWidth = overrides.name.hoverGlowWidth;
+  }
+  if (overrides.name?.hoverGlowAlpha !== undefined) {
+    settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
+  }
   if (overrides.structure?.classicIcons === true) {
     // Classic look: lighter player-colored shape behind a dark icon glyph,
     // with a touch of translucency.

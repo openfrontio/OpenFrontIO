@@ -30,6 +30,7 @@ uniform float uStatusRowOffset;  // row Y offset (multiples of uFontBase * nameW
 
 uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor is over (0 = none)
 uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
+uniform float uAllianceFlashWindowSec; // seconds before expiry the alliance icon flashes (= renewal prompt offset)
 
 out vec2 vUV;
 out vec2 vLocalUV;               // 0..1 within the icon cell
@@ -90,7 +91,7 @@ void main() {
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, smallID, [free]
-  vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, [free]
+  vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, allianceRemainingTicks
 
   // Early out: dead player OR emoji is active
   if (pd1.w <= 0.0 || pd4.y >= 0.0) {
@@ -222,6 +223,19 @@ void main() {
     if (remainingSec <= 15.0 && remainingSec > 0.0) {
       float elapsed = 15.0 - remainingSec;
       float phase = uTime * 2.0 + elapsed * elapsed * 0.1;
+      vFlashAlpha = 0.3 + 0.7 * (0.5 + 0.5 * cos(phase * 6.2832));
+    }
+  }
+
+  // Alliance expiry flash: slot 3 = alliance icon
+  // Window matches the renewal prompt offset so the icon flashes exactly
+  // while the prompt is up. Same pulse as the traitor flash (2 Hz → 5 Hz).
+  if (iconSlot == 3) {
+    float window = uAllianceFlashWindowSec;
+    float remainingSec = pd7.w / 10.0;                 // ticks → seconds
+    if (window > 0.0 && remainingSec <= window && remainingSec > 0.0) {
+      float elapsed = window - remainingSec;
+      float phase = uTime * 2.0 + elapsed * elapsed * (1.5 / window);
       vFlashAlpha = 0.3 + 0.7 * (0.5 + 0.5 * cos(phase * 6.2832));
     }
   }

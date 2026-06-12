@@ -194,7 +194,7 @@ export class HeadsUpMessage extends LitElement implements Controller {
               </div>
             `
           : null}
-        ${this.game.inSpawnPhase() &&
+        ${this.game?.inSpawnPhase() &&
         this.game.config().gameConfig().gameMode === GameMode.FFA &&
         this.game.config().gameConfig().gameType === GameType.Public &&
         !this.hasClosedCollusionWarning
