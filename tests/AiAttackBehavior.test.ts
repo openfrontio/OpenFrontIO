@@ -1,3 +1,4 @@
+import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
@@ -123,13 +124,19 @@ describe("Ai Attack Behavior", () => {
 
     nation.addTroops(1000);
 
+    // Provide an emoji behavior so sendAttack can run the full Nation code
+    // path; the attack on an ally must be blocked by AttackExecution's
+    // alliance check regardless of what the AI decides.
+    const nationRandom = new PseudoRandom(42);
     const nationBehavior = new AiAttackBehavior(
-      new PseudoRandom(42),
+      nationRandom,
       game,
       nation,
       0.5,
       0.5,
       0.2,
+      undefined,
+      new NationEmojiBehavior(nationRandom, game, nation),
     );
 
     // Alliance between nation and human

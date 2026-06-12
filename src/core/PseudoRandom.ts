@@ -1,34 +1,60 @@
-import seedrandom from "seedrandom";
-
 export class PseudoRandom {
-  private rng: seedrandom.PRNG;
+  // sfc32 state. All operations are 32-bit integer ops, so sequences are
+  // identical across platforms.
+  private s0: number;
+  private s1: number;
+  private s2: number;
+  private s3: number;
 
   private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8
 
   constructor(seed: number) {
-    this.rng = seedrandom(String(seed));
+    // Expand the numeric seed into four state words with splitmix32.
+    let h = seed | 0;
+    const split = () => {
+      h = (h + 0x9e3779b9) | 0;
+      let t = h ^ (h >>> 16);
+      t = Math.imul(t, 0x21f0aaad);
+      t = t ^ (t >>> 15);
+      t = Math.imul(t, 0x735a2d97);
+      return (t ^ (t >>> 15)) | 0;
+    };
+    this.s0 = split();
+    this.s1 = split();
+    this.s2 = split();
+    this.s3 = split();
+    // Warm up to diffuse low-entropy seeds (sequential ints, small numbers).
+    for (let i = 0; i < 12; i++) {
+      this.next();
+    }
   }
 
   // Generates the next pseudorandom number between 0 and 1.
   next(): number {
-    return this.rng();
+    const t = (((this.s0 + this.s1) | 0) + this.s3) | 0;
+    this.s3 = (this.s3 + 1) | 0;
+    this.s0 = this.s1 ^ (this.s1 >>> 9);
+    this.s1 = (this.s2 + (this.s2 << 3)) | 0;
+    this.s2 = (this.s2 << 21) | (this.s2 >>> 11);
+    this.s2 = (this.s2 + t) | 0;
+    return (t >>> 0) / 4294967296;
   }
 
   // Generates a random integer between min (inclusive) and max (exclusive).
   nextInt(min: number, max: number): number {
     const lo = Math.floor(min);
     const hi = Math.floor(max);
-    return Math.floor(this.rng() * (hi - lo)) + lo;
+    return Math.floor(this.next() * (hi - lo)) + lo;
   }
 
   // Generates a random float between min (inclusive) and max (exclusive).
   nextFloat(min: number, max: number): number {
-    return this.rng() * (max - min) + min;
+    return this.next() * (max - min) + min;
   }
 
   // Generates a random ID (8 characters, alphanumeric).
   nextID(): string {
-    return Math.floor(this.rng() * PseudoRandom.POW36_8)
+    return Math.floor(this.next() * PseudoRandom.POW36_8)
       .toString(36)
       .padStart(8, "0");
   }
