@@ -334,6 +334,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       slider(s.fx, "shockwaveRingWidth", d.fx, 0.01, 0.2, 0.005),
       slider(
         s.fx,
+        "attackRingScreenPx",
+        d.fx,
+        5,
+        60,
+        1,
+        "Attack Ring Size (px)",
+      ),
+      slider(
+        s.fx,
         "nukeShockwaveDurationMs",
         d.fx,
         200,

@@ -6,18 +6,18 @@ layout(location = 1) in vec3 aInstData; // x, y, alpha
 
 uniform mat3 uCamera;
 uniform float uTilesPerPx;
+// Quad half-size in screen px; visible outer ring = 0.8× (frag OUTER_R),
+// the rest is headroom for SDF AA.
+uniform float uRingScreenPx;
 
 out vec2  vLocalPos;
 flat out float vAlpha;
-
-// Upstream outer ring = 16 screen-px; quad needs headroom for SDF AA.
-const float RING_SCREEN_PX = 20.0;
 
 void main() {
   vec2 center = vec2(aInstData.x + 0.5, aInstData.y + 0.5);
   vAlpha = aInstData.z;
 
-  float worldRadius = RING_SCREEN_PX * uTilesPerPx;
+  float worldRadius = uRingScreenPx * uTilesPerPx;
   vec2 worldPos = center + (aPos - 0.5) * worldRadius * 2.0;
 
   vec3 clip = uCamera * vec3(worldPos, 1.0);
