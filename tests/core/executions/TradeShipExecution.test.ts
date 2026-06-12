@@ -8,12 +8,15 @@ describe("TradeShipExecution", () => {
   let origOwner: Player;
   let dstOwner: Player;
   let pirate: Player;
+  let halfPirate: Player;
   let srcPort: Unit;
   let piratePort: Unit;
   let piratePort2: Unit;
+  let halfPiratePort: Unit;
   let tradeShip: Unit;
   let dstPort: Unit;
   let tradeShipExecution: TradeShipExecution;
+  let currentTarget: Unit | null = null;
 
   beforeEach(async () => {
     // Mock Game, Player, Unit, and required methods
@@ -48,9 +51,18 @@ describe("TradeShipExecution", () => {
     pirate = {
       id: vi.fn(() => 3),
       addGold: vi.fn(),
-      displayName: vi.fn(() => "Destination"),
+      displayName: vi.fn(() => "Destination 1"),
       units: vi.fn(() => [piratePort, piratePort2]),
       unitCount: vi.fn(() => 2),
+      canTrade: vi.fn(() => true),
+    } as any;
+
+    halfPirate = {
+      id: vi.fn(() => 4),
+      addGold: vi.fn(),
+      displayName: vi.fn(() => "Destination 2"),
+      units: vi.fn(() => [halfPiratePort]),
+      unitCount: vi.fn(() => 1),
       canTrade: vi.fn(() => true),
     } as any;
 
@@ -67,6 +79,15 @@ describe("TradeShipExecution", () => {
       id: vi.fn(() => 202),
       tile: vi.fn(() => 75),
       owner: vi.fn(() => pirate),
+      isActive: vi.fn(() => true),
+      isUnderConstruction: vi.fn(() => false),
+      isMarkedForDeletion: vi.fn(() => false),
+    } as any;
+
+    halfPiratePort = {
+      id: vi.fn(() => 301),
+      tile: vi.fn(() => 11),
+      owner: vi.fn(() => halfPirate),
       isActive: vi.fn(() => true),
       isUnderConstruction: vi.fn(() => false),
       isMarkedForDeletion: vi.fn(() => false),
@@ -95,7 +116,10 @@ describe("TradeShipExecution", () => {
       owner: vi.fn(() => origOwner),
       id: vi.fn(() => 123),
       move: vi.fn(),
-      setTargetUnit: vi.fn(),
+      setTargetUnit: vi.fn((port: Unit) => {
+        currentTarget = port;
+      }),
+      targetUnit: vi.fn(() => currentTarget),
       setSafeFromPirates: vi.fn(),
       touch: vi.fn(),
       delete: vi.fn(),
@@ -109,6 +133,18 @@ describe("TradeShipExecution", () => {
       findPath: vi.fn((from: number) => [from]),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
+
+    vi.spyOn(game, "players").mockReturnValue([
+      origOwner,
+      dstOwner,
+      pirate,
+      halfPirate,
+    ]);
+    vi.spyOn(game, "getWaterComponent").mockReturnValue(1);
+    vi.spyOn(game, "hasWaterComponent").mockReturnValue(true);
+    vi.spyOn(game, "manhattanDist").mockReturnValue(10);
+
+    currentTarget = null;
   });
 
   it("should initialize and tick without errors", () => {
@@ -133,6 +169,22 @@ describe("TradeShipExecution", () => {
     tradeShip.owner = vi.fn(() => pirate);
     tradeShipExecution.tick(1);
     expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
+  });
+
+  it("should pick another port if destination is embargoed and ship not captured", () => {
+    dstOwner.canTrade = vi.fn(() => false);
+    halfPirate.canTrade = vi.fn(() => true);
+    pirate.canTrade = vi.fn(() => false);
+    origOwner.canTrade = vi.fn((target: Player) => {
+      if (target.id() === halfPirate.id()) return true;
+      return false;
+    });
+
+    tradeShipExecution.tick(1);
+    expect(tradeShip.delete).not.toHaveBeenCalled();
+    expect(tradeShipExecution.isActive()).toBe(true);
+    expect(tradeShip.targetUnit()).toBe(halfPiratePort);
+    expect(tradeShip.touch).toHaveBeenCalled();
   });
 
   it("should complete trade and award gold", () => {
