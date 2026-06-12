@@ -4,4 +4,4 @@ export type { FrameData } from "../types";
 // Upload
 export type { RelationMatrixResult } from "./derive/RelationMatrix";
 export { uploadFrameData } from "./Upload";
-export type { FrameUploadTarget, UploadOptions } from "./Upload";
+export type { FrameUploadTarget } from "./Upload";

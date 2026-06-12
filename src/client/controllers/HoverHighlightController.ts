@@ -9,12 +9,12 @@
  */
 
 import { EventBus } from "../../core/EventBus";
-import { GameView } from "../../core/game/GameView";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
-import { GameView as WebGLGameView } from "../render/gl";
+import { MapRenderer } from "../render/gl";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
+import { GameView } from "../view";
 
 export class HoverHighlightController implements Controller {
   private lastOwnerID = 0;
@@ -23,7 +23,7 @@ export class HoverHighlightController implements Controller {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    private view: WebGLGameView,
+    private view: MapRenderer,
   ) {}
 
   init() {

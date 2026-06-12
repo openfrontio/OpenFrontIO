@@ -2,8 +2,8 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
+import { GameView } from "../../view";
 
 export class ImmunityBarVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}

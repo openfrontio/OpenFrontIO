@@ -7,9 +7,9 @@ import {
   rootMenuElement,
   Slot,
 } from "../../../src/client/hud/layers/RadialMenuElements";
+import { GameView, PlayerView } from "../../../src/client/view";
 import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
-import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
 vi.mock("../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),

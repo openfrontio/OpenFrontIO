@@ -2,9 +2,9 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameMode, GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";
+import { GameView } from "../../view";
 
 const COLLUSION_WARNING_CLOSED_KEY = "hasClosedCollusionWarning";
 

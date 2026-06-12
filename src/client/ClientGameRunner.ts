@@ -27,7 +27,6 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   DARK_MODE_KEY,
@@ -73,12 +72,13 @@ import {
   applyGraphicsOverrides,
   createRenderSettings,
   deepAssign,
+  MapRenderer,
   preloadAtlasData,
-  GameView as WebGLGameView,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 import { themeProvider } from "./theme/ThemeProvider";
+import { GameView, PlayerView } from "./view";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -257,7 +257,7 @@ function createWebGLView(
   terrainMap: TerrainMapData,
   config: Config,
 ): {
-  view: WebGLGameView;
+  view: MapRenderer;
   glCanvas: HTMLCanvasElement;
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
 } {
@@ -295,7 +295,7 @@ function createWebGLView(
   };
 
   const palette = new Float32Array(4096 * 2 * 4);
-  const view = new WebGLGameView(
+  const view = new MapRenderer(
     glCanvas,
     {
       mapWidth,
@@ -322,7 +322,7 @@ function createWebGLView(
 
 function mountWebGLFrameLoop(
   terrainMap: TerrainMapData,
-  view: WebGLGameView,
+  view: MapRenderer,
   glCanvas: HTMLCanvasElement,
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null },
   transformHandler: import("./TransformHandler").TransformHandler,
@@ -397,7 +397,7 @@ function mountWebGLFrameLoop(
 
   // When context is lost and restored, WebGL loses all textures and geometry.
   // Force a full re-upload of the simulation state.
-  view.on("contextrestored", () => {
+  view.onContextRestored = () => {
     builder.clearCaches();
 
     // Full upload of terrain, territory & trail state
@@ -418,7 +418,7 @@ function mountWebGLFrameLoop(
     view.uploadRailroadState(frameData.railroadState);
 
     builder.update(gameView);
-  });
+  };
 
   return { builder };
 }

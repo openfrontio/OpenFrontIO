@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
 
 import { PlayerType } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../view";
 
 import quickChatData from "resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";

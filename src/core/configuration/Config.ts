@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
 import {
   Difficulty,
@@ -16,7 +17,6 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
