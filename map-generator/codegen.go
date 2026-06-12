@@ -133,7 +133,6 @@ func loadMapInfos() ([]mapInfo, error) {
 
 // generateMapsTS writes the GameMapType enum, the MapCategory union, the
 // MapInfo interface, and the maps list to src/core/game/Maps.gen.ts.
-// Derived lookups (mapCategories, mapTranslationKeys, ...) live in Game.ts.
 func generateMapsTS(infos []mapInfo) error {
 	cwd, err := os.Getwd()
 	if err != nil {

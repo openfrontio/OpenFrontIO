@@ -53,6 +53,12 @@ function readInfoJson(key: GameMapName): Record<string, unknown> | null {
   return JSON.parse(fs.readFileSync(infoPath, "utf8"));
 }
 
+/** The generator treats falsy info.json values (0, "") as "omitted". */
+function orOmitted(value: unknown): unknown {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  return value || undefined;
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Map consistency", () => {
@@ -132,8 +138,12 @@ describe("Map consistency", () => {
           info.multiplayer_frequency ?? 0,
           map.multiplayerFrequency,
         ],
-        ["featured_rank", info.featured_rank, map.featuredRank],
-        ["special_team_count", info.special_team_count, map.specialTeamCount],
+        ["featured_rank", orOmitted(info.featured_rank), map.featuredRank],
+        [
+          "special_team_count",
+          orOmitted(info.special_team_count),
+          map.specialTeamCount,
+        ],
       ];
       for (const [field, infoValue, mapValue] of fields) {
         if (JSON.stringify(infoValue) !== JSON.stringify(mapValue)) {
@@ -181,7 +191,7 @@ describe("Map consistency", () => {
       const folder = toFolderName(key);
       const info = readInfoJson(key);
       if (info === null) continue; // Other tests catch missing files.
-      const expected = info.display_name ?? info.name;
+      const expected = orOmitted(info.display_name) ?? info.name;
       if (enMapSection[folder] === undefined) {
         errors.push(
           `${key} (key "${folder}") is missing from en.json map translations`,
