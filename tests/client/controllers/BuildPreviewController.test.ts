@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { shouldPreserveGhostAfterBuild } from "../../../src/client/controllers/BuildPreviewController";
+import {
+  samThreatensNukePreview,
+  shouldPreserveGhostAfterBuild,
+} from "../../../src/client/controllers/BuildPreviewController";
 import { UnitType } from "../../../src/core/game/Game";
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
@@ -28,5 +31,25 @@ describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm
       expect(shouldPreserveGhostAfterBuild(UnitType.Warship)).toBe(false);
       expect(shouldPreserveGhostAfterBuild(UnitType.MIRV)).toBe(false);
     });
+  });
+});
+
+describe("samThreatensNukePreview (nuke trajectory threat set, #4226)", () => {
+  const allies = new Set([2, 3]);
+
+  test("non-allied SAM threatens the trajectory", () => {
+    expect(samThreatensNukePreview(5, allies, new Set())).toBe(true);
+  });
+
+  test("allied SAM does not threaten when the strike breaks no alliance", () => {
+    expect(samThreatensNukePreview(2, allies, new Set())).toBe(false);
+  });
+
+  test("would-be-betrayed ally's SAM threatens (alliance breaks at launch)", () => {
+    expect(samThreatensNukePreview(2, allies, new Set([2]))).toBe(true);
+  });
+
+  test("other allies' SAMs still excluded when a different ally is betrayed", () => {
+    expect(samThreatensNukePreview(3, allies, new Set([2]))).toBe(false);
   });
 });
