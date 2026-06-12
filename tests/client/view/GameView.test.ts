@@ -27,9 +27,11 @@ function withPlayers(
 ) {
   const gu = makeEmptyGu(tick);
   gu.updates[GameUpdateType.Player] = players;
+  const nameViewData: NonNullable<typeof gu.playerNameViewData> = {};
   for (const p of players) {
-    gu.playerNameViewData[p.id] = nameDataMap[p.id] ?? makeNameViewData();
+    nameViewData[p.id] = nameDataMap[p.id] ?? makeNameViewData();
   }
+  gu.playerNameViewData = nameViewData;
   return gu;
 }
 
@@ -137,6 +139,131 @@ describe("GameView.update — players", () => {
       ]),
     );
     expect(game.myPlayer()?.name()).toBe("RealName");
+  });
+});
+
+describe("GameView.update — packed channels", () => {
+  it("packedPlayerUpdates quads update tilesOwned/gold/troops in place", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({ id: "alice", smallID: 1, troops: 100, gold: 5n }),
+      ]),
+    );
+
+    const gu = makeEmptyGu(2);
+    // [smallID, tilesOwned, gold, troops]
+    gu.packedPlayerUpdates = new Float64Array([1, 42, 999, 250]);
+    game.update(gu);
+
+    const alice = game.player("alice");
+    expect(alice.numTilesOwned()).toBe(42);
+    expect(alice.gold()).toBe(999n);
+    expect(alice.troops()).toBe(250);
+  });
+
+  it("packedAttackUpdates patches troop counts by direction and index", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({
+          id: "alice",
+          smallID: 1,
+          outgoingAttacks: [
+            {
+              attackerID: 1,
+              targetID: 2,
+              troops: 500,
+              id: "a1",
+              retreating: false,
+            },
+            {
+              attackerID: 1,
+              targetID: 3,
+              troops: 300,
+              id: "a2",
+              retreating: false,
+            },
+          ],
+          incomingAttacks: [
+            {
+              attackerID: 4,
+              targetID: 1,
+              troops: 80,
+              id: "a3",
+              retreating: false,
+            },
+          ],
+        }),
+      ]),
+    );
+
+    const gu = makeEmptyGu(2);
+    // [ownerSmallID, direction (0=outgoing, 1=incoming), index, troops]
+    gu.packedAttackUpdates = new Float64Array([1, 0, 1, 290, 1, 1, 0, 75]);
+    game.update(gu);
+
+    const alice = game.player("alice");
+    expect(alice.outgoingAttacks().map((a) => a.troops)).toEqual([500, 290]);
+    expect(alice.incomingAttacks().map((a) => a.troops)).toEqual([75]);
+  });
+
+  it("quads for unknown smallIDs and out-of-range attack indexes are ignored", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })]),
+    );
+    const gu = makeEmptyGu(2);
+    gu.packedPlayerUpdates = new Float64Array([99, 1, 1, 1]);
+    gu.packedAttackUpdates = new Float64Array([1, 0, 5, 123, 99, 1, 0, 7]);
+    expect(() => game.update(gu)).not.toThrow();
+  });
+
+  it("nameData persists across ticks without a playerNameViewData record", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })], {
+        alice: { x: 7, y: 9, size: 3 },
+      }),
+    );
+    expect(game.frameData().names.get("alice")).toMatchObject({ x: 7, y: 9 });
+
+    // Tick without a record (worker omits it between placement rebuilds) —
+    // even with a player update present, the old placement must survive.
+    const gu = makeEmptyGu(2);
+    gu.updates[GameUpdateType.Player] = [
+      makePlayerUpdate({ id: "alice", smallID: 1 }),
+    ];
+    game.update(gu);
+    expect(game.frameData().names.get("alice")).toMatchObject({ x: 7, y: 9 });
+
+    // A new record updates the placement (alice is alive).
+    const gu3 = makeEmptyGu(3);
+    gu3.playerNameViewData = { alice: { x: 11, y: 13, size: 4 } };
+    game.update(gu3);
+    expect(game.frameData().names.get("alice")).toMatchObject({ x: 11, y: 13 });
+  });
+
+  it("dead players keep their last name placement (freeze at death)", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })], {
+        alice: { x: 7, y: 9, size: 3 },
+      }),
+    );
+
+    // Alice dies.
+    const gu2 = makeEmptyGu(2);
+    gu2.updates[GameUpdateType.Player] = [
+      makePlayerUpdate({ id: "alice", smallID: 1, isAlive: false }),
+    ];
+    game.update(gu2);
+
+    // A later record must not move her name.
+    const gu3 = makeEmptyGu(3);
+    gu3.playerNameViewData = { alice: { x: 0, y: 0, size: 0 } };
+    game.update(gu3);
+    expect(game.frameData().names.get("alice")).toMatchObject({ x: 7, y: 9 });
   });
 });
 

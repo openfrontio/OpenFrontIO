@@ -41,7 +41,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { diffPlayerUpdate } from "./GameUpdateUtils";
+import { diffPlayerUpdate, packAttackTroopDeltas } from "./GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -154,13 +154,53 @@ export class PlayerImpl implements Player {
    * return only fields that changed since the previous call (a partial
    * `{ type, id, ...changedFields }`), or `null` if nothing changed.
    *
+   * tilesOwned / gold / troops are excluded from partial updates (they churn
+   * for every alive player every tick): when any of them changed, a
+   * `[smallID, tilesOwned, gold, troops]` quad is pushed to `statsOut`
+   * instead, which GameImpl drains into the transferable
+   * `packedPlayerUpdates` buffer. Attack troop counts likewise go to
+   * `attackTroopsOut` as `[smallID, direction, index, troops]` quads
+   * (→ `packedAttackUpdates`) instead of re-sending whole attack arrays.
+   *
    * `lastSentUpdate` is updated to the full snapshot on every call.
    */
-  toUpdate(): PlayerUpdate | null {
+  toUpdate(
+    statsOut?: number[],
+    attackTroopsOut?: number[],
+  ): PlayerUpdate | null {
     const full = this.toFullUpdate();
     const prev = this.lastSentUpdate;
     this.lastSentUpdate = full;
     if (prev === undefined) return full;
+    if (
+      statsOut !== undefined &&
+      (prev.tilesOwned !== full.tilesOwned ||
+        prev.gold !== full.gold ||
+        prev.troops !== full.troops)
+    ) {
+      statsOut.push(
+        full.smallID!,
+        full.tilesOwned!,
+        Number(full.gold),
+        full.troops!,
+      );
+    }
+    if (attackTroopsOut !== undefined) {
+      packAttackTroopDeltas(
+        prev.outgoingAttacks,
+        full.outgoingAttacks,
+        full.smallID!,
+        0,
+        attackTroopsOut,
+      );
+      packAttackTroopDeltas(
+        prev.incomingAttacks,
+        full.incomingAttacks,
+        full.smallID!,
+        1,
+        attackTroopsOut,
+      );
+    }
     return diffPlayerUpdate(prev, full);
   }
 
