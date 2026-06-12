@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "africa"],
+  "featured_rank": 6,
   "id": "Africa",
   "map": {
     "height": 2032,

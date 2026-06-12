@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "south_america"],
+  "featured_rank": 4,
   "id": "SouthAmerica",
   "map": {
     "height": 2376,

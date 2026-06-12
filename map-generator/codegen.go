@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -34,6 +35,9 @@ type mapInfo struct {
 	// How many times the map appears in the multiplayer playlist.
 	// 0 (or omitted) keeps the map out of the regular rotation.
 	MultiplayerFrequency int `json:"multiplayer_frequency"`
+	// Position in the featured grid (1 = first). Featured maps without a
+	// rank sort after ranked ones, alphabetically.
+	FeaturedRank int `json:"featured_rank"`
 }
 
 // hasCategory reports whether the map lists the given category.
@@ -86,6 +90,12 @@ func generateMapsTS() error {
 		if info.MultiplayerFrequency < 0 {
 			return fmt.Errorf("map %s: info.json \"multiplayer_frequency\" (%d) must be >= 0", m.Name, info.MultiplayerFrequency)
 		}
+		if info.FeaturedRank < 0 {
+			return fmt.Errorf("map %s: info.json \"featured_rank\" (%d) must be >= 1", m.Name, info.FeaturedRank)
+		}
+		if info.FeaturedRank > 0 && !info.hasCategory("featured") {
+			return fmt.Errorf("map %s: info.json sets \"featured_rank\" but \"categories\" does not include \"featured\"", m.Name)
+		}
 		if len(info.Categories) == 0 {
 			return fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
 		}
@@ -126,11 +136,27 @@ func generateMapsTS() error {
 
 	b.WriteString("export const mapCategories: Record<string, GameMapType[]> = {\n")
 	for _, category := range categoryOrder {
-		b.WriteString(fmt.Sprintf("  %s: [\n", category))
+		members := make([]mapInfo, 0, len(infos))
 		for _, info := range infos {
 			if info.hasCategory(category) {
-				b.WriteString(fmt.Sprintf("    GameMapType.%s,\n", info.ID))
+				members = append(members, info)
 			}
+		}
+		if category == "featured" {
+			sort.SliceStable(members, func(i, j int) bool {
+				ri, rj := members[i].FeaturedRank, members[j].FeaturedRank
+				if ri == 0 {
+					ri = len(infos) + 1
+				}
+				if rj == 0 {
+					rj = len(infos) + 1
+				}
+				return ri < rj
+			})
+		}
+		b.WriteString(fmt.Sprintf("  %s: [\n", category))
+		for _, info := range members {
+			b.WriteString(fmt.Sprintf("    GameMapType.%s,\n", info.ID))
 		}
 		b.WriteString("  ],\n")
 	}

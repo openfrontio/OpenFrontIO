@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "north_america"],
+  "featured_rank": 3,
   "id": "NorthAmerica",
   "map": {
     "height": 1448,

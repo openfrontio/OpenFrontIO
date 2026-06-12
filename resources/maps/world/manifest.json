@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "world"],
+  "featured_rank": 1,
   "id": "World",
   "map": {
     "height": 1000,

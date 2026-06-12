@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "europe"],
+  "featured_rank": 2,
   "id": "Europe",
   "map": {
     "height": 1672,

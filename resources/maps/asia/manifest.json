@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "asia"],
+  "featured_rank": 5,
   "id": "Asia",
   "map": {
     "height": 1200,

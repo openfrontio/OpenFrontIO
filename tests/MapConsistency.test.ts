@@ -354,6 +354,7 @@ describe("Map consistency", () => {
       "translation_key",
       "categories",
       "multiplayer_frequency",
+      "featured_rank",
     ];
     const errors: string[] = [];
 

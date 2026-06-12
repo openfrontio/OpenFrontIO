@@ -103,13 +103,13 @@ export type GameMapName = keyof typeof GameMapType;
 
 export const mapCategories: Record<string, GameMapType[]> = {
   featured: [
-    GameMapType.Africa,
-    GameMapType.Asia,
+    GameMapType.World,
     GameMapType.Europe,
-    GameMapType.Japan,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
-    GameMapType.World,
+    GameMapType.Asia,
+    GameMapType.Africa,
+    GameMapType.Japan,
   ],
   world: [
     GameMapType.Dyslexdria,

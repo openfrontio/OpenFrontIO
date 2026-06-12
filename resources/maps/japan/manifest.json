@@ -1,5 +1,6 @@
 {
   "categories": ["featured", "asia"],
+  "featured_rank": 7,
   "id": "Japan",
   "map": {
     "height": 2500,

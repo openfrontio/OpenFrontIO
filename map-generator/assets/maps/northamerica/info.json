@@ -4,6 +4,7 @@
   "translation_key": "map.northamerica",
   "categories": ["featured", "north_america"],
   "multiplayer_frequency": 5,
+  "featured_rank": 3,
   "nations": [
     {
       "coordinates": [1625, 1040],

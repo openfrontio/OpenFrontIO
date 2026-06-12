@@ -4,6 +4,7 @@
   "translation_key": "map.world",
   "categories": ["featured", "world"],
   "multiplayer_frequency": 20,
+  "featured_rank": 1,
   "nations": [
     {
       "coordinates": [484, 284],

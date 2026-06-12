@@ -127,6 +127,8 @@ Example:
 
 `multiplayer_frequency` is how many times the map appears in the public multiplayer playlist. Use 0 (or omit) to keep the map out of the regular rotation.
 
+`featured_rank` (optional, featured maps only) is the map's position in the featured grid (1 = first). Featured maps without a rank sort after ranked ones, alphabetically.
+
 `flag` is the code for a country
 
 - The full list of supported codes can be seen in `../src/client/data/countries.json` - all ISO_3166 codes are supported, with several additions.
