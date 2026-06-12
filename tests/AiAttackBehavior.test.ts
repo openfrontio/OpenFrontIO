@@ -1,5 +1,11 @@
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Difficulty,
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+} from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 
@@ -151,5 +157,231 @@ describe("Ai Attack Behavior", () => {
 
     expect(nation.isAlliedWith(human)).toBe(true);
     expect(nation.outgoingAttacks()).toHaveLength(attacksBefore);
+  });
+});
+
+describe("Hard/Impossible troop floor", () => {
+  /**
+   * Sets up a game where a bot attacker borders a neighbor and a bot target.
+   * All players get alternating land tiles so they share borders.
+   * Uses Bot type for the attacker to avoid needing emojiBehavior initialization.
+   */
+  async function setupTroopFloorTest(difficulty: Difficulty) {
+    const testGame = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+      difficulty,
+    });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Bot,
+      null,
+      "attacker_id",
+    );
+    const neighborInfo = new PlayerInfo(
+      "neighbor",
+      PlayerType.Human,
+      null,
+      "neighbor_id",
+    );
+    const botInfo = new PlayerInfo(
+      "target_bot",
+      PlayerType.Bot,
+      null,
+      "bot_id",
+    );
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(neighborInfo);
+    testGame.addPlayer(botInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const neighbor = testGame.player("neighbor_id");
+    const bot = testGame.player("bot_id");
+
+    // Assign alternating tiles so all three share borders
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      const players = [attacker, neighbor, bot];
+      players[assigned % 3].conquer(tile);
+      assigned++;
+    });
+
+    // Give bot target a tiny amount of troops so it's a valid target
+    bot.addTroops(100);
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+    );
+
+    return { testGame, attacker, neighbor, bot, behavior };
+  }
+
+  it("Hard: caps attack troops so nation retains 75% of strongest neighbor's troops", async () => {
+    const { testGame, attacker, neighbor, bot, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+    // minRetained = ceil(90_000 * 0.75) = 67_500
+    // troopSendCap = max(0, 100_000 - 67_500) = 32_500
+    // reserve = maxTroops * 0.3 → large, so troops = ~70_000 without cap
+    // With cap: troops = min(~70_000, 32_500) = 32_500
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    expect(exec.startTroops).toBeLessThanOrEqual(32_500);
+  });
+
+  it("Hard: prevents attack when nation troops < 75% of strongest neighbor", async () => {
+    const { testGame, attacker, neighbor, bot, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    // Attacker has fewer troops than 75% of neighbor
+    attacker.addTroops(3_000);
+    neighbor.addTroops(5_000);
+    // minRetained = ceil(5_000 * 0.75) = 3_750
+    // troopSendCap = max(0, 3_000 - 3_750) = 0
+    // Attack should be blocked entirely
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(false);
+    expect(addExecSpy).not.toHaveBeenCalled();
+  });
+
+  it("Hard: skips attack when capped troops are < 20% of target's troops", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    // Add a strong human target sharing borders
+    const targetInfo = new PlayerInfo(
+      "strong_target",
+      PlayerType.Human,
+      null,
+      "target_id",
+    );
+    testGame.addPlayer(targetInfo);
+    const target = testGame.player("target_id");
+
+    // Give target some tiles from the attacker's pool
+    let stolen = 0;
+    for (const tile of Array.from(attacker.tiles())) {
+      if (stolen >= 20) break;
+      target.conquer(tile);
+      stolen++;
+    }
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(100_000);
+    target.addTroops(300_000);
+    // troopSendCap = 100_000 - ceil(100_000 * 0.75) = 25_000
+    // 20% of target = 300_000 * 0.2 = 60_000
+    // 25_000 < 60_000 → attack should be blocked
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(target);
+
+    expect(result).toBe(false);
+    expect(addExecSpy).not.toHaveBeenCalled();
+  });
+
+  it("Impossible: caps attack troops so nation retains 90% of strongest neighbor's troops", async () => {
+    const { testGame, attacker, neighbor, bot, behavior } =
+      await setupTroopFloorTest(Difficulty.Impossible);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+    // minRetained = ceil(90_000 * 0.9) = 81_000
+    // troopSendCap = max(0, 100_000 - 81_000) = 19_000
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    expect(exec.startTroops).toBeLessThanOrEqual(19_000);
+  });
+
+  it("Easy: no troop floor — sends based on reserve only", async () => {
+    const { testGame, attacker, neighbor, bot, behavior } =
+      await setupTroopFloorTest(Difficulty.Easy);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+    // No cap on Easy — sends full reserve amount
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // Without cap, troops ≈ 100_000 - maxTroops*0.3 ≈ 70_000
+    expect(exec.startTroops).toBeGreaterThan(32_500);
+  });
+
+  it("Hard: sendAttack uncapped when nation has no player neighbors", async () => {
+    const testGame = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+      difficulty: Difficulty.Hard,
+    });
+
+    // Give bot only half the land so there's unowned land to attack via sendAttack
+    const botInfo = new PlayerInfo("lone_bot", PlayerType.Bot, null, "lone_id");
+    testGame.addPlayer(botInfo);
+    const bot = testGame.player("lone_id");
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (!testGame.map().isLand(tile)) return;
+      if (assigned % 2 === 0) bot.conquer(tile);
+      assigned++;
+    });
+    bot.addTroops(100_000);
+
+    // No player neighbors — troopSendCap should return Infinity
+    expect(bot.nearby().filter((n) => n.isPlayer()).length).toBe(0);
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      bot,
+      0.5,
+      0.3,
+      0.2,
+    );
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    // sendAttack goes through sendLandAttack which applies troopSendCap.
+    // With no player neighbors, troopSendCap returns Infinity (no cap).
+    const result = behavior.sendAttack(testGame.terraNullius());
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // No cap applies, so troops should be the full reserve amount
+    expect(exec.startTroops).toBeGreaterThan(40_000);
   });
 });
