@@ -123,7 +123,8 @@ export class PlayerView {
   constructor(
     private game: GameView,
     data: PlayerUpdate,
-    public nameData: NameViewData,
+    // Undefined until the worker's first name placement for this player.
+    public nameData: NameViewData | undefined,
     public cosmetics: PlayerCosmetics,
   ) {
     this.state = stateFromUpdate(data);
@@ -405,7 +406,7 @@ export class PlayerView {
       .filter((u) => u.owner().smallID() === this.smallID());
   }
 
-  nameLocation(): NameViewData {
+  nameLocation(): NameViewData | undefined {
     return this.nameData;
   }
 

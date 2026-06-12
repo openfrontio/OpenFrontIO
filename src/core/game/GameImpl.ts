@@ -95,6 +95,10 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
+  /** [smallID, tilesOwned, gold, troops] quads — see PlayerImpl.toUpdate. */
+  private playerStatsQuads: number[] = [];
+  /** [smallID, direction, index, troops] quads — see packAttackTroopDeltas. */
+  private attackTroopsQuads: number[] = [];
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
@@ -451,7 +455,10 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
-      const update = player.toUpdate();
+      const update = player.toUpdate(
+        this.playerStatsQuads,
+        this.attackTroopsQuads,
+      );
       if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
@@ -486,6 +493,22 @@ export class GameImpl implements Game {
       packed[i] = pairs[i];
     }
     pairs.length = 0;
+    return packed;
+  }
+
+  drainPackedPlayerUpdates(): Float64Array | null {
+    const quads = this.playerStatsQuads;
+    if (quads.length === 0) return null;
+    const packed = Float64Array.from(quads);
+    quads.length = 0;
+    return packed;
+  }
+
+  drainPackedAttackUpdates(): Float64Array | null {
+    const quads = this.attackTroopsQuads;
+    if (quads.length === 0) return null;
+    const packed = Float64Array.from(quads);
+    quads.length = 0;
     return packed;
   }
 

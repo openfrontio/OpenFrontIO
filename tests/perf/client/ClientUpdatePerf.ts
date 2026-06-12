@@ -424,6 +424,12 @@ async function main(): Promise<void> {
     if (gu.packedMotionPlans) {
       transfers.push(gu.packedMotionPlans.buffer);
     }
+    if (gu.packedPlayerUpdates) {
+      transfers.push(gu.packedPlayerUpdates.buffer);
+    }
+    if (gu.packedAttackUpdates) {
+      transfers.push(gu.packedAttackUpdates.buffer);
+    }
     start = performance.now();
     const cloned = structuredClone(gu, { transfer: transfers });
     const cloneMs = performance.now() - start;

@@ -666,7 +666,10 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  toUpdate(): PlayerUpdate | null;
+  toUpdate(
+    statsOut?: number[],
+    attackTroopsOut?: number[],
+  ): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
@@ -720,6 +723,8 @@ export interface Game extends GameMap {
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;
   drainPackedMotionPlans(): Uint32Array | null;
+  drainPackedPlayerUpdates(): Float64Array | null;
+  drainPackedAttackUpdates(): Float64Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
