@@ -10,13 +10,13 @@
  */
 import { EventBus } from "../../core/EventBus";
 import { Cell, PlayerType } from "../../core/game/Game";
-import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
-import { GameView as WebGLGameView } from "../render/gl";
+import { MapRenderer } from "../render/gl";
 import type { AttackTroopLabel } from "../render/gl/passes/WorldTextPass";
 import { renderTroops } from "../Utils";
+import { GameView } from "../view";
 
 // Aquarius (#3fa9f5) for outgoing, red-400 (#f87171) for incoming.
 const OUTGOING_R = 0x3f / 255;
@@ -75,7 +75,7 @@ export class AttackingTroopsController implements Controller {
     private readonly game: GameView,
     private readonly eventBus: EventBus,
     private readonly userSettings: UserSettings,
-    private readonly view: WebGLGameView,
+    private readonly view: MapRenderer,
   ) {}
 
   init() {

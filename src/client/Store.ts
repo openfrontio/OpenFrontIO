@@ -12,6 +12,7 @@ import {
   fetchCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
+  SUBSCRIPTIONS_ENABLED,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -32,7 +33,14 @@ export class StoreModal extends BaseModal {
     return {
       tabs: [
         { key: "packs", label: translateText("store.packs") },
-        { key: "subscriptions", label: translateText("store.subscriptions") },
+        ...(SUBSCRIPTIONS_ENABLED
+          ? [
+              {
+                key: "subscriptions",
+                label: translateText("store.subscriptions"),
+              },
+            ]
+          : []),
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
       ],

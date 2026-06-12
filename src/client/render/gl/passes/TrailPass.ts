@@ -115,25 +115,6 @@ export class TrailPass {
     this.trailsDirty = true;
   }
 
-  /** Full trail state upload (on seek). */
-  uploadFullState(trailState: Uint8Array): void {
-    this.liveTrailRef = null;
-    this.cpuTrailState.set(trailState);
-    this.trailsDirty = true;
-  }
-
-  /** Set a single trail tile (during playback advance). */
-  setTile(ref: number, ownerID: number): void {
-    this.cpuTrailState[ref] = ownerID;
-    this.trailsDirty = true;
-  }
-
-  /** Clear all trails (on seek before rebuilding). */
-  clear(): void {
-    this.cpuTrailState.fill(0);
-    this.trailsDirty = true;
-  }
-
   /** Flush trail texture to GPU. Called once per render frame in uploadTextures. */
   flushTexture(): void {
     if (!this.trailsDirty) return;

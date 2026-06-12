@@ -27,7 +27,6 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   DARK_MODE_KEY,
@@ -71,14 +70,15 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
   applyDarkModeOverride,
   applyGraphicsOverrides,
-  createDebugGui,
   createRenderSettings,
   deepAssign,
-  GameView as WebGLGameView,
+  MapRenderer,
+  preloadAtlasData,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 import { themeProvider } from "./theme/ThemeProvider";
+import { GameView, PlayerView } from "./view";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -257,7 +257,7 @@ function createWebGLView(
   terrainMap: TerrainMapData,
   config: Config,
 ): {
-  view: WebGLGameView;
+  view: MapRenderer;
   glCanvas: HTMLCanvasElement;
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
 } {
@@ -295,7 +295,7 @@ function createWebGLView(
   };
 
   const palette = new Float32Array(4096 * 2 * 4);
-  const view = new WebGLGameView(
+  const view = new MapRenderer(
     glCanvas,
     {
       mapWidth,
@@ -322,7 +322,7 @@ function createWebGLView(
 
 function mountWebGLFrameLoop(
   terrainMap: TerrainMapData,
-  view: WebGLGameView,
+  view: MapRenderer,
   glCanvas: HTMLCanvasElement,
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null },
   transformHandler: import("./TransformHandler").TransformHandler,
@@ -397,7 +397,7 @@ function mountWebGLFrameLoop(
 
   // When context is lost and restored, WebGL loses all textures and geometry.
   // Force a full re-upload of the simulation state.
-  view.on("contextrestored", () => {
+  view.onContextRestored = () => {
     builder.clearCaches();
 
     // Full upload of terrain, territory & trail state
@@ -418,7 +418,7 @@ function mountWebGLFrameLoop(
     view.uploadRailroadState(frameData.railroadState);
 
     builder.update(gameView);
-  });
+  };
 
   return { builder };
 }
@@ -451,8 +451,12 @@ async function createClientGame(
       mapLoader,
     );
   }
+  // Kick off the font-atlas fetch so it overlaps with worker init; the
+  // render passes need it parsed before createWebGLView runs.
+  const atlasDataLoad = preloadAtlasData();
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
+  await atlasDataLoad;
   const gameView = new GameView(
     worker,
     config,
@@ -519,11 +523,21 @@ async function createClientGame(
       { signal: graphicsListenerAbort.signal },
     );
 
-    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    let debugGui: { open(): void; destroy(): void } | null = null;
+    let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
       if (debugGui === null) {
-        debugGui = createDebugGui(view.getSettings());
-        debugGui.open();
+        if (debugGuiLoading) return;
+        debugGuiLoading = true;
+        import("./render/gl/debug/index")
+          .then(({ createDebugGui }) => {
+            debugGui = createDebugGui(view.getSettings());
+            debugGui.open();
+          })
+          .finally(() => {
+            debugGuiLoading = false;
+          });
       } else {
         debugGui.destroy();
         debugGui = null;

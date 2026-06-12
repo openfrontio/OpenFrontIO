@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Didier",
   "map": {
     "height": 1348,
     "num_land_tiles": 1122321,
@@ -14,6 +16,7 @@
     "num_land_tiles": 278357,
     "width": 750
   },
+  "multiplayer_frequency": 1,
   "name": "Didier",
   "nations": [
     {
@@ -64,5 +67,6 @@
       "coordinates": [622, 1220],
       "name": "Mell Confederation"
     }
-  ]
+  ],
+  "translation_key": "map.didier"
 }

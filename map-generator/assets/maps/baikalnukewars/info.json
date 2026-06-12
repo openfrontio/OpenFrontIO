@@ -1,10 +1,25 @@
 {
-  "name": "Baikal (Nuke Wars)",
+  "id": "BaikalNukeWars",
+  "name": "Baikal Nuke Wars",
+  "display_name": "Baikal (Nuke Wars)",
+  "translation_key": "map.baikalnukewars",
+  "categories": ["other"],
+  "multiplayer_frequency": 0,
   "nations": [],
   "teamGameSpawnAreas": {
     "2": [
-      { "x": 0, "y": 0, "width": 1330, "height": 1564 },
-      { "x": 1430, "y": 0, "width": 1070, "height": 1564 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 1330,
+        "height": 1564
+      },
+      {
+        "x": 1430,
+        "y": 0,
+        "width": 1070,
+        "height": 1564
+      }
     ]
   }
 }

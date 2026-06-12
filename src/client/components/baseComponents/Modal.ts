@@ -1,12 +1,12 @@
-import { LitElement, html, unsafeCSS } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import tailwindStyles from "../../styles.css?inline";
+import { documentStylesSheet } from "./SharedStyles";
 
 export type OModalTab = { key: string; label: string };
 
 @customElement("o-modal")
 export class OModal extends LitElement {
-  static styles = [unsafeCSS(tailwindStyles)];
+  static styles = [documentStylesSheet()];
 
   @state() public isModalOpen = false;
 

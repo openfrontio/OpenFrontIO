@@ -152,15 +152,15 @@ describe("checkClanTagOwnership", () => {
     });
   });
 
-  it("rejects on an inconclusive existence check", async () => {
+  it("fails open on an inconclusive existence check (API unavailable)", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(status(503))),
     );
     await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
-      tag: null,
-      error: "username.tag_check_failed",
+      tag: "ABC",
+      error: null,
     });
   });
 });

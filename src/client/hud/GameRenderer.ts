@@ -1,5 +1,4 @@
 import { EventBus } from "../../core/EventBus";
-import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
@@ -10,9 +9,10 @@ import { StructureHighlightController } from "../controllers/StructureHighlightC
 import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { GameStartingModal } from "../GameStartingModal";
-import { GameView as WebGLGameView } from "../render/gl";
+import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
+import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
@@ -48,7 +48,7 @@ export function createRenderer(
   game: GameView,
   eventBus: EventBus,
   playerRole: string | null,
-  view: WebGLGameView,
+  view: MapRenderer,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
   const userSettings = new UserSettings();

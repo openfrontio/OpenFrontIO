@@ -1,4 +1,6 @@
 {
+  "categories": ["asia", "north_america"],
+  "id": "BeringSea",
   "map": {
     "height": 1600,
     "num_land_tiles": 1615723,
@@ -14,6 +16,7 @@
     "num_land_tiles": 396641,
     "width": 1250
   },
+  "multiplayer_frequency": 5,
   "name": "Bering Sea",
   "nations": [
     {
@@ -137,6 +140,7 @@
       "name": "Magadan"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -152,5 +156,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.beringsea"
 }

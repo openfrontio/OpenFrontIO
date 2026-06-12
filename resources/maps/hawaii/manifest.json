@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america", "oceania"],
+  "id": "Hawaii",
   "map": {
     "height": 2076,
     "num_land_tiles": 408264,
@@ -14,6 +16,7 @@
     "num_land_tiles": 100951,
     "width": 1600
   },
+  "multiplayer_frequency": 4,
   "name": "Hawaii",
   "nations": [
     {
@@ -61,5 +64,6 @@
       "flag": "us",
       "name": "Hilo"
     }
-  ]
+  ],
+  "translation_key": "map.hawaii"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Britannia",
   "map": {
     "height": 2088,
     "num_land_tiles": 1183898,
@@ -14,6 +16,7 @@
     "num_land_tiles": 290479,
     "width": 800
   },
+  "multiplayer_frequency": 5,
   "name": "Britannia",
   "nations": [
     {
@@ -115,5 +118,6 @@
       "coordinates": [404, 1146],
       "name": "Fermanagh"
     }
-  ]
+  ],
+  "translation_key": "map.britannia"
 }

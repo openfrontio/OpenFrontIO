@@ -1,5 +1,9 @@
 {
+  "id": "NorthwestPassage",
   "name": "Northwest Passage",
+  "translation_key": "map.northwestpassage",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1203, 592],

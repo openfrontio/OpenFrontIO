@@ -1,4 +1,6 @@
 {
+  "categories": ["africa"],
+  "id": "Conakry",
   "map": {
     "height": 1000,
     "num_land_tiles": 1108371,
@@ -14,6 +16,7 @@
     "num_land_tiles": 272605,
     "width": 1228
   },
+  "multiplayer_frequency": 3,
   "name": "Conakry",
   "nations": [
     {
@@ -117,6 +120,7 @@
       "name": "Dioumaya"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -132,5 +136,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.conakry"
 }

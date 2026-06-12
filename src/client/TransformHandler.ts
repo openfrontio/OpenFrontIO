@@ -1,7 +1,7 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { Cell } from "../core/game/Game";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "./InputHandler";
+import { GameView, PlayerView, UnitView } from "./view";
 
 export class GoToPlayerEvent implements GameEvent {
   constructor(

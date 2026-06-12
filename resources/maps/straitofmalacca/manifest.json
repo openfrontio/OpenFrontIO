@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "StraitOfMalacca",
   "map": {
     "height": 1644,
     "num_land_tiles": 865820,
@@ -14,6 +16,7 @@
     "num_land_tiles": 211494,
     "width": 916
   },
+  "multiplayer_frequency": 4,
   "name": "Strait Of Malacca",
   "nations": [
     {
@@ -81,5 +84,6 @@
       "flag": "id",
       "name": "Riau Islands"
     }
-  ]
+  ],
+  "translation_key": "map.straitofmalacca"
 }

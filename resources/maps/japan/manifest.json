@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "asia"],
+  "featured_rank": 7,
+  "id": "Japan",
   "map": {
     "height": 2500,
     "num_land_tiles": 478894,
@@ -14,7 +17,8 @@
     "num_land_tiles": 116922,
     "width": 1250
   },
-  "name": "japan",
+  "multiplayer_frequency": 6,
+  "name": "Japan",
   "nations": [
     {
       "coordinates": [1895, 288],
@@ -76,5 +80,6 @@
       "flag": "jp",
       "name": "Kyoto"
     }
-  ]
+  ],
+  "translation_key": "map.japan"
 }

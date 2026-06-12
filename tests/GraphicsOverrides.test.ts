@@ -23,7 +23,10 @@ describe("GraphicsOverridesSchema", () => {
       { name: { nameScaleFactor: 0.8 } },
       { name: { cullThreshold: 0.02 } },
       { name: { darkNames: true } },
+      { name: { hoverGlowWidth: 5 } },
+      { name: { hoverGlowAlpha: 0.6 } },
       { name: { nameScaleFactor: 1.2, cullThreshold: 0, darkNames: false } },
+      { name: { hoverGlowWidth: 0, hoverGlowAlpha: 0 } },
     ];
     for (const c of cases) {
       expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
@@ -73,6 +76,14 @@ describe("GraphicsOverridesSchema", () => {
     ).toBe(false);
     expect(
       GraphicsOverridesSchema.safeParse({ name: { darkNames: "yes" } }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({ name: { hoverGlowWidth: "wide" } })
+        .success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({ name: { hoverGlowAlpha: true } })
+        .success,
     ).toBe(false);
     expect(
       GraphicsOverridesSchema.safeParse({
@@ -132,6 +143,28 @@ describe("applyGraphicsOverrides", () => {
     expect(gen({ name: { cullThreshold: 0 } }).name.cullThreshold).toBe(0);
   });
 
+  test("applies hoverGlowWidth override (including 0)", () => {
+    expect(gen({ name: { hoverGlowWidth: 6 } }).name.hoverGlowWidth).toBe(6);
+    expect(gen({ name: { hoverGlowWidth: 0 } }).name.hoverGlowWidth).toBe(0);
+  });
+
+  test("applies hoverGlowAlpha override (including 0)", () => {
+    expect(gen({ name: { hoverGlowAlpha: 0.9 } }).name.hoverGlowAlpha).toBe(
+      0.9,
+    );
+    expect(gen({ name: { hoverGlowAlpha: 0 } }).name.hoverGlowAlpha).toBe(0);
+  });
+
+  test("hover glow overrides leave other name fields at defaults", () => {
+    const defaults = createRenderSettings().name;
+    const s = gen({
+      name: { hoverGlowWidth: 7, hoverGlowAlpha: 0.1 },
+    }).name;
+    expect(s.hoverFadeAlpha).toBe(defaults.hoverFadeAlpha);
+    expect(s.nameScaleFactor).toBe(defaults.nameScaleFactor);
+    expect(s.cullThreshold).toBe(defaults.cullThreshold);
+  });
+
   test("darkNames=true → black fill + player-colored outline + outline RGB 0", () => {
     const s = gen({ name: { darkNames: true } }).name;
     expect(s.fillUsePlayerColor).toBe(false);
@@ -178,19 +211,17 @@ describe("applyGraphicsOverrides", () => {
     expect(s.structure).toEqual(defaults.structure);
   });
 
-  test("classicIcons=true → light shape + dark icon + 0.75 alpha", () => {
+  test("classicIcons=true → light shape + dark icon + 0.9 alpha", () => {
     const s = gen({
       structure: { classicIcons: true },
     }).structure;
     // Shape (circle behind) is mostly player color, lightly darkened.
     expect(s.fillDarken).toBe(1.0);
     expect(s.borderDarken).toBe(0.7);
-    // Icon glyph itself is black.
-    expect(s.iconR).toBe(0);
-    expect(s.iconG).toBe(0);
-    expect(s.iconB).toBe(0);
+    // Icon glyph is a darkened version of the player color.
+    expect(s.iconDarken).toBe(0.3);
     // Slightly translucent in classic mode.
-    expect(s.iconAlpha).toBe(0.75);
+    expect(s.iconAlpha).toBe(0.9);
   });
 
   test("classicIcons=false or absent → keeps render-settings.json defaults (fully opaque)", () => {
@@ -200,12 +231,12 @@ describe("applyGraphicsOverrides", () => {
     }).structure;
     expect(off.borderDarken).toBe(defaults.borderDarken);
     expect(off.fillDarken).toBe(defaults.fillDarken);
-    expect(off.iconR).toBe(defaults.iconR);
+    expect(off.iconDarken).toBe(0);
     expect(off.iconAlpha).toBe(1);
     const absent = gen({ structure: {} }).structure;
     expect(absent.borderDarken).toBe(defaults.borderDarken);
     expect(absent.fillDarken).toBe(defaults.fillDarken);
-    expect(absent.iconR).toBe(defaults.iconR);
+    expect(absent.iconDarken).toBe(0);
     expect(absent.iconAlpha).toBe(1);
   });
 
@@ -270,6 +301,6 @@ describe("applyGraphicsOverrides", () => {
     expect(s.name.nameScaleFactor).toBe(0.9);
     expect(s.structure.borderDarken).toBe(0.7);
     expect(s.structure.fillDarken).toBe(1.0);
-    expect(s.structure.iconAlpha).toBe(0.75);
+    expect(s.structure.iconAlpha).toBe(0.9);
   });
 });

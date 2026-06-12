@@ -16,8 +16,7 @@ import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
-import { Theme } from "../theme/Theme";
-import { themeProvider } from "../theme/ThemeProvider";
+import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {

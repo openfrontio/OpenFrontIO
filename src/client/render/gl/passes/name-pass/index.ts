@@ -16,6 +16,7 @@
  *   - types          — shared interfaces + constants
  */
 
+import type { Config } from "../../../../../core/configuration/Config";
 import type {
   NameEntry,
   PlayerState,
@@ -117,6 +118,7 @@ export class NamePass {
     header: RendererConfig,
     paletteData: Float32Array,
     settings: RenderSettings,
+    config: Config,
   ) {
     this.gl = gl;
     this.settings = settings;
@@ -194,6 +196,7 @@ export class NamePass {
       atlas,
       this.playerDataTex,
       this.maxPlayers,
+      config.allianceExtensionPromptOffset(),
     );
     this.debugProgram = new DebugProgram(
       gl,
@@ -219,6 +222,25 @@ export class NamePass {
         paletteData[off + 1],
         paletteData[off + 2],
       ]);
+    }
+  }
+
+  /**
+   * Re-read every known player's territory color from the palette and rewrite
+   * the live slot rows. Called after a mid-game palette refresh (e.g. toggling
+   * colorblind mode) so name fills/outlines pick up the re-themed colors.
+   */
+  refreshPlayerColors(paletteData: Float32Array): void {
+    for (const [id, p] of this.playerByID) {
+      const off = p.smallID * 4;
+      this.playerColors.set(id, [
+        paletteData[off],
+        paletteData[off + 1],
+        paletteData[off + 2],
+      ]);
+    }
+    for (const slot of this.slots.values()) {
+      this.writePlayerDataRow(slot);
     }
   }
 
@@ -306,6 +328,7 @@ export class NamePass {
           nukeTargetsMe: false,
           traitorRemainingTicks: 0,
           allianceFraction: 0,
+          allianceRemainingTicks: 0,
         };
         this.slots.set(p.id, slot);
         this.resolveSlotFlag(slot);
@@ -422,6 +445,7 @@ export class NamePass {
       const nukeTargetsMe = sd?.nukeTargetsMe ?? false;
       const traitorRemainingTicks = sd?.traitorRemainingTicks ?? 0;
       const allianceFraction = sd?.allianceFraction ?? 0;
+      const allianceRemainingTicks = sd?.allianceRemainingTicks ?? 0;
 
       if (
         crown !== slot.crown ||
@@ -434,7 +458,8 @@ export class NamePass {
         nukeActive !== slot.nukeActive ||
         nukeTargetsMe !== slot.nukeTargetsMe ||
         traitorRemainingTicks !== slot.traitorRemainingTicks ||
-        allianceFraction !== slot.allianceFraction
+        allianceFraction !== slot.allianceFraction ||
+        allianceRemainingTicks !== slot.allianceRemainingTicks
       ) {
         slot.crown = crown;
         slot.traitor = traitor;
@@ -447,6 +472,7 @@ export class NamePass {
         slot.nukeTargetsMe = nukeTargetsMe;
         slot.traitorRemainingTicks = traitorRemainingTicks;
         slot.allianceFraction = allianceFraction;
+        slot.allianceRemainingTicks = allianceRemainingTicks;
         dirty = true;
       }
 
@@ -541,11 +567,11 @@ export class NamePass {
     d[off + 26] = slot.embargo ? 1.0 : 0.0;
     d[off + 27] = slot.nukeActive ? 1.0 : 0.0;
 
-    // Column 7: nukeTargetsMe, traitorRemainingTicks, allianceFraction, [free]
+    // Column 7: nukeTargetsMe, traitorRemainingTicks, allianceFraction, allianceRemainingTicks
     d[off + 28] = slot.nukeTargetsMe ? 1.0 : 0.0;
     d[off + 29] = slot.traitorRemainingTicks;
     d[off + 30] = slot.allianceFraction;
-    d[off + 31] = 0;
+    d[off + 31] = slot.allianceRemainingTicks;
 
     this.playerDataDirty = true;
   }

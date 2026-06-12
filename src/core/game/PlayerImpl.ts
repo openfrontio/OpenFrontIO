@@ -66,6 +66,25 @@ class Donation {
   ) {}
 }
 
+// Shared singletons for empty collections in toFullUpdate. Sharing
+// references lets diffPlayerUpdate's `a === b` fast paths skip structural
+// comparison and avoids per-player-per-tick allocations. The arrays are
+// frozen so accidental in-worker mutation throws instead of silently
+// corrupting every player's updates; updates crossing to the main thread
+// are structured-cloned (clones are mutable). Sets cannot be frozen
+// (Set.add ignores freeze) — EMPTY_EMBARGOES must never be mutated.
+const EMPTY_NUMBER_ARRAY: number[] = [];
+const EMPTY_STRING_ARRAY: string[] = [];
+const EMPTY_ATTACK_UPDATES: AttackUpdate[] = [];
+const EMPTY_ALLIANCE_VIEWS: AllianceView[] = [];
+const EMPTY_EMOJIS: EmojiMessage[] = [];
+const EMPTY_EMBARGOES = new Set<string>();
+Object.freeze(EMPTY_NUMBER_ARRAY);
+Object.freeze(EMPTY_STRING_ARRAY);
+Object.freeze(EMPTY_ATTACK_UPDATES);
+Object.freeze(EMPTY_ALLIANCE_VIEWS);
+Object.freeze(EMPTY_EMOJIS);
+
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
   public _pseudo_random: PseudoRandom;
@@ -146,9 +165,92 @@ export class PlayerImpl implements Player {
   }
 
   private toFullUpdate(): PlayerUpdate {
-    const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
-      ar.recipient().id(),
-    );
+    // Empty collections reuse shared singletons (EMPTY_*) so
+    // diffPlayerUpdate's reference fast paths hit and nothing is allocated.
+    // This runs for every player every tick; most collections are empty for
+    // most players. The singletons are never mutated — updates are
+    // structured-cloned before leaving the worker.
+    let outgoingAllianceRequests = EMPTY_STRING_ARRAY;
+    for (const ar of this.mg.allianceRequests) {
+      if (ar.requestor() === this) {
+        if (outgoingAllianceRequests === EMPTY_STRING_ARRAY) {
+          outgoingAllianceRequests = [];
+        }
+        outgoingAllianceRequests.push(ar.recipient().id());
+      }
+    }
+
+    const alliances = this.alliances();
+    let allies = EMPTY_NUMBER_ARRAY;
+    let allianceViews = EMPTY_ALLIANCE_VIEWS;
+    if (alliances.length > 0) {
+      allies = alliances.map((a) => a.other(this).smallID());
+      const extensionCutoff =
+        this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset();
+      allianceViews = alliances.map(
+        (a) =>
+          ({
+            id: a.id(),
+            other: a.other(this).id(),
+            createdAt: a.createdAt(),
+            expiresAt: a.expiresAt(),
+            hasExtensionRequest: a.expiresAt() <= extensionCutoff,
+          }) satisfies AllianceView,
+      );
+    }
+
+    let embargoes = EMPTY_EMBARGOES;
+    if (this.embargoes.size > 0) {
+      embargoes = new Set<string>();
+      for (const id of this.embargoes.keys()) {
+        embargoes.add(id.toString());
+      }
+    }
+
+    let targets = EMPTY_NUMBER_ARRAY;
+    if (this.targets_.length > 0) {
+      const t = this.targets();
+      if (t.length > 0) {
+        targets = t.map((p) => p.smallID());
+      }
+    }
+
+    let outgoingEmojis = EMPTY_EMOJIS;
+    if (this.outgoingEmojis_.length > 0) {
+      const e = this.outgoingEmojis();
+      if (e.length > 0) {
+        outgoingEmojis = e;
+      }
+    }
+
+    const outgoingAttacks =
+      this._outgoingAttacks.length === 0
+        ? EMPTY_ATTACK_UPDATES
+        : this._outgoingAttacks.map((a) => {
+            return {
+              attackerID: a.attacker().smallID(),
+              targetID: a.target().smallID(),
+              troops: a.troops(),
+              id: a.id(),
+              retreating: a.retreating(),
+            } satisfies AttackUpdate;
+          });
+
+    let incomingAttacks = EMPTY_ATTACK_UPDATES;
+    if (this._incomingAttacks.length > 0) {
+      const incoming = this.incomingAttacks();
+      if (incoming.length > 0) {
+        incomingAttacks = incoming.map((a) => {
+          return {
+            attackerID: a.attacker().smallID(),
+            targetID: a.target().smallID(),
+            troops: a.troops(),
+            id: a.id(),
+            retreating: a.retreating(),
+          } satisfies AttackUpdate;
+        });
+      }
+    }
 
     return {
       type: GameUpdateType.Player,
@@ -164,44 +266,16 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
+      allies: allies,
+      embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
-      targets: this.targets().map((p) => p.smallID()),
-      outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this.outgoingAttacks().map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      incomingAttacks: this.incomingAttacks().map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
+      targets: targets,
+      outgoingEmojis: outgoingEmojis,
+      outgoingAttacks: outgoingAttacks,
+      incomingAttacks: incomingAttacks,
       outgoingAllianceRequests: outgoingAllianceRequests,
-      alliances: this.alliances().map(
-        (a) =>
-          ({
-            id: a.id(),
-            other: a.other(this).id(),
-            createdAt: a.createdAt(),
-            expiresAt: a.expiresAt(),
-            hasExtensionRequest:
-              a.expiresAt() <=
-              this.mg.ticks() +
-                this.mg.config().allianceExtensionPromptOffset(),
-          }) satisfies AllianceView,
-      ),
+      alliances: allianceViews,
       hasSpawned: this.hasSpawned(),
       spawnTile: this._spawnTile,
       betrayals: this._betrayalCount,

@@ -4,11 +4,11 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
+import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
 const leaderboardRegularIcon = assetUrl(

@@ -113,7 +113,9 @@ export class JoinLobbyModal extends BaseModal {
         : null;
     const statusLabel =
       secondsRemaining === null
-        ? translateText("public_lobby.waiting_for_players")
+        ? this.isPrivateLobby()
+          ? translateText("private_lobby.joined_waiting")
+          : translateText("public_lobby.waiting_for_players")
         : secondsRemaining > 0
           ? translateText("public_lobby.starting_in", {
               time: renderDuration(secondsRemaining),
@@ -164,56 +166,39 @@ export class JoinLobbyModal extends BaseModal {
               `}
         </div>
 
-        ${this.isPrivateLobby()
-          ? html`
-              <div
-                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
-              >
-                <button
-                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
-                  disabled
+        ${html`
+          <div class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0">
+            <div
+              class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
+            >
+              <div class="flex flex-col">
+                <span
+                  class="text-[10px] font-bold uppercase tracking-widest text-white/40"
+                  >${translateText("public_lobby.status")}</span
                 >
-                  ${translateText("private_lobby.joined_waiting")}
-                </button>
+                <span class="text-sm font-bold text-white">${statusLabel}</span>
               </div>
-            `
-          : html`
-              <div
-                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
-              >
-                <div
-                  class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
-                >
-                  <div class="flex flex-col">
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-widest text-white/40"
-                      >${translateText("public_lobby.status")}</span
+              ${maxPlayers > 0
+                ? html`
+                    <div
+                      class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
                     >
-                    <span class="text-sm font-bold text-white"
-                      >${statusLabel}</span
-                    >
-                  </div>
-                  ${maxPlayers > 0
-                    ? html`
-                        <div
-                          class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
-                        >
-                          <span>${playerCount}/${maxPlayers}</span>
-                          <svg
-                            class="w-4 h-4 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-                            ></path>
-                          </svg>
-                        </div>
-                      `
-                    : html``}
-                </div>
-              </div>
-            `}
+                      <span>${playerCount}/${maxPlayers}</span>
+                      <svg
+                        class="w-4 h-4 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                        ></path>
+                      </svg>
+                    </div>
+                  `
+                : html``}
+            </div>
+          </div>
+        `}
       </div>
     `;
   }

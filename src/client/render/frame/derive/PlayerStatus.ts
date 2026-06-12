@@ -90,6 +90,7 @@ export function computePlayerStatus(
     let embargo = false;
     let allianceReq = false;
     let allianceFraction = 0;
+    let allianceRemainingTicks = 0;
 
     // Nukes: show during replay too, except the nukeTargetsMe flag
     for (const u of units.values()) {
@@ -143,6 +144,7 @@ export function computePlayerStatus(
             0,
             Math.min(1, remainingTicks / Math.max(1, opts.allianceDuration)),
           );
+          allianceRemainingTicks = remainingTicks;
         }
       }
     }
@@ -171,6 +173,7 @@ export function computePlayerStatus(
         nukeTargetsMe,
         traitorRemainingTicks,
         allianceFraction,
+        allianceRemainingTicks,
       });
     }
   }

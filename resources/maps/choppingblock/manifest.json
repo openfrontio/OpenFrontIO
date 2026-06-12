@@ -142,6 +142,8 @@
       "name": "Honeycomb"
     }
   ],
+  "categories": ["other"],
+  "id": "ChoppingBlock",
   "map": {
     "height": 1616,
     "num_land_tiles": 1485703,
@@ -157,6 +159,7 @@
     "num_land_tiles": 364395,
     "width": 808
   },
+  "multiplayer_frequency": 5,
   "name": "Chopping Block",
   "nations": [
     {
@@ -320,6 +323,7 @@
       "name": "Keeko"
     }
   ],
+  "special_team_count": 4,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -361,5 +365,6 @@
         "y": 809
       }
     ]
-  }
+  },
+  "translation_key": "map.choppingblock"
 }

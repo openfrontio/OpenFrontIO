@@ -575,13 +575,13 @@ describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
     expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
-  it("drops a non-member's tag fail-closed (no reserved set while infra is down)", () => {
+  it("keeps a non-member's tag fail-open (no reserved set while infra is down)", () => {
     const result = checker.resolveClanTag("ABC", ["other"]);
-    expect(result).toEqual({ tag: null, dropped: true });
+    expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
-  it("drops an anonymous user's tag fail-closed", () => {
+  it("keeps an anonymous user's tag fail-open", () => {
     const result = checker.resolveClanTag("ABC", []);
-    expect(result.dropped).toBe(true);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 });

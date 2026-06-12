@@ -1,11 +1,11 @@
 import { html, LitElement } from "lit";
-import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import version from "resources/version.txt?raw";
 import { translateText } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { renderMarkdown } from "./Markdown";
 import { normalizeNewsMarkdown } from "./NewsMarkdown";
 
 @customElement("news-modal")
@@ -36,10 +36,7 @@ export class NewsModal extends BaseModal {
           [&_li]:text-gray-300 [&_li]:leading-relaxed
           [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold"
       >
-        ${resolveMarkdown(this.markdown, {
-          includeImages: true,
-          includeCodeBlockClassNames: true,
-        })}
+        ${renderMarkdown(this.markdown, { includeImages: true })}
       </div>
     `;
   }

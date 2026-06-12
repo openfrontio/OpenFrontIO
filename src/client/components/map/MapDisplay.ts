@@ -49,6 +49,20 @@ export class MapDisplay extends LitElement {
     super.disconnectedCallback();
   }
 
+  updated(changedProperties: Map<string, unknown>) {
+    // If this element is reused for a different map, reload its data —
+    // otherwise it keeps showing the previous map's thumbnail.
+    const previousMapKey = changedProperties.get("mapKey");
+    if (
+      changedProperties.has("mapKey") &&
+      previousMapKey !== undefined &&
+      previousMapKey !== this.mapKey &&
+      this.dataLoaded
+    ) {
+      this.loadMapData();
+    }
+  }
+
   private async loadMapData() {
     if (!this.mapKey) return;
 

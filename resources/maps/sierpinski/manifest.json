@@ -1,4 +1,6 @@
 {
+  "categories": ["other"],
+  "id": "Sierpinski",
   "map": {
     "height": 1400,
     "num_land_tiles": 582988,
@@ -14,6 +16,7 @@
     "num_land_tiles": 143268,
     "width": 700
   },
+  "multiplayer_frequency": 10,
   "name": "Sierpinski",
   "nations": [
     {
@@ -61,5 +64,6 @@
       "flag": "",
       "name": "Center"
     }
-  ]
+  ],
+  "translation_key": "map.sierpinski"
 }

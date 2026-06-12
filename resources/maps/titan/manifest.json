@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Titan",
   "map": {
     "height": 2160,
     "num_land_tiles": 1627144,
@@ -14,6 +16,7 @@
     "num_land_tiles": 398688,
     "width": 616
   },
+  "multiplayer_frequency": 3,
   "name": "Titan",
   "nations": [
     {
@@ -128,5 +131,6 @@
       "flag": "un",
       "name": "UNOOSA"
     }
-  ]
+  ],
+  "translation_key": "map.titan"
 }

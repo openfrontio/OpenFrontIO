@@ -1,5 +1,5 @@
 import type { GraphicsOverrides } from "./GraphicsOverrides";
-import type { RenderSettings } from "./RenderSettings";
+import { createThemeSettings, type RenderSettings } from "./RenderSettings";
 
 const DARK_AMBIENT = 0.35;
 
@@ -21,15 +21,20 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverFadeAlpha !== undefined) {
     settings.name.hoverFadeAlpha = overrides.name.hoverFadeAlpha;
   }
+  if (overrides.name?.hoverGlowWidth !== undefined) {
+    settings.name.hoverGlowWidth = overrides.name.hoverGlowWidth;
+  }
+  if (overrides.name?.hoverGlowAlpha !== undefined) {
+    settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
+  }
   if (overrides.structure?.classicIcons === true) {
-    // Classic look: lighter player-colored shape behind a dark icon glyph,
-    // with a touch of translucency.
+    // Classic look: lighter player-colored shape behind a darkened
+    // player-colored icon glyph (matching the old canvas renderer's
+    // structureColors().dark), with a touch of translucency.
     settings.structure.borderDarken = 0.7;
     settings.structure.fillDarken = 1.0;
-    settings.structure.iconR = 0;
-    settings.structure.iconG = 0;
-    settings.structure.iconB = 0;
-    settings.structure.iconAlpha = 0.75;
+    settings.structure.iconDarken = 0.3;
+    settings.structure.iconAlpha = 0.9;
   }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
@@ -49,6 +54,10 @@ export function applyGraphicsOverrides(
   }
   if (overrides.mapOverlay?.territoryAlpha !== undefined) {
     settings.mapOverlay.territoryAlpha = overrides.mapOverlay.territoryAlpha;
+  }
+  if (overrides.mapOverlay?.coordinateGridOpacity !== undefined) {
+    settings.mapOverlay.coordinateGridOpacity =
+      overrides.mapOverlay.coordinateGridOpacity;
   }
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
@@ -73,6 +82,9 @@ export function applyGraphicsOverrides(
     settings.name.outlineB = channel;
   }
   if (overrides.accessibility?.colorblind === true) {
+    // Swap the active theme slice for the colorblind palette (replaced
+    // wholesale — palette arrays differ in length between themes).
+    settings.theme = createThemeSettings("colorblind");
     // Swap the red/green friend-foe encoding (the most common confusion axis)
     // for a colorblind-safe blue/orange pairing (Okabe-Ito).
     // Alt-view affiliation borders: self/ally in the blue family, enemy orange.

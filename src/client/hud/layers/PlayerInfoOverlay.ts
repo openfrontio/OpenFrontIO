@@ -11,7 +11,6 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
@@ -27,6 +26,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { GameView, PlayerView, UnitView } from "../../view";
 import {
   EMOJI_ICON_KIND,
   getFirstPlacePlayer,

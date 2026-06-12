@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "EastAsia",
   "map": {
     "height": 1644,
     "num_land_tiles": 879264,
@@ -14,6 +16,7 @@
     "num_land_tiles": 214937,
     "width": 780
   },
+  "multiplayer_frequency": 5,
   "name": "East Asia",
   "nations": [
     {
@@ -126,5 +129,6 @@
       "flag": "jp",
       "name": "Kinki"
     }
-  ]
+  ],
+  "translation_key": "map.eastasia"
 }

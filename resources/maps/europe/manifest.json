@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "europe"],
+  "featured_rank": 2,
+  "id": "Europe",
   "map": {
     "height": 1672,
     "num_land_tiles": 2345907,
@@ -14,6 +17,7 @@
     "num_land_tiles": 568335,
     "width": 1452
   },
+  "multiplayer_frequency": 7,
   "name": "Europe",
   "nations": [
     {
@@ -276,5 +280,6 @@
       "flag": "mc",
       "name": "Monaco"
     }
-  ]
+  ],
+  "translation_key": "map.europe"
 }

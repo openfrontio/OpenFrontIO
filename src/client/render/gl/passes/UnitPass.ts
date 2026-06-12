@@ -93,7 +93,7 @@ const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
  * Per-instance data (16 bytes):
  *   float x, y, ownerID   — 12 bytes (3 floats)
  *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
- *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating)
+ *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating, 5 = flicker-untargetable)
  *   2 bytes padding        — aligns to 4-byte boundary
  */
 const FLOATS_PER_INSTANCE = 4;
@@ -105,6 +105,7 @@ const FLAG_FLICKER = 1;
 const FLAG_ANGRY = 2;
 const FLAG_TRADE_FRIENDLY = 3;
 const FLAG_RETREATING = 4;
+const FLAG_FLICKER_UNTARGETABLE = 5;
 
 /** Atlas column indices for train sub-types (resolved from trainType + loaded) */
 const TRAIN_ENGINE_COL = UNIT_ORDER.indexOf("TrainEngine");
@@ -183,6 +184,7 @@ export class UnitPass {
   private uHBombGlowColor: WebGLUniformLocation;
   private uHBombGlowStrength: WebGLUniformLocation;
   private uHBombGlowInner: WebGLUniformLocation;
+  private uUntargetableAlpha: WebGLUniformLocation;
 
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
@@ -262,6 +264,10 @@ export class UnitPass {
     this.uHBombGlowInner = gl.getUniformLocation(
       this.program,
       "uHBombGlowInner",
+    )!;
+    this.uUntargetableAlpha = gl.getUniformLocation(
+      this.program,
+      "uUntargetableAlpha",
     )!;
 
     // Texture unit bindings
@@ -427,7 +433,8 @@ export class UnitPass {
       } else if (isAngryWarship) {
         flags = FLAG_ANGRY;
       } else if (isFlicker) {
-        flags = FLAG_FLICKER;
+        // Untargetable nukes render dimmed so players can tell SAMs can't hit them
+        flags = unit.targetable ? FLAG_FLICKER : FLAG_FLICKER_UNTARGETABLE;
       }
       const isMissile = MISSILE_TYPES.has(unit.unitType);
 
@@ -508,6 +515,7 @@ export class UnitPass {
     );
     gl.uniform1f(this.uHBombGlowStrength, us.hBombGlowStrength);
     gl.uniform1f(this.uHBombGlowInner, us.hBombGlowInner);
+    gl.uniform1f(this.uUntargetableAlpha, us.untargetableAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
