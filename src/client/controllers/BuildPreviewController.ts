@@ -8,7 +8,10 @@
  */
 
 import { EventBus } from "../../core/EventBus";
-import { wouldNukeBreakAlliance } from "../../core/execution/Util";
+import {
+  listNukeBreakAlliance,
+  wouldNukeBreakAlliance,
+} from "../../core/execution/Util";
 import {
   BuildableUnit,
   PlayerBuildableUnitType,
@@ -36,6 +39,22 @@ import { UIState } from "../UIState";
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+}
+
+/**
+ * Whether a SAM belongs in the nuke trajectory preview's threat set.
+ * Allied SAMs are excluded unless the strike would betray that ally —
+ * the alliance breaks at launch, so their SAMs will engage the nuke.
+ * (Own SAMs never threaten; the caller filters those out first.)
+ */
+export function samThreatensNukePreview(
+  samOwnerSmallId: number,
+  allySmallIds: ReadonlySet<number>,
+  betrayedSmallIds: ReadonlySet<number>,
+): boolean {
+  return (
+    !allySmallIds.has(samOwnerSmallId) || betrayedSmallIds.has(samOwnerSmallId)
+  );
 }
 
 export class BuildPreviewController implements Controller {
@@ -312,15 +331,29 @@ export class BuildPreviewController implements Controller {
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
 
-    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't.
+    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't —
+    // except allies this strike would betray: the alliance breaks at launch
+    // (NukeExecution.maybeBreakAlliances), so their SAMs will intercept.
+    // listNukeBreakAlliance is the same function the sim uses there.
     const allyIds = new Set<number>();
     for (const a of myPlayer.allies()) allyIds.add(a.smallID());
+    const betrayedIds: ReadonlySet<number> =
+      allyIds.size > 0
+        ? listNukeBreakAlliance({
+            game: this.game,
+            targetTile: tileRef,
+            magnitude: this.game.config().nukeMagnitudes(type),
+            threshold: this.game.config().nukeAllianceBreakThreshold(),
+          })
+        : new Set();
     const sams: SAMInfo[] = [];
     for (const s of this.game.units(UnitType.SAMLauncher)) {
       if (!s.isActive()) continue;
       const owner = s.owner();
       if (owner === myPlayer) continue;
-      if (allyIds.has(owner.smallID())) continue;
+      if (!samThreatensNukePreview(owner.smallID(), allyIds, betrayedIds)) {
+        continue;
+      }
       const r = this.game.config().samRange(s.level());
       sams.push({
         x: this.game.x(s.tile()),
