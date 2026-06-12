@@ -851,10 +851,12 @@ export class AiAttackBehavior {
   }
 
   /**
-   * For Hard & Impossible: returns true if `troops` is less than 20% of the
-   * target's troop count, meaning the attack is too weak to be worthwhile.
+   * For Hard & Impossible nations: returns true if `troops` is less than 20%
+   * of the target's troop count, meaning the attack is too weak to be
+   * worthwhile.  Bots are exempt.
    */
   private isAttackTooWeak(troops: number, target: Player): boolean {
+    if (this.player.type() === PlayerType.Bot) return false;
     const { difficulty } = this.game.config().gameConfig();
     return (
       (difficulty === Difficulty.Hard ||
@@ -864,13 +866,14 @@ export class AiAttackBehavior {
   }
 
   /**
-   * For Hard & Impossible: computes the max troops this nation can send in an
-   * attack without letting its troop count drop below a fraction of its
+   * For Hard & Impossible nations: computes the max troops this nation can send
+   * in an attack without letting its troop count drop below a fraction of its
    * strongest non-allied neighbor's troop count (Hard: 75%, Impossible: 90%).
-   * Allied players are not considered threats. Returns Infinity when no cap
-   * applies.
+   * Allied players and bot neighbors are not considered threats.
+   * Bots are entirely exempt. Returns Infinity when no cap applies.
    */
   private troopSendCap(): number {
+    if (this.player.type() === PlayerType.Bot) return Infinity;
     const { difficulty } = this.game.config().gameConfig();
     let retainFraction: number;
     switch (difficulty) {
