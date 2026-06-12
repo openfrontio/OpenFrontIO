@@ -8,9 +8,9 @@ import {
   DisplayMessageUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { Controller } from "../../Controller";
+import { GameView } from "../../view";
 
 interface ChatEvent {
   description: string;

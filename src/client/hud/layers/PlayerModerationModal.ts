@@ -3,10 +3,10 @@ import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PlayerType } from "../../../core/game/Game";
-import { PlayerView } from "../../../core/game/GameView";
 import { actionButton } from "../../components/ui/ActionButton";
 import { SendKickPlayerIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import { PlayerView } from "../../view";
 const kickIcon = assetUrl("images/ExitIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 

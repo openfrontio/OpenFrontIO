@@ -1,12 +1,12 @@
 import { Colord, colord, LabaColor } from "colord";
 import { PlayerType, Team } from "../../core/game/Game";
-import { PlayerView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { simpleHash } from "../../core/Util";
 import {
   createThemeSettings,
   ThemeSettings,
 } from "../render/gl/RenderSettings";
+import { PlayerView } from "../view";
 import { ColorAllocator } from "./ColorAllocator";
 
 /**

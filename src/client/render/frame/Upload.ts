@@ -24,8 +24,6 @@ export interface FrameUploadTarget {
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void;
-  applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void;
-  applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void;
   uploadRailroadState(data: Uint8Array): void;
   applyRailroadDust(tileRefs: number[]): void;
   updateUnits(units: ReadonlyMap<number, UnitState>, gameTick: number): void;
@@ -45,54 +43,33 @@ export interface FrameUploadTarget {
   setSAMAllianceClusters(clusters: ReadonlyMap<number, number>): void;
 }
 
-export interface UploadOptions {
-  /** Snap name positions instantly (seek mode). Default: false. */
-  snap?: boolean;
-  /** Skip tile upload — caller already handled tiles (e.g. seek with bloom reset). */
-  skipTileUpload?: boolean;
-}
-
 /**
  * Upload a FrameData snapshot to the GPU view.
  *
- * Handles tile upload mode switching, all view update calls, and conditional
- * railroad/ephemeral uploads. The FrameData itself carries semantic differences
- * (seek sets deadUnits=[], conquestEvents=[] etc.) — this function is a
- * straightforward dispatch loop.
+ * A straightforward dispatch loop: pushes tile/trail deltas, then all the
+ * conditional railroad/ephemeral uploads, to the view's update*() methods.
  */
 export function uploadFrameData(
   view: FrameUploadTarget,
   frame: FrameData,
-  opts?: UploadOptions,
 ): void {
-  const snap = opts?.snap ?? false;
-  const skipTileUpload = opts?.skipTileUpload ?? false;
-
   // --- Tiles + Trails ---
-  // Live mode: changedTiles[] means "only these tiles changed" (empty = nothing changed, skip upload).
-  //            changedTiles null/undefined means "no delta info" (first tick — full upload needed).
-  // Copy mode: changedTiles[] = delta playback, null = full seek.
-  if (!skipTileUpload) {
-    if (frame.tileMode === "live" && frame.changedTiles) {
-      // Live delta path — tiles and trails uploaded independently
-      if (frame.changedTiles.length > 0) {
-        view.uploadLiveDelta(frame.tileState, frame.changedTiles);
-      }
-      // Trail dirty rows come from TrailManager, independent of tile deltas
-      if (frame.trailDirtyRowMax >= 0) {
-        view.uploadLiveTrailDelta(
-          frame.trailState,
-          frame.trailDirtyRowMin,
-          frame.trailDirtyRowMax,
-        );
-      }
-    } else if (frame.tileMode === "live") {
-      view.uploadTileAndTrailState(frame.tileState, frame.trailState);
-    } else if (!frame.changedTiles) {
-      view.applyFullTiles(frame.tileState, frame.trailState);
-    } else {
-      view.applyDelta(frame.changedTiles, frame.trailState);
+  // changedTiles[] means "only these tiles changed" (empty = nothing changed,
+  // skip upload). null means "no delta info" (first tick — full upload needed).
+  if (frame.changedTiles) {
+    if (frame.changedTiles.length > 0) {
+      view.uploadLiveDelta(frame.tileState, frame.changedTiles);
     }
+    // Trail dirty rows come from TrailManager, independent of tile deltas
+    if (frame.trailDirtyRowMax >= 0) {
+      view.uploadLiveTrailDelta(
+        frame.trailState,
+        frame.trailDirtyRowMin,
+        frame.trailDirtyRowMax,
+      );
+    }
+  } else {
+    view.uploadTileAndTrailState(frame.tileState, frame.trailState);
   }
 
   // --- Railroads ---
@@ -125,7 +102,7 @@ export function uploadFrameData(
   view.updateNukeTelegraphs(frame.nukeTelegraphs);
 
   // --- Names + player status ---
-  view.updateNames(frame.names, frame.players, snap, frame.playerStatus);
+  view.updateNames(frame.names, frame.players, false, frame.playerStatus);
 
   // --- Relations ---
   view.updateRelations(frame.relationMatrix, frame.relationSize);

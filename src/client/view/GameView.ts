@@ -156,8 +156,7 @@ export class GameView implements GameMap {
     // buffers (tileState, trailState, etc.); some (_changedTilesScratch,
     // derived arrays) are reused each tick. Properties marked `readonly` on
     // FrameData only prevent reassignment, not mutation through the reference.
-    // events: fresh arrays we own; cleared and repopulated each tick. (Don't
-    // spread EMPTY_FRAME_EVENTS — that would share the module-level arrays.)
+    // events: fresh arrays we own; cleared and repopulated each tick.
     this._frame = {
       tick: 0,
       inSpawnPhase: true,
@@ -170,19 +169,7 @@ export class GameView implements GameMap {
       events: {
         deadUnits: [],
         conquestEvents: [],
-        unitUpdates: [],
-        playerUpdates: [],
-        allianceFormed: [],
-        allianceBroken: [],
-        allianceExpired: [],
-        embargoEvents: [],
-        targetEvents: [],
         bonusEvents: [],
-        nukeIncoming: [],
-        emojis: [],
-        displayMessages: [],
-        wins: [],
-        gamePaused: null,
       },
       changedTiles: this._changedTilesScratch,
       railroadDirty: false,
@@ -198,7 +185,6 @@ export class GameView implements GameMap {
       nukeTelegraphs: [],
       attackRings: [],
       structuresDirty: false,
-      tileMode: "live",
     };
   }
 

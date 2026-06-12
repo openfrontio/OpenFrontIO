@@ -1,11 +1,14 @@
 /**
- * GameView — public facade for the openfront-gl renderer.
+ * MapRenderer — public facade for the WebGL map renderer.
  *
- * Wraps GPURenderer (rendering) and Camera (viewport math) as private
- * implementation details. Handles all user interaction: drag-to-pan,
- * wheel-to-zoom, click detection, hover tracking, and hit-testing.
+ * Wraps GPURenderer as a private implementation detail and survives WebGL
+ * context loss: when the context is lost the renderer is disposed, and on
+ * restore a fresh GPURenderer is created and `onContextRestored` fires so
+ * the owner can re-upload all simulation state.
  *
- * Consumers only touch GameView — they never import GPURenderer or Camera.
+ * This is a pure data sink. Input handling lives in InputHandler/EventBus;
+ * camera state is pushed in each frame via setCameraState. Consumers only
+ * touch MapRenderer — they never import GPURenderer or Camera.
  */
 
 import type { Config } from "../../../core/configuration/Config";
@@ -25,27 +28,21 @@ import type {
   TilePair,
   UnitState,
 } from "../types";
-import type {
-  GameViewEventMap,
-  GameViewEventType,
-  RadialMenuItem,
-} from "./Events";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import type { AttackTroopLabel } from "./passes/WorldTextPass";
 import { GPURenderer } from "./Renderer";
 import type { RenderSettings } from "./RenderSettings";
 
-export class GameView {
+export class MapRenderer {
   private renderer: GPURenderer | null = null;
   private resizeObs: ResizeObserver | null = null;
 
-  private listeners = new Map<string, Set<(e: unknown) => void>>();
-  private cachedIcons: { key: string; img: CanvasImageSource }[] = [];
-
-  // Stored for context recreation
-  private cachedOnFrame: ((ms: number) => void) | null = null;
-  private cachedAfterRender: ((canvas: HTMLCanvasElement) => void) | null =
-    null;
+  /**
+   * Called after a lost WebGL context is restored and the renderer has been
+   * recreated. The owner must re-upload all simulation state (textures and
+   * geometry are gone).
+   */
+  onContextRestored: (() => void) | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -66,10 +63,10 @@ export class GameView {
     });
     this.resizeObs.observe(canvas);
 
-    canvas.addEventListener("webglcontextlost", this.onContextLost, false);
+    canvas.addEventListener("webglcontextlost", this.handleContextLost, false);
     canvas.addEventListener(
       "webglcontextrestored",
-      this.onContextRestored,
+      this.handleContextRestored,
       false,
     );
   }
@@ -85,18 +82,11 @@ export class GameView {
       this.caf,
     );
 
-    // Restore cached state
-    if (this.cachedIcons.length > 0) {
-      this.renderer.registerRadialMenuIcons(this.cachedIcons);
-    }
-    this.renderer.onFrame = this.cachedOnFrame;
-    this.renderer.afterRender = this.cachedAfterRender;
-
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
   };
 
-  private onContextLost = (e: Event) => {
+  private handleContextLost = (e: Event) => {
     e.preventDefault();
     if (this.renderer) {
       this.renderer.dispose();
@@ -104,141 +94,19 @@ export class GameView {
     }
   };
 
-  private onContextRestored = () => {
+  private handleContextRestored = () => {
     this.initRenderer();
-    this.emit("contextrestored", { type: "restored" });
+    this.onContextRestored?.();
   };
 
-  // ---- Event system ----
-
-  on<K extends GameViewEventType>(
-    event: K,
-    handler: (e: GameViewEventMap[K]) => void,
-  ): void {
-    let set = this.listeners.get(event);
-    if (!set) {
-      set = new Set();
-      this.listeners.set(event, set);
-    }
-    set.add(handler as (e: unknown) => void);
-  }
-
-  off<K extends GameViewEventType>(
-    event: K,
-    handler: (e: GameViewEventMap[K]) => void,
-  ): void {
-    this.listeners.get(event)?.delete(handler as (e: unknown) => void);
-  }
-
-  private emit<K extends GameViewEventType>(
-    event: K,
-    data: GameViewEventMap[K],
-  ): void {
-    const set = this.listeners.get(event);
-    if (set)
-      for (const fn of set) (fn as (e: GameViewEventMap[K]) => void)(data);
-  }
-
-  // ---- Radial menu ----
-
-  showRadialMenu(
-    screenX: number,
-    screenY: number,
-    items: RadialMenuItem[],
-    centerItem?: RadialMenuItem,
-  ): void {
-    this.renderer?.showRadialMenu(screenX, screenY, items, centerItem);
-  }
-
-  hideRadialMenu(): void {
-    this.renderer?.hideRadialMenu();
-  }
-
-  openRadialSubMenu(subItems: RadialMenuItem[]): void {
-    this.renderer?.openRadialSubMenu(subItems);
-  }
-
-  goBackRadialMenu(): void {
-    this.renderer?.goBackRadialMenu();
-  }
-
-  get radialMenuVisible(): boolean {
-    return this.renderer?.radialMenuVisible ?? false;
-  }
-  registerRadialMenuIcons(
-    icons: { key: string; img: CanvasImageSource }[],
-  ): void {
-    this.cachedIcons = icons;
-    this.renderer?.registerRadialMenuIcons(icons);
-  }
-
   // ---- Camera ----
-
-  screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-    return this.renderer?.screenToWorld(screenX, screenY) ?? { x: 0, y: 0 };
-  }
-
-  worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
-    return this.renderer?.worldToScreen(worldX, worldY) ?? { x: 0, y: 0 };
-  }
-
-  panTo(worldX: number, worldY: number): void {
-    this.renderer?.panTo(worldX, worldY);
-  }
-  zoomTo(level: number): void {
-    this.renderer?.zoomTo(level);
-  }
-  fitMap(): void {
-    this.renderer?.fitMap();
-  }
-  focusOwner(ownerID: number): void {
-    this.renderer?.focusOwner(ownerID);
-  }
-
-  focusBBox(
-    minX: number,
-    minY: number,
-    maxX: number,
-    maxY: number,
-    padding?: number,
-  ): void {
-    this.renderer?.focusBBox(minX, minY, maxX, maxY, padding);
-  }
-
-  getCameraState(): { x: number; y: number; z: number } {
-    return this.renderer?.getCameraState() ?? { x: 0, y: 0, z: 1 };
-  }
 
   setCameraState(x: number, y: number, z: number): void {
     this.renderer?.setCameraState(x, y, z);
   }
 
-  getOwnerAtWorld(worldX: number, worldY: number): number {
-    return this.renderer?.getOwnerAtWorld(worldX, worldY) ?? 0;
-  }
-
   // ---- Data upload ----
 
-  applyFullFrame(
-    tileState: Uint16Array,
-    trailState: Uint8Array,
-    nukeEvents?: Array<{ tick: number; tiles: number[] }>,
-    currentTick?: number,
-  ): void {
-    this.renderer?.applyFullFrame(
-      tileState,
-      trailState,
-      nukeEvents,
-      currentTick,
-    );
-  }
-
-  applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
-    this.renderer?.applyFullTiles(tileState, trailState);
-  }
-  applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
-    this.renderer?.applyDelta(changedTiles, trailState);
-  }
   uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
@@ -318,12 +186,6 @@ export class GameView {
   updateAttackRings(rings: AttackRingInput[]): void {
     this.renderer?.updateAttackRings(rings);
   }
-  clearFx(): void {
-    this.renderer?.clearFx();
-  }
-  setFxTimeFn(fn: () => number): void {
-    this.renderer?.setFxTimeFn(fn);
-  }
 
   /** Update ghost structure preview (build-mode visualization). null = clear. */
   updateGhostPreview(data: GhostPreviewData | null): void {
@@ -349,11 +211,6 @@ export class GameView {
 
   // ---- Selection box ----
 
-  /** Show/hide the stippled selection box around a unit (warship selection). */
-  setSelectedUnit(unitId: number | null): void {
-    this.renderer?.setSelectedUnit(unitId);
-  }
-
   /** Set multiple selected units (multi-select). Pass [] to clear. */
   setSelectedUnits(unitIds: readonly number[]): void {
     this.renderer?.setSelectedUnits(unitIds);
@@ -364,17 +221,8 @@ export class GameView {
     this.renderer?.showMoveIndicator(tileX, tileY, ownerID);
   }
 
-  // ---- SAM radius (replay) ----
+  // ---- SAM radius ----
 
-  setSAMRadiusVisible(visible: boolean): void {
-    this.renderer?.setSAMRadiusVisible(visible);
-  }
-  setSAMPerspective(playerID: number, allies: Set<number>): void {
-    this.renderer?.setSAMPerspective(playerID, allies);
-  }
-  setSAMColorMode(mode: "perspective" | "owner"): void {
-    this.renderer?.setSAMColorMode(mode);
-  }
   setSAMAllianceClusters(clusters: Map<number, number>): void {
     this.renderer?.setSAMAllianceClusters(clusters);
   }
@@ -409,29 +257,18 @@ export class GameView {
   getSettings(): RenderSettings {
     return this.renderer?.getSettings() ?? ({} as RenderSettings);
   }
-  get fps(): number {
-    return this.renderer?.fps ?? 0;
-  }
-  set onFrame(cb: ((ms: number) => void) | null) {
-    this.cachedOnFrame = cb;
-    if (this.renderer) this.renderer.onFrame = cb;
-  }
-  set afterRender(cb: ((canvas: HTMLCanvasElement) => void) | null) {
-    this.cachedAfterRender = cb;
-    if (this.renderer) this.renderer.afterRender = cb;
-  }
 
   // ---- Lifecycle ----
 
   dispose(): void {
     this.resizeObs?.disconnect();
     this.resizeObs = null;
-    this.listeners.clear();
+    this.onContextRestored = null;
     this.renderer?.dispose();
-    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.removeEventListener("webglcontextlost", this.handleContextLost);
     this.canvas.removeEventListener(
       "webglcontextrestored",
-      this.onContextRestored,
+      this.handleContextRestored,
     );
   }
 }

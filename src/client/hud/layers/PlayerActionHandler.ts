@@ -1,6 +1,5 @@
 import { EventBus } from "../../../core/EventBus";
 import { TileRef } from "../../../core/game/GameMap";
-import { PlayerView } from "../../../core/game/GameView";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
@@ -16,6 +15,7 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
+import { PlayerView } from "../../view";
 
 export class PlayerActionHandler {
   constructor(

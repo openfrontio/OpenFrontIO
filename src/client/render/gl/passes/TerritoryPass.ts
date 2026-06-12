@@ -16,7 +16,7 @@ import type { TilePair } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
-import { OWNER_MASK, TILE_DEFINES } from "../utils/TileCodec";
+import { TILE_DEFINES } from "../utils/TileCodec";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
@@ -193,15 +193,6 @@ export class TerritoryPass {
   // Tile data upload
   // ---------------------------------------------------------------------------
 
-  /** Full tile state upload (on seek). */
-  uploadFullTileState(tileState: Uint16Array): void {
-    this.cpuTileState.set(tileState);
-    this.clearDripBuckets();
-    this.scatter.clear();
-    this.fullUploadPending = true;
-    this.tilesDirty = true;
-  }
-
   /** Live-game path: snapshot the initial tile state and clear pending drip. */
   setLiveRef(tileState: Uint16Array): void {
     this.cpuTileState.set(tileState);
@@ -219,25 +210,6 @@ export class TerritoryPass {
    */
   setBorderPatchConsumer(fn: (x: number, y: number) => void): void {
     this.borderPatchConsumer = fn;
-  }
-
-  /** Apply tile deltas (during playback). */
-  uploadDeltaTiles(changedTiles: TilePair[]): void {
-    const ts = this.cpuTileState;
-    const w = this.mapW;
-    const pending = this.fullUploadPending;
-    const borderFn = this.borderPatchConsumer;
-    for (let i = 0; i < changedTiles.length; i++) {
-      const tp = changedTiles[i];
-      ts[tp.ref] = tp.state;
-      if (!pending) {
-        const x = tp.ref % w;
-        const y = (tp.ref - x) / w;
-        this.scatter.push(x, y, tp.state);
-        if (borderFn) borderFn(x, y);
-      }
-    }
-    this.tilesDirty = true;
   }
 
   /**
@@ -315,43 +287,6 @@ export class TerritoryPass {
   private clearDripBuckets(): void {
     for (let b = 0; b < this.nBuckets; b++) this.dripBuckets[b].length = 0;
     this.currentBucket = 0;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Queries
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Get ownerID at a tile reference. Returns 0 for unowned.
-   * Reads display state (post-drip), so queries match what's visible.
-   */
-  getOwnerAt(tileRef: number): number {
-    const ts = this.cpuTileState;
-    if (tileRef < 0 || tileRef >= ts.length) return 0;
-    return ts[tileRef] & OWNER_MASK;
-  }
-
-  /** AABB of all tiles owned by ownerID. */
-  getBBoxForOwner(
-    ownerID: number,
-  ): { minX: number; minY: number; maxX: number; maxY: number } | null {
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    const w = this.mapW;
-    const ts = this.cpuTileState;
-    for (let i = 0; i < ts.length; i++) {
-      if ((ts[i] & OWNER_MASK) === ownerID) {
-        const x = i % w;
-        const y = (i - x) / w;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-    return minX === Infinity ? null : { minX, minY, maxX, maxY };
   }
 
   // ---------------------------------------------------------------------------

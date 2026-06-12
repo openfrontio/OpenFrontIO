@@ -18,7 +18,6 @@ import {
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
-import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import {
@@ -26,7 +25,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
-import { GameView as WebGLGameView, buildNukeTrajectory } from "../render/gl";
+import { MapRenderer, buildNukeTrajectory } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
@@ -35,6 +34,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
+import { GameView } from "../view";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
@@ -86,7 +86,7 @@ export class BuildPreviewController implements Controller {
     private eventBus: EventBus,
     public uiState: UIState,
     private transformHandler: TransformHandler,
-    private view: WebGLGameView,
+    private view: MapRenderer,
     private userSettings: UserSettings,
   ) {}
 

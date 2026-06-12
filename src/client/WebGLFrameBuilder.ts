@@ -3,15 +3,11 @@ import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
-import { GameView } from "../core/game/GameView";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
-import type {
-  PlayerStatic,
-  SpawnCenter,
-  GameView as WebGLGameView,
-} from "./render/gl";
+import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
+import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
@@ -47,7 +43,7 @@ export class WebGLFrameBuilder {
   // Scratch buffer for terrain-delta uploads (parallel to the refs list).
   private terrainDeltaBytes: Uint8Array = new Uint8Array(0);
 
-  constructor(private readonly view: WebGLGameView) {
+  constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);

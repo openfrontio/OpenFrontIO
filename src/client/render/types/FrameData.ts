@@ -10,17 +10,17 @@ import type {
 } from "./Renderer";
 
 /**
- * FrameData — the boundary contract between game integration and features.
+ * FrameData — the boundary contract between game integration and the
+ * renderer. Built once per tick by GameView; the renderer reads from this
+ * interface and never touches game internals directly.
  *
- * Produced once per frame by a driver (shim for live, codec for replay).
- * All feature consumers (renderer, minimap, stats) read from this interface.
- * They never touch game internals directly.
+ * Arrays are long-lived and mutated in place each tick (zero-copy refs).
  */
 export interface FrameData {
   // ── Core accumulated state ────────────────────────────────────────────
 
   readonly tick: number;
-  /** True during spawn phase (before gameplay begins). Always false for replay. */
+  /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
   readonly tileState: Uint16Array;
   readonly trailState: Uint8Array;
@@ -38,10 +38,10 @@ export interface FrameData {
 
   /**
    * Changed tiles this frame for delta uploads.
-   * - `null` or `undefined` → full upload needed (live mode or keyframe seek)
-   * - array → delta upload (replay sequential advance)
+   * - `null` → no delta info; full upload needed (first tick)
+   * - array → only these tiles changed (empty = skip upload)
    */
-  readonly changedTiles?: TilePair[] | null;
+  readonly changedTiles: TilePair[] | null;
   readonly railroadDirty: boolean;
   readonly revealedRailTiles: number[];
 
@@ -49,7 +49,6 @@ export interface FrameData {
    * Trail dirty row range for partial GPU upload.
    * - `dirtyRowMin > dirtyRowMax` → no trail changes (skip upload)
    * - Otherwise → upload rows [min, max] from trailState
-   * Only meaningful in `tileMode: "live"`.
    */
   readonly trailDirtyRowMin: number;
   readonly trailDirtyRowMax: number;
@@ -64,13 +63,4 @@ export interface FrameData {
   readonly attackRings: AttackRingInput[];
   /** True when structures changed this tick (added/removed/level change). */
   readonly structuresDirty: boolean;
-
-  // ── Upload semantics ──────────────────────────────────────────────────
-
-  /**
-   * How tile data should reach the GPU:
-   * - `"live"` — arrays are mutated in-place by shim each tick (zero-copy refs)
-   * - `"copy"` — arrays may be swapped/reconstructed (renderer must copy)
-   */
-  readonly tileMode: "live" | "copy";
 }

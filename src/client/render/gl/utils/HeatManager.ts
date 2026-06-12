@@ -15,7 +15,7 @@ import {
   createTexture2D,
   shaderSrc,
 } from "./GlUtils";
-import { FALLOUT_BIT, TILE_DEFINES } from "./TileCodec";
+import { TILE_DEFINES } from "./TileCodec";
 
 import heatDecayFragSrc from "../shaders/fallout-bloom/heat-decay.frag.glsl?raw";
 import fullscreenNoUvVertSrc from "../shaders/shared/fullscreen-no-uv.vert.glsl?raw";
@@ -39,12 +39,11 @@ export class HeatManager {
   private prevTileTex: WebGLTexture;
   private prevTileFbo: WebGLFramebuffer;
   private tileTexReadFbo: WebGLFramebuffer;
-  /** True on first frame and after seek — blit tileTex→prevTileTex without transitions. */
+  /** True on first frame — blit tileTex→prevTileTex without transitions. */
   private needsPrevTileCopy = true;
 
   // Pending CPU → GPU writes
   private pendingDecay = 0;
-  private pendingFullHeat: Uint8Array | null = null;
   /**
    * True when heat may be non-zero anywhere — gates the decay pass.
    * Set true on each game tick (shader may detect new fallout transitions).
@@ -157,25 +156,7 @@ export class HeatManager {
     const mw = this.mapW;
     const mh = this.mapH;
 
-    // 1. Upload reconstructed heat on seek
-    if (this.pendingFullHeat) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.heatReadTex);
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        mw,
-        mh,
-        gl.RED,
-        gl.UNSIGNED_BYTE,
-        this.pendingFullHeat,
-      );
-      this.pendingFullHeat = null;
-    }
-
-    // 2. First frame / seek: copy tileTex → prevTileTex, skip transitions
+    // 1. First frame: copy tileTex → prevTileTex, skip transitions
     if (this.needsPrevTileCopy) {
       this.blitTileToPrev();
       this.needsPrevTileCopy = false;
@@ -183,7 +164,7 @@ export class HeatManager {
       return;
     }
 
-    // 3. Skip decay pass when nothing to do — no pending decay and heat already settled.
+    // 2. Skip decay pass when nothing to do — no pending decay and heat already settled.
     // Still blit tileTex→prevTileTex when a tick fired (pendingDecay > 0) so transition
     // detection stays accurate if heat activates later.
     if (!this.heatActive && this.pendingDecay === 0) return;
@@ -195,7 +176,7 @@ export class HeatManager {
       return;
     }
 
-    // 4. Combined transition detection + decay (GPU ping-pong)
+    // 3. Combined transition detection + decay (GPU ping-pong)
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.heatWriteFbo);
     gl.viewport(0, 0, mw, mh);
     gl.disable(gl.BLEND);
@@ -242,30 +223,6 @@ export class HeatManager {
     );
   }
 
-  /**
-   * Reset heat state on seek. Reconstructs heat from nuke history and
-   * masks out recaptured tiles.
-   */
-  resetForSeek(
-    tileState: Uint16Array,
-    nukeEvents?: Array<{ tick: number; tiles: number[] }>,
-    currentTick?: number,
-  ): void {
-    let hasHeat = false;
-    if (nukeEvents && nukeEvents.length > 0 && currentTick !== undefined) {
-      const heat = this.reconstructHeat(nukeEvents, currentTick);
-      this.maskHeat(heat, tileState);
-      this.pendingFullHeat = heat;
-      hasHeat = heat.some((v) => v > 0);
-    } else {
-      this.pendingFullHeat = new Uint8Array(this.mapW * this.mapH);
-    }
-    this.pendingDecay = 0;
-    this.decayAccumulated = 0;
-    this.heatActive = hasHeat;
-    this.needsPrevTileCopy = true;
-  }
-
   /** Accumulate heat decay for one game tick. */
   decayHeat(): void {
     this.pendingDecay += this.settings.falloutBloom.heatDecayPerTick;
@@ -279,32 +236,6 @@ export class HeatManager {
   // ---------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------
-
-  private reconstructHeat(
-    nukeEvents: Array<{ tick: number; tiles: number[] }>,
-    currentTick: number,
-  ): Uint8Array {
-    const heat = new Uint8Array(this.mapW * this.mapH);
-    const decay = this.settings.falloutBloom.heatDecayPerTick;
-    for (const evt of nukeEvents) {
-      if (evt.tick > currentTick) continue;
-      const elapsed = currentTick - evt.tick;
-      const h = Math.round(255 - elapsed * decay);
-      if (h <= 0) continue;
-      for (const ref of evt.tiles) {
-        if (heat[ref] < h) heat[ref] = h;
-      }
-    }
-    return heat;
-  }
-
-  private maskHeat(heat: Uint8Array, tileState: Uint16Array): void {
-    for (let i = 0; i < heat.length; i++) {
-      if (heat[i] > 0 && (tileState[i] & FALLOUT_BIT) === 0) {
-        heat[i] = 0;
-      }
-    }
-  }
 
   dispose(): void {
     const gl = this.gl;

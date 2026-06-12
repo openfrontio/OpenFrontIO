@@ -12,12 +12,12 @@
 import { EventBus } from "../../core/EventBus";
 import { Controller } from "../Controller";
 import { ToggleStructureEvent } from "../InputHandler";
-import { GameView as WebGLGameView } from "../render/gl";
+import { MapRenderer } from "../render/gl";
 
 export class StructureHighlightController implements Controller {
   constructor(
     private eventBus: EventBus,
-    private view: WebGLGameView,
+    private view: MapRenderer,
   ) {}
 
   init() {

@@ -454,11 +454,6 @@ describe("GameView.frameData() — renderer contract", () => {
     expect(game.frameData().events.deadUnits).toBe(a1);
   });
 
-  it("frame.tileMode is 'live'", () => {
-    const game = makeGameView();
-    expect(game.frameData().tileMode).toBe("live");
-  });
-
   it("frame.structuresDirty is true on first populate (force initial upload)", () => {
     const game = makeGameView();
     game.update(makeEmptyGu(1));
