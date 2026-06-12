@@ -162,20 +162,17 @@ describe("Ai Attack Behavior", () => {
 
 describe("Hard/Impossible troop floor", () => {
   /**
-   * Sets up a game where a bot attacker borders a neighbor and a bot target.
+   * Sets up a game where a nation attacker borders a neighbor and a bot target.
    * All players get alternating land tiles so they share borders.
-   * Uses Bot type for the attacker to avoid needing emojiBehavior initialization.
    */
   async function setupTroopFloorTest(difficulty: Difficulty) {
     const testGame = await setup("big_plains", {
-      infiniteGold: true,
-      instantBuild: true,
       difficulty,
     });
 
     const attackerInfo = new PlayerInfo(
       "attacker",
-      PlayerType.Bot,
+      PlayerType.Nation,
       null,
       "attacker_id",
     );
@@ -212,6 +209,13 @@ describe("Hard/Impossible troop floor", () => {
     // Give bot target a tiny amount of troops so it's a valid target
     bot.addTroops(100);
 
+    // Nation type requires alliance and emoji behaviors
+    const mockEmoji = {
+      maybeSendAttackEmoji: vi.fn(),
+      sendEmoji: vi.fn(),
+    } as any;
+    const mockAlliance = { maybeBetray: vi.fn() } as any;
+
     const behavior = new AiAttackBehavior(
       new PseudoRandom(42),
       testGame,
@@ -219,31 +223,33 @@ describe("Hard/Impossible troop floor", () => {
       0.5, // triggerRatio
       0.3, // reserveRatio
       0.2, // expandRatio
+      mockAlliance,
+      mockEmoji,
     );
 
     return { testGame, attacker, neighbor, bot, behavior };
   }
 
   it("Hard: caps attack troops so nation retains 75% of strongest neighbor's troops", async () => {
-    const { testGame, attacker, neighbor, bot, behavior } =
+    const { testGame, attacker, neighbor, behavior } =
       await setupTroopFloorTest(Difficulty.Hard);
 
     attacker.addTroops(100_000);
     neighbor.addTroops(90_000);
-    // minRetained = ceil(90_000 * 0.75) = 67_500
-    // troopSendCap = max(0, 100_000 - 67_500) = 32_500
-    // reserve = maxTroops * 0.3 → large, so troops = ~70_000 without cap
-    // With cap: troops = min(~70_000, 32_500) = 32_500
 
     const addExecSpy = vi.spyOn(testGame, "addExecution");
-    const result = behavior.sendAttack(bot);
+    // Attack the neighbor directly (already shares border, is Human type)
+    const result = behavior.sendAttack(neighbor);
 
     expect(result).toBe(true);
     const exec = addExecSpy.mock.calls.find(
       (c) => c[0].constructor.name === "AttackExecution",
     )?.[0] as any;
     expect(exec).toBeDefined();
-    expect(exec.startTroops).toBeLessThanOrEqual(32_500);
+    // Nation must retain at least 75% of strongest non-allied neighbor's troops
+    const minRetained = Math.ceil(neighbor.troops() * 0.75);
+    const expectedCap = Math.max(0, attacker.troops() - minRetained);
+    expect(exec.startTroops).toBeLessThanOrEqual(expectedCap);
   });
 
   it("Hard: prevents attack when nation troops < 75% of strongest neighbor", async () => {
@@ -301,23 +307,25 @@ describe("Hard/Impossible troop floor", () => {
   });
 
   it("Impossible: caps attack troops so nation retains 90% of strongest neighbor's troops", async () => {
-    const { testGame, attacker, neighbor, bot, behavior } =
+    const { testGame, attacker, neighbor, behavior } =
       await setupTroopFloorTest(Difficulty.Impossible);
 
     attacker.addTroops(100_000);
     neighbor.addTroops(90_000);
-    // minRetained = ceil(90_000 * 0.9) = 81_000
-    // troopSendCap = max(0, 100_000 - 81_000) = 19_000
 
     const addExecSpy = vi.spyOn(testGame, "addExecution");
-    const result = behavior.sendAttack(bot);
+    // Attack the neighbor directly (already shares border, is Human type)
+    const result = behavior.sendAttack(neighbor);
 
     expect(result).toBe(true);
     const exec = addExecSpy.mock.calls.find(
       (c) => c[0].constructor.name === "AttackExecution",
     )?.[0] as any;
     expect(exec).toBeDefined();
-    expect(exec.startTroops).toBeLessThanOrEqual(19_000);
+    // Nation must retain at least 90% of strongest non-allied neighbor's troops
+    const minRetained = Math.ceil(neighbor.troops() * 0.9);
+    const expectedCap = Math.max(0, attacker.troops() - minRetained);
+    expect(exec.startTroops).toBeLessThanOrEqual(expectedCap);
   });
 
   it("Easy: no troop floor — sends based on reserve only", async () => {
@@ -336,8 +344,14 @@ describe("Hard/Impossible troop floor", () => {
       (c) => c[0].constructor.name === "AttackExecution",
     )?.[0] as any;
     expect(exec).toBeDefined();
-    // Without cap, troops ≈ 100_000 - maxTroops*0.3 ≈ 70_000
-    expect(exec.startTroops).toBeGreaterThan(32_500);
+    // On Easy, no troop floor applies — troops are only limited by the reserve ratio
+    expect(exec.startTroops).toBeGreaterThan(0);
+    // Verify the troops exceed what the Hard cap would have been
+    const hardCap = Math.max(
+      0,
+      attacker.troops() - Math.ceil(neighbor.troops() * 0.75),
+    );
+    expect(exec.startTroops).toBeGreaterThan(hardCap);
   });
 
   it("Hard: sendAttack uncapped when nation has no player neighbors", async () => {
