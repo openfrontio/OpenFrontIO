@@ -33,8 +33,8 @@ export function applyGraphicsOverrides(
     // structureColors().dark), with a touch of translucency.
     settings.structure.borderDarken = 0.7;
     settings.structure.fillDarken = 1.0;
-    settings.structure.iconDarken = 0.45;
-    settings.structure.iconAlpha = 0.75;
+    settings.structure.iconDarken = 0.3;
+    settings.structure.iconAlpha = 0.9;
   }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
