@@ -116,7 +116,9 @@ func generateMapsTS() error {
 
 	b.WriteString("export enum GameMapType {\n")
 	for _, info := range infos {
-		b.WriteString(fmt.Sprintf("  %s = %q,\n", info.ID, info.Name))
+		// Trailing comment so editors can jump straight to the map's info.json.
+		b.WriteString(fmt.Sprintf("  %s = %q, // map-generator/assets/maps/%s/info.json\n",
+			info.ID, info.Name, strings.ToLower(info.ID)))
 	}
 	b.WriteString("}\n\n")
 
