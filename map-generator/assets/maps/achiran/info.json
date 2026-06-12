@@ -2,7 +2,7 @@
   "id": "Achiran",
   "name": "Achiran",
   "translation_key": "map.achiran",
-  "categories": ["other"],
+  "categories": ["fictional", "europe"],
   "multiplayer_frequency": 5,
   "nations": [
     {

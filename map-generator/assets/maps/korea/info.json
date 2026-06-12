@@ -2,7 +2,7 @@
   "id": "Korea",
   "name": "Korea",
   "translation_key": "map.korea",
-  "categories": ["asia"],
+  "categories": ["new", "asia"],
   "multiplayer_frequency": 5,
   "nations": [
     {

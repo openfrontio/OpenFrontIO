@@ -2,7 +2,7 @@
   "id": "FourIslands",
   "name": "Four Islands",
   "translation_key": "map.fourislands",
-  "categories": ["other"],
+  "categories": ["fictional"],
   "multiplayer_frequency": 4,
   "special_team_count": 4,
   "nations": [

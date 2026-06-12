@@ -2,7 +2,7 @@
   "id": "NorthAmerica",
   "name": "North America",
   "translation_key": "map.northamerica",
-  "categories": ["featured", "north_america"],
+  "categories": ["featured", "continental", "north_america"],
   "multiplayer_frequency": 5,
   "featured_rank": 3,
   "nations": [

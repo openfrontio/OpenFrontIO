@@ -256,7 +256,7 @@
       "name": "Round Lake"
     }
   ],
-  "categories": ["north_america"],
+  "categories": ["new", "north_america"],
   "id": "MississippiRiver",
   "map": {
     "height": 4200,
