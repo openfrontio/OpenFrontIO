@@ -9,6 +9,8 @@ export class PseudoRandom {
   private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8
 
   constructor(seed: number) {
+    // The seed is truncated to 32 bits: seeds congruent mod 2^32 produce
+    // identical streams, and fractional parts are discarded.
     // Expand the numeric seed into four state words with splitmix32.
     let h = seed | 0;
     const split = () => {

@@ -148,8 +148,9 @@ describe("Ai Attack Behavior", () => {
     const attacksBefore = nation.outgoingAttacks().length;
     nation.addTroops(50_000);
 
-    // Nation tries to attack ally (should be blocked)
-    nationBehavior.sendAttack(human);
+    // Force the attack past shouldAttack's dice gate so the alliance check
+    // in AttackExecution is the layer under test, regardless of RNG outcome.
+    nationBehavior.sendAttack(human, true);
 
     // Execute a few ticks to process the attacks
     for (let i = 0; i < 5; i++) {
