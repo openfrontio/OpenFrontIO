@@ -149,7 +149,8 @@
     "iconAlpha": 1.0,
     "iconR": 1.0,
     "iconG": 1.0,
-    "iconB": 1.0
+    "iconB": 1.0,
+    "iconDarken": 0
   },
   "structureLevel": {
     "scale": 1.2,

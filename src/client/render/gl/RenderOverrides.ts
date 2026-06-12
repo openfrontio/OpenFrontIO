@@ -28,13 +28,12 @@ export function applyGraphicsOverrides(
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
   if (overrides.structure?.classicIcons === true) {
-    // Classic look: lighter player-colored shape behind a dark icon glyph,
-    // with a touch of translucency.
+    // Classic look: lighter player-colored shape behind a darkened
+    // player-colored icon glyph (matching the old canvas renderer's
+    // structureColors().dark), with a touch of translucency.
     settings.structure.borderDarken = 0.7;
     settings.structure.fillDarken = 1.0;
-    settings.structure.iconR = 0;
-    settings.structure.iconG = 0;
-    settings.structure.iconB = 0;
+    settings.structure.iconDarken = 0.45;
     settings.structure.iconAlpha = 0.75;
   }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {

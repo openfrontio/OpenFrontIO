@@ -218,10 +218,8 @@ describe("applyGraphicsOverrides", () => {
     // Shape (circle behind) is mostly player color, lightly darkened.
     expect(s.fillDarken).toBe(1.0);
     expect(s.borderDarken).toBe(0.7);
-    // Icon glyph itself is black.
-    expect(s.iconR).toBe(0);
-    expect(s.iconG).toBe(0);
-    expect(s.iconB).toBe(0);
+    // Icon glyph is a darkened version of the player color.
+    expect(s.iconDarken).toBe(0.45);
     // Slightly translucent in classic mode.
     expect(s.iconAlpha).toBe(0.75);
   });
@@ -233,12 +231,12 @@ describe("applyGraphicsOverrides", () => {
     }).structure;
     expect(off.borderDarken).toBe(defaults.borderDarken);
     expect(off.fillDarken).toBe(defaults.fillDarken);
-    expect(off.iconR).toBe(defaults.iconR);
+    expect(off.iconDarken).toBe(0);
     expect(off.iconAlpha).toBe(1);
     const absent = gen({ structure: {} }).structure;
     expect(absent.borderDarken).toBe(defaults.borderDarken);
     expect(absent.fillDarken).toBe(defaults.fillDarken);
-    expect(absent.iconR).toBe(defaults.iconR);
+    expect(absent.iconDarken).toBe(0);
     expect(absent.iconAlpha).toBe(1);
   });
 

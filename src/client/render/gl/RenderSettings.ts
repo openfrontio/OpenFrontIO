@@ -182,6 +182,11 @@ export interface RenderSettings {
     iconR: number;
     iconG: number;
     iconB: number;
+    /**
+     * When > 0, the icon glyph is a darkened version of the player color
+     * (HSV value multiplier) instead of the flat iconR/G/B color. 0 = off.
+     */
+    iconDarken: number;
   };
   structureLevel: {
     scale: number;
