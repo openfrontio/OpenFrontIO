@@ -1,0 +1,56 @@
+{
+  "categories": ["new", "arcade"],
+  "id": "Dungeon",
+  "map": {
+    "height": 1344,
+    "num_land_tiles": 946048,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 336,
+    "num_land_tiles": 59128,
+    "width": 512
+  },
+  "map4x": {
+    "height": 672,
+    "num_land_tiles": 236512,
+    "width": 1024
+  },
+  "multiplayer_frequency": 8,
+  "name": "Dungeon",
+  "nations": [
+    {
+      "coordinates": [1983, 285],
+      "name": "Dragon"
+    },
+    {
+      "coordinates": [929, 698],
+      "name": "Wizard"
+    },
+    {
+      "coordinates": [322, 1096],
+      "name": "Necromancer"
+    },
+    {
+      "coordinates": [155, 540],
+      "name": "Skeleton"
+    },
+    {
+      "coordinates": [1675, 1250],
+      "name": "Knight"
+    },
+    {
+      "coordinates": [1170, 89],
+      "name": "Assassin"
+    },
+    {
+      "coordinates": [186, 166],
+      "name": "Alchemist"
+    },
+    {
+      "coordinates": [1681, 816],
+      "name": "Goblin"
+    }
+  ],
+  "translation_key": "map.dungeon"
+}
