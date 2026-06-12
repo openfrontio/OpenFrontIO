@@ -76,6 +76,8 @@ export class GameView implements GameMap {
     import("../render/types").PlayerState
   >();
   private _unitStates = new Map<number, import("../render/types").UnitState>();
+  /** smallID → team, for the renderer's relation matrix (team games). */
+  private _teams = new Map<number, string>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
 
@@ -327,6 +329,10 @@ export class GameView implements GameMap {
         );
         this._players.set(pu.id, player);
         this._playerStates.set(pu.smallID!, player.state);
+        const team = player.team();
+        if (team !== null) {
+          this._teams.set(pu.smallID!, team);
+        }
       }
     });
 
@@ -472,7 +478,7 @@ export class GameView implements GameMap {
       isTransitiveTarget: (sid) =>
         this._myPlayer?.hasTransitiveTarget(sid) ?? false,
     });
-    const rel = buildRelationMatrix(this._playerStates);
+    const rel = buildRelationMatrix(this._playerStates, this._teams);
     f.relationMatrix = rel.matrix;
     f.relationSize = rel.size;
     f.allianceClusters = computeAllianceClusters(this._playerStates);
