@@ -1,6 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../../../../client/Utils";
+import {
+  loadKeyboardLayout,
+  subscribeToLayoutChange,
+} from "../../../../client/utilities/KeyboardLayout";
 
 @customElement("setting-keybind")
 export class SettingKeybind extends LitElement {
@@ -12,8 +16,27 @@ export class SettingKeybind extends LitElement {
   @property({ type: String }) display = "";
   @property({ type: Boolean }) easter = false;
 
+  private unsubscribeLayout: (() => void) | null = null;
+
   createRenderRoot() {
     return this;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    // Re-render when the keyboard layout map loads, or the user switches
+    // layouts at the OS level, so the displayed character matches the
+    // user's actual keyboard.
+    this.unsubscribeLayout = subscribeToLayoutChange(() => {
+      this.requestUpdate();
+    });
+    void loadKeyboardLayout();
+  }
+
+  disconnectedCallback() {
+    this.unsubscribeLayout?.();
+    this.unsubscribeLayout = null;
+    super.disconnectedCallback();
   }
 
   private listening = false;

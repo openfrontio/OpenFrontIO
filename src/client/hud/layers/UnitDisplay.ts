@@ -14,7 +14,11 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { formatKeyForDisplay, renderNumber, translateText } from "../../Utils";
+import {
+  loadKeyboardLayout,
+  subscribeToLayoutChange,
+} from "../../utilities/KeyboardLayout";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -34,6 +38,7 @@ export class UnitDisplay extends LitElement implements Controller {
   public uiState: UIState;
   private playerBuildables: BuildableUnit[] | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
+  private unsubscribeLayout: (() => void) | null = null;
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
@@ -55,7 +60,33 @@ export class UnitDisplay extends LitElement implements Controller {
     this.keybinds = userSettings.parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
+    // Re-render when the keyboard layout map loads or the user switches
+    // layouts, so the hotkey hints (e.g. "1"/"2"/.../"W") match what the
+    // user has printed on their physical keys.
+    this.unsubscribeLayout?.();
+    this.unsubscribeLayout = subscribeToLayoutChange(() => {
+      this.requestUpdate();
+    });
+    void loadKeyboardLayout();
     this.requestUpdate();
+  }
+
+  disconnectedCallback() {
+    this.unsubscribeLayout?.();
+    this.unsubscribeLayout = null;
+    super.disconnectedCallback();
+  }
+
+  /**
+   * Returns the character to display next to a build-menu icon.
+   * Prefers the user's own saved character when they have rebound the
+   * action; otherwise translates the default code (e.g. "Digit1") through
+   * the current keyboard layout via {@link formatKeyForDisplay}.
+   */
+  private hotkeyLabel(action: string, defaultCode: string): string {
+    const userKey = this.keybinds[action]?.key;
+    if (userKey) return userKey.toUpperCase();
+    return formatKeyForDisplay(defaultCode);
   }
 
   private cost(item: UnitType): Gold {
@@ -128,70 +159,70 @@ export class UnitDisplay extends LitElement implements Controller {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.hotkeyLabel("buildCity", "Digit1"),
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.hotkeyLabel("buildFactory", "Digit2"),
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.hotkeyLabel("buildPort", "Digit3"),
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.hotkeyLabel("buildDefensePost", "Digit4"),
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.hotkeyLabel("buildMissileSilo", "Digit5"),
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.hotkeyLabel("buildSamLauncher", "Digit6"),
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.hotkeyLabel("buildWarship", "Digit7"),
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.hotkeyLabel("buildAtomBomb", "Digit8"),
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.hotkeyLabel("buildHydrogenBomb", "Digit9"),
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.hotkeyLabel("buildMIRV", "Digit0"),
           )}
         </div>
       </div>
@@ -210,10 +241,9 @@ export class UnitDisplay extends LitElement implements Controller {
     }
     const selected = this.uiState.ghostStructure === unitType;
     const hovered = this._hoveredUnit === unitType;
-    const displayHotkey = hotkey
-      .replace("Digit", "")
-      .replace("Key", "")
-      .toUpperCase();
+    // hotkey already comes from hotkeyLabel() pre-formatted via the layout
+    // map; uppercase it here as a final-line normalization.
+    const displayHotkey = hotkey.toUpperCase();
 
     return html`
       <div

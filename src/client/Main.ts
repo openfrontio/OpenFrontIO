@@ -67,6 +67,7 @@ import {
   translateText,
 } from "./Utils";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
+import { loadKeyboardLayout } from "./utilities/KeyboardLayout";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -1073,6 +1074,13 @@ const bootstrap = () => {
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
   // on iOS and can softlock the HUD. See issue #2330.
   installSafariPinchZoomBlocker();
+
+  // Pre-load the keyboard layout map so keybind labels (settings, help
+  // modal, build-menu HUD) show the user's actual keyboard characters
+  // (e.g. "Z" on AZERTY instead of the QWERTY-encoded "W"). Fire-and-forget;
+  // any not-yet-loaded display falls back to QWERTY and re-renders when the
+  // map resolves. See issue #1071.
+  void loadKeyboardLayout();
 
   initLayout();
   new Client().initialize();

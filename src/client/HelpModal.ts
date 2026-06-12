@@ -8,6 +8,11 @@ import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
+import {
+  getKeyForCode,
+  loadKeyboardLayout,
+  subscribeToLayoutChange,
+} from "./utilities/KeyboardLayout";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
@@ -15,6 +20,24 @@ export class HelpModal extends BaseModal {
 
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
+
+  private unsubscribeLayout: (() => void) | null = null;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.unsubscribeLayout = subscribeToLayoutChange(() => {
+      // Re-render so getKeyLabel picks up the new layout-mapped characters.
+      this.requestUpdate();
+    });
+    // Kick off the load if it hasn't happened yet (idempotent).
+    void loadKeyboardLayout();
+  }
+
+  disconnectedCallback() {
+    this.unsubscribeLayout?.();
+    this.unsubscribeLayout = null;
+    super.disconnectedCallback();
+  }
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -44,6 +67,12 @@ export class HelpModal extends BaseModal {
     };
 
     if (specialLabels[code]) return specialLabels[code];
+
+    // Use the user's actual keyboard layout when available (Chromium browsers).
+    // E.g. on AZERTY, "KeyW" → "Z" instead of the QWERTY-encoded "W".
+    const layoutChar = getKeyForCode(code);
+    if (layoutChar) return layoutChar.toUpperCase();
+
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;

@@ -13,6 +13,7 @@ import {
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
+import { getKeyForCode } from "./utilities/KeyboardLayout";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
@@ -314,6 +315,15 @@ export function formatPercentage(value: number): string {
  * Formats a keyboard key code for user-friendly display.
  * Handles empty values, spaces, and normalizes key codes like "Digit1" and "KeyA".
  *
+ * When the [Keyboard Layout Map API][1] is available (Chromium browsers
+ * after {@link loadKeyboardLayout} resolves), letter and digit codes are
+ * resolved to the character produced by the user's actual keyboard layout
+ * — e.g. `"KeyW"` returns `"Z"` on AZERTY, `","` on Dvorak. Other browsers
+ * (Firefox, Safari) and not-yet-loaded states fall back to the QWERTY
+ * letter encoded in the code itself.
+ *
+ * [1]: https://developer.mozilla.org/en-US/docs/Web/API/Keyboard
+ *
  * @param value - The key code to format (e.g., "Digit1", "KeyA", "Space")
  * @returns The formatted key for display (e.g., "1", "A", "Space")
  *
@@ -336,6 +346,14 @@ export function formatKeyForDisplay(value: string): string {
 
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";
+
+  // Prefer the user's actual keyboard layout (e.g. "KeyW" -> "z" on AZERTY).
+  // Returns null on Firefox/Safari or while the map is still loading; we
+  // fall through to the QWERTY-style normalization below in that case.
+  const layoutChar = getKeyForCode(value);
+  if (layoutChar) {
+    return layoutChar.toUpperCase();
+  }
 
   // Handle DigitN pattern (e.g., "Digit1" -> "1")
   if (/^Digit\d$/.test(value)) {
