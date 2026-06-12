@@ -260,7 +260,13 @@
     "fillAlphaOffset": 0.6,
     "colorR": 1,
     "colorG": 0,
-    "colorB": 0
+    "colorB": 0,
+    "selfColorR": 0,
+    "selfColorG": 1,
+    "selfColorB": 0,
+    "allyColorR": 1,
+    "allyColorG": 1,
+    "allyColorB": 0
   },
   "moveIndicator": {
     "startRadius": 13,

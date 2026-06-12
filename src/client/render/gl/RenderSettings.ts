@@ -299,9 +299,15 @@ export interface RenderSettings {
     pulseAmplitude: number; // alpha pulse ±
     pulseSpeed: number; // pulse frequency (radians/sec)
     fillAlphaOffset: number; // inner fill is baseAlpha minus this
-    colorR: number; // circle color
+    colorR: number; // circle color — enemy nukes
     colorG: number;
     colorB: number;
+    selfColorR: number; // circle color — own nukes
+    selfColorG: number;
+    selfColorB: number;
+    allyColorR: number; // circle color — ally/teammate nukes
+    allyColorG: number;
+    allyColorB: number;
   };
   moveIndicator: {
     startRadius: number; // screen px — initial distance from center

@@ -485,6 +485,9 @@ export class GameView implements GameMap {
     f.nukeTelegraphs = extractNukeTelegraphs(
       this._unitStates,
       this._map.width(),
+      this._myPlayer?.smallID() ?? 0,
+      rel.matrix,
+      rel.size,
     );
     f.attackRings = this._myPlayer
       ? extractAttackRings(
