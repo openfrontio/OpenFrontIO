@@ -1,6 +1,6 @@
 ---
 name: run-openfront
-description: Build, run, and drive OpenFront locally. Use when asked to run the game, start the dev server, take a screenshot of the UI, verify a client change in the real app, or interact with the running game (lobby, modals, map picker).
+description: Build, run, and drive OpenFront locally — including full in-game WebGL testing. Use when asked to run the game, start the dev server, take a screenshot of the UI, verify a client change in the real app, or interact with the running game (lobby, modals, map picker, starting a singleplayer game, spawning, attacking, build menu, reading live sim state).
 ---
 
 OpenFront is a browser game (Lit + Pixi.js client, Node game server).
@@ -65,6 +65,99 @@ const s = await page.evaluate(
 );
 await browser.close();
 ```
+
+## Drive a full game (WebGL, in-game interaction)
+
+`game.mjs` drives an actual singleplayer game end-to-end: start, spawn,
+attack/expand, open the radial menu, and read **ground-truth sim state**.
+WebGL works headless via SwiftShader (no extra flags needed), and the
+screenshots show the real rendered map.
+
+Smoke flow (≈2 min: starts a 50-bot game, spawns, expands, opens the
+radial menu, asserts territory growth):
+
+```bash
+node .claude/skills/run-openfront/game.mjs
+# screenshots: /tmp/openfront-run/game-{spawn-phase,spawned,expanded,radial-menu}.png
+```
+
+For ad-hoc in-game flows, import the helpers (script must live inside the
+repo):
+
+```js
+import {
+  launch,
+  gotoHome,
+  openSoloModal,
+} from "./.claude/skills/run-openfront/driver.mjs";
+import {
+  startSoloGame, // set modal options ({bots, map, difficulty, instantBuild, …}), click Start, wait for sim
+  gameState, // {ticks, inSpawnPhase, numPlayers, myPlayer: {troops, gold, tilesOwned, isAlive}, …}
+  findSpawnTile,
+  spawn, // pick land + click it; waits until myPlayer owns tiles
+  waitForSpawnPhaseEnd,
+  waitForTick,
+  findExpansionTile,
+  attack,
+  clickWorld,
+  panTo,
+  setAttackRatio,
+  openRadialMenu, // right-click on own territory; returns true if the menu opened
+} from "./.claude/skills/run-openfront/game.mjs";
+
+const { browser, page } = await launch({ rafIntervalMs: 3000 }); // throttle is REQUIRED in-game, see below
+await gotoHome(page);
+await openSoloModal(page);
+await startSoloGame(page, { bots: 50 });
+const tile = await spawn(page);
+await waitForSpawnPhaseEnd(page);
+const target = await findExpansionTile(page, tile);
+await attack(page, target.x, target.y);
+await browser.close();
+```
+
+### How it works / in-game gotchas
+
+- **Ground-truth state without any repo changes**: `hud/GameRenderer.ts`
+  assigns the `GameView` and `TransformHandler` onto the `<build-menu>`
+  Lit element (light DOM). From page JS:
+  `document.querySelector("build-menu").game` / `.transformHandler`.
+  GameView has `ticks()`, `inSpawnPhase()`, `myPlayer()`, `players()`,
+  `ref(x,y)`, `isLand()`, `hasOwner()`; PlayerView has `troops()`,
+  `numTilesOwned()`, `gold()`, `isAlive()`, `outgoingAttacks()`.
+- **`launch({ rafIntervalMs: 3000 })` is mandatory for in-game work.**
+  SwiftShader needs seconds of CPU per frame; an unthrottled rAF loop
+  starves the main thread (0.8 fps, 100 ms timers firing every ~4 s) and
+  the singleplayer turn loop crawls at ~0.3 ticks/s instead of 10/s. The
+  throttle stubs `requestAnimationFrame` to one frame per interval —
+  sim runs near full speed, frames still render for screenshots.
+- **Solo modal options are settable as element properties** before
+  clicking Start: `document.querySelector("single-player-modal").bots = 50`
+  (`@state` fields are TS-private only). `startSoloGame` does this.
+- **Click tile centers, not corners.** World coords address a tile's
+  top-left corner and `screenToWorldCoordinates` floors — a corner click
+  can land on the neighboring tile (and clicking your own tile is a
+  silent no-op). `clickWorld` aims at `+0.5,+0.5`.
+- **HUD elements swallow canvas clicks.** The leaderboard / control panel
+  / modals sit above the `#game-input-overlay`. `clickWorld` verifies
+  `document.elementFromPoint` hits the overlay and recenters the camera
+  (`panTo`) if not — never click raw screen coords yourself.
+- **The camera animates on its own** (post-spawn go-to-player), so screen
+  coords computed before the click go stale. `clickWorld` calls
+  `transformHandler.clearTarget()` first to freeze it.
+- **Spawning**: during the spawn phase a left click on unowned land sends
+  the spawn intent; in singleplayer the spawn phase ends as soon as the
+  human spawns. `nameLocation()` can still be `{0,0}` for the first ticks
+  after spawning — pass the spawn tile as fallback origin (helpers do).
+- **Attacking**: a left click outside the spawn phase attacks/expands if
+  `canAttack` (unowned land must be connected to your border through
+  unowned land). Troops drop and `outgoingAttacks()` becomes non-empty on
+  success. The radial menu (right click) is a DOM/SVG overlay —
+  `.radial-menu-container` exists from startup; check
+  `style.display !== "none"` for "open".
+- Verify rendering visually by reading the screenshots — a blank WebGL
+  canvas means SwiftShader broke (check `webgl2` context creation and
+  `LD_LIBRARY_PATH`/fontconfig from setup.sh).
 
 ## Run (human path)
 
