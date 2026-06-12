@@ -1,0 +1,58 @@
+{
+  "name": "Warship Warship",
+  "id": "WarshipWarship",
+  "translation_key": "map.warshipwarship",
+  "multiplayer_frequency": 3,
+  "categories": ["other"],
+  "nations": [
+    {
+      "coordinates": [750, 680],
+      "name": "Isle of Infestation",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [1775, 435],
+      "name": "Poort",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [1884, 1064],
+      "name": "Battleship Bay",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [1116, 1000],
+      "name": "Piracity",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [413, 378],
+      "name": "Robbery Rock",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [1009, 272],
+      "name": "Warship Wastelands",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [388, 1027],
+      "name": "Bootyful Valley",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "coordinates": [2688, 968],
+      "name": "Cape Carribean",
+      "flag": "bs"
+    },
+    {
+      "coordinates": [2222, 686],
+      "name": "Evil island man"
+    },
+    {
+      "coordinates": [2597, 405],
+      "name": "Somalian Sound",
+      "flag": "so"
+    }
+  ]
+}
