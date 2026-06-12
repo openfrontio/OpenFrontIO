@@ -1,4 +1,96 @@
 {
+  "additionalNations": [
+    {
+      "flag": "Republic of Pirates",
+      "name": "Just Pirates"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "The Pillage"
+    },
+    {
+      "name": "Nice island man"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Port Pirate"
+    },
+    {
+      "name": "Chill island trader"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Plunder Peak"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Corsair Cay"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Cutlass Cove"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Galleon Gulf"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Rogue’s Reach"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Buccaneer Bay"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Blackflag Basin"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Dreadnought Dunes"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Armada Anchor"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Caliber Cape"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Salvo Shores"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Bastion Bluffs"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Garrison Atoll"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Vanguard Reef"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Fortress Floe"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Citadel Crag"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Watchpoint Wick"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Redoubt Ridge"
+    }
+  ],
   "categories": ["other"],
   "id": "WarshipWarship",
   "map": {
@@ -69,5 +161,21 @@
       "name": "Somalian Sound"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1396,
+        "width": 1500,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1396,
+        "width": 1500,
+        "x": 1500,
+        "y": 0
+      }
+    ]
+  },
   "translation_key": "map.warshipwarship"
 }
