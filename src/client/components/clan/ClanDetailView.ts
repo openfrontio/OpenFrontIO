@@ -254,6 +254,9 @@ export class ClanDetailView extends LitElement {
     try {
       const result = await joinClan(this.selectedClan.tag);
       if ("error" in result) {
+        if (result.error === "clan_modal.sign_in_for_clans") {
+          window.showPage?.("page-account");
+        }
         showToast(
           result.reason
             ? translateText(result.error, { reason: result.reason })

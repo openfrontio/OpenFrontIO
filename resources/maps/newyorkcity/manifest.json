@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "NewYorkCity",
   "map": {
     "height": 1900,
     "num_land_tiles": 1648646,
@@ -14,6 +16,7 @@
     "num_land_tiles": 406215,
     "width": 750
   },
+  "multiplayer_frequency": 3,
   "name": "New York City",
   "nations": [
     {
@@ -105,5 +108,6 @@
       "flag": "gb-eng",
       "name": "Gravesend"
     }
-  ]
+  ],
+  "translation_key": "map.newyorkcity"
 }

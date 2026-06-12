@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "IndianSubcontinent",
   "map": {
     "height": 2220,
     "num_land_tiles": 2113509,
@@ -14,6 +16,7 @@
     "num_land_tiles": 519188,
     "width": 1000
   },
+  "multiplayer_frequency": 8,
   "name": "Indian Subcontinent",
   "nations": [
     {
@@ -276,5 +279,6 @@
       "flag": "in",
       "name": "Puducherry"
     }
-  ]
+  ],
+  "translation_key": "map.indiansubcontinent"
 }

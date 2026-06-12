@@ -71,9 +71,9 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
   applyDarkModeOverride,
   applyGraphicsOverrides,
-  createDebugGui,
   createRenderSettings,
   deepAssign,
+  preloadAtlasData,
   GameView as WebGLGameView,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
@@ -451,8 +451,12 @@ async function createClientGame(
       mapLoader,
     );
   }
+  // Kick off the font-atlas fetch so it overlaps with worker init; the
+  // render passes need it parsed before createWebGLView runs.
+  const atlasDataLoad = preloadAtlasData();
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
+  await atlasDataLoad;
   const gameView = new GameView(
     worker,
     config,
@@ -497,10 +501,20 @@ async function createClientGame(
       applyGraphicsOverrides(live, userSettings.graphicsOverrides());
       applyDarkModeOverride(live, userSettings.darkMode());
     };
+    // Re-apply render settings, then re-theme and recolor players, on a
+    // graphics-override change (covers a theme switch such as colorblind mode).
+    const onGraphicsChanged = (): void => {
+      regenerateRenderSettings();
+      // A graphics override can switch the active theme (e.g. colorblind mode),
+      // so re-theme existing players and re-upload the palette to recolor their
+      // territory fills/borders live.
+      gameView.refreshPlayerColors();
+      webglBuilder.refreshPalette(gameView);
+    };
     regenerateRenderSettings();
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      regenerateRenderSettings,
+      onGraphicsChanged,
       { signal: graphicsListenerAbort.signal },
     );
     globalThis.addEventListener(
@@ -509,11 +523,21 @@ async function createClientGame(
       { signal: graphicsListenerAbort.signal },
     );
 
-    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    let debugGui: { open(): void; destroy(): void } | null = null;
+    let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
       if (debugGui === null) {
-        debugGui = createDebugGui(view.getSettings());
-        debugGui.open();
+        if (debugGuiLoading) return;
+        debugGuiLoading = true;
+        import("./render/gl/debug/index")
+          .then(({ createDebugGui }) => {
+            debugGui = createDebugGui(view.getSettings());
+            debugGui.open();
+          })
+          .finally(() => {
+            debugGuiLoading = false;
+          });
       } else {
         debugGui.destroy();
         debugGui = null;

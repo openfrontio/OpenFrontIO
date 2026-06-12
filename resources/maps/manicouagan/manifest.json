@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "Manicouagan",
   "map": {
     "height": 1600,
     "num_land_tiles": 1992029,
@@ -14,6 +16,7 @@
     "num_land_tiles": 489928,
     "width": 800
   },
+  "multiplayer_frequency": 4,
   "name": "Manicouagan",
   "nations": [
     {
@@ -71,5 +74,6 @@
       "flag": "Quebec",
       "name": "Lamontagne"
     }
-  ]
+  ],
+  "translation_key": "map.manicouagan"
 }

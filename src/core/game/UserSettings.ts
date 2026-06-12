@@ -154,10 +154,6 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
-  fxLayer() {
-    return this.getBool("settings.specialEffects", true);
-  }
-
   darkMode() {
     return this.getBool(DARK_MODE_KEY, false);
   }
@@ -211,16 +207,20 @@ export class UserSettings {
     this.setBool("settings.alertFrame", !this.alertFrame());
   }
 
+  helpMessages() {
+    return this.getBool("settings.helpMessages", true);
+  }
+
+  toggleHelpMessages() {
+    this.setBool("settings.helpMessages", !this.helpMessages());
+  }
+
   toggleRandomName() {
     this.setBool("settings.anonymousNames", !this.anonymousNames());
   }
 
   toggleLobbyIdVisibility() {
     this.setBool("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
-  }
-
-  toggleFxLayer() {
-    this.setBool("settings.specialEffects", !this.fxLayer());
   }
 
   toggleCursorCostLabel() {

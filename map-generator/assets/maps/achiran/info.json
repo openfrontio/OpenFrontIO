@@ -1,5 +1,9 @@
 {
+  "id": "Achiran",
   "name": "Achiran",
+  "translation_key": "map.achiran",
+  "categories": ["other"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [785, 985],

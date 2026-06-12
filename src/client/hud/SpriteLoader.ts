@@ -2,7 +2,7 @@ import { Colord } from "colord";
 import { assetUrl } from "../../core/AssetUrls";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
-import { Theme } from "../theme/Theme";
+import { Theme } from "../theme/ThemeProvider";
 const atomBombSprite = assetUrl("sprites/atombomb.png");
 const hydrogenBombSprite = assetUrl("sprites/hydrogenbomb.png");
 const mirvSprite = assetUrl("sprites/mirv2.png");

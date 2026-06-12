@@ -1,5 +1,9 @@
 {
+  "id": "Alps",
   "name": "Alps",
+  "translation_key": "map.alps",
+  "categories": ["europe"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [740, 620],

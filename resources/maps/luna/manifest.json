@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Luna",
   "map": {
     "height": 3508,
     "num_land_tiles": 1517614,
@@ -14,6 +16,7 @@
     "num_land_tiles": 363006,
     "width": 654
   },
+  "multiplayer_frequency": 6,
   "name": "Luna",
   "nations": [
     {
@@ -134,14 +137,15 @@
     {
       "coordinates": [755, 3035],
       "flag": "",
-      "name": "T▆p░S▅cr▅t░M▊l▊t▅r▆░B▅s▅"
+      "name": "T0Þ $e¢®ët Mi|¡tªr¥ ß@§£"
     },
     {
       "coordinates": [628, 921],
-      "flag": "",
-      "name": "▊"
+      "flag": "custom/luna_monolith",
+      "name": "ΜΟΝΟʟΙȚΗ"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -157,5 +161,6 @@
         "y": 1754
       }
     ]
-  }
+  },
+  "translation_key": "map.luna"
 }

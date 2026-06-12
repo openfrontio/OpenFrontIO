@@ -206,6 +206,25 @@ export class UserSettingModal extends BaseModal {
     console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
   }
 
+  /** Whether colorblind mode is currently enabled in the graphics overrides. */
+  private colorblindMode(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
+
+  /** Flip the colorblind-mode graphics override and persist it. */
+  private toggleColorblindMode() {
+    const overrides = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...overrides,
+      accessibility: {
+        ...overrides.accessibility,
+        colorblind: !this.colorblindMode(),
+      },
+    });
+  }
+
   private toggleEmojis() {
     this.userSettings.toggleEmojis();
 
@@ -218,15 +237,6 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "🚨 Alert frame:",
       this.userSettings.alertFrame() ? "ON" : "OFF",
-    );
-  }
-
-  private toggleFxLayer() {
-    this.userSettings.toggleFxLayer();
-
-    console.log(
-      "💥 Special effects:",
-      this.userSettings.fxLayer() ? "ON" : "OFF",
     );
   }
 
@@ -751,6 +761,15 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleDarkMode}
       ></setting-toggle>
 
+      <!-- 🎨 Colorblind Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.colorblind_label")}"
+        description="${translateText("user_setting.colorblind_desc")}"
+        id="colorblind-toggle"
+        .checked=${this.colorblindMode()}
+        @change=${this.toggleColorblindMode}
+      ></setting-toggle>
+
       <!-- 😊 Emojis -->
       <setting-toggle
         label="${translateText("user_setting.emojis_label")}"
@@ -767,15 +786,6 @@ export class UserSettingModal extends BaseModal {
         id="alert-frame-toggle"
         .checked=${this.userSettings.alertFrame()}
         @change=${this.toggleAlertFrame}
-      ></setting-toggle>
-
-      <!-- 💥 Special effects -->
-      <setting-toggle
-        label="${translateText("user_setting.special_effects_label")}"
-        description="${translateText("user_setting.special_effects_desc")}"
-        id="special-effect-toggle"
-        .checked=${this.userSettings.fxLayer()}
-        @change=${this.toggleFxLayer}
       ></setting-toggle>
 
       <!-- 💰 Cursor Price Pill -->

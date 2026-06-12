@@ -17,11 +17,12 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
 ## Creating a new map
 
+Maps are discovered automatically from the `assets/maps/` folders — `info.json` holds everything the game needs to know about a map.
+
 1. Create a new folder in `assets/maps/<map_name>`
 2. Create `assets/maps/<map_name>/image.png`
-3. Create `assets/maps/<map_name>/info.json` with name and countries
-4. Add the map name in `main.go` The `<name>` in `{Name: "<name>"},` should match the `<map-name>` folder at `assets/maps/<map_name>`
-5. Run the generator for your map: `go run . --maps=<map_name>`
+3. Create `assets/maps/<map_name>/info.json` (see below)
+4. Run the generator for your map: `go run . --maps=<map_name>`
 
    By default, `go run .` will process all defined maps.
 
@@ -33,11 +34,13 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
    `go run . --maps=northamerica,world`
 
-6. Find the output folder at `../resources/maps/<map_name>`
-7. Go back to the root directory: `cd ..`
-8. Run Prettier: `npm run format`
+5. Find the output folder at `../resources/maps/<map_name>`
+6. Go back to the root directory: `cd ..`
+7. Run Prettier: `npm run format`
    This rewrites ALL files in place. Git figures out which files are actually changed, don't worry.
    Alternatively, you can either run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
+
+Alternatively, `npm run gen-maps` (from the root directory) runs the generator for all maps and formats the output in one step.
 
 ## Output Files
 
@@ -46,6 +49,8 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 - `../resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
+- `../src/core/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
+- `../resources/lang/en.json` - The `map` section is rewritten with each map's display name. Regenerated on every run, even with `--maps`.
 
 ## Command Line Flags
 
@@ -96,7 +101,11 @@ Example:
 
 ```json
 {
-  "name": "MySampleMap",
+  "id": "MySampleMap",
+  "name": "My Sample Map",
+  "translation_key": "map.mysamplemap",
+  "categories": ["europe"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [396, 364],
@@ -109,7 +118,21 @@ Example:
 
 `coordinates` is x/y position of the nation spawn on the map. Origin is at top left, with x extending right and y extending down
 
-`name` is a `CamelCaseName` of your map. It is used to enable the map in-game.
+`id` is the `CamelCaseName` of your map. It must match the `assets/maps/<map_name>` folder name (lowercased) and becomes the `GameMapType` enum key.
+
+`name` is the map's canonical name — the `GameMapType` enum value. It must never change once the map ships (it is part of the wire format and stored in game records).
+
+`display_name` (optional) is the English display name written to the `map` section of `../resources/lang/en.json`. It defaults to `name` — set it only when the display name should differ from the canonical name (e.g. `MENA`, `Europe (Classic)`).
+
+`translation_key` is the key of the map's display name in `../resources/lang/en.json`. It must be `map.<map_name>`.
+
+`categories` groups the map in the map picker. Each entry must be one of: `featured`, `world`, `europe`, `asia`, `north_america`, `africa`, `south_america`, `oceania`, `antarctica`, `cosmic`, `tournament`, `other`. Maps that straddle regions (e.g. Black Sea, Bering Strait) can list more than one. Add `featured` to show the map in the featured section of the map picker.
+
+`multiplayer_frequency` is how many times the map appears in the public multiplayer playlist. Use 0 (or omit) to keep the map out of the regular rotation.
+
+`featured_rank` (optional, featured maps only) is the map's position in the featured grid (1 = first). Featured maps without a rank sort after ranked ones, alphabetically.
+
+`special_team_count` (optional) is the map's preferred team count in team / special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Omit it for no preference.
 
 `flag` is the code for a country
 
@@ -130,11 +153,14 @@ The country will need to be added to `../src/client/data/countries.json`
 
 ## To Enable In-Game
 
-Using the `name` from your json:
+Everything is generated from the info.json files when the map-generator runs —
+there are no manual steps:
 
-- Add to GameMapType and mapCategories in `../src/core/game/Game.ts`
-- Add to the map playlist in `../src/server/MapPlaylist.ts`
-- Add to the `map` translation object in `../resources/lang/en.json`
+- The `GameMapType` enum and the `maps` list (one `MapInfo` per map) are
+  written to `../src/core/game/Maps.gen.ts`. Do not edit that file by hand.
+- The `map` section of `../resources/lang/en.json` is rewritten with each
+  map's `display_name` (or `name`). Translations to other languages are
+  managed via Crowdin.
 
 ## Notes
 

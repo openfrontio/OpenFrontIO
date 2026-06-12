@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "africa"],
+  "id": "StraitOfGibraltar",
   "map": {
     "height": 1476,
     "num_land_tiles": 1957694,
@@ -14,6 +16,7 @@
     "num_land_tiles": 486917,
     "width": 1450
   },
+  "multiplayer_frequency": 5,
   "name": "Strait of Gibraltar",
   "nations": [
     {
@@ -49,6 +52,7 @@
       "name": "Andalusia"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -64,5 +68,6 @@
         "y": 651
       }
     ]
-  }
+  },
+  "translation_key": "map.straitofgibraltar"
 }

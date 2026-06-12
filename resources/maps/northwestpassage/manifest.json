@@ -196,6 +196,8 @@
       "name": "Zackenberg"
     }
   ],
+  "categories": ["north_america"],
+  "id": "NorthwestPassage",
   "map": {
     "height": 1664,
     "num_land_tiles": 1569905,
@@ -211,6 +213,7 @@
     "num_land_tiles": 379907,
     "width": 1250
   },
+  "multiplayer_frequency": 5,
   "name": "Northwest Passage",
   "nations": [
     {
@@ -318,5 +321,6 @@
       "flag": "northwestterritories",
       "name": "Inuvik"
     }
-  ]
+  ],
+  "translation_key": "map.northwestpassage"
 }

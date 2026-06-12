@@ -4,7 +4,7 @@
  */
 
 import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
-import atlasData from "resources/atlases/msdf-atlas.json";
+import { assetUrl } from "src/core/AssetUrls";
 import type { BMChar, BMKerning, ParsedAtlas } from "./Types";
 import { CHAR_RANGE } from "./Types";
 
@@ -12,15 +12,45 @@ import { CHAR_RANGE } from "./Types";
 // Atlas parsing
 // ---------------------------------------------------------------------------
 
+interface RawMsdfAtlas {
+  info: { size: number };
+  common: { base: number; scaleW: number; scaleH: number };
+  distanceField?: { distanceRange: number };
+  chars: BMChar[];
+  kernings?: BMKerning[];
+}
+
+// Fetched at game-load time rather than statically imported — the JSON is
+// ~320 KB minified and would otherwise sit in the main bundle.
+let atlasData: RawMsdfAtlas | null = null;
+let atlasDataPromise: Promise<void> | null = null;
+
+export function preloadAtlasData(): Promise<void> {
+  atlasDataPromise ??= fetch(assetUrl("atlases/msdf-atlas.json"))
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch msdf-atlas.json: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((json) => {
+      atlasData = json as RawMsdfAtlas;
+    });
+  return atlasDataPromise;
+}
+
 export function parseAtlasData(): ParsedAtlas {
+  if (atlasData === null) {
+    throw new Error("Atlas data not loaded; await preloadAtlasData() first");
+  }
   return {
     fontSize: atlasData.info.size,
     base: atlasData.common.base,
     scaleW: atlasData.common.scaleW,
     scaleH: atlasData.common.scaleH,
-    distanceRange: (atlasData as any).distanceField?.distanceRange ?? 4,
-    chars: atlasData.chars as BMChar[],
-    kernings: (atlasData.kernings ?? []) as BMKerning[],
+    distanceRange: atlasData.distanceField?.distanceRange ?? 4,
+    chars: atlasData.chars,
+    kernings: atlasData.kernings ?? [],
   };
 }
 

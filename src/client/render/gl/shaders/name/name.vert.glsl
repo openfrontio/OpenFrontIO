@@ -28,10 +28,13 @@ uniform float uNameScaleFactor;
 uniform float uNameScaleCap;
 uniform float uTroopSizeMultiplier;
 uniform float uHighlightOwnerID;
+uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor is over (0 = none)
+uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
 
 out vec2 vUV;
 out vec4 vPlayerColor;  // player territory color (rgb) + alpha
-out float vIsHuman;     // 1.0 for human, 0.0 for bot/nation
+out float vNameShade;     // name fill grayscale shade (0.0 = black)
+flat out float vHighlight; // 1.0 when this player is hovered (white glow)
 
 void main() {
   // 1. Decode instance ID → playerIdx, lineIdx, charPos
@@ -45,7 +48,7 @@ void main() {
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd2 = texelFetch(uPlayerData, ivec2(2, playerIdx), 0); // r, g, b, a
-  vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, isHuman, 0
+  vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, nameShade, nameHalfWidth
   vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayerIdx, emojiAtlasIdx, smallID, 0
   float smallID = pd4.z;
 
@@ -54,7 +57,8 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
+    vHighlight = 0.0;
     return;
   }
 
@@ -64,7 +68,8 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
+    vHighlight = 0.0;
     return;
   }
 
@@ -75,7 +80,8 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
+    vHighlight = 0.0;
     return;
   }
 
@@ -109,7 +115,8 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
+    vHighlight = 0.0;
     return;
   }
 
@@ -133,7 +140,8 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
+    vHighlight = 0.0;
     return;
   }
 
@@ -155,8 +163,14 @@ void main() {
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 
-  // 10. UV interpolation across quad
+  // 10. Fade the whole name plate when the cursor is on top of any part of it
+  // so units underneath stay visible. Hit test runs on the CPU (NamePass).
+  float hoverAlpha = (uFadeOwnerID > 0.0 && smallID == uFadeOwnerID)
+    ? uHoverFadeAlpha : 1.0;
+
+  // 11. UV interpolation across quad
   vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
-  vPlayerColor = pd2;       // player territory color (rgb) + alpha
-  vIsHuman = pd3.z;         // 1.0 = human, 0.0 = bot/nation
+  vPlayerColor = vec4(pd2.rgb, pd2.a * hoverAlpha); // player territory color + alpha
+  vNameShade = pd3.z;         // name fill grayscale shade (0.0 = black)
+  vHighlight = isHighlighted ? 1.0 : 0.0;
 }

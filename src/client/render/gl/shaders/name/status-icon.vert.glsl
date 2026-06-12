@@ -28,6 +28,10 @@ uniform float uStatusPad;    // transparent padding in texels per side
 // Configurable layout
 uniform float uStatusRowOffset;  // row Y offset (multiples of uFontBase * nameWorldScale)
 
+uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor is over (0 = none)
+uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
+uniform float uAllianceFlashWindowSec; // seconds before expiry the alliance icon flashes (= renewal prompt offset)
+
 out vec2 vUV;
 out vec2 vLocalUV;               // 0..1 within the icon cell
 flat out int vDiscard;
@@ -35,6 +39,7 @@ flat out float vAllianceFraction; // 0 = no drain effect, >0 = active drain
 flat out vec2 vFadedUV0;         // top-left UV of faded alliance cell
 flat out vec2 vFadedUV1;         // bottom-right UV of faded alliance cell
 flat out float vFlashAlpha;      // traitor flash opacity (1.0 = fully visible)
+out float vHoverAlpha;
 
 // Status flag float array — indexed by icon slot.
 // Slot mapping: 0=crown, 1=traitor, 2=disconnected, 3=alliance,
@@ -85,8 +90,8 @@ void main() {
   // Read player data
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
-  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, [free], [free]
-  vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, [free]
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, smallID, [free]
+  vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, allianceRemainingTicks
 
   // Early out: dead player OR emoji is active
   if (pd1.w <= 0.0 || pd4.y >= 0.0) {
@@ -98,6 +103,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vHoverAlpha = 1.0;
     return;
   }
 
@@ -114,6 +120,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vHoverAlpha = 1.0;
     return;
   }
 
@@ -142,6 +149,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vHoverAlpha = 1.0;
     return;
   }
 
@@ -171,6 +179,11 @@ void main() {
   if (iconSlot == 7) {
     atlasIdx = (pd7.x > 0.5) ? 7 : 8;
   }
+
+  // Fade the status row along with the rest of the name plate when the cursor
+  // is over any part of it. Hit test runs on the CPU (NamePass).
+  vHoverAlpha = (uFadeOwnerID > 0.0 && pd4.z == uFadeOwnerID)
+    ? uHoverFadeAlpha : 1.0;
 
   // Quad world position
   vec2 iconOrigin = vec2(iconX, iconY);
@@ -210,6 +223,19 @@ void main() {
     if (remainingSec <= 15.0 && remainingSec > 0.0) {
       float elapsed = 15.0 - remainingSec;
       float phase = uTime * 2.0 + elapsed * elapsed * 0.1;
+      vFlashAlpha = 0.3 + 0.7 * (0.5 + 0.5 * cos(phase * 6.2832));
+    }
+  }
+
+  // Alliance expiry flash: slot 3 = alliance icon
+  // Window matches the renewal prompt offset so the icon flashes exactly
+  // while the prompt is up. Same pulse as the traitor flash (2 Hz → 5 Hz).
+  if (iconSlot == 3) {
+    float window = uAllianceFlashWindowSec;
+    float remainingSec = pd7.w / 10.0;                 // ticks → seconds
+    if (window > 0.0 && remainingSec <= window && remainingSec > 0.0) {
+      float elapsed = window - remainingSec;
+      float phase = uTime * 2.0 + elapsed * elapsed * (1.5 / window);
       vFlashAlpha = 0.3 + 0.7 * (0.5 + 0.5 * cos(phase * 6.2832));
     }
   }

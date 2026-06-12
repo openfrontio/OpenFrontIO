@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "asia"],
+  "featured_rank": 5,
+  "id": "Asia",
   "map": {
     "height": 1200,
     "num_land_tiles": 1079855,
@@ -14,6 +17,7 @@
     "num_land_tiles": 265625,
     "width": 1000
   },
+  "multiplayer_frequency": 6,
   "name": "Asia",
   "nations": [
     {
@@ -141,5 +145,6 @@
       "flag": "ua",
       "name": "Ukraine"
     }
-  ]
+  ],
+  "translation_key": "map.asia"
 }

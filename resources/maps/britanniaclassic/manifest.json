@@ -1,4 +1,7 @@
 {
+  "categories": ["europe"],
+  "display_name": "Britannia (Classic)",
+  "id": "BritanniaClassic",
   "map": {
     "height": 1396,
     "num_land_tiles": 933571,
@@ -14,6 +17,7 @@
     "num_land_tiles": 228703,
     "width": 1000
   },
+  "multiplayer_frequency": 0,
   "name": "Britannia Classic",
   "nations": [
     {
@@ -131,5 +135,6 @@
       "flag": "1_Franks",
       "name": "Franks"
     }
-  ]
+  ],
+  "translation_key": "map.britanniaclassic"
 }

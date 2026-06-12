@@ -3,6 +3,7 @@ import {
   Duos,
   GameMode,
   HumansVsNations,
+  maps,
   MessageType,
   PublicGameModifiers,
   Quads,
@@ -21,7 +22,10 @@ export function normaliseMapKey(mapName: string): string {
 
 export function getMapName(mapName: string | undefined): string | null {
   if (!mapName) return null;
-  return translateText(`map.${normaliseMapKey(mapName)}`);
+  const translationKey =
+    maps.find((m) => m.type === mapName)?.translationKey ??
+    `map.${normaliseMapKey(mapName)}`;
+  return translateText(translationKey);
 }
 
 /**
@@ -516,7 +520,6 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.ATTACK_FAILED:
     case MessageType.ALLIANCE_REJECTED:
     case MessageType.ALLIANCE_BROKEN:
-    case MessageType.UNIT_CAPTURED_BY_ENEMY:
     case MessageType.UNIT_DESTROYED:
     case MessageType.NUKE_DETONATED:
       return severityColors["fail"];

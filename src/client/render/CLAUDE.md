@@ -49,6 +49,7 @@ each frame (and animate from local time, e.g. the spawn-overlay breath).
 | `gl/Camera.ts`            | World↔screen math; mutated externally each frame via `setCameraState`                                                                                                 |
 | `gl/RenderSettings.ts`    | Typed view of `render-settings.json` (tuning knobs)                                                                                                                   |
 | `gl/render-settings.json` | All per-pass tuning constants (alpha, radii, colors, etc.)                                                                                                            |
+| `gl/*-theme.json`         | Theme data (player/team palettes, color-derivation knobs) — the active one is combined into `settings.theme` at runtime                                               |
 | `gl/passes/`              | One file per pass — see "Pass conventions" below                                                                                                                      |
 | `gl/utils/`               | Cross-pass helpers: `GlUtils` (program/shader compile), `TileCodec` (`OWNER_MASK` etc.), `NukeTrajectory` (Bezier math), `Affiliation`, `HeatManager`, `GpuResources` |
 | `gl/shaders/`             | `.glsl` source files (`?raw` imported by passes)                                                                                                                      |
@@ -143,6 +144,14 @@ bundled.
 constants. Passes read their slice (`settings.spawnOverlay`, `settings.bar`,
 etc.) at construct time and use it in `draw`. The debug GUI in `gl/debug/`
 gives a live-editable view of the same object during development.
+
+Theme data (player/team palettes, color-derivation knobs) lives in sibling
+theme JSONs (`gl/default-theme.json`, `gl/colorblind-theme.json`);
+`createRenderSettings()` combines the active one with `render-settings.json`
+into the `settings.theme` slice (the colorblind graphics override swaps the
+slice in `applyGraphicsOverrides`). The theme module in `src/client/theme/`
+builds its allocators and color derivations from the same theme JSONs — see
+`ThemeProvider.ts`.
 
 ## Adding a new pass
 

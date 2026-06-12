@@ -150,9 +150,17 @@ export class SpawnOverlayPass {
       const c = this.centers[i];
       dataA[i * 4 + 0] = c.x;
       dataA[i * 4 + 1] = c.y;
-      dataA[i * 4 + 2] = c.r;
-      dataA[i * 4 + 3] = c.g;
-      dataB[i * 4 + 0] = c.b;
+      if (c.isSelf) {
+        // Self ring pulses white (1,1,1) → gold (1,0.84,0) in phase with the
+        // breath so one end of the pulse always contrasts with the terrain.
+        dataA[i * 4 + 2] = 1;
+        dataA[i * 4 + 3] = 1 - 0.16 * breathRadius;
+        dataB[i * 4 + 0] = 1 - breathRadius;
+      } else {
+        dataA[i * 4 + 2] = c.r;
+        dataA[i * 4 + 3] = c.g;
+        dataB[i * 4 + 0] = c.b;
+      }
       dataB[i * 4 + 1] = c.isSelf ? 1 : 0;
       dataB[i * 4 + 2] = c.isTeammate ? 1 : 0;
       dataB[i * 4 + 3] = 0;

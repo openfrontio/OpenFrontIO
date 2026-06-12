@@ -1,10 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameType } from "../../../core/game/Game";
+import { GameMode, GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";
+
+const COLLUSION_WARNING_CLOSED_KEY = "hasClosedCollusionWarning";
 
 @customElement("heads-up-message")
 export class HeadsUpMessage extends LitElement implements Controller {
@@ -12,6 +14,10 @@ export class HeadsUpMessage extends LitElement implements Controller {
 
   @state()
   private isVisible = false;
+
+  @state()
+  private hasClosedCollusionWarning =
+    localStorage.getItem(COLLUSION_WARNING_CLOSED_KEY) !== null;
 
   @state()
   private isPaused = false;
@@ -139,6 +145,12 @@ export class HeadsUpMessage extends LitElement implements Controller {
       : translateText("heads_up_message.choose_spawn");
   }
 
+  private onCloseCollusionWarning = (): void => {
+    localStorage.setItem(COLLUSION_WARNING_CLOSED_KEY, "true");
+    this.hasClosedCollusionWarning = true;
+    this.requestUpdate();
+  };
+
   render() {
     return html`
       <div style="pointer-events: none;">
@@ -179,6 +191,31 @@ export class HeadsUpMessage extends LitElement implements Controller {
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}
               >
                 ${this.getMessage()}
+              </div>
+            `
+          : null}
+        ${this.game?.inSpawnPhase() &&
+        this.game.config().gameConfig().gameMode === GameMode.FFA &&
+        this.game.config().gameConfig().gameType === GameType.Public &&
+        !this.hasClosedCollusionWarning
+          ? html`
+              <div
+                class="fixed top-[25%] left-1/2 -translate-x-1/2 z-[799]
+                            inline-flex flex-col items-center justify-center min-h-8 lg:min-h-10
+                            w-fit max-w-[90vw]
+                            bg-amber-500/70 rounded-md lg:rounded-lg
+                            backdrop-blur-xs text-white text-md lg:text-xl px-3 lg:px-4 py-3
+                            text-center break-words"
+                style="word-wrap: break-word; hyphens: auto; pointer-events: auto;"
+                @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+              >
+                <div>${translateText("heads_up_message.ffa_collusion")}</div>
+                <button
+                  class="mt-2 px-3 py-1 rounded bg-black/20 hover:bg-black/30 text-sm"
+                  @click=${this.onCloseCollusionWarning}
+                >
+                  ${translateText("heads_up_message.dont_show_again")}
+                </button>
               </div>
             `
           : null}
