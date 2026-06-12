@@ -1,7 +1,6 @@
 import { Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
-import Color from "colorjs.io";
 import { PseudoRandom } from "../../core/PseudoRandom";
 import { simpleHash } from "../../core/Util";
 extend([lchPlugin]);
@@ -75,14 +74,12 @@ export function selectDistinctColorIndex(
     throw new Error("No assigned colors");
   }
 
-  const assignedLabColors = assignedColors.map(toColor);
-
   let maxDeltaE = 0;
   let maxIndex = 0;
 
   for (let i = 0; i < availableColors.length; i++) {
     const color = availableColors[i];
-    const deltaE = minDeltaE(toColor(color), assignedLabColors);
+    const deltaE = minDeltaE(color, assignedColors);
     if (deltaE > maxDeltaE) {
       maxDeltaE = deltaE;
       maxIndex = i;
@@ -91,20 +88,11 @@ export function selectDistinctColorIndex(
   return maxIndex;
 }
 
-/** Smallest delta-E 2000 distance from `lab1` to any of the assigned colors. */
-function minDeltaE(lab1: Color, assignedLabColors: Color[]) {
-  return assignedLabColors.reduce((min, assigned) => {
-    return Math.min(min, deltaE2000(lab1, assigned));
+/** Smallest delta-E 2000 distance from `color` to any of the assigned colors. */
+function minDeltaE(color: Colord, assignedColors: Colord[]) {
+  return assignedColors.reduce((min, assigned) => {
+    // colord's lab plugin .delta() is CIEDE2000 normalized to 0..1; only
+    // relative magnitudes matter here.
+    return Math.min(min, color.delta(assigned));
   }, Infinity);
-}
-
-/** Perceptual distance between two colors using the CIEDE2000 formula. */
-function deltaE2000(c1: Color, c2: Color): number {
-  return c1.deltaE(c2, "2000");
-}
-
-/** Convert a colord color to a colorjs.io LAB color for delta-E math. */
-function toColor(colord: Colord): Color {
-  const lab = colord.toLab();
-  return new Color("lab", [lab.l, lab.a, lab.b]);
 }
