@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "north_america"],
+  "featured_rank": 3,
+  "id": "NorthAmerica",
   "map": {
     "height": 1448,
     "num_land_tiles": 1243623,
@@ -14,7 +17,8 @@
     "num_land_tiles": 294494,
     "width": 1400
   },
-  "name": "NorthAmerica",
+  "multiplayer_frequency": 5,
+  "name": "North America",
   "nations": [
     {
       "coordinates": [1625, 1040],
@@ -361,5 +365,6 @@
       "flag": "Massachusetts",
       "name": "Massachusetts"
     }
-  ]
+  ],
+  "translation_key": "map.northamerica"
 }

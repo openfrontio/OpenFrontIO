@@ -1,5 +1,10 @@
 {
+  "id": "Pluto",
   "name": "Pluto",
+  "translation_key": "map.pluto",
+  "categories": ["cosmic"],
+  "multiplayer_frequency": 6,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [396, 364],

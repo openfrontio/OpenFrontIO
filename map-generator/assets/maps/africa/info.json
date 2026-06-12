@@ -1,5 +1,10 @@
 {
+  "id": "Africa",
   "name": "Africa",
+  "translation_key": "map.africa",
+  "categories": ["featured", "africa"],
+  "multiplayer_frequency": 7,
+  "featured_rank": 6,
   "nations": [
     {
       "coordinates": [1144, 1894],

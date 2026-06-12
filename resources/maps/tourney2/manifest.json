@@ -1,4 +1,6 @@
 {
+  "categories": ["tournament"],
+  "id": "Tourney2",
   "map": {
     "height": 1500,
     "num_land_tiles": 1024327,
@@ -14,7 +16,8 @@
     "num_land_tiles": 254300,
     "width": 750
   },
-  "name": "Tourney2",
+  "multiplayer_frequency": 0,
+  "name": "Tourney 3 Teams",
   "nations": [
     {
       "coordinates": [339, 987],
@@ -28,5 +31,6 @@
       "coordinates": [750, 278],
       "name": "North"
     }
-  ]
+  ],
+  "translation_key": "map.tourney2"
 }

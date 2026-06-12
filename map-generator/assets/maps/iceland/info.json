@@ -1,5 +1,9 @@
 {
+  "id": "Iceland",
   "name": "Iceland",
+  "translation_key": "map.iceland",
+  "categories": ["europe"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [455, 1115],

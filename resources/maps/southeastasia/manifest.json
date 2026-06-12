@@ -156,6 +156,9 @@
       "name": "Paracel Islands"
     }
   ],
+  "categories": ["asia"],
+  "display_name": "Southeast Asia",
+  "id": "SoutheastAsia",
   "map": {
     "height": 1672,
     "num_land_tiles": 977094,
@@ -171,7 +174,8 @@
     "num_land_tiles": 235008,
     "width": 1406
   },
-  "name": "Southeast Asia",
+  "multiplayer_frequency": 5,
+  "name": "SoutheastAsia",
   "nations": [
     {
       "coordinates": [1319, 76],
@@ -328,5 +332,6 @@
       "flag": "Wa State",
       "name": "Wa State"
     }
-  ]
+  ],
+  "translation_key": "map.southeastasia"
 }

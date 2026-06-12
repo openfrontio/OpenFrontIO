@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "Korea",
   "map": {
     "height": 2148,
     "num_land_tiles": 1193914,
@@ -14,6 +16,7 @@
     "num_land_tiles": 294064,
     "width": 546
   },
+  "multiplayer_frequency": 5,
   "name": "Korea",
   "nations": [
     {
@@ -191,5 +194,6 @@
       "flag": "jp",
       "name": "Saga"
     }
-  ]
+  ],
+  "translation_key": "map.korea"
 }

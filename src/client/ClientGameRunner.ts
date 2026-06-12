@@ -71,9 +71,9 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
   applyDarkModeOverride,
   applyGraphicsOverrides,
-  createDebugGui,
   createRenderSettings,
   deepAssign,
+  preloadAtlasData,
   GameView as WebGLGameView,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
@@ -451,8 +451,12 @@ async function createClientGame(
       mapLoader,
     );
   }
+  // Kick off the font-atlas fetch so it overlaps with worker init; the
+  // render passes need it parsed before createWebGLView runs.
+  const atlasDataLoad = preloadAtlasData();
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
+  await atlasDataLoad;
   const gameView = new GameView(
     worker,
     config,
@@ -519,11 +523,21 @@ async function createClientGame(
       { signal: graphicsListenerAbort.signal },
     );
 
-    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    let debugGui: { open(): void; destroy(): void } | null = null;
+    let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
       if (debugGui === null) {
-        debugGui = createDebugGui(view.getSettings());
-        debugGui.open();
+        if (debugGuiLoading) return;
+        debugGuiLoading = true;
+        import("./render/gl/debug/index")
+          .then(({ createDebugGui }) => {
+            debugGui = createDebugGui(view.getSettings());
+            debugGui.open();
+          })
+          .finally(() => {
+            debugGuiLoading = false;
+          });
       } else {
         debugGui.destroy();
         debugGui = null;

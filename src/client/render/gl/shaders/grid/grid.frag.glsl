@@ -6,6 +6,7 @@ uniform float uCellSize;
 uniform float uZoom;
 uniform float uFontSize;
 uniform sampler2D uGlyphTex;
+uniform float uOpacity;
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -29,7 +30,7 @@ void main() {
 
   // --- Grid lines (at cell boundaries) ---
   if (localX < lineW || localY < lineW) {
-    fragColor = vec4(1.0, 1.0, 1.0, 0.35);
+    fragColor = vec4(1.0, 1.0, 1.0, uOpacity);
     return;
   }
 
@@ -41,7 +42,6 @@ void main() {
   float gw = fontSize * 0.6 * px;   // glyph width in world units
   float gh = fontSize * px;          // glyph height
   float pad = 8.0 * px;              // padding from cell corner
-  float bgPad = 2.0 * px;            // background extends beyond text
 
   float lx = localX - pad;
   float ly = localY - pad;
@@ -73,32 +73,24 @@ void main() {
 
   float totalW = float(nc) * gw;
 
-  // Check label background area (text + padding)
-  if (lx < -bgPad || ly < -bgPad || lx >= totalW + bgPad || ly >= gh + bgPad)
-    discard;
-
   // Check if on actual glyph
-  if (lx >= 0.0 && ly >= 0.0 && lx < totalW && ly < gh) {
-    int ci = int(floor(lx / gw));
-    if (ci < nc) {
-      int g;
-      if (ci == 0) g = c0;
-      else if (ci == 1) g = c1;
-      else if (ci == 2) g = c2;
-      else g = c3;
-
-      float cu = fract(lx / gw);
-      float cv = ly / gh;
-      float au = (float(g) + cu) / GLYPH_COUNT;
-      float mask = texture(uGlyphTex, vec2(au, cv)).r;
-
-      if (mask > 0.3) {
-        fragColor = vec4(1.0, 1.0, 1.0, 0.9);
-        return;
-      }
-    }
+  if (lx < 0.0 || ly < 0.0 || lx >= totalW || ly >= gh) {
+    discard;
   }
 
-  // Background behind label
-  fragColor = vec4(0.08, 0.08, 0.08, 0.7);
+  int ci = int(floor(lx / gw));
+  if (ci < nc) {
+    int g;
+    if (ci == 0) g = c0;
+    else if (ci == 1) g = c1;
+    else if (ci == 2) g = c2;
+    else g = c3;
+
+    float cu = fract(lx / gw);
+    float cv = ly / gh;
+    float au = (float(g) + cu) / GLYPH_COUNT;
+    vec4 gColor = texture(uGlyphTex, vec2(au, cv));
+    fragColor = gColor.a * vec4(gColor.rgb, uOpacity);
+    return;
+  }
 }

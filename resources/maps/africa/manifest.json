@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "africa"],
+  "featured_rank": 6,
+  "id": "Africa",
   "map": {
     "height": 2032,
     "num_land_tiles": 2183186,
@@ -14,6 +17,7 @@
     "num_land_tiles": 537561,
     "width": 974
   },
+  "multiplayer_frequency": 7,
   "name": "Africa",
   "nations": [
     {
@@ -196,5 +200,6 @@
       "flag": "ga",
       "name": "Gabon"
     }
-  ]
+  ],
+  "translation_key": "map.africa"
 }

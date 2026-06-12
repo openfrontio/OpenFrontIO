@@ -1,5 +1,10 @@
 {
+  "id": "BeringSea",
   "name": "Bering Sea",
+  "translation_key": "map.beringsea",
+  "categories": ["asia", "north_america"],
+  "multiplayer_frequency": 5,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [1043, 121],

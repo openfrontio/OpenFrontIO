@@ -1,5 +1,6 @@
 export type { AttackRingInput } from "../types";
-export { createDebugGui } from "./debug/index";
+// createDebugGui is intentionally not re-exported here — it pulls lil-gui and
+// the debug GUI into the main bundle; dynamically import "./debug/index".
 export type {
   GameViewEventMap,
   GameViewEventType,
@@ -11,6 +12,7 @@ export type {
 export { GameView } from "./GameView";
 export { GraphicsOverridesSchema } from "./GraphicsOverrides";
 export type { GraphicsOverrides } from "./GraphicsOverrides";
+export { preloadAtlasData } from "./passes/name-pass/AtlasData";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
 export {
   applyDarkModeOverride,

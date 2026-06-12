@@ -36,6 +36,18 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
+  // Zero-allocation neighbor iteration (cardinal only), in W, E, N, S order.
+  forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
+  // Writes the cardinal neighbors of ref into out (W, E, N, S order) and
+  // returns the count. out must have length >= 4; reuse it across calls to
+  // avoid allocation in hot loops.
+  neighbors4(ref: TileRef, out: TileRef[]): number;
+  // Zero-allocation neighbor iteration including diagonals, in dx-major
+  // order: (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1).
+  forEachNeighborWithDiag(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void;
   isWater(ref: TileRef): boolean;
   isShore(ref: TileRef): boolean;
   cost(ref: TileRef): number;
@@ -196,9 +208,16 @@ export class GameMapImpl implements GameMap {
   }
 
   isOceanShore(ref: TileRef): boolean {
-    return (
-      this.isLand(ref) && this.neighbors(ref).some((tr) => this.isOcean(tr))
-    );
+    if (!this.isLand(ref)) {
+      return false;
+    }
+    const w = this.width_;
+    const x = this.refToX[ref];
+    if (x !== 0 && this.isOcean(ref - 1)) return true;
+    if (x !== w - 1 && this.isOcean(ref + 1)) return true;
+    if (ref >= w && this.isOcean(ref - w)) return true;
+    if (ref < (this.height_ - 1) * w && this.isOcean(ref + w)) return true;
+    return false;
   }
 
   isOcean(ref: TileRef): boolean {
@@ -288,9 +307,16 @@ export class GameMapImpl implements GameMap {
   }
 
   isBorder(ref: TileRef): boolean {
-    return this.neighbors(ref).some(
-      (tr) => this.ownerID(tr) !== this.ownerID(ref),
-    );
+    const w = this.width_;
+    const x = this.refToX[ref];
+    const owner = this.ownerID(ref);
+    if (x !== 0 && this.ownerID(ref - 1) !== owner) return true;
+    if (x !== w - 1 && this.ownerID(ref + 1) !== owner) return true;
+    if (ref >= w && this.ownerID(ref - w) !== owner) return true;
+    if (ref < (this.height_ - 1) * w && this.ownerID(ref + w) !== owner) {
+      return true;
+    }
+    return false;
   }
 
   hasDefenseBonus(ref: TileRef): boolean {
@@ -341,6 +367,51 @@ export class GameMapImpl implements GameMap {
     if (x !== w - 1) neighbors.push(ref + 1);
 
     return neighbors;
+  }
+
+  forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void {
+    const w = this.width_;
+    const x = this.refToX[ref];
+
+    if (x !== 0) callback(ref - 1);
+    if (x !== w - 1) callback(ref + 1);
+    if (ref >= w) callback(ref - w);
+    if (ref < (this.height_ - 1) * w) callback(ref + w);
+  }
+
+  neighbors4(ref: TileRef, out: TileRef[]): number {
+    const w = this.width_;
+    const x = this.refToX[ref];
+    let n = 0;
+
+    if (x !== 0) out[n++] = ref - 1;
+    if (x !== w - 1) out[n++] = ref + 1;
+    if (ref >= w) out[n++] = ref - w;
+    if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
+    return n;
+  }
+
+  forEachNeighborWithDiag(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    const w = this.width_;
+    const x = this.refToX[ref];
+    const hasN = ref >= w;
+    const hasS = ref < (this.height_ - 1) * w;
+
+    if (x !== 0) {
+      if (hasN) callback(ref - 1 - w);
+      callback(ref - 1);
+      if (hasS) callback(ref - 1 + w);
+    }
+    if (hasN) callback(ref - w);
+    if (hasS) callback(ref + w);
+    if (x !== w - 1) {
+      if (hasN) callback(ref + 1 - w);
+      callback(ref + 1);
+      if (hasS) callback(ref + 1 + w);
+    }
   }
 
   forEachTile(fn: (tile: TileRef) => void): void {

@@ -1,4 +1,6 @@
 {
+  "categories": ["north_america"],
+  "id": "Montreal",
   "map": {
     "height": 1500,
     "num_land_tiles": 1954940,
@@ -14,6 +16,7 @@
     "num_land_tiles": 483571,
     "width": 764
   },
+  "multiplayer_frequency": 6,
   "name": "Montreal",
   "nations": [
     {
@@ -76,5 +79,6 @@
       "flag": "Quebec",
       "name": "Pointe-aux-Trembles"
     }
-  ]
+  ],
+  "translation_key": "map.montreal"
 }

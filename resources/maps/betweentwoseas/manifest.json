@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "BetweenTwoSeas",
   "map": {
     "height": 1060,
     "num_land_tiles": 1478803,
@@ -14,7 +16,8 @@
     "num_land_tiles": 364078,
     "width": 888
   },
-  "name": "BetweenTwoSeas",
+  "multiplayer_frequency": 5,
+  "name": "Between Two Seas",
   "nations": [
     {
       "coordinates": [40, 674],
@@ -91,5 +94,6 @@
       "flag": "Circassia",
       "name": "Circassia"
     }
-  ]
+  ],
+  "translation_key": "map.betweentwoseas"
 }

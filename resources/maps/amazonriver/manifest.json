@@ -1,4 +1,6 @@
 {
+  "categories": ["south_america"],
+  "id": "AmazonRiver",
   "map": {
     "height": 276,
     "num_land_tiles": 1150819,
@@ -14,6 +16,7 @@
     "num_land_tiles": 284639,
     "width": 2768
   },
+  "multiplayer_frequency": 3,
   "name": "Amazon River",
   "nations": [
     {
@@ -121,5 +124,6 @@
       "flag": "br",
       "name": "Baia"
     }
-  ]
+  ],
+  "translation_key": "map.amazonriver"
 }

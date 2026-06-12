@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "MareNostrum",
   "map": {
     "height": 1448,
     "num_land_tiles": 2644620,
@@ -14,6 +16,7 @@
     "num_land_tiles": 652112,
     "width": 1424
   },
+  "multiplayer_frequency": 6,
   "name": "Mare Nostrum",
   "nations": [
     {
@@ -206,5 +209,6 @@
       "flag": "Amazigh flag",
       "name": "Numidia"
     }
-  ]
+  ],
+  "translation_key": "map.marenostrum"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Alps",
   "map": {
     "height": 1836,
     "num_land_tiles": 3672000,
@@ -14,6 +16,7 @@
     "num_land_tiles": 918000,
     "width": 1000
   },
+  "multiplayer_frequency": 4,
   "name": "Alps",
   "nations": [
     {
@@ -56,5 +59,6 @@
       "flag": "li",
       "name": "Liechtenstein"
     }
-  ]
+  ],
+  "translation_key": "map.alps"
 }
