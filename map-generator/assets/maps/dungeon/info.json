@@ -1,0 +1,41 @@
+{
+  "id": "Dungeon",
+  "name": "Dungeon",
+  "translation_key": "map.dungeon",
+  "categories": ["other"],
+  "multiplayer_frequency": 8,
+  "nations": [
+    {
+      "name": "Dragon",
+      "coordinates": [1983, 285]
+    },
+    {
+      "name": "Wizard",
+      "coordinates": [929, 698]
+    },
+    {
+      "name": "Necromancer",
+      "coordinates": [322, 1096]
+    },
+    {
+      "name": "Skeleton",
+      "coordinates": [155, 540]
+    },
+    {
+      "name": "Knight",
+      "coordinates": [1675, 1250]
+    },
+    {
+      "name": "Assassin",
+      "coordinates": [1170, 89]
+    },
+    {
+      "name": "Alchemist",
+      "coordinates": [186, 166]
+    },
+    {
+      "name": "Goblin",
+      "coordinates": [1681, 816]
+    }
+  ]
+}
