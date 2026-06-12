@@ -222,7 +222,8 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
-  private keybindAndEvent: Map<string, ((type: KeyboardEvent) => any)[]> = new Map();
+  private keybindAndEvent: Map<string, ((type: KeyboardEvent) => any)[]> =
+    new Map();
   private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
@@ -330,6 +331,7 @@ export class InputHandler {
         this.keybinds[i],
         (e: KeyboardEvent) => {
           const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
+
           if (matchedBuild !== null) {
             this.setGhostStructure(matchedBuild);
           }
