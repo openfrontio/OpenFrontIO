@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -221,12 +222,11 @@ func generateMapsTS(infos []mapInfo) error {
 
 // generateEnJSON rewrites the "map" section of resources/lang/en.json with
 // each map's display name, keyed by folder name. Existing keys in the
-// section that are not maps (e.g. "featured", "random") are preserved, in
-// their original order, ahead of the map entries.
+// section that are not maps (e.g. "featured", "random") are preserved.
 //
-// The file is parsed as a sequence of top-level (key, raw value) pairs —
-// json.Decoder preserves encounter order and json.RawMessage keeps every
-// other section byte-for-byte, so only the "map" object changes.
+// The whole file is round-tripped through encoding/json, which marshals
+// object keys in sorted order — a no-op for everything but the map section
+// because en.json is kept sorted (see tests/EnJsonSorted.test.ts).
 func generateEnJSON(infos []mapInfo) error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -238,105 +238,39 @@ func generateEnJSON(infos []mapInfo) error {
 		return fmt.Errorf("failed to read en.json: %w", err)
 	}
 
-	type section struct {
-		key string
-		raw json.RawMessage
-	}
-	var sections []section
-	mapIndex := -1
-
-	dec := json.NewDecoder(strings.NewReader(string(content)))
-	if _, err := dec.Token(); err != nil { // opening brace
+	var root map[string]interface{}
+	if err := json.Unmarshal(content, &root); err != nil {
 		return fmt.Errorf("failed to parse en.json: %w", err)
 	}
-	for dec.More() {
-		keyTok, err := dec.Token()
-		if err != nil {
-			return fmt.Errorf("failed to parse en.json: %w", err)
-		}
-		key, ok := keyTok.(string)
-		if !ok {
-			return fmt.Errorf("unexpected token %v at the top level of en.json", keyTok)
-		}
-		var raw json.RawMessage
-		if err := dec.Decode(&raw); err != nil {
-			return fmt.Errorf("failed to parse en.json %q section: %w", key, err)
-		}
-		if key == "map" {
-			mapIndex = len(sections)
-		}
-		sections = append(sections, section{key, raw})
-	}
-	if mapIndex < 0 {
-		return fmt.Errorf("en.json has no top-level \"map\" section")
+	oldSection, ok := root["map"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("en.json has no top-level \"map\" object")
 	}
 
-	// Walk the existing map section in order, keeping non-map entries.
 	mapFolders := make(map[string]bool, len(infos))
 	for _, info := range infos {
 		mapFolders[strings.ToLower(info.ID)] = true
 	}
-	type entry struct{ key, value string }
-	var entries []entry
-	mapDec := json.NewDecoder(strings.NewReader(string(sections[mapIndex].raw)))
-	if _, err := mapDec.Token(); err != nil { // opening brace
-		return fmt.Errorf("failed to parse the \"map\" section in en.json: %w", err)
-	}
-	for mapDec.More() {
-		keyTok, err := mapDec.Token()
-		if err != nil {
-			return fmt.Errorf("failed to parse the \"map\" section in en.json: %w", err)
-		}
-		key, ok := keyTok.(string)
-		if !ok {
-			return fmt.Errorf("unexpected token %v in the \"map\" section of en.json", keyTok)
-		}
-		var value string
-		if err := mapDec.Decode(&value); err != nil {
-			return fmt.Errorf("en.json map.%s: expected a string value: %w", key, err)
-		}
+	section := make(map[string]interface{}, len(oldSection))
+	for key, value := range oldSection {
 		if !mapFolders[key] {
-			entries = append(entries, entry{key, value})
+			section[key] = value
 		}
 	}
 	for _, info := range infos {
-		entries = append(entries, entry{strings.ToLower(info.ID), info.displayName()})
+		section[strings.ToLower(info.ID)] = info.displayName()
 	}
+	root["map"] = section
 
-	var mapSection strings.Builder
-	mapSection.WriteString("{")
-	for i, e := range entries {
-		if i > 0 {
-			mapSection.WriteString(",")
-		}
-		mapSection.WriteString(fmt.Sprintf("\n    %s: %s", jsonString(e.key), jsonString(e.value)))
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(root); err != nil {
+		return fmt.Errorf("failed to serialize en.json: %w", err)
 	}
-	mapSection.WriteString("\n  }")
-	sections[mapIndex].raw = json.RawMessage(mapSection.String())
-
-	var b strings.Builder
-	b.WriteString("{\n")
-	for i, s := range sections {
-		if i > 0 {
-			b.WriteString(",\n")
-		}
-		b.WriteString(fmt.Sprintf("  %s: %s", jsonString(s.key), s.raw))
-	}
-	b.WriteString("\n}\n")
-
-	if err := os.WriteFile(enPath, []byte(b.String()), 0644); err != nil {
+	if err := os.WriteFile(enPath, b.Bytes(), 0644); err != nil {
 		return fmt.Errorf("failed to write en.json: %w", err)
 	}
 	return nil
-}
-
-// jsonString encodes s as a JSON string literal without HTML escaping.
-func jsonString(s string) string {
-	var b strings.Builder
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(s); err != nil {
-		panic(err) // strings always encode
-	}
-	return strings.TrimRight(b.String(), "\n")
 }
