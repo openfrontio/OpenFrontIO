@@ -3,7 +3,7 @@
   "name": "Giant World Map",
   "translation_key": "map.giantworldmap",
   "categories": ["world"],
-  "multiplayer_frequency": 0,
+  "multiplayer_frequency": 10,
   "nations": [
     {
       "coordinates": [2309, 535],
