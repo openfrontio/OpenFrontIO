@@ -227,7 +227,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
-  private keybindAndEvent: [[string, KeybindEntry]]
+  private keybindAndEvent: [[string, KeybindEntry]];
   private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
@@ -362,7 +362,9 @@ export class InputHandler {
         return "Shift+" + t;
       }),
     );
-    buildKeybinds = [... new Set(buildKeybinds)].filter((v): v is string => v != null);
+    buildKeybinds = [...new Set(buildKeybinds)].filter(
+      (v): v is string => v != null,
+    );
     for (const i of buildKeybinds) {
       this.addKeybindAndEvent(
         i,
@@ -978,8 +980,8 @@ export class InputHandler {
   ) {
     const entry: KeybindEntry = {
       handler: event,
-      conditions
-    }
+      conditions,
+    };
     this.keybindAndEvent.push([keybind, entry]);
   }
 
