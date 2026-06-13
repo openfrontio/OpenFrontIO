@@ -33,6 +33,7 @@
  */
 
 import { assetUrl } from "src/core/AssetUrls";
+import type { Config } from "src/core/configuration/Config";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
@@ -135,9 +136,6 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_MIRV_WARHEAD,
 ]);
 
-/** Simulation tick duration — one tick is 100ms (see Config.ts). */
-const TICK_INTERVAL_MS = 100;
-
 /** Values per smoothing segment in the flat `smoothSegs` array:
  *  (instanceIdx, lastX, lastY, x, y). The push site and the read loop must
  *  agree on this width — it's the record size, not a tunable. */
@@ -147,7 +145,7 @@ const SMOOTH_SEG_STRIDE = 5;
  *  CPU-side (not from the shader's instance position) so per-frame position
  *  smoothing doesn't re-roll the flicker every frame. Matches the formula the
  *  vertex shader previously applied to its rendered position. */
-function flickerHashByte(x: number, y: number): number {
+export function flickerHashByte(x: number, y: number): number {
   const f = x * 0.1731 + y * 0.3179;
   return ((f - Math.floor(f)) * 255) | 0;
 }
@@ -223,6 +221,8 @@ export class UnitPass {
   // missile buffer in drawMissiles.
   private smoothSegs: number[] = [];
   private lastUnitsUpdateMs = 0;
+  /** Simulation tick duration in ms (Config.msPerTick). */
+  private tickIntervalMs: number;
 
   private quadBuf: WebGLBuffer;
   private paletteTex: WebGLTexture;
@@ -245,11 +245,13 @@ export class UnitPass {
     header: RendererConfig,
     paletteTex: WebGLTexture,
     settings: RenderSettings,
+    config: Config,
   ) {
     this.gl = gl;
     this.settings = settings;
     this.mapW = header.mapWidth;
     this.paletteTex = paletteTex;
+    this.tickIntervalMs = config.msPerTick();
 
     // Build unitType string → atlas column mapping
     for (let i = 0; i < header.unitTypes.length; i++) {
@@ -592,7 +594,7 @@ export class UnitPass {
     if (segs.length === 0) return;
     const alpha = Math.min(
       1,
-      (performance.now() - this.lastUnitsUpdateMs) / TICK_INTERVAL_MS,
+      (performance.now() - this.lastUnitsUpdateMs) / this.tickIntervalMs,
     );
     const f32 = this.missileBuf.float32;
     for (let i = 0; i < segs.length; i += SMOOTH_SEG_STRIDE) {
