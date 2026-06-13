@@ -363,7 +363,7 @@ export class InputHandler {
       }),
     );
     buildKeybinds = [...new Set(buildKeybinds)].filter(
-      (v): v is string => v != null,
+      (v): v is string => v !== null,
     );
     for (const i of buildKeybinds) {
       this.addKeybindAndEvent(
