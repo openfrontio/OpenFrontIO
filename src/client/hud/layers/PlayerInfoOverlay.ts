@@ -37,7 +37,8 @@ import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
+const swordIcon = assetUrl("images/SwordIcon.svg");
+const swordIconAquarius = assetUrl("images/SwordIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
@@ -212,7 +213,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   private displayUnitCount(player: PlayerView, type: UnitType, icon: string) {
     return !this.game.config().isUnitDisabled(type)
       ? html`<div
-          class="flex items-center justify-center gap-0.5 lg:gap-1 p-0.5 lg:p-1 border rounded-md border-gray-500 text-[10px] lg:text-xs w-9 lg:w-12 h-6 lg:h-7"
+          class="flex items-center justify-center gap-0.5 lg:gap-1 p-0.5 lg:p-1 border rounded-md border-gray-500 text-[10px] lg:text-xs w-9 lg:w-12 h-5 lg:h-6"
           translate="no"
         >
           <img
@@ -302,76 +303,75 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
-      <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
+      <div class="flex items-start gap-1 p-1 lg:p-1.5">
         <!-- Left: Gold & Troop bar -->
-        <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
+        <div class="flex flex-1 flex-col gap-1 shrink-0 w-28 md:w-36">
           <div class="flex items-center gap-1">
             <div
-              class="flex flex-1 items-center justify-center px-1 py-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
+              class="flex flex-1 items-center justify-center gap-1 shrink-0 px-1 py-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm"
               translate="no"
             >
               <img src=${goldCoinIcon} width="13" height="13" />
               <span class="px-0.5">${renderNumber(player.gold())}</span>
             </div>
             <div
-              class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
-              0
-                ? "text-aquarius"
-                : "text-white/40"} drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+              class="flex flex-1 items-center justify-center gap-1 shrink-0 px-1 py-0.5 border rounded-md ${attackingTroops > 0 ? "border-aquarius text-aquarius" : "border-white/40 text-white/40"} font-bold text-sm"
               translate="no"
             >
-              <span class="flex items-center gap-px leading-none text-xs"
-                ><img
-                  class="w-2.5 h-2.5 inline-block ${attackingTroops > 0
-                    ? ""
-                    : "brightness-0 invert opacity-40"}"
-                  src=${attackingTroops > 0 ? soldierIconAquarius : soldierIcon}
-                  alt=""
-                  aria-hidden="true"
-                />↑</span
-              >
-              <span class="tabular-nums leading-none text-sm mt-0.5"
-                >${renderTroops(attackingTroops)}</span
-              >
+              <img
+                class="inline-block ${
+                  attackingTroops > 0 ? "" : "brightness-0 invert opacity-40"
+                }"
+                src=${attackingTroops > 0 ? swordIconAquarius : swordIcon}
+                width="13"
+                height="13"
+                alt=""
+                aria-hidden="true"
+              />
+              <span class="px-0.5 tabular-nums">${renderTroops(attackingTroops)}</span>
             </div>
           </div>
-          <div class="w-28 md:w-36" translate="no">
+          <div class="w-full translate="no">
             ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
           </div>
         </div>
         <!-- Right: Player identity + Units below -->
         <div class="flex flex-col justify-between self-stretch">
           <div
-            class="flex items-center gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
+            class="flex items-center gap-2 font-bold text-sm lg:text-lg ml-1 lg:-mt-0.5 min-h-6 ${this.getPlayerNameColor(
               isFriendly ?? false,
             )}"
           >
-            ${player.cosmetics.flag
-              ? html`<img
-                  class="h-6 object-contain"
-                  src=${assetUrl(player.cosmetics.flag!)}
-                />`
-              : html``}
+            ${
+              player.cosmetics.flag
+                ? html`<img
+                    class="h-6 object-contain"
+                    src=${assetUrl(player.cosmetics.flag!)}
+                  />`
+                : html``
+            }
             <span>${player.displayName()}</span>
             ${this.getRelationSmiley(player, myPlayer)}
-            ${playerTeam !== "" && player.type() !== PlayerType.Bot
-              ? html`<div class="flex flex-col leading-tight">
-                  <span class="text-gray-400 text-xs font-normal"
-                    >${playerType}</span
-                  >
-                  <span class="text-xs font-normal text-gray-400"
-                    >[<span
-                      style="color: ${themeProvider
-                        .current()
-                        .teamColor(player.team()!)
-                        .toHex()}"
-                      >${playerTeam}</span
-                    >]</span
-                  >
-                </div>`
-              : html`<span class="text-gray-400 text-xs font-normal"
-                  >${playerType}</span
-                >`}
+            ${
+              playerTeam !== "" && player.type() !== PlayerType.Bot
+                ? html`<div class="flex flex-col leading-tight">
+                    <span class="text-gray-400 text-xs font-normal"
+                      >${playerType}</span
+                    >
+                    <span class="text-xs font-normal text-gray-400"
+                      >[<span
+                        style="color: ${themeProvider
+                          .current()
+                          .teamColor(player.team()!)
+                          .toHex()}"
+                        >${playerTeam}</span
+                      >]</span
+                    >
+                  </div>`
+                : html`<span class="text-gray-400 text-xs font-normal"
+                    >(${playerType})</span
+                  >`
+            }
             ${this.renderPlayerNameIcons(player)} ${allianceHtml ?? ""}
           </div>
           <div class="flex gap-0.5 lg:gap-1 items-center mt-0.5">
@@ -496,7 +496,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-t-none sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
