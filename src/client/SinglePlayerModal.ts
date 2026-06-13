@@ -198,6 +198,7 @@ export class SinglePlayerModal extends BaseModal {
     });
   }
 
+  /** Render the single-player setup body: game config settings. */
   protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
@@ -290,6 +291,9 @@ export class SinglePlayerModal extends BaseModal {
                   defaultValue: this.defaultNationCount,
                   labelKey: "single_modal.nations",
                   disabledKey: "single_modal.nations_disabled",
+                  // Random map: show "Map default" without the count, which
+                  // would otherwise reveal the hidden map.
+                  hideDefaultValue: this.useRandomMap,
                 },
                 toggles: [
                   {

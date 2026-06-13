@@ -36,6 +36,8 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
+  /** When true (a "Random" lobby), hide the nation count so it can't reveal the map. */
+  @property({ type: Boolean }) randomMap: boolean = false;
 
   private get theme(): Theme {
     return themeProvider.current();
@@ -49,12 +51,20 @@ export class LobbyTeamView extends LitElement {
    * controls the nation count via the slider.
    */
   private get effectiveNationCount(): number {
+    // A "Random" lobby must not reveal the map's nation count — not in the
+    // header, and not via anything derived from it (team-card totals, team
+    // sizing, player totals). Treat it as 0 everywhere; the header shows
+    // "Map default" via its own randomMap branch instead.
+    if (this.randomMap) {
+      return 0;
+    }
     if (this.isPublicGame && this.teamCount === HumansVsNations) {
       return this.clients.length;
     }
     return this.nationCount;
   }
 
+  /** Recompute the team preview when an input affecting team layout changes. */
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
@@ -63,7 +73,8 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
       changedProperties.has("nationCount") ||
-      changedProperties.has("isPublicGame")
+      changedProperties.has("isPublicGame") ||
+      changedProperties.has("randomMap")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
@@ -71,6 +82,7 @@ export class LobbyTeamView extends LitElement {
     }
   }
 
+  /** Render the player/nation summary header and the team or FFA roster. */
   render() {
     return html`
       <div class="border-t border-white/10 pt-6">
@@ -83,10 +95,13 @@ export class LobbyTeamView extends LitElement {
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
-            ${this.effectiveNationCount}
-            ${this.effectiveNationCount === 1
-              ? translateText("host_modal.nation_player")
-              : translateText("host_modal.nation_players")}
+            ${this.randomMap
+              ? html`${translateText("common.map_default")}
+                ${translateText("host_modal.nation_players")}`
+              : html`${this.effectiveNationCount}
+                ${this.effectiveNationCount === 1
+                  ? translateText("host_modal.nation_player")
+                  : translateText("host_modal.nation_players")}`}
           </div>
         </div>
         <div

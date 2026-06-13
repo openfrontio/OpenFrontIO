@@ -16,6 +16,12 @@ export class FluentSlider extends LitElement {
   @property({ type: String }) disabledKey = "";
   @property({ type: Number }) defaultValue: number | undefined = undefined;
   @property({ type: String }) defaultLabelKey = "";
+  /**
+   * When true, render only the default label (not the numeric value) while the
+   * slider sits at its default position. Used to hide the map's nation count
+   * for "Random" lobbies, where the number would reveal the map.
+   */
+  @property({ type: Boolean }) hideDefaultValue = false;
 
   @state() private isEditing = false;
 
@@ -29,6 +35,14 @@ export class FluentSlider extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  /** Restore the slider to its default value and notify listeners. */
+  private resetToDefault() {
+    if (this.defaultValue === undefined) return;
+    this.value = this.defaultValue;
+    this.isEditing = false;
+    this.dispatchValueChange();
   }
 
   private handleSliderInput(e: Event) {
@@ -71,11 +85,23 @@ export class FluentSlider extends LitElement {
     this.updateComplete.then(() => this.numberInput?.focus());
   }
 
+  /** Render the range input, its value label, and the optional reset button. */
   render() {
+    // For a hidden default (a "Random" lobby), the real value would reveal the
+    // map's nation count via the thumb's *position*, not just the number. While
+    // untouched at the default, park the thumb at the track's center so it
+    // gives nothing away. Dragging/typing still reports the real input value.
+    const atHiddenDefault =
+      this.hideDefaultValue &&
+      this.defaultValue !== undefined &&
+      this.value === this.defaultValue;
+    const displayValue = atHiddenDefault
+      ? Math.round((this.min + this.max) / 2)
+      : this.value;
     const percentage =
       this.max === this.min
         ? 0
-        : ((this.value - this.min) / (this.max - this.min)) * 100;
+        : ((displayValue - this.min) / (this.max - this.min)) * 100;
     return html`
       <div
         class="flex flex-col items-center justify-center gap-1 w-full text-center"
@@ -85,7 +111,7 @@ export class FluentSlider extends LitElement {
           .min=${this.min}
           .max=${this.max}
           .step=${this.step}
-          .valueAsNumber=${this.value}
+          .valueAsNumber=${displayValue}
           style="background: linear-gradient(to right, var(--color-malibu-blue) 0%, var(--color-malibu-blue) ${percentage}%, rgba(255, 255, 255, 0.15) ${percentage}%, rgba(255, 255, 255, 0.15) 100%); background-size: 100% 6px; background-repeat: no-repeat; background-position: center; border-radius: 9999px;"
           class="w-full h-6 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none 
                  [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors
@@ -107,7 +133,7 @@ export class FluentSlider extends LitElement {
                 type="number"
                 .min=${this.min}
                 .max=${this.max}
-                .valueAsNumber=${this.value}
+                .valueAsNumber=${displayValue}
                 class="w-[60px] bg-black/60 text-white border border-white/20 text-center rounded text-sm p-1 leading-none font-bold font-inherit mt-1 focus:outline-none focus:border-blue-500"
                 @input=${this.handleNumberInput}
                 @blur=${() => {
@@ -136,12 +162,28 @@ export class FluentSlider extends LitElement {
                   : this.defaultValue !== undefined &&
                       this.value === this.defaultValue &&
                       this.defaultLabelKey
-                    ? html`${this.value}
-                        <span class="text-white/40 uppercase"
-                          >(${translateText(this.defaultLabelKey)})</span
+                    ? this.hideDefaultValue
+                      ? html`<span class="text-white/40 uppercase"
+                          >${translateText(this.defaultLabelKey)}</span
                         >`
+                      : html`${this.value}
+                          <span class="text-white/40 uppercase"
+                            >(${translateText(this.defaultLabelKey)})</span
+                          >`
                     : this.value}
               </span>`}
+          ${this.hideDefaultValue &&
+          this.defaultValue !== undefined &&
+          this.value !== this.defaultValue &&
+          this.defaultLabelKey
+            ? html`<button
+                type="button"
+                class="text-xs lowercase text-white/40 hover:text-white underline underline-offset-2 mt-1 cursor-pointer bg-transparent border-none"
+                @click=${this.resetToDefault}
+              >
+                ↺ ${translateText(this.defaultLabelKey)}
+              </button>`
+            : ""}
         </div>
       </div>
     `;
