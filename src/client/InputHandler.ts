@@ -618,15 +618,13 @@ export class InputHandler {
         this.activeKeys.delete(this.keybinds.zoomOut);
       }
 
-      for (const item of this.keybindAndEvent) {
+      outerLoop: for (const item of this.keybindAndEvent) {
         if (this.keybindMatchesEvent(e, item[0])) {
-          let allConditionsFulfilled = true;
           for (const i of item[1].conditions) {
             if (!i(e)) {
-              allConditionsFulfilled = false;
+              continue outerLoop
             }
           }
-          if (!allConditionsFulfilled) continue;
           e.preventDefault();
           item[1].handler(e);
         }
