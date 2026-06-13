@@ -227,7 +227,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
-  private keybindAndEvent: [[string, KeybindEntry]];
+  private keybindAndEvent: Array<[string, KeybindEntry]> = [];
   private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
