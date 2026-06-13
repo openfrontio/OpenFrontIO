@@ -684,6 +684,8 @@ export class GameView implements GameMap {
         continue;
       }
 
+      unit.applyDerivedRest();
+
       // Once a plan is past its final step, `newTile` remains clamped to the last path tile.
       // Drop finished plans to avoid repeatedly marking static units as updated each tick.
       if (dt > 0 && stepIndex >= lastIndex) {

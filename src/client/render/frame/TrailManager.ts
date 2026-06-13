@@ -11,6 +11,7 @@
  */
 
 import type { UnitState } from "../types";
+import { SMOOTHED_NUKE_TYPES } from "../types";
 
 interface UnitTrail {
   ownerID: number;
@@ -69,14 +70,20 @@ export class TrailManager {
         trail = { ownerID: unit.ownerID, tiles: new Set(), lastPosStamped: -1 };
         this.unitTrails.set(id, trail);
       }
+      // Smoothed nukes render lastPos→pos interpolated per frame (UnitPass);
+      // stamp their trail only up to lastPos so the tail never leads the
+      // rendered missile.
+      const head = SMOOTHED_NUKE_TYPES.has(unit.unitType)
+        ? unit.lastPos
+        : unit.pos;
       if (trail.lastPosStamped === -1) {
-        // First sighting — just stamp current pos
-        this.stamp(unit.pos, trail.ownerID);
-        trail.tiles.add(unit.pos);
-        trail.lastPosStamped = unit.pos;
-      } else if (trail.lastPosStamped !== unit.pos) {
-        this.bresenham(trail.lastPosStamped, unit.pos, trail);
-        trail.lastPosStamped = unit.pos;
+        // First sighting — just stamp the current head
+        this.stamp(head, trail.ownerID);
+        trail.tiles.add(head);
+        trail.lastPosStamped = head;
+      } else if (trail.lastPosStamped !== head) {
+        this.bresenham(trail.lastPosStamped, head, trail);
+        trail.lastPosStamped = head;
       }
     }
   }
