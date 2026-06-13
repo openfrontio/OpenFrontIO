@@ -16,12 +16,14 @@ uniform float uZoom;
 uniform float uIconSize;
 uniform float uDotsThreshold;
 uniform float uScaleFactor;
+uniform float uIconGrowZoom;
 
 // Text sizing
 uniform float uFontSize;
 uniform float uAtlasScaleH;
 uniform float uBase;
 uniform float uLevelScale;
+uniform float uLevelOffsetY;  // extra height above icon, in halfIconSize units
 
 out vec2 vUV;
 flat out float vAlive;
@@ -37,6 +39,9 @@ void main() {
   float iconScale;
   if (uZoom <= uDotsThreshold) {
     iconScale = 0.0;  // hidden in dots mode
+  } else if (uZoom >= uIconGrowZoom) {
+    // World-anchored: grow with the map past this zoom, matching the icons.
+    iconScale = uZoom / uIconGrowZoom;
   } else {
     iconScale = min(1.0, uZoom / uScaleFactor);
   }
@@ -78,7 +83,9 @@ void main() {
   // Position above icon center
   vec2 center = vec2(worldX + 0.5, worldY + 0.5);
   float baselineY = -uBase * 0.5;
-  float yOff = -halfIconSize - levelScale * uBase * 0.6;  // above icon top edge
+  // above icon top edge; uLevelOffsetY raises (or lowers) it proportionally
+  float yOff =
+    -halfIconSize * (1.0 + uLevelOffsetY) - levelScale * uBase * 0.6;
 
   vec2 glyphOrigin = vec2(
     cursorX + m0.y,  // + xoffset

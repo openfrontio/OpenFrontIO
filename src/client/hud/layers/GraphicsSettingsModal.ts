@@ -320,7 +320,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private currentClassicIcons(): boolean {
     return (
-      this.userSettings.graphicsOverrides().structure?.classicIcons ?? false
+      this.userSettings.graphicsOverrides().structure?.classicIcons ?? true
     );
   }
 

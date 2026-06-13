@@ -65,9 +65,11 @@ export class StructureLevelPass {
   private uIconSize: WebGLUniformLocation;
   private uDotsThreshold: WebGLUniformLocation;
   private uScaleFactor: WebGLUniformLocation;
+  private uIconGrowZoom: WebGLUniformLocation;
   private uDistRange: WebGLUniformLocation;
   private uOutlineWidth: WebGLUniformLocation;
   private uLevelScale: WebGLUniformLocation;
+  private uLevelOffsetY: WebGLUniformLocation;
   private uHighlightMask: WebGLUniformLocation;
   private uHighlightDimAlpha: WebGLUniformLocation;
 
@@ -152,9 +154,11 @@ export class StructureLevelPass {
       "uDotsThreshold",
     )!;
     this.uScaleFactor = gl.getUniformLocation(this.program, "uScaleFactor")!;
+    this.uIconGrowZoom = gl.getUniformLocation(this.program, "uIconGrowZoom")!;
     this.uDistRange = gl.getUniformLocation(this.program, "uDistRange")!;
     this.uOutlineWidth = gl.getUniformLocation(this.program, "uOutlineWidth")!;
     this.uLevelScale = gl.getUniformLocation(this.program, "uLevelScale")!;
+    this.uLevelOffsetY = gl.getUniformLocation(this.program, "uLevelOffsetY")!;
     this.uHighlightMask = gl.getUniformLocation(
       this.program,
       "uHighlightMask",
@@ -290,9 +294,11 @@ export class StructureLevelPass {
     gl.uniform1f(this.uIconSize, ss.iconSize);
     gl.uniform1f(this.uDotsThreshold, ss.dotsZoomThreshold);
     gl.uniform1f(this.uScaleFactor, ss.iconScaleFactorZoomedOut);
+    gl.uniform1f(this.uIconGrowZoom, ss.iconGrowZoom);
     gl.uniform1f(this.uDistRange, this.distanceRange);
     gl.uniform1f(this.uOutlineWidth, sl.outlineWidth);
     gl.uniform1f(this.uLevelScale, sl.scale);
+    gl.uniform1f(this.uLevelOffsetY, sl.offsetY);
     gl.uniform1i(this.uHighlightMask, this.highlightMask);
     gl.uniform1f(this.uHighlightDimAlpha, ss.highlightDimAlpha);
 
