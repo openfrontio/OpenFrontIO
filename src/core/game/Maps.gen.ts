@@ -813,7 +813,7 @@ export const maps: readonly MapInfo[] = [
     id: "WarshipWarship",
     type: GameMapType.WarshipWarship,
     translationKey: "map.warshipwarship",
-    categories: ["other"],
+    categories: ["arcade", "new"],
     multiplayerFrequency: 3,
   },
   {
