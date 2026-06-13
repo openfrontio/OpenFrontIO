@@ -195,6 +195,7 @@ export class GameView implements GameMap {
       playerStatus: new Map(),
       relationMatrix: new Uint8Array(0),
       relationSize: 0,
+      relationsDirty: false,
       allianceClusters: new Map(),
       nukeTelegraphs: [],
       attackRings: [],
@@ -563,12 +564,17 @@ export class GameView implements GameMap {
     // change rarely (teams only when a player is added) — recompute only
     // when one of those inputs arrived this tick. buildRelationMatrix
     // writes into a reusable module-level buffer, so skipping the call
-    // leaves f.relationMatrix's contents intact.
+    // leaves f.relationMatrix's contents intact. f.relationsDirty lets the
+    // upload layer skip the GPU push (and the full-map border recompute it
+    // triggers) on unchanged ticks.
     if (this._relationsDirty) {
       this._relationsDirty = false;
       const rel = buildRelationMatrix(this._playerStates, this._teams);
       f.relationMatrix = rel.matrix;
       f.relationSize = rel.size;
+      f.relationsDirty = true;
+    } else {
+      f.relationsDirty = false;
     }
     if (this._clustersDirty) {
       this._clustersDirty = false;

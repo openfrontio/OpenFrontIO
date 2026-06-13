@@ -413,9 +413,11 @@ function mountWebGLFrameLoop(
     const frameData = gameView.frameData();
     view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
 
-    // Structures and railroads normally skip GPU upload unless marked dirty, now force
+    // Structures, railroads and relations normally skip GPU upload unless
+    // marked dirty, now force
     view.updateStructures(frameData.units as Map<number, UnitState>);
     view.uploadRailroadState(frameData.railroadState);
+    view.updateRelations(frameData.relationMatrix, frameData.relationSize);
 
     builder.update(gameView);
   };
