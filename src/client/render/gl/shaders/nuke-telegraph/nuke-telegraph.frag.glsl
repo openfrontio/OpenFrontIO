@@ -4,11 +4,14 @@ precision highp float;
 in vec2 vLocal;
 flat in float vInnerRadius;
 flat in float vOuterRadius;
+flat in float vRelation;        // 0 = self, 1 = ally, 2 = enemy
 
 uniform float uTime;            // seconds
 uniform vec4 uTelegraphStyle;   // (strokeWidth, dashLen, gapLen, rotationSpeed)
 uniform vec4 uTelegraphAlpha;   // (baseAlpha, pulseAmplitude, pulseSpeed, fillAlphaOffset)
-uniform vec3 uTelegraphColor;
+uniform vec3 uColorSelf;
+uniform vec3 uColorAlly;
+uniform vec3 uColorEnemy;
 
 out vec4 fragColor;
 
@@ -52,5 +55,8 @@ void main() {
   float alpha = max(max(fillAlpha, strokeAlpha), outerAlpha);
   if (alpha < 0.01) discard;
 
-  fragColor = vec4(uTelegraphColor, alpha);
+  vec3 color = vRelation < 0.5 ? uColorSelf
+             : vRelation < 1.5 ? uColorAlly
+             : uColorEnemy;
+  fragColor = vec4(color, alpha);
 }

@@ -15,6 +15,7 @@ uniform float uFillDarken;      // HSV value multiplier on icon fill
 uniform float uBorderDarken;    // HSV value multiplier on icon border
 uniform float uIconAlpha;       // global multiplier on final icon alpha
 uniform vec3  uIconColor;       // color of the inner icon glyph (was white)
+uniform float uIconDarken;      // >0: glyph = darkened player color instead of uIconColor
 
 in vec2  vLocalPos;
 in vec2  vAtlasUV;
@@ -132,7 +133,8 @@ void main() {
   }
 
   // Composite: tinted icon over player-colored shape
-  vec3 finalRGB = mix(bgColor.rgb, uIconColor, iconAlpha);
+  vec3 glyphColor = uIconDarken > 0.0 ? darken(fillColor.rgb, uIconDarken) : uIconColor;
+  vec3 finalRGB = mix(bgColor.rgb, glyphColor, iconAlpha);
 
   // Red X overlay for units marked for deletion
   if (vMarkedForDeletion > 0.5) {

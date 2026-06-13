@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "BosphorusStraits",
   "map": {
     "height": 612,
     "num_land_tiles": 382332,
@@ -14,6 +16,7 @@
     "num_land_tiles": 93711,
     "width": 500
   },
+  "multiplayer_frequency": 3,
   "name": "Bosphorus Straits",
   "nations": [
     {
@@ -127,6 +130,7 @@
       "name": "Esenyurt"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -142,5 +146,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.bosphorusstraits"
 }

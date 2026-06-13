@@ -113,6 +113,12 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
     if (gu.packedMotionPlans) {
       transfers.push(gu.packedMotionPlans.buffer);
     }
+    if (gu.packedPlayerUpdates) {
+      transfers.push(gu.packedPlayerUpdates.buffer);
+    }
+    if (gu.packedAttackUpdates) {
+      transfers.push(gu.packedAttackUpdates.buffer);
+    }
   }
 
   ctx.postMessage(

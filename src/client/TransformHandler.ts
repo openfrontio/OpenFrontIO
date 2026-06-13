@@ -1,7 +1,7 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { Cell } from "../core/game/Game";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "./InputHandler";
+import { GameView, PlayerView, UnitView } from "./view";
 
 export class GoToPlayerEvent implements GameEvent {
   constructor(
@@ -227,8 +227,9 @@ export class TransformHandler {
   centerCamera() {
     this.clearTarget();
     const player = this.game.myPlayer();
-    if (!player || !player.nameLocation()) return;
-    this.target = new Cell(player.nameLocation().x, player.nameLocation().y);
+    const nameLocation = player?.nameLocation();
+    if (!nameLocation) return;
+    this.target = new Cell(nameLocation.x, nameLocation.y);
     this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 

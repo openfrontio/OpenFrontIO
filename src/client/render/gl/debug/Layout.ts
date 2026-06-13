@@ -325,10 +325,22 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       toggle(s.name, "fillUsePlayerColor", d.name, "Fill = Player Color"),
       slider(s.name, "emojiRowOffset", d.name, 0, 5, 0.1, "Emoji Row Offset"),
       slider(s.name, "statusRowOffset", d.name, 0, 5, 0.1, "Status Row Offset"),
+      slider(s.name, "hoverFadeAlpha", d.name, 0, 1, 0.05, "Hover Fade Alpha"),
+      slider(s.name, "hoverGlowWidth", d.name, 0, 8, 0.25, "Hover Glow Width"),
+      slider(s.name, "hoverGlowAlpha", d.name, 0, 1, 0.05, "Hover Glow Alpha"),
     ]),
 
     folder("FX", [
       slider(s.fx, "shockwaveRingWidth", d.fx, 0.01, 0.2, 0.005),
+      slider(
+        s.fx,
+        "attackRingScreenPx",
+        d.fx,
+        5,
+        60,
+        1,
+        "Attack Ring Size (px)",
+      ),
       slider(
         s.fx,
         "nukeShockwaveDurationMs",
@@ -482,7 +494,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
         "markerXRadius",
         d.nukeTrajectory,
         2,
-        16,
+        64,
         1,
         "X Marker (px)",
       ),

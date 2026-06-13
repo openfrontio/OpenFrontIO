@@ -206,6 +206,25 @@ export class UserSettingModal extends BaseModal {
     console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
   }
 
+  /** Whether colorblind mode is currently enabled in the graphics overrides. */
+  private colorblindMode(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
+
+  /** Flip the colorblind-mode graphics override and persist it. */
+  private toggleColorblindMode() {
+    const overrides = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...overrides,
+      accessibility: {
+        ...overrides.accessibility,
+        colorblind: !this.colorblindMode(),
+      },
+    });
+  }
+
   private toggleEmojis() {
     this.userSettings.toggleEmojis();
 
@@ -740,6 +759,15 @@ export class UserSettingModal extends BaseModal {
         id="dark-mode-toggle"
         .checked=${this.userSettings.darkMode()}
         @change=${this.toggleDarkMode}
+      ></setting-toggle>
+
+      <!-- 🎨 Colorblind Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.colorblind_label")}"
+        description="${translateText("user_setting.colorblind_desc")}"
+        id="colorblind-toggle"
+        .checked=${this.colorblindMode()}
+        @change=${this.toggleColorblindMode}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->

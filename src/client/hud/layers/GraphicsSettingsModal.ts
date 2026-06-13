@@ -20,6 +20,18 @@ const NAME_CULL_MIN = 0;
 const NAME_CULL_MAX = 0.05;
 const NAME_CULL_STEP = 0.001;
 
+const HOVER_FADE_MIN = 0;
+const HOVER_FADE_MAX = 1;
+const HOVER_FADE_STEP = 0.05;
+
+const HOVER_GLOW_WIDTH_MIN = 0;
+const HOVER_GLOW_WIDTH_MAX = 8;
+const HOVER_GLOW_WIDTH_STEP = 0.5;
+
+const HOVER_GLOW_ALPHA_MIN = 0;
+const HOVER_GLOW_ALPHA_MAX = 1;
+const HOVER_GLOW_ALPHA_STEP = 0.05;
+
 const HIGHLIGHT_FILL_MIN = 0;
 const HIGHLIGHT_FILL_MAX = 1;
 const HIGHLIGHT_FILL_STEP = 0.01;
@@ -39,6 +51,10 @@ const TERRITORY_SAT_STEP = 0.01;
 const TERRITORY_ALPHA_MIN = 0;
 const TERRITORY_ALPHA_MAX = 1;
 const TERRITORY_ALPHA_STEP = 0.01;
+
+const COORDINATE_GRID_OPACITY_MIN = 0;
+const COORDINATE_GRID_OPACITY_MAX = 1;
+const COORDINATE_GRID_OPACITY_STEP = 0.01;
 
 // Train track "draw distance" is presented inverted: a higher slider value means
 // tracks stay visible when more zoomed out, i.e. a lower railMinZoom.
@@ -148,6 +164,27 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentHoverFade(): number {
+    return (
+      this.userSettings.graphicsOverrides().name?.hoverFadeAlpha ??
+      renderDefaults.name.hoverFadeAlpha
+    );
+  }
+
+  private currentHoverGlowWidth(): number {
+    return (
+      this.userSettings.graphicsOverrides().name?.hoverGlowWidth ??
+      renderDefaults.name.hoverGlowWidth
+    );
+  }
+
+  private currentHoverGlowAlpha(): number {
+    return (
+      this.userSettings.graphicsOverrides().name?.hoverGlowAlpha ??
+      renderDefaults.name.hoverGlowAlpha
+    );
+  }
+
   private patchName(patch: Partial<GraphicsOverrides["name"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -219,6 +256,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentCoordinateGridOpacity(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.coordinateGridOpacity ??
+      renderDefaults.mapOverlay.coordinateGridOpacity
+    );
+  }
+
   private currentRailMinZoom(): number {
     return (
       this.userSettings.graphicsOverrides().railroad?.railMinZoom ??
@@ -258,6 +302,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchMapOverlay({ territoryAlpha: value });
   }
 
+  private onCoordinateGridOpacityChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ coordinateGridOpacity: value });
+  }
+
   private onRailDrawDistanceChange(event: Event) {
     const drawDistance = parseFloat((event.target as HTMLInputElement).value);
     // Invert: higher draw distance => tracks visible when more zoomed out.
@@ -288,6 +337,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  /** Merge a patch into the accessibility graphics overrides and persist it. */
+  private patchAccessibility(
+    patch: Partial<GraphicsOverrides["accessibility"]>,
+  ) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      accessibility: { ...current.accessibility, ...patch },
+    });
+    this.requestUpdate();
+  }
+
   private currentSpecialEffects(): boolean {
     return (
       this.userSettings.graphicsOverrides().passEnabled?.fx ??
@@ -299,6 +360,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
   }
 
+  /** Whether colorblind mode is currently enabled. */
+  private currentColorblind(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
+
+  /** Toggle colorblind-friendly colors. */
+  private onToggleColorblind() {
+    this.patchAccessibility({ colorblind: !this.currentColorblind() });
+  }
+
   private onNameScaleChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ nameScaleFactor: value });
@@ -307,6 +380,21 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private onNameCullChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ cullThreshold: value });
+  }
+
+  private onHoverFadeChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchName({ hoverFadeAlpha: value });
+  }
+
+  private onHoverGlowWidthChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchName({ hoverGlowWidth: value });
+  }
+
+  private onHoverGlowAlphaChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchName({ hoverGlowAlpha: value });
   }
 
   private currentDarkNames(): boolean {
@@ -330,6 +418,9 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
     const nameScale = this.currentNameScale();
     const nameCull = this.currentNameCull();
+    const hoverFade = this.currentHoverFade();
+    const hoverGlowWidth = this.currentHoverGlowWidth();
+    const hoverGlowAlpha = this.currentHoverGlowAlpha();
     const namesColored = !this.currentDarkNames();
     const classicIcons = this.currentClassicIcons();
     const highlightFill = this.currentHighlightFill();
@@ -337,8 +428,10 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const highlightThicken = this.currentHighlightThicken();
     const territorySat = this.currentTerritorySat();
     const territoryAlpha = this.currentTerritoryAlpha();
+    const coordinateGridOpacity = this.currentCoordinateGridOpacity();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
+    const colorblind = this.currentColorblind();
 
     return html`
       <div
@@ -422,6 +515,81 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${nameCull.toFixed(3)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.hover_fade_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.hover_fade_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HOVER_FADE_MIN}
+                  max=${HOVER_FADE_MAX}
+                  step=${HOVER_FADE_STEP}
+                  .value=${String(hoverFade)}
+                  @input=${this.onHoverFadeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${hoverFade.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.hover_glow_width_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.hover_glow_width_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HOVER_GLOW_WIDTH_MIN}
+                  max=${HOVER_GLOW_WIDTH_MAX}
+                  step=${HOVER_GLOW_WIDTH_STEP}
+                  .value=${String(hoverGlowWidth)}
+                  @input=${this.onHoverGlowWidthChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${hoverGlowWidth.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.hover_glow_alpha_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.hover_glow_alpha_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${HOVER_GLOW_ALPHA_MIN}
+                  max=${HOVER_GLOW_ALPHA_MAX}
+                  step=${HOVER_GLOW_ALPHA_STEP}
+                  .value=${String(hoverGlowAlpha)}
+                  @input=${this.onHoverGlowAlphaChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${hoverGlowAlpha.toFixed(2)}
               </div>
             </div>
 
@@ -605,6 +773,35 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             >
               <div class="flex-1">
                 <div class="font-medium">
+                  ${translateText(
+                    "graphics_setting.coordinate_grid_opacity_label",
+                  )}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText(
+                    "graphics_setting.coordinate_grid_opacity_desc",
+                  )}
+                </div>
+                <input
+                  type="range"
+                  min=${COORDINATE_GRID_OPACITY_MIN}
+                  max=${COORDINATE_GRID_OPACITY_MAX}
+                  step=${COORDINATE_GRID_OPACITY_STEP}
+                  .value=${String(coordinateGridOpacity)}
+                  @input=${this.onCoordinateGridOpacityChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${coordinateGridOpacity.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
                   ${translateText("graphics_setting.rail_distance_label")}
                 </div>
                 <div class="text-sm text-slate-400">
@@ -670,6 +867,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_accessibility")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleColorblind}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.colorblind_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.colorblind_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${colorblind
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

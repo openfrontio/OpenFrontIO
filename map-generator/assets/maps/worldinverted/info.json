@@ -1,5 +1,9 @@
 {
+  "id": "WorldInverted",
   "name": "World Inverted",
+  "translation_key": "map.worldinverted",
+  "categories": ["world"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "name": "Titan Submersible",
@@ -49,7 +53,6 @@
       "name": "Atlantis",
       "flag": ""
     },
-
     {
       "coordinates": [2420, 230],
       "name": "RMS Lusitania",
@@ -250,7 +253,6 @@
       "name": "ARA San Juan",
       "flag": "ar"
     },
-
     {
       "coordinates": [1500, 610],
       "name": "Pacific",
@@ -326,7 +328,6 @@
       "name": "Weddell",
       "flag": ""
     },
-
     {
       "coordinates": [120, 1050],
       "name": "Weddell Plain",
@@ -382,7 +383,6 @@
       "name": "Nazca Ridge",
       "flag": ""
     },
-
     {
       "coordinates": [1450, 333],
       "name": "Mendocino",
@@ -464,7 +464,6 @@
       "flag": ""
     }
   ],
-
   "additionalNations": [
     {
       "name": "TCG Dumlupınar",
@@ -777,7 +776,6 @@
       "name": "SS Monroe",
       "flag": "us"
     },
-
     {
       "name": "Wave Goodbye",
       "flag": ""
@@ -898,7 +896,6 @@
       "name": "Red November",
       "flag": "ussr"
     },
-
     {
       "coordinates": [2326, 303],
       "name": "Ocean Ranger",
@@ -1019,7 +1016,6 @@
       "name": "SS Kiche Maru",
       "flag": "jp"
     },
-
     {
       "coordinates": [2030, 480],
       "name": "Gulf of Merica",
@@ -1295,7 +1291,6 @@
       "name": "South-Sandwich",
       "flag": ""
     },
-
     {
       "coordinates": [1255, 920],
       "name": "Challenger Bay",

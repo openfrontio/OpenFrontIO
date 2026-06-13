@@ -2,7 +2,6 @@ import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import {
   formatPercentage,
@@ -10,6 +9,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { GameView, PlayerView } from "../../view";
 
 interface TeamEntry {
   teamName: string;

@@ -10,7 +10,6 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
-import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -30,6 +29,7 @@ import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
+import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -174,7 +174,9 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
 
-export class SendStartGameEvent implements GameEvent {}
+export class SendToggleGameStartTimer implements GameEvent {
+  constructor() {}
+}
 
 export class Transport {
   private socket: WebSocket | null = null;
@@ -266,7 +268,9 @@ export class Transport {
       this.onSendUpdateGameConfigIntent(e),
     );
 
-    this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
+    this.eventBus.on(SendToggleGameStartTimer, (e) =>
+      this.onSendToggleGameStartTimer(e),
+    );
   }
 
   private startPing() {
@@ -647,8 +651,8 @@ export class Transport {
     });
   }
 
-  private onSendStartGame() {
-    this.sendIntent({ type: "start_game" });
+  private onSendToggleGameStartTimer(event: SendToggleGameStartTimer) {
+    this.sendIntent({ type: "toggle_game_start_timer" });
   }
 
   private sendIntent(intent: Intent) {

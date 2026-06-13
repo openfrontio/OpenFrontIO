@@ -157,24 +157,23 @@ export type ClanTagResolution = {
 };
 
 /**
- * The clan-tag ownership rule, shared by every PrivilegeChecker:
+ * The clan-tag ownership rule:
  *   - member of the clan             -> keep the tag
  *   - not a member, tag not reserved -> fictional tag, keep it
  *   - otherwise                      -> drop it (impersonation)
- * `reservedTags` is every registered tag (uppercase); null means the reserved
- * list is unavailable (cosmetics infra still loading), in which case an
- * unverifiable tag counts as reserved and is dropped fail-closed.
+ * `reservedTags` is every registered tag (uppercase).
  */
 function decideClanTag(
   censoredTag: string | null,
   ownedClanTags: string[],
-  reservedTags: Set<string> | null,
+  reservedTags: Set<string>,
 ): ClanTagResolution {
   if (censoredTag === null) return { tag: null, dropped: false };
   const tag = censoredTag.toUpperCase();
   const isMember = ownedClanTags.some((t) => t.toUpperCase() === tag);
-  const isReserved = reservedTags === null || reservedTags.has(tag);
-  if (isMember || !isReserved) return { tag: censoredTag, dropped: false };
+  if (isMember || !reservedTags.has(tag)) {
+    return { tag: censoredTag, dropped: false };
+  }
   return { tag: null, dropped: true };
 }
 
@@ -372,13 +371,13 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
     return censorWithMatcher(username, clanTag, defaultMatcher);
   }
 
-  // No reserved-tag list while cosmetics infra is unavailable (null), so a
-  // non-member's tag is treated as reserved and dropped fail-closed to block
-  // impersonation. Members are still known from their own tag list.
+  // No reserved-tag list while cosmetics infra is unavailable (e.g. during
+  // development), so ownership can't be verified. Fail open and keep the tag
+  // rather than blocking everyone whenever the API service is down.
   resolveClanTag(
     censoredTag: string | null,
     ownedClanTags: string[],
   ): ClanTagResolution {
-    return decideClanTag(censoredTag, ownedClanTags, null);
+    return { tag: censoredTag, dropped: false };
   }
 }

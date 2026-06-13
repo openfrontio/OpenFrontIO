@@ -1,8 +1,8 @@
 import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/Config";
 import {
+  maps as allMaps,
   Difficulty,
   Duos,
-  GameMapName,
   GameMapSize,
   GameMapType,
   GameMode,
@@ -13,7 +13,6 @@ import {
   RankedType,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
@@ -22,100 +21,20 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-const ARCADE_MAPS = new Set(mapCategories.arcade);
+// Arcade-style maps only appear in the "special" playlist.
+const ARCADE_MAPS = new Set<GameMapType>([
+  GameMapType.TheBox,
+  GameMapType.ChoppingBlock,
+  GameMapType.Didier,
+  GameMapType.DidierFrance,
+  GameMapType.Labyrinth,
+  GameMapType.Sierpinski,
+  GameMapType.Onion,
+]);
 const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
-
-// How many times each map should appear in the playlist.
-// Note: The Partial should eventually be removed for better type safety.
-const FREQUENCY: Partial<Record<GameMapName, number>> = {
-  Achiran: 5,
-  Aegean: 6,
-  Africa: 7,
-  Alps: 4,
-  AmazonRiver: 3,
-  Antarctica: 1,
-  ArchipelagoSea: 3,
-  Arctic: 6,
-  Asia: 6,
-  Australia: 4,
-  Baikal: 5,
-  BajaCalifornia: 4,
-  Balkans: 6,
-  BeringSea: 5,
-  BeringStrait: 2,
-  BetweenTwoSeas: 5,
-  BlackSea: 6,
-  BosphorusStraits: 3,
-  Britannia: 5,
-  Caribbean: 5,
-  Caucasus: 5,
-  ChoppingBlock: 5,
-  Conakry: 3,
-  DanishStraits: 5,
-  DeglaciatedAntarctica: 4,
-  Didier: 1,
-  DidierFrance: 1,
-  Dyslexdria: 8,
-  EastAsia: 5,
-  Europe: 7,
-  FalklandIslands: 4,
-  FaroeIslands: 4,
-  FourIslands: 4,
-  GatewayToTheAtlantic: 5,
-  GreatLakes: 6,
-  GulfOfStLawrence: 4,
-  Halkidiki: 4,
-  Hawaii: 4,
-  HongKong: 6,
-  Iceland: 4,
-  IndianSubcontinent: 8,
-  Italia: 6,
-  Japan: 6,
-  JuanDeFucaStrait: 4,
-  Korea: 5,
-  Labyrinth: 6,
-  Lemnos: 3,
-  Lisbon: 4,
-  LosAngeles: 8,
-  Luna: 6,
-  Manicouagan: 4,
-  MareNostrum: 6,
-  Mars: 3,
-  Mena: 6,
-  MiddleEast: 8,
-  MilkyWay: 8,
-  MississippiRiver: 3,
-  Montreal: 6,
-  NewYorkCity: 3,
-  NileDelta: 4,
-  NorthAmerica: 5,
-  NorthwestPassage: 5,
-  Pangaea: 5,
-  Passage: 4,
-  Onion: 2,
-  Pluto: 6,
-  SanFrancisco: 3,
-  Sierpinski: 10,
-  SouthAmerica: 5,
-  SoutheastAsia: 5,
-  StraitOfGibraltar: 5,
-  StraitOfHormuz: 4,
-  StraitOfMalacca: 4,
-  Surrounded: 4,
-  Svalmel: 8,
-  TaiwanStrait: 5,
-  TheBox: 3,
-  TradersDream: 4,
-  TwoLakes: 6,
-  Venice: 6,
-  World: 20,
-  WorldInverted: 8,
-  YellowSea: 5,
-  Yenisei: 6,
-};
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
@@ -130,30 +49,17 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: HumansVsNations, weight: 20 },
 ];
 
-// Maps with a preferred team count in team / special games.
+// Maps with a preferred team count in team / special games, declared via
+// "special_team_count" in each map's info.json.
 // For these maps: team-playlist frequency is doubled, and the preferred
 // team count overrides the random TEAM_WEIGHTS roll with SPECIAL_TEAM_FORCE_CHANCE.
 const SPECIAL_TEAM_FORCE_CHANCE = 0.75;
 const SPECIAL_TEAM_FREQ_MULTIPLIER = 2;
-const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
-  [GameMapType.Baikal, 2],
-  [GameMapType.FourIslands, 4],
-  [GameMapType.Luna, 2],
-  [GameMapType.StraitOfGibraltar, 2],
-  [GameMapType.StraitOfHormuz, 2],
-  [GameMapType.Aegean, 2],
-  [GameMapType.BeringSea, 2],
-  [GameMapType.BeringStrait, 2],
-  [GameMapType.BosphorusStraits, 2],
-  [GameMapType.Conakry, 2],
-  [GameMapType.Pluto, 2],
-  [GameMapType.FalklandIslands, 2],
-  [GameMapType.TradersDream, 2],
-  [GameMapType.Surrounded, 4],
-  [GameMapType.GulfOfStLawrence, 3],
-  [GameMapType.ChoppingBlock, 4],
-  [GameMapType.JuanDeFucaStrait, 3],
-]);
+const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map(
+  allMaps
+    .filter((m) => m.specialTeamCount !== undefined)
+    .map((m) => [m.type, m.specialTeamCount!]),
+);
 
 type ModifierKey =
   | "isRandomSpawn"
@@ -578,15 +484,15 @@ export class MapPlaylist {
 
   private buildMapsList(type: PublicGameType): GameMapType[] {
     const maps: GameMapType[] = [];
-    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
-      const map = GameMapType[key];
+    allMaps.forEach((mapInfo) => {
+      const map = mapInfo.type;
       if (
         type !== "special" &&
         (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
       ) {
         return;
       }
-      let freq = FREQUENCY[key] ?? 0;
+      let freq = mapInfo.multiplayerFrequency;
       // Boost frequency for special team maps in the team playlist
       if (type === "team" && SPECIAL_TEAM_MAPS.has(map)) {
         freq *= SPECIAL_TEAM_FREQ_MULTIPLIER;

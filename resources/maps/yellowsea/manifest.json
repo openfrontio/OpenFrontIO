@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "YellowSea",
   "map": {
     "height": 1152,
     "num_land_tiles": 1042745,
@@ -14,6 +16,7 @@
     "num_land_tiles": 258545,
     "width": 750
   },
+  "multiplayer_frequency": 5,
   "name": "Yellow Sea",
   "nations": [
     {
@@ -56,5 +59,6 @@
       "flag": "cn",
       "name": "Jilin"
     }
-  ]
+  ],
+  "translation_key": "map.yellowsea"
 }

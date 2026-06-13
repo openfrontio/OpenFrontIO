@@ -1,5 +1,9 @@
 {
+  "id": "TwoLakes",
   "name": "Two Lakes",
+  "translation_key": "map.twolakes",
+  "categories": ["europe"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [1025, 750],

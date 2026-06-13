@@ -27,7 +27,6 @@ import type {
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
-import type { RadialMenuItem } from "./Events";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
@@ -44,7 +43,6 @@ import { NightCompositePass } from "./passes/NightCompositePass";
 import { NukeTelegraphPass } from "./passes/NukeTelegraphPass";
 import { NukeTrajectoryPass } from "./passes/NukeTrajectoryPass";
 import { PointLightPass } from "./passes/PointLightPass";
-import { RadialMenuPass } from "./passes/RadialMenuPass";
 import { RailroadPass } from "./passes/RailroadPass";
 import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
@@ -91,6 +89,8 @@ const SAM_RADIUS_HIGHLIGHT_TYPES = new Set([
   "Hydrogen Bomb",
 ]);
 
+const GRID_VIEW_KEY = "renderer:grid_view_enabled";
+
 export class GPURenderer {
   private gl: WebGL2RenderingContext;
   private camera: Camera;
@@ -119,7 +119,6 @@ export class GPURenderer {
   private railroadPass: RailroadPass;
   private barPass: BarPass;
   private worldTextPass: WorldTextPass;
-  private radialMenuPass: RadialMenuPass;
   private selectionBoxPass: SelectionBoxPass;
   private moveIndicatorPass: MoveIndicatorPass;
   private nukeTrajectoryPass: NukeTrajectoryPass;
@@ -152,15 +151,7 @@ export class GPURenderer {
   private mapW = 0;
   private mapH = 0;
 
-  // FPS tracking
-  private frameTimes: Float64Array = new Float64Array(60);
-  private frameIdx = 0;
-  private frameCount = 0;
-  fps = 0;
-  onFrame: ((ms: number) => void) | null = null;
-  afterRender: ((canvas: HTMLCanvasElement) => void) | null = null;
-
-  // Hit-testing references
+  // Last-uploaded unit/structure maps (selection box + bar pass inputs)
   private lastUnits: Map<number, UnitState> = new Map();
   private lastStructures: Map<number, UnitState> = new Map();
 
@@ -466,12 +457,17 @@ export class GPURenderer {
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
     this.unitPass = new UnitPass(gl, header, this.paletteTex, this.settings);
-    this.namePass = new NamePass(gl, header, paletteData, this.settings);
+    this.namePass = new NamePass(
+      gl,
+      header,
+      paletteData,
+      this.settings,
+      config,
+    );
     this.fxPass = new FxPass(gl, header, this.settings, config);
     this.barPass = new BarPass(gl, header, this.settings, config);
     this.worldTextPass = new WorldTextPass(gl, this.settings, config);
     this.worldTextPass.setMapWidth(this.mapW);
-    this.radialMenuPass = new RadialMenuPass(gl);
     this.selectionBoxPass = new SelectionBoxPass(gl);
     this.moveIndicatorPass = new MoveIndicatorPass(gl, this.settings);
     this.nukeTrajectoryPass = new NukeTrajectoryPass(gl, this.settings);
@@ -520,6 +516,11 @@ export class GPURenderer {
       mapH,
       this.settings,
     );
+    try {
+      this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
+    } catch {
+      this.setGridView(false);
+    }
 
     for (const p of header.players) {
       if (p.team !== null) this.playerTeams.set(p.smallID, p.team);
@@ -558,79 +559,13 @@ export class GPURenderer {
     this.camera.resize(cssWidth, cssHeight);
   }
 
-  screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-    return this.camera.screenToWorld(screenX, screenY);
-  }
-
-  worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
-    return this.camera.worldToScreen(worldX, worldY);
-  }
-
-  panTo(worldX: number, worldY: number): void {
-    this.camera.panTo(worldX, worldY);
-  }
-  panBy(dx: number, dy: number): void {
-    this.camera.panBy(dx, dy);
-  }
-  zoomTo(level: number): void {
-    this.camera.zoomTo(level);
-  }
-  zoomBy(factor: number): void {
-    this.camera.zoomBy(factor);
-  }
-  zoomAtScreen(factor: number, screenX: number, screenY: number): void {
-    this.camera.zoomAtScreen(factor, screenX, screenY);
-  }
-  fitMap(): void {
-    this.camera.fitMap();
-  }
-  focusBBox(
-    minX: number,
-    minY: number,
-    maxX: number,
-    maxY: number,
-    padding?: number,
-  ): void {
-    this.camera.focusBBox(minX, minY, maxX, maxY, padding);
-  }
-  getCameraState(): { x: number; y: number; z: number } {
-    return {
-      x: this.camera.offsetX,
-      y: this.camera.offsetY,
-      z: this.camera.zoom,
-    };
-  }
   setCameraState(x: number, y: number, z: number): void {
     this.camera.setCameraState(x, y, z);
-  }
-  get zoom(): number {
-    return this.camera.zoom;
   }
 
   // ---------------------------------------------------------------------------
   // Data upload
   // ---------------------------------------------------------------------------
-
-  applyFullFrame(
-    tileState: Uint16Array,
-    trailState: Uint8Array,
-    nukeEvents?: Array<{ tick: number; tiles: number[] }>,
-    currentTick?: number,
-  ): void {
-    this.territoryPass.uploadFullTileState(tileState);
-    this.trailPass.uploadFullState(trailState);
-    this.heatManager.resetForSeek(tileState, nukeEvents, currentTick);
-  }
-
-  applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
-    this.territoryPass.uploadFullTileState(tileState);
-    this.trailPass.uploadFullState(trailState);
-  }
-
-  applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
-    this.territoryPass.uploadDeltaTiles(changedTiles);
-    this.trailPass.uploadFullState(trailState);
-  }
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
@@ -673,6 +608,8 @@ export class GPURenderer {
     );
     // SAM radius pass stores its own copy
     this.samRadiusPass.setPaletteData(this.paletteData);
+    // Name pass caches per-player colors and bakes them into slot rows
+    this.namePass.refreshPlayerColors(this.paletteData);
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
@@ -897,15 +834,6 @@ export class GPURenderer {
     this.fxPass.updateAttackRings(rings);
   }
 
-  clearFx(): void {
-    this.fxPass.clear();
-    this.worldTextPass.clear();
-  }
-  setFxTimeFn(fn: () => number): void {
-    this.fxPass.setTimeFn(fn);
-    this.worldTextPass.setTimeFn(fn);
-  }
-
   updateGhostPreview(data: GhostPreviewData | null): void {
     this.structurePass.updateGhostPreview(data);
     this.railroadPass.updateGhostPreview(data);
@@ -951,6 +879,9 @@ export class GPURenderer {
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
   }
+  setMouseWorldPos(x: number, y: number): void {
+    this.namePass.setMouseWorldPos(x, y);
+  }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.structurePass.setHighlightTypes(unitTypes);
     this.structureLevelPass.setHighlightTypes(unitTypes);
@@ -960,64 +891,6 @@ export class GPURenderer {
     this.samRadiusPass.setVisible(
       this.samGhostVisible || this.samHighlightVisible,
     );
-  }
-
-  focusOwner(ownerID: number): void {
-    if (ownerID !== 0) {
-      const bbox = this.territoryPass.getBBoxForOwner(ownerID);
-      if (bbox) {
-        this.camera.focusBBox(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY);
-        return;
-      }
-    }
-    this.camera.focusBBox(0, 0, this.mapW - 1, this.mapH - 1);
-  }
-
-  getOwnerAtWorld(worldX: number, worldY: number): number {
-    const tx = Math.floor(worldX);
-    const ty = Math.floor(worldY);
-    if (tx < 0 || ty < 0 || tx >= this.mapW || ty >= this.mapH) return 0;
-    return this.territoryPass.getOwnerAt(ty * this.mapW + tx);
-  }
-
-  getUnitAtWorld(
-    worldX: number,
-    worldY: number,
-    radius: number,
-  ): UnitState | null {
-    let best: UnitState | null = null;
-    let bestDist = radius * radius;
-    const w = this.mapW;
-    for (const u of this.lastUnits.values()) {
-      const dx = (u.pos % w) - worldX;
-      const dy = Math.floor(u.pos / w) - worldY;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestDist) {
-        bestDist = d2;
-        best = u;
-      }
-    }
-    return best;
-  }
-
-  getStructureAtWorld(
-    worldX: number,
-    worldY: number,
-    radius: number,
-  ): UnitState | null {
-    let best: UnitState | null = null;
-    let bestDist = radius * radius;
-    const w = this.mapW;
-    for (const s of this.lastStructures.values()) {
-      const dx = (s.pos % w) - worldX;
-      const dy = Math.floor(s.pos / w) - worldY;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestDist) {
-        bestDist = d2;
-        best = s;
-      }
-    }
-    return best;
   }
 
   setLocalPlayerID(id: number): void {
@@ -1031,21 +904,6 @@ export class GPURenderer {
 
   setLocalRailColor(r: number, g: number, b: number): void {
     this.railroadPass.setLocalRailColor(r, g, b);
-  }
-
-  setSAMRadiusVisible(visible: boolean): void {
-    this.samRadiusPass.setVisible(visible);
-  }
-
-  setSAMPerspective(playerID: number, allies: Set<number>): void {
-    this.samRadiusPass.setLocalPlayer(playerID);
-    this.samRadiusPass.setAllies(allies);
-    this.unitPass.setLocalPlayer(playerID);
-    this.unitPass.setAllies(allies);
-  }
-
-  setSAMColorMode(mode: "perspective" | "owner"): void {
-    this.samRadiusPass.setColorMode(mode);
   }
 
   setSAMAllianceClusters(clusters: Map<number, number>): void {
@@ -1067,6 +925,11 @@ export class GPURenderer {
 
   setGridView(active: boolean): void {
     this.gridView = active;
+    try {
+      window.localStorage.setItem(GRID_VIEW_KEY, active ? "true" : "false");
+    } catch {
+      // Ignore if we are unable to use localstorage.
+    }
   }
 
   getSettings(): RenderSettings {
@@ -1074,55 +937,8 @@ export class GPURenderer {
   }
 
   // ---------------------------------------------------------------------------
-  // Radial menu
-  // ---------------------------------------------------------------------------
-
-  showRadialMenu(
-    anchorX: number,
-    anchorY: number,
-    items: RadialMenuItem[],
-    centerItem?: RadialMenuItem,
-  ): void {
-    this.radialMenuPass.show(anchorX, anchorY, items, centerItem);
-  }
-
-  hideRadialMenu(): void {
-    this.radialMenuPass.hide();
-  }
-  openRadialSubMenu(subItems: RadialMenuItem[]): void {
-    this.radialMenuPass.openSubMenu(subItems);
-  }
-  goBackRadialMenu(): void {
-    this.radialMenuPass.goBack();
-  }
-  setRadialMenuHover(index: number): void {
-    this.radialMenuPass.setHover(index);
-  }
-  radialMenuHitTest(screenX: number, screenY: number): number {
-    return this.radialMenuPass.hitTest(screenX, screenY);
-  }
-  get radialMenuVisible(): boolean {
-    return this.radialMenuPass.isVisible;
-  }
-  getRadialMenuItems(): readonly RadialMenuItem[] {
-    return this.radialMenuPass.getItems();
-  }
-  getRadialMenuItemAt(index: number): RadialMenuItem | null {
-    return this.radialMenuPass.getItemAt(index);
-  }
-  registerRadialMenuIcons(
-    icons: { key: string; img: CanvasImageSource }[],
-  ): void {
-    this.radialMenuPass.registerIcons(icons);
-  }
-
-  // ---------------------------------------------------------------------------
   // Selection box (warship selection)
   // ---------------------------------------------------------------------------
-
-  setSelectedUnit(unitId: number | null): void {
-    this.setSelectedUnits(unitId === null ? [] : [unitId]);
-  }
 
   setSelectedUnits(unitIds: readonly number[]): void {
     // Copy in (callers may mutate their array).
@@ -1199,27 +1015,9 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   draw(): void {
-    const now = performance.now();
-    this.trackFps(now);
     this.uploadTextures();
     this.computeTextures();
     this.renderFrame();
-    if (this.onFrame) this.onFrame(performance.now() - now);
-    if (this.afterRender) this.afterRender(this.canvas);
-  }
-
-  private trackFps(now: number): void {
-    this.frameTimes[this.frameIdx] = now;
-    this.frameIdx = (this.frameIdx + 1) % this.frameTimes.length;
-    if (this.frameCount < this.frameTimes.length) this.frameCount++;
-    if (this.frameCount > 1) {
-      const oldest =
-        this.frameTimes[
-          (this.frameIdx - this.frameCount + this.frameTimes.length) %
-            this.frameTimes.length
-        ];
-      this.fps = (this.frameCount - 1) / ((now - oldest) / 1000);
-    }
   }
 
   private uploadTextures(): void {
@@ -1234,6 +1032,11 @@ export class GPURenderer {
     if (this.territoryPass.flushTileTexture() === "full") {
       this.borderPass.markGlobalDirty();
       this.defenseCoveragePass.markDirty();
+    }
+    // Heat decay only runs while fallout is in play — (re)activate whenever a
+    // fallout bit flipped in the tile state that just reached the GPU.
+    if (this.territoryPass.consumeFalloutTouched()) {
+      this.heatManager.activate();
     }
     this.trailPass.flushTexture();
     this.heatManager.updateHeat();
@@ -1346,8 +1149,6 @@ export class GPURenderer {
     this.worldTextPass.tick(zoom);
     this.worldTextPass.draw(cam, zoom);
 
-    this.radialMenuPass.draw();
-
     gl.disable(gl.BLEND);
   }
 
@@ -1382,7 +1183,6 @@ export class GPURenderer {
     this.namePass.dispose();
     this.fxPass.dispose();
     this.worldTextPass.dispose();
-    this.radialMenuPass.dispose();
     this.selectionBoxPass.dispose();
     this.moveIndicatorPass.dispose();
     this.nukeTrajectoryPass.dispose();

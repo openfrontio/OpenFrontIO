@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "TwoLakes",
   "map": {
     "height": 1840,
     "num_land_tiles": 3423870,
@@ -14,6 +16,7 @@
     "num_land_tiles": 852792,
     "width": 1050
   },
+  "multiplayer_frequency": 6,
   "name": "Two Lakes",
   "nations": [
     {
@@ -41,5 +44,6 @@
       "flag": "gr",
       "name": "Prespa"
     }
-  ]
+  ],
+  "translation_key": "map.twolakes"
 }

@@ -1,4 +1,5 @@
 import { renderNumber } from "../../client/Utils";
+import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
 import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
@@ -40,7 +41,6 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
-import { UnitView } from "./GameView";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -95,6 +95,10 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
+  /** [smallID, tilesOwned, gold, troops] quads — see PlayerImpl.toUpdate. */
+  private playerStatsQuads: number[] = [];
+  /** [smallID, direction, index, troops] quads — see packAttackTroopDeltas. */
+  private attackTroopsQuads: number[] = [];
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
@@ -451,7 +455,10 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
-      const update = player.toUpdate();
+      const update = player.toUpdate(
+        this.playerStatsQuads,
+        this.attackTroopsQuads,
+      );
       if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
@@ -486,6 +493,22 @@ export class GameImpl implements Game {
       packed[i] = pairs[i];
     }
     pairs.length = 0;
+    return packed;
+  }
+
+  drainPackedPlayerUpdates(): Float64Array | null {
+    const quads = this.playerStatsQuads;
+    if (quads.length === 0) return null;
+    const packed = Float64Array.from(quads);
+    quads.length = 0;
+    return packed;
+  }
+
+  drainPackedAttackUpdates(): Float64Array | null {
+    const quads = this.attackTroopsQuads;
+    if (quads.length === 0) return null;
+    const packed = Float64Array.from(quads);
+    quads.length = 0;
     return packed;
   }
 
@@ -542,23 +565,21 @@ export class GameImpl implements Game {
   }
 
   removeInactiveExecutions(): void {
-    const activeExecs: Execution[] = [];
-    for (const exec of this.execs) {
-      if (this.inSpawnPhase()) {
-        if (exec.activeDuringSpawnPhase()) {
-          if (exec.isActive()) {
-            activeExecs.push(exec);
-          }
-        } else {
-          activeExecs.push(exec);
-        }
-      } else {
-        if (exec.isActive()) {
-          activeExecs.push(exec);
-        }
+    // Compact in place to avoid reallocating the (large) executions array
+    // every tick.
+    const execs = this.execs;
+    const inSpawnPhase = this.inSpawnPhase();
+    let w = 0;
+    for (let i = 0; i < execs.length; i++) {
+      const exec = execs[i];
+      const keep = inSpawnPhase
+        ? !exec.activeDuringSpawnPhase() || exec.isActive()
+        : exec.isActive();
+      if (keep) {
+        execs[w++] = exec;
       }
     }
-    this.execs = activeExecs;
+    execs.length = w;
   }
 
   players(): Player[] {
@@ -666,23 +687,7 @@ export class GameImpl implements Game {
     tile: TileRef,
     callback: (neighbor: TileRef) => void,
   ): void {
-    const x = this.x(tile);
-    const y = this.y(tile);
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue; // Skip the center tile
-        const newX = x + dx;
-        const newY = y + dy;
-        if (
-          newX >= 0 &&
-          newX < this._width &&
-          newY >= 0 &&
-          newY < this._height
-        ) {
-          callback(this._map.ref(newX, newY));
-        }
-      }
-    }
+    this._map.forEachNeighborWithDiag(tile, callback);
   }
 
   conquer(owner: PlayerImpl, tile: TileRef): void {
@@ -721,49 +726,27 @@ export class GameImpl implements Game {
     this.recordTileUpdate(tile);
   }
 
-  private updateBorders(tile: TileRef) {
-    const updateBorderStatus = (t: TileRef) => {
-      if (!this.hasOwner(t)) {
-        return;
-      }
-      const owner = this.owner(t) as PlayerImpl;
-      if (this.calcIsBorder(t)) {
-        owner._borderTiles.add(t);
-      } else {
-        owner._borderTiles.delete(t);
-      }
-    };
+  // Reusable neighbor buffer to avoid closures/allocation in updateBorders.
+  private borderNbuf: TileRef[] = [0, 0, 0, 0];
 
-    updateBorderStatus(tile);
-    this.forEachNeighbor(tile, updateBorderStatus);
+  private updateBorders(tile: TileRef) {
+    this.updateBorderStatus(tile);
+    const numNeighbors = this._map.neighbors4(tile, this.borderNbuf);
+    for (let i = 0; i < numNeighbors; i++) {
+      this.updateBorderStatus(this.borderNbuf[i]);
+    }
   }
 
-  private calcIsBorder(tile: TileRef): boolean {
-    if (!this.hasOwner(tile)) {
-      return false;
+  private updateBorderStatus(t: TileRef): void {
+    if (!this._map.hasOwner(t)) {
+      return;
     }
-    const ownerId = this.ownerID(tile);
-    const x = this.x(tile);
-    const y = this.y(tile);
-    if (x > 0 && this.ownerID(this._map.ref(x - 1, y)) !== ownerId) {
-      return true;
+    const owner = this.owner(t) as PlayerImpl;
+    if (this._map.isBorder(t)) {
+      owner._borderTiles.add(t);
+    } else {
+      owner._borderTiles.delete(t);
     }
-    if (
-      x + 1 < this._width &&
-      this.ownerID(this._map.ref(x + 1, y)) !== ownerId
-    ) {
-      return true;
-    }
-    if (y > 0 && this.ownerID(this._map.ref(x, y - 1)) !== ownerId) {
-      return true;
-    }
-    if (
-      y + 1 < this._height &&
-      this.ownerID(this._map.ref(x, y + 1)) !== ownerId
-    ) {
-      return true;
-    }
-    return false;
   }
 
   target(targeter: Player, target: Player) {
@@ -1139,12 +1122,10 @@ export class GameImpl implements Game {
   }
   // Zero-allocation neighbor iteration (cardinal only)
   forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void {
-    const x = this.x(tile);
-    const y = this.y(tile);
-    if (x > 0) callback(this._map.ref(x - 1, y));
-    if (x + 1 < this._width) callback(this._map.ref(x + 1, y));
-    if (y > 0) callback(this._map.ref(x, y - 1));
-    if (y + 1 < this._height) callback(this._map.ref(x, y + 1));
+    this._map.forEachNeighbor(tile, callback);
+  }
+  neighbors4(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors4(ref, out);
   }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);

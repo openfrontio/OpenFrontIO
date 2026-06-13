@@ -7,6 +7,9 @@ export const GraphicsOverridesSchema = z
         nameScaleFactor: z.number(),
         cullThreshold: z.number(),
         darkNames: z.boolean(),
+        hoverFadeAlpha: z.number(),
+        hoverGlowWidth: z.number(),
+        hoverGlowAlpha: z.number(),
       })
       .partial(),
     structure: z
@@ -21,6 +24,7 @@ export const GraphicsOverridesSchema = z
         highlightThicken: z.number(),
         territorySaturation: z.number(),
         territoryAlpha: z.number(),
+        coordinateGridOpacity: z.number(),
       })
       .partial(),
     railroad: z
@@ -32,6 +36,11 @@ export const GraphicsOverridesSchema = z
     passEnabled: z
       .object({
         fx: z.boolean(),
+      })
+      .partial(),
+    accessibility: z
+      .object({
+        colorblind: z.boolean(),
       })
       .partial(),
   })

@@ -221,6 +221,8 @@
       "name": "Sudden Valley"
     }
   ],
+  "categories": ["north_america"],
+  "id": "JuanDeFucaStrait",
   "map": {
     "height": 1100,
     "num_land_tiles": 1666141,
@@ -236,6 +238,7 @@
     "num_land_tiles": 410851,
     "width": 1500
   },
+  "multiplayer_frequency": 4,
   "name": "Juan De Fuca Strait",
   "nations": [
     {
@@ -319,6 +322,7 @@
       "name": "Arlington"
     }
   ],
+  "special_team_count": 3,
   "teamGameSpawnAreas": {
     "3": [
       {
@@ -340,5 +344,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.juandefucastrait"
 }

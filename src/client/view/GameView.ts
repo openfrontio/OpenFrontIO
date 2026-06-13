@@ -16,6 +16,7 @@ import {
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
+import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
 import {
   MotionPlanRecord,
   unpackMotionPlans,
@@ -76,6 +77,8 @@ export class GameView implements GameMap {
     import("../render/types").PlayerState
   >();
   private _unitStates = new Map<number, import("../render/types").UnitState>();
+  /** smallID → team, for the renderer's relation matrix (team games). */
+  private _teams = new Map<number, string>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
 
@@ -97,6 +100,17 @@ export class GameView implements GameMap {
   private _firstPopulate = true;
 
   private _myPlayer: PlayerView | null = null;
+
+  // ── populateFrame dirty flags ──────────────────────────────────────────
+  // The derived structures below only depend on rarely-changing player
+  // fields, so they're rebuilt only when one of their inputs arrived this
+  // tick (PlayerUpdates are partial — field presence means "changed").
+  /** Names: nameData record applied, or a player was added. */
+  private _namesDirty = true;
+  /** Relation matrix: allies/embargoes changed, or a player was added. */
+  private _relationsDirty = true;
+  /** Alliance clusters: allies changed, or a player was added. */
+  private _clustersDirty = true;
 
   private unitGrid: UnitGrid;
   private unitMotionPlans = new Map<
@@ -156,8 +170,7 @@ export class GameView implements GameMap {
     // buffers (tileState, trailState, etc.); some (_changedTilesScratch,
     // derived arrays) are reused each tick. Properties marked `readonly` on
     // FrameData only prevent reassignment, not mutation through the reference.
-    // events: fresh arrays we own; cleared and repopulated each tick. (Don't
-    // spread EMPTY_FRAME_EVENTS — that would share the module-level arrays.)
+    // events: fresh arrays we own; cleared and repopulated each tick.
     this._frame = {
       tick: 0,
       inSpawnPhase: true,
@@ -170,19 +183,7 @@ export class GameView implements GameMap {
       events: {
         deadUnits: [],
         conquestEvents: [],
-        unitUpdates: [],
-        playerUpdates: [],
-        allianceFormed: [],
-        allianceBroken: [],
-        allianceExpired: [],
-        embargoEvents: [],
-        targetEvents: [],
         bonusEvents: [],
-        nukeIncoming: [],
-        emojis: [],
-        displayMessages: [],
-        wins: [],
-        gamePaused: null,
       },
       changedTiles: this._changedTilesScratch,
       railroadDirty: false,
@@ -194,11 +195,11 @@ export class GameView implements GameMap {
       playerStatus: new Map(),
       relationMatrix: new Uint8Array(0),
       relationSize: 0,
+      relationsDirty: false,
       allianceClusters: new Map(),
       nukeTelegraphs: [],
       attackRings: [],
       structuresDirty: false,
-      tileMode: "live",
     };
   }
 
@@ -302,6 +303,21 @@ export class GameView implements GameMap {
       this._myClanTag,
     );
 
+    // Name placements arrive only on ticks where the worker recomputed them
+    // (see GameUpdateViewData.playerNameViewData). Apply to existing alive
+    // players here; dead players keep their last placement (names freeze at
+    // death), and new players get theirs via the PlayerView constructor in
+    // pass 1 below.
+    if (gu.playerNameViewData !== undefined) {
+      for (const id in gu.playerNameViewData) {
+        const pv = this._players.get(id);
+        if (pv !== undefined && pv.state.isAlive) {
+          pv.nameData = gu.playerNameViewData[id];
+        }
+      }
+      this._namesDirty = true;
+    }
+
     // Pass 1: ensure every player exists with up-to-date PlayerState. We need
     // all smallIDs registered before pass 2 can translate embargo PlayerIDs.
     // PlayerUpdate is now partial: only `id` is guaranteed; everything else
@@ -323,9 +339,19 @@ export class GameView implements GameMap {
         this.smallIDToID.set(pu.smallID, pu.id);
       }
 
+      // Derived-data dirty tracking: field presence on a partial update
+      // means the field changed this tick.
+      if (pu.allies !== undefined) {
+        this._relationsDirty = true;
+        this._clustersDirty = true;
+      }
+      if (pu.embargoes !== undefined) {
+        this._relationsDirty = true;
+      }
+
       if (existing !== undefined) {
         existing.applyUpdate(pu);
-        const nextNameData = gu.playerNameViewData[pu.id];
+        const nextNameData = gu.playerNameViewData?.[pu.id];
         if (nextNameData !== undefined) {
           existing.nameData = nextNameData;
         }
@@ -333,7 +359,7 @@ export class GameView implements GameMap {
         const player = new PlayerView(
           this,
           pu,
-          gu.playerNameViewData[pu.id],
+          gu.playerNameViewData?.[pu.id],
           // First check human by clientID, then check nation by name.
           this._cosmetics.get(pu.clientID ?? "") ??
             this._cosmetics.get(pu.name!) ??
@@ -341,6 +367,13 @@ export class GameView implements GameMap {
         );
         this._players.set(pu.id, player);
         this._playerStates.set(pu.smallID!, player.state);
+        const team = player.team();
+        if (team !== null) {
+          this._teams.set(pu.smallID!, team);
+        }
+        this._namesDirty = true;
+        this._relationsDirty = true;
+        this._clustersDirty = true;
       }
     });
 
@@ -360,6 +393,43 @@ export class GameView implements GameMap {
       }
       player.setEmbargoSmallIDs(smallIDs);
     });
+
+    // Packed per-player stats: [smallID, tilesOwned, gold, troops] quads for
+    // every player whose stats changed this tick (the per-tick churn that no
+    // longer travels in PlayerUpdate objects). Applied after pass 1 so
+    // first-emission players exist; their quad carries the same values as
+    // the full update, so double-applying is harmless.
+    const packedStats = gu.packedPlayerUpdates;
+    if (packedStats !== undefined) {
+      for (let i = 0; i + 3 < packedStats.length; i += 4) {
+        const state = this._playerStates.get(packedStats[i]);
+        if (state === undefined) continue;
+        state.tilesOwned = packedStats[i + 1];
+        state.gold = packedStats[i + 2];
+        state.troops = packedStats[i + 3];
+      }
+    }
+
+    // Packed attack troop counts: [ownerSmallID, direction, index, troops]
+    // quads. The attack arrays themselves are only resent when membership/
+    // order changes, which is also what keeps these indexes valid — a tick
+    // either resends an array (fresh troops included) or patches it, never
+    // both. See packAttackTroopDeltas.
+    const packedAttacks = gu.packedAttackUpdates;
+    if (packedAttacks !== undefined) {
+      for (let i = 0; i + 3 < packedAttacks.length; i += 4) {
+        const state = this._playerStates.get(packedAttacks[i]);
+        if (state === undefined) continue;
+        const attacks =
+          packedAttacks[i + 1] === ATTACK_DELTA_OUTGOING
+            ? state.outgoingAttacks
+            : state.incomingAttacks;
+        const attack = attacks[packedAttacks[i + 2]];
+        if (attack !== undefined) {
+          attack.troops = packedAttacks[i + 3];
+        }
+      }
+    }
 
     if (this._myClientID) {
       this._myPlayer ??= this.playerByClientID(this._myClientID);
@@ -449,16 +519,20 @@ export class GameView implements GameMap {
       this._changedTilesScratch.push({ ref: this.updatedTiles[i], state: 0 });
     }
 
-    // Names map — rebuilt every tick. Cheap (one entry per player, no big
-    // arrays). Entry order is irrelevant for the renderer.
-    this._names.clear();
-    for (const p of this._players.values()) {
-      this._names.set(p.id(), {
-        playerID: p.id(),
-        x: p.nameData?.x ?? 0,
-        y: p.nameData?.y ?? 0,
-        size: p.nameData?.size ?? 0,
-      });
+    // Names map — rebuilt only when a placement record arrived or a player
+    // was added (nameData values cannot change between those ticks). Entry
+    // order is irrelevant for the renderer.
+    if (this._namesDirty) {
+      this._namesDirty = false;
+      this._names.clear();
+      for (const p of this._players.values()) {
+        this._names.set(p.id(), {
+          playerID: p.id(),
+          x: p.nameData?.x ?? 0,
+          y: p.nameData?.y ?? 0,
+          size: p.nameData?.size ?? 0,
+        });
+      }
     }
 
     // FrameEvents — clear arrays, then re-populate from this tick's updates.
@@ -486,13 +560,34 @@ export class GameView implements GameMap {
       isTransitiveTarget: (sid) =>
         this._myPlayer?.hasTransitiveTarget(sid) ?? false,
     });
-    const rel = buildRelationMatrix(this._playerStates);
-    f.relationMatrix = rel.matrix;
-    f.relationSize = rel.size;
-    f.allianceClusters = computeAllianceClusters(this._playerStates);
+    // Relations + clusters depend only on allies/embargoes/teams, which
+    // change rarely (teams only when a player is added) — recompute only
+    // when one of those inputs arrived this tick. buildRelationMatrix
+    // writes into a reusable module-level buffer, so skipping the call
+    // leaves f.relationMatrix's contents intact. f.relationsDirty lets the
+    // upload layer skip the GPU push (and the full-map border recompute it
+    // triggers) on unchanged ticks.
+    if (this._relationsDirty) {
+      this._relationsDirty = false;
+      const rel = buildRelationMatrix(this._playerStates, this._teams);
+      f.relationMatrix = rel.matrix;
+      f.relationSize = rel.size;
+      f.relationsDirty = true;
+    } else {
+      f.relationsDirty = false;
+    }
+    if (this._clustersDirty) {
+      this._clustersDirty = false;
+      f.allianceClusters = computeAllianceClusters(this._playerStates);
+    }
     f.nukeTelegraphs = extractNukeTelegraphs(
       this._unitStates,
       this._map.width(),
+      this._myPlayer?.smallID() ?? 0,
+      // The latest relation matrix — recomputed above when dirty, otherwise
+      // carried over on the frame from the last rebuild.
+      f.relationMatrix,
+      f.relationSize,
     );
     f.attackRings = this._myPlayer
       ? extractAttackRings(
@@ -540,6 +635,7 @@ export class GameView implements GameMap {
       const conquered = this._players.get(c.conqueredId);
       if (conquered === undefined) continue;
       const loc = conquered.nameLocation();
+      if (loc === undefined) continue;
       ev.conquestEvents.push({
         x: loc.x,
         y: loc.y,
@@ -872,6 +968,17 @@ export class GameView implements GameMap {
     return Array.from(this._players.values());
   }
 
+  /**
+   * Recompute every player's theme-derived colors. Call when the active theme
+   * changes mid-game (e.g. toggling colorblind mode) so existing territories
+   * re-color; the renderer palette must be refreshed afterwards.
+   */
+  refreshPlayerColors(): void {
+    for (const p of this._players.values()) {
+      p.refreshColors();
+    }
+  }
+
   playerBySmallID(id: number): PlayerView | TerraNullius {
     if (id === 0) {
       return new TerraNulliusImpl();
@@ -1053,6 +1160,18 @@ export class GameView implements GameMap {
   }
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
+  }
+  forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void {
+    this._map.forEachNeighbor(ref, callback);
+  }
+  neighbors4(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors4(ref, out);
+  }
+  forEachNeighborWithDiag(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    this._map.forEachNeighborWithDiag(ref, callback);
   }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);

@@ -196,21 +196,24 @@
       "name": "Western Macedonia"
     }
   ],
+  "categories": ["europe"],
+  "id": "Balkans",
   "map": {
     "height": 2048,
-    "num_land_tiles": 2478822,
+    "num_land_tiles": 2478805,
     "width": 2048
   },
   "map16x": {
     "height": 512,
-    "num_land_tiles": 148761,
+    "num_land_tiles": 148759,
     "width": 512
   },
   "map4x": {
     "height": 1024,
-    "num_land_tiles": 610636,
+    "num_land_tiles": 610629,
     "width": 1024
   },
+  "multiplayer_frequency": 6,
   "name": "Balkans",
   "nations": [
     {
@@ -328,5 +331,6 @@
       "flag": "Sicily",
       "name": "Sicily"
     }
-  ]
+  ],
+  "translation_key": "map.balkans"
 }

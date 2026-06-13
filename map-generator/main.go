@@ -13,113 +13,38 @@ import (
 	"sync"
 )
 
-// maps defines the registry of available maps to be processed.
-// Each entry contains the folder name and a flag indicating if it's a test map.
-//
-// New maps need to be added here in order to allow the map-generator to process them.
-var maps = []struct {
+// mapEntry identifies one map to process: its folder name and whether it
+// lives in assets/test_maps instead of assets/maps.
+type mapEntry struct {
 	Name   string
 	IsTest bool
-}{
-	{Name: "achiran"},
-	{Name: "aegean"},
-	{Name: "africa"},
-	{Name: "alps"},
-	{Name: "amazonriver"},
-	{Name: "antarctica"},
-	{Name: "archipelagosea"},
-	{Name: "arctic"},
-	{Name: "asia"},
-	{Name: "australia"},
-	{Name: "baikal"},
-	{Name: "baikalnukewars"},
-	{Name: "bajacalifornia"},
-	{Name: "balkans"},
-	{Name: "beringsea"},
-	{Name: "beringstrait"},
-	{Name: "betweentwoseas"},
-	{Name: "blacksea"},
-	{Name: "bosphorusstraits"},
-	{Name: "britannia"},
-	{Name: "britanniaclassic"},
-	{Name: "caribbean"},
-	{Name: "caucasus"},
-	{Name: "choppingblock"},
-	{Name: "conakry"},
-	{Name: "danishstraits"},
-	{Name: "deglaciatedantarctica"},
-	{Name: "didier"},
-	{Name: "didierfrance"},
-	{Name: "dyslexdria"},
-	{Name: "eastasia"},
-	{Name: "europe"},
-	{Name: "europeclassic"},
-	{Name: "falklandislands"},
-	{Name: "faroeislands"},
-	{Name: "fourislands"},
-	{Name: "gatewaytotheatlantic"},
-	{Name: "giantworldmap"},
-	{Name: "greatlakes"},
-	{Name: "gulfofstlawrence"},
-	{Name: "halkidiki"},
-	{Name: "hawaii"},
-	{Name: "hongkong"},
-	{Name: "iceland"},
-	{Name: "indiansubcontinent"},
-	{Name: "italia"},
-	{Name: "japan"},
-	{Name: "juandefucastrait"},
-	{Name: "korea"},
-	{Name: "labyrinth"},
-	{Name: "lemnos"},
-	{Name: "lisbon"},
-	{Name: "losangeles"},
-	{Name: "luna"},
-	{Name: "manicouagan"},
-	{Name: "marenostrum"},
-	{Name: "mars"},
-	{Name: "mena"},
-	{Name: "middleeast"},
-	{Name: "milkyway"},
-	{Name: "mississippiriver"},
-	{Name: "montreal"},
-	{Name: "newyorkcity"},
-	{Name: "niledelta"},
-	{Name: "northamerica"},
-	{Name: "northwestpassage"},
-	{Name: "oceania"},
-	{Name: "onion"},
-	{Name: "pangaea"},
-	{Name: "passage"},
-	{Name: "pluto"},
-	{Name: "sanfrancisco"},
-	{Name: "sierpinski"},
-	{Name: "southamerica"},
-	{Name: "southeastasia"},
-	{Name: "straitofgibraltar"},
-	{Name: "straitofhormuz"},
-	{Name: "straitofmalacca"},
-	{Name: "surrounded"},
-	{Name: "svalmel"},
-	{Name: "taiwanstrait"},
-	{Name: "thebox"},
-	{Name: "tourney1"},
-	{Name: "tourney2"},
-	{Name: "tourney3"},
-	{Name: "tourney4"},
-	{Name: "tradersdream"},
-	{Name: "twolakes"},
-	{Name: "venice"},
-	{Name: "world"},
-	{Name: "worldinverted"},
-	{Name: "yellowsea"},
-	{Name: "yenisei"},
-	{Name: "big_plains", IsTest: true},
-	{Name: "half_land_half_ocean", IsTest: true},
-	{Name: "ocean_and_land", IsTest: true},
-	{Name: "plains", IsTest: true},
-	{Name: "giantworldmap", IsTest: true},
-	{Name: "world", IsTest: true},
+}
+
+// maps holds the registry of maps to process, discovered from the assets
+// directories by discoverMaps() at startup.
+var maps []mapEntry
+
+// discoverMaps builds the map registry from the filesystem: every folder in
+// assets/maps, plus every folder in assets/test_maps as a test map. Adding a
+// map is just adding a folder with image.png and info.json.
+func discoverMaps() ([]mapEntry, error) {
+	var result []mapEntry
+	for _, isTest := range []bool{false, true} {
+		dir, err := inputMapDir(isTest)
+		if err != nil {
+			return nil, err
+		}
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read maps directory %s: %w", dir, err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				result = append(result, mapEntry{Name: entry.Name(), IsTest: isTest})
+			}
+		}
+	}
+	return result, nil
 }
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
@@ -339,8 +264,25 @@ func main() {
 
 	slog.SetDefault(logger)
 
+	discovered, err := discoverMaps()
+	if err != nil {
+		log.Fatalf("Error discovering maps: %v", err)
+	}
+	maps = discovered
+
 	if err := loadTerrainMaps(); err != nil {
 		log.Fatalf("Error generating terrain maps: %v", err)
+	}
+
+	infos, err := loadMapInfos()
+	if err != nil {
+		log.Fatalf("Error loading map info: %v", err)
+	}
+	if err := generateMapsTS(infos); err != nil {
+		log.Fatalf("Error generating Maps.gen.ts: %v", err)
+	}
+	if err := generateEnJSON(infos); err != nil {
+		log.Fatalf("Error generating en.json map section: %v", err)
 	}
 
 	fmt.Println("Terrain maps generated successfully")

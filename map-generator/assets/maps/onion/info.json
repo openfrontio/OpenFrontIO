@@ -1,5 +1,9 @@
 {
-  "name": "onion",
+  "id": "Onion",
+  "name": "Onion",
+  "translation_key": "map.onion",
+  "categories": ["other"],
+  "multiplayer_frequency": 2,
   "nations": [
     {
       "coordinates": [51, 188],

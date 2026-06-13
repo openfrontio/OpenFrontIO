@@ -1,18 +1,11 @@
 import { colord, Colord } from "colord";
+import defaultTheme from "../src/client/render/gl/default-theme.json";
+import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
-import {
-  blue,
-  botColor,
-  green,
-  orange,
-  purple,
-  red,
-  teal,
-  yellow,
-} from "../src/client/theme/Colors";
+import { SettingsTheme } from "../src/client/theme/ThemeProvider";
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
@@ -80,71 +73,69 @@ describe("ColorAllocator", () => {
     expect(c1.isEqual(c1Again)).toBe(true);
     expect(c2.isEqual(c2Again)).toBe(true);
   });
+});
 
-  test("assignTeamColor returns the base color from the team", () => {
-    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
-    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
-    expect(allocator.assignTeamColor(ColoredTeams.Purple)).toEqual(purple);
-    expect(allocator.assignTeamColor(ColoredTeams.Yellow)).toEqual(yellow);
-    expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(orange);
-    expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(green);
-    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
-    expect(allocator.assignTeamColor(ColoredTeams.Humans)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Nations)).toEqual(red);
+describe("default theme team colors", () => {
+  const teamBase = (team: keyof typeof defaultTheme.teamColors): Colord =>
+    colord(defaultTheme.teamColors[team]);
+
+  test("teamColor returns the base color from the theme JSON", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    expect(theme.teamColor(ColoredTeams.Blue)).toEqual(teamBase("Blue"));
+    expect(theme.teamColor(ColoredTeams.Red)).toEqual(teamBase("Red"));
+    expect(theme.teamColor(ColoredTeams.Teal)).toEqual(teamBase("Teal"));
+    expect(theme.teamColor(ColoredTeams.Purple)).toEqual(teamBase("Purple"));
+    expect(theme.teamColor(ColoredTeams.Yellow)).toEqual(teamBase("Yellow"));
+    expect(theme.teamColor(ColoredTeams.Orange)).toEqual(teamBase("Orange"));
+    expect(theme.teamColor(ColoredTeams.Green)).toEqual(teamBase("Green"));
+    expect(theme.teamColor(ColoredTeams.Bot)).toEqual(teamBase("Bot"));
+    expect(theme.teamColor(ColoredTeams.Humans)).toEqual(teamBase("Humans"));
+    expect(theme.teamColor(ColoredTeams.Nations)).toEqual(teamBase("Nations"));
   });
 
-  test("assignTeamPlayerColor always returns the same color for the same playerID", () => {
-    const playerId = "player123";
-
-    const blueColor1 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerId,
-    );
-    const blueColor2 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerId,
-    );
-
-    expect(blueColor1.isEqual(blueColor2)).toBe(true);
-
-    const redColor1 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerId,
-    );
-    const redColor2 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerId,
-    );
-
-    expect(redColor1.isEqual(redColor2)).toBe(true);
+  test("teamColorForPlayer is stable for the same playerID", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
+    const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
+    expect(a.isEqual(b)).toBe(true);
   });
 
-  test("assignTeamPlayerColor returns a different color when the playerID is different", () => {
-    const playerIdOne = "player1";
-    const playerIdTwo = "player2";
+  test("teamColorForPlayer differs for different playerIDs", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player1");
+    const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player2");
+    expect(a.isEqual(b)).toBe(false);
+  });
+});
 
-    const blueColorPlayerOne = allocator.assignTeamPlayerColor(
+describe("colorblind theme", () => {
+  test("applies a palette distinct from the default theme", () => {
+    const defaultTheme = new SettingsTheme(createThemeSettings("default"));
+    const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+
+    // At least one team's base color should differ — the colorblind theme
+    // swaps the team palettes for CVD-safe (Okabe-Ito) colors.
+    const teams = [
       ColoredTeams.Blue,
-      playerIdOne,
-    );
-    const blueColorPlayerTwo = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerIdTwo,
-    );
-
-    expect(blueColorPlayerOne.isEqual(blueColorPlayerTwo)).toBe(false);
-
-    const redColorPlayerOne = allocator.assignTeamPlayerColor(
       ColoredTeams.Red,
-      playerIdOne,
+      ColoredTeams.Teal,
+      ColoredTeams.Purple,
+      ColoredTeams.Yellow,
+      ColoredTeams.Orange,
+      ColoredTeams.Green,
+    ];
+    const anyDifferent = teams.some(
+      (team) =>
+        !defaultTheme.teamColor(team).isEqual(colorblind.teamColor(team)),
     );
-    const redColorPlayerTwo = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerIdTwo,
-    );
+    expect(anyDifferent).toBe(true);
+  });
 
-    expect(redColorPlayerOne.isEqual(redColorPlayerTwo)).toBe(false);
+  test("scales border lightness relative to the fill", () => {
+    const colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+    const fill = colord("#0072b2");
+    const border = colorblind.borderColor(fill);
+    expect(border.toHsl().l).toBeCloseTo(fill.toHsl().l * 0.6, 0);
   });
 });
 
@@ -158,8 +149,7 @@ describe("selectDistinctColor", () => {
     ];
 
     const result = selectDistinctColorIndex(availableColors, assignedColors);
-    expect(result).not.toBeNull();
-    const rgb = availableColors[result!].toRgb();
+    const rgb = availableColors[result].toRgb();
     expect([
       { r: 0, g: 255, b: 0, a: 1 },
       { r: 0, g: 0, b: 255, a: 1 },

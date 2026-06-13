@@ -7,9 +7,9 @@ import {
   WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
 import { UIState } from "../src/client/UIState";
+import { GameView, PlayerView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
-import { GameView, PlayerView } from "../src/core/game/GameView";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {

@@ -1,5 +1,9 @@
 {
+  "id": "Dyslexdria",
   "name": "Dyslexdria",
+  "translation_key": "map.dyslexdria",
+  "categories": ["world"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "name": "ZOMIBES",

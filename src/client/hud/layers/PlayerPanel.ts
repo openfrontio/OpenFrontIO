@@ -11,7 +11,6 @@ import {
   Relation,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
@@ -36,6 +35,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { GameView, PlayerView } from "../../view";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";

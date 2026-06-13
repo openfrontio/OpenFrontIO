@@ -1,6 +1,46 @@
+import colorblindTheme from "./colorblind-theme.json";
+import defaultTheme from "./default-theme.json";
 import defaults from "./render-settings.json";
 
+/**
+ * Theme data — player/team palettes and color-derivation knobs. Loaded from a
+ * theme JSON file (default-theme.json or colorblind-theme.json) and combined
+ * with render-settings.json at runtime so all graphics configuration flows
+ * through one pipeline. Colors are hex strings; palettes are consumed by the
+ * theme module (src/client/theme/), which generates team variations and
+ * allocates player colors at runtime.
+ */
+export interface ThemeSettings {
+  /**
+   * Base color per colored team (keys match ColoredTeams). Per-player
+   * variations are generated at runtime; Bot stays a single flat color.
+   */
+  teamColors: Record<string, string>;
+  humanColors: string[];
+  nationColors: string[];
+  botColors: string[];
+  /** Used when the primary palettes are exhausted. */
+  fallbackColors: string[];
+  /** Border = territory color darkened by this absolute amount. */
+  borderDarken: number;
+  /**
+   * Border HSL lightness multiplier, applied before borderDarken. 1 = no-op.
+   * Scaling keeps every border the same proportion darker than its fill
+   * (used by the colorblind theme so dark fills don't collapse to black).
+   */
+  borderLightnessScale: number;
+  defendedBorderDarkenLight: number;
+  defendedBorderDarkenDark: number;
+  /** Minimum LAB delta between structure fill and border colors. */
+  structureContrastTarget: number;
+  /** Border color of the local player's territory. */
+  focusedBorderColor: string;
+  /** Tint applied to unit sprites during spawn highlight. */
+  spawnHighlightColor: string;
+}
+
 export interface RenderSettings {
+  theme: ThemeSettings;
   passEnabled: {
     terrain: boolean;
     territory: boolean;
@@ -73,6 +113,7 @@ export interface RenderSettings {
     territorySaturation: number;
     /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
     territoryAlpha: number;
+    coordinateGridOpacity: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;
@@ -141,6 +182,11 @@ export interface RenderSettings {
     iconR: number;
     iconG: number;
     iconB: number;
+    /**
+     * When > 0, the icon glyph is a darkened version of the player color
+     * (HSV value multiplier) instead of the flat iconR/G/B color. 0 = off.
+     */
+    iconDarken: number;
   };
   structureLevel: {
     scale: number;
@@ -183,6 +229,7 @@ export interface RenderSettings {
     hBombGlowB: number;
     hBombGlowStrength: number; // peak opacity of the glow
     hBombGlowInner: number; // radial falloff start (0..1, quad-space)
+    untargetableAlpha: number; // alpha for nukes SAMs can't target (0..1)
   };
   name: {
     lerpSpeed: number;
@@ -201,9 +248,16 @@ export interface RenderSettings {
     nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Alpha multiplier applied to a name while the cursor is over it. */
+    hoverFadeAlpha: number;
+    /** White glow behind the hovered player's name: px past the outline. */
+    hoverGlowWidth: number;
+    /** Peak opacity of the hover glow (0 disables it). */
+    hoverGlowAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;
+    attackRingScreenPx: number; // screen px — attack ring quad half-size (visible outer ring = 0.8×)
     nukeShockwaveDurationMs: number;
     nukeShockwaveRadiusFactor: number;
     samShockwaveDurationMs: number;
@@ -246,9 +300,15 @@ export interface RenderSettings {
     pulseAmplitude: number; // alpha pulse ±
     pulseSpeed: number; // pulse frequency (radians/sec)
     fillAlphaOffset: number; // inner fill is baseAlpha minus this
-    colorR: number; // circle color
+    colorR: number; // circle color — enemy nukes
     colorG: number;
     colorB: number;
+    selfColorR: number; // circle color — own nukes
+    selfColorG: number;
+    selfColorB: number;
+    allyColorR: number; // circle color — ally/teammate nukes
+    allyColorG: number;
+    allyColorB: number;
   };
   moveIndicator: {
     startRadius: number; // screen px — initial distance from center
@@ -309,9 +369,30 @@ export interface RenderSettings {
   lightConfigs: Record<string, { radius: number; intensity: number }>;
 }
 
-/** Create a fresh settings object with defaults from render-settings.json. */
+export type ThemeName = "default" | "colorblind";
+
+// Typed so tsc validates each theme JSON against the ThemeSettings shape.
+const THEMES: Record<ThemeName, ThemeSettings> = {
+  default: defaultTheme,
+  colorblind: colorblindTheme,
+};
+
+/** Create fresh theme settings with defaults from the named theme JSON. */
+export function createThemeSettings(
+  name: ThemeName = "default",
+): ThemeSettings {
+  return JSON.parse(JSON.stringify(THEMES[name])) as ThemeSettings;
+}
+
+/**
+ * Create a fresh settings object: render-settings.json combined with the
+ * active theme JSON.
+ */
 export function createRenderSettings(): RenderSettings {
-  return JSON.parse(JSON.stringify(defaults)) as RenderSettings;
+  return {
+    ...(JSON.parse(JSON.stringify(defaults)) as Omit<RenderSettings, "theme">),
+    theme: createThemeSettings(),
+  };
 }
 
 /** Dump current settings to a downloadable JSON file. */

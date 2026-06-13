@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "world"],
+  "featured_rank": 1,
+  "id": "World",
   "map": {
     "height": 1000,
     "num_land_tiles": 651609,
@@ -14,6 +17,7 @@
     "num_land_tiles": 158086,
     "width": 1000
   },
+  "multiplayer_frequency": 20,
   "name": "World",
   "nations": [
     {
@@ -376,5 +380,6 @@
       "flag": "lk",
       "name": "Sri Lanka"
     }
-  ]
+  ],
+  "translation_key": "map.world"
 }

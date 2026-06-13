@@ -3,13 +3,11 @@ import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
-import { GameView } from "../core/game/GameView";
 import { uploadFrameData } from "./render/frame/Upload";
-import {
-  PlayerStatic,
-  SpawnCenter,
-  GameView as WebGLGameView,
-} from "./render/gl";
+// Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
+// imports into any non-Vite consumer (e.g. the Node perf harness).
+import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
+import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
@@ -45,7 +43,7 @@ export class WebGLFrameBuilder {
   // Scratch buffer for terrain-delta uploads (parallel to the refs list).
   private terrainDeltaBytes: Uint8Array = new Uint8Array(0);
 
-  constructor(private readonly view: WebGLGameView) {
+  constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
@@ -57,6 +55,19 @@ export class WebGLFrameBuilder {
     this.lastSpawnTile.clear();
     this.localPlayerSmallID = 0;
     this.skinsInitialized = false;
+  }
+
+  /**
+   * Re-write every player's palette entry from their current (possibly re-themed)
+   * colors and re-upload just the palette texture. Used after a mid-game theme
+   * change (e.g. toggling colorblind mode) so existing territories re-color
+   * without re-syncing players, skins, or spawns.
+   */
+  refreshPalette(gameView: GameView): void {
+    for (const p of gameView.players()) {
+      this.writePaletteEntry(p.smallID(), p.territoryColor(), p.borderColor());
+    }
+    this.view.updatePalette(this.palette);
   }
 
   update(gameView: GameView): void {
@@ -139,18 +150,20 @@ export class WebGLFrameBuilder {
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
-      // myPlayer's ring color is overridden in SpawnOverlayPass (animated
-      // white→gold pulse); everyone else uses their territory tint.
+      // myPlayer's ring pulses white→this color in SpawnOverlayPass: gold
+      // when teamless, own territory tint in team games (matches teammates'
+      // rings). Everyone else uses their territory tint directly.
       const c = p.territoryColor().toRgb();
+      const useGold = isSelf && myTeam === null;
       centers.push({
         // spawnTile tracks the player's currently-selected spawn directly —
         // updates the same tick the player picks a new location (faster than
         // the nameData centroid which only refreshes every 2 ticks).
         x: gameView.x(spawnTile),
         y: gameView.y(spawnTile),
-        r: c.r / 255,
-        g: c.g / 255,
-        b: c.b / 255,
+        r: useGold ? 1 : c.r / 255,
+        g: useGold ? 0.84 : c.g / 255,
+        b: useGold ? 0 : c.b / 255,
         isSelf,
         isTeammate:
           myTeam !== null &&

@@ -2,7 +2,6 @@ import { Cell } from "src/core/game/Game";
 import { EventBus } from "../../core/EventBus";
 import { UnitType } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
-import { GameView, UnitView } from "../../core/game/GameView";
 import { Controller } from "../Controller";
 import {
   CloseViewEvent,
@@ -15,9 +14,10 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../InputHandler";
-import { GameView as WebGLGameView } from "../render/gl";
+import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { MoveWarshipIntentEvent } from "../Transport";
+import { GameView, UnitView } from "../view";
 
 const WARSHIP_SELECTION_RADIUS = 10;
 
@@ -48,7 +48,7 @@ export class WarshipSelectionController implements Controller {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    private view: WebGLGameView,
+    private view: MapRenderer,
   ) {}
 
   tick() {

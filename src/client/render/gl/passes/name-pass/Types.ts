@@ -77,6 +77,7 @@ export interface PlayerSlot {
   nukeTargetsMe: boolean;
   traitorRemainingTicks: number;
   allianceFraction: number;
+  allianceRemainingTicks: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -54,7 +54,7 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
-  SendStartGameEvent,
+  SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
@@ -219,7 +219,7 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
-    "start-game": CustomEvent;
+    toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
@@ -376,7 +376,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
-    document.addEventListener("start-game", this.handleStartGame.bind(this));
+    document.addEventListener(
+      "toggle_game_start_timer",
+      this.handleToggleGameStartTimer.bind(this),
+    );
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -1008,9 +1011,9 @@ class Client {
     }
   }
 
-  private handleStartGame() {
+  private handleToggleGameStartTimer() {
     if (this.eventBus) {
-      this.eventBus.emit(new SendStartGameEvent());
+      this.eventBus.emit(new SendToggleGameStartTimer());
     }
   }
 

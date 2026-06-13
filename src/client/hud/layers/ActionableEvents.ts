@@ -9,7 +9,6 @@ import {
   BrokeAllianceUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { GoToPlayerEvent } from "../../TransformHandler";
@@ -20,6 +19,7 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { GameView, PlayerView } from "../../view";
 
 interface ActionableEvent {
   description: string;
@@ -120,10 +120,14 @@ export class ActionableEvents extends LitElement implements Controller {
         (event.duration === undefined ||
           this.game.ticks() - event.createdAt < event.duration) &&
         (event.type !== MessageType.ALLIANCE_REQUEST ||
-          // We remove Alliance Requests if the requestor is no longer requesting an alliance with us.
-          (
+          // We remove Alliance Requests if the requestor is dead.
+          ((
             this.game.playerBySmallID(event.requestorID) as PlayerView
-          ).isRequestingAllianceWith(this.game.myPlayer() as PlayerView)),
+          ).isAlive() &&
+            // We remove Alliance Requests if the requestor is no longer requesting an alliance with us.
+            (
+              this.game.playerBySmallID(event.requestorID) as PlayerView
+            ).isRequestingAllianceWith(this.game.myPlayer() as PlayerView))),
     );
 
     if (this.events.length !== remainingEvents.length) {

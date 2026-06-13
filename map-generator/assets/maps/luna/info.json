@@ -1,5 +1,10 @@
 {
+  "id": "Luna",
   "name": "Luna",
+  "translation_key": "map.luna",
+  "categories": ["cosmic"],
+  "multiplayer_frequency": 6,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [265, 662],
@@ -46,7 +51,6 @@
       "flag": "us",
       "name": "Artemis II"
     },
-
     {
       "coordinates": [515, 170],
       "flag": "Russian SSR",
@@ -57,7 +61,6 @@
       "flag": "Russian SSR",
       "name": "Luna 21"
     },
-
     {
       "coordinates": [1030, 790],
       "flag": "Russian SSR",
@@ -83,7 +86,6 @@
       "flag": "Russian SSR",
       "name": "Luna 1"
     },
-
     {
       "coordinates": [672, 2323],
       "flag": "cn",
@@ -104,13 +106,11 @@
       "flag": "cn",
       "name": "Chang'e 6"
     },
-
     {
       "coordinates": [830, 745],
       "flag": "jp",
       "name": "S.L.I.M."
     },
-
     {
       "coordinates": [400, 3360],
       "flag": "in",
@@ -121,7 +121,6 @@
       "flag": "in",
       "name": "Chandrayaan 1"
     },
-
     {
       "coordinates": [755, 3035],
       "flag": "",
@@ -135,8 +134,18 @@
   ],
   "teamGameSpawnAreas": {
     "2": [
-      { "x": 0, "y": 0, "width": 1308, "height": 1754 },
-      { "x": 0, "y": 1754, "width": 1308, "height": 1754 }
+      {
+        "x": 0,
+        "y": 0,
+        "width": 1308,
+        "height": 1754
+      },
+      {
+        "x": 0,
+        "y": 1754,
+        "width": 1308,
+        "height": 1754
+      }
     ]
   }
 }
