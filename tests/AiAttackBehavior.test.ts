@@ -470,7 +470,7 @@ describe("Hard/Impossible troop floor", () => {
     );
 
     // In FFA Hard, attacker with 100k and neighbor with 90k would cap
-    // attack troops to 25k. In Team mode, troopSendCap returns Infinity
+    // attack troops to 32.5k. In Team mode, troopSendCap returns Infinity
     // so the attack is not capped by neighbor strength.
     attacker.addTroops(100_000);
     neighbor.addTroops(90_000);
@@ -483,8 +483,8 @@ describe("Hard/Impossible troop floor", () => {
       (c) => c[0].constructor.name === "AttackExecution",
     )?.[0] as any;
     expect(exec).toBeDefined();
-    // In FFA Hard, troops would be capped to 25k. In Team mode, no cap.
-    expect(exec.startTroops).toBeGreaterThan(25_000);
+    // In FFA Hard, troops would be capped to 32.5k. In Team mode, no cap.
+    expect(exec.startTroops).toBeGreaterThan(32_500);
   });
 
   it("Team: isAttackTooWeak returns false — weak attacks allowed in team games", async () => {
