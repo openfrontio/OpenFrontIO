@@ -35,6 +35,7 @@
 import { assetUrl } from "src/core/AssetUrls";
 import type { RendererConfig, UnitState } from "../../types";
 import {
+  SMOOTHED_NUKE_TYPES,
   TrainType,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
@@ -94,7 +95,8 @@ const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
  *   float x, y, ownerID   — 12 bytes (3 floats)
  *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
  *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating, 5 = flicker-untargetable)
- *   2 bytes padding        — aligns to 4-byte boundary
+ *   uint8 flickerHash      —  1 byte  (per-instance flicker phase offset)
+ *   1 byte padding         — aligns to 4-byte boundary
  */
 const FLOATS_PER_INSTANCE = 4;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
@@ -133,17 +135,17 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_MIRV_WARHEAD,
 ]);
 
-/** Nuke types whose position is interpolated lastPos→pos each render frame,
- *  so they glide along their arc instead of jumping once per game tick. */
-const SMOOTH_TYPES: ReadonlySet<string> = new Set([
-  UT_ATOM_BOMB,
-  UT_HYDROGEN_BOMB,
-  UT_MIRV,
-  UT_MIRV_WARHEAD,
-]);
-
 /** Simulation tick duration — one tick is 100ms (see Config.ts). */
 const TICK_INTERVAL_MS = 100;
+
+/** Per-instance flicker phase offset, hashed from the tick position. Computed
+ *  CPU-side (not from the shader's instance position) so per-frame position
+ *  smoothing doesn't re-roll the flicker every frame. Matches the formula the
+ *  vertex shader previously applied to its rendered position. */
+function flickerHashByte(x: number, y: number): number {
+  const f = x * 0.1731 + y * 0.3179;
+  return ((f - Math.floor(f)) * 255) | 0;
+}
 
 // ---------------------------------------------------------------------------
 // Helper: create a VAO for instanced unit rendering
@@ -168,9 +170,9 @@ function createUnitVao(
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, BYTES_PER_INSTANCE, 0);
   gl.vertexAttribDivisor(1, 1);
 
-  // Attribute 2: per-instance (atlasIdx, flags) — 2 uint8s at offset 12, converted to float
+  // Attribute 2: per-instance (atlasIdx, flags, flickerHash) — 3 uint8s at offset 12, converted to float
   gl.enableVertexAttribArray(2);
-  gl.vertexAttribPointer(2, 2, gl.UNSIGNED_BYTE, false, BYTES_PER_INSTANCE, 12);
+  gl.vertexAttribPointer(2, 3, gl.UNSIGNED_BYTE, false, BYTES_PER_INSTANCE, 12);
   gl.vertexAttribDivisor(2, 1);
 
   gl.bindVertexArray(null);
@@ -373,6 +375,7 @@ export class UnitPass {
     const byteOff = this.groundCount * BYTES_PER_INSTANCE;
     this.groundBuf.uint8[byteOff + 12] = atlasIdx;
     this.groundBuf.uint8[byteOff + 13] = flags;
+    this.groundBuf.uint8[byteOff + 14] = flickerHashByte(x, y);
     this.groundCount++;
   }
 
@@ -391,6 +394,7 @@ export class UnitPass {
     const byteOff = this.missileCount * BYTES_PER_INSTANCE;
     this.missileBuf.uint8[byteOff + 12] = atlasIdx;
     this.missileBuf.uint8[byteOff + 13] = flags;
+    this.missileBuf.uint8[byteOff + 14] = flickerHashByte(x, y);
     this.missileCount++;
   }
 
@@ -461,7 +465,10 @@ export class UnitPass {
       const y = (unit.pos - x) / this.mapW;
 
       if (isMissile) {
-        if (SMOOTH_TYPES.has(unit.unitType) && unit.lastPos !== unit.pos) {
+        if (
+          SMOOTHED_NUKE_TYPES.has(unit.unitType) &&
+          unit.lastPos !== unit.pos
+        ) {
           const lx = unit.lastPos % this.mapW;
           const ly = (unit.lastPos - lx) / this.mapW;
           this.smoothSegs.push(this.missileCount, lx, ly, x, y);
