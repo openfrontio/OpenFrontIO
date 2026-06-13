@@ -133,6 +133,18 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_MIRV_WARHEAD,
 ]);
 
+/** Nuke types whose position is interpolated lastPos→pos each render frame,
+ *  so they glide along their arc instead of jumping once per game tick. */
+const SMOOTH_TYPES: ReadonlySet<string> = new Set([
+  UT_ATOM_BOMB,
+  UT_HYDROGEN_BOMB,
+  UT_MIRV,
+  UT_MIRV_WARHEAD,
+]);
+
+/** Simulation tick duration — one tick is 100ms (see Config.ts). */
+const TICK_INTERVAL_MS = 100;
+
 // ---------------------------------------------------------------------------
 // Helper: create a VAO for instanced unit rendering
 // ---------------------------------------------------------------------------
@@ -198,6 +210,11 @@ export class UnitPass {
   private missileVao: WebGLVertexArrayObject;
   private missileBuf: DynamicInstanceBuffer;
   private missileCount = 0;
+
+  // Per-frame nuke smoothing: flat (instanceIdx, lastX, lastY, x, y) tuples
+  // recorded each tick, lerped into the missile buffer in drawMissiles.
+  private smoothSegs: number[] = [];
+  private lastUnitsUpdateMs = 0;
 
   private quadBuf: WebGLBuffer;
   private paletteTex: WebGLTexture;
@@ -381,6 +398,8 @@ export class UnitPass {
     this.frameTick = tick;
     this.groundCount = 0;
     this.missileCount = 0;
+    this.smoothSegs.length = 0;
+    this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
       if (!unit.isActive) continue;
@@ -442,6 +461,11 @@ export class UnitPass {
       const y = (unit.pos - x) / this.mapW;
 
       if (isMissile) {
+        if (SMOOTH_TYPES.has(unit.unitType) && unit.lastPos !== unit.pos) {
+          const lx = unit.lastPos % this.mapW;
+          const ly = (unit.lastPos - lx) / this.mapW;
+          this.smoothSegs.push(this.missileCount, lx, ly, x, y);
+        }
         this.emitMissile(x, y, unit.ownerID, atlasIdx, flags);
 
         // Shells emit a second instance at lastPos (2-pixel trail effect)
@@ -541,10 +565,37 @@ export class UnitPass {
   /** Draw missiles/projectiles (nukes, shells, SAM, MIRV warheads). Render above structures. */
   drawMissiles(cameraMatrix: Float32Array): void {
     if (this.missileCount === 0) return;
+    this.applyMissileSmoothing();
     this.bindProgram(cameraMatrix);
     const gl = this.gl;
     gl.bindVertexArray(this.missileVao);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.missileCount);
+  }
+
+  /** Lerp smoothed nukes lastPos→pos by wall-clock progress through the
+   *  current tick and re-upload the (small) missile instance buffer. */
+  private applyMissileSmoothing(): void {
+    const segs = this.smoothSegs;
+    if (segs.length === 0) return;
+    const alpha = Math.min(
+      1,
+      (performance.now() - this.lastUnitsUpdateMs) / TICK_INTERVAL_MS,
+    );
+    const f32 = this.missileBuf.float32;
+    for (let i = 0; i < segs.length; i += 5) {
+      const off = segs[i] * FLOATS_PER_INSTANCE;
+      f32[off + 0] = segs[i + 1] + (segs[i + 3] - segs[i + 1]) * alpha;
+      f32[off + 1] = segs[i + 2] + (segs[i + 4] - segs[i + 2]) * alpha;
+    }
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.missileBuf.buffer);
+    gl.bufferSubData(
+      gl.ARRAY_BUFFER,
+      0,
+      f32,
+      0,
+      this.missileCount * FLOATS_PER_INSTANCE,
+    );
   }
 
   dispose(): void {
