@@ -36,6 +36,10 @@ export function applyGraphicsOverrides(
     settings.structure.iconDarken = 0.3;
     settings.structure.iconAlpha = 0.9;
   }
+  // Classic level numbers (default): the round_6x6_modified bitmap font;
+  // false switches to the overpass-bold MSDF font.
+  settings.structureLevel.classicFont =
+    overrides.structure?.classicNumbers ?? true;
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
       overrides.mapOverlay.highlightFillBrighten;

@@ -281,6 +281,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       ),
       slider(
         s.structureLevel,
+        "outlineWidth",
+        d.structureLevel,
+        0,
+        20,
+        0.1,
+        "Outline Width (px)",
+      ),
+      slider(
+        s.structureLevel,
         "offsetY",
         d.structureLevel,
         -2,

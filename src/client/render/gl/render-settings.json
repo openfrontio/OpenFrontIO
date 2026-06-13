@@ -154,7 +154,9 @@
   },
   "structureLevel": {
     "scale": 1,
-    "offsetY": -0.4
+    "outlineWidth": 8,
+    "offsetY": -0.4,
+    "classicFont": true
   },
   "bar": {
     "healthBarW": 11,

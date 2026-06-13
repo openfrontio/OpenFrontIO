@@ -15,6 +15,7 @@ export const GraphicsOverridesSchema = z
     structure: z
       .object({
         classicIcons: z.boolean(),
+        classicNumbers: z.boolean(),
       })
       .partial(),
     mapOverlay: z
