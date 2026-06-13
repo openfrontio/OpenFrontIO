@@ -150,18 +150,20 @@ export class WebGLFrameBuilder {
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
-      // myPlayer's ring color is overridden in SpawnOverlayPass (animated
-      // white→gold pulse); everyone else uses their territory tint.
+      // myPlayer's ring pulses white→this color in SpawnOverlayPass: gold
+      // when teamless, own territory tint in team games (matches teammates'
+      // rings). Everyone else uses their territory tint directly.
       const c = p.territoryColor().toRgb();
+      const useGold = isSelf && myTeam === null;
       centers.push({
         // spawnTile tracks the player's currently-selected spawn directly —
         // updates the same tick the player picks a new location (faster than
         // the nameData centroid which only refreshes every 2 ticks).
         x: gameView.x(spawnTile),
         y: gameView.y(spawnTile),
-        r: c.r / 255,
-        g: c.g / 255,
-        b: c.b / 255,
+        r: useGold ? 1 : c.r / 255,
+        g: useGold ? 0.84 : c.g / 255,
+        b: useGold ? 0 : c.b / 255,
         isSelf,
         isTeammate:
           myTeam !== null &&

@@ -211,19 +211,17 @@ describe("applyGraphicsOverrides", () => {
     expect(s.structure).toEqual(defaults.structure);
   });
 
-  test("classicIcons=true → light shape + dark icon + 0.75 alpha", () => {
+  test("classicIcons=true → light shape + dark icon + 0.9 alpha", () => {
     const s = gen({
       structure: { classicIcons: true },
     }).structure;
     // Shape (circle behind) is mostly player color, lightly darkened.
     expect(s.fillDarken).toBe(1.0);
     expect(s.borderDarken).toBe(0.7);
-    // Icon glyph itself is black.
-    expect(s.iconR).toBe(0);
-    expect(s.iconG).toBe(0);
-    expect(s.iconB).toBe(0);
+    // Icon glyph is a darkened version of the player color.
+    expect(s.iconDarken).toBe(0.3);
     // Slightly translucent in classic mode.
-    expect(s.iconAlpha).toBe(0.75);
+    expect(s.iconAlpha).toBe(0.9);
   });
 
   test("classicIcons=false or absent → keeps render-settings.json defaults (fully opaque)", () => {
@@ -233,12 +231,12 @@ describe("applyGraphicsOverrides", () => {
     }).structure;
     expect(off.borderDarken).toBe(defaults.borderDarken);
     expect(off.fillDarken).toBe(defaults.fillDarken);
-    expect(off.iconR).toBe(defaults.iconR);
+    expect(off.iconDarken).toBe(0);
     expect(off.iconAlpha).toBe(1);
     const absent = gen({ structure: {} }).structure;
     expect(absent.borderDarken).toBe(defaults.borderDarken);
     expect(absent.fillDarken).toBe(defaults.fillDarken);
-    expect(absent.iconR).toBe(defaults.iconR);
+    expect(absent.iconDarken).toBe(0);
     expect(absent.iconAlpha).toBe(1);
   });
 
@@ -303,6 +301,6 @@ describe("applyGraphicsOverrides", () => {
     expect(s.name.nameScaleFactor).toBe(0.9);
     expect(s.structure.borderDarken).toBe(0.7);
     expect(s.structure.fillDarken).toBe(1.0);
-    expect(s.structure.iconAlpha).toBe(0.75);
+    expect(s.structure.iconAlpha).toBe(0.9);
   });
 });

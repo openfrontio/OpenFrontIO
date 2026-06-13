@@ -89,6 +89,7 @@ export class StructurePass {
   private uBorderDarken: WebGLUniformLocation;
   private uIconAlpha: WebGLUniformLocation;
   private uIconColor: WebGLUniformLocation;
+  private uIconDarken: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
   private instanceBuf: DynamicInstanceBuffer;
@@ -174,6 +175,7 @@ export class StructurePass {
     this.uBorderDarken = gl.getUniformLocation(this.program, "uBorderDarken")!;
     this.uIconAlpha = gl.getUniformLocation(this.program, "uIconAlpha")!;
     this.uIconColor = gl.getUniformLocation(this.program, "uIconColor")!;
+    this.uIconDarken = gl.getUniformLocation(this.program, "uIconDarken")!;
 
     // Texture unit bindings + ghost defaults
     gl.useProgram(this.program);
@@ -370,6 +372,7 @@ export class StructurePass {
     gl.uniform1f(this.uBorderDarken, ss.borderDarken);
     gl.uniform1f(this.uIconAlpha, ss.iconAlpha);
     gl.uniform3f(this.uIconColor, ss.iconR, ss.iconG, ss.iconB);
+    gl.uniform1f(this.uIconDarken, ss.iconDarken);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);

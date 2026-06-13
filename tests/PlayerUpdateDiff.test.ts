@@ -72,15 +72,61 @@ describe("Player update diffing (toUpdate)", () => {
 
   test("primitive changes appear in the diff without unchanged collections", () => {
     alice.toUpdate();
-    alice.addGold(123n);
+    alice.markTraitor();
     const diff = alice.toUpdate();
     expect(diff).not.toBeNull();
-    expect(diff!.gold).toBe(alice.gold());
+    expect(diff!.isTraitor).toBe(true);
     // Unchanged collection fields must be absent from the diff.
     expect(diff!.allies).toBeUndefined();
     expect(diff!.embargoes).toBeUndefined();
     expect(diff!.outgoingAttacks).toBeUndefined();
     expect(diff!.alliances).toBeUndefined();
+  });
+
+  test("stat churn (gold/troops/tilesOwned) travels via statsOut, not the diff", () => {
+    const statsOut: number[] = [];
+    alice.toUpdate(statsOut);
+    statsOut.length = 0;
+
+    alice.addGold(123n);
+    const diff = alice.toUpdate(statsOut);
+    // No object diff — gold alone must not put the player on the object
+    // channel (that's the whole point of the packed stats channel).
+    expect(diff).toBeNull();
+    expect(statsOut).toEqual([
+      alice.smallID(),
+      alice.numTilesOwned(),
+      Number(alice.gold()),
+      alice.troops(),
+    ]);
+
+    // Nothing changed → no quad, no diff.
+    statsOut.length = 0;
+    expect(alice.toUpdate(statsOut)).toBeNull();
+    expect(statsOut).toEqual([]);
+
+    // A non-stat change produces an object diff but no quad.
+    alice.markTraitor();
+    expect(alice.toUpdate(statsOut)).not.toBeNull();
+    expect(statsOut).toEqual([]);
+  });
+
+  test("first emission carries the stats in the full snapshot, not statsOut", () => {
+    const info = new PlayerInfo(
+      "dora",
+      PlayerType.Human,
+      "dora_client",
+      "dora_id",
+    );
+    game.addPlayer(info);
+    const dora = game.player("dora_id");
+    const statsOut: number[] = [];
+    const full = dora.toUpdate(statsOut);
+    expect(full).not.toBeNull();
+    expect(full!.gold).toBe(dora.gold());
+    expect(full!.troops).toBe(dora.troops());
+    expect(full!.tilesOwned).toBe(dora.numTilesOwned());
+    expect(statsOut).toEqual([]);
   });
 
   test("adding and removing an embargo shows up in consecutive diffs", () => {
@@ -156,17 +202,33 @@ describe("Player update diffing (toUpdate)", () => {
       alice.smallID(),
     );
 
-    // As the attack progresses, troop counts change and must keep flowing
-    // through subsequent diffs.
+    // As the attack progresses, troop counts change — but attack arrays are
+    // NOT resent for troop-only changes. Troops flow as packed
+    // [ownerSmallID, direction, index, troops] quads instead.
+    game.drainPackedAttackUpdates(); // discard quads from earlier ticks
     const nextUpdates = game.executeNextTick();
     const nextPlayerUpdates = nextUpdates[
       GameUpdateType.Player
     ] as PlayerUpdate[];
     const next = nextPlayerUpdates.find((u) => u.id === "alice_id");
-    expect(next).toBeDefined();
-    expect(
-      next!.outgoingAttacks!.some((a) => a.targetID === bob.smallID()),
-    ).toBe(true);
+    if (next !== undefined) {
+      // Alice may appear for other field changes, but not for attack arrays.
+      expect(next.outgoingAttacks).toBeUndefined();
+    }
+    const packed = game.drainPackedAttackUpdates();
+    expect(packed).not.toBeNull();
+    // Find alice's outgoing quads and check one matches her current attack.
+    const aliceQuads: number[][] = [];
+    for (let i = 0; i + 3 < packed!.length; i += 4) {
+      if (packed![i] === alice.smallID() && packed![i + 1] === 0) {
+        aliceQuads.push(Array.from(packed!.subarray(i, i + 4)));
+      }
+    }
+    expect(aliceQuads.length).toBeGreaterThan(0);
+    const aliceAttacks = alice.outgoingAttacks();
+    for (const [, , index, troops] of aliceQuads) {
+      expect(troops).toBe(aliceAttacks[index].troops());
+    }
   });
 
   test("in-worker mutation of shared empty collections fails loudly", () => {

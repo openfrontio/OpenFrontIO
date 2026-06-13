@@ -426,7 +426,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.GiantWorldMap,
     translationKey: "map.giantworldmap",
     categories: ["world"],
-    multiplayerFrequency: 0,
+    multiplayerFrequency: 10,
   },
   {
     id: "GreatLakes",

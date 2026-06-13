@@ -204,7 +204,9 @@ export function makeEmptyGu(
     tick,
     updates,
     packedTileUpdates: new Uint32Array(0),
-    playerNameViewData: {},
+    // playerNameViewData deliberately absent — production omits it on every
+    // tick between placement rebuilds, so the stub default must exercise the
+    // absent path. Tests that need placements set it explicitly.
     ...overrides,
   };
 }

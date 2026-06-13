@@ -149,7 +149,8 @@
     "iconAlpha": 1.0,
     "iconR": 1.0,
     "iconG": 1.0,
-    "iconB": 1.0
+    "iconB": 1.0,
+    "iconDarken": 0
   },
   "structureLevel": {
     "scale": 1.2,
@@ -215,6 +216,7 @@
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
+    "attackRingScreenPx": 30,
     "nukeShockwaveDurationMs": 1500,
     "nukeShockwaveRadiusFactor": 1.5,
     "samShockwaveDurationMs": 800,
@@ -227,7 +229,7 @@
     "conquestFadeOut": 0.6
   },
   "nukeTrajectory": {
-    "lineWidth": 1.25,
+    "lineWidth": 2.5,
     "outlineWidth": 1.5,
     "dashTargetable": 8,
     "gapTargetable": 4,
@@ -259,7 +261,13 @@
     "fillAlphaOffset": 0.6,
     "colorR": 1,
     "colorG": 0,
-    "colorB": 0
+    "colorB": 0,
+    "selfColorR": 0,
+    "selfColorG": 1,
+    "selfColorB": 0,
+    "allyColorR": 1,
+    "allyColorG": 1,
+    "allyColorB": 0
   },
   "moveIndicator": {
     "startRadius": 13,

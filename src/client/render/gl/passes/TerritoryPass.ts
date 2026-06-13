@@ -16,7 +16,7 @@ import type { TilePair } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
-import { TILE_DEFINES } from "../utils/TileCodec";
+import { FALLOUT_BIT, TILE_DEFINES } from "../utils/TileCodec";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
@@ -63,6 +63,13 @@ export class TerritoryPass {
   /** CPU-side tile state — what is currently on the GPU (display state). */
   private cpuTileState: Uint16Array;
   private tilesDirty = false;
+
+  /**
+   * True when a tile's fallout bit flipped since the last consume (or a full
+   * state replacement happened, which may contain fallout). The renderer uses
+   * this to activate the heat-decay pass only while fallout is in play.
+   */
+  private falloutTouched = false;
 
   /**
    * True after a full state replacement (initial load / seek). flushTileTexture
@@ -200,6 +207,7 @@ export class TerritoryPass {
     this.scatter.clear();
     this.fullUploadPending = true;
     this.tilesDirty = true;
+    this.falloutTouched = true; // conservative: replaced state may have fallout
   }
 
   /**
@@ -238,6 +246,9 @@ export class TerritoryPass {
       for (let i = 0; i < bucket.length; i += 2) {
         const ref = bucket[i];
         const state = bucket[i + 1];
+        if (((ts[ref] ^ state) & FALLOUT_BIT) !== 0) {
+          this.falloutTouched = true;
+        }
         ts[ref] = state;
         if (!pending) {
           const x = ref % w;
@@ -269,6 +280,9 @@ export class TerritoryPass {
       for (let i = 0; i < bucket.length; i += 2) {
         const ref = bucket[i];
         const state = bucket[i + 1];
+        if (((ts[ref] ^ state) & FALLOUT_BIT) !== 0) {
+          this.falloutTouched = true;
+        }
         ts[ref] = state;
         if (!pending) {
           const x = ref % w;
@@ -287,6 +301,20 @@ export class TerritoryPass {
   private clearDripBuckets(): void {
     for (let b = 0; b < this.nBuckets; b++) this.dripBuckets[b].length = 0;
     this.currentBucket = 0;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Queries
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns true (and resets) if any fallout bit flipped since the last call.
+   * Checked by the renderer each frame to (re)activate heat decay.
+   */
+  consumeFalloutTouched(): boolean {
+    const touched = this.falloutTouched;
+    this.falloutTouched = false;
+    return touched;
   }
 
   // ---------------------------------------------------------------------------

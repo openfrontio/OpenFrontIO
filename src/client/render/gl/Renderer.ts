@@ -1033,6 +1033,11 @@ export class GPURenderer {
       this.borderPass.markGlobalDirty();
       this.defenseCoveragePass.markDirty();
     }
+    // Heat decay only runs while fallout is in play — (re)activate whenever a
+    // fallout bit flipped in the tile state that just reached the GPU.
+    if (this.territoryPass.consumeFalloutTouched()) {
+      this.heatManager.activate();
+    }
     this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }

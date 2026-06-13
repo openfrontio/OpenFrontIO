@@ -105,7 +105,11 @@ export function uploadFrameData(
   view.updateNames(frame.names, frame.players, false, frame.playerStatus);
 
   // --- Relations ---
-  view.updateRelations(frame.relationMatrix, frame.relationSize);
+  // Gated: updateRelations triggers a full-map border recompute downstream,
+  // so only push when the matrix was actually rebuilt this tick.
+  if (frame.relationsDirty) {
+    view.updateRelations(frame.relationMatrix, frame.relationSize);
+  }
 
   // --- Alliance clusters (SAM pass) ---
   view.setSAMAllianceClusters(frame.allianceClusters);
