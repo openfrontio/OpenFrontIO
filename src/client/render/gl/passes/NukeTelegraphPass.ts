@@ -14,8 +14,8 @@ import { createProgram } from "../utils/GlUtils";
 import fragSrc from "../shaders/nuke-telegraph/nuke-telegraph.frag.glsl?raw";
 import vertSrc from "../shaders/nuke-telegraph/nuke-telegraph.vert.glsl?raw";
 
-// Per-instance: x, y, innerRadius, outerRadius
-const FLOATS_PER_INSTANCE = 4;
+// Per-instance: x, y, innerRadius, outerRadius, relation
+const FLOATS_PER_INSTANCE = 5;
 
 export class NukeTelegraphPass {
   private gl: WebGL2RenderingContext;
@@ -28,7 +28,9 @@ export class NukeTelegraphPass {
   private uTime: WebGLUniformLocation;
   private uTelegraphStyle: WebGLUniformLocation;
   private uTelegraphAlpha: WebGLUniformLocation;
-  private uTelegraphColor: WebGLUniformLocation;
+  private uColorSelf: WebGLUniformLocation;
+  private uColorAlly: WebGLUniformLocation;
+  private uColorEnemy: WebGLUniformLocation;
 
   private instanceCount = 0;
   private startTime = performance.now();
@@ -48,10 +50,9 @@ export class NukeTelegraphPass {
       this.program,
       "uTelegraphAlpha",
     )!;
-    this.uTelegraphColor = gl.getUniformLocation(
-      this.program,
-      "uTelegraphColor",
-    )!;
+    this.uColorSelf = gl.getUniformLocation(this.program, "uColorSelf")!;
+    this.uColorAlly = gl.getUniformLocation(this.program, "uColorAlly")!;
+    this.uColorEnemy = gl.getUniformLocation(this.program, "uColorEnemy")!;
 
     // VAO
     this.vao = gl.createVertexArray()!;
@@ -69,6 +70,7 @@ export class NukeTelegraphPass {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
     // Attribute 1: per-instance vec4 (x, y, innerR, outerR)
+    // Attribute 2: per-instance float (relation: 0=self, 1=ally, 2=enemy)
     const glBuf = gl.createBuffer()!;
     this.instanceBuf = new DynamicInstanceBuffer(
       gl,
@@ -76,10 +78,14 @@ export class NukeTelegraphPass {
       16,
       FLOATS_PER_INSTANCE,
     );
+    const stride = FLOATS_PER_INSTANCE * 4;
     gl.bindBuffer(gl.ARRAY_BUFFER, glBuf);
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, stride, 0);
     gl.vertexAttribDivisor(1, 1);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 1, gl.FLOAT, false, stride, 16);
+    gl.vertexAttribDivisor(2, 1);
 
     gl.bindVertexArray(null);
   }
@@ -96,6 +102,7 @@ export class NukeTelegraphPass {
       buf[off + 1] = d.y;
       buf[off + 2] = d.innerRadius;
       buf[off + 3] = d.outerRadius;
+      buf[off + 4] = d.relation;
     }
 
     this.instanceCount = count;
@@ -137,7 +144,9 @@ export class NukeTelegraphPass {
       s.pulseSpeed,
       s.fillAlphaOffset,
     );
-    gl.uniform3f(this.uTelegraphColor, s.colorR, s.colorG, s.colorB);
+    gl.uniform3f(this.uColorSelf, s.selfColorR, s.selfColorG, s.selfColorB);
+    gl.uniform3f(this.uColorAlly, s.allyColorR, s.allyColorG, s.allyColorB);
+    gl.uniform3f(this.uColorEnemy, s.colorR, s.colorG, s.colorB);
 
     gl.bindVertexArray(this.vao);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.instanceCount);

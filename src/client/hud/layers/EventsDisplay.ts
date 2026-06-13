@@ -19,15 +19,16 @@ import {
 import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
 
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
+import { GameView, PlayerView, UnitView } from "../../view";
 
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
 import {
   getMessageTypeClasses,
   renderNumber,
+  renderTroops,
   translateText,
 } from "../../Utils";
 
@@ -428,7 +429,9 @@ export class EventsDisplay extends LitElement implements Controller {
         : "events_display.sent_troops_to_player";
     const params: Record<string, string | number> = {
       name: other.displayName(),
-      [isGold ? "gold" : "troops"]: renderNumber(update.amount),
+      [isGold ? "gold" : "troops"]: isGold
+        ? renderNumber(update.amount)
+        : renderTroops(Number(update.amount)),
     };
 
     this.addEvent({

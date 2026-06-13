@@ -1,6 +1,6 @@
 import { assetUrl } from "../../core/AssetUrls";
 import { AllPlayers, Nukes } from "../../core/game/Game";
-import { GameView, PlayerView } from "../../core/game/GameView";
+import { GameView, PlayerView } from "../view";
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const allianceIconFaded = assetUrl("images/AllianceIconFaded.svg");
 const allianceRequestBlackIcon = assetUrl(

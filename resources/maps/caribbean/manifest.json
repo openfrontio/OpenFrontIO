@@ -141,7 +141,7 @@
       "name": "Tobago"
     }
   ],
-  "categories": ["north_america"],
+  "categories": ["new", "north_america"],
   "id": "Caribbean",
   "map": {
     "height": 1808,

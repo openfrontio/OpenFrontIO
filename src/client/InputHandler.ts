@@ -1,10 +1,10 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
-import { GameView, UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+import { GameView, UnitView } from "./view";
 
 export class MouseUpEvent implements GameEvent {
   constructor(

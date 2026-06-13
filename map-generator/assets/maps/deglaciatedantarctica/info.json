@@ -2,7 +2,7 @@
   "id": "DeglaciatedAntarctica",
   "name": "Deglaciated Antarctica",
   "translation_key": "map.deglaciatedantarctica",
-  "categories": ["antarctica"],
+  "categories": ["antarctica", "fictional"],
   "multiplayer_frequency": 4,
   "nations": [
     {

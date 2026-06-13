@@ -137,10 +137,19 @@ export class AiAttackBehavior {
       }
     }
 
+    // Hard & Impossible: don't drop below neighbor troop threshold
+    const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
+    if (troops < 1) return;
+
+    // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
+    const owner = this.game.owner(dst);
+    if (owner.isPlayer() && this.isAttackTooWeak(troops, owner)) {
+      return;
+    }
+
     this.game.addExecution(
-      new TransportShipExecution(this.player, dst, this.player.troops() / 5),
+      new TransportShipExecution(this.player, dst, troops),
     );
-    return;
   }
 
   private findRandomBoatTarget(
@@ -804,7 +813,8 @@ export class AiAttackBehavior {
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
-        const troops = this.player.troops() / 5;
+        // Hard & Impossible: don't drop below neighbor troop threshold
+        const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
         if (troops < 1) return false;
 
         this.game.addExecution(
@@ -840,6 +850,67 @@ export class AiAttackBehavior {
     return true;
   }
 
+  /**
+   * For Hard & Impossible nations in FFA: returns true if `troops` is less
+   * than 20% of the target's troop count, meaning the attack is too weak to
+   * be worthwhile.  Bots and team games are exempt.
+   */
+  private isAttackTooWeak(troops: number, target: Player): boolean {
+    if (this.player.type() === PlayerType.Bot) return false;
+    if (this.game.config().gameConfig().gameMode === GameMode.Team)
+      return false;
+
+    const { difficulty } = this.game.config().gameConfig();
+    return (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      troops < target.troops() * 0.2
+    );
+  }
+
+  /**
+   * For Hard & Impossible nations in FFA: computes the max troops this nation
+   * can send in an attack without letting its troop count drop below a
+   * fraction of its strongest non-allied neighbor's troop count (Hard: 75%,
+   * Impossible: 90%). Allied players and bot neighbors are not considered
+   * threats. Bots and team games are entirely exempt. Returns Infinity when
+   * no cap applies.
+   */
+  private troopSendCap(): number {
+    if (this.player.type() === PlayerType.Bot) return Infinity;
+    if (this.game.config().gameConfig().gameMode === GameMode.Team)
+      return Infinity;
+
+    const { difficulty } = this.game.config().gameConfig();
+    let retainFraction: number;
+    switch (difficulty) {
+      case Difficulty.Hard:
+        retainFraction = 0.75;
+        break;
+      case Difficulty.Impossible:
+        retainFraction = 0.9;
+        break;
+      default:
+        return Infinity;
+    }
+
+    let maxNeighborTroops = 0;
+    for (const n of this.player.nearby()) {
+      if (
+        n.isPlayer() &&
+        !this.player.isFriendly(n) &&
+        n.type() !== PlayerType.Bot &&
+        n.troops() > maxNeighborTroops
+      ) {
+        maxNeighborTroops = n.troops();
+      }
+    }
+    if (maxNeighborTroops === 0) return Infinity;
+
+    const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
+    return Math.max(0, this.player.troops() - minRetained);
+  }
+
   private sendLandAttack(target: Player | TerraNullius): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
     const botWithStructures =
@@ -866,7 +937,15 @@ export class AiAttackBehavior {
       troops = this.player.troops() - targetTroops;
     }
 
+    // Hard & Impossible: don't drop below neighbor troop threshold
+    troops = Math.min(troops, this.troopSendCap());
+
     if (troops < 1) {
+      return false;
+    }
+
+    // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
+    if (target.isPlayer() && this.isAttackTooWeak(troops, target)) {
       return false;
     }
 
@@ -910,7 +989,15 @@ export class AiAttackBehavior {
       troops = this.player.troops() / 5;
     }
 
+    // Hard & Impossible: don't drop below neighbor troop threshold
+    troops = Math.min(troops, this.troopSendCap());
+
     if (troops < 1) {
+      return false;
+    }
+
+    // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
+    if (this.isAttackTooWeak(troops, target)) {
       return false;
     }
 

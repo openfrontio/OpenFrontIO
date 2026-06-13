@@ -15,7 +15,7 @@ import {
   createTexture2D,
   shaderSrc,
 } from "./GlUtils";
-import { FALLOUT_BIT, TILE_DEFINES } from "./TileCodec";
+import { TILE_DEFINES } from "./TileCodec";
 
 import heatDecayFragSrc from "../shaders/fallout-bloom/heat-decay.frag.glsl?raw";
 import fullscreenNoUvVertSrc from "../shaders/shared/fullscreen-no-uv.vert.glsl?raw";
@@ -39,16 +39,17 @@ export class HeatManager {
   private prevTileTex: WebGLTexture;
   private prevTileFbo: WebGLFramebuffer;
   private tileTexReadFbo: WebGLFramebuffer;
-  /** True on first frame and after seek — blit tileTex→prevTileTex without transitions. */
+  /** True on first frame — blit tileTex→prevTileTex without transitions. */
   private needsPrevTileCopy = true;
 
   // Pending CPU → GPU writes
   private pendingDecay = 0;
-  private pendingFullHeat: Uint8Array | null = null;
   /**
    * True when heat may be non-zero anywhere — gates the decay pass.
-   * Set true on each game tick (shader may detect new fallout transitions).
-   * Set false once accumulated decay since last activation exceeds 255 (fully drained).
+   * Set true via activate() whenever a tile's fallout bit flips (or a full
+   * state replacement happens). Set false once accumulated decay since last
+   * activation exceeds 255 (fully drained). While false, updateHeat() does no
+   * GPU work at all.
    */
   private heatActive = false;
   /** Accumulated decay since heatActive was last set true. */
@@ -157,25 +158,7 @@ export class HeatManager {
     const mw = this.mapW;
     const mh = this.mapH;
 
-    // 1. Upload reconstructed heat on seek
-    if (this.pendingFullHeat) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.heatReadTex);
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        mw,
-        mh,
-        gl.RED,
-        gl.UNSIGNED_BYTE,
-        this.pendingFullHeat,
-      );
-      this.pendingFullHeat = null;
-    }
-
-    // 2. First frame / seek: copy tileTex → prevTileTex, skip transitions
+    // 1. First frame: copy tileTex → prevTileTex, skip transitions
     if (this.needsPrevTileCopy) {
       this.blitTileToPrev();
       this.needsPrevTileCopy = false;
@@ -183,19 +166,17 @@ export class HeatManager {
       return;
     }
 
-    // 3. Skip decay pass when nothing to do — no pending decay and heat already settled.
-    // Still blit tileTex→prevTileTex when a tick fired (pendingDecay > 0) so transition
-    // detection stays accurate if heat activates later.
-    if (!this.heatActive && this.pendingDecay === 0) return;
+    // 2. Inactive: no heat anywhere, and no fallout bits can change without
+    // activate() being called first (TerritoryPass flags every fallout-bit
+    // flip before the tile flush reaches the GPU). prevTileTex can go stale
+    // in owner bits only, which the transition test ignores — so skip all GPU
+    // work, including the prev-tile blit.
     if (!this.heatActive) {
-      // Tick fired but no heat — just keep prevTileTex in sync and bail.
-      this.blitTileToPrev();
       this.pendingDecay = 0;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       return;
     }
 
-    // 4. Combined transition detection + decay (GPU ping-pong)
+    // 3. Combined transition detection + decay (GPU ping-pong)
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.heatWriteFbo);
     gl.viewport(0, 0, mw, mh);
     gl.disable(gl.BLEND);
@@ -242,69 +223,24 @@ export class HeatManager {
     );
   }
 
-  /**
-   * Reset heat state on seek. Reconstructs heat from nuke history and
-   * masks out recaptured tiles.
-   */
-  resetForSeek(
-    tileState: Uint16Array,
-    nukeEvents?: Array<{ tick: number; tiles: number[] }>,
-    currentTick?: number,
-  ): void {
-    let hasHeat = false;
-    if (nukeEvents && nukeEvents.length > 0 && currentTick !== undefined) {
-      const heat = this.reconstructHeat(nukeEvents, currentTick);
-      this.maskHeat(heat, tileState);
-      this.pendingFullHeat = heat;
-      hasHeat = heat.some((v) => v > 0);
-    } else {
-      this.pendingFullHeat = new Uint8Array(this.mapW * this.mapH);
-    }
-    this.pendingDecay = 0;
-    this.decayAccumulated = 0;
-    this.heatActive = hasHeat;
-    this.needsPrevTileCopy = true;
-  }
-
   /** Accumulate heat decay for one game tick. */
   decayHeat(): void {
     this.pendingDecay += this.settings.falloutBloom.heatDecayPerTick;
-    // A tick fired — the shader may detect new fallout transitions, so heat is potentially active.
-    if (!this.heatActive) {
-      this.heatActive = true;
-      this.decayAccumulated = 0;
-    }
+  }
+
+  /**
+   * Activate the heat pipeline: a fallout bit flipped, so the decay pass must
+   * run (transition detection stamps fresh heat / clears recaptured tiles).
+   * Resets the drain window — fresh heat needs a full 255 of decay again.
+   */
+  activate(): void {
+    this.heatActive = true;
+    this.decayAccumulated = 0;
   }
 
   // ---------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------
-
-  private reconstructHeat(
-    nukeEvents: Array<{ tick: number; tiles: number[] }>,
-    currentTick: number,
-  ): Uint8Array {
-    const heat = new Uint8Array(this.mapW * this.mapH);
-    const decay = this.settings.falloutBloom.heatDecayPerTick;
-    for (const evt of nukeEvents) {
-      if (evt.tick > currentTick) continue;
-      const elapsed = currentTick - evt.tick;
-      const h = Math.round(255 - elapsed * decay);
-      if (h <= 0) continue;
-      for (const ref of evt.tiles) {
-        if (heat[ref] < h) heat[ref] = h;
-      }
-    }
-    return heat;
-  }
-
-  private maskHeat(heat: Uint8Array, tileState: Uint16Array): void {
-    for (let i = 0; i < heat.length; i++) {
-      if (heat[i] > 0 && (tileState[i] & FALLOUT_BIT) === 0) {
-        heat[i] = 0;
-      }
-    }
-  }
 
   dispose(): void {
     const gl = this.gl;

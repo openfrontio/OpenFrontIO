@@ -16,7 +16,7 @@
     "num_land_tiles": 563340,
     "width": 2054
   },
-  "multiplayer_frequency": 0,
+  "multiplayer_frequency": 10,
   "name": "Giant World Map",
   "nations": [
     {

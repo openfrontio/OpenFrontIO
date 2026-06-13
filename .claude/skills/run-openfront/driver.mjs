@@ -16,7 +16,14 @@ export const BASE_URL = process.env.OPENFRONT_URL ?? "http://localhost:9000";
 // Launch chromium with the locally-extracted system libraries and fontconfig
 // (see setup.sh). Without them the headless shell dies on libnspr4.so, and
 // later Skia FATALs on the missing fontconfig.
-export async function launch() {
+// opts:
+//   viewport      - {width, height}, default 1400x1000
+//   rafIntervalMs - throttle requestAnimationFrame to one frame per interval.
+//                   Essential for in-game testing: SwiftShader needs seconds
+//                   of CPU per frame, and an unthrottled rAF loop starves the
+//                   main thread (timers, the singleplayer turn loop, input).
+//                   ~1000 is a good value; frames still render for screenshots.
+export async function launch({ viewport, rafIntervalMs } = {}) {
   const env = { ...process.env };
   const libs = path.join(CACHE, "extracted", "usr", "lib", "x86_64-linux-gnu");
   if (fs.existsSync(libs)) {
@@ -30,8 +37,22 @@ export async function launch() {
     env,
   });
   const context = await browser.newContext({
-    viewport: { width: 1400, height: 1000 },
+    viewport: viewport ?? { width: 1400, height: 1000 },
   });
+  if (rafIntervalMs) {
+    await context.addInitScript((interval) => {
+      let last = 0;
+      window.requestAnimationFrame = (cb) => {
+        const now = performance.now();
+        const wait = Math.max(0, interval - (now - last));
+        return setTimeout(() => {
+          last = performance.now();
+          cb(last);
+        }, wait);
+      };
+      window.cancelAnimationFrame = (id) => clearTimeout(id);
+    }, rafIntervalMs);
+  }
   const page = await context.newPage();
   page.on("pageerror", (e) =>
     console.log("PAGEERROR:", e.message.split("\n")[0]),

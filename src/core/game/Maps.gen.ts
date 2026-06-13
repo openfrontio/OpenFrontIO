@@ -93,6 +93,7 @@ export enum GameMapType {
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
+  WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -103,7 +104,9 @@ export type GameMapName = keyof typeof GameMapType;
 
 export type MapCategory =
   | "featured"
+  | "new"
   | "world"
+  | "continental"
   | "europe"
   | "asia"
   | "north_america"
@@ -112,13 +115,16 @@ export type MapCategory =
   | "oceania"
   | "antarctica"
   | "cosmic"
-  | "tournament"
-  | "other";
+  | "fictional"
+  | "arcade"
+  | "tournament";
 
 // Category display order in the map picker.
 export const mapCategoryOrder: readonly MapCategory[] = [
   "featured",
+  "new",
   "world",
+  "continental",
   "europe",
   "asia",
   "north_america",
@@ -127,8 +133,9 @@ export const mapCategoryOrder: readonly MapCategory[] = [
   "oceania",
   "antarctica",
   "cosmic",
+  "fictional",
+  "arcade",
   "tournament",
-  "other",
 ];
 
 export interface MapInfo {
@@ -153,14 +160,14 @@ export const maps: readonly MapInfo[] = [
     id: "Achiran",
     type: GameMapType.Achiran,
     translationKey: "map.achiran",
-    categories: ["other"],
+    categories: ["fictional", "europe"],
     multiplayerFrequency: 5,
   },
   {
     id: "Aegean",
     type: GameMapType.Aegean,
     translationKey: "map.aegean",
-    categories: ["europe"],
+    categories: ["europe", "asia"],
     multiplayerFrequency: 6,
     specialTeamCount: 2,
   },
@@ -168,7 +175,7 @@ export const maps: readonly MapInfo[] = [
     id: "Africa",
     type: GameMapType.Africa,
     translationKey: "map.africa",
-    categories: ["featured", "africa"],
+    categories: ["featured", "continental", "africa"],
     multiplayerFrequency: 7,
     featuredRank: 6,
   },
@@ -190,7 +197,7 @@ export const maps: readonly MapInfo[] = [
     id: "Antarctica",
     type: GameMapType.Antarctica,
     translationKey: "map.antarctica",
-    categories: ["antarctica"],
+    categories: ["antarctica", "continental"],
     multiplayerFrequency: 1,
   },
   {
@@ -204,14 +211,14 @@ export const maps: readonly MapInfo[] = [
     id: "Arctic",
     type: GameMapType.Arctic,
     translationKey: "map.arctic",
-    categories: ["europe", "north_america"],
+    categories: ["europe", "north_america", "asia"],
     multiplayerFrequency: 6,
   },
   {
     id: "Asia",
     type: GameMapType.Asia,
     translationKey: "map.asia",
-    categories: ["featured", "asia"],
+    categories: ["featured", "continental", "asia"],
     multiplayerFrequency: 6,
     featuredRank: 5,
   },
@@ -234,7 +241,7 @@ export const maps: readonly MapInfo[] = [
     id: "BaikalNukeWars",
     type: GameMapType.BaikalNukeWars,
     translationKey: "map.baikalnukewars",
-    categories: ["other"],
+    categories: ["fictional"],
     multiplayerFrequency: 0,
   },
   {
@@ -248,7 +255,7 @@ export const maps: readonly MapInfo[] = [
     id: "Balkans",
     type: GameMapType.Balkans,
     translationKey: "map.balkans",
-    categories: ["europe"],
+    categories: ["new", "europe"],
     multiplayerFrequency: 6,
   },
   {
@@ -307,7 +314,7 @@ export const maps: readonly MapInfo[] = [
     id: "Caribbean",
     type: GameMapType.Caribbean,
     translationKey: "map.caribbean",
-    categories: ["north_america"],
+    categories: ["new", "north_america"],
     multiplayerFrequency: 5,
   },
   {
@@ -321,7 +328,7 @@ export const maps: readonly MapInfo[] = [
     id: "ChoppingBlock",
     type: GameMapType.ChoppingBlock,
     translationKey: "map.choppingblock",
-    categories: ["other"],
+    categories: ["new", "arcade"],
     multiplayerFrequency: 5,
     specialTeamCount: 4,
   },
@@ -337,35 +344,35 @@ export const maps: readonly MapInfo[] = [
     id: "DanishStraits",
     type: GameMapType.DanishStraits,
     translationKey: "map.danishstraits",
-    categories: ["europe"],
+    categories: ["new", "europe"],
     multiplayerFrequency: 5,
   },
   {
     id: "DeglaciatedAntarctica",
     type: GameMapType.DeglaciatedAntarctica,
     translationKey: "map.deglaciatedantarctica",
-    categories: ["antarctica"],
+    categories: ["antarctica", "fictional"],
     multiplayerFrequency: 4,
   },
   {
     id: "Didier",
     type: GameMapType.Didier,
     translationKey: "map.didier",
-    categories: ["other"],
+    categories: ["arcade"],
     multiplayerFrequency: 1,
   },
   {
     id: "DidierFrance",
     type: GameMapType.DidierFrance,
     translationKey: "map.didierfrance",
-    categories: ["other"],
+    categories: ["arcade"],
     multiplayerFrequency: 1,
   },
   {
     id: "Dyslexdria",
     type: GameMapType.Dyslexdria,
     translationKey: "map.dyslexdria",
-    categories: ["world"],
+    categories: ["world", "fictional"],
     multiplayerFrequency: 8,
   },
   {
@@ -379,7 +386,7 @@ export const maps: readonly MapInfo[] = [
     id: "Europe",
     type: GameMapType.Europe,
     translationKey: "map.europe",
-    categories: ["featured", "europe"],
+    categories: ["featured", "continental", "europe"],
     multiplayerFrequency: 7,
     featuredRank: 2,
   },
@@ -387,7 +394,7 @@ export const maps: readonly MapInfo[] = [
     id: "EuropeClassic",
     type: GameMapType.EuropeClassic,
     translationKey: "map.europeclassic",
-    categories: ["europe"],
+    categories: ["europe", "continental"],
     multiplayerFrequency: 0,
   },
   {
@@ -409,7 +416,7 @@ export const maps: readonly MapInfo[] = [
     id: "FourIslands",
     type: GameMapType.FourIslands,
     translationKey: "map.fourislands",
-    categories: ["other"],
+    categories: ["fictional"],
     multiplayerFrequency: 4,
     specialTeamCount: 4,
   },
@@ -425,7 +432,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.GiantWorldMap,
     translationKey: "map.giantworldmap",
     categories: ["world"],
-    multiplayerFrequency: 0,
+    multiplayerFrequency: 10,
   },
   {
     id: "GreatLakes",
@@ -453,14 +460,14 @@ export const maps: readonly MapInfo[] = [
     id: "Hawaii",
     type: GameMapType.Hawaii,
     translationKey: "map.hawaii",
-    categories: ["north_america", "oceania"],
+    categories: ["oceania"],
     multiplayerFrequency: 4,
   },
   {
     id: "HongKong",
     type: GameMapType.HongKong,
     translationKey: "map.hongkong",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 6,
   },
   {
@@ -474,7 +481,7 @@ export const maps: readonly MapInfo[] = [
     id: "IndianSubcontinent",
     type: GameMapType.IndianSubcontinent,
     translationKey: "map.indiansubcontinent",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 8,
   },
   {
@@ -496,7 +503,7 @@ export const maps: readonly MapInfo[] = [
     id: "JuanDeFucaStrait",
     type: GameMapType.JuanDeFucaStrait,
     translationKey: "map.juandefucastrait",
-    categories: ["north_america"],
+    categories: ["new", "north_america"],
     multiplayerFrequency: 4,
     specialTeamCount: 3,
   },
@@ -504,14 +511,14 @@ export const maps: readonly MapInfo[] = [
     id: "Korea",
     type: GameMapType.Korea,
     translationKey: "map.korea",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 5,
   },
   {
     id: "Labyrinth",
     type: GameMapType.Labyrinth,
     translationKey: "map.labyrinth",
-    categories: ["other"],
+    categories: ["new", "arcade"],
     multiplayerFrequency: 6,
   },
   {
@@ -554,7 +561,7 @@ export const maps: readonly MapInfo[] = [
     id: "MareNostrum",
     type: GameMapType.MareNostrum,
     translationKey: "map.marenostrum",
-    categories: ["europe"],
+    categories: ["europe", "asia", "africa"],
     multiplayerFrequency: 6,
   },
   {
@@ -575,7 +582,7 @@ export const maps: readonly MapInfo[] = [
     id: "MiddleEast",
     type: GameMapType.MiddleEast,
     translationKey: "map.middleeast",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 8,
   },
   {
@@ -589,7 +596,7 @@ export const maps: readonly MapInfo[] = [
     id: "MississippiRiver",
     type: GameMapType.MississippiRiver,
     translationKey: "map.mississippiriver",
-    categories: ["north_america"],
+    categories: ["new", "north_america"],
     multiplayerFrequency: 3,
   },
   {
@@ -617,7 +624,7 @@ export const maps: readonly MapInfo[] = [
     id: "NorthAmerica",
     type: GameMapType.NorthAmerica,
     translationKey: "map.northamerica",
-    categories: ["featured", "north_america"],
+    categories: ["featured", "continental", "north_america"],
     multiplayerFrequency: 5,
     featuredRank: 3,
   },
@@ -625,35 +632,35 @@ export const maps: readonly MapInfo[] = [
     id: "NorthwestPassage",
     type: GameMapType.NorthwestPassage,
     translationKey: "map.northwestpassage",
-    categories: ["north_america"],
+    categories: ["new", "north_america"],
     multiplayerFrequency: 5,
   },
   {
     id: "Oceania",
     type: GameMapType.Oceania,
     translationKey: "map.oceania",
-    categories: ["oceania"],
+    categories: ["oceania", "continental"],
     multiplayerFrequency: 0,
   },
   {
     id: "Onion",
     type: GameMapType.Onion,
     translationKey: "map.onion",
-    categories: ["other"],
+    categories: ["new", "arcade"],
     multiplayerFrequency: 2,
   },
   {
     id: "Pangaea",
     type: GameMapType.Pangaea,
     translationKey: "map.pangaea",
-    categories: ["other"],
+    categories: ["fictional"],
     multiplayerFrequency: 5,
   },
   {
     id: "Passage",
     type: GameMapType.Passage,
     translationKey: "map.passage",
-    categories: ["other"],
+    categories: ["fictional"],
     multiplayerFrequency: 4,
   },
   {
@@ -675,14 +682,14 @@ export const maps: readonly MapInfo[] = [
     id: "Sierpinski",
     type: GameMapType.Sierpinski,
     translationKey: "map.sierpinski",
-    categories: ["other"],
+    categories: ["arcade"],
     multiplayerFrequency: 10,
   },
   {
     id: "SouthAmerica",
     type: GameMapType.SouthAmerica,
     translationKey: "map.southamerica",
-    categories: ["featured", "south_america"],
+    categories: ["featured", "continental", "south_america"],
     multiplayerFrequency: 5,
     featuredRank: 4,
   },
@@ -690,7 +697,7 @@ export const maps: readonly MapInfo[] = [
     id: "SoutheastAsia",
     type: GameMapType.SoutheastAsia,
     translationKey: "map.southeastasia",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 5,
   },
   {
@@ -720,7 +727,7 @@ export const maps: readonly MapInfo[] = [
     id: "Surrounded",
     type: GameMapType.Surrounded,
     translationKey: "map.surrounded",
-    categories: ["other"],
+    categories: ["fictional"],
     multiplayerFrequency: 4,
     specialTeamCount: 4,
   },
@@ -728,28 +735,28 @@ export const maps: readonly MapInfo[] = [
     id: "Svalmel",
     type: GameMapType.Svalmel,
     translationKey: "map.svalmel",
-    categories: ["other"],
+    categories: ["fictional", "europe", "north_america"],
     multiplayerFrequency: 8,
   },
   {
     id: "TaiwanStrait",
     type: GameMapType.TaiwanStrait,
     translationKey: "map.taiwanstrait",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 5,
   },
   {
     id: "TheBox",
     type: GameMapType.TheBox,
     translationKey: "map.thebox",
-    categories: ["other"],
+    categories: ["arcade"],
     multiplayerFrequency: 3,
   },
   {
     id: "Titan",
     type: GameMapType.Titan,
     translationKey: "map.titan",
-    categories: ["cosmic"],
+    categories: ["new", "cosmic"],
     multiplayerFrequency: 3,
   },
   {
@@ -784,7 +791,7 @@ export const maps: readonly MapInfo[] = [
     id: "TradersDream",
     type: GameMapType.TradersDream,
     translationKey: "map.tradersdream",
-    categories: ["other"],
+    categories: ["fictional"],
     multiplayerFrequency: 4,
     specialTeamCount: 2,
   },
@@ -799,8 +806,15 @@ export const maps: readonly MapInfo[] = [
     id: "Venice",
     type: GameMapType.Venice,
     translationKey: "map.venice",
-    categories: ["europe"],
+    categories: ["new", "europe"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "WarshipWarship",
+    type: GameMapType.WarshipWarship,
+    translationKey: "map.warshipwarship",
+    categories: ["arcade", "new"],
+    multiplayerFrequency: 3,
   },
   {
     id: "World",
@@ -814,14 +828,14 @@ export const maps: readonly MapInfo[] = [
     id: "WorldInverted",
     type: GameMapType.WorldInverted,
     translationKey: "map.worldinverted",
-    categories: ["world"],
+    categories: ["new", "world", "fictional"],
     multiplayerFrequency: 8,
   },
   {
     id: "YellowSea",
     type: GameMapType.YellowSea,
     translationKey: "map.yellowsea",
-    categories: ["asia"],
+    categories: ["new", "asia"],
     multiplayerFrequency: 5,
   },
   {

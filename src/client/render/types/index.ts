@@ -22,72 +22,15 @@ export type {
 // Frame data — boundary contract between game integration and features
 export type { FrameData } from "./FrameData";
 
-// Frame events — per-frame ephemeral events (rendering FX + stats events)
-export { EMPTY_FRAME_EVENTS } from "./FrameEvents";
-export type {
-  AllianceBrokenEvent,
-  AllianceExpiredEvent,
-  AllianceFormedEvent,
-  BonusEvent,
-  DisplayMessageEvent,
-  EmbargoEvent,
-  EmojiEvent,
-  FrameEvents,
-  NukeIncomingEvent,
-  TargetEvent,
-  WinEvent,
-} from "./FrameEvents";
-
-// Frame source — mode-agnostic subscription interface
-export type { FrameSource, GameStartConfig } from "./FrameSource";
-
-// Game update types
-export type { GameStartInfo, GameUpdateViewData } from "./Game";
-
-// Replay types (header, frames, codec helpers)
-export type {
-  ChunkIndexEntry,
-  FrameSnapshot,
-  GridPlanRecord,
-  GzipFn,
-  InflateFn,
-  MotionPlanRecord,
-  RawDelta,
-  RawFrame,
-  RawKeyframe,
-  ReplayHeader,
-  StreamableReplayInfo,
-  TrainPlanRecord,
-} from "./Replay";
-
-// Game update type constants and event payloads (shared between shim + codec)
-export { GameUpdateType } from "./GameUpdates";
-export type {
-  AllianceExpiredUpdate,
-  AllianceReplyUpdate,
-  AttackEventUpdate,
-  BonusUpdate,
-  BrokeAllianceUpdate,
-  DisplayMessageUpdate,
-  EmbargoUpdate,
-  EmojiUpdate,
-  GamePausedUpdate,
-  PlayerEventUpdate,
-  PlayerType,
-  RailroadConstructionUpdate,
-  RailroadDestructionUpdate,
-  RailroadSnapUpdate,
-  TargetPlayerUpdate,
-  UnitEventUpdate,
-  UnitIncomingUpdate,
-  WinUpdate,
-} from "./GameUpdates";
+// Frame events — per-frame ephemeral events (rendering FX)
+export type { BonusEvent, FrameEvents } from "./FrameEvents";
 
 // Unit type string constants and derived sets
 export {
   ALL_UNIT_TYPES,
   NUKE_MAGNITUDES,
   NUKE_TYPES,
+  SMOOTHED_NUKE_TYPES,
   STRUCTURE_TYPES,
   UT_ATOM_BOMB,
   UT_CITY,

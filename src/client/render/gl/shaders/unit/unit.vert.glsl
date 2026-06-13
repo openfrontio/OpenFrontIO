@@ -5,7 +5,7 @@ layout(location = 0) in vec2 aPos;
 
 // Per-instance attributes
 layout(location = 1) in vec3 aInstPos;   // x, y, ownerID
-layout(location = 2) in vec2 aInstFlags; // atlasIdx (uint8→float), flags (uint8→float)
+layout(location = 2) in vec3 aInstFlags; // atlasIdx, flags, flickerHash (uint8→float)
 
 uniform mat3  uCamera;
 
@@ -29,8 +29,10 @@ void main() {
   vFlags = aInstFlags.y;
   vAtlasCol = atlasCol;
 
-  // Position-based hash so each unit flickers independently
-  vHash = fract(worldX * 0.1731 + worldY * 0.3179);
+  // Per-instance hash so each unit flickers independently. Computed CPU-side
+  // from the tick position — hashing worldX/Y here would re-roll the phase
+  // every frame for nukes whose position is smoothed per frame.
+  vHash = aInstFlags.z * (1.0 / 255.0);
 
   // Hydrogen bombs render an enlarged quad so there's room for a glow halo
   // around the sprite. All other units keep scale 1 (no behavior change).

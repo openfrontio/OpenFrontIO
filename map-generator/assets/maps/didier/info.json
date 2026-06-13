@@ -2,7 +2,7 @@
   "id": "Didier",
   "name": "Didier",
   "translation_key": "map.didier",
-  "categories": ["other"],
+  "categories": ["arcade"],
   "multiplayer_frequency": 1,
   "nations": [
     {

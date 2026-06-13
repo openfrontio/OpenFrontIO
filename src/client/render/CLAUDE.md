@@ -19,7 +19,7 @@ WebGLFrameBuilder.update      ← syncs palette, local-player ID, spawn
 uploadFrameData(view, frame)  ← frame/Upload.ts — dispatches to view.update*()
         │
         ▼
-GameView.update*() methods    ← gl/GameView.ts — public facade
+MapRenderer.update*() methods ← gl/MapRenderer.ts — public facade
         │
         ▼
 GPURenderer (gl/Renderer.ts)  ← owns all passes
@@ -44,7 +44,7 @@ each frame (and animate from local time, e.g. the spawn-overlay breath).
 | `frame/TrailManager.ts`   | Mutates the per-tile trail texture; emits dirty row range                                                                                                             |
 | `frame/RailroadCache.ts`  | Maintains the railroad tile state buffer                                                                                                                              |
 | `gl/`                     | WebGL2 renderer internals                                                                                                                                             |
-| `gl/GameView.ts`          | Public facade — what `WebGLFrameBuilder` and the client talk to                                                                                                       |
+| `gl/MapRenderer.ts`       | Public facade — what `WebGLFrameBuilder` and the client talk to                                                                                                       |
 | `gl/Renderer.ts`          | Owns all passes, runs them in order each frame, manages FBOs                                                                                                          |
 | `gl/Camera.ts`            | World↔screen math; mutated externally each frame via `setCameraState`                                                                                                 |
 | `gl/RenderSettings.ts`    | Typed view of `render-settings.json` (tuning knobs)                                                                                                                   |
@@ -163,6 +163,6 @@ builds its allocators and color derivations from the same theme JSONs — see
    defaults to `render-settings.json`.
 4. Instantiate it in `GPURenderer`'s constructor and call its `draw` from the
    appropriate phase of `Renderer.render`.
-5. Expose any needed setters on `GameView` (gl/GameView.ts).
+5. Expose any needed setters on `MapRenderer` (gl/MapRenderer.ts).
 6. Wire the data push from `WebGLFrameBuilder` or a controller — without
    this step the pass is dead code.

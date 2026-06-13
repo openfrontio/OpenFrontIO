@@ -164,6 +164,13 @@ export class UnitView {
     this.state.pos = pos;
   }
 
+  /** Plan-driven unit stayed put this tick — its previous-tick position is
+   *  its current one. Keeps lastPos→pos frame interpolation from replaying
+   *  the prior segment. */
+  applyDerivedRest() {
+    this.state.lastPos = this.state.pos;
+  }
+
   id(): number {
     return this.state.id;
   }

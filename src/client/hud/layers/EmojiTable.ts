@@ -2,12 +2,12 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { AllPlayers } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
 import { TransformHandler } from "../../TransformHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
+import { GameView, PlayerView } from "../../view";
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {

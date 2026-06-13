@@ -51,7 +51,7 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | StartGameIntent;
+  | ToggleGameStartTimer;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -85,7 +85,9 @@ export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
 export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
-export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
+export type ToggleGameStartTimer = z.infer<
+  typeof ToggleGameStartTimerIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -281,6 +283,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
+  startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
@@ -481,8 +484,8 @@ export const UpdateGameConfigIntentSchema = z.object({
   config: GameConfigSchema.partial(),
 });
 
-export const StartGameIntentSchema = z.object({
-  type: z.literal("start_game"),
+export const ToggleGameStartTimerIntentSchema = z.object({
+  type: z.literal("toggle_game_start_timer"),
 });
 
 const IntentSchema = z.discriminatedUnion("type", [
@@ -510,7 +513,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
-  StartGameIntentSchema,
+  ToggleGameStartTimerIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

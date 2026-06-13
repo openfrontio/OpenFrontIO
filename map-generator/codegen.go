@@ -13,7 +13,9 @@ import (
 // the display order of map categories in the generated TypeScript.
 var categoryOrder = []string{
 	"featured",
+	"new",
 	"world",
+	"continental",
 	"europe",
 	"asia",
 	"north_america",
@@ -22,8 +24,9 @@ var categoryOrder = []string{
 	"oceania",
 	"antarctica",
 	"cosmic",
+	"fictional",
+	"arcade",
 	"tournament",
-	"other",
 }
 
 // mapInfo is the subset of info.json fields used for code generation.

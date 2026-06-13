@@ -2,7 +2,7 @@
   "id": "Arctic",
   "name": "Arctic",
   "translation_key": "map.arctic",
-  "categories": ["europe", "north_america"],
+  "categories": ["europe", "north_america", "asia"],
   "multiplayer_frequency": 6,
   "nations": [
     {

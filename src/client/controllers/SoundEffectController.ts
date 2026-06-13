@@ -1,9 +1,9 @@
 import { EventBus } from "../../core/EventBus";
 import { UnitType } from "../../core/game/Game";
 import { GameUpdateType } from "../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../core/game/GameView";
 import { Controller } from "../Controller";
 import { PlaySoundEffectEvent, SoundEffect } from "../sound/Sounds";
+import { GameView, UnitView } from "../view";
 
 export class SoundEffectController implements Controller {
   constructor(

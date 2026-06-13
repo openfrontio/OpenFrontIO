@@ -3,7 +3,7 @@
   "name": "Europe Classic",
   "display_name": "Europe (Classic)",
   "translation_key": "map.europeclassic",
-  "categories": ["europe"],
+  "categories": ["europe", "continental"],
   "multiplayer_frequency": 0,
   "nations": [
     {

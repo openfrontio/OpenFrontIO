@@ -2,7 +2,7 @@
   "id": "MississippiRiver",
   "name": "Mississippi River",
   "translation_key": "map.mississippiriver",
-  "categories": ["north_america"],
+  "categories": ["new", "north_america"],
   "multiplayer_frequency": 3,
   "nations": [
     {

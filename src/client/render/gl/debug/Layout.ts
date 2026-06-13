@@ -214,7 +214,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
     ]),
 
     folder("Structure", [
-      slider(s.structure, "iconSize", d.structure, 10, 60, 1),
+      slider(s.structure, "iconSize", d.structure, 10, 100, 1),
       slider(s.structure, "dotsZoomThreshold", d.structure, 0.1, 2, 0.05),
       slider(
         s.structure,
@@ -266,6 +266,36 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
             ),
           ]),
         ),
+      ),
+    ]),
+
+    folder("Structure Level", [
+      slider(
+        s.structureLevel,
+        "scale",
+        d.structureLevel,
+        0.5,
+        3,
+        0.05,
+        "Scale",
+      ),
+      slider(
+        s.structureLevel,
+        "outlineWidth",
+        d.structureLevel,
+        0,
+        20,
+        0.1,
+        "Outline Width (px)",
+      ),
+      slider(
+        s.structureLevel,
+        "offsetY",
+        d.structureLevel,
+        -2,
+        2,
+        0.05,
+        "Height Above Icon",
       ),
     ]),
 
@@ -332,6 +362,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
 
     folder("FX", [
       slider(s.fx, "shockwaveRingWidth", d.fx, 0.01, 0.2, 0.005),
+      slider(
+        s.fx,
+        "attackRingScreenPx",
+        d.fx,
+        5,
+        60,
+        1,
+        "Attack Ring Size (px)",
+      ),
       slider(
         s.fx,
         "nukeShockwaveDurationMs",

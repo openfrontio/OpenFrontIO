@@ -49,6 +49,16 @@ export const NUKE_TYPES: ReadonlySet<string> = new Set([
   UT_MIRV,
 ]);
 
+/** Nuke types whose rendered position is interpolated lastPos→pos each render
+ *  frame (UnitPass). Their trails stamp only up to lastPos so the tail never
+ *  leads the smoothly-moving missile. */
+export const SMOOTHED_NUKE_TYPES: ReadonlySet<string> = new Set([
+  UT_ATOM_BOMB,
+  UT_HYDROGEN_BOMB,
+  UT_MIRV,
+  UT_MIRV_WARHEAD,
+]);
+
 /** Blast radii (in tiles) matching upstream DefaultConfig.nukeMagnitudes(). */
 export const NUKE_MAGNITUDES: Readonly<
   Record<string, { inner: number; outer: number }>

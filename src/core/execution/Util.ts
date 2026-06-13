@@ -1,7 +1,7 @@
+import { GameView } from "../../client/view";
 import { NukeMagnitude } from "../configuration/Config";
 import { Game, Player, Structures } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
-import { GameView } from "../game/GameView";
 
 export interface NukeBlastParams {
   gm: GameMap;

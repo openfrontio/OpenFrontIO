@@ -1,7 +1,7 @@
 import { EventBus } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import { GameView, PlayerView } from "../../view";
 import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
 import { COLORS, MenuElement, MenuElementParams } from "./RadialMenuElements";
 
