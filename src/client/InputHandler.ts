@@ -362,7 +362,7 @@ export class InputHandler {
         return "Shift+" + t;
       }),
     );
-    buildKeybinds = [... new Set(buildKeybinds)]
+    buildKeybinds = [... new Set(buildKeybinds)].filter((v): v is string => v != null);
     for (const i of buildKeybinds) {
       this.addKeybindAndEvent(
         i,
