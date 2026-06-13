@@ -18,9 +18,10 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
+import "./components/FriendsList";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { fetchCosmetics } from "./Cosmetics";
+import { fetchCosmetics, SUBSCRIPTIONS_ENABLED } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -31,9 +32,9 @@ export class AccountModal extends BaseModal {
   @state() private isLoadingUser: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
+  private cosmetics: Cosmetics | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
-  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -93,86 +94,138 @@ export class AccountModal extends BaseModal {
     });
   }
 
-  protected renderBody() {
+  private isLinkedAccount(): boolean {
+    const me = this.userMeResponse?.user;
+    return !!(me?.discord ?? me?.email);
+  }
+
+  protected modalConfig() {
+    if (this.isLoadingUser || !this.isLinkedAccount()) {
+      return {};
+    }
+    return {
+      tabs: [
+        { key: "account", label: translateText("account_modal.tab_account") },
+        { key: "stats", label: translateText("account_modal.tab_stats") },
+        { key: "games", label: translateText("account_modal.tab_games") },
+        { key: "friends", label: translateText("account_modal.tab_friends") },
+      ],
+    };
+  }
+
+  protected renderBody(tab: string) {
     if (this.isLoadingUser) {
       return this.renderLoadingSpinner(
         translateText("account_modal.fetching_account"),
       );
     }
-    const isLoggedIn = !!this.userMeResponse?.user;
+    if (!this.isLinkedAccount()) {
+      return html`<div class="custom-scrollbar mr-1">
+        ${this.renderLoginOptions()}
+      </div>`;
+    }
     return html`
       <div class="custom-scrollbar mr-1">
-        ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
+        <div class="p-6">${this.renderTab(tab)}</div>
       </div>
     `;
   }
 
-  private renderAccountInfo() {
-    const me = this.userMeResponse?.user;
-    const isLinked = me?.discord ?? me?.email;
-
-    if (!isLinked) {
-      return this.renderLoginOptions();
+  private renderTab(tab: string): TemplateResult {
+    switch (tab) {
+      case "stats":
+        return this.renderStatsTab();
+      case "games":
+        return this.renderGamesTab();
+      case "friends":
+        return this.renderFriendsTab();
+      default:
+        return this.renderAccountTab();
     }
+  }
 
+  private renderFriendsTab(): TemplateResult {
+    const myPublicId = this.userMeResponse?.player?.publicId ?? "";
+    return html`<friends-list .myPublicId=${myPublicId}></friends-list>`;
+  }
+
+  private renderAccountTab(): TemplateResult {
     return html`
-      <div class="p-6">
-        <div class="flex flex-col gap-6">
-          <!-- Top Row: Connected As -->
-          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-            <div class="flex flex-col items-center gap-4">
-              <div
-                class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
-              >
-                ${translateText("account_modal.connected_as")}
-              </div>
-              <div class="flex items-center gap-8 justify-center flex-wrap">
-                <discord-user-header
-                  .data=${this.userMeResponse?.user?.discord ?? null}
-                ></discord-user-header>
-                ${this.renderLoggedInAs()}
-              </div>
+      <div class="flex flex-col gap-6">
+        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+          <div class="flex flex-col items-center gap-4">
+            <div
+              class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
+            >
+              ${translateText("account_modal.connected_as")}
+            </div>
+            <div class="flex items-center gap-8 justify-center flex-wrap">
+              <discord-user-header
+                .data=${this.userMeResponse?.user?.discord ?? null}
+              ></discord-user-header>
+              ${this.renderLoggedInAs()}
             </div>
           </div>
-
-          ${this.renderSubscriptionPanel()}
-
-          <!-- Middle Row: Stats Section -->
-          ${this.hasAnyStats()
-            ? html`<div
-                class="bg-white/5 rounded-xl border border-white/10 p-6"
-              >
-                <h3
-                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-                >
-                  <span class="text-blue-400">📊</span>
-                  ${translateText("account_modal.stats_overview")}
-                </h3>
-                <player-stats-tree-view
-                  .statsTree=${this.statsTree}
-                ></player-stats-tree-view>
-              </div>`
-            : ""}
-
-          <!-- Bottom Row: Recent Games Section -->
-          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-            <h3
-              class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-            >
-              <span class="text-blue-400">🎮</span>
-              ${translateText("game_list.recent_games")}
-            </h3>
-            <game-list
-              .games=${this.recentGames}
-              .onViewGame=${(id: string) => void this.viewGame(id)}
-            ></game-list>
-          </div>
         </div>
+        ${this.renderSubscriptionPanel()}
+      </div>
+    `;
+  }
+
+  private renderStatsTab(): TemplateResult {
+    if (!this.hasAnyStats()) {
+      return this.renderEmptyState(
+        "📊",
+        translateText("account_modal.no_stats"),
+      );
+    }
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span class="text-blue-400">📊</span>
+          ${translateText("account_modal.stats_overview")}
+        </h3>
+        <player-stats-tree-view
+          .statsTree=${this.statsTree}
+        ></player-stats-tree-view>
+      </div>
+    `;
+  }
+
+  private renderGamesTab(): TemplateResult {
+    if (this.recentGames.length === 0) {
+      return this.renderEmptyState(
+        "🎮",
+        translateText("account_modal.no_games"),
+      );
+    }
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span class="text-blue-400">🎮</span>
+          ${translateText("game_list.recent_games")}
+        </h3>
+        <game-list
+          .games=${this.recentGames}
+          .onViewGame=${(id: string) => void this.viewGame(id)}
+        ></game-list>
+      </div>
+    `;
+  }
+
+  private renderEmptyState(icon: string, message: string): TemplateResult {
+    return html`
+      <div
+        class="bg-white/5 rounded-xl border border-white/10 p-12 flex flex-col items-center justify-center text-center"
+      >
+        <div class="text-4xl mb-3">${icon}</div>
+        <p class="text-white/60 text-sm">${message}</p>
       </div>
     `;
   }
 
   private renderSubscriptionPanel(): TemplateResult | "" {
+    if (!SUBSCRIPTIONS_ENABLED) return "";
     const sub = this.userMeResponse?.player?.subscription;
     if (!sub) return "";
     const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
@@ -367,10 +420,12 @@ export class AccountModal extends BaseModal {
   protected onOpen(): void {
     this.isLoadingUser = true;
 
-    void fetchCosmetics().then((cosmetics) => {
-      this.cosmetics = cosmetics;
-      this.requestUpdate();
-    });
+    if (SUBSCRIPTIONS_ENABLED) {
+      void fetchCosmetics().then((cosmetics) => {
+        this.cosmetics = cosmetics;
+        this.requestUpdate();
+      });
+    }
 
     void getUserMe()
       .then((userMe) => {

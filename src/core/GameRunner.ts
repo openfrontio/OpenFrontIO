@@ -1,4 +1,4 @@
-import { placeName } from "../client/graphics/NameBoxCalculator";
+import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
@@ -53,6 +53,7 @@ export async function createGameRunner(
       random.nextID(),
       p.isLobbyCreator ?? false,
       p.clanTag,
+      p.friends ?? [],
     );
   });
 
@@ -99,6 +100,9 @@ export class GameRunner {
     if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
       this.game.addExecution(new SpawnTimerExecution());
     }
+    if (this.game.config().spawnNations()) {
+      this.game.addExecution(...this.execManager.nationExecutions());
+    }
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
@@ -106,9 +110,6 @@ export class GameRunner {
       this.game.addExecution(
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
-    }
-    if (this.game.config().spawnNations()) {
-      this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
@@ -159,16 +160,20 @@ export class GameRunner {
       return false;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
-      this.game
-        .players()
-        .filter(
-          (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.Nation,
-        )
-        .forEach(
-          (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
-        );
+    // Track whether placements were recomputed this tick — the record is
+    // only attached to the update when it could have changed, so the main
+    // thread doesn't structured-clone an identical ~all-players record on
+    // every other tick.
+    let viewDataChanged = false;
+    if (this.game.inSpawnPhase()) {
+      for (const p of this.game.players()) {
+        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
+          continue;
+        }
+        if (p.spawnTile() === undefined) continue;
+        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+        viewDataChanged = true;
+      }
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
@@ -177,20 +182,25 @@ export class GameRunner {
       this.game.ticks() < 3 ||
       this.game.ticks() % 30 === 0
     ) {
-      this.game.players().forEach((p) => {
+      for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
-      });
+      }
+      viewDataChanged = true;
     }
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
     const packedMotionPlans = this.game.drainPackedMotionPlans();
+    const packedPlayerUpdates = this.game.drainPackedPlayerUpdates();
+    const packedAttackUpdates = this.game.drainPackedAttackUpdates();
 
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
       ...(packedMotionPlans ? { packedMotionPlans } : {}),
+      ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
+      ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       updates: updates,
-      playerNameViewData: this.playerViewData,
+      ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
     });

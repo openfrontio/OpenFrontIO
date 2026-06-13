@@ -1,10 +1,10 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
-import { GameView, UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
-import { UIState } from "./graphics/UIState";
 import { Platform } from "./Platform";
+import { UIState } from "./UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+import { GameView, UnitView } from "./view";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -84,16 +84,14 @@ export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
 
+export class ToggleRenderDebugGuiEvent implements GameEvent {}
+
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
   constructor(
     public readonly structureTypes: PlayerBuildableUnitType[] | null,
   ) {}
-}
-
-export class GhostStructureChangedEvent implements GameEvent {
-  constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
 
 export class ConfirmGhostStructureEvent implements GameEvent {}
@@ -235,7 +233,7 @@ export class InputHandler {
   constructor(
     private gameView: GameView,
     public uiState: UIState,
-    private canvas: HTMLCanvasElement,
+    private canvas: HTMLElement,
     private eventBus: EventBus,
   ) {}
 
@@ -438,6 +436,8 @@ export class InputHandler {
           "ControlLeft",
           "ControlRight",
           this.keybinds.shiftKey,
+          this.keybinds.emojiMenuModifier,
+          this.keybinds.buildMenuModifier,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -691,13 +691,12 @@ export class InputHandler {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
     }
-
-    if (this.isModifierKeyPressed(event)) {
+    if (this.activeKeys.has(this.keybinds.buildMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
-    if (this.isAltKeyPressed(event)) {
+    if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
@@ -850,7 +849,6 @@ export class InputHandler {
 
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
-    this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
   }
 
   /**
@@ -995,23 +993,6 @@ export class InputHandler {
     this.activeKeys.clear();
   }
 
-  isModifierKeyPressed(event: PointerEvent): boolean {
-    return (
-      ((this.keybinds.modifierKey === "AltLeft" ||
-        this.keybinds.modifierKey === "AltRight") &&
-        event.altKey) ||
-      ((this.keybinds.modifierKey === "ControlLeft" ||
-        this.keybinds.modifierKey === "ControlRight") &&
-        event.ctrlKey) ||
-      ((this.keybinds.modifierKey === "ShiftLeft" ||
-        this.keybinds.modifierKey === "ShiftRight") &&
-        event.shiftKey) ||
-      ((this.keybinds.modifierKey === "MetaLeft" ||
-        this.keybinds.modifierKey === "MetaRight") &&
-        event.metaKey)
-    );
-  }
-
   private isAltKeyHeld(event: KeyboardEvent): boolean {
     if (
       this.keybinds.altKey === "AltLeft" ||
@@ -1038,22 +1019,5 @@ export class InputHandler {
       return event.metaKey;
     }
     return false;
-  }
-
-  isAltKeyPressed(event: PointerEvent): boolean {
-    return (
-      ((this.keybinds.altKey === "AltLeft" ||
-        this.keybinds.altKey === "AltRight") &&
-        event.altKey) ||
-      ((this.keybinds.altKey === "ControlLeft" ||
-        this.keybinds.altKey === "ControlRight") &&
-        event.ctrlKey) ||
-      ((this.keybinds.altKey === "ShiftLeft" ||
-        this.keybinds.altKey === "ShiftRight") &&
-        event.shiftKey) ||
-      ((this.keybinds.altKey === "MetaLeft" ||
-        this.keybinds.altKey === "MetaRight") &&
-        event.metaKey)
-    );
   }
 }

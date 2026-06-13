@@ -13,6 +13,8 @@ export class MoveWarshipExecution implements Execution {
       console.warn(`MoveWarshipExecution: position ${this.position} not valid`);
       return;
     }
+    // Get water component of new TargetTile for connectivity check
+    const newPatrolTileWaterComponent = mg.getWaterComponent(this.position);
     // Cache warship list and build a lookup map — avoids repeated iteration
     const warshipMap = new Map(
       this.owner.units(UnitType.Warship).map((u) => [u.id(), u]),
@@ -26,6 +28,10 @@ export class MoveWarshipExecution implements Execution {
       }
       if (!warship.isActive()) {
         console.warn(`MoveWarshipExecution: warship ${unitId} is not active`);
+        continue;
+      }
+      // Do not update the warship's patrolTile if it is in a different Water Component
+      if (!mg.hasWaterComponent(warship.tile(), newPatrolTileWaterComponent!)) {
         continue;
       }
       warship.updateWarshipState({

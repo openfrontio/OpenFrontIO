@@ -54,8 +54,8 @@
     "go_to_troubleshooting": "Rendez-vous sur notre page de dépannage"
   },
   "news": {
-    "github_link": "Sur GitHub",
-    "title": "Notes de version"
+    "title": "Notes de version",
+    "github_link": "Sur GitHub"
   },
   "troubleshooting": {
     "title": "Dépannage",
@@ -106,6 +106,9 @@
     "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
     "action_reset_gfx": "Réinitialiser les graphismes",
     "action_auto_upgrade": "Améliorer automatiquement le bâtiment le plus proche",
+    "action_warship_multiselect": "Sélectionner plusieurs navires de guerre (cliquer et glisser pour dessiner le carré de sélection)",
+    "action_warship_selectall": "Sélectionne tous vos navires de guerre",
+    "drag": "glisser",
     "ui_section": "IU du jeu",
     "ui_leaderboard": "Classement",
     "ui_your_team": "Votre équipe :",
@@ -185,7 +188,8 @@
     "exit_confirmation": "Êtes-vous sûr de vouloir quitter le jeu ?",
     "bomb_direction": "Direction de l'arc de bombe Atomique / Hydrogène",
     "icon_alt_player_leaderboard": "Icône du Classement des Joueurs",
-    "icon_alt_team_leaderboard": "Icône du classement d'équipe"
+    "icon_alt_team_leaderboard": "Icône du classement d'équipe",
+    "game_id_tooltip": "ID de la partie"
   },
   "single_modal": {
     "random_spawn": "Apparition aléatoire",
@@ -235,7 +239,7 @@
     "clear_session": "Effacer la session",
     "failed_to_send_recovery_email": "Échec de l'envoi de l'e-mail de récupération",
     "enter_email_address": "Veuillez saisir une adresse e-mail",
-    "personal_player_id": "ID du joueur :"
+    "public_player_id": "ID public du joueur :"
   },
   "leaderboard_modal": {
     "title": "Classement",
@@ -354,13 +358,18 @@
     "sanfrancisco": "San Francisco",
     "aegean": "Mer Égée",
     "milkyway": "Voie lactée",
+    "marenostrum": "Mare Nostrum",
     "dyslexdria": "Dyslexdria",
     "greatlakes": "Grands Lacs",
     "straitofmalacca": "Détroit de Malacca",
     "luna": "Luna",
     "conakry": "Conakry",
     "caucasus": "Caucase",
-    "mediterranean": "Méditerranée"
+    "losangeles": "Los Angeles",
+    "beringsea": "Mer de Béring",
+    "antarctica": "Antarctique",
+    "archipelagosea": "Saaristomeri",
+    "bajacalifornia": "Basse-Californie"
   },
   "map_categories": {
     "featured": "En vedette",
@@ -554,8 +563,6 @@
     "alert_frame_desc": "Activer/Désactiver le cadre d'alerte. Lorsqu'il est activé, le cadre s'affichera lorsque vous serez trahi ou attaqué par la terre.",
     "special_effects_label": "Effets spéciaux",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
-    "structure_sprites_label": "Sprites de structure",
-    "structure_sprites_desc": "Activer/désactiver les sprites de structure",
     "cursor_cost_label_label": "Coûts de construction",
     "cursor_cost_label_desc": "Afficher une pastille indiquant le coût sous l'icône du curseur de construction",
     "anonymous_names_label": "Noms masqués",
@@ -628,6 +635,11 @@
     "boat_attack_desc": "Envoyer une attaque navale à la tuile sous votre curseur.",
     "ground_attack": "Attaque au sol",
     "ground_attack_desc": "Envoyez une attaque au sol sur la tuile sous votre curseur.",
+    "ally_keybinds": "Raccourcis des alliés",
+    "request_alliance": "Demander une alliance",
+    "request_alliance_desc": "Envoie une demande d'alliance au joueur en dessous de votre curseur.",
+    "break_alliance": "Briser une Alliance (Trahir)",
+    "break_alliance_desc": "Brise l'alliance avec le joueur en dessous de votre curseur.",
     "swap_direction": "Inverser la trajectoire balistique",
     "swap_direction_desc": "Inverser la trajectoire balistique de lancement",
     "zoom_controls": "Contrôles de zoom",
@@ -655,7 +667,9 @@
     "exit_game_info": "Retour au menu principal",
     "background_music_volume": "Volume de la musique de fond",
     "sound_effects_volume": "Volume des effets sonores",
-    "keybind_conflict_error": "La clé {key} est déjà liée à une autre action."
+    "keybind_conflict_error": "La clé {key} est déjà liée à une autre action.",
+    "structure_sprites_label": "Sprites de structure",
+    "structure_sprites_desc": "Activer/désactiver les sprites de structure"
   },
   "chat": {
     "title": "Discussion",
@@ -759,6 +773,7 @@
       "city": "Augmente la population maximale",
       "factory": "Crée des chemins de fer et fait apparaître des trains"
     },
+    "warship_shift_hint": "Maintenir la touche Maj et glisser le curseur pour sélectionner plusieurs navires de guerre à la fois",
     "not_enough_money": "Pas assez d'argent"
   },
   "win_modal": {
@@ -781,7 +796,6 @@
     "youtube_tutorial": "Besoin d'aide ?"
   },
   "leaderboard": {
-    "hide": "Masquer",
     "player": "Joueur",
     "team": "Équipe",
     "owned": "Possédé",
@@ -792,10 +806,10 @@
     "warships": "Vaisseaux de guerre",
     "cities": "Villes",
     "show_control": "Afficher les commandes",
-    "show_units": "Afficher les unités"
+    "show_units": "Afficher les unités",
+    "hide": "Masquer"
   },
   "events_display": {
-    "events": "Événements",
     "retreating": "en retraite",
     "alliance_request_status": "{name} {status} votre demande d'alliance",
     "alliance_accepted": "a accepté",
@@ -812,6 +826,7 @@
     "sent_emoji": "Envoyé à {name} : {emoji}",
     "renew_alliance": "Demander le renouvellement",
     "request_alliance": "{name} demande une alliance !",
+    "alliance_request_sent": "Demande d'alliance envoyée à {name}.",
     "focus": "Focaliser",
     "accept_alliance": "Accepter",
     "reject_alliance": "Refuser",
@@ -822,7 +837,6 @@
     "betrayal_debuff_ends": "{time} secondes restantes jusqu'à la fin du malus de trahison",
     "attack_cancelled_retreat": "Attaque annulée, {troops} soldats ont été tués pendant la retraite",
     "received_gold_from_captured_ship": "{gold} ors reçu pour la capture d'un navire de {name}",
-    "received_gold_from_trade": "{gold} ors reçu pour le commerce avec {name}",
     "received_gold_from_conquest": "{name} éliminé, {gold} d'or reçu",
     "conquered_no_gold": "Élimination de {name} (n'a pas joué, pas d'or reçu)",
     "missile_intercepted": "Le missile a intercepté {unit}",
@@ -834,7 +848,9 @@
     "unit_captured_by_enemy": "Votre {unit} a été capturé par {name}",
     "captured_enemy_unit": "{unit} de {name} capturé",
     "unit_destroyed": "Votre {unit} a été détruit",
-    "no_boats_available": "Aucun bateau disponible, max {max}"
+    "no_boats_available": "Aucun bateau disponible, max {max}",
+    "events": "Événements",
+    "received_gold_from_trade": "{gold} ors reçu pour le commerce avec {name}"
   },
   "player_type": {
     "player": "Joueur",
@@ -880,6 +896,7 @@
   "kick_reason": {
     "duplicate_session": "Expulsé de la partie (vous jouiez peut-être dans un autre onglet)",
     "lobby_creator": "Expulsé par le créateur du lobby",
+    "admin": "Expulsé par un admin",
     "host_left": "L'hôte a quitté le salon."
   },
   "send_troops_modal": {
@@ -1073,5 +1090,22 @@
     "dismiss": "Ignorer",
     "go_to_item": "Aller à l'article {num}",
     "firefox_warning": "OpenFront.io ne fonctionne pas bien avec [les navigateurs basés sur Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Nous vous recommandons d'utiliser un navigateur [basé sur Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser) #Browsers_based_on_Chromium) pour de meilleures performances."
+  },
+  "ios_banner": {
+    "text": "Pour le grand écran, ajouter OpenFront à votre écran d'accueil",
+    "how": "Comment",
+    "later": "Plus tard",
+    "never": "Jamais",
+    "modal_title": "Grand écran sur iOS",
+    "modal_desc": "Votre navigateur ne supporte pas le grand écran, mais vous pouvez ajouter OpenFront à votre écran d'accueil pour une meilleure expérience :",
+    "step_share": "Tapotez le bouton \"Partager\" dans votre navigateur",
+    "step_scroll_and_tap": "Défilez vers le bas et tapotez",
+    "step_add_to_home_label": "Ajouter à l'écran d'accueil",
+    "step_open": "Ouvrir depuis votre écran d'accueil — ouvre en grand écran sans la barre d'adresse",
+    "got_it": "J'ai compris"
+  },
+  "fullscreen": {
+    "enter": "Passer en mode grand écran",
+    "exit": "Quitter le mode grand écran"
   }
 }

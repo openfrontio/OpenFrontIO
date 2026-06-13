@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "Caucasus",
   "map": {
     "height": 1000,
     "num_land_tiles": 846140,
@@ -14,6 +16,7 @@
     "num_land_tiles": 209226,
     "width": 624
   },
+  "multiplayer_frequency": 5,
   "name": "Caucasus",
   "nations": [
     {
@@ -121,5 +124,6 @@
       "flag": "tr",
       "name": "Eastern Anatolia"
     }
-  ]
+  ],
+  "translation_key": "map.caucasus"
 }

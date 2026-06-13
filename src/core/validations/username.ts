@@ -58,7 +58,7 @@ export function validateClanTag(clanTag: string): {
     return { isValid: false, error: translateText("username.tag_too_short") };
   }
   if (clanTag.length > MAX_CLAN_TAG_LENGTH) {
-    return { isValid: false, error: translateText("username.tag_too_short") };
+    return { isValid: false, error: translateText("username.tag_too_long") };
   }
 
   const parsed = ClanTagSchema.safeParse(clanTag);

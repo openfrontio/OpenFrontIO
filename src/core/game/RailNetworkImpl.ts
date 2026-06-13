@@ -223,10 +223,14 @@ export class RailNetworkImpl implements RailNetwork {
     return editedClusters.size !== 0;
   }
 
-  overlappingRailroads(tile: TileRef): number[] {
-    return [...this.railGrid.query(tile, this.stationRadius)].map(
-      (railroad: Railroad) => railroad.id,
-    );
+  overlappingRailroads(tile: TileRef): TileRef[] {
+    const tiles = new Set<TileRef>();
+    for (const railroad of this.railGrid.query(tile, this.stationRadius)) {
+      for (const t of railroad.tiles) {
+        tiles.add(t);
+      }
+    }
+    return Array.from(tiles).sort((a, b) => a - b);
   }
 
   private canSnapToExistingRailway(tile: TileRef): boolean {
@@ -234,9 +238,7 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
-    // Factories already show their radius, so we'll exclude from ghost rails
-    // in order not to clutter the interface too much.
-    if (![UnitType.City, UnitType.Port].includes(unitType)) {
+    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
       return [];
     }
 

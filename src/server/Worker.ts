@@ -73,6 +73,7 @@ export async function startWorker() {
     ServerEnv.jwtIssuer() + "/cosmetics.json",
     ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
+    ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
   );
   privilegeRefresher.start();
@@ -104,7 +105,6 @@ export async function startWorker() {
 
   app.set("trust proxy", 3);
   app.use(compression());
-  app.use(express.json());
 
   app.use(
     express.static(path.join(__dirname, "../../out"), {
@@ -377,6 +377,9 @@ export async function startWorker() {
         }
 
         let flares: string[] | undefined;
+        let publicId: string | undefined;
+        let friends: string[] = [];
+        let ownedClanTags: string[] = [];
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
@@ -397,6 +400,9 @@ export async function startWorker() {
             return;
           }
           flares = result.response.player.flares;
+          publicId = result.response.player.publicId;
+          friends = result.response.player.friends;
+          ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -411,6 +417,21 @@ export async function startWorker() {
             }
           }
         }
+
+        // Enforce clan tag ownership: a player can wear a tag only if they're
+        // a member; a real clan they're not in (or an unverifiable tag) is
+        // dropped to prevent impersonation. Fictional tags pass through.
+        const resolution = privilegeRefresher
+          .get()
+          .resolveClanTag(censoredClanTag, ownedClanTags);
+        if (resolution.dropped) {
+          log.warn("Dropped clan tag: player is not a member", {
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
+            clanTag: censoredClanTag,
+          });
+        }
+        const resolvedClanTag = resolution.tag;
 
         const cosmeticResult = privilegeRefresher
           .get()
@@ -460,9 +481,11 @@ export async function startWorker() {
           flares,
           ip,
           censoredUsername,
-          censoredClanTag,
+          resolvedClanTag,
           ws,
           cosmeticResult.cosmetics,
+          publicId,
+          friends,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

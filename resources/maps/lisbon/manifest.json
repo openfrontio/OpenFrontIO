@@ -1,4 +1,6 @@
 {
+  "categories": ["europe"],
+  "id": "Lisbon",
   "map": {
     "height": 1600,
     "num_land_tiles": 1495857,
@@ -14,6 +16,7 @@
     "num_land_tiles": 369114,
     "width": 800
   },
+  "multiplayer_frequency": 4,
   "name": "Lisbon",
   "nations": [
     {
@@ -91,5 +94,6 @@
       "flag": "pt",
       "name": "Carvalhal"
     }
-  ]
+  ],
+  "translation_key": "map.lisbon"
 }

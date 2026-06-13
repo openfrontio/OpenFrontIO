@@ -237,19 +237,10 @@ describe("ClanModal — rendering", () => {
     });
 
     it("shows 0 in the stats row of the detail view when memberCount is undefined", async () => {
-      const { fetchClanDetail, fetchClanStats } =
-        await import("../../../src/client/ClanApi");
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan({ memberCount: undefined }),
       );
-      (fetchClanStats as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        clanTag: "TST",
-        games: 0,
-        wins: 0,
-        losses: 0,
-        teamTypeWL: {},
-        teamCountWL: {},
-      });
       setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
       setState(modal, "view" as keyof ClanModal, "detail" as never);
       await waitForSubComponent(modal, "clan-detail-view");

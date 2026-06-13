@@ -1,0 +1,336 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [40, 1127],
+      "flag": "Yucatan",
+      "name": "Yucatan"
+    },
+    {
+      "coordinates": [30, 1437],
+      "flag": "mx",
+      "name": "Quintana Roo"
+    },
+    {
+      "coordinates": [20, 1795],
+      "flag": "gt",
+      "name": "Guatemala"
+    },
+    {
+      "coordinates": [590, 1684],
+      "flag": "Mosquito Kingdom",
+      "name": "Moskitia"
+    },
+    {
+      "coordinates": [1127, 1495],
+      "flag": "co",
+      "name": "Bajo Nuevo Bank"
+    },
+    {
+      "coordinates": [1009, 1522],
+      "flag": "co",
+      "name": "Serranilla Bank"
+    },
+    {
+      "coordinates": [2111, 1643],
+      "flag": "aw",
+      "name": "Aruba"
+    },
+    {
+      "coordinates": [2302, 1641],
+      "flag": "bq",
+      "name": "Bonaire"
+    },
+    {
+      "coordinates": [2841, 904],
+      "flag": "Barbuda",
+      "name": "Barbuda"
+    },
+    {
+      "coordinates": [2770, 974],
+      "flag": "Nevis",
+      "name": "Nevis"
+    },
+    {
+      "coordinates": [434, 198],
+      "flag": "Florida",
+      "name": "Tampa"
+    },
+    {
+      "coordinates": [556, 122],
+      "flag": "Florida",
+      "name": "Orlando"
+    },
+    {
+      "coordinates": [517, 8],
+      "flag": "Florida",
+      "name": "Jacksonville"
+    },
+    {
+      "coordinates": [16, 3],
+      "flag": "Florida",
+      "name": "Pensacola"
+    },
+    {
+      "coordinates": [214, 0],
+      "flag": "Florida",
+      "name": "Tallahassee"
+    },
+    {
+      "coordinates": [708, 392],
+      "flag": "Florida",
+      "name": "Miami"
+    },
+    {
+      "coordinates": [706, 292],
+      "flag": "Florida",
+      "name": "Fort Lauderdale"
+    },
+    {
+      "coordinates": [464, 285],
+      "flag": "Florida",
+      "name": "Sarasota"
+    },
+    {
+      "coordinates": [566, 394],
+      "flag": "Florida",
+      "name": "Fort Myers"
+    },
+    {
+      "coordinates": [710, 767],
+      "flag": "cu",
+      "name": "Havana"
+    },
+    {
+      "coordinates": [1249, 961],
+      "flag": "cu",
+      "name": "Santiago de Cuba"
+    },
+    {
+      "coordinates": [1234, 917],
+      "flag": "cu",
+      "name": "Holguin"
+    },
+    {
+      "coordinates": [1106, 867],
+      "flag": "cu",
+      "name": "Camagüey"
+    },
+    {
+      "coordinates": [829, 805],
+      "flag": "cu",
+      "name": "Santa Clara"
+    },
+    {
+      "coordinates": [1029, 437],
+      "flag": "Republic of Pirates",
+      "name": "Republic of Pirates"
+    },
+    {
+      "coordinates": [565, 939],
+      "flag": "cu",
+      "name": "Nueva Gerona"
+    },
+    {
+      "coordinates": [473, 852],
+      "flag": "cu",
+      "name": "Pinar del Rio"
+    },
+    {
+      "coordinates": [3113, 1563],
+      "flag": "tt",
+      "name": "Tobago"
+    }
+  ],
+  "categories": ["north_america"],
+  "id": "Caribbean",
+  "map": {
+    "height": 1808,
+    "num_land_tiles": 577573,
+    "width": 3200
+  },
+  "map16x": {
+    "height": 452,
+    "num_land_tiles": 32566,
+    "width": 800
+  },
+  "map4x": {
+    "height": 904,
+    "num_land_tiles": 138280,
+    "width": 1600
+  },
+  "multiplayer_frequency": 5,
+  "name": "Caribbean",
+  "nations": [
+    {
+      "coordinates": [538, 200],
+      "flag": "Florida",
+      "name": "Florida"
+    },
+    {
+      "coordinates": [65, 1211],
+      "flag": "mx",
+      "name": "Mexico"
+    },
+    {
+      "coordinates": [53, 1596],
+      "flag": "bz",
+      "name": "Belize"
+    },
+    {
+      "coordinates": [333, 1748],
+      "flag": "hn",
+      "name": "Honduras"
+    },
+    {
+      "coordinates": [960, 809],
+      "flag": "cu",
+      "name": "Cuba"
+    },
+    {
+      "coordinates": [1339, 943],
+      "flag": "us",
+      "name": "Guantanamo Bay"
+    },
+    {
+      "coordinates": [1213, 1210],
+      "flag": "jm",
+      "name": "Jamaica"
+    },
+    {
+      "coordinates": [1682, 674],
+      "flag": "tc",
+      "name": "Turks and Caicos"
+    },
+    {
+      "coordinates": [973, 481],
+      "flag": "bs",
+      "name": "Bahamas"
+    },
+    {
+      "coordinates": [786, 1167],
+      "flag": "ky",
+      "name": "Cayman Islands"
+    },
+    {
+      "coordinates": [1714, 971],
+      "flag": "ht",
+      "name": "Haiti"
+    },
+    {
+      "coordinates": [1867, 962],
+      "flag": "do",
+      "name": "Dominican Republic"
+    },
+    {
+      "coordinates": [2388, 934],
+      "flag": "pr",
+      "name": "Puerto Rico"
+    },
+    {
+      "coordinates": [1964, 1732],
+      "flag": "co",
+      "name": "Colombia"
+    },
+    {
+      "coordinates": [2503, 1791],
+      "flag": "ve",
+      "name": "Venezuela"
+    },
+    {
+      "coordinates": [3070, 1784],
+      "flag": "gy",
+      "name": "Guyana"
+    },
+    {
+      "coordinates": [3065, 1655],
+      "flag": "tt",
+      "name": "Trinidad and Tobago"
+    },
+    {
+      "coordinates": [3183, 1334],
+      "flag": "bb",
+      "name": "Barbados"
+    },
+    {
+      "coordinates": [2986, 1493],
+      "flag": "gd",
+      "name": "Grenada"
+    },
+    {
+      "coordinates": [3007, 1361],
+      "flag": "vc",
+      "name": "St Vincent \u0026 the Grenadines"
+    },
+    {
+      "coordinates": [3015, 1291],
+      "flag": "lc",
+      "name": "Saint Lucia"
+    },
+    {
+      "coordinates": [2989, 1202],
+      "flag": "mq",
+      "name": "Martinique"
+    },
+    {
+      "coordinates": [2937, 1130],
+      "flag": "dm",
+      "name": "Dominica"
+    },
+    {
+      "coordinates": [2887, 1063],
+      "flag": "gp",
+      "name": "Guadeloupe"
+    },
+    {
+      "coordinates": [2746, 959],
+      "flag": "kn",
+      "name": "Saint Kitts and Nevis"
+    },
+    {
+      "coordinates": [2853, 966],
+      "flag": "ag",
+      "name": "Antigua and Barbuda"
+    },
+    {
+      "coordinates": [2821, 1011],
+      "flag": "ms",
+      "name": "Montserrat"
+    },
+    {
+      "coordinates": [2700, 886],
+      "flag": "sx",
+      "name": "Sint Maarten"
+    },
+    {
+      "coordinates": [2528, 963],
+      "flag": "vi",
+      "name": "U.S. Virgin Islands"
+    },
+    {
+      "coordinates": [2233, 1660],
+      "flag": "cw",
+      "name": "Curaçao"
+    },
+    {
+      "coordinates": [3185, 13],
+      "flag": "bm",
+      "name": "Bermuda"
+    },
+    {
+      "coordinates": [603, 1768],
+      "flag": "ni",
+      "name": "Nicaragua"
+    },
+    {
+      "coordinates": [2528, 882],
+      "flag": "vg",
+      "name": "British Virgin Islands"
+    },
+    {
+      "coordinates": [903, 1700],
+      "flag": "co",
+      "name": "San Andres"
+    }
+  ],
+  "translation_key": "map.caribbean"
+}

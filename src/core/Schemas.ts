@@ -51,7 +51,7 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | StartGameIntent;
+  | ToggleGameStartTimer;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -85,7 +85,9 @@ export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
 export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
-export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
+export type ToggleGameStartTimer = z.infer<
+  typeof ToggleGameStartTimerIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -133,6 +135,7 @@ export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
+export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -156,6 +159,7 @@ const ClientInfoSchema = z.object({
   clientID: z.string(),
   username: UsernameSchema,
   clanTag: ClanTagSchema,
+  friends: z.array(z.string()).optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -181,6 +185,28 @@ export const PublicGamesSchema = z.object({
   games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
+// Wire message sent from server to lobby WebSocket clients.
+// "full" carries the complete snapshot; "counts" carries only the
+// per-lobby player counts, which change far more often than the rest.
+export const PublicLobbyFullSchema = z.object({
+  type: z.literal("full"),
+  serverTime: z.number(),
+  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+});
+
+export const PublicLobbyCountsSchema = z.object({
+  type: z.literal("counts"),
+  serverTime: z.number(),
+  counts: z.record(z.string(), z.number()),
+});
+
+export const PublicLobbyMessageSchema = z.discriminatedUnion("type", [
+  PublicLobbyFullSchema,
+  PublicLobbyCountsSchema,
+]);
+
+export type PublicLobbyMessage = z.infer<typeof PublicLobbyMessageSchema>;
+
 export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,
@@ -192,6 +218,7 @@ export interface ClientInfo {
   clientID: ClientID;
   username: string;
   clanTag: string | null;
+  friends?: ClientID[];
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -251,10 +278,12 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
+  disableClanTags: z.boolean().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
+  startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
@@ -455,8 +484,8 @@ export const UpdateGameConfigIntentSchema = z.object({
   config: GameConfigSchema.partial(),
 });
 
-export const StartGameIntentSchema = z.object({
-  type: z.literal("start_game"),
+export const ToggleGameStartTimerIntentSchema = z.object({
+  type: z.literal("toggle_game_start_timer"),
 });
 
 const IntentSchema = z.discriminatedUnion("type", [
@@ -484,7 +513,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
-  StartGameIntentSchema,
+  ToggleGameStartTimerIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
@@ -534,6 +563,12 @@ export const PlayerCosmeticRefsSchema = z.object({
   color: z.string().optional(),
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
+  skinName: CosmeticNameSchema.optional(),
+});
+
+export const PlayerSkinSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
 });
 
 // Server converts refs to the actual cosmetics here
@@ -541,6 +576,7 @@ export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
+  skin: PlayerSkinSchema.optional(),
 });
 
 export const PlayerSchema = z.object({
@@ -549,6 +585,7 @@ export const PlayerSchema = z.object({
   clanTag: ClanTagSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
+  friends: z.array(ID).optional(),
 });
 
 export const GameStartInfoSchema = z.object({

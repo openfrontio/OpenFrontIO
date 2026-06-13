@@ -8,6 +8,7 @@ import {
   Pack,
   Pattern,
   Product,
+  Skin,
   Subscription,
 } from "../core/CosmeticSchemas";
 import {
@@ -17,6 +18,7 @@ import {
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
 import {
+  changeSubscriptionTier,
   createCheckoutSession,
   getApiBase,
   getUserMe,
@@ -27,8 +29,35 @@ import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
+// Subscriptions are not ready yet — flip to true to show them in the store
+// and on the account/profile modal.
+export const SUBSCRIPTIONS_ENABLED = false;
+
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
+let __cosmeticsCache: Cosmetics | null = null;
+
+/**
+ * Synchronous accessor for the most recently resolved cosmetics. Returns null
+ * before the first successful `fetchCosmetics()` call. Useful when a code path
+ * cannot await (e.g. WebGL per-frame sync).
+ */
+export function getCachedCosmetics(): Cosmetics | null {
+  return __cosmeticsCache;
+}
+
+/**
+ * Resolve the local player's selected skin from UserSettings + cached
+ * cosmetics. Returns null if no skin is selected, cosmetics aren't loaded,
+ * or the saved skin no longer exists.
+ */
+export function getLocalSelectedSkin(): { name: string; url: string } | null {
+  const skinName = new UserSettings().getSelectedSkinName();
+  if (!skinName) return null;
+  const skin = __cosmeticsCache?.skins?.[skinName];
+  if (!skin) return null;
+  return { name: skin.name, url: skin.url };
+}
 
 export type PaymentMethod = "dollar" | "hard" | "soft";
 
@@ -41,10 +70,41 @@ export async function purchaseCosmetic(
   const colorPaletteName = resolved.colorPalette?.name;
 
   if (resolved.type === "subscription") {
+    const sub = c as Subscription;
     const userMe = await getUserMe();
-    const flares = userMe === false ? [] : (userMe.player.flares ?? []);
-    if (flares.some((f) => f.startsWith("subscription:"))) {
-      alert(translateText("store.already_subscribed"));
+    const currentSub =
+      userMe === false ? null : (userMe.player.subscription ?? null);
+
+    if (currentSub) {
+      if (currentSub.tier === sub.name) {
+        alert(translateText("store.already_subscribed"));
+        return;
+      }
+
+      // Direction-aware confirm based on priceMonthly. We don't have the
+      // server's sortOrder client-side — priceMonthly is a good proxy.
+      const currentCosmetic =
+        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const isUpgrade =
+        currentCosmetic !== null
+          ? sub.priceMonthly > currentCosmetic.priceMonthly
+          : true;
+      const targetName = translateCosmetic("subscriptions", sub.name);
+      const confirmKey = isUpgrade
+        ? "store.confirm_upgrade"
+        : "store.confirm_downgrade";
+      const confirmed = window.confirm(
+        translateText(confirmKey, { tier: targetName }),
+      );
+      if (!confirmed) return;
+
+      const ok = await changeSubscriptionTier(sub.name);
+      if (!ok) {
+        alert(translateText("store.change_tier_failed"));
+        return;
+      }
+      alert(translateText("store.change_tier_success", { tier: targetName }));
+      window.location.reload();
       return;
     }
   }
@@ -143,6 +203,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         .map((k) => k + (result.data.patterns[k].product ? "sale" : ""))
         .join(",");
       __cosmeticsHash = simpleHash(hashInput);
+      __cosmeticsCache = result.data;
       return result.data;
     } catch (error) {
       console.error("Error getting cosmetics:", error);
@@ -277,12 +338,31 @@ export function flagRelationship(
   );
 }
 
+export function skinRelationship(
+  skin: Skin,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "skin:*",
+      requiredFlare: `skin:${skin.name}`,
+      product: skin.product,
+      priceSoft: skin.priceSoft,
+      priceHard: skin.priceHard,
+      affiliateCode,
+      itemAffiliateCode: skin.affiliateCode ?? null,
+    },
+    userMeResponse,
+  );
+}
+
 export type ResolvedCosmetic = {
-  type: "pattern" | "flag" | "pack" | "subscription";
-  cosmetic: Pattern | Flag | Pack | Subscription | null;
+  type: "pattern" | "skin" | "flag" | "pack" | "subscription";
+  cosmetic: Pattern | Skin | Flag | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
-  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
+  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
   key: string;
 };
 
@@ -345,6 +425,19 @@ export function resolveCosmetics(
     });
   }
 
+  // Skins (image-based territory cosmetics). No separate "default" entry —
+  // the pattern default doubles as "no skin": selecting it clears both.
+  for (const [skinKey, skin] of Object.entries(cosmetics.skins ?? {})) {
+    const rel = skinRelationship(skin, userMeResponse, affiliateCode);
+    result.push({
+      type: "skin",
+      cosmetic: skin,
+      colorPalette: null,
+      relationship: rel,
+      key: `skin:${skinKey}`,
+    });
+  }
+
   // Packs
   for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
     const rel = pack.product ? "purchasable" : "blocked";
@@ -360,9 +453,14 @@ export function resolveCosmetics(
   // Subscriptions
   const flares =
     userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  const currentSubTier =
+    userMeResponse === false
+      ? null
+      : (userMeResponse.player.subscription?.tier ?? null);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    const rel = flares.includes(key)
+    const isCurrent = subKey === currentSubTier || flares.includes(key);
+    const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
       : sub.product
         ? "purchasable"
@@ -442,10 +540,32 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     userSettings.clearFlag();
   }
 
+  let skinName = userSettings.getSelectedSkinName() ?? undefined;
+  if (skinName) {
+    const skin = cosmetics?.skins?.[skinName];
+    if (cosmetics && !skin) {
+      // Cosmetics loaded but the saved skin no longer exists.
+      skinName = undefined;
+    } else if (skin) {
+      const userMe = await getUserMe();
+      if (userMe) {
+        const flares = userMe.player.flares ?? [];
+        const hasWildcard = flares.includes("skin:*");
+        if (!hasWildcard && !flares.includes(`skin:${skin.name}`)) {
+          skinName = undefined;
+        }
+      }
+    }
+    if (skinName === undefined) {
+      userSettings.setSelectedPatternName(undefined);
+    }
+  }
+
   return {
     flag: flag ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+    skinName,
   };
 }
 
@@ -459,7 +579,15 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     result.flag = await resolveFlagUrl(refs.flag);
   }
 
-  if (refs.patternName && cosmetics) {
+  const devPattern = new UserSettings().getDevOnlyPattern();
+
+  if (devPattern) {
+    result.pattern = {
+      name: devPattern.name,
+      patternData: devPattern.patternData,
+      colorPalette: devPattern.colorPalette,
+    };
+  } else if (refs.patternName && cosmetics) {
     const pattern = cosmetics.patterns[refs.patternName];
 
     if (pattern) {
@@ -471,15 +599,12 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
           : undefined,
       };
     }
-  } else {
-    const devPattern = new UserSettings().getDevOnlyPattern();
+  }
 
-    if (devPattern) {
-      result.pattern = {
-        name: devPattern.name,
-        patternData: devPattern.patternData,
-        colorPalette: devPattern.colorPalette,
-      };
+  if (refs.skinName && cosmetics) {
+    const skin = cosmetics.skins?.[refs.skinName];
+    if (skin) {
+      result.skin = { name: refs.skinName, url: skin.url };
     }
   }
 

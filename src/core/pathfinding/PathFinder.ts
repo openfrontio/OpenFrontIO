@@ -10,12 +10,17 @@ import {
 } from "./PathFinder.Parabola";
 import { StationPathFinder } from "./PathFinder.Station";
 import { PathFinderBuilder } from "./PathFinderBuilder";
-import { StepperConfig } from "./PathFinderStepper";
+import { PathFinderStepper, StepperConfig } from "./PathFinderStepper";
 import { ComponentCheckTransformer } from "./transformers/ComponentCheckTransformer";
 import { MiniMapTransformer } from "./transformers/MiniMapTransformer";
 import { ShoreCoercingTransformer } from "./transformers/ShoreCoercingTransformer";
 import { SmoothingWaterTransformer } from "./transformers/SmoothingWaterTransformer";
-import { PathResult, PathStatus, SteppingPathFinder } from "./types";
+import {
+  PathFinder,
+  PathResult,
+  PathStatus,
+  SteppingPathFinder,
+} from "./types";
 
 /**
  * Pathfinders that work with GameMap - usable in both simulation and UI layers
@@ -29,37 +34,64 @@ export class UniversalPathFinding {
   }
 }
 
+// Shared water-pathfinder chain cache. The transformer chain wraps the
+// already-shared AStarWaterHierarchical (owned by WaterManager) and holds the
+// only large per-ship allocation we had — SmoothingWaterTransformer's bounded
+// A* scratch. Sharing the chain across all callers cuts ~500 KB per ship.
+// Single-threaded worker + stamp-based scratch invalidation makes sharing safe.
+const _waterChainCache = new WeakMap<
+  Game,
+  { version: number; chain: PathFinder<TileRef> }
+>();
+
+function buildWaterChain(game: Game): PathFinder<TileRef> {
+  const hpa = game.miniWaterHPA();
+  const graph = game.miniWaterGraph();
+  const miniMap = game.miniMap();
+
+  if (!hpa || !graph || graph.nodeCount < 100) {
+    const simple = new AStarWater(miniMap);
+    return PathFinderBuilder.create(simple)
+      .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
+      .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
+      .build();
+  }
+
+  const componentCheckFn = (t: TileRef) => graph.getComponentId(t);
+  return PathFinderBuilder.create(hpa)
+    .wrap((pf) => new ComponentCheckTransformer(pf, componentCheckFn))
+    .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
+    .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
+    .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
+    .build();
+}
+
+function sharedWaterChain(game: Game): PathFinder<TileRef> {
+  const version = game.waterGraphVersion();
+  const cached = _waterChainCache.get(game);
+  if (cached && cached.version === version) {
+    return cached.chain;
+  }
+  const chain = buildWaterChain(game);
+  _waterChainCache.set(game, { version, chain });
+  return chain;
+}
+
 /**
  * Pathfinders that require Game - simulation layer only
  */
 export class PathFinding {
   static Water(game: Game): SteppingPathFinder<TileRef> {
-    const pf = game.miniWaterHPA();
-    const graph = game.miniWaterGraph();
-
-    if (!pf || !graph || graph.nodeCount < 100) {
-      return PathFinding.WaterSimple(game);
-    }
-
-    const miniMap = game.miniMap();
-    const componentCheckFn = (t: TileRef) => graph.getComponentId(t);
-
-    return PathFinderBuilder.create(pf)
-      .wrap((pf) => new ComponentCheckTransformer(pf, componentCheckFn))
-      .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
-      .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
-      .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
-      .buildWithStepper(tileStepperConfig(game));
+    return new PathFinderStepper(
+      sharedWaterChain(game),
+      tileStepperConfig(game),
+    );
   }
 
   static WaterSimple(game: Game): SteppingPathFinder<TileRef> {
-    const miniMap = game.miniMap();
-    const pf = new AStarWater(miniMap);
-
-    return PathFinderBuilder.create(pf)
-      .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
-      .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
-      .buildWithStepper(tileStepperConfig(game));
+    // Kept for backwards compatibility; shared chain auto-selects simple vs
+    // hierarchical based on graph availability.
+    return PathFinding.Water(game);
   }
 
   static Rail(game: Game): SteppingPathFinder<TileRef> {
@@ -91,10 +123,11 @@ export class PathFinding {
 
 /**
  * Water pathfinder that auto-rebuilds when the water graph changes.
- * Wraps SteppingPathFinder and tracks waterGraphVersion internally.
+ * Wraps a per-ship stepper around the shared water chain on Game; tracks
+ * waterGraphVersion to stagger when each ship invalidates its cached path.
  */
 export class WaterPathFinder implements SteppingPathFinder<TileRef> {
-  private inner: SteppingPathFinder<TileRef>;
+  private stepper: SteppingPathFinder<TileRef>;
   private _waterGraphVersion: number;
   private _rebuilt = false;
 
@@ -112,7 +145,10 @@ export class WaterPathFinder implements SteppingPathFinder<TileRef> {
     private game: Game,
     private _stagger: number = 0,
   ) {
-    this.inner = PathFinding.Water(game);
+    this.stepper = new PathFinderStepper(
+      sharedWaterChain(game),
+      tileStepperConfig(game),
+    );
     this._waterGraphVersion = game.waterGraphVersion();
     this._staggerCountdown = 0;
   }
@@ -140,27 +176,32 @@ export class WaterPathFinder implements SteppingPathFinder<TileRef> {
 
     if (this._staggerCountdown > 0) {
       this._staggerCountdown--;
-      return; // Keep using old pathfinder for now
+      return; // Keep using old stepper (and its cached path) for now
     }
 
-    // Countdown complete — rebuild.
+    // Countdown complete — swap to a fresh stepper around the (now-current)
+    // shared chain. Dropping the old stepper invalidates the cached path,
+    // which forces an A* re-run on the next call against the new graph.
     this._waterGraphVersion = v;
-    this.inner = PathFinding.Water(this.game);
+    this.stepper = new PathFinderStepper(
+      sharedWaterChain(this.game),
+      tileStepperConfig(this.game),
+    );
     this._rebuilt = true;
   }
 
   next(from: TileRef, to: TileRef, dist?: number): PathResult<TileRef> {
     this.ensureFresh();
-    return this.inner.next(from, to, dist);
+    return this.stepper.next(from, to, dist);
   }
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     this.ensureFresh();
-    return this.inner.findPath(from, to);
+    return this.stepper.findPath(from, to);
   }
 
   invalidate(): void {
-    this.inner.invalidate();
+    this.stepper.invalidate();
   }
 }
 

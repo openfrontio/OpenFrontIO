@@ -1,0 +1,49 @@
+{
+  "id": "YellowSea",
+  "name": "Yellow Sea",
+  "translation_key": "map.yellowsea",
+  "categories": ["asia"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [1350, 575],
+      "flag": "kp",
+      "name": "North Korea"
+    },
+    {
+      "coordinates": [1469, 935],
+      "flag": "kr",
+      "name": "South Korea"
+    },
+    {
+      "coordinates": [1003, 220],
+      "flag": "cn",
+      "name": "Liaoning"
+    },
+    {
+      "coordinates": [490, 924],
+      "flag": "cn",
+      "name": "Shandong"
+    },
+    {
+      "coordinates": [32, 295],
+      "flag": "cn",
+      "name": "Beijing"
+    },
+    {
+      "coordinates": [161, 483],
+      "flag": "cn",
+      "name": "Tianjin"
+    },
+    {
+      "coordinates": [109, 781],
+      "flag": "cn",
+      "name": "Hebei"
+    },
+    {
+      "coordinates": [1387, 84],
+      "flag": "cn",
+      "name": "Jilin"
+    }
+  ]
+}

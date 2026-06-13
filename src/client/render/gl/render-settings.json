@@ -1,0 +1,380 @@
+{
+  "passEnabled": {
+    "terrain": true,
+    "territory": true,
+    "borderCompute": true,
+    "borderStamp": true,
+    "trail": true,
+    "territoryPatterns": true,
+    "structure": true,
+    "unit": true,
+    "name": true,
+    "falloutBloom": true,
+    "railroad": true,
+    "fx": true,
+    "bar": true,
+    "nameDebug": false
+  },
+  "falloutBloom": {
+    "broilSpeedCold": 0.0018,
+    "broilSpeedHot": 0,
+    "noiseFreq1": 0.059,
+    "noiseFreq2": 0.171,
+    "contrastLoCold": 0.52,
+    "contrastLoHot": 0,
+    "contrastHiCold": 1,
+    "contrastHiHot": 0,
+    "metaFreq": 0.02,
+    "intensityCold": 0.15,
+    "intensityHot": 1.8,
+    "metaInfluenceCold": 1,
+    "metaInfluenceHot": 0,
+    "opacityFadeEnd": 1,
+    "bloomR": 0.054901960784313725,
+    "bloomG": 0.8196078431372549,
+    "bloomB": 0,
+    "bloomCoverage": 1.1,
+    "heatDecayPerTick": 1,
+    "particleColorDarkR": 0.05,
+    "particleColorDarkG": 0.4,
+    "particleColorDarkB": 0.05,
+    "particleColorBrightR": 0.2,
+    "particleColorBrightG": 1,
+    "particleColorBrightB": 0.2,
+    "particleThresholdUnowned": 0.85,
+    "particleThresholdOwned": 0.875,
+    "particleFlickerSpeed": 0.2,
+    "particleStrength": 1,
+    "particleFreshScale": 0.2
+  },
+  "lighting": {
+    "ambient": 1,
+    "enabled": false,
+    "falloffPower": 2,
+    "falloutLightR": 0.15,
+    "falloutLightG": 0.95,
+    "falloutLightB": 0.15,
+    "falloutLightIntensity": 5.2,
+    "falloutLightThreshold": 0.01,
+    "emberLightR": 1,
+    "emberLightG": 0.4,
+    "emberLightB": 0.05,
+    "emberLightIntensity": 3,
+    "blurZoomDivisor": 4,
+    "lightRadiusMultiplier": 1
+  },
+  "mapOverlay": {
+    "trailAlpha": 0.588,
+    "defenseCheckerDarken": 0.7,
+    "territoryDefenseDarken": 0.85,
+    "territorySaturation": 1,
+    "territoryAlpha": 0.588,
+    "coordinateGridOpacity": 0.5,
+    "staleNukeBase": 0,
+    "staleNukeVariation": 0.05,
+    "staleNukeAlpha": 1,
+    "staleNukeR": 0.05,
+    "staleNukeG": 0.55,
+    "staleNukeB": 0.07,
+    "highlightBrighten": 0.25,
+    "highlightFillBrighten": 0.15,
+    "highlightThicken": 2,
+    "defensePostRange": 30,
+    "embargoTintRatio": 0.35,
+    "friendlyTintRatio": 0.35,
+    "embargoTintR": 1,
+    "embargoTintG": 0,
+    "embargoTintB": 0,
+    "friendlyTintR": 0,
+    "friendlyTintG": 1,
+    "friendlyTintB": 0
+  },
+  "affiliation": {
+    "selfR": 0,
+    "selfG": 1,
+    "selfB": 0,
+    "allyR": 1,
+    "allyG": 1,
+    "allyB": 0,
+    "neutralR": 0.502,
+    "neutralG": 0.502,
+    "neutralB": 0.502,
+    "enemyR": 1,
+    "enemyG": 0,
+    "enemyB": 0
+  },
+  "railroad": {
+    "railMinZoom": 4,
+    "railFadeRange": 2,
+    "railDetailZoom": 6,
+    "railAlpha": 1,
+    "railThickness": 1
+  },
+  "structure": {
+    "iconSize": 50,
+    "dotsZoomThreshold": 1.2,
+    "dotScale": 0.3,
+    "iconScaleFactorZoomedOut": 3,
+    "iconGrowZoom": 7,
+    "shapes": {
+      "City": {
+        "scale": 1,
+        "iconFill": 0.85
+      },
+      "Port": {
+        "scale": 1.08,
+        "iconFill": 0.85
+      },
+      "Factory": {
+        "scale": 1,
+        "iconFill": 0.85
+      },
+      "Defense Post": {
+        "scale": 1,
+        "iconFill": 0.8
+      },
+      "SAM Launcher": {
+        "scale": 1.4,
+        "iconFill": 1
+      },
+      "Missile Silo": {
+        "scale": 1.55,
+        "iconFill": 0.85
+      }
+    },
+    "highlightOutlineWidth": 0.04,
+    "highlightDimAlpha": 0.3,
+    "fillDarken": 0.65,
+    "borderDarken": 0.35,
+    "iconAlpha": 1.0,
+    "iconR": 1.0,
+    "iconG": 1.0,
+    "iconB": 1.0,
+    "iconDarken": 0
+  },
+  "structureLevel": {
+    "scale": 1.2,
+    "outlineWidth": 1.4
+  },
+  "bar": {
+    "healthBarW": 11,
+    "healthBarH": 3,
+    "healthBarOffsetY": -6,
+    "progressBarW": 14,
+    "progressBarH": 3,
+    "progressBarOffsetY": 6,
+    "borderWidth": 1,
+    "threshold1": 0.25,
+    "threshold2": 0.5,
+    "threshold3": 0.75,
+    "colorRedR": 0.91,
+    "colorRedG": 0.098,
+    "colorRedB": 0.098,
+    "colorOrangeR": 0.941,
+    "colorOrangeG": 0.478,
+    "colorOrangeB": 0.098,
+    "colorYellowR": 0.792,
+    "colorYellowG": 0.906,
+    "colorYellowB": 0.059,
+    "colorGreenR": 0.173,
+    "colorGreenG": 0.937,
+    "colorGreenB": 0.071
+  },
+  "unit": {
+    "unitSize": 13,
+    "flickerSpeed": 0.3,
+    "angryR": 0.784,
+    "angryG": 0,
+    "angryB": 0,
+    "hBombGlowScale": 2.2,
+    "hBombGlowR": 1.0,
+    "hBombGlowG": 0.72,
+    "hBombGlowB": 0.15,
+    "hBombGlowStrength": 0.5,
+    "hBombGlowInner": 0.45,
+    "untargetableAlpha": 0.6
+  },
+  "name": {
+    "lerpSpeed": 10,
+    "cullThreshold": 0.008,
+    "nameScaleFactor": 0.4,
+    "nameScaleCap": 3,
+    "troopSizeMultiplier": 0.6,
+    "outlineWidth": 1.4,
+    "outlineR": 0.0,
+    "outlineG": 0.0,
+    "outlineB": 0.0,
+    "outlineUsePlayerColor": true,
+    "fillUsePlayerColor": false,
+    "nameShadeNation": 0.3,
+    "nameShadeBot": 0.4,
+    "emojiRowOffset": 1.4,
+    "statusRowOffset": 1.4,
+    "hoverFadeAlpha": 0.5,
+    "hoverGlowWidth": 5,
+    "hoverGlowAlpha": 0.75
+  },
+  "fx": {
+    "shockwaveRingWidth": 0.04,
+    "attackRingScreenPx": 30,
+    "nukeShockwaveDurationMs": 1500,
+    "nukeShockwaveRadiusFactor": 1.5,
+    "samShockwaveDurationMs": 800,
+    "samShockwaveRadius": 40,
+    "debrisLifetimeMs": 6000,
+    "debrisFadeIn": 0.1,
+    "debrisFadeOut": 0.8,
+    "conquestLifetimeMs": 2500,
+    "conquestFadeIn": 0.1,
+    "conquestFadeOut": 0.6
+  },
+  "nukeTrajectory": {
+    "lineWidth": 2.5,
+    "outlineWidth": 1.5,
+    "dashTargetable": 8,
+    "gapTargetable": 4,
+    "dashUntargetable": 2,
+    "gapUntargetable": 6,
+    "lineR": 1,
+    "lineG": 1,
+    "lineB": 1,
+    "interceptR": 1,
+    "interceptG": 0.314,
+    "interceptB": 0.314,
+    "outlineR": 0.549,
+    "outlineG": 0.549,
+    "outlineB": 0.549,
+    "interceptOutlineR": 0.588,
+    "interceptOutlineG": 0.353,
+    "interceptOutlineB": 0.353,
+    "markerCircleRadius": 6,
+    "markerXRadius": 40
+  },
+  "nukeTelegraph": {
+    "strokeWidth": 1.5,
+    "dashLen": 12,
+    "gapLen": 6,
+    "rotationSpeed": 20,
+    "baseAlpha": 0.85,
+    "pulseAmplitude": 0.1,
+    "pulseSpeed": 3,
+    "fillAlphaOffset": 0.6,
+    "colorR": 1,
+    "colorG": 0,
+    "colorB": 0,
+    "selfColorR": 0,
+    "selfColorG": 1,
+    "selfColorB": 0,
+    "allyColorR": 1,
+    "allyColorG": 1,
+    "allyColorB": 0
+  },
+  "moveIndicator": {
+    "startRadius": 13,
+    "chevronSize": 5,
+    "lineWidth": 2,
+    "duration": 800,
+    "converge": 0.7
+  },
+  "samRadius": {
+    "strokeWidth": 1.5,
+    "dashLen": 12,
+    "gapLen": 6,
+    "rotationSpeed": 14,
+    "alpha": 0.8,
+    "outlineWidth": 0.4,
+    "outlineSoftness": 0.15
+  },
+  "bonusPopup": {
+    "scale": 6,
+    "lifetimeMs": 1500,
+    "riseSpeed": 3,
+    "yOffset": -3,
+    "outlineWidth": 2,
+    "colorR": 1,
+    "colorG": 1,
+    "colorB": 1,
+    "minScreenScale": 0.15,
+    "cullZoom": 0.3
+  },
+  "ghostCost": {
+    "screenScale": 18,
+    "screenYOffset": 25
+  },
+  "spawnOverlay": {
+    "highlightRadius": 9,
+    "highlightAlpha": 1.0,
+    "selfMinRad": 10,
+    "selfMaxRad": 30,
+    "mateMinRad": 5,
+    "mateMaxRad": 14,
+    "animSpeed": 0.005,
+    "gradientInnerEdge": 0.01,
+    "gradientSolidEnd": 0.1
+  },
+  "altView": {
+    "gridFontSize": 24,
+    "recolorStructures": true
+  },
+  "tileDrip": {
+    "bucketCount": 9
+  },
+  "lightConfigs": {
+    "City": {
+      "radius": 18,
+      "intensity": 1.2
+    },
+    "Port": {
+      "radius": 12,
+      "intensity": 1
+    },
+    "Factory": {
+      "radius": 12,
+      "intensity": 1
+    },
+    "Defense Post": {
+      "radius": 10,
+      "intensity": 0.9
+    },
+    "SAM Launcher": {
+      "radius": 10,
+      "intensity": 0.9
+    },
+    "Missile Silo": {
+      "radius": 10,
+      "intensity": 0.9
+    },
+    "Transport": {
+      "radius": 6,
+      "intensity": 2.7
+    },
+    "Trade Ship": {
+      "radius": 6,
+      "intensity": 2.7
+    },
+    "Warship": {
+      "radius": 10,
+      "intensity": 2.8
+    },
+    "Atom Bomb": {
+      "radius": 16,
+      "intensity": 1.1
+    },
+    "Hydrogen Bomb": {
+      "radius": 22,
+      "intensity": 1.3
+    },
+    "MIRV": {
+      "radius": 18,
+      "intensity": 1.2
+    },
+    "MIRV Warhead": {
+      "radius": 12,
+      "intensity": 1
+    },
+    "Train": {
+      "radius": 8,
+      "intensity": 2
+    }
+  }
+}

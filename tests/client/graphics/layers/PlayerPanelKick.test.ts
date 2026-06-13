@@ -27,11 +27,11 @@ vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
 }));
 
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
-import { PlayerModerationModal } from "../../../../src/client/graphics/layers/PlayerModerationModal";
-import { PlayerPanel } from "../../../../src/client/graphics/layers/PlayerPanel";
+import { PlayerModerationModal } from "../../../../src/client/hud/layers/PlayerModerationModal";
+import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import { SendKickPlayerIntentEvent } from "../../../../src/client/Transport";
+import { PlayerView } from "../../../../src/client/view";
 import { PlayerType } from "../../../../src/core/game/Game";
-import { PlayerView } from "../../../../src/core/game/GameView";
 
 describe("PlayerPanel - kick player moderation", () => {
   let panel: PlayerPanel;

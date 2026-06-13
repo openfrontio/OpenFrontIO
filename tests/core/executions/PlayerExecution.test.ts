@@ -46,7 +46,7 @@ describe("PlayerExecution", () => {
     expect(game.unitCount(UnitType.DefensePost)).toBe(0);
   });
 
-  test("DefensePost lv. 2+ is downgraded when tile owner changes", () => {
+  test("DefensePost lv. 2+ is destroyed when tile owner changes", () => {
     const tile = game.ref(50, 50);
     player.conquer(tile);
     const defensePost = player.buildUnit(UnitType.DefensePost, tile, {});
@@ -60,11 +60,8 @@ describe("PlayerExecution", () => {
     otherPlayer.conquer(tile);
     executeTicks(game, 2);
 
-    expect(defensePost.level()).toBe(1);
-    expect(game.unitCount(UnitType.DefensePost)).toBe(1);
-    expect(otherPlayer.units(UnitType.DefensePost)).toHaveLength(1);
-    expect(defensePost.owner()).toBe(otherPlayer);
-    expect(defensePost.isActive()).toBe(true);
+    expect(game.unitCount(UnitType.DefensePost)).toBe(0);
+    expect(defensePost.isActive()).toBe(false);
   });
 
   test("Non-DefensePost structures are transferred (not downgraded) when tile owner changes", () => {

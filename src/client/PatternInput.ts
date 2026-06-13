@@ -4,7 +4,7 @@ import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
 } from "../core/game/UserSettings";
-import { PlayerPattern } from "../core/Schemas";
+import { PlayerPattern, PlayerSkin } from "../core/Schemas";
 import { renderPatternPreview } from "./components/PatternPreview";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -13,6 +13,7 @@ import { translateText } from "./Utils";
 @customElement("pattern-input")
 export class PatternInput extends LitElement {
   @state() public pattern: PlayerPattern | null = null;
+  @state() public skin: PlayerSkin | null = null;
   @state() public selectedColor: string | null = null;
   @state() private isLoading: boolean = true;
 
@@ -24,10 +25,11 @@ export class PatternInput extends LitElement {
 
   private _abortController: AbortController | null = null;
 
-  private _onPatternSelected = async () => {
+  private _onCosmeticSelected = async () => {
     const cosmetics = await getPlayerCosmetics();
     this.selectedColor = cosmetics.color?.color ?? null;
     this.pattern = cosmetics.pattern ?? null;
+    this.skin = cosmetics.skin ?? null;
   };
 
   private onInputClick(e: Event) {
@@ -48,11 +50,12 @@ export class PatternInput extends LitElement {
     const cosmetics = await getPlayerCosmetics();
     this.selectedColor = cosmetics.color?.color ?? null;
     this.pattern = cosmetics.pattern ?? null;
+    this.skin = cosmetics.skin ?? null;
     if (!this.isConnected) return;
     this.isLoading = false;
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
-      this._onPatternSelected,
+      this._onCosmeticSelected,
       {
         signal: this._abortController.signal,
       },
@@ -72,7 +75,9 @@ export class PatternInput extends LitElement {
   }
 
   private getIsDefaultPattern(): boolean {
-    return this.pattern === null && this.selectedColor === null;
+    return (
+      this.pattern === null && this.skin === null && this.selectedColor === null
+    );
   }
 
   private shouldShowSelectLabel(): boolean {
@@ -121,8 +126,17 @@ export class PatternInput extends LitElement {
       `;
     }
 
+    // Skin takes precedence over pattern (mutually exclusive in-game too).
     let previewContent;
-    if (this.pattern) {
+    if (this.skin) {
+      previewContent = html`<img
+        src=${this.skin.url}
+        alt=${this.skin.name}
+        class="pointer-events-none"
+        draggable="false"
+        loading="lazy"
+      />`;
+    } else if (this.pattern) {
       previewContent = renderPatternPreview(this.pattern, 128, 128);
     } else {
       previewContent = renderPatternPreview(null, 128, 128);

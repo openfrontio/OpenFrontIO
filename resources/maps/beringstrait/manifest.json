@@ -1,4 +1,6 @@
 {
+  "categories": ["asia", "north_america"],
+  "id": "BeringStrait",
   "map": {
     "height": 916,
     "num_land_tiles": 596318,
@@ -14,7 +16,8 @@
     "num_land_tiles": 146676,
     "width": 750
   },
-  "name": "BeringStrait",
+  "multiplayer_frequency": 2,
+  "name": "Bering Strait",
   "nations": [
     {
       "coordinates": [1297, 287],
@@ -26,5 +29,23 @@
       "flag": "ru",
       "name": "Russia"
     }
-  ]
+  ],
+  "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 916,
+        "width": 750,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 916,
+        "width": 750,
+        "x": 750,
+        "y": 0
+      }
+    ]
+  },
+  "translation_key": "map.beringstrait"
 }

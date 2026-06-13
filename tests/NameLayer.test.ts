@@ -1,4 +1,4 @@
-import { computeAllianceClipPath } from "../src/client/graphics/PlayerIcons";
+import { computeAllianceClipPath } from "../src/client/hud/PlayerIcons";
 
 describe("PlayerIcons", () => {
   describe("computeAllianceClipPath", () => {

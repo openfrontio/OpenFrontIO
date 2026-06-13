@@ -1,5 +1,6 @@
 import {
   createMatcher,
+  FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
   shadowNames,
 } from "../src/server/Privilege";
@@ -52,6 +53,37 @@ const flagCosmetics = {
 };
 const flagChecker = new PrivilegeCheckerImpl(
   flagCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
+const skinCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  skins: {
+    mountain: {
+      name: "mountain",
+      url: "https://example.com/mountain.png",
+      affiliateCode: null,
+      product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "common",
+    },
+    forest: {
+      name: "forest",
+      url: "https://example.com/forest.png",
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "rare",
+    },
+  },
+};
+const skinChecker = new PrivilegeCheckerImpl(
+  skinCosmetics,
   mockDecoder,
   bannedWords,
 );
@@ -360,5 +392,196 @@ describe("Flag validation in isAllowed", () => {
     if (result.type === "allowed") {
       expect(result.cosmetics.flag).toBeUndefined();
     }
+  });
+});
+
+describe("Skin validation", () => {
+  describe("isSkinAllowed (direct)", () => {
+    test("returns skin when user has wildcard flare", () => {
+      const result = skinChecker.isSkinAllowed(["skin:*"], "mountain");
+      expect(result).toEqual({
+        name: "mountain",
+        url: "https://example.com/mountain.png",
+      });
+    });
+
+    test("returns skin when user has exact-match flare", () => {
+      const result = skinChecker.isSkinAllowed(["skin:mountain"], "mountain");
+      expect(result).toEqual({
+        name: "mountain",
+        url: "https://example.com/mountain.png",
+      });
+    });
+
+    test("ignores unrelated flares", () => {
+      expect(() =>
+        skinChecker.isSkinAllowed(
+          ["skin:forest", "pattern:*", "flag:*"],
+          "mountain",
+        ),
+      ).toThrow(/No flares for skin mountain/);
+    });
+
+    test("throws when user has no skin flares", () => {
+      expect(() => skinChecker.isSkinAllowed([], "mountain")).toThrow(
+        /No flares for skin mountain/,
+      );
+    });
+
+    test("throws when skin does not exist in cosmetics", () => {
+      expect(() =>
+        skinChecker.isSkinAllowed(["skin:*"], "nonexistent"),
+      ).toThrow(/Skin nonexistent not found/);
+    });
+
+    test("throws when skin does not exist even with exact-match flare", () => {
+      // Forged refs.skinName must not bypass the existence check.
+      expect(() =>
+        skinChecker.isSkinAllowed(["skin:nonexistent"], "nonexistent"),
+      ).toThrow(/Skin nonexistent not found/);
+    });
+
+    test("throws when checker has no skins map at all", () => {
+      // checker is constructed with mockCosmetics (no skins key).
+      expect(() => checker.isSkinAllowed(["skin:*"], "anything")).toThrow(
+        /Skin anything not found/,
+      );
+    });
+  });
+
+  describe("isAllowed integration", () => {
+    test("allows valid skin with wildcard flare", () => {
+      const result = skinChecker.isAllowed(["skin:*"], {
+        skinName: "mountain",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.skin).toEqual({
+          name: "mountain",
+          url: "https://example.com/mountain.png",
+        });
+      }
+    });
+
+    test("allows valid skin with exact-match flare", () => {
+      const result = skinChecker.isAllowed(["skin:forest"], {
+        skinName: "forest",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.skin).toEqual({
+          name: "forest",
+          url: "https://example.com/forest.png",
+        });
+      }
+    });
+
+    test("rejects skin when user lacks flare", () => {
+      const result = skinChecker.isAllowed([], { skinName: "mountain" });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/invalid skin/);
+      }
+    });
+
+    test("rejects skin when flare is for a different skin", () => {
+      const result = skinChecker.isAllowed(["skin:forest"], {
+        skinName: "mountain",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+
+    test("rejects nonexistent skin", () => {
+      const result = skinChecker.isAllowed(["skin:*"], {
+        skinName: "ghost",
+      });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/Skin ghost not found/);
+      }
+    });
+
+    test("no skin in refs leaves cosmetics.skin undefined", () => {
+      const result = skinChecker.isAllowed(["skin:*"], {});
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.skin).toBeUndefined();
+      }
+    });
+
+    test("invalid skin short-circuits and does not return other cosmetics", () => {
+      // pattern is valid (no pattern requested), color is valid, skin is invalid —
+      // the whole result must be forbidden, with no partial cosmetics leaking out.
+      const result = skinChecker.isAllowed(["color:red"], {
+        color: "red",
+        skinName: "mountain",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+  });
+});
+
+describe("PrivilegeCheckerImpl#resolveClanTag", () => {
+  // Reserved tags are stored uppercase, exactly as PrivilegeRefresher loads them.
+  const makeChecker = (reservedTags: string[]) =>
+    new PrivilegeCheckerImpl(
+      mockCosmetics,
+      mockDecoder,
+      bannedWords,
+      new Set(reservedTags),
+    );
+
+  it("passes a null tag through unchanged", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag(null, []);
+    expect(result).toEqual({ tag: null, dropped: false });
+  });
+
+  it("accepts a member's tag without consulting the reserved set (case-insensitive)", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["abc"]);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("drops a reserved tag the player does not belong to (impersonation)", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["other"]);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+
+  it("keeps a fictional tag matching no reserved clan", () => {
+    const result = makeChecker(["OTHER"]).resolveClanTag("ABC", []);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("matches the reserved set case-insensitively", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("abc", ["other"]);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+
+  it("treats anonymous users as members of no clans", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", []);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+});
+
+describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
+  const checker = new FailOpenPrivilegeChecker();
+
+  it("passes a null tag through unchanged", () => {
+    const result = checker.resolveClanTag(null, []);
+    expect(result).toEqual({ tag: null, dropped: false });
+  });
+
+  it("keeps a member's tag (known from owned tags, no lookup needed)", () => {
+    const result = checker.resolveClanTag("ABC", ["abc"]);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("keeps a non-member's tag fail-open (no reserved set while infra is down)", () => {
+    const result = checker.resolveClanTag("ABC", ["other"]);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("keeps an anonymous user's tag fail-open", () => {
+    const result = checker.resolveClanTag("ABC", []);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 });

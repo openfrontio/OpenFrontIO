@@ -1,4 +1,6 @@
 {
+  "categories": ["cosmic"],
+  "id": "Pluto",
   "map": {
     "height": 1300,
     "num_land_tiles": 1987279,
@@ -14,6 +16,7 @@
     "num_land_tiles": 489070,
     "width": 1050
   },
+  "multiplayer_frequency": 6,
   "name": "Pluto",
   "nations": [
     {
@@ -96,5 +99,23 @@
       "flag": "",
       "name": "Free Pluto State"
     }
-  ]
+  ],
+  "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1300,
+        "width": 1050,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1300,
+        "width": 1050,
+        "x": 1050,
+        "y": 0
+      }
+    ]
+  },
+  "translation_key": "map.pluto"
 }

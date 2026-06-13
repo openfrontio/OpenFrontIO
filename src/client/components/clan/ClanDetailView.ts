@@ -6,10 +6,8 @@ import {
   type ClanMember,
   type ClanMemberOrder,
   type ClanMemberSort,
-  type ClanStats,
   fetchClanDetail,
   fetchClanMembers,
-  fetchClanStats,
   joinClan,
   leaveClan,
 } from "../../ClanApi";
@@ -20,7 +18,6 @@ import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
-  renderClanWL,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -50,8 +47,8 @@ export class ClanDetailView extends LitElement {
     members: ClanMember[];
     membersTotal: number;
     pendingRequestCount: number;
-    stats: ClanStats | null;
   } | null = null;
+  @property() detailTab: "overview" | "members" = "overview";
 
   @property({ type: Object }) cachedClan: ClanInfo | null = null;
   @state() private selectedClan: ClanInfo | null = null;
@@ -63,10 +60,10 @@ export class ClanDetailView extends LitElement {
   @state() private memberSort: ClanMemberSort = "default";
   @state() private memberOrder: ClanMemberOrder = "asc";
   @state() private pendingRequestCount = 0;
-  @state() private clanStats: ClanStats | null = null;
   @state() private loading = false;
   @state() private actionPending = false;
   @state() private allStatsExpanded = false;
+  @state() private membersLoadInFlight = false;
   private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private asyncGeneration = 0;
@@ -85,7 +82,6 @@ export class ClanDetailView extends LitElement {
     this.members = cache.members;
     this.membersTotal = cache.membersTotal;
     this.pendingRequestCount = cache.pendingRequestCount;
-    this.clanStats = cache.stats;
     this.memberPage = 1;
     const knownRole = this.myClanRoles.get(this.clanTag);
     this.myRole = knownRole ?? null;
@@ -111,23 +107,22 @@ export class ClanDetailView extends LitElement {
     this.pendingRequestCount = 0;
     this.memberSearch = "";
 
-    const isMember = this.myClanRoles.has(this.clanTag);
-    const [detail, membersRes, stats] = await Promise.all([
-      fetchClanDetail(this.clanTag),
-      isMember
-        ? fetchClanMembers(
-            this.clanTag,
-            1,
-            this.membersPerPage,
-            this.memberSort,
-            this.memberOrder,
-          )
-        : Promise.resolve(false as const),
-      fetchClanStats(this.clanTag),
-    ]);
+    // When the user lands directly on the Members tab (deep link / cached
+    // activeTab), fire both fetches in parallel — otherwise sequencing
+    // adds a full members RTT to the visible loading time. The Overview
+    // tab waits for detail only; willUpdate kicks off members on tab
+    // switch later.
+    const goingToMembers =
+      this.detailTab === "members" && this.myClanRoles.has(this.clanTag);
+    const detailPromise = fetchClanDetail(this.clanTag);
+    if (goingToMembers) {
+      // Floating; loadInitialMembers's own asyncGeneration + tag guards
+      // cancel cleanly if the user navigates away mid-flight.
+      void this.loadInitialMembers();
+    }
+    const detail = await detailPromise;
 
     if (gen !== this.asyncGeneration) return;
-    this.clanStats = stats || null;
     this.loading = false;
 
     if (!detail) {
@@ -140,25 +135,13 @@ export class ClanDetailView extends LitElement {
 
     this.selectedClan = detail;
     this.memberPage = 1;
-
-    if (membersRes) {
-      this.members = membersRes.results;
-      this.membersTotal = membersRes.total;
-      this.pendingRequestCount = membersRes.pendingRequests ?? 0;
-      const knownRole = this.myClanRoles.get(this.clanTag);
-      if (knownRole) {
-        this.myRole = knownRole;
-      } else {
-        const me = this.myPublicId
-          ? membersRes.results.find((m) => m.publicId === this.myPublicId)
-          : null;
-        this.myRole = me ? me.role : null;
-      }
-    } else {
+    if (!goingToMembers) {
+      // Members tab will populate these via loadInitialMembers; the
+      // Overview tab doesn't need them.
       this.members = [];
       this.membersTotal = 0;
-      this.myRole = null;
     }
+    this.myRole = this.myClanRoles.get(this.clanTag) ?? null;
 
     this.dispatchEvent(
       new CustomEvent("detail-loaded", {
@@ -168,12 +151,66 @@ export class ClanDetailView extends LitElement {
           members: this.members,
           membersTotal: this.membersTotal,
           pendingRequestCount: this.pendingRequestCount,
-          stats: this.clanStats,
         },
         bubbles: true,
         composed: true,
       }),
     );
+  }
+
+  private async loadInitialMembers() {
+    if (this.membersLoadInFlight) return;
+    if (!this.clanTag) return;
+    if (!this.myClanRoles.has(this.clanTag)) return;
+    if (this.members.length > 0) return;
+    // Don't share `asyncGeneration` with loadDetail — these two run
+    // concurrently when the user lands on the Members tab directly, and
+    // bumping the shared counter would cancel the parent. The
+    // `membersLoadInFlight` flag dedupes concurrent invocations and the
+    // `requestedTag` check handles tag navigation.
+    const requestedTag = this.clanTag;
+    this.membersLoadInFlight = true;
+    try {
+      const res = await fetchClanMembers(
+        requestedTag,
+        1,
+        this.membersPerPage,
+        this.memberSort,
+        this.memberOrder,
+      );
+      if (requestedTag !== this.clanTag) return;
+      if (!res) return;
+      this.members = res.results;
+      this.membersTotal = res.total;
+      this.pendingRequestCount = res.pendingRequests ?? 0;
+      this.memberPage = 1;
+
+      this.dispatchEvent(
+        new CustomEvent("members-loaded", {
+          detail: {
+            members: this.members,
+            membersTotal: this.membersTotal,
+            pendingRequestCount: this.pendingRequestCount,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } finally {
+      this.membersLoadInFlight = false;
+    }
+  }
+
+  protected willUpdate(changed: Map<string, unknown>) {
+    if (
+      (changed.has("detailTab") || changed.has("selectedClan")) &&
+      this.detailTab === "members" &&
+      this.selectedClan &&
+      this.members.length === 0 &&
+      this.myClanRoles.has(this.clanTag)
+    ) {
+      this.loadInitialMembers();
+    }
   }
 
   private async loadMemberPage(page: number) {
@@ -217,6 +254,9 @@ export class ClanDetailView extends LitElement {
     try {
       const result = await joinClan(this.selectedClan.tag);
       if ("error" in result) {
+        if (result.error === "clan_modal.sign_in_for_clans") {
+          window.showPage?.("page-account");
+        }
         showToast(
           result.reason
             ? translateText(result.error, { reason: result.reason })
@@ -304,6 +344,33 @@ export class ClanDetailView extends LitElement {
       (r) => r.tag === clan.tag,
     );
 
+    if (this.detailTab === "members") {
+      if (!isMember) {
+        return html`
+          <div
+            class="bg-white/5 rounded-xl border border-white/10 p-8 text-center"
+          >
+            <p class="text-white/40 text-sm">
+              ${translateText("clan_modal.members_visible_to_members")}
+            </p>
+          </div>
+        `;
+      }
+      // Initial lazy-load: show a spinner instead of an empty members
+      // list + pagination so there's no flash of "no members".
+      if (this.membersLoadInFlight && this.members.length === 0) {
+        return renderLoadingSpinner();
+      }
+      return html`
+        <div class="space-y-6">
+          ${canManageRequests && this.pendingRequestCount > 0
+            ? this.renderRequestsButton()
+            : ""}
+          ${this.renderMembersList()}
+        </div>
+      `;
+    }
+
     return html`
       <div class="space-y-6">
         <div class="bg-white/5 rounded-xl border border-white/10 p-5">
@@ -324,12 +391,6 @@ export class ClanDetailView extends LitElement {
               : translateText("clan_modal.invite_only"),
           )}
         </div>
-
-        ${this.clanStats ? renderClanWL(this.clanStats) : ""}
-        ${canManageRequests && this.pendingRequestCount > 0
-          ? this.renderRequestsButton()
-          : ""}
-        ${isMember ? this.renderMembersList() : ""}
 
         <div class="flex flex-wrap gap-3">
           ${this.renderActionButtons(

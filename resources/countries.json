@@ -202,6 +202,11 @@
     "name": "Australia"
   },
   {
+    "code": "Azad Kashmir",
+    "continent": "Asia",
+    "name": "Azad Kashmir"
+  },
+  {
     "code": "az",
     "continent": "Asia",
     "name": "Azerbaijan"
@@ -244,6 +249,11 @@
     "code": "bb",
     "continent": "North America",
     "name": "Barbados"
+  },
+  {
+    "code": "Barbuda",
+    "continent": "North America",
+    "name": "Barbuda"
   },
   {
     "code": "Babylonia",
@@ -459,6 +469,11 @@
     "name": "Chile"
   },
   {
+    "code": "Chin State",
+    "continent": "Asia",
+    "name": "Chin State"
+  },
+  {
     "code": "cn",
     "continent": "Asia",
     "name": "China"
@@ -580,6 +595,11 @@
     "code": "cz",
     "continent": "Europe",
     "name": "Czech Republic"
+  },
+  {
+    "code": "Danu",
+    "continent": "Asia",
+    "name": "Danu"
   },
   {
     "code": "Danzig",
@@ -1076,6 +1096,11 @@
     "name": "Jamaica"
   },
   {
+    "code": "Jammu and Kashmir",
+    "continent": "Asia",
+    "name": "Jammu and Kashmir"
+  },
+  {
     "code": "jp",
     "continent": "Asia",
     "name": "Japan"
@@ -1086,9 +1111,19 @@
     "name": "Jersey"
   },
   {
+    "code": "Johor",
+    "continent": "Asia",
+    "name": "Johor"
+  },
+  {
     "code": "jo",
     "continent": "Asia",
     "name": "Jordan"
+  },
+  {
+    "code": "Kachin",
+    "continent": "Asia",
+    "name": "Kachin"
   },
   {
     "code": "Kansas",
@@ -1101,6 +1136,16 @@
     "name": "Karelo-Finnish SSR"
   },
   {
+    "code": "Kayah",
+    "continent": "Asia",
+    "name": "Kayah"
+  },
+  {
+    "code": "Kayin",
+    "continent": "Asia",
+    "name": "Kayin"
+  },
+  {
     "code": "Kazakh SSR",
     "continent": "Asia",
     "name": "Kazakh SSR"
@@ -1109,6 +1154,16 @@
     "code": "kz",
     "continent": "Asia",
     "name": "Kazakhstan"
+  },
+  {
+    "code": "Kedah",
+    "continent": "Asia",
+    "name": "Kedah"
+  },
+  {
+    "code": "Kelantan",
+    "continent": "Asia",
+    "name": "Kelantan"
   },
   {
     "code": "Kemet",
@@ -1185,9 +1240,19 @@
     "name": "Kiwi"
   },
   {
+    "code": "Kokang",
+    "continent": "Asia",
+    "name": "Kokang"
+  },
+  {
     "code": "xk",
     "continent": "Europe",
     "name": "Kosovo"
+  },
+  {
+    "code": "Kuala Lumpur",
+    "continent": "Asia",
+    "name": "Kuala Lumpur"
   },
   {
     "code": "kurdistan",
@@ -1208,6 +1273,11 @@
     "code": "kg",
     "continent": "Asia",
     "name": "Kyrgyzstan"
+  },
+  {
+    "code": "Labuan",
+    "continent": "Asia",
+    "name": "Labuan"
   },
   {
     "code": "1_Laigin",
@@ -1337,9 +1407,19 @@
     "name": "Maine"
   },
   {
+    "code": "Majapahit",
+    "continent": "Asia",
+    "name": "Majapahit"
+  },
+  {
     "code": "Massachusetts",
     "continent": "North America",
     "name": "Massachusetts"
+  },
+  {
+    "code": "Malacca",
+    "continent": "Asia",
+    "name": "Malacca"
   },
   {
     "code": "mw",
@@ -1452,6 +1532,11 @@
     "name": "Moldova"
   },
   {
+    "code": "Mon State",
+    "continent": "Asia",
+    "name": "Mon State"
+  },
+  {
     "code": "mc",
     "continent": "Europe",
     "name": "Monaco"
@@ -1487,6 +1572,11 @@
     "name": "Morocco"
   },
   {
+    "code": "Mosquito Kingdom",
+    "continent": "North America",
+    "name": "Mosquito Kingdom"
+  },
+  {
     "code": "mz",
     "continent": "Africa",
     "name": "Mozambique"
@@ -1500,6 +1590,11 @@
     "code": "mm",
     "continent": "Asia",
     "name": "Myanmar"
+  },
+  {
+    "code": "Naga",
+    "continent": "Asia",
+    "name": "Naga"
   },
   {
     "code": "na",
@@ -1521,6 +1616,11 @@
     "name": "Nebraska"
   },
   {
+    "code": "Negeri Sembilan",
+    "continent": "Asia",
+    "name": "Negeri Sembilan"
+  },
+  {
     "code": "np",
     "continent": "Asia",
     "name": "Nepal"
@@ -1538,6 +1638,11 @@
     "code": "Nevada",
     "continent": "North America",
     "name": "Nevada"
+  },
+  {
+    "code": "Nevis",
+    "continent": "North America",
+    "name": "Nevis"
   },
   {
     "code": "newbrunswick",
@@ -1710,6 +1815,11 @@
     "name": "Ottoman Empire"
   },
   {
+    "code": "Pahang",
+    "continent": "Asia",
+    "name": "Pahang"
+  },
+  {
     "code": "pk",
     "continent": "Asia",
     "name": "Pakistan"
@@ -1720,6 +1830,11 @@
     "name": "Palau"
   },
   {
+    "code": "Palaung",
+    "continent": "Asia",
+    "name": "Palaung"
+  },
+  {
     "code": "Palekh",
     "continent": "Europe",
     "name": "Palekh"
@@ -1728,6 +1843,11 @@
     "code": "pa",
     "continent": "North America",
     "name": "Panama"
+  },
+  {
+    "code": "Pa-O",
+    "continent": "Asia",
+    "name": "Pa'O"
   },
   {
     "code": "pg",
@@ -1765,9 +1885,24 @@
     "name": "Persia"
   },
   {
+    "code": "Penang",
+    "continent": "Asia",
+    "name": "Penang"
+  },
+  {
+    "code": "Perak",
+    "continent": "Asia",
+    "name": "Perak"
+  },
+  {
     "code": "ph",
     "continent": "Asia",
     "name": "Philippines"
+  },
+  {
+    "code": "Philippines (war)",
+    "continent": "Asia",
+    "name": "Philippines (war)"
   },
   {
     "code": "Phrygia",
@@ -1809,6 +1944,11 @@
     "name": "Prince Edward Island"
   },
   {
+    "code": "Principality of Moldavia",
+    "continent": "Europe",
+    "name": "Principality of Moldavia"
+  },
+  {
     "code": "provence",
     "continent": "Europe",
     "name": "Provence"
@@ -1824,6 +1964,15 @@
     "name": "Puerto Rico"
   },
   {
+    "code": "Purple Flag",
+    "name": "Purple Flag"
+  },
+  {
+    "code": "Putrajaya",
+    "continent": "Asia",
+    "name": "Putrajaya"
+  },
+  {
     "code": "qa",
     "continent": "Asia",
     "name": "Qatar"
@@ -1837,6 +1986,11 @@
     "code": "Quebec",
     "continent": "North America",
     "name": "Quebec"
+  },
+  {
+    "code": "Rakhine",
+    "continent": "Asia",
+    "name": "Rakhine"
   },
   {
     "code": "Rashidi Emirate",
@@ -1872,6 +2026,11 @@
     "code": "Republic of Pirates",
     "continent": "North America",
     "name": "Republic of Pirates"
+  },
+  {
+    "code": "Republika Srpska",
+    "continent": "Europe",
+    "name": "Republika Srpska"
   },
   {
     "code": "re",
@@ -1926,6 +2085,11 @@
     "code": "Saba kingdom",
     "continent": "Asia",
     "name": "Saba Kingdom"
+  },
+  {
+    "code": "Sabah",
+    "continent": "Asia",
+    "name": "Sabah"
   },
   {
     "code": "bl",
@@ -1997,6 +2161,11 @@
     "name": "São Paulo"
   },
   {
+    "code": "Sarawak",
+    "continent": "Asia",
+    "name": "Sarawak"
+  },
+  {
     "code": "sardines",
     "name": "Sardines"
   },
@@ -2029,6 +2198,11 @@
     "code": "Second Spanish Republic",
     "continent": "Europe",
     "name": "Second Spanish Republic"
+  },
+  {
+    "code": "Selangor",
+    "continent": "Asia",
+    "name": "Selangor"
   },
   {
     "code": "sn",
@@ -2071,6 +2245,11 @@
     "name": "Sierra Leone"
   },
   {
+    "code": "Sikkim",
+    "continent": "Asia",
+    "name": "Sikkim"
+  },
+  {
     "code": "sg",
     "continent": "Asia",
     "name": "Singapore"
@@ -2079,6 +2258,11 @@
     "code": "sx",
     "continent": "North America",
     "name": "Sint Maarten"
+  },
+  {
+    "code": "Slavonia",
+    "continent": "Europe",
+    "name": "Slavonia"
   },
   {
     "code": "sk",
@@ -2230,6 +2414,11 @@
     "name": "Tajikistan"
   },
   {
+    "code": "Tanintharyi",
+    "continent": "Asia",
+    "name": "Tanintharyi"
+  },
+  {
     "code": "tannutuva",
     "continent": "Asia",
     "name": "Tannu Tuva"
@@ -2243,6 +2432,11 @@
     "code": "Tennessee",
     "continent": "North America",
     "name": "Tennessee"
+  },
+  {
+    "code": "Terengganu",
+    "continent": "Asia",
+    "name": "Terengganu"
   },
   {
     "code": "Texas",
@@ -2278,6 +2472,11 @@
     "code": "to",
     "continent": "Oceania",
     "name": "Tonga"
+  },
+  {
+    "code": "Transylvania",
+    "continent": "Europe",
+    "name": "Transylvania"
   },
   {
     "code": "tt",
@@ -2454,6 +2653,16 @@
     "name": "Virginia"
   },
   {
+    "code": "Vojvodina",
+    "continent": "Europe",
+    "name": "Vojvodina"
+  },
+  {
+    "code": "Wa State",
+    "continent": "Asia",
+    "name": "Wa State"
+  },
+  {
     "code": "gb-wls",
     "continent": "Europe",
     "name": "Wales"
@@ -2482,6 +2691,11 @@
     "code": "west_germany",
     "continent": "Europe",
     "name": "West Germany"
+  },
+  {
+    "code": "West Papua",
+    "continent": "Asia",
+    "name": "West Papua"
   },
   {
     "code": "West Roman Empire",
@@ -2520,6 +2734,11 @@
     "code": "ye",
     "continent": "Asia",
     "name": "Yemen"
+  },
+  {
+    "code": "Yucatan",
+    "continent": "North America",
+    "name": "Yucatan"
   },
   {
     "code": "yugoslavia",

@@ -12,6 +12,7 @@ import {
   fetchCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
+  SUBSCRIPTIONS_ENABLED,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -32,7 +33,14 @@ export class StoreModal extends BaseModal {
     return {
       tabs: [
         { key: "packs", label: translateText("store.packs") },
-        { key: "subscriptions", label: translateText("store.subscriptions") },
+        ...(SUBSCRIPTIONS_ENABLED
+          ? [
+              {
+                key: "subscriptions",
+                label: translateText("store.subscriptions"),
+              },
+            ]
+          : []),
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
       ],
@@ -71,7 +79,7 @@ export class StoreModal extends BaseModal {
       this.affiliateCode,
     ).filter(
       (r) =>
-        r.type === "pattern" &&
+        (r.type === "pattern" || r.type === "skin") &&
         r.relationship !== "blocked" &&
         r.relationship !== "owned",
     );
@@ -175,7 +183,9 @@ export class StoreModal extends BaseModal {
       this.userMeResponse,
       this.affiliateCode,
     ).filter(
-      (r) => r.type === "subscription" && r.relationship === "purchasable",
+      (r) =>
+        r.type === "subscription" &&
+        (r.relationship === "purchasable" || r.relationship === "owned"),
     );
 
     if (items.length === 0) {
@@ -186,6 +196,10 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
 
+    const userHasSubscription =
+      this.userMeResponse !== false &&
+      this.userMeResponse.player.subscription !== null;
+
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
@@ -195,6 +209,7 @@ export class StoreModal extends BaseModal {
             <cosmetic-button
               .resolved=${r}
               .onPurchase=${purchaseCosmetic}
+              .userHasSubscription=${userHasSubscription}
             ></cosmetic-button>
           `,
         )}
@@ -230,7 +245,10 @@ export class StoreModal extends BaseModal {
       this.affiliateCode,
     ).filter(
       (r) =>
-        (r.type === "pattern" || r.type === "flag" || r.type === "pack") &&
+        (r.type === "pattern" ||
+          r.type === "skin" ||
+          r.type === "flag" ||
+          r.type === "pack") &&
         r.relationship === "purchasable",
     );
 

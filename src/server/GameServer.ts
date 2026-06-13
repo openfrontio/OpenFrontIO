@@ -70,6 +70,10 @@ export class GameServer {
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
+  // Wire-only copy of gameStartInfo sent to clients. Identical to
+  // gameStartInfo unless disableClanTags is set, in which case clan tags
+  // are stripped from players. Archive uses the original gameStartInfo.
+  private wireGameStartInfo!: GameStartInfo;
 
   private log: Logger;
 
@@ -144,6 +148,9 @@ export class GameServer {
     }
     if (gameConfig.maxTimerValue !== undefined) {
       this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
+    }
+    if (gameConfig.startDelay !== undefined) {
+      this.gameConfig.startDelay = gameConfig.startDelay ?? undefined;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
@@ -484,7 +491,7 @@ export class GameServer {
                 this.updateGameConfig(stampedIntent.config);
                 return;
               }
-              case "start_game": {
+              case "toggle_game_start_timer": {
                 if (client.clientID !== this.lobbyCreatorID) {
                   this.log.warn(`Only lobby creator can start game`, {
                     clientID: client.clientID,
@@ -510,7 +517,13 @@ export class GameServer {
                   creatorID: client.clientID,
                   gameID: this.id,
                 });
-                this.start();
+                if (this.startsAt) {
+                  this.startsAt = undefined;
+                } else {
+                  this.setStartsAt(
+                    Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
+                  );
+                }
                 return;
               }
               case "toggle_pause": {
@@ -672,7 +685,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(msg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -729,6 +744,8 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    const friendsFor = this.buildFriendsLookup();
+
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
@@ -740,6 +757,7 @@ export class GameServer {
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
+        friends: friendsFor(c),
       })),
     });
     if (!result.success) {
@@ -748,6 +766,15 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.wireGameStartInfo = this.gameConfig.disableClanTags
+      ? {
+          ...this.gameStartInfo,
+          players: this.gameStartInfo.players.map((p) => ({
+            ...p,
+            clanTag: null,
+          })),
+        }
+      : this.gameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -781,24 +808,27 @@ export class GameServer {
     });
 
     try {
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.log.warn(`WebSocket not open, skipping start message`, {
+          clientID: client.clientID,
+          readyState: ws.readyState,
+        });
+        return;
+      }
       ws.send(
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.gameStartInfo,
+          gameStartInfo: this.wireGameStartInfo,
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
-      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
-      // eslint-disable-next-line preserve-caught-error
-      throw new Error(
-        `error sending start message for game ${this.id}, ${error}`.substring(
-          0,
-          250,
-        ),
-      );
+      this.log.error(`error sending start message for game ${this.id}`, {
+        clientID: client.clientID,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -910,25 +940,6 @@ export class GameServer {
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
     const noActive = this.activeClients.length === 0;
 
-    if (this.gameConfig.gameType !== GameType.Public) {
-      if (this._hasStarted) {
-        if (noActive && noRecentPings) {
-          this.log.info("private game complete", {
-            gameID: this.id,
-          });
-          return GamePhase.Finished;
-        } else {
-          return GamePhase.Active;
-        }
-      } else if (this._hasEnded) {
-        return GamePhase.Finished;
-      } else {
-        return GamePhase.Lobby;
-      }
-    }
-
-    // Public Games
-
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (
       lessThanLifetime &&
@@ -950,18 +961,38 @@ export class GameServer {
   }
 
   public gameInfo(): GameInfo {
+    const friendsFor = this.buildFriendsLookup();
+    const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: hideClanTags ? null : (c.clanTag ?? null),
         clientID: c.clientID,
+        friends: friendsFor(c),
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+    };
+  }
+
+  // Maps each active client's publicId-based friends list to in-game
+  // clientIDs, dropping friends not present in this game. Returns undefined
+  // when no friends are present so the field can be omitted from the wire
+  // payload.
+  private buildFriendsLookup(): (client: Client) => ClientID[] | undefined {
+    const publicIdToClientID = new Map<string, ClientID>();
+    for (const c of this.activeClients) {
+      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
+    }
+    return (client: Client) => {
+      const friendClientIDs = client.friends
+        .map((pid) => publicIdToClientID.get(pid))
+        .filter((id): id is ClientID => id !== undefined);
+      return friendClientIDs.length > 0 ? friendClientIDs : undefined;
     };
   }
 
@@ -999,13 +1030,15 @@ export class GameServer {
         persistentID: client.persistentID,
         reasonKey,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: reasonKey,
-        } satisfies ServerErrorMessage),
-      );
-      client.ws.close(1000, reasonKey);
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(
+          JSON.stringify({
+            type: "error",
+            error: reasonKey,
+          } satisfies ServerErrorMessage),
+        );
+        client.ws.close(1000, reasonKey);
+      }
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
@@ -1137,7 +1170,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(desyncMsg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(desyncMsg);
+      }
     }
   }
 
@@ -1178,8 +1213,8 @@ export class GameServer {
       }
     }
 
-    // If half clients out of sync assume all are out of sync.
-    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
+    // If strict majority clients out of sync assume all are out of sync.
+    if (outOfSyncClients.length > Math.floor(this.activeClients.length / 2)) {
       outOfSyncClients = this.activeClients;
     }
 

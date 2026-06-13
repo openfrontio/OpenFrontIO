@@ -1,0 +1,154 @@
+{
+  "categories": ["europe"],
+  "id": "DanishStraits",
+  "map": {
+    "height": 1224,
+    "num_land_tiles": 587312,
+    "width": 872
+  },
+  "map16x": {
+    "height": 306,
+    "num_land_tiles": 33817,
+    "width": 218
+  },
+  "map4x": {
+    "height": 612,
+    "num_land_tiles": 142124,
+    "width": 436
+  },
+  "multiplayer_frequency": 5,
+  "name": "Danish Straits",
+  "nations": [
+    {
+      "coordinates": [37, 227],
+      "flag": "Sweden Norway Union",
+      "name": "Agder"
+    },
+    {
+      "coordinates": [252, 43],
+      "flag": "Sweden Norway Union",
+      "name": "Østlandet"
+    },
+    {
+      "coordinates": [737, 791],
+      "flag": "Sweden Norway Union",
+      "name": "Skåne"
+    },
+    {
+      "coordinates": [646, 566],
+      "flag": "Sweden Norway Union",
+      "name": "Halland"
+    },
+    {
+      "coordinates": [846, 488],
+      "flag": "Sweden Norway Union",
+      "name": "Småland"
+    },
+    {
+      "coordinates": [701, 260],
+      "flag": "Sweden Norway Union",
+      "name": "Västergötland"
+    },
+    {
+      "coordinates": [501, 273],
+      "flag": "Sweden Norway Union",
+      "name": "Bohuslän"
+    },
+    {
+      "coordinates": [843, 278],
+      "flag": "Sweden Norway Union",
+      "name": "Östergötland"
+    },
+    {
+      "coordinates": [579, 45],
+      "flag": "Sweden Norway Union",
+      "name": "Dalsland"
+    },
+    {
+      "coordinates": [833, 73],
+      "flag": "Sweden Norway Union",
+      "name": "Närke"
+    },
+    {
+      "coordinates": [510, 821],
+      "flag": "dk",
+      "name": "Zealand"
+    },
+    {
+      "coordinates": [495, 949],
+      "flag": "dk",
+      "name": "Lolland-Falster"
+    },
+    {
+      "coordinates": [347, 862],
+      "flag": "dk",
+      "name": "Funen"
+    },
+    {
+      "coordinates": [239, 976],
+      "flag": "prussia",
+      "name": "Schleswig-Holstein"
+    },
+    {
+      "coordinates": [585, 1182],
+      "flag": "German Empire",
+      "name": "Mecklenburg-Schwerin"
+    },
+    {
+      "coordinates": [846, 1131],
+      "flag": "prussia",
+      "name": "Pomerania"
+    },
+    {
+      "coordinates": [59, 1201],
+      "flag": "German Empire",
+      "name": "Oldenburg"
+    },
+    {
+      "coordinates": [302, 1143],
+      "flag": "German Empire",
+      "name": "Hamburg"
+    },
+    {
+      "coordinates": [219, 1205],
+      "flag": "prussia",
+      "name": "Hanover"
+    },
+    {
+      "coordinates": [324, 457],
+      "flag": "dk",
+      "name": "North Jutland"
+    },
+    {
+      "coordinates": [202, 609],
+      "flag": "dk",
+      "name": "Viborg"
+    },
+    {
+      "coordinates": [384, 644],
+      "flag": "dk",
+      "name": "Aarhus"
+    },
+    {
+      "coordinates": [150, 767],
+      "flag": "dk",
+      "name": "Ringkobing"
+    },
+    {
+      "coordinates": [189, 863],
+      "flag": "dk",
+      "name": "Ribe"
+    },
+    {
+      "coordinates": [278, 739],
+      "flag": "dk",
+      "name": "Vejle"
+    },
+    {
+      "coordinates": [850, 889],
+      "flag": "dk",
+      "name": "Bornholm"
+    }
+  ],
+  "translation_key": "map.danishstraits"
+}

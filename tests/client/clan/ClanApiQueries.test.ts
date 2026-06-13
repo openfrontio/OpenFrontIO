@@ -2,20 +2,45 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../src/client/Api", () => ({
   getApiBase: vi.fn(() => "http://localhost:3000"),
+  getUserMe: vi.fn(),
 }));
 
 vi.mock("../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
 
+import { getUserMe } from "../../../src/client/Api";
 import {
+  checkClanTagOwnership,
   fetchClanDetail,
+  fetchClanExists,
+  fetchClanGames,
   fetchClanLeaderboard,
   fetchClanMembers,
   fetchClanRequests,
   fetchClans,
-  fetchClanStats,
 } from "../../../src/client/ClanApi";
+import type { UserMeResponse } from "../../../src/core/ApiSchemas";
+
+const userWithClans = (tags: string[]): UserMeResponse =>
+  ({
+    user: {},
+    player: {
+      publicId: "p1",
+      adfree: false,
+      flares: [],
+      achievements: { singleplayerMap: [] },
+      friends: [],
+      subscription: null,
+      clans: tags.map((tag) => ({
+        tag,
+        name: tag,
+        role: "member" as const,
+        joinedAt: "2024-01-01T00:00:00.000Z",
+        memberCount: 1,
+      })),
+    },
+  }) as unknown as UserMeResponse;
 
 const okJson = (data: unknown, status = 200) => ({
   ok: true,
@@ -35,6 +60,109 @@ const mockFetch = (impl: (...args: unknown[]) => unknown) =>
 beforeEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+describe("fetchClanExists", () => {
+  const status = (s: number) => ({ status: s });
+
+  it("returns true on HTTP 200", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(200))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBe(true);
+  });
+
+  it("returns false on HTTP 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(404))),
+    );
+    await expect(fetchClanExists("XYZ")).resolves.toBe(false);
+  });
+
+  it("returns null on unexpected status (5xx)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(503))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBeNull();
+  });
+
+  it("returns null on transport error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBeNull();
+  });
+
+  it("uppercases and URL-encodes the tag in the request URL", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(status(200)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    await fetchClanExists("abc");
+    expect(fetchSpy.mock.calls[0]![0] as string).toContain(
+      "/public/clan/ABC/exists",
+    );
+    await fetchClanExists("a/b");
+    expect(fetchSpy.mock.calls[1]![0] as string).toContain(
+      "/public/clan/A%2FB/exists",
+    );
+  });
+});
+
+describe("checkClanTagOwnership", () => {
+  const status = (s: number) => ({ status: s });
+
+  it("accepts a tag the user is a member of without probing existence", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans(["abc"]));
+    const fetchSpy = vi.fn(() => Promise.resolve(status(200)));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: "ABC",
+      error: null,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts a fictional tag (clan does not exist)", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans(["other"]));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(404))),
+    );
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: "ABC",
+      error: null,
+    });
+  });
+
+  it("rejects a real clan the user does not belong to", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(200))),
+    );
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: null,
+      error: "username.tag_not_member",
+    });
+  });
+
+  it("fails open on an inconclusive existence check (API unavailable)", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(503))),
+    );
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: "ABC",
+      error: null,
+    });
+  });
 });
 
 describe("fetchClanLeaderboard", () => {
@@ -68,61 +196,6 @@ describe("fetchClanLeaderboard", () => {
   it("returns false when Zod validation fails", async () => {
     mockFetch(() => okJson({ start: "bad-date", end: "bad-date", clans: [] }));
     const result = await fetchClanLeaderboard();
-    expect(result).toBe(false);
-  });
-});
-
-describe("fetchClanStats", () => {
-  const clanStats = {
-    clanTag: "TEST",
-    games: 20,
-    wins: 15,
-    losses: 5,
-    stats: {
-      total: { wins: 15, losses: 5 },
-      ffa: { wins: 7, losses: 3 },
-      team: { wins: 4, losses: 1 },
-      hvn: { wins: 1, losses: 0 },
-      duos: { wins: 2, losses: 0 },
-      trios: { wins: 1, losses: 1 },
-      quads: { wins: 1, losses: 0 },
-      "2": { wins: 2, losses: 0 },
-      "3": { wins: 1, losses: 1 },
-      "4": { wins: 1, losses: 0 },
-      "5": { wins: 0, losses: 0 },
-      "6": { wins: 0, losses: 0 },
-      "7": { wins: 0, losses: 0 },
-      ranked: { wins: 3, losses: 1 },
-      "1v1": { wins: 3, losses: 1 },
-    },
-    teamTypeWL: { ffa: { wl: [15, 5] } },
-    teamCountWL: { "2": { wl: [10, 3] } },
-  };
-
-  it("returns parsed data from json.clan on success", async () => {
-    mockFetch(() => okJson({ clan: clanStats }));
-    const result = await fetchClanStats("TEST");
-    expect(result).toEqual(clanStats);
-  });
-
-  it("returns false when json.clan is missing", async () => {
-    mockFetch(() => okJson({}));
-    const result = await fetchClanStats("TEST");
-    expect(result).toBe(false);
-  });
-
-  it("returns false on non-ok response", async () => {
-    mockFetch(() => failRes(404));
-    const result = await fetchClanStats("TEST");
-    expect(result).toBe(false);
-  });
-
-  it("returns false on network error", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.reject(new Error("offline"))),
-    );
-    const result = await fetchClanStats("TEST");
     expect(result).toBe(false);
   });
 });
@@ -381,6 +454,129 @@ describe("fetchClanRequests", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     await fetchClanRequests("TEST");
+
+    const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
+      string,
+      string
+    >;
+    expect(headers.Authorization).toBe("Bearer test-token");
+  });
+});
+
+describe("fetchClanGames", () => {
+  const gamesResponse = {
+    results: [
+      {
+        gameId: "g1",
+        start: "2024-06-01T00:00:00.000Z",
+        durationSeconds: 1234,
+        map: "World",
+        mode: "Team",
+        playerTeams: "Duos",
+        result: "victory",
+        totalPlayers: 8,
+        clanPlayers: [{ publicId: "p1", username: "alice", won: true }],
+      },
+    ],
+    nextCursor: "opaque-cursor-abc123",
+  };
+
+  it("returns parsed data on success", async () => {
+    mockFetch(() => okJson(gamesResponse));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual(gamesResponse);
+  });
+
+  it("accepts a null nextCursor (no more pages)", async () => {
+    mockFetch(() => okJson({ ...gamesResponse, nextCursor: null }));
+    const result = await fetchClanGames("TEST");
+    expect("error" in result).toBe(false);
+    if (!("error" in result)) expect(result.nextCursor).toBeNull();
+  });
+
+  it("omits filter and cursor query params when not provided", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("TEST");
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    const url = new URL(calledUrl);
+    expect(url.searchParams.has("filter")).toBe(false);
+    expect(url.searchParams.has("cursor")).toBe(false);
+    expect(url.pathname).toBe("/clans/TEST/games");
+  });
+
+  it("passes filter and cursor as query params", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("TEST", {
+      filter: "team",
+      cursor: "opaque-cursor-abc123",
+    });
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    const url = new URL(calledUrl);
+    expect(url.searchParams.get("filter")).toBe("team");
+    expect(url.searchParams.get("cursor")).toBe("opaque-cursor-abc123");
+  });
+
+  it("URL-encodes the clan tag", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("A/B");
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    // encodeURIComponent('/') === '%2F'
+    expect(calledUrl).toContain("/clans/A%2FB/games");
+  });
+
+  it("returns { error: 'forbidden' } on 403", async () => {
+    mockFetch(() => failRes(403));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "forbidden" });
+  });
+
+  it("returns { error: 'failed' } on other non-ok responses", async () => {
+    mockFetch(() => failRes(500));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "failed" });
+  });
+
+  it("returns { error: 'failed' } when Zod validation fails", async () => {
+    mockFetch(() => okJson({ results: "not-an-array", nextCursor: 42 }));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "failed" });
+  });
+
+  it("returns { error: 'failed' } on network error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "failed" });
+  });
+
+  it("sends Authorization header", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("TEST");
 
     const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
       string,

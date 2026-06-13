@@ -1,19 +1,22 @@
 {
+  "categories": ["europe"],
+  "id": "Italia",
   "map": {
     "height": 1272,
-    "num_land_tiles": 780495,
+    "num_land_tiles": 775663,
     "width": 1360
   },
   "map16x": {
     "height": 318,
-    "num_land_tiles": 47179,
+    "num_land_tiles": 46701,
     "width": 340
   },
   "map4x": {
     "height": 636,
-    "num_land_tiles": 192649,
+    "num_land_tiles": 191249,
     "width": 680
   },
+  "multiplayer_frequency": 6,
   "name": "Italia",
   "nations": [
     {
@@ -70,5 +73,6 @@
       "coordinates": [1238, 349],
       "name": "Ottoman Empire"
     }
-  ]
+  ],
+  "translation_key": "map.italia"
 }

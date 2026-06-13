@@ -1,4 +1,7 @@
 {
+  "categories": ["cosmic"],
+  "display_name": "Milky Way",
+  "id": "MilkyWay",
   "map": {
     "height": 1500,
     "num_land_tiles": 442979,
@@ -14,7 +17,8 @@
     "num_land_tiles": 105978,
     "width": 750
   },
-  "name": "milkyway",
+  "multiplayer_frequency": 8,
+  "name": "MilkyWay",
   "nations": [
     {
       "coordinates": [775, 757],
@@ -46,5 +50,6 @@
       "flag": "Cthulhu Republic",
       "name": "The Void"
     }
-  ]
+  ],
+  "translation_key": "map.milkyway"
 }
