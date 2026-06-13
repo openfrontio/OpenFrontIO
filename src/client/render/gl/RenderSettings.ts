@@ -190,7 +190,6 @@ export interface RenderSettings {
   };
   structureLevel: {
     scale: number;
-    outlineWidth: number;
     offsetY: number;
   };
   bar: {
