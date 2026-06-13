@@ -74,6 +74,24 @@ export function computePlayerStatus(
     }
   }
 
+  // Nukes: single pass over units → per-owner flags (avoids the
+  // O(players × units) scan of checking every unit per player).
+  // Shown during replay too, except the nukeTargetsMe flag.
+  const nukeActiveOwners = new Set<number>();
+  const nukeTargetsMeOwners = new Set<number>();
+  for (const u of units.values()) {
+    if (!u.isActive || !NUKE_ACTIVE_TYPES.has(u.unitType)) continue;
+    nukeActiveOwners.add(u.ownerID);
+    if (
+      localPlayerSmallID > 0 &&
+      tileState !== undefined &&
+      u.targetTile !== null &&
+      (tileState[u.targetTile] & OWNER_MASK) === localPlayerSmallID
+    ) {
+      nukeTargetsMeOwners.add(u.ownerID);
+    }
+  }
+
   for (const ps of players.values()) {
     if (!ps.isAlive) continue;
     const sid = ps.smallID;
@@ -83,34 +101,14 @@ export function computePlayerStatus(
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
     // Relative flags
-    let nukeActive = false;
-    let nukeTargetsMe = false;
+    const nukeActive = nukeActiveOwners.has(sid);
+    const nukeTargetsMe = nukeTargetsMeOwners.has(sid);
     let alliance = false;
     let target = false;
     let embargo = false;
     let allianceReq = false;
     let allianceFraction = 0;
     let allianceRemainingTicks = 0;
-
-    // Nukes: show during replay too, except the nukeTargetsMe flag
-    for (const u of units.values()) {
-      if (
-        u.ownerID === sid &&
-        u.isActive &&
-        NUKE_ACTIVE_TYPES.has(u.unitType)
-      ) {
-        nukeActive = true;
-        if (
-          localPlayerSmallID > 0 &&
-          tileState !== undefined &&
-          u.targetTile !== null &&
-          (tileState[u.targetTile] & OWNER_MASK) === localPlayerSmallID
-        ) {
-          nukeTargetsMe = true;
-        }
-        if (nukeTargetsMe) break;
-      }
-    }
 
     // Flags which are only meaningful when there's a local player,
     // and we're not looking at the local player itself.

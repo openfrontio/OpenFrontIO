@@ -216,6 +216,7 @@
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
+    "attackRingScreenPx": 30,
     "nukeShockwaveDurationMs": 1500,
     "nukeShockwaveRadiusFactor": 1.5,
     "samShockwaveDurationMs": 800,

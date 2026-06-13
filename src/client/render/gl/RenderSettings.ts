@@ -257,6 +257,7 @@ export interface RenderSettings {
   };
   fx: {
     shockwaveRingWidth: number;
+    attackRingScreenPx: number; // screen px — attack ring quad half-size (visible outer ring = 0.8×)
     nukeShockwaveDurationMs: number;
     nukeShockwaveRadiusFactor: number;
     samShockwaveDurationMs: number;
