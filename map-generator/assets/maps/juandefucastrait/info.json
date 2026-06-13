@@ -2,7 +2,7 @@
   "id": "JuanDeFucaStrait",
   "name": "Juan De Fuca Strait",
   "translation_key": "map.juandefucastrait",
-  "categories": ["north_america"],
+  "categories": ["new", "north_america"],
   "multiplayer_frequency": 4,
   "special_team_count": 3,
   "nations": [

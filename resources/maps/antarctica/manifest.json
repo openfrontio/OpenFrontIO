@@ -1,5 +1,5 @@
 {
-  "categories": ["antarctica"],
+  "categories": ["antarctica", "continental"],
   "id": "Antarctica",
   "map": {
     "height": 2000,

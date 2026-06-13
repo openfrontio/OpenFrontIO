@@ -2,7 +2,7 @@
   "id": "Aegean",
   "name": "Aegean",
   "translation_key": "map.aegean",
-  "categories": ["europe"],
+  "categories": ["europe", "asia"],
   "multiplayer_frequency": 6,
   "special_team_count": 2,
   "nations": [

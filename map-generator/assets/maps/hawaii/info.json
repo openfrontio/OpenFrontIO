@@ -2,7 +2,7 @@
   "id": "Hawaii",
   "name": "Hawaii",
   "translation_key": "map.hawaii",
-  "categories": ["north_america", "oceania"],
+  "categories": ["oceania"],
   "multiplayer_frequency": 4,
   "nations": [
     {

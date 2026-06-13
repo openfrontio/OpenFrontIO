@@ -2,7 +2,7 @@
   "id": "Europe",
   "name": "Europe",
   "translation_key": "map.europe",
-  "categories": ["featured", "europe"],
+  "categories": ["featured", "continental", "europe"],
   "multiplayer_frequency": 7,
   "featured_rank": 2,
   "nations": [

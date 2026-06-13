@@ -2,7 +2,7 @@
   "id": "TradersDream",
   "name": "Traders Dream",
   "translation_key": "map.tradersdream",
-  "categories": ["other"],
+  "categories": ["fictional"],
   "multiplayer_frequency": 4,
   "special_team_count": 2,
   "nations": [

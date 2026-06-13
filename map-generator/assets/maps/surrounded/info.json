@@ -2,7 +2,7 @@
   "id": "Surrounded",
   "name": "Surrounded",
   "translation_key": "map.surrounded",
-  "categories": ["other"],
+  "categories": ["fictional"],
   "multiplayer_frequency": 4,
   "special_team_count": 4,
   "nations": [

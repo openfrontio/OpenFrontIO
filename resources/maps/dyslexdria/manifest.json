@@ -569,7 +569,7 @@
       "name": "Patrick Plays Badly"
     }
   ],
-  "categories": ["world"],
+  "categories": ["world", "fictional"],
   "id": "Dyslexdria",
   "map": {
     "height": 1344,

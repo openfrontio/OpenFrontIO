@@ -2,7 +2,7 @@
   "id": "WorldInverted",
   "name": "World Inverted",
   "translation_key": "map.worldinverted",
-  "categories": ["world"],
+  "categories": ["new", "world", "fictional"],
   "multiplayer_frequency": 8,
   "nations": [
     {

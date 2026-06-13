@@ -2,7 +2,7 @@
   "id": "Oceania",
   "name": "Oceania",
   "translation_key": "map.oceania",
-  "categories": ["oceania"],
+  "categories": ["oceania", "continental"],
   "multiplayer_frequency": 0,
   "nations": [
     {
