@@ -138,6 +138,11 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
 /** Simulation tick duration — one tick is 100ms (see Config.ts). */
 const TICK_INTERVAL_MS = 100;
 
+/** Values per smoothing segment in the flat `smoothSegs` array:
+ *  (instanceIdx, lastX, lastY, x, y). The push site and the read loop must
+ *  agree on this width — it's the record size, not a tunable. */
+const SMOOTH_SEG_STRIDE = 5;
+
 /** Per-instance flicker phase offset, hashed from the tick position. Computed
  *  CPU-side (not from the shader's instance position) so per-frame position
  *  smoothing doesn't re-roll the flicker every frame. Matches the formula the
@@ -213,8 +218,9 @@ export class UnitPass {
   private missileBuf: DynamicInstanceBuffer;
   private missileCount = 0;
 
-  // Per-frame nuke smoothing: flat (instanceIdx, lastX, lastY, x, y) tuples
-  // recorded each tick, lerped into the missile buffer in drawMissiles.
+  // Per-frame nuke smoothing: flat SMOOTH_SEG_STRIDE-wide tuples
+  // (instanceIdx, lastX, lastY, x, y) recorded each tick, lerped into the
+  // missile buffer in drawMissiles.
   private smoothSegs: number[] = [];
   private lastUnitsUpdateMs = 0;
 
@@ -589,7 +595,7 @@ export class UnitPass {
       (performance.now() - this.lastUnitsUpdateMs) / TICK_INTERVAL_MS,
     );
     const f32 = this.missileBuf.float32;
-    for (let i = 0; i < segs.length; i += 5) {
+    for (let i = 0; i < segs.length; i += SMOOTH_SEG_STRIDE) {
       const off = segs[i] * FLOATS_PER_INSTANCE;
       f32[off + 0] = segs[i + 1] + (segs[i + 3] - segs[i + 1]) * alpha;
       f32[off + 1] = segs[i + 2] + (segs[i + 4] - segs[i + 2]) * alpha;
