@@ -193,6 +193,11 @@ export class TickMetricsEvent implements GameEvent {
   ) {}
 }
 
+interface KeybindEntry {
+  handler: (e: KeyboardEvent) => void;
+  conditions: Array<(e: KeyboardEvent) => boolean>;
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -222,8 +227,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
-  private keybindAndEvent: Map<string, ((type: KeyboardEvent) => any)[]> =
-    new Map();
+  private keybindAndEvent: [[string, KeybindEntry]]
   private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
@@ -615,14 +619,14 @@ export class InputHandler {
       for (const item of this.keybindAndEvent) {
         if (this.keybindMatchesEvent(e, item[0])) {
           let allConditionsFullfiled = true;
-          for (const i of item[1].slice(1)) {
+          for (const i of item[1].conditions) {
             if (!i(e)) {
               allConditionsFullfiled = false;
             }
           }
           if (!allConditionsFullfiled) continue;
           e.preventDefault();
-          item[1][0](e);
+          item[1].handler(e);
         }
       }
       this.activeKeys.delete(e.code);
@@ -972,7 +976,11 @@ export class InputHandler {
     event: (type: KeyboardEvent) => any,
     ...conditions: ((type: KeyboardEvent) => any)[]
   ) {
-    this.keybindAndEvent.set(keybind, [event, ...conditions]);
+    const entry: KeybindEntry = {
+      handler: event,
+      conditions
+    }
+    this.keybindAndEvent.push([keybind, entry]);
   }
 
   /**
