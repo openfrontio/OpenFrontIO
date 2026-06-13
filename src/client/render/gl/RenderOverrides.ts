@@ -27,8 +27,8 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverGlowAlpha !== undefined) {
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
-  if (overrides.structure?.classicIcons === true) {
-    // Classic look: lighter player-colored shape behind a darkened
+  if (overrides.structure?.classicIcons ?? true) {
+    // Classic look (default): lighter player-colored shape behind a darkened
     // player-colored icon glyph (matching the old canvas renderer's
     // structureColors().dark), with a touch of translucency.
     settings.structure.borderDarken = 0.7;

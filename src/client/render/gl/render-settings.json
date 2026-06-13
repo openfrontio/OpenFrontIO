@@ -111,7 +111,7 @@
     "railThickness": 1
   },
   "structure": {
-    "iconSize": 50,
+    "iconSize": 60,
     "dotsZoomThreshold": 1.2,
     "dotScale": 0.3,
     "iconScaleFactorZoomedOut": 3,
@@ -153,8 +153,9 @@
     "iconDarken": 0
   },
   "structureLevel": {
-    "scale": 1.2,
-    "outlineWidth": 1.4
+    "scale": 1,
+    "outlineWidth": 8,
+    "offsetY": -0.4
   },
   "bar": {
     "healthBarW": 11,

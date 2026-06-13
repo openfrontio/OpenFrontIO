@@ -93,6 +93,7 @@ export enum GameMapType {
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
+  WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -807,6 +808,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.venice",
     categories: ["new", "europe"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "WarshipWarship",
+    type: GameMapType.WarshipWarship,
+    translationKey: "map.warshipwarship",
+    categories: ["other"],
+    multiplayerFrequency: 3,
   },
   {
     id: "World",
