@@ -620,13 +620,13 @@ export class InputHandler {
 
       for (const item of this.keybindAndEvent) {
         if (this.keybindMatchesEvent(e, item[0])) {
-          let allConditionsFullfiled = true;
+          let allConditionsFulfilled = true;
           for (const i of item[1].conditions) {
             if (!i(e)) {
-              allConditionsFullfiled = false;
+              allConditionsFulfilled = false;
             }
           }
-          if (!allConditionsFullfiled) continue;
+          if (!allConditionsFulfilled) continue;
           e.preventDefault();
           item[1].handler(e);
         }
