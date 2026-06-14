@@ -19,8 +19,9 @@ import type { BMChar, ParsedAtlas } from "./Types";
 // Match the MSDF atlas em/base so all downstream sizing stays identical.
 const EM = 48;
 const BASE = 36;
-// Bold to match the weight of the overpass-bold name style.
-const FONT = `bold ${EM}px Arial, "Liberation Sans", sans-serif`;
+// Thin Arial. Arial ships no dedicated thin face, so browsers without one fall
+// back to regular weight (still much lighter than the MSDF bold).
+const FONT = `100 ${EM}px Arial, "Liberation Sans", sans-serif`;
 
 const ATLAS_W = 1024;
 const PAD = 2; // transparent gutter between packed glyphs
