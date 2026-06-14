@@ -54,7 +54,7 @@ const LIGHT_CONFIGS: Record<string, LightConfig> = {
   [UT_HYDROGEN_BOMB]: { r: 1.0, g: 0.95, b: 0.6, radius: 22, intensity: 1.3 },
   [UT_MIRV]: { r: 1.0, g: 0.9, b: 0.7, radius: 18, intensity: 1.2 },
   [UT_MIRV_WARHEAD]: { r: 1.0, g: 0.6, b: 0.3, radius: 12, intensity: 1.0 },
-  [UT_TRAIN]: { r: 1.0, g: 0.85, b: 0.5, radius: 6, intensity: 0.5 },
+  [UT_TRAIN]: { r: 1.0, g: 0.85, b: 0.5, radius: 6, intensity: 2.7 },
 };
 
 const FLOATS_PER_LIGHT = 6;
