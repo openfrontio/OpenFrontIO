@@ -155,7 +155,8 @@
   "structureLevel": {
     "scale": 1,
     "outlineWidth": 8,
-    "offsetY": -0.4
+    "offsetY": -0.4,
+    "classicFont": true
   },
   "bar": {
     "healthBarW": 11,

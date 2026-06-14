@@ -36,6 +36,10 @@ export function applyGraphicsOverrides(
     settings.structure.iconDarken = 0.3;
     settings.structure.iconAlpha = 0.9;
   }
+
+  if (overrides.structure?.classicNumbers !== undefined) {
+    settings.structureLevel.classicFont = overrides.structure.classicNumbers;
+  }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
       overrides.mapOverlay.highlightFillBrighten;

@@ -190,8 +190,11 @@ export interface RenderSettings {
   };
   structureLevel: {
     scale: number;
+    /** MSDF outline width in px; unused by the classic bitmap font. */
     outlineWidth: number;
     offsetY: number;
+    /** true = round_6x6_modified bitmap font, false = overpass-bold MSDF. */
+    classicFont: boolean;
   };
   bar: {
     healthBarW: number;

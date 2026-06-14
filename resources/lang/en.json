@@ -516,6 +516,8 @@
     "black": "Black",
     "classic_icons_desc": "Lighter outline with near-black interior",
     "classic_icons_label": "Classic icons",
+    "classic_numbers_desc": "Pixel font for structure level numbers (off uses the smooth font)",
+    "classic_numbers_label": "Classic level numbers",
     "colored": "Colored",
     "colored_names_desc": "Show player names in their player color or in black",
     "colored_names_label": "Name color",

@@ -38,6 +38,9 @@ describe("GraphicsOverridesSchema", () => {
       { structure: {} },
       { structure: { classicIcons: true } },
       { structure: { classicIcons: false } },
+      { structure: { classicNumbers: true } },
+      { structure: { classicNumbers: false } },
+      { structure: { classicIcons: true, classicNumbers: false } },
       { name: { darkNames: true }, structure: { classicIcons: true } },
     ];
     for (const c of cases) {
@@ -88,6 +91,11 @@ describe("GraphicsOverridesSchema", () => {
     expect(
       GraphicsOverridesSchema.safeParse({
         structure: { classicIcons: "yes" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        structure: { classicNumbers: "yes" },
       }).success,
     ).toBe(false);
     expect(
@@ -252,6 +260,31 @@ describe("applyGraphicsOverrides", () => {
     expect(absent.fillDarken).toBe(1.0);
     expect(absent.iconDarken).toBe(0.3);
     expect(absent.iconAlpha).toBe(0.9);
+  });
+
+  test("classicNumbers=true → classic bitmap font", () => {
+    expect(
+      gen({ structure: { classicNumbers: true } }).structureLevel.classicFont,
+    ).toBe(true);
+  });
+
+  test("classicNumbers=false → smooth MSDF font", () => {
+    expect(
+      gen({ structure: { classicNumbers: false } }).structureLevel.classicFont,
+    ).toBe(false);
+  });
+
+  test("classicNumbers absent → defaults to classic bitmap font", () => {
+    expect(gen({ structure: {} }).structureLevel.classicFont).toBe(true);
+    expect(gen({}).structureLevel.classicFont).toBe(true);
+  });
+
+  test("classicNumbers is independent of classicIcons", () => {
+    const s = gen({
+      structure: { classicIcons: false, classicNumbers: true },
+    });
+    expect(s.structureLevel.classicFont).toBe(true);
+    expect(s.structure.iconDarken).toBe(0);
   });
 
   test("applies territorySaturation override (including 0)", () => {

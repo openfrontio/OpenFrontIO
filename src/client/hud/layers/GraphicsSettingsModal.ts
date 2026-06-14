@@ -328,6 +328,16 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchStructure({ classicIcons: !this.currentClassicIcons() });
   }
 
+  private currentClassicNumbers(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().structure?.classicNumbers ?? true
+    );
+  }
+
+  private onToggleClassicNumbers() {
+    this.patchStructure({ classicNumbers: !this.currentClassicNumbers() });
+  }
+
   private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -423,6 +433,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const hoverGlowAlpha = this.currentHoverGlowAlpha();
     const namesColored = !this.currentDarkNames();
     const classicIcons = this.currentClassicIcons();
+    const classicNumbers = this.currentClassicNumbers();
     const highlightFill = this.currentHighlightFill();
     const highlightBrighten = this.currentHighlightBrighten();
     const highlightThicken = this.currentHighlightThicken();
@@ -632,6 +643,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${classicIcons
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleClassicNumbers}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.classic_numbers_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.classic_numbers_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${classicNumbers
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
