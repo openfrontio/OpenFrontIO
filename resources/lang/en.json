@@ -1357,6 +1357,8 @@
     "game_speed_up_desc": "Cycle to next game speed (0.5, 1, 2, max). Single player only.",
     "go_to_player_desc": "Toggle zooming in on the player in the beginning of a game.",
     "go_to_player_label": "Go to player on start",
+    "graphics_refresh_modifier": "Graphics refresh modifier",
+    "graphics_refresh_modifier_desc": "Hold this key and R to refresh graphics",
     "graphics_settings_desc": "Adjust how the map looks",
     "graphics_settings_label": "Graphics Settings",
     "ground_attack": "Ground Attack",

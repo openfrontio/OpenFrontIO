@@ -96,7 +96,22 @@ export class UserSettingModal extends BaseModal {
       .filter(([k]) => k !== action)
       .map(([, v]) => v);
 
-    if (values.includes(value) && value !== "Null") {
+    //This is so that there is not conflict when remapping altKey and emojiMenuModifier back to default
+    let isEmojiMenuModAndAltKeyConflict = false;
+    if (
+      ((action === "emojiMenuModifier" &&
+        activeKeybinds["altKey"] === "AltLeft") ||
+        (action === "altKey" &&
+          activeKeybinds["emojiMenuModifier"] === "AltLeft")) &&
+      value === "AltLeft"
+    ) {
+      isEmojiMenuModAndAltKeyConflict = true;
+    }
+    if (
+      values.includes(value) &&
+      value !== "Null" &&
+      !isEmojiMenuModAndAltKeyConflict
+    ) {
       const displayKey = formatKeyForDisplay(key || value);
       window.dispatchEvent(
         new CustomEvent("show-message", {
@@ -399,6 +414,18 @@ export class UserSettingModal extends BaseModal {
         defaultKey=${this.defaultKeybinds.coordinateGrid}
         .value=${this.getKeyValue("coordinateGrid")}
         .display=${this.getKeyChar("coordinateGrid")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="altKey"
+        label=${translateText("user_setting.graphics_refresh_modifier")}
+        description=${translateText(
+          "user_setting.graphics_refresh_modifier_desc",
+        )}
+        defaultKey=${this.defaultKeybinds.altKey}
+        .value=${this.getKeyValue("altKey")}
+        .display=${this.getKeyChar("altKey")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
