@@ -10,6 +10,7 @@ export class MouseUpEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
+    public readonly ctrlKey: boolean = false,
   ) {}
 }
 
@@ -722,7 +723,7 @@ export class InputHandler {
         event.shiftKey ||
         this.gameView.inSpawnPhase() // No Radial Menu during spawn phase, only spawn point selection
       ) {
-        this.eventBus.emit(new MouseUpEvent(event.x, event.y));
+        this.eventBus.emit(new MouseUpEvent(event.x, event.y, event.ctrlKey));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       }

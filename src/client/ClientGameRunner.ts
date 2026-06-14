@@ -50,6 +50,7 @@ import {
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { Platform } from "./Platform";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -918,8 +919,11 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
+    // On macOS, Ctrl+left-click is the system "secondary click" gesture, so
+    // don't treat it as an attack on another player.
+    const suppressAttack = Platform.isMac && event.ctrlKey;
     this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
-      if (actions.canAttack) {
+      if (actions.canAttack && !suppressAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
