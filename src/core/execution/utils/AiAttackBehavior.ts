@@ -857,6 +857,8 @@ export class AiAttackBehavior {
    */
   private isAttackTooWeak(troops: number, target: Player): boolean {
     if (this.player.type() === PlayerType.Bot) return false;
+    // Nations under attack may retaliate freely
+    if (this.player.incomingAttacks().length > 0) return false;
     const { difficulty } = this.game.config().gameConfig();
     return (
       (difficulty === Difficulty.Hard ||
@@ -866,14 +868,21 @@ export class AiAttackBehavior {
   }
 
   /**
-   * For Hard & Impossible nations: computes the max troops this nation can send
-   * in an attack without letting its troop count drop below a fraction of its
-   * strongest non-allied neighbor's troop count (Hard: 75%, Impossible: 90%).
-   * Allied players and bot neighbors are not considered threats.
-   * Bots are entirely exempt. Returns Infinity when no cap applies.
+   * For Hard & Impossible nations in FFA: computes the max troops this nation
+   * can send in an attack without letting its troop count drop below a
+   * fraction of its strongest non-allied neighbor's troop count (Hard: 75%,
+   * Impossible: 90%). Allied players and bot neighbors are not considered
+   * threats. Bots and team games are entirely exempt. Returns Infinity when
+   * no cap applies.
+   *
+   * Nations under attack may retaliate with at least the total incoming
+   * attack troops, even if that exceeds the neighbor-based cap.
    */
   private troopSendCap(): number {
     if (this.player.type() === PlayerType.Bot) return Infinity;
+    if (this.game.config().gameConfig().gameMode === GameMode.Team)
+      return Infinity;
+
     const { difficulty } = this.game.config().gameConfig();
     let retainFraction: number;
     switch (difficulty) {
@@ -898,10 +907,23 @@ export class AiAttackBehavior {
         maxNeighborTroops = n.troops();
       }
     }
-    if (maxNeighborTroops === 0) return Infinity;
 
-    const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
-    return Math.max(0, this.player.troops() - minRetained);
+    let cap: number;
+    if (maxNeighborTroops === 0) {
+      cap = Infinity;
+    } else {
+      const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
+      cap = Math.max(0, this.player.troops() - minRetained);
+    }
+
+    // Nations under attack may retaliate with at least the incoming troops
+    const incoming = this.player.incomingAttacks();
+    if (incoming.length > 0) {
+      const totalIncoming = incoming.reduce((sum, a) => sum + a.troops(), 0);
+      cap = Math.max(cap, totalIncoming);
+    }
+
+    return cap;
   }
 
   private sendLandAttack(target: Player | TerraNullius): boolean {

@@ -1,8 +1,10 @@
+import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
   Difficulty,
   Game,
+  GameMode,
   Player,
   PlayerInfo,
   PlayerType,
@@ -405,5 +407,196 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec).toBeDefined();
     // No cap applies, so troops should be the full reserve amount
     expect(exec.startTroops).toBeGreaterThan(40_000);
+  });
+
+  it("Team: troopSendCap returns Infinity — no cap in team games", async () => {
+    // Same setup as Hard cap test but with GameMode.Team
+    const testGame = await setup("big_plains", {
+      difficulty: Difficulty.Hard,
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+    });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const neighborInfo = new PlayerInfo(
+      "neighbor",
+      PlayerType.Human,
+      null,
+      "neighbor_id",
+    );
+    const botInfo = new PlayerInfo(
+      "target_bot",
+      PlayerType.Bot,
+      null,
+      "bot_id",
+    );
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(neighborInfo);
+    testGame.addPlayer(botInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const neighbor = testGame.player("neighbor_id");
+    const bot = testGame.player("bot_id");
+
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      const players = [attacker, neighbor, bot];
+      players[assigned % 3].conquer(tile);
+      assigned++;
+    });
+    bot.addTroops(100);
+
+    const mockEmoji = {
+      maybeSendAttackEmoji: vi.fn(),
+      sendEmoji: vi.fn(),
+    } as any;
+    const mockAlliance = { maybeBetray: vi.fn() } as any;
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5,
+      0.3,
+      0.2,
+      mockAlliance,
+      mockEmoji,
+    );
+
+    // In FFA Hard, attacker with 100k and neighbor with 90k would cap
+    // attack troops to 32.5k. In Team mode, troopSendCap returns Infinity
+    // so the attack is not capped by neighbor strength.
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(bot);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // In FFA Hard, troops would be capped to 32.5k. In Team mode, no cap.
+    expect(exec.startTroops).toBeGreaterThan(32_500);
+  });
+
+  it("Team: isAttackTooWeak returns false — weak attacks allowed in team games", async () => {
+    // Same setup as the FFA "skips attack when capped troops are < 20%" test
+    // but with GameMode.Team. In FFA Hard, the attack would be blocked.
+    const testGame = await setup("big_plains", {
+      difficulty: Difficulty.Hard,
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+    });
+
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Nation,
+      null,
+      "attacker_id",
+    );
+    const neighborInfo = new PlayerInfo(
+      "neighbor",
+      PlayerType.Human,
+      null,
+      "neighbor_id",
+    );
+    testGame.addPlayer(attackerInfo);
+    testGame.addPlayer(neighborInfo);
+
+    const attacker = testGame.player("attacker_id");
+    const neighbor = testGame.player("neighbor_id");
+
+    // Add a strong human target sharing borders
+    const targetInfo = new PlayerInfo(
+      "strong_target",
+      PlayerType.Human,
+      null,
+      "target_id",
+    );
+    testGame.addPlayer(targetInfo);
+    const target = testGame.player("target_id");
+
+    let assigned = 0;
+    testGame.map().forEachTile((tile) => {
+      if (assigned >= 90) return;
+      if (!testGame.map().isLand(tile)) return;
+      const players = [attacker, neighbor, target];
+      players[assigned % 3].conquer(tile);
+      assigned++;
+    });
+
+    const mockEmoji = {
+      maybeSendAttackEmoji: vi.fn(),
+      sendEmoji: vi.fn(),
+    } as any;
+    const mockAlliance = { maybeBetray: vi.fn() } as any;
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      testGame,
+      attacker,
+      0.5,
+      0.3,
+      0.2,
+      mockAlliance,
+      mockEmoji,
+    );
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(100_000);
+    target.addTroops(300_000);
+    // In FFA Hard: troopSendCap = 25k, 20% of target = 60k → blocked.
+    // In Team mode: isAttackTooWeak returns false, so the attack proceeds
+    // even though troops would be below 20% of the target.
+
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(target);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    expect(exec.startTroops).toBeGreaterThan(0);
+  });
+
+  it("Hard: nation under attack bypasses troopSendCap and isAttackTooWeak", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    attacker.addTroops(100_000);
+    neighbor.addTroops(90_000);
+
+    // Without incoming attacks, the cap limits to 32.5k
+    const cap = Math.max(
+      0,
+      attacker.troops() - Math.ceil(neighbor.troops() * 0.75),
+    );
+
+    // Simulate the neighbor attacking the attacker
+    testGame.addExecution(new AttackExecution(10_000, neighbor, attacker.id()));
+    testGame.executeNextTick();
+    expect(attacker.incomingAttacks().length).toBeGreaterThan(0);
+
+    // With incoming attacks, troopSendCap and isAttackTooWeak are bypassed
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(neighbor);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // Retaliation should use more troops than the cap would allow
+    expect(exec.startTroops).toBeGreaterThan(cap);
   });
 });
