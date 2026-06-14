@@ -2,7 +2,7 @@
   "id": "Africa",
   "name": "Africa",
   "translation_key": "map.africa",
-  "categories": ["featured", "africa"],
+  "categories": ["featured", "continental", "africa"],
   "multiplayer_frequency": 7,
   "featured_rank": 6,
   "nations": [

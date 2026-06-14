@@ -1,5 +1,5 @@
 {
-  "categories": ["oceania"],
+  "categories": ["oceania", "continental"],
   "id": "Oceania",
   "map": {
     "height": 1000,

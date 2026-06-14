@@ -2,7 +2,7 @@
   "id": "SouthAmerica",
   "name": "South America",
   "translation_key": "map.southamerica",
-  "categories": ["featured", "south_america"],
+  "categories": ["featured", "continental", "south_america"],
   "multiplayer_frequency": 5,
   "featured_rank": 4,
   "nations": [

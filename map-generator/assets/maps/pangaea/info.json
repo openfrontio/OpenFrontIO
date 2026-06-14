@@ -2,7 +2,7 @@
   "id": "Pangaea",
   "name": "Pangaea",
   "translation_key": "map.pangaea",
-  "categories": ["other"],
+  "categories": ["fictional"],
   "multiplayer_frequency": 5,
   "nations": [
     {

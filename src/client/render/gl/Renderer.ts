@@ -57,9 +57,9 @@ import { TerritoryPass } from "./passes/TerritoryPass";
 import { TrailPass } from "./passes/TrailPass";
 import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
-import { createRenderSettings, type RenderSettings } from "./RenderSettings";
+import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
+import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
 import {
   createTexture2D,
   toScreen,
@@ -180,11 +180,15 @@ export class GPURenderer {
     terrainBytes: Uint8Array,
     paletteData: Float32Array,
     config: Config,
+    settings: RenderSettings,
     raf: typeof requestAnimationFrame = requestAnimationFrame.bind(window),
     caf: typeof cancelAnimationFrame = cancelAnimationFrame.bind(window),
   ) {
     this.canvas = canvas;
-    this.settings = createRenderSettings();
+    // Settings are resolved (defaults + user overrides) by the caller and
+    // passed in, so every pass — including texture-baking ones like terrain —
+    // is built with the final values. Live changes mutate this object in place.
+    this.settings = settings;
     this.raf = raf;
     this.caf = caf;
 
@@ -209,8 +213,13 @@ export class GPURenderer {
     this.camera = new Camera(mapW, mapH);
 
     // --- Terrain (static) ---
-    const terrainRGBA = buildTerrainRGBA(terrainBytes, mapW, mapH);
-    this.terrainPass = new TerrainPass(gl, terrainRGBA, mapW, mapH);
+    this.terrainPass = new TerrainPass(
+      gl,
+      terrainBytes,
+      mapW,
+      mapH,
+      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+    );
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
@@ -456,7 +465,13 @@ export class GPURenderer {
       this.settings,
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
-    this.unitPass = new UnitPass(gl, header, this.paletteTex, this.settings);
+    this.unitPass = new UnitPass(
+      gl,
+      header,
+      this.paletteTex,
+      this.settings,
+      config,
+    );
     this.namePass = new NamePass(
       gl,
       header,
@@ -805,6 +820,17 @@ export class GPURenderer {
     if (refs.length === 0) return;
     this.terrainPass.applyTerrainDelta(refs, terrainBytes);
     this.railroadPass.applyTerrainDelta(refs, terrainBytes);
+  }
+
+  /**
+   * Rebuild the terrain texture from the current `settings.terrain` colors.
+   * Terrain is baked into a GPU texture rather than read per-frame, so a
+   * settings change needs this explicit rebuild.
+   */
+  rebuildTerrain(): void {
+    this.terrainPass.setOceanColor(
+      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+    );
   }
 
   applyConquestEvents(events: ConquestFx[]): void {

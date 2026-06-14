@@ -2,7 +2,7 @@
   "id": "DanishStraits",
   "name": "Danish Straits",
   "translation_key": "map.danishstraits",
-  "categories": ["europe"],
+  "categories": ["new", "europe"],
   "multiplayer_frequency": 5,
   "nations": [
     {

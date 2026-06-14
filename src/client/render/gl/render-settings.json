@@ -15,6 +15,9 @@
     "bar": true,
     "nameDebug": false
   },
+  "terrain": {
+    "oceanColor": "#4785b5"
+  },
   "falloutBloom": {
     "broilSpeedCold": 0.0018,
     "broilSpeedHot": 0,
@@ -155,7 +158,8 @@
   "structureLevel": {
     "scale": 1,
     "outlineWidth": 8,
-    "offsetY": -0.4
+    "offsetY": -0.4,
+    "classicFont": true
   },
   "bar": {
     "healthBarW": 11,

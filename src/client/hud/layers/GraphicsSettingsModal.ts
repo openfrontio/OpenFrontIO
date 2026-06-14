@@ -32,6 +32,10 @@ const HOVER_GLOW_ALPHA_MIN = 0;
 const HOVER_GLOW_ALPHA_MAX = 1;
 const HOVER_GLOW_ALPHA_STEP = 0.05;
 
+const ICON_SIZE_MIN = 40;
+const ICON_SIZE_MAX = 70;
+const ICON_SIZE_STEP = 5;
+
 const HIGHLIGHT_FILL_MIN = 0;
 const HIGHLIGHT_FILL_MAX = 1;
 const HIGHLIGHT_FILL_STEP = 0.01;
@@ -65,6 +69,8 @@ const RAIL_ZOOM_STEP = 0.1;
 const RAIL_THICKNESS_MIN = 0.5;
 const RAIL_THICKNESS_MAX = 3;
 const RAIL_THICKNESS_STEP = 0.1;
+
+const HEX_COLOR_RE = /^#?([0-9a-fA-F]{6})$/;
 
 export class ShowGraphicsSettingsModalEvent {
   constructor(
@@ -318,6 +324,41 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchRailroad({ railThickness: value });
   }
 
+  private currentIconSize(): number {
+    return (
+      this.userSettings.graphicsOverrides().structure?.iconSize ??
+      renderDefaults.structure.iconSize
+    );
+  }
+
+  private onIconSizeChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchStructure({ iconSize: value });
+  }
+
+  private patchTerrain(patch: Partial<GraphicsOverrides["terrain"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      terrain: { ...current.terrain, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentOceanColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.oceanColor ??
+      renderDefaults.terrain.oceanColor
+    );
+  }
+
+  private onOceanColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return; // ignore partial/invalid hex while typing
+    this.patchTerrain({ oceanColor: `#${match[1].toLowerCase()}` });
+  }
+
   private currentClassicIcons(): boolean {
     return (
       this.userSettings.graphicsOverrides().structure?.classicIcons ?? true
@@ -326,6 +367,16 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private onToggleClassicIcons() {
     this.patchStructure({ classicIcons: !this.currentClassicIcons() });
+  }
+
+  private currentClassicNumbers(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().structure?.classicNumbers ?? true
+    );
+  }
+
+  private onToggleClassicNumbers() {
+    this.patchStructure({ classicNumbers: !this.currentClassicNumbers() });
   }
 
   private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
@@ -422,7 +473,9 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const hoverGlowWidth = this.currentHoverGlowWidth();
     const hoverGlowAlpha = this.currentHoverGlowAlpha();
     const namesColored = !this.currentDarkNames();
+    const iconSize = this.currentIconSize();
     const classicIcons = this.currentClassicIcons();
+    const classicNumbers = this.currentClassicNumbers();
     const highlightFill = this.currentHighlightFill();
     const highlightBrighten = this.currentHighlightBrighten();
     const highlightThicken = this.currentHighlightThicken();
@@ -431,6 +484,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const coordinateGridOpacity = this.currentCoordinateGridOpacity();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
+    const oceanColor = this.currentOceanColor();
     const colorblind = this.currentColorblind();
 
     return html`
@@ -618,6 +672,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               ${translateText("graphics_setting.section_structure_icons")}
             </div>
 
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.icon_size_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.icon_size_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${ICON_SIZE_MIN}
+                  max=${ICON_SIZE_MAX}
+                  step=${ICON_SIZE_STEP}
+                  .value=${String(iconSize)}
+                  @input=${this.onIconSizeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${iconSize.toFixed(0)}
+              </div>
+            </div>
+
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click=${this.onToggleClassicIcons}
@@ -632,6 +711,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${classicIcons
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleClassicNumbers}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.classic_numbers_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.classic_numbers_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${classicNumbers
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -845,6 +943,39 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${railThickness.toFixed(1)}
               </div>
+            </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_terrain")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.ocean_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.ocean_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${oceanColor}
+                placeholder=${renderDefaults.terrain.oceanColor}
+                spellcheck="false"
+                @change=${this.onOceanColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${oceanColor}
+                @input=${this.onOceanColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
             </div>
 
             <div

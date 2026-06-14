@@ -2,7 +2,7 @@
   "id": "Svalmel",
   "name": "Svalmel",
   "translation_key": "map.svalmel",
-  "categories": ["other"],
+  "categories": ["fictional", "europe", "north_america"],
   "multiplayer_frequency": 8,
   "nations": [
     {

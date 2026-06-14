@@ -14,7 +14,9 @@ export const GraphicsOverridesSchema = z
       .partial(),
     structure: z
       .object({
+        iconSize: z.number(),
         classicIcons: z.boolean(),
+        classicNumbers: z.boolean(),
       })
       .partial(),
     mapOverlay: z
@@ -41,6 +43,12 @@ export const GraphicsOverridesSchema = z
     accessibility: z
       .object({
         colorblind: z.boolean(),
+      })
+      .partial(),
+    terrain: z
+      .object({
+        // "#rrggbb" hex string; overrides the base ocean (deep water) color.
+        oceanColor: z.string(),
       })
       .partial(),
   })

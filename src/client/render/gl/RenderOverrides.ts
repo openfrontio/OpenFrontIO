@@ -27,6 +27,9 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverGlowAlpha !== undefined) {
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
+  if (overrides.structure?.iconSize !== undefined) {
+    settings.structure.iconSize = overrides.structure.iconSize;
+  }
   if (overrides.structure?.classicIcons ?? true) {
     // Classic look (default): lighter player-colored shape behind a darkened
     // player-colored icon glyph (matching the old canvas renderer's
@@ -35,6 +38,10 @@ export function applyGraphicsOverrides(
     settings.structure.fillDarken = 1.0;
     settings.structure.iconDarken = 0.3;
     settings.structure.iconAlpha = 0.9;
+  }
+
+  if (overrides.structure?.classicNumbers !== undefined) {
+    settings.structureLevel.classicFont = overrides.structure.classicNumbers;
   }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
@@ -67,6 +74,9 @@ export function applyGraphicsOverrides(
   }
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
+  }
+  if (overrides.terrain?.oceanColor !== undefined) {
+    settings.terrain.oceanColor = overrides.terrain.oceanColor;
   }
   if (overrides.name?.darkNames !== undefined) {
     const dark = overrides.name.darkNames;

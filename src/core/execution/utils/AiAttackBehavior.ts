@@ -851,12 +851,14 @@ export class AiAttackBehavior {
   }
 
   /**
-   * For Hard & Impossible nations: returns true if `troops` is less than 20%
-   * of the target's troop count, meaning the attack is too weak to be
-   * worthwhile.  Bots are exempt.
+   * For Hard & Impossible nations in FFA: returns true if `troops` is less
+   * than 20% of the target's troop count, meaning the attack is too weak to
+   * be worthwhile.  Bots and team games are exempt.
    */
   private isAttackTooWeak(troops: number, target: Player): boolean {
     if (this.player.type() === PlayerType.Bot) return false;
+    if (this.game.config().gameConfig().gameMode === GameMode.Team)
+      return false;
     // Nations under attack may retaliate freely
     if (this.player.incomingAttacks().length > 0) return false;
     const { difficulty } = this.game.config().gameConfig();

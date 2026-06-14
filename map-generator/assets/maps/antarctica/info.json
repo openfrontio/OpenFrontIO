@@ -2,7 +2,7 @@
   "id": "Antarctica",
   "name": "Antarctica",
   "translation_key": "map.antarctica",
-  "categories": ["antarctica"],
+  "categories": ["antarctica", "continental"],
   "multiplayer_frequency": 1,
   "nations": [
     {

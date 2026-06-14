@@ -188,6 +188,7 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+      this.recordMotionPlan(ticks);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
         this.maybeBreakAlliances();
       }
@@ -253,6 +254,38 @@ export class NukeExecution implements Execution {
 
   public getNuke(): Unit | null {
     return this.nuke;
+  }
+
+  /**
+   * Record a motion plan so the client can derive the nuke's position each
+   * tick instead of receiving per-tick unit updates (see TradeShipExecution).
+   * Replays a separate pathfinder because the curve's cached points don't
+   * advance exactly one index per tick — the plan path must be the exact
+   * tile sequence that movement's `next()` calls will produce.
+   */
+  private recordMotionPlan(ticks: number): void {
+    if (this.nuke === null || this.src === undefined || this.src === null) {
+      return;
+    }
+    const pathFinder = UniversalPathFinding.Parabola(this.mg, {
+      increment: this.speed,
+      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
+      directionUp: this.rocketDirectionUp,
+    });
+    const path: TileRef[] = [this.src];
+    let result = pathFinder.next(this.src, this.dst, this.speed);
+    while (result.status === PathStatus.NEXT) {
+      path.push(result.node);
+      result = pathFinder.next(this.src, this.dst, this.speed);
+    }
+    this.mg.recordMotionPlan({
+      kind: "grid",
+      unitId: this.nuke.id(),
+      planId: 1,
+      startTick: ticks + this.waitTicks + 1,
+      ticksPerStep: 1,
+      path,
+    });
   }
 
   private getTrajectory(target: TileRef): TrajectoryTile[] {

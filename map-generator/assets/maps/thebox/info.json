@@ -2,7 +2,7 @@
   "id": "TheBox",
   "name": "The Box",
   "translation_key": "map.thebox",
-  "categories": ["other"],
+  "categories": ["arcade"],
   "multiplayer_frequency": 3,
   "nations": [
     {

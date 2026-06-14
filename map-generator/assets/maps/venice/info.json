@@ -2,7 +2,7 @@
   "id": "Venice",
   "name": "Venice",
   "translation_key": "map.venice",
-  "categories": ["europe"],
+  "categories": ["new", "europe"],
   "multiplayer_frequency": 6,
   "nations": [
     {

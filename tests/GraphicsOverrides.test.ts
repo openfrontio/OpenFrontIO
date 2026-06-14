@@ -38,6 +38,11 @@ describe("GraphicsOverridesSchema", () => {
       { structure: {} },
       { structure: { classicIcons: true } },
       { structure: { classicIcons: false } },
+      { structure: { classicNumbers: true } },
+      { structure: { classicNumbers: false } },
+      { structure: { classicIcons: true, classicNumbers: false } },
+      { structure: { iconSize: 80 } },
+      { structure: { iconSize: 40, classicIcons: false } },
       { name: { darkNames: true }, structure: { classicIcons: true } },
     ];
     for (const c of cases) {
@@ -92,6 +97,11 @@ describe("GraphicsOverridesSchema", () => {
     ).toBe(false);
     expect(
       GraphicsOverridesSchema.safeParse({
+        structure: { classicNumbers: "yes" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
         mapOverlay: { territorySaturation: "full" },
       }).success,
     ).toBe(false);
@@ -109,9 +119,18 @@ describe("GraphicsOverridesSchema", () => {
 });
 
 describe("applyGraphicsOverrides", () => {
-  test("with empty overrides matches createRenderSettings defaults", () => {
+  test("with empty overrides applies default classic structure, otherwise matches createRenderSettings", () => {
     const fromGen = gen({});
     const fromCreate = createRenderSettings();
+    // Classic icons are the default, so empty overrides still tune the
+    // structure slice (borderDarken/fillDarken/iconDarken/iconAlpha).
+    expect(fromGen.structure.borderDarken).toBe(0.7);
+    expect(fromGen.structure.fillDarken).toBe(1.0);
+    expect(fromGen.structure.iconDarken).toBe(0.3);
+    expect(fromGen.structure.iconAlpha).toBe(0.9);
+    // Everything outside the structure slice is left at createRenderSettings
+    // defaults.
+    fromCreate.structure = fromGen.structure;
     expect(fromGen).toEqual(fromCreate);
   });
 
@@ -202,13 +221,15 @@ describe("applyGraphicsOverrides", () => {
   });
 
   test("settings outside the name slice are untouched by name overrides", () => {
-    const defaults = createRenderSettings();
+    // Baseline is empty overrides (which apply the default classic structure),
+    // so name overrides should leave the non-name slices identical to it.
+    const base = gen({});
     const s = gen({
       name: { nameScaleFactor: 0.6, darkNames: true },
     });
-    expect(s.passEnabled).toEqual(defaults.passEnabled);
-    expect(s.lighting).toEqual(defaults.lighting);
-    expect(s.structure).toEqual(defaults.structure);
+    expect(s.passEnabled).toEqual(base.passEnabled);
+    expect(s.lighting).toEqual(base.lighting);
+    expect(s.structure).toEqual(base.structure);
   });
 
   test("classicIcons=true → light shape + dark icon + 0.9 alpha", () => {
@@ -224,7 +245,7 @@ describe("applyGraphicsOverrides", () => {
     expect(s.iconAlpha).toBe(0.9);
   });
 
-  test("classicIcons=false or absent → keeps render-settings.json defaults (fully opaque)", () => {
+  test("classicIcons=false → keeps render-settings.json defaults (fully opaque)", () => {
     const defaults = createRenderSettings().structure;
     const off = gen({
       structure: { classicIcons: false },
@@ -233,11 +254,49 @@ describe("applyGraphicsOverrides", () => {
     expect(off.fillDarken).toBe(defaults.fillDarken);
     expect(off.iconDarken).toBe(0);
     expect(off.iconAlpha).toBe(1);
+  });
+
+  test("classicIcons absent → applies classic styling by default", () => {
     const absent = gen({ structure: {} }).structure;
-    expect(absent.borderDarken).toBe(defaults.borderDarken);
-    expect(absent.fillDarken).toBe(defaults.fillDarken);
-    expect(absent.iconDarken).toBe(0);
-    expect(absent.iconAlpha).toBe(1);
+    expect(absent.borderDarken).toBe(0.7);
+    expect(absent.fillDarken).toBe(1.0);
+    expect(absent.iconDarken).toBe(0.3);
+    expect(absent.iconAlpha).toBe(0.9);
+  });
+
+  test("iconSize override sets structure.iconSize", () => {
+    expect(gen({ structure: { iconSize: 90 } }).structure.iconSize).toBe(90);
+  });
+
+  test("iconSize absent → keeps render-settings.json default", () => {
+    const def = createRenderSettings().structure.iconSize;
+    expect(gen({ structure: {} }).structure.iconSize).toBe(def);
+    expect(gen({}).structure.iconSize).toBe(def);
+  });
+
+  test("classicNumbers=true → classic bitmap font", () => {
+    expect(
+      gen({ structure: { classicNumbers: true } }).structureLevel.classicFont,
+    ).toBe(true);
+  });
+
+  test("classicNumbers=false → smooth MSDF font", () => {
+    expect(
+      gen({ structure: { classicNumbers: false } }).structureLevel.classicFont,
+    ).toBe(false);
+  });
+
+  test("classicNumbers absent → defaults to classic bitmap font", () => {
+    expect(gen({ structure: {} }).structureLevel.classicFont).toBe(true);
+    expect(gen({}).structureLevel.classicFont).toBe(true);
+  });
+
+  test("classicNumbers is independent of classicIcons", () => {
+    const s = gen({
+      structure: { classicIcons: false, classicNumbers: true },
+    });
+    expect(s.structureLevel.classicFont).toBe(true);
+    expect(s.structure.iconDarken).toBe(0);
   });
 
   test("applies territorySaturation override (including 0)", () => {
