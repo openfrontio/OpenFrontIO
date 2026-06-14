@@ -215,12 +215,6 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
-  toggleDarkMode() {
-    this.userSettings.toggleDarkMode();
-
-    console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
-  }
-
   /** Whether colorblind mode is currently enabled in the graphics overrides. */
   private colorblindMode(): boolean {
     return (
@@ -779,15 +773,6 @@ export class UserSettingModal extends BaseModal {
 
   private renderBasicSettings() {
     return html`
-      <!-- 🌙 Dark Mode -->
-      <setting-toggle
-        label="${translateText("user_setting.dark_mode_label")}"
-        description="${translateText("user_setting.dark_mode_desc")}"
-        id="dark-mode-toggle"
-        .checked=${this.userSettings.darkMode()}
-        @change=${this.toggleDarkMode}
-      ></setting-toggle>
-
       <!-- 🎨 Colorblind Mode -->
       <setting-toggle
         label="${translateText("user_setting.colorblind_label")}"

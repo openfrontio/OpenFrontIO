@@ -18,6 +18,7 @@ import "./components/clan/ClanTransferView";
 import "./components/ConfirmDialog";
 import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { modalRouter } from "./ModalRouter";
 import { translateText } from "./Utils";
 
 type View =
@@ -195,6 +196,7 @@ export class ClanModal extends BaseModal {
         this.selectedClanTag = "";
         this.myRole = null;
         this.detailCache = null;
+        modalRouter.syncArgs("clan", { clan: null, tag: null });
         this.gameHistoryCache = null;
         this.setActiveTab(this.previousListTab);
       },
@@ -204,7 +206,12 @@ export class ClanModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    const targetTag = typeof args?.tag === "string" ? args.tag : "";
+    const targetTag =
+      typeof args?.clan === "string"
+        ? args.clan.trim()
+        : typeof args?.tag === "string"
+          ? args.tag.trim()
+          : "";
     if (targetTag) {
       this.openDetail(targetTag.toUpperCase());
     }
@@ -489,6 +496,7 @@ export class ClanModal extends BaseModal {
     }
     this.selectedClanTag = tag;
     this.view = "detail";
+    modalRouter.syncArgs("clan", { clan: tag, tag: null });
     // modalConfig() returns detail tabs; setActiveTab anchors activeTab to
     // "overview" and syncs the URL router (routerName = "clan").
     this.setActiveTab("overview");

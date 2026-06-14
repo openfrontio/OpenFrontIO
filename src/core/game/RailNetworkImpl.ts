@@ -223,7 +223,10 @@ export class RailNetworkImpl implements RailNetwork {
     return editedClusters.size !== 0;
   }
 
-  overlappingRailroads(tile: TileRef): TileRef[] {
+  overlappingRailroads(unitType: UnitType, tile: TileRef): TileRef[] {
+    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
+      return [];
+    }
     const tiles = new Set<TileRef>();
     for (const railroad of this.railGrid.query(tile, this.stationRadius)) {
       for (const t of railroad.tiles) {

@@ -103,7 +103,7 @@ export function getPlayerIcons(
 
   const myPlayer = game.myPlayer();
   const userSettings = game.config().userSettings();
-  const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
+  const isDarkMode = darkMode ?? false;
   const emojisEnabled = userSettings?.emojis() ?? false;
   const alliancesOff = alliancesDisabled ?? game.config().disableAlliances();
 

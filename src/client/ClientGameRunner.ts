@@ -29,7 +29,6 @@ import {
 } from "../core/game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
-  DARK_MODE_KEY,
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -68,12 +67,12 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
-  applyDarkModeOverride,
   applyGraphicsOverrides,
   createRenderSettings,
   deepAssign,
   MapRenderer,
   preloadAtlasData,
+  type RenderSettings,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
@@ -256,6 +255,7 @@ export function joinLobby(
 function createWebGLView(
   terrainMap: TerrainMapData,
   config: Config,
+  settings: RenderSettings,
 ): {
   view: MapRenderer;
   glCanvas: HTMLCanvasElement;
@@ -311,6 +311,7 @@ function createWebGLView(
     terrainBytes,
     palette,
     config,
+    settings,
     captureRaf,
     captureCaf,
   );
@@ -485,9 +486,20 @@ async function createClientGame(
 
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
+    // Resolve render settings (defaults + user overrides) up front so the
+    // renderer is built with the final values — no construct-with-defaults,
+    // re-apply-overrides dance, and texture-baking passes (terrain) get the
+    // right colors on the first build.
+    const resolveRenderSettings = (): RenderSettings => {
+      const settings = createRenderSettings();
+      applyGraphicsOverrides(settings, userSettings.graphicsOverrides());
+      return settings;
+    };
+
     const { view, glCanvas, cachedWebGLFrameCallback } = createWebGLView(
       gameMap,
       config,
+      resolveRenderSettings(),
     );
 
     view.setShowPatterns(userSettings.territoryPatterns());
@@ -497,31 +509,30 @@ async function createClientGame(
     );
 
     const graphicsListenerAbort = new AbortController();
+    // Re-resolve settings and copy them onto the renderer's live object in
+    // place (passes hold a reference to it, so they pick the change up).
     const regenerateRenderSettings = (): void => {
-      const live = view.getSettings();
-      deepAssign(live, createRenderSettings());
-      applyGraphicsOverrides(live, userSettings.graphicsOverrides());
-      applyDarkModeOverride(live, userSettings.darkMode());
+      deepAssign(view.getSettings(), resolveRenderSettings());
     };
     // Re-apply render settings, then re-theme and recolor players, on a
     // graphics-override change (covers a theme switch such as colorblind mode).
     const onGraphicsChanged = (): void => {
       regenerateRenderSettings();
+      // Terrain is baked into a GPU texture rather than read per-frame, so a
+      // terrain-color override (e.g. ocean) needs an explicit texture rebuild.
+      view.rebuildTerrain();
       // A graphics override can switch the active theme (e.g. colorblind mode),
       // so re-theme existing players and re-upload the palette to recolor their
       // territory fills/borders live.
       gameView.refreshPlayerColors();
       webglBuilder.refreshPalette(gameView);
     };
-    regenerateRenderSettings();
+    // No initial regenerate or terrain rebuild needed — the renderer was
+    // constructed with the resolved settings above, so the terrain texture
+    // already bakes any saved ocean-color override.
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       onGraphicsChanged,
-      { signal: graphicsListenerAbort.signal },
-    );
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      regenerateRenderSettings,
       { signal: graphicsListenerAbort.signal },
     );
 
