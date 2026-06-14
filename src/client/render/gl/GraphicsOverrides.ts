@@ -51,6 +51,15 @@ export const GraphicsOverridesSchema = z
         oceanColor: z.string(),
       })
       .partial(),
+    lighting: z
+      .object({
+        // Scene brightness multiplier in the day/night composite. <1 darkens
+        // the map and reveals the glow around structures/units; 1 is identity.
+        ambient: z.number(),
+        // Exponent controlling how sharply a light fades with distance.
+        falloffPower: z.number(),
+      })
+      .partial(),
   })
   .partial();
 

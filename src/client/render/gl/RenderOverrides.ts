@@ -1,8 +1,6 @@
 import type { GraphicsOverrides } from "./GraphicsOverrides";
 import { createThemeSettings, type RenderSettings } from "./RenderSettings";
 
-const DARK_AMBIENT = 0.35;
-
 /**
  * Apply the user's graphics overrides onto a RenderSettings in place: name
  * scaling, classic/dark structure and name styling, and the colorblind-safe
@@ -78,6 +76,16 @@ export function applyGraphicsOverrides(
   if (overrides.terrain?.oceanColor !== undefined) {
     settings.terrain.oceanColor = overrides.terrain.oceanColor;
   }
+  if (overrides.lighting?.ambient !== undefined) {
+    settings.lighting.ambient = overrides.lighting.ambient;
+    // The composite only darkens the scene (and reveals the structure/unit
+    // glow) when ambient < 1; at ambient === 1 it's a visual identity, so
+    // don't pay the scene-capture cost of enabling the lighting pass.
+    settings.lighting.enabled = overrides.lighting.ambient < 1;
+  }
+  if (overrides.lighting?.falloffPower !== undefined) {
+    settings.lighting.falloffPower = overrides.lighting.falloffPower;
+  }
   if (overrides.name?.darkNames !== undefined) {
     const dark = overrides.name.darkNames;
     // Dark: black fill + player-colored outline. Force outline RGB to black
@@ -121,14 +129,4 @@ export function applyGraphicsOverrides(
     settings.mapOverlay.friendlyTintRatio = 0.85;
     settings.mapOverlay.embargoTintRatio = 0.85;
   }
-}
-
-/** Apply dark-mode lighting (ambient + enabled) onto settings when active. */
-export function applyDarkModeOverride(
-  settings: RenderSettings,
-  isDark: boolean,
-): void {
-  if (!isDark) return;
-  settings.lighting.ambient = DARK_AMBIENT;
-  settings.lighting.enabled = true;
 }

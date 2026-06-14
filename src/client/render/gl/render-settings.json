@@ -378,8 +378,8 @@
       "intensity": 1
     },
     "Train": {
-      "radius": 8,
-      "intensity": 2
+      "radius": 6,
+      "intensity": 0.5
     }
   }
 }

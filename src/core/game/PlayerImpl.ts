@@ -1317,7 +1317,7 @@ export class PlayerImpl implements Player {
         canUpgrade,
         cost,
         overlappingRailroads: buildNew
-          ? rail.overlappingRailroads(canBuild as TileRef)
+          ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],
         ghostRailPaths: buildNew
           ? rail.computeGhostRailPaths(u, canBuild as TileRef)

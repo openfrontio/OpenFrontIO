@@ -450,9 +450,14 @@ export class UnitPass {
         const targetPort = this.structures.get(unit.targetUnitId);
         if (targetPort) {
           const portOwner = targetPort.ownerID;
+          // Only recolor enemy-owned ships: a self/allied ship already renders
+          // green/yellow via its affiliation color (e.g. a captured trade ship
+          // heading to our port is ours and must stay green, not yellow).
           isTradeFriendly =
-            portOwner === this.localPlayerID ||
-            this.friendlyOwners.has(portOwner);
+            unit.ownerID !== this.localPlayerID &&
+            !this.friendlyOwners.has(unit.ownerID) &&
+            (portOwner === this.localPlayerID ||
+              this.friendlyOwners.has(portOwner));
         }
       }
 

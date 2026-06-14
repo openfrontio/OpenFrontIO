@@ -178,7 +178,7 @@ describe("RailNetworkImpl", () => {
       };
       (network as any).railGrid = railGridMock;
 
-      const result = network.overlappingRailroads(tile);
+      const result = network.overlappingRailroads(UnitType.City, tile);
 
       expect(railGridMock.query).toHaveBeenCalledWith(tile, 3);
       expect(result).toEqual([42, 45, 50, 60]); // Deduplicated and sorted
@@ -189,10 +189,30 @@ describe("RailNetworkImpl", () => {
       const railGridMock = { query: vi.fn(() => new Set()) };
       (network as any).railGrid = railGridMock;
 
-      const result = network.overlappingRailroads(tile);
+      const result = network.overlappingRailroads(UnitType.City, tile);
 
       expect(result).toEqual([]);
     });
+
+    test.each([
+      UnitType.MissileSilo,
+      UnitType.DefensePost,
+      UnitType.SAMLauncher,
+    ])(
+      "returns empty array for %s which cannot snap to railroads",
+      (unitType) => {
+        const tile = 42 as any;
+        const railGridMock = {
+          query: vi.fn(() => new Set([{ tiles: [50, 42, 60] }])),
+        };
+        (network as any).railGrid = railGridMock;
+
+        const result = network.overlappingRailroads(unitType, tile);
+
+        expect(result).toEqual([]);
+        expect(railGridMock.query).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("computeGhostRailPaths", () => {
