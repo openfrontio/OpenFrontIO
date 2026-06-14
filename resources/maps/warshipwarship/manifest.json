@@ -95,17 +95,17 @@
   "id": "WarshipWarship",
   "map": {
     "height": 1396,
-    "num_land_tiles": 1122359,
+    "num_land_tiles": 1122343,
     "width": 3000
   },
   "map16x": {
     "height": 349,
-    "num_land_tiles": 68556,
+    "num_land_tiles": 68553,
     "width": 750
   },
   "map4x": {
     "height": 698,
-    "num_land_tiles": 279836,
+    "num_land_tiles": 279822,
     "width": 1500
   },
   "multiplayer_frequency": 3,
