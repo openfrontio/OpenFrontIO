@@ -134,6 +134,11 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Build the OpenGraph/social preview (title, description, image, join URL) for
+ * a game link from its live lobby and/or archived public info. A pre-start
+ * "Random" lobby is shown with a generic placeholder so the map isn't spoiled.
+ */
 export async function buildPreview(
   gameID: string,
   origin: string,
@@ -162,6 +167,10 @@ export async function buildPreview(
       countActivePlayers(players) || (lobby?.clients?.length ?? 0);
   }
   const map = lobby?.gameConfig?.gameMap ?? config.gameMap;
+  // While a "Random" lobby hasn't started, hide the concrete map so the embed
+  // doesn't spoil it. The server clears randomMap at prestart, so an
+  // in-progress/finished game reveals its real map normally.
+  const isRandomMap = lobby?.gameConfig?.randomMap === true && !isFinished;
   let mode = lobby?.gameConfig?.gameMode ?? config.gameMode ?? GameMode.FFA;
   const playerTeams = lobby?.gameConfig?.playerTeams ?? config.playerTeams;
   const numericTeamCount =
@@ -192,23 +201,28 @@ export async function buildPreview(
   const duration = publicInfo?.info?.duration;
 
   // Normalize map name to match filesystem (lowercase, no spaces or special chars)
-  const normalizedMap = map ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
+  const normalizedMap =
+    map && !isRandomMap ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
 
   const mapThumbnail = normalizedMap
     ? buildAbsoluteAssetUrl(
         `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
       )
     : null;
-  const image =
-    mapThumbnail ?? buildAbsoluteAssetUrl("images/GameplayScreenshot.png");
+  const image = isRandomMap
+    ? buildAbsoluteAssetUrl("images/RandomMap.webp")
+    : (mapThumbnail ?? buildAbsoluteAssetUrl("images/GameplayScreenshot.png"));
+
+  // The name shown in the title: "Random Map" until the lobby starts.
+  const displayMap = isRandomMap ? "Random Map" : map;
 
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
   const gameTypeLabel = gameType ? ` (${gameType})` : "";
 
   const title = isFinished
     ? `${mode ?? "Game"} on ${map ?? "Unknown Map"}${gameTypeLabel}`
-    : mode && map
-      ? `${mode} on ${map}${gameTypeLabel}`
+    : mode && displayMap
+      ? `${mode} on ${displayMap}${gameTypeLabel}`
       : "OpenFront Game";
 
   let description: string;

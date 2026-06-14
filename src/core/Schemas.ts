@@ -243,6 +243,11 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
+  // When true, the host chose "Random": the concrete gameMap above is still
+  // resolved client-side (so nation count etc. work), but it must be hidden
+  // from all pre-start visuals (embed, lobby map name, nation count). The
+  // server clears this flag at prestart, which reveals the map.
+  randomMap: z.boolean().optional(),
   difficulty: z.enum(Difficulty),
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only

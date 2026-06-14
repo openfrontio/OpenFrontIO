@@ -118,9 +118,13 @@ export class GameServer {
       : undefined;
   }
 
+  /** Merge an allowed subset of config fields from a lobby host's update. */
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
+    }
+    if (gameConfig.randomMap !== undefined) {
+      this.gameConfig.randomMap = gameConfig.randomMap;
     }
     if (gameConfig.gameMapSize !== undefined) {
       this.gameConfig.gameMapSize = gameConfig.gameMapSize;
@@ -657,11 +661,18 @@ export class GameServer {
     return this.outOfSyncClients.size;
   }
 
+  /** Begin the start sequence: reveal the map and broadcast prestart to clients. */
   public prestart() {
     if (this.hasStarted()) {
       return;
     }
     this._hasPrestarted = true;
+
+    // The game is starting: reveal the map. Clearing the flag means every
+    // downstream consumer (embed, started-game info) sees a normal concrete
+    // map with no special-casing. The concrete gameMap was already resolved
+    // client-side at lobby creation, so nothing else needs to change here.
+    this.gameConfig.randomMap = false;
 
     const prestartMsg = ServerPrestartMessageSchema.safeParse({
       type: "prestart",
