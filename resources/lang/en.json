@@ -535,6 +535,8 @@
     "hover_glow_alpha_label": "Hover glow strength",
     "hover_glow_width_desc": "How far the white glow extends behind the hovered player's name",
     "hover_glow_width_label": "Hover glow size",
+    "icon_size_desc": "How large structure icons are drawn on the map",
+    "icon_size_label": "Structure icon size",
     "name_cull_desc": "Hide names smaller than this size",
     "name_cull_label": "Minimum name size",
     "name_scale_label": "Name Scale",
