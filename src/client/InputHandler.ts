@@ -622,7 +622,7 @@ export class InputHandler {
         if (this.keybindMatchesEvent(e, item[0])) {
           for (const i of item[1].conditions) {
             if (!i(e)) {
-              continue outerLoop
+              continue outerLoop;
             }
           }
           e.preventDefault();
