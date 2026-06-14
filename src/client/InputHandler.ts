@@ -301,7 +301,6 @@ export class InputHandler {
       this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
     });
     this.addKeybindAndEvent("Shift+KeyD", () => {
-      console.log("TogglePerformanceOverlayEvent");
       this.eventBus.emit(new TogglePerformanceOverlayEvent());
     });
     this.addKeybindAndEvent(this.keybinds.toggleView, () => {
