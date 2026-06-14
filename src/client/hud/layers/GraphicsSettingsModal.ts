@@ -32,6 +32,10 @@ const HOVER_GLOW_ALPHA_MIN = 0;
 const HOVER_GLOW_ALPHA_MAX = 1;
 const HOVER_GLOW_ALPHA_STEP = 0.05;
 
+const ICON_SIZE_MIN = 40;
+const ICON_SIZE_MAX = 70;
+const ICON_SIZE_STEP = 5;
+
 const HIGHLIGHT_FILL_MIN = 0;
 const HIGHLIGHT_FILL_MAX = 1;
 const HIGHLIGHT_FILL_STEP = 0.01;
@@ -318,6 +322,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchRailroad({ railThickness: value });
   }
 
+  private currentIconSize(): number {
+    return (
+      this.userSettings.graphicsOverrides().structure?.iconSize ??
+      renderDefaults.structure.iconSize
+    );
+  }
+
+  private onIconSizeChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchStructure({ iconSize: value });
+  }
+
   private currentClassicIcons(): boolean {
     return (
       this.userSettings.graphicsOverrides().structure?.classicIcons ?? true
@@ -432,6 +448,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const hoverGlowWidth = this.currentHoverGlowWidth();
     const hoverGlowAlpha = this.currentHoverGlowAlpha();
     const namesColored = !this.currentDarkNames();
+    const iconSize = this.currentIconSize();
     const classicIcons = this.currentClassicIcons();
     const classicNumbers = this.currentClassicNumbers();
     const highlightFill = this.currentHighlightFill();
@@ -627,6 +644,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
             >
               ${translateText("graphics_setting.section_structure_icons")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.icon_size_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.icon_size_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${ICON_SIZE_MIN}
+                  max=${ICON_SIZE_MAX}
+                  step=${ICON_SIZE_STEP}
+                  .value=${String(iconSize)}
+                  @input=${this.onIconSizeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${iconSize.toFixed(0)}
+              </div>
             </div>
 
             <button

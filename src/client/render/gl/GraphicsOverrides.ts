@@ -14,6 +14,7 @@ export const GraphicsOverridesSchema = z
       .partial(),
     structure: z
       .object({
+        iconSize: z.number(),
         classicIcons: z.boolean(),
         classicNumbers: z.boolean(),
       })

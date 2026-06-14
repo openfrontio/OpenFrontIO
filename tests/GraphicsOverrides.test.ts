@@ -41,6 +41,8 @@ describe("GraphicsOverridesSchema", () => {
       { structure: { classicNumbers: true } },
       { structure: { classicNumbers: false } },
       { structure: { classicIcons: true, classicNumbers: false } },
+      { structure: { iconSize: 80 } },
+      { structure: { iconSize: 40, classicIcons: false } },
       { name: { darkNames: true }, structure: { classicIcons: true } },
     ];
     for (const c of cases) {
@@ -260,6 +262,16 @@ describe("applyGraphicsOverrides", () => {
     expect(absent.fillDarken).toBe(1.0);
     expect(absent.iconDarken).toBe(0.3);
     expect(absent.iconAlpha).toBe(0.9);
+  });
+
+  test("iconSize override sets structure.iconSize", () => {
+    expect(gen({ structure: { iconSize: 90 } }).structure.iconSize).toBe(90);
+  });
+
+  test("iconSize absent → keeps render-settings.json default", () => {
+    const def = createRenderSettings().structure.iconSize;
+    expect(gen({ structure: {} }).structure.iconSize).toBe(def);
+    expect(gen({}).structure.iconSize).toBe(def);
   });
 
   test("classicNumbers=true → classic bitmap font", () => {
