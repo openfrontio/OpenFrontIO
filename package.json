@@ -52,7 +52,7 @@
     "autoprefixer": "^10.5.0",
     "benchmark": "^2.1.4",
     "canvas": "^3.2.3",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
     "d3": "^7.9.0",
     "eslint": "^10.3.0",
@@ -111,7 +111,7 @@
     "node-html-parser": "^7.1.0",
     "obscenity": "^0.4.6",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.4",
     "winston": "^3.19.0",
     "ws": "^8.20.1",
     "zod": "^4.4.2"
