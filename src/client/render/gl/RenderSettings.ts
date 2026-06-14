@@ -57,6 +57,13 @@ export interface RenderSettings {
     bar: boolean;
     nameDebug: boolean;
   };
+  terrain: {
+    /**
+     * Base (shallowest) color of deep water as a "#rrggbb" hex string. The
+     * per-depth brightness gradient is preserved relative to this color.
+     */
+    oceanColor: string;
+  };
   falloutBloom: {
     broilSpeedCold: number;
     broilSpeedHot: number;

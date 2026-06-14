@@ -59,7 +59,7 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
+import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
 import {
   createTexture2D,
   toScreen,
@@ -213,8 +213,13 @@ export class GPURenderer {
     this.camera = new Camera(mapW, mapH);
 
     // --- Terrain (static) ---
-    const terrainRGBA = buildTerrainRGBA(terrainBytes, mapW, mapH);
-    this.terrainPass = new TerrainPass(gl, terrainRGBA, mapW, mapH);
+    this.terrainPass = new TerrainPass(
+      gl,
+      terrainBytes,
+      mapW,
+      mapH,
+      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+    );
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
@@ -815,6 +820,17 @@ export class GPURenderer {
     if (refs.length === 0) return;
     this.terrainPass.applyTerrainDelta(refs, terrainBytes);
     this.railroadPass.applyTerrainDelta(refs, terrainBytes);
+  }
+
+  /**
+   * Rebuild the terrain texture from the current `settings.terrain` colors.
+   * Terrain is baked into a GPU texture rather than read per-frame, so a
+   * settings change needs this explicit rebuild.
+   */
+  rebuildTerrain(): void {
+    this.terrainPass.setOceanColor(
+      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+    );
   }
 
   applyConquestEvents(events: ConquestFx[]): void {

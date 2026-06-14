@@ -45,6 +45,12 @@ export const GraphicsOverridesSchema = z
         colorblind: z.boolean(),
       })
       .partial(),
+    terrain: z
+      .object({
+        // "#rrggbb" hex string; overrides the base ocean (deep water) color.
+        oceanColor: z.string(),
+      })
+      .partial(),
   })
   .partial();
 

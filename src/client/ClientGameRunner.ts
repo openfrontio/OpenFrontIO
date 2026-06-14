@@ -521,14 +521,18 @@ async function createClientGame(
     // graphics-override change (covers a theme switch such as colorblind mode).
     const onGraphicsChanged = (): void => {
       regenerateRenderSettings();
+      // Terrain is baked into a GPU texture rather than read per-frame, so a
+      // terrain-color override (e.g. ocean) needs an explicit texture rebuild.
+      view.rebuildTerrain();
       // A graphics override can switch the active theme (e.g. colorblind mode),
       // so re-theme existing players and re-upload the palette to recolor their
       // territory fills/borders live.
       gameView.refreshPlayerColors();
       webglBuilder.refreshPalette(gameView);
     };
-    // No initial regenerate needed — the renderer was constructed with the
-    // resolved settings above.
+    // No initial regenerate or terrain rebuild needed — the renderer was
+    // constructed with the resolved settings above, so the terrain texture
+    // already bakes any saved ocean-color override.
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       onGraphicsChanged,
