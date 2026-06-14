@@ -9,7 +9,7 @@ import {
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
-import { discordLogin, logOut, sendMagicLink } from "./Auth";
+import { discordLogin, googleLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
@@ -96,7 +96,7 @@ export class AccountModal extends BaseModal {
 
   private isLinkedAccount(): boolean {
     const me = this.userMeResponse?.user;
-    return !!(me?.discord ?? me?.email);
+    return !!(me?.discord ?? me?.google ?? me?.email);
   }
 
   protected modalConfig() {
@@ -255,6 +255,17 @@ export class AccountModal extends BaseModal {
           ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
+    } else if (me?.google) {
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          <div class="text-white text-lg font-medium">
+            ${translateText("account_modal.linked_account", {
+              account_name: me.google.email,
+            })}
+          </div>
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
+        </div>
+      `;
     } else if (me?.email) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
@@ -340,6 +351,16 @@ export class AccountModal extends BaseModal {
               >
             </button>
 
+            <!-- Google Login Button -->
+            <button
+              @click="${this.handleGoogleLogin}"
+              class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
+            >
+              <span class="font-bold relative z-10 tracking-wide"
+                >${translateText("main.login_google")}</span
+              >
+            </button>
+
             <!-- Divider -->
             <div class="flex items-center gap-4 py-2">
               <div class="h-px bg-white/10 flex-1"></div>
@@ -415,6 +436,10 @@ export class AccountModal extends BaseModal {
 
   private handleDiscordLogin() {
     discordLogin();
+  }
+
+  private handleGoogleLogin() {
+    googleLogin();
   }
 
   protected onOpen(): void {

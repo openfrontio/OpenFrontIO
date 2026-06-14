@@ -19,6 +19,11 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/auth/login/discord?redirect_uri=${redirectUri}`;
 }
 
+export function googleLogin() {
+  const redirectUri = encodeURIComponent(window.location.href);
+  window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
+}
+
 export async function tempTokenLogin(token: string): Promise<string | null> {
   const response = await fetch(
     `${getApiBase()}/auth/login/token?login-token=${token}`,
