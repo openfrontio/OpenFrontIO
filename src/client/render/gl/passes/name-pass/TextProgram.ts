@@ -1,9 +1,16 @@
 /**
- * TextProgram — MSDF text rendering (player names + troop counts).
+ * TextProgram — text rendering for player names + troop counts.
  *
- * Owns: shader program, uniform locations, MSDF atlas texture (async loaded).
- * Shared textures (glyphMetrics, cursor, strings, playerData) are passed in
- * and bound at draw time but not owned/deleted by this class.
+ * Supports two fonts, switchable per draw via settings.name.classicFont:
+ *   - MSDF: the overpass-bold atlas (default), loaded async from CDN.
+ *   - classic: an Arial bitmap coverage atlas built at runtime (set via
+ *     setArialFont), drawn fill-only (no synthesized outline).
+ * Both fonts share the em size (48) and baseline (36), so name sizing and the
+ * sibling icon/status passes are unaffected by the choice.
+ *
+ * Owns: shader program, uniform locations, the MSDF atlas texture and the
+ * Arial atlas texture. Glyph-metric / cursor / string / player-data textures
+ * are passed in and bound at draw time but not owned here.
  */
 
 import { assetUrl } from "src/core/AssetUrls";
@@ -28,14 +35,26 @@ export class TextProgram {
   private program: WebGLProgram;
   private textures: TextProgramTextures;
 
-  // Async-loaded MSDF atlas
+  // MSDF atlas (async-loaded)
   private atlasTex: WebGLTexture | null = null;
   private atlasReady = false;
+  private msdfScaleW: number;
+  private msdfScaleH: number;
+  private distanceRange: number;
+
+  // Arial bitmap atlas (built at runtime, set via setArialFont)
+  private arialAtlasTex: WebGLTexture | null = null;
+  private arialMetricsTex: WebGLTexture | null = null;
+  private arialScaleW = 0;
+  private arialScaleH = 0;
 
   // Uniform locations
   private uCamera: WebGLUniformLocation;
   private uTime: WebGLUniformLocation;
   private uDistRange: WebGLUniformLocation;
+  private uAtlasScaleW: WebGLUniformLocation;
+  private uAtlasScaleH: WebGLUniformLocation;
+  private uClassic: WebGLUniformLocation;
   private uLerpSpeed: WebGLUniformLocation;
   private uCullThreshold: WebGLUniformLocation;
   private uNameScaleFactor: WebGLUniformLocation;
@@ -52,8 +71,6 @@ export class TextProgram {
   private uHoverGlowWidth: WebGLUniformLocation;
   private uHoverGlowAlpha: WebGLUniformLocation;
 
-  private distanceRange: number;
-
   constructor(
     gl: WebGL2RenderingContext,
     atlas: ParsedAtlas,
@@ -62,6 +79,8 @@ export class TextProgram {
     this.gl = gl;
     this.textures = textures;
     this.distanceRange = atlas.distanceRange;
+    this.msdfScaleW = atlas.scaleW;
+    this.msdfScaleH = atlas.scaleH;
 
     this.program = createProgram(
       gl,
@@ -77,18 +96,10 @@ export class TextProgram {
     gl.uniform1i(gl.getUniformLocation(this.program, "uStrings"), 3);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPlayerData"), 4);
 
-    // Static uniforms
+    // Static uniforms — em size + baseline are shared by both fonts.
     gl.uniform1f(
       gl.getUniformLocation(this.program, "uFontSize")!,
       atlas.fontSize,
-    );
-    gl.uniform1f(
-      gl.getUniformLocation(this.program, "uAtlasScaleW")!,
-      atlas.scaleW,
-    );
-    gl.uniform1f(
-      gl.getUniformLocation(this.program, "uAtlasScaleH")!,
-      atlas.scaleH,
     );
     gl.uniform1f(gl.getUniformLocation(this.program, "uBase")!, atlas.base);
 
@@ -96,6 +107,9 @@ export class TextProgram {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;
     this.uDistRange = gl.getUniformLocation(this.program, "uDistRange")!;
+    this.uAtlasScaleW = gl.getUniformLocation(this.program, "uAtlasScaleW")!;
+    this.uAtlasScaleH = gl.getUniformLocation(this.program, "uAtlasScaleH")!;
+    this.uClassic = gl.getUniformLocation(this.program, "uClassic")!;
     this.uLerpSpeed = gl.getUniformLocation(this.program, "uLerpSpeed")!;
     this.uCullThreshold = gl.getUniformLocation(
       this.program,
@@ -142,8 +156,30 @@ export class TextProgram {
     this.loadAtlas();
   }
 
-  get ready(): boolean {
-    return this.atlasReady;
+  /** True when the atlas for the requested font is uploaded and drawable. */
+  isReady(classic: boolean): boolean {
+    return classic ? this.arialAtlasTex !== null : this.atlasReady;
+  }
+
+  /** Install the runtime-built Arial bitmap atlas (coverage mask) + metrics. */
+  setArialFont(
+    canvas: HTMLCanvasElement,
+    metricsTex: WebGLTexture,
+    scaleW: number,
+    scaleH: number,
+  ): void {
+    const gl = this.gl;
+    const tex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    this.arialAtlasTex = tex;
+    this.arialMetricsTex = metricsTex;
+    this.arialScaleW = scaleW;
+    this.arialScaleH = scaleH;
   }
 
   private loadAtlas(): void {
@@ -172,16 +208,28 @@ export class TextProgram {
     ambient: number,
     highlightOwnerID: number,
     fadeOwnerID: number,
+    classic: boolean,
   ): void {
-    if (!this.atlasReady) return;
+    if (!this.isReady(classic)) return;
 
     const gl = this.gl;
     const ns = settings.name;
     gl.useProgram(this.program);
 
+    const atlasTex = classic ? this.arialAtlasTex! : this.atlasTex!;
+    const metricsTex = classic
+      ? this.arialMetricsTex!
+      : this.textures.glyphMetrics;
+    const scaleW = classic ? this.arialScaleW : this.msdfScaleW;
+    const scaleH = classic ? this.arialScaleH : this.msdfScaleH;
+    const distRange = classic ? 0 : this.distanceRange;
+
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uTime, performance.now() / 1000);
-    gl.uniform1f(this.uDistRange, this.distanceRange);
+    gl.uniform1f(this.uDistRange, distRange);
+    gl.uniform1f(this.uAtlasScaleW, scaleW);
+    gl.uniform1f(this.uAtlasScaleH, scaleH);
+    gl.uniform1i(this.uClassic, classic ? 1 : 0);
     gl.uniform1f(this.uLerpSpeed, ns.lerpSpeed);
     gl.uniform1f(this.uCullThreshold, ns.cullThreshold);
     gl.uniform1f(this.uNameScaleFactor, ns.nameScaleFactor);
@@ -202,9 +250,9 @@ export class TextProgram {
     gl.uniform1f(this.uHoverGlowAlpha, ns.hoverGlowAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex!);
+    gl.bindTexture(gl.TEXTURE_2D, atlasTex);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.textures.glyphMetrics);
+    gl.bindTexture(gl.TEXTURE_2D, metricsTex);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.textures.cursor);
     gl.activeTexture(gl.TEXTURE3);
@@ -225,5 +273,6 @@ export class TextProgram {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     if (this.atlasTex) gl.deleteTexture(this.atlasTex);
+    if (this.arialAtlasTex) gl.deleteTexture(this.arialAtlasTex);
   }
 }

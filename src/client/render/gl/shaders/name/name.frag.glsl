@@ -10,6 +10,7 @@ uniform float uOutlineUsePlayerColor;
 uniform float uFillUsePlayerColor;
 uniform float uHoverGlowWidth; // px the white hover glow extends past the outline
 uniform float uHoverGlowAlpha; // peak opacity of the hover glow
+uniform int   uClassic;        // 1 = Arial bitmap coverage atlas, 0 = MSDF
 
 in vec2 vUV;
 in vec4 vPlayerColor;   // player territory color (rgb) + alpha
@@ -25,15 +26,23 @@ void main() {
   // Degenerate fragment — skip
   if (vPlayerColor.a <= 0.0) discard;
 
+  // Compute fill color: player color, or per-type grayscale shade
+  // (black for human, grayer for nation/bot).
+  vec3 fillColor = mix(vec3(vNameShade), vPlayerColor.rgb, uFillUsePlayerColor);
+
+  // Classic Arial bitmap: the atlas is a coverage mask; tint it with the fill
+  // color, no outline (matching the old DOM-rendered names).
+  if (uClassic == 1) {
+    float coverage = texture(uAtlas, vUV).a;
+    if (coverage <= 0.0) discard;
+    fragColor = vec4(fillColor, vPlayerColor.a * coverage);
+    return;
+  }
+
   // Border darkens with night: t² stays dark longer, snaps toward the
   // outline color late in the day cycle.
   float t = 1.0 - uNightAmbient;
   float borderT = t * t;
-
-  // Compute fill color: player color, or per-type grayscale shade
-  // (black for human, grayer for nation/bot). Applies in day and night.
-  vec3 defaultFill = vec3(vNameShade);
-  vec3 fillColor = mix(defaultFill, vPlayerColor.rgb, uFillUsePlayerColor);
 
   vec3 msd = texture(uAtlas, vUV).rgb;
   float sd = median(msd.r, msd.g, msd.b);

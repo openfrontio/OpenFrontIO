@@ -217,7 +217,8 @@
     "statusRowOffset": 1.4,
     "hoverFadeAlpha": 0.5,
     "hoverGlowWidth": 5,
-    "hoverGlowAlpha": 0.75
+    "hoverGlowAlpha": 0.75,
+    "classicFont": false
   },
   "fx": {
     "shockwaveRingWidth": 0.04,

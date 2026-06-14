@@ -265,6 +265,8 @@ export interface RenderSettings {
     hoverGlowWidth: number;
     /** Peak opacity of the hover glow (0 disables it). */
     hoverGlowAlpha: number;
+    /** true = Arial bitmap font for names/troops, false = overpass MSDF. */
+    classicFont: boolean;
   };
   fx: {
     shockwaveRingWidth: number;

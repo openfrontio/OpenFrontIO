@@ -535,6 +535,14 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchName({ darkNames: !this.currentDarkNames() });
   }
 
+  private currentClassicNames(): boolean {
+    return this.userSettings.graphicsOverrides().name?.classicFont ?? false;
+  }
+
+  private onToggleClassicNames() {
+    this.patchName({ classicFont: !this.currentClassicNames() });
+  }
+
   private onResetClick() {
     this.userSettings.setGraphicsOverrides({});
     this.requestUpdate();
@@ -550,6 +558,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const hoverGlowAlpha = this.currentHoverGlowAlpha();
     const namesColored = !this.currentDarkNames();
     const iconSize = this.currentIconSize();
+    const classicNames = this.currentClassicNames();
     const classicIcons = this.currentClassicIcons();
     const classicNumbers = this.currentClassicNumbers();
     const highlightFill = this.currentHighlightFill();
@@ -797,6 +806,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 ${namesColored
                   ? translateText("graphics_setting.colored")
                   : translateText("graphics_setting.black")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleClassicNames}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.classic_names_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.classic_names_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${classicNames
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
