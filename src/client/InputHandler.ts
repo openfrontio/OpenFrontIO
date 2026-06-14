@@ -314,8 +314,7 @@ export class InputHandler {
       () => {
         this.eventBus.emit(new RefreshGraphicsEvent());
       },
-      (e: KeyboardEvent) =>
-        this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight"),
+      (e: KeyboardEvent) => this.activeKeys.has(this.keybinds.altKey),
     );
 
     let buildKeybinds: string[] = [
@@ -578,8 +577,7 @@ export class InputHandler {
           this.keybinds.shiftKey,
           this.keybinds.emojiMenuModifier,
           this.keybinds.buildMenuModifier,
-          "AltLeft",
-          "AltRight",
+          this.keybinds.altKey,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
