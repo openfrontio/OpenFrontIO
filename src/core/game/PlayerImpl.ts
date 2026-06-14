@@ -1608,11 +1608,10 @@ export class PlayerImpl implements Player {
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    if (this.type() === PlayerType.Bot) {
-      // Bots are not affected by immunity
+    if (this.type() !== PlayerType.Human) {
+      // Only human attackers respect PVP immunity
       return !this.isFriendly(player, treatAFKFriendly);
     }
-    // Humans and Nations respect immunity
     return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
   }
 
