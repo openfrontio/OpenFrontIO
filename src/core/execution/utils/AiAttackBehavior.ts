@@ -137,12 +137,12 @@ export class AiAttackBehavior {
       }
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold
-    const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
+    const owner = this.game.owner(dst);
+    const cap = owner.isPlayer() ? this.troopSendCap() : Infinity;
+    const troops = Math.min(this.player.troops() / 5, cap);
     if (troops < 1) return;
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
-    const owner = this.game.owner(dst);
     if (owner.isPlayer() && this.isAttackTooWeak(troops, owner)) {
       return;
     }
@@ -813,8 +813,7 @@ export class AiAttackBehavior {
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
-        // Hard & Impossible: don't drop below neighbor troop threshold
-        const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
+        const troops = this.player.troops() / 5;
         if (troops < 1) return false;
 
         this.game.addExecution(
@@ -954,8 +953,10 @@ export class AiAttackBehavior {
       troops = this.player.troops() - targetTroops;
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold
-    troops = Math.min(troops, this.troopSendCap());
+    // Hard & Impossible: don't drop below neighbor troop threshold (players only)
+    if (target.isPlayer()) {
+      troops = Math.min(troops, this.troopSendCap());
+    }
 
     if (troops < 1) {
       return false;
