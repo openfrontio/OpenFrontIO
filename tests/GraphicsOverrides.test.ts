@@ -74,6 +74,19 @@ describe("GraphicsOverridesSchema", () => {
     }
   });
 
+  test("accepts partial lighting overrides", () => {
+    const cases = [
+      { lighting: {} },
+      { lighting: { ambient: 0.5 } },
+      { lighting: { ambient: 1 } },
+      { lighting: { falloffPower: 2 } },
+      { lighting: { ambient: 0.3, falloffPower: 1.5 } },
+    ];
+    for (const c of cases) {
+      expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
+    }
+  });
+
   test("rejects wrong field types", () => {
     expect(
       GraphicsOverridesSchema.safeParse({ name: { nameScaleFactor: "big" } })
@@ -113,6 +126,16 @@ describe("GraphicsOverridesSchema", () => {
     expect(
       GraphicsOverridesSchema.safeParse({
         railroad: { railThickness: "wide" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        lighting: { ambient: "dark" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        lighting: { falloffPower: "soft" },
       }).success,
     ).toBe(false);
   });
@@ -349,6 +372,55 @@ describe("applyGraphicsOverrides", () => {
     expect(r.railAlpha).toBe(defaults.railAlpha);
     const z = gen({ railroad: { railMinZoom: 1 } }).railroad;
     expect(z.railThickness).toBe(defaults.railThickness);
+  });
+
+  test("ambient < 1 sets ambient and enables the lighting pass", () => {
+    const l = gen({ lighting: { ambient: 0.5 } }).lighting;
+    expect(l.ambient).toBe(0.5);
+    expect(l.enabled).toBe(true);
+  });
+
+  test("ambient === 1 sets ambient but leaves lighting disabled (identity)", () => {
+    const l = gen({ lighting: { ambient: 1 } }).lighting;
+    expect(l.ambient).toBe(1);
+    expect(l.enabled).toBe(false);
+  });
+
+  test("ambient absent → lighting stays at render-settings.json defaults", () => {
+    const defaults = createRenderSettings().lighting;
+    expect(gen({}).lighting.ambient).toBe(defaults.ambient);
+    expect(gen({}).lighting.enabled).toBe(defaults.enabled);
+    expect(gen({ lighting: {} }).lighting.enabled).toBe(defaults.enabled);
+  });
+
+  test("applies falloffPower override (including values below default)", () => {
+    expect(gen({ lighting: { falloffPower: 1.4 } }).lighting.falloffPower).toBe(
+      1.4,
+    );
+    expect(gen({ lighting: { falloffPower: 3 } }).lighting.falloffPower).toBe(
+      3,
+    );
+  });
+
+  test("falloffPower override alone does not enable the lighting pass", () => {
+    expect(gen({ lighting: { falloffPower: 1.4 } }).lighting.enabled).toBe(
+      false,
+    );
+  });
+
+  test("lighting override leaves other lighting fields at defaults", () => {
+    const defaults = createRenderSettings().lighting;
+    const l = gen({ lighting: { ambient: 0.4 } }).lighting;
+    expect(l.falloffPower).toBe(defaults.falloffPower);
+    expect(l.blurZoomDivisor).toBe(defaults.blurZoomDivisor);
+    expect(l.lightRadiusMultiplier).toBe(defaults.lightRadiusMultiplier);
+  });
+
+  test("ambient + falloffPower compose together", () => {
+    const l = gen({ lighting: { ambient: 0.3, falloffPower: 1 } }).lighting;
+    expect(l.ambient).toBe(0.3);
+    expect(l.falloffPower).toBe(1);
+    expect(l.enabled).toBe(true);
   });
 
   test("classicIcons + name overrides compose independently", () => {
