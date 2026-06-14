@@ -600,6 +600,62 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
             >
+              ${translateText("graphics_setting.section_lighting")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.lighting_ambient_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.lighting_ambient_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${AMBIENT_LEVEL_MIN}
+                  max=${AMBIENT_LEVEL_MAX}
+                  step=${AMBIENT_LEVEL_STEP}
+                  .value=${String(ambientLevel)}
+                  @input=${this.onAmbientLevelChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${ambientLevel}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.lighting_unit_glow_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.lighting_unit_glow_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${UNIT_GLOW_MIN}
+                  max=${UNIT_GLOW_MAX}
+                  step=${UNIT_GLOW_STEP}
+                  .value=${String(unitGlow)}
+                  @input=${this.onUnitGlowChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${unitGlow}
+              </div>
+            </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
               ${translateText("graphics_setting.section_name_labels")}
             </div>
 
@@ -1054,62 +1110,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 @input=${this.onOceanColorChange}
                 class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
               />
-            </div>
-
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_lighting")}
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.lighting_ambient_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.lighting_ambient_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${AMBIENT_LEVEL_MIN}
-                  max=${AMBIENT_LEVEL_MAX}
-                  step=${AMBIENT_LEVEL_STEP}
-                  .value=${String(ambientLevel)}
-                  @input=${this.onAmbientLevelChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${ambientLevel}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.lighting_unit_glow_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.lighting_unit_glow_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${UNIT_GLOW_MIN}
-                  max=${UNIT_GLOW_MAX}
-                  step=${UNIT_GLOW_STEP}
-                  .value=${String(unitGlow)}
-                  @input=${this.onUnitGlowChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${unitGlow}
-              </div>
             </div>
 
             <div
