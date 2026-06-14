@@ -29,7 +29,6 @@ import {
 } from "../core/game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
-  DARK_MODE_KEY,
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -68,7 +67,6 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
-  applyDarkModeOverride,
   applyGraphicsOverrides,
   createRenderSettings,
   deepAssign,
@@ -495,7 +493,6 @@ async function createClientGame(
     const resolveRenderSettings = (): RenderSettings => {
       const settings = createRenderSettings();
       applyGraphicsOverrides(settings, userSettings.graphicsOverrides());
-      applyDarkModeOverride(settings, userSettings.darkMode());
       return settings;
     };
 
@@ -536,11 +533,6 @@ async function createClientGame(
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       onGraphicsChanged,
-      { signal: graphicsListenerAbort.signal },
-    );
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      regenerateRenderSettings,
       { signal: graphicsListenerAbort.signal },
     );
 

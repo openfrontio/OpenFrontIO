@@ -70,6 +70,17 @@ const RAIL_THICKNESS_MIN = 0.5;
 const RAIL_THICKNESS_MAX = 3;
 const RAIL_THICKNESS_STEP = 0.1;
 
+// "Ambiance" level shown to the player: 1 = no darkening (lighting off),
+// 3 = darkest with the strongest structure glow. Mapped to the renderer's
+// ambient value as ambient = 1 / level.
+const AMBIENT_LEVEL_MIN = 1;
+const AMBIENT_LEVEL_MAX = 3;
+const AMBIENT_LEVEL_STEP = 0.1;
+
+const FALLOFF_MIN = 1;
+const FALLOFF_MAX = 3;
+const FALLOFF_STEP = 0.1;
+
 const HEX_COLOR_RE = /^#?([0-9a-fA-F]{6})$/;
 
 export class ShowGraphicsSettingsModalEvent {
@@ -359,6 +370,39 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchTerrain({ oceanColor: `#${match[1].toLowerCase()}` });
   }
 
+  private patchLighting(patch: Partial<GraphicsOverrides["lighting"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      lighting: { ...current.lighting, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentAmbientLevel(): number {
+    const ambient =
+      this.userSettings.graphicsOverrides().lighting?.ambient ??
+      renderDefaults.lighting.ambient;
+    return 1 / ambient;
+  }
+
+  private onAmbientLevelChange(event: Event) {
+    const level = parseFloat((event.target as HTMLInputElement).value);
+    this.patchLighting({ ambient: 1 / level });
+  }
+
+  private currentFalloff(): number {
+    return (
+      this.userSettings.graphicsOverrides().lighting?.falloffPower ??
+      renderDefaults.lighting.falloffPower
+    );
+  }
+
+  private onFalloffChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchLighting({ falloffPower: value });
+  }
+
   private currentClassicIcons(): boolean {
     return (
       this.userSettings.graphicsOverrides().structure?.classicIcons ?? true
@@ -485,6 +529,8 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
     const oceanColor = this.currentOceanColor();
+    const ambientLevel = this.currentAmbientLevel();
+    const falloff = this.currentFalloff();
     const colorblind = this.currentColorblind();
 
     return html`
@@ -976,6 +1022,62 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 @input=${this.onOceanColorChange}
                 class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
               />
+            </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_lighting")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.lighting_ambient_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.lighting_ambient_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${AMBIENT_LEVEL_MIN}
+                  max=${AMBIENT_LEVEL_MAX}
+                  step=${AMBIENT_LEVEL_STEP}
+                  .value=${String(ambientLevel)}
+                  @input=${this.onAmbientLevelChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${ambientLevel.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.lighting_falloff_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.lighting_falloff_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${FALLOFF_MIN}
+                  max=${FALLOFF_MAX}
+                  step=${FALLOFF_STEP}
+                  .value=${String(falloff)}
+                  @input=${this.onFalloffChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${falloff.toFixed(1)}
+              </div>
             </div>
 
             <div

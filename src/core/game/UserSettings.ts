@@ -54,7 +54,6 @@ export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
-export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
@@ -154,10 +153,6 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
-  darkMode() {
-    return this.getBool(DARK_MODE_KEY, false);
-  }
-
   leftClickOpensMenu() {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
@@ -233,10 +228,6 @@ export class UserSettings {
 
   toggleGoToPlayer() {
     this.setBool("settings.goToPlayer", !this.goToPlayer());
-  }
-
-  toggleDarkMode() {
-    this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
   // For development only. Used for testing patterns, set in the console manually.

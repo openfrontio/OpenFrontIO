@@ -8,7 +8,6 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
-  RefreshGraphicsEvent,
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
@@ -18,7 +17,6 @@ import {
 } from "../../sound/Sounds";
 import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
-const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const mouseIcon = assetUrl("images/MouseIconWhite.svg");
@@ -138,12 +136,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onToggleHelpMessagesButtonClick() {
     this.userSettings.toggleHelpMessages();
-    this.requestUpdate();
-  }
-
-  private onToggleDarkModeButtonClick() {
-    this.userSettings.toggleDarkMode();
-    this.eventBus.emit(new RefreshGraphicsEvent());
     this.requestUpdate();
   }
 
@@ -348,31 +340,6 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.emojis()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleDarkModeButtonClick}"
-            >
-              <img
-                src=${darkModeIcon}
-                alt="darkModeIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.dark_mode_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.dark_mode_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.darkMode()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
