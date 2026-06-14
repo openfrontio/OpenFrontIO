@@ -50,6 +50,10 @@ export class MapRenderer {
     private terrainBytes: Uint8Array,
     private paletteData: Float32Array,
     private config: Config,
+    // Resolved render settings (defaults + overrides). Held so the same object
+    // is re-used when a GPURenderer is recreated after a context restore,
+    // preserving any user overrides that were applied to it.
+    private settings: RenderSettings,
     private raf?: typeof requestAnimationFrame,
     private caf?: typeof cancelAnimationFrame,
   ) {
@@ -78,6 +82,7 @@ export class MapRenderer {
       this.terrainBytes,
       this.paletteData,
       this.config,
+      this.settings,
       this.raf,
       this.caf,
     );

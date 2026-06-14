@@ -57,7 +57,7 @@ import { TerritoryPass } from "./passes/TerritoryPass";
 import { TrailPass } from "./passes/TrailPass";
 import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
-import { createRenderSettings, type RenderSettings } from "./RenderSettings";
+import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
 import {
@@ -180,11 +180,15 @@ export class GPURenderer {
     terrainBytes: Uint8Array,
     paletteData: Float32Array,
     config: Config,
+    settings: RenderSettings,
     raf: typeof requestAnimationFrame = requestAnimationFrame.bind(window),
     caf: typeof cancelAnimationFrame = cancelAnimationFrame.bind(window),
   ) {
     this.canvas = canvas;
-    this.settings = createRenderSettings();
+    // Settings are resolved (defaults + user overrides) by the caller and
+    // passed in, so every pass — including texture-baking ones like terrain —
+    // is built with the final values. Live changes mutate this object in place.
+    this.settings = settings;
     this.raf = raf;
     this.caf = caf;
 
