@@ -29,6 +29,7 @@ import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
 import { renderTroops } from "../../../../Utils";
+import { generateArialBitmapAtlas } from "./ArialAtlas";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
@@ -49,7 +50,7 @@ import { StatusIconProgram } from "./StatusIconProgram";
 import { layoutString } from "./TextLayout";
 import { TextProgram } from "./TextProgram";
 import type { PlayerSlot } from "./Types";
-import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
+import { CHAR_RANGE, LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 
 // Flag quad aspect ratio — must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts.
 const FLAG_ASPECT = 128 / 85;
@@ -73,11 +74,19 @@ export class NamePass {
   private statusIconProgram: StatusIconProgram;
   private debugProgram: DebugProgram;
 
-  // Atlas + glyph data
+  // Atlas + glyph data. `glyph`/`kernTable` point at the active font; the MSDF
+  // and Arial tables are kept so layout can be recomputed when the font toggles.
   private glyph: GlyphTables;
   private kernTable: Int8Array;
   private fontSize: number;
   private fontBase: number;
+  private msdfGlyph: GlyphTables;
+  private msdfKern: Int8Array;
+  private arialGlyph: GlyphTables;
+  private arialKern: Int8Array;
+  private arialMetricsTex: WebGLTexture;
+  // Which font the cursor buffers are currently laid out for.
+  private classicFont = false;
 
   // Player management
   private playerByID: Map<string, PlayerStatic>;
@@ -130,6 +139,8 @@ export class NamePass {
     this.fontBase = atlas.base;
     this.glyph = buildGlyphTables(atlas.chars);
     this.kernTable = buildKernTable(atlas.kernings);
+    this.msdfGlyph = this.glyph;
+    this.msdfKern = this.kernTable;
     this.emojiCharToIndex = buildEmojiLookup();
 
     // Runtime flag-image manager (TEXTURE_2D_ARRAY of player flags, fetched
@@ -204,6 +215,25 @@ export class NamePass {
       this.playerDataTex,
       this.maxPlayers,
     );
+
+    // Classic Arial bitmap font: built once at runtime, same em/baseline as the
+    // MSDF atlas so sizing/icons are unchanged. Selected via name.classicFont.
+    const arial = generateArialBitmapAtlas();
+    this.arialGlyph = buildGlyphTables(arial.atlas.chars);
+    this.arialKern = new Int8Array(CHAR_RANGE * CHAR_RANGE); // no kerning
+    this.arialMetricsTex = buildGlyphMetricsTex(gl, arial.atlas);
+    this.textProgram.setArialFont(
+      arial.canvas,
+      this.arialMetricsTex,
+      arial.atlas.scaleW,
+      arial.atlas.scaleH,
+    );
+
+    this.classicFont = settings.name.classicFont;
+    if (this.classicFont) {
+      this.glyph = this.arialGlyph;
+      this.kernTable = this.arialKern;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -643,8 +673,37 @@ export class NamePass {
     return 0;
   }
 
+  /**
+   * Switch the active text font when settings.name.classicFont changes, then
+   * re-lay-out every name + troop line — advances differ between the two fonts,
+   * so cursor positions and name half-widths must be recomputed.
+   */
+  private syncFont(): void {
+    const classic = this.settings.name.classicFont;
+    if (classic === this.classicFont) return;
+    this.classicFont = classic;
+    this.glyph = classic ? this.arialGlyph : this.msdfGlyph;
+    this.kernTable = classic ? this.arialKern : this.msdfKern;
+    for (const slot of this.slots.values()) {
+      if (slot.nameLen > 0) {
+        slot.nameHalfWidth = this.uploadStringRow(
+          slot.index * LINES_PER_PLAYER,
+          slot.static.displayName,
+        );
+      }
+      if (slot.troopLen > 0 && slot.lastTroopStr) {
+        this.uploadStringRow(
+          slot.index * LINES_PER_PLAYER + 1,
+          slot.lastTroopStr,
+        );
+      }
+      this.writePlayerDataRow(slot);
+    }
+  }
+
   draw(cameraMatrix: Float32Array, ambient: number): void {
-    if (!this.textProgram.ready) return;
+    this.syncFont();
+    if (!this.textProgram.isReady(this.classicFont)) return;
     if (this.slots.size === 0) return;
 
     const gl = this.gl;
@@ -704,6 +763,7 @@ export class NamePass {
       ambient,
       this.highlightOwnerID,
       fadeOwnerID,
+      this.classicFont,
     );
     this.statusIconProgram.draw(
       cameraMatrix,
@@ -730,6 +790,7 @@ export class NamePass {
     this.statusIconProgram.dispose();
     this.debugProgram.dispose();
     gl.deleteTexture(this.glyphMetricsTex);
+    gl.deleteTexture(this.arialMetricsTex);
     gl.deleteTexture(this.cursorTex);
     gl.deleteTexture(this.stringTex);
     gl.deleteTexture(this.playerDataTex);

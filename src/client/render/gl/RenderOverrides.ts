@@ -27,6 +27,8 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverGlowAlpha !== undefined) {
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
+  // Classic names: Arial bitmap font for names/troops (default false = MSDF).
+  settings.name.classicFont = overrides.name?.classicFont ?? false;
   if (overrides.structure?.classicIcons ?? true) {
     // Classic look (default): lighter player-colored shape behind a darkened
     // player-colored icon glyph (matching the old canvas renderer's

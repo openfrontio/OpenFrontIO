@@ -516,6 +516,8 @@
     "black": "Black",
     "classic_icons_desc": "Lighter outline with near-black interior",
     "classic_icons_label": "Classic icons",
+    "classic_names_desc": "Arial bitmap font for player names and troops (off uses the smooth font)",
+    "classic_names_label": "Classic names",
     "classic_numbers_desc": "Pixel font for structure level numbers (off uses the smooth font)",
     "classic_numbers_label": "Classic level numbers",
     "colored": "Colored",
