@@ -10,7 +10,7 @@
 
 import terrainFragSrc from "../shaders/terrain/terrain.frag.glsl?raw";
 import terrainVertSrc from "../shaders/terrain/terrain.vert.glsl?raw";
-import { encodeTerrainTile } from "../utils/ColorUtils";
+import { buildTerrainRGBA, encodeTerrainTile } from "../utils/ColorUtils";
 import {
   createMapQuad,
   createProgram,
@@ -28,16 +28,22 @@ export class TerrainPass {
   private vao: WebGLVertexArrayObject;
   private uCamera: WebGLUniformLocation;
   private mapW: number;
+  private mapH: number;
+  // Base ocean (deep water) color; reused by applyTerrainDelta and rebuilds.
+  private oceanColor: readonly [number, number, number] | undefined;
   // Scratch buffer for 1×1 sub-uploads; reused across applyTerrainDelta calls.
   private readonly pixelScratch = new Uint8Array(4);
 
   constructor(
     private gl: WebGL2RenderingContext,
-    terrainRGBA: Uint8Array,
+    private terrainBytes: Uint8Array,
     mapW: number,
     mapH: number,
+    oceanColor?: readonly [number, number, number],
   ) {
     this.mapW = mapW;
+    this.mapH = mapH;
+    this.oceanColor = oceanColor;
     this.program = createProgram(
       gl,
       shaderSrc(terrainVertSrc, { MAP_W: mapW, MAP_H: mapH }),
@@ -51,11 +57,33 @@ export class TerrainPass {
       internalFormat: gl.RGBA8,
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
-      data: terrainRGBA,
+      data: buildTerrainRGBA(terrainBytes, mapW, mapH, oceanColor),
       filter: gl.NEAREST, // pixel-crisp at all zoom levels
     });
 
     this.vao = createMapQuad(gl, mapW, mapH);
+  }
+
+  /**
+   * Replace the base ocean color and re-upload the whole terrain texture.
+   * Called when the user changes the ocean color in graphics settings.
+   */
+  setOceanColor(oceanColor?: readonly [number, number, number]): void {
+    this.oceanColor = oceanColor;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      this.mapW,
+      this.mapH,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      buildTerrainRGBA(this.terrainBytes, this.mapW, this.mapH, oceanColor),
+    );
   }
 
   /**
@@ -73,7 +101,7 @@ export class TerrainPass {
       const ref = refs[i];
       const x = ref % this.mapW;
       const y = (ref - x) / this.mapW;
-      encodeTerrainTile(bytes[i], this.pixelScratch, 0);
+      encodeTerrainTile(bytes[i], this.pixelScratch, 0, this.oceanColor);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,

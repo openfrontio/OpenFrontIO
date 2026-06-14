@@ -75,6 +75,9 @@ export function applyGraphicsOverrides(
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
   }
+  if (overrides.terrain?.oceanColor !== undefined) {
+    settings.terrain.oceanColor = overrides.terrain.oceanColor;
+  }
   if (overrides.name?.darkNames !== undefined) {
     const dark = overrides.name.darkNames;
     // Dark: black fill + player-colored outline. Force outline RGB to black

@@ -188,6 +188,11 @@ export class MapRenderer {
   applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
     this.renderer?.applyTerrainDelta(refs, terrainBytes);
   }
+
+  /** Rebuild the terrain texture from current settings (e.g. ocean color). */
+  rebuildTerrain(): void {
+    this.renderer?.rebuildTerrain();
+  }
   updateAttackRings(rings: AttackRingInput[]): void {
     this.renderer?.updateAttackRings(rings);
   }
