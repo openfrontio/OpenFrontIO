@@ -12,11 +12,7 @@ import {
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
-import {
-  DARK_MODE_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
+import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -225,11 +221,6 @@ declare global {
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
-  }
-
-  // Fixes the globalThis.addEventListener errors
-  interface WindowEventMap {
-    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 
@@ -546,24 +537,6 @@ class Client {
     } else {
       this.joinModal.eventBus = this.eventBus;
     }
-
-    const applyDarkMode = (isDark: boolean) => {
-      if (isDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-
-    applyDarkMode(this.userSettings.darkMode());
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e: CustomEvent<string>) => {
-        const isDark = e.detail === "true";
-        applyDarkMode(isDark);
-      },
-    );
 
     // Attempt to join lobby
     if (document.readyState === "loading") {
