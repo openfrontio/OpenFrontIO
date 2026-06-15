@@ -21,6 +21,8 @@ class MockPointerEvent {
   pointerId: number;
   type: string;
   pointerType: string;
+  ctrlKey: boolean;
+  shiftKey: boolean;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -32,6 +34,8 @@ class MockPointerEvent {
     this.y = init.y ?? init.clientY;
     this.pointerId = init.pointerId;
     this.pointerType = init.pointerType ?? "mouse";
+    this.ctrlKey = init.ctrlKey ?? false;
+    this.shiftKey = init.shiftKey ?? false;
     this.preventDefault = vi.fn();
   }
 }
@@ -284,6 +288,46 @@ describe("InputHandler AutoUpgrade", () => {
         (call) => call[0].constructor.name,
       );
       expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+  });
+
+  describe("MouseUpEvent modifier passthrough", () => {
+    const emitMouseUp = (ctrlKey: boolean) => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      // Left-click that resolves to a MouseUpEvent (not the radial menu).
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+        ctrlKey,
+      });
+      inputHandler["lastPointerDownX"] = 150;
+      inputHandler["lastPointerDownY"] = 250;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const call = mockEmit.mock.calls.find(
+        (c) => c[0].constructor.name === "MouseUpEvent",
+      );
+      return call?.[0] as { x: number; y: number; ctrlKey: boolean } | undefined;
+    };
+
+    test("MouseUpEvent carries ctrlKey=true when Ctrl is held", () => {
+      expect(emitMouseUp(true)).toMatchObject({
+        x: 150,
+        y: 250,
+        ctrlKey: true,
+      });
+    });
+
+    test("MouseUpEvent carries ctrlKey=false when Ctrl is not held", () => {
+      expect(emitMouseUp(false)).toMatchObject({
+        x: 150,
+        y: 250,
+        ctrlKey: false,
+      });
     });
   });
 
