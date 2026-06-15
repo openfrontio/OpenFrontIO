@@ -815,16 +815,16 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             >
               <div class="flex-1">
                 <div class="font-medium">
-                  ${translateText("graphics_setting.classic_names_label")}
+                  ${translateText("graphics_setting.name_font_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.classic_names_desc")}
+                  ${translateText("graphics_setting.name_font_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
                 ${classicNames
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                  ? translateText("graphics_setting.font_arial")
+                  : translateText("graphics_setting.font_overpass")}
               </div>
             </button>
 
