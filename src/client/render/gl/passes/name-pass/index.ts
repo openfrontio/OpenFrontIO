@@ -36,6 +36,7 @@ import {
   buildKernTable,
   parseArialAtlasData,
   parseAtlasData,
+  preloadArialAtlasData,
 } from "./AtlasData";
 import {
   buildCursorTex,
@@ -84,12 +85,15 @@ export class NamePass {
   private msdfKern: Int8Array;
   private msdfFontSize: number;
   private msdfBase: number;
-  private arialGlyph: GlyphTables;
-  private arialKern: Int8Array;
-  private arialMetricsTex: WebGLTexture;
-  private arialFontSize: number;
-  private arialBase: number;
-  // Which font the cursor buffers are currently laid out for.
+  // The classic (Arial) font is loaded lazily the first time it's selected.
+  private arialGlyph: GlyphTables | null = null;
+  private arialKern: Int8Array | null = null;
+  private arialMetricsTex: WebGLTexture | null = null;
+  private arialFontSize = 0;
+  private arialBase = 0;
+  private arialLoaded = false;
+  private arialLoading = false;
+  // Which font the cursor buffers are currently laid out / rendering as.
   private classicFont = false;
 
   // Player management
@@ -222,35 +226,75 @@ export class NamePass {
       this.maxPlayers,
     );
 
-    // Classic name font: Arial (Arimo) MSDF atlas — same format as overpass,
-    // its own metrics. Selected via name.classicFont.
-    const arialAtlas = parseArialAtlasData();
-    this.arialGlyph = buildGlyphTables(arialAtlas.chars);
-    this.arialKern = buildKernTable(arialAtlas.kernings);
-    this.arialMetricsTex = buildGlyphMetricsTex(gl, arialAtlas);
-    this.arialFontSize = arialAtlas.fontSize;
-    this.arialBase = arialAtlas.base;
-    this.textProgram.setArialFont(this.arialMetricsTex, arialAtlas);
-
-    // Apply the initially-selected font to the glyph tables + sibling passes.
+    // The classic (Arial) atlas is loaded lazily; render MSDF until it's
+    // selected. If it's already the chosen font, kick off the load now.
     this.classicFont = false;
-    this.applyFont(settings.name.classicFont);
+    if (settings.name.classicFont) this.ensureArialFont();
   }
 
   /**
-   * Switch the active font: point the layout tables + line metrics at it and
-   * push its metrics to the icon/status/debug passes so they stay aligned.
-   * Each font carries its own em size and baseline.
+   * Point the layout tables + line metrics at the given font and push its
+   * metrics to the icon/status/debug passes so they stay aligned. Each font
+   * carries its own em size and baseline. Arial must be loaded for classic.
    */
   private applyFont(classic: boolean): void {
     this.classicFont = classic;
-    this.glyph = classic ? this.arialGlyph : this.msdfGlyph;
-    this.kernTable = classic ? this.arialKern : this.msdfKern;
+    this.glyph = classic ? this.arialGlyph! : this.msdfGlyph;
+    this.kernTable = classic ? this.arialKern! : this.msdfKern;
     this.fontSize = classic ? this.arialFontSize : this.msdfFontSize;
     this.fontBase = classic ? this.arialBase : this.msdfBase;
     this.iconProgram.setFont(this.fontSize, this.fontBase);
     this.statusIconProgram.setFont(this.fontSize, this.fontBase);
     this.debugProgram.setFont(this.fontSize, this.fontBase);
+  }
+
+  /** Switch fonts and re-lay-out all names/troops (advances differ per font). */
+  private switchFont(classic: boolean): void {
+    this.applyFont(classic);
+    for (const slot of this.slots.values()) {
+      if (slot.nameLen > 0) {
+        slot.nameHalfWidth = this.uploadStringRow(
+          slot.index * LINES_PER_PLAYER,
+          slot.static.displayName,
+        );
+      }
+      if (slot.troopLen > 0 && slot.lastTroopStr) {
+        this.uploadStringRow(
+          slot.index * LINES_PER_PLAYER + 1,
+          slot.lastTroopStr,
+        );
+      }
+      this.writePlayerDataRow(slot);
+    }
+  }
+
+  /**
+   * Lazily fetch + build the Arial (Arimo) MSDF atlas on first use. Resolves
+   * into a font switch only once the atlas image is uploaded, so names keep
+   * rendering in MSDF (no blank flash) until classic is fully ready.
+   */
+  private ensureArialFont(): void {
+    if (this.arialLoaded || this.arialLoading) return;
+    this.arialLoading = true;
+    preloadArialAtlasData()
+      .then(() => {
+        const atlas = parseArialAtlasData();
+        this.arialGlyph = buildGlyphTables(atlas.chars);
+        this.arialKern = buildKernTable(atlas.kernings);
+        this.arialMetricsTex = buildGlyphMetricsTex(this.gl, atlas);
+        this.arialFontSize = atlas.fontSize;
+        this.arialBase = atlas.base;
+        return this.textProgram.setArialFont(this.arialMetricsTex, atlas);
+      })
+      .then(() => {
+        this.arialLoaded = true;
+        // Switch now if it's (still) the selected font.
+        if (this.settings.name.classicFont) this.switchFont(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load Arial atlas:", err);
+        // Leave arialLoading=true so we don't spin retrying a hard failure.
+      });
   }
 
   // -------------------------------------------------------------------------
@@ -691,28 +735,18 @@ export class NamePass {
   }
 
   /**
-   * Switch the active text font when settings.name.classicFont changes, then
-   * re-lay-out every name + troop line — advances differ between the two fonts,
-   * so cursor positions and name half-widths must be recomputed.
+   * Reconcile the rendering font with the selected one (settings.name.classicFont).
+   * Switching to classic lazily loads the Arial atlas first; rendering stays on
+   * MSDF until it's ready, then switches.
    */
   private syncFont(): void {
-    const classic = this.settings.name.classicFont;
-    if (classic === this.classicFont) return;
-    this.applyFont(classic);
-    for (const slot of this.slots.values()) {
-      if (slot.nameLen > 0) {
-        slot.nameHalfWidth = this.uploadStringRow(
-          slot.index * LINES_PER_PLAYER,
-          slot.static.displayName,
-        );
-      }
-      if (slot.troopLen > 0 && slot.lastTroopStr) {
-        this.uploadStringRow(
-          slot.index * LINES_PER_PLAYER + 1,
-          slot.lastTroopStr,
-        );
-      }
-      this.writePlayerDataRow(slot);
+    const desired = this.settings.name.classicFont;
+    if (desired === this.classicFont) return;
+    if (desired) {
+      if (this.arialLoaded) this.switchFont(true);
+      else this.ensureArialFont();
+    } else {
+      this.switchFont(false);
     }
   }
 
@@ -805,7 +839,7 @@ export class NamePass {
     this.statusIconProgram.dispose();
     this.debugProgram.dispose();
     gl.deleteTexture(this.glyphMetricsTex);
-    gl.deleteTexture(this.arialMetricsTex);
+    if (this.arialMetricsTex) gl.deleteTexture(this.arialMetricsTex);
     gl.deleteTexture(this.cursorTex);
     gl.deleteTexture(this.stringTex);
     gl.deleteTexture(this.playerDataTex);
