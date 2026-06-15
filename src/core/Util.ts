@@ -363,6 +363,21 @@ export function createRandomName(
   return randomName;
 }
 
+// Deterministic anonymized name. No emoji, so it passes UsernameSchema and
+// survives client-side wire validation (unlike createRandomName).
+export function anonymousUsername(seed: string): string {
+  const hash = simpleHash(seed);
+  const prefix = TRIBE_NAME_PREFIXES[hash % TRIBE_NAME_PREFIXES.length];
+  const suffix =
+    TRIBE_NAME_SUFFIXES[
+      Math.floor(hash / TRIBE_NAME_PREFIXES.length) % TRIBE_NAME_SUFFIXES.length
+    ];
+  const name = `${prefix} ${suffix}`
+    .replace(/[^a-zA-Z0-9_ üÜ.]/g, "")
+    .slice(0, 27);
+  return name.length >= 3 ? name : "Player";
+}
+
 export const emojiTable = [
   ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],

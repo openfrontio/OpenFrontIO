@@ -682,6 +682,7 @@
     "video_tutorial_title": "OpenFront.io Tutorial"
   },
   "host_modal": {
+    "anonymous_players": "Anonymous players",
     "assigned_teams": "Assigned Teams",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
