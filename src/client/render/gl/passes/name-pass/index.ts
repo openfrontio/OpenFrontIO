@@ -227,6 +227,7 @@ export class NamePass {
       this.arialMetricsTex,
       arial.atlas.scaleW,
       arial.atlas.scaleH,
+      arial.renderScale,
     );
 
     this.classicFont = settings.name.classicFont;

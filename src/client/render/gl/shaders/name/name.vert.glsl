@@ -132,7 +132,11 @@ void main() {
   float glyphH = m1.x;
   float u0 = m1.y;
   float v0 = m1.z;
-  float u1 = m1.w;
+  // Derive u1/v1 from the glyph size and atlas scale (rather than a precomputed
+  // u1) so a supersampled atlas — rendered finer than the em metrics — maps
+  // correctly: uAtlasScaleW/H carry the atlas-pixels-per-em. For the MSDF atlas
+  // (atlas px == em units) this is identical to the old precomputed u1.
+  float u1 = u0 + glyphW / uAtlasScaleW;
   float v1 = v0 + glyphH / uAtlasScaleH;
 
   // Degenerate if glyph has no size (e.g. space)

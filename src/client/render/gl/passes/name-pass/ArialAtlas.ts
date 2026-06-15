@@ -7,30 +7,40 @@
  * once at startup with canvas 2D: each glyph is rasterized, its tight bounding
  * box is found by scanning pixels, and the glyphs are shelf-packed.
  *
- * Metrics are emitted with the SAME em size (48) and baseline (36) as the MSDF
- * atlas, so name sizing, hit-testing, flag offsets and icon alignment are all
- * unchanged — only the glyph shapes and advances differ. The returned shape is
- * a ParsedAtlas, so it flows through buildGlyphTables / buildGlyphMetricsTex /
- * layoutString exactly like the MSDF atlas.
+ * The atlas is SUPERSAMPLED: glyphs are rasterized RENDER_SCALE× larger than
+ * the em metrics so edges stay finer/straighter when names are drawn large.
+ * Metrics are still emitted in the MSDF em size (48) and baseline (36), so name
+ * sizing, hit-testing, flag offsets and icon alignment are unchanged — the
+ * extra atlas resolution is carried separately via the returned renderScale
+ * (the name shader derives UVs from glyph size / atlas-pixels-per-em).
  */
 
 import type { BMChar, ParsedAtlas } from "./Types";
 
-// Match the MSDF atlas em/base so all downstream sizing stays identical.
+// Em metrics (match the MSDF atlas so downstream sizing is identical).
 const EM = 48;
 const BASE = 36;
+// Supersample factor: rasterize this much finer than the em metrics.
+const RENDER_SCALE = 2;
+const RENDER_PX = EM * RENDER_SCALE;
+
 // Thin Arial. Arial ships no dedicated thin face, so browsers without one fall
-// back to regular weight (still much lighter than the MSDF bold).
-const FONT = `100 ${EM}px Arial, "Liberation Sans", sans-serif`;
+// back to regular weight (still lighter than the MSDF bold).
+const FONT = `100 ${RENDER_PX}px Arial, "Liberation Sans", sans-serif`;
 
-const ATLAS_W = 1024;
-const PAD = 3; // transparent gutter between packed glyphs (> erosion radius)
+// Measuring cell + pen, in render (supersampled) pixels.
+const CELL = 160;
+const PEN_X = 16;
+const PEN_Y = 118;
 
-// Arial has no face thinner than Regular, so thin the strokes by eroding the
-// rasterized coverage. Fractional: each pixel's alpha is reduced toward the
-// minimum of its neighbourhood, shaving ~ERODE_PX off every edge.
+const ATLAS_W = 2048; // render pixels
+const PAD = 4; // transparent gutter between packed glyphs (> erosion radius)
+
+// Arial has no face thinner than Regular, so thin the strokes slightly by
+// eroding the rasterized coverage. Fractional: each pixel's alpha is reduced
+// toward the minimum of its neighbourhood (render pixels), blended by strength.
 const ERODE_PX = 1;
-const ERODE_STRENGTH = 0.85; // 0 = none, 1 = hard min-filter
+const ERODE_STRENGTH = 0.5; // 0 = none, 1 = hard min-filter
 
 // Codepoint coverage: ASCII + Latin-1 + Latin Extended-A (matches CHAR_RANGE),
 // skipping the C0/C1 control gaps. Covers player names and troop labels.
@@ -44,24 +54,19 @@ function* codepoints(): Generator<number> {
 interface Measured {
   code: number;
   ch: string;
-  advance: number;
-  w: number;
-  h: number;
-  xoffset: number;
-  yoffset: number;
-  // Where the tight bbox landed in the measuring canvas (to re-place it later).
-  srcMinX: number;
+  advance: number; // render px
+  w: number; // render px
+  h: number; // render px
+  srcMinX: number; // tight bbox top-left in the measuring cell (render px)
   srcMinY: number;
 }
 
 export function generateArialBitmapAtlas(): {
   atlas: ParsedAtlas;
   canvas: HTMLCanvasElement;
+  renderScale: number;
 } {
   // --- measuring pass: rasterize each glyph, find its tight bbox ---
-  const CELL = 80; // > any 48px glyph incl. ascenders/descenders
-  const PEN_X = 8;
-  const PEN_Y = 56; // baseline inside the measuring cell
   const tmp = document.createElement("canvas");
   tmp.width = CELL;
   tmp.height = CELL;
@@ -96,17 +101,7 @@ export function generateArialBitmapAtlas(): {
 
     if (maxX < 0) {
       // No ink (e.g. space) — advance only, zero-size glyph.
-      measured.push({
-        code,
-        ch,
-        advance,
-        w: 0,
-        h: 0,
-        xoffset: 0,
-        yoffset: 0,
-        srcMinX: 0,
-        srcMinY: 0,
-      });
+      measured.push({ code, ch, advance, w: 0, h: 0, srcMinX: 0, srcMinY: 0 });
       continue;
     }
 
@@ -116,14 +111,12 @@ export function generateArialBitmapAtlas(): {
       advance,
       w: maxX - minX + 1,
       h: maxY - minY + 1,
-      xoffset: minX - PEN_X, // glyph left relative to the pen
-      yoffset: BASE - (PEN_Y - minY), // glyph top relative to the line top
       srcMinX: minX,
       srcMinY: minY,
     });
   }
 
-  // --- shelf packing into a fixed-width atlas ---
+  // --- shelf packing into a fixed-width atlas (render pixels) ---
   const chars: BMChar[] = [];
   const placements: { m: Measured; ax: number; ay: number }[] = [];
   let x = PAD;
@@ -174,13 +167,14 @@ export function generateArialBitmapAtlas(): {
     chars,
     kernings: [],
   };
-  return { atlas, canvas };
+  return { atlas, canvas, renderScale: RENDER_SCALE };
 }
 
 /**
  * Thin the rasterized glyphs by eroding the alpha (coverage) channel: each
  * pixel is pulled toward the minimum alpha in a (2·ERODE_PX+1)² window, blended
- * by ERODE_STRENGTH. Shrinks every stroke edge by ~ERODE_PX·ERODE_STRENGTH px.
+ * by ERODE_STRENGTH. Shrinks every stroke edge by ~ERODE_PX·ERODE_STRENGTH
+ * render pixels.
  */
 function erodeCoverage(
   ctx: CanvasRenderingContext2D,
@@ -220,15 +214,16 @@ function erodeCoverage(
   ctx.putImageData(img, 0, 0);
 }
 
+/** Build a glyph entry: atlas position in render px, metrics in em units. */
 function toBMChar(m: Measured, ax: number, ay: number): BMChar {
   return {
     id: m.code,
     char: m.ch,
-    width: m.w,
-    height: m.h,
-    xoffset: m.xoffset,
-    yoffset: m.yoffset,
-    xadvance: m.advance,
+    width: m.w / RENDER_SCALE,
+    height: m.h / RENDER_SCALE,
+    xoffset: (m.srcMinX - PEN_X) / RENDER_SCALE,
+    yoffset: BASE - (PEN_Y - m.srcMinY) / RENDER_SCALE,
+    xadvance: m.advance / RENDER_SCALE,
     x: ax,
     y: ay,
     page: 0,

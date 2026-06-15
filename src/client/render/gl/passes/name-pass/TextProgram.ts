@@ -161,12 +161,17 @@ export class TextProgram {
     return classic ? this.arialAtlasTex !== null : this.atlasReady;
   }
 
-  /** Install the runtime-built Arial bitmap atlas (coverage mask) + metrics. */
+  /**
+   * Install the runtime-built Arial bitmap atlas (coverage mask) + metrics.
+   * The atlas is supersampled (rendered renderScale× finer than the em metrics),
+   * so the uAtlasScale uniforms carry atlas-pixels-per-em = realPixels/renderScale.
+   */
   setArialFont(
     canvas: HTMLCanvasElement,
     metricsTex: WebGLTexture,
     scaleW: number,
     scaleH: number,
+    renderScale: number,
   ): void {
     const gl = this.gl;
     const tex = gl.createTexture()!;
@@ -178,8 +183,8 @@ export class TextProgram {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     this.arialAtlasTex = tex;
     this.arialMetricsTex = metricsTex;
-    this.arialScaleW = scaleW;
-    this.arialScaleH = scaleH;
+    this.arialScaleW = scaleW / renderScale;
+    this.arialScaleH = scaleH / renderScale;
   }
 
   private loadAtlas(): void {
