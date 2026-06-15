@@ -59,6 +59,8 @@ const DEFAULT_OPTIONS = {
   disabledUnits: [] as UnitType[],
   disableAlliances: false,
   waterNukes: false,
+  invasionMode: false,
+  invasionGracePeriod: undefined as number | undefined,
 } as const;
 
 @customElement("single-player-modal")
@@ -97,6 +99,9 @@ export class SinglePlayerModal extends BaseModal {
   ];
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
+  @state() private invasionMode: boolean = DEFAULT_OPTIONS.invasionMode;
+  @state() private invasionGracePeriod: number | undefined =
+    DEFAULT_OPTIONS.invasionGracePeriod;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -251,6 +256,23 @@ export class SinglePlayerModal extends BaseModal {
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.invasion_mode"}
+        .checked=${this.invasionMode}
+        .inputId=${"invasion-grace-value"}
+        .inputMin=${0}
+        .inputMax=${15}
+        .inputValue=${this.invasionGracePeriod}
+        .inputAriaLabel=${translateText("single_modal.invasion_grace")}
+        .inputPlaceholder=${translateText(
+          "single_modal.invasion_grace_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleInvasionToggle}
+        .onInput=${this.handleInvasionGraceChanges}
+        .onKeyDown=${this.handleInvasionGraceKeyDown}
+      ></toggle-input-card>`,
     ];
 
     return html`
@@ -377,6 +399,7 @@ export class SinglePlayerModal extends BaseModal {
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
+      this.invasionMode !== DEFAULT_OPTIONS.invasionMode ||
       this.disabledUnits.length > 0
     );
   }
@@ -405,6 +428,8 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
     this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
+    this.invasionMode = DEFAULT_OPTIONS.invasionMode;
+    this.invasionGracePeriod = DEFAULT_OPTIONS.invasionGracePeriod;
   }
 
   protected onOpen(): void {
@@ -545,6 +570,29 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.startingGold = checked;
     this.startingGoldValue = toOptionalNumber(value);
+  };
+
+  private handleInvasionToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.invasionMode = checked;
+    this.invasionGracePeriod = toOptionalNumber(value);
+  };
+
+  private handleInvasionGraceKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
+  };
+
+  private handleInvasionGraceChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 15,
+      stripPattern: /[e+\-.]/gi,
+    });
+
+    this.invasionGracePeriod = value;
   };
 
   private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
@@ -698,6 +746,15 @@ export class SinglePlayerModal extends BaseModal {
                 : {}),
               ...(this.disableAlliances ? { disableAlliances: true } : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
+              ...(this.invasionMode
+                ? {
+                    invasionMode: true,
+                    invasionGracePeriod: Math.max(
+                      0,
+                      Math.min(15, this.invasionGracePeriod ?? 0),
+                    ),
+                  }
+                : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

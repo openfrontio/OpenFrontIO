@@ -9,7 +9,8 @@
     "Green": "#56b4e9",
     "Bot": "#d1cdc7",
     "Humans": "#0072b2",
-    "Nations": "#d55e00"
+    "Nations": "#d55e00",
+    "Invaders": "#a00000"
   },
   "humanColors": [
     "#b60056",

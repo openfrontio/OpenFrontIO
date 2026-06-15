@@ -91,6 +91,7 @@ export const ColoredTeams: Record<string, Team> = {
   Bot: "Bot",
   Humans: "Humans",
   Nations: "Nations",
+  Invaders: "Invaders",
 } as const;
 
 // GameMapType and the maps list are generated from
@@ -700,7 +701,7 @@ export interface Game extends GameMap {
   playerByClientID(id: ClientID): Player | null;
   playerBySmallID(id: number): Player | TerraNullius;
   hasPlayer(id: PlayerID): boolean;
-  addPlayer(playerInfo: PlayerInfo): Player;
+  addPlayer(playerInfo: PlayerInfo, team?: Team | null): Player;
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
 

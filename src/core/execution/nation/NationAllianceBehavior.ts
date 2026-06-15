@@ -1,4 +1,5 @@
 import {
+  ColoredTeams,
   Difficulty,
   Game,
   GameMode,
@@ -26,8 +27,22 @@ export class NationAllianceBehavior {
     private emojiBehavior: NationEmojiBehavior,
   ) {}
 
+  private isInvader(): boolean {
+    // Invaders are a hostile horde faction: they never form, accept, or
+    // request alliances. Inert when no invader player exists.
+    return this.player.team() === ColoredTeams.Invaders;
+  }
+
   handleAllianceRequests() {
     if (this.game.config().disableAlliances()) return;
+
+    // Invaders reject every incoming request outright.
+    if (this.isInvader()) {
+      for (const req of this.player.incomingAllianceRequests()) {
+        req.reject();
+      }
+      return;
+    }
 
     for (const req of this.player.incomingAllianceRequests()) {
       // Alliance Request intents created during the spawn phase are executed on
@@ -47,6 +62,7 @@ export class NationAllianceBehavior {
 
   handleAllianceExtensionRequests() {
     if (this.game.config().disableAlliances()) return;
+    if (this.isInvader()) return;
 
     for (const alliance of this.player.alliances()) {
       // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
@@ -64,6 +80,7 @@ export class NationAllianceBehavior {
 
   maybeSendAllianceRequests(borderingEnemies: Player[]) {
     if (this.game.config().disableAlliances()) return;
+    if (this.isInvader()) return;
 
     // Only easy nations are allowed to send alliance requests to bots
     const isAcceptablePlayerType = (p: Player) =>

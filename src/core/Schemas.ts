@@ -281,6 +281,8 @@ export const GameConfigSchema = z.object({
   disableClanTags: z.boolean().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
+  invasionMode: z.boolean().optional(),
+  invasionGracePeriod: z.number().int().min(0).max(15).nullable().optional(), // In minutes
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
   startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds

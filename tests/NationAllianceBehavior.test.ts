@@ -176,6 +176,7 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
       relation: vi.fn(),
       id: vi.fn(() => "bot_id"),
       type: vi.fn(() => PlayerType.Nation),
+      team: vi.fn(() => null),
     };
 
     allianceBehavior = new NationAllianceBehavior(

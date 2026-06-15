@@ -668,6 +668,13 @@ export class PlayerImpl implements Player {
     if (other === this) {
       return false;
     }
+    // Invaders (hostile horde faction) can neither send nor receive alliances.
+    if (
+      this.team() === ColoredTeams.Invaders ||
+      other.team() === ColoredTeams.Invaders
+    ) {
+      return false;
+    }
     if (this.isDisconnected() || other.isDisconnected()) {
       // Disconnected players are marked as not-friendly even if they are allies,
       // so we need to return early if either player is disconnected.

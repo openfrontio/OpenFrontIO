@@ -81,6 +81,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
   @state() private waterNukes: boolean = false;
+  @state() private invasionMode: boolean = false;
+  @state() private invasionGracePeriod: number | undefined = undefined;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -287,6 +289,23 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleStartingGoldToggle}
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.invasion_mode"}
+        .checked=${this.invasionMode}
+        .inputId=${"invasion-grace-value"}
+        .inputMin=${0}
+        .inputMax=${15}
+        .inputValue=${this.invasionGracePeriod}
+        .inputAriaLabel=${translateText("host_modal.invasion_grace")}
+        .inputPlaceholder=${translateText(
+          "host_modal.invasion_grace_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleInvasionToggle}
+        .onInput=${this.handleInvasionGraceChanges}
+        .onKeyDown=${this.handleInvasionGraceKeyDown}
       ></toggle-input-card>`,
     ];
 
@@ -584,6 +603,8 @@ export class HostLobbyModal extends BaseModal {
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
     this.waterNukes = false;
+    this.invasionMode = false;
+    this.invasionGracePeriod = undefined;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
     this.hostCheatInfiniteTroops = false;
@@ -777,6 +798,29 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.startingGold = checked;
     this.startingGoldValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleInvasionToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.invasionMode = checked;
+    this.invasionGracePeriod = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleInvasionGraceKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
+  };
+
+  private handleInvasionGraceChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, { min: 0, max: 15 });
+    if (value === undefined) {
+      return;
+    }
+    this.invasionGracePeriod = value;
     this.putGameConfig();
   };
 
@@ -1037,6 +1081,10 @@ export class HostLobbyModal extends BaseModal {
                 : null,
             disableAlliances: this.disableAlliances || null,
             waterNukes: this.waterNukes ? true : null,
+            invasionMode: this.invasionMode || undefined,
+            invasionGracePeriod: this.invasionMode
+              ? Math.max(0, Math.min(15, this.invasionGracePeriod ?? 0))
+              : null,
             hostCheats: this.hostCheatsEnabled
               ? {
                   infiniteGold: this.hostCheatInfiniteGold || undefined,

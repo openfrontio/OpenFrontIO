@@ -111,6 +111,9 @@ export class GameRunner {
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
+    if (this.game.config().invasionMode()) {
+      this.game.addExecution(this.execManager.invasionExecution());
+    }
     this.game.addExecution(new WinCheckExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(

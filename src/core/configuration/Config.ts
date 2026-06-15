@@ -185,6 +185,12 @@ export class Config {
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
+  invasionMode(): boolean {
+    return this._gameConfig.invasionMode ?? false;
+  }
+  invasionGracePeriodTicks(): Tick {
+    return (this._gameConfig.invasionGracePeriod ?? 0) * 60 * 10;
+  }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }

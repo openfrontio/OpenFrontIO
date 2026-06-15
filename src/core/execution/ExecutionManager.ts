@@ -15,6 +15,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { InvasionExecution } from "./invasion/InvasionExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
@@ -140,5 +141,9 @@ export class Executor {
       execs.push(new NationExecution(this.gameID, nation));
     }
     return execs;
+  }
+
+  invasionExecution(): Execution {
+    return new InvasionExecution(this.gameID);
   }
 }

@@ -44,6 +44,10 @@ export class TransportShipExecution implements Execution {
     private attacker: Player,
     private ref: TileRef,
     private troops: number,
+    // Optional explicit launch tile (water). Used by Invasion Mode to launch
+    // a boat from a map-edge water tile for an attacker that owns no shore.
+    // When undefined, the source is resolved normally via canBuild().
+    private srcOverride?: TileRef,
   ) {
     this.originalOwner = this.attacker;
   }
@@ -116,7 +120,9 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+    const src =
+      this.srcOverride ??
+      this.attacker.canBuild(UnitType.TransportShip, this.dst);
 
     if (src === false) {
       console.warn(
