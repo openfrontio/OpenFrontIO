@@ -351,11 +351,17 @@ export class AccountModal extends BaseModal {
               >
             </button>
 
-            <!-- Google Login Button -->
+            <!-- Google Login Button (Google brand guidelines: white surface,
+                 dark text, the multicolor "G" mark) -->
             <button
               @click="${this.handleGoogleLogin}"
-              class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
+              class="w-full px-6 py-4 text-[#1f1f1f] bg-white hover:bg-[#f7f8f8] border border-[#dadce0] rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg"
             >
+              <img
+                src=${assetUrl("images/GoogleLogo.svg")}
+                alt="Google"
+                class="w-6 h-6 relative z-10"
+              />
               <span class="font-bold relative z-10 tracking-wide"
                 >${translateText("main.login_google")}</span
               >
