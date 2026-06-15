@@ -143,12 +143,15 @@ export class SettingKeybind extends LitElement {
   }
 
   private resetToDefault() {
+    const prevValue = this.value;
     this.value = this.defaultKey;
     this.dispatchEvent(
       new CustomEvent("change", {
         detail: {
           action: this.action,
           value: this.defaultKey,
+          key: this.defaultKey,
+          prevValue,
         },
         bubbles: true,
         composed: true,
