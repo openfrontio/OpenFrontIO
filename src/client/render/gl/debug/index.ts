@@ -7,6 +7,7 @@ import { makeDraggable, wireActions, wireModifiedIndicators } from "./Wiring";
 
 export function createDebugGui(
   settings: RenderSettings,
+  resolveDefaults: () => RenderSettings = createRenderSettings,
   onSettingsChanged?: () => void,
 ): GUI {
   const gui = new GUI({ title: "Render Settings", width: 320 });
@@ -17,10 +18,13 @@ export function createDebugGui(
 
   makeDraggable(gui);
 
-  const defaults = createRenderSettings();
+  // Defaults include the user's graphics overrides so "Reset to Defaults"
+  // (and the per-prop reset / modified indicators) restore the same settings
+  // the renderer was built with — not bare defaults that drop the overrides.
+  const defaults = resolveDefaults();
   const props = walkTree(buildTree(settings, defaults), gui);
 
-  wireActions(gui, settings, props, onSettingsChanged);
+  wireActions(gui, settings, props, resolveDefaults, onSettingsChanged);
   wireModifiedIndicators(gui, props, onSettingsChanged);
 
   gui.close();
