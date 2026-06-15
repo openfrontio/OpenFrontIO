@@ -220,6 +220,17 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
+  if (modifiers.maxTimerValue) {
+    result.push({
+      labelKey: "public_game_modifier.time_limit_label",
+      badgeKey: "public_game_modifier.time_limit",
+      badgeParams: {
+        amount: modifiers.maxTimerValue,
+      },
+      value: modifiers.maxTimerValue,
+      formattedValue: `${modifiers.maxTimerValue} min`,
+    });
+  }
   return result;
 }
 

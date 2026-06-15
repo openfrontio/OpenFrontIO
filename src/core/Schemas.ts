@@ -264,6 +264,7 @@ export const GameConfigSchema = z.object({
       isSAMsDisabled: z.boolean().optional(),
       isPeaceTime: z.boolean().optional(),
       isWaterNukes: z.boolean().optional(),
+      maxTimerValue: z.number().int().min(1).optional(),
     })
     .optional(),
   nations: z

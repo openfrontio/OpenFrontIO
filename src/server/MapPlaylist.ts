@@ -75,7 +75,10 @@ type ModifierKey =
   | "isNukesDisabled"
   | "isSAMsDisabled"
   | "isPeaceTime"
-  | "isWaterNukes";
+  | "isWaterNukes"
+  | "timeLimit10M"
+  | "timeLimit20M"
+  | "timeLimit30M";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 // Weights are roughly informed by the community "favorite modifier" poll.
@@ -94,6 +97,9 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
   ...Array<ModifierKey>(4).fill("isWaterNukes"),
+  ...Array<ModifierKey>(2).fill("timeLimit10M"),
+  ...Array<ModifierKey>(2).fill("timeLimit20M"),
+  ...Array<ModifierKey>(1).fill("timeLimit30M"),
 ];
 
 // Maps where water nukes have a higher chance on top of the normal pool
@@ -122,6 +128,9 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["isHardNations", "startingGold25M"],
   ["isNukesDisabled", "isSAMsDisabled"],
   ["isNukesDisabled", "isWaterNukes"],
+  ["timeLimit10M", "timeLimit20M"],
+  ["timeLimit10M", "timeLimit30M"],
+  ["timeLimit20M", "timeLimit30M"],
 ];
 
 export class MapPlaylist {
@@ -263,6 +272,7 @@ export class MapPlaylist {
       isSAMsDisabled,
       isPeaceTime,
       isWaterNukes,
+      maxTimerValue,
     } = poolResult;
     if (boostWaterNukes) {
       isWaterNukes = true;
@@ -290,7 +300,8 @@ export class MapPlaylist {
           !isNukesDisabled &&
           !isSAMsDisabled &&
           !isPeaceTime &&
-          !isWaterNukes
+          !isWaterNukes &&
+          maxTimerValue === undefined
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
@@ -308,6 +319,7 @@ export class MapPlaylist {
             isSAMsDisabled,
             isPeaceTime,
             isWaterNukes,
+            maxTimerValue,
           } = fallback);
           ({ isHardNations } = fallback);
         }
@@ -368,6 +380,7 @@ export class MapPlaylist {
         isSAMsDisabled,
         isPeaceTime,
         isWaterNukes,
+        maxTimerValue,
       },
       startingGold,
       goldMultiplier,
@@ -378,7 +391,7 @@ export class MapPlaylist {
           : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: undefined,
+      maxTimerValue,
       instantBuild: false,
       randomSpawn: isRandomSpawn ? true : false,
       nations,
@@ -573,6 +586,13 @@ export class MapPlaylist {
       isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
       isPeaceTime: selected.has("isPeaceTime") || undefined,
       isWaterNukes: selected.has("isWaterNukes") || undefined,
+      maxTimerValue: selected.has("timeLimit10M")
+        ? 10
+        : selected.has("timeLimit20M")
+          ? 20
+          : selected.has("timeLimit30M")
+            ? 30
+            : undefined,
     };
   }
 

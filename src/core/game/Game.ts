@@ -143,6 +143,7 @@ export interface PublicGameModifiers {
   isSAMsDisabled?: boolean;
   isPeaceTime?: boolean;
   isWaterNukes?: boolean;
+  maxTimerValue?: number;
 }
 
 export interface UnitInfo {

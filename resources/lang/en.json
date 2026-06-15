@@ -1128,6 +1128,8 @@
     "sams_disabled_label": "SAMs",
     "starting_gold": "{amount}M Starting Gold",
     "starting_gold_label": "Starting Gold",
+    "time_limit": "{amount}min Time Limit",
+    "time_limit_label": "Time Limit",
     "water_nukes": "Water Nukes",
     "water_nukes_label": "Water Nukes"
   },
