@@ -1,3 +1,4 @@
+import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
@@ -566,5 +567,38 @@ describe("Hard/Impossible troop floor", () => {
     )?.[0] as any;
     expect(exec).toBeDefined();
     expect(exec.startTroops).toBeGreaterThan(0);
+  });
+
+  it("Hard: nation under attack bypasses troopSendCap and isAttackTooWeak", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+
+    // Neighbor has far more troops, so the normal cap would be 0
+    attacker.addTroops(100_000);
+    neighbor.addTroops(200_000);
+    // Normal cap = max(0, 100k - ceil(200k * 0.75)) = max(0, 100k - 150k) = 0
+    // Without the bypass, the nation couldn't attack at all.
+    const normalCap = Math.max(
+      0,
+      attacker.troops() - Math.ceil(neighbor.troops() * 0.75),
+    );
+    expect(normalCap).toBe(0);
+
+    // Simulate the neighbor attacking with 50k troops
+    testGame.addExecution(new AttackExecution(50_000, neighbor, attacker.id()));
+    testGame.executeNextTick();
+    expect(attacker.incomingAttacks().length).toBeGreaterThan(0);
+
+    // With incoming attacks, troopSendCap raises to at least totalIncoming
+    const addExecSpy = vi.spyOn(testGame, "addExecution");
+    const result = behavior.sendAttack(neighbor);
+
+    expect(result).toBe(true);
+    const exec = addExecSpy.mock.calls.find(
+      (c) => c[0].constructor.name === "AttackExecution",
+    )?.[0] as any;
+    expect(exec).toBeDefined();
+    // The bypass allows retaliation with at least the incoming 50k
+    expect(exec.startTroops).toBeGreaterThanOrEqual(50_000);
   });
 });

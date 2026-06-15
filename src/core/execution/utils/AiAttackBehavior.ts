@@ -137,12 +137,12 @@ export class AiAttackBehavior {
       }
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold
-    const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
+    const owner = this.game.owner(dst);
+    const cap = owner.isPlayer() ? this.troopSendCap() : Infinity;
+    const troops = Math.min(this.player.troops() / 5, cap);
     if (troops < 1) return;
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
-    const owner = this.game.owner(dst);
     if (owner.isPlayer() && this.isAttackTooWeak(troops, owner)) {
       return;
     }
@@ -813,8 +813,7 @@ export class AiAttackBehavior {
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
-        // Hard & Impossible: don't drop below neighbor troop threshold
-        const troops = Math.min(this.player.troops() / 5, this.troopSendCap());
+        const troops = this.player.troops() / 5;
         if (troops < 1) return false;
 
         this.game.addExecution(
@@ -859,7 +858,8 @@ export class AiAttackBehavior {
     if (this.player.type() === PlayerType.Bot) return false;
     if (this.game.config().gameConfig().gameMode === GameMode.Team)
       return false;
-
+    // Nations under attack may retaliate freely
+    if (this.player.incomingAttacks().length > 0) return false;
     const { difficulty } = this.game.config().gameConfig();
     return (
       (difficulty === Difficulty.Hard ||
@@ -875,6 +875,9 @@ export class AiAttackBehavior {
    * Impossible: 90%). Allied players and bot neighbors are not considered
    * threats. Bots and team games are entirely exempt. Returns Infinity when
    * no cap applies.
+   *
+   * Nations under attack may retaliate with at least the total incoming
+   * attack troops, even if that exceeds the neighbor-based cap.
    */
   private troopSendCap(): number {
     if (this.player.type() === PlayerType.Bot) return Infinity;
@@ -905,10 +908,23 @@ export class AiAttackBehavior {
         maxNeighborTroops = n.troops();
       }
     }
-    if (maxNeighborTroops === 0) return Infinity;
 
-    const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
-    return Math.max(0, this.player.troops() - minRetained);
+    let cap: number;
+    if (maxNeighborTroops === 0) {
+      cap = Infinity;
+    } else {
+      const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
+      cap = Math.max(0, this.player.troops() - minRetained);
+    }
+
+    // Nations under attack may retaliate with at least the incoming troops
+    const incoming = this.player.incomingAttacks();
+    if (incoming.length > 0) {
+      const totalIncoming = incoming.reduce((sum, a) => sum + a.troops(), 0);
+      cap = Math.max(cap, totalIncoming);
+    }
+
+    return cap;
   }
 
   private sendLandAttack(target: Player | TerraNullius): boolean {
@@ -937,8 +953,10 @@ export class AiAttackBehavior {
       troops = this.player.troops() - targetTroops;
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold
-    troops = Math.min(troops, this.troopSendCap());
+    // Hard & Impossible: don't drop below neighbor troop threshold (players only)
+    if (target.isPlayer()) {
+      troops = Math.min(troops, this.troopSendCap());
+    }
 
     if (troops < 1) {
       return false;

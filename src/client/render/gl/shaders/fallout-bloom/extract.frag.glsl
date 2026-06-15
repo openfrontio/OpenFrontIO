@@ -102,6 +102,10 @@ void main() {
     flick *= flick;
     // Dampen when fresh (high heat); ramp to full as heat decays.
     flick *= mix(uParticleFreshScale, 1.0, 1.0 - heat);
+    // Fade dots out with the glow. Heat decays to 0, but the fallout bit is
+    // permanent on tiles that stay unowned, so without this the dots flicker
+    // forever once the bloom is gone.
+    flick *= opacity;
     vec3 pc = mix(uParticleColorDark, uParticleColorBright, h1) * flick * uParticleStrength;
     float pa = max(pc.r, max(pc.g, pc.b));
     fragColor += vec4(pc, pa);

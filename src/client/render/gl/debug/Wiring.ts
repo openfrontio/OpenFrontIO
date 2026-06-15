@@ -1,6 +1,6 @@
 import GUI, { FunctionController } from "lil-gui";
 import type { RenderSettings } from "../RenderSettings";
-import { createRenderSettings, dumpSettings } from "../RenderSettings";
+import { dumpSettings } from "../RenderSettings";
 import { deepAssign } from "../SettingsUtils";
 import type { ConfigProp } from "./ConfigProp";
 
@@ -66,6 +66,7 @@ export function wireActions(
   gui: GUI,
   settings: RenderSettings,
   props: ConfigProp[],
+  resolveDefaults: () => RenderSettings,
   onSettingsChanged?: () => void,
 ): void {
   gui.add({ dump: () => dumpSettings(settings) }, "dump").name("Download JSON");
@@ -99,7 +100,7 @@ export function wireActions(
     .add(
       {
         reset: () => {
-          deepAssign(settings, createRenderSettings());
+          deepAssign(settings, resolveDefaults());
           props.forEach((p) => p.resetToDefault());
           onSettingsChanged?.();
         },
