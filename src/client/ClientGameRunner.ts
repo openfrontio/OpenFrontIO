@@ -514,10 +514,9 @@ async function createClientGame(
     const regenerateRenderSettings = (): void => {
       deepAssign(view.getSettings(), resolveRenderSettings());
     };
-    // Re-apply render settings, then re-theme and recolor players, on a
-    // graphics-override change (covers a theme switch such as colorblind mode).
-    const onGraphicsChanged = (): void => {
-      regenerateRenderSettings();
+    // Rebuild the GPU-derived graphics state that the per-frame passes don't
+    // pick up from the live settings object on their own.
+    const refreshDerivedGraphics = (): void => {
       // Terrain is baked into a GPU texture rather than read per-frame, so a
       // terrain-color override (e.g. ocean) needs an explicit texture rebuild.
       view.rebuildTerrain();
@@ -526,6 +525,12 @@ async function createClientGame(
       // territory fills/borders live.
       gameView.refreshPlayerColors();
       webglBuilder.refreshPalette(gameView);
+    };
+    // Re-apply render settings, then re-theme and recolor players, on a
+    // graphics-override change (covers a theme switch such as colorblind mode).
+    const onGraphicsChanged = (): void => {
+      regenerateRenderSettings();
+      refreshDerivedGraphics();
     };
     // No initial regenerate or terrain rebuild needed — the renderer was
     // constructed with the resolved settings above, so the terrain texture
@@ -545,7 +550,11 @@ async function createClientGame(
         debugGuiLoading = true;
         import("./render/gl/debug/index")
           .then(({ createDebugGui }) => {
-            debugGui = createDebugGui(view.getSettings());
+            debugGui = createDebugGui(
+              view.getSettings(),
+              resolveRenderSettings,
+              refreshDerivedGraphics,
+            );
             debugGui.open();
           })
           .finally(() => {
