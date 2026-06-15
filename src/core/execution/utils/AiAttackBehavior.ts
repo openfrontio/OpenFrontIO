@@ -911,7 +911,10 @@ export class AiAttackBehavior {
     return Math.max(0, this.player.troops() - minRetained);
   }
 
-  private sendLandAttack(target: Player | TerraNullius): boolean {
+  private calculateAttackTroops(
+    target: Player | TerraNullius,
+    nonBotTroops: (targetTroops: number) => number,
+  ): number | null {
     const maxTroops = this.game.config().maxTroops(this.player);
     const botWithStructures =
       target.isPlayer() &&
@@ -934,24 +937,36 @@ export class AiAttackBehavior {
         this.player.troops() - targetTroops - this.botAttackTroopsSent,
       );
     } else {
-      troops = this.player.troops() - targetTroops;
+      troops = nonBotTroops(targetTroops);
     }
 
     // Hard & Impossible: don't drop below neighbor troop threshold
     troops = Math.min(troops, this.troopSendCap());
 
     if (troops < 1) {
-      return false;
+      return null;
     }
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
     if (target.isPlayer() && this.isAttackTooWeak(troops, target)) {
-      return false;
+      return null;
     }
 
     if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
+    return troops;
+  }
+
+  private sendLandAttack(target: Player | TerraNullius): boolean {
+    const troops = this.calculateAttackTroops(
+      target,
+      (targetTroops) => this.player.troops() - targetTroops,
+    );
+    if (troops === null) {
+      return false;
     }
 
     this.game.addExecution(
@@ -982,28 +997,12 @@ export class AiAttackBehavior {
       return false;
     }
 
-    let troops;
-    if (target.type() === PlayerType.Bot) {
-      troops = this.calculateBotAttackTroops(target, this.player.troops() / 5);
-    } else {
-      troops = this.player.troops() / 5;
-    }
-
-    // Hard & Impossible: don't drop below neighbor troop threshold
-    troops = Math.min(troops, this.troopSendCap());
-
-    if (troops < 1) {
+    const troops = this.calculateAttackTroops(
+      target,
+      () => this.player.troops() / 5,
+    );
+    if (troops === null) {
       return false;
-    }
-
-    // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
-    if (this.isAttackTooWeak(troops, target)) {
-      return false;
-    }
-
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
-      if (this.emojiBehavior === undefined) throw new Error("not initialized");
-      this.emojiBehavior.maybeSendAttackEmoji(target);
     }
 
     this.game.addExecution(
