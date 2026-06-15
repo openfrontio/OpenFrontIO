@@ -536,7 +536,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   }
 
   private currentClassicNames(): boolean {
-    return this.userSettings.graphicsOverrides().name?.classicFont ?? true;
+    return this.userSettings.graphicsOverrides().name?.classicFont ?? false;
   }
 
   private onToggleClassicNames() {

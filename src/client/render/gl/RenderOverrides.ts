@@ -28,8 +28,8 @@ export function applyGraphicsOverrides(
   if (overrides.structure?.iconSize !== undefined) {
     settings.structure.iconSize = overrides.structure.iconSize;
   }
-  // Name font: Arial (Arimo) MSDF atlas by default; false = overpass.
-  settings.name.classicFont = overrides.name?.classicFont ?? true;
+  // Name font: overpass MSDF by default; true = Arial (Arimo) MSDF.
+  settings.name.classicFont = overrides.name?.classicFont ?? false;
   if (overrides.structure?.classicIcons ?? true) {
     // Classic look (default): lighter player-colored shape behind a darkened
     // player-colored icon glyph (matching the old canvas renderer's
