@@ -1,7 +1,10 @@
 {
   "passEnabled": {
     "terrain": true,
-    "mapOverlay": true,
+    "territory": true,
+    "borderCompute": true,
+    "borderStamp": true,
+    "trail": true,
     "territoryPatterns": true,
     "structure": true,
     "unit": true,
@@ -11,6 +14,9 @@
     "fx": true,
     "bar": true,
     "nameDebug": false
+  },
+  "terrain": {
+    "oceanColor": "#4785b5"
   },
   "falloutBloom": {
     "broilSpeedCold": 0.0018,
@@ -44,10 +50,9 @@
     "particleStrength": 1,
     "particleFreshScale": 0.2
   },
-  "dayNight": {
-    "mode": "light",
-    "nightAmbient": 0.15,
-    "dayAmbient": 1,
+  "lighting": {
+    "ambient": 1,
+    "enabled": false,
     "falloffPower": 2,
     "falloutLightR": 0.15,
     "falloutLightG": 0.95,
@@ -64,6 +69,10 @@
   "mapOverlay": {
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
+    "territoryDefenseDarken": 0.85,
+    "territorySaturation": 1,
+    "territoryAlpha": 0.588,
+    "coordinateGridOpacity": 0.5,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,
@@ -75,16 +84,37 @@
     "highlightThicken": 2,
     "defensePostRange": 30,
     "embargoTintRatio": 0.35,
-    "friendlyTintRatio": 0.35
+    "friendlyTintRatio": 0.35,
+    "embargoTintR": 1,
+    "embargoTintG": 0,
+    "embargoTintB": 0,
+    "friendlyTintR": 0,
+    "friendlyTintG": 1,
+    "friendlyTintB": 0
+  },
+  "affiliation": {
+    "selfR": 0,
+    "selfG": 1,
+    "selfB": 0,
+    "allyR": 1,
+    "allyG": 1,
+    "allyB": 0,
+    "neutralR": 0.502,
+    "neutralG": 0.502,
+    "neutralB": 0.502,
+    "enemyR": 1,
+    "enemyG": 0,
+    "enemyB": 0
   },
   "railroad": {
     "railMinZoom": 4,
     "railFadeRange": 2,
     "railDetailZoom": 6,
-    "railAlpha": 1
+    "railAlpha": 1,
+    "railThickness": 1
   },
   "structure": {
-    "iconSize": 50,
+    "iconSize": 60,
     "dotsZoomThreshold": 1.2,
     "dotScale": 0.3,
     "iconScaleFactorZoomedOut": 3,
@@ -122,11 +152,14 @@
     "iconAlpha": 1.0,
     "iconR": 1.0,
     "iconG": 1.0,
-    "iconB": 1.0
+    "iconB": 1.0,
+    "iconDarken": 0
   },
   "structureLevel": {
-    "scale": 1.2,
-    "outlineWidth": 1.4
+    "scale": 1,
+    "outlineWidth": 8,
+    "offsetY": -0.4,
+    "classicFont": true
   },
   "bar": {
     "healthBarW": 11,
@@ -157,7 +190,14 @@
     "flickerSpeed": 0.3,
     "angryR": 0.784,
     "angryG": 0,
-    "angryB": 0
+    "angryB": 0,
+    "hBombGlowScale": 2.2,
+    "hBombGlowR": 1.0,
+    "hBombGlowG": 0.72,
+    "hBombGlowB": 0.15,
+    "hBombGlowStrength": 0.5,
+    "hBombGlowInner": 0.45,
+    "untargetableAlpha": 0.6
   },
   "name": {
     "lerpSpeed": 10,
@@ -171,11 +211,17 @@
     "outlineB": 0.0,
     "outlineUsePlayerColor": true,
     "fillUsePlayerColor": false,
+    "nameShadeNation": 0.3,
+    "nameShadeBot": 0.4,
     "emojiRowOffset": 1.4,
-    "statusRowOffset": 1.4
+    "statusRowOffset": 1.4,
+    "hoverFadeAlpha": 0.5,
+    "hoverGlowWidth": 5,
+    "hoverGlowAlpha": 0.75
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
+    "attackRingScreenPx": 30,
     "nukeShockwaveDurationMs": 1500,
     "nukeShockwaveRadiusFactor": 1.5,
     "samShockwaveDurationMs": 800,
@@ -188,7 +234,7 @@
     "conquestFadeOut": 0.6
   },
   "nukeTrajectory": {
-    "lineWidth": 1.25,
+    "lineWidth": 2.5,
     "outlineWidth": 1.5,
     "dashTargetable": 8,
     "gapTargetable": 4,
@@ -207,7 +253,7 @@
     "interceptOutlineG": 0.353,
     "interceptOutlineB": 0.353,
     "markerCircleRadius": 6,
-    "markerXRadius": 8
+    "markerXRadius": 40
   },
   "nukeTelegraph": {
     "strokeWidth": 1.5,
@@ -220,7 +266,13 @@
     "fillAlphaOffset": 0.6,
     "colorR": 1,
     "colorG": 0,
-    "colorB": 0
+    "colorB": 0,
+    "selfColorR": 0,
+    "selfColorG": 1,
+    "selfColorB": 0,
+    "allyColorR": 1,
+    "allyColorG": 1,
+    "allyColorB": 0
   },
   "moveIndicator": {
     "startRadius": 13,
@@ -251,17 +303,17 @@
     "cullZoom": 0.3
   },
   "ghostCost": {
-    "screenScale": 30,
-    "screenYOffset": 50
+    "screenScale": 18,
+    "screenYOffset": 25
   },
   "spawnOverlay": {
     "highlightRadius": 9,
     "highlightAlpha": 1.0,
-    "selfMinRad": 8,
-    "selfMaxRad": 24,
+    "selfMinRad": 10,
+    "selfMaxRad": 30,
     "mateMinRad": 5,
     "mateMaxRad": 14,
-    "animSpeed": 0.0035,
+    "animSpeed": 0.005,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },
@@ -326,8 +378,8 @@
       "intensity": 1
     },
     "Train": {
-      "radius": 8,
-      "intensity": 2
+      "radius": 6,
+      "intensity": 0.5
     }
   }
 }

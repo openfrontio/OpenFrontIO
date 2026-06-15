@@ -11,13 +11,13 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
   MouseMoveEvent,
   TouchEvent,
 } from "../../InputHandler";
+import { themeProvider } from "../../theme/ThemeProvider";
 import { TransformHandler } from "../../TransformHandler";
 import {
   getTranslatedPlayerTeamLabel,
@@ -26,6 +26,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { GameView, PlayerView, UnitView } from "../../view";
 import {
   EMOJI_ICON_KIND,
   getFirstPlacePlayer,
@@ -360,9 +361,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   >
                   <span class="text-xs font-normal text-gray-400"
                     >[<span
-                      style="color: ${this.game
-                        .config()
-                        .theme()
+                      style="color: ${themeProvider
+                        .current()
                         .teamColor(player.team()!)
                         .toHex()}"
                       >${playerTeam}</span

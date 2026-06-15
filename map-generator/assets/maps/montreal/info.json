@@ -1,5 +1,9 @@
 {
+  "id": "Montreal",
   "name": "Montreal",
+  "translation_key": "map.montreal",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [800, 430],

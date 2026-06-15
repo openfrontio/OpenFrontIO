@@ -8,7 +8,6 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
-  RefreshGraphicsEvent,
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
@@ -18,10 +17,8 @@ import {
 } from "../../sound/Sounds";
 import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
-const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
-const explosionIcon = assetUrl("images/ExplosionIconWhite.svg");
 const mouseIcon = assetUrl("images/MouseIconWhite.svg");
 const ninjaIcon = assetUrl("images/NinjaIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -132,19 +129,13 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  private onToggleSpecialEffectsButtonClick() {
-    this.userSettings.toggleFxLayer();
-    this.requestUpdate();
-  }
-
   private onToggleAlertFrameButtonClick() {
     this.userSettings.toggleAlertFrame();
     this.requestUpdate();
   }
 
-  private onToggleDarkModeButtonClick() {
-    this.userSettings.toggleDarkMode();
-    this.eventBus.emit(new RefreshGraphicsEvent());
+  private onToggleHelpMessagesButtonClick() {
+    this.userSettings.toggleHelpMessages();
     this.requestUpdate();
   }
 
@@ -245,6 +236,26 @@ export class SettingsModal extends LitElement implements Controller {
           </div>
 
           <div class="p-4 flex flex-col gap-3">
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onGraphicsSettingsButtonClick}"
+            >
+              <img
+                src=${settingsIcon}
+                alt="graphicsSettings"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.graphics_settings_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.graphics_settings_desc")}
+                </div>
+              </div>
+            </button>
+
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
             >
@@ -336,56 +347,6 @@ export class SettingsModal extends LitElement implements Controller {
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleDarkModeButtonClick}"
-            >
-              <img
-                src=${darkModeIcon}
-                alt="darkModeIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.dark_mode_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.dark_mode_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.darkMode()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleSpecialEffectsButtonClick}"
-            >
-              <img
-                src=${explosionIcon}
-                alt="specialEffects"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.special_effects_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.special_effects_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.fxLayer()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click="${this.onToggleAlertFrameButtonClick}"
             >
               <img src=${sirenIcon} alt="alertFrame" width="20" height="20" />
@@ -399,6 +360,47 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.alertFrame()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onToggleHelpMessagesButtonClick}"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="10"
+                  cy="10"
+                  r="9"
+                  stroke="white"
+                  stroke-width="1.5"
+                />
+                <path
+                  d="M10 9V14"
+                  stroke="white"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+                <circle cx="10" cy="6.5" r="1" fill="white" />
+              </svg>
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.help_messages_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.help_messages_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.helpMessages()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -488,26 +490,6 @@ export class SettingsModal extends LitElement implements Controller {
                 ${this.userSettings.leftClickOpensMenu()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onGraphicsSettingsButtonClick}"
-            >
-              <img
-                src=${settingsIcon}
-                alt="graphicsSettings"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.graphics_settings_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.graphics_settings_desc")}
-                </div>
               </div>
             </button>
 

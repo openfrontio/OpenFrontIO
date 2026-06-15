@@ -1,4 +1,6 @@
 {
+  "categories": ["new", "asia"],
+  "id": "TaiwanStrait",
   "map": {
     "height": 1600,
     "num_land_tiles": 907469,
@@ -14,6 +16,7 @@
     "num_land_tiles": 224367,
     "width": 800
   },
+  "multiplayer_frequency": 5,
   "name": "Taiwan Strait",
   "nations": [
     {
@@ -157,5 +160,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.taiwanstrait"
 }

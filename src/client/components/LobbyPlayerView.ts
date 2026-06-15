@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { PastelTheme } from "../../core/configuration/PastelTheme";
 import {
   ColoredTeams,
   Duos,
@@ -17,6 +16,7 @@ import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
+import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -37,7 +37,9 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
 
-  private theme: PastelTheme = new PastelTheme();
+  private get theme(): Theme {
+    return themeProvider.current();
+  }
   @state() private showTeamColors: boolean = false;
   private userSettings: UserSettings = new UserSettings();
 

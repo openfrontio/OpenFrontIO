@@ -200,10 +200,23 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
-  toggleDarkMode() {
-    this.userSettings.toggleDarkMode();
+  /** Whether colorblind mode is currently enabled in the graphics overrides. */
+  private colorblindMode(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
 
-    console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
+  /** Flip the colorblind-mode graphics override and persist it. */
+  private toggleColorblindMode() {
+    const overrides = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...overrides,
+      accessibility: {
+        ...overrides.accessibility,
+        colorblind: !this.colorblindMode(),
+      },
+    });
   }
 
   private toggleEmojis() {
@@ -218,15 +231,6 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "🚨 Alert frame:",
       this.userSettings.alertFrame() ? "ON" : "OFF",
-    );
-  }
-
-  private toggleFxLayer() {
-    this.userSettings.toggleFxLayer();
-
-    console.log(
-      "💥 Special effects:",
-      this.userSettings.fxLayer() ? "ON" : "OFF",
     );
   }
 
@@ -505,22 +509,22 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="modifierKey"
+        action="buildMenuModifier"
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.modifierKey}
-        .value=${this.getKeyValue("modifierKey")}
-        .display=${this.getKeyChar("modifierKey")}
+        .defaultKey=${this.defaultKeybinds.buildMenuModifier}
+        .value=${this.getKeyValue("buildMenuModifier")}
+        .display=${this.getKeyChar("buildMenuModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="altKey"
+        action="emojiMenuModifier"
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.altKey}
-        .value=${this.getKeyValue("altKey")}
-        .display=${this.getKeyChar("altKey")}
+        .defaultKey=${this.defaultKeybinds.emojiMenuModifier}
+        .value=${this.getKeyValue("emojiMenuModifier")}
+        .display=${this.getKeyChar("emojiMenuModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -742,13 +746,13 @@ export class UserSettingModal extends BaseModal {
 
   private renderBasicSettings() {
     return html`
-      <!-- 🌙 Dark Mode -->
+      <!-- 🎨 Colorblind Mode -->
       <setting-toggle
-        label="${translateText("user_setting.dark_mode_label")}"
-        description="${translateText("user_setting.dark_mode_desc")}"
-        id="dark-mode-toggle"
-        .checked=${this.userSettings.darkMode()}
-        @change=${this.toggleDarkMode}
+        label="${translateText("user_setting.colorblind_label")}"
+        description="${translateText("user_setting.colorblind_desc")}"
+        id="colorblind-toggle"
+        .checked=${this.colorblindMode()}
+        @change=${this.toggleColorblindMode}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
@@ -767,15 +771,6 @@ export class UserSettingModal extends BaseModal {
         id="alert-frame-toggle"
         .checked=${this.userSettings.alertFrame()}
         @change=${this.toggleAlertFrame}
-      ></setting-toggle>
-
-      <!-- 💥 Special effects -->
-      <setting-toggle
-        label="${translateText("user_setting.special_effects_label")}"
-        description="${translateText("user_setting.special_effects_desc")}"
-        id="special-effect-toggle"
-        .checked=${this.userSettings.fxLayer()}
-        @change=${this.toggleFxLayer}
       ></setting-toggle>
 
       <!-- 💰 Cursor Price Pill -->

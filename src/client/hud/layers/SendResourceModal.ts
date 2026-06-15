@@ -1,7 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { within } from "../../../core/Util";
 import {
   SendDonateGoldIntentEvent,
@@ -9,6 +8,7 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
+import { GameView, PlayerView } from "../../view";
 
 @customElement("send-resource-modal")
 export class SendResourceModal extends LitElement {

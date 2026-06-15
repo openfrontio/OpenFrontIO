@@ -141,6 +141,8 @@
       "name": "Tobago"
     }
   ],
+  "categories": ["new", "north_america"],
+  "id": "Caribbean",
   "map": {
     "height": 1808,
     "num_land_tiles": 577573,
@@ -156,6 +158,7 @@
     "num_land_tiles": 138280,
     "width": 1600
   },
+  "multiplayer_frequency": 5,
   "name": "Caribbean",
   "nations": [
     {
@@ -328,5 +331,6 @@
       "flag": "co",
       "name": "San Andres"
     }
-  ]
+  ],
+  "translation_key": "map.caribbean"
 }

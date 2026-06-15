@@ -1,19 +1,22 @@
 {
+  "categories": ["south_america"],
+  "id": "FalklandIslands",
   "map": {
     "height": 1400,
-    "num_land_tiles": 859274,
+    "num_land_tiles": 746474,
     "width": 2100
   },
   "map16x": {
     "height": 350,
-    "num_land_tiles": 49216,
+    "num_land_tiles": 42072,
     "width": 525
   },
   "map4x": {
     "height": 700,
-    "num_land_tiles": 207480,
+    "num_land_tiles": 178970,
     "width": 1050
   },
+  "multiplayer_frequency": 4,
   "name": "Falkland Islands",
   "nations": [
     {
@@ -77,6 +80,7 @@
       "name": "San Carlos"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -92,5 +96,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.falklandislands"
 }

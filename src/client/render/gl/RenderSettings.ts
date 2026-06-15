@@ -1,10 +1,52 @@
-import { GraphicsOverrides } from "./GraphicsOverrides";
+import colorblindTheme from "./colorblind-theme.json";
+import defaultTheme from "./default-theme.json";
 import defaults from "./render-settings.json";
 
+/**
+ * Theme data — player/team palettes and color-derivation knobs. Loaded from a
+ * theme JSON file (default-theme.json or colorblind-theme.json) and combined
+ * with render-settings.json at runtime so all graphics configuration flows
+ * through one pipeline. Colors are hex strings; palettes are consumed by the
+ * theme module (src/client/theme/), which generates team variations and
+ * allocates player colors at runtime.
+ */
+export interface ThemeSettings {
+  /**
+   * Base color per colored team (keys match ColoredTeams). Per-player
+   * variations are generated at runtime; Bot stays a single flat color.
+   */
+  teamColors: Record<string, string>;
+  humanColors: string[];
+  nationColors: string[];
+  botColors: string[];
+  /** Used when the primary palettes are exhausted. */
+  fallbackColors: string[];
+  /** Border = territory color darkened by this absolute amount. */
+  borderDarken: number;
+  /**
+   * Border HSL lightness multiplier, applied before borderDarken. 1 = no-op.
+   * Scaling keeps every border the same proportion darker than its fill
+   * (used by the colorblind theme so dark fills don't collapse to black).
+   */
+  borderLightnessScale: number;
+  defendedBorderDarkenLight: number;
+  defendedBorderDarkenDark: number;
+  /** Minimum LAB delta between structure fill and border colors. */
+  structureContrastTarget: number;
+  /** Border color of the local player's territory. */
+  focusedBorderColor: string;
+  /** Tint applied to unit sprites during spawn highlight. */
+  spawnHighlightColor: string;
+}
+
 export interface RenderSettings {
+  theme: ThemeSettings;
   passEnabled: {
     terrain: boolean;
-    mapOverlay: boolean;
+    territory: boolean;
+    borderCompute: boolean;
+    borderStamp: boolean;
+    trail: boolean;
     territoryPatterns: boolean;
     structure: boolean;
     unit: boolean;
@@ -14,6 +56,13 @@ export interface RenderSettings {
     fx: boolean;
     bar: boolean;
     nameDebug: boolean;
+  };
+  terrain: {
+    /**
+     * Base (shallowest) color of deep water as a "#rrggbb" hex string. The
+     * per-depth brightness gradient is preserved relative to this color.
+     */
+    oceanColor: string;
   };
   falloutBloom: {
     broilSpeedCold: number;
@@ -47,10 +96,9 @@ export interface RenderSettings {
     particleStrength: number;
     particleFreshScale: number;
   };
-  dayNight: {
-    mode: "light" | "dark";
-    nightAmbient: number;
-    dayAmbient: number;
+  lighting: {
+    ambient: number;
+    enabled: boolean;
     falloffPower: number;
     falloutLightR: number;
     falloutLightG: number;
@@ -67,6 +115,12 @@ export interface RenderSettings {
   mapOverlay: {
     trailAlpha: number;
     defenseCheckerDarken: number;
+    territoryDefenseDarken: number;
+    /** Saturation of the territory fill. 1 = full color, 0 = grayscale. */
+    territorySaturation: number;
+    /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
+    territoryAlpha: number;
+    coordinateGridOpacity: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;
@@ -79,12 +133,35 @@ export interface RenderSettings {
     defensePostRange: number;
     embargoTintRatio: number;
     friendlyTintRatio: number;
+    embargoTintR: number;
+    embargoTintG: number;
+    embargoTintB: number;
+    friendlyTintR: number;
+    friendlyTintG: number;
+    friendlyTintB: number;
+  };
+  /** Alt-view affiliation colors (0–1 RGB). */
+  affiliation: {
+    selfR: number;
+    selfG: number;
+    selfB: number;
+    allyR: number;
+    allyG: number;
+    allyB: number;
+    neutralR: number;
+    neutralG: number;
+    neutralB: number;
+    enemyR: number;
+    enemyG: number;
+    enemyB: number;
   };
   railroad: {
     railMinZoom: number;
     railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
+    /** Track width multiplier (1 = default width). */
+    railThickness: number;
   };
   structure: {
     iconSize: number;
@@ -112,10 +189,19 @@ export interface RenderSettings {
     iconR: number;
     iconG: number;
     iconB: number;
+    /**
+     * When > 0, the icon glyph is a darkened version of the player color
+     * (HSV value multiplier) instead of the flat iconR/G/B color. 0 = off.
+     */
+    iconDarken: number;
   };
   structureLevel: {
     scale: number;
+    /** MSDF outline width in px; unused by the classic bitmap font. */
     outlineWidth: number;
+    offsetY: number;
+    /** true = round_6x6_modified bitmap font, false = overpass-bold MSDF. */
+    classicFont: boolean;
   };
   bar: {
     healthBarW: number;
@@ -147,6 +233,14 @@ export interface RenderSettings {
     angryR: number;
     angryG: number;
     angryB: number;
+    // Steady soft glow rendered underneath the hydrogen bomb
+    hBombGlowScale: number; // quad enlargement factor (1 = no glow room)
+    hBombGlowR: number;
+    hBombGlowG: number;
+    hBombGlowB: number;
+    hBombGlowStrength: number; // peak opacity of the glow
+    hBombGlowInner: number; // radial falloff start (0..1, quad-space)
+    untargetableAlpha: number; // alpha for nukes SAMs can't target (0..1)
   };
   name: {
     lerpSpeed: number;
@@ -160,11 +254,21 @@ export interface RenderSettings {
     outlineB: number;
     outlineUsePlayerColor: boolean;
     fillUsePlayerColor: boolean;
+    /** Name fill grayscale shade by player type (0 = black). Human is always 0. */
+    nameShadeNation: number;
+    nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Alpha multiplier applied to a name while the cursor is over it. */
+    hoverFadeAlpha: number;
+    /** White glow behind the hovered player's name: px past the outline. */
+    hoverGlowWidth: number;
+    /** Peak opacity of the hover glow (0 disables it). */
+    hoverGlowAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;
+    attackRingScreenPx: number; // screen px — attack ring quad half-size (visible outer ring = 0.8×)
     nukeShockwaveDurationMs: number;
     nukeShockwaveRadiusFactor: number;
     samShockwaveDurationMs: number;
@@ -207,9 +311,15 @@ export interface RenderSettings {
     pulseAmplitude: number; // alpha pulse ±
     pulseSpeed: number; // pulse frequency (radians/sec)
     fillAlphaOffset: number; // inner fill is baseAlpha minus this
-    colorR: number; // circle color
+    colorR: number; // circle color — enemy nukes
     colorG: number;
     colorB: number;
+    selfColorR: number; // circle color — own nukes
+    selfColorG: number;
+    selfColorB: number;
+    allyColorR: number; // circle color — ally/teammate nukes
+    allyColorG: number;
+    allyColorB: number;
   };
   moveIndicator: {
     startRadius: number; // screen px — initial distance from center
@@ -270,49 +380,30 @@ export interface RenderSettings {
   lightConfigs: Record<string, { radius: number; intensity: number }>;
 }
 
-/** Create a fresh settings object with defaults from render-settings.json. */
-export function createRenderSettings(): RenderSettings {
-  return JSON.parse(JSON.stringify(defaults)) as RenderSettings;
+export type ThemeName = "default" | "colorblind";
+
+// Typed so tsc validates each theme JSON against the ThemeSettings shape.
+const THEMES: Record<ThemeName, ThemeSettings> = {
+  default: defaultTheme,
+  colorblind: colorblindTheme,
+};
+
+/** Create fresh theme settings with defaults from the named theme JSON. */
+export function createThemeSettings(
+  name: ThemeName = "default",
+): ThemeSettings {
+  return JSON.parse(JSON.stringify(THEMES[name])) as ThemeSettings;
 }
 
 /**
- * Generate a fresh RenderSettings by layering user overrides on top of the
- * render-settings.json defaults. Pure — does not mutate any input.
+ * Create a fresh settings object: render-settings.json combined with the
+ * active theme JSON.
  */
-export function generateRenderSettings(
-  overrides: GraphicsOverrides,
-): RenderSettings {
-  const settings = createRenderSettings();
-  if (overrides.name?.nameScaleFactor !== undefined) {
-    settings.name.nameScaleFactor = overrides.name.nameScaleFactor;
-  }
-  if (overrides.name?.cullThreshold !== undefined) {
-    settings.name.cullThreshold = overrides.name.cullThreshold;
-  }
-  if (overrides.structure?.classicIcons === true) {
-    // Classic look: lighter player-colored shape behind a dark icon glyph,
-    // with a touch of translucency.
-    settings.structure.borderDarken = 0.7;
-    settings.structure.fillDarken = 1.0;
-    settings.structure.iconR = 0;
-    settings.structure.iconG = 0;
-    settings.structure.iconB = 0;
-    settings.structure.iconAlpha = 0.75;
-  }
-  if (overrides.name?.darkNames !== undefined) {
-    const dark = overrides.name.darkNames;
-    // Dark: black fill + player-colored outline. Force outline RGB to black
-    // so the shader's defaultFill ramp (mix(uOutlineColor, black, fillT))
-    // collapses to pure black regardless of ambient.
-    // Colored: player-colored fill + white outline (defaults from JSON).
-    settings.name.fillUsePlayerColor = !dark;
-    settings.name.outlineUsePlayerColor = dark;
-    const channel = dark ? 0 : 1;
-    settings.name.outlineR = channel;
-    settings.name.outlineG = channel;
-    settings.name.outlineB = channel;
-  }
-  return settings;
+export function createRenderSettings(): RenderSettings {
+  return {
+    ...(JSON.parse(JSON.stringify(defaults)) as Omit<RenderSettings, "theme">),
+    theme: createThemeSettings(),
+  };
 }
 
 /** Dump current settings to a downloadable JSON file. */

@@ -10,12 +10,12 @@
 import { EventBus } from "../../core/EventBus";
 import { Controller } from "../Controller";
 import { AlternateViewEvent, ToggleCoordinateGridEvent } from "../InputHandler";
-import { GameView as WebGLGameView } from "../render/gl";
+import { MapRenderer } from "../render/gl";
 
 export class ViewModeController implements Controller {
   constructor(
     private eventBus: EventBus,
-    private view: WebGLGameView,
+    private view: MapRenderer,
   ) {}
 
   init() {

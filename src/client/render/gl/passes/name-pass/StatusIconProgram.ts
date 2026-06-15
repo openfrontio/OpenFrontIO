@@ -38,12 +38,15 @@ export class StatusIconProgram {
   private uNameScaleFactor: WebGLUniformLocation;
   private uNameScaleCap: WebGLUniformLocation;
   private uStatusRowOffset: WebGLUniformLocation;
+  private uFadeOwnerID: WebGLUniformLocation;
+  private uHoverFadeAlpha: WebGLUniformLocation;
 
   constructor(
     gl: WebGL2RenderingContext,
     atlas: ParsedAtlas,
     playerDataTex: WebGLTexture,
     maxPlayers: number,
+    allianceFlashWindowTicks: number,
   ) {
     this.gl = gl;
     this.playerDataTex = playerDataTex;
@@ -80,6 +83,11 @@ export class StatusIconProgram {
       gl.getUniformLocation(this.program, "uStatusPad")!,
       sm.pad ?? 0,
     );
+    // Flash window matches the alliance renewal prompt (10 ticks/sec)
+    gl.uniform1f(
+      gl.getUniformLocation(this.program, "uAllianceFlashWindowSec")!,
+      allianceFlashWindowTicks / 10,
+    );
 
     // Dynamic uniform locations
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
@@ -97,6 +105,11 @@ export class StatusIconProgram {
     this.uStatusRowOffset = gl.getUniformLocation(
       this.program,
       "uStatusRowOffset",
+    )!;
+    this.uFadeOwnerID = gl.getUniformLocation(this.program, "uFadeOwnerID")!;
+    this.uHoverFadeAlpha = gl.getUniformLocation(
+      this.program,
+      "uHoverFadeAlpha",
     )!;
 
     this.loadAtlas();
@@ -129,6 +142,7 @@ export class StatusIconProgram {
     cameraMatrix: Float32Array,
     settings: RenderSettings,
     vao: WebGLVertexArrayObject,
+    fadeOwnerID: number,
   ): void {
     if (!this.atlasReady) return;
 
@@ -143,6 +157,8 @@ export class StatusIconProgram {
     gl.uniform1f(this.uNameScaleFactor, ns.nameScaleFactor);
     gl.uniform1f(this.uNameScaleCap, ns.nameScaleCap);
     gl.uniform1f(this.uStatusRowOffset, ns.statusRowOffset);
+    gl.uniform1f(this.uFadeOwnerID, fadeOwnerID);
+    gl.uniform1f(this.uHoverFadeAlpha, ns.hoverFadeAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.playerDataTex);

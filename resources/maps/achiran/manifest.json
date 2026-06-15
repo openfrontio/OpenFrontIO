@@ -1,4 +1,6 @@
 {
+  "categories": ["fictional", "europe"],
+  "id": "Achiran",
   "map": {
     "height": 1700,
     "num_land_tiles": 1149943,
@@ -14,6 +16,7 @@
     "num_land_tiles": 284422,
     "width": 1000
   },
+  "multiplayer_frequency": 5,
   "name": "Achiran",
   "nations": [
     {
@@ -36,5 +39,6 @@
       "flag": "ie",
       "name": "Achill"
     }
-  ]
+  ],
+  "translation_key": "map.achiran"
 }

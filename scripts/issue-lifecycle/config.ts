@@ -51,6 +51,11 @@ This isn't a judgment of the issue's merit — just routine triage. @${author}, 
 
 — *Automated.*`,
 
+  NEW_ISSUE_NOT_APPROVED: (author: string): string =>
+    `Hi @${author}, thanks for opening this issue. It hasn't been approved by a maintainer yet — we'll get back to you shortly to either milestone it (approval) or close it.
+
+— *Automated. See [CONTRIBUTING.md](https://github.com/${REPO.owner}/${REPO.repo}/blob/main/CONTRIBUTING.md).*`,
+
   UNASSIGNED_NO_MILESTONE: (assignees: string[]): string =>
     `${assignees.map((u) => "@" + u).join(", ")} — you've been unassigned from this issue automatically because it doesn't have a milestone set.
 

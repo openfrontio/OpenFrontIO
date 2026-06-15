@@ -2,9 +2,10 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode, GameType, Team } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
+import { themeProvider } from "../../theme/ThemeProvider";
 import { TransformHandler } from "../../TransformHandler";
+import { GameView } from "../../view";
 
 export class SpawnBarVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
@@ -71,7 +72,7 @@ export class SpawnTimer extends LitElement implements Controller {
           teamTiles.set(team, tiles + player.numTilesOwned());
         }
 
-        const theme = this.game.config().theme();
+        const theme = themeProvider.current();
         const total = sumIterator(teamTiles.values());
         if (total > 0) {
           for (const [team, count] of teamTiles) {

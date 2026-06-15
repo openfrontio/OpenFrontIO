@@ -29,6 +29,10 @@ import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
+// Subscriptions are not ready yet — flip to true to show them in the store
+// and on the account/profile modal.
+export const SUBSCRIPTIONS_ENABLED = false;
+
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
@@ -575,7 +579,15 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     result.flag = await resolveFlagUrl(refs.flag);
   }
 
-  if (refs.patternName && cosmetics) {
+  const devPattern = new UserSettings().getDevOnlyPattern();
+
+  if (devPattern) {
+    result.pattern = {
+      name: devPattern.name,
+      patternData: devPattern.patternData,
+      colorPalette: devPattern.colorPalette,
+    };
+  } else if (refs.patternName && cosmetics) {
     const pattern = cosmetics.patterns[refs.patternName];
 
     if (pattern) {
@@ -585,16 +597,6 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
         colorPalette: refs.patternColorPaletteName
           ? cosmetics.colorPalettes?.[refs.patternColorPaletteName]
           : undefined,
-      };
-    }
-  } else {
-    const devPattern = new UserSettings().getDevOnlyPattern();
-
-    if (devPattern) {
-      result.pattern = {
-        name: devPattern.name,
-        patternData: devPattern.patternData,
-        colorPalette: devPattern.colorPalette,
       };
     }
   }

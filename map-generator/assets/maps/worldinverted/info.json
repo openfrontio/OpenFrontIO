@@ -1,0 +1,1419 @@
+{
+  "id": "WorldInverted",
+  "name": "World Inverted",
+  "translation_key": "map.worldinverted",
+  "categories": ["new", "world", "fictional"],
+  "multiplayer_frequency": 8,
+  "nations": [
+    {
+      "name": "Titan Submersible",
+      "flag": "us"
+    },
+    {
+      "name": "HMS K5",
+      "flag": "gb"
+    },
+    {
+      "name": "MV Dali",
+      "flag": "sg"
+    },
+    {
+      "name": "Ever Given",
+      "flag": "pa"
+    },
+    {
+      "name": "Rouse Simmons",
+      "flag": "santa_claus"
+    },
+    {
+      "name": "Flying Dutchman",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "name": "Duck Boat",
+      "flag": "us"
+    },
+    {
+      "name": "Queen Annes Revenge",
+      "flag": "Republic of Pirates"
+    },
+    {
+      "name": "Sea Diamond",
+      "flag": "fi"
+    },
+    {
+      "name": "Boaty McBoatface",
+      "flag": "gb"
+    },
+    {
+      "name": "Unsinkable II",
+      "flag": ""
+    },
+    {
+      "name": "Atlantis",
+      "flag": ""
+    },
+    {
+      "coordinates": [2420, 230],
+      "name": "RMS Lusitania",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [250, 365],
+      "name": "HMHS Britannic",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2330, 1095],
+      "name": "Endurance",
+      "flag": "no"
+    },
+    {
+      "coordinates": [920, 520],
+      "name": "Doña Paz",
+      "flag": "ph"
+    },
+    {
+      "coordinates": [310, 510],
+      "name": "Ferry Neptune",
+      "flag": "ht"
+    },
+    {
+      "coordinates": [2322, 340],
+      "name": "RMS Titanic",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1060, 410],
+      "name": "Toya Maru",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [64, 310],
+      "name": "Castillo de Olite",
+      "flag": "es"
+    },
+    {
+      "coordinates": [423, 646],
+      "name": "MV Bukoba",
+      "flag": "tz"
+    },
+    {
+      "coordinates": [706, 555],
+      "name": "SS Camorta",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [830, 680],
+      "name": "Tampomas II",
+      "flag": "id"
+    },
+    {
+      "coordinates": [2020, 575],
+      "name": "SS Valbanera",
+      "flag": "es"
+    },
+    {
+      "coordinates": [2020, 450],
+      "name": "Cahaya Bahari",
+      "flag": "id"
+    },
+    {
+      "coordinates": [120, 625],
+      "name": "MV Le Joola",
+      "flag": "sn"
+    },
+    {
+      "coordinates": [965, 470],
+      "name": "Sewol",
+      "flag": "kr"
+    },
+    {
+      "coordinates": [950, 570],
+      "name": "Teratai Prima",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1680, 300],
+      "name": "Princess Sophia",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2360, 730],
+      "name": "Principessa Mafalda",
+      "flag": "it"
+    },
+    {
+      "coordinates": [322, 333],
+      "name": "Uskudar",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [2091, 852],
+      "name": "Angamos",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [2498, 800],
+      "name": "MV Dara",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2221, 555],
+      "name": "MV Christena",
+      "flag": "gy"
+    },
+    {
+      "coordinates": [288, 888],
+      "name": "SS Waratah",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2227, 200],
+      "name": "Christiana Hama",
+      "flag": "ke"
+    },
+    {
+      "coordinates": [930, 720],
+      "name": "SS Koombana",
+      "flag": "au"
+    },
+    {
+      "coordinates": [2480, 360],
+      "name": "Pamir",
+      "flag": "west_germany"
+    },
+    {
+      "coordinates": [2225, 345],
+      "name": "USS Thresher",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2450, 500],
+      "name": "TSMS Lakonia",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [1170, 720],
+      "name": "SS Yongala",
+      "flag": "au"
+    },
+    {
+      "coordinates": [120, 20],
+      "name": "K-141 Kursk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1720, 400],
+      "name": "SS Valencia",
+      "flag": "us"
+    },
+    {
+      "coordinates": [570, 540],
+      "name": "INS Khukri",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1300, 730],
+      "name": "MV Butiraoi",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1050, 335],
+      "name": "361 Ming III",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [2330, 446],
+      "name": "USS Scorpion",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2115, 482],
+      "name": "SS Yarmouth Castle",
+      "flag": "pa"
+    },
+    {
+      "coordinates": [1170, 880],
+      "name": "HMAS Voyager",
+      "flag": "au"
+    },
+    {
+      "coordinates": [1410, 900],
+      "name": "TEV Wahine",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [690, 700],
+      "name": "PNS Ghazi",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [2322, 907],
+      "name": "ARA San Juan",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [1500, 610],
+      "name": "Pacific",
+      "flag": ""
+    },
+    {
+      "coordinates": [2475, 660],
+      "name": "Atlantic",
+      "flag": ""
+    },
+    {
+      "coordinates": [645, 775],
+      "name": "Indian",
+      "flag": ""
+    },
+    {
+      "coordinates": [87, 175],
+      "name": "Baltic",
+      "flag": ""
+    },
+    {
+      "coordinates": [2344, 15],
+      "name": "Arctic",
+      "flag": ""
+    },
+    {
+      "coordinates": [203, 101],
+      "name": "Barents",
+      "flag": ""
+    },
+    {
+      "coordinates": [1350, 230],
+      "name": "Bering",
+      "flag": ""
+    },
+    {
+      "coordinates": [1000, 664],
+      "name": "Banda",
+      "flag": ""
+    },
+    {
+      "coordinates": [475, 1045],
+      "name": "Amundsen",
+      "flag": ""
+    },
+    {
+      "coordinates": [1684, 107],
+      "name": "Beaufort",
+      "flag": ""
+    },
+    {
+      "coordinates": [970, 75],
+      "name": "Laptev",
+      "flag": ""
+    },
+    {
+      "coordinates": [610, 35],
+      "name": "Kara",
+      "flag": ""
+    },
+    {
+      "coordinates": [2084, 1045],
+      "name": "Bellingshausen",
+      "flag": ""
+    },
+    {
+      "coordinates": [1550, 1120],
+      "name": "Ross",
+      "flag": ""
+    },
+    {
+      "coordinates": [24, 1080],
+      "name": "Weddell",
+      "flag": ""
+    },
+    {
+      "coordinates": [120, 1050],
+      "name": "Weddell Plain",
+      "flag": ""
+    },
+    {
+      "coordinates": [120, 820],
+      "name": "Walvis Ridge",
+      "flag": ""
+    },
+    {
+      "coordinates": [645, 945],
+      "name": "Lake Kerguelen",
+      "flag": ""
+    },
+    {
+      "coordinates": [1270, 567],
+      "name": "Mariana Mountains",
+      "flag": ""
+    },
+    {
+      "coordinates": [1230, 390],
+      "name": "Shatsky Falls",
+      "flag": ""
+    },
+    {
+      "coordinates": [1270, 60],
+      "name": "Siberian Shelf",
+      "flag": ""
+    },
+    {
+      "coordinates": [1500, 467],
+      "name": "Hawaiian-Emperor Lakes",
+      "flag": ""
+    },
+    {
+      "coordinates": [1770, 820],
+      "name": "Manihiki Valley",
+      "flag": ""
+    },
+    {
+      "coordinates": [1544, 965],
+      "name": "Kermadec Mountains",
+      "flag": ""
+    },
+    {
+      "coordinates": [1940, 914],
+      "name": "East Pacific Plains",
+      "flag": ""
+    },
+    {
+      "coordinates": [2070, 760],
+      "name": "Nazca Ridge",
+      "flag": ""
+    },
+    {
+      "coordinates": [1450, 333],
+      "name": "Mendocino",
+      "flag": ""
+    },
+    {
+      "coordinates": [1635, 520],
+      "name": "Clarion",
+      "flag": ""
+    },
+    {
+      "coordinates": [1720, 580],
+      "name": "Clipperton",
+      "flag": ""
+    },
+    {
+      "coordinates": [1680, 770],
+      "name": "Challenger",
+      "flag": ""
+    },
+    {
+      "coordinates": [1670, 1040],
+      "name": "Udintsev",
+      "flag": ""
+    },
+    {
+      "coordinates": [75, 940],
+      "name": "Falkland-Agulhas",
+      "flag": ""
+    },
+    {
+      "coordinates": [465, 860],
+      "name": "Gallieni",
+      "flag": ""
+    },
+    {
+      "coordinates": [355, 970],
+      "name": "Andrew-Basin",
+      "flag": ""
+    },
+    {
+      "coordinates": [190, 950],
+      "name": "Shaka",
+      "flag": ""
+    },
+    {
+      "coordinates": [700, 890],
+      "name": "Zeewolf",
+      "flag": ""
+    },
+    {
+      "coordinates": [855, 840],
+      "name": "Naturaliste",
+      "flag": ""
+    },
+    {
+      "coordinates": [837, 993],
+      "name": "Zeehaen",
+      "flag": ""
+    },
+    {
+      "coordinates": [1090, 1030],
+      "name": "Saint Vincent",
+      "flag": ""
+    },
+    {
+      "coordinates": [1000, 940],
+      "name": "Gambier",
+      "flag": ""
+    },
+    {
+      "coordinates": [1270, 1078],
+      "name": "Hjort",
+      "flag": ""
+    },
+    {
+      "coordinates": [1325, 1000],
+      "name": "Emerald",
+      "flag": ""
+    }
+  ],
+  "additionalNations": [
+    {
+      "name": "TCG Dumlupınar",
+      "flag": ""
+    },
+    {
+      "name": "Almirante Ferrándiz",
+      "flag": "es"
+    },
+    {
+      "name": "MV Princess Ashika",
+      "flag": "to"
+    },
+    {
+      "name": "SS Royston Grange",
+      "flag": "gb"
+    },
+    {
+      "name": "MV Wilhelm Gustloff",
+      "flag": "East Germany"
+    },
+    {
+      "name": "SS Thistlegorm",
+      "flag": "gb"
+    },
+    {
+      "name": "Salem Express",
+      "flag": "eg"
+    },
+    {
+      "name": "General Slocum",
+      "flag": "us"
+    },
+    {
+      "name": "RMS Empress of Ireland",
+      "flag": "ie"
+    },
+    {
+      "name": "Knyaz Suvorov",
+      "flag": "ru"
+    },
+    {
+      "name": "Hitachi Maru",
+      "flag": "jp"
+    },
+    {
+      "name": "Taiping",
+      "flag": "cn"
+    },
+    {
+      "name": "Wusung",
+      "flag": "jp"
+    },
+    {
+      "name": "MS Estonia",
+      "flag": "ee"
+    },
+    {
+      "name": "Indigirka",
+      "flag": "ussr"
+    },
+    {
+      "name": "HMS Bulwark",
+      "flag": "gb"
+    },
+    {
+      "name": "Kawachi",
+      "flag": "jp"
+    },
+    {
+      "name": "Baleares",
+      "flag": "es"
+    },
+    {
+      "name": "Tarumizu Maru",
+      "flag": "jp"
+    },
+    {
+      "name": "MV Spice Islander I",
+      "flag": "tz"
+    },
+    {
+      "name": "MS al-Salam Boccaccio 98",
+      "flag": "eg"
+    },
+    {
+      "name": "Princess of the Stars",
+      "flag": "ph"
+    },
+    {
+      "name": "Senopati Nusantara",
+      "flag": "bd"
+    },
+    {
+      "name": "Dona Marilyn",
+      "flag": "ph"
+    },
+    {
+      "name": "KM Bismas Raya 2",
+      "flag": "id"
+    },
+    {
+      "name": "Namyoung-ho",
+      "flag": "kr"
+    },
+    {
+      "name": "Sekirei Maru",
+      "flag": "jp"
+    },
+    {
+      "name": "Liberte",
+      "flag": "East Germany"
+    },
+    {
+      "name": "SS Sirio",
+      "flag": "es"
+    },
+    {
+      "name": "Yoshino",
+      "flag": "jp"
+    },
+    {
+      "name": "PNS Muhafiz",
+      "flag": "pk"
+    },
+    {
+      "name": "MV St Thomas Aquinas",
+      "flag": "ph"
+    },
+    {
+      "name": "MV Shariatpur 1",
+      "flag": "bd"
+    },
+    {
+      "name": "Al-Baraqua II",
+      "flag": "dj"
+    },
+    {
+      "name": "Zico",
+      "flag": "mz"
+    },
+    {
+      "name": "Changgyeong",
+      "flag": "kr"
+    },
+    {
+      "name": "Matsushima",
+      "flag": "jp"
+    },
+    {
+      "name": "MS Herald of Free Enterprise",
+      "flag": "gb"
+    },
+    {
+      "name": "Shiun Maru",
+      "flag": "jp"
+    },
+    {
+      "name": "MS Scandinavian Star",
+      "flag": "no"
+    },
+    {
+      "name": "SS Larchmont",
+      "flag": "us"
+    },
+    {
+      "name": "Mayakovsky",
+      "flag": "ussr"
+    },
+    {
+      "name": "SS Kuru",
+      "flag": "fi"
+    },
+    {
+      "name": "MV Princess Victoria",
+      "flag": "gb"
+    },
+    {
+      "name": "Iéna",
+      "flag": "fr"
+    },
+    {
+      "name": "HB la Saintet",
+      "flag": "cd"
+    },
+    {
+      "name": "Don Dexter Cathlyn",
+      "flag": "ph"
+    },
+    {
+      "name": "MS Hans Hedtoft",
+      "flag": "dk"
+    },
+    {
+      "name": "SS Florizel",
+      "flag": "Newfoundland"
+    },
+    {
+      "name": "HMS M1",
+      "flag": "gb"
+    },
+    {
+      "name": "HMS Cobra",
+      "flag": "gb"
+    },
+    {
+      "name": "USS Conestoga",
+      "flag": "us"
+    },
+    {
+      "name": "MS Jan Heweliusz",
+      "flag": "pl"
+    },
+    {
+      "name": "MV Conception",
+      "flag": "us"
+    },
+    {
+      "name": "MV Lady Mary Joy 3",
+      "flag": "ph"
+    },
+    {
+      "name": "HTMS Sukhothai",
+      "flag": "th"
+    },
+    {
+      "name": "Costa Concordia",
+      "flag": "it"
+    },
+    {
+      "name": "Lady Duck",
+      "flag": "ca"
+    },
+    {
+      "name": "Yellow Duck",
+      "flag": "gb"
+    },
+    {
+      "name": "Duck Rides",
+      "flag": "us"
+    },
+    {
+      "name": "Lady Lovibond",
+      "flag": "gb"
+    },
+    {
+      "name": "Eliza Battle",
+      "flag": "us"
+    },
+    {
+      "name": "Iron Mountain",
+      "flag": "us"
+    },
+    {
+      "name": "København",
+      "flag": "dk"
+    },
+    {
+      "name": "Octavius",
+      "flag": "gb"
+    },
+    {
+      "name": "Duc de Dantzig",
+      "flag": "fr"
+    },
+    {
+      "name": "Jenny",
+      "flag": "gb"
+    },
+    {
+      "name": "Marlborough",
+      "flag": "gb"
+    },
+    {
+      "name": "Ourang Medan"
+    },
+    {
+      "name": "Mary Celeste",
+      "flag": "us"
+    },
+    {
+      "name": "HMS Resolute",
+      "flag": "gb"
+    },
+    {
+      "name": "Zebrina",
+      "flag": "gb"
+    },
+    {
+      "name": "Carroll A. Deering",
+      "flag": "us"
+    },
+    {
+      "name": "SS Baychimo",
+      "flag": "gb"
+    },
+    {
+      "name": "MV Joyita",
+      "flag": "us"
+    },
+    {
+      "name": "SM UB-65",
+      "flag": "de"
+    },
+    {
+      "name": "Twenty One Friends",
+      "flag": "us"
+    },
+    {
+      "name": "SS Monroe",
+      "flag": "us"
+    },
+    {
+      "name": "Wave Goodbye",
+      "flag": ""
+    },
+    {
+      "name": "Flying Laboratory",
+      "flag": ""
+    },
+    {
+      "name": "Relationship",
+      "flag": ""
+    },
+    {
+      "name": "Shipfaced",
+      "flag": ""
+    },
+    {
+      "name": "Water You Doing",
+      "flag": ""
+    },
+    {
+      "name": "Lifes a Beach",
+      "flag": ""
+    },
+    {
+      "name": "Stern Talking Too",
+      "flag": ""
+    },
+    {
+      "name": "Buried Treasure",
+      "flag": ""
+    },
+    {
+      "name": "Hook",
+      "flag": ""
+    },
+    {
+      "name": "Line",
+      "flag": ""
+    },
+    {
+      "name": "Sinker",
+      "flag": ""
+    },
+    {
+      "name": "Keep It Reel",
+      "flag": ""
+    },
+    {
+      "name": "Seas the Day",
+      "flag": ""
+    },
+    {
+      "name": "The Codfather",
+      "flag": ""
+    },
+    {
+      "name": "Ship Happens",
+      "flag": ""
+    },
+    {
+      "name": "Pier Pressure",
+      "flag": ""
+    },
+    {
+      "name": "Aquaholic",
+      "flag": ""
+    },
+    {
+      "name": "Seaduced",
+      "flag": ""
+    },
+    {
+      "name": "Swell Times",
+      "flag": ""
+    },
+    {
+      "name": "Bait and Switch",
+      "flag": ""
+    },
+    {
+      "name": "Yachts of Fun",
+      "flag": ""
+    },
+    {
+      "name": "Dihydrogen Monoxide",
+      "flag": ""
+    },
+    {
+      "name": "The Dark Pearl",
+      "flag": ""
+    },
+    {
+      "name": "Jenny",
+      "flag": "us"
+    },
+    {
+      "name": "Orca",
+      "flag": ""
+    },
+    {
+      "name": "Jolly Doger",
+      "flag": "santa_claus"
+    },
+    {
+      "name": "Nautilus",
+      "flag": ""
+    },
+    {
+      "name": "Pequod",
+      "flag": ""
+    },
+    {
+      "name": "Yellow Submersible",
+      "flag": ""
+    },
+    {
+      "name": "Red November",
+      "flag": "ussr"
+    },
+    {
+      "coordinates": [2326, 303],
+      "name": "Ocean Ranger",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1480, 480],
+      "name": "USS Arizona",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1015, 560],
+      "name": "KRI Nanggala",
+      "flag": "id"
+    },
+    {
+      "coordinates": [2230, 500],
+      "name": "SS Andrea Doria",
+      "flag": "it"
+    },
+    {
+      "coordinates": [2310, 840],
+      "name": "Príncipe de Asturias",
+      "flag": "br"
+    },
+    {
+      "coordinates": [530, 495],
+      "name": "MS Georges Philippar",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [2327, 200],
+      "name": "USS Hobson",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2175, 400],
+      "name": "SS Morro Castle",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2010, 575],
+      "name": "SS Grandcamp",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2400, 300],
+      "name": "SS Volturno",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2400, 1050],
+      "name": "MV Rabaul Queen",
+      "flag": "pg"
+    },
+    {
+      "coordinates": [2450, 350],
+      "name": "SS Afrique",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [980, 490],
+      "name": "USS Johnston",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2186, 490],
+      "name": "SS El Faro",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2310, 830],
+      "name": "Aquidabã",
+      "flag": "br"
+    },
+    {
+      "coordinates": [160, 350],
+      "name": "MS Orazio",
+      "flag": "it"
+    },
+    {
+      "coordinates": [315, 378],
+      "name": "SS Heraklion",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [355, 320],
+      "name": "SS Admiral Nakhimov",
+      "flag": "ussr"
+    },
+    {
+      "coordinates": [895, 550],
+      "name": "DS Seacrest",
+      "flag": "us"
+    },
+    {
+      "coordinates": [925, 525],
+      "name": "USS Frank E. Evans",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1750, 405],
+      "name": "San Juan",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2400, 900],
+      "name": "ARA General Belgrano",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2130, 380],
+      "name": "SS Vestris",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1110, 335],
+      "name": "SS Kiche Maru",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [2030, 480],
+      "name": "Gulf of Merica",
+      "flag": ""
+    },
+    {
+      "coordinates": [2221, 200],
+      "name": "Labrador",
+      "flag": ""
+    },
+    {
+      "coordinates": [101, 118],
+      "name": "Norwegian",
+      "flag": ""
+    },
+    {
+      "coordinates": [364, 305],
+      "name": "Azov",
+      "flag": ""
+    },
+    {
+      "coordinates": [353, 325],
+      "name": "Black",
+      "flag": ""
+    },
+    {
+      "coordinates": [315, 377],
+      "name": "Aegean",
+      "flag": ""
+    },
+    {
+      "coordinates": [570, 560],
+      "name": "Arabian",
+      "flag": ""
+    },
+    {
+      "coordinates": [710, 570],
+      "name": "Bengal",
+      "flag": ""
+    },
+    {
+      "coordinates": [968, 599],
+      "name": "Celebes",
+      "flag": ""
+    },
+    {
+      "coordinates": [2392, 50],
+      "name": "Irminger",
+      "flag": ""
+    },
+    {
+      "coordinates": [245, 375],
+      "name": "Ionian",
+      "flag": ""
+    },
+    {
+      "coordinates": [206, 351],
+      "name": "Tyrrhenian",
+      "flag": ""
+    },
+    {
+      "coordinates": [955, 570],
+      "name": "Sulu",
+      "flag": ""
+    },
+    {
+      "coordinates": [1036, 490],
+      "name": "Philippine",
+      "flag": ""
+    },
+    {
+      "coordinates": [2412, 600],
+      "name": "Doldrums",
+      "flag": ""
+    },
+    {
+      "coordinates": [760, 950],
+      "name": "Ter Tholen",
+      "flag": ""
+    },
+    {
+      "coordinates": [767, 607],
+      "name": "Andaman",
+      "flag": ""
+    },
+    {
+      "coordinates": [565, 685],
+      "name": "Vityaz",
+      "flag": ""
+    },
+    {
+      "coordinates": [530, 765],
+      "name": "Rodrigues",
+      "flag": ""
+    },
+    {
+      "coordinates": [120, 1030],
+      "name": "Bouvet",
+      "flag": ""
+    },
+    {
+      "coordinates": [360, 910],
+      "name": "Prince-Edward",
+      "flag": ""
+    },
+    {
+      "coordinates": [595, 700],
+      "name": "Argo",
+      "flag": ""
+    },
+    {
+      "coordinates": [595, 745],
+      "name": "Mary-Celeste",
+      "flag": ""
+    },
+    {
+      "coordinates": [550, 630],
+      "name": "Bao-Chuan",
+      "flag": ""
+    },
+    {
+      "coordinates": [530, 560],
+      "name": "Owen",
+      "flag": ""
+    },
+    {
+      "coordinates": [800, 930],
+      "name": "Nieuw-Amsterdam",
+      "flag": ""
+    },
+    {
+      "coordinates": [740, 900],
+      "name": "Ter-Tholen",
+      "flag": ""
+    },
+    {
+      "coordinates": [825, 980],
+      "name": "Geelvinck",
+      "flag": ""
+    },
+    {
+      "coordinates": [1160, 1000],
+      "name": "Balleny",
+      "flag": ""
+    },
+    {
+      "coordinates": [1015, 510],
+      "name": "Central",
+      "flag": ""
+    },
+    {
+      "coordinates": [2300, 565],
+      "name": "Vema",
+      "flag": ""
+    },
+    {
+      "coordinates": [2326, 524],
+      "name": "Fifteen-Twenty",
+      "flag": ""
+    },
+    {
+      "coordinates": [2270, 450],
+      "name": "Kane",
+      "flag": ""
+    },
+    {
+      "coordinates": [2480, 635],
+      "name": "Romanche",
+      "flag": ""
+    },
+    {
+      "coordinates": [44, 720],
+      "name": "Bode-Verde",
+      "flag": ""
+    },
+    {
+      "coordinates": [2499, 760],
+      "name": "Hotspur",
+      "flag": ""
+    },
+    {
+      "coordinates": [2450, 785],
+      "name": "Rio-Grande",
+      "flag": ""
+    },
+    {
+      "coordinates": [1670, 460],
+      "name": "Molokai",
+      "flag": ""
+    },
+    {
+      "coordinates": [80, 1040],
+      "name": "Conrad",
+      "flag": ""
+    },
+    {
+      "coordinates": [2376, 394],
+      "name": "Maxwell",
+      "flag": ""
+    },
+    {
+      "coordinates": [2340, 375],
+      "name": "Oceanographer",
+      "flag": ""
+    },
+    {
+      "coordinates": [2300, 400],
+      "name": "Hayes",
+      "flag": ""
+    },
+    {
+      "coordinates": [2425, 375],
+      "name": "Faraday",
+      "flag": ""
+    },
+    {
+      "coordinates": [2390, 260],
+      "name": "Charlie-Gibbs",
+      "flag": ""
+    },
+    {
+      "coordinates": [1595, 415],
+      "name": "Murray",
+      "flag": ""
+    },
+    {
+      "coordinates": [2450, 900],
+      "name": "Gough",
+      "flag": ""
+    },
+    {
+      "coordinates": [2390, 630],
+      "name": "Saint-Paul",
+      "flag": ""
+    },
+    {
+      "coordinates": [1690, 980],
+      "name": "Eltanin",
+      "flag": ""
+    },
+    {
+      "coordinates": [1190, 790],
+      "name": "Coral",
+      "flag": ""
+    },
+    {
+      "coordinates": [1200, 990],
+      "name": "Tasman",
+      "flag": ""
+    },
+    {
+      "coordinates": [870, 940],
+      "name": "Heemskerck",
+      "flag": ""
+    },
+    {
+      "coordinates": [540, 850],
+      "name": "Melville",
+      "flag": ""
+    },
+    {
+      "coordinates": [605, 650],
+      "name": "Sealark",
+      "flag": ""
+    },
+    {
+      "coordinates": [1080, 500],
+      "name": "Parece-Vela",
+      "flag": ""
+    },
+    {
+      "coordinates": [2335, 1020],
+      "name": "South-Sandwich",
+      "flag": ""
+    },
+    {
+      "coordinates": [1255, 920],
+      "name": "Challenger Bay",
+      "flag": ""
+    },
+    {
+      "coordinates": [310, 1050],
+      "name": "Enderby Plain",
+      "flag": ""
+    },
+    {
+      "coordinates": [180, 700],
+      "name": "Congo Mount",
+      "flag": ""
+    },
+    {
+      "coordinates": [490, 570],
+      "name": "Carlsberg Delta",
+      "flag": ""
+    },
+    {
+      "coordinates": [567, 545],
+      "name": "Chagos-Laccadive Valley",
+      "flag": ""
+    },
+    {
+      "coordinates": [1111, 402],
+      "name": "Ryukyu Mountains",
+      "flag": ""
+    },
+    {
+      "coordinates": [1240, 630],
+      "name": "Ontong Java Bay",
+      "flag": ""
+    },
+    {
+      "coordinates": [1265, 610],
+      "name": "Melanesian Valley",
+      "flag": ""
+    },
+    {
+      "coordinates": [1700, 325],
+      "name": "Juan de Fuca Ridge",
+      "flag": ""
+    },
+    {
+      "name": "Monterey Mount",
+      "flag": ""
+    },
+    {
+      "name": "Gorda Ridge",
+      "flag": ""
+    },
+    {
+      "coordinates": [2260, 890],
+      "name": "Peru-Chilean Mountains",
+      "flag": ""
+    },
+    {
+      "coordinates": [2235, 860],
+      "name": "Abyssal Plains",
+      "flag": ""
+    },
+    {
+      "coordinates": [2300, 900],
+      "name": "Argentine Plateau",
+      "flag": ""
+    },
+    {
+      "coordinates": [2420, 650],
+      "name": "Brazilian Plateau",
+      "flag": ""
+    },
+    {
+      "name": "Sohm Plain",
+      "flag": ""
+    },
+    {
+      "name": "Nares Plain",
+      "flag": ""
+    },
+    {
+      "name": "Blake Valley",
+      "flag": ""
+    },
+    {
+      "coordinates": [2322, 306],
+      "name": "Grand Banks",
+      "flag": ""
+    },
+    {
+      "name": "Rockall Ridge",
+      "flag": ""
+    },
+    {
+      "coordinates": [454, 325],
+      "name": "Caspian Sea",
+      "flag": ""
+    },
+    {
+      "coordinates": [135, 710],
+      "name": "Angola Plateau",
+      "flag": ""
+    },
+    {
+      "coordinates": [800, 700],
+      "name": "Ninetyeast Canyon",
+      "flag": ""
+    },
+    {
+      "coordinates": [1385, 950],
+      "name": "Campbell Bay",
+      "flag": ""
+    },
+    {
+      "coordinates": [1225, 270],
+      "name": "Sea of Okhotsk",
+      "flag": ""
+    },
+    {
+      "coordinates": [2360, 220],
+      "name": "Reykjanes Delta",
+      "flag": ""
+    }
+  ]
+}

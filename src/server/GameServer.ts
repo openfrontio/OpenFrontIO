@@ -149,6 +149,9 @@ export class GameServer {
     if (gameConfig.maxTimerValue !== undefined) {
       this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
     }
+    if (gameConfig.startDelay !== undefined) {
+      this.gameConfig.startDelay = gameConfig.startDelay ?? undefined;
+    }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
     }
@@ -488,7 +491,7 @@ export class GameServer {
                 this.updateGameConfig(stampedIntent.config);
                 return;
               }
-              case "start_game": {
+              case "toggle_game_start_timer": {
                 if (client.clientID !== this.lobbyCreatorID) {
                   this.log.warn(`Only lobby creator can start game`, {
                     clientID: client.clientID,
@@ -514,7 +517,13 @@ export class GameServer {
                   creatorID: client.clientID,
                   gameID: this.id,
                 });
-                this.start();
+                if (this.startsAt) {
+                  this.startsAt = undefined;
+                } else {
+                  this.setStartsAt(
+                    Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
+                  );
+                }
                 return;
               }
               case "toggle_pause": {
@@ -930,25 +939,6 @@ export class GameServer {
 
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
     const noActive = this.activeClients.length === 0;
-
-    if (this.gameConfig.gameType !== GameType.Public) {
-      if (this._hasStarted) {
-        if (noActive && noRecentPings) {
-          this.log.info("private game complete", {
-            gameID: this.id,
-          });
-          return GamePhase.Finished;
-        } else {
-          return GamePhase.Active;
-        }
-      } else if (this._hasEnded) {
-        return GamePhase.Finished;
-      } else {
-        return GamePhase.Lobby;
-      }
-    }
-
-    // Public Games
 
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (

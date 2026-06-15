@@ -1,4 +1,6 @@
 {
+  "categories": ["fictional", "europe", "north_america"],
+  "id": "Svalmel",
   "map": {
     "height": 1580,
     "num_land_tiles": 1011623,
@@ -14,6 +16,7 @@
     "num_land_tiles": 248032,
     "width": 850
   },
+  "multiplayer_frequency": 8,
   "name": "Svalmel",
   "nations": [
     {
@@ -41,5 +44,6 @@
       "flag": "no",
       "name": "Nordaustlandet"
     }
-  ]
+  ],
+  "translation_key": "map.svalmel"
 }

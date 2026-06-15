@@ -9,7 +9,6 @@ import {
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticButton";
 import { Controller } from "../../Controller";
@@ -21,6 +20,7 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
 import { SendWinnerEvent } from "../../Transport";
+import { GameView } from "../../view";
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {

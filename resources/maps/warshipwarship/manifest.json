@@ -1,0 +1,181 @@
+{
+  "additionalNations": [
+    {
+      "flag": "Republic of Pirates",
+      "name": "Just Pirates"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "The Pillage"
+    },
+    {
+      "name": "Nice island man"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Bootyful Valley"
+    },
+    {
+      "name": "Chill island trader"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Plunder Peak"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Corsair Cay"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Cutlass Cove"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Galleon Gulf"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Rogue’s Reach"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Buccaneer Bay"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Blackflag Basin"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Dreadnought Dunes"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Armada Anchor"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Caliber Cape"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Salvo Shores"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Bastion Bluffs"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Garrison Atoll"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Vanguard Reef"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Fortress Floe"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Citadel Crag"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Watchpoint Wick"
+    },
+    {
+      "flag": "Republic of Pirates",
+      "name": "Redoubt Ridge"
+    }
+  ],
+  "categories": ["arcade", "new"],
+  "id": "WarshipWarship",
+  "map": {
+    "height": 1396,
+    "num_land_tiles": 1122343,
+    "width": 3000
+  },
+  "map16x": {
+    "height": 349,
+    "num_land_tiles": 68553,
+    "width": 750
+  },
+  "map4x": {
+    "height": 698,
+    "num_land_tiles": 279822,
+    "width": 1500
+  },
+  "multiplayer_frequency": 3,
+  "name": "Warship Warship",
+  "nations": [
+    {
+      "coordinates": [750, 680],
+      "flag": "Republic of Pirates",
+      "name": "Isle of Infestation"
+    },
+    {
+      "coordinates": [1775, 435],
+      "flag": "Republic of Pirates",
+      "name": "Poort"
+    },
+    {
+      "coordinates": [1884, 1064],
+      "flag": "Republic of Pirates",
+      "name": "Battleship Bay"
+    },
+    {
+      "coordinates": [1116, 1000],
+      "flag": "Republic of Pirates",
+      "name": "Piracity"
+    },
+    {
+      "coordinates": [413, 378],
+      "flag": "Republic of Pirates",
+      "name": "Robbery Rock"
+    },
+    {
+      "coordinates": [1009, 272],
+      "flag": "Republic of Pirates",
+      "name": "Warship Wastelands"
+    },
+    {
+      "coordinates": [388, 1027],
+      "flag": "Republic of Pirates",
+      "name": "Port Pirate"
+    },
+    {
+      "coordinates": [2688, 968],
+      "flag": "bs",
+      "name": "Cape Caribbean"
+    },
+    {
+      "coordinates": [2222, 686],
+      "name": "Evil island man"
+    },
+    {
+      "coordinates": [2597, 405],
+      "flag": "so",
+      "name": "Somalian Sound"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1396,
+        "width": 1500,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1396,
+        "width": 1500,
+        "x": 1500,
+        "y": 0
+      }
+    ]
+  },
+  "translation_key": "map.warshipwarship"
+}

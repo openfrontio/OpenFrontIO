@@ -1,0 +1,121 @@
+{
+  "id": "Titan",
+  "name": "Titan",
+  "translation_key": "map.titan",
+  "categories": ["new", "cosmic"],
+  "multiplayer_frequency": 3,
+  "nations": [
+    {
+      "name": "Stone-Keeping Purple Aliens",
+      "flag": "Purple Flag"
+    },
+    {
+      "name": "European Space Agency",
+      "flag": "eu"
+    },
+    {
+      "name": "UKSA",
+      "flag": "gb"
+    },
+    {
+      "name": "CNSA",
+      "flag": "cn"
+    },
+    {
+      "name": "NASA",
+      "flag": "us"
+    },
+    {
+      "name": "Roscosmos",
+      "flag": "ru"
+    },
+    {
+      "name": "JAXA",
+      "flag": "jp"
+    },
+    {
+      "name": "UAESA",
+      "flag": "ae"
+    },
+    {
+      "name": "NATA",
+      "flag": "kp"
+    },
+    {
+      "name": "CONAE",
+      "flag": "ar"
+    },
+    {
+      "name": "ASA",
+      "flag": "au"
+    },
+    {
+      "name": "UEB",
+      "flag": "br"
+    },
+    {
+      "name": "CSA",
+      "flag": "ca"
+    },
+    {
+      "name": "CNES",
+      "flag": "fr"
+    },
+    {
+      "name": "ISRO",
+      "flag": "in"
+    },
+    {
+      "name": "Iranian Space Agency",
+      "flag": "ir"
+    },
+    {
+      "name": "Israel Space Agency",
+      "flag": "il"
+    },
+    {
+      "name": "ASI",
+      "flag": "it"
+    },
+    {
+      "name": "KARI",
+      "flag": "kr"
+    },
+    {
+      "name": "MSA",
+      "flag": "mx"
+    },
+    {
+      "name": "NZSA",
+      "flag": "nz"
+    },
+    {
+      "name": "SUPARCO",
+      "flag": "pk"
+    },
+    {
+      "name": "POLSA",
+      "flag": "pl"
+    },
+    {
+      "name": "SNSA",
+      "flag": "se"
+    },
+    {
+      "name": "SSAU",
+      "flag": "ua"
+    },
+    {
+      "name": "LuxSpace",
+      "flag": "lu"
+    },
+    {
+      "name": "TUA",
+      "flag": "tr"
+    },
+    {
+      "name": "UNOOSA",
+      "flag": "un"
+    }
+  ]
+}

@@ -1,7 +1,12 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { translateText } from "../client/Utils";
+import {
+  calculateServerTimeOffset,
+  getSecondsUntilServerTimestamp,
+  renderDuration,
+  translateText,
+} from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -25,6 +30,7 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
+import "./components/InputCard";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -65,6 +71,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private donateTroops: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
+  @state() private startDelayValue: number | undefined = 3;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
@@ -87,6 +94,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private hostCheatStartingGold: boolean = false;
   @state() private hostCheatStartingGoldValue: number | undefined = undefined;
   @state() private lobbyCreatorClientID: string = "";
+  @state() private lobbyStartAt: number | null = null;
+  @state() private serverTimeOffset: number = 0;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -102,6 +111,10 @@ export class HostLobbyModal extends BaseModal {
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
       return;
     }
+    if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
+      this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
+    }
+    this.lobbyStartAt = lobby.startsAt ?? null;
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
@@ -180,6 +193,22 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected renderBody() {
+    const secondsRemaining =
+      this.lobbyStartAt !== null
+        ? getSecondsUntilServerTimestamp(
+            this.lobbyStartAt,
+            this.serverTimeOffset,
+          )
+        : null;
+    const statusLabel =
+      secondsRemaining === null
+        ? this.clients.length === 1
+          ? translateText("host_modal.waiting")
+          : translateText("host_modal.start")
+        : translateText("host_modal.starting_in", {
+            time: renderDuration(secondsRemaining),
+          });
+
     const inputCards = [
       html`<toggle-input-card
         .labelKey=${"host_modal.max_timer"}
@@ -195,6 +224,19 @@ export class HostLobbyModal extends BaseModal {
         .onInput=${this.handleMaxTimerValueChanges}
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
       ></toggle-input-card>`,
+      html`<input-card
+        .labelKey=${"host_modal.start_delay"}
+        .inputId=${"start-delay-value"}
+        .inputMin=${0}
+        .inputMax=${600}
+        .inputStep=${"1"}
+        .inputValue=${this.startDelayValue}
+        .inputAriaLabel=${translateText("host_modal.start_delay")}
+        .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
+        .defaultInputValue=${3}
+        .onChange=${this.handleStartDelayValueChanges}
+        .onKeyDown=${this.handleStartDelayValueKeyDown}
+      ></input-card>`,
       html`<toggle-input-card
         .labelKey=${"host_modal.player_immunity_duration"}
         .checked=${this.spawnImmunity}
@@ -289,7 +331,9 @@ export class HostLobbyModal extends BaseModal {
 
     return html`
       <div class="flex flex-col h-full">
-        <div class="flex-1 p-6 mx-auto w-full max-w-5xl">
+        <div
+          class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
+        >
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-10"}
@@ -417,11 +461,9 @@ export class HostLobbyModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            .title=${this.clients.length === 1
-              ? translateText("host_modal.waiting")
-              : translateText("host_modal.start")}
-            ?disable=${this.clients.length < 2}
-            @click=${this.startGame}
+            .title=${statusLabel}
+            ?disable=${this.lobbyStartAt === null && this.clients.length < 2}
+            @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
       </div>
@@ -527,6 +569,7 @@ export class HostLobbyModal extends BaseModal {
     this.donateTroops = false;
     this.maxTimer = false;
     this.maxTimerValue = undefined;
+    this.startDelayValue = 3;
     this.instantBuild = false;
     this.randomSpawn = false;
     this.compactMap = false;
@@ -898,6 +941,26 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
+  };
+
+  private handleStartDelayValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 600,
+    });
+
+    if (value === undefined) {
+      this.startDelayValue = undefined;
+      input.value = "";
+    } else {
+      this.startDelayValue = value;
+    }
+    this.putGameConfig();
+  };
+
   private handleNationsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
@@ -965,6 +1028,7 @@ export class HostLobbyModal extends BaseModal {
               this.defaultNationCount,
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
+            startDelay: this.startDelayValue,
             goldMultiplier:
               this.goldMultiplier === true ? this.goldMultiplierValue : null,
             startingGold:
@@ -996,7 +1060,7 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  private async startGame() {
+  private async toggleGameStartTimer() {
     await this.putGameConfig();
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -1006,7 +1070,7 @@ export class HostLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = false;
 
     this.dispatchEvent(
-      new CustomEvent("start-game", {
+      new CustomEvent("toggle_game_start_timer", {
         bubbles: true,
         composed: true,
       }),

@@ -1,22 +1,13 @@
 export type { AttackRingInput } from "../types";
-export { createDebugGui } from "./debug/index";
-export type {
-  GameViewEventMap,
-  GameViewEventType,
-  MapPointerEvent,
-  MapScrollEvent,
-  RadialMenuItem,
-  RadialMenuSelectEvent,
-} from "./Events";
-export { GameView } from "./GameView";
+// createDebugGui is intentionally not re-exported here — it pulls lil-gui and
+// the debug GUI into the main bundle; dynamically import "./debug/index".
 export { GraphicsOverridesSchema } from "./GraphicsOverrides";
 export type { GraphicsOverrides } from "./GraphicsOverrides";
+export { MapRenderer } from "./MapRenderer";
+export { preloadAtlasData } from "./passes/name-pass/AtlasData";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
-export {
-  createRenderSettings,
-  dumpSettings,
-  generateRenderSettings,
-} from "./RenderSettings";
+export { applyGraphicsOverrides } from "./RenderOverrides";
+export { createRenderSettings, dumpSettings } from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
 export { deepAssign, deepDiff } from "./SettingsUtils";
 export { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";

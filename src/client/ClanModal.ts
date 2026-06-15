@@ -18,6 +18,7 @@ import "./components/clan/ClanTransferView";
 import "./components/ConfirmDialog";
 import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { modalRouter } from "./ModalRouter";
 import { translateText } from "./Utils";
 
 type View =
@@ -195,6 +196,7 @@ export class ClanModal extends BaseModal {
         this.selectedClanTag = "";
         this.myRole = null;
         this.detailCache = null;
+        modalRouter.syncArgs("clan", { clan: null, tag: null });
         this.gameHistoryCache = null;
         this.setActiveTab(this.previousListTab);
       },
@@ -203,8 +205,17 @@ export class ClanModal extends BaseModal {
     });
   }
 
-  protected onOpen(): void {
-    this.loadMyClans();
+  protected onOpen(args?: Record<string, unknown>): void {
+    const targetTag =
+      typeof args?.clan === "string"
+        ? args.clan.trim()
+        : typeof args?.tag === "string"
+          ? args.tag.trim()
+          : "";
+    if (targetTag) {
+      this.openDetail(targetTag.toUpperCase());
+    }
+    this.loadMyClans({ allowGuest: Boolean(targetTag) });
   }
 
   protected onClose(): void {
@@ -219,12 +230,19 @@ export class ClanModal extends BaseModal {
     this.gameHistoryCache = null;
   }
 
-  private async loadMyClans() {
+  private async loadMyClans(opts: { allowGuest?: boolean } = {}) {
     this.loading = true;
     try {
       const me = await getUserMe();
       if (!this.isModalOpen) return;
       if (!me || Object.keys(me.user).length === 0) {
+        if (opts.allowGuest) {
+          this.myPublicId = null;
+          this.myPendingRequests = [];
+          this.myClanRoles = new Map();
+          this.myClans = [];
+          return;
+        }
         window.dispatchEvent(
           new CustomEvent("show-message", {
             detail: {
@@ -478,6 +496,7 @@ export class ClanModal extends BaseModal {
     }
     this.selectedClanTag = tag;
     this.view = "detail";
+    modalRouter.syncArgs("clan", { clan: tag, tag: null });
     // modalConfig() returns detail tabs; setActiveTab anchors activeTab to
     // "overview" and syncs the URL router (routerName = "clan").
     this.setActiveTab("overview");

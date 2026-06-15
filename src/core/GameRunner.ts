@@ -100,6 +100,9 @@ export class GameRunner {
     if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
       this.game.addExecution(new SpawnTimerExecution());
     }
+    if (this.game.config().spawnNations()) {
+      this.game.addExecution(...this.execManager.nationExecutions());
+    }
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
@@ -107,9 +110,6 @@ export class GameRunner {
       this.game.addExecution(
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
-    }
-    if (this.game.config().spawnNations()) {
-      this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
@@ -160,6 +160,11 @@ export class GameRunner {
       return false;
     }
 
+    // Track whether placements were recomputed this tick — the record is
+    // only attached to the update when it could have changed, so the main
+    // thread doesn't structured-clone an identical ~all-players record on
+    // every other tick.
+    let viewDataChanged = false;
     if (this.game.inSpawnPhase()) {
       for (const p of this.game.players()) {
         if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
@@ -167,6 +172,7 @@ export class GameRunner {
         }
         if (p.spawnTile() === undefined) continue;
         this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+        viewDataChanged = true;
       }
     }
 
@@ -179,17 +185,22 @@ export class GameRunner {
       for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
       }
+      viewDataChanged = true;
     }
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
     const packedMotionPlans = this.game.drainPackedMotionPlans();
+    const packedPlayerUpdates = this.game.drainPackedPlayerUpdates();
+    const packedAttackUpdates = this.game.drainPackedAttackUpdates();
 
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
       ...(packedMotionPlans ? { packedMotionPlans } : {}),
+      ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
+      ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       updates: updates,
-      playerNameViewData: this.playerViewData,
+      ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
     });

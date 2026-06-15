@@ -145,6 +145,7 @@ export interface PlayerStatusData {
   nukeTargetsMe: boolean;
   traitorRemainingTicks: number;
   allianceFraction: number;
+  allianceRemainingTicks: number;
 }
 
 /** Ghost structure preview data for build-mode visualization. */
@@ -152,6 +153,8 @@ export interface GhostPreviewData {
   ghostType: string; // UnitType string ("City", "Port", etc.)
   tileX: number; // Hover tile X
   tileY: number; // Hover tile Y
+  radiusTileX: number;
+  radiusTileY: number;
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
@@ -202,6 +205,8 @@ export interface NukeTelegraphData {
   y: number;
   innerRadius: number;
   outerRadius: number;
+  /** Launcher vs local player: 0 = self, 1 = ally/teammate, 2 = enemy. */
+  relation: number;
 }
 
 /** Lean config for constructing the GPU renderer — no replay-specific fields. */

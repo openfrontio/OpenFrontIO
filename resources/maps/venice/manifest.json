@@ -1,4 +1,6 @@
 {
+  "categories": ["new", "europe"],
+  "id": "Venice",
   "map": {
     "height": 1500,
     "num_land_tiles": 823860,
@@ -14,6 +16,7 @@
     "num_land_tiles": 198423,
     "width": 1000
   },
+  "multiplayer_frequency": 6,
   "name": "Venice",
   "nations": [
     {
@@ -91,5 +94,6 @@
       "flag": "venice",
       "name": "Sant'Elena"
     }
-  ]
+  ],
+  "translation_key": "map.venice"
 }

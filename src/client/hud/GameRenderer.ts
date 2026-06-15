@@ -1,17 +1,18 @@
 import { EventBus } from "../../core/EventBus";
-import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
-import { GameStartingModal } from "../GameStartingModal";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { SoundEffectController } from "../controllers/SoundEffectController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
-import { GameView as WebGLGameView } from "../render/gl";
+import { GameStartingModal } from "../GameStartingModal";
+import { MapRenderer } from "../render/gl";
+import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
+import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
@@ -40,13 +41,14 @@ import { SpawnTimer } from "./layers/SpawnTimer";
 import { TeamStats } from "./layers/TeamStats";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
+import { loadAllSprites } from "./SpriteLoader";
 
 export function createRenderer(
   inputEl: HTMLElement,
   game: GameView,
   eventBus: EventBus,
   playerRole: string | null,
-  view: WebGLGameView,
+  view: MapRenderer,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
   const userSettings = new UserSettings();
@@ -294,6 +296,7 @@ export function createRenderer(
     new StructureHighlightController(eventBus, view),
     new ViewModeController(eventBus, view),
     new AttackingTroopsController(game, eventBus, userSettings, view),
+    new SoundEffectController(game, eventBus),
     eventsDisplay,
     actionableEvents,
     attacksDisplay,
@@ -348,6 +351,10 @@ export class GameRenderer {
   ) {}
 
   initialize() {
+    loadAllSprites().catch((err) =>
+      console.error("Failed to preload sprites:", err),
+    );
+
     this.layers.forEach((l) => l.init?.());
 
     window.addEventListener("resize", () =>

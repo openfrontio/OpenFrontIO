@@ -1,5 +1,10 @@
 {
-  "name": "Milky Way",
+  "id": "MilkyWay",
+  "name": "MilkyWay",
+  "display_name": "Milky Way",
+  "translation_key": "map.milkyway",
+  "categories": ["cosmic"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [775, 757],

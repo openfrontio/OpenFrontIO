@@ -50,6 +50,7 @@ export class FxAttackRingPass {
   private uTilesPerPx: WebGLUniformLocation;
   private uTime: WebGLUniformLocation;
   private uRingWidth: WebGLUniformLocation;
+  private uRingScreenPx: WebGLUniformLocation;
   private vao: WebGLVertexArrayObject;
   private instanceBuf: DynamicInstanceBuffer;
   private ringCount = 0;
@@ -65,6 +66,7 @@ export class FxAttackRingPass {
     this.uTilesPerPx = gl.getUniformLocation(this.program, "uTilesPerPx")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;
     this.uRingWidth = gl.getUniformLocation(this.program, "uRingWidth")!;
+    this.uRingScreenPx = gl.getUniformLocation(this.program, "uRingScreenPx")!;
 
     const glBuf = gl.createBuffer()!;
     this.instanceBuf = new DynamicInstanceBuffer(
@@ -182,6 +184,7 @@ export class FxAttackRingPass {
     gl.uniform1f(this.uTilesPerPx, 1 / zoom);
     gl.uniform1f(this.uTime, performance.now() / 1000);
     gl.uniform1f(this.uRingWidth, this.settings.fx.shockwaveRingWidth);
+    gl.uniform1f(this.uRingScreenPx, this.settings.fx.attackRingScreenPx);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf.buffer);
     gl.bufferSubData(
       gl.ARRAY_BUFFER,

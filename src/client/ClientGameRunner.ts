@@ -27,10 +27,8 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
-  DARK_MODE_KEY,
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -69,17 +67,25 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
-  createDebugGui,
-  generateRenderSettings,
-  GameView as WebGLGameView,
+  applyGraphicsOverrides,
+  createRenderSettings,
+  deepAssign,
+  MapRenderer,
+  preloadAtlasData,
+  type RenderSettings,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
+import { themeProvider } from "./theme/ThemeProvider";
+import { GameView, PlayerView } from "./view";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
+  // In-flight clan-tag ownership check; resolves to the tag to submit (null if
+  // it failed). Runs parallel to the WS handshake — only the join waits on it.
+  clanTagCheck?: Promise<string | null>;
   playerRole: string | null;
   gameID: GameID;
   turnstileToken: string | null;
@@ -110,13 +116,18 @@ export function joinLobby(
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
   const userSettings: UserSettings = new UserSettings();
+  themeProvider.reset(); // fresh colour allocators for this game
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
 
-  const onconnect = () => {
+  const onconnect = async () => {
+    // Drop the tag if the ownership check failed; the server re-checks anyway.
+    if (lobbyConfig.clanTagCheck !== undefined) {
+      lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
+    }
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     transport.joinGame();
@@ -244,8 +255,9 @@ export function joinLobby(
 function createWebGLView(
   terrainMap: TerrainMapData,
   config: Config,
+  settings: RenderSettings,
 ): {
-  view: WebGLGameView;
+  view: MapRenderer;
   glCanvas: HTMLCanvasElement;
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
 } {
@@ -283,7 +295,7 @@ function createWebGLView(
   };
 
   const palette = new Float32Array(4096 * 2 * 4);
-  const view = new WebGLGameView(
+  const view = new MapRenderer(
     glCanvas,
     {
       mapWidth,
@@ -299,6 +311,7 @@ function createWebGLView(
     terrainBytes,
     palette,
     config,
+    settings,
     captureRaf,
     captureCaf,
   );
@@ -310,7 +323,7 @@ function createWebGLView(
 
 function mountWebGLFrameLoop(
   terrainMap: TerrainMapData,
-  view: WebGLGameView,
+  view: MapRenderer,
   glCanvas: HTMLCanvasElement,
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null },
   transformHandler: import("./TransformHandler").TransformHandler,
@@ -385,7 +398,7 @@ function mountWebGLFrameLoop(
 
   // When context is lost and restored, WebGL loses all textures and geometry.
   // Force a full re-upload of the simulation state.
-  view.on("contextrestored", () => {
+  view.onContextRestored = () => {
     builder.clearCaches();
 
     // Full upload of terrain, territory & trail state
@@ -401,12 +414,14 @@ function mountWebGLFrameLoop(
     const frameData = gameView.frameData();
     view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
 
-    // Structures and railroads normally skip GPU upload unless marked dirty, now force
+    // Structures, railroads and relations normally skip GPU upload unless
+    // marked dirty, now force
     view.updateStructures(frameData.units as Map<number, UnitState>);
     view.uploadRailroadState(frameData.railroadState);
+    view.updateRelations(frameData.relationMatrix, frameData.relationSize);
 
     builder.update(gameView);
-  });
+  };
 
   return { builder };
 }
@@ -439,8 +454,12 @@ async function createClientGame(
       mapLoader,
     );
   }
+  // Kick off the font-atlas fetch so it overlaps with worker init; the
+  // render passes need it parsed before createWebGLView runs.
+  const atlasDataLoad = preloadAtlasData();
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
+  await atlasDataLoad;
   const gameView = new GameView(
     worker,
     config,
@@ -467,21 +486,20 @@ async function createClientGame(
 
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
+    // Resolve render settings (defaults + user overrides) up front so the
+    // renderer is built with the final values — no construct-with-defaults,
+    // re-apply-overrides dance, and texture-baking passes (terrain) get the
+    // right colors on the first build.
+    const resolveRenderSettings = (): RenderSettings => {
+      const settings = createRenderSettings();
+      applyGraphicsOverrides(settings, userSettings.graphicsOverrides());
+      return settings;
+    };
+
     const { view, glCanvas, cachedWebGLFrameCallback } = createWebGLView(
       gameMap,
       config,
-    );
-
-    // Bind the WebGL renderer's day/night mode to the existing darkMode
-    // UserSetting so the in-game map matches the rest of the UI. Initial
-    // apply + live updates via the per-key settings-changed event.
-    const applyDayNightMode = (isDark: boolean): void => {
-      view.getSettings().dayNight.mode = isDark ? "dark" : "light";
-    };
-    applyDayNightMode(userSettings.darkMode());
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
+      resolveRenderSettings(),
     );
 
     view.setShowPatterns(userSettings.territoryPatterns());
@@ -491,26 +509,57 @@ async function createClientGame(
     );
 
     const graphicsListenerAbort = new AbortController();
-    const applyGraphicsOverrides = (): void => {
-      const generated = generateRenderSettings(
-        userSettings.graphicsOverrides(),
-      );
-      const live = view.getSettings();
-      Object.assign(live.name, generated.name);
-      Object.assign(live.structure, generated.structure);
+    // Re-resolve settings and copy them onto the renderer's live object in
+    // place (passes hold a reference to it, so they pick the change up).
+    const regenerateRenderSettings = (): void => {
+      deepAssign(view.getSettings(), resolveRenderSettings());
     };
-    applyGraphicsOverrides();
+    // Rebuild the GPU-derived graphics state that the per-frame passes don't
+    // pick up from the live settings object on their own.
+    const refreshDerivedGraphics = (): void => {
+      // Terrain is baked into a GPU texture rather than read per-frame, so a
+      // terrain-color override (e.g. ocean) needs an explicit texture rebuild.
+      view.rebuildTerrain();
+      // A graphics override can switch the active theme (e.g. colorblind mode),
+      // so re-theme existing players and re-upload the palette to recolor their
+      // territory fills/borders live.
+      gameView.refreshPlayerColors();
+      webglBuilder.refreshPalette(gameView);
+    };
+    // Re-apply render settings, then re-theme and recolor players, on a
+    // graphics-override change (covers a theme switch such as colorblind mode).
+    const onGraphicsChanged = (): void => {
+      regenerateRenderSettings();
+      refreshDerivedGraphics();
+    };
+    // No initial regenerate or terrain rebuild needed — the renderer was
+    // constructed with the resolved settings above, so the terrain texture
+    // already bakes any saved ocean-color override.
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      applyGraphicsOverrides,
+      onGraphicsChanged,
       { signal: graphicsListenerAbort.signal },
     );
 
-    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
+    let debugGui: { open(): void; destroy(): void } | null = null;
+    let debugGuiLoading = false;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
       if (debugGui === null) {
-        debugGui = createDebugGui(view.getSettings());
-        debugGui.open();
+        if (debugGuiLoading) return;
+        debugGuiLoading = true;
+        import("./render/gl/debug/index")
+          .then(({ createDebugGui }) => {
+            debugGui = createDebugGui(
+              view.getSettings(),
+              resolveRenderSettings,
+              refreshDerivedGraphics,
+            );
+            debugGui.open();
+          })
+          .finally(() => {
+            debugGuiLoading = false;
+          });
       } else {
         debugGui.destroy();
         debugGui = null;

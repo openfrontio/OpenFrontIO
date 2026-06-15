@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "BosphorusStraits",
   "map": {
     "height": 612,
     "num_land_tiles": 382332,
@@ -14,6 +16,7 @@
     "num_land_tiles": 93711,
     "width": 500
   },
+  "multiplayer_frequency": 3,
   "name": "Bosphorus Straits",
   "nations": [
     {
@@ -49,7 +52,7 @@
     {
       "coordinates": [534, 425],
       "flag": "tr",
-      "name": "Kadıköy"
+      "name": "Kadiköy"
     },
     {
       "coordinates": [559, 568],
@@ -94,27 +97,27 @@
     {
       "coordinates": [459, 157],
       "flag": "tr",
-      "name": "Sarıyer"
+      "name": "Sariyer"
     },
     {
       "coordinates": [477, 297],
       "flag": "tr",
-      "name": "Beşiktaş"
+      "name": "Besiktas"
     },
     {
       "coordinates": [171, 379],
       "flag": "tr",
-      "name": "Avcılar"
+      "name": "Avcilar"
     },
     {
       "coordinates": [308, 412],
       "flag": "tr",
-      "name": "Bakırköy"
+      "name": "Bakirköy"
     },
     {
       "coordinates": [263, 283],
       "flag": "tr",
-      "name": "Başakşehir"
+      "name": "Basaksehir"
     },
     {
       "coordinates": [402, 272],
@@ -127,6 +130,7 @@
       "name": "Esenyurt"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -142,5 +146,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.bosphorusstraits"
 }

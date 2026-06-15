@@ -1,5 +1,9 @@
 {
-  "name": "GatewayToTheAtlantic",
+  "id": "GatewayToTheAtlantic",
+  "name": "Gateway to the Atlantic",
+  "translation_key": "map.gatewaytotheatlantic",
+  "categories": ["europe"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [2161, 420],

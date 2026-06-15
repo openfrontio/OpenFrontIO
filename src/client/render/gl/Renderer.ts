@@ -27,12 +27,12 @@ import type {
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
-import type { RadialMenuItem } from "./Events";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
 import { CoordinateGridPass } from "./passes/CoordinateGridPass";
 import { CrosshairPass } from "./passes/CrosshairPass";
+import { DefenseCoveragePass } from "./passes/DefenseCoveragePass";
 import { FalloutBloomPass } from "./passes/FalloutBloomPass";
 import { FalloutLightPass } from "./passes/FalloutLightPass";
 import { FxPass } from "./passes/fx-pass";
@@ -43,7 +43,6 @@ import { NightCompositePass } from "./passes/NightCompositePass";
 import { NukeTelegraphPass } from "./passes/NukeTelegraphPass";
 import { NukeTrajectoryPass } from "./passes/NukeTrajectoryPass";
 import { PointLightPass } from "./passes/PointLightPass";
-import { RadialMenuPass } from "./passes/RadialMenuPass";
 import { RailroadPass } from "./passes/RailroadPass";
 import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
@@ -58,9 +57,9 @@ import { TerritoryPass } from "./passes/TerritoryPass";
 import { TrailPass } from "./passes/TrailPass";
 import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
-import { createRenderSettings, type RenderSettings } from "./RenderSettings";
+import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
+import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
 import {
   createTexture2D,
   toScreen,
@@ -90,6 +89,8 @@ const SAM_RADIUS_HIGHLIGHT_TYPES = new Set([
   "Hydrogen Bomb",
 ]);
 
+const GRID_VIEW_KEY = "renderer:grid_view_enabled";
+
 export class GPURenderer {
   private gl: WebGL2RenderingContext;
   private camera: Camera;
@@ -101,6 +102,7 @@ export class GPURenderer {
   private trailPass: TrailPass;
   private borderStampPass: BorderStampPass;
   private borderPass: BorderComputePass;
+  private defenseCoveragePass: DefenseCoveragePass;
   private bloomPass: FalloutBloomPass;
   private pointLightPass: PointLightPass;
   private falloutLightPass: FalloutLightPass;
@@ -117,7 +119,6 @@ export class GPURenderer {
   private railroadPass: RailroadPass;
   private barPass: BarPass;
   private worldTextPass: WorldTextPass;
-  private radialMenuPass: RadialMenuPass;
   private selectionBoxPass: SelectionBoxPass;
   private moveIndicatorPass: MoveIndicatorPass;
   private nukeTrajectoryPass: NukeTrajectoryPass;
@@ -150,15 +151,7 @@ export class GPURenderer {
   private mapW = 0;
   private mapH = 0;
 
-  // FPS tracking
-  private frameTimes: Float64Array = new Float64Array(60);
-  private frameIdx = 0;
-  private frameCount = 0;
-  fps = 0;
-  onFrame: ((ms: number) => void) | null = null;
-  afterRender: ((canvas: HTMLCanvasElement) => void) | null = null;
-
-  // Hit-testing references
+  // Last-uploaded unit/structure maps (selection box + bar pass inputs)
   private lastUnits: Map<number, UnitState> = new Map();
   private lastStructures: Map<number, UnitState> = new Map();
 
@@ -187,11 +180,15 @@ export class GPURenderer {
     terrainBytes: Uint8Array,
     paletteData: Float32Array,
     config: Config,
+    settings: RenderSettings,
     raf: typeof requestAnimationFrame = requestAnimationFrame.bind(window),
     caf: typeof cancelAnimationFrame = cancelAnimationFrame.bind(window),
   ) {
     this.canvas = canvas;
-    this.settings = createRenderSettings();
+    // Settings are resolved (defaults + user overrides) by the caller and
+    // passed in, so every pass — including texture-baking ones like terrain —
+    // is built with the final values. Live changes mutate this object in place.
+    this.settings = settings;
     this.raf = raf;
     this.caf = caf;
 
@@ -216,8 +213,13 @@ export class GPURenderer {
     this.camera = new Camera(mapW, mapH);
 
     // --- Terrain (static) ---
-    const terrainRGBA = buildTerrainRGBA(terrainBytes, mapW, mapH);
-    this.terrainPass = new TerrainPass(gl, terrainRGBA, mapW, mapH);
+    this.terrainPass = new TerrainPass(
+      gl,
+      terrainBytes,
+      mapW,
+      mapH,
+      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+    );
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
@@ -308,6 +310,17 @@ export class GPURenderer {
     );
     this.res.borderTex = this.borderPass.getBorderTex();
 
+    // --- Defense coverage (needs tileTex) — per-tile "defended by same-owner
+    // post" flag, stamped one instanced circle per post. Replaces the old
+    // 64-cap uniform loop; consumed by BorderStampPass. ---
+    this.defenseCoveragePass = new DefenseCoveragePass(
+      gl,
+      mapW,
+      mapH,
+      this.res.tileTex,
+      this.settings,
+    );
+
     // --- Heat manager (needs tileTex, heatTexA/B) ---
     this.heatManager = new HeatManager(
       gl,
@@ -333,6 +346,20 @@ export class GPURenderer {
       this.skinAnchorTex,
       this.settings,
     );
+    // Route per-tile changes to the border pass so it can scatter-recompute
+    // just the affected tiles instead of rebuilding the whole map. A tile
+    // changing owner can also flip its defense-coverage flag (same-owner test),
+    // so mark the coverage stale too — one coalesced re-stamp happens per frame.
+    this.territoryPass.setBorderPatchConsumer((x, y) => {
+      this.borderPass.patchTile(x, y);
+      this.defenseCoveragePass.markTileDirty(x, y);
+    });
+    // Territory fill darkens on interior tiles defended by a same-owner post;
+    // borderTex lets the fill skip border tiles (those get the checkerboard).
+    this.territoryPass.setDefenseCoverageTex(
+      this.defenseCoveragePass.getCoverageTex(),
+    );
+    this.territoryPass.setBorderTex(this.res.borderTex);
 
     // --- Spawn overlay (needs tileTex) ---
     this.spawnOverlayPass = new SpawnOverlayPass(
@@ -362,6 +389,9 @@ export class GPURenderer {
       this.paletteTex,
       this.res.borderTex,
       this.settings,
+    );
+    this.borderStampPass.setDefenseCoverageTex(
+      this.defenseCoveragePass.getCoverageTex(),
     );
 
     // --- Fallout bloom (needs tileTex, heatManager) ---
@@ -435,13 +465,24 @@ export class GPURenderer {
       this.settings,
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
-    this.unitPass = new UnitPass(gl, header, this.paletteTex, this.settings);
-    this.namePass = new NamePass(gl, header, paletteData, this.settings);
+    this.unitPass = new UnitPass(
+      gl,
+      header,
+      this.paletteTex,
+      this.settings,
+      config,
+    );
+    this.namePass = new NamePass(
+      gl,
+      header,
+      paletteData,
+      this.settings,
+      config,
+    );
     this.fxPass = new FxPass(gl, header, this.settings, config);
     this.barPass = new BarPass(gl, header, this.settings, config);
     this.worldTextPass = new WorldTextPass(gl, this.settings, config);
     this.worldTextPass.setMapWidth(this.mapW);
-    this.radialMenuPass = new RadialMenuPass(gl);
     this.selectionBoxPass = new SelectionBoxPass(gl);
     this.moveIndicatorPass = new MoveIndicatorPass(gl, this.settings);
     this.nukeTrajectoryPass = new NukeTrajectoryPass(gl, this.settings);
@@ -478,7 +519,7 @@ export class GPURenderer {
     this.sceneTarget = { fbo: sceneFbo, tex: sceneTex, w: 1, h: 1 };
 
     // --- Alt-view passes ---
-    this.affiliationPalette = new AffiliationPalette(gl);
+    this.affiliationPalette = new AffiliationPalette(gl, this.settings);
     const affTex = this.affiliationPalette.getTexture();
     this.borderStampPass.setAffiliationTex(affTex);
     this.unitPass.setAffiliationTex(affTex);
@@ -490,6 +531,11 @@ export class GPURenderer {
       mapH,
       this.settings,
     );
+    try {
+      this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
+    } catch {
+      this.setGridView(false);
+    }
 
     for (const p of header.players) {
       if (p.team !== null) this.playerTeams.set(p.smallID, p.team);
@@ -528,79 +574,13 @@ export class GPURenderer {
     this.camera.resize(cssWidth, cssHeight);
   }
 
-  screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-    return this.camera.screenToWorld(screenX, screenY);
-  }
-
-  worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
-    return this.camera.worldToScreen(worldX, worldY);
-  }
-
-  panTo(worldX: number, worldY: number): void {
-    this.camera.panTo(worldX, worldY);
-  }
-  panBy(dx: number, dy: number): void {
-    this.camera.panBy(dx, dy);
-  }
-  zoomTo(level: number): void {
-    this.camera.zoomTo(level);
-  }
-  zoomBy(factor: number): void {
-    this.camera.zoomBy(factor);
-  }
-  zoomAtScreen(factor: number, screenX: number, screenY: number): void {
-    this.camera.zoomAtScreen(factor, screenX, screenY);
-  }
-  fitMap(): void {
-    this.camera.fitMap();
-  }
-  focusBBox(
-    minX: number,
-    minY: number,
-    maxX: number,
-    maxY: number,
-    padding?: number,
-  ): void {
-    this.camera.focusBBox(minX, minY, maxX, maxY, padding);
-  }
-  getCameraState(): { x: number; y: number; z: number } {
-    return {
-      x: this.camera.offsetX,
-      y: this.camera.offsetY,
-      z: this.camera.zoom,
-    };
-  }
   setCameraState(x: number, y: number, z: number): void {
     this.camera.setCameraState(x, y, z);
-  }
-  get zoom(): number {
-    return this.camera.zoom;
   }
 
   // ---------------------------------------------------------------------------
   // Data upload
   // ---------------------------------------------------------------------------
-
-  applyFullFrame(
-    tileState: Uint16Array,
-    trailState: Uint8Array,
-    nukeEvents?: Array<{ tick: number; tiles: number[] }>,
-    currentTick?: number,
-  ): void {
-    this.territoryPass.uploadFullTileState(tileState);
-    this.trailPass.uploadFullState(trailState);
-    this.heatManager.resetForSeek(tileState, nukeEvents, currentTick);
-  }
-
-  applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
-    this.territoryPass.uploadFullTileState(tileState);
-    this.trailPass.uploadFullState(trailState);
-  }
-
-  applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
-    this.territoryPass.uploadDeltaTiles(changedTiles);
-    this.trailPass.uploadFullState(trailState);
-  }
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
@@ -643,6 +623,8 @@ export class GPURenderer {
     );
     // SAM radius pass stores its own copy
     this.samRadiusPass.setPaletteData(this.paletteData);
+    // Name pass caches per-player colors and bakes them into slot rows
+    this.namePass.refreshPlayerColors(this.paletteData);
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
@@ -817,7 +799,7 @@ export class GPURenderer {
         });
       }
     }
-    this.borderPass.updateDefensePosts(posts);
+    this.defenseCoveragePass.updateDefensePosts(posts);
   }
 
   applyDeadUnits(deadUnits: DeadUnitFx[]): void {
@@ -838,6 +820,17 @@ export class GPURenderer {
     if (refs.length === 0) return;
     this.terrainPass.applyTerrainDelta(refs, terrainBytes);
     this.railroadPass.applyTerrainDelta(refs, terrainBytes);
+  }
+
+  /**
+   * Rebuild the terrain texture from the current `settings.terrain` colors.
+   * Terrain is baked into a GPU texture rather than read per-frame, so a
+   * settings change needs this explicit rebuild.
+   */
+  rebuildTerrain(): void {
+    this.terrainPass.setOceanColor(
+      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+    );
   }
 
   applyConquestEvents(events: ConquestFx[]): void {
@@ -865,15 +858,6 @@ export class GPURenderer {
 
   updateAttackRings(rings: AttackRingInput[]): void {
     this.fxPass.updateAttackRings(rings);
-  }
-
-  clearFx(): void {
-    this.fxPass.clear();
-    this.worldTextPass.clear();
-  }
-  setFxTimeFn(fn: () => number): void {
-    this.fxPass.setTimeFn(fn);
-    this.worldTextPass.setTimeFn(fn);
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
@@ -919,6 +903,10 @@ export class GPURenderer {
   setHighlightOwner(ownerID: number): void {
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
+    this.namePass.setHighlightOwner(ownerID);
+  }
+  setMouseWorldPos(x: number, y: number): void {
+    this.namePass.setMouseWorldPos(x, y);
   }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.structurePass.setHighlightTypes(unitTypes);
@@ -931,85 +919,17 @@ export class GPURenderer {
     );
   }
 
-  focusOwner(ownerID: number): void {
-    if (ownerID !== 0) {
-      const bbox = this.territoryPass.getBBoxForOwner(ownerID);
-      if (bbox) {
-        this.camera.focusBBox(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY);
-        return;
-      }
-    }
-    this.camera.focusBBox(0, 0, this.mapW - 1, this.mapH - 1);
-  }
-
-  getOwnerAtWorld(worldX: number, worldY: number): number {
-    const tx = Math.floor(worldX);
-    const ty = Math.floor(worldY);
-    if (tx < 0 || ty < 0 || tx >= this.mapW || ty >= this.mapH) return 0;
-    return this.territoryPass.getOwnerAt(ty * this.mapW + tx);
-  }
-
-  getUnitAtWorld(
-    worldX: number,
-    worldY: number,
-    radius: number,
-  ): UnitState | null {
-    let best: UnitState | null = null;
-    let bestDist = radius * radius;
-    const w = this.mapW;
-    for (const u of this.lastUnits.values()) {
-      const dx = (u.pos % w) - worldX;
-      const dy = Math.floor(u.pos / w) - worldY;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestDist) {
-        bestDist = d2;
-        best = u;
-      }
-    }
-    return best;
-  }
-
-  getStructureAtWorld(
-    worldX: number,
-    worldY: number,
-    radius: number,
-  ): UnitState | null {
-    let best: UnitState | null = null;
-    let bestDist = radius * radius;
-    const w = this.mapW;
-    for (const s of this.lastStructures.values()) {
-      const dx = (s.pos % w) - worldX;
-      const dy = Math.floor(s.pos / w) - worldY;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestDist) {
-        bestDist = d2;
-        best = s;
-      }
-    }
-    return best;
-  }
-
   setLocalPlayerID(id: number): void {
     if (id === this.localPlayerID) return;
     this.localPlayerID = id;
     this.samRadiusPass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
+    this.railroadPass.setLocalPlayer(id);
   }
 
-  setSAMRadiusVisible(visible: boolean): void {
-    this.samRadiusPass.setVisible(visible);
-  }
-
-  setSAMPerspective(playerID: number, allies: Set<number>): void {
-    this.samRadiusPass.setLocalPlayer(playerID);
-    this.samRadiusPass.setAllies(allies);
-    this.unitPass.setLocalPlayer(playerID);
-    this.unitPass.setAllies(allies);
-  }
-
-  setSAMColorMode(mode: "perspective" | "owner"): void {
-    this.samRadiusPass.setColorMode(mode);
+  setLocalRailColor(r: number, g: number, b: number): void {
+    this.railroadPass.setLocalRailColor(r, g, b);
   }
 
   setSAMAllianceClusters(clusters: Map<number, number>): void {
@@ -1031,6 +951,11 @@ export class GPURenderer {
 
   setGridView(active: boolean): void {
     this.gridView = active;
+    try {
+      window.localStorage.setItem(GRID_VIEW_KEY, active ? "true" : "false");
+    } catch {
+      // Ignore if we are unable to use localstorage.
+    }
   }
 
   getSettings(): RenderSettings {
@@ -1038,55 +963,8 @@ export class GPURenderer {
   }
 
   // ---------------------------------------------------------------------------
-  // Radial menu
-  // ---------------------------------------------------------------------------
-
-  showRadialMenu(
-    anchorX: number,
-    anchorY: number,
-    items: RadialMenuItem[],
-    centerItem?: RadialMenuItem,
-  ): void {
-    this.radialMenuPass.show(anchorX, anchorY, items, centerItem);
-  }
-
-  hideRadialMenu(): void {
-    this.radialMenuPass.hide();
-  }
-  openRadialSubMenu(subItems: RadialMenuItem[]): void {
-    this.radialMenuPass.openSubMenu(subItems);
-  }
-  goBackRadialMenu(): void {
-    this.radialMenuPass.goBack();
-  }
-  setRadialMenuHover(index: number): void {
-    this.radialMenuPass.setHover(index);
-  }
-  radialMenuHitTest(screenX: number, screenY: number): number {
-    return this.radialMenuPass.hitTest(screenX, screenY);
-  }
-  get radialMenuVisible(): boolean {
-    return this.radialMenuPass.isVisible;
-  }
-  getRadialMenuItems(): readonly RadialMenuItem[] {
-    return this.radialMenuPass.getItems();
-  }
-  getRadialMenuItemAt(index: number): RadialMenuItem | null {
-    return this.radialMenuPass.getItemAt(index);
-  }
-  registerRadialMenuIcons(
-    icons: { key: string; img: CanvasImageSource }[],
-  ): void {
-    this.radialMenuPass.registerIcons(icons);
-  }
-
-  // ---------------------------------------------------------------------------
   // Selection box (warship selection)
   // ---------------------------------------------------------------------------
-
-  setSelectedUnit(unitId: number | null): void {
-    this.setSelectedUnits(unitId === null ? [] : [unitId]);
-  }
 
   setSelectedUnits(unitIds: readonly number[]): void {
     // Copy in (callers may mutate their array).
@@ -1163,27 +1041,9 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   draw(): void {
-    const now = performance.now();
-    this.trackFps(now);
     this.uploadTextures();
     this.computeTextures();
     this.renderFrame();
-    if (this.onFrame) this.onFrame(performance.now() - now);
-    if (this.afterRender) this.afterRender(this.canvas);
-  }
-
-  private trackFps(now: number): void {
-    this.frameTimes[this.frameIdx] = now;
-    this.frameIdx = (this.frameIdx + 1) % this.frameTimes.length;
-    if (this.frameCount < this.frameTimes.length) this.frameCount++;
-    if (this.frameCount > 1) {
-      const oldest =
-        this.frameTimes[
-          (this.frameIdx - this.frameCount + this.frameTimes.length) %
-            this.frameTimes.length
-        ];
-      this.fps = (this.frameCount - 1) / ((now - oldest) / 1000);
-    }
   }
 
   private uploadTextures(): void {
@@ -1193,14 +1053,26 @@ export class GPURenderer {
     } else {
       this.territoryPass.drainDripBucket();
     }
-    if (this.territoryPass.flushTileTexture())
-      this.borderPass.notifyTilesChanged();
+    // Full uploads need a full border recompute; scatter uploads already
+    // pushed per-tile border patches via the wired `borderPatchConsumer`.
+    if (this.territoryPass.flushTileTexture() === "full") {
+      this.borderPass.markGlobalDirty();
+      this.defenseCoveragePass.markDirty();
+    }
+    // Heat decay only runs while fallout is in play — (re)activate whenever a
+    // fallout bit flipped in the tile state that just reached the GPU.
+    if (this.territoryPass.consumeFalloutTouched()) {
+      this.heatManager.activate();
+    }
     this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }
 
   private computeTextures(): void {
-    if (this.settings.passEnabled.mapOverlay) this.borderPass.draw();
+    if (this.settings.passEnabled.borderCompute) this.borderPass.draw();
+    // Re-stamp defense coverage if posts/territory changed (dirty-gated).
+    // Leaves the default framebuffer bound; renderFrame resets the viewport.
+    this.defenseCoveragePass.draw();
   }
 
   private renderFrame(): void {
@@ -1208,9 +1080,9 @@ export class GPURenderer {
     const zoom = this.camera.zoom;
     const cw = this.canvas.width;
     const ch = this.canvas.height;
-    const nightActive = this.isNightActive();
+    const compositingActive = this.isLightCompositingActive();
 
-    if (nightActive) {
+    if (compositingActive) {
       this.resizeSceneTargetIfNeeded(cw, ch);
       const sceneTex = toTarget(this.gl, this.sceneTarget, () =>
         this.drawBaseLayer(cam),
@@ -1226,8 +1098,8 @@ export class GPURenderer {
     this.renderOverlays(cam, zoom);
   }
 
-  private isNightActive(): boolean {
-    return this.settings.dayNight.mode === "dark";
+  private isLightCompositingActive(): boolean {
+    return this.settings.lighting.enabled;
   }
 
   private resizeSceneTargetIfNeeded(cw: number, ch: number): void {
@@ -1258,7 +1130,7 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    if (pe.mapOverlay) this.territoryPass.draw(cam);
+    if (pe.territory) this.territoryPass.draw(cam);
   }
 
   private renderOverlays(cam: Float32Array, zoom: number): void {
@@ -1269,7 +1141,7 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.spawnOverlayPass.draw(cam);
-    if (pe.mapOverlay) this.borderStampPass.draw(cam);
+    if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
     this.samRadiusPass.draw(cam);
@@ -1284,7 +1156,7 @@ export class GPURenderer {
     this.moveIndicatorPass.draw(cam, zoom);
     this.nukeTelegraphPass.draw(cam);
     if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
-    if (pe.mapOverlay) this.trailPass.draw(cam);
+    if (pe.trail) this.trailPass.draw(cam);
     if (pe.unit) this.unitPass.drawMissiles(cam);
 
     if (pe.fx) {
@@ -1303,8 +1175,6 @@ export class GPURenderer {
     this.worldTextPass.tick(zoom);
     this.worldTextPass.draw(cam, zoom);
 
-    this.radialMenuPass.draw();
-
     gl.disable(gl.BLEND);
   }
 
@@ -1319,6 +1189,7 @@ export class GPURenderer {
     this.trailPass.dispose();
     this.borderStampPass.dispose();
     this.borderPass.dispose();
+    this.defenseCoveragePass.dispose();
     this.bloomPass.dispose();
     this.pointLightPass.dispose();
     this.falloutLightPass.dispose();
@@ -1338,7 +1209,6 @@ export class GPURenderer {
     this.namePass.dispose();
     this.fxPass.dispose();
     this.worldTextPass.dispose();
-    this.radialMenuPass.dispose();
     this.selectionBoxPass.dispose();
     this.moveIndicatorPass.dispose();
     this.nukeTrajectoryPass.dispose();

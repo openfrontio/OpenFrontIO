@@ -2,11 +2,13 @@
  * GPU-ready color utilities.
  *
  * Terrain RGBA: Uint8Array(w × h × 4) — one RGBA pixel per tile, computed
- * from PastelTheme rules applied to the raw terrain byte layout.
+ * from the terrain color rules applied to the raw terrain byte layout.
  *
  * Player palette is NOT built here — consumers provide a pre-built
  * Float32Array(PALETTE_SIZE × 2 × 4) to the GPURenderer constructor.
  */
+
+import renderDefaults from "../render-settings.json";
 
 /** Must cover 12-bit smallID range (0-4095). */
 const PALETTE_SIZE = 4096;
@@ -17,9 +19,26 @@ export function getPaletteSize(): number {
 
 // ---------- Terrain ----------
 
+/** Parse a "#rrggbb" (or "rrggbb") hex string into an RGB tuple, or null. */
+export function hexToRgb(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+/**
+ * Default base (shallowest, magnitude 0) color for deep water. Derived from
+ * the `terrain.oceanColor` default in render-settings.json (the single source
+ * of truth); used as a fallback when no override color is supplied.
+ */
+const DEEP_WATER_BASE: readonly [number, number, number] = hexToRgb(
+  renderDefaults.terrain.oceanColor,
+)!;
+
 /**
  * Compute a static RGBA8 texture from raw terrain bytes.
- * Replicates PastelTheme.terrainColor() on the CPU.
+ * The single source of truth for terrain colors.
  *
  * Terrain byte layout per tile:
  *   bit 7: isLand
@@ -32,6 +51,7 @@ export function encodeTerrainTile(
   tb: number,
   out: Uint8Array,
   offset: number,
+  oceanColor?: readonly [number, number, number],
 ): void {
   const isLand = (tb & 0x80) !== 0;
   const isShoreline = (tb & 0x40) !== 0;
@@ -68,12 +88,14 @@ export function encodeTerrainTile(
     g = 143;
     b = 255;
   } else {
-    // Deep water
+    // Deep water — darkens with depth (magnitude). The base color sets the
+    // shallowest (brightest) shade; the per-depth gradient is preserved by
+    // subtracting the depth from each channel.
     const m = Math.min(magnitude, 10);
-    const off = 11 - m;
-    r = Math.max(0, 70 - 10 + off);
-    g = Math.max(0, 132 - 10 + off);
-    b = Math.max(0, 180 - 10 + off);
+    const base = oceanColor ?? DEEP_WATER_BASE;
+    r = Math.max(0, base[0] - m);
+    g = Math.max(0, base[1] - m);
+    b = Math.max(0, base[2] - m);
   }
 
   out[offset] = r;
@@ -86,10 +108,11 @@ export function buildTerrainRGBA(
   terrainBytes: Uint8Array,
   w: number,
   h: number,
+  oceanColor?: readonly [number, number, number],
 ): Uint8Array {
   const pixels = new Uint8Array(w * h * 4);
   for (let i = 0; i < w * h; i++) {
-    encodeTerrainTile(terrainBytes[i], pixels, i * 4);
+    encodeTerrainTile(terrainBytes[i], pixels, i * 4, oceanColor);
   }
   return pixels;
 }

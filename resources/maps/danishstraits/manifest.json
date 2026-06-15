@@ -1,4 +1,6 @@
 {
+  "categories": ["new", "europe"],
+  "id": "DanishStraits",
   "map": {
     "height": 1224,
     "num_land_tiles": 587312,
@@ -14,6 +16,7 @@
     "num_land_tiles": 142124,
     "width": 436
   },
+  "multiplayer_frequency": 5,
   "name": "Danish Straits",
   "nations": [
     {
@@ -146,5 +149,6 @@
       "flag": "dk",
       "name": "Bornholm"
     }
-  ]
+  ],
+  "translation_key": "map.danishstraits"
 }

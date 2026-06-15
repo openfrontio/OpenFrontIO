@@ -4,10 +4,11 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
+import { themeProvider } from "../../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
+import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
 const leaderboardRegularIcon = assetUrl(
@@ -66,10 +67,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
     if (!this.playerTeam && this.game.myPlayer()?.team()) {
       this.playerTeam = this.game.myPlayer()!.team();
       if (this.playerTeam) {
-        this.playerColor = this.game
-          .config()
-          .theme()
-          .teamColor(this.playerTeam);
+        this.playerColor = themeProvider.current().teamColor(this.playerTeam);
         this.requestUpdate();
       }
     }

@@ -1,4 +1,7 @@
 {
+  "categories": ["europe", "continental"],
+  "display_name": "Europe (Classic)",
+  "id": "EuropeClassic",
   "map": {
     "height": 1000,
     "num_land_tiles": 1008469,
@@ -14,7 +17,8 @@
     "num_land_tiles": 248492,
     "width": 1000
   },
-  "name": "Europe",
+  "multiplayer_frequency": 0,
+  "name": "Europe Classic",
   "nations": [
     {
       "coordinates": [171, 171],
@@ -201,5 +205,6 @@
       "flag": "dk",
       "name": "Denmark"
     }
-  ]
+  ],
+  "translation_key": "map.europeclassic"
 }

@@ -1,4 +1,6 @@
 {
+  "categories": ["new", "arcade"],
+  "id": "Onion",
   "map": {
     "height": 512,
     "num_land_tiles": 210555,
@@ -14,7 +16,8 @@
     "num_land_tiles": 51713,
     "width": 256
   },
-  "name": "onion",
+  "multiplayer_frequency": 2,
+  "name": "Onion",
   "nations": [
     {
       "coordinates": [51, 188],
@@ -31,5 +34,6 @@
       "flag": "",
       "name": "Inner Tribe"
     }
-  ]
+  ],
+  "translation_key": "map.onion"
 }

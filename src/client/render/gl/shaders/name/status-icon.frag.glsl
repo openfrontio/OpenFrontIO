@@ -10,6 +10,7 @@ flat in float vAllianceFraction;
 flat in vec2 vFadedUV0;
 flat in vec2 vFadedUV1;
 flat in float vFlashAlpha;
+in float vHoverAlpha;
 
 out vec4 fragColor;
 
@@ -33,7 +34,7 @@ void main() {
   }
 
   // Traitor flash: modulate alpha for urgency pulse
-  texel.a *= vFlashAlpha;
+  texel.a *= vFlashAlpha * vHoverAlpha;
 
   if (texel.a < 0.01) discard;
   fragColor = texel;

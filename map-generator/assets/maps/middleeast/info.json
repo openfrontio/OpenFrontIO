@@ -1,5 +1,9 @@
 {
+  "id": "MiddleEast",
   "name": "Middle East",
+  "translation_key": "map.middleeast",
+  "categories": ["new", "asia"],
+  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [300, 65],

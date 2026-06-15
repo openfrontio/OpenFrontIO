@@ -4,6 +4,7 @@ precision highp usampler2D;
 uniform usampler2D uTileTex;
 uniform vec2 uMapSize;
 uniform float uTick;
+uniform float uTileScale;
 
 uniform float uBroilSpeedCold;
 uniform float uBroilSpeedHot;
@@ -54,10 +55,10 @@ float vnoise3(vec3 p) {
 }
 
 void main() {
-  // Tile-space: viewport is mapW x mapH, one fragment per tile.
-  // gl_FragCoord.xy gives exact integer tile coords — completely
-  // deterministic, independent of camera position/zoom.
-  ivec2 tc = ivec2(gl_FragCoord.xy);
+  // Bloom FBO is mapW/uTileScale × mapH/uTileScale; each output pixel maps
+  // to the center tile of its uTileScale×uTileScale block. Still deterministic
+  // and camera-independent — just sparser than 1:1.
+  ivec2 tc = ivec2(gl_FragCoord.xy * uTileScale);
   if (tc.x >= int(uMapSize.x) || tc.y >= int(uMapSize.y)) discard;
 
   uint raw = texelFetch(uTileTex, tc, 0).r;
@@ -101,6 +102,10 @@ void main() {
     flick *= flick;
     // Dampen when fresh (high heat); ramp to full as heat decays.
     flick *= mix(uParticleFreshScale, 1.0, 1.0 - heat);
+    // Fade dots out with the glow. Heat decays to 0, but the fallout bit is
+    // permanent on tiles that stay unowned, so without this the dots flicker
+    // forever once the bloom is gone.
+    flick *= opacity;
     vec3 pc = mix(uParticleColorDark, uParticleColorBright, h1) * flick * uParticleStrength;
     float pa = max(pc.r, max(pc.g, pc.b));
     fragColor += vec4(pc, pa);

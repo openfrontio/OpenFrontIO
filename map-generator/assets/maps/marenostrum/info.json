@@ -1,5 +1,9 @@
 {
+  "id": "MareNostrum",
   "name": "Mare Nostrum",
+  "translation_key": "map.marenostrum",
+  "categories": ["europe", "asia", "africa"],
+  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [141, 574],

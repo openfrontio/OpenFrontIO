@@ -34,7 +34,9 @@ export function createNationsForGame(
 ): Nation[] {
   const toNation = (n: ManifestNation): Nation =>
     new Nation(
-      new Cell(n.coordinates[0], n.coordinates[1]),
+      n.coordinates !== undefined
+        ? new Cell(n.coordinates[0], n.coordinates[1])
+        : undefined,
       new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
     );
 

@@ -54,7 +54,10 @@ const LIGHT_CONFIGS: Record<string, LightConfig> = {
   [UT_HYDROGEN_BOMB]: { r: 1.0, g: 0.95, b: 0.6, radius: 22, intensity: 1.3 },
   [UT_MIRV]: { r: 1.0, g: 0.9, b: 0.7, radius: 18, intensity: 1.2 },
   [UT_MIRV_WARHEAD]: { r: 1.0, g: 0.6, b: 0.3, radius: 12, intensity: 1.0 },
-  [UT_TRAIN]: { r: 1.0, g: 0.85, b: 0.5, radius: 8, intensity: 2.0 },
+  // A train is many UT_TRAIN units (engine + tail + carriages) in a line, and
+  // lights blend additively — keep per-unit intensity low (~a trade ship's
+  // brightness ÷ car count) so the train corridor doesn't blow out.
+  [UT_TRAIN]: { r: 1.0, g: 0.85, b: 0.5, radius: 6, intensity: 0.5 },
 };
 
 const FLOATS_PER_LIGHT = 6;
@@ -207,7 +210,7 @@ export class PointLightPass {
     if (this.lightCount === 0) return;
 
     const gl = this.gl;
-    const dn = this.settings.dayNight;
+    const dn = this.settings.lighting;
 
     gl.useProgram(this.lightProg);
     gl.uniformMatrix3fv(this.uLightCam, false, cameraMatrix);

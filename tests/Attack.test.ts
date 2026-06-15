@@ -527,4 +527,97 @@ describe("Attack immunity", () => {
     constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
     expect(playerA.units(UnitType.AtomBomb)).toHaveLength(1);
   });
+
+  test("Should abort TransportShipExecution when target is the attacker itself", async () => {
+    // Wait for spawn immunity to end to ensure it doesn't prematurely abort the execution
+    waitForImmunityToEnd();
+
+    // playerA tries to send a transport ship targeting one of playerA's own tiles (spawn tile at 7, 0)
+    const selfTarget = game.ref(7, 0);
+    const exec = new TransportShipExecution(playerA, selfTarget, 10);
+    game.addExecution(exec);
+    game.executeNextTick();
+
+    // Verify it aborted immediately: active is false, and no transport ship unit spawned
+    expect(exec.isActive()).toBe(false);
+    expect(playerA.units(UnitType.TransportShip)).toHaveLength(0);
+  });
+
+  test("Nation can attack human during PVP immunity", async () => {
+    const nationInfo = new PlayerInfo(
+      "nation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    const nation = addPlayerToGame(nationInfo, game, game.ref(15, 0));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Nation attacks playerA during PVP immunity - should succeed
+    game.addExecution(new AttackExecution(null, nation, "playerA_id", null));
+    game.executeNextTick();
+    expect(nation.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Bot can attack human during PVP immunity", async () => {
+    const botInfo = new PlayerInfo("bot", PlayerType.Bot, null, "bot_id");
+    const bot = addPlayerToGame(botInfo, game, game.ref(15, 0));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Bot attacks playerA during PVP immunity - should succeed
+    game.addExecution(new AttackExecution(null, bot, "playerA_id", null));
+    game.executeNextTick();
+    expect(bot.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Nation can attack nation during PVP immunity", async () => {
+    const nationAInfo = new PlayerInfo(
+      "nationA",
+      PlayerType.Nation,
+      null,
+      "nationA_id",
+    );
+    const nationA = addPlayerToGame(nationAInfo, game, game.ref(15, 0));
+
+    const nationBInfo = new PlayerInfo(
+      "nationB",
+      PlayerType.Nation,
+      null,
+      "nationB_id",
+    );
+    addPlayerToGame(nationBInfo, game, game.ref(15, 15));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Nation A attacks Nation B during PVP immunity - should succeed
+    game.addExecution(new AttackExecution(null, nationA, "nationB_id", null));
+    game.executeNextTick();
+    expect(nationA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Nation cannot attack allied human during PVP immunity", async () => {
+    const nationInfo = new PlayerInfo(
+      "nation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    const nation = addPlayerToGame(nationInfo, game, game.ref(15, 0));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Create alliance between nation and playerA
+    const allianceRequest = nation.createAllianceRequest(playerA);
+    if (allianceRequest) {
+      allianceRequest.accept();
+    }
+    expect(nation.isAlliedWith(playerA)).toBe(true);
+
+    // Nation tries to attack allied playerA during immunity - should be blocked by friendliness
+    game.addExecution(new AttackExecution(null, nation, "playerA_id", null));
+    game.executeNextTick();
+    expect(nation.outgoingAttacks()).toHaveLength(0);
+  });
 });

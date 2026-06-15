@@ -1,5 +1,9 @@
 {
+  "id": "YellowSea",
   "name": "Yellow Sea",
+  "translation_key": "map.yellowsea",
+  "categories": ["new", "asia"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1350, 575],

@@ -8,14 +8,16 @@
  */
 
 import { EventBus } from "../../core/EventBus";
-import { wouldNukeBreakAlliance } from "../../core/execution/Util";
+import {
+  listNukeBreakAlliance,
+  wouldNukeBreakAlliance,
+} from "../../core/execution/Util";
 import {
   BuildableUnit,
   PlayerBuildableUnitType,
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
-import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import {
@@ -23,7 +25,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
-import { GameView as WebGLGameView, buildNukeTrajectory } from "../render/gl";
+import { MapRenderer, buildNukeTrajectory } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
@@ -32,10 +34,27 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
+import { GameView } from "../view";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+}
+
+/**
+ * Whether a SAM belongs in the nuke trajectory preview's threat set.
+ * Allied SAMs are excluded unless the strike would betray that ally —
+ * the alliance breaks at launch, so their SAMs will engage the nuke.
+ * (Own SAMs never threaten; the caller filters those out first.)
+ */
+export function samThreatensNukePreview(
+  samOwnerSmallId: number,
+  allySmallIds: ReadonlySet<number>,
+  betrayedSmallIds: ReadonlySet<number>,
+): boolean {
+  return (
+    !allySmallIds.has(samOwnerSmallId) || betrayedSmallIds.has(samOwnerSmallId)
+  );
 }
 
 export class BuildPreviewController implements Controller {
@@ -52,12 +71,22 @@ export class BuildPreviewController implements Controller {
   // frame with the current cursor world position.
   private lastGhostData: GhostPreviewData | null = null;
 
+  // Static inputs for the nuke trajectory preview (source silo + threatening
+  // SAMs). Recomputed in the throttled renderGhost path; cursorLoop rebuilds
+  // the Bezier each frame with the live cursor position as the destination so
+  // the arc tracks the cursor smoothly instead of snapping tile-to-tile.
+  private nukeTrajectoryStatic: {
+    srcX: number;
+    srcY: number;
+    sams: SAMInfo[];
+  } | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     public uiState: UIState,
     private transformHandler: TransformHandler,
-    private view: WebGLGameView,
+    private view: MapRenderer,
     private userSettings: UserSettings,
   ) {}
 
@@ -78,16 +107,45 @@ export class BuildPreviewController implements Controller {
     // integer tile coord centers on that tile), so we subtract 0.5 here to
     // place the icon exactly under the cursor.
     const cursorLoop = () => {
-      if (this.lastGhostData !== null) {
+      const ghost = this.lastGhostData;
+      const traj = this.nukeTrajectoryStatic;
+      if (ghost !== null || traj !== null) {
         const w = this.transformHandler.screenToWorldCoordinatesFloat(
           this.mousePos.x,
           this.mousePos.y,
         );
-        this.view.updateGhostPreview({
-          ...this.lastGhostData,
-          tileX: w.x - 0.5,
-          tileY: w.y - 0.5,
-        });
+        if (ghost !== null) {
+          // The range circle (defense post / SAM / nuke radius) normally
+          // follows the cursor, so smooth it the same way as the icon. When
+          // upgrading, the circle is anchored to the existing structure's tile
+          // (stationary, correctly snapped) — leave it alone in that case.
+          const radiusFollowsCursor = !(
+            ghost.canUpgrade && ghost.upgradeTargetTile !== null
+          );
+          this.view.updateGhostPreview({
+            ...ghost,
+            tileX: w.x - 0.5,
+            tileY: w.y - 0.5,
+            ...(radiusFollowsCursor
+              ? { radiusTileX: w.x - 0.5, radiusTileY: w.y - 0.5 }
+              : {}),
+          });
+        }
+        if (traj !== null) {
+          // Rebuild the arc with the live cursor as the destination (same
+          // tile-center convention as the icon: shader adds +0.5).
+          this.view.updateNukeTrajectory(
+            buildNukeTrajectory(
+              traj.srcX,
+              traj.srcY,
+              w.x - 0.5,
+              w.y - 0.5,
+              this.game.height(),
+              this.uiState.rocketDirectionUp,
+              traj.sams,
+            ),
+          );
+        }
       }
       requestAnimationFrame(cursorLoop);
     };
@@ -228,55 +286,74 @@ export class BuildPreviewController implements Controller {
    */
   private updateNukeTrajectoryPreview(tileRef: TileRef | undefined): void {
     if (!this.ghostUnit || tileRef === undefined) {
-      this.view.updateNukeTrajectory(null);
+      this.clearNukeTrajectory();
       return;
     }
     const type = this.ghostUnit.buildableUnit.type;
     if (type !== UnitType.AtomBomb && type !== UnitType.HydrogenBomb) {
-      this.view.updateNukeTrajectory(null);
+      this.clearNukeTrajectory();
       return;
     }
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) {
-      this.view.updateNukeTrajectory(null);
+      this.clearNukeTrajectory();
       return;
     }
 
+    // Mirror PlayerImpl.nukeSpawn (the source NukeExecution actually fires
+    // from): only silos that are active, not reloading, and not under
+    // construction are eligible, and the nearest is chosen by Manhattan
+    // distance. Keeping these in sync prevents the preview arc from
+    // originating from a silo the game wouldn't use.
     const silos = myPlayer
       .units(UnitType.MissileSilo)
-      .filter((u) => u.isActive());
+      .filter(
+        (u) => u.isActive() && !u.isInCooldown() && !u.isUnderConstruction(),
+      );
     if (silos.length === 0) {
-      this.view.updateNukeTrajectory(null);
+      this.clearNukeTrajectory();
       return;
     }
 
     const dstX = this.game.x(tileRef);
     const dstY = this.game.y(tileRef);
     let bestSilo = silos[0];
-    let bestDistSq = Infinity;
+    let bestDist = Infinity;
     for (const s of silos) {
       const sx = this.game.x(s.tile());
       const sy = this.game.y(s.tile());
-      const dx = sx - dstX;
-      const dy = sy - dstY;
-      const d = dx * dx + dy * dy;
-      if (d < bestDistSq) {
-        bestDistSq = d;
+      const d = Math.abs(sx - dstX) + Math.abs(sy - dstY);
+      if (d < bestDist) {
+        bestDist = d;
         bestSilo = s;
       }
     }
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
 
-    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't.
+    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't —
+    // except allies this strike would betray: the alliance breaks at launch
+    // (NukeExecution.maybeBreakAlliances), so their SAMs will intercept.
+    // listNukeBreakAlliance is the same function the sim uses there.
     const allyIds = new Set<number>();
     for (const a of myPlayer.allies()) allyIds.add(a.smallID());
+    const betrayedIds: ReadonlySet<number> =
+      allyIds.size > 0
+        ? listNukeBreakAlliance({
+            game: this.game,
+            targetTile: tileRef,
+            magnitude: this.game.config().nukeMagnitudes(type),
+            threshold: this.game.config().nukeAllianceBreakThreshold(),
+          })
+        : new Set();
     const sams: SAMInfo[] = [];
     for (const s of this.game.units(UnitType.SAMLauncher)) {
       if (!s.isActive()) continue;
       const owner = s.owner();
       if (owner === myPlayer) continue;
-      if (allyIds.has(owner.smallID())) continue;
+      if (!samThreatensNukePreview(owner.smallID(), allyIds, betrayedIds)) {
+        continue;
+      }
       const r = this.game.config().samRange(s.level());
       sams.push({
         x: this.game.x(s.tile()),
@@ -285,17 +362,14 @@ export class BuildPreviewController implements Controller {
       });
     }
 
-    this.view.updateNukeTrajectory(
-      buildNukeTrajectory(
-        srcX,
-        srcY,
-        dstX,
-        dstY,
-        this.game.height(),
-        this.uiState.rocketDirectionUp,
-        sams,
-      ),
-    );
+    // Stash the static inputs; cursorLoop rebuilds the Bezier each frame with
+    // the live cursor as the destination so the arc tracks smoothly.
+    this.nukeTrajectoryStatic = { srcX, srcY, sams };
+  }
+
+  private clearNukeTrajectory(): void {
+    this.nukeTrajectoryStatic = null;
+    this.view.updateNukeTrajectory(null);
   }
 
   private buildGhostPreviewData(
@@ -335,12 +409,24 @@ export class BuildPreviewController implements Controller {
         rangeRadius = this.game.config().defensePostRange();
         break;
     }
+    let radiusTileX = this.game.x(tileRef);
+    let radiusTileY = this.game.y(tileRef);
+    if (
+      rangeRadius > 0 &&
+      u.canUpgrade !== false &&
+      upgradeTargetTile !== null
+    ) {
+      radiusTileX = this.game.x(upgradeTargetTile);
+      radiusTileY = this.game.y(upgradeTargetTile);
+    }
 
     const cost = u.cost;
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
       tileY: this.game.y(tileRef),
+      radiusTileX,
+      radiusTileY,
       canBuild: u.canBuild !== false,
       canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),
@@ -434,7 +520,7 @@ export class BuildPreviewController implements Controller {
     this.ghostUnit = null;
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);
-    this.view.updateNukeTrajectory(null);
+    this.clearNukeTrajectory();
   }
 
   private removeGhostStructure() {

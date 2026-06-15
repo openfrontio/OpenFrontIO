@@ -1,4 +1,6 @@
 {
+  "categories": ["europe", "asia"],
+  "id": "Aegean",
   "map": {
     "height": 2000,
     "num_land_tiles": 1171283,
@@ -14,7 +16,8 @@
     "num_land_tiles": 284992,
     "width": 850
   },
-  "name": "aegean",
+  "multiplayer_frequency": 6,
+  "name": "Aegean",
   "nations": [
     {
       "coordinates": [786, 1860],
@@ -137,6 +140,7 @@
       "name": "Carpathos"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -152,5 +156,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "translation_key": "map.aegean"
 }

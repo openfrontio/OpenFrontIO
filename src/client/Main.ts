@@ -12,11 +12,7 @@ import {
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
-import {
-  DARK_MODE_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
+import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -54,7 +50,7 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
-  SendStartGameEvent,
+  SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
@@ -219,17 +215,12 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
-    "start-game": CustomEvent;
+    toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
-  }
-
-  // Fixes the globalThis.addEventListener errors
-  interface WindowEventMap {
-    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 
@@ -376,7 +367,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
-    document.addEventListener("start-game", this.handleStartGame.bind(this));
+    document.addEventListener(
+      "toggle_game_start_timer",
+      this.handleToggleGameStartTimer.bind(this),
+    );
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -543,24 +537,6 @@ class Client {
     } else {
       this.joinModal.eventBus = this.eventBus;
     }
-
-    const applyDarkMode = (isDark: boolean) => {
-      if (isDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-
-    applyDarkMode(this.userSettings.darkMode());
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e: CustomEvent<string>) => {
-        const isDark = e.detail === "true";
-        applyDarkMode(isDark);
-      },
-    );
 
     // Attempt to join lobby
     if (document.readyState === "loading") {
@@ -814,7 +790,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
-    if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
+    if (this.usernameInput && !this.usernameInput.canPlay()) {
       return;
     }
 
@@ -842,6 +818,7 @@ class Client {
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
@@ -1007,9 +984,9 @@ class Client {
     }
   }
 
-  private handleStartGame() {
+  private handleToggleGameStartTimer() {
     if (this.eventBus) {
-      this.eventBus.emit(new SendStartGameEvent());
+      this.eventBus.emit(new SendToggleGameStartTimer());
     }
   }
 

@@ -1,0 +1,364 @@
+{
+  "id": "HongKong",
+  "name": "Hong Kong",
+  "translation_key": "map.hongkong",
+  "categories": ["new", "asia"],
+  "multiplayer_frequency": 6,
+  "nations": [
+    {
+      "coordinates": [1592, 1147],
+      "name": "Tsim Sha Tsui",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1564, 993],
+      "name": "Mong Kok",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1529, 1116],
+      "name": "Kowloon",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1599, 1072],
+      "name": "Yau Ma Tei",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1490, 953],
+      "name": "Sham Shui Po",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1284, 898],
+      "name": "Tsing Yi",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1710, 995],
+      "name": "Kai Tak",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1654, 1232],
+      "name": "Causeway Bay",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1470, 1196],
+      "name": "Central District",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1593, 1238],
+      "name": "Wan Chai",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1406, 1226],
+      "name": "Kennedy Town",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1850, 1068],
+      "name": "Kwun Tong",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1527, 1220],
+      "name": "Admiralty District",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1749, 1503],
+      "name": "Stanley",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1588, 1424],
+      "name": "Ocean Park",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1534, 1376],
+      "name": "Aberdeen",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1923, 1470],
+      "name": "Shek O",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1903, 1310],
+      "name": "Chai Wan",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1706, 1425],
+      "name": "Repulse Bay",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1437, 1325],
+      "name": "Pok Fu Lam",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1765, 1192],
+      "name": "Quarry Bay",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1866, 1243],
+      "name": "Shau Kei Wan",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1400, 1649],
+      "name": "Lamma Island",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [447, 1093],
+      "name": "Hong Kong Int'l Airport",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [556, 1210],
+      "name": "Tung Chung",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1381, 779],
+      "name": "Tsuen Wan",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [675, 716],
+      "name": "Tuen Mun",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [864, 456],
+      "name": "Yuen Long",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [881, 1165],
+      "name": "Discovery Bay",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [953, 1021],
+      "name": "Disneyland",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [480, 1347],
+      "name": "Lantau Island",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [205, 1373],
+      "name": "Tai O",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2004, 1763],
+      "name": "Po Toi",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [951, 1592],
+      "name": "Cheung Chau",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [846, 295],
+      "name": "Tin Shui Wai",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1007, 212],
+      "name": "Mai Po",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [932, 4],
+      "name": "Shenzhen",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1178, 177],
+      "name": "Lok Ma Chau",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1981, 183],
+      "name": "Plover Cove",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1355, 167],
+      "name": "Sheung Shui",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1492, 233],
+      "name": "Fanling",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1659, 343],
+      "name": "Tai Po",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1775, 707],
+      "name": "Sha Tin",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1659, 705],
+      "name": "Tai Wai",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1913, 526],
+      "name": "Ma On Shan",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2160, 1141],
+      "name": "Clearwater Bay",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2020, 1121],
+      "name": "Tseung Kwan O",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2000, 976],
+      "name": "Hang Hau",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [977, 814],
+      "name": "Sham Tseng",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1082, 897],
+      "name": "Ma Wan",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2381, 637],
+      "name": "Sai Kung",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2225, 847],
+      "name": "Kau Sai",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1054, 387],
+      "name": "Kam Tin",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1466, 382],
+      "name": "Lam Tsuen",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1208, 430],
+      "name": "Pat Heung",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [523, 55],
+      "name": "Houhai District",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [462, 168],
+      "name": "Shekou District",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1237, 26],
+      "name": "Luohu District",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1027, 101],
+      "name": "Futian District",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [996, 1226],
+      "name": "Peng Chau",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2479, 781],
+      "name": "Long Ke",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1698, 182],
+      "name": "Pat Sin Leung",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1426, 870],
+      "name": "Kwai Chung",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1766, 1364],
+      "name": "Tai Tam",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1524, 1299],
+      "name": "The Peak",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [698, 1405],
+      "name": "Pui O",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [565, 1450],
+      "name": "Cheung Sha",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1665, 1067],
+      "name": "Hung Hom",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1545, 842],
+      "name": "Kam Shan",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1031, 654],
+      "name": "Tai Tong",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [1422, 602],
+      "name": "Tai Mo Shan",
+      "flag": "hk"
+    }
+  ]
+}

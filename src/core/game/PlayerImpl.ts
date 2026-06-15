@@ -41,7 +41,12 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { diffPlayerUpdate } from "./GameUpdateUtils";
+import {
+  ATTACK_DELTA_INCOMING,
+  ATTACK_DELTA_OUTGOING,
+  diffPlayerUpdate,
+  packAttackTroopDeltas,
+} from "./GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -66,6 +71,25 @@ class Donation {
   ) {}
 }
 
+// Shared singletons for empty collections in toFullUpdate. Sharing
+// references lets diffPlayerUpdate's `a === b` fast paths skip structural
+// comparison and avoids per-player-per-tick allocations. The arrays are
+// frozen so accidental in-worker mutation throws instead of silently
+// corrupting every player's updates; updates crossing to the main thread
+// are structured-cloned (clones are mutable). Sets cannot be frozen
+// (Set.add ignores freeze) — EMPTY_EMBARGOES must never be mutated.
+const EMPTY_NUMBER_ARRAY: number[] = [];
+const EMPTY_STRING_ARRAY: string[] = [];
+const EMPTY_ATTACK_UPDATES: AttackUpdate[] = [];
+const EMPTY_ALLIANCE_VIEWS: AllianceView[] = [];
+const EMPTY_EMOJIS: EmojiMessage[] = [];
+const EMPTY_EMBARGOES = new Set<string>();
+Object.freeze(EMPTY_NUMBER_ARRAY);
+Object.freeze(EMPTY_STRING_ARRAY);
+Object.freeze(EMPTY_ATTACK_UPDATES);
+Object.freeze(EMPTY_ALLIANCE_VIEWS);
+Object.freeze(EMPTY_EMOJIS);
+
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
   public _pseudo_random: PseudoRandom;
@@ -89,6 +113,7 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
+  private outgoingQuickChats_ = new Map<number, Tick>();
 
   private sentDonations: Donation[] = [];
 
@@ -100,6 +125,8 @@ export class PlayerImpl implements Player {
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
+
+  public _alliances: MutableAlliance[] = [];
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
@@ -132,20 +159,143 @@ export class PlayerImpl implements Player {
    * return only fields that changed since the previous call (a partial
    * `{ type, id, ...changedFields }`), or `null` if nothing changed.
    *
+   * tilesOwned / gold / troops are excluded from partial updates (they churn
+   * for every alive player every tick): when any of them changed, a
+   * `[smallID, tilesOwned, gold, troops]` quad is pushed to `statsOut`
+   * instead, which GameImpl drains into the transferable
+   * `packedPlayerUpdates` buffer. Attack troop counts likewise go to
+   * `attackTroopsOut` as `[smallID, direction, index, troops]` quads
+   * (→ `packedAttackUpdates`) instead of re-sending whole attack arrays.
+   *
    * `lastSentUpdate` is updated to the full snapshot on every call.
    */
-  toUpdate(): PlayerUpdate | null {
+  toUpdate(
+    statsOut?: number[],
+    attackTroopsOut?: number[],
+  ): PlayerUpdate | null {
     const full = this.toFullUpdate();
     const prev = this.lastSentUpdate;
     this.lastSentUpdate = full;
     if (prev === undefined) return full;
+    if (
+      statsOut !== undefined &&
+      (prev.tilesOwned !== full.tilesOwned ||
+        prev.gold !== full.gold ||
+        prev.troops !== full.troops)
+    ) {
+      statsOut.push(
+        full.smallID!,
+        full.tilesOwned!,
+        Number(full.gold),
+        full.troops!,
+      );
+    }
+    if (attackTroopsOut !== undefined) {
+      packAttackTroopDeltas(
+        prev.outgoingAttacks,
+        full.outgoingAttacks,
+        full.smallID!,
+        ATTACK_DELTA_OUTGOING,
+        attackTroopsOut,
+      );
+      packAttackTroopDeltas(
+        prev.incomingAttacks,
+        full.incomingAttacks,
+        full.smallID!,
+        ATTACK_DELTA_INCOMING,
+        attackTroopsOut,
+      );
+    }
     return diffPlayerUpdate(prev, full);
   }
 
   private toFullUpdate(): PlayerUpdate {
-    const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
-      ar.recipient().id(),
-    );
+    // Empty collections reuse shared singletons (EMPTY_*) so
+    // diffPlayerUpdate's reference fast paths hit and nothing is allocated.
+    // This runs for every player every tick; most collections are empty for
+    // most players. The singletons are never mutated — updates are
+    // structured-cloned before leaving the worker.
+    let outgoingAllianceRequests = EMPTY_STRING_ARRAY;
+    for (const ar of this.mg.allianceRequests) {
+      if (ar.requestor() === this) {
+        if (outgoingAllianceRequests === EMPTY_STRING_ARRAY) {
+          outgoingAllianceRequests = [];
+        }
+        outgoingAllianceRequests.push(ar.recipient().id());
+      }
+    }
+
+    const alliances = this.alliances();
+    let allies = EMPTY_NUMBER_ARRAY;
+    let allianceViews = EMPTY_ALLIANCE_VIEWS;
+    if (alliances.length > 0) {
+      allies = alliances.map((a) => a.other(this).smallID());
+      const extensionCutoff =
+        this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset();
+      allianceViews = alliances.map(
+        (a) =>
+          ({
+            id: a.id(),
+            other: a.other(this).id(),
+            createdAt: a.createdAt(),
+            expiresAt: a.expiresAt(),
+            hasExtensionRequest: a.expiresAt() <= extensionCutoff,
+          }) satisfies AllianceView,
+      );
+    }
+
+    let embargoes = EMPTY_EMBARGOES;
+    if (this.embargoes.size > 0) {
+      embargoes = new Set<string>();
+      for (const id of this.embargoes.keys()) {
+        embargoes.add(id.toString());
+      }
+    }
+
+    let targets = EMPTY_NUMBER_ARRAY;
+    if (this.targets_.length > 0) {
+      const t = this.targets();
+      if (t.length > 0) {
+        targets = t.map((p) => p.smallID());
+      }
+    }
+
+    let outgoingEmojis = EMPTY_EMOJIS;
+    if (this.outgoingEmojis_.length > 0) {
+      const e = this.outgoingEmojis();
+      if (e.length > 0) {
+        outgoingEmojis = e;
+      }
+    }
+
+    const outgoingAttacks =
+      this._outgoingAttacks.length === 0
+        ? EMPTY_ATTACK_UPDATES
+        : this._outgoingAttacks.map((a) => {
+            return {
+              attackerID: a.attacker().smallID(),
+              targetID: a.target().smallID(),
+              troops: a.troops(),
+              id: a.id(),
+              retreating: a.retreating(),
+            } satisfies AttackUpdate;
+          });
+
+    let incomingAttacks = EMPTY_ATTACK_UPDATES;
+    if (this._incomingAttacks.length > 0) {
+      const incoming = this.incomingAttacks();
+      if (incoming.length > 0) {
+        incomingAttacks = incoming.map((a) => {
+          return {
+            attackerID: a.attacker().smallID(),
+            targetID: a.target().smallID(),
+            troops: a.troops(),
+            id: a.id(),
+            retreating: a.retreating(),
+          } satisfies AttackUpdate;
+        });
+      }
+    }
 
     return {
       type: GameUpdateType.Player,
@@ -161,44 +311,16 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
+      allies: allies,
+      embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
-      targets: this.targets().map((p) => p.smallID()),
-      outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this.outgoingAttacks().map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      incomingAttacks: this.incomingAttacks().map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
+      targets: targets,
+      outgoingEmojis: outgoingEmojis,
+      outgoingAttacks: outgoingAttacks,
+      incomingAttacks: incomingAttacks,
       outgoingAllianceRequests: outgoingAllianceRequests,
-      alliances: this.alliances().map(
-        (a) =>
-          ({
-            id: a.id(),
-            other: a.other(this).id(),
-            createdAt: a.createdAt(),
-            expiresAt: a.expiresAt(),
-            hasExtensionRequest:
-              a.expiresAt() <=
-              this.mg.ticks() +
-                this.mg.config().allianceExtensionPromptOffset(),
-          }) satisfies AllianceView,
-      ),
+      alliances: allianceViews,
       hasSpawned: this.hasSpawned(),
       spawnTile: this._spawnTile,
       betrayals: this._betrayalCount,
@@ -486,9 +608,7 @@ export class PlayerImpl implements Player {
   }
 
   alliances(): MutableAlliance[] {
-    return this.mg.alliances_.filter(
-      (a) => a.requestor() === this || a.recipient() === this,
-    );
+    return this._alliances;
   }
 
   expiredAlliances(): Alliance[] {
@@ -759,7 +879,25 @@ export class PlayerImpl implements Player {
     return true;
   }
 
+  canSendQuickChat(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
+    const lastSentAt = this.outgoingQuickChats_.get(recipient.smallID());
+    return (
+      lastSentAt === undefined ||
+      this.mg.ticks() - lastSentAt >= this.mg.config().quickChatCooldown()
+    );
+  }
+
+  recordQuickChat(recipient: Player): void {
+    this.outgoingQuickChats_.set(recipient.smallID(), this.mg.ticks());
+  }
+
   canDonateGold(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -787,6 +925,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateTroops(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -814,6 +955,9 @@ export class PlayerImpl implements Player {
   }
 
   donateTroops(recipient: Player, troops: number): boolean {
+    // Defense-in-depth: canDonateTroops already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (troops <= 0) return false;
     const removed = this.removeTroops(troops);
     if (removed === 0) return false;
@@ -831,6 +975,9 @@ export class PlayerImpl implements Player {
   }
 
   donateGold(recipient: Player, gold: Gold): boolean {
+    // Defense-in-depth: canDonateGold already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
@@ -953,6 +1100,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other === this) {
+      return true;
+    }
     if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }
@@ -1167,7 +1317,7 @@ export class PlayerImpl implements Player {
         canUpgrade,
         cost,
         overlappingRailroads: buildNew
-          ? rail.overlappingRailroads(canBuild as TileRef)
+          ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],
         ghostRailPaths: buildNew
           ? rail.computeGhostRailPaths(u, canBuild as TileRef)
@@ -1458,11 +1608,10 @@ export class PlayerImpl implements Player {
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    if (this.type() === PlayerType.Bot) {
-      // Bots are not affected by immunity
+    if (this.type() !== PlayerType.Human) {
+      // Only human attackers respect PVP immunity
       return !this.isFriendly(player, treatAFKFriendly);
     }
-    // Humans and Nations respect immunity
     return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
   }
 

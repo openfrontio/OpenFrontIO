@@ -1,5 +1,9 @@
 {
+  "id": "EastAsia",
   "name": "East Asia",
+  "translation_key": "map.eastasia",
+  "categories": ["asia"],
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1150, 660],

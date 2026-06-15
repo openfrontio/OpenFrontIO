@@ -2,7 +2,6 @@ import type { RenderSettings } from "../RenderSettings";
 import type { DebugNode } from "./Folder";
 import { folder } from "./Folder";
 import { color } from "./props/Color";
-import { select } from "./props/Select";
 import { slider } from "./props/Slider";
 import { toggle } from "./props/Toggle";
 
@@ -10,7 +9,10 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
   return [
     folder("Pass Enables", [
       toggle(s.passEnabled, "terrain", d.passEnabled),
-      toggle(s.passEnabled, "mapOverlay", d.passEnabled),
+      toggle(s.passEnabled, "territory", d.passEnabled),
+      toggle(s.passEnabled, "borderCompute", d.passEnabled),
+      toggle(s.passEnabled, "borderStamp", d.passEnabled),
+      toggle(s.passEnabled, "trail", d.passEnabled),
       toggle(s.passEnabled, "structure", d.passEnabled),
       toggle(s.passEnabled, "unit", d.passEnabled),
       toggle(s.passEnabled, "name", d.passEnabled),
@@ -90,30 +92,29 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       slider(s.falloutBloom, "particleFreshScale", d.falloutBloom, 0, 1, 0.01),
     ]),
 
-    folder("Day / Night", [
-      select(s.dayNight, "mode", d.dayNight, ["light", "dark"], "Mode"),
-      slider(s.dayNight, "nightAmbient", d.dayNight, 0, 1, 0.01),
-      slider(s.dayNight, "dayAmbient", d.dayNight, 0, 1, 0.01),
-      slider(s.dayNight, "falloffPower", d.dayNight, 0.5, 5, 0.1),
-      slider(s.dayNight, "falloutLightIntensity", d.dayNight, 0, 20, 0.1),
-      slider(s.dayNight, "falloutLightThreshold", d.dayNight, 0, 0.5, 0.001),
-      slider(s.dayNight, "blurZoomDivisor", d.dayNight, 1, 20, 0.5),
-      slider(s.dayNight, "lightRadiusMultiplier", d.dayNight, 0.1, 5, 0.1),
+    folder("Lighting", [
+      toggle(s.lighting, "enabled", d.lighting),
+      slider(s.lighting, "ambient", d.lighting, 0, 1, 0.01),
+      slider(s.lighting, "falloffPower", d.lighting, 0.5, 5, 0.1),
+      slider(s.lighting, "falloutLightIntensity", d.lighting, 0, 20, 0.1),
+      slider(s.lighting, "falloutLightThreshold", d.lighting, 0, 0.5, 0.001),
+      slider(s.lighting, "blurZoomDivisor", d.lighting, 1, 20, 0.5),
+      slider(s.lighting, "lightRadiusMultiplier", d.lighting, 0.1, 5, 0.1),
       color(
-        s.dayNight,
+        s.lighting,
         "falloutLightR",
         "falloutLightG",
         "falloutLightB",
-        d.dayNight,
+        d.lighting,
         "Fallout Light Color",
       ),
-      slider(s.dayNight, "emberLightIntensity", d.dayNight, 0, 20, 0.1),
+      slider(s.lighting, "emberLightIntensity", d.lighting, 0, 20, 0.1),
       color(
-        s.dayNight,
+        s.lighting,
         "emberLightR",
         "emberLightG",
         "emberLightB",
-        d.dayNight,
+        d.lighting,
         "Ember Light Color",
       ),
     ]),
@@ -121,6 +122,25 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
     folder("Map Overlay", [
       slider(s.mapOverlay, "trailAlpha", d.mapOverlay, 0, 1, 0.01),
       slider(s.mapOverlay, "defenseCheckerDarken", d.mapOverlay, 0, 1, 0.01),
+      slider(s.mapOverlay, "territoryDefenseDarken", d.mapOverlay, 0, 1, 0.01),
+      slider(
+        s.mapOverlay,
+        "territorySaturation",
+        d.mapOverlay,
+        0,
+        1,
+        0.01,
+        "Territory Saturation",
+      ),
+      slider(
+        s.mapOverlay,
+        "territoryAlpha",
+        d.mapOverlay,
+        0,
+        1,
+        0.01,
+        "Territory Alpha",
+      ),
       slider(s.mapOverlay, "staleNukeBase", d.mapOverlay, 0, 0.3, 0.005),
       slider(s.mapOverlay, "staleNukeVariation", d.mapOverlay, 0, 0.3, 0.005),
       slider(s.mapOverlay, "staleNukeAlpha", d.mapOverlay, 0, 1, 0.01),
@@ -181,11 +201,20 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
           "Detail Zoom",
         ),
         slider(s.railroad, "railAlpha", d.railroad, 0, 1, 0.01, "Alpha"),
+        slider(
+          s.railroad,
+          "railThickness",
+          d.railroad,
+          0.5,
+          3,
+          0.1,
+          "Thickness",
+        ),
       ]),
     ]),
 
     folder("Structure", [
-      slider(s.structure, "iconSize", d.structure, 10, 60, 1),
+      slider(s.structure, "iconSize", d.structure, 10, 100, 1),
       slider(s.structure, "dotsZoomThreshold", d.structure, 0.1, 2, 0.05),
       slider(
         s.structure,
@@ -237,6 +266,36 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
             ),
           ]),
         ),
+      ),
+    ]),
+
+    folder("Structure Level", [
+      slider(
+        s.structureLevel,
+        "scale",
+        d.structureLevel,
+        0.5,
+        3,
+        0.05,
+        "Scale",
+      ),
+      slider(
+        s.structureLevel,
+        "outlineWidth",
+        d.structureLevel,
+        0,
+        20,
+        0.1,
+        "Outline Width (px)",
+      ),
+      slider(
+        s.structureLevel,
+        "offsetY",
+        d.structureLevel,
+        -2,
+        2,
+        0.05,
+        "Height Above Icon",
       ),
     ]),
 
@@ -296,10 +355,22 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       toggle(s.name, "fillUsePlayerColor", d.name, "Fill = Player Color"),
       slider(s.name, "emojiRowOffset", d.name, 0, 5, 0.1, "Emoji Row Offset"),
       slider(s.name, "statusRowOffset", d.name, 0, 5, 0.1, "Status Row Offset"),
+      slider(s.name, "hoverFadeAlpha", d.name, 0, 1, 0.05, "Hover Fade Alpha"),
+      slider(s.name, "hoverGlowWidth", d.name, 0, 8, 0.25, "Hover Glow Width"),
+      slider(s.name, "hoverGlowAlpha", d.name, 0, 1, 0.05, "Hover Glow Alpha"),
     ]),
 
     folder("FX", [
       slider(s.fx, "shockwaveRingWidth", d.fx, 0.01, 0.2, 0.005),
+      slider(
+        s.fx,
+        "attackRingScreenPx",
+        d.fx,
+        5,
+        60,
+        1,
+        "Attack Ring Size (px)",
+      ),
       slider(
         s.fx,
         "nukeShockwaveDurationMs",
@@ -453,7 +524,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
         "markerXRadius",
         d.nukeTrajectory,
         2,
-        16,
+        64,
         1,
         "X Marker (px)",
       ),

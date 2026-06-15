@@ -4,9 +4,9 @@
  * Renders all mobile (non-structure) units: boats, nukes, shells, SAM
  * missiles, and MIRV warheads. All unit types are rotationally symmetric
  * — no rotation needed. Sprites are tiny grayscale PNGs colorized on the
- * GPU using the standard 3-band gray replacement (180/130/70). Shell and
- * MIRV Warhead use programmatic 3×3 white squares (colorized to border
- * color).
+ * GPU using the standard 3-band gray replacement (180/130/70). MIRV
+ * Warhead uses a programmatic 3×3 white square (colorized to border
+ * color); Shell is a single white pixel.
  *
  * Two instanced draw calls per frame — ground units and missiles are
  * split into separate buffers for correct layer ordering:
@@ -21,7 +21,7 @@
  *   Col 4: Hydrogen Bomb (9×9)
  *   Col 5: MIRV (13×13, grayscale colorized)
  *   Col 6: SAM Missile (3×3)
- *   Col 7: Shell (3×3 white square)
+ *   Col 7: Shell (1×1 white pixel)
  *   Col 8: MIRV Warhead (3×3 white square)
  *   Col 9: Train Engine (5×5)
  *   Col 10: Train Carriage (5×5)
@@ -33,8 +33,10 @@
  */
 
 import { assetUrl } from "src/core/AssetUrls";
+import type { Config } from "src/core/configuration/Config";
 import type { RendererConfig, UnitState } from "../../types";
 import {
+  SMOOTHED_NUKE_TYPES,
   TrainType,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
@@ -82,6 +84,9 @@ const UNIT_ORDER = [
 
 const ATLAS_COLS = UNIT_ORDER.length;
 
+/** Atlas column of the hydrogen bomb — drives the GPU glow halo. */
+const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
+
 // ---------------------------------------------------------------------------
 // Instance data layout
 // ---------------------------------------------------------------------------
@@ -90,8 +95,9 @@ const ATLAS_COLS = UNIT_ORDER.length;
  * Per-instance data (16 bytes):
  *   float x, y, ownerID   — 12 bytes (3 floats)
  *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
- *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry)
- *   2 bytes padding        — aligns to 4-byte boundary
+ *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating, 5 = flicker-untargetable)
+ *   uint8 flickerHash      —  1 byte  (per-instance flicker phase offset)
+ *   1 byte padding         — aligns to 4-byte boundary
  */
 const FLOATS_PER_INSTANCE = 4;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
@@ -101,6 +107,8 @@ const FLAG_NORMAL = 0;
 const FLAG_FLICKER = 1;
 const FLAG_ANGRY = 2;
 const FLAG_TRADE_FRIENDLY = 3;
+const FLAG_RETREATING = 4;
+const FLAG_FLICKER_UNTARGETABLE = 5;
 
 /** Atlas column indices for train sub-types (resolved from trainType + loaded) */
 const TRAIN_ENGINE_COL = UNIT_ORDER.indexOf("TrainEngine");
@@ -128,6 +136,20 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_MIRV_WARHEAD,
 ]);
 
+/** Values per smoothing segment in the flat `smoothSegs` array:
+ *  (instanceIdx, lastX, lastY, x, y). The push site and the read loop must
+ *  agree on this width — it's the record size, not a tunable. */
+const SMOOTH_SEG_STRIDE = 5;
+
+/** Per-instance flicker phase offset, hashed from the tick position. Computed
+ *  CPU-side (not from the shader's instance position) so per-frame position
+ *  smoothing doesn't re-roll the flicker every frame. Matches the formula the
+ *  vertex shader previously applied to its rendered position. */
+export function flickerHashByte(x: number, y: number): number {
+  const f = x * 0.1731 + y * 0.3179;
+  return ((f - Math.floor(f)) * 255) | 0;
+}
+
 // ---------------------------------------------------------------------------
 // Helper: create a VAO for instanced unit rendering
 // ---------------------------------------------------------------------------
@@ -151,9 +173,9 @@ function createUnitVao(
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, BYTES_PER_INSTANCE, 0);
   gl.vertexAttribDivisor(1, 1);
 
-  // Attribute 2: per-instance (atlasIdx, flags) — 2 uint8s at offset 12, converted to float
+  // Attribute 2: per-instance (atlasIdx, flags, flickerHash) — 3 uint8s at offset 12, converted to float
   gl.enableVertexAttribArray(2);
-  gl.vertexAttribPointer(2, 2, gl.UNSIGNED_BYTE, false, BYTES_PER_INSTANCE, 12);
+  gl.vertexAttribPointer(2, 3, gl.UNSIGNED_BYTE, false, BYTES_PER_INSTANCE, 12);
   gl.vertexAttribDivisor(2, 1);
 
   gl.bindVertexArray(null);
@@ -175,6 +197,11 @@ export class UnitPass {
   private uFlickerSpeed: WebGLUniformLocation;
   private uAngryColor: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
+  private uHBombGlowScale: WebGLUniformLocation;
+  private uHBombGlowColor: WebGLUniformLocation;
+  private uHBombGlowStrength: WebGLUniformLocation;
+  private uHBombGlowInner: WebGLUniformLocation;
+  private uUntargetableAlpha: WebGLUniformLocation;
 
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
@@ -188,6 +215,14 @@ export class UnitPass {
   private missileVao: WebGLVertexArrayObject;
   private missileBuf: DynamicInstanceBuffer;
   private missileCount = 0;
+
+  // Per-frame nuke smoothing: flat SMOOTH_SEG_STRIDE-wide tuples
+  // (instanceIdx, lastX, lastY, x, y) recorded each tick, lerped into the
+  // missile buffer in drawMissiles.
+  private smoothSegs: number[] = [];
+  private lastUnitsUpdateMs = 0;
+  /** Simulation tick duration in ms (Config.msPerTick). */
+  private tickIntervalMs: number;
 
   private quadBuf: WebGLBuffer;
   private paletteTex: WebGLTexture;
@@ -210,11 +245,13 @@ export class UnitPass {
     header: RendererConfig,
     paletteTex: WebGLTexture,
     settings: RenderSettings,
+    config: Config,
   ) {
     this.gl = gl;
     this.settings = settings;
     this.mapW = header.mapWidth;
     this.paletteTex = paletteTex;
+    this.tickIntervalMs = config.msPerTick();
 
     // Build unitType string → atlas column mapping
     for (let i = 0; i < header.unitTypes.length; i++) {
@@ -229,8 +266,8 @@ export class UnitPass {
     // Compile shaders
     this.program = createProgram(
       gl,
-      shaderSrc(unitVertSrc, { ATLAS_COLS }),
-      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize() }),
+      shaderSrc(unitVertSrc, { ATLAS_COLS, HYDROGEN_BOMB_COL }),
+      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize(), ATLAS_COLS }),
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTick = gl.getUniformLocation(this.program, "uTick")!;
@@ -239,6 +276,26 @@ export class UnitPass {
     this.uAngryColor = gl.getUniformLocation(this.program, "uAngryColor")!;
 
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
+    this.uHBombGlowScale = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowScale",
+    )!;
+    this.uHBombGlowColor = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowColor",
+    )!;
+    this.uHBombGlowStrength = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowStrength",
+    )!;
+    this.uHBombGlowInner = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowInner",
+    )!;
+    this.uUntargetableAlpha = gl.getUniformLocation(
+      this.program,
+      "uUntargetableAlpha",
+    )!;
 
     // Texture unit bindings
     gl.useProgram(this.program);
@@ -326,6 +383,7 @@ export class UnitPass {
     const byteOff = this.groundCount * BYTES_PER_INSTANCE;
     this.groundBuf.uint8[byteOff + 12] = atlasIdx;
     this.groundBuf.uint8[byteOff + 13] = flags;
+    this.groundBuf.uint8[byteOff + 14] = flickerHashByte(x, y);
     this.groundCount++;
   }
 
@@ -344,6 +402,7 @@ export class UnitPass {
     const byteOff = this.missileCount * BYTES_PER_INSTANCE;
     this.missileBuf.uint8[byteOff + 12] = atlasIdx;
     this.missileBuf.uint8[byteOff + 13] = flags;
+    this.missileBuf.uint8[byteOff + 14] = flickerHashByte(x, y);
     this.missileCount++;
   }
 
@@ -351,6 +410,8 @@ export class UnitPass {
     this.frameTick = tick;
     this.groundCount = 0;
     this.missileCount = 0;
+    this.smoothSegs.length = 0;
+    this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
       if (!unit.isActive) continue;
@@ -372,6 +433,8 @@ export class UnitPass {
 
       if (atlasIdx === undefined) continue;
 
+      const isRetreatingWarship =
+        unit.unitType === UT_WARSHIP && unit.retreating;
       const isAngryWarship =
         unit.unitType === UT_WARSHIP && unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
@@ -387,25 +450,42 @@ export class UnitPass {
         const targetPort = this.structures.get(unit.targetUnitId);
         if (targetPort) {
           const portOwner = targetPort.ownerID;
+          // Only recolor enemy-owned ships: a self/allied ship already renders
+          // green/yellow via its affiliation color (e.g. a captured trade ship
+          // heading to our port is ours and must stay green, not yellow).
           isTradeFriendly =
-            portOwner === this.localPlayerID ||
-            this.friendlyOwners.has(portOwner);
+            unit.ownerID !== this.localPlayerID &&
+            !this.friendlyOwners.has(unit.ownerID) &&
+            (portOwner === this.localPlayerID ||
+              this.friendlyOwners.has(portOwner));
         }
       }
 
-      const flags = isTradeFriendly
-        ? FLAG_TRADE_FRIENDLY
-        : isAngryWarship
-          ? FLAG_ANGRY
-          : isFlicker
-            ? FLAG_FLICKER
-            : FLAG_NORMAL;
+      let flags = FLAG_NORMAL;
+      if (isTradeFriendly) {
+        flags = FLAG_TRADE_FRIENDLY;
+      } else if (isRetreatingWarship) {
+        flags = FLAG_RETREATING;
+      } else if (isAngryWarship) {
+        flags = FLAG_ANGRY;
+      } else if (isFlicker) {
+        // Untargetable nukes render dimmed so players can tell SAMs can't hit them
+        flags = unit.targetable ? FLAG_FLICKER : FLAG_FLICKER_UNTARGETABLE;
+      }
       const isMissile = MISSILE_TYPES.has(unit.unitType);
 
       const x = unit.pos % this.mapW;
       const y = (unit.pos - x) / this.mapW;
 
       if (isMissile) {
+        if (
+          SMOOTHED_NUKE_TYPES.has(unit.unitType) &&
+          unit.lastPos !== unit.pos
+        ) {
+          const lx = unit.lastPos % this.mapW;
+          const ly = (unit.lastPos - lx) / this.mapW;
+          this.smoothSegs.push(this.missileCount, lx, ly, x, y);
+        }
         this.emitMissile(x, y, unit.ownerID, atlasIdx, flags);
 
         // Shells emit a second instance at lastPos (2-pixel trail effect)
@@ -470,6 +550,16 @@ export class UnitPass {
     gl.uniform1f(this.uFlickerSpeed, us.flickerSpeed);
     gl.uniform3f(this.uAngryColor, us.angryR, us.angryG, us.angryB);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
+    gl.uniform1f(this.uHBombGlowScale, us.hBombGlowScale);
+    gl.uniform3f(
+      this.uHBombGlowColor,
+      us.hBombGlowR,
+      us.hBombGlowG,
+      us.hBombGlowB,
+    );
+    gl.uniform1f(this.uHBombGlowStrength, us.hBombGlowStrength);
+    gl.uniform1f(this.uHBombGlowInner, us.hBombGlowInner);
+    gl.uniform1f(this.uUntargetableAlpha, us.untargetableAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
@@ -495,10 +585,37 @@ export class UnitPass {
   /** Draw missiles/projectiles (nukes, shells, SAM, MIRV warheads). Render above structures. */
   drawMissiles(cameraMatrix: Float32Array): void {
     if (this.missileCount === 0) return;
+    this.applyMissileSmoothing();
     this.bindProgram(cameraMatrix);
     const gl = this.gl;
     gl.bindVertexArray(this.missileVao);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.missileCount);
+  }
+
+  /** Lerp smoothed nukes lastPos→pos by wall-clock progress through the
+   *  current tick and re-upload the (small) missile instance buffer. */
+  private applyMissileSmoothing(): void {
+    const segs = this.smoothSegs;
+    if (segs.length === 0) return;
+    const alpha = Math.min(
+      1,
+      (performance.now() - this.lastUnitsUpdateMs) / this.tickIntervalMs,
+    );
+    const f32 = this.missileBuf.float32;
+    for (let i = 0; i < segs.length; i += SMOOTH_SEG_STRIDE) {
+      const off = segs[i] * FLOATS_PER_INSTANCE;
+      f32[off + 0] = segs[i + 1] + (segs[i + 3] - segs[i + 1]) * alpha;
+      f32[off + 1] = segs[i + 2] + (segs[i + 4] - segs[i + 2]) * alpha;
+    }
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.missileBuf.buffer);
+    gl.bufferSubData(
+      gl.ARRAY_BUFFER,
+      0,
+      f32,
+      0,
+      this.missileCount * FLOATS_PER_INSTANCE,
+    );
   }
 
   dispose(): void {

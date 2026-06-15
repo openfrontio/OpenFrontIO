@@ -1,4 +1,6 @@
 {
+  "categories": ["oceania", "continental"],
+  "id": "Oceania",
   "map": {
     "height": 1000,
     "num_land_tiles": 194648,
@@ -14,6 +16,7 @@
     "num_land_tiles": 46259,
     "width": 1000
   },
+  "multiplayer_frequency": 0,
   "name": "Oceania",
   "nations": [
     {
@@ -126,5 +129,6 @@
       "flag": "Hawaii",
       "name": "Hawaii"
     }
-  ]
+  ],
+  "translation_key": "map.oceania"
 }

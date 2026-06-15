@@ -1,4 +1,6 @@
 {
+  "categories": ["new", "asia"],
+  "id": "MiddleEast",
   "map": {
     "height": 2060,
     "num_land_tiles": 3449078,
@@ -14,6 +16,7 @@
     "num_land_tiles": 856603,
     "width": 1100
   },
+  "multiplayer_frequency": 8,
   "name": "Middle East",
   "nations": [
     {
@@ -151,5 +154,6 @@
       "flag": "ru",
       "name": "Russian State"
     }
-  ]
+  ],
+  "translation_key": "map.middleeast"
 }
