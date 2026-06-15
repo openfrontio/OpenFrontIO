@@ -45,6 +45,10 @@ void main() {
     float flick = max(0.0, sin(uTick * tileRate + h1 * 12.0) * 0.8 + 0.2);
     flick *= flick;
     flick *= mix(uParticleFreshScale, 1.0, 1.0 - heat);
+    // Fade embers out with the heat. The fallout bit is permanent on tiles
+    // that stay unowned, so without this the ember light flickers forever
+    // once the blast has cooled.
+    flick *= heat;
     light += uEmberLightColor * flick * uEmberLightIntensity;
   }
 
