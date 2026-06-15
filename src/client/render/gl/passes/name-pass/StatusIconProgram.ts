@@ -138,6 +138,14 @@ export class StatusIconProgram {
     img.src = statusAtlasUrl;
   }
 
+  /** Update font metrics used to position status icons (on a font toggle). */
+  setFont(fontSize: number, base: number): void {
+    const gl = this.gl;
+    gl.useProgram(this.program);
+    gl.uniform1f(gl.getUniformLocation(this.program, "uFontSize")!, fontSize);
+    gl.uniform1f(gl.getUniformLocation(this.program, "uFontBase")!, base);
+  }
+
   draw(
     cameraMatrix: Float32Array,
     settings: RenderSettings,

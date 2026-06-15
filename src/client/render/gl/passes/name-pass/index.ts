@@ -29,12 +29,12 @@ import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
 import { renderTroops } from "../../../../Utils";
-import { generateArialBitmapAtlas } from "./ArialAtlas";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
   buildGlyphTables,
   buildKernTable,
+  parseArialAtlasData,
   parseAtlasData,
 } from "./AtlasData";
 import {
@@ -50,7 +50,7 @@ import { StatusIconProgram } from "./StatusIconProgram";
 import { layoutString } from "./TextLayout";
 import { TextProgram } from "./TextProgram";
 import type { PlayerSlot } from "./Types";
-import { CHAR_RANGE, LINES_PER_PLAYER, MAX_CHARS } from "./Types";
+import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 
 // Flag quad aspect ratio — must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts.
 const FLAG_ASPECT = 128 / 85;
@@ -82,9 +82,13 @@ export class NamePass {
   private fontBase: number;
   private msdfGlyph: GlyphTables;
   private msdfKern: Int8Array;
+  private msdfFontSize: number;
+  private msdfBase: number;
   private arialGlyph: GlyphTables;
   private arialKern: Int8Array;
   private arialMetricsTex: WebGLTexture;
+  private arialFontSize: number;
+  private arialBase: number;
   // Which font the cursor buffers are currently laid out for.
   private classicFont = false;
 
@@ -141,6 +145,8 @@ export class NamePass {
     this.kernTable = buildKernTable(atlas.kernings);
     this.msdfGlyph = this.glyph;
     this.msdfKern = this.kernTable;
+    this.msdfFontSize = atlas.fontSize;
+    this.msdfBase = atlas.base;
     this.emojiCharToIndex = buildEmojiLookup();
 
     // Runtime flag-image manager (TEXTURE_2D_ARRAY of player flags, fetched
@@ -216,25 +222,35 @@ export class NamePass {
       this.maxPlayers,
     );
 
-    // Classic Arial bitmap font: built once at runtime, same em/baseline as the
-    // MSDF atlas so sizing/icons are unchanged. Selected via name.classicFont.
-    const arial = generateArialBitmapAtlas();
-    this.arialGlyph = buildGlyphTables(arial.atlas.chars);
-    this.arialKern = new Int8Array(CHAR_RANGE * CHAR_RANGE); // no kerning
-    this.arialMetricsTex = buildGlyphMetricsTex(gl, arial.atlas);
-    this.textProgram.setArialFont(
-      arial.canvas,
-      this.arialMetricsTex,
-      arial.atlas.scaleW,
-      arial.atlas.scaleH,
-      arial.renderScale,
-    );
+    // Classic name font: Arial (Arimo) MSDF atlas — same format as overpass,
+    // its own metrics. Selected via name.classicFont.
+    const arialAtlas = parseArialAtlasData();
+    this.arialGlyph = buildGlyphTables(arialAtlas.chars);
+    this.arialKern = buildKernTable(arialAtlas.kernings);
+    this.arialMetricsTex = buildGlyphMetricsTex(gl, arialAtlas);
+    this.arialFontSize = arialAtlas.fontSize;
+    this.arialBase = arialAtlas.base;
+    this.textProgram.setArialFont(this.arialMetricsTex, arialAtlas);
 
-    this.classicFont = settings.name.classicFont;
-    if (this.classicFont) {
-      this.glyph = this.arialGlyph;
-      this.kernTable = this.arialKern;
-    }
+    // Apply the initially-selected font to the glyph tables + sibling passes.
+    this.classicFont = false;
+    this.applyFont(settings.name.classicFont);
+  }
+
+  /**
+   * Switch the active font: point the layout tables + line metrics at it and
+   * push its metrics to the icon/status/debug passes so they stay aligned.
+   * Each font carries its own em size and baseline.
+   */
+  private applyFont(classic: boolean): void {
+    this.classicFont = classic;
+    this.glyph = classic ? this.arialGlyph : this.msdfGlyph;
+    this.kernTable = classic ? this.arialKern : this.msdfKern;
+    this.fontSize = classic ? this.arialFontSize : this.msdfFontSize;
+    this.fontBase = classic ? this.arialBase : this.msdfBase;
+    this.iconProgram.setFont(this.fontSize, this.fontBase);
+    this.statusIconProgram.setFont(this.fontSize, this.fontBase);
+    this.debugProgram.setFont(this.fontSize, this.fontBase);
   }
 
   // -------------------------------------------------------------------------
@@ -682,9 +698,7 @@ export class NamePass {
   private syncFont(): void {
     const classic = this.settings.name.classicFont;
     if (classic === this.classicFont) return;
-    this.classicFont = classic;
-    this.glyph = classic ? this.arialGlyph : this.msdfGlyph;
-    this.kernTable = classic ? this.arialKern : this.msdfKern;
+    this.applyFont(classic);
     for (const slot of this.slots.values()) {
       if (slot.nameLen > 0) {
         slot.nameHalfWidth = this.uploadStringRow(

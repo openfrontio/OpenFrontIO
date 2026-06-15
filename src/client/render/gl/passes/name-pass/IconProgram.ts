@@ -122,6 +122,14 @@ export class IconProgram {
     return this.emojiReady;
   }
 
+  /** Update font metrics used to size/position icons (on a font toggle). */
+  setFont(fontSize: number, base: number): void {
+    const gl = this.gl;
+    gl.useProgram(this.program);
+    gl.uniform1f(gl.getUniformLocation(this.program, "uFontSize")!, fontSize);
+    gl.uniform1f(gl.getUniformLocation(this.program, "uFontBase")!, base);
+  }
+
   private loadEmojiAtlas(): void {
     const gl = this.gl;
     const img = new Image();

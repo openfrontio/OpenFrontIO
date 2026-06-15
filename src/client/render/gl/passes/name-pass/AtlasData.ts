@@ -21,38 +21,48 @@ interface RawMsdfAtlas {
 }
 
 // Fetched at game-load time rather than statically imported — the JSON is
-// ~320 KB minified and would otherwise sit in the main bundle.
-let atlasData: RawMsdfAtlas | null = null;
-let atlasDataPromise: Promise<void> | null = null;
+// large (~320 KB for overpass) and would otherwise sit in the main bundle.
+const atlasData: Record<string, RawMsdfAtlas> = {};
+const atlasPromises: Record<string, Promise<void>> = {};
 
-export function preloadAtlasData(): Promise<void> {
-  atlasDataPromise ??= fetch(assetUrl("atlases/msdf-atlas.json"))
+function preload(file: string): Promise<void> {
+  atlasPromises[file] ??= fetch(assetUrl(`atlases/${file}`))
     .then((response) => {
       if (!response.ok) {
-        throw new Error(`Failed to fetch msdf-atlas.json: ${response.status}`);
+        throw new Error(`Failed to fetch ${file}: ${response.status}`);
       }
       return response.json();
     })
     .then((json) => {
-      atlasData = json as RawMsdfAtlas;
+      atlasData[file] = json as RawMsdfAtlas;
     });
-  return atlasDataPromise;
+  return atlasPromises[file];
 }
 
-export function parseAtlasData(): ParsedAtlas {
-  if (atlasData === null) {
-    throw new Error("Atlas data not loaded; await preloadAtlasData() first");
+function parse(file: string): ParsedAtlas {
+  const raw = atlasData[file];
+  if (raw === undefined) {
+    throw new Error(`Atlas ${file} not loaded; await its preload first`);
   }
   return {
-    fontSize: atlasData.info.size,
-    base: atlasData.common.base,
-    scaleW: atlasData.common.scaleW,
-    scaleH: atlasData.common.scaleH,
-    distanceRange: atlasData.distanceField?.distanceRange ?? 4,
-    chars: atlasData.chars,
-    kernings: atlasData.kernings ?? [],
+    fontSize: raw.info.size,
+    base: raw.common.base,
+    scaleW: raw.common.scaleW,
+    scaleH: raw.common.scaleH,
+    distanceRange: raw.distanceField?.distanceRange ?? 4,
+    chars: raw.chars,
+    kernings: raw.kernings ?? [],
   };
 }
+
+/** Default MSDF font (overpass-bold) — names + troops + structure levels. */
+export const preloadAtlasData = (): Promise<void> => preload("msdf-atlas.json");
+export const parseAtlasData = (): ParsedAtlas => parse("msdf-atlas.json");
+
+/** Classic name font: Arimo MSDF atlas (Arial-metric), same format as overpass. */
+export const preloadArialAtlasData = (): Promise<void> =>
+  preload("arial-atlas.json");
+export const parseArialAtlasData = (): ParsedAtlas => parse("arial-atlas.json");
 
 // ---------------------------------------------------------------------------
 // CPU-side glyph lookup tables

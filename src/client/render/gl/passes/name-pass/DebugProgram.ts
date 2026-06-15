@@ -69,6 +69,14 @@ export class DebugProgram {
     this.uNameScaleCap = gl.getUniformLocation(this.program, "uNameScaleCap")!;
   }
 
+  /** Update font metrics used to position debug boxes (on a font toggle). */
+  setFont(fontSize: number, base: number): void {
+    const gl = this.gl;
+    gl.useProgram(this.program);
+    gl.uniform1f(gl.getUniformLocation(this.program, "uFontSize")!, fontSize);
+    gl.uniform1f(gl.getUniformLocation(this.program, "uFontBase")!, base);
+  }
+
   draw(
     cameraMatrix: Float32Array,
     settings: RenderSettings,

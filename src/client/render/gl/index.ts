@@ -4,7 +4,10 @@ export type { AttackRingInput } from "../types";
 export { GraphicsOverridesSchema } from "./GraphicsOverrides";
 export type { GraphicsOverrides } from "./GraphicsOverrides";
 export { MapRenderer } from "./MapRenderer";
-export { preloadAtlasData } from "./passes/name-pass/AtlasData";
+export {
+  preloadArialAtlasData,
+  preloadAtlasData,
+} from "./passes/name-pass/AtlasData";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
 export { applyGraphicsOverrides } from "./RenderOverrides";
 export { createRenderSettings, dumpSettings } from "./RenderSettings";

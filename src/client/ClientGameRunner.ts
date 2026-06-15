@@ -71,6 +71,7 @@ import {
   createRenderSettings,
   deepAssign,
   MapRenderer,
+  preloadArialAtlasData,
   preloadAtlasData,
   type RenderSettings,
 } from "./render/gl";
@@ -454,9 +455,12 @@ async function createClientGame(
       mapLoader,
     );
   }
-  // Kick off the font-atlas fetch so it overlaps with worker init; the
-  // render passes need it parsed before createWebGLView runs.
-  const atlasDataLoad = preloadAtlasData();
+  // Kick off the font-atlas fetches so they overlap with worker init; the
+  // render passes need them parsed before createWebGLView runs.
+  const atlasDataLoad = Promise.all([
+    preloadAtlasData(),
+    preloadArialAtlasData(),
+  ]);
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
   await atlasDataLoad;
