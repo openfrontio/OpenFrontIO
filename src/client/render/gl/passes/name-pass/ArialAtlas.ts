@@ -24,7 +24,13 @@ const BASE = 36;
 const FONT = `100 ${EM}px Arial, "Liberation Sans", sans-serif`;
 
 const ATLAS_W = 1024;
-const PAD = 2; // transparent gutter between packed glyphs
+const PAD = 3; // transparent gutter between packed glyphs (> erosion radius)
+
+// Arial has no face thinner than Regular, so thin the strokes by eroding the
+// rasterized coverage. Fractional: each pixel's alpha is reduced toward the
+// minimum of its neighbourhood, shaving ~ERODE_PX off every edge.
+const ERODE_PX = 1;
+const ERODE_STRENGTH = 0.85; // 0 = none, 1 = hard min-filter
 
 // Codepoint coverage: ASCII + Latin-1 + Latin Extended-A (matches CHAR_RANGE),
 // skipping the C0/C1 control gaps. Covers player names and troop labels.
@@ -157,6 +163,8 @@ export function generateArialBitmapAtlas(): {
     actx.fillText(m.ch, penX, penY);
   }
 
+  erodeCoverage(actx, ATLAS_W, ATLAS_H);
+
   const atlas: ParsedAtlas = {
     fontSize: EM,
     base: BASE,
@@ -167,6 +175,49 @@ export function generateArialBitmapAtlas(): {
     kernings: [],
   };
   return { atlas, canvas };
+}
+
+/**
+ * Thin the rasterized glyphs by eroding the alpha (coverage) channel: each
+ * pixel is pulled toward the minimum alpha in a (2·ERODE_PX+1)² window, blended
+ * by ERODE_STRENGTH. Shrinks every stroke edge by ~ERODE_PX·ERODE_STRENGTH px.
+ */
+function erodeCoverage(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+): void {
+  if (ERODE_PX <= 0 || ERODE_STRENGTH <= 0) return;
+  const img = ctx.getImageData(0, 0, w, h);
+  const a = img.data;
+  const src = new Uint8ClampedArray(a.length);
+  src.set(a);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4 + 3;
+      const cur = src[i];
+      if (cur === 0) continue;
+      let min = cur;
+      for (let dy = -ERODE_PX; dy <= ERODE_PX && min > 0; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) {
+          min = 0;
+          break;
+        }
+        for (let dx = -ERODE_PX; dx <= ERODE_PX; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= w) {
+            min = 0;
+            break;
+          }
+          const v = src[(yy * w + xx) * 4 + 3];
+          if (v < min) min = v;
+        }
+      }
+      a[i] = Math.round(cur + (min - cur) * ERODE_STRENGTH);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 function toBMChar(m: Measured, ax: number, ay: number): BMChar {
