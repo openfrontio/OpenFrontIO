@@ -2,6 +2,7 @@ import {
   boatIntervalTicks,
   boatTroops,
   bombIntervalTicks,
+  maxInvaderNations,
   nukeTier,
   selectInvasionNuke,
   warshipCount,
@@ -59,6 +60,32 @@ describe("InvasionConfig.boatTroops", () => {
     );
     expect(boatTroops(1000 * MIN, Difficulty.Impossible)).toBeLessThanOrEqual(
       350_000,
+    );
+  });
+
+  test("each successive boat carries slightly more troops", () => {
+    const first = boatTroops(0, Difficulty.Medium, 0);
+    const later = boatTroops(0, Difficulty.Medium, 10);
+    expect(later).toBeGreaterThan(first);
+    // Still bounded by the cap even for huge wave indices.
+    expect(boatTroops(0, Difficulty.Medium, 100_000)).toBeLessThanOrEqual(
+      350_000,
+    );
+  });
+});
+
+describe("InvasionConfig.maxInvaderNations", () => {
+  test("caps fewer nations on easier difficulties (5 easy, 20 impossible)", () => {
+    expect(maxInvaderNations(Difficulty.Easy)).toBe(5);
+    expect(maxInvaderNations(Difficulty.Impossible)).toBe(20);
+    expect(maxInvaderNations(Difficulty.Easy)).toBeLessThan(
+      maxInvaderNations(Difficulty.Medium),
+    );
+    expect(maxInvaderNations(Difficulty.Medium)).toBeLessThan(
+      maxInvaderNations(Difficulty.Hard),
+    );
+    expect(maxInvaderNations(Difficulty.Hard)).toBeLessThan(
+      maxInvaderNations(Difficulty.Impossible),
     );
   });
 });

@@ -21,9 +21,11 @@ const BOAT_INTERVAL_FLOOR = 20; // 2s — the hard cap from the spec
 const BOAT_RAMP_TICKS = 20 * TICKS_PER_MINUTE; // reaches the floor at 20 min
 const BOAT_RAMP_DELTA = BOAT_INTERVAL_START - BOAT_INTERVAL_FLOOR;
 
-// Transport population: starts at 30k, grows with time and difficulty.
+// Transport population: starts at 30k, grows with time and difficulty, plus a
+// small bump for each successive boat sent (waves get a little stronger).
 const TROOPS_START = 30_000;
 const TROOPS_GROWTH_PER_MINUTE = 8_000;
+const TROOPS_PER_WAVE_BONUS = 600;
 const TROOPS_CAP = 350_000;
 
 // Escalation onsets (before difficulty time-shift).
@@ -105,10 +107,15 @@ export function boatIntervalTicks(
   return Math.max(BOAT_INTERVAL_FLOOR, scaled);
 }
 
-/** Troop count carried by a transport launched at the given elapsed time. */
+/**
+ * Troop count carried by a transport. Grows with elapsed time (scaled by
+ * difficulty) and gets a small cumulative bump per boat already sent, so each
+ * successive wave lands slightly more troops.
+ */
 export function boatTroops(
   elapsedTicks: number,
   difficulty: Difficulty,
+  waveIndex = 0,
 ): number {
   const minutesTimesGrowth = Math.floor(
     (TROOPS_GROWTH_PER_MINUTE * Math.max(0, elapsedTicks)) / TICKS_PER_MINUTE,
@@ -116,7 +123,29 @@ export function boatTroops(
   const scaledGrowth = Math.floor(
     (minutesTimesGrowth * difficultyIntensity(difficulty)) / 100,
   );
-  return Math.min(TROOPS_CAP, TROOPS_START + scaledGrowth);
+  const waveBonus = Math.max(0, waveIndex) * TROOPS_PER_WAVE_BONUS;
+  return Math.min(TROOPS_CAP, TROOPS_START + scaledGrowth + waveBonus);
+}
+
+/**
+ * Maximum number of concurrent invader nations, capped by difficulty. Keeps the
+ * total faction count down (each nation can field up to `boatMaxNumber` boats),
+ * so the invasion arrives as fewer, busier nations rather than a swarm of one-
+ * boat nations.
+ */
+export function maxInvaderNations(difficulty: Difficulty): number {
+  switch (difficulty) {
+    case Difficulty.Easy:
+      return 5;
+    case Difficulty.Medium:
+      return 10;
+    case Difficulty.Hard:
+      return 15;
+    case Difficulty.Impossible:
+      return 20;
+    default:
+      assertNever(difficulty);
+  }
 }
 
 /**

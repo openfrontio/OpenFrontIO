@@ -1,3 +1,4 @@
+import { maxInvaderNations } from "../src/core/execution/invasion/InvasionConfig";
 import { InvasionExecution } from "../src/core/execution/invasion/InvasionExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import {
@@ -78,6 +79,37 @@ describe("Invasion Mode waves", () => {
       .players()
       .filter((p) => p.team() === ColoredTeams.Invaders);
     expect(invaders.length).toBe(0);
+  });
+
+  test("never exceeds the difficulty cap of concurrent invader nations", async () => {
+    const difficulty = "Impossible";
+    const game = await setup("ocean_and_land", {
+      invasionMode: true,
+      invasionGracePeriod: 0,
+      difficulty: difficulty as never,
+    });
+    game.addExecution(new InvasionExecution(gameID));
+
+    const cap = maxInvaderNations(difficulty as never);
+    let maxConcurrent = 0;
+    let sawWarship = false;
+    for (let i = 0; i < 1600; i++) {
+      game.executeNextTick();
+      if (game.units(UnitType.Warship).length > 0) sawWarship = true;
+      const live = game
+        .players()
+        .filter(
+          (p) =>
+            p.team() === ColoredTeams.Invaders &&
+            (p.isAlive() || p.unitCount(UnitType.TransportShip) > 0),
+        ).length;
+      maxConcurrent = Math.max(maxConcurrent, live);
+    }
+
+    expect(maxConcurrent).toBeGreaterThan(0);
+    expect(maxConcurrent).toBeLessThanOrEqual(cap);
+    // Escorts arrive once the invasion passes minute 2.
+    expect(sawWarship).toBe(true);
   });
 });
 
