@@ -31,9 +31,12 @@ void main() {
   vec3 fillColor = mix(vec3(vNameShade), vPlayerColor.rgb, uFillUsePlayerColor);
 
   // Classic Arial bitmap: the atlas is a coverage mask; tint it with the fill
-  // color, no outline (matching the old DOM-rendered names).
+  // color, no outline (matching the old DOM-rendered names). Antialias the 0.5
+  // coverage contour in screen space (fwidth) so the edge stays ~1px sharp at
+  // any magnification instead of blurring when names are drawn large.
   if (uClassic == 1) {
-    float coverage = texture(uAtlas, vUV).a;
+    float a = texture(uAtlas, vUV).a;
+    float coverage = clamp((a - 0.5) / max(fwidth(a), 1e-5) + 0.5, 0.0, 1.0);
     if (coverage <= 0.0) discard;
     fragColor = vec4(fillColor, vPlayerColor.a * coverage);
     return;
