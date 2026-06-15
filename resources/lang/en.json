@@ -944,6 +944,9 @@
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
     "loading": "Loading...",
+    "no_results": "No maps found",
+    "search_maps": "Search maps...",
+    "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
   },
   "matchmaking_button": {
