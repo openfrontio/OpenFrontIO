@@ -1,4 +1,4 @@
-import { LitElement, PropertyValues, html, nothing } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../Utils";
 import { CARD_LABEL_CLASS, INPUT_CLASS, cardClass } from "./InputCardStyles";
@@ -28,19 +28,6 @@ export class ToggleInputCard extends LitElement {
   createRenderRoot() {
     return this;
   }
-
-  protected updated(changedProperties: PropertyValues<this>) {
-    if (!changedProperties.has("checked")) return;
-    const previousChecked = changedProperties.get("checked");
-    if (previousChecked === false && this.checked) {
-      const input = this.querySelector("input");
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }
-  }
-
   private toOptionalNumber(
     value: number | string | undefined,
   ): number | undefined {
