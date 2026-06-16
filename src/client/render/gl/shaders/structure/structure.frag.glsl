@@ -132,8 +132,16 @@ void main() {
     iconAlpha = iconSample.a * borderMask * inBounds;
   }
 
-  // Composite: tinted icon over player-colored shape
-  vec3 glyphColor = uIconDarken > 0.0 ? darken(fillColor.rgb, uIconDarken) : uIconColor;
+  // Composite: tinted icon over player-colored shape.
+  // Classic icons (uIconDarken > 0) tint the glyph with a darkened player
+  // color. When the shape itself is already dark, that darkened glyph blends
+  // into the shape (and the dark territory behind it) and becomes unreadable —
+  // so flip the glyph to the light icon color when the fill is too dark.
+  vec3 glyphColor = uIconColor;
+  if (uIconDarken > 0.0) {
+    float fillLum = dot(fillColor.rgb, vec3(0.299, 0.587, 0.114));
+    glyphColor = fillLum < 0.25 ? uIconColor : darken(fillColor.rgb, uIconDarken);
+  }
   vec3 finalRGB = mix(bgColor.rgb, glyphColor, iconAlpha);
 
   // Red X overlay for units marked for deletion
