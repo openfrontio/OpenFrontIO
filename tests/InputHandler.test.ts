@@ -639,6 +639,10 @@ describe("InputHandler AutoUpgrade", () => {
   describe("Digit keys still set ghost structure when bound to Numpad", () => {
     beforeEach(() => {
       inputHandler.destroy();
+      testSettings.setKeybinds({
+        buildCity: "Numpad1",
+        buildMIRV: "Numpad0",
+      });
       const uiState: UIState = {
         attackRatio: 20,
         ghostStructure: null,
@@ -651,10 +655,6 @@ describe("InputHandler AutoUpgrade", () => {
         eventBus,
       );
       inputHandler.initialize();
-      testSettings.setKeybinds({
-        buildCity: "Numpad1",
-        buildMIRV: "Numpad0",
-      });
     });
     test("Digit1 sets ghost structure to City when buildCity is Numpad1", () => {
       window.dispatchEvent(
