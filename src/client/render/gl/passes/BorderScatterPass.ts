@@ -13,10 +13,10 @@
  * border shader makes the neighbors' results depend on this tile's ownership.
  * Use `pushWithNeighbors` to do that expansion automatically.
  *
- * Highlight-thicken rings within `uHighlightThicken` of a changed tile are
- * NOT incrementally repainted — they'll lag visually until the next full
- * recompute (which fires on highlight / relation / defense changes). That
- * artifact is small and short-lived; for live combat it's a fair trade.
+ * When a highlight is active, a changed tile also affects the highlight
+ * thickening of nearby highlight-owner tiles (an N-tile Chebyshev expansion),
+ * so `pushWithNeighbors` widens the repaint to that radius — otherwise the
+ * inner edge of the highlight band would lag until the next full recompute.
  */
 
 import type { RenderSettings } from "../RenderSettings";
@@ -122,13 +122,41 @@ export class BorderScatterPass {
     this.patchCount++;
   }
 
-  /** Queue the tile + its 4 cardinal neighbors (clipped to map bounds). */
+  /**
+   * Queue the tile + the neighborhood whose border value depends on it
+   * (clipped to map bounds).
+   *
+   * Normal borders only need the 4 cardinal neighbors (the shader's border
+   * test is cardinal-only). But when a highlight is active, the highlight
+   * thickening is an N-tile Chebyshev expansion, so a changed tile affects the
+   * thickening of every highlight-owner tile within `highlightThicken` of it.
+   * Repaint that whole box so the inner edge of the highlight band tracks
+   * tile changes instead of lagging until the next full recompute.
+   */
   pushWithNeighbors(x: number, y: number): void {
-    this.push(x, y);
-    if (x > 0) this.push(x - 1, y);
-    if (x < this.mapW - 1) this.push(x + 1, y);
-    if (y > 0) this.push(x, y - 1);
-    if (y < this.mapH - 1) this.push(x, y + 1);
+    const r =
+      this.highlightOwner !== 0
+        ? Math.max(1, Math.floor(this.settings.mapOverlay.highlightThicken))
+        : 1;
+
+    if (r === 1) {
+      this.push(x, y);
+      if (x > 0) this.push(x - 1, y);
+      if (x < this.mapW - 1) this.push(x + 1, y);
+      if (y > 0) this.push(x, y - 1);
+      if (y < this.mapH - 1) this.push(x, y + 1);
+      return;
+    }
+
+    const x0 = Math.max(0, x - r);
+    const x1 = Math.min(this.mapW - 1, x + r);
+    const y0 = Math.max(0, y - r);
+    const y1 = Math.min(this.mapH - 1, y + r);
+    for (let yy = y0; yy <= y1; yy++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        this.push(xx, yy);
+      }
+    }
   }
 
   get count(): number {
