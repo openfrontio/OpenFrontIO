@@ -85,4 +85,17 @@ describe("GameLifecycle", () => {
     await expect(game.end()).resolves.toBeUndefined();
     expect((game as any)._hasEnded).toBe(true);
   });
+
+  it("propagates invasion mode settings through updateGameConfig", () => {
+    // Regression: the host's config update is an allowlist; invasion fields
+    // must be copied or private matches never start the invasion.
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
+
+    game.updateGameConfig({ invasionMode: true, invasionGracePeriod: 5 });
+
+    expect((game as any).gameConfig.invasionMode).toBe(true);
+    expect((game as any).gameConfig.invasionGracePeriod).toBe(5);
+  });
 });

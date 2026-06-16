@@ -184,6 +184,13 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
+    if (gameConfig.invasionMode !== undefined) {
+      this.gameConfig.invasionMode = gameConfig.invasionMode;
+    }
+    if (gameConfig.invasionGracePeriod !== undefined) {
+      this.gameConfig.invasionGracePeriod =
+        gameConfig.invasionGracePeriod ?? undefined;
+    }
     this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 
