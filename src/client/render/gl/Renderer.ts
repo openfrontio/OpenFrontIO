@@ -350,8 +350,8 @@ export class GPURenderer {
     // just the affected tiles instead of rebuilding the whole map. A tile
     // changing owner can also flip its defense-coverage flag (same-owner test),
     // so mark the coverage stale too — one coalesced re-stamp happens per frame.
-    this.territoryPass.setBorderPatchConsumer((x, y) => {
-      this.borderPass.patchTile(x, y);
+    this.territoryPass.setBorderPatchConsumer((x, y, prevOwner, newOwner) => {
+      this.borderPass.patchTile(x, y, prevOwner, newOwner);
       this.defenseCoveragePass.markTileDirty(x, y);
     });
     // Territory fill darkens on interior tiles defended by a same-owner post;
