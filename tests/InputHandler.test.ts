@@ -1040,3 +1040,26 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("");
   });
 });
+
+describe("InputHandler keybind registry", () => {
+  function makeHandler() {
+    return new InputHandler(
+      {} as any, // gameView
+      {} as any, // uiState
+      document.createElement("div"), // canvas
+      {} as any, // eventBus
+    );
+  }
+
+  test("two actions bound to the same key are both kept (no overwrite)", () => {
+    const ih = makeHandler() as any;
+    ih.keybindAndEvent = [];
+    ih.addKeybindAndEvent("KeyX", () => {});
+    ih.addKeybindAndEvent("KeyX", () => {});
+
+    const entries = ih.keybindAndEvent.filter(
+      ([k]: [string, unknown]) => k === "KeyX",
+    );
+    expect(entries.length).toBe(2); // would have been 1 with the old Map
+  });
+});
