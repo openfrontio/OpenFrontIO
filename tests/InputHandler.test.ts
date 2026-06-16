@@ -636,6 +636,62 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Digit keys still set ghost structure when bound to Numpad", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+      testSettings.setKeybinds({
+        buildCity: "Numpad1",
+        buildMIRV: "Numpad0",
+      });
+    });
+    test("Digit1 sets ghost structure to City when buildCity is Numpad1", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", key: "1" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+    test("Digit0 sets ghost structrue to MIRV when buildMIRV is Numpad0", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit0", key: "0" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
+    });
+  });
+
+  describe("InputHandler keybind registry", () => {
+    function makeHandler() {
+      return new InputHandler(
+        {} as any, // gameView
+        {} as any, // uiState
+        document.createElement("div"), // canvas
+        {} as any, // eventBus
+      );
+    }
+
+    test("two actions bound to the same key are both kept (no overwrite)", () => {
+      const ih = makeHandler() as any;
+      ih.keybindAndEvent = [];
+      ih.addKeybindAndEvent("KeyX", () => {});
+      ih.addKeybindAndEvent("KeyX", () => {});
+
+      const entries = ih.keybindAndEvent.filter(
+        ([k]: [string, unknown]) => k === "KeyX",
+      );
+      expect(entries.length).toBe(2); // would have been 1 with the old Map
+    });
+  });
   describe("Build keybind two-phase matching (exact code first, then digit/Numpad alias)", () => {
     beforeEach(() => {
       inputHandler.destroy();
@@ -1038,28 +1094,5 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("crosshair");
     window.dispatchEvent(new Event("blur"));
     expect(mockCanvas.style.cursor).toBe("");
-  });
-});
-
-describe("InputHandler keybind registry", () => {
-  function makeHandler() {
-    return new InputHandler(
-      {} as any, // gameView
-      {} as any, // uiState
-      document.createElement("div"), // canvas
-      {} as any, // eventBus
-    );
-  }
-
-  test("two actions bound to the same key are both kept (no overwrite)", () => {
-    const ih = makeHandler() as any;
-    ih.keybindAndEvent = [];
-    ih.addKeybindAndEvent("KeyX", () => {});
-    ih.addKeybindAndEvent("KeyX", () => {});
-
-    const entries = ih.keybindAndEvent.filter(
-      ([k]: [string, unknown]) => k === "KeyX",
-    );
-    expect(entries.length).toBe(2); // would have been 1 with the old Map
   });
 });

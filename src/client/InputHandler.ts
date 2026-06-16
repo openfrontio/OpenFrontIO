@@ -360,8 +360,8 @@ export class InputHandler {
         return "Shift+" + t;
       }),
     );
-    buildKeybinds = [...new Set(buildKeybinds)].filter(
-      (v): v is string => Boolean(v),
+    buildKeybinds = [...new Set(buildKeybinds)].filter((v): v is string =>
+      Boolean(v),
     );
     for (const i of buildKeybinds) {
       this.addKeybindAndEvent(
