@@ -16,7 +16,7 @@ import type { TilePair } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
-import { FALLOUT_BIT, TILE_DEFINES } from "../utils/TileCodec";
+import { FALLOUT_BIT, OWNER_MASK, TILE_DEFINES } from "../utils/TileCodec";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
@@ -89,7 +89,9 @@ export class TerritoryPass {
    * incrementally repaint affected tiles instead of rebuilding the whole map.
    * Wired by the renderer to `borderPass.patchTile`.
    */
-  private borderPatchConsumer: ((x: number, y: number) => void) | null = null;
+  private borderPatchConsumer:
+    | ((x: number, y: number, prevOwner: number, newOwner: number) => void)
+    | null = null;
 
   /**
    * Drip buckets — round-robin staggering of tile updates across render frames.
@@ -216,7 +218,9 @@ export class TerritoryPass {
    * hooks this to `borderPass.patchTile` so border recompute scales with the
    * number of changed tiles instead of full map area.
    */
-  setBorderPatchConsumer(fn: (x: number, y: number) => void): void {
+  setBorderPatchConsumer(
+    fn: (x: number, y: number, prevOwner: number, newOwner: number) => void,
+  ): void {
     this.borderPatchConsumer = fn;
   }
 
@@ -246,7 +250,8 @@ export class TerritoryPass {
       for (let i = 0; i < bucket.length; i += 2) {
         const ref = bucket[i];
         const state = bucket[i + 1];
-        if (((ts[ref] ^ state) & FALLOUT_BIT) !== 0) {
+        const prev = ts[ref];
+        if (((prev ^ state) & FALLOUT_BIT) !== 0) {
           this.falloutTouched = true;
         }
         ts[ref] = state;
@@ -254,7 +259,9 @@ export class TerritoryPass {
           const x = ref % w;
           const y = (ref - x) / w;
           this.scatter.push(x, y, state);
-          if (borderFn) borderFn(x, y);
+          if (borderFn) {
+            borderFn(x, y, prev & OWNER_MASK, state & OWNER_MASK);
+          }
         }
       }
       bucket.length = 0;
@@ -280,7 +287,8 @@ export class TerritoryPass {
       for (let i = 0; i < bucket.length; i += 2) {
         const ref = bucket[i];
         const state = bucket[i + 1];
-        if (((ts[ref] ^ state) & FALLOUT_BIT) !== 0) {
+        const prev = ts[ref];
+        if (((prev ^ state) & FALLOUT_BIT) !== 0) {
           this.falloutTouched = true;
         }
         ts[ref] = state;
@@ -288,7 +296,9 @@ export class TerritoryPass {
           const x = ref % w;
           const y = (ref - x) / w;
           this.scatter.push(x, y, state);
-          if (borderFn) borderFn(x, y);
+          if (borderFn) {
+            borderFn(x, y, prev & OWNER_MASK, state & OWNER_MASK);
+          }
         }
       }
       bucket.length = 0;
