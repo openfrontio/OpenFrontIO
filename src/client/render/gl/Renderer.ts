@@ -410,6 +410,7 @@ export class GPURenderer {
       header,
       paletteData,
       this.settings,
+      config,
     );
 
     // --- Fallout light (needs tileTex + heatManager; particle flicker is
