@@ -1144,6 +1144,7 @@ export class GPURenderer {
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
+    if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
     this.samRadiusPass.draw(cam);
     this.rangeCirclePass.draw(cam);
     this.nukeTrajectoryPass.draw(cam);
@@ -1155,7 +1156,6 @@ export class GPURenderer {
     this.selectionBoxPass.draw(cam, this.frameTick);
     this.moveIndicatorPass.draw(cam, zoom);
     this.nukeTelegraphPass.draw(cam);
-    if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
     if (pe.trail) this.trailPass.draw(cam);
     if (pe.unit) this.unitPass.drawMissiles(cam);
 
