@@ -416,17 +416,12 @@ export class PlayerImpl implements Player {
     }
   }
 
-  // Count of units built by the player, including construction
+  // Count of units built by the player, including those still under
+  // construction. recordUnitConstructed() is called in buildUnit() the moment a
+  // unit is created (while still under construction), so numUnitsConstructed
+  // already accounts for in-progress builds — don't re-count them.
   unitsConstructed(type: UnitType): number {
-    const built = this.numUnitsConstructed[type] ?? 0;
-    let constructing = 0;
-    for (const unit of this._units) {
-      if (unit.type() !== type) continue;
-      if (!unit.isUnderConstruction()) continue;
-      constructing++;
-    }
-    const total = constructing + built;
-    return total;
+    return this.numUnitsConstructed[type] ?? 0;
   }
 
   // Count of units owned by the player, not including construction
