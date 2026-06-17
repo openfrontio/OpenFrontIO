@@ -487,6 +487,17 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
   }
 
+  private currentFallout(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().passEnabled?.fallout ??
+      renderDefaults.passEnabled.falloutBloom
+    );
+  }
+
+  private onToggleFallout() {
+    this.patchPassEnabled({ fallout: !this.currentFallout() });
+  }
+
   /** Whether colorblind mode is currently enabled. */
   private currentColorblind(): boolean {
     return (
@@ -1132,6 +1143,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleFallout}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.fallout_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.fallout_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.currentFallout()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
