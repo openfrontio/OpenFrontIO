@@ -56,7 +56,7 @@ function loadTwitchSdk(): Promise<TwitchGlobal> {
 export class FeaturedStream extends LitElement {
   @state() private live = false;
   @state() private inGame = false;
-  @state() private dismissed = false;
+  @state() private minimized = false;
 
   private channels: string[] = [];
   private idx = 0;
@@ -143,7 +143,7 @@ export class FeaturedStream extends LitElement {
 
   // Autoplay can be blocked while the panel is hidden; once it's visible, nudge playback.
   private kickPlay() {
-    if (!this.visible()) return;
+    if (!this.present()) return;
     void this.updateComplete.then(() => {
       try {
         this.player?.setMuted(true);
@@ -154,38 +154,51 @@ export class FeaturedStream extends LitElement {
     });
   }
 
-  private visible(): boolean {
-    return this.live && !this.inGame && !this.dismissed;
+  // present = rendered & playing (live, not in a game). minimized is a sub-state that
+  // keeps the player mounted and streaming, just visually collapsed to the header bar.
+  private present(): boolean {
+    return this.live && !this.inGame;
   }
 
   render() {
     if (!this.channels.length) return html``;
     const channel = this.channels[this.idx] ?? "";
+    const min = this.minimized;
+    // Always render the mount so the player stays alive. Minimized just clips the card to
+    // the header bar (overflow-hidden + max-height) — the iframe keeps streaming, so
+    // un-minimizing is instant. z above the footer/content so it overlays everything.
     return html`
       <div
-        class="fixed bottom-3 right-3 z-40 w-80 max-w-[90vw] overflow-hidden rounded-lg bg-black/90 shadow-2xl ring-1 ring-white/10 transition-opacity ${this.visible()
+        class="fixed bottom-4 right-4 z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 transition-all duration-300 ${this.present()
           ? "opacity-100"
-          : "pointer-events-none opacity-0"}"
-        aria-hidden=${this.visible() ? "false" : "true"}
+          : "pointer-events-none opacity-0"} ${min
+          ? "w-72 max-h-9"
+          : "w-[clamp(340px,40vw,720px)] max-w-[92vw] max-h-[85vh]"}"
+        aria-hidden=${this.present() ? "false" : "true"}
       >
-        <div class="flex items-center justify-between px-2 py-1 text-white">
-          <span class="flex items-center gap-1 text-xs font-semibold">
-            <span class="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
-            ${translateText("featured_stream.live")}
-            <a
-              href="https://twitch.tv/${channel}"
-              target="_blank"
-              rel="noopener"
-              class="ml-1 font-normal text-white/70 hover:text-white"
-              >${channel}</a
+        <div
+          class="flex h-9 items-center justify-between gap-2 px-2 text-white"
+        >
+          <span class="flex min-w-0 items-center gap-2 text-sm font-semibold">
+            <span
+              class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500"
+            ></span>
+            <span class="shrink-0"
+              >${translateText("featured_stream.live")}</span
             >
+            <span class="truncate font-bold">${channel}</span>
           </span>
           <button
-            class="px-1 text-white/70 hover:text-white"
-            aria-label=${translateText("featured_stream.close")}
-            @click=${() => (this.dismissed = true)}
+            class="shrink-0 px-1 text-lg leading-none text-white/70 hover:text-white"
+            aria-label=${translateText(
+              min ? "featured_stream.expand" : "featured_stream.minimize",
+            )}
+            @click=${() => {
+              this.minimized = !this.minimized;
+              if (!this.minimized) this.kickPlay();
+            }}
           >
-            ✕
+            ${min ? "⤢" : "–"}
           </button>
         </div>
         <div

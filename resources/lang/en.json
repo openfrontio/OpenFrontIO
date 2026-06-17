@@ -428,8 +428,9 @@
     "wants_to_renew_alliance": "{name} wants to renew your alliance"
   },
   "featured_stream": {
-    "close": "Close",
-    "live": "LIVE"
+    "expand": "Expand",
+    "live": "LIVE",
+    "minimize": "Minimize"
   },
   "flag_input": {
     "button_title": "Pick a flag!",
