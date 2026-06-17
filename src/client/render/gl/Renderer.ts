@@ -1226,5 +1226,9 @@ export class GPURenderer {
     this.gl.deleteTexture(this.sceneTarget.tex);
     this.lastUnits = new Map();
     this.lastStructures = new Map();
+    // Deleting GL resources isn't enough — the context itself counts against
+    // the browser's WebGL context limit until it's GC'd, which is unreliable
+    // on mobile. Explicitly drop it so repeated game starts don't overflow.
+    this.gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }

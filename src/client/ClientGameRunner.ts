@@ -329,7 +329,7 @@ function mountWebGLFrameLoop(
   transformHandler: import("./TransformHandler").TransformHandler,
   gameView: GameView,
   eventBus: EventBus,
-): { builder: WebGLFrameBuilder } {
+): { builder: WebGLFrameBuilder; stopFrameLoop: () => void } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
   const mapHeight = gameMap.height();
@@ -388,11 +388,24 @@ function mountWebGLFrameLoop(
   // TransformHandler, pushes it to WebGL, and synchronously invokes the
   // renderer's captured frame callback (which draws). One RAF = one
   // synchronized camera-update + WebGL render.
+  let rafId: number | null = null;
   const driveFrame = (): void => {
     syncCamera();
-    requestAnimationFrame(driveFrame);
+    rafId = requestAnimationFrame(driveFrame);
   };
-  requestAnimationFrame(driveFrame);
+  rafId = requestAnimationFrame(driveFrame);
+
+  // Tear down the per-frame loop so a stopped game stops driving WebGL and
+  // releases the view for disposal. Left running, the RAF keeps the WebGL
+  // context referenced (and alive) forever — each new game would then stack
+  // another context until the browser's limit is hit.
+  const stopFrameLoop = (): void => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    resizeObs.disconnect();
+  };
 
   const builder = new WebGLFrameBuilder(view);
 
@@ -423,7 +436,7 @@ function mountWebGLFrameLoop(
     builder.update(gameView);
   };
 
-  return { builder };
+  return { builder, stopFrameLoop };
 }
 
 async function createClientGame(
@@ -502,13 +515,15 @@ async function createClientGame(
       resolveRenderSettings(),
     );
 
+    const graphicsListenerAbort = new AbortController();
+
     view.setShowPatterns(userSettings.territoryPatterns());
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
+      { signal: graphicsListenerAbort.signal },
     );
 
-    const graphicsListenerAbort = new AbortController();
     // Re-resolve settings and copy them onto the renderer's live object in
     // place (passes hold a reference to it, so they pick the change up).
     const regenerateRenderSettings = (): void => {
@@ -574,7 +589,7 @@ async function createClientGame(
       view,
     );
 
-    const { builder: webglBuilder } = mountWebGLFrameLoop(
+    const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
       gameMap,
       view,
       glCanvas,
@@ -583,6 +598,20 @@ async function createClientGame(
       gameView,
       eventBus,
     );
+
+    // Releases all WebGL/DOM resources this game created. Without it, stopping
+    // a game (e.g. joining another without a page reload) leaks the WebGL
+    // context, canvas and input overlay — a few games and mobile browsers hit
+    // their WebGL context limit. Idempotent: stop() may be called more than once.
+    let rendererDisposed = false;
+    const disposeRenderer = (): void => {
+      if (rendererDisposed) return;
+      rendererDisposed = true;
+      stopFrameLoop();
+      view.dispose();
+      glCanvas.remove();
+      inputOverlay.remove();
+    };
 
     console.log(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -601,6 +630,7 @@ async function createClientGame(
       userSettings,
       webglBuilder,
       graphicsListenerAbort,
+      disposeRenderer,
     );
   } catch (err) {
     soundManager.dispose();
@@ -635,6 +665,7 @@ export class ClientGameRunner {
     private userSettings: UserSettings,
     private webglBuilder: WebGLFrameBuilder | null = null,
     private graphicsListenerAbort: AbortController | null = null,
+    private disposeRenderer: (() => void) | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -892,6 +923,7 @@ export class ClientGameRunner {
   public stop() {
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
+    this.disposeRenderer?.();
     if (!this.isActive) return;
 
     this.isActive = false;
