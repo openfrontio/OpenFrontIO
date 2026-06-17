@@ -516,6 +516,11 @@ export class AccountModal extends BaseModal {
         () => alert(translateText("account_modal.link_google_already_linked")),
         0,
       );
+    } else if (link === "error") {
+      setTimeout(
+        () => alert(translateText("account_modal.link_google_error")),
+        0,
+      );
     }
   }
 
