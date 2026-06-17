@@ -57,6 +57,7 @@ export class FeaturedStream extends LitElement {
   @state() private live = false;
   @state() private inGame = false;
   @state() private minimized = false;
+  @state() private streamTitle = ""; // live broadcast title (HTMLElement.title is reserved)
 
   private channels: string[] = [];
   private idx = 0;
@@ -131,7 +132,24 @@ export class FeaturedStream extends LitElement {
 
   private setLive() {
     this.live = true;
+    void this.fetchTitle(this.channels[this.idx]);
     this.kickPlay();
+  }
+
+  // The Twitch embed exposes only the channel name, so fetch the broadcast title from a
+  // lightweight third-party (decapi, no auth/CORS-open). Falls back to the channel name.
+  // For production this can be swapped for a Helix-backed endpoint.
+  private async fetchTitle(channel: string) {
+    this.streamTitle = channel;
+    try {
+      const r = await fetch(
+        `https://decapi.me/twitch/title/${encodeURIComponent(channel)}`,
+      );
+      const t = (await r.text()).trim();
+      if (r.ok && t) this.streamTitle = t;
+    } catch {
+      /* keep channel-name fallback */
+    }
   }
 
   // current channel offline -> try the next configured one; none left -> stay hidden
@@ -174,7 +192,7 @@ export class FeaturedStream extends LitElement {
         class="fixed bottom-4 right-4 z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 transition-all duration-300 ${this.present()
           ? "opacity-100"
           : "pointer-events-none opacity-0"} ${min
-          ? "w-64"
+          ? "w-[360px]"
           : "w-[clamp(340px,40vw,720px)] max-w-[92vw]"}"
         aria-hidden=${this.present() ? "false" : "true"}
       >
@@ -188,7 +206,13 @@ export class FeaturedStream extends LitElement {
             <span class="shrink-0"
               >${translateText("featured_stream.live")}</span
             >
-            <span class="truncate font-bold">${channel}</span>
+            <a
+              href="https://twitch.tv/${channel}"
+              target="_blank"
+              rel="noopener"
+              class="truncate font-bold hover:underline"
+              >${this.streamTitle || channel}</a
+            >
           </span>
           <button
             class="shrink-0 px-1 text-lg leading-none text-white/70 hover:text-white"
@@ -197,7 +221,7 @@ export class FeaturedStream extends LitElement {
             )}
             @click=${() => {
               this.minimized = !this.minimized;
-              if (!this.minimized) this.kickPlay();
+              this.kickPlay(); // resume playback after the resize either way
             }}
           >
             ${min ? "⤢" : "–"}
