@@ -69,6 +69,12 @@ export class ServerEnv {
   static instanceId(): string {
     return process.env.INSTANCE_ID ?? "";
   }
+  // Comma-separated Twitch channel logins for the homepage "featured stream" panel
+  // (e.g. "openfrontmasters,openfront"). Empty/unset disables it; the panel only
+  // appears when one of the listed channels is actually live.
+  static streamChannels(): string {
+    return process.env.STREAM_CHANNELS ?? "";
+  }
   static workerId(): number | undefined {
     const raw = process.env.WORKER_ID;
     if (raw === undefined) return undefined;

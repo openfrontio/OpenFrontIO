@@ -33,6 +33,7 @@ declare global {
       turnstileSiteKey?: string;
       jwtAudience?: string;
       instanceId?: string;
+      streamChannels?: string;
     };
   }
 }
