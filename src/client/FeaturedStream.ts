@@ -75,6 +75,9 @@ export class FeaturedStream extends LitElement {
   private idx = 0;
   private player?: TwitchPlayer;
   private dragOff = { x: 0, y: 0 };
+  private dragStart = { x: 0, y: 0 };
+  private dragging = false;
+  private dragMoved = false;
 
   // Light DOM so Tailwind classes apply (matches HomepagePromos).
   createRenderRoot() {
@@ -110,38 +113,58 @@ export class FeaturedStream extends LitElement {
     this.kickPlay();
   };
 
-  // Drag the header to move the panel; on release it snaps to the nearest screen corner.
+  // The header is both a drag handle and a click target: a plain click opens the stream on
+  // Twitch; a drag (past a small threshold) snaps the panel to the nearest corner. Our
+  // minimize button is excluded; the Twitch player is a separate iframe, so its own
+  // controls/buttons are never intercepted by this.
   private onDragDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button")) return; // let the minimize button work
+    this.dragOff = { x: 0, y: 0 };
     const card = this.querySelector(
       "#featured-stream-card",
     ) as HTMLElement | null;
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    this.dragOff = { x: e.clientX - r.left, y: e.clientY - r.top };
-    this.dragPos = { x: r.left, y: r.top };
+    if (card) {
+      const r = card.getBoundingClientRect();
+      this.dragOff = { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    this.dragStart = { x: e.clientX, y: e.clientY };
+    this.dragging = true;
+    this.dragMoved = false;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   private onDragMove = (e: PointerEvent) => {
-    if (!this.dragPos) return;
+    if (!this.dragging) return;
+    if (
+      !this.dragMoved &&
+      Math.hypot(e.clientX - this.dragStart.x, e.clientY - this.dragStart.y) < 5
+    )
+      return; // below threshold -> still a click, not a drag
+    this.dragMoved = true;
     this.dragPos = {
       x: e.clientX - this.dragOff.x,
       y: e.clientY - this.dragOff.y,
     };
   };
   private onDragUp = () => {
-    if (!this.dragPos) return;
-    const card = this.querySelector(
-      "#featured-stream-card",
-    ) as HTMLElement | null;
-    const cx = this.dragPos.x + (card?.offsetWidth ?? 360) / 2;
-    const cy = this.dragPos.y + (card?.offsetHeight ?? 200) / 2;
-    const v = cy > window.innerHeight / 2 ? "b" : "t";
-    const h = cx > window.innerWidth / 2 ? "r" : "l";
-    this.corner = `${v}${h}` as Corner;
-    localStorage.setItem(CORNER_KEY, this.corner);
-    this.dragPos = null;
+    if (!this.dragging) return;
+    this.dragging = false;
+    if (this.dragMoved && this.dragPos) {
+      const card = this.querySelector(
+        "#featured-stream-card",
+      ) as HTMLElement | null;
+      const cx = this.dragPos.x + (card?.offsetWidth ?? 360) / 2;
+      const cy = this.dragPos.y + (card?.offsetHeight ?? 200) / 2;
+      const v = cy > window.innerHeight / 2 ? "b" : "t";
+      const h = cx > window.innerWidth / 2 ? "r" : "l";
+      this.corner = `${v}${h}` as Corner;
+      localStorage.setItem(CORNER_KEY, this.corner);
+      this.dragPos = null;
+    } else {
+      const channel = this.channels[this.idx];
+      if (channel)
+        window.open(`https://twitch.tv/${channel}`, "_blank", "noopener");
+    }
   };
 
   private async start() {
