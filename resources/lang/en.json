@@ -12,6 +12,7 @@
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "fetching_account": "Fetching account information...",
     "get_magic_link": "Get Magic Link",
+    "google_alt": "Google",
     "link_discord": "Link Discord Account",
     "link_google": "Link Google Account",
     "link_google_already_linked": "That Google account is already linked to another player.",

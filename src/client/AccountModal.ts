@@ -300,7 +300,7 @@ export class AccountModal extends BaseModal {
       >
         <img
           src=${assetUrl("images/GoogleLogo.svg")}
-          alt="Google"
+          alt=${translateText("account_modal.google_alt")}
           class="w-5 h-5"
         />
         <span class="font-bold tracking-wide"
