@@ -34,6 +34,7 @@ interface TwitchGlobal {
 
 type Corner = "tl" | "tr" | "bl" | "br";
 const CORNER_KEY = "featured-stream-corner";
+const MIN_KEY = "featured-stream-minimized";
 const CORNER_CLASS: Record<Corner, string> = {
   tl: "top-4 left-4",
   tr: "top-4 right-4",
@@ -86,6 +87,7 @@ export class FeaturedStream extends LitElement {
     const saved = localStorage.getItem(CORNER_KEY);
     if (saved === "tl" || saved === "tr" || saved === "bl" || saved === "br")
       this.corner = saved;
+    this.minimized = localStorage.getItem(MIN_KEY) === "true";
     document.addEventListener("join-lobby", this.onJoin);
     document.addEventListener("leave-lobby", this.onLeave);
   }
@@ -278,6 +280,7 @@ export class FeaturedStream extends LitElement {
             )}
             @click=${() => {
               this.minimized = !this.minimized;
+              localStorage.setItem(MIN_KEY, String(this.minimized));
               this.kickPlay(); // resume playback after the resize either way
             }}
           >
