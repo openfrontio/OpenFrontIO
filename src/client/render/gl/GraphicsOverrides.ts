@@ -38,6 +38,9 @@ export const GraphicsOverridesSchema = z
     passEnabled: z
       .object({
         fx: z.boolean(),
+        // Nuclear fallout effects: the broiling green territory bloom and its
+        // light emission in day/night mode. Disable to improve performance.
+        fallout: z.boolean(),
       })
       .partial(),
     accessibility: z
