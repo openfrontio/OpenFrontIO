@@ -1,6 +1,5 @@
 import {
   ColoredTeams,
-  Difficulty,
   Execution,
   Game,
   Nation,
@@ -23,39 +22,64 @@ import { WarshipExecution } from "../WarshipExecution";
 import {
   boatIntervalTicks,
   boatTroops,
-  bombIntervalTicks,
-  maxInvaderNations,
-  nukeTier,
-  selectInvasionNuke,
+  INVADER_BOAT_MAX,
+  invaderStartingGold,
+  InvasionNuke,
+  MAX_INVADER_NATIONS,
+  selectInvasionStrike,
   warshipCount,
 } from "./InvasionConfig";
 
-// Escort warships are released ~0.5s apart so they don't stack on the map.
-const WARSHIP_STAGGER_TICKS = 5;
+// Formation geometry (tiles), measured from the transport's spawn tile toward
+// the landing shore. The lead escort sits ahead; flankers sit out to either
+// side and slightly forward, so a wave reads as an arrowhead.
+const FRONT_DIST = 6;
+const FLANK_SIDE = 4;
+const FLANK_FORWARD = 2;
 
-interface PendingEscort {
+// Formation timing (ticks; 10 ticks = 1s). Escorts deploy first and the
+// transport follows so the wave assembles into formation before advancing.
+const FLANK_DELAY = 10; // 1s after the lead escort (3-warship waves)
+const TRANSPORT_DELAY_ESCORTED = 20; // 2s after escorts (1- and 2-warship waves)
+const TRANSPORT_DELAY_TRIPLE = 30; // 1s + 2s after the lead (3-warship waves)
+
+interface PendingWarship {
+  kind: "warship";
   fireTick: number;
   ownerId: PlayerID;
   spawnTile: TileRef;
   patrolTile: TileRef;
 }
 
+interface PendingTransport {
+  kind: "transport";
+  fireTick: number;
+  ownerId: PlayerID;
+  spawnTile: TileRef;
+  target: TileRef;
+  troops: number;
+  strike: InvasionNuke[];
+}
+
+type PendingSpawn = PendingWarship | PendingTransport;
+
 /**
  * Drives "Invasion Mode": an escalating hostile horde that arrives by sea.
  *
  * A single long-lived execution (added once in `GameRunner.init()` when
- * `config.invasionMode()` is set). After the configured grace period it
- * launches periodic waves — boats ferried in from a random map-edge water tile
- * to a nearby shore. The number of distinct invader `Nation`s (all on the
- * shared `Invaders` team) is capped by difficulty; once that cap is reached,
- * existing invaders send additional boats (up to `boatMaxNumber` each) instead
- * of new nations spawning. Escort warships join from minute 2, and scheduled
- * atom/hydrogen/MIRV strikes begin at minutes 4/10/20 (shifted by difficulty).
- * Once an invader makes landfall it is handed a stock `NationExecution`, so it
- * then builds and attacks like any AI nation at the lobby difficulty.
+ * `config.invasionMode()` is set). After the grace period it launches periodic
+ * waves — boats ferried from a random map-edge water tile to a nearby shore,
+ * arriving in an escorted formation. Up to `MAX_INVADER_NATIONS` distinct
+ * invader `Nation`s (all on the shared `Invaders` team) exist at once; beyond
+ * that cap existing invaders send extra boats (up to `INVADER_BOAT_MAX` each).
+ * Every boat may launch a missile strike straight from its open-water spawn
+ * tile the instant it appears, with intensity rising over time. Once an invader
+ * makes landfall it is handed a stock `NationExecution`, so it then builds and
+ * attacks like any AI nation.
  *
- * Determinism: all randomness comes from a single seeded `PseudoRandom`; the
- * escalation clock is derived from integer tick counts.
+ * The invasion ignores the lobby `Difficulty` entirely — there is one ever-
+ * escalating curve. Determinism: all randomness comes from a single seeded
+ * `PseudoRandom`; the escalation clock is derived from integer tick counts.
  */
 export class InvasionExecution implements Execution {
   private active = true;
@@ -67,7 +91,6 @@ export class InvasionExecution implements Execution {
   private startTick = -1;
   private graceTicks = 0;
   private nextWaveTick = -1;
-  private nextBombTick = -1;
   private invaderCounter = 0;
   private wavesLaunched = 0;
   // Minimum manhattan distance an invader must travel before landfall.
@@ -75,7 +98,7 @@ export class InvasionExecution implements Execution {
 
   private readonly invaders: PlayerInfo[] = [];
   private readonly aiAttached = new Set<PlayerID>();
-  private readonly pendingEscorts: PendingEscort[] = [];
+  private readonly pendingSpawns: PendingSpawn[] = [];
 
   constructor(private gameID: GameID) {
     this.random = new PseudoRandom(simpleHash(gameID) + 7919);
@@ -102,32 +125,19 @@ export class InvasionExecution implements Execution {
       return;
     }
 
-    const difficulty = this.mg.config().gameConfig().difficulty;
-
     // Bring landed invaders to life: per-player upkeep + normal nation AI.
     this.activateLandedInvaders();
 
-    // Release any escort warships whose staggered launch tick has arrived.
-    this.processPendingEscorts(ticks);
+    // Release any formation spawns whose scheduled tick has arrived.
+    this.processPendingSpawns(ticks);
 
     // Waves.
     if (this.nextWaveTick < 0) {
       this.nextWaveTick = ticks; // first wave fires immediately
     }
     if (ticks >= this.nextWaveTick) {
-      this.launchWave(ticks, elapsed, difficulty);
-      this.nextWaveTick = ticks + boatIntervalTicks(elapsed, difficulty);
-    }
-
-    // Scheduled bombardment, once the tier is unlocked.
-    if (nukeTier(elapsed, difficulty) !== "none") {
-      if (this.nextBombTick < 0) {
-        this.nextBombTick = ticks; // first strike as soon as unlocked
-      }
-      if (ticks >= this.nextBombTick) {
-        this.launchBomb(elapsed, difficulty);
-        this.nextBombTick = ticks + bombIntervalTicks(elapsed, difficulty);
-      }
+      this.launchWave(ticks, elapsed);
+      this.nextWaveTick = ticks + boatIntervalTicks(elapsed);
     }
   }
 
@@ -149,11 +159,7 @@ export class InvasionExecution implements Execution {
     }
   }
 
-  private launchWave(
-    ticks: number,
-    elapsed: number,
-    difficulty: Difficulty,
-  ): void {
+  private launchWave(ticks: number, elapsed: number): void {
     // Resolve the route before committing a launcher, so a failed geometry
     // lookup doesn't leave a freshly-created invader stranded with no boat.
     const src = this.pickEdgeWaterTile();
@@ -161,140 +167,196 @@ export class InvasionExecution implements Execution {
     const target = this.pickLandingShore(src);
     if (target === null) return;
 
-    const launcher = this.selectWaveLauncher(difficulty);
+    const launcher = this.selectWaveLauncher(elapsed);
     if (launcher === null) return;
+    const ownerId = launcher.id();
 
-    const troops = boatTroops(elapsed, difficulty, this.wavesLaunched);
-    // The boat's troops are drawn from the player's pool on creation, so top
-    // the launcher up by exactly that many troops first.
-    launcher.addTroops(troops);
-    this.mg.addExecution(
-      new TransportShipExecution(launcher, target, troops, src),
+    const warships = this.mg.config().isUnitDisabled(UnitType.Warship)
+      ? 0
+      : warshipCount(this.random);
+
+    // Schedule the escort formation, then the transport behind it. Each boat
+    // rolls its own missile package, fired from its spawn tile on arrival.
+    const transportDelay = this.scheduleEscorts(
+      ticks,
+      ownerId,
+      src,
+      target,
+      warships,
     );
+    this.pendingSpawns.push({
+      kind: "transport",
+      fireTick: ticks + transportDelay,
+      ownerId,
+      spawnTile: src,
+      target,
+      troops: boatTroops(elapsed, this.wavesLaunched),
+      strike: this.mg.config().isUnitDisabled(UnitType.AtomBomb)
+        ? []
+        : selectInvasionStrike(elapsed, this.random),
+    });
     this.wavesLaunched++;
+  }
 
-    // Escort warships (weighted 0-3, only from minute 2 onward). They are
-    // released ~0.5s apart, each heading to a slightly different point near the
-    // landing, so they read as an escort rather than a stacked convoy.
-    if (!this.mg.config().isUnitDisabled(UnitType.Warship)) {
-      const escorts = warshipCount(elapsed, this.random, difficulty);
-      const ownerId = launcher.id();
-      for (let i = 0; i < escorts; i++) {
-        this.pendingEscorts.push({
-          fireTick: ticks + i * WARSHIP_STAGGER_TICKS,
-          ownerId,
-          spawnTile: this.randomWaterNear(src, 3),
-          patrolTile: this.randomWaterNear(target, 6),
+  /**
+   * Queues the escort warships for a wave and returns how long (ticks) to delay
+   * the transport so it slots in behind the assembled formation.
+   *
+   * - 1 escort: a single lead boat out front.
+   * - 2 escorts: a flanker on each side of the transport's spawn.
+   * - 3 escorts: a lead boat, then the two flankers 1s later.
+   */
+  private scheduleEscorts(
+    ticks: number,
+    ownerId: PlayerID,
+    src: TileRef,
+    target: TileRef,
+    warships: number,
+  ): number {
+    const escort = (fireTick: number, spawnTile: TileRef) =>
+      this.pendingSpawns.push({
+        kind: "warship",
+        fireTick,
+        ownerId,
+        spawnTile,
+        patrolTile: this.randomWaterNear(target, 6),
+      });
+
+    switch (warships) {
+      case 0:
+        return 0;
+      case 1:
+        escort(ticks, this.formationTile(src, target, FRONT_DIST, 0));
+        return TRANSPORT_DELAY_ESCORTED;
+      case 2:
+        escort(
+          ticks,
+          this.formationTile(src, target, FLANK_FORWARD, FLANK_SIDE),
+        );
+        escort(
+          ticks,
+          this.formationTile(src, target, FLANK_FORWARD, -FLANK_SIDE),
+        );
+        return TRANSPORT_DELAY_ESCORTED;
+      default: {
+        escort(ticks, this.formationTile(src, target, FRONT_DIST, 0));
+        const flankTick = ticks + FLANK_DELAY;
+        escort(
+          flankTick,
+          this.formationTile(src, target, FLANK_FORWARD, FLANK_SIDE),
+        );
+        escort(
+          flankTick,
+          this.formationTile(src, target, FLANK_FORWARD, -FLANK_SIDE),
+        );
+        return TRANSPORT_DELAY_TRIPLE;
+      }
+    }
+  }
+
+  private processPendingSpawns(ticks: number): void {
+    if (this.pendingSpawns.length === 0) return;
+    for (let i = this.pendingSpawns.length - 1; i >= 0; i--) {
+      const spawn = this.pendingSpawns[i];
+      if (ticks < spawn.fireTick) continue;
+      this.pendingSpawns.splice(i, 1);
+      if (!this.mg.hasPlayer(spawn.ownerId)) continue;
+      const owner = this.mg.player(spawn.ownerId);
+      if (spawn.kind === "warship") {
+        if (this.mg.config().isUnitDisabled(UnitType.Warship)) continue;
+        const warship = owner.buildUnit(UnitType.Warship, spawn.spawnTile, {
+          patrolTile: spawn.patrolTile,
         });
+        this.mg.addExecution(new WarshipExecution(warship));
+      } else {
+        // The boat's troops are drawn from the player's pool on creation, so top
+        // the launcher up by exactly that many troops first.
+        owner.addTroops(spawn.troops);
+        this.mg.addExecution(
+          new TransportShipExecution(
+            owner,
+            spawn.target,
+            spawn.troops,
+            spawn.spawnTile,
+          ),
+        );
+        // Missiles launch from the very tile the boat spawned at.
+        this.launchStrike(owner, spawn.spawnTile, spawn.strike);
+      }
+    }
+  }
+
+  /**
+   * Fires a boat's missile package from its open-water spawn tile. Each warhead
+   * targets independently so an atom barrage rains across enemy territory. The
+   * launcher is funded exactly for each warhead (its starting gold — the prize
+   * for conquering it — is left intact).
+   */
+  private launchStrike(
+    owner: Player,
+    srcTile: TileRef,
+    strike: InvasionNuke[],
+  ): void {
+    for (const nuke of strike) {
+      const dst = this.pickEnemyLandTarget();
+      if (dst === null) return;
+      if (nuke === "mirv") {
+        if (this.mg.config().isUnitDisabled(UnitType.MIRV)) continue;
+        owner.addGold(this.mg.unitInfo(UnitType.MIRV).cost(this.mg, owner));
+        this.mg.addExecution(new MirvExecution(owner, dst, srcTile));
+      } else {
+        const type =
+          nuke === "atom" ? UnitType.AtomBomb : UnitType.HydrogenBomb;
+        if (this.mg.config().isUnitDisabled(type)) continue;
+        owner.addGold(this.mg.unitInfo(type).cost(this.mg, owner));
+        this.mg.addExecution(
+          new NukeExecution(type, owner, dst, srcTile, -1, 0, true, true),
+        );
       }
     }
   }
 
   /**
    * Chooses who launches the next wave: a brand-new invader nation while below
-   * the difficulty cap, otherwise an existing active invader that still has room
-   * for another boat. Returns null if every invader is at its boat limit.
+   * the cap, otherwise an existing active invader that still has room for
+   * another boat. Returns null if every invader is at its boat limit.
    */
-  private selectWaveLauncher(difficulty: Difficulty): Player | null {
+  private selectWaveLauncher(elapsed: number): Player | null {
     const active = this.invaders.filter((info) => this.isActiveInvader(info));
-    if (active.length < maxInvaderNations(difficulty)) {
+    if (active.length < MAX_INVADER_NATIONS) {
       const info = this.createInvaderInfo();
       const invader = this.mg.addPlayer(info, ColoredTeams.Invaders);
+      invader.addGold(invaderStartingGold(elapsed));
       this.invaders.push(info);
       return invader;
     }
-    const boatMax = this.mg.config().boatMaxNumber();
     const candidates = active
       .map((info) => this.mg.player(info.id))
-      .filter((p) => p.unitCount(UnitType.TransportShip) < boatMax);
+      .filter((p) => this.boatLoad(p) < INVADER_BOAT_MAX);
     if (candidates.length === 0) return null;
     return this.random.randElement(candidates);
   }
 
-  /** An invader still in play: landed (alive) or with a boat still inbound. */
+  /** Boats a player currently has in play: in flight plus scheduled to spawn. */
+  private boatLoad(player: Player): number {
+    let pending = 0;
+    for (const spawn of this.pendingSpawns) {
+      if (spawn.kind === "transport" && spawn.ownerId === player.id())
+        pending++;
+    }
+    return player.unitCount(UnitType.TransportShip) + pending;
+  }
+
+  /** An invader still in play: landed (alive), boat inbound, or boat pending. */
   private isActiveInvader(info: PlayerInfo): boolean {
     if (!this.mg.hasPlayer(info.id)) return false;
     const player = this.mg.player(info.id);
-    return player.isAlive() || player.unitCount(UnitType.TransportShip) > 0;
-  }
-
-  private processPendingEscorts(ticks: number): void {
-    if (this.pendingEscorts.length === 0) return;
-    if (this.mg.config().isUnitDisabled(UnitType.Warship)) {
-      this.pendingEscorts.length = 0;
-      return;
+    if (player.isAlive() || player.unitCount(UnitType.TransportShip) > 0) {
+      return true;
     }
-    for (let i = this.pendingEscorts.length - 1; i >= 0; i--) {
-      const escort = this.pendingEscorts[i];
-      if (ticks < escort.fireTick) continue;
-      this.pendingEscorts.splice(i, 1);
-      if (!this.mg.hasPlayer(escort.ownerId)) continue;
-      const owner = this.mg.player(escort.ownerId);
-      const warship = owner.buildUnit(UnitType.Warship, escort.spawnTile, {
-        patrolTile: escort.patrolTile,
-      });
-      this.mg.addExecution(new WarshipExecution(warship));
-    }
-  }
-
-  private launchBomb(elapsed: number, difficulty: Difficulty): void {
-    const choice = selectInvasionNuke(elapsed, this.random, difficulty);
-    if (choice === null) return;
-
-    const nukeType =
-      choice === "atom"
-        ? UnitType.AtomBomb
-        : choice === "hydrogen"
-          ? UnitType.HydrogenBomb
-          : UnitType.MIRV;
-    if (this.mg.config().isUnitDisabled(nukeType)) return;
-
-    const launcher = this.pickLaunchInvader();
-    if (launcher === null) return;
-    const dst = this.pickEnemyLandTarget();
-    if (dst === null) return;
-
-    // A launch needs a usable missile silo and enough gold for the warhead.
-    // Gold is clamped to >= 0 on spend, so fund the strike explicitly.
-    if (!this.ensureSilo(launcher)) return;
-    launcher.addGold(this.mg.unitInfo(nukeType).cost(this.mg, launcher));
-
-    if (choice === "mirv") {
-      this.mg.addExecution(new MirvExecution(launcher, dst));
-    } else {
-      this.mg.addExecution(new NukeExecution(nukeType, launcher, dst));
-    }
-  }
-
-  /** Ensure the launcher has an immediately-usable missile silo. */
-  private ensureSilo(player: Player): boolean {
-    if (this.mg.config().isUnitDisabled(UnitType.MissileSilo)) {
-      return false;
-    }
-    const hasUsable = player
-      .units(UnitType.MissileSilo)
-      .some(
-        (s) => s.isActive() && !s.isInCooldown() && !s.isUnderConstruction(),
-      );
-    if (hasUsable) return true;
-    const tile = this.firstOwnedTile(player);
-    if (tile === null) return false;
-    // Built directly (not via ConstructionExecution) so it is usable at once.
-    player.buildUnit(UnitType.MissileSilo, tile, {});
-    return true;
-  }
-
-  private pickLaunchInvader(): Player | null {
-    const candidates: Player[] = [];
-    for (const info of this.invaders) {
-      if (!this.mg.hasPlayer(info.id)) continue;
-      const player = this.mg.player(info.id);
-      if (player.isAlive() && player.tiles().size > 0) {
-        candidates.push(player);
-      }
-    }
-    if (candidates.length === 0) return null;
-    return this.random.randElement(candidates);
+    return this.pendingSpawns.some(
+      (s) => s.kind === "transport" && s.ownerId === info.id,
+    );
   }
 
   private createInvaderInfo(): PlayerInfo {
@@ -379,9 +441,56 @@ export class InvasionExecution implements Execution {
   }
 
   /**
-   * A water tile randomly offset within `radius` of `center`, so staggered
-   * escorts spawn and patrol at spread-out points rather than the same tile.
-   * Falls back to `center` if no nearby water is found.
+   * A water tile `forward` tiles toward `target` and `side` tiles perpendicular
+   * (positive = left of the heading) from `src`, snapped to the nearest water.
+   * Used to place escorts into an arrowhead formation around the transport.
+   */
+  private formationTile(
+    src: TileRef,
+    target: TileRef,
+    forward: number,
+    side: number,
+  ): TileRef {
+    const sx = this.mg.x(src);
+    const sy = this.mg.y(src);
+    let ux = this.mg.x(target) - sx;
+    let uy = this.mg.y(target) - sy;
+    const len = Math.sqrt(ux * ux + uy * uy);
+    if (len > 0) {
+      ux /= len;
+      uy /= len;
+    } else {
+      ux = 0;
+      uy = -1;
+    }
+    // Perpendicular (rotate the heading 90°): left of travel.
+    const px = -uy;
+    const py = ux;
+    const tx = Math.round(sx + ux * forward + px * side);
+    const ty = Math.round(sy + uy * forward + py * side);
+    return this.nearestWater(tx, ty, src);
+  }
+
+  /** Nearest water tile to (cx, cy) via an expanding ring search. */
+  private nearestWater(cx: number, cy: number, fallback: TileRef): TileRef {
+    for (let r = 0; r <= 6; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dy = -r; dy <= r; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (!this.mg.isValidCoord(nx, ny)) continue;
+          const ref = this.mg.ref(nx, ny);
+          if (this.mg.isWater(ref)) return ref;
+        }
+      }
+    }
+    return fallback;
+  }
+
+  /**
+   * A water tile randomly offset within `radius` of `center`, so escorts patrol
+   * at spread-out points rather than the same tile. Falls back to `center`.
    */
   private randomWaterNear(center: TileRef, radius: number): TileRef {
     const cx = this.mg.x(center);
@@ -396,13 +505,6 @@ export class InvasionExecution implements Execution {
       }
     }
     return center;
-  }
-
-  private firstOwnedTile(player: Player): TileRef | null {
-    for (const tile of player.tiles()) {
-      return tile;
-    }
-    return null;
   }
 
   isActive(): boolean {

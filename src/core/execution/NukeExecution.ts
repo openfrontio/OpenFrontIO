@@ -34,6 +34,11 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    // When true, launch directly from `src` and skip the usual silo/ownership
+    // checks in `canBuild`. Used by Invasion Mode to fire from an open-water
+    // spawn tile (the invader owns no silo and no land). Defaults to false so
+    // every existing caller is byte-for-byte unchanged.
+    private forceSrc: boolean = false,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -177,7 +182,10 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(this.nukeType, this.dst);
+      const spawn =
+        this.forceSrc && this.src !== undefined && this.src !== null
+          ? this.src
+          : this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
         console.warn(`cannot build Nuke`);
         this.active = false;

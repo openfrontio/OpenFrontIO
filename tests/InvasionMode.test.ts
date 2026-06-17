@@ -1,6 +1,7 @@
-import { maxInvaderNations } from "../src/core/execution/invasion/InvasionConfig";
+import { MAX_INVADER_NATIONS } from "../src/core/execution/invasion/InvasionConfig";
 import { InvasionExecution } from "../src/core/execution/invasion/InvasionExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
+import { WinCheckExecution } from "../src/core/execution/WinCheckExecution";
 import {
   ColoredTeams,
   Game,
@@ -81,16 +82,13 @@ describe("Invasion Mode waves", () => {
     expect(invaders.length).toBe(0);
   });
 
-  test("never exceeds the difficulty cap of concurrent invader nations", async () => {
-    const difficulty = "Impossible";
+  test("never exceeds the cap of concurrent invader nations and escorts arrive", async () => {
     const game = await setup("ocean_and_land", {
       invasionMode: true,
       invasionGracePeriod: 0,
-      difficulty: difficulty as never,
     });
     game.addExecution(new InvasionExecution(gameID));
 
-    const cap = maxInvaderNations(difficulty as never);
     let maxConcurrent = 0;
     let sawWarship = false;
     for (let i = 0; i < 1600; i++) {
@@ -107,8 +105,7 @@ describe("Invasion Mode waves", () => {
     }
 
     expect(maxConcurrent).toBeGreaterThan(0);
-    expect(maxConcurrent).toBeLessThanOrEqual(cap);
-    // Escorts arrive once the invasion passes minute 2.
+    expect(maxConcurrent).toBeLessThanOrEqual(MAX_INVADER_NATIONS);
     expect(sawWarship).toBe(true);
   });
 });
@@ -134,10 +131,10 @@ describe("Invasion Mode faction", () => {
     expect(invader.canSendAllianceRequest(human)).toBe(false);
   });
 
-  // Locks the assumption InvasionExecution.launchBomb relies on: a missile silo
-  // built directly via buildUnit is immediately usable, so a (normally silo-less)
-  // invader can be funded and fire a scheduled strike.
-  test("an invader can build a silo and launch a strike", async () => {
+  // The core of the new "missiles from the ocean" mechanic: a landless invader
+  // (owns no tiles, no silo, not even "alive") can still fire a nuke straight
+  // from an open-water spawn tile via NukeExecution's forced-src launch.
+  test("a landless invader launches a nuke from open water", async () => {
     const game = await setup("half_land_half_ocean");
     const invaderInfo = new PlayerInfo(
       "Invader 1",
@@ -152,29 +149,91 @@ describe("Invasion Mode faction", () => {
     const victim = game.player("vic");
 
     const land: number[] = [];
-    for (let x = 2; x < 14; x++) {
-      for (let y = 2; y < 14; y++) {
+    let water = -1;
+    for (let x = 0; x < game.width(); x++) {
+      for (let y = 0; y < game.height(); y++) {
+        const r = game.ref(x, y);
+        if (game.isLand(r)) land.push(r);
+        else if (game.isWater(r) && water < 0) water = r;
+      }
+    }
+    expect(water).toBeGreaterThanOrEqual(0);
+    expect(land.length).toBeGreaterThan(10);
+    for (let i = 0; i < 10; i++) victim.conquer(land[i]);
+
+    // The invader holds no territory — the normal canBuild path would refuse.
+    expect(invader.isAlive()).toBe(false);
+
+    invader.addGold(game.unitInfo(UnitType.AtomBomb).cost(game, invader));
+    game.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        invader,
+        land[5], // target a victim tile
+        water, // launch from open water
+        -1,
+        0,
+        true,
+        true, // forceSrc
+      ),
+    );
+
+    const tilesBefore = victim.numTilesOwned();
+    let sawAtomBomb = false;
+    let bombStartedFromWater = false;
+    for (let i = 0; i < 200; i++) {
+      game.executeNextTick();
+      for (const bomb of game.units(UnitType.AtomBomb)) {
+        sawAtomBomb = true;
+        if (game.isWater(bomb.tile())) bombStartedFromWater = true;
+      }
+    }
+
+    expect(sawAtomBomb).toBe(true);
+    expect(bombStartedFromWater).toBe(true);
+    expect(victim.numTilesOwned()).toBeLessThan(tilesBefore);
+  });
+});
+
+describe("Invasion Mode win conditions", () => {
+  test("no player can win while the invader horde remains", async () => {
+    const game = await setup("half_land_half_ocean", {
+      invasionMode: true,
+      maxTimerValue: 1, // game-length win condition fires after 60s
+    });
+    const humanInfo = new PlayerInfo("human", PlayerType.Human, null, "human");
+    game.addPlayer(humanInfo);
+    const invaderInfo = new PlayerInfo(
+      "Invader 1",
+      PlayerType.Nation,
+      null,
+      "invader",
+    );
+    game.addPlayer(invaderInfo, ColoredTeams.Invaders);
+    const human = game.player("human");
+    const invader = game.player("invader");
+
+    const land: number[] = [];
+    for (let x = 0; x < game.width(); x++) {
+      for (let y = 0; y < game.height(); y++) {
         const r = game.ref(x, y);
         if (game.isLand(r)) land.push(r);
       }
     }
+    expect(land.length).toBeGreaterThan(1);
+    // Human dominates the map; a single invader tile keeps the horde "alive".
+    for (let i = 1; i < land.length; i++) human.conquer(land[i]);
     invader.conquer(land[0]);
-    for (let i = 1; i < 6; i++) victim.conquer(land[i]);
 
-    // Mirror launchBomb: free instant silo, fund the warhead, fire.
-    invader.buildUnit(UnitType.MissileSilo, land[0], {});
-    invader.addGold(game.unitInfo(UnitType.AtomBomb).cost(game, invader));
-    game.addExecution(new NukeExecution(UnitType.AtomBomb, invader, land[3]));
+    game.addExecution(new WinCheckExecution());
 
-    const tilesBefore = victim.numTilesOwned();
-    let sawAtomBomb = false;
-    for (let i = 0; i < 120; i++) {
-      game.executeNextTick();
-      if (game.units(UnitType.AtomBomb).length > 0) sawAtomBomb = true;
-    }
+    // Run well past the 60s game-length condition.
+    for (let i = 0; i < 700; i++) game.executeNextTick();
 
-    expect(sawAtomBomb).toBe(true);
-    expect(victim.numTilesOwned()).toBeLessThan(tilesBefore);
+    expect(human.isAlive()).toBe(true);
+    expect(invader.isAlive()).toBe(true);
+    // The "You Won" path never triggers: an opposing (invader) player remains.
+    expect(game.getWinner()).toBeNull();
   });
 });
 

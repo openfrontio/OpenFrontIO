@@ -74,6 +74,13 @@ export class WinCheckExecution implements Execution {
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
       timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
     ) {
+      // Invasion Mode: a player can only win once no other player is left
+      // alive. The invader horde respawns forever, so this never happens — the
+      // "You Won" screen is unreachable while "You Died" (per-player, handled
+      // by WinModal) still fires when the human is wiped out.
+      if (this.mg.config().invasionMode() && this.mg.players().length > 1) {
+        return;
+      }
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
       this.active = false;
@@ -111,6 +118,12 @@ export class WinCheckExecution implements Execution {
     ) {
       if (max[0] === ColoredTeams.Bot || max[0] === ColoredTeams.Invaders)
         return;
+      // Invasion Mode: only declare a winning team once it is the sole team
+      // left alive. The invaders are always present, so the win never lands —
+      // see checkWinnerFFA for the rationale.
+      if (this.mg.config().invasionMode() && sorted.length > 1) {
+        return;
+      }
       this.mg.setWinner(max[0], this.mg.stats().stats());
       console.log(`${max[0]} has won the game`);
       this.active = false;

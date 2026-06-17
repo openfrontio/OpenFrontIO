@@ -267,7 +267,7 @@ export class SinglePlayerModal extends BaseModal {
         .inputPlaceholder=${translateText(
           "single_modal.invasion_grace_placeholder",
         )}
-        .defaultInputValue=${2}
+        .defaultInputValue=${5}
         .minValidOnEnable=${0}
         .onToggle=${this.handleInvasionToggle}
         .onInput=${this.handleInvasionGraceChanges}
@@ -751,7 +751,7 @@ export class SinglePlayerModal extends BaseModal {
                     invasionMode: true,
                     invasionGracePeriod: Math.max(
                       0,
-                      Math.min(15, this.invasionGracePeriod ?? 0),
+                      Math.min(15, this.invasionGracePeriod ?? 5),
                     ),
                   }
                 : {}),

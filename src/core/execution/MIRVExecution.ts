@@ -44,6 +44,11 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
+    // When provided, launch directly from this tile and skip the usual
+    // silo/ownership checks in `canBuild`. Used by Invasion Mode to fire from an
+    // open-water spawn tile. Undefined for every existing caller, leaving their
+    // behavior unchanged.
+    private srcOverride?: TileRef | null,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -70,7 +75,8 @@ export class MirvExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
+      const spawn =
+        this.srcOverride ?? this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
         console.warn(`cannot build MIRV`);
         this.active = false;

@@ -301,7 +301,7 @@ export class HostLobbyModal extends BaseModal {
         .inputPlaceholder=${translateText(
           "host_modal.invasion_grace_placeholder",
         )}
-        .defaultInputValue=${2}
+        .defaultInputValue=${5}
         .minValidOnEnable=${0}
         .onToggle=${this.handleInvasionToggle}
         .onInput=${this.handleInvasionGraceChanges}
@@ -1083,7 +1083,7 @@ export class HostLobbyModal extends BaseModal {
             waterNukes: this.waterNukes ? true : null,
             invasionMode: this.invasionMode || undefined,
             invasionGracePeriod: this.invasionMode
-              ? Math.max(0, Math.min(15, this.invasionGracePeriod ?? 0))
+              ? Math.max(0, Math.min(15, this.invasionGracePeriod ?? 5))
               : null,
             hostCheats: this.hostCheatsEnabled
               ? {
