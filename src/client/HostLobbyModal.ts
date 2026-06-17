@@ -81,6 +81,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
   @state() private anonymizeNames: boolean = false;
+  @state() private nameReveals: string[] = [];
   @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
@@ -457,6 +458,10 @@ export class HostLobbyModal extends BaseModal {
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            .onToggleNameReveal=${(clientID: string) =>
+              this.toggleNameReveal(clientID)}
+            .nameReveals=${this.nameReveals}
+            .anonymizeNames=${this.anonymizeNames}
           ></lobby-player-view>
         </div>
 
@@ -589,6 +594,7 @@ export class HostLobbyModal extends BaseModal {
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
     this.anonymizeNames = false;
+    this.nameReveals = [];
     this.waterNukes = false;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
@@ -1046,7 +1052,8 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
             disableAlliances: this.disableAlliances || null,
-            anonymizeNames: this.anonymizeNames || undefined,
+            anonymizeNames: this.anonymizeNames,
+            nameReveals: this.nameReveals,
             waterNukes: this.waterNukes ? true : null,
             hostCheats: this.hostCheatsEnabled
               ? {
@@ -1069,6 +1076,13 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  private toggleNameReveal(clientID: string) {
+    this.nameReveals = this.nameReveals.includes(clientID)
+      ? this.nameReveals.filter((c) => c !== clientID)
+      : [...this.nameReveals, clientID];
+    this.putGameConfig();
   }
 
   private async toggleGameStartTimer() {

@@ -39,7 +39,11 @@ function makeClient(
 }
 
 // creator = lobby host, admin = admin role, alice + bob = regular players.
-function makeGame(anonymizeNames: boolean, disableClanTags = false) {
+function makeGame(
+  anonymizeNames: boolean,
+  disableClanTags = false,
+  nameReveals: string[] = [],
+) {
   const logger: any = {
     child: vi.fn().mockReturnThis(),
     info: vi.fn(),
@@ -50,7 +54,12 @@ function makeGame(anonymizeNames: boolean, disableClanTags = false) {
     "g1",
     logger,
     Date.now(),
-    { gameType: GameType.Private, anonymizeNames, disableClanTags } as any,
+    {
+      gameType: GameType.Private,
+      anonymizeNames,
+      disableClanTags,
+      nameReveals,
+    } as any,
     "creator-pid",
   );
   [
@@ -92,17 +101,25 @@ describe("anonymizeNames: gameInfo (lobby / HTTP / preview)", () => {
     expect(UsernameSchema.safeParse(bob.username).success).toBe(true);
   });
 
-  it("on: the host (lobby creator) sees everyone's real names", () => {
+  it("on: nobody is exempt by default, not even the host", () => {
     const info = makeGame(true).gameInfo("creator");
-    for (const id of ["admin", "alice", "bob"]) {
+    expect(byId(info, "creator").username).toBe("CreatorReal"); // own name
+    const bob = byId(info, "bob");
+    expect(bob.username).not.toBe("BobReal"); // host does NOT see others
+    expect(REAL_NAMES).not.toContain(bob.username);
+  });
+
+  it("on: a granted viewer (nameReveals) sees everyone's real names", () => {
+    const info = makeGame(true, false, ["alice"]).gameInfo("alice");
+    for (const id of ["creator", "admin", "bob"]) {
       expect(REAL_NAMES).toContain(byId(info, id).username);
     }
   });
 
-  it("on: an admin sees everyone's real names", () => {
-    expect(byId(makeGame(true).gameInfo("admin"), "alice").username).toBe(
-      "AliceReal",
-    );
+  it("on: a non-granted viewer still sees only themselves", () => {
+    const info = makeGame(true, false, ["alice"]).gameInfo("bob");
+    expect(byId(info, "bob").username).toBe("BobReal"); // self
+    expect(REAL_NAMES).not.toContain(byId(info, "alice").username);
   });
 
   it("on: no viewer (HTTP / preview) anonymizes everyone", () => {
@@ -118,6 +135,27 @@ describe("anonymizeNames: gameInfo (lobby / HTTP / preview)", () => {
     expect(byId(game.gameInfo("alice"), "bob").username).toBe(
       byId(game.gameInfo("alice"), "bob").username,
     );
+  });
+});
+
+describe("anonymizeNames: config updates propagate", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("turning it off un-anonymizes (not stuck on)", () => {
+    const game = makeGame(true);
+    game.updateGameConfig({ anonymizeNames: false });
+    expect(byId(game.gameInfo("alice"), "bob").username).toBe("BobReal");
+  });
+
+  it("clearing nameReveals revokes the grant", () => {
+    const game = makeGame(true, false, ["alice"]);
+    expect(byId(game.gameInfo("alice"), "bob").username).toBe("BobReal"); // granted
+    game.updateGameConfig({ nameReveals: [] });
+    expect(byId(game.gameInfo("alice"), "bob").username).not.toBe("BobReal"); // revoked
   });
 });
 

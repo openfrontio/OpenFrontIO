@@ -118,12 +118,12 @@ export class GameServer {
       : undefined;
   }
 
-  // Host (lobby creator / admin) sees real names; everyone else does not.
+  // anonymizeNames: only players the host granted (nameReveals) see real names.
+  // Nobody is exempt by default, not even the host, until he grants them.
   private viewerSeesAllNames(viewer: ClientID | undefined): boolean {
-    if (viewer === undefined) return false;
-    if (viewer === this.lobbyCreatorID) return true;
-    return isAdminRole(
-      this.activeClients.find((c) => c.clientID === viewer)?.role,
+    return (
+      viewer !== undefined &&
+      (this.gameConfig.nameReveals?.includes(viewer) ?? false)
     );
   }
 
@@ -200,6 +200,9 @@ export class GameServer {
     }
     if (gameConfig.anonymizeNames !== undefined) {
       this.gameConfig.anonymizeNames = gameConfig.anonymizeNames;
+    }
+    if (gameConfig.nameReveals !== undefined) {
+      this.gameConfig.nameReveals = gameConfig.nameReveals;
     }
     this.gameConfig.hostCheats = gameConfig.hostCheats;
   }

@@ -280,6 +280,7 @@ export const GameConfigSchema = z.object({
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
   anonymizeNames: z.boolean().optional(),
+  nameReveals: z.string().array().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
