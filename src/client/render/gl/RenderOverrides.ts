@@ -73,6 +73,12 @@ export function applyGraphicsOverrides(
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
   }
+  if (overrides.passEnabled?.fallout !== undefined) {
+    // One user-facing toggle drives both fallout passes: the territory bloom
+    // and its additive light contribution in the day/night composite.
+    settings.passEnabled.falloutBloom = overrides.passEnabled.fallout;
+    settings.passEnabled.falloutLight = overrides.passEnabled.fallout;
+  }
   if (overrides.terrain?.oceanColor !== undefined) {
     settings.terrain.oceanColor = overrides.terrain.oceanColor;
   }

@@ -160,7 +160,9 @@ export class LightmapPass {
     this.pointLightPass.draw(cameraMatrix);
 
     // --- 2. Fallout light → extract at tile res, composite into FBO A (additive) ---
-    this.falloutLightPass.draw(cameraMatrix, this.lightFboA, lw, lh, tick);
+    if (this.settings.passEnabled.falloutLight) {
+      this.falloutLightPass.draw(cameraMatrix, this.lightFboA, lw, lh, tick);
+    }
 
     // --- 3. Blur: 2 iterations separable H+V Gaussian ---
     const zoom = Math.abs(cameraMatrix[0]);
