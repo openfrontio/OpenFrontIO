@@ -142,11 +142,12 @@ export class FeaturedStream extends LitElement {
   }
 
   // Autoplay can be blocked while the panel is hidden; once it's visible, nudge playback.
+  // Do NOT touch mute here — respect the user's choice (initial load is muted for
+  // autoplay; if they unmuted to listen, it stays unmuted even when minimized).
   private kickPlay() {
     if (!this.present()) return;
     void this.updateComplete.then(() => {
       try {
-        this.player?.setMuted(true);
         this.player?.play();
       } catch {
         /* user can press play in the embed */
@@ -164,16 +165,17 @@ export class FeaturedStream extends LitElement {
     if (!this.channels.length) return html``;
     const channel = this.channels[this.idx] ?? "";
     const min = this.minimized;
-    // Always render the mount so the player stays alive. Minimized just clips the card to
-    // the header bar (overflow-hidden + max-height) — the iframe keeps streaming, so
-    // un-minimizing is instant. z above the footer/content so it overlays everything.
+    // Twitch pauses the player when it's off-screen/clipped, so "minimized" can't fully
+    // hide the video without pausing it. Instead minimized = a small but still-visible
+    // corner thumbnail: the iframe stays in-viewport and keeps streaming, just smaller.
+    // z above the footer (z-50) and content so it overlays everything.
     return html`
       <div
         class="fixed bottom-4 right-4 z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 transition-all duration-300 ${this.present()
           ? "opacity-100"
           : "pointer-events-none opacity-0"} ${min
-          ? "w-72 max-h-9"
-          : "w-[clamp(340px,40vw,720px)] max-w-[92vw] max-h-[85vh]"}"
+          ? "w-64"
+          : "w-[clamp(340px,40vw,720px)] max-w-[92vw]"}"
         aria-hidden=${this.present() ? "false" : "true"}
       >
         <div
