@@ -10,6 +10,7 @@
     "unit": true,
     "name": true,
     "falloutBloom": true,
+    "falloutLight": true,
     "railroad": true,
     "fx": true,
     "bar": true,

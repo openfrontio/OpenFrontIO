@@ -52,6 +52,7 @@ export interface RenderSettings {
     unit: boolean;
     name: boolean;
     falloutBloom: boolean;
+    falloutLight: boolean;
     railroad: boolean;
     fx: boolean;
     bar: boolean;
