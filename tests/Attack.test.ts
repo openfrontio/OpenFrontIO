@@ -21,10 +21,6 @@ let defender: Player;
 let defenderSpawn: TileRef;
 let attackerSpawn: TileRef;
 
-function sendBoat(target: TileRef, troops: number) {
-  game.addExecution(new TransportShipExecution(defender, target, troops));
-}
-
 const immunityPhaseTicks = 10;
 function waitForImmunityToEnd() {
   for (let i = 0; i < immunityPhaseTicks + 1; i++) {
@@ -110,7 +106,9 @@ describe("Attack", () => {
     constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
 
-    sendBoat(game.ref(15, 8), 100);
+    game.addExecution(
+      new TransportShipExecution(defender, game.ref(15, 8), 100),
+    );
 
     constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
     const nuke = defender.units(UnitType.AtomBomb)[0];
@@ -129,7 +127,9 @@ describe("Attack", () => {
     const player_start_troops = defender.troops();
     const boat_troops = player_start_troops * 0.5;
 
-    sendBoat(game.ref(15, 8), boat_troops);
+    game.addExecution(
+      new TransportShipExecution(defender, game.ref(15, 8), boat_troops),
+    );
 
     game.executeNextTick();
 
