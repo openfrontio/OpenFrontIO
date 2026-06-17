@@ -32,6 +32,15 @@ interface TwitchGlobal {
   Player: TwitchPlayerCtor;
 }
 
+type Corner = "tl" | "tr" | "bl" | "br";
+const CORNER_KEY = "featured-stream-corner";
+const CORNER_CLASS: Record<Corner, string> = {
+  tl: "top-4 left-4",
+  tr: "top-4 right-4",
+  bl: "bottom-4 left-4",
+  br: "bottom-4 right-4",
+};
+
 const SDK_SRC = "https://embed.twitch.tv/embed/v1.js";
 let sdkPromise: Promise<TwitchGlobal> | undefined;
 function loadTwitchSdk(): Promise<TwitchGlobal> {
@@ -58,10 +67,13 @@ export class FeaturedStream extends LitElement {
   @state() private inGame = false;
   @state() private minimized = false;
   @state() private streamTitle = ""; // live broadcast title (HTMLElement.title is reserved)
+  @state() private corner: Corner = "br"; // which screen corner the panel snaps to
+  @state() private dragPos: { x: number; y: number } | null = null; // free pos while dragging
 
   private channels: string[] = [];
   private idx = 0;
   private player?: TwitchPlayer;
+  private dragOff = { x: 0, y: 0 };
 
   // Light DOM so Tailwind classes apply (matches HomepagePromos).
   createRenderRoot() {
@@ -71,6 +83,9 @@ export class FeaturedStream extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.channels = ClientEnv.streamChannels();
+    const saved = localStorage.getItem(CORNER_KEY);
+    if (saved === "tl" || saved === "tr" || saved === "bl" || saved === "br")
+      this.corner = saved;
     document.addEventListener("join-lobby", this.onJoin);
     document.addEventListener("leave-lobby", this.onLeave);
   }
@@ -91,6 +106,40 @@ export class FeaturedStream extends LitElement {
   private onLeave = () => {
     this.inGame = false;
     this.kickPlay();
+  };
+
+  // Drag the header to move the panel; on release it snaps to the nearest screen corner.
+  private onDragDown = (e: PointerEvent) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return; // let the minimize button work
+    const card = this.querySelector(
+      "#featured-stream-card",
+    ) as HTMLElement | null;
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    this.dragOff = { x: e.clientX - r.left, y: e.clientY - r.top };
+    this.dragPos = { x: r.left, y: r.top };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  private onDragMove = (e: PointerEvent) => {
+    if (!this.dragPos) return;
+    this.dragPos = {
+      x: e.clientX - this.dragOff.x,
+      y: e.clientY - this.dragOff.y,
+    };
+  };
+  private onDragUp = () => {
+    if (!this.dragPos) return;
+    const card = this.querySelector(
+      "#featured-stream-card",
+    ) as HTMLElement | null;
+    const cx = this.dragPos.x + (card?.offsetWidth ?? 360) / 2;
+    const cy = this.dragPos.y + (card?.offsetHeight ?? 200) / 2;
+    const v = cy > window.innerHeight / 2 ? "b" : "t";
+    const h = cx > window.innerWidth / 2 ? "r" : "l";
+    this.corner = `${v}${h}` as Corner;
+    localStorage.setItem(CORNER_KEY, this.corner);
+    this.dragPos = null;
   };
 
   private async start() {
@@ -189,15 +238,27 @@ export class FeaturedStream extends LitElement {
     // z above the footer (z-50) and content so it overlays everything.
     return html`
       <div
-        class="fixed bottom-4 right-4 z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 transition-all duration-300 ${this.present()
+        id="featured-stream-card"
+        class="fixed z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 ${this
+          .dragPos
+          ? ""
+          : "transition-all duration-300 " +
+            CORNER_CLASS[this.corner]} ${this.present()
           ? "opacity-100"
           : "pointer-events-none opacity-0"} ${min
           ? "w-[360px]"
           : "w-[clamp(340px,40vw,720px)] max-w-[92vw]"}"
+        style=${this.dragPos
+          ? `left:${this.dragPos.x}px;top:${this.dragPos.y}px`
+          : ""}
         aria-hidden=${this.present() ? "false" : "true"}
       >
         <div
-          class="flex h-9 items-center justify-between gap-2 px-2 text-white"
+          class="flex h-9 cursor-move touch-none items-center justify-between gap-2 px-2 text-white select-none"
+          @pointerdown=${this.onDragDown}
+          @pointermove=${this.onDragMove}
+          @pointerup=${this.onDragUp}
+          @pointercancel=${this.onDragUp}
         >
           <span class="flex min-w-0 items-center gap-2 text-sm font-semibold">
             <span
@@ -206,12 +267,8 @@ export class FeaturedStream extends LitElement {
             <span class="shrink-0"
               >${translateText("featured_stream.live")}</span
             >
-            <a
-              href="https://twitch.tv/${channel}"
-              target="_blank"
-              rel="noopener"
-              class="truncate font-bold hover:underline"
-              >${this.streamTitle || channel}</a
+            <span class="truncate font-bold"
+              >${this.streamTitle || channel}</span
             >
           </span>
           <button
