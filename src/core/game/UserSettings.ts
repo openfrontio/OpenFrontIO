@@ -169,17 +169,6 @@ export class UserSettings {
     return this.getBool("settings.attackingTroopsOverlay", true);
   }
 
-  tradeShipCapturedEvents() {
-    return this.getBool("settings.tradeShipCapturedEvents", true);
-  }
-
-  toggleTradeShipCapturedEvents() {
-    this.setBool(
-      "settings.tradeShipCapturedEvents",
-      !this.tradeShipCapturedEvents(),
-    );
-  }
-
   toggleAttackingTroopsOverlay() {
     this.setBool(
       "settings.attackingTroopsOverlay",

@@ -1419,8 +1419,6 @@
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "territory_patterns_label": "Territory Skins",
     "title": "Settings",
-    "trade_ship_captured_desc": "Show an event when one of your trade ships is captured.",
-    "trade_ship_captured_label": "Trade Ship Captured Alerts",
     "toggle_terrain": "Toggle Terrain",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",

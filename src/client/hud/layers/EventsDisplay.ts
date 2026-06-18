@@ -243,14 +243,6 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    // Losing one of your trade ships is an opt-out alert (on by default).
-    if (
-      event.message === "events_display.trade_ship_captured" &&
-      !this.game.config().userSettings().tradeShipCapturedEvents()
-    ) {
-      return;
-    }
-
     let description: string = event.message;
     if (event.message.startsWith("events_display.")) {
       description = translateText(event.message, event.params ?? {});
