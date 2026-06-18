@@ -96,11 +96,10 @@ Pure black pixels (`#000000` / `rgb(0, 0, 0)` with alpha ≥ 20) are encoded as 
 
 Use impassable terrain to carve out non-rectangular map shapes or to create barriers that divide regions without water.
 
-In-Game, terrain is rendered using themes. The color of a tile is determined dynamically based on
-its **Terrain Type** and **Magnitude**. Theme Files:
+In-Game, the color of a tile is determined dynamically based on its **Terrain Type** and **Magnitude**.
 
-- `../src/core/configuration/PastelTheme.ts` (Light)
-- `../src/core/configuration/PastelThemeDark.ts` (Dark).
+- Ocean default color definition: `../src/client/render/gl/render-settings.json` (user changeable via settings)
+- Terrain color calculations: `../src/client/render/gl/utils/ColorUtils.ts#L50`
 
 ## Create info.json
 

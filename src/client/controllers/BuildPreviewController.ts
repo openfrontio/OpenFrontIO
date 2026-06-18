@@ -43,15 +43,21 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
 
 /**
  * Whether a SAM belongs in the nuke trajectory preview's threat set.
- * Allied SAMs are excluded unless the strike would betray that ally —
- * the alliance breaks at launch, so their SAMs will engage the nuke.
+ * Mirrors SAMLauncherExecution: a SAM ignores a nuke whose owner it's
+ * friendly with (same team OR allied).
+ * Teammates are excluded unconditionally — a strike can break an alliance
+ * but never a team relationship, so a teammate's SAM never engages.
+ * Allied SAMs are excluded unless the strike would betray that ally — the
+ * alliance breaks at launch, so their SAMs will engage the nuke.
  * (Own SAMs never threaten; the caller filters those out first.)
  */
 export function samThreatensNukePreview(
   samOwnerSmallId: number,
+  teammateSmallIds: ReadonlySet<number>,
   allySmallIds: ReadonlySet<number>,
   betrayedSmallIds: ReadonlySet<number>,
 ): boolean {
+  if (teammateSmallIds.has(samOwnerSmallId)) return false;
   return (
     !allySmallIds.has(samOwnerSmallId) || betrayedSmallIds.has(samOwnerSmallId)
   );
@@ -339,10 +345,15 @@ export class BuildPreviewController implements Controller {
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
 
-    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't —
-    // except allies this strike would betray: the alliance breaks at launch
-    // (NukeExecution.maybeBreakAlliances), so their SAMs will intercept.
+    // Non-friendly SAMs threaten the trajectory; own + teammate + allied SAMs
+    // don't — except allies this strike would betray: the alliance breaks at
+    // launch (NukeExecution.maybeBreakAlliances), so their SAMs will intercept.
+    // Teammates have no such exception (a strike never breaks a team).
     // listNukeBreakAlliance is the same function the sim uses there.
+    const teammateIds = new Set<number>();
+    for (const p of this.game.players()) {
+      if (myPlayer.isOnSameTeam(p)) teammateIds.add(p.smallID());
+    }
     const allyIds = new Set<number>();
     for (const a of myPlayer.allies()) allyIds.add(a.smallID());
     const betrayedIds: ReadonlySet<number> =
@@ -359,7 +370,14 @@ export class BuildPreviewController implements Controller {
       if (!s.isActive()) continue;
       const owner = s.owner();
       if (owner === myPlayer) continue;
-      if (!samThreatensNukePreview(owner.smallID(), allyIds, betrayedIds)) {
+      if (
+        !samThreatensNukePreview(
+          owner.smallID(),
+          teammateIds,
+          allyIds,
+          betrayedIds,
+        )
+      ) {
         continue;
       }
       const r = this.game.config().samRange(s.level());

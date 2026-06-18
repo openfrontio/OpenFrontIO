@@ -72,6 +72,7 @@ import {
   deepAssign,
   MapRenderer,
   preloadAtlasData,
+  renderDpr,
   type RenderSettings,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
@@ -352,7 +353,7 @@ function mountWebGLFrameLoop(
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = renderDpr();
     const centerX =
       transformHandler.offsetX +
       mapWidth / 2 +
