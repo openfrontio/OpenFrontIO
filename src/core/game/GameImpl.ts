@@ -1032,7 +1032,7 @@ export class GameImpl implements Game {
     types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
-  ): Array<{ unit: Unit; distSquared: number }> {
+  ): Array<{ unit: Unit; distSquared: number; euclideanDist: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
       searchRange,
@@ -1042,6 +1042,7 @@ export class GameImpl implements Game {
     ) as Array<{
       unit: Unit;
       distSquared: number;
+      euclideanDist: number;
     }>;
   }
 

@@ -250,8 +250,7 @@ export class RailNetworkImpl implements RailNetwork {
     }
 
     const maxRange = this.game.config().trainStationMaxRange();
-    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
-    const maxPathSize = this.game.config().railroadMaxSize();
+    const minRange = this.game.config().trainStationMinRange();
 
     // A City or Port only joins the rail network when a Factory is already in
     // range (see CityExecution/PortExecution). A Factory always becomes a
@@ -277,7 +276,7 @@ export class RailNetworkImpl implements RailNetwork {
     for (const neighbor of neighbors) {
       // Limit to the closest 5 stations to avoid running too many pathfinding calls.
       if (paths.length >= 5) break;
-      if (neighbor.distSquared <= minRangeSquared) continue;
+      if (neighbor.euclideanDist <= minRange) continue;
 
       const neighborStation = this._stationManager.findStation(neighbor.unit);
 
@@ -301,13 +300,10 @@ export class RailNetworkImpl implements RailNetwork {
       } else {
         continue;
       }
-
       const path = this.pathService.findTilePath(tile, targetTile);
-      if (path.length > 0 && path.length < maxPathSize) {
-        paths.push(path);
-        if (neighborStation) {
-          connectedStations.push(neighborStation);
-        }
+      paths.push(path);
+      if (neighborStation) {
+        connectedStations.push(neighborStation);
       }
     }
 
@@ -342,7 +338,7 @@ export class RailNetworkImpl implements RailNetwork {
         distanceToStation === -1;
       if (
         connectionAvailable &&
-        neighbor.distSquared > this.game.config().trainStationMinRange() ** 2
+        neighbor.euclideanDist > this.game.config().trainStationMinRange()
       ) {
         if (this.connect(station, neighborStation)) {
           neighborCluster.addStation(station);
@@ -378,19 +374,16 @@ export class RailNetworkImpl implements RailNetwork {
 
   private connect(from: TrainStation, to: TrainStation) {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
-    if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
-      const railroad = new Railroad(from, to, path, this.nextId++);
-      this.game.addUpdate({
-        type: GameUpdateType.RailroadConstructionEvent,
-        id: railroad.id,
-        tiles: railroad.tiles,
-      });
-      from.addRailroad(railroad);
-      to.addRailroad(railroad);
-      this.railGrid.register(railroad);
-      return true;
-    }
-    return false;
+    const railroad = new Railroad(from, to, path, this.nextId++);
+    this.game.addUpdate({
+      type: GameUpdateType.RailroadConstructionEvent,
+      id: railroad.id,
+      tiles: railroad.tiles,
+    });
+    from.addRailroad(railroad);
+    to.addRailroad(railroad);
+    this.railGrid.register(railroad);
+    return true;
   }
 
   private distanceFrom(

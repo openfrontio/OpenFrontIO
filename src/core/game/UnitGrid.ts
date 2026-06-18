@@ -138,8 +138,16 @@ export class UnitGrid {
     types: readonly UnitType[] | UnitType,
     predicate?: UnitPredicate,
     includeUnderConstruction: boolean = false,
-  ): Array<{ unit: Unit | UnitView; distSquared: number }> {
-    const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
+  ): Array<{
+    unit: Unit | UnitView;
+    distSquared: number;
+    euclideanDist: number;
+  }> {
+    const nearby: Array<{
+      unit: Unit | UnitView;
+      distSquared: number;
+      euclideanDist: number;
+    }> = [];
     const gm = this.gm;
     const x = gm.x(tile);
     const y = gm.y(tile);
@@ -166,8 +174,12 @@ export class UnitGrid {
               const dx = gm.x(unitTile) - x;
               const dy = gm.y(unitTile) - y;
               const distSquared = dx * dx + dy * dy;
-              if (distSquared > rangeSquared) continue;
-              const value = { unit, distSquared };
+              if (Math.sqrt(distSquared) > searchRange) continue;
+              const value = {
+                unit,
+                distSquared,
+                euclideanDist: Math.sqrt(distSquared),
+              };
               if (predicate !== undefined && !predicate(value)) continue;
               nearby.push(value);
             }
@@ -191,8 +203,12 @@ export class UnitGrid {
           const dx = gm.x(unitTile) - x;
           const dy = gm.y(unitTile) - y;
           const distSquared = dx * dx + dy * dy;
-          if (distSquared > rangeSquared) continue;
-          const value = { unit, distSquared };
+          if (Math.sqrt(distSquared) > searchRange) continue;
+          const value = {
+            unit,
+            distSquared,
+            euclideanDist: Math.sqrt(distSquared),
+          };
           if (predicate !== undefined && !predicate(value)) continue;
           nearby.push(value);
         }
@@ -204,7 +220,7 @@ export class UnitGrid {
   private unitIsInRange(
     unit: Unit | UnitView,
     tile: TileRef,
-    rangeSquared: number,
+    searchRange: number,
     playerId?: PlayerID,
     includeUnderConstruction: boolean = false,
   ): boolean {
@@ -219,8 +235,8 @@ export class UnitGrid {
     if (playerId !== undefined && unit.owner().id() !== playerId) {
       return false;
     }
-    const distSquared = this.squaredDistanceFromTile(unit, tile);
-    return distSquared <= rangeSquared;
+    const dist = Math.sqrt(this.squaredDistanceFromTile(unit, tile));
+    return dist <= searchRange;
   }
 
   // Return true if it finds an owned specific unit in range
@@ -235,7 +251,6 @@ export class UnitGrid {
       tile,
       searchRange,
     );
-    const rangeSquared = searchRange * searchRange;
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         const unitSet = this.grid[cy][cx].get(type);
@@ -245,7 +260,7 @@ export class UnitGrid {
             this.unitIsInRange(
               unit,
               tile,
-              rangeSquared,
+              searchRange,
               playerId,
               includeUnderConstruction,
             )
@@ -271,7 +286,6 @@ export class UnitGrid {
       tile,
       searchRange,
     );
-    const rangeSquared = searchRange * searchRange;
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const type of types) {
@@ -282,7 +296,7 @@ export class UnitGrid {
               !this.unitIsInRange(
                 unit,
                 tile,
-                rangeSquared,
+                searchRange,
                 playerId,
                 includeUnderConstruction,
               )

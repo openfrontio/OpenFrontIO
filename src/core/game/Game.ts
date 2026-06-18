@@ -757,7 +757,7 @@ export interface Game extends GameMap {
     types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
-  ): Array<{ unit: Unit; distSquared: number }>;
+  ): Array<{ unit: Unit; distSquared: number; euclideanDist: number }>;
 
   addExecution(...exec: Execution[]): void;
   displayMessage(
