@@ -236,7 +236,7 @@ export class UnitGrid {
     if (playerId !== undefined && unit.owner().id() !== playerId) {
       return false;
     }
-    const dist = this.squaredDistanceFromTile(unit, tile)
+    const dist = this.squaredDistanceFromTile(unit, tile);
     return dist <= rangeSquared;
   }
 
