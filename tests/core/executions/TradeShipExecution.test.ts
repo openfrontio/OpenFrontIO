@@ -1,5 +1,5 @@
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
-import { Game, Player, Unit } from "../../../src/core/game/Game";
+import { Game, MessageType, Player, Unit } from "../../../src/core/game/Game";
 import { PathStatus } from "../../../src/core/pathfinding/types";
 import { setup } from "../../util/Setup";
 
@@ -133,6 +133,25 @@ describe("TradeShipExecution", () => {
     tradeShip.owner = vi.fn(() => pirate);
     tradeShipExecution.tick(1);
     expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
+  });
+
+  it("should notify the original owner when the ship is captured", () => {
+    tradeShip.owner = vi.fn(() => pirate);
+    tradeShipExecution.tick(1);
+    expect(game.displayMessage).toHaveBeenCalledWith(
+      "events_display.trade_ship_captured",
+      MessageType.UNIT_DESTROYED,
+      origOwner.id(),
+      undefined,
+      { name: pirate.displayName() },
+    );
+  });
+
+  it("should only notify the original owner once across ticks", () => {
+    tradeShip.owner = vi.fn(() => pirate);
+    tradeShipExecution.tick(1);
+    tradeShipExecution.tick(2);
+    expect(game.displayMessage).toHaveBeenCalledTimes(1);
   });
 
   it("should complete trade and award gold", () => {

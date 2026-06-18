@@ -423,6 +423,7 @@
     "sent_emoji": "Sent {name}: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "trade_ship_captured": "Your trade ship was captured by {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
     "wants_to_renew_alliance": "{name} wants to renew your alliance"
@@ -1418,6 +1419,8 @@
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "territory_patterns_label": "Territory Skins",
     "title": "Settings",
+    "trade_ship_captured_desc": "Show an event when one of your trade ships is captured.",
+    "trade_ship_captured_label": "Trade Ship Captured Alerts",
     "toggle_terrain": "Toggle Terrain",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",

@@ -69,6 +69,13 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured !== true && this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
+      this.mg.displayMessage(
+        "events_display.trade_ship_captured",
+        MessageType.UNIT_DESTROYED,
+        this.origOwner.id(),
+        undefined,
+        { name: tradeShipOwner.displayName() },
+      );
     }
 
     // If a player captures another player's port while trading we should delete
