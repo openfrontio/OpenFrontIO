@@ -70,8 +70,7 @@ describe("RailNetworkImpl", () => {
       addExecution: vi.fn(),
       config: () => ({
         trainStationMaxRange: () => 80,
-        trainStationMinRange: () => 10,
-        railroadMaxSize: () => 100,
+        trainStationMinRange: () => 10
       }),
       x: vi.fn(() => 0),
       y: vi.fn(() => 0),
@@ -302,7 +301,7 @@ describe("RailNetworkImpl", () => {
       pathService.findTilePath.mockReturnValue(new Array(100));
 
       game.nearbyUnits.mockReturnValue([
-        { unit: neighborStation.unit, distSquared: 400 },
+        { unit: neighborStation.unit, distSquared: 400, euclideanDist: 20 },
       ]);
 
       const result = network.computeGhostRailPaths(UnitType.City, tile);
@@ -314,11 +313,11 @@ describe("RailNetworkImpl", () => {
       const railGridMock = { query: vi.fn(() => new Set()) };
       (network as any).railGrid = railGridMock;
 
-      const neighbors: Array<{ unit: any; distSquared: number }> = [];
+      const neighbors: Array<{ unit: any; distSquared: number, euclideanDist: number }> = [];
       for (let i = 0; i < 7; i++) {
         const station = createMockStation(i);
         station.tile.mockReturnValue(100 + i);
-        neighbors.push({ unit: station.unit, distSquared: 400 + i });
+        neighbors.push({ unit: station.unit, distSquared: 400 + i, euclideanDist: Math.sqrt(400 + i) });
       }
 
       stationManager.findStation.mockImplementation((unit: any) => {
