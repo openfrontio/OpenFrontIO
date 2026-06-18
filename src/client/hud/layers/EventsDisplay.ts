@@ -237,15 +237,12 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    // Captured trade-ship gold is surfaced as a transient +gold pip in
-    // control-panel rather than as a scroll-list entry.
-    if (event.message === "events_display.received_gold_from_captured_ship") {
-      return;
-    }
-
-    // Losing a trade ship is an opt-out alert (on by default).
+    // Trade-ship capture alerts (both capturing an enemy ship and losing
+    // your own) are gated behind a single setting (on by default). Capturing
+    // a ship otherwise only surfaces a transient +gold pip via addGold.
     if (
-      event.message === "events_display.trade_ship_captured" &&
+      (event.message === "events_display.received_gold_from_captured_ship" ||
+        event.message === "events_display.trade_ship_captured") &&
       !this.game.config().userSettings().tradeShipCapturedEvents()
     ) {
       return;
