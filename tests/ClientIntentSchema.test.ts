@@ -35,8 +35,7 @@ describe("Client intent schema", () => {
 
   test("accepts valid finite resource amounts and integer refs", () => {
     expect(
-      parseIntent({ type: "attack", targetID: VALID_ID, troops: 10.5 })
-        .success,
+      parseIntent({ type: "attack", targetID: VALID_ID, troops: 10.5 }).success,
     ).toBe(true);
     expect(parseIntent({ type: "spawn", tile: 0 }).success).toBe(true);
     expect(
