@@ -301,6 +301,7 @@ export class RailNetworkImpl implements RailNetwork {
         continue;
       }
       const path = this.pathService.findTilePath(tile, targetTile);
+      if (path.length === 0) continue;
       paths.push(path);
       if (neighborStation) {
         connectedStations.push(neighborStation);
@@ -374,6 +375,7 @@ export class RailNetworkImpl implements RailNetwork {
 
   private connect(from: TrainStation, to: TrainStation) {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
+    if (path.length === 0) return false;
     const railroad = new Railroad(from, to, path, this.nextId++);
     this.game.addUpdate({
       type: GameUpdateType.RailroadConstructionEvent,
