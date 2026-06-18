@@ -175,7 +175,7 @@ export class UnitGrid {
               if (distSquared > rangeSquared) continue;
               const value = {
                 unit,
-                distSquared
+                distSquared,
               };
               if (predicate !== undefined && !predicate(value)) continue;
               nearby.push(value);
@@ -203,7 +203,7 @@ export class UnitGrid {
           if (distSquared > rangeSquared) continue;
           const value = {
             unit,
-            distSquared
+            distSquared,
           };
           if (predicate !== undefined && !predicate(value)) continue;
           nearby.push(value);
