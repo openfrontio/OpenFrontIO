@@ -155,6 +155,7 @@ export class UnitGrid {
       tile,
       searchRange,
     );
+    const rangeSquared = searchRange * searchRange;
 
     if (Array.isArray(types)) {
       for (let cy = startGridY; cy <= endGridY; cy++) {
@@ -173,7 +174,7 @@ export class UnitGrid {
               const dx = gm.x(unitTile) - x;
               const dy = gm.y(unitTile) - y;
               const distSquared = dx * dx + dy * dy;
-              if (Math.sqrt(distSquared) > searchRange) continue;
+              if (distSquared > rangeSquared) continue;
               const value = {
                 unit,
                 distSquared,
@@ -202,7 +203,7 @@ export class UnitGrid {
           const dx = gm.x(unitTile) - x;
           const dy = gm.y(unitTile) - y;
           const distSquared = dx * dx + dy * dy;
-          if (Math.sqrt(distSquared) > searchRange) continue;
+          if (distSquared > rangeSquared) continue;
           const value = {
             unit,
             distSquared,
@@ -226,6 +227,7 @@ export class UnitGrid {
     if (!unit.isActive()) {
       return false;
     }
+    const rangeSquared = searchRange * searchRange;
     // Exclude units under construction by default (e.g., defense posts being built)
     // But include them for spacing checks
     if (!includeUnderConstruction && unit.isUnderConstruction()) {
@@ -234,8 +236,8 @@ export class UnitGrid {
     if (playerId !== undefined && unit.owner().id() !== playerId) {
       return false;
     }
-    const dist = Math.sqrt(this.squaredDistanceFromTile(unit, tile));
-    return dist <= searchRange;
+    const dist = this.squaredDistanceFromTile(unit, tile)
+    return dist <= rangeSquared;
   }
 
   // Return true if it finds an owned specific unit in range
