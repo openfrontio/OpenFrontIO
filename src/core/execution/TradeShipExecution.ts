@@ -75,6 +75,7 @@ export class TradeShipExecution implements Execution {
         this.origOwner.id(),
         undefined,
         { name: tradeShipOwner.displayName() },
+        this.tradeShip.id(),
       );
     }
 

@@ -144,6 +144,7 @@ describe("TradeShipExecution", () => {
       origOwner.id(),
       undefined,
       { name: pirate.displayName() },
+      tradeShip.id(),
     );
   });
 
