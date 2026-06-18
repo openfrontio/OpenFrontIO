@@ -779,6 +779,11 @@ export class GPURenderer {
     }
   }
 
+  /** Re-resolve player name strings live (e.g. anonymous-names toggle). */
+  refreshNames(displayNames: Map<string, string>): void {
+    this.namePass.refreshNames(displayNames);
+  }
+
   updateRelations(data: Uint8Array, size: number): void {
     this.borderPass.updateRelations(data, size);
     this.affiliationPalette.updateRelations(data, size);
