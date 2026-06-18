@@ -250,7 +250,7 @@ export class RailNetworkImpl implements RailNetwork {
     }
 
     const maxRange = this.game.config().trainStationMaxRange();
-    const minRange = this.game.config().trainStationMinRange();
+    const minRangeSquared = this.game.config().trainStationMinRange() * this.game.config().trainStationMinRange();
 
     // A City or Port only joins the rail network when a Factory is already in
     // range (see CityExecution/PortExecution). A Factory always becomes a
@@ -276,7 +276,7 @@ export class RailNetworkImpl implements RailNetwork {
     for (const neighbor of neighbors) {
       // Limit to the closest 5 stations to avoid running too many pathfinding calls.
       if (paths.length >= 5) break;
-      if (neighbor.euclideanDist <= minRange) continue;
+      if (neighbor.distSquared <= minRangeSquared) continue;
 
       const neighborStation = this._stationManager.findStation(neighbor.unit);
 
@@ -339,7 +339,7 @@ export class RailNetworkImpl implements RailNetwork {
         distanceToStation === -1;
       if (
         connectionAvailable &&
-        neighbor.euclideanDist > this.game.config().trainStationMinRange()
+        neighbor.distSquared > this.game.config().trainStationMinRange() * this.game.config().trainStationMinRange()
       ) {
         if (this.connect(station, neighborStation)) {
           neighborCluster.addStation(station);

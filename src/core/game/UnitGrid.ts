@@ -141,12 +141,10 @@ export class UnitGrid {
   ): Array<{
     unit: Unit | UnitView;
     distSquared: number;
-    euclideanDist: number;
   }> {
     const nearby: Array<{
       unit: Unit | UnitView;
       distSquared: number;
-      euclideanDist: number;
     }> = [];
     const gm = this.gm;
     const x = gm.x(tile);
@@ -177,8 +175,7 @@ export class UnitGrid {
               if (distSquared > rangeSquared) continue;
               const value = {
                 unit,
-                distSquared,
-                euclideanDist: Math.sqrt(distSquared),
+                distSquared
               };
               if (predicate !== undefined && !predicate(value)) continue;
               nearby.push(value);
@@ -206,8 +203,7 @@ export class UnitGrid {
           if (distSquared > rangeSquared) continue;
           const value = {
             unit,
-            distSquared,
-            euclideanDist: Math.sqrt(distSquared),
+            distSquared
           };
           if (predicate !== undefined && !predicate(value)) continue;
           nearby.push(value);
