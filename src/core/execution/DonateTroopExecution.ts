@@ -25,7 +25,7 @@ export class DonateTroopsExecution implements Execution {
   constructor(
     private sender: Player,
     private recipientID: PlayerID,
-    private troops: number | null,
+    private troops: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -41,7 +41,6 @@ export class DonateTroopsExecution implements Execution {
     }
 
     this.recipient = mg.player(this.recipientID);
-    this.troops ??= mg.config().defaultDonationAmount(this.sender);
     const maxDonation =
       mg.config().maxTroops(this.recipient) - this.recipient.troops();
     this.troops = Math.min(this.troops, maxDonation);

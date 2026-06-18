@@ -71,14 +71,17 @@ export class SendSpawnIntentEvent implements GameEvent {
 export class SendAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
-    public readonly troops: number,
+    public readonly troopRatio: number,
+    public readonly troopCount: number,
+    public readonly maxTroopCount: number | null = null,
   ) {}
 }
 
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly dst: TileRef,
-    public readonly troops: number,
+    public readonly troopRatio: number,
+    public readonly troopCount: number,
   ) {}
 }
 
@@ -111,7 +114,8 @@ export class SendDonateGoldIntentEvent implements GameEvent {
 export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
-    public readonly troops: number | null,
+    public readonly troopRatio: number,
+    public readonly troopCount: number,
   ) {}
 }
 
@@ -484,14 +488,16 @@ export class Transport {
     this.sendIntent({
       type: "attack",
       targetID: event.targetID,
-      troops: event.troops,
+      troopRatio: event.troopRatio,
+      troopCount: event.troopCount,
     });
   }
 
   private onSendBoatAttackIntent(event: SendBoatAttackIntentEvent) {
     this.sendIntent({
       type: "boat",
-      troops: event.troops,
+      troopRatio: event.troopRatio,
+      troopCount: event.troopCount,
       dst: event.dst,
     });
   }
@@ -532,7 +538,8 @@ export class Transport {
     this.sendIntent({
       type: "donate_troops",
       recipient: event.recipient.id(),
-      troops: event.troops,
+      troopRatio: event.troopRatio,
+      troopCount: event.troopCount,
     });
   }
 

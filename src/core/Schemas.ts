@@ -359,7 +359,10 @@ export const AllianceExtensionIntentSchema = z.object({
 export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: ID.nullable(),
-  troops: z.number().nonnegative().nullable(),
+  troopCount: z.number().nonnegative(),
+  troopRatio: z.number().gt(0).max(1),
+  // maxTroopSent present only for retaliation.
+  maxTroopSent: z.number().nonnegative().optional(),
 });
 
 export const SpawnIntentSchema = z.object({
@@ -369,7 +372,8 @@ export const SpawnIntentSchema = z.object({
 
 export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
-  troops: z.number().nonnegative(),
+  troopCount: z.number().nonnegative(),
+  troopRatio: z.number().gt(0).max(1),
   dst: z.number(),
 });
 
@@ -419,7 +423,8 @@ export const DonateGoldIntentSchema = z.object({
 export const DonateTroopIntentSchema = z.object({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troops: z.number().nonnegative().nullable(),
+  troopCount: z.number().nonnegative(),
+  troopRatio: z.number().gt(0).max(1),
 });
 
 export const BuildUnitIntentSchema = z.object({

@@ -27,7 +27,8 @@ export class PlayerActionHandler {
     this.eventBus.emit(
       new SendAttackIntentEvent(
         targetId,
-        this.uiState.attackRatio * player.troops(),
+        this.uiState.attackRatio,
+        player.troops(),
       ),
     );
   }
@@ -36,7 +37,8 @@ export class PlayerActionHandler {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         targetTile,
-        this.uiState.attackRatio * player.troops(),
+        this.uiState.attackRatio,
+        player.troops(),
       ),
     );
   }
@@ -74,12 +76,14 @@ export class PlayerActionHandler {
     this.eventBus.emit(new SendDonateGoldIntentEvent(recipient, null));
   }
 
-  handleDonateTroops(recipient: PlayerView, troops?: number) {
-    const amount = troops ?? null;
-    if (amount !== null && amount <= 0) {
-      return;
-    }
-    this.eventBus.emit(new SendDonateTroopsIntentEvent(recipient, amount));
+  handleDonateTroops(
+    recipient: PlayerView,
+    troopRatio: number,
+    troopsCount: number,
+  ) {
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(recipient, troopRatio, troopsCount),
+    );
   }
 
   handleEmbargo(recipient: PlayerView, action: "start" | "stop") {

@@ -296,7 +296,11 @@ const allyDonateTroopsElement: MenuElement = {
   color: COLORS.ally,
   icon: donateTroopIcon,
   action: (params: MenuElementParams) => {
-    params.playerActionHandler.handleDonateTroops(params.selected!);
+    params.playerActionHandler.handleDonateTroops(
+      params.selected!,
+      params.game.config().defaultDonationRatio(),
+      params.myPlayer.troops(),
+    );
     params.closeMenu();
   },
 };
@@ -626,14 +630,14 @@ export const centerButtonElement: CenterButtonElement = {
     } else {
       if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
         const selectedPlayer = params.selected as PlayerView;
-        const ratio = params.uiState?.attackRatio ?? 1;
-        const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
-        if (troopsToDonate > 0) {
-          params.playerActionHandler.handleDonateTroops(
-            selectedPlayer,
-            troopsToDonate,
-          );
-        }
+        const ratio =
+          params.uiState?.attackRatio ??
+          params.game.config().defaultDonationRatio();
+        params.playerActionHandler.handleDonateTroops(
+          selectedPlayer,
+          ratio,
+          params.myPlayer.troops(),
+        );
       } else {
         params.playerActionHandler.handleAttack(
           params.myPlayer,
