@@ -694,6 +694,9 @@ export class GameImpl implements Game {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
     }
+    if (this.isImpassable(tile)) {
+      throw Error(`cannot conquer impassable terrain`);
+    }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
       previousOwner._lastTileChange = this._ticks;
@@ -1074,6 +1077,9 @@ export class GameImpl implements Game {
   }
   isLand(ref: TileRef): boolean {
     return this._map.isLand(ref);
+  }
+  isImpassable(ref: TileRef): boolean {
+    return this._map.isImpassable(ref);
   }
   isOceanShore(ref: TileRef): boolean {
     return this._map.isOceanShore(ref);

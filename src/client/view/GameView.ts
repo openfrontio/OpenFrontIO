@@ -1112,6 +1112,9 @@ export class GameView implements GameMap {
   isLand(ref: TileRef): boolean {
     return this._map.isLand(ref);
   }
+  isImpassable(ref: TileRef): boolean {
+    return this._map.isImpassable(ref);
+  }
   isOceanShore(ref: TileRef): boolean {
     return this._map.isOceanShore(ref);
   }

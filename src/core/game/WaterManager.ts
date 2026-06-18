@@ -54,7 +54,11 @@ export class WaterManager {
       const converted: TileRef[] = [];
       for (const tile of this._pendingWaterTiles) {
         // Tile may have been conquered between queueing and flushing
-        if (this.map.isLand(tile) && !this.map.hasOwner(tile)) {
+        if (
+          this.map.isLand(tile) &&
+          !this.map.hasOwner(tile) &&
+          !this.map.isImpassable(tile)
+        ) {
           if (this.map.hasFallout(tile)) {
             this.map.setFallout(tile, false);
           }
@@ -373,10 +377,21 @@ export class WaterManager {
       }
     }
     for (const tile of tilesToCheck) {
+      // Impassable tiles never get shoreline — they render as the map
+      // background, so no sand/water outline should appear around them.
+      if (map.isImpassable(tile)) {
+        if (map.isShoreline(tile)) {
+          map.clearShorelineBit(tile);
+          changed.add(tile);
+        }
+        continue;
+      }
       const tileIsLand = map.isLand(tile);
       let hasOpposite = false;
       const end = pushNeighbors(tile, nb, 0);
       for (let i = 0; i < end; i++) {
+        // Impassable neighbors don't create shorelines (void, not coast).
+        if (map.isImpassable(nb[i])) continue;
         if (map.isLand(nb[i]) !== tileIsLand) {
           hasOpposite = true;
           break;

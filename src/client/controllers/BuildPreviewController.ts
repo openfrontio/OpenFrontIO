@@ -72,13 +72,15 @@ export class BuildPreviewController implements Controller {
   private lastGhostData: GhostPreviewData | null = null;
 
   // Static inputs for the nuke trajectory preview (source silo + threatening
-  // SAMs). Recomputed in the throttled renderGhost path; cursorLoop rebuilds
-  // the Bezier each frame with the live cursor position as the destination so
-  // the arc tracks the cursor smoothly instead of snapping tile-to-tile.
+  // SAMs + impassable-terrain blocker). Recomputed in the throttled renderGhost
+  // path; cursorLoop rebuilds the Bezier each frame with the live cursor
+  // position as the destination so the arc tracks the cursor smoothly instead
+  // of snapping tile-to-tile.
   private nukeTrajectoryStatic: {
     srcX: number;
     srcY: number;
     sams: SAMInfo[];
+    isBlocked: (x: number, y: number) => boolean;
   } | null = null;
 
   constructor(
@@ -143,6 +145,7 @@ export class BuildPreviewController implements Controller {
               this.game.height(),
               this.uiState.rocketDirectionUp,
               traj.sams,
+              traj.isBlocked,
             ),
           );
         }
@@ -190,6 +193,11 @@ export class BuildPreviewController implements Controller {
     );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
+      // Impassable terrain is a void — treat hovering over it the same as
+      // hovering outside the map (no ghost, no trajectory, no blast circle).
+      if (this.game.isImpassable(tileRef)) {
+        tileRef = undefined;
+      }
     }
 
     // Check if targeting an ally (for nuke warning visual)
@@ -364,7 +372,18 @@ export class BuildPreviewController implements Controller {
 
     // Stash the static inputs; cursorLoop rebuilds the Bezier each frame with
     // the live cursor as the destination so the arc tracks smoothly.
-    this.nukeTrajectoryStatic = { srcX, srcY, sams };
+    // The isBlocked callback tests impassable terrain so the trajectory turns
+    // red with a red X where it would cross impassable terrain (matching the
+    // simulation's abort-on-impassable behavior).
+    this.nukeTrajectoryStatic = {
+      srcX,
+      srcY,
+      sams,
+      isBlocked: (x: number, y: number) => {
+        if (!this.game.isValidCoord(x, y)) return false;
+        return this.game.isImpassable(this.game.ref(x, y));
+      },
+    };
   }
 
   private clearNukeTrajectory(): void {
