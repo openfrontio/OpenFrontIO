@@ -44,6 +44,17 @@ export type Corner = "tl" | "tr" | "bl" | "br";
 const CORNER_KEY = "featured-stream-corner";
 const MIN_KEY = "featured-stream-minimized";
 const RECHECK_MS = 60_000; // re-probe interval when every channel is offline
+const TITLE_TIMEOUT_MS = 5_000; // give up on the title fetch and keep the channel name
+
+// Where the broadcast title comes from. DecAPI is a long-running, no-auth community proxy
+// (the kind Nightbot/StreamElements use) that holds its own Twitch credentials and returns
+// the title as plaintext, CORS-open. Getting the title straight from Twitch needs a
+// Client-ID + app token (a server secret), which a browser can't hold, so a browser-only
+// path goes through a proxy like this. OF can later point this at a Helix-backed route on
+// their own API that returns the same plaintext; the channel-name fallback stays either way.
+const titleEndpoint = (channel: string) =>
+  `https://decapi.me/twitch/title/${encodeURIComponent(channel)}`;
+
 const CORNER_CLASS: Record<Corner, string> = {
   tl: "top-4 left-4",
   tr: "top-4 right-4",
@@ -229,21 +240,24 @@ export class FeaturedStream extends LitElement {
     }, RECHECK_MS);
   }
 
-  // The Twitch embed exposes only the channel name, so fetch the broadcast title from a
-  // lightweight third-party (decapi, no auth/CORS-open). Falls back to the channel name.
-  // For production this can be swapped for a Helix-backed endpoint.
+  // The Twitch embed exposes only the channel name, not the broadcast title, so fetch the
+  // title from titleEndpoint() (see its note). The channel name is shown immediately and is
+  // only replaced on a clean response, so anything that goes wrong (proxy down, rate-limited,
+  // slow, channel not found) just leaves the channel name in place.
   private async fetchTitle(channel: string) {
-    this.streamTitle = channel;
+    this.streamTitle = channel; // fallback shown right away
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TITLE_TIMEOUT_MS);
     try {
-      const r = await fetch(
-        `https://decapi.me/twitch/title/${encodeURIComponent(channel)}`,
-      );
+      const r = await fetch(titleEndpoint(channel), { signal: ctrl.signal });
       const t = (await r.text()).trim();
-      // Guard against a late response for a channel we've since moved past.
+      // Ignore a failed/empty response, or a late one for a channel we've since moved past.
       if (r.ok && t && channel === this.channels[this.idx])
         this.streamTitle = t;
     } catch {
-      /* keep channel-name fallback */
+      /* keep channel-name fallback (timeout, network error, etc.) */
+    } finally {
+      clearTimeout(timer);
     }
   }
 
