@@ -63,7 +63,7 @@ function buildTerrain(
 }
 
 async function setupImpassableGame(humans: PlayerInfo[] = []): Promise<Game> {
-  console.debug = () => {};
+  vi.spyOn(console, "debug").mockImplementation(() => {});
 
   const full = buildTerrain(MAP_W, MAP_H, WALL_X, WALL_WIDTH);
   const mini = buildTerrain(MINI_W, MINI_H, Math.floor(WALL_X / 2), 1);
@@ -103,6 +103,10 @@ describe("Impassable Terrain", () => {
   let game: Game;
   let player: Player;
   let other: Player;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   beforeEach(async () => {
     game = await setupImpassableGame([
