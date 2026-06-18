@@ -167,13 +167,19 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 
 	removeSmallIslands(ctx, terrain, minIslandSize, args.RemoveSmall)
 	processWater(ctx, terrain, args.RemoveSmall)
+	// Water adjacent to impassable terrain should be deep (no depth gradient),
+	// just like water at the map edge.  Override the BFS-calculated magnitude
+	// so these tiles render as the deepest shade.
+	setImpassableNeighborWaterDepth(ctx, terrain)
 
 	terrain4x := createMiniMap(terrain)
 	removeSmallIslands(ctx, terrain4x, minIslandSize/2, args.RemoveSmall)
 	processWater(ctx, terrain4x, false)
+	setImpassableNeighborWaterDepth(ctx, terrain4x)
 
 	terrain16x := createMiniMap(terrain4x)
 	processWater(ctx, terrain16x, false)
+	setImpassableNeighborWaterDepth(ctx, terrain16x)
 
 	thumb := createMapThumbnail(ctx, terrain4x, 0.5)
 	webp, err := convertToWebP(ThumbData{
@@ -322,11 +328,11 @@ func processShore(ctx context.Context, terrain [][]Terrain) []Coord {
 				}
 			} else if tile.Type == Water {
 				// Water tile adjacent to land is shoreline
-				for _, c := range buf[:n] {
-					if terrain[c.X][c.Y].Type == Land {
-						tile.Shoreline = true
-						shorelineWaters = append(shorelineWaters, Coord{X: x, Y: y})
-						break
+					for _, c := range buf[:n] {
+						if terrain[c.X][c.Y].Type == Land {
+							tile.Shoreline = true
+							shorelineWaters = append(shorelineWaters, Coord{X: x, Y: y})
+							break
 					}
 				}
 			}
@@ -381,6 +387,33 @@ func processDistToLand(ctx context.Context, shorelineWaters []Coord, terrain [][
 				visited[nx][ny] = true
 				terrain[nx][ny].Magnitude = float64(current.dist + 1)
 				queue = append(queue, queueItem{x: nx, y: ny, dist: current.dist + 1})
+			}
+		}
+	}
+}
+
+// setImpassableNeighborWaterDepth forces water tiles adjacent to impassable
+// terrain to deep-water magnitude.  Without this, the processDistToLand BFS
+// assigns them a shallow magnitude (close to "land"), producing a visible
+// depth gradient next to impassable terrain.  Impassable terrain is void —
+// like the map edge — so the water beside it should be uniformly deep.
+func setImpassableNeighborWaterDepth(ctx context.Context, terrain [][]Terrain) {
+	width := len(terrain)
+	height := len(terrain[0])
+	const deepMagnitude = 20 // packed as 10 (÷2), matches max render depth
+
+	var buf [4]Coord
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			if terrain[x][y].Type != Water {
+				continue
+			}
+			n := neighborCoords(x, y, width, height, &buf)
+			for _, c := range buf[:n] {
+				if terrain[c.X][c.Y].Type == Impassable {
+					terrain[x][y].Magnitude = deepMagnitude
+					break
+				}
 			}
 		}
 	}

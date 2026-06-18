@@ -299,6 +299,9 @@ export class WaterManager {
     const sMaxY = Math.min(h - 1, cMaxY + MAX_MAG_DIST * 2);
 
     // Seed from coastline water tiles inside the seed box.
+    // Impassable terrain is void (like the map edge), so water tiles
+    // adjacent only to impassable terrain are NOT coastline — they should
+    // be uniformly deep with no depth gradient.
     for (let by = sMinY; by <= sMaxY; by++) {
       const rowStart = by * w;
       for (let bx = sMinX; bx <= sMaxX; bx++) {
@@ -306,7 +309,7 @@ export class WaterManager {
         if (!map.isWater(tile) || stampArr[tile] === stamp) continue;
         const end = pushNeighbors(tile, nb, 0);
         for (let i = 0; i < end; i++) {
-          if (map.isLand(nb[i])) {
+          if (map.isLand(nb[i]) && !map.isImpassable(nb[i])) {
             stampArr[tile] = stamp;
             distArr[tile] = 0;
             magQueue.push(tile);
