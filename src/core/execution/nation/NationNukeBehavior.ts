@@ -636,8 +636,7 @@ export class NationNukeBehavior {
   /**
    * Check if the parabolic nuke trajectory from spawnTile to targetTile
    * crosses any impassable terrain. Mirrors the check in NukeExecution that
-   * aborts such launches — if we don't check here, the AI wastes gold on
-   * nukes that silently fail at launch time.
+   * aborts such launches
    */
   private isTrajectoryBlockedByImpassable(
     spawnTile: TileRef,
