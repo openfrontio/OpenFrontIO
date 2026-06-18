@@ -86,11 +86,10 @@ If you are doing work in image editing software or using automated tools, `./map
 - `Pixel` -> `Terrain Type & Magnitude` mapping in `GenerateMap`
 - `Terrain Type` -> `Thumbnail Color` mapping in `getThumbnailColor`
 
-In-Game, terrain is rendered using themes. The color of a tile is determined dynamically based on
-its **Terrain Type** and **Magnitude**. Theme Files:
+In-Game, the color of a tile is determined dynamically based on its **Terrain Type** and **Magnitude**.
 
-- `../src/core/configuration/PastelTheme.ts` (Light)
-- `../src/core/configuration/PastelThemeDark.ts` (Dark).
+- Ocean default color definition: `../src/client/render/gl/render-settings.json` (user changeable via settings)
+- Terrain color calculations: `../src/client/render/gl/utils/ColorUtils.ts#L50`
 
 ## Create info.json
 
