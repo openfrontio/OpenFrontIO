@@ -525,6 +525,14 @@ async function createClientGame(
       { signal: graphicsListenerAbort.signal },
     );
 
+    // Re-resolve names drawn on the map when the anonymous-names setting toggles
+    // so they switch live, like the leaderboard.
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.anonymousNames`,
+      () => webglBuilder.refreshNames(gameView),
+      { signal: graphicsListenerAbort.signal },
+    );
+
     // Re-resolve settings and copy them onto the renderer's live object in
     // place (passes hold a reference to it, so they pick the change up).
     const regenerateRenderSettings = (): void => {
