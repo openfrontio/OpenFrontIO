@@ -163,6 +163,9 @@ export class MapRenderer {
   ): void {
     this.renderer?.updateNames(names, players, snap, statusData);
   }
+  refreshNames(displayNames: Map<string, string>): void {
+    this.renderer?.refreshNames(displayNames);
+  }
   updateRelations(data: Uint8Array, size: number): void {
     this.renderer?.updateRelations(data, size);
   }
