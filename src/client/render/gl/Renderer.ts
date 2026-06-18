@@ -60,6 +60,7 @@ import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
+import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
   toScreen,
@@ -569,7 +570,7 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = renderDpr();
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
     this.camera.resize(cssWidth, cssHeight);
