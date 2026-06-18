@@ -42,7 +42,6 @@ export class ClientEnv {
       jwtAudience: bc.jwtAudience,
       instanceId: bc.instanceId,
       gitCommit: bc.gitCommit,
-      streamChannels: bc.streamChannels ?? "", // optional: unset -> feature off
     };
     return ClientEnv.values;
   }
@@ -68,13 +67,6 @@ export class ClientEnv {
   }
   static gitCommit(): string {
     return ClientEnv.get().gitCommit;
-  }
-  /** Twitch channel logins for the homepage featured-stream panel (empty = off). */
-  static streamChannels(): string[] {
-    return ClientEnv.get()
-      .streamChannels.split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
   }
   static jwtIssuer(): string {
     const audience = ClientEnv.jwtAudience();
@@ -125,5 +117,4 @@ export interface ClientEnvValues {
   jwtAudience: string;
   instanceId: string;
   gitCommit: string;
-  streamChannels: string;
 }

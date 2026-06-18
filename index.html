@@ -69,7 +69,6 @@
         turnstileSiteKey: <%- turnstileSiteKey %>,
         jwtAudience: <%- jwtAudience %>,
         instanceId: <%- instanceId %>,
-        streamChannels: <%- streamChannels %>,
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
@@ -193,7 +192,6 @@
       ></div>
 
       <homepage-promos></homepage-promos>
-      <featured-stream></featured-stream>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -358,6 +356,12 @@
     <leader-board></leader-board>
     <team-stats></team-stats>
     <heads-up-message></heads-up-message>
+
+    <!-- Featured stream: direct <body> child (NOT inside the in-[.in-game]:hidden
+         home container) so the Twitch iframe is never display:none'd during a game,
+         which would unmount the player and break ToS-compliant playback. The
+         component is position:fixed and self-manages visibility (pauses in-game). -->
+    <featured-stream></featured-stream>
 
     <!-- Scripts -->
     <script>

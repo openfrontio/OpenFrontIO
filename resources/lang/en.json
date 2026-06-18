@@ -430,7 +430,8 @@
   "featured_stream": {
     "expand": "Expand",
     "live": "LIVE",
-    "minimize": "Minimize"
+    "minimize": "Minimize",
+    "open_on_twitch": "Open {channel} on Twitch"
   },
   "flag_input": {
     "button_title": "Pick a flag!",
