@@ -155,7 +155,6 @@ export class UnitGrid {
       tile,
       searchRange,
     );
-    const rangeSquared = searchRange * searchRange;
 
     if (Array.isArray(types)) {
       for (let cy = startGridY; cy <= endGridY; cy++) {
