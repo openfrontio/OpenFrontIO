@@ -27,6 +27,7 @@ import type {
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
+import { GLUnavailableError, initGL } from "./initGL";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
@@ -204,12 +205,18 @@ export class GPURenderer {
     this.raf = raf;
     this.caf = caf;
 
-    const gl = canvas.getContext("webgl2", {
+    // Demand a GPU-accelerated context. A software (SwiftShader) or missing
+    // WebGL2 context throws GLUnavailableError, which the game-start path turns
+    // into an actionable gate instead of letting the game crawl at ~1fps.
+    const res = initGL(canvas, {
       alpha: false,
       antialias: false,
       powerPreference: "high-performance",
     });
-    if (!gl) throw new Error("WebGL2 not supported");
+    if (res.status !== "ok") {
+      throw new GLUnavailableError(res.status, res.renderer);
+    }
+    const gl = res.gl;
     this.gl = gl;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
