@@ -282,6 +282,8 @@ export const GameConfigSchema = z.object({
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
+  // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
+  allowedPublicIds: z.array(z.string()).max(200).optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
   startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks

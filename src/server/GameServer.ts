@@ -181,6 +181,9 @@ export class GameServer {
       this.gameConfig.disableAlliances =
         gameConfig.disableAlliances ?? undefined;
     }
+    if (gameConfig.allowedPublicIds !== undefined) {
+      this.gameConfig.allowedPublicIds = gameConfig.allowedPublicIds;
+    }
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
@@ -202,9 +205,27 @@ export class GameServer {
     return clientID;
   }
 
-  public joinClient(client: Client): "joined" | "kicked" | "rejected" {
+  public joinClient(
+    client: Client,
+  ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
     if (this.kickedPersistentIds.has(client.persistentID)) {
       return "kicked";
+    }
+
+    // OFM: if an allowlist is set, only those publicIds may join. Re-checked on
+    // every join attempt (not sticky), so clearing the allowlist immediately
+    // lets previously-rejected players in.
+    const allowedPublicIds = this.gameConfig.allowedPublicIds;
+    if (
+      allowedPublicIds !== undefined &&
+      allowedPublicIds.length > 0 &&
+      (client.publicId === undefined ||
+        !allowedPublicIds.includes(client.publicId))
+    ) {
+      this.log.warn("client not on allowlist, rejecting", {
+        clientID: client.clientID,
+      });
+      return "not_allowlisted";
     }
 
     if (

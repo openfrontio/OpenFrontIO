@@ -499,6 +499,12 @@ export async function startWorker() {
             workerId,
           });
           ws.close(1002, "Cannot join game");
+        } else if (joinResult === "not_allowlisted") {
+          log.info(`client not whitelisted for game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "You are not whitelisted");
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
