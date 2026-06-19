@@ -286,6 +286,22 @@ export class StatsImpl implements Stats {
     this._addPlayerKilled(player, tick);
   }
 
+  recordFinalTiles(player: Player, tiles: BigIntLike): void {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.finalTiles = _bigint(tiles);
+  }
+
+  recordKill(player: Player, victim: Player, tick: BigIntLike): void {
+    if (victim.type() !== PlayerType.Human) return;
+    const victimId = victim.clientID();
+    if (victimId === null) return;
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.kills ??= [];
+    p.kills.push({ victim: victimId, tick: _bigint(tick) });
+  }
+
   trainSelfTrade(player: Player, gold: BigIntLike): void {
     this._addGold(player, GOLD_INDEX_TRAIN_SELF, gold);
   }

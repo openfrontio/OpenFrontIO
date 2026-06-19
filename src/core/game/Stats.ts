@@ -102,6 +102,12 @@ export interface Stats {
   // player was killed (0 tiles)
   playerKilled(player: Player, tick: number): void;
 
+  // Record tiles owned at game end (final standings).
+  recordFinalTiles(player: Player, tiles: number | bigint): void;
+
+  // Record that player eliminated human victim at tick (OFM kill scoring).
+  recordKill(player: Player, victim: Player, tick: number | bigint): void;
+
   // Player's train arrives at any station, generating gold
   trainSelfTrade(player: Player, gold: number | bigint): void;
 
