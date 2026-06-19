@@ -250,8 +250,7 @@ export class RailNetworkImpl implements RailNetwork {
     }
 
     const maxRange = this.game.config().trainStationMaxRange();
-    const minRangeSquared =
-      this.game.config().trainStationMinRange() **2
+    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
 
     // A City or Port only joins the rail network when a Factory is already in
     // range (see CityExecution/PortExecution). A Factory always becomes a
@@ -340,8 +339,7 @@ export class RailNetworkImpl implements RailNetwork {
         distanceToStation === -1;
       if (
         connectionAvailable &&
-        neighbor.distSquared >
-          this.game.config().trainStationMinRange() **2
+        neighbor.distSquared > this.game.config().trainStationMinRange() ** 2
       ) {
         if (this.connect(station, neighborStation)) {
           neighborCluster.addStation(station);
