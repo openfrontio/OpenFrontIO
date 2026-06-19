@@ -114,8 +114,7 @@ export class SendDonateGoldIntentEvent implements GameEvent {
 export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
-    public readonly troopRatio: number,
-    public readonly troopCount: number,
+    public readonly troops: number | null,
   ) {}
 }
 
@@ -538,8 +537,7 @@ export class Transport {
     this.sendIntent({
       type: "donate_troops",
       recipient: event.recipient.id(),
-      troopRatio: event.troopRatio,
-      troopCount: event.troopCount,
+      troops: event.troops,
     });
   }
 

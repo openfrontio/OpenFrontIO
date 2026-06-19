@@ -486,8 +486,8 @@ export class Config {
     };
   }
 
-  defaultDonationRatio(): number {
-    return 1 / 3;
+  defaultDonationAmount(sender: Player): number {
+    return Math.floor(sender.troops() / 3);
   }
   donateCooldown(): Tick {
     return 10 * 10;

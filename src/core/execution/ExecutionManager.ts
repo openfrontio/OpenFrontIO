@@ -53,8 +53,7 @@ export class Executor {
     for (const intent of turn.intents) {
       switch (intent.type) {
         case "boat":
-        case "attack":
-        case "donate_troops": {
+        case "attack": {
           remainingTroopRatio_perClientID.set(
             intent.clientID,
             (remainingTroopRatio_perClientID.get(intent.clientID) ?? 1) *
@@ -132,7 +131,7 @@ export class Executor {
         return new DonateTroopsExecution(
           player,
           intent.recipient,
-          Math.floor(troopRatioFactor! * intent.troopRatio * intent.troopCount),
+          intent.troops,
         );
       case "donate_gold":
         return new DonateGoldExecution(player, intent.recipient, intent.gold);

@@ -423,8 +423,7 @@ export const DonateGoldIntentSchema = z.object({
 export const DonateTroopIntentSchema = z.object({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troopCount: z.number().nonnegative(),
-  troopRatio: z.number().gt(0).max(1),
+  troops: z.number().nonnegative().nullable(),
 });
 
 export const BuildUnitIntentSchema = z.object({
