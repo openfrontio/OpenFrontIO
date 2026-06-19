@@ -213,8 +213,7 @@ export class GameServer {
     }
 
     // OFM: if an allowlist is set, only those publicIds may join. Re-checked on
-    // every join attempt (not sticky), so clearing the allowlist immediately
-    // lets previously-rejected players in.
+    // every join attempt 
     const allowedPublicIds = this.gameConfig.allowedPublicIds;
     if (
       allowedPublicIds !== undefined &&
