@@ -65,6 +65,11 @@ export const DiscordUserSchema = z.object({
 });
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
+export const GoogleUserSchema = z.object({
+  email: z.string(),
+});
+export type GoogleUser = z.infer<typeof GoogleUserSchema>;
+
 const SingleplayerMapAchievementSchema = z.object({
   mapName: z.string(),
   difficulty: z.enum(Difficulty),
@@ -73,6 +78,7 @@ const SingleplayerMapAchievementSchema = z.object({
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
+    google: GoogleUserSchema.optional(),
     email: z.string().optional(),
   }),
   player: z.object({

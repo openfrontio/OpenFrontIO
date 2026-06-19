@@ -9,7 +9,13 @@ import {
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
-import { discordLogin, logOut, sendMagicLink } from "./Auth";
+import {
+  discordLogin,
+  googleLogin,
+  linkGoogle,
+  logOut,
+  sendMagicLink,
+} from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
@@ -96,7 +102,7 @@ export class AccountModal extends BaseModal {
 
   private isLinkedAccount(): boolean {
     const me = this.userMeResponse?.user;
-    return !!(me?.discord ?? me?.email);
+    return !!(me?.discord ?? me?.google ?? me?.email);
   }
 
   protected modalConfig() {
@@ -252,6 +258,18 @@ export class AccountModal extends BaseModal {
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
+          ${this.renderCurrency()} ${this.renderLinkGoogleButton()}
+          ${this.renderLogoutButton()}
+        </div>
+      `;
+    } else if (me?.google) {
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          <div class="text-white text-lg font-medium">
+            ${translateText("account_modal.linked_account", {
+              account_name: me.google.email,
+            })}
+          </div>
           ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
@@ -263,11 +281,33 @@ export class AccountModal extends BaseModal {
               account_name: me.email,
             })}
           </div>
-          ${this.renderCurrency()} ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLinkGoogleButton()}
+          ${this.renderLogoutButton()}
         </div>
       `;
     }
     return html``;
+  }
+
+  // Shown when logged in without a Google identity yet. Lets the user attach
+  // Google to their existing account (we never auto-merge by email).
+  private renderLinkGoogleButton(): TemplateResult {
+    if (this.userMeResponse?.user?.google) return html``;
+    return html`
+      <button
+        @click=${this.handleLinkGoogle}
+        class="w-full px-6 py-3 text-[#1f1f1f] bg-white hover:bg-[#f7f8f8] border border-[#dadce0] rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
+      >
+        <img
+          src=${assetUrl("images/GoogleLogo.svg")}
+          alt=${translateText("account_modal.google_alt")}
+          class="w-5 h-5"
+        />
+        <span class="font-bold tracking-wide"
+          >${translateText("account_modal.link_google")}</span
+        >
+      </button>
+    `;
   }
 
   private async viewGame(gameId: string): Promise<void> {
@@ -337,6 +377,22 @@ export class AccountModal extends BaseModal {
               <span class="font-bold relative z-10 tracking-wide"
                 >${translateText("main.login_discord") ||
                 translateText("account_modal.link_discord")}</span
+              >
+            </button>
+
+            <!-- Google Login Button (Google brand guidelines: white surface,
+                 dark text, the multicolor "G" mark) -->
+            <button
+              @click="${this.handleGoogleLogin}"
+              class="w-full px-6 py-4 text-[#1f1f1f] bg-white hover:bg-[#f7f8f8] border border-[#dadce0] rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg"
+            >
+              <img
+                src=${assetUrl("images/GoogleLogo.svg")}
+                alt="Google"
+                class="w-6 h-6 relative z-10"
+              />
+              <span class="font-bold relative z-10 tracking-wide"
+                >${translateText("main.login_google")}</span
               >
             </button>
 
@@ -417,8 +473,60 @@ export class AccountModal extends BaseModal {
     discordLogin();
   }
 
-  protected onOpen(): void {
+  private handleGoogleLogin() {
+    googleLogin();
+  }
+
+  private async handleLinkGoogle(): Promise<void> {
+    // On success linkGoogle navigates to Google; the result comes back as a
+    // `link=...` router arg handled in handleLinkResult. A false return means we
+    // couldn't start it.
+    const started = await linkGoogle();
+    if (!started) {
+      alert(translateText("account_modal.link_google_failed"));
+    }
+  }
+
+  // The Google link callback returns us to #modal=account&link=<result>, so the
+  // router reopens this modal with a `link` arg. Surface the outcome, then strip
+  // the one-shot param from the URL so a refresh/re-open doesn't replay it.
+  private handleLinkResult(args?: Record<string, unknown>): void {
+    const link = typeof args?.link === "string" ? args.link : undefined;
+    if (link === undefined) return;
+
+    // replaceState doesn't fire hashchange, so removing the param won't re-route.
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    params.delete("link");
+    const rest = params.toString();
+    history.replaceState(
+      null,
+      "",
+      rest ? `#${rest}` : window.location.pathname + window.location.search,
+    );
+
+    // Defer so the modal paints before the (blocking) alert. "cancel" needs no
+    // feedback — the user chose to back out.
+    if (link === "google") {
+      setTimeout(
+        () => alert(translateText("account_modal.link_google_success")),
+        0,
+      );
+    } else if (link === "already_linked") {
+      setTimeout(
+        () => alert(translateText("account_modal.link_google_already_linked")),
+        0,
+      );
+    } else if (link === "error") {
+      setTimeout(
+        () => alert(translateText("account_modal.link_google_error")),
+        0,
+      );
+    }
+  }
+
+  protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
+    this.handleLinkResult(args);
 
     if (SUBSCRIPTIONS_ENABLED) {
       void fetchCosmetics().then((cosmetics) => {
