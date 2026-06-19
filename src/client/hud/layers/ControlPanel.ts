@@ -347,19 +347,16 @@ export class ControlPanel extends LitElement implements Controller {
       <div
         class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
-        <div class="h-full flex">
-          ${greenPercent > 0
-            ? html`<div
-                class="h-full bg-malibu-blue transition-[width] duration-200"
-                style="width: ${greenPercent}%;"
-              ></div>`
-            : ""}
-          ${orangePercent > 0
-            ? html`<div
-                class="h-full bg-aquarius transition-[width] duration-200"
-                style="width: ${orangePercent}%;"
-              ></div>`
-            : ""}
+        <div class="relative h-full">
+          <div
+            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
+            style="transform: scaleX(${greenPercent / 100});"
+          ></div>
+          <div
+            class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
+            style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
+            100});"
+          ></div>
         </div>
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
@@ -402,19 +399,16 @@ export class ControlPanel extends LitElement implements Controller {
       <div
         class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
-        <div class="h-full flex">
-          ${greenPercent > 0
-            ? html`<div
-                class="h-full bg-malibu-blue transition-[width] duration-200"
-                style="width: ${greenPercent}%;"
-              ></div>`
-            : ""}
-          ${orangePercent > 0
-            ? html`<div
-                class="h-full bg-aquarius transition-[width] duration-200"
-                style="width: ${orangePercent}%;"
-              ></div>`
-            : ""}
+        <div class="relative h-full">
+          <div
+            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
+            style="transform: scaleX(${greenPercent / 100});"
+          ></div>
+          <div
+            class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
+            style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
+            100});"
+          ></div>
         </div>
         <div
           class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"

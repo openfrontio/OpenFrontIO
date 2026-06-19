@@ -29,15 +29,14 @@ export class ToggleInputCard extends LitElement {
     return this;
   }
 
+  // Autofocus + select the number input when the card is toggled on. Safe now
+  // that the input is always mounted (focusing a freshly-inserted one janked).
   protected updated(changedProperties: PropertyValues<this>) {
     if (!changedProperties.has("checked")) return;
-    const previousChecked = changedProperties.get("checked");
-    if (previousChecked === false && this.checked) {
+    if (changedProperties.get("checked") === false && this.checked) {
       const input = this.querySelector("input");
-      if (input) {
-        input.focus();
-        input.select();
-      }
+      input?.focus();
+      input?.select();
     }
   }
 
@@ -133,28 +132,32 @@ export class ToggleInputCard extends LitElement {
           </span>
         </button>
 
-        ${this.checked
-          ? html`
-              <div
-                class="absolute left-3 right-3 top-1/2 -translate-y-1/2 z-10"
-              >
-                <input
-                  type=${this.inputType}
-                  id=${this.inputId ?? nothing}
-                  min=${this.inputMin ?? nothing}
-                  max=${this.inputMax ?? nothing}
-                  step=${this.inputStep ?? nothing}
-                  .value=${String(this.inputValue ?? "")}
-                  class=${INPUT_CLASS}
-                  aria-label=${this.inputAriaLabel ?? nothing}
-                  placeholder=${this.inputPlaceholder ?? nothing}
-                  @input=${this.onInput}
-                  @change=${this.onChange}
-                  @keydown=${this.onKeyDown}
-                />
-              </div>
-            `
-          : nothing}
+        <!-- Keep the input permanently mounted and just hide it when unchecked.
+             Rendering it conditionally (\${checked ? input : nothing}) inserts a
+             fresh input on enable, and focusing a just-inserted input forces
+             several ms of layout/paint per frame. CSS-hiding an always-present
+             input avoids that. -->
+        <div
+          class="absolute left-3 right-3 top-1/2 -translate-y-1/2 z-10 ${this
+            .checked
+            ? ""
+            : "hidden"}"
+        >
+          <input
+            type=${this.inputType}
+            id=${this.inputId ?? nothing}
+            min=${this.inputMin ?? nothing}
+            max=${this.inputMax ?? nothing}
+            step=${this.inputStep ?? nothing}
+            .value=${String(this.inputValue ?? "")}
+            class=${INPUT_CLASS}
+            aria-label=${this.inputAriaLabel ?? nothing}
+            placeholder=${this.inputPlaceholder ?? nothing}
+            @input=${this.onInput}
+            @change=${this.onChange}
+            @keydown=${this.onKeyDown}
+          />
+        </div>
       </div>
     `;
   }

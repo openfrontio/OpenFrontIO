@@ -27,6 +27,9 @@ export class UsernameInput extends LitElement {
   @state() private baseUsername: string = "";
   @state() private clanTag: string = "";
 
+  // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
+  private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+
   @property({ type: String }) validationError: string = "";
   // Ownership-check feedback (i18n key) shown inline beneath the tag input. Only
   // "not a member" gates the buttons (see emitValidity); the rest is advisory.
@@ -124,7 +127,9 @@ export class UsernameInput extends LitElement {
   private loadStoredUsername() {
     const storedUsername = localStorage.getItem(usernameKey);
     if (storedUsername) {
-      this.clanTag = localStorage.getItem(clanTagKey) ?? "";
+      if (!this.onCrazyGames) {
+        this.clanTag = localStorage.getItem(clanTagKey) ?? "";
+      }
       this.baseUsername = storedUsername;
       this.validateAndStore();
       this.startClanCheck();
@@ -137,7 +142,7 @@ export class UsernameInput extends LitElement {
   render() {
     return html`
       <div class="flex items-center w-full h-full gap-2">
-        <div class="relative flex items-center shrink-0">
+        <div class="no-crazygames relative flex items-center shrink-0">
           <input
             type="text"
             .value=${this.clanTag}
@@ -276,7 +281,9 @@ export class UsernameInput extends LitElement {
     this._isValid = result.isValid;
     if (result.isValid) {
       localStorage.setItem(usernameKey, trimmedBase);
-      localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
+      if (!this.onCrazyGames) {
+        localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
+      }
       this.validationError = "";
     } else {
       this.validationError = result.error ?? "";

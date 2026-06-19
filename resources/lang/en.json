@@ -429,6 +429,7 @@
     "sent_emoji": "Sent {name}: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "trade_ship_captured": "Your trade ship was captured by {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
     "wants_to_renew_alliance": "{name} wants to renew your alliance"
@@ -529,6 +530,8 @@
     "colored_names_label": "Name color",
     "coordinate_grid_opacity_desc": "How opaque the coordinate grid is (lower lets more things show through)",
     "coordinate_grid_opacity_label": "Coordinate grid opacity",
+    "fallout_desc": "Show the green nuclear fallout glow on irradiated territory. Disable to improve performance",
+    "fallout_label": "Fallout effects",
     "highlight_brighten_desc": "How strongly the border brightens on hover (0 to disable)",
     "highlight_brighten_label": "Border highlight amount",
     "highlight_fill_desc": "How strongly territory brightens on hover (0 to disable)",
