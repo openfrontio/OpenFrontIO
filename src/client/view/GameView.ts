@@ -913,7 +913,6 @@ export class GameView implements GameMap {
     ) as Array<{
       unit: UnitView;
       distSquared: number;
-      euclideanDist: number;
     }>;
   }
 
