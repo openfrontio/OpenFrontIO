@@ -13,7 +13,6 @@ import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { GameID } from "../../Schemas";
 import { simpleHash } from "../../Util";
-import { MirvExecution } from "../MIRVExecution";
 import { NationExecution } from "../NationExecution";
 import { NukeExecution } from "../NukeExecution";
 import { PlayerExecution } from "../PlayerExecution";
@@ -298,21 +297,14 @@ export class InvasionExecution implements Execution {
     strike: InvasionNuke[],
   ): void {
     for (const nuke of strike) {
+      const type = nuke === "atom" ? UnitType.AtomBomb : UnitType.HydrogenBomb;
+      if (this.mg.config().isUnitDisabled(type)) continue;
       const dst = this.pickEnemyLandTarget();
       if (dst === null) return;
-      if (nuke === "mirv") {
-        if (this.mg.config().isUnitDisabled(UnitType.MIRV)) continue;
-        owner.addGold(this.mg.unitInfo(UnitType.MIRV).cost(this.mg, owner));
-        this.mg.addExecution(new MirvExecution(owner, dst, srcTile));
-      } else {
-        const type =
-          nuke === "atom" ? UnitType.AtomBomb : UnitType.HydrogenBomb;
-        if (this.mg.config().isUnitDisabled(type)) continue;
-        owner.addGold(this.mg.unitInfo(type).cost(this.mg, owner));
-        this.mg.addExecution(
-          new NukeExecution(type, owner, dst, srcTile, -1, 0, true, true),
-        );
-      }
+      owner.addGold(this.mg.unitInfo(type).cost(this.mg, owner));
+      this.mg.addExecution(
+        new NukeExecution(type, owner, dst, srcTile, -1, 0, true, true),
+      );
     }
   }
 
@@ -326,6 +318,8 @@ export class InvasionExecution implements Execution {
     if (active.length < MAX_INVADER_NATIONS) {
       const info = this.createInvaderInfo();
       const invader = this.mg.addPlayer(info, ColoredTeams.Invaders);
+      // Set the prize pot precisely, independent of the lobby "starting gold".
+      invader.removeGold(invader.gold());
       invader.addGold(invaderStartingGold(elapsed));
       this.invaders.push(info);
       return invader;

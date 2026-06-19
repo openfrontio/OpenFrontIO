@@ -50,12 +50,13 @@ describe("InvasionConfig.boatTroops", () => {
 });
 
 describe("InvasionConfig.invaderStartingGold", () => {
-  test("starts at a few thousand, rises, and is capped at 1m", () => {
-    expect(invaderStartingGold(0)).toBe(3_000n);
+  test("starts at 250k, rises past 1m, and is capped at 2m", () => {
+    expect(invaderStartingGold(0)).toBe(250_000n);
+    expect(invaderStartingGold(10 * MIN)).toBeGreaterThanOrEqual(1_000_000n);
     expect(invaderStartingGold(10 * MIN)).toBeGreaterThan(
       invaderStartingGold(1 * MIN),
     );
-    expect(invaderStartingGold(10_000 * MIN)).toBeLessThanOrEqual(1_000_000n);
+    expect(invaderStartingGold(10_000 * MIN)).toBeLessThanOrEqual(2_000_000n);
   });
 
   test("rises monotonically toward the cap", () => {
@@ -69,8 +70,8 @@ describe("InvasionConfig.invaderStartingGold", () => {
 });
 
 describe("InvasionConfig.maxima", () => {
-  test("ten nations, three boats each", () => {
-    expect(MAX_INVADER_NATIONS).toBe(10);
+  test("twelve nations, three boats each", () => {
+    expect(MAX_INVADER_NATIONS).toBe(12);
     expect(INVADER_BOAT_MAX).toBe(3);
   });
 });
@@ -85,18 +86,21 @@ describe("InvasionConfig.warshipCount", () => {
     }
   });
 
-  test("is weighted toward 0 and 1", () => {
+  test("is weighted very heavily toward 0 and 1; 2 and 3 are rare", () => {
     const rng = new PseudoRandom(7);
     const counts = [0, 0, 0, 0];
     const samples = 4000;
     for (let i = 0; i < samples; i++) {
       counts[warshipCount(rng)]++;
     }
-    // Most waves should arrive with 0 or 1 escorts.
-    expect((counts[0] + counts[1]) / samples).toBeGreaterThan(0.6);
-    expect(counts[0]).toBeGreaterThan(counts[3]);
+    // The vast majority of waves arrive with 0 or 1 escorts.
+    expect((counts[0] + counts[1]) / samples).toBeGreaterThan(0.8);
+    // 2 and 3 escorts together stay uncommon, with 3 rarest of all.
+    expect((counts[2] + counts[3]) / samples).toBeLessThan(0.2);
+    expect(counts[1]).toBeGreaterThan(counts[2]);
+    expect(counts[2]).toBeGreaterThan(counts[3]);
     const avg = (counts[1] + 2 * counts[2] + 3 * counts[3]) / samples;
-    expect(avg).toBeLessThan(1.5);
+    expect(avg).toBeLessThan(1);
   });
 });
 
@@ -109,36 +113,35 @@ describe("InvasionConfig.selectInvasionStrike", () => {
     }
   });
 
-  test("at minute 1: only single atoms/hydrogens, never a MIRV", () => {
+  test("at minute 1: only single atoms or hydrogens", () => {
     const rng = new PseudoRandom(11);
     for (let i = 0; i < 2000; i++) {
       const strike = selectInvasionStrike(1 * MIN, rng);
-      expect(strike).not.toContain("mirv");
       if (strike[0] === "atom") expect(strike.length).toBe(1);
       if (strike[0] === "hydrogen") expect(strike.length).toBe(1);
     }
   });
 
-  test("MIRVs never appear before minute 4", () => {
+  test("only ever launches atoms or hydrogens (no MIRVs)", () => {
     const rng = new PseudoRandom(99);
-    for (let i = 0; i < 3000; i++) {
-      expect(selectInvasionStrike(3 * MIN, rng)).not.toContain("mirv");
+    for (const m of [1, 4, 10, 20, 60, 200]) {
+      for (let i = 0; i < 1000; i++) {
+        for (const nuke of selectInvasionStrike(m * MIN, rng)) {
+          expect(["atom", "hydrogen"]).toContain(nuke);
+        }
+      }
     }
   });
 
-  test("by minute 10: atoms barrage (5), hydrogens (2), rare MIRVs appear", () => {
+  test("by minute 10: atom barrages (5) and hydrogen salvos (2) appear", () => {
     const rng = new PseudoRandom(123);
-    let mirvs = 0;
     let sawHydrogen2 = false;
     let sawAtom5 = false;
     const samples = 8000;
     for (let i = 0; i < samples; i++) {
       const strike = selectInvasionStrike(10 * MIN, rng);
       if (strike.length === 0) continue;
-      if (strike[0] === "mirv") {
-        expect(strike.length).toBe(1);
-        mirvs++;
-      } else if (strike[0] === "hydrogen") {
+      if (strike[0] === "hydrogen") {
         expect(strike.length).toBe(2);
         sawHydrogen2 = true;
       } else {
@@ -148,9 +151,6 @@ describe("InvasionConfig.selectInvasionStrike", () => {
     }
     expect(sawAtom5).toBe(true);
     expect(sawHydrogen2).toBe(true);
-    // ~3% of boats fire a MIRV once the tier is reached.
-    expect(mirvs).toBeGreaterThan(0);
-    expect(mirvs / samples).toBeLessThan(0.1);
   });
 
   test("missile counts never exceed their caps deep into the game", () => {
@@ -158,9 +158,9 @@ describe("InvasionConfig.selectInvasionStrike", () => {
     for (let i = 0; i < 4000; i++) {
       const strike = selectInvasionStrike(120 * MIN, rng);
       if (strike[0] === "atom") expect(strike.length).toBeLessThanOrEqual(8);
-      if (strike[0] === "hydrogen")
+      if (strike[0] === "hydrogen") {
         expect(strike.length).toBeLessThanOrEqual(3);
-      if (strike[0] === "mirv") expect(strike.length).toBe(1);
+      }
     }
   });
 });

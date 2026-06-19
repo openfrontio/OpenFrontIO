@@ -18,7 +18,7 @@ const TICKS_PER_MINUTE = 600;
 // Up to this many distinct invader nations exist at once; once the cap is hit
 // they reuse existing nations (each fielding up to INVADER_BOAT_MAX boats)
 // rather than spawning more.
-export const MAX_INVADER_NATIONS = 10;
+export const MAX_INVADER_NATIONS = 12;
 export const INVADER_BOAT_MAX = 3;
 
 // Boat cadence: ~1 every 15s early, ramping down to the 2s floor by 20 min.
@@ -36,26 +36,26 @@ const TROOPS_PEAK_TICKS = 20 * TICKS_PER_MINUTE;
 const TROOPS_LINEAR_PER_MINUTE = 10_000; // growth past minute 20
 const TROOPS_PER_WAVE_BONUS = 200; // each successive boat lands a touch more
 
-// Per-nation starting gold follows a saturating (plateau) curve: a few thousand
-// early, asymptotically approaching the 1m cap. Captured wholesale when the
-// nation is conquered, so later invaders are richer prizes.
-const GOLD_START = 3_000;
-const GOLD_CAP = 1_000_000;
-const GOLD_HALF_TICKS = 6 * TICKS_PER_MINUTE; // ~half the cap reached by min 6
+// Per-nation starting gold follows a saturating (plateau) curve, independent of
+// the lobby "starting gold" setting: a flat 250k early, climbing toward the 2m
+// cap (~1m by minute 10). Captured wholesale when the nation is conquered, so
+// later invaders are far richer prizes.
+const GOLD_START = 250_000;
+const GOLD_CAP = 2_000_000;
+const GOLD_HALF_TICKS = 10 * TICKS_PER_MINUTE; // ~half the cap reached by min 10
 
 // Missile escalation. Missiles begin one minute into the invasion and a single
 // strike "package" (the highest tier that passes its roll) is launched per
 // boat. Chances/counts ramp early then plateau; the relentless troop growth is
-// what keeps the late game lethal.
+// what keeps the late game lethal. MIRVs are deliberately excluded — atom and
+// hydrogen barrages alone carry the bombardment.
 const STRIKE_START_TICKS = 1 * TICKS_PER_MINUTE;
 const ATOM_CHANCE = 50; // constant % once strikes begin
 const HYDROGEN_MAX_CHANCE = 12;
 const HYDROGEN_MAX_COUNT = 3;
 const ATOM_MAX_COUNT = 8;
-const MIRV_START_TICKS = 4 * TICKS_PER_MINUTE; // MIRVs only after minute 4
-const MIRV_MAX_CHANCE = 5;
 
-export type InvasionNuke = "atom" | "hydrogen" | "mirv";
+export type InvasionNuke = "atom" | "hydrogen";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -122,14 +122,15 @@ export function invaderStartingGold(elapsedTicks: number): Gold {
 
 /**
  * Number of escort warships (0-3) accompanying a wave. Time-independent and
- * weighted heavily toward 0 and 1 so most waves arrive lightly escorted.
+ * weighted very heavily toward 0 and 1 — 2 is uncommon and 3 is rare — so the
+ * map is never flooded with warships, especially early on.
  */
 export function warshipCount(random: PseudoRandom): number {
   const roll = random.nextInt(0, 100);
-  if (roll < 45) return 0; // 45%
-  if (roll < 75) return 1; // 30%
-  if (roll < 92) return 2; // 17%
-  return 3; // 8%
+  if (roll < 55) return 0; // 55%
+  if (roll < 88) return 1; // 33%
+  if (roll < 97) return 2; // 9%
+  return 3; // 3%
 }
 
 function atomCount(elapsedTicks: number): number {
@@ -171,25 +172,11 @@ function hydrogenCount(elapsedTicks: number): number {
   return clamp(c, 1, HYDROGEN_MAX_COUNT);
 }
 
-function mirvChance(elapsedTicks: number): number {
-  // 0% until minute 4, ramping to 3% at minute 10, then up to the cap.
-  if (elapsedTicks < MIRV_START_TICKS) return 0;
-  let c = ramp(elapsedTicks, MIRV_START_TICKS, 0, 10 * TICKS_PER_MINUTE, 3);
-  if (elapsedTicks > 10 * TICKS_PER_MINUTE) {
-    c =
-      3 +
-      Math.floor(
-        (elapsedTicks - 10 * TICKS_PER_MINUTE) / (10 * TICKS_PER_MINUTE),
-      );
-  }
-  return clamp(c, 0, MIRV_MAX_CHANCE);
-}
-
 /**
  * The missile package launched by a single boat as it spawns, or an empty list
- * if it carries none. The highest tier that passes its roll wins: a rare MIRV,
- * else a small hydrogen salvo, else an atom barrage. Returns concrete warhead
- * types so the caller can fire one execution each from the spawn tile.
+ * if it carries none. The higher tier that passes its roll wins: a small
+ * hydrogen salvo, else an atom barrage. Returns concrete warhead types so the
+ * caller can fire one execution each from the spawn tile.
  */
 export function selectInvasionStrike(
   elapsedTicks: number,
@@ -197,10 +184,6 @@ export function selectInvasionStrike(
 ): InvasionNuke[] {
   if (elapsedTicks < STRIKE_START_TICKS) return [];
 
-  const mc = mirvChance(elapsedTicks);
-  if (mc > 0 && random.nextInt(0, 100) < mc) {
-    return ["mirv"];
-  }
   if (random.nextInt(0, 100) < hydrogenChance(elapsedTicks)) {
     return new Array<InvasionNuke>(hydrogenCount(elapsedTicks)).fill(
       "hydrogen",
