@@ -296,7 +296,10 @@ export class AttackExecution implements Execution {
       if (this.map.ownerID(tileToConquer) !== this.targetSmallID || !onBorder) {
         continue;
       }
-      if (!this.map.isLand(tileToConquer)) {
+      if (
+        !this.map.isLand(tileToConquer) ||
+        this.map.isImpassable(tileToConquer)
+      ) {
         continue;
       }
       this.addNeighbors(tileToConquer);
@@ -341,6 +344,7 @@ export class AttackExecution implements Execution {
       const neighbor = this.nbuf[i];
       if (
         this.map.isWater(neighbor) ||
+        this.map.isImpassable(neighbor) ||
         this.map.ownerID(neighbor) !== this.targetSmallID
       ) {
         continue;

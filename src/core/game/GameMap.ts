@@ -15,6 +15,7 @@ export interface GameMap {
   isValidCoord(x: number, y: number): boolean;
   // Terrain getters
   isLand(ref: TileRef): boolean;
+  isImpassable(ref: TileRef): boolean;
   isOceanShore(ref: TileRef): boolean;
   isOcean(ref: TileRef): boolean;
   isShoreline(ref: TileRef): boolean;
@@ -118,6 +119,11 @@ export class GameMapImpl implements GameMap {
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
   private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
+  // Land tiles with magnitude == IMPASSABLE_MAGNITUDE are impassable terrain:
+  // solid ground that cannot be owned, attacked, or nuked, and that nuke
+  // trajectories cannot cross. Rendered as the map background colour so the
+  // map appears non-rectangular.
+  private static readonly IMPASSABLE_MAGNITUDE = 31;
 
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_MASK = 0xfff;
@@ -207,6 +213,14 @@ export class GameMapImpl implements GameMap {
     return Boolean(this.terrain[ref] & (1 << GameMapImpl.IS_LAND_BIT));
   }
 
+  isImpassable(ref: TileRef): boolean {
+    return (
+      this.isLand(ref) &&
+      (this.terrain[ref] & GameMapImpl.MAGNITUDE_MASK) ===
+        GameMapImpl.IMPASSABLE_MAGNITUDE
+    );
+  }
+
   isOceanShore(ref: TileRef): boolean {
     if (!this.isLand(ref)) {
       return false;
@@ -237,7 +251,7 @@ export class GameMapImpl implements GameMap {
   }
 
   setWater(ref: TileRef): void {
-    if (!this.isLand(ref)) return;
+    if (!this.isLand(ref) || this.isImpassable(ref)) return;
     this.terrain[ref] = 0; // Lake water: no land, no ocean, no shoreline, magnitude 0
     this.numLandTiles_--;
   }
@@ -349,6 +363,8 @@ export class GameMapImpl implements GameMap {
   terrainType(ref: TileRef): TerrainType {
     if (this.isLand(ref)) {
       const magnitude = this.magnitude(ref);
+      if (magnitude >= GameMapImpl.IMPASSABLE_MAGNITUDE)
+        return TerrainType.Impassable;
       if (magnitude < 10) return TerrainType.Plains;
       if (magnitude < 20) return TerrainType.Highland;
       return TerrainType.Mountain;

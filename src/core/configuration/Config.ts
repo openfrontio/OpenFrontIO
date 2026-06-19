@@ -588,6 +588,8 @@ export class Config {
         mag = 120;
         speed = 25;
         break;
+      case TerrainType.Impassable:
+        throw new Error(`impassable terrain cannot be attacked`);
       default:
         throw new Error(`terrain type ${type} not supported`);
     }
