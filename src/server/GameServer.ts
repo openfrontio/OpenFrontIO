@@ -213,7 +213,7 @@ export class GameServer {
     }
 
     // OFM: if an allowlist is set, only those publicIds may join. Re-checked on
-    // every join attempt 
+    // every join attempt
     const allowedPublicIds = this.gameConfig.allowedPublicIds;
     if (
       allowedPublicIds !== undefined &&

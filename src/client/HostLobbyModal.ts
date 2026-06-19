@@ -1022,12 +1022,15 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
-  // Comma/space/newline-separated publicIds, or undefined when empty (no allowlist).
+  // Comma/space/newline-separated publicIds, capped at the 200 the schema
+  // allows so a large paste can't make the config update fail validation.
+  // Undefined when empty (no allowlist).
   private parseAllowedPublicIds(): string[] | undefined {
     const ids = this.allowedPublicIds
       .split(/[\s,]+/)
       .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+      .filter((s) => s.length > 0)
+      .slice(0, 200);
     return ids.length > 0 ? ids : undefined;
   }
 

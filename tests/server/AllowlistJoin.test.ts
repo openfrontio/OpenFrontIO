@@ -67,6 +67,7 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   function makeGame(allowedPublicIds?: string[]) {
