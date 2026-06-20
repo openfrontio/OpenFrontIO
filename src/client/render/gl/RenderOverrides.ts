@@ -1,5 +1,6 @@
 import type { GraphicsOverrides } from "./GraphicsOverrides";
 import { createThemeSettings, type RenderSettings } from "./RenderSettings";
+import { hexToRgb } from "./utils/ColorUtils";
 
 /**
  * Apply the user's graphics overrides onto a RenderSettings in place: name
@@ -63,6 +64,15 @@ export function applyGraphicsOverrides(
   if (overrides.mapOverlay?.coordinateGridOpacity !== undefined) {
     settings.mapOverlay.coordinateGridOpacity =
       overrides.mapOverlay.coordinateGridOpacity;
+  }
+  if (overrides.mapOverlay?.staleNukeColor !== undefined) {
+    // hexToRgb yields 0-255 channels; the stale-nuke uniforms are 0-1 floats.
+    const rgb = hexToRgb(overrides.mapOverlay.staleNukeColor);
+    if (rgb !== null) {
+      settings.mapOverlay.staleNukeR = rgb[0] / 255;
+      settings.mapOverlay.staleNukeG = rgb[1] / 255;
+      settings.mapOverlay.staleNukeB = rgb[2] / 255;
+    }
   }
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;

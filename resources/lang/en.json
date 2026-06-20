@@ -547,6 +547,8 @@
     "name_cull_desc": "Hide names smaller than this size",
     "name_cull_label": "Minimum name size",
     "name_scale_label": "Name Scale",
+    "nuke_color_desc": "Color of the fallout tint left on territory after a nuke.",
+    "nuke_color_label": "Nuke fallout color",
     "ocean_color_desc": "Base color of ocean.",
     "ocean_color_label": "Ocean color",
     "rail_distance_desc": "How far zoomed out train tracks remain visible",

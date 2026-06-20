@@ -27,6 +27,9 @@ export const GraphicsOverridesSchema = z
         territorySaturation: z.number(),
         territoryAlpha: z.number(),
         coordinateGridOpacity: z.number(),
+        // "#rrggbb" hex string; overrides the lingering fallout ground tint
+        // left on territory after a nuke.
+        staleNukeColor: z.string(),
       })
       .partial(),
     railroad: z
