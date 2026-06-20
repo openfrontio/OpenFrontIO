@@ -74,10 +74,18 @@ export class EventsDisplay extends LitElement implements Controller {
   private _eventsContainer?: HTMLDivElement;
   private _shouldScrollToBottom = true;
 
+  @query(".important-events-container")
+  private _importantEventsContainer?: HTMLDivElement;
+  private _shouldScrollImportantToBottom = true;
+
   updated(changed: Map<string, unknown>) {
     super.updated(changed);
     if (this._eventsContainer && this._shouldScrollToBottom) {
       this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
+    }
+    if (this._importantEventsContainer && this._shouldScrollImportantToBottom) {
+      this._importantEventsContainer.scrollTop =
+        this._importantEventsContainer.scrollHeight;
     }
   }
 
@@ -170,6 +178,14 @@ export class EventsDisplay extends LitElement implements Controller {
         el.scrollHeight - el.scrollTop - el.clientHeight < 5;
     } else {
       this._shouldScrollToBottom = true;
+    }
+
+    if (this._importantEventsContainer) {
+      const el = this._importantEventsContainer;
+      this._shouldScrollImportantToBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 5;
+    } else {
+      this._shouldScrollImportantToBottom = true;
     }
 
     if (!this._isVisible && !this.game.inSpawnPhase()) {
@@ -640,7 +656,7 @@ export class EventsDisplay extends LitElement implements Controller {
         ${tier1Events.length > 0 || showBetrayalTimer
           ? html`
               <div
-                class="bg-gray-800 backdrop-blur-sm rounded-lg shadow-lg border-l-4 border-red-500"
+                class="bg-gray-800 backdrop-blur-sm max-h-[30vh] lg:max-h-[40vh] overflow-y-auto rounded-lg shadow-lg border-l-4 border-red-500 important-events-container"
               >
                 <table
                   class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"
