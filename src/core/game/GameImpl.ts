@@ -854,6 +854,10 @@ export class GameImpl implements Game {
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this._winner = winner;
+    // OFM: snapshot final tiles for standings (bots skipped in recordFinalTiles).
+    for (const player of this.players()) {
+      this.stats().recordFinalTiles(player, player.numTilesOwned());
+    }
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: this.makeWinner(winner),
@@ -1256,6 +1260,9 @@ export class GameImpl implements Game {
       // Record stats
       this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
+
+    // OFM: per-kill log for standings (humans-only filtered in recordKill).
+    this.stats().recordKill(conqueror, conquered, this.ticks());
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
