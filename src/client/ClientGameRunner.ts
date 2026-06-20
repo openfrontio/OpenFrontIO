@@ -72,6 +72,7 @@ import {
   deepAssign,
   MapRenderer,
   preloadAtlasData,
+  renderDpr,
   type RenderSettings,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
@@ -352,7 +353,7 @@ function mountWebGLFrameLoop(
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = renderDpr();
     const centerX =
       transformHandler.offsetX +
       mapWidth / 2 +
@@ -521,6 +522,14 @@ async function createClientGame(
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
+      { signal: graphicsListenerAbort.signal },
+    );
+
+    // Re-resolve names drawn on the map when the anonymous-names setting toggles
+    // so they switch live, like the leaderboard.
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.anonymousNames`,
+      () => webglBuilder.refreshNames(gameView),
       { signal: graphicsListenerAbort.signal },
     );
 

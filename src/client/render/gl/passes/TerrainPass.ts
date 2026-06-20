@@ -91,6 +91,9 @@ export class TerrainPass {
    * nuke). `bytes[i]` is the new terrain byte for `refs[i]` (parallel arrays).
    * One 1×1 texSubImage2D per ref — fine for the small bursts a single nuke
    * produces.
+   *
+   * Also writes back into `terrainBytes` so a later full re-upload (e.g.
+   * setOceanColor) reflects these conversions instead of reverting them.
    */
   applyTerrainDelta(refs: readonly number[], bytes: Uint8Array): void {
     if (refs.length === 0) return;
@@ -101,6 +104,7 @@ export class TerrainPass {
       const ref = refs[i];
       const x = ref % this.mapW;
       const y = (ref - x) / this.mapW;
+      this.terrainBytes[ref] = bytes[i];
       encodeTerrainTile(bytes[i], this.pixelScratch, 0, this.oceanColor);
       gl.texSubImage2D(
         gl.TEXTURE_2D,

@@ -86,11 +86,20 @@ If you are doing work in image editing software or using automated tools, `./map
 - `Pixel` -> `Terrain Type & Magnitude` mapping in `GenerateMap`
 - `Terrain Type` -> `Thumbnail Color` mapping in `getThumbnailColor`
 
-In-Game, terrain is rendered using themes. The color of a tile is determined dynamically based on
-its **Terrain Type** and **Magnitude**. Theme Files:
+### Impassable Terrain
 
-- `../src/core/configuration/PastelTheme.ts` (Light)
-- `../src/core/configuration/PastelThemeDark.ts` (Dark).
+Pure black pixels (`#000000` / `rgb(0, 0, 0)` with alpha ≥ 20) are encoded as **impassable terrain**. This is a solid, static void that:
+
+- Cannot be owned, attacked, or nuked.
+- Nuke trajectories cannot pass over it (just as they cannot leave the map border).
+- Renders as the map background colour, making the map appear non-rectangular.
+
+Use impassable terrain to carve out non-rectangular map shapes or to create barriers that divide regions without water.
+
+In-Game, the color of a tile is determined dynamically based on its **Terrain Type** and **Magnitude**.
+
+- Ocean default color definition: `../src/client/render/gl/render-settings.json` (user changeable via settings)
+- Terrain color calculations: `../src/client/render/gl/utils/ColorUtils.ts#L50`
 
 ## Create info.json
 

@@ -243,9 +243,6 @@ export class Config {
   trainStationMaxRange(): number {
     return 110;
   }
-  railroadMaxSize(): number {
-    return this.trainStationMaxRange();
-  }
 
   tradeShipGold(dist: number, player: Player | PlayerView): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
@@ -588,6 +585,8 @@ export class Config {
         mag = 120;
         speed = 25;
         break;
+      case TerrainType.Impassable:
+        throw new Error(`impassable terrain cannot be attacked`);
       default:
         throw new Error(`terrain type ${type} not supported`);
     }

@@ -107,14 +107,20 @@ export class NukeExecution implements Execution {
             const threshold = radiiSq[i0] * (1 - frac) + radiiSq[i1] * frac;
             if (d2 > threshold) continue;
           }
-          result.add(this.mg.ref(px, py));
+          const tile = this.mg.ref(px, py);
+          if (this.mg.isImpassable(tile)) continue;
+          result.add(tile);
         }
       }
       this.tilesToDestroyCache = result;
     } else {
       this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
         const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-        return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
+        return (
+          d2 <= outer2 &&
+          (d2 <= inner2 || rand.chance(2)) &&
+          !this.mg.isImpassable(n)
+        );
       });
     }
     return this.tilesToDestroyCache;
@@ -184,6 +190,17 @@ export class NukeExecution implements Execution {
         return;
       }
       this.src = spawn;
+      // Nuke trajectories cannot pass over impassable terrain, just as they
+      // cannot exceed the map border. Check the full parabola path before
+      // launching; if any tile is impassable, abort the launch.
+      const path = this.pathFinder.findPath(spawn, this.dst) ?? [];
+      for (const tile of path) {
+        if (this.mg.isImpassable(tile)) {
+          console.warn(`nuke trajectory crosses impassable terrain`);
+          this.active = false;
+          return;
+        }
+      }
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
