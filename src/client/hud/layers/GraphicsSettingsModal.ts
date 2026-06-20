@@ -1155,6 +1155,33 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             </div>
 
             <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.nuke_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.nuke_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${nukeColor}
+                placeholder=${NUKE_COLOR_DEFAULT}
+                spellcheck="false"
+                @change=${this.onNukeColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${nukeColor}
+                @input=${this.onNukeColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
             >
               ${translateText("graphics_setting.section_effects")}
@@ -1197,33 +1224,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                   : translateText("user_setting.off")}
               </div>
             </button>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.nuke_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.nuke_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${nukeColor}
-                placeholder=${NUKE_COLOR_DEFAULT}
-                spellcheck="false"
-                @change=${this.onNukeColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${nukeColor}
-                @input=${this.onNukeColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
 
             <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
