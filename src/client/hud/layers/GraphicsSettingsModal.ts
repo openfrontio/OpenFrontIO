@@ -609,11 +609,11 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
     return html`
       <div
-        class="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
+        class="modal-overlay fixed inset-0 z-2000 flex items-center p-4 left-0 top-0 h-full w-fit"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto"
+          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md h-full overflow-y-auto"
         >
           <div
             class="flex items-center justify-between p-4 border-b border-slate-600"
