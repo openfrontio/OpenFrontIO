@@ -107,6 +107,7 @@ void main() {
     int local = int(uLocalPlayerID);
     float u = (vOwnerID + 0.5) / float(PALETTE_SIZE);
     fillColor = texture(uPalette, vec2(u, 0.25));
+    // if local player, use territory color because the border color is grey
     borderColor = texture(uPalette, vec2(u, owner == local ? 0.25 : 0.75));
     // Darken via HSV value so hue/saturation stay intact
     // vScale < 1.0 = darker, > 1.0 = brighter
