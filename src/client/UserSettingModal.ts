@@ -11,10 +11,16 @@ import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
+import { EventBus } from "../core/EventBus";
+import { ShowGraphicsSettingsModalEvent } from "./hud/layers/GraphicsSettingsModal";
+import { assetUrl } from "../core/AssetUrls";
+
+const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
   protected routerName = "settings";
+  public eventBus?: EventBus;
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 
@@ -744,8 +750,42 @@ export class UserSettingModal extends BaseModal {
     `;
   }
 
+  private onGraphicsSettingsButtonClick() {
+    if (this.eventBus) {
+      this.eventBus.emit(
+        new ShowGraphicsSettingsModalEvent(
+          true,
+          false,
+          false,
+        ),
+      );
+      this.close();
+    }
+  }
+
   private renderBasicSettings() {
     return html`
+      <!-- 🖥️ Graphics Settings -->
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 bg-slate-700/30 hover:bg-slate-700/70 border border-slate-600/50 hover:border-slate-500 rounded-lg text-white transition-all duration-200 shadow-sm mb-2"
+        @click="${this.onGraphicsSettingsButtonClick}"
+      >
+        <img
+          src=${settingsIcon}
+          alt="graphicsSettings"
+          width="20"
+          height="20"
+        />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.graphics_settings_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.graphics_settings_desc")}
+          </div>
+        </div>
+      </button>
+
       <!-- 🎨 Colorblind Mode -->
       <setting-toggle
         label="${translateText("user_setting.colorblind_label")}"

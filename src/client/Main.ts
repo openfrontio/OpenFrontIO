@@ -54,6 +54,7 @@ import {
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
+import { GraphicsSettingsModal } from "./hud/layers/GraphicsSettingsModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import {
@@ -519,7 +520,21 @@ class Client {
     ) as UserSettingModal;
     if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
       console.warn("User settings modal element not found");
+    } else {
+      settingsModal.eventBus = this.eventBus;
     }
+
+    const graphicsSettingsModal = document.querySelector(
+      "graphics-settings-modal",
+    ) as GraphicsSettingsModal;
+    if (!graphicsSettingsModal || !(graphicsSettingsModal instanceof GraphicsSettingsModal)) {
+      console.warn("Graphics settings modal element not found");
+    } else {
+      graphicsSettingsModal.userSettings = this.userSettings;
+      graphicsSettingsModal.eventBus = this.eventBus;
+      graphicsSettingsModal.init();
+    }
+
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {

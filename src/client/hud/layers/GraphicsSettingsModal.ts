@@ -581,6 +581,61 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private onExportClick() {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.userSettings.graphicsOverrides(), null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "openfront_graphics_settings.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: "Graphics settings exported successfully!", color: "green" }
+        })
+      );
+    } catch (err) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: "Failed to export settings", color: "red" }
+        })
+      );
+    }
+  }
+
+  private onImportClick() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (event: Event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const contents = e.target?.result as string;
+          const parsed = JSON.parse(contents);
+          this.userSettings.setGraphicsOverrides(parsed);
+          this.requestUpdate();
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: { message: "Graphics settings imported successfully!", color: "green" }
+            })
+          );
+        } catch (err) {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: { message: "Failed to import settings: Invalid JSON", color: "red" }
+            })
+          );
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
   render() {
     if (!this.isVisible) return null;
 
@@ -1250,7 +1305,35 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
             </button>
 
-            <div class="border-t border-slate-600 pt-3 mt-4">
+            <div class="border-t border-slate-600 pt-3 mt-4 flex flex-col gap-1">
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                @click=${this.onExportClick}
+              >
+                <div class="flex-1">
+                  <div class="font-medium">
+                    ${translateText("graphics_setting.export_label")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("graphics_setting.export_desc")}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                @click=${this.onImportClick}
+              >
+                <div class="flex-1">
+                  <div class="font-medium">
+                    ${translateText("graphics_setting.import_label")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("graphics_setting.import_desc")}
+                  </div>
+                </div>
+              </button>
+
               <button
                 class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
                 @click=${this.onResetClick}
