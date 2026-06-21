@@ -69,7 +69,9 @@ export class StructurePass {
   private gl: WebGL2RenderingContext;
   private settings: RenderSettings;
   private program: WebGLProgram;
+  private localPlayerID: number;
 
+  private uLocalPlayerID: WebGLUniformLocation;
   private uCamera: WebGLUniformLocation;
   private uZoom: WebGLUniformLocation;
   private uIconSize: WebGLUniformLocation;
@@ -144,6 +146,10 @@ export class StructurePass {
         ATLAS_COLS,
       }),
     );
+    this.uLocalPlayerID = gl.getUniformLocation(
+      this.program,
+      "uLocalPlayerID",
+    )!;
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uZoom = gl.getUniformLocation(this.program, "uZoom")!;
     this.uIconSize = gl.getUniformLocation(this.program, "uIconSize")!;
@@ -270,6 +276,10 @@ export class StructurePass {
     );
   }
 
+  setLocalPlayer(smallID: number): void {
+    this.localPlayerID = smallID;
+  }
+
   updateStructures(units: Map<number, UnitState>): void {
     let count = 0;
 
@@ -343,6 +353,7 @@ export class StructurePass {
 
     const ss = this.settings.structure;
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
+    gl.uniform1f(this.uLocalPlayerID, this.localPlayerID);
     gl.uniform1f(this.uZoom, zoom);
     gl.uniform1f(this.uIconSize, ss.iconSize);
     gl.uniform1f(this.uDotsThreshold, ss.dotsZoomThreshold);
