@@ -331,6 +331,8 @@ const TokenSchema = z
 
 const EmojiSchema = z
   .number()
+  .safe()
+  .int()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
 
@@ -361,18 +363,18 @@ export const AllianceExtensionIntentSchema = z.object({
 export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: ID.nullable(),
-  troops: z.number().nonnegative().nullable(),
+  troops: z.number().safe().int().nonnegative().nullable(),
 });
 
 export const SpawnIntentSchema = z.object({
   type: z.literal("spawn"),
-  tile: z.number(),
+  tile: z.number().safe().int().nonnegative(),
 });
 
 export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
-  troops: z.number().nonnegative(),
-  dst: z.number(),
+  troops: z.number().safe().int().nonnegative(),
+  dst: z.number().safe().int().nonnegative(),
 });
 
 export const AllianceRequestIntentSchema = z.object({
@@ -415,26 +417,26 @@ export const EmbargoAllIntentSchema = z.object({
 export const DonateGoldIntentSchema = z.object({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nonnegative().nullable(),
+  gold: z.number().safe().int().nonnegative().nullable(),
 });
 
 export const DonateTroopIntentSchema = z.object({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troops: z.number().nonnegative().nullable(),
+  troops: z.number().safe().int().nonnegative().nullable(),
 });
 
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  tile: z.number(),
+  tile: z.number().safe().int().nonnegative(),
   rocketDirectionUp: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
-  unitId: z.number(),
+  unitId: z.number().safe().int().nonnegative(),
 });
 
 export const CancelAttackIntentSchema = z.object({
@@ -444,18 +446,18 @@ export const CancelAttackIntentSchema = z.object({
 
 export const CancelBoatIntentSchema = z.object({
   type: z.literal("cancel_boat"),
-  unitID: z.number(),
+  unitID: z.number().safe().int().nonnegative(),
 });
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
-  unitIds: z.array(z.number().int()).nonempty(),
-  tile: z.number(),
+  unitIds: z.array(z.number().safe().int().nonnegative()).nonempty(),
+  tile: z.number().safe().int().nonnegative(),
 });
 
 export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),
-  unitId: z.number(),
+  unitId: z.number().safe().int().nonnegative(),
 });
 
 export const QuickChatIntentSchema = z.object({
@@ -681,8 +683,8 @@ export const ClientSendWinnerSchema = z.object({
 
 export const ClientHashSchema = z.object({
   type: z.literal("hash"),
-  hash: z.number(),
-  turnNumber: z.number(),
+  hash: z.number().safe().int(),
+  turnNumber: z.number().safe().int().nonnegative(),
 });
 
 export const ClientLogMessageSchema = z.object({
@@ -717,7 +719,7 @@ export const ClientRejoinMessageSchema = z.object({
   type: z.literal("rejoin"),
   gameID: ID,
   // Note: clientID is NOT sent - server looks it up from persistentID in token
-  lastTurn: z.number(),
+  lastTurn: z.number().safe().int().nonnegative(),
   token: TokenSchema,
 });
 
