@@ -36,11 +36,30 @@ export const ClanInfoSchema = z.object({
   name: z.string().max(35),
   tag: RequiredClanTagSchema,
   description: z.string().max(200),
+  // Discord invite URL set by the clan leader; null when unset. Optional
+  // because not every ClanInfo source includes it (e.g. browse results).
+  discordUrl: z.string().max(255).nullable().optional(),
   isOpen: z.boolean(),
   createdAt: z.iso.datetime().optional(),
   memberCount: z.number().optional(),
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
+
+// View model for the clan Discord card, assembled client-side from the clan's
+// discordUrl plus Discord's public invite lookup. `valid` is false only when
+// Discord definitively no longer recognises the invite (404 — revoked since
+// the leader saved it); when Discord is unreachable the card degrades to the
+// plain link with valid: true.
+export type ClanDiscord = {
+  url: string;
+  valid: boolean;
+  serverName?: string;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  description?: string | null;
+  onlineCount?: number | null;
+  memberCount?: number | null;
+};
 
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),
