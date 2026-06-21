@@ -725,6 +725,8 @@
     "options_title": "Options",
     "player": "Player",
     "player_immunity_duration": "PVP immunity duration (minutes)",
+    "player_whitelist": "Player Whitelist (public IDs)",
+    "player_whitelist_placeholder": "comma separated",
     "players": "Players",
     "random_spawn": "Random spawn",
     "remove_player": "Remove {username}",

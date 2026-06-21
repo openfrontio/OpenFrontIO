@@ -31,7 +31,7 @@ export class GameManager {
   joinClient(
     client: Client,
     gameID: GameID,
-  ): "joined" | "kicked" | "rejected" | "not_found" {
+  ): "joined" | "kicked" | "rejected" | "not_allowlisted" | "not_found" {
     const game = this.games.get(gameID);
     if (!game) return "not_found";
     return game.joinClient(client);
