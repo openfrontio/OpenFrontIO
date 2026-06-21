@@ -30,19 +30,6 @@ import {
 } from "./ClanShared";
 import { ClanStatsBreakdown } from "./ClanStatsBreakdown";
 
-// discordUrl is validated server-side, but the raw stored string is rendered
-// straight into an href, so coerce anything that isn't http(s) (e.g. a
-// javascript: scheme) to about:blank as defence in depth.
-function safeHttpHref(url: string): string {
-  try {
-    const { protocol } = new URL(url);
-    if (protocol === "http:" || protocol === "https:") return url;
-  } catch {
-    // Unparseable — fall through to the safe default.
-  }
-  return "about:blank";
-}
-
 @customElement("clan-detail-view")
 export class ClanDetailView extends LitElement {
   createRenderRoot() {
@@ -697,7 +684,7 @@ export class ClanDetailView extends LitElement {
                 ${translateText("clan_modal.discord_invite_unavailable")}
               </p>`
             : html`<a
-                href=${safeHttpHref(url)}
+                href=${url}
                 target="_blank"
                 rel="noopener noreferrer"
                 class="mt-4 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold text-white uppercase tracking-wider bg-[#5865F2] hover:bg-[#4752c4] active:bg-[#3c45a5] rounded-xl transition-all shadow-lg shadow-[#5865F2]/20"
