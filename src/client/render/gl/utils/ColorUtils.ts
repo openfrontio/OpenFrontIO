@@ -95,10 +95,11 @@ export function encodeTerrainTile(
       b = v;
     }
   } else if (isShoreline) {
-    // Shoreline water
-    r = 100;
-    g = 143;
-    b = 255;
+    // Shoreline water — computed dynamically based on the ocean color
+    const base = oceanColor ?? DEEP_WATER_BASE;
+    r = Math.min(255, Math.round(base[0] * 1.4));
+    g = Math.min(255, Math.round(base[1] * 1.08));
+    b = Math.min(255, Math.round(base[2] * 1.4));
   } else {
     // Deep water — darkens with depth (magnitude). The base color sets the
     // shallowest (brightest) shade; the per-depth gradient is preserved by
