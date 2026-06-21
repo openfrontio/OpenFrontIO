@@ -258,7 +258,7 @@ export class AccountModal extends BaseModal {
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
-          ${this.renderCurrency()} ${this.renderLinkGoogleButton()}
+          ${this.renderCurrency()} ${this.renderGoogleLink()}
           ${this.renderLogoutButton()}
         </div>
       `;
@@ -281,12 +281,36 @@ export class AccountModal extends BaseModal {
               account_name: me.email,
             })}
           </div>
-          ${this.renderCurrency()} ${this.renderLinkGoogleButton()}
+          ${this.renderCurrency()} ${this.renderGoogleLink()}
           ${this.renderLogoutButton()}
         </div>
       `;
     }
     return html``;
+  }
+
+  // Show the Google link state: a confirmation line when a Google account is
+  // already linked, otherwise the button to link one.
+  private renderGoogleLink(): TemplateResult {
+    const google = this.userMeResponse?.user?.google;
+    if (google) {
+      const label = google.email
+        ? translateText("account_modal.linked_to_google_email", {
+            email: google.email,
+          })
+        : translateText("account_modal.linked_to_google");
+      return html`
+        <div class="flex items-center gap-2 text-white/70 text-sm">
+          <img
+            src=${assetUrl("images/GoogleLogo.svg")}
+            alt=${translateText("account_modal.google_alt")}
+            class="w-4 h-4"
+          />
+          <span>${label}</span>
+        </div>
+      `;
+    }
+    return this.renderLinkGoogleButton();
   }
 
   // Shown when logged in without a Google identity yet. Lets the user attach
@@ -388,7 +412,7 @@ export class AccountModal extends BaseModal {
             >
               <img
                 src=${assetUrl("images/GoogleLogo.svg")}
-                alt="Google"
+                alt=${translateText("account_modal.google_alt")}
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
