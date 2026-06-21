@@ -296,9 +296,7 @@ export async function updateClan(
   patch: {
     name?: string;
     description?: string;
-    // null clears the stored link (the documented "unset" value); an empty
-    // string would instead fail server-side Discord-invite validation.
-    discordUrl?: string | null;
+    discordUrl?: string;
     isOpen?: boolean;
   },
 ): Promise<ClanInfo | { error: string }> {
@@ -376,14 +374,10 @@ function discordCdnAsset(
 // metadata) rather than misreporting the invite as dead; only a definitive
 // Discord 404 yields valid: false.
 export async function fetchDiscordInvite(url: string): Promise<ClanDiscord> {
-  // The server stores the normalised short form https://discord.gg/{code},
-  // but handle the long discord.com/invite/{code} form too: there the code is
-  // the segment after "invite" rather than the first one.
+  // The server stores the normalised short form https://discord.gg/{code}.
   let code: string | undefined;
   try {
-    const segments = new URL(url).pathname.split("/").filter(Boolean);
-    const inviteIdx = segments.indexOf("invite");
-    code = inviteIdx >= 0 ? segments[inviteIdx + 1] : segments[0];
+    code = new URL(url).pathname.split("/").filter(Boolean)[0];
   } catch {
     // Unparseable stored URL — fall through to the plain link.
   }

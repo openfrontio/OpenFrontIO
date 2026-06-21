@@ -116,18 +116,17 @@ export class ClanManageView extends LitElement {
     const patch: {
       name?: string;
       description?: string;
-      discordUrl?: string | null;
+      discordUrl?: string;
       isOpen?: boolean;
     } = {};
     if (this.manageName !== clan.name) patch.name = this.manageName;
     if ((this.manageDescription ?? "") !== (clan.description ?? ""))
       patch.description = this.manageDescription;
     // Discord URL is leader-only; the input only renders for leaders, so this
-    // diff is a no-op for officers (server also enforces it). Send null rather
-    // than "" when the leader clears the field so the stored link is unset.
-    const nextDiscordUrl = this.manageDiscordUrl.trim();
-    if (nextDiscordUrl !== (clan.discordUrl ?? ""))
-      patch.discordUrl = nextDiscordUrl === "" ? null : nextDiscordUrl;
+    // diff is a no-op for officers (server also enforces it). "" clears the
+    // link — the server trims and coerces it to null.
+    if ((this.manageDiscordUrl ?? "") !== (clan.discordUrl ?? ""))
+      patch.discordUrl = this.manageDiscordUrl;
     if (this.manageIsOpen !== (clan.isOpen ?? true))
       patch.isOpen = this.manageIsOpen;
     if (Object.keys(patch).length === 0) return;

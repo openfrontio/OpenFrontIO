@@ -449,17 +449,6 @@ describe("updateClan", () => {
     });
     expect(result).toEqual({ error: "clan_modal.discord_rate_limited" });
   });
-
-  it("sends discordUrl: null to clear the stored link", async () => {
-    const fetchMock = vi.fn(() => okJson(validClan));
-    vi.stubGlobal("fetch", fetchMock);
-    await updateClan("TEST", { discordUrl: null });
-    const [, init] = fetchMock.mock.calls[0] as unknown as [
-      string,
-      { body: string },
-    ];
-    expect(JSON.parse(init.body)).toEqual({ discordUrl: null });
-  });
 });
 
 describe("fetchDiscordInvite", () => {
@@ -493,10 +482,10 @@ describe("fetchDiscordInvite", () => {
     );
   });
 
-  it("parses the code from a discord.com/invite/{code} URL", async () => {
+  it("parses the code from the stored discord.gg/{code} URL", async () => {
     const fetchMock = vi.fn(() => okJson(inviteBody));
     vi.stubGlobal("fetch", fetchMock);
-    await fetchDiscordInvite("https://discord.com/invite/xyz789");
+    await fetchDiscordInvite("https://discord.gg/xyz789");
     const [requestUrl] = fetchMock.mock.calls[0] as unknown as [string];
     expect(requestUrl).toContain("/invites/xyz789");
   });
