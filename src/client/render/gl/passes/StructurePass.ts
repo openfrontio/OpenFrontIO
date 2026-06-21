@@ -69,7 +69,7 @@ export class StructurePass {
   private gl: WebGL2RenderingContext;
   private settings: RenderSettings;
   private program: WebGLProgram;
-  private localPlayerID: number;
+  private localPlayerID = 0;
 
   private uLocalPlayerID: WebGLUniformLocation;
   private uCamera: WebGLUniformLocation;
