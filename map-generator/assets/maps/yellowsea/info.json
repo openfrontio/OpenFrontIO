@@ -2,7 +2,7 @@
   "id": "YellowSea",
   "name": "Yellow Sea",
   "translation_key": "map.yellowsea",
-  "categories": ["new", "asia"],
+  "categories": ["asia"],
   "multiplayer_frequency": 5,
   "nations": [
     {
