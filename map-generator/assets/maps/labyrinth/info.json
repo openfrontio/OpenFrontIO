@@ -2,7 +2,7 @@
   "id": "Labyrinth",
   "name": "Labyrinth",
   "translation_key": "map.labyrinth",
-  "categories": ["new", "arcade"],
+  "categories": ["arcade"],
   "multiplayer_frequency": 6,
   "nations": [
     {

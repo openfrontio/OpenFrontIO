@@ -2,7 +2,7 @@
   "id": "Titan",
   "name": "Titan",
   "translation_key": "map.titan",
-  "categories": ["new", "cosmic"],
+  "categories": ["cosmic"],
   "multiplayer_frequency": 3,
   "nations": [
     {

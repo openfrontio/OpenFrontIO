@@ -80,6 +80,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private whitelistEnabled: boolean = false;
+  @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
@@ -287,6 +289,19 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleStartingGoldToggle}
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.player_whitelist"}
+        .checked=${this.whitelistEnabled}
+        .inputType=${"text"}
+        .inputId=${"allowed-public-ids"}
+        .inputValue=${this.allowedPublicIds}
+        .inputAriaLabel=${translateText("host_modal.player_whitelist")}
+        .inputPlaceholder=${translateText(
+          "host_modal.player_whitelist_placeholder",
+        )}
+        .onToggle=${this.handleWhitelistToggle}
+        .onChange=${this.handleAllowedPublicIdsChange}
       ></toggle-input-card>`,
     ];
 
@@ -583,6 +598,8 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.whitelistEnabled = false;
+    this.allowedPublicIds = "";
     this.waterNukes = false;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
@@ -995,6 +1012,28 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
+  private handleWhitelistToggle = (checked: boolean) => {
+    this.whitelistEnabled = checked;
+    this.putGameConfig();
+  };
+
+  private handleAllowedPublicIdsChange = (e: Event) => {
+    this.allowedPublicIds = (e.target as HTMLInputElement).value;
+    this.putGameConfig();
+  };
+
+  // Comma/space/newline-separated publicIds, capped at the 200 the schema
+  // allows so a large paste can't make the config update fail validation.
+  // Undefined when empty (no allowlist).
+  private parseAllowedPublicIds(): string[] | undefined {
+    const ids = this.allowedPublicIds
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .slice(0, 200);
+    return ids.length > 0 ? ids : undefined;
+  }
+
   private async putGameConfig() {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes
       ? this.spawnImmunityDurationMinutes * 60 * 10
@@ -1036,6 +1075,9 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
             disableAlliances: this.disableAlliances || null,
+            allowedPublicIds: this.whitelistEnabled
+              ? (this.parseAllowedPublicIds() ?? [])
+              : [],
             waterNukes: this.waterNukes ? true : null,
             hostCheats: this.hostCheatsEnabled
               ? {

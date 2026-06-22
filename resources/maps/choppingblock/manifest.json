@@ -142,7 +142,7 @@
       "name": "Honeycomb"
     }
   ],
-  "categories": ["new", "arcade"],
+  "categories": ["arcade"],
   "id": "ChoppingBlock",
   "map": {
     "height": 1616,
