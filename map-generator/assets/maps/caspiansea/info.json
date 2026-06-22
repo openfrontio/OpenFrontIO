@@ -1,0 +1,69 @@
+{
+  "name": "Caspian Sea",
+  "id": "CaspianSea",
+  "translation_key": "map.caspiansea",
+  "categories": ["asia"],
+  "multiplayer_frequency": 6,
+  "nations": [
+    {
+      "coordinates": [969, 384],
+      "name": "Mangystau",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [1009, 1284],
+      "name": "Turkmenistan",
+      "flag": "tm"
+    },
+    {
+      "coordinates": [574, 38],
+      "name": "Atyrau",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [633, 678],
+      "name": "Aktau",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [778, 1734],
+      "name": "Tehran",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [434, 1695],
+      "name": "Gilan",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [9, 1336],
+      "name": "Armenia",
+      "flag": "am"
+    },
+    {
+      "coordinates": [128, 1658],
+      "name": "Tabriz",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [302, 1154],
+      "name": "Azerbaijan",
+      "flag": "az"
+    },
+    {
+      "coordinates": [218, 104],
+      "name": "Astrakhan",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [133, 899],
+      "name": "Dagestan",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [21, 310],
+      "name": "Kalmykia",
+      "flag": "ru"
+    }
+  ]
+}

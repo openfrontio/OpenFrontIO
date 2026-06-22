@@ -25,6 +25,7 @@ export enum GameMapType {
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
+  CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
   ChoppingBlock = "Chopping Block", // map-generator/assets/maps/choppingblock/info.json
   Conakry = "Conakry", // map-generator/assets/maps/conakry/info.json
@@ -316,6 +317,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caribbean",
     categories: ["north_america"],
     multiplayerFrequency: 5,
+  },
+  {
+    id: "CaspianSea",
+    type: GameMapType.CaspianSea,
+    translationKey: "map.caspiansea",
+    categories: ["asia"],
+    multiplayerFrequency: 6,
   },
   {
     id: "Caucasus",
