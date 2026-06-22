@@ -42,6 +42,11 @@ export function applyGraphicsOverrides(
   if (overrides.structure?.classicNumbers !== undefined) {
     settings.structureLevel.classicFont = overrides.structure.classicNumbers;
   }
+  if (overrides.structure?.showDots === false) {
+    // Zoom is always > 0, so a threshold of 0 means the dots LOD never
+    // triggers — structures stay as full icons at every zoom level.
+    settings.structure.dotsZoomThreshold = 0;
+  }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
       overrides.mapOverlay.highlightFillBrighten;
