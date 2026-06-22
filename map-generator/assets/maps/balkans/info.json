@@ -2,7 +2,7 @@
   "id": "Balkans",
   "name": "Balkans",
   "translation_key": "map.balkans",
-  "categories": ["new", "europe"],
+  "categories": ["europe"],
   "multiplayer_frequency": 6,
   "nations": [
     {
