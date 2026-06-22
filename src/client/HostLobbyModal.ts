@@ -473,7 +473,7 @@ export class HostLobbyModal extends BaseModal {
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <o-button
-            variant="primary"
+            variant=${secondsRemaining !== null ? "warning" : "primary"}
             width="block"
             size="lg"
             .title=${statusLabel}
