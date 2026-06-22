@@ -528,6 +528,7 @@ export const deleteUnitElement: MenuElement = {
         (unit) =>
           !unit.isUnderConstruction() &&
           unit.markedForDeletion() === false &&
+          Structures.has(unit.type()) &&
           params.game.manhattanDist(unit.tile(), params.tile) <=
             DELETE_SELECTION_RADIUS,
       );
