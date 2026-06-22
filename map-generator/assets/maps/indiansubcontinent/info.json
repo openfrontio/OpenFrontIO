@@ -2,7 +2,7 @@
   "id": "IndianSubcontinent",
   "name": "Indian Subcontinent",
   "translation_key": "map.indiansubcontinent",
-  "categories": ["asia"],
+  "categories": ["new", "asia"],
   "multiplayer_frequency": 8,
   "nations": [
     {

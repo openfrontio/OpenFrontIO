@@ -2,7 +2,7 @@
   "id": "Onion",
   "name": "Onion",
   "translation_key": "map.onion",
-  "categories": ["arcade"],
+  "categories": ["new", "arcade"],
   "multiplayer_frequency": 2,
   "nations": [
     {

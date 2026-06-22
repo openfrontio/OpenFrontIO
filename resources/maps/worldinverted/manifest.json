@@ -951,7 +951,7 @@
       "name": "Reykjanes Delta"
     }
   ],
-  "categories": ["world", "fictional"],
+  "categories": ["new", "world", "fictional"],
   "id": "WorldInverted",
   "map": {
     "height": 1248,

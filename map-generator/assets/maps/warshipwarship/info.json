@@ -3,7 +3,7 @@
   "id": "WarshipWarship",
   "translation_key": "map.warshipwarship",
   "multiplayer_frequency": 3,
-  "categories": ["arcade"],
+  "categories": ["arcade", "new"],
   "nations": [
     {
       "coordinates": [750, 680],

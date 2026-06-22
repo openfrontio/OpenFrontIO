@@ -2,7 +2,7 @@
   "id": "Caribbean",
   "name": "Caribbean",
   "translation_key": "map.caribbean",
-  "categories": ["north_america"],
+  "categories": ["new", "north_america"],
   "multiplayer_frequency": 5,
   "nations": [
     {

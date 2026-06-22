@@ -91,7 +91,7 @@
       "name": "Redoubt Ridge"
     }
   ],
-  "categories": ["arcade"],
+  "categories": ["arcade", "new"],
   "id": "WarshipWarship",
   "map": {
     "height": 1396,
