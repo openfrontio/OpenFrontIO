@@ -9,6 +9,7 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { GameUpdateType, UnitUpdate } from "../src/core/game/GameUpdates";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -119,10 +120,24 @@ describe("Attack", () => {
     const ship = defender.units(UnitType.TransportShip)[0];
     expect(ship.troops()).toBe(100);
 
-    game.executeNextTick();
+    const updates = game.executeNextTick();
+    const updatedShip = defender.units(UnitType.TransportShip)[0];
+    const shipUpdates = (updates[GameUpdateType.Unit] as UnitUpdate[]).filter(
+      (u) => u.id === ship.id(),
+    );
 
     expect(nuke.isActive()).toBe(false);
-    expect(defender.units(UnitType.TransportShip)[0].troops()).toBeLessThan(90);
+    expect(updatedShip.troops()).toBeLessThan(90);
+    expect(shipUpdates).toContainEqual(
+      expect.objectContaining({
+        id: ship.id(),
+        unitType: UnitType.TransportShip,
+        troops: updatedShip.troops(),
+        transportShipState: expect.objectContaining({
+          troops: updatedShip.troops(),
+        }),
+      }),
+    );
   });
 
   test("Boat penalty on retreat Transport Ship arrival", async () => {
