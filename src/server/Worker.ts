@@ -17,6 +17,7 @@ import {
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
+import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -218,6 +219,8 @@ export async function startWorker() {
     log,
     baseDir: __dirname,
   });
+
+  registerAdminBotRoutes({ app, gm, workerId, log });
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
     try {

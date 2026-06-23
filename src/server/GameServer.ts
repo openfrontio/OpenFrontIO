@@ -6,6 +6,7 @@ import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
+  ADMIN_BOT_CLIENT_ID,
   ClientID,
   ClientMessageSchema,
   ClientSendWinnerMessage,
@@ -13,6 +14,7 @@ import {
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
+  Intent,
   PlayerRecord,
   PublicGameType,
   ServerDesyncSchema,
@@ -33,6 +35,13 @@ export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
   Finished = "FINISHED",
+}
+
+// Result of applying an admin-bot intent. `status` is an HTTP status code the
+// route maps directly onto the response.
+export interface AdminIntentResult {
+  status: number;
+  error?: string;
 }
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
@@ -187,7 +196,71 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
-    this.gameConfig.hostCheats = gameConfig.hostCheats;
+    if (gameConfig.hostCheats !== undefined) {
+      this.gameConfig.hostCheats = gameConfig.hostCheats;
+    }
+  }
+
+  // Apply an intent received over the trusted admin-bot HTTP API. Mirrors the
+  // WebSocket `case "intent"` dispatch but with admin authority instead of the
+  // per-connection lobby-creator/role checks. Scope is lobby management of
+  // private games only: gameplay intents (and mark_disconnected) are rejected.
+  // The bot is not a player, so the server stamps a placeholder clientID.
+  public applyAdminIntent(intent: Intent): AdminIntentResult {
+    if (this.isPublic()) {
+      return { status: 403, error: "admin bot cannot act on public games" };
+    }
+    const stamped: StampedIntent = { ...intent, clientID: ADMIN_BOT_CLIENT_ID };
+
+    switch (stamped.type) {
+      case "update_game_config":
+        if (this.hasStarted()) {
+          return { status: 409, error: "game already started" };
+        }
+        if (stamped.config.gameType === GameType.Public) {
+          return { status: 400, error: "admin bot cannot make a game public" };
+        }
+        this.updateGameConfig(stamped.config);
+        return { status: 200 };
+
+      case "toggle_game_start_timer":
+        if (this.hasStarted()) {
+          return { status: 409, error: "game already started" };
+        }
+        // Same toggle semantics as the WebSocket path.
+        if (this.startsAt) {
+          this.startsAt = undefined;
+        } else {
+          this.setStartsAt(
+            Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
+          );
+        }
+        return { status: 200 };
+
+      case "kick_player":
+        this.kickClient(stamped.target, KICK_REASON_ADMIN);
+        return { status: 200 };
+
+      case "toggle_pause":
+        if (!this.hasStarted()) {
+          return { status: 409, error: "game not started" };
+        }
+        // Mirror the WebSocket ordering exactly: when pausing, flush the intent
+        // into a turn before isPaused short-circuits endTurn().
+        if (stamped.paused) {
+          this.addIntent(stamped);
+          this.endTurn();
+          this.isPaused = true;
+        } else {
+          this.isPaused = false;
+          this.addIntent(stamped);
+          this.endTurn();
+        }
+        return { status: 200 };
+
+      default:
+        return { status: 400, error: "intent not permitted for admin bot" };
+    }
   }
 
   private isKicked(clientID: ClientID): boolean {

@@ -156,6 +156,15 @@ export class ServerEnv {
   static apiKey(): string {
     return process.env.API_KEY ?? "";
   }
+  // Long-lived shared secret for the trusted admin bot HTTP API.
+  // Undefined when unset, which disables the admin bot API entirely.
+  static adminBotKey(): string | undefined {
+    const v = process.env.ADMIN_BOT_API_KEY;
+    return v && v.length > 0 ? v : undefined;
+  }
+  static adminBotHeader(): string {
+    return "x-admin-bot-key";
+  }
   static allowedFlares(): string[] | undefined {
     const raw = process.env.ALLOWED_FLARES;
     if (!raw) return undefined;
