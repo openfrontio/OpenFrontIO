@@ -156,16 +156,6 @@ export class ServerEnv {
   static apiKey(): string {
     return process.env.API_KEY ?? "";
   }
-  static adminHeader(): string {
-    return "x-admin-key";
-  }
-  static adminToken(): string {
-    const token = process.env.ADMIN_TOKEN;
-    if (!token) {
-      throw new Error("ADMIN_TOKEN not set");
-    }
-    return token;
-  }
   static allowedFlares(): string[] | undefined {
     const raw = process.env.ALLOWED_FLARES;
     if (!raw) return undefined;
