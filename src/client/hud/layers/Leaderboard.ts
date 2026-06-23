@@ -71,14 +71,9 @@ export class Leaderboard extends LitElement implements Controller {
     if (this.game === null) throw new Error("Not initialized");
     const myPlayer = this.game.myPlayer();
 
-    class PlayerViewTroopsCache {
+    interface PlayerViewTroopsCache {
       pv: PlayerView;
       maxTroops: number;
-
-      constructor(pView: PlayerView, mt: number) {
-        this.pv = pView;
-        this.maxTroops = mt;
-      }
     }
 
     const compare = (a: number, b: number) =>
@@ -86,21 +81,21 @@ export class Leaderboard extends LitElement implements Controller {
 
     const maxTroops = (p: PlayerView) => this.game!.config().maxTroops(p);
 
-    let sorted = this.game
+    const sorted: PlayerViewTroopsCache[] = this.game
       .playerViews()
-      .map((p) => new PlayerViewTroopsCache(p, maxTroops(p)));
+      .map((p) => ({ pv: p, maxTroops: maxTroops(p) }));
 
     switch (this._sortKey) {
       case "gold":
-        sorted = sorted.sort((a, b) =>
+        sorted.sort((a, b) =>
           compare(Number(a.pv.gold()), Number(b.pv.gold())),
         );
         break;
       case "maxtroops":
-        sorted = sorted.sort((a, b) => compare(a.maxTroops, b.maxTroops));
+        sorted.sort((a, b) => compare(a.maxTroops, b.maxTroops));
         break;
       default:
-        sorted = sorted.sort((a, b) =>
+        sorted.sort((a, b) =>
           compare(a.pv.numTilesOwned(), b.pv.numTilesOwned()),
         );
     }
