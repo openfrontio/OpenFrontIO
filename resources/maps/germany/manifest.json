@@ -1,0 +1,186 @@
+{
+  "categories": ["europe", "new"],
+  "id": "Germany",
+  "map": {
+    "height": 1216,
+    "num_land_tiles": 1230665,
+    "width": 1240
+  },
+  "map16x": {
+    "height": 304,
+    "num_land_tiles": 74381,
+    "width": 310
+  },
+  "map4x": {
+    "height": 608,
+    "num_land_tiles": 303810,
+    "width": 620
+  },
+  "multiplayer_frequency": 5,
+  "name": "Germany",
+  "nations": [
+    {
+      "coordinates": [548, 323],
+      "flag": "DE-HH",
+      "name": "Hamburg",
+      "strength": 2
+    },
+    {
+      "coordinates": [484, 200],
+      "flag": "DE-SH",
+      "name": "Schleswig-Holstein",
+      "strength": 2
+    },
+    {
+      "coordinates": [428, 381],
+      "flag": "DE-HB",
+      "name": "Bremen",
+      "strength": 2
+    },
+    {
+      "coordinates": [603, 498],
+      "flag": "DE-NI",
+      "name": "Lower Saxony",
+      "strength": 2
+    },
+    {
+      "coordinates": [303, 615],
+      "flag": "DE-NW",
+      "name": "North Rhine-Westphalia",
+      "strength": 2
+    },
+    {
+      "coordinates": [253, 866],
+      "flag": "DE-SL",
+      "name": "Saarland",
+      "strength": 2
+    },
+    {
+      "coordinates": [289, 795],
+      "flag": "DE-RP",
+      "name": "Rhineland-Palatinate",
+      "strength": 2
+    },
+    {
+      "coordinates": [499, 967],
+      "flag": "DE-BW",
+      "name": "Baden-Württemberg",
+      "strength": 2
+    },
+    {
+      "coordinates": [498, 703],
+      "flag": "DE-HE",
+      "name": "Hesse",
+      "strength": 2
+    },
+    {
+      "coordinates": [714, 917],
+      "flag": "DE-BY-L",
+      "name": "Bavaria",
+      "strength": 2
+    },
+    {
+      "coordinates": [927, 651],
+      "flag": "DE-SN",
+      "name": "Saxony",
+      "strength": 2
+    },
+    {
+      "coordinates": [786, 519],
+      "flag": "DE-ST",
+      "name": "Saxony-Anhalt",
+      "strength": 2
+    },
+    {
+      "coordinates": [708, 691],
+      "flag": "DE-TH",
+      "name": "Thuringia",
+      "strength": 2
+    },
+    {
+      "coordinates": [834, 309],
+      "flag": "DE-MV",
+      "name": "Mecklenburg-Western Pomerania",
+      "strength": 2
+    },
+    {
+      "coordinates": [941, 491],
+      "flag": "DE-BE",
+      "name": "Berlin",
+      "strength": 2
+    },
+    {
+      "coordinates": [1032, 590],
+      "flag": "DE-BB",
+      "name": "Brandenburg",
+      "strength": 2
+    },
+    {
+      "coordinates": [1089, 818],
+      "flag": "cz",
+      "name": "Czech Republic",
+      "strength": 2
+    },
+    {
+      "coordinates": [1185, 370],
+      "flag": "pl",
+      "name": "Poland",
+      "strength": 2
+    },
+    {
+      "coordinates": [764, 69],
+      "flag": "dk",
+      "name": "Denmark",
+      "strength": 2
+    },
+    {
+      "coordinates": [975, 39],
+      "flag": "se",
+      "name": "Sweden",
+      "strength": 2
+    },
+    {
+      "coordinates": [47, 527],
+      "flag": "nl",
+      "name": "Netherlands",
+      "strength": 2
+    },
+    {
+      "coordinates": [74, 795],
+      "flag": "be",
+      "name": "Belgium",
+      "strength": 2
+    },
+    {
+      "coordinates": [148, 852],
+      "flag": "lu",
+      "name": "Luxembourg",
+      "strength": 2
+    },
+    {
+      "coordinates": [119, 1045],
+      "flag": "fr",
+      "name": "France",
+      "strength": 2
+    },
+    {
+      "coordinates": [455, 1182],
+      "flag": "ch",
+      "name": "Switzerland",
+      "strength": 2
+    },
+    {
+      "coordinates": [1187, 1089],
+      "flag": "at",
+      "name": "Austria",
+      "strength": 2
+    },
+    {
+      "coordinates": [698, 1166],
+      "flag": "li",
+      "name": "Liechtenstein",
+      "strength": 2
+    }
+  ],
+  "translation_key": "map.germany"
+}
