@@ -72,9 +72,7 @@ export class TerrainPass {
    * Replace the base terrain colors and re-upload the whole terrain texture.
    * Called when the user changes the terrain colors in graphics settings.
    */
-  setTerrainColors(
-    terrainColors?: import("../utils/ColorUtils").TerrainColorOverrides,
-  ): void {
+  setTerrainColors(terrainColors?: TerrainColorOverrides): void {
     this.terrainColors = terrainColors;
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
