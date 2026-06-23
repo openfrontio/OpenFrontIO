@@ -139,9 +139,13 @@ export async function startWorker() {
     next();
   });
 
-  app.post("/api/create_game/:id", async (req, res) => {
-    const id = req.params.id;
-
+  // Shared create logic for both the caller-supplied-id route and the new
+  // mint-an-id route. Responds with the game info plus the worker that owns it.
+  const createGameForId = async (
+    req: Request,
+    res: Response,
+    id: string,
+  ): Promise<void> => {
     // Extract persistentID from Authorization header token
     // Never accept persistentID directly from client
     let creatorPersistentID: string | undefined;
@@ -153,26 +157,25 @@ export async function startWorker() {
         creatorPersistentID = result.persistentId;
       } else {
         log.warn(`Invalid creator token: ${result.message}`);
-        return res.status(401).json({ error: "Invalid creator token" });
+        res.status(401).json({ error: "Invalid creator token" });
+        return;
       }
     } else if (
       !req.headers[ServerEnv.adminHeader()] // Public games use admin token instead
     ) {
-      return res
+      res
         .status(400)
         .json({ error: "Authorization header required to create a game" });
+      return;
     }
 
-    if (!id) {
-      log.warn(`cannot create game, id not found`);
-      return res.status(400).json({ error: "Game ID is required" });
-    }
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
     const result = CreateGameInputSchema.safeParse(req.body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
-      return res.status(400).json({ error });
+      res.status(400).json({ error });
+      return;
     }
 
     const gc = result.data;
@@ -183,7 +186,8 @@ export async function startWorker() {
       log.warn(
         `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
       );
-      return res.status(401).send("Unauthorized");
+      res.status(401).send("Unauthorized");
+      return;
     }
 
     // Double-check this worker should host this game
@@ -192,20 +196,43 @@ export async function startWorker() {
       log.warn(
         `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
       );
-      return res.status(400).json({ error: "Worker, game id mismatch" });
+      res.status(400).json({ error: "Worker, game id mismatch" });
+      return;
     }
 
     // Pass creatorPersistentID to createGame
     const game = gm.createGame(id, gc, creatorPersistentID);
     if (game === null) {
       log.warn(`cannot create game, id ${id} already exists`);
-      return res.status(409).json({ error: "Game ID already exists" });
+      res.status(409).json({ error: "Game ID already exists" });
+      return;
     }
 
     log.info(
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? GameType.Public : GameType.Private}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
     );
-    res.json(game.gameInfo());
+    res.json({
+      ...game.gameInfo(),
+      workerIndex: workerId,
+      workerPath: ServerEnv.workerPath(id),
+    });
+  };
+
+  app.post("/api/create_game/:id", (req, res) => {
+    void createGameForId(req, res, req.params.id as string);
+  });
+
+  // New-game endpoint: the worker mints an id that belongs to itself and
+  // returns it, so callers don't need to know the sharding. nginx randomly
+  // routes here (and the vite dev proxy does the same) to spread new games
+  // across workers.
+  app.post("/api/create_game", (req, res) => {
+    const id = generateGameIdForWorker();
+    if (id === null) {
+      log.warn(`Failed to mint game id on worker ${workerId}`);
+      return res.status(500).json({ error: "Could not allocate game id" });
+    }
+    void createGameForId(req, res, id);
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {
