@@ -323,7 +323,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.CaspianSea,
     translationKey: "map.caspiansea",
     categories: ["asia"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 5,
   },
   {
     id: "Caucasus",

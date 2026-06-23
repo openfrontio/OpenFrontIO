@@ -3,7 +3,7 @@
   "id": "CaspianSea",
   "translation_key": "map.caspiansea",
   "categories": ["asia"],
-  "multiplayer_frequency": 6,
+  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [969, 384],
@@ -65,5 +65,21 @@
       "name": "Kalmykia",
       "flag": "ru"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1752,
+        "width": 542,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1752,
+        "width": 542,
+        "x": 542,
+        "y": 0
+      }
+    ]
+  }
 }
