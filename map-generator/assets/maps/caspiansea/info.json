@@ -6,17 +6,17 @@
   "multiplayer_frequency": 5,
   "nations": [
     {
-      "coordinates": [969, 384],
+      "coordinates": [927, 426],
       "name": "Mangystau",
       "flag": "kz"
     },
     {
-      "coordinates": [1009, 1284],
+      "coordinates": [914, 1270],
       "name": "Turkmenistan",
       "flag": "tm"
     },
     {
-      "coordinates": [574, 38],
+      "coordinates": [574, 24],
       "name": "Atyrau",
       "flag": "kz"
     },
@@ -26,17 +26,17 @@
       "flag": "kz"
     },
     {
-      "coordinates": [778, 1734],
+      "coordinates": [807, 1705],
       "name": "Tehran",
       "flag": "ir"
     },
     {
-      "coordinates": [434, 1695],
+      "coordinates": [398, 1647],
       "name": "Gilan",
       "flag": "ir"
     },
     {
-      "coordinates": [9, 1336],
+      "coordinates": [69, 1350],
       "name": "Armenia",
       "flag": "am"
     },
@@ -51,12 +51,12 @@
       "flag": "az"
     },
     {
-      "coordinates": [218, 104],
+      "coordinates": [203, 91],
       "name": "Astrakhan",
       "flag": "ru"
     },
     {
-      "coordinates": [133, 899],
+      "coordinates": [96, 744],
       "name": "Dagestan",
       "flag": "ru"
     },
@@ -69,15 +69,15 @@
   "teamGameSpawnAreas": {
     "2": [
       {
-        "height": 1752,
-        "width": 542,
+        "height": 1728,
+        "width": 504,
         "x": 0,
         "y": 0
       },
       {
-        "height": 1752,
-        "width": 542,
-        "x": 542,
+        "height": 1728,
+        "width": 504,
+        "x": 504,
         "y": 0
       }
     ]
