@@ -79,7 +79,7 @@ export function encodeTerrainTile(
   let r: number, g: number, b: number;
 
   const terrainColors = {
-    ocean: oceanColor ?? [71, 133, 181],
+    ocean: oceanColor ?? DEEP_WATER_BASE,
     shoreWater: [100, 143, 255],
     sand: sandColor ?? [204, 203, 158],
     plains: plainsColor ?? [190, 220, 138],
