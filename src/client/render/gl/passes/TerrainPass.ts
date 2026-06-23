@@ -99,7 +99,7 @@ export class TerrainPass {
    * produces.
    *
    * Also writes back into `terrainBytes` so a later full re-upload (e.g.
-   * setOceanColor) reflects these conversions instead of reverting them.
+   * setTerrainColor) reflects these conversions instead of reverting them.
    */
   applyTerrainDelta(refs: readonly number[], bytes: Uint8Array): void {
     if (refs.length === 0) return;
