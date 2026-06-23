@@ -52,22 +52,25 @@ function serveProprietaryDir(
   };
 }
 
-// Dev-only stand-in for the nginx random create-game routing. Forwards
-// POST /api/create_game to a randomly chosen worker port so the worker can
-// mint a self-owned id. Runs as direct middleware (before vite's /api proxy).
+// Dev-only stand-in for the nginx random-worker routing (the openfront_workers
+// upstream). Forwards these prefix-less POSTs to a randomly chosen worker port
+// so the worker can mint a self-owned id. Runs as direct middleware (before
+// vite's /api proxy).
+const RANDOM_WORKER_PATHS = ["/api/create_game", "/api/adminbot/create_game"];
 function randomWorkerCreateProxy(numWorkers: number): Plugin {
   return {
     name: "random-worker-create-proxy",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.method !== "POST") return next();
-        if ((req.url ?? "").split("?")[0] !== "/api/create_game") return next();
+        const path = (req.url ?? "").split("?")[0];
+        if (!RANDOM_WORKER_PATHS.includes(path)) return next();
         const port = 3001 + Math.floor(Math.random() * numWorkers);
         const proxyReq = http.request(
           {
             host: "localhost",
             port,
-            path: "/api/create_game",
+            path,
             method: "POST",
             headers: req.headers,
           },

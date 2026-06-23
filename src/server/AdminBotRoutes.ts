@@ -10,6 +10,7 @@ import type { Logger } from "winston";
 import { z } from "zod";
 import { GameType } from "../core/game/Game";
 import { GameConfigSchema, ID, IntentSchema } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
 
@@ -62,11 +63,19 @@ export function registerAdminBotRoutes(opts: {
     return true;
   };
 
-  // Create a private game.
-  app.post("/api/adminbot/game/:id", requireAdminBotKey, (req, res) => {
-    const id = req.params.id as string;
-    if (!ownsGame(id, res)) return;
+  // Mint an id that hashes to this worker, so the created game lives here.
+  const mintGameId = (): string | null => {
+    for (let i = 0; i < 1000; i++) {
+      const id = generateID();
+      if (ServerEnv.workerIndex(id) === workerId) return id;
+    }
+    return null;
+  };
 
+  // Create a private game. The worker mints a self-owned id and returns it, so
+  // the bot doesn't need to know the sharding. nginx (and the vite dev proxy)
+  // randomly route here to spread new games across workers.
+  app.post("/api/adminbot/create_game", requireAdminBotKey, (req, res) => {
     const parsed = GameConfigSchema.partial().safeParse(req.body ?? {});
     if (!parsed.success) {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
@@ -78,12 +87,22 @@ export function registerAdminBotRoutes(opts: {
         .json({ error: "admin bot can only create private games" });
     }
 
+    const id = mintGameId();
+    if (id === null) {
+      log.warn(`admin bot: failed to mint game id on worker ${workerId}`);
+      return res.status(500).json({ error: "Could not allocate game id" });
+    }
+
     const game = gm.createGame(id, config, undefined);
     if (game === null) {
       return res.status(409).json({ error: "Game ID already exists" });
     }
     log.info(`admin bot created game ${id}`);
-    res.json({ ...game.gameInfo(), workerPath: ServerEnv.workerPath(id) });
+    res.json({
+      ...game.gameInfo(),
+      workerIndex: workerId,
+      workerPath: ServerEnv.workerPath(id),
+    });
   });
 
   // Send an intent. Honors the lobby-management intents; everything else 400.
