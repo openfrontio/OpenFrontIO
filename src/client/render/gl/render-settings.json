@@ -108,7 +108,7 @@
     "enemyB": 0
   },
   "railroad": {
-    "railMinZoom": 4,
+    "railMinZoom": 3,
     "railFadeRange": 2,
     "railDetailZoom": 6,
     "railAlpha": 1,
