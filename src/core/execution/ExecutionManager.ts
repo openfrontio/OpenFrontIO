@@ -42,6 +42,13 @@ export class Executor {
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
   }
 
+  private computeRatio(
+    remainingTroopRatio: number,
+    totalRatioUsage: number,
+  ): number {
+    return (1 - remainingTroopRatio) / totalRatioUsage;
+  }
+
   createExecs(turn: Turn): Execution[] {
     // In the rare case a client sends multiple troopRatio-orders,
     // we need to "merge" their orders instead of executing them in parallel.
@@ -70,15 +77,21 @@ export class Executor {
       }
     }
 
-    return turn.intents.map((intent) =>
-      this.createExec(
-        intent,
-        remainingTroopRatio_perClientID.has(intent.clientID)
-          ? (1 - remainingTroopRatio_perClientID.get(intent.clientID)!) /
-              totalRatioUsage_perClientID.get(intent.clientID)!
-          : undefined,
-      ),
-    );
+    return turn.intents.map((intent) => {
+      switch (intent.type) {
+        case "boat":
+        case "attack":
+          return this.createExec(
+            intent,
+            this.computeRatio(
+              remainingTroopRatio_perClientID.get(intent.clientID)!,
+              totalRatioUsage_perClientID.get(intent.clientID)!,
+            ),
+          );
+        default:
+          return this.createExec(intent, undefined);
+      }
+    });
   }
 
   createExec(intent: StampedIntent, troopRatioFactor?: number): Execution {
