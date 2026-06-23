@@ -469,7 +469,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private onPlainsColorChange(event: Event) {
     const value = (event.target as HTMLInputElement).value.trim();
-    console.log("onPlainsColorChange", value);
     const match = HEX_COLOR_RE.exec(value);
     if (!match) return;
     this.patchTerrain({ plainsColor: `#${match[1].toLowerCase()}` });
