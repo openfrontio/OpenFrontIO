@@ -51,7 +51,7 @@ export class GameManager {
 
   createGame(
     id: GameID,
-    gameConfig: GameConfig | undefined,
+    gameConfig: Partial<GameConfig> | undefined,
     creatorPersistentID?: string,
     startsAt?: number,
     publicGameType?: PublicGameType,
