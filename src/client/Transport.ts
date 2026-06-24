@@ -640,7 +640,7 @@ export class Transport {
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
     this.sendIntent({
       type: "kick_player",
-      target: event.target,
+      targetClientID: event.target,
     });
   }
 
