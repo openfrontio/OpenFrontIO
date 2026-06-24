@@ -94,6 +94,7 @@ export type GameConfig = z.infer<typeof GameConfigSchema>;
 
 export type ClientMessage =
   | ClientSendWinnerMessage
+  | ClientSendLiveStatsMessage
   | ClientPingMessage
   | ClientIntentMessage
   | ClientJoinMessage
@@ -122,6 +123,11 @@ export type ServerLobbyInfoMessage = z.infer<
   typeof ServerLobbyInfoMessageSchema
 >;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
+export type ClientSendLiveStatsMessage = z.infer<
+  typeof ClientSendLiveStatsSchema
+>;
+export type PlayerLiveStats = z.infer<typeof PlayerLiveStatsSchema>;
+export type LiveStats = z.infer<typeof LiveStatsSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
@@ -279,6 +285,10 @@ export const GameConfigSchema = z.object({
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
+  // Opt-in live game stats reporting for the admin bot. Off by default and has
+  // no UI — the admin bot sets it when creating tournament games, since it adds
+  // per-client traffic. See LiveStatsController / GameServer.handleLiveStats.
+  liveStatsEnabled: z.boolean().optional(),
   anonymizeNames: z.boolean().optional(),
   // While anonymizeNames is on, clientIDs the host has granted real-name
   // visibility to (e.g. casters / observers). Everyone else stays anonymized.
@@ -693,6 +703,32 @@ export const ClientSendWinnerSchema = z.object({
   allPlayersStats: AllPlayersStatsSchema,
 });
 
+// A live snapshot of one human player at a given turn. Only deterministic sim
+// values are included so in-sync clients produce an identical snapshot that can
+// be agreed on by majority vote. gold is a decimal string because it is a
+// bigint in the engine.
+export const PlayerLiveStatsSchema = z.object({
+  clientID: ID,
+  tilesOwned: z.number().int().nonnegative(),
+  troops: z.number(),
+  gold: z.string(),
+  isAlive: z.boolean(),
+  team: z.string().nullable(),
+});
+
+// A full live snapshot of a running game at a given turn. Reported by clients
+// (which run the sim) so the server can answer "what's happening" queries for
+// the admin bot.
+export const LiveStatsSchema = z.object({
+  turn: z.number().int().nonnegative(),
+  players: PlayerLiveStatsSchema.array(),
+});
+
+export const ClientSendLiveStatsSchema = z.object({
+  type: z.literal("live_stats"),
+  stats: LiveStatsSchema,
+});
+
 export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: z.number(),
@@ -737,6 +773,7 @@ export const ClientRejoinMessageSchema = z.object({
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
+  ClientSendLiveStatsSchema,
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
   ClientJoinMessageSchema,
