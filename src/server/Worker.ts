@@ -139,73 +139,60 @@ export async function startWorker() {
     next();
   });
 
-  app.post("/api/create_game/:id", async (req, res) => {
-    const id = req.params.id;
-
-    // Extract persistentID from Authorization header token
-    // Never accept persistentID directly from client
-    let creatorPersistentID: string | undefined;
+  // Create a new private game. The worker mints an id that belongs to itself
+  // and returns it, so callers don't need to know the sharding. nginx (and the
+  // vite dev proxy) randomly route here to spread new games across workers.
+  app.post("/api/create_game", async (req, res) => {
+    // Identify the creator from their token. Never accept persistentID directly.
     const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring("Bearer ".length);
-      const result = await verifyClientToken(token);
-      if (result.type === "success") {
-        creatorPersistentID = result.persistentId;
-      } else {
-        log.warn(`Invalid creator token: ${result.message}`);
-        return res.status(401).json({ error: "Invalid creator token" });
-      }
-    } else if (
-      !req.headers[ServerEnv.adminHeader()] // Public games use admin token instead
-    ) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return res
         .status(400)
         .json({ error: "Authorization header required to create a game" });
     }
-
-    if (!id) {
-      log.warn(`cannot create game, id not found`);
-      return res.status(400).json({ error: "Game ID is required" });
+    const auth = await verifyClientToken(
+      authHeader.substring("Bearer ".length),
+    );
+    if (auth.type !== "success") {
+      log.warn(`Invalid creator token: ${auth.message}`);
+      return res.status(401).json({ error: "Invalid creator token" });
     }
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-    const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-    const result = CreateGameInputSchema.safeParse(req.body);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      return res.status(400).json({ error });
-    }
+    const creatorPersistentID = auth.persistentId;
 
-    const gc = result.data;
-    if (
-      gc?.gameType === GameType.Public &&
-      req.headers[ServerEnv.adminHeader()] !== ServerEnv.adminToken()
-    ) {
-      log.warn(
-        `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
-      );
-      return res.status(401).send("Unauthorized");
+    const parsed = CreateGameInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    }
+    const gc = parsed.data;
+    // Public games are scheduled by the master over IPC, never created here.
+    if (gc?.gameType === GameType.Public) {
+      return res
+        .status(400)
+        .json({ error: "Cannot create public games via this endpoint" });
     }
 
-    // Double-check this worker should host this game
-    const expectedWorkerId = ServerEnv.workerIndex(id);
-    if (expectedWorkerId !== workerId) {
-      log.warn(
-        `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-      );
-      return res.status(400).json({ error: "Worker, game id mismatch" });
+    const id = generateGameIdForWorker();
+    if (id === null) {
+      log.warn(`Failed to mint game id on worker ${workerId}`);
+      return res.status(500).json({ error: "Could not allocate game id" });
     }
 
-    // Pass creatorPersistentID to createGame
     const game = gm.createGame(id, gc, creatorPersistentID);
     if (game === null) {
       log.warn(`cannot create game, id ${id} already exists`);
       return res.status(409).json({ error: "Game ID already exists" });
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    const clientIP = req.ip || req.socket.remoteAddress || "unknown";
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? GameType.Public : GameType.Private}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating private${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}, creator: ${creatorPersistentID.substring(0, 8)}...`,
     );
-    res.json(game.gameInfo());
+    res.json({
+      ...game.gameInfo(),
+      workerIndex: workerId,
+      workerPath: ServerEnv.workerPath(id),
+    });
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {

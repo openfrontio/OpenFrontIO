@@ -54,6 +54,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -f /etc/nginx/sites-enabled/default
 
+# Script that generates the create-game worker upstream at container start.
+COPY generate-nginx-upstream.sh /usr/local/bin/generate-nginx-upstream.sh
+RUN chmod +x /usr/local/bin/generate-nginx-upstream.sh
+
 # Copy production node_modules from prod-deps stage (cached separately from build)
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY package*.json ./
@@ -76,6 +80,9 @@ ENV GIT_COMMIT="$GIT_COMMIT"
 
 RUN <<'EOF' tee /usr/local/bin/start.sh
 #!/bin/sh
+# Generate the create-game nginx upstream from NUM_WORKERS before nginx starts.
+/usr/local/bin/generate-nginx-upstream.sh
+
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
     exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
