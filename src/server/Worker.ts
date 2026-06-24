@@ -11,7 +11,6 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
-  GameID,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
@@ -172,7 +171,7 @@ export async function startWorker() {
         .json({ error: "Cannot create public games via this endpoint" });
     }
 
-    const id = generateGameIdForWorker();
+    const id = ServerEnv.generateGameIdForWorker(workerId);
     if (id === null) {
       log.warn(`Failed to mint game id on worker ${workerId}`);
       return res.status(500).json({ error: "Could not allocate game id" });
@@ -556,7 +555,7 @@ async function startMatchmakingPolling(gm: GameManager) {
     async () => {
       try {
         const url = `${ServerEnv.jwtIssuer() + "/matchmaking/checkin"}`;
-        const gameId = generateGameIdForWorker();
+        const gameId = ServerEnv.generateGameIdForWorker(workerId);
         if (gameId === null) {
           log.warn(`Failed to generate game ID for worker ${workerId}`);
           return;
@@ -612,21 +611,6 @@ async function startMatchmakingPolling(gm: GameManager) {
     },
     5000 + Math.random() * 1000,
   );
-}
-
-// TODO: This is a hack to generate a game ID for the worker.
-// It should be replaced with a more robust solution.
-function generateGameIdForWorker(): GameID | null {
-  let attempts = 1000;
-  while (attempts > 0) {
-    const gameId = generateID();
-    if (workerId === ServerEnv.workerIndex(gameId)) {
-      return gameId;
-    }
-    attempts--;
-  }
-  log.warn(`Failed to generate game ID for worker ${workerId}`);
-  return null;
 }
 
 function getClientIp(req: http.IncomingMessage): string {

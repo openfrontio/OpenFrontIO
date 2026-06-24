@@ -10,7 +10,6 @@ import type { Logger } from "winston";
 import { z } from "zod";
 import { GameType } from "../core/game/Game";
 import { GameConfigSchema, ID, IntentSchema } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
 
@@ -63,15 +62,6 @@ export function registerAdminBotRoutes(opts: {
     return true;
   };
 
-  // Mint an id that hashes to this worker, so the created game lives here.
-  const mintGameId = (): string | null => {
-    for (let i = 0; i < 1000; i++) {
-      const id = generateID();
-      if (ServerEnv.workerIndex(id) === workerId) return id;
-    }
-    return null;
-  };
-
   // Create a private game. The worker mints a self-owned id and returns it, so
   // the bot doesn't need to know the sharding. nginx (and the vite dev proxy)
   // randomly route here to spread new games across workers.
@@ -87,7 +77,7 @@ export function registerAdminBotRoutes(opts: {
         .json({ error: "admin bot can only create private games" });
     }
 
-    const id = mintGameId();
+    const id = ServerEnv.generateGameIdForWorker(workerId);
     if (id === null) {
       log.warn(`admin bot: failed to mint game id on worker ${workerId}`);
       return res.status(500).json({ error: "Could not allocate game id" });
