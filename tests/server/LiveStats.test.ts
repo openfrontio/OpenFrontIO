@@ -39,8 +39,13 @@ describe("GameServer.handleLiveStats", () => {
     ];
     (game as any).activeClients = clients;
     const allClients = new Map<string, unknown>();
-    for (const c of clients) allClients.set(c.clientID, c);
+    const disconnected = new Map<string, boolean>();
+    for (const c of clients) {
+      allClients.set(c.clientID, c);
+      disconnected.set(c.clientID, false); // all connected
+    }
     (game as any).allClients = allClients;
+    (game as any).clientsDisconnectedStatus = disconnected;
     return { game, clients };
   }
 
@@ -78,8 +83,18 @@ describe("GameServer.handleLiveStats", () => {
     // 2 of 3 IPs -> consensus.
     expect(game.liveStats()).toEqual({
       turn: 100,
-      players: [{ ...players[0], username: "Alice" }],
+      players: [{ ...players[0], username: "Alice", connected: true }],
     });
+  });
+
+  it("reports server-side connection status per player", () => {
+    const { game, clients } = gameWithClients();
+    // client01 (the only player in the snapshot) has dropped.
+    (game as any).clientsDisconnectedStatus.set("client01", true);
+    const players = snapshot(10);
+    report(game, clients[0], 100, players);
+    report(game, clients[1], 100, players);
+    expect(game.liveStats()?.players[0].connected).toBe(false);
   });
 
   it("does not reach consensus when clients disagree", () => {
@@ -123,7 +138,7 @@ describe("GameServer.handleLiveStats", () => {
     report(game, clients[1], 200, snapshot(42));
     expect(game.liveStats()).toEqual({
       turn: 200,
-      players: [{ ...snapshot(42)[0], username: "Alice" }],
+      players: [{ ...snapshot(42)[0], username: "Alice", connected: true }],
     });
   });
 
@@ -189,6 +204,7 @@ describe("admin bot stats endpoint", () => {
           isAlive: true,
           team: null,
           username: "Alice",
+          connected: true,
         },
       ],
     };

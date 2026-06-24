@@ -1413,10 +1413,14 @@ export class GameServer {
   }
 
   // Latest majority-agreed live stats snapshot, with players enriched with
-  // usernames the server already knows. null until the first consensus.
+  // server-authoritative info the clients don't vote on: the username and
+  // current connection status. null until the first consensus.
   public liveStats(): {
     turn: number;
-    players: (PlayerLiveStats & { username: string | null })[];
+    players: (PlayerLiveStats & {
+      username: string | null;
+      connected: boolean;
+    })[];
   } | null {
     if (this.latestLiveStats === null) {
       return null;
@@ -1426,6 +1430,7 @@ export class GameServer {
       players: this.latestLiveStats.players.map((p) => ({
         ...p,
         username: this.allClients.get(p.clientID)?.username ?? null,
+        connected: !this.isClientDisconnected(p.clientID),
       })),
     };
   }
