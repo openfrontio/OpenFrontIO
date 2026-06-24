@@ -28,6 +28,14 @@ export function makeOctokit(token: string): Octokit {
   return new Octokit({ auth: token });
 }
 
+// GitHub label names are case-insensitive (you cannot have both "Stale" and
+// "stale"), so match them that way — otherwise a label applied with different
+// casing (e.g. the "Stale" label from the PR stale action) is missed.
+export function hasLabel(issue: Issue, label: string): boolean {
+  const target = label.toLowerCase();
+  return issue.labels.some((l) => l.toLowerCase() === target);
+}
+
 export function isBotUser(
   user: { login: string; type: string } | null,
 ): boolean {

@@ -172,7 +172,12 @@ export class UnitImpl implements Unit {
   }
 
   setTroops(troops: number): void {
-    this._troops = Math.max(0, troops);
+    const nextTroops = Math.max(0, troops);
+    if (this._troops === nextTroops) {
+      return;
+    }
+    this._troops = nextTroops;
+    this.mg.addUpdate(this.toUpdate());
   }
   troops(): number {
     return this._troops;
