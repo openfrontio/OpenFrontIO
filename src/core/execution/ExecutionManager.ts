@@ -55,8 +55,8 @@ export class Executor {
     // (two 60% attacks should be one 84% attack, not one 120% attack)
     // But, they may be of different types/on different targets
     // (hence we do two (84/120)*60% = 42% attacks).
-    let remainingTroopRatio_perClientID = new Map<ClientID, number>();
-    var totalRatioUsage_perClientID = new Map<ClientID, number>();
+    const remainingTroopRatio_perClientID = new Map<ClientID, number>();
+    const totalRatioUsage_perClientID = new Map<ClientID, number>();
     for (const intent of turn.intents) {
       switch (intent.type) {
         case "boat":
@@ -72,8 +72,6 @@ export class Executor {
               intent.troopRatio,
           );
         }
-        default:
-          break;
       }
     }
 
