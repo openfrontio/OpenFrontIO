@@ -1,17 +1,19 @@
 import { EventBus } from "../../core/EventBus";
-import { GameType } from "../../core/game/Game";
 import { LiveStats, PlayerLiveStats } from "../../core/Schemas";
 import { Controller } from "../Controller";
 import { SendLiveStatsEvent } from "../Transport";
 import { GameView } from "../view";
 
-// Clients each report a live stats snapshot to the server every ~30s (turns are
+// Clients each report a live stats snapshot to the server every ~10s (turns are
 // 100ms), which the server reaches consensus on so the admin bot can observe a
-// running game. See GameServer.handleLiveStats.
-const LIVE_STATS_INTERVAL_TURNS = 300;
+// running game. Opt-in per game (GameConfig.liveStatsEnabled) since it adds
+// per-client traffic; the admin bot sets it for tournaments. See
+// GameServer.handleLiveStats.
+const LIVE_STATS_INTERVAL_TURNS = 100;
 
 export class LiveStatsController implements Controller {
-  // Replays and singleplayer games have no server to report to, so skip them.
+  // Only report when the game opted in, and never for replays (which have no
+  // server to report to).
   private readonly enabled: boolean;
 
   constructor(
@@ -19,7 +21,7 @@ export class LiveStatsController implements Controller {
     private readonly eventBus: EventBus,
   ) {
     this.enabled =
-      game.config().gameConfig().gameType !== GameType.Singleplayer &&
+      game.config().gameConfig().liveStatsEnabled === true &&
       !game.config().isReplay();
   }
 

@@ -285,6 +285,10 @@ export const GameConfigSchema = z.object({
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
+  // Opt-in live game stats reporting for the admin bot. Off by default and has
+  // no UI — the admin bot sets it when creating tournament games, since it adds
+  // per-client traffic. See LiveStatsController / GameServer.handleLiveStats.
+  liveStatsEnabled: z.boolean().optional(),
   anonymizeNames: z.boolean().optional(),
   // While anonymizeNames is on, clientIDs the host has granted real-name
   // visibility to (e.g. casters / observers). Everyone else stays anonymized.
