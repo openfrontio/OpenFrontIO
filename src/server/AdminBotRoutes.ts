@@ -9,7 +9,12 @@ import type {
 import type { Logger } from "winston";
 import { z } from "zod";
 import { GameType } from "../core/game/Game";
-import { GameConfigSchema, ID, IntentSchema } from "../core/Schemas";
+import {
+  ADMIN_BOT_CLIENT_ID,
+  GameConfigSchema,
+  ID,
+  IntentSchema,
+} from "../core/Schemas";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
 
@@ -109,7 +114,12 @@ export function registerAdminBotRoutes(opts: {
       return res.status(404).json({ error: "Game not found" });
     }
 
-    const result = game.applyAdminIntent(parsed.data);
+    const result = game.handleIntent(parsed.data, {
+      clientID: ADMIN_BOT_CLIENT_ID,
+      isLobbyCreator: false,
+      isAdmin: true,
+      isAdminBot: true,
+    });
     if (result.status !== 200) {
       return res.status(result.status).json({ error: result.error ?? "error" });
     }

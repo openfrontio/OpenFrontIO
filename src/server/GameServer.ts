@@ -6,7 +6,6 @@ import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
-  ADMIN_BOT_CLIENT_ID,
   ClientID,
   ClientMessageSchema,
   ClientSendWinnerMessage,
@@ -37,9 +36,19 @@ export enum GamePhase {
   Finished = "FINISHED",
 }
 
-// Result of applying an admin-bot intent. `status` is an HTTP status code the
-// route maps directly onto the response.
-export interface AdminIntentResult {
+// Identity + authority for an intent, supplied by whoever dispatched it: a
+// per-connection websocket client, or the trusted admin-bot HTTP API.
+export interface IntentActor {
+  clientID: ClientID; // stamped onto the intent
+  isLobbyCreator: boolean;
+  isAdmin: boolean; // role-based admin/root (also true for the admin bot)
+  isAdminBot: boolean; // the trusted admin-bot HTTP API
+}
+
+// Outcome of dispatching an intent. `status` is an HTTP-style code: 200 on
+// success. The admin-bot route maps a non-200 straight to its response; the
+// websocket path logs it and drops the message.
+export interface IntentOutcome {
   status: number;
   error?: string;
 }
@@ -196,38 +205,83 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
-    if (gameConfig.hostCheats !== undefined) {
-      this.gameConfig.hostCheats = gameConfig.hostCheats;
-    }
+    // Unconditional on purpose: the host clears cheats by omitting hostCheats
+    // (the full config it sends has hostCheats: undefined when the toggle is
+    // off), so `undefined` here means "clear", not "leave unchanged".
+    this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 
-  // Apply an intent received over the trusted admin-bot HTTP API. Mirrors the
-  // WebSocket `case "intent"` dispatch but with admin authority instead of the
-  // per-connection lobby-creator/role checks. Scope is lobby management of
-  // private games only: gameplay intents (and mark_disconnected) are rejected.
-  // The bot is not a player, so the server stamps a placeholder clientID.
-  public applyAdminIntent(intent: Intent): AdminIntentResult {
-    if (this.isPublic()) {
+  // Dispatch a control/gameplay intent from either a websocket client or the
+  // trusted admin-bot HTTP API. `actor` carries the authority; the per-intent
+  // actions and game-state guards live here. Returns an HTTP-style outcome the
+  // caller maps (the bot route -> response, the websocket path -> a log).
+  public handleIntent(intent: Intent, actor: IntentActor): IntentOutcome {
+    const stamped: StampedIntent = { ...intent, clientID: actor.clientID };
+
+    // The admin bot only manages private games.
+    if (actor.isAdminBot && this.isPublic()) {
       return { status: 403, error: "admin bot cannot act on public games" };
     }
-    const stamped: StampedIntent = { ...intent, clientID: ADMIN_BOT_CLIENT_ID };
 
     switch (stamped.type) {
-      case "update_game_config":
+      case "mark_disconnected":
+        return { status: 400, error: "mark_disconnected is server-internal" };
+
+      case "kick_player": {
+        if (!actor.isLobbyCreator && !actor.isAdmin) {
+          return {
+            status: 403,
+            error: "only the lobby creator or an admin can kick players",
+          };
+        }
+        if (stamped.clientID === stamped.target) {
+          return { status: 400, error: "cannot kick yourself" };
+        }
+        const reason =
+          actor.isAdmin && !actor.isLobbyCreator
+            ? KICK_REASON_ADMIN
+            : KICK_REASON_LOBBY_CREATOR;
+        this.log.info("player kicked", {
+          kicker: stamped.clientID,
+          target: stamped.target,
+          isAdmin: actor.isAdmin,
+          isAdminBot: actor.isAdminBot,
+          gameID: this.id,
+        });
+        this.kickClient(stamped.target, reason);
+        return { status: 200 };
+      }
+
+      case "update_game_config": {
+        if (!actor.isLobbyCreator && !actor.isAdminBot) {
+          return {
+            status: 403,
+            error: "only the lobby creator can update game config",
+          };
+        }
+        if (this.isPublic()) {
+          return { status: 403, error: "cannot update a public game" };
+        }
         if (this.hasStarted()) {
           return { status: 409, error: "game already started" };
         }
         if (stamped.config.gameType === GameType.Public) {
-          return { status: 400, error: "admin bot cannot make a game public" };
+          return { status: 400, error: "cannot change a game to public" };
         }
         this.updateGameConfig(stamped.config);
         return { status: 200 };
+      }
 
-      case "toggle_game_start_timer":
+      case "toggle_game_start_timer": {
+        if (!actor.isLobbyCreator && !actor.isAdminBot) {
+          return { status: 403, error: "only the lobby creator can start" };
+        }
+        if (this.isPublic()) {
+          return { status: 403, error: "cannot start a public game" };
+        }
         if (this.hasStarted()) {
           return { status: 409, error: "game already started" };
         }
-        // Same toggle semantics as the WebSocket path.
         if (this.startsAt) {
           this.startsAt = undefined;
         } else {
@@ -236,17 +290,19 @@ export class GameServer {
           );
         }
         return { status: 200 };
+      }
 
-      case "kick_player":
-        this.kickClient(stamped.target, KICK_REASON_ADMIN);
-        return { status: 200 };
-
-      case "toggle_pause":
-        if (!this.hasStarted()) {
+      case "toggle_pause": {
+        if (!actor.isLobbyCreator && !actor.isAdminBot) {
+          return { status: 403, error: "only the lobby creator can pause" };
+        }
+        // The bot only pauses a running game; the websocket UI only exposes
+        // pause in-game, so it doesn't need the guard.
+        if (actor.isAdminBot && !this.hasStarted()) {
           return { status: 409, error: "game not started" };
         }
-        // Mirror the WebSocket ordering exactly: when pausing, flush the intent
-        // into a turn before isPaused short-circuits endTurn().
+        // Pausing: flush the intent into a turn before isPaused short-circuits
+        // endTurn(). Unpausing: clear the flag first so the next turn runs.
         if (stamped.paused) {
           this.addIntent(stamped);
           this.endTurn();
@@ -257,9 +313,18 @@ export class GameServer {
           this.endTurn();
         }
         return { status: 200 };
+      }
 
-      default:
-        return { status: 400, error: "intent not permitted for admin bot" };
+      default: {
+        // Gameplay intents: websocket players only, into the turn queue.
+        if (actor.isAdminBot) {
+          return { status: 400, error: "intent not permitted for admin bot" };
+        }
+        if (!this.isPaused) {
+          this.addIntent(stamped);
+        }
+        return { status: 200 };
+      }
     }
   }
 
@@ -478,183 +543,20 @@ export class GameServer {
             break;
           }
           case "intent": {
-            // Server stamps clientID from the authenticated connection
-            const stampedIntent = {
-              ...clientMsg.intent,
+            // Server stamps clientID from the authenticated connection.
+            const outcome = this.handleIntent(clientMsg.intent, {
               clientID: client.clientID,
-            };
-            switch (stampedIntent.type) {
-              case "mark_disconnected": {
-                this.log.warn(
-                  `Should not receive mark_disconnected intent from client`,
-                );
-                return;
-              }
-
-              // Handle kick_player intent via WebSocket
-              case "kick_player": {
-                const isLobbyCreator = client.clientID === this.lobbyCreatorID;
-                const isAdmin = isAdminRole(client.role);
-
-                // Check if the authenticated client is the lobby creator or admin
-                if (!isLobbyCreator && !isAdmin) {
-                  this.log.warn(
-                    `Only lobby creator or admin can kick players`,
-                    {
-                      clientID: client.clientID,
-                      creatorID: this.lobbyCreatorID,
-                      target: stampedIntent.target,
-                      gameID: this.id,
-                    },
-                  );
-                  return;
-                }
-
-                // Don't allow kicking yourself
-                if (client.clientID === stampedIntent.target) {
-                  this.log.warn(`Cannot kick yourself`, {
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                // Log and execute the kick
-                this.log.info(`Player initiated kick`, {
-                  kickerID: client.clientID,
-                  isAdmin,
-                  target: stampedIntent.target,
-                  gameID: this.id,
-                  kickMethod: "websocket",
-                });
-
-                this.kickClient(
-                  stampedIntent.target,
-                  isAdmin && !isLobbyCreator
-                    ? KICK_REASON_ADMIN
-                    : KICK_REASON_LOBBY_CREATOR,
-                );
-                return;
-              }
-              case "update_game_config": {
-                // Only lobby creator can update config
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can update game config`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                if (this.isPublic()) {
-                  this.log.warn(`Cannot update public game via WebSocket`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                if (this.hasStarted()) {
-                  this.log.warn(
-                    `Cannot update game config after it has started`,
-                    {
-                      gameID: this.id,
-                      clientID: client.clientID,
-                    },
-                  );
-                  return;
-                }
-
-                if (stampedIntent.config.gameType === GameType.Public) {
-                  this.log.warn(`Cannot update game to public via WebSocket`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                this.log.info(
-                  `Lobby creator updated game config via WebSocket`,
-                  {
-                    creatorID: client.clientID,
-                    gameID: this.id,
-                  },
-                );
-
-                this.updateGameConfig(stampedIntent.config);
-                return;
-              }
-              case "toggle_game_start_timer": {
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can start game`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-                if (this.isPublic()) {
-                  this.log.warn(`Cannot start public game via WebSocket`, {
-                    gameID: this.id,
-                  });
-                  return;
-                }
-                if (this.hasStarted()) {
-                  this.log.warn(`Cannot start game that has already started`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-                this.log.info(`Lobby creator starting game via WebSocket`, {
-                  creatorID: client.clientID,
-                  gameID: this.id,
-                });
-                if (this.startsAt) {
-                  this.startsAt = undefined;
-                } else {
-                  this.setStartsAt(
-                    Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
-                  );
-                }
-                return;
-              }
-              case "toggle_pause": {
-                // Only lobby creator can pause/resume
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can toggle pause`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                if (stampedIntent.paused) {
-                  // Pausing: send intent and complete current turn before pause takes effect
-                  this.addIntent(stampedIntent);
-                  this.endTurn();
-                  this.isPaused = true;
-                } else {
-                  // Unpausing: clear pause flag before sending intent so next turn can execute
-                  this.isPaused = false;
-                  this.addIntent(stampedIntent);
-                  this.endTurn();
-                }
-
-                this.log.info(`Game ${this.isPaused ? "paused" : "resumed"}`, {
-                  clientID: client.clientID,
-                  gameID: this.id,
-                });
-                break;
-              }
-              default: {
-                // Don't process intents while game is paused
-                if (!this.isPaused) {
-                  this.addIntent(stampedIntent);
-                }
-                break;
-              }
+              isLobbyCreator: client.clientID === this.lobbyCreatorID,
+              isAdmin: isAdminRole(client.role),
+              isAdminBot: false,
+            });
+            if (outcome.status !== 200) {
+              this.log.warn(`intent rejected`, {
+                type: clientMsg.intent.type,
+                clientID: client.clientID,
+                gameID: this.id,
+                reason: outcome.error,
+              });
             }
             break;
           }

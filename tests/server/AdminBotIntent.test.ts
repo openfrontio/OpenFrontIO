@@ -3,7 +3,7 @@ import { GameType } from "../../src/core/game/Game";
 import { ADMIN_BOT_CLIENT_ID } from "../../src/core/Schemas";
 import { GameServer } from "../../src/server/GameServer";
 
-describe("GameServer.applyAdminIntent", () => {
+describe("GameServer.handleIntent (admin bot)", () => {
   let mockLogger: any;
 
   beforeEach(() => {
@@ -32,10 +32,19 @@ describe("GameServer.applyAdminIntent", () => {
     (game as any)._hasStarted = true;
   };
 
+  const ADMIN_ACTOR = {
+    clientID: ADMIN_BOT_CLIENT_ID,
+    isLobbyCreator: false,
+    isAdmin: true,
+    isAdminBot: true,
+  };
+  const apply = (game: GameServer, intent: any) =>
+    game.handleIntent(intent, ADMIN_ACTOR);
+
   describe("update_game_config", () => {
     it("mutates the config", () => {
       const game = makeGame({ bots: 100 });
-      const result = game.applyAdminIntent({
+      const result = apply(game, {
         type: "update_game_config",
         config: { bots: 42 },
       } as any);
@@ -46,7 +55,7 @@ describe("GameServer.applyAdminIntent", () => {
     it("rejects a public game with 403", () => {
       const game = makeGame({ gameType: GameType.Public });
       expect(
-        game.applyAdminIntent({
+        apply(game, {
           type: "update_game_config",
           config: { bots: 1 },
         } as any).status,
@@ -56,7 +65,7 @@ describe("GameServer.applyAdminIntent", () => {
     it("rejects promoting a game to public with 400", () => {
       const game = makeGame();
       expect(
-        game.applyAdminIntent({
+        apply(game, {
           type: "update_game_config",
           config: { gameType: GameType.Public },
         } as any).status,
@@ -67,22 +76,11 @@ describe("GameServer.applyAdminIntent", () => {
       const game = makeGame();
       started(game);
       expect(
-        game.applyAdminIntent({
+        apply(game, {
           type: "update_game_config",
           config: { bots: 1 },
         } as any).status,
       ).toBe(409);
-    });
-
-    it("preserves hostCheats when the partial update omits it", () => {
-      const game = makeGame({ hostCheats: { infiniteGold: true } });
-      game.applyAdminIntent({
-        type: "update_game_config",
-        config: { bots: 7 },
-      } as any);
-      expect((game as any).gameConfig.hostCheats).toEqual({
-        infiniteGold: true,
-      });
     });
   });
 
@@ -92,14 +90,12 @@ describe("GameServer.applyAdminIntent", () => {
       expect((game as any).startsAt).toBeUndefined();
 
       expect(
-        game.applyAdminIntent({ type: "toggle_game_start_timer" } as any)
-          .status,
+        apply(game, { type: "toggle_game_start_timer" } as any).status,
       ).toBe(200);
       expect((game as any).startsAt).toBeDefined();
 
       expect(
-        game.applyAdminIntent({ type: "toggle_game_start_timer" } as any)
-          .status,
+        apply(game, { type: "toggle_game_start_timer" } as any).status,
       ).toBe(200);
       expect((game as any).startsAt).toBeUndefined();
     });
@@ -108,8 +104,7 @@ describe("GameServer.applyAdminIntent", () => {
       const game = makeGame();
       started(game);
       expect(
-        game.applyAdminIntent({ type: "toggle_game_start_timer" } as any)
-          .status,
+        apply(game, { type: "toggle_game_start_timer" } as any).status,
       ).toBe(409);
     });
   });
@@ -118,7 +113,7 @@ describe("GameServer.applyAdminIntent", () => {
     it("routes to kickClient", () => {
       const game = makeGame();
       const spy = vi.spyOn(game, "kickClient");
-      const result = game.applyAdminIntent({
+      const result = apply(game, {
         type: "kick_player",
         target: "abcdABCD",
       } as any);
@@ -129,7 +124,7 @@ describe("GameServer.applyAdminIntent", () => {
     it("rejects a public game with 403", () => {
       const game = makeGame({ gameType: GameType.Public });
       expect(
-        game.applyAdminIntent({
+        apply(game, {
           type: "kick_player",
           target: "abcdABCD",
         } as any).status,
@@ -141,8 +136,7 @@ describe("GameServer.applyAdminIntent", () => {
     it("rejects when the game has not started with 409", () => {
       const game = makeGame();
       expect(
-        game.applyAdminIntent({ type: "toggle_pause", paused: true } as any)
-          .status,
+        apply(game, { type: "toggle_pause", paused: true } as any).status,
       ).toBe(409);
     });
 
@@ -151,14 +145,12 @@ describe("GameServer.applyAdminIntent", () => {
       started(game);
 
       expect(
-        game.applyAdminIntent({ type: "toggle_pause", paused: true } as any)
-          .status,
+        apply(game, { type: "toggle_pause", paused: true } as any).status,
       ).toBe(200);
       expect((game as any).isPaused).toBe(true);
 
       expect(
-        game.applyAdminIntent({ type: "toggle_pause", paused: false } as any)
-          .status,
+        apply(game, { type: "toggle_pause", paused: false } as any).status,
       ).toBe(200);
       expect((game as any).isPaused).toBe(false);
     });
@@ -166,7 +158,7 @@ describe("GameServer.applyAdminIntent", () => {
     it("records the pause intent stamped with the placeholder clientID", () => {
       const game = makeGame();
       started(game);
-      game.applyAdminIntent({ type: "toggle_pause", paused: true } as any);
+      apply(game, { type: "toggle_pause", paused: true } as any);
 
       const intents = (game as any).turns.flatMap((t: any) => t.intents);
       const pause = intents.find((i: any) => i.type === "toggle_pause");
@@ -178,15 +170,15 @@ describe("GameServer.applyAdminIntent", () => {
   describe("rejected intents", () => {
     it("rejects a gameplay intent with 400", () => {
       const game = makeGame();
-      expect(
-        game.applyAdminIntent({ type: "spawn", x: 1, y: 1 } as any).status,
-      ).toBe(400);
+      expect(apply(game, { type: "spawn", x: 1, y: 1 } as any).status).toBe(
+        400,
+      );
     });
 
     it("rejects mark_disconnected with 400", () => {
       const game = makeGame();
       expect(
-        game.applyAdminIntent({
+        apply(game, {
           type: "mark_disconnected",
           isDisconnected: true,
         } as any).status,
