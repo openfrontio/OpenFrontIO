@@ -12,7 +12,7 @@ import { Executor } from "../../../src/core/execution/ExecutionManager";
 import { AllianceExtensionExecution } from "../../../src/core/execution/alliance/AllianceExtensionExecution";
 
 describe("Executor", () => {
-  const game: Game = (undefined as any);
+  const game: Game = undefined as any;
   let executor: Executor;
   const gameID: GameID = "test_game";
   const clientID: ClientID = "test_client";
