@@ -116,7 +116,6 @@ export function registerAdminBotRoutes(opts: {
 
     res.json({
       gameID: id,
-      serverTime: Date.now(),
       liveStats: game.liveStats(),
     });
   });
