@@ -265,7 +265,19 @@ export class GameServer {
             error: "only the lobby creator or an admin can kick players",
           };
         }
-        if (stamped.clientID === stamped.target) {
+        // Resolve the target to a live clientID: an explicit clientID, or an
+        // account publicId matched against the connected clients (for callers
+        // that know the account but not the per-session clientID).
+        let target = stamped.target;
+        if (target === undefined && stamped.targetPublicId !== undefined) {
+          target = this.activeClients.find(
+            (c) => c.publicId === stamped.targetPublicId,
+          )?.clientID;
+        }
+        if (target === undefined) {
+          return { status: 404, error: "no matching player to kick" };
+        }
+        if (stamped.clientID === target) {
           return { status: 400, error: "cannot kick yourself" };
         }
         const reason =
@@ -274,12 +286,12 @@ export class GameServer {
             : KICK_REASON_LOBBY_CREATOR;
         this.log.info("player kicked", {
           kicker: stamped.clientID,
-          target: stamped.target,
+          target,
           isAdmin: actor.isAdmin,
           isAdminBot: actor.isAdminBot,
           gameID: this.id,
         });
-        this.kickClient(stamped.target, reason);
+        this.kickClient(target, reason);
         return { status: 200 };
       }
 

@@ -130,6 +130,31 @@ describe("GameServer.handleIntent (admin bot)", () => {
         } as any).status,
       ).toBe(403);
     });
+
+    it("resolves a publicId target to the connected client's clientID", () => {
+      const game = makeGame();
+      (game as any).activeClients.push({
+        clientID: "liveCID01",
+        publicId: "account-public-id",
+      });
+      const spy = vi.spyOn(game, "kickClient");
+      const result = apply(game, {
+        type: "kick_player",
+        targetPublicId: "account-public-id",
+      } as any);
+      expect(result.status).toBe(200);
+      expect(spy).toHaveBeenCalledWith("liveCID01", expect.any(String));
+    });
+
+    it("404s when no connected client matches the publicId", () => {
+      const game = makeGame();
+      expect(
+        apply(game, {
+          type: "kick_player",
+          targetPublicId: "nobody-here",
+        } as any).status,
+      ).toBe(404);
+    });
   });
 
   describe("toggle_pause", () => {
