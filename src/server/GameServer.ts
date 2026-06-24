@@ -296,9 +296,8 @@ export class GameServer {
         if (!actor.isLobbyCreator && !actor.isAdminBot) {
           return { status: 403, error: "only the lobby creator can pause" };
         }
-        // The bot only pauses a running game; the websocket UI only exposes
-        // pause in-game, so it doesn't need the guard.
-        if (actor.isAdminBot && !this.hasStarted()) {
+        // Pausing only makes sense once the game is running.
+        if (!this.hasStarted()) {
           return { status: 409, error: "game not started" };
         }
         // Pausing: flush the intent into a turn before isPaused short-circuits
