@@ -24,7 +24,6 @@ import {
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -82,6 +81,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private disableAlliances: boolean = false;
   @state() private anonymizeNames: boolean = false;
   @state() private nameReveals: string[] = [];
+  @state() private whitelistEnabled: boolean = false;
+  @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
@@ -290,6 +291,19 @@ export class HostLobbyModal extends BaseModal {
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.player_whitelist"}
+        .checked=${this.whitelistEnabled}
+        .inputType=${"text"}
+        .inputId=${"allowed-public-ids"}
+        .inputValue=${this.allowedPublicIds}
+        .inputAriaLabel=${translateText("host_modal.player_whitelist")}
+        .inputPlaceholder=${translateText(
+          "host_modal.player_whitelist_placeholder",
+        )}
+        .onToggle=${this.handleWhitelistToggle}
+        .onChange=${this.handleAllowedPublicIdsChange}
+      ></toggle-input-card>`,
     ];
 
     const hostCheatInputCards = [
@@ -468,7 +482,7 @@ export class HostLobbyModal extends BaseModal {
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <o-button
-            variant="primary"
+            variant=${secondsRemaining !== null ? "warning" : "primary"}
             width="block"
             size="lg"
             .title=${statusLabel}
@@ -482,26 +496,24 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.startLobbyUpdates();
-    this.lobbyId = generateID();
-    // Note: clientID will be assigned by server when we join the lobby
-    // lobbyCreatorClientID stays empty until then
-
-    // Copy immediately so the host can share the link without waiting for the
-    // server. If lobby creation fails, clear the clipboard to avoid a dead link.
-    void this.constructUrl().then(async (url) => {
-      this.updateLobbyHistory(url);
-      await this.updateComplete;
-      void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
-    });
+    // The server mints the game id, so we don't know it until createLobby
+    // resolves. clientID is assigned by the server when we join the lobby.
 
     // Pass auth token for creator identification (server extracts persistentID from it)
-    createLobby(this.lobbyId)
+    createLobby()
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
         crazyGamesSDK.showInviteButton(this.lobbyId);
+
+        // Now that we have the id, build and copy the share link. If lobby
+        // creation fails, the catch below clears the clipboard.
+        const url = await this.constructUrl();
+        this.updateLobbyHistory(url);
+        await this.updateComplete;
+        void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
       })
       .then(() => {
         this.dispatchEvent(
@@ -595,6 +607,8 @@ export class HostLobbyModal extends BaseModal {
     this.disableAlliances = false;
     this.anonymizeNames = false;
     this.nameReveals = [];
+    this.whitelistEnabled = false;
+    this.allowedPublicIds = "";
     this.waterNukes = false;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
@@ -1011,6 +1025,28 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
+  private handleWhitelistToggle = (checked: boolean) => {
+    this.whitelistEnabled = checked;
+    this.putGameConfig();
+  };
+
+  private handleAllowedPublicIdsChange = (e: Event) => {
+    this.allowedPublicIds = (e.target as HTMLInputElement).value;
+    this.putGameConfig();
+  };
+
+  // Comma/space/newline-separated publicIds, capped at the 200 the schema
+  // allows so a large paste can't make the config update fail validation.
+  // Undefined when empty (no allowlist).
+  private parseAllowedPublicIds(): string[] | undefined {
+    const ids = this.allowedPublicIds
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .slice(0, 200);
+    return ids.length > 0 ? ids : undefined;
+  }
+
   private async putGameConfig() {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes
       ? this.spawnImmunityDurationMinutes * 60 * 10
@@ -1054,6 +1090,9 @@ export class HostLobbyModal extends BaseModal {
             disableAlliances: this.disableAlliances || null,
             anonymizeNames: this.anonymizeNames,
             nameReveals: this.nameReveals,
+            allowedPublicIds: this.whitelistEnabled
+              ? (this.parseAllowedPublicIds() ?? [])
+              : [],
             waterNukes: this.waterNukes ? true : null,
             hostCheats: this.hostCheatsEnabled
               ? {
@@ -1132,21 +1171,20 @@ export class HostLobbyModal extends BaseModal {
   }
 }
 
-async function createLobby(gameID: string): Promise<GameInfo> {
+async function createLobby(): Promise<GameInfo> {
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
   try {
-    const response = await fetch(
-      `/${ClientEnv.workerPath(gameID)}/api/create_game/${gameID}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+    // No worker prefix and no id: nginx (prod) / the vite dev proxy randomly
+    // routes to a worker, which mints a self-owned id and returns it.
+    const response = await fetch(`/api/create_game`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-    );
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

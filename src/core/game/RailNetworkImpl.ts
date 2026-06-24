@@ -251,10 +251,16 @@ export class RailNetworkImpl implements RailNetwork {
 
     const maxRange = this.game.config().trainStationMaxRange();
     const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
-    const maxPathSize = this.game.config().railroadMaxSize();
 
-    // Cannot connect if outside the max range of a factory
-    if (!this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)) {
+    // A City or Port only joins the rail network when a Factory is already in
+    // range (see CityExecution/PortExecution). A Factory always becomes a
+    // station and pulls nearby City/Port/Factory into the network itself, so
+    // it needs no pre-existing factory to connect to.
+    const buildingFactory = unitType === UnitType.Factory;
+    if (
+      !buildingFactory &&
+      !this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)
+    ) {
       return [];
     }
 
@@ -273,21 +279,31 @@ export class RailNetworkImpl implements RailNetwork {
       if (neighbor.distSquared <= minRangeSquared) continue;
 
       const neighborStation = this._stationManager.findStation(neighbor.unit);
-      if (!neighborStation) continue;
 
-      const alreadyReachable = connectedStations.some(
-        (s) =>
-          this.distanceFrom(
-            neighborStation,
-            s,
-            this.maxConnectionDistance - 1,
-          ) !== -1,
-      );
-      if (alreadyReachable) continue;
-
-      const path = this.pathService.findTilePath(tile, neighborStation.tile());
-      if (path.length > 0 && path.length < maxPathSize) {
-        paths.push(path);
+      // Building a factory connects to nearby structures even if they aren't
+      // stations yet — they get promoted to stations when the factory is
+      // built. For a city/port, only existing stations are relevant.
+      let targetTile: TileRef;
+      if (neighborStation) {
+        const alreadyReachable = connectedStations.some(
+          (s) =>
+            this.distanceFrom(
+              neighborStation,
+              s,
+              this.maxConnectionDistance - 1,
+            ) !== -1,
+        );
+        if (alreadyReachable) continue;
+        targetTile = neighborStation.tile();
+      } else if (buildingFactory) {
+        targetTile = neighbor.unit.tile();
+      } else {
+        continue;
+      }
+      const path = this.pathService.findTilePath(tile, targetTile);
+      if (path.length === 0) continue;
+      paths.push(path);
+      if (neighborStation) {
         connectedStations.push(neighborStation);
       }
     }
@@ -359,19 +375,17 @@ export class RailNetworkImpl implements RailNetwork {
 
   private connect(from: TrainStation, to: TrainStation) {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
-    if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
-      const railroad = new Railroad(from, to, path, this.nextId++);
-      this.game.addUpdate({
-        type: GameUpdateType.RailroadConstructionEvent,
-        id: railroad.id,
-        tiles: railroad.tiles,
-      });
-      from.addRailroad(railroad);
-      to.addRailroad(railroad);
-      this.railGrid.register(railroad);
-      return true;
-    }
-    return false;
+    if (path.length === 0) return false;
+    const railroad = new Railroad(from, to, path, this.nextId++);
+    this.game.addUpdate({
+      type: GameUpdateType.RailroadConstructionEvent,
+      id: railroad.id,
+      tiles: railroad.tiles,
+    });
+    from.addRailroad(railroad);
+    to.addRailroad(railroad);
+    this.railGrid.register(railroad);
+    return true;
   }
 
   private distanceFrom(

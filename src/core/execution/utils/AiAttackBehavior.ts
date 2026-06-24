@@ -57,6 +57,7 @@ export class AiAttackBehavior {
       .filter(
         (t) =>
           this.game.isLand(t) &&
+          !this.game.isImpassable(t) &&
           this.game.ownerID(t) !== this.player?.smallID(),
       );
     const playerNeighbors = this.player.nearby();
@@ -169,6 +170,9 @@ export class AiAttackBehavior {
       }
       const randTile = this.game.ref(randX, randY);
       if (!this.game.isLand(randTile)) {
+        continue;
+      }
+      if (this.game.isImpassable(randTile)) {
         continue;
       }
       const owner = this.game.owner(randTile);
@@ -764,7 +768,11 @@ export class AiAttackBehavior {
   private hasLandBorderWithTerraNullius(): boolean {
     for (const border of this.player.borderTiles()) {
       for (const neighbor of this.game.neighbors(border)) {
-        if (this.game.isLand(neighbor) && !this.game.hasOwner(neighbor)) {
+        if (
+          this.game.isLand(neighbor) &&
+          !this.game.isImpassable(neighbor) &&
+          !this.game.hasOwner(neighbor)
+        ) {
           return true;
         }
       }
@@ -809,6 +817,7 @@ export class AiAttackBehavior {
         if (!this.game.isValidCoord(nx, ny)) continue;
         const tile = this.game.ref(nx, ny);
         if (!this.game.isLand(tile)) continue;
+        if (this.game.isImpassable(tile)) continue;
         if (this.game.hasOwner(tile)) continue;
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
@@ -927,7 +936,10 @@ export class AiAttackBehavior {
     return cap;
   }
 
-  private sendLandAttack(target: Player | TerraNullius): boolean {
+  private calculateAttackTroops(
+    target: Player | TerraNullius,
+    nonBotTroops: (targetTroops: number) => number,
+  ): number | null {
     const maxTroops = this.game.config().maxTroops(this.player);
     const botWithStructures =
       target.isPlayer() &&
@@ -950,7 +962,7 @@ export class AiAttackBehavior {
         this.player.troops() - targetTroops - this.botAttackTroopsSent,
       );
     } else {
-      troops = this.player.troops() - targetTroops;
+      troops = nonBotTroops(targetTroops);
     }
 
     // Hard & Impossible: don't drop below neighbor troop threshold (players only)
@@ -959,17 +971,29 @@ export class AiAttackBehavior {
     }
 
     if (troops < 1) {
-      return false;
+      return null;
     }
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
     if (target.isPlayer() && this.isAttackTooWeak(troops, target)) {
-      return false;
+      return null;
     }
 
     if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
+    return troops;
+  }
+
+  private sendLandAttack(target: Player | TerraNullius): boolean {
+    const troops = this.calculateAttackTroops(
+      target,
+      (targetTroops) => this.player.troops() - targetTroops,
+    );
+    if (troops === null) {
+      return false;
     }
 
     this.game.addExecution(
@@ -1000,28 +1024,12 @@ export class AiAttackBehavior {
       return false;
     }
 
-    let troops;
-    if (target.type() === PlayerType.Bot) {
-      troops = this.calculateBotAttackTroops(target, this.player.troops() / 5);
-    } else {
-      troops = this.player.troops() / 5;
-    }
-
-    // Hard & Impossible: don't drop below neighbor troop threshold
-    troops = Math.min(troops, this.troopSendCap());
-
-    if (troops < 1) {
+    const troops = this.calculateAttackTroops(
+      target,
+      () => this.player.troops() / 5,
+    );
+    if (troops === null) {
       return false;
-    }
-
-    // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
-    if (this.isAttackTooWeak(troops, target)) {
-      return false;
-    }
-
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
-      if (this.emojiBehavior === undefined) throw new Error("not initialized");
-      this.emojiBehavior.maybeSendAttackEmoji(target);
     }
 
     this.game.addExecution(

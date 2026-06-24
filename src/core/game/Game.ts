@@ -334,6 +334,7 @@ export enum TerrainType {
   Highland,
   Mountain,
   Ocean,
+  Impassable,
 }
 
 export enum PlayerType {

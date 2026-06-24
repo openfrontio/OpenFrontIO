@@ -13,10 +13,11 @@
  * border shader makes the neighbors' results depend on this tile's ownership.
  * Use `pushWithNeighbors` to do that expansion automatically.
  *
- * Highlight-thicken rings within `uHighlightThicken` of a changed tile are
- * NOT incrementally repainted — they'll lag visually until the next full
- * recompute (which fires on highlight / relation / defense changes). That
- * artifact is small and short-lived; for live combat it's a fair trade.
+ * When a tile is gained or lost by the highlighted owner, it also affects the
+ * highlight thickening of nearby highlight-owner tiles (an N-tile Chebyshev
+ * expansion), so `pushWithNeighbors` widens the repaint to that radius for
+ * those tiles only — otherwise the inner edge of the highlight band would lag
+ * until the next full recompute.
  */
 
 import type { RenderSettings } from "../RenderSettings";
@@ -122,13 +123,52 @@ export class BorderScatterPass {
     this.patchCount++;
   }
 
-  /** Queue the tile + its 4 cardinal neighbors (clipped to map bounds). */
-  pushWithNeighbors(x: number, y: number): void {
-    this.push(x, y);
-    if (x > 0) this.push(x - 1, y);
-    if (x < this.mapW - 1) this.push(x + 1, y);
-    if (y > 0) this.push(x, y - 1);
-    if (y < this.mapH - 1) this.push(x, y + 1);
+  /**
+   * Queue the tile + the neighborhood whose border value depends on it
+   * (clipped to map bounds). `prevOwner`/`newOwner` are the tile's owner before
+   * and after the change.
+   *
+   * Normal borders only need the 4 cardinal neighbors (the shader's border
+   * test is cardinal-only). But the highlight thickening is an N-tile Chebyshev
+   * expansion: a tile being gained or lost by the highlighted owner affects the
+   * thickening of every highlight-owner tile within `highlightThicken` of it.
+   * In that case — and only that case — repaint the whole box so the inner edge
+   * of the highlight band tracks the change instead of lagging until the next
+   * full recompute. Changes elsewhere on the map don't touch the band, so they
+   * keep the cheap cardinal cross.
+   */
+  pushWithNeighbors(
+    x: number,
+    y: number,
+    prevOwner: number,
+    newOwner: number,
+  ): void {
+    const touchesHighlight =
+      this.highlightOwner !== 0 &&
+      (prevOwner === this.highlightOwner || newOwner === this.highlightOwner);
+
+    if (!touchesHighlight) {
+      this.push(x, y);
+      if (x > 0) this.push(x - 1, y);
+      if (x < this.mapW - 1) this.push(x + 1, y);
+      if (y > 0) this.push(x, y - 1);
+      if (y < this.mapH - 1) this.push(x, y + 1);
+      return;
+    }
+
+    const r = Math.max(
+      1,
+      Math.floor(this.settings.mapOverlay.highlightThicken),
+    );
+    const x0 = Math.max(0, x - r);
+    const x1 = Math.min(this.mapW - 1, x + r);
+    const y0 = Math.max(0, y - r);
+    const y1 = Math.min(this.mapH - 1, y + r);
+    for (let yy = y0; yy <= y1; yy++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        this.push(xx, yy);
+      }
+    }
   }
 
   get count(): number {

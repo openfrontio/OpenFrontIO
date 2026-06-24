@@ -43,15 +43,21 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
 
 /**
  * Whether a SAM belongs in the nuke trajectory preview's threat set.
- * Allied SAMs are excluded unless the strike would betray that ally —
- * the alliance breaks at launch, so their SAMs will engage the nuke.
+ * Mirrors SAMLauncherExecution: a SAM ignores a nuke whose owner it's
+ * friendly with (same team OR allied).
+ * Teammates are excluded unconditionally — a strike can break an alliance
+ * but never a team relationship, so a teammate's SAM never engages.
+ * Allied SAMs are excluded unless the strike would betray that ally — the
+ * alliance breaks at launch, so their SAMs will engage the nuke.
  * (Own SAMs never threaten; the caller filters those out first.)
  */
 export function samThreatensNukePreview(
   samOwnerSmallId: number,
+  teammateSmallIds: ReadonlySet<number>,
   allySmallIds: ReadonlySet<number>,
   betrayedSmallIds: ReadonlySet<number>,
 ): boolean {
+  if (teammateSmallIds.has(samOwnerSmallId)) return false;
   return (
     !allySmallIds.has(samOwnerSmallId) || betrayedSmallIds.has(samOwnerSmallId)
   );
@@ -72,13 +78,15 @@ export class BuildPreviewController implements Controller {
   private lastGhostData: GhostPreviewData | null = null;
 
   // Static inputs for the nuke trajectory preview (source silo + threatening
-  // SAMs). Recomputed in the throttled renderGhost path; cursorLoop rebuilds
-  // the Bezier each frame with the live cursor position as the destination so
-  // the arc tracks the cursor smoothly instead of snapping tile-to-tile.
+  // SAMs + impassable-terrain blocker). Recomputed in the throttled renderGhost
+  // path; cursorLoop rebuilds the Bezier each frame with the live cursor
+  // position as the destination so the arc tracks the cursor smoothly instead
+  // of snapping tile-to-tile.
   private nukeTrajectoryStatic: {
     srcX: number;
     srcY: number;
     sams: SAMInfo[];
+    isBlocked: (x: number, y: number) => boolean;
   } | null = null;
 
   constructor(
@@ -143,6 +151,7 @@ export class BuildPreviewController implements Controller {
               this.game.height(),
               this.uiState.rocketDirectionUp,
               traj.sams,
+              traj.isBlocked,
             ),
           );
         }
@@ -190,6 +199,11 @@ export class BuildPreviewController implements Controller {
     );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
+      // Impassable terrain is a void — treat hovering over it the same as
+      // hovering outside the map (no ghost, no trajectory, no blast circle).
+      if (this.game.isImpassable(tileRef)) {
+        tileRef = undefined;
+      }
     }
 
     // Check if targeting an ally (for nuke warning visual)
@@ -331,10 +345,15 @@ export class BuildPreviewController implements Controller {
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
 
-    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't —
-    // except allies this strike would betray: the alliance breaks at launch
-    // (NukeExecution.maybeBreakAlliances), so their SAMs will intercept.
+    // Non-friendly SAMs threaten the trajectory; own + teammate + allied SAMs
+    // don't — except allies this strike would betray: the alliance breaks at
+    // launch (NukeExecution.maybeBreakAlliances), so their SAMs will intercept.
+    // Teammates have no such exception (a strike never breaks a team).
     // listNukeBreakAlliance is the same function the sim uses there.
+    const teammateIds = new Set<number>();
+    for (const p of this.game.players()) {
+      if (myPlayer.isOnSameTeam(p)) teammateIds.add(p.smallID());
+    }
     const allyIds = new Set<number>();
     for (const a of myPlayer.allies()) allyIds.add(a.smallID());
     const betrayedIds: ReadonlySet<number> =
@@ -351,7 +370,14 @@ export class BuildPreviewController implements Controller {
       if (!s.isActive()) continue;
       const owner = s.owner();
       if (owner === myPlayer) continue;
-      if (!samThreatensNukePreview(owner.smallID(), allyIds, betrayedIds)) {
+      if (
+        !samThreatensNukePreview(
+          owner.smallID(),
+          teammateIds,
+          allyIds,
+          betrayedIds,
+        )
+      ) {
         continue;
       }
       const r = this.game.config().samRange(s.level());
@@ -364,7 +390,18 @@ export class BuildPreviewController implements Controller {
 
     // Stash the static inputs; cursorLoop rebuilds the Bezier each frame with
     // the live cursor as the destination so the arc tracks smoothly.
-    this.nukeTrajectoryStatic = { srcX, srcY, sams };
+    // The isBlocked callback tests impassable terrain so the trajectory turns
+    // red with a red X where it would cross impassable terrain (matching the
+    // simulation's abort-on-impassable behavior).
+    this.nukeTrajectoryStatic = {
+      srcX,
+      srcY,
+      sams,
+      isBlocked: (x: number, y: number) => {
+        if (!this.game.isValidCoord(x, y)) return false;
+        return this.game.isImpassable(this.game.ref(x, y));
+      },
+    };
   }
 
   private clearNukeTrajectory(): void {
