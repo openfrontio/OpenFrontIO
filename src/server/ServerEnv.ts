@@ -2,7 +2,7 @@ import { JWK } from "jose";
 import { z } from "zod";
 import { GameEnv, parseGameEnv } from "../core/configuration/Config";
 import { GameID } from "../core/Schemas";
-import { simpleHash } from "../core/Util";
+import { generateID, simpleHash } from "../core/Util";
 
 const JwksSchema = z.object({
   keys: z
@@ -125,6 +125,19 @@ export class ServerEnv {
   static workerPortByIndex(index: number): number {
     return 3001 + index;
   }
+  // Generate a game id that hashes to `workerId`, so requests for the game route
+  // back to this worker. Rejection sampling: each id lands on a uniformly-random
+  // worker, so the expected number of tries is numWorkers; the cap scales with
+  // the worker count to keep the failure chance negligible (~e^-100). Returns
+  // null if none was found (effectively never).
+  static generateGameIdForWorker(workerId: number): GameID | null {
+    const maxAttempts = ServerEnv.numWorkers() * 100;
+    for (let i = 0; i < maxAttempts; i++) {
+      const id = generateID();
+      if (ServerEnv.workerIndex(id) === workerId) return id;
+    }
+    return null;
+  }
 
   // Server-only env values
   static domain(): string {
@@ -155,6 +168,15 @@ export class ServerEnv {
   }
   static apiKey(): string {
     return process.env.API_KEY ?? "";
+  }
+  // Long-lived shared secret for the trusted admin bot HTTP API.
+  // Undefined when unset, which disables the admin bot API entirely.
+  static adminBotKey(): string | undefined {
+    const v = process.env.ADMIN_BOT_API_KEY;
+    return v && v.length > 0 ? v : undefined;
+  }
+  static adminBotHeader(): string {
+    return "x-admin-bot-key";
   }
   static allowedFlares(): string[] | undefined {
     const raw = process.env.ALLOWED_FLARES;
