@@ -1,18 +1,14 @@
 import { TransportShipExecution } from "src/core/execution/TransportShipExecution";
 import { Game } from "../../..//src/core/game/Game";
-import {
-  ClientID,
-  GameID,
-  StampedIntent,
-  Turn,
-} from "../../../src/core/Schemas";
+import { ClientID, GameID, Turn } from "../../../src/core/Schemas";
 import { AttackExecution } from "../../../src/core/execution/AttackExecution";
 import { DeleteUnitExecution } from "../../../src/core/execution/DeleteUnitExecution";
 import { Executor } from "../../../src/core/execution/ExecutionManager";
 import { AllianceExtensionExecution } from "../../../src/core/execution/alliance/AllianceExtensionExecution";
+import { setup } from "../../util/Setup";
 
 describe("Executor", () => {
-  const game: Game = undefined as any;
+  let game: Game;
   let executor: Executor;
   const gameID: GameID = "test_game";
   const clientID: ClientID = "test_client";
@@ -20,6 +16,9 @@ describe("Executor", () => {
 
   beforeEach(() => {
     executor = new Executor(game, gameID, clientID);
+    beforeEach(async () => {
+      game = await setup("plains", {});
+    });
   });
 
   test("createExecs merges attack-ratio-based intents from same client ID", () => {
@@ -40,12 +39,13 @@ describe("Executor", () => {
         },
         {
           type: "delete_unit",
+          clientID: "client3",
           unitId: 1001,
         },
         {
           type: "allianceExtension",
           clientID: "client3",
-          allianceID: "alliance1",
+          recipient: "alliance1",
         },
         {
           type: "attack",
@@ -73,7 +73,7 @@ describe("Executor", () => {
           clientID: "client3",
           troopRatio: 0.1,
           troopCount: 1000,
-          targetID: "target2",
+          dst: 42,
         },
         {
           type: "attack",
@@ -82,7 +82,7 @@ describe("Executor", () => {
           troopCount: 1000,
           targetID: "target3",
         },
-      ] as StampedIntent[],
+      ],
     };
 
     const executions = executor.createExecs(turn);
