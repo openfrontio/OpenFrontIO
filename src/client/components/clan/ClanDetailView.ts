@@ -417,7 +417,7 @@ export class ClanDetailView extends LitElement {
           <div class="grid gap-4 sm:grid-cols-5 items-start">
             <div class="sm:col-span-3 flex flex-col gap-4">
               ${this.renderDescriptionCard(clan)}
-              <div class="grid grid-cols-2 gap-4 sm:grid-cols-1">
+              <div class="grid grid-cols-2 gap-4">
                 ${this.renderStatTiles(clan)}
               </div>
             </div>
