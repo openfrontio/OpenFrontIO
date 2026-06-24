@@ -697,6 +697,7 @@
     "video_tutorial_title": "OpenFront.io Tutorial"
   },
   "host_modal": {
+    "anonymous_players": "Anonymous players",
     "assigned_teams": "Assigned Teams",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
@@ -744,6 +745,7 @@
     "teams_Quads": "Quads (teams of 4)",
     "teams_Trios": "Trios (teams of 3)",
     "title": "Create Private Lobby",
+    "toggle_name_reveal": "Toggle whether this player can see real names",
     "waiting": "Waiting for players...",
     "water_nukes": "Water nukes"
   },

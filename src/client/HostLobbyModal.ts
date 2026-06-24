@@ -79,6 +79,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private anonymizeNames: boolean = false;
+  @state() private nameReveals: string[] = [];
   @state() private whitelistEnabled: boolean = false;
   @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
@@ -414,6 +416,10 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.disableAlliances,
                   },
                   {
+                    labelKey: "host_modal.anonymous_players",
+                    checked: this.anonymizeNames,
+                  },
+                  {
                     labelKey: "host_modal.water_nukes",
                     checked: this.waterNukes,
                   },
@@ -466,6 +472,10 @@ export class HostLobbyModal extends BaseModal {
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            .onToggleNameReveal=${(clientID: string) =>
+              this.toggleNameReveal(clientID)}
+            .nameReveals=${this.nameReveals}
+            .anonymizeNames=${this.anonymizeNames}
           ></lobby-player-view>
         </div>
 
@@ -595,6 +605,8 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.anonymizeNames = false;
+    this.nameReveals = [];
     this.whitelistEnabled = false;
     this.allowedPublicIds = "";
     this.waterNukes = false;
@@ -683,6 +695,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.disable_alliances":
         this.disableAlliances = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.anonymous_players":
+        this.anonymizeNames = checked;
         this.putGameConfig();
         break;
       case "host_modal.water_nukes":
@@ -1072,6 +1088,8 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
             disableAlliances: this.disableAlliances || null,
+            anonymizeNames: this.anonymizeNames,
+            nameReveals: this.nameReveals,
             allowedPublicIds: this.whitelistEnabled
               ? (this.parseAllowedPublicIds() ?? [])
               : [],
@@ -1097,6 +1115,13 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  private toggleNameReveal(clientID: string) {
+    this.nameReveals = this.nameReveals.includes(clientID)
+      ? this.nameReveals.filter((c) => c !== clientID)
+      : [...this.nameReveals, clientID];
+    this.putGameConfig();
   }
 
   private async toggleGameStartTimer() {

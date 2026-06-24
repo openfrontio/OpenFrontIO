@@ -25,7 +25,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord } from "../core/Util";
+import { anonymousUsername, createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
@@ -136,6 +136,31 @@ export class GameServer {
       : undefined;
   }
 
+  // anonymizeNames: only players the host granted (nameReveals) see real names.
+  // Nobody is exempt by default, not even the host, until he grants them.
+  private viewerSeesAllNames(viewer: ClientID | undefined): boolean {
+    return (
+      viewer !== undefined &&
+      (this.gameConfig.nameReveals?.includes(viewer) ?? false)
+    );
+  }
+
+  // Same (viewer, target) -> same name in the lobby and in-game.
+  private anonName(viewer: ClientID | undefined, target: ClientID): string {
+    return anonymousUsername(target + (viewer ?? ""));
+  }
+
+  // Whether `viewer` should see `target`'s real identity: when names aren't
+  // anonymized, when looking at themselves, or when the host granted the
+  // viewer reveal access (nameReveals).
+  private seesReal(viewer: ClientID | undefined, target: ClientID): boolean {
+    return (
+      !this.gameConfig.anonymizeNames ||
+      target === viewer ||
+      this.viewerSeesAllNames(viewer)
+    );
+  }
+
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
@@ -204,6 +229,12 @@ export class GameServer {
     }
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
+    }
+    if (gameConfig.anonymizeNames !== undefined) {
+      this.gameConfig.anonymizeNames = gameConfig.anonymizeNames;
+    }
+    if (gameConfig.nameReveals !== undefined) {
+      this.gameConfig.nameReveals = gameConfig.nameReveals;
     }
     // Unconditional on purpose: the host clears cheats by omitting hostCheats
     // (the full config it sends has hostCheats: undefined when the toggle is
@@ -715,12 +746,13 @@ export class GameServer {
   }
 
   private broadcastLobbyInfo() {
-    const lobbyInfo = this.gameInfo();
+    // Off: same payload for everyone (build once). On: per-recipient.
+    const shared = this.gameConfig.anonymizeNames ? null : this.gameInfo();
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
         const msg = JSON.stringify({
           type: "lobby_info",
-          lobby: lobbyInfo,
+          lobby: shared ?? this.gameInfo(c.clientID),
           myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
@@ -787,6 +819,30 @@ export class GameServer {
     this.intents.push(intent);
   }
 
+  // Per-viewer start info. The real gameStartInfo is untouched, so the
+  // archived record keeps real identities. clanTag and friends feed the
+  // deterministic team assignment (TeamAssignment.ts), so they are blanked
+  // for every player here, identical on every client, never per-viewer, or
+  // clients desync. Only the username of players this viewer can't see is
+  // anonymized, and their cosmetics hidden, neither of which the simulation
+  // reads.
+  private startInfoFor(viewer: ClientID): GameStartInfo {
+    if (!this.gameConfig.anonymizeNames) return this.wireGameStartInfo;
+    return {
+      ...this.wireGameStartInfo,
+      players: this.wireGameStartInfo.players.map((p) => {
+        const real = this.seesReal(viewer, p.clientID);
+        return {
+          ...p,
+          username: real ? p.username : this.anonName(viewer, p.clientID),
+          clanTag: null,
+          friends: undefined,
+          cosmetics: real ? p.cosmetics : undefined,
+        };
+      }),
+    };
+  }
+
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
     // Find which client this websocket belongs to
     const client = this.activeClients.find((c) => c.ws === ws);
@@ -813,7 +869,7 @@ export class GameServer {
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.wireGameStartInfo,
+          gameStartInfo: this.startInfoFor(client.clientID),
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
@@ -954,17 +1010,27 @@ export class GameServer {
     return this._hasStarted || this._hasPrestarted;
   }
 
-  public gameInfo(): GameInfo {
+  // Omitting viewer (e.g. the HTTP /api/game/:id and link-preview routes)
+  // anonymizes all names when the option is on.
+  public gameInfo(viewer?: ClientID): GameInfo {
     const friendsFor = this.buildFriendsLookup();
     const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
-      clients: this.activeClients.map((c) => ({
-        username: c.username,
-        clanTag: hideClanTags ? null : (c.clanTag ?? null),
-        clientID: c.clientID,
-        friends: friendsFor(c),
-      })),
+      clients: this.activeClients.map((c) =>
+        this.seesReal(viewer, c.clientID)
+          ? {
+              username: c.username,
+              clanTag: hideClanTags ? null : (c.clanTag ?? null),
+              clientID: c.clientID,
+              friends: friendsFor(c),
+            }
+          : {
+              username: this.anonName(viewer, c.clientID),
+              clanTag: null,
+              clientID: c.clientID,
+            },
+      ),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
