@@ -182,7 +182,7 @@
     "description": "Description",
     "disband_clan": "Disband Clan",
     "discord_default_name": "Discord",
-    "discord_expires": "Use a Discord invite set to never expire.",
+    "discord_expires": "That invite expires, use one set to never expire.",
     "discord_invalid": "That isn't a valid Discord invite link.",
     "discord_invite_unavailable": "This Discord invite is no longer valid.",
     "discord_online_members": "{online, number} online · {members, number} members",

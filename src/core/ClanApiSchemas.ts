@@ -61,6 +61,22 @@ export type ClanDiscord = {
   memberCount?: number | null;
 };
 
+// Subset of Discord's public GET /invites/{code}?with_counts=true response,
+// parsed client-side into ClanDiscord. snake_case mirrors Discord's wire format.
+export const DiscordInviteResponseSchema = z.object({
+  guild: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      icon: z.string().nullable().optional(),
+      banner: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+    })
+    .optional(),
+  approximate_member_count: z.number().optional(),
+  approximate_presence_count: z.number().optional(),
+});
+
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),
   total: z.number(),

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   type ClanBansResponse,
   ClanBansResponseSchema,
@@ -16,6 +15,7 @@ import {
   ClanMembersResponseSchema,
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
+  DiscordInviteResponseSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
@@ -339,21 +339,6 @@ export async function updateClan(
     return { error: "clan_modal.error_network" };
   }
 }
-
-// Subset of Discord's public GET /invites/{code}?with_counts=true response.
-const DiscordInviteResponseSchema = z.object({
-  guild: z
-    .object({
-      id: z.string(),
-      name: z.string(),
-      icon: z.string().nullable().optional(),
-      banner: z.string().nullable().optional(),
-      description: z.string().nullable().optional(),
-    })
-    .optional(),
-  approximate_member_count: z.number().optional(),
-  approximate_presence_count: z.number().optional(),
-});
 
 // Animated icons/banners use an `a_` hash prefix and are served as .gif.
 function discordCdnAsset(

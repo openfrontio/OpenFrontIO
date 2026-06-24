@@ -524,4 +524,30 @@ describe("fetchDiscordInvite", () => {
     expect(result).toEqual({ url: "not a url", valid: true });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("passes an AbortSignal to fetch so the request can time out", async () => {
+    const fetchMock = vi.fn(() => okJson(inviteBody));
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchDiscordInvite("https://discord.gg/abc123");
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { signal: AbortSignal },
+    ];
+    // Pins the AbortSignal.timeout(5000) guard; without it the card could hang
+    // indefinitely on a stalled connection.
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("degrades to the plain link when the request times out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.reject(
+          new DOMException("The operation timed out", "TimeoutError"),
+        ),
+      ),
+    );
+    const result = await fetchDiscordInvite("https://discord.gg/slow");
+    expect(result).toEqual({ url: "https://discord.gg/slow", valid: true });
+  });
 });
