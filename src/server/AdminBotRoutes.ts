@@ -76,7 +76,9 @@ export function registerAdminBotRoutes(opts: {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
     const config = parsed.data;
-    if (config.gameType === GameType.Public) {
+    // Private only: reject Public and Singleplayer. An omitted gameType defaults
+    // to Private in createGame, so it's allowed through.
+    if (config.gameType !== undefined && config.gameType !== GameType.Private) {
       return res
         .status(400)
         .json({ error: "admin bot can only create private games" });
