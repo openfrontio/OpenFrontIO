@@ -73,7 +73,6 @@ export class SendAttackIntentEvent implements GameEvent {
     public readonly targetID: PlayerID | null,
     public readonly troopRatio: number,
     public readonly troopCount: number,
-    public readonly maxTroopCount: number | null = null,
   ) {}
 }
 

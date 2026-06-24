@@ -1239,7 +1239,7 @@ export class ClientGameRunner {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         tile,
-        this.renderer.uiState.attackRatio,
+        Math.floor(100 * this.renderer.uiState.attackRatio),
         this.myPlayer.troops(),
       ),
     );
