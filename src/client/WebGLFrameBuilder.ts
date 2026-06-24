@@ -70,6 +70,19 @@ export class WebGLFrameBuilder {
     this.view.updatePalette(this.palette);
   }
 
+  /**
+   * Re-resolve every player's display name (e.g. after toggling the
+   * anonymous-names setting) and push it to the renderer so the names drawn on
+   * the map switch live, matching the leaderboard.
+   */
+  refreshNames(gameView: GameView): void {
+    const displayNames = new Map<string, string>();
+    for (const p of gameView.players()) {
+      displayNames.set(p.id(), p.displayName());
+    }
+    this.view.refreshNames(displayNames);
+  }
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncPlayerSpawns(gameView);
@@ -224,6 +237,9 @@ export class WebGLFrameBuilder {
 
       newPlayers.push({
         ...p.static,
+        // displayName() honors the anonymous-names setting; static.displayName
+        // is always the real name.
+        displayName: p.displayName(),
         flag: flagUrl,
         color: p.territoryColor().toHex(),
       });

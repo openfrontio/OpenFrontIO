@@ -19,6 +19,41 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/auth/login/discord?redirect_uri=${redirectUri}`;
 }
 
+export function googleLogin() {
+  const redirectUri = encodeURIComponent(window.location.href);
+  window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
+}
+
+// Link a Google account to the currently logged-in player. Unlike login this is
+// an authenticated request, so we fetch the Google authorize URL with the
+// Bearer token (a top-level navigation can't carry it) and then navigate to it.
+// Returns false if the user isn't logged in or the request fails.
+export async function linkGoogle(): Promise<boolean> {
+  const authHeader = await getAuthHeader();
+  if (authHeader === "") return false;
+  const redirectUri = encodeURIComponent(window.location.href);
+  try {
+    const response = await fetch(
+      `${getApiBase()}/auth/link/google?redirect_uri=${redirectUri}`,
+      {
+        headers: { Authorization: authHeader },
+        credentials: "include",
+      },
+    );
+    if (!response.ok) {
+      console.error("Failed to start Google link", response);
+      return false;
+    }
+    const { url } = await response.json();
+    if (typeof url !== "string") return false;
+    window.location.href = url;
+    return true;
+  } catch (e) {
+    console.error("Failed to start Google link", e);
+    return false;
+  }
+}
+
 export async function tempTokenLogin(token: string): Promise<string | null> {
   const response = await fetch(
     `${getApiBase()}/auth/login/token?login-token=${token}`,

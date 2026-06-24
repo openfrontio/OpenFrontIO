@@ -108,6 +108,12 @@ export const PlayerStatsSchema = z
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
     killedAt: BigIntStringSchema.optional(),
+    // Tiles owned at game end, for OFM standings (set on setWinner).
+    finalTiles: BigIntStringSchema.optional(),
+    // Humans this player eliminated (victim clientID + tick), for OFM kill scoring.
+    kills: z
+      .array(z.object({ victim: z.string(), tick: BigIntStringSchema }))
+      .optional(),
     conquests: AtLeastOneNumberSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),

@@ -57,6 +57,7 @@ export class AiAttackBehavior {
       .filter(
         (t) =>
           this.game.isLand(t) &&
+          !this.game.isImpassable(t) &&
           this.game.ownerID(t) !== this.player?.smallID(),
       );
     const playerNeighbors = this.player.nearby();
@@ -169,6 +170,9 @@ export class AiAttackBehavior {
       }
       const randTile = this.game.ref(randX, randY);
       if (!this.game.isLand(randTile)) {
+        continue;
+      }
+      if (this.game.isImpassable(randTile)) {
         continue;
       }
       const owner = this.game.owner(randTile);
@@ -764,7 +768,11 @@ export class AiAttackBehavior {
   private hasLandBorderWithTerraNullius(): boolean {
     for (const border of this.player.borderTiles()) {
       for (const neighbor of this.game.neighbors(border)) {
-        if (this.game.isLand(neighbor) && !this.game.hasOwner(neighbor)) {
+        if (
+          this.game.isLand(neighbor) &&
+          !this.game.isImpassable(neighbor) &&
+          !this.game.hasOwner(neighbor)
+        ) {
           return true;
         }
       }
@@ -809,6 +817,7 @@ export class AiAttackBehavior {
         if (!this.game.isValidCoord(nx, ny)) continue;
         const tile = this.game.ref(nx, ny);
         if (!this.game.isLand(tile)) continue;
+        if (this.game.isImpassable(tile)) continue;
         if (this.game.hasOwner(tile)) continue;
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;

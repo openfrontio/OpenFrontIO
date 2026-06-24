@@ -60,6 +60,7 @@ import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
+import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
   toScreen,
@@ -569,7 +570,7 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = renderDpr();
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
     this.camera.resize(cssWidth, cssHeight);
@@ -778,6 +779,11 @@ export class GPURenderer {
     }
   }
 
+  /** Re-resolve player name strings live (e.g. anonymous-names toggle). */
+  refreshNames(displayNames: Map<string, string>): void {
+    this.namePass.refreshNames(displayNames);
+  }
+
   updateRelations(data: Uint8Array, size: number): void {
     this.borderPass.updateRelations(data, size);
     this.affiliationPalette.updateRelations(data, size);
@@ -924,6 +930,7 @@ export class GPURenderer {
     if (id === this.localPlayerID) return;
     this.localPlayerID = id;
     this.samRadiusPass.setLocalPlayer(id);
+    this.structurePass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
     this.railroadPass.setLocalPlayer(id);
@@ -1226,5 +1233,9 @@ export class GPURenderer {
     this.gl.deleteTexture(this.sceneTarget.tex);
     this.lastUnits = new Map();
     this.lastStructures = new Map();
+    // Deleting GL resources isn't enough — the context itself counts against
+    // the browser's WebGL context limit until it's GC'd, which is unreliable
+    // on mobile. Explicitly drop it so repeated game starts don't overflow.
+    this.gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }

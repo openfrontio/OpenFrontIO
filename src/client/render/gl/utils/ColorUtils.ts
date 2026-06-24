@@ -45,6 +45,11 @@ const DEEP_WATER_BASE: readonly [number, number, number] = hexToRgb(
  *   bit 6: isShoreline
  *   bit 5: isOcean  (water only)
  *   bits 0-4: magnitude (0-31)
+ *
+ * Impassable terrain is encoded as isLand=1 + magnitude=31. It renders as
+ * the map background colour (matching `gl.clearColor` in Renderer.ts) so the
+ * map appears non-rectangular — the impassable regions are visually
+ * indistinguishable from the area outside the map.
  */
 /** Encode one terrain byte → RGBA, writing into `out[offset..offset+3]`. */
 export function encodeTerrainTile(
@@ -59,7 +64,14 @@ export function encodeTerrainTile(
 
   let r: number, g: number, b: number;
 
-  if (isLand && isShoreline) {
+  // Impassable terrain: render as the map background colour so it blends
+  // with the area outside the map quad. Must match the clear colour in
+  // Renderer.ts drawBaseLayer(): gl.clearColor(60/255, 60/255, 60/255).
+  if (isLand && magnitude === 31) {
+    r = 60;
+    g = 60;
+    b = 60;
+  } else if (isLand && isShoreline) {
     // Shore (sand)
     r = 204;
     g = 203;
@@ -83,10 +95,11 @@ export function encodeTerrainTile(
       b = v;
     }
   } else if (isShoreline) {
-    // Shoreline water
-    r = 100;
-    g = 143;
-    b = 255;
+    // Shoreline water — computed dynamically by blending 70% ocean color and 30% white
+    const base = oceanColor ?? DEEP_WATER_BASE;
+    r = Math.round(0.7 * base[0] + 76.5);
+    g = Math.round(0.7 * base[1] + 76.5);
+    b = Math.round(0.7 * base[2] + 76.5);
   } else {
     // Deep water — darkens with depth (magnitude). The base color sets the
     // shallowest (brightest) shade; the per-depth gradient is preserved by

@@ -16,6 +16,7 @@ uniform float uBorderDarken;    // HSV value multiplier on icon border
 uniform float uIconAlpha;       // global multiplier on final icon alpha
 uniform vec3  uIconColor;       // color of the inner icon glyph (was white)
 uniform float uIconDarken;      // >0: glyph = darkened player color instead of uIconColor
+uniform float uLocalPlayerID;
 
 in vec2  vLocalPos;
 in vec2  vAtlasUV;
@@ -102,9 +103,12 @@ void main() {
     fillColor = vec4(198.0/255.0, 198.0/255.0, 198.0/255.0, 1.0);
     borderColor = vec4(127.0/255.0, 127.0/255.0, 127.0/255.0, 1.0);
   } else {
+    int owner = int(vOwnerID + 0.5);
+    int local = int(uLocalPlayerID);
     float u = (vOwnerID + 0.5) / float(PALETTE_SIZE);
     fillColor = texture(uPalette, vec2(u, 0.25));
-    borderColor = texture(uPalette, vec2(u, 0.75));
+    // if local player, use territory color because the border color is grey
+    borderColor = texture(uPalette, vec2(u, owner == local ? 0.25 : 0.75));
     // Darken via HSV value so hue/saturation stay intact
     // vScale < 1.0 = darker, > 1.0 = brighter
     fillColor.rgb = darken(fillColor.rgb, uFillDarken);
