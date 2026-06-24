@@ -102,6 +102,24 @@ export function registerAdminBotRoutes(opts: {
     });
   });
 
+  // Read what's happening in a running game. The sim runs on the clients, so
+  // this returns the latest live stats snapshot a majority of them agreed on
+  // (liveStats is null until the first consensus is reached).
+  app.get("/api/adminbot/game/:id/stats", requireAdminBotKey, (req, res) => {
+    const id = req.params.id as string;
+    if (!ownsGame(id, res)) return;
+
+    const game = gm.game(id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+
+    res.json({
+      gameID: id,
+      liveStats: game.liveStats(),
+    });
+  });
+
   // Send an intent. Honors the lobby-management intents; everything else 400.
   app.post("/api/adminbot/game/:id/intent", requireAdminBotKey, (req, res) => {
     const id = req.params.id as string;
