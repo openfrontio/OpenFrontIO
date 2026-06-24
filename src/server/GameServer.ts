@@ -268,10 +268,10 @@ export class GameServer {
         // Resolve the target to a live clientID: an explicit clientID, or an
         // account publicId matched against the connected clients (for callers
         // that know the account but not the per-session clientID).
-        let target = stamped.target;
-        if (target === undefined && stamped.targetPublicId !== undefined) {
+        let target = stamped.targetClientID;
+        if (target === undefined && stamped.targetPublicID !== undefined) {
           target = this.activeClients.find(
-            (c) => c.publicId === stamped.targetPublicId,
+            (c) => c.publicId === stamped.targetPublicID,
           )?.clientID;
         }
         if (target === undefined) {

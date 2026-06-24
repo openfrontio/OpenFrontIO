@@ -477,11 +477,11 @@ export const MarkDisconnectedIntentSchema = z.object({
 
 export const KickPlayerIntentSchema = z.object({
   type: z.literal("kick_player"),
-  // Either a live clientID (lobby / in-game kick) OR an account publicId, for
+  // Either a live clientID (lobby / in-game kick) OR an account publicID, for
   // callers that identify a player by account rather than per-session clientID;
-  // the server resolves the publicId to the live clientID. Exactly one is set.
-  target: ID.optional(),
-  targetPublicId: z.string().optional(),
+  // the server resolves the publicID to the live clientID. Exactly one is set.
+  targetClientID: ID.optional(),
+  targetPublicID: ID.optional(),
 });
 
 export const TogglePauseIntentSchema = z.object({
