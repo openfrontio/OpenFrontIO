@@ -279,6 +279,10 @@ export const GameConfigSchema = z.object({
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
+  anonymizeNames: z.boolean().optional(),
+  // While anonymizeNames is on, clientIDs the host has granted real-name
+  // visibility to (e.g. casters / observers). Everyone else stays anonymized.
+  nameReveals: z.string().array().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
@@ -490,7 +494,7 @@ export const ToggleGameStartTimerIntentSchema = z.object({
   type: z.literal("toggle_game_start_timer"),
 });
 
-const IntentSchema = z.discriminatedUnion("type", [
+export const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
@@ -521,6 +525,12 @@ const IntentSchema = z.discriminatedUnion("type", [
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
 export const StampedIntentSchema = IntentSchema.and(z.object({ clientID: ID }));
 export type StampedIntent = Intent & { clientID: ClientID };
+
+// Placeholder clientID stamped onto admin-bot intents (HTTP admin API). The bot
+// is not a player, but toggle_pause — the one bot intent that reaches the turn
+// queue — needs a valid clientID. Chosen so it can never collide with a real id:
+// generateID() omits 0/l/I/O, and this contains I and O.
+export const ADMIN_BOT_CLIENT_ID: ClientID = "ADMINBOT";
 
 //
 // Server utility types

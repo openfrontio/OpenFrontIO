@@ -485,6 +485,14 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchStructure({ classicNumbers: !this.currentClassicNumbers() });
   }
 
+  private currentShowDots(): boolean {
+    return this.userSettings.graphicsOverrides().structure?.showDots ?? true;
+  }
+
+  private onToggleShowDots() {
+    this.patchStructure({ showDots: !this.currentShowDots() });
+  }
+
   private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -593,6 +601,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const iconSize = this.currentIconSize();
     const classicIcons = this.currentClassicIcons();
     const classicNumbers = this.currentClassicNumbers();
+    const showDots = this.currentShowDots();
     const highlightFill = this.currentHighlightFill();
     const highlightBrighten = this.currentHighlightBrighten();
     const highlightThicken = this.currentHighlightThicken();
@@ -906,6 +915,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${classicNumbers
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleShowDots}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.structure_dots_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.structure_dots_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${showDots
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

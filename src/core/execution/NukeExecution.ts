@@ -375,6 +375,10 @@ export class NukeExecution implements Execution {
     for (const [player, numImpactedTiles] of tilesPerPlayers) {
       const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
       const transportShips = player.units(UnitType.TransportShip);
+      const transportShipTroops = new Map<Unit, number>();
+      for (const unit of transportShips) {
+        transportShipTroops.set(unit, unit.troops());
+      }
       const outgoingAttacks = player.outgoingAttacks();
       const maxTroops = config.maxTroops(player);
       // nukeDeathFactor could compute the complete fallout in a single call instead
@@ -400,15 +404,18 @@ export class NukeExecution implements Execution {
           attack.setTroops(attackTroops - deaths);
         }
         for (const unit of transportShips) {
-          const unitTroops = unit.troops();
+          const unitTroops = transportShipTroops.get(unit) ?? unit.troops();
           const deaths = config.nukeDeathFactor(
             this.nukeType,
             unitTroops,
             numTilesLeft,
             maxTroops,
           );
-          unit.setTroops(unitTroops - deaths);
+          transportShipTroops.set(unit, Math.max(0, unitTroops - deaths));
         }
+      }
+      for (const [unit, troops] of transportShipTroops) {
+        unit.setTroops(troops);
       }
     }
 

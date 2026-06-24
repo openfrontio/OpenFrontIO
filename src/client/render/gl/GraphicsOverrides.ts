@@ -17,6 +17,9 @@ export const GraphicsOverridesSchema = z
         iconSize: z.number(),
         classicIcons: z.boolean(),
         classicNumbers: z.boolean(),
+        // When false, structures keep their full icon at any zoom instead of
+        // collapsing to dots when zoomed out (forces dotsZoomThreshold to 0).
+        showDots: z.boolean(),
       })
       .partial(),
     mapOverlay: z
