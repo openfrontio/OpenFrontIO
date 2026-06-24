@@ -93,7 +93,7 @@ describe("GameServer - kick_player authorization", () => {
       "message",
       JSON.stringify({
         type: "intent",
-        intent: { type: "kick_player", target },
+        intent: { type: "kick_player", targetClientID: target },
       }),
     );
   }

@@ -115,7 +115,7 @@ describe("GameServer.handleIntent (admin bot)", () => {
       const spy = vi.spyOn(game, "kickClient");
       const result = apply(game, {
         type: "kick_player",
-        target: "abcdABCD",
+        targetClientID: "abcdABCD",
       } as any);
       expect(result.status).toBe(200);
       expect(spy).toHaveBeenCalledWith("abcdABCD", expect.any(String));
@@ -126,9 +126,34 @@ describe("GameServer.handleIntent (admin bot)", () => {
       expect(
         apply(game, {
           type: "kick_player",
-          target: "abcdABCD",
+          targetClientID: "abcdABCD",
         } as any).status,
       ).toBe(403);
+    });
+
+    it("resolves a publicID target to the connected client's clientID", () => {
+      const game = makeGame();
+      (game as any).activeClients.push({
+        clientID: "liveCID1",
+        publicId: "pubABCD1",
+      });
+      const spy = vi.spyOn(game, "kickClient");
+      const result = apply(game, {
+        type: "kick_player",
+        targetPublicID: "pubABCD1",
+      } as any);
+      expect(result.status).toBe(200);
+      expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
+    });
+
+    it("404s when no connected client matches the publicID", () => {
+      const game = makeGame();
+      expect(
+        apply(game, {
+          type: "kick_player",
+          targetPublicID: "nobodyXX",
+        } as any).status,
+      ).toBe(404);
     });
   });
 
