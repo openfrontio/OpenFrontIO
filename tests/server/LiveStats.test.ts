@@ -24,7 +24,13 @@ describe("GameServer.handleLiveStats", () => {
   });
 
   function makeClient(clientID: string, ip: string, username: string) {
-    return { clientID, ip, persistentID: `pid-${clientID}`, username } as any;
+    return {
+      clientID,
+      ip,
+      persistentID: `pid-${clientID}`,
+      username,
+      publicId: clientID.replace("client", "public"), // 8-char ID, e.g. public01
+    } as any;
   }
 
   // A GameServer with three distinct-IP active clients wired up.
@@ -83,7 +89,14 @@ describe("GameServer.handleLiveStats", () => {
     // 2 of 3 IPs -> consensus.
     expect(game.liveStats()).toEqual({
       turn: 100,
-      players: [{ ...players[0], username: "Alice", connected: true }],
+      players: [
+        {
+          ...players[0],
+          username: "Alice",
+          publicID: "public01",
+          connected: true,
+        },
+      ],
     });
   });
 
@@ -138,7 +151,14 @@ describe("GameServer.handleLiveStats", () => {
     report(game, clients[1], 200, snapshot(42));
     expect(game.liveStats()).toEqual({
       turn: 200,
-      players: [{ ...snapshot(42)[0], username: "Alice", connected: true }],
+      players: [
+        {
+          ...snapshot(42)[0],
+          username: "Alice",
+          publicID: "public01",
+          connected: true,
+        },
+      ],
     });
   });
 
@@ -204,6 +224,7 @@ describe("admin bot stats endpoint", () => {
           isAlive: true,
           team: null,
           username: "Alice",
+          publicID: "public01",
           connected: true,
         },
       ],
