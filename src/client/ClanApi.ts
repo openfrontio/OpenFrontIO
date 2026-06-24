@@ -351,13 +351,8 @@ function discordCdnAsset(
   return `https://cdn.discordapp.com/${kind}/${guildId}/${hash}.${ext}${query}`;
 }
 
-// Live metadata for a clan's Discord card (`url` is the discordUrl from
-// GET /clans/:tag), fetched straight from Discord's public invite API — it
-// permits cross-origin browser requests, and per-player IPs sidestep the rate
-// limit Discord applies to shared server IPs. If Discord can't be reached (ad
-// blocker, outage), the card degrades to the plain link (valid: true, no
-// metadata) rather than misreporting the invite as dead; only a definitive
-// Discord 404 yields valid: false.
+// Fetched from the browser rather than via our server: per-player IPs sidestep
+// the rate limit Discord applies to its public invite API on shared server IPs.
 export async function fetchDiscordInvite(url: string): Promise<ClanDiscord> {
   // The server stores the normalised short form https://discord.gg/{code}.
   let code: string | undefined;

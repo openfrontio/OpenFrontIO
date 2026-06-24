@@ -45,10 +45,8 @@ export const ClanInfoSchema = z.object({
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
 
-// View model for the clan Discord card, assembled client-side from the clan's
-// discordUrl plus Discord's public invite lookup. `valid` is false only when
-// Discord definitively no longer recognises the invite (404 — revoked since
-// the leader saved it); when Discord is unreachable the card degrades to the
+// Client-assembled view model for the clan Discord card. `valid` is false only
+// on a definitive Discord 404 (invite revoked); other failures degrade to the
 // plain link with valid: true.
 export type ClanDiscord = {
   url: string;
