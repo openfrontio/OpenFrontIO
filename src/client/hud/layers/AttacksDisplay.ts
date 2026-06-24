@@ -203,7 +203,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     this.eventBus.emit(
       new SendAttackIntentEvent(
         attacker.id(),
-        Math.floor(
+        Math.ceil(
           // Ensures the attackRatio is between 1% and the required percentage to defend fully.
           Math.max(
             100 *

@@ -1141,7 +1141,7 @@ export class ClientGameRunner {
     this.eventBus.emit(
       new SendAttackIntentEvent(
         attacker.id(),
-        Math.floor(
+        Math.ceil(
           // Ensures the attackRatio is between 1% and the required percentage to defend fully.
           Math.max(
             100 *
