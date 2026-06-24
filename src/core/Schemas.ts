@@ -280,6 +280,8 @@ export const GameConfigSchema = z.object({
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
   anonymizeNames: z.boolean().optional(),
+  // While anonymizeNames is on, clientIDs the host has granted real-name
+  // visibility to (e.g. casters / observers). Everyone else stays anonymized.
   nameReveals: z.string().array().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),

@@ -132,6 +132,17 @@ export class GameServer {
     return anonymousUsername(target + (viewer ?? ""));
   }
 
+  // Whether `viewer` should see `target`'s real identity: when names aren't
+  // anonymized, when looking at themselves, or when the host granted the
+  // viewer reveal access (nameReveals).
+  private seesReal(viewer: ClientID | undefined, target: ClientID): boolean {
+    return (
+      !this.gameConfig.anonymizeNames ||
+      target === viewer ||
+      this.viewerSeesAllNames(viewer)
+    );
+  }
+
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
@@ -815,23 +826,26 @@ export class GameServer {
   }
 
   // Per-viewer start info. The real gameStartInfo is untouched, so the
-  // archived record keeps real identities.
+  // archived record keeps real identities. clanTag and friends feed the
+  // deterministic team assignment (TeamAssignment.ts), so they are blanked
+  // for every player here, identical on every client, never per-viewer, or
+  // clients desync. Only the username of players this viewer can't see is
+  // anonymized, and their cosmetics hidden, neither of which the simulation
+  // reads.
   private startInfoFor(viewer: ClientID): GameStartInfo {
     if (!this.gameConfig.anonymizeNames) return this.wireGameStartInfo;
-    const seesAll = this.viewerSeesAllNames(viewer);
     return {
       ...this.wireGameStartInfo,
-      players: this.wireGameStartInfo.players.map((p) =>
-        seesAll || p.clientID === viewer
-          ? p
-          : {
-              ...p,
-              username: this.anonName(viewer, p.clientID),
-              clanTag: null,
-              cosmetics: undefined,
-              friends: undefined,
-            },
-      ),
+      players: this.wireGameStartInfo.players.map((p) => {
+        const real = this.seesReal(viewer, p.clientID);
+        return {
+          ...p,
+          username: real ? p.username : this.anonName(viewer, p.clientID),
+          clanTag: null,
+          friends: undefined,
+          cosmetics: real ? p.cosmetics : undefined,
+        };
+      }),
     };
   }
 
@@ -1007,12 +1021,10 @@ export class GameServer {
   public gameInfo(viewer?: ClientID): GameInfo {
     const friendsFor = this.buildFriendsLookup();
     const hideClanTags = this.gameConfig.disableClanTags ?? false;
-    const seesAll =
-      !this.gameConfig.anonymizeNames || this.viewerSeesAllNames(viewer);
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) =>
-        seesAll || c.clientID === viewer
+        this.seesReal(viewer, c.clientID)
           ? {
               username: c.username,
               clanTag: hideClanTags ? null : (c.clanTag ?? null),
