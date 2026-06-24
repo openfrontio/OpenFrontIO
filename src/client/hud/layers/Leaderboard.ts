@@ -71,38 +71,46 @@ export class Leaderboard extends LitElement implements Controller {
     if (this.game === null) throw new Error("Not initialized");
     const myPlayer = this.game.myPlayer();
 
-    let sorted = this.game.playerViews();
+    interface PlayerViewTroopsCache {
+      pv: PlayerView;
+      maxTroops: number;
+    }
 
     const compare = (a: number, b: number) =>
       this._sortOrder === "asc" ? a - b : b - a;
 
     const maxTroops = (p: PlayerView) => this.game!.config().maxTroops(p);
 
+    const sorted: PlayerViewTroopsCache[] = this.game
+      .playerViews()
+      .map((p) => ({ pv: p, maxTroops: maxTroops(p) }));
+
     switch (this._sortKey) {
       case "gold":
-        sorted = sorted.sort((a, b) =>
-          compare(Number(a.gold()), Number(b.gold())),
+        sorted.sort((a, b) =>
+          compare(Number(a.pv.gold()), Number(b.pv.gold())),
         );
         break;
       case "maxtroops":
-        sorted = sorted.sort((a, b) => compare(maxTroops(a), maxTroops(b)));
+        sorted.sort((a, b) => compare(a.maxTroops, b.maxTroops));
         break;
       default:
-        sorted = sorted.sort((a, b) =>
-          compare(a.numTilesOwned(), b.numTilesOwned()),
+        sorted.sort((a, b) =>
+          compare(a.pv.numTilesOwned(), b.pv.numTilesOwned()),
         );
     }
 
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const alivePlayers = sorted.filter((player) => player.isAlive());
+    const alivePlayers = sorted.filter((player) => player.pv.isAlive());
     const playersToShow = this.showTopFive
       ? alivePlayers.slice(0, 5)
       : alivePlayers;
 
-    this.players = playersToShow.map((player, index) => {
-      const maxTroops = this.game!.config().maxTroops(player);
+    this.players = playersToShow.map((playerCache, index) => {
+      const player = playerCache.pv;
+      const maxTroops = playerCache.maxTroops;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -126,7 +134,7 @@ export class Leaderboard extends LitElement implements Controller {
       let place = 0;
       for (const p of sorted) {
         place++;
-        if (p === myPlayer) {
+        if (p.pv === myPlayer) {
           break;
         }
       }
