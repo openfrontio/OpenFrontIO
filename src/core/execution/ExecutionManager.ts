@@ -43,10 +43,14 @@ export class Executor {
   }
 
   private computeRatio(
+    counterTroopRatio: number,
     remainingTroopRatio: number,
     totalRatioUsage: number,
   ): number {
-    return (1 - remainingTroopRatio) / totalRatioUsage;
+    const factor = 100 ** (counterTroopRatio - 1);
+    return Math.floor(
+      (100 * (100 * factor - remainingTroopRatio)) / factor / totalRatioUsage,
+    );
   }
 
   createExecs(turn: Turn): Execution[] {
@@ -55,16 +59,21 @@ export class Executor {
     // (two 60% attacks should be one 84% attack, not one 120% attack)
     // But, they may be of different types/on different targets
     // (hence we do two (84/120)*60% = 42% attacks).
+    const counterTroopRatio_perClientID = new Map<ClientID, number>();
     const remainingTroopRatio_perClientID = new Map<ClientID, number>();
     const totalRatioUsage_perClientID = new Map<ClientID, number>();
     for (const intent of turn.intents) {
       switch (intent.type) {
         case "boat":
         case "attack": {
+          counterTroopRatio_perClientID.set(
+            intent.clientID,
+            (counterTroopRatio_perClientID.get(intent.clientID) ?? 0) + 1,
+          );
           remainingTroopRatio_perClientID.set(
             intent.clientID,
             (remainingTroopRatio_perClientID.get(intent.clientID) ?? 1) *
-              (1 - intent.troopRatio),
+              (100 - intent.troopRatio),
           );
           totalRatioUsage_perClientID.set(
             intent.clientID,
@@ -82,6 +91,7 @@ export class Executor {
           return this.createExec(
             intent,
             this.computeRatio(
+              counterTroopRatio_perClientID.get(intent.clientID)!,
               remainingTroopRatio_perClientID.get(intent.clientID)!,
               totalRatioUsage_perClientID.get(intent.clientID)!,
             ),
@@ -92,7 +102,7 @@ export class Executor {
     });
   }
 
-  createExec(intent: StampedIntent, troopRatioFactor?: number): Execution {
+  createExec(intent: StampedIntent, troopRatioFactor = 100): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -104,10 +114,7 @@ export class Executor {
       case "attack": {
         return new AttackExecution(
           Math.floor(
-            Math.min(
-              troopRatioFactor! * intent.troopRatio * intent.troopCount,
-              intent.maxTroopSent ?? intent.troopCount,
-            ),
+            (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
           ),
           player,
           intent.targetID,
@@ -126,7 +133,9 @@ export class Executor {
         return new TransportShipExecution(
           player,
           intent.dst,
-          Math.floor(troopRatioFactor! * intent.troopRatio * intent.troopCount),
+          Math.floor(
+            (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
+          ),
         );
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);

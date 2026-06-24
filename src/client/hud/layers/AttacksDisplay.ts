@@ -203,9 +203,18 @@ export class AttacksDisplay extends LitElement implements Controller {
     this.eventBus.emit(
       new SendAttackIntentEvent(
         attacker.id(),
-        this.uiState.attackRatio,
+        Math.floor(
+          // Ensures the attackRatio is between 1% and the required percentage to defend fully.
+          Math.max(
+            100 *
+              Math.min(
+                this.uiState.attackRatio,
+                attack.troops / myPlayer.troops(),
+              ),
+            1,
+          ),
+        ),
         myPlayer.troops(),
-        attack.troops,
       ),
     );
   }

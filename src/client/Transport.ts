@@ -489,7 +489,6 @@ export class Transport {
       targetID: event.targetID,
       troopRatio: event.troopRatio,
       troopCount: event.troopCount,
-      maxTroopSent: event.maxTroopCount ?? undefined,
     });
   }
 

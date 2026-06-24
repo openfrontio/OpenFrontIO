@@ -14,11 +14,9 @@ describe("Executor", () => {
   const clientID: ClientID = "test_client";
   const mockPlayer: any = 7;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    game = await setup("plains", {});
     executor = new Executor(game, gameID, clientID);
-    beforeEach(async () => {
-      game = await setup("plains", {});
-    });
   });
 
   test("createExecs merges attack-ratio-based intents from same client ID", () => {
@@ -33,7 +31,7 @@ describe("Executor", () => {
         {
           type: "attack",
           clientID: "client1",
-          troopRatio: 0.6,
+          troopRatio: 60,
           troopCount: 100,
           targetID: "target1",
         },
@@ -50,35 +48,35 @@ describe("Executor", () => {
         {
           type: "attack",
           clientID: "client1",
-          troopRatio: 0.6,
+          troopRatio: 60,
           troopCount: 100,
           targetID: "target2",
         },
         {
           type: "attack",
           clientID: "client2",
-          troopRatio: 0.9,
+          troopRatio: 90,
           troopCount: 200,
           targetID: "target2",
         },
         {
           type: "attack",
           clientID: "client3",
-          troopRatio: 0.5,
+          troopRatio: 50,
           troopCount: 1000,
           targetID: "target1",
         },
         {
           type: "boat",
           clientID: "client3",
-          troopRatio: 0.1,
+          troopRatio: 10,
           troopCount: 1000,
           dst: 42,
         },
         {
           type: "attack",
           clientID: "client3",
-          troopRatio: 0.5,
+          troopRatio: 50,
           troopCount: 1000,
           targetID: "target3",
         },
@@ -97,7 +95,7 @@ describe("Executor", () => {
     expect(executions[7]).toBeInstanceOf(AttackExecution);
 
     // Mock the computeRatio method to previous, buggy, version.
-    (executor as any).computeRatio = (a: number, b: number) => 1;
+    (executor as any).computeRatio = (a: number, b: number) => 100;
     const executionsBuggy = executor.createExecs(turn);
     expect(executionsBuggy).toHaveLength(8);
 
@@ -110,25 +108,26 @@ describe("Executor", () => {
     expect(
       (executionsBuggy[0] as any).startTroops +
         (executionsBuggy[3] as any).startTroops,
-    ).toBe(0.6 * 100 + 0.6 * 100);
+    ).toBe((0.6 + 0.6) * 100);
 
     // The total should be equal to sequenced 60% attacks, meaning the first sends 60% of 100,
     // and the second sends 60% of the remaining 40, which is 24. Total = 84.
     // BUT the attacks are considered equals, ensuring that the total troops sent is 0.6*100 + 0.6*(100 - 0.6*100) = 84.
     expect(
       (executions[0] as any).startTroops + (executions[3] as any).startTroops,
-    ).toBe(0.6 * 100 + 0.6 * (100 - 0.6 * 100));
+      // Factor is (1.0-(0.4*0.4))/1.2 = 0.70
+    ).toBe(0.7 * (0.6 + 0.6) * 100);
 
     expect(
       (executionsBuggy[5] as any).startTroops +
         (executionsBuggy[6] as any).troops +
         (executionsBuggy[7] as any).startTroops,
-    ).toBe(0.5 * 1000 + 0.1 * 1000 + 0.5 * 1000);
+    ).toBe((0.5 + 0.1 + 0.5) * 1000);
     expect(
       (executions[5] as any).startTroops +
         (executions[6] as any).troops +
         (executions[7] as any).startTroops,
-      // We remove one because of rounding
-    ).toBe(0.5 * 1000 + 0.5 * 500 + 0.1 * 250 - 1);
+      // Factor is (1.0-(0.5*0.5*0.9))/1.1 = 0.704545... BUT 0.70 because of rounding
+    ).toBe(0.7 * (0.5 + 0.1 + 0.5) * 1000);
   });
 });

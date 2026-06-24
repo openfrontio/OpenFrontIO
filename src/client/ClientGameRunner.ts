@@ -943,7 +943,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.renderer.uiState.attackRatio,
+            Math.floor(100 * this.renderer.uiState.attackRatio),
             this.myPlayer!.troops(),
           ),
         );
@@ -1103,7 +1103,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.renderer.uiState.attackRatio,
+            Math.floor(100 * this.renderer.uiState.attackRatio),
             this.myPlayer!.troops(),
           ),
         );
@@ -1141,9 +1141,18 @@ export class ClientGameRunner {
     this.eventBus.emit(
       new SendAttackIntentEvent(
         attacker.id(),
-        this.renderer.uiState.attackRatio,
+        Math.floor(
+          // Ensures the attackRatio is between 1% and the required percentage to defend fully.
+          Math.max(
+            100 *
+              Math.min(
+                this.renderer.uiState.attackRatio,
+                mostRecentAttack.troops / this.myPlayer.troops(),
+              ),
+            1,
+          ),
+        ),
         this.myPlayer.troops(),
-        mostRecentAttack.troops,
       ),
     );
   }
