@@ -1,25 +1,36 @@
 import { EventBus } from "../../core/EventBus";
+import { GameType } from "../../core/game/Game";
 import { LiveStats, PlayerLiveStats } from "../../core/Schemas";
 import { Controller } from "../Controller";
 import { SendLiveStatsEvent } from "../Transport";
 import { GameView } from "../view";
 
-// Clients each report a live stats snapshot to the server every ~10s (turns are
+// Clients each report a live stats snapshot to the server every ~30s (turns are
 // 100ms), which the server reaches consensus on so the admin bot can observe a
 // running game. See GameServer.handleLiveStats.
-const LIVE_STATS_INTERVAL_TURNS = 100;
+const LIVE_STATS_INTERVAL_TURNS = 300;
 
 export class LiveStatsController implements Controller {
+  // Replays and singleplayer games have no server to report to, so skip them.
+  private readonly enabled: boolean;
+
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
-  ) {}
+  ) {
+    this.enabled =
+      game.config().gameConfig().gameType !== GameType.Singleplayer &&
+      !game.config().isReplay();
+  }
 
   // Report a live snapshot of the game so the server can reach consensus and
   // serve it to the admin bot. Only deterministic sim values are sent, with
   // players sorted by clientID, so in-sync clients produce an identical payload
   // that the server can vote on.
   tick(): void {
+    if (!this.enabled) {
+      return;
+    }
     const turn = this.game.ticks();
     if (turn <= 0 || turn % LIVE_STATS_INTERVAL_TURNS !== 0) {
       return;
