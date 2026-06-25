@@ -146,7 +146,47 @@ describe("GameServer.handleIntent (admin bot)", () => {
       expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
     });
 
-    it("404s when no connected client matches the publicID", () => {
+    it("kicks a disconnected account by publicID via allClients (bans its persistentID)", () => {
+      const game = makeGame();
+      // Disconnected: still known to the game (allClients) but already dropped
+      // from activeClients on socket close. Must stay kickable so the
+      // persistentID ban fires and blocks a rejoin/reconnect.
+      (game as any).allClients.set("goneCID1", {
+        clientID: "goneCID1",
+        publicId: "pubGONE1",
+        persistentID: "persist-gone-1",
+      });
+      const result = apply(game, {
+        type: "kick_player",
+        targetPublicID: "pubGONE1",
+      } as any);
+      expect(result.status).toBe(200);
+      expect((game as any).kickedPersistentIds.has("persist-gone-1")).toBe(
+        true,
+      );
+    });
+
+    it("prefers a connected client over allClients when both match", () => {
+      const game = makeGame();
+      (game as any).activeClients.push({
+        clientID: "liveCID1",
+        publicId: "dupPUBID",
+      });
+      (game as any).allClients.set("staleCID1", {
+        clientID: "staleCID1",
+        publicId: "dupPUBID",
+        persistentID: "persist-stale-1",
+      });
+      const spy = vi.spyOn(game, "kickClient");
+      const result = apply(game, {
+        type: "kick_player",
+        targetPublicID: "dupPUBID",
+      } as any);
+      expect(result.status).toBe(200);
+      expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
+    });
+
+    it("404s when no client matches the publicID (active or all)", () => {
       const game = makeGame();
       expect(
         apply(game, {
