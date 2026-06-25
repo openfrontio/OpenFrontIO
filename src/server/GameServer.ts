@@ -1419,6 +1419,7 @@ export class GameServer {
     turn: number;
     players: (PlayerLiveStats & {
       username: string | null;
+      publicID: string | null;
       connected: boolean;
     })[];
   } | null {
@@ -1427,11 +1428,15 @@ export class GameServer {
     }
     return {
       turn: this.latestLiveStats.turn,
-      players: this.latestLiveStats.players.map((p) => ({
-        ...p,
-        username: this.allClients.get(p.clientID)?.username ?? null,
-        connected: !this.isClientDisconnected(p.clientID),
-      })),
+      players: this.latestLiveStats.players.map((p) => {
+        const client = this.allClients.get(p.clientID);
+        return {
+          ...p,
+          username: client?.username ?? null,
+          publicID: client?.publicId ?? null,
+          connected: !this.isClientDisconnected(p.clientID),
+        };
+      }),
     };
   }
 }

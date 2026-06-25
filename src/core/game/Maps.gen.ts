@@ -93,6 +93,7 @@ export enum GameMapType {
   Tourney4 = "Tourney 8 Teams", // map-generator/assets/maps/tourney4/info.json
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
+  UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
@@ -115,6 +116,7 @@ export type MapCategory =
   | "south_america"
   | "oceania"
   | "antarctica"
+  | "countries"
   | "cosmic"
   | "fictional"
   | "arcade"
@@ -133,6 +135,7 @@ export const mapCategoryOrder: readonly MapCategory[] = [
   "south_america",
   "oceania",
   "antarctica",
+  "countries",
   "cosmic",
   "fictional",
   "arcade",
@@ -809,6 +812,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.twolakes",
     categories: ["europe"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "UnitedStates",
+    type: GameMapType.UnitedStates,
+    translationKey: "map.unitedstates",
+    categories: ["north_america", "new", "countries"],
+    multiplayerFrequency: 9,
   },
   {
     id: "Venice",
