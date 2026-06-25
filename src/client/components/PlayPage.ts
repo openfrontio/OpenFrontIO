@@ -96,6 +96,10 @@ export class PlayPage extends LitElement {
                 show-select-label
                 class="shrink-0 lg:hidden h-10 w-10"
               ></flag-input>
+              <transport-trail-input
+                id="transport-trail-input-mobile"
+                class="shrink-0 lg:hidden h-10 w-10"
+              ></transport-trail-input>
             </div>
           </div>
 
@@ -111,6 +115,10 @@ export class PlayPage extends LitElement {
               show-select-label
               class="flex-1 h-full"
             ></flag-input>
+            <transport-trail-input
+              id="transport-trail-input-desktop"
+              class="flex-1 h-full"
+            ></transport-trail-input>
           </div>
         </div>
 

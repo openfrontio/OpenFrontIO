@@ -143,6 +143,18 @@ export class MapRenderer {
   setPlayerSkin(smallID: number, url: string): void {
     this.renderer?.setPlayerSkin(smallID, url);
   }
+  setPlayerTrailStyle(
+    smallID: number,
+    r: number,
+    g: number,
+    b: number,
+    effectId: number,
+    r2: number,
+    g2: number,
+    b2: number,
+  ): void {
+    this.renderer?.setPlayerTrailStyle(smallID, r, g, b, effectId, r2, g2, b2);
+  }
   initSkinAtlas(urls: readonly string[]): void {
     this.renderer?.initSkinAtlas(urls);
   }

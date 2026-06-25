@@ -16,7 +16,7 @@ import {
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
-type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
+type StoreTab = "patterns" | "flags" | "trails" | "packs" | "subscriptions";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -43,6 +43,7 @@ export class StoreModal extends BaseModal {
           : []),
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
+        { key: "trails", label: translateText("store.trails") },
       ],
     };
   }
@@ -146,6 +147,45 @@ export class StoreModal extends BaseModal {
     `;
   }
 
+  private renderTrailGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        r.type === "transportTrail" &&
+        r.relationship !== "blocked" &&
+        r.relationship !== "owned",
+    );
+
+    if (items.length === 0) {
+      return html`<div
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.no_trails")}
+      </div>`;
+    }
+
+    const selectedTrail =
+      new UserSettings().getSelectedTransportTrailName() ?? "";
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .selected=${`transportTrail:${selectedTrail}` === r.key}
+              .onPurchase=${purchaseCosmetic}
+            ></cosmetic-button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   private renderPackGrid(): TemplateResult {
     const items = resolveCosmetics(
       this.cosmetics,
@@ -230,6 +270,8 @@ export class StoreModal extends BaseModal {
         return this.renderPatternGrid();
       case "flags":
         return this.renderFlagGrid();
+      case "trails":
+        return this.renderTrailGrid();
       case "subscriptions":
         return this.renderSubscriptionGrid();
       case "packs":
@@ -248,6 +290,7 @@ export class StoreModal extends BaseModal {
         (r.type === "pattern" ||
           r.type === "skin" ||
           r.type === "flag" ||
+          r.type === "transportTrail" ||
           r.type === "pack") &&
         r.relationship === "purchasable",
     );

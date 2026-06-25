@@ -2,8 +2,8 @@ import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
 } from "../../client/render/gl/GraphicsOverrides";
-import { Cosmetics } from "../CosmeticSchemas";
-import { PlayerPattern } from "../Schemas";
+import { Cosmetics, TrailEffect } from "../CosmeticSchemas";
+import { PlayerPattern, PlayerTransportTrail } from "../Schemas";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
@@ -54,6 +54,7 @@ export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
+export const TRANSPORT_TRAIL_KEY = "transportTrail";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
@@ -245,6 +246,35 @@ export class UserSettings {
     } satisfies PlayerPattern;
   }
 
+  // For development only. Used for previewing transport-trail effects without
+  // a cosmetics.json entry — set in the console manually, e.g.
+  //   localStorage.setItem("dev-trail-type", "rainbow")  // solid|rainbow|pulse|gradient
+  //   localStorage.setItem("dev-trail-color", "#ff00ff")
+  //   localStorage.setItem("dev-trail-color2", "#00ffff") // gradient only
+  // then reload and start a singleplayer game.
+  getDevOnlyTransportTrail(): PlayerTransportTrail | undefined {
+    const type = localStorage.getItem("dev-trail-type") ?? undefined;
+    if (type === undefined) return undefined;
+    const color = localStorage.getItem("dev-trail-color") ?? "#ff0000";
+    const color2 = localStorage.getItem("dev-trail-color2") ?? "#0000ff";
+    let effect: TrailEffect;
+    switch (type) {
+      case "rainbow":
+        effect = { type: "rainbow" };
+        break;
+      case "pulse":
+        effect = { type: "pulse", color };
+        break;
+      case "gradient":
+        effect = { type: "gradient", color, color2 };
+        break;
+      default:
+        effect = { type: "solid", color };
+        break;
+    }
+    return { name: "dev-trail", effect } satisfies PlayerTransportTrail;
+  }
+
   getSelectedPatternName(cosmetics: Cosmetics | null): PlayerPattern | null {
     if (cosmetics === null) return null;
     let data = this.getCached(PATTERN_KEY);
@@ -310,6 +340,19 @@ export class UserSettings {
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
+  }
+
+  /** Returns the bare transport-trail cosmetic name, or null if none selected. */
+  getSelectedTransportTrailName(): string | null {
+    return this.getCached(TRANSPORT_TRAIL_KEY);
+  }
+
+  setSelectedTransportTrailName(value: string | undefined): void {
+    if (value === undefined) {
+      this.removeCached(TRANSPORT_TRAIL_KEY);
+    } else {
+      this.setCached(TRANSPORT_TRAIL_KEY, value);
+    }
   }
 
   backgroundMusicVolume(): number {

@@ -88,6 +88,50 @@ const skinChecker = new PrivilegeCheckerImpl(
   bannedWords,
 );
 
+const trailCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  transportTrails: {
+    crimson: {
+      name: "crimson",
+      effect: { type: "solid" as const, color: "#e01b24" },
+      affiliateCode: null,
+      product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "common",
+    },
+    spectrum: {
+      name: "spectrum",
+      effect: { type: "rainbow" as const },
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "legendary",
+    },
+    sunset: {
+      name: "sunset",
+      effect: {
+        type: "gradient" as const,
+        color: "#ff6b00",
+        color2: "#7d2bff",
+      },
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "epic",
+    },
+  },
+};
+const trailChecker = new PrivilegeCheckerImpl(
+  trailCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
 describe("UsernameCensor", () => {
   describe("isProfane (via matcher.hasMatch)", () => {
     test("detects exact banned words", () => {
@@ -518,6 +562,82 @@ describe("Skin validation", () => {
       });
       expect(result.type).toBe("forbidden");
     });
+  });
+});
+
+describe("Transport trail validation in isAllowed", () => {
+  test("allows valid solid trail with wildcard flare", () => {
+    const result = trailChecker.isAllowed(["trail:*"], {
+      transportTrailName: "crimson",
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.transportTrail).toEqual({
+        name: "crimson",
+        effect: { type: "solid", color: "#e01b24" },
+      });
+    }
+  });
+
+  test("allows valid rainbow trail with exact-match flare", () => {
+    const result = trailChecker.isAllowed(["trail:spectrum"], {
+      transportTrailName: "spectrum",
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.transportTrail).toEqual({
+        name: "spectrum",
+        effect: { type: "rainbow" },
+      });
+    }
+  });
+
+  test("allows valid gradient trail with wildcard flare", () => {
+    const result = trailChecker.isAllowed(["trail:*"], {
+      transportTrailName: "sunset",
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.transportTrail).toEqual({
+        name: "sunset",
+        effect: { type: "gradient", color: "#ff6b00", color2: "#7d2bff" },
+      });
+    }
+  });
+
+  test("rejects trail when user lacks flare", () => {
+    const result = trailChecker.isAllowed([], {
+      transportTrailName: "crimson",
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/invalid transport trail/);
+    }
+  });
+
+  test("rejects trail when flare is for a different trail", () => {
+    const result = trailChecker.isAllowed(["trail:spectrum"], {
+      transportTrailName: "crimson",
+    });
+    expect(result.type).toBe("forbidden");
+  });
+
+  test("rejects nonexistent trail", () => {
+    const result = trailChecker.isAllowed(["trail:*"], {
+      transportTrailName: "ghost",
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/Transport trail ghost not found/);
+    }
+  });
+
+  test("no trail in refs leaves cosmetics.transportTrail undefined", () => {
+    const result = trailChecker.isAllowed(["trail:*"], {});
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.transportTrail).toBeUndefined();
+    }
   });
 });
 

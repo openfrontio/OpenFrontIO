@@ -9,6 +9,8 @@ export type Flag = z.infer<typeof FlagSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
+export type TransportTrail = z.infer<typeof TransportTrailSchema>;
+export type TrailEffect = z.infer<typeof TrailEffectSchema>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -85,6 +87,25 @@ export const SkinSchema = CosmeticSchema.extend({
   url: z.string(),
 });
 
+// A transport-ship trail (the colored breadcrumb drawn behind moving boats)
+// is either a solid color or an animated effect. `color` is a hex string and
+// is required for the color-based effects ("solid", "pulse") and unused by
+// "rainbow".
+export const TrailEffectSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("solid"), color: z.string() }),
+  z.object({ type: z.literal("rainbow") }),
+  z.object({ type: z.literal("pulse"), color: z.string() }),
+  z.object({
+    type: z.literal("gradient"),
+    color: z.string(),
+    color2: z.string(),
+  }),
+]);
+
+export const TransportTrailSchema = CosmeticSchema.extend({
+  effect: TrailEffectSchema,
+});
+
 export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),
   currency: z.enum(["hard", "soft"]),
@@ -105,6 +126,7 @@ export const CosmeticsSchema = z.object({
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
   skins: z.record(z.string(), SkinSchema).optional(),
+  transportTrails: z.record(z.string(), TransportTrailSchema).optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });

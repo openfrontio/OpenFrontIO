@@ -6,6 +6,7 @@ import { PlayerType } from "../core/game/Game";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
+import type { PlayerTransportTrail } from "../core/Schemas";
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
 import type { GameView } from "./view";
 
@@ -204,6 +205,7 @@ export class WebGLFrameBuilder {
       this.knownSmallIDs.add(smallID);
 
       this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
+      this.syncTrailStyle(smallID, p.cosmetics.transportTrail);
 
       // p.cosmetics.flag has already been server-resolved to either a full URL
       // or a relative asset path (e.g. "/flags/US.svg" or a CDN URL for a
@@ -252,6 +254,50 @@ export class WebGLFrameBuilder {
         this.patternData,
       );
     }
+  }
+
+  /**
+   * Translate a player's transport-trail cosmetic into the renderer's per-owner
+   * trail style (base color + effect id). No-op when the player has no trail
+   * cosmetic — the style texture is zero-initialized (effect 0 = palette color).
+   */
+  private syncTrailStyle(
+    smallID: number,
+    trail: PlayerTransportTrail | undefined,
+  ): void {
+    if (!trail) return;
+    const effect = trail.effect;
+    let effectId = 0;
+    let rgb = { r: 0, g: 0, b: 0 };
+    let rgb2 = { r: 0, g: 0, b: 0 };
+    switch (effect.type) {
+      case "solid":
+        effectId = 1;
+        rgb = new Colord(effect.color).toRgb();
+        break;
+      case "rainbow":
+        effectId = 2;
+        break;
+      case "pulse":
+        effectId = 3;
+        rgb = new Colord(effect.color).toRgb();
+        break;
+      case "gradient":
+        effectId = 4;
+        rgb = new Colord(effect.color).toRgb();
+        rgb2 = new Colord(effect.color2).toRgb();
+        break;
+    }
+    this.view.setPlayerTrailStyle(
+      smallID,
+      rgb.r,
+      rgb.g,
+      rgb.b,
+      effectId,
+      rgb2.r,
+      rgb2.g,
+      rgb2.b,
+    );
   }
 
   private writePaletteEntry(

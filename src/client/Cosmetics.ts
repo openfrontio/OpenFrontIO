@@ -10,6 +10,7 @@ import {
   Product,
   Skin,
   Subscription,
+  TransportTrail,
 } from "../core/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
@@ -357,9 +358,34 @@ export function skinRelationship(
   );
 }
 
+export function transportTrailRelationship(
+  trail: TransportTrail,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "trail:*",
+      requiredFlare: `trail:${trail.name}`,
+      product: trail.product,
+      priceSoft: trail.priceSoft,
+      priceHard: trail.priceHard,
+      affiliateCode,
+      itemAffiliateCode: trail.affiliateCode ?? null,
+    },
+    userMeResponse,
+  );
+}
+
 export type ResolvedCosmetic = {
-  type: "pattern" | "skin" | "flag" | "pack" | "subscription";
-  cosmetic: Pattern | Skin | Flag | Pack | Subscription | null;
+  type:
+    | "pattern"
+    | "skin"
+    | "flag"
+    | "transportTrail"
+    | "pack"
+    | "subscription";
+  cosmetic: Pattern | Skin | Flag | TransportTrail | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
@@ -435,6 +461,24 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `skin:${skinKey}`,
+    });
+  }
+
+  // Transport-ship trails (the colored wake drawn behind moving boats)
+  for (const [trailKey, trail] of Object.entries(
+    cosmetics.transportTrails ?? {},
+  )) {
+    const rel = transportTrailRelationship(
+      trail,
+      userMeResponse,
+      affiliateCode,
+    );
+    result.push({
+      type: "transportTrail",
+      cosmetic: trail,
+      colorPalette: null,
+      relationship: rel,
+      key: `transportTrail:${trailKey}`,
     });
   }
 
@@ -561,11 +605,34 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     }
   }
 
+  let transportTrailName =
+    userSettings.getSelectedTransportTrailName() ?? undefined;
+  if (transportTrailName) {
+    const trail = cosmetics?.transportTrails?.[transportTrailName];
+    if (cosmetics && !trail) {
+      // Cosmetics loaded but the saved trail no longer exists.
+      transportTrailName = undefined;
+    } else if (trail) {
+      const userMe = await getUserMe();
+      if (userMe) {
+        const flares = userMe.player.flares ?? [];
+        const hasWildcard = flares.includes("trail:*");
+        if (!hasWildcard && !flares.includes(`trail:${trail.name}`)) {
+          transportTrailName = undefined;
+        }
+      }
+    }
+    if (transportTrailName === undefined) {
+      userSettings.setSelectedTransportTrailName(undefined);
+    }
+  }
+
   return {
     flag: flag ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
     skinName,
+    transportTrailName,
   };
 }
 
@@ -605,6 +672,19 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     const skin = cosmetics.skins?.[refs.skinName];
     if (skin) {
       result.skin = { name: refs.skinName, url: skin.url };
+    }
+  }
+
+  const devTrail = new UserSettings().getDevOnlyTransportTrail();
+  if (devTrail) {
+    result.transportTrail = devTrail;
+  } else if (refs.transportTrailName && cosmetics) {
+    const trail = cosmetics.transportTrails?.[refs.transportTrailName];
+    if (trail) {
+      result.transportTrail = {
+        name: refs.transportTrailName,
+        effect: trail.effect,
+      };
     }
   }
 

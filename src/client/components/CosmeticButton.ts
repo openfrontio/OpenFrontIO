@@ -6,6 +6,7 @@ import {
   Pattern,
   Skin,
   Subscription,
+  TransportTrail,
 } from "../../core/CosmeticSchemas";
 import { PlayerPattern } from "../../core/Schemas";
 import {
@@ -20,6 +21,7 @@ import "./CosmeticInfo";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
 import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
+import { renderTrailSwatch } from "./TransportTrailPreview";
 
 @customElement("cosmetic-button")
 export class CosmeticButton extends LitElement {
@@ -61,6 +63,9 @@ export class CosmeticButton extends LitElement {
     if (this.resolved.type === "subscription") {
       return translateCosmetic("subscriptions", c.name);
     }
+    if (this.resolved.type === "transportTrail") {
+      return translateCosmetic("transport_trails", c.name);
+    }
     return translateCosmetic("flags", c.name);
   }
 
@@ -95,6 +100,19 @@ export class CosmeticButton extends LitElement {
         draggable="false"
         loading="lazy"
       />`;
+    }
+
+    if (this.resolved.type === "transportTrail") {
+      const c = this.resolved.cosmetic as TransportTrail | null;
+      if (c === null) {
+        // "Default" tile — selecting it clears the trail back to the player color.
+        return html`<div
+          class="w-full h-full flex items-center justify-center text-white/40 text-xs uppercase"
+        >
+          ${translateText("territory_patterns.pattern.default")}
+        </div>`;
+      }
+      return renderTrailSwatch(c.effect);
     }
 
     if (this.resolved.type === "pack") {

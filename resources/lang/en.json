@@ -1249,6 +1249,7 @@
     "no_packs": "No packs available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
+    "no_trails": "No boat trails available. Check back later for new items.",
     "not_enough_currency": "Not enough currency for this purchase.",
     "packs": "Packs",
     "patterns": "Skins",
@@ -1259,7 +1260,8 @@
     "subscription_purchase_success": "Subscription activated!",
     "subscriptions": "Subscriptions",
     "switch_button": "Switch",
-    "title": "Store"
+    "title": "Store",
+    "trails": "Boat Trails"
   },
   "team_colors": {
     "blue": "Blue",
@@ -1287,6 +1289,11 @@
     "logging_in": "Logging in...",
     "success": "Successfully logged in as {email}!",
     "title": "Logging in..."
+  },
+  "transport_trails": {
+    "search": "Search...",
+    "select": "Trail",
+    "title": "Boat Trails"
   },
   "troubleshooting": {
     "battery": "Battery",

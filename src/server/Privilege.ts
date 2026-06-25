@@ -19,6 +19,7 @@ import {
   PlayerCosmetics,
   PlayerPattern,
   PlayerSkin,
+  PlayerTransportTrail,
 } from "../core/Schemas";
 import { simpleHash } from "../core/Util";
 
@@ -257,6 +258,20 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         return { type: "forbidden", reason: "invalid skin: " + message };
       }
     }
+    if (refs.transportTrailName) {
+      try {
+        cosmetics.transportTrail = this.isTransportTrailAllowed(
+          flares,
+          refs.transportTrailName,
+        );
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return {
+          type: "forbidden",
+          reason: "invalid transport trail: " + message,
+        };
+      }
+    }
 
     return { type: "allowed", cosmetics };
   }
@@ -333,6 +348,18 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     } else {
       throw new Error(`invalid flag prefix`);
     }
+  }
+
+  isTransportTrailAllowed(
+    flares: string[],
+    name: string,
+  ): PlayerTransportTrail {
+    const found = this.cosmetics.transportTrails?.[name];
+    if (!found) throw new Error(`Transport trail ${name} not found`);
+    if (flares.includes("trail:*") || flares.includes(`trail:${found.name}`)) {
+      return { name: found.name, effect: found.effect };
+    }
+    throw new Error(`No flares for transport trail ${name}`);
   }
 
   isColorAllowed(flares: string[], color: string): PlayerColor {

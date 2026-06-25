@@ -53,6 +53,9 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import "./TransportTrailInput";
+import "./TransportTrailModal";
+import { TransportTrailModal } from "./TransportTrailModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
@@ -310,6 +313,9 @@ class Client {
     modalRouter.register("territory-patterns", {
       tag: "territory-patterns-modal",
     });
+    modalRouter.register("transport-trail", {
+      tag: "transport-trail-modal",
+    });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
     // Prefetch turnstile token so it is available when
@@ -437,6 +443,18 @@ class Client {
     document.querySelectorAll("pattern-input").forEach((patternInput) => {
       patternInput.addEventListener("pattern-input-click", () => {
         patternsModal.open();
+      });
+    });
+
+    const trailModal = document.getElementById(
+      "transport-trail-modal",
+    ) as TransportTrailModal;
+    if (!trailModal || !(trailModal instanceof TransportTrailModal)) {
+      console.warn("Transport trail modal element not found");
+    }
+    document.querySelectorAll("transport-trail-input").forEach((trailInput) => {
+      trailInput.addEventListener("transport-trail-input-click", () => {
+        trailModal.open();
       });
     });
 
@@ -860,6 +878,7 @@ class Client {
         "user-setting",
         "troubleshooting-modal",
         "territory-patterns-modal",
+        "transport-trail-modal",
         "store-modal",
         "language-modal",
         "news-modal",

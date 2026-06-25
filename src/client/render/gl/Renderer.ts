@@ -727,6 +727,24 @@ export class GPURenderer {
     this.uploadSkinLayerTex();
   }
 
+  /**
+   * Set a player's transport-trail cosmetic style. `effectId`: 0 none (palette
+   * fallback), 1 solid, 2 rainbow, 3 pulse, 4 gradient. r/g/b are the 0–255
+   * base color; r2/g2/b2 the second color (gradient only).
+   */
+  setPlayerTrailStyle(
+    smallID: number,
+    r: number,
+    g: number,
+    b: number,
+    effectId: number,
+    r2: number,
+    g2: number,
+    b2: number,
+  ): void {
+    this.trailPass.setPlayerTrailStyle(smallID, r, g, b, effectId, r2, g2, b2);
+  }
+
   private uploadSkinLayerTex(): void {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.skinLayerTex);

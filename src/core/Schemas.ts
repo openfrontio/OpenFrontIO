@@ -4,6 +4,7 @@ import {
   ColorPaletteSchema,
   CosmeticNameSchema,
   PatternDataSchema,
+  TrailEffectSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
 import {
@@ -142,6 +143,7 @@ export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
+export type PlayerTransportTrail = z.infer<typeof PlayerTransportTrailSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -582,6 +584,11 @@ export const PlayerColorSchema = z.object({
   color: z.string(),
 });
 
+export const PlayerTransportTrailSchema = z.object({
+  name: CosmeticNameSchema,
+  effect: TrailEffectSchema,
+});
+
 // Refs contain cosmetics names, will be replaced by the actual
 // content in the server
 export const PlayerCosmeticRefsSchema = z.object({
@@ -590,6 +597,7 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
+  transportTrailName: CosmeticNameSchema.optional(),
 });
 
 export const PlayerSkinSchema = z.object({
@@ -603,6 +611,7 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
+  transportTrail: PlayerTransportTrailSchema.optional(),
 });
 
 export const PlayerSchema = z.object({
