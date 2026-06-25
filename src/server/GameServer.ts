@@ -276,14 +276,19 @@ export class GameServer {
             error: "only the lobby creator or an admin can kick players",
           };
         }
-        // Resolve the target to a live clientID: an explicit clientID, or an
-        // account publicId matched against the connected clients (for callers
-        // that know the account but not the per-session clientID).
+        // Resolve the target to a clientID: an explicit clientID, or an account
+        // publicId matched against clients. Check connected clients first, then
+        // fall back to allClients so a disconnected account can still be kicked
+        // (its persistentID is banned, which blocks rejoin/reconnect).
         let target = stamped.targetClientID;
         if (target === undefined && stamped.targetPublicID !== undefined) {
-          target = this.activeClients.find(
-            (c) => c.publicId === stamped.targetPublicID,
-          )?.clientID;
+          target =
+            this.activeClients.find(
+              (c) => c.publicId === stamped.targetPublicID,
+            )?.clientID ??
+            [...this.allClients.values()].find(
+              (c) => c.publicId === stamped.targetPublicID,
+            )?.clientID;
         }
         if (target === undefined) {
           return { status: 404, error: "no matching player to kick" };
