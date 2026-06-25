@@ -256,9 +256,9 @@ func convertToWebP(thumb ThumbData) ([]byte, error) {
 
 // createMiniMap downscales the terrain grid by half.
 // It maps 2x2 blocks of input tiles to a single output tile.
-// Priority: Impassable > Water > Land. If any of the 4 source tiles is
-// Impassable, the result is Impassable; else if any is Water, the result is
-// Water; otherwise the last Land tile wins.
+// Priority: Water > Impassable > Land. Water always wins so that narrow
+// rivers inside or bordering impassable terrain are preserved on the minimap
+// (the pathfinder runs on the minimap and needs accurate water bodies).
 func createMiniMap(tm [][]Terrain) [][]Terrain {
 	width := len(tm)
 	height := len(tm[0])
@@ -281,16 +281,21 @@ func createMiniMap(tm [][]Terrain) [][]Terrain {
 			}
 			src := tm[x][y]
 			dst := &miniMap[miniX][miniY]
-			// Impassable wins over everything; once set, keep it.
+			// Water wins over everything — narrow rivers must be preserved
+			// for pathfinding accuracy.
+			if dst.Type == Water {
+				continue
+			}
+			if src.Type == Water {
+				*dst = src
+				continue
+			}
+			// Impassable wins over land; once set, keep it.
 			if dst.Type == Impassable {
 				continue
 			}
 			if src.Type == Impassable {
 				*dst = src
-				continue
-			}
-			// Water wins over land; once set to water, keep it.
-			if dst.Type == Water {
 				continue
 			}
 			*dst = src

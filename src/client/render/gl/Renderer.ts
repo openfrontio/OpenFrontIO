@@ -930,6 +930,7 @@ export class GPURenderer {
     if (id === this.localPlayerID) return;
     this.localPlayerID = id;
     this.samRadiusPass.setLocalPlayer(id);
+    this.structurePass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
     this.railroadPass.setLocalPlayer(id);

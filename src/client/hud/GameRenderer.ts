@@ -4,6 +4,7 @@ import { Controller } from "../Controller";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { LiveStatsController } from "../controllers/LiveStatsController";
 import { SoundEffectController } from "../controllers/SoundEffectController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
@@ -293,6 +294,7 @@ export function createRenderer(
       userSettings,
     ),
     new HoverHighlightController(game, eventBus, transformHandler, view),
+    new LiveStatsController(game, eventBus),
     new StructureHighlightController(eventBus, view),
     new ViewModeController(eventBus, view),
     new AttackingTroopsController(game, eventBus, userSettings, view),
