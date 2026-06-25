@@ -2,6 +2,9 @@ export const REPO = { owner: "openfrontio", repo: "OpenFrontIO" } as const;
 
 export const TRUSTED_REPO_PERMISSIONS = ["admin", "maintain", "write"] as const;
 
+// Bot authors whose PRs are exempt from the gate (e.g. Dependabot dependency bumps).
+export const TRUSTED_BOT_AUTHORS = ["dependabot[bot]"] as const;
+
 export const SMALL_FIX_LINE_THRESHOLD = 50;
 
 export const APPROVED_ISSUE_LABEL = "approved";

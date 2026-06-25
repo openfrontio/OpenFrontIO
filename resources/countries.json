@@ -147,6 +147,11 @@
     "name": "Arabia"
   },
   {
+    "code": "Arapaho",
+    "continent": "North America",
+    "name": "Arapaho"
+  },
+  {
     "code": "Arizona",
     "continent": "North America",
     "name": "Arizona"
@@ -464,6 +469,16 @@
     "name": "Chaldea"
   },
   {
+    "code": "Cherokee Nation",
+    "continent": "North America",
+    "name": "Cherokee"
+  },
+  {
+    "code": "Chickasaw",
+    "continent": "North America",
+    "name": "Chickasaw"
+  },
+  {
     "code": "cl",
     "continent": "South America",
     "name": "Chile"
@@ -487,6 +502,11 @@
     "code": "cx",
     "continent": "Asia",
     "name": "Christmas Island"
+  },
+  {
+    "code": "Choctaw",
+    "continent": "North America",
+    "name": "Choctaw"
   },
   {
     "code": "Chuvashia",
@@ -541,6 +561,11 @@
     "code": "1_Connacht",
     "continent": "Europe",
     "name": "Connacht"
+  },
+  {
+    "code": "Connecticut",
+    "continent": "North America",
+    "name": "Connecticut"
   },
   {
     "code": "ck",
@@ -612,6 +637,11 @@
     "name": "Dál Riata"
   },
   {
+    "code": "Delaware",
+    "continent": "North America",
+    "name": "Delaware"
+  },
+  {
     "code": "dk",
     "continent": "Europe",
     "name": "Denmark"
@@ -622,6 +652,11 @@
     "name": "Democratic Republic of the Congo"
   },
   {
+    "code": "Deseret",
+    "continent": "North America",
+    "name": "Deseret"
+  },
+  {
     "code": "dg",
     "continent": "Asia",
     "name": "Diego Garcia"
@@ -630,6 +665,11 @@
     "code": "Dilmun",
     "continent": "Asia",
     "name": "Dilmun"
+  },
+  {
+    "code": "District_of_Columbia",
+    "continent": "North America",
+    "name": "Washington D.C."
   },
   {
     "code": "dj",
@@ -1031,6 +1071,11 @@
     "name": "Idaho"
   },
   {
+    "code": "Illinois (Centennial)",
+    "continent": "North America",
+    "name": "Illinois (Centennial)"
+  },
+  {
     "code": "Illinois",
     "continent": "North America",
     "name": "Illinois"
@@ -1076,6 +1121,11 @@
     "name": "Ireland"
   },
   {
+    "code": "Haudenosaunee",
+    "continent": "North America",
+    "name": "Iroquois Confederacy"
+  },
+  {
     "code": "im",
     "continent": "Europe",
     "name": "Isle of Man"
@@ -1106,6 +1156,11 @@
     "name": "Japan"
   },
   {
+    "code": "Jefferson",
+    "continent": "North America",
+    "name": "Jefferson"
+  },
+  {
     "code": "je",
     "continent": "Europe",
     "name": "Jersey"
@@ -1124,6 +1179,11 @@
     "code": "Kachin",
     "continent": "Asia",
     "name": "Kachin"
+  },
+  {
+    "code": "Kansas (Banner)",
+    "continent": "North America",
+    "name": "Kansas (Banner)"
   },
   {
     "code": "Kansas",
@@ -1285,6 +1345,11 @@
     "name": "Laigin"
   },
   {
+    "code": "Lakotah",
+    "continent": "North America",
+    "name": "Lakotah"
+  },
+  {
     "code": "la",
     "continent": "Asia",
     "name": "Laos"
@@ -1348,6 +1413,11 @@
     "name": "Liechtenstein"
   },
   {
+    "code": "Lincoln",
+    "continent": "North America",
+    "name": "Lincoln"
+  },
+  {
     "code": "Listenbourg",
     "name": "Listenbourg"
   },
@@ -1402,6 +1472,11 @@
     "name": "Madagascar"
   },
   {
+    "code": "Maine (1901)",
+    "continent": "North America",
+    "name": "Maine (1901)"
+  },
+  {
     "code": "Maine",
     "continent": "North America",
     "name": "Maine"
@@ -1410,6 +1485,11 @@
     "code": "Majapahit",
     "continent": "Asia",
     "name": "Majapahit"
+  },
+  {
+    "code": "Massachusetts (Naval)",
+    "continent": "North America",
+    "name": "Massachusetts (Naval)"
   },
   {
     "code": "Massachusetts",
@@ -1495,6 +1575,11 @@
     "code": "mx",
     "continent": "North America",
     "name": "Mexico"
+  },
+  {
+    "code": "Miccosukee",
+    "continent": "North America",
+    "name": "Miccosukee"
   },
   {
     "code": "Michigan",
@@ -1611,6 +1696,11 @@
     "name": "Nauru"
   },
   {
+    "code": "Navajo",
+    "continent": "North America",
+    "name": "Navajo"
+  },
+  {
     "code": "Nebraska",
     "continent": "North America",
     "name": "Nebraska"
@@ -1653,6 +1743,11 @@
     "code": "nc",
     "continent": "Oceania",
     "name": "New Caledonia"
+  },
+  {
+    "code": "New England",
+    "continent": "North America",
+    "name": "New England"
   },
   {
     "code": "newfoundlandandlabrador",
@@ -1805,6 +1900,11 @@
     "name": "Ontario"
   },
   {
+    "code": "Oregon (Reverse)",
+    "continent": "North America",
+    "name": "Oregon (Reverse)"
+  },
+  {
     "code": "Oregon",
     "continent": "North America",
     "name": "Oregon"
@@ -1908,6 +2008,11 @@
     "code": "Phrygia",
     "continent": "Asia",
     "name": "Phrygia"
+  },
+  {
+    "code": "Pine Tree Flag",
+    "continent": "North America",
+    "name": "Pine Tree Flag"
   },
   {
     "code": "pn",
@@ -2631,6 +2736,11 @@
     "code": "Vermont",
     "continent": "North America",
     "name": "Vermont"
+  },
+  {
+    "code": "Vermont Republic",
+    "continent": "North America",
+    "name": "Vermont Republic"
   },
   {
     "code": "vn",

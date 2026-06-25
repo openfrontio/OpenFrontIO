@@ -3,7 +3,7 @@
   "name": "SoutheastAsia",
   "display_name": "Southeast Asia",
   "translation_key": "map.southeastasia",
-  "categories": ["new", "asia"],
+  "categories": ["asia"],
   "multiplayer_frequency": 5,
   "nations": [
     {

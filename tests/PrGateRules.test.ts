@@ -4,6 +4,7 @@ import {
   checkBypass,
   checkRepoAccess,
   checkSmallFix,
+  checkTrustedBot,
   evaluate,
   parseLinkedIssues,
   type IssueMetadata,
@@ -106,6 +107,26 @@ describe("checkBypass", () => {
     expect(checkBypass(makePR({ labels: ["bug", "small-fix"] })).action).toBe(
       "next",
     );
+  });
+});
+
+describe("checkTrustedBot", () => {
+  it("passes for dependabot[bot]", () => {
+    const r = checkTrustedBot(makePR({ user: { login: "dependabot[bot]" } }));
+    expect(r.action).toBe("pass");
+  });
+
+  it("returns next for a regular author", () => {
+    expect(checkTrustedBot(makePR({ user: { login: "alice" } })).action).toBe(
+      "next",
+    );
+  });
+
+  it("returns next for a lookalike bot author", () => {
+    expect(
+      checkTrustedBot(makePR({ user: { login: "not-dependabot[bot]" } }))
+        .action,
+    ).toBe("next");
   });
 });
 
@@ -268,6 +289,16 @@ describe("evaluate (priority ordering)", () => {
       makePR({ body: "Closes #5" }),
       [{ additions: 200, deletions: 50 }],
       async () => makeIssue(),
+      async () => "none",
+    );
+    expect(r.action).toBe("pass");
+  });
+
+  it("trusted bot — large Dependabot PR passes without an issue", async () => {
+    const r = await evaluate(
+      makePR({ user: { login: "dependabot[bot]" } }),
+      [{ additions: 5000, deletions: 0 }],
+      async () => null,
       async () => "none",
     );
     expect(r.action).toBe("pass");

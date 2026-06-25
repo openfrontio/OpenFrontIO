@@ -363,6 +363,18 @@ export function createRandomName(
   return randomName;
 }
 
+// Deterministic anonymized username. Reuses createRandomName, then strips the
+// emoji and any illegal chars so it passes UsernameSchema and survives the wire
+// (createRandomName's output is a display string, not a valid username).
+export function anonymousUsername(seed: string): string {
+  const base = createRandomName(seed, PlayerType.Human) ?? "";
+  const name = base
+    .replace(/[^a-zA-Z0-9_ üÜ.]/g, "")
+    .trim()
+    .slice(0, 27);
+  return name.length >= 3 ? name : "Player";
+}
+
 export const emojiTable = [
   ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],

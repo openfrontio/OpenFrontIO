@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
+import http from "http";
 import { lookup as lookupMime } from "mrmime";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -51,9 +52,47 @@ function serveProprietaryDir(
   };
 }
 
+// Dev-only stand-in for the nginx random-worker routing (the openfront_workers
+// upstream). Forwards these prefix-less POSTs to a randomly chosen worker port
+// so the worker can mint a self-owned id. Runs as direct middleware (before
+// vite's /api proxy).
+const RANDOM_WORKER_PATHS = ["/api/create_game", "/api/adminbot/create_game"];
+function randomWorkerCreateProxy(numWorkers: number): Plugin {
+  return {
+    name: "random-worker-create-proxy",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== "POST") return next();
+        const path = (req.url ?? "").split("?")[0];
+        if (!RANDOM_WORKER_PATHS.includes(path)) return next();
+        const port = 3001 + Math.floor(Math.random() * numWorkers);
+        const proxyReq = http.request(
+          {
+            host: "localhost",
+            port,
+            path,
+            method: "POST",
+            headers: req.headers,
+          },
+          (proxyRes) => {
+            res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+            proxyRes.pipe(res);
+          },
+        );
+        proxyReq.on("error", (err) => {
+          res.statusCode = 502;
+          res.end(`create proxy error: ${err.message}`);
+        });
+        req.pipe(proxyReq);
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
+  const devNumWorkers = parseInt(env.NUM_WORKERS ?? "2", 10);
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];
@@ -168,7 +207,10 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       ...(!isProduction
-        ? [serveProprietaryDir(proprietaryDir, resourcesDir)]
+        ? [
+            serveProprietaryDir(proprietaryDir, resourcesDir),
+            randomWorkerCreateProxy(devNumWorkers),
+          ]
         : []),
       ...(isProduction
         ? []

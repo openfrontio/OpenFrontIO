@@ -18,9 +18,11 @@ import {
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
+  ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
   Intent,
+  LiveStats,
   ServerMessage,
   ServerMessageSchema,
   Winner,
@@ -152,6 +154,9 @@ export class SendWinnerEvent implements GameEvent {
     public readonly allPlayersStats: AllPlayersStats,
   ) {}
 }
+export class SendLiveStatsEvent implements GameEvent {
+  constructor(public readonly stats: LiveStats) {}
+}
 export class SendHashEvent implements GameEvent {
   constructor(
     public readonly tick: Tick,
@@ -244,6 +249,7 @@ export class Transport {
 
     this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
+    this.eventBus.on(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
@@ -592,6 +598,15 @@ export class Transport {
     }
   }
 
+  private onSendLiveStatsEvent(event: SendLiveStatsEvent) {
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+      this.sendMsg({
+        type: "live_stats",
+        stats: event.stats,
+      } satisfies ClientSendLiveStatsMessage);
+    }
+  }
+
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg({
@@ -640,7 +655,7 @@ export class Transport {
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
     this.sendIntent({
       type: "kick_player",
-      target: event.target,
+      targetClientID: event.target,
     });
   }
 
