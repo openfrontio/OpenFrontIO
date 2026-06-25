@@ -315,7 +315,7 @@
     "selfMaxRad": 30,
     "mateMinRad": 5,
     "mateMaxRad": 14,
-    "animSpeed": 0.005,
+    "animSpeed": 0.008,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },
