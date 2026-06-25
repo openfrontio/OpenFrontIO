@@ -147,12 +147,18 @@ export class GameServer {
       : undefined;
   }
 
-  // anonymizeNames: only players the host granted (nameReveals) see real names.
-  // Nobody is exempt by default, not even the host, until he grants them.
+  // anonymizeNames: only players the host granted (nameReveals, or by account via
+  // nameRevealPublicIds) see real names. Nobody is exempt by default, not even the
+  // host, until he grants them.
   private viewerSeesAllNames(viewer: ClientID | undefined): boolean {
+    if (viewer === undefined) return false;
+    if (this.gameConfig.nameReveals?.includes(viewer) ?? false) return true;
+    // Resolve the per-game clientID to its stable account publicId so a host that
+    // only knows publicIds (the admin bot) can grant reveal access at create_game.
+    const publicId = this.allClients.get(viewer)?.publicId;
     return (
-      viewer !== undefined &&
-      (this.gameConfig.nameReveals?.includes(viewer) ?? false)
+      publicId !== undefined &&
+      (this.gameConfig.nameRevealPublicIds?.includes(publicId) ?? false)
     );
   }
 
@@ -246,6 +252,9 @@ export class GameServer {
     }
     if (gameConfig.nameReveals !== undefined) {
       this.gameConfig.nameReveals = gameConfig.nameReveals;
+    }
+    if (gameConfig.nameRevealPublicIds !== undefined) {
+      this.gameConfig.nameRevealPublicIds = gameConfig.nameRevealPublicIds;
     }
     // Unconditional on purpose: the host clears cheats by omitting hostCheats
     // (the full config it sends has hostCheats: undefined when the toggle is
