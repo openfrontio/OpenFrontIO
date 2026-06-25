@@ -131,13 +131,13 @@ describe("GameServer.handleIntent (admin bot)", () => {
       ).toBe(403);
     });
 
-    it("resolves a publicID target to the connected client's clientID", () => {
+    it("resolves a publicID target to a connected client's clientID", () => {
       const game = makeGame();
-      (game as any).activeClients.push({
-        clientID: "liveCID1",
-        publicId: "pubABCD1",
-      });
-      const spy = vi.spyOn(game, "kickClient");
+      // A connected client is in both lists; allClients is the superset we match on.
+      const connected = { clientID: "liveCID1", publicId: "pubABCD1" };
+      (game as any).activeClients.push(connected);
+      (game as any).allClients.set("liveCID1", connected);
+      const spy = vi.spyOn(game, "kickClient").mockImplementation(() => {});
       const result = apply(game, {
         type: "kick_player",
         targetPublicID: "pubABCD1",
@@ -146,7 +146,27 @@ describe("GameServer.handleIntent (admin bot)", () => {
       expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
     });
 
-    it("404s when no connected client matches the publicID", () => {
+    it("kicks a disconnected account by publicID via allClients (bans its persistentID)", () => {
+      const game = makeGame();
+      // Disconnected: still known to the game (allClients) but already dropped
+      // from activeClients on socket close. Must stay kickable so the
+      // persistentID ban fires and blocks a rejoin/reconnect.
+      (game as any).allClients.set("goneCID1", {
+        clientID: "goneCID1",
+        publicId: "pubGONE1",
+        persistentID: "persist-gone-1",
+      });
+      const result = apply(game, {
+        type: "kick_player",
+        targetPublicID: "pubGONE1",
+      } as any);
+      expect(result.status).toBe(200);
+      expect((game as any).kickedPersistentIds.has("persist-gone-1")).toBe(
+        true,
+      );
+    });
+
+    it("404s when no client matches the publicID", () => {
       const game = makeGame();
       expect(
         apply(game, {
