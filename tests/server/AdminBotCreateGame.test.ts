@@ -27,6 +27,7 @@ function captureCreateHandler() {
     post(path: string, ...handlers: ((req: any, res: any) => void)[]) {
       routes[path] = handlers[handlers.length - 1];
     },
+    get() {},
   };
   const log: any = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   registerAdminBotRoutes({ app, gm: {} as any, workerId: 0, log });

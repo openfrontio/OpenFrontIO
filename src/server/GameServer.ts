@@ -8,12 +8,15 @@ import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
+  ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
   Intent,
+  LiveStats,
+  PlayerLiveStats,
   PlayerRecord,
   PublicGameType,
   ServerDesyncSchema,
@@ -30,6 +33,7 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { ServerEnv } from "./ServerEnv";
+import { VoteRound } from "./VoteTally";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -104,10 +108,17 @@ export class GameServer {
 
   private websockets: Set<WebSocket> = new Set();
 
-  private winnerVotes: Map<
-    string,
-    { winner: ClientSendWinnerMessage; ips: Set<string> }
+  private winnerVotes = new VoteRound<ClientSendWinnerMessage>();
+
+  // Per-turn consensus on the live stats snapshot (see handleLiveStats).
+  // Tallies are keyed by turn number; an entry is removed once consensus is
+  // reached for that turn (or a later one) so the map stays small.
+  private liveStatsVotes: Map<
+    number,
+    { round: VoteRound<LiveStats>; voters: Set<ClientID> }
   > = new Map();
+  private latestLiveStats: LiveStats | null = null;
+  private static readonly MAX_PENDING_LIVE_STATS_ROUNDS = 20;
 
   private _hasEnded = false;
 
@@ -136,12 +147,18 @@ export class GameServer {
       : undefined;
   }
 
-  // anonymizeNames: only players the host granted (nameReveals) see real names.
-  // Nobody is exempt by default, not even the host, until he grants them.
+  // anonymizeNames: only players the host granted (nameReveals, or by account via
+  // nameRevealPublicIds) see real names. Nobody is exempt by default, not even the
+  // host, until he grants them.
   private viewerSeesAllNames(viewer: ClientID | undefined): boolean {
+    if (viewer === undefined) return false;
+    if (this.gameConfig.nameReveals?.includes(viewer) ?? false) return true;
+    // Resolve the per-game clientID to its stable account publicId so a host that
+    // only knows publicIds (the admin bot) can grant reveal access at create_game.
+    const publicId = this.allClients.get(viewer)?.publicId;
     return (
-      viewer !== undefined &&
-      (this.gameConfig.nameReveals?.includes(viewer) ?? false)
+      publicId !== undefined &&
+      (this.gameConfig.nameRevealPublicIds?.includes(publicId) ?? false)
     );
   }
 
@@ -236,6 +253,9 @@ export class GameServer {
     if (gameConfig.nameReveals !== undefined) {
       this.gameConfig.nameReveals = gameConfig.nameReveals;
     }
+    if (gameConfig.nameRevealPublicIds !== undefined) {
+      this.gameConfig.nameRevealPublicIds = gameConfig.nameRevealPublicIds;
+    }
     // Unconditional on purpose: the host clears cheats by omitting hostCheats
     // (the full config it sends has hostCheats: undefined when the toggle is
     // off), so `undefined` here means "clear", not "leave unchanged".
@@ -265,12 +285,13 @@ export class GameServer {
             error: "only the lobby creator or an admin can kick players",
           };
         }
-        // Resolve the target to a live clientID: an explicit clientID, or an
-        // account publicId matched against the connected clients (for callers
-        // that know the account but not the per-session clientID).
+        // Resolve the target to a clientID: an explicit clientID, or an account
+        // publicId matched against allClients (a superset of activeClients that
+        // retains disconnected players), so a disconnected account can still be
+        // kicked — its persistentID is banned, blocking rejoin/reconnect.
         let target = stamped.targetClientID;
         if (target === undefined && stamped.targetPublicID !== undefined) {
-          target = this.activeClients.find(
+          target = [...this.allClients.values()].find(
             (c) => c.publicId === stamped.targetPublicID,
           )?.clientID;
         }
@@ -613,6 +634,10 @@ export class GameServer {
           }
           case "winner": {
             this.handleWinner(client, clientMsg);
+            break;
+          }
+          case "live_stats": {
+            this.handleLiveStats(client, clientMsg);
             break;
           }
           default: {
@@ -1309,34 +1334,119 @@ export class GameServer {
 
     // Add client vote
     const winnerKey = JSON.stringify(clientMsg.winner);
-    if (!this.winnerVotes.has(winnerKey)) {
-      this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
-    }
-    const potentialWinner = this.winnerVotes.get(winnerKey)!;
-    potentialWinner.ips.add(client.ip);
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip)).size;
+    const votes = this.winnerVotes.add(winnerKey, clientMsg, client.ip);
 
-    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
-
-    const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
     this.log.info(
-      `received winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
+      `received winner vote ${clientMsg.winner}, ${votes}/${activeUniqueIPs} votes for this winner`,
       {
         clientID: client.clientID,
       },
     );
 
-    if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+    const result = this.winnerVotes.result(activeUniqueIPs);
+    if (result === null) {
       return;
     }
 
     // Vote succeeded
-    this.winner = potentialWinner.winner;
+    this.winner = result.value;
     this.log.info(
-      `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+      `Winner determined by ${result.votes}/${activeUniqueIPs} active IPs`,
       {
-        winnerKey: winnerKey,
+        winnerKey,
       },
     );
     this.archiveGame();
+  }
+
+  // Clients each send a live stats snapshot every ~10s tagged with the turn it
+  // was taken at. In-sync clients produce an identical snapshot for a given
+  // turn, so we reach majority consensus (same IP-weighted vote as the winner)
+  // and keep the latest agreed snapshot for the admin bot to read.
+  private handleLiveStats(
+    client: Client,
+    clientMsg: ClientSendLiveStatsMessage,
+  ) {
+    if (
+      this.outOfSyncClients.has(client.clientID) ||
+      this.isKicked(client.clientID)
+    ) {
+      return;
+    }
+    const stats = clientMsg.stats;
+    const turn = stats.turn;
+    // Ignore turns we've already reached consensus on (or older ones).
+    if (this.latestLiveStats !== null && turn <= this.latestLiveStats.turn) {
+      return;
+    }
+
+    let entry = this.liveStatsVotes.get(turn);
+    if (entry === undefined) {
+      entry = { round: new VoteRound<LiveStats>(), voters: new Set() };
+      this.liveStatsVotes.set(turn, entry);
+      this.pruneLiveStatsVotes();
+    }
+    // One vote per client per turn.
+    if (entry.voters.has(client.clientID)) {
+      return;
+    }
+    entry.voters.add(client.clientID);
+
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip)).size;
+    entry.round.add(JSON.stringify(stats), stats, client.ip);
+    const result = entry.round.result(activeUniqueIPs);
+    if (result === null) {
+      return;
+    }
+
+    this.latestLiveStats = result.value;
+    // This turn (and any older still-pending ones) are now settled.
+    for (const t of this.liveStatsVotes.keys()) {
+      if (t <= turn) {
+        this.liveStatsVotes.delete(t);
+      }
+    }
+  }
+
+  // Bound the pending-vote map in case consensus is never reached for some
+  // turns (e.g. a persistent desync). Maps iterate in insertion order and turns
+  // arrive ascending, so this drops the oldest pending rounds.
+  private pruneLiveStatsVotes() {
+    while (
+      this.liveStatsVotes.size > GameServer.MAX_PENDING_LIVE_STATS_ROUNDS
+    ) {
+      const oldest = this.liveStatsVotes.keys().next().value;
+      if (oldest === undefined) break;
+      this.liveStatsVotes.delete(oldest);
+    }
+  }
+
+  // Latest majority-agreed live stats snapshot, with players enriched with
+  // server-authoritative info the clients don't vote on: the username and
+  // current connection status. null until the first consensus.
+  public liveStats(): {
+    turn: number;
+    players: (PlayerLiveStats & {
+      username: string | null;
+      publicID: string | null;
+      connected: boolean;
+    })[];
+  } | null {
+    if (this.latestLiveStats === null) {
+      return null;
+    }
+    return {
+      turn: this.latestLiveStats.turn,
+      players: this.latestLiveStats.players.map((p) => {
+        const client = this.allClients.get(p.clientID);
+        return {
+          ...p,
+          username: client?.username ?? null,
+          publicID: client?.publicId ?? null,
+          connected: !this.isClientDisconnected(p.clientID),
+        };
+      }),
+    };
   }
 }
