@@ -43,6 +43,7 @@ function makeGame(
   anonymizeNames: boolean,
   disableClanTags = false,
   nameReveals: string[] = [],
+  nameRevealPublicIds: string[] = [],
 ) {
   const logger: any = {
     child: vi.fn().mockReturnThis(),
@@ -59,6 +60,7 @@ function makeGame(
       anonymizeNames,
       disableClanTags,
       nameReveals,
+      nameRevealPublicIds,
     } as any,
     "creator-pid",
   );
@@ -122,6 +124,21 @@ describe("anonymizeNames: gameInfo (lobby / HTTP / preview)", () => {
     expect(REAL_NAMES).not.toContain(byId(info, "alice").username);
   });
 
+  it("on: a viewer granted by account (nameRevealPublicIds) sees everyone's real names", () => {
+    // alice's clientID is "alice", her account publicId is "alice-pub" — the grant
+    // is keyed by publicId and resolved back to her clientID at lookup.
+    const info = makeGame(true, false, [], ["alice-pub"]).gameInfo("alice");
+    for (const id of ["creator", "admin", "bob"]) {
+      expect(REAL_NAMES).toContain(byId(info, id).username);
+    }
+  });
+
+  it("on: a viewer NOT in nameRevealPublicIds still sees only themselves", () => {
+    const info = makeGame(true, false, [], ["alice-pub"]).gameInfo("bob");
+    expect(byId(info, "bob").username).toBe("BobReal"); // self
+    expect(REAL_NAMES).not.toContain(byId(info, "alice").username);
+  });
+
   it("on: no viewer (HTTP / preview) anonymizes everyone", () => {
     const info = makeGame(true).gameInfo();
     for (const id of ["creator", "admin", "alice", "bob"]) {
@@ -155,6 +172,15 @@ describe("anonymizeNames: config updates propagate", () => {
     const game = makeGame(true, false, ["alice"]);
     expect(byId(game.gameInfo("alice"), "bob").username).toBe("BobReal"); // granted
     game.updateGameConfig({ nameReveals: [] });
+    expect(byId(game.gameInfo("alice"), "bob").username).not.toBe("BobReal"); // revoked
+  });
+
+  it("granting nameRevealPublicIds at runtime reveals by account; clearing revokes", () => {
+    const game = makeGame(true);
+    expect(byId(game.gameInfo("alice"), "bob").username).not.toBe("BobReal"); // not granted
+    game.updateGameConfig({ nameRevealPublicIds: ["alice-pub"] });
+    expect(byId(game.gameInfo("alice"), "bob").username).toBe("BobReal"); // granted by account
+    game.updateGameConfig({ nameRevealPublicIds: [] });
     expect(byId(game.gameInfo("alice"), "bob").username).not.toBe("BobReal"); // revoked
   });
 });
