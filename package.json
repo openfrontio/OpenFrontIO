@@ -5,7 +5,7 @@
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\"",
     "start:client": "vite",
     "start:server": "tsx src/server/Server.ts",
-    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
+    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION ADMIN_BOT_API_KEY=WARNING_DEV_ADMIN_BOT_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:host": "cross-env GAME_ENV=dev VITE_HOST=lan concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:staging": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
@@ -104,7 +104,7 @@
     "intl-messageformat": "^11.2.3",
     "ip-anonymize": "^0.1.0",
     "jose": "^6.2.3",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.2.0",
     "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
     "nanoid": "^5.1.11",
@@ -113,7 +113,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "winston": "^3.19.0",
-    "ws": "^8.20.1",
+    "ws": "^8.21.0",
     "zod": "^4.4.2"
   },
   "overrides": {
