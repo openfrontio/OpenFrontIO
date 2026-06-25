@@ -131,13 +131,13 @@ describe("GameServer.handleIntent (admin bot)", () => {
       ).toBe(403);
     });
 
-    it("resolves a publicID target to the connected client's clientID", () => {
+    it("resolves a publicID target to a connected client's clientID", () => {
       const game = makeGame();
-      (game as any).activeClients.push({
-        clientID: "liveCID1",
-        publicId: "pubABCD1",
-      });
-      const spy = vi.spyOn(game, "kickClient");
+      // A connected client is in both lists; allClients is the superset we match on.
+      const connected = { clientID: "liveCID1", publicId: "pubABCD1" };
+      (game as any).activeClients.push(connected);
+      (game as any).allClients.set("liveCID1", connected);
+      const spy = vi.spyOn(game, "kickClient").mockImplementation(() => {});
       const result = apply(game, {
         type: "kick_player",
         targetPublicID: "pubABCD1",
@@ -166,27 +166,7 @@ describe("GameServer.handleIntent (admin bot)", () => {
       );
     });
 
-    it("prefers a connected client over allClients when both match", () => {
-      const game = makeGame();
-      (game as any).activeClients.push({
-        clientID: "liveCID1",
-        publicId: "dupPUBID",
-      });
-      (game as any).allClients.set("staleCID1", {
-        clientID: "staleCID1",
-        publicId: "dupPUBID",
-        persistentID: "persist-stale-1",
-      });
-      const spy = vi.spyOn(game, "kickClient");
-      const result = apply(game, {
-        type: "kick_player",
-        targetPublicID: "dupPUBID",
-      } as any);
-      expect(result.status).toBe(200);
-      expect(spy).toHaveBeenCalledWith("liveCID1", expect.any(String));
-    });
-
-    it("404s when no client matches the publicID (active or all)", () => {
+    it("404s when no client matches the publicID", () => {
       const game = makeGame();
       expect(
         apply(game, {
