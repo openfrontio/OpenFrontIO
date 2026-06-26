@@ -58,6 +58,10 @@ export const GraphicsOverridesSchema = z
       .object({
         // "#rrggbb" hex string; overrides the base ocean (deep water) color.
         oceanColor: z.string(),
+        sandColor: z.string(),
+        plainsColor: z.string(),
+        highlandColor: z.string(),
+        mountainColor: z.string(),
       })
       .partial(),
     lighting: z

@@ -293,6 +293,9 @@ export const GameConfigSchema = z.object({
   // While anonymizeNames is on, clientIDs the host has granted real-name
   // visibility to (e.g. casters / observers). Everyone else stays anonymized.
   nameReveals: z.string().array().optional(),
+  // Like nameReveals but keyed by stable account publicId (for automated hosts
+  // that only know publicIds at create_game); resolved to clientID at lookup.
+  nameRevealPublicIds: z.string().array().max(200).optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
