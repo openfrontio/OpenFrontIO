@@ -97,6 +97,18 @@ export function applyGraphicsOverrides(
   if (overrides.terrain?.oceanColor !== undefined) {
     settings.terrain.oceanColor = overrides.terrain.oceanColor;
   }
+  if (overrides.terrain?.sandColor !== undefined) {
+    settings.terrain.sandColor = overrides.terrain.sandColor;
+  }
+  if (overrides.terrain?.plainsColor !== undefined) {
+    settings.terrain.plainsColor = overrides.terrain.plainsColor;
+  }
+  if (overrides.terrain?.highlandColor !== undefined) {
+    settings.terrain.highlandColor = overrides.terrain.highlandColor;
+  }
+  if (overrides.terrain?.mountainColor !== undefined) {
+    settings.terrain.mountainColor = overrides.terrain.mountainColor;
+  }
   if (overrides.lighting?.ambient !== undefined) {
     settings.lighting.ambient = overrides.lighting.ambient;
     // The composite only darkens the scene (and reveals the structure/unit

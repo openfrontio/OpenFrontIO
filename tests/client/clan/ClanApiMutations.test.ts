@@ -13,6 +13,7 @@ import {
   demoteMember,
   denyClanRequest,
   disbandClan,
+  fetchDiscordInvite,
   joinClan,
   kickMember,
   leaveClan,
@@ -419,5 +420,134 @@ describe("updateClan", () => {
     );
     const result = await updateClan("TEST", { name: "x" });
     expect(result).toEqual({ error: "clan_modal.error_network" });
+  });
+
+  it("maps 400 DISCORD_INVALID to the discord invalid error", async () => {
+    mockFetch(() => failRes(400, { code: "DISCORD_INVALID" }));
+    const result = await updateClan("TEST", { discordUrl: "not-a-link" });
+    expect(result).toEqual({ error: "clan_modal.discord_invalid" });
+  });
+
+  it("maps 400 DISCORD_EXPIRES to the discord expires error", async () => {
+    mockFetch(() => failRes(400, { code: "DISCORD_EXPIRES" }));
+    const result = await updateClan("TEST", {
+      discordUrl: "https://discord.gg/temp",
+    });
+    expect(result).toEqual({ error: "clan_modal.discord_expires" });
+  });
+
+  it("returns generic error on 400 with an unrecognised code", async () => {
+    mockFetch(() => failRes(400, { code: "SOMETHING_ELSE" }));
+    const result = await updateClan("TEST", { name: "x" });
+    expect(result).toEqual({ error: "clan_modal.error_failed" });
+  });
+
+  it("maps 429 to the discord rate limited error", async () => {
+    mockFetch(() => failRes(429));
+    const result = await updateClan("TEST", {
+      discordUrl: "https://discord.gg/abc",
+    });
+    expect(result).toEqual({ error: "clan_modal.discord_rate_limited" });
+  });
+});
+
+describe("fetchDiscordInvite", () => {
+  const inviteBody = {
+    guild: {
+      id: "123",
+      name: "Test Server",
+      icon: "abc",
+      banner: "a_def",
+      description: "A server",
+    },
+    approximate_member_count: 100,
+    approximate_presence_count: 42,
+  };
+
+  it("returns metadata with CDN asset URLs on success", async () => {
+    mockFetch(() => okJson(inviteBody));
+    const result = await fetchDiscordInvite("https://discord.gg/abc123");
+    expect(result).toMatchObject({
+      url: "https://discord.gg/abc123",
+      valid: true,
+      serverName: "Test Server",
+      description: "A server",
+      onlineCount: 42,
+      memberCount: 100,
+    });
+    expect(result.iconUrl).toBe("https://cdn.discordapp.com/icons/123/abc.png");
+    // Animated banner (a_ prefix) is served as .gif.
+    expect(result.bannerUrl).toBe(
+      "https://cdn.discordapp.com/banners/123/a_def.gif?size=1024",
+    );
+  });
+
+  it("parses the code from the stored discord.gg/{code} URL", async () => {
+    const fetchMock = vi.fn(() => okJson(inviteBody));
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchDiscordInvite("https://discord.gg/xyz789");
+    const [requestUrl] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(requestUrl).toContain("/invites/xyz789");
+  });
+
+  it("marks the invite invalid on a Discord 404", async () => {
+    mockFetch(() => failRes(404));
+    const result = await fetchDiscordInvite("https://discord.gg/gone");
+    expect(result).toEqual({ url: "https://discord.gg/gone", valid: false });
+  });
+
+  it("degrades to the plain link when Discord is unreachable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("network"))),
+    );
+    const result = await fetchDiscordInvite("https://discord.gg/x");
+    expect(result).toEqual({ url: "https://discord.gg/x", valid: true });
+  });
+
+  it("degrades to the plain link on a non-404 error status", async () => {
+    mockFetch(() => failRes(500));
+    const result = await fetchDiscordInvite("https://discord.gg/x");
+    expect(result).toEqual({ url: "https://discord.gg/x", valid: true });
+  });
+
+  it("returns valid with no metadata when the response lacks a guild", async () => {
+    mockFetch(() => okJson({ approximate_member_count: 5 }));
+    const result = await fetchDiscordInvite("https://discord.gg/x");
+    expect(result).toEqual({ url: "https://discord.gg/x", valid: true });
+  });
+
+  it("returns the plain link for an unparseable URL without fetching", async () => {
+    const fetchMock = vi.fn(() => okJson(inviteBody));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await fetchDiscordInvite("not a url");
+    expect(result).toEqual({ url: "not a url", valid: true });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("passes an AbortSignal to fetch so the request can time out", async () => {
+    const fetchMock = vi.fn(() => okJson(inviteBody));
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchDiscordInvite("https://discord.gg/abc123");
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { signal: AbortSignal },
+    ];
+    // Pins the AbortSignal.timeout(5000) guard; without it the card could hang
+    // indefinitely on a stalled connection.
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("degrades to the plain link when the request times out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.reject(
+          new DOMException("The operation timed out", "TimeoutError"),
+        ),
+      ),
+    );
+    const result = await fetchDiscordInvite("https://discord.gg/slow");
+    expect(result).toEqual({ url: "https://discord.gg/slow", valid: true });
   });
 });

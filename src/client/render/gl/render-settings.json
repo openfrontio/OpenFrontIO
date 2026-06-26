@@ -17,7 +17,11 @@
     "nameDebug": false
   },
   "terrain": {
-    "oceanColor": "#4785b5"
+    "oceanColor": "#4785b5",
+    "sandColor": "#CC9E9E",
+    "plainsColor": "#BECD8A",
+    "highlandColor": "#C8B78A",
+    "mountainColor": "#e6e6e6"
   },
   "falloutBloom": {
     "broilSpeedCold": 0.0018,
@@ -315,7 +319,7 @@
     "selfMaxRad": 30,
     "mateMinRad": 5,
     "mateMaxRad": 14,
-    "animSpeed": 0.005,
+    "animSpeed": 0.008,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },

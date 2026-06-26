@@ -23,6 +23,7 @@ var categoryOrder = []string{
 	"south_america",
 	"oceania",
 	"antarctica",
+	"countries",
 	"cosmic",
 	"fictional",
 	"arcade",

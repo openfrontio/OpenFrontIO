@@ -36,11 +36,44 @@ export const ClanInfoSchema = z.object({
   name: z.string().max(35),
   tag: RequiredClanTagSchema,
   description: z.string().max(200),
+  // Discord invite URL set by the clan leader; null when unset. Optional
+  // because not every ClanInfo source includes it (e.g. browse results).
+  discordUrl: z.string().max(255).nullable().optional(),
   isOpen: z.boolean(),
   createdAt: z.iso.datetime().optional(),
   memberCount: z.number().optional(),
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
+
+// Client-assembled view model for the clan Discord card. `valid` is false only
+// on a definitive Discord 404 (invite revoked); other failures degrade to the
+// plain link with valid: true.
+export type ClanDiscord = {
+  url: string;
+  valid: boolean;
+  serverName?: string;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  description?: string | null;
+  onlineCount?: number | null;
+  memberCount?: number | null;
+};
+
+// Subset of Discord's public GET /invites/{code}?with_counts=true response,
+// parsed client-side into ClanDiscord. snake_case mirrors Discord's wire format.
+export const DiscordInviteResponseSchema = z.object({
+  guild: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      icon: z.string().nullable().optional(),
+      banner: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+    })
+    .optional(),
+  approximate_member_count: z.number().optional(),
+  approximate_presence_count: z.number().optional(),
+});
 
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),

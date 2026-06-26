@@ -1,0 +1,321 @@
+{
+  "id": "UnitedStates",
+  "name": "United States",
+  "translation_key": "map.unitedstates",
+  "categories": ["north_america", "new", "countries"],
+  "multiplayer_frequency": 9,
+  "nations": [
+    {
+      "coordinates": [320, 692],
+      "name": "California",
+      "flag": "California"
+    },
+    {
+      "coordinates": [439, 344],
+      "name": "Oregon",
+      "flag": "Oregon"
+    },
+    {
+      "coordinates": [490, 174],
+      "name": "Washington",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [677, 375],
+      "name": "Idaho",
+      "flag": "Idaho"
+    },
+    {
+      "coordinates": [558, 658],
+      "name": "Nevada",
+      "flag": "Nevada"
+    },
+    {
+      "coordinates": [660, 941],
+      "name": "Arizona",
+      "flag": "Arizona"
+    },
+    {
+      "coordinates": [716, 681],
+      "name": "Utah",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [943, 279],
+      "name": "Montana",
+      "flag": "Montana"
+    },
+    {
+      "coordinates": [1005, 500],
+      "name": "Wyoming",
+      "flag": "Wyoming"
+    },
+    {
+      "coordinates": [971, 735],
+      "name": "Colorado",
+      "flag": "Colorado"
+    },
+    {
+      "coordinates": [940, 922],
+      "name": "New Mexico",
+      "flag": "New_Mexico"
+    },
+    {
+      "coordinates": [1254, 1191],
+      "name": "Texas",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [1597, 1201],
+      "name": "Louisiana",
+      "flag": "Louisiana"
+    },
+    {
+      "coordinates": [1322, 961],
+      "name": "Oklahoma",
+      "flag": "Oklahoma"
+    },
+    {
+      "coordinates": [1277, 262],
+      "name": "North Dakota",
+      "flag": "North_Dakota"
+    },
+    {
+      "coordinates": [1274, 437],
+      "name": "South Dakota",
+      "flag": "South_Dakota"
+    },
+    {
+      "coordinates": [1285, 621],
+      "name": "Nebraska",
+      "flag": "Nebraska"
+    },
+    {
+      "coordinates": [1308, 817],
+      "name": "Kansas",
+      "flag": "Kansas"
+    },
+    {
+      "coordinates": [1513, 383],
+      "name": "Minnesota",
+      "flag": "Minnesota"
+    },
+    {
+      "coordinates": [1566, 593],
+      "name": "Iowa",
+      "flag": "Iowa"
+    },
+    {
+      "coordinates": [1605, 767],
+      "name": "Missouri",
+      "flag": "Missouri"
+    },
+    {
+      "coordinates": [1598, 972],
+      "name": "Arkansas",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [1671, 475],
+      "name": "Wisconsin",
+      "flag": "Wisconsin"
+    },
+    {
+      "coordinates": [1875, 457],
+      "name": "Michigan",
+      "flag": "Michigan"
+    },
+    {
+      "coordinates": [1706, 670],
+      "name": "Illinois",
+      "flag": "Illinois"
+    },
+    {
+      "coordinates": [1835, 664],
+      "name": "Indiana",
+      "flag": "Indiana"
+    },
+    {
+      "coordinates": [1891, 799],
+      "name": "Kentucky",
+      "flag": "Kentucky"
+    },
+    {
+      "coordinates": [1872, 921],
+      "name": "Tennessee",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [1688, 1127],
+      "name": "Mississippi",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [1843, 1085],
+      "name": "Alabama",
+      "flag": "Alabama"
+    },
+    {
+      "coordinates": [2123, 1300],
+      "name": "Florida",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2020, 1092],
+      "name": "Georgia (US State)",
+      "flag": "Georgia_US"
+    },
+    {
+      "coordinates": [1970, 646],
+      "name": "Ohio",
+      "flag": "Ohio"
+    },
+    {
+      "coordinates": [2472, 245],
+      "name": "Maine",
+      "flag": "Maine"
+    },
+    {
+      "coordinates": [2112, 996],
+      "name": "South Carolina",
+      "flag": "South_Carolina"
+    },
+    {
+      "coordinates": [2154, 829],
+      "name": "North Carolina",
+      "flag": "North_Carolina"
+    },
+    {
+      "coordinates": [2163, 727],
+      "name": "Virginia",
+      "flag": "Virginia"
+    },
+    {
+      "coordinates": [2061, 703],
+      "name": "West Virginia",
+      "flag": "West_Virginia"
+    },
+    {
+      "coordinates": [2241, 649],
+      "name": "Maryland",
+      "flag": "Maryland"
+    },
+    {
+      "coordinates": [2294, 667],
+      "name": "Delaware",
+      "flag": "Delaware"
+    },
+    {
+      "coordinates": [2201, 519],
+      "name": "Pennsylvania",
+      "flag": "Pennsylvania"
+    },
+    {
+      "coordinates": [2318, 588],
+      "name": "New Jersey",
+      "flag": "New_Jersey"
+    },
+    {
+      "coordinates": [2315, 481],
+      "name": "New York",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [2402, 497],
+      "name": "Connecticut",
+      "flag": "Connecticut"
+    },
+    {
+      "coordinates": [2415, 446],
+      "name": "Massachusetts",
+      "flag": "Massachusetts"
+    },
+    {
+      "coordinates": [2430, 473],
+      "name": "Rhode Island",
+      "flag": "Rhode_Island"
+    },
+    {
+      "coordinates": [2339, 358],
+      "name": "Vermont",
+      "flag": "Vermont"
+    },
+    {
+      "coordinates": [2200, 660],
+      "name": "Washington D.C",
+      "flag": "District_of_Columbia"
+    },
+    {
+      "coordinates": [2409, 334],
+      "name": "New Hampshire",
+      "flag": "New_Hampshire"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [661, 237],
+      "name": "Lincoln",
+      "flag": "Lincoln"
+    },
+    {
+      "coordinates": [304, 605],
+      "name": "Jefferson",
+      "flag": "Jefferson"
+    },
+    {
+      "coordinates": [958, 442],
+      "name": "Arapaho",
+      "flag": "Arapaho"
+    },
+    {
+      "coordinates": [1464, 909],
+      "name": "Cherokee",
+      "flag": "Cherokee Nation"
+    },
+    {
+      "coordinates": [1378, 1010],
+      "name": "Chickasaw",
+      "flag": "Chickasaw"
+    },
+    {
+      "coordinates": [1494, 1019],
+      "name": "Choctaw",
+      "flag": "Choctaw"
+    },
+    {
+      "coordinates": [613, 620],
+      "name": "Deseret",
+      "flag": "Deseret"
+    },
+    {
+      "coordinates": [1158, 516],
+      "name": "Lakotah",
+      "flag": "Lakotah"
+    },
+    {
+      "coordinates": [381, 257],
+      "name": "Chinook",
+      "flag": "Chinook"
+    },
+    {
+      "coordinates": [819, 814],
+      "name": "Navajo",
+      "flag": "Navajo"
+    },
+    {
+      "coordinates": [2488, 263],
+      "name": "New England",
+      "flag": "New England"
+    },
+    {
+      "coordinates": [2062, 570],
+      "name": "Iroquois Confederacy",
+      "flag": "Haudenosaunee"
+    },
+    {
+      "coordinates": [1991, 1201],
+      "name": "Miccosukee",
+      "flag": "Miccosukee"
+    }
+  ]
+}

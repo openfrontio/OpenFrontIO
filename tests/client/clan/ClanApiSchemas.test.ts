@@ -57,6 +57,34 @@ describe("ClanInfoSchema", () => {
       expect(result.data.memberCount).toBeUndefined();
     }
   });
+
+  it("accepts a string discordUrl", () => {
+    const result = ClanInfoSchema.safeParse({
+      ...base,
+      discordUrl: "https://discord.gg/abc123",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a null discordUrl (link unset)", () => {
+    const result = ClanInfoSchema.safeParse({ ...base, discordUrl: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.discordUrl).toBeNull();
+  });
+
+  it("accepts data without discordUrl (omitted by browse results)", () => {
+    const result = ClanInfoSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.discordUrl).toBeUndefined();
+  });
+
+  it("rejects a discordUrl longer than 255 characters", () => {
+    const result = ClanInfoSchema.safeParse({
+      ...base,
+      discordUrl: "https://discord.gg/" + "a".repeat(255),
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("ClanMemberSchema", () => {
