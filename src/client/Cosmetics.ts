@@ -4,6 +4,8 @@ import {
   ColorPalette,
   Cosmetics,
   CosmeticsSchema,
+  Effect,
+  EffectType,
   Flag,
   Pack,
   Pattern,
@@ -14,6 +16,7 @@ import {
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
+  PlayerEffect,
   PlayerPattern,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
@@ -156,7 +159,7 @@ export async function purchaseCosmetic(
     return;
   }
 
-  const cosmeticType = resolved.type as "pattern" | "skin" | "flag";
+  const cosmeticType = resolved.type as "pattern" | "skin" | "flag" | "effect";
   const success = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -357,9 +360,28 @@ export function skinRelationship(
   );
 }
 
+export function effectRelationship(
+  effect: Effect,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "effect:*",
+      requiredFlare: `effect:${effect.name}`,
+      product: effect.product,
+      priceSoft: effect.priceSoft,
+      priceHard: effect.priceHard,
+      affiliateCode,
+      itemAffiliateCode: effect.affiliateCode ?? null,
+    },
+    userMeResponse,
+  );
+}
+
 export type ResolvedCosmetic = {
-  type: "pattern" | "skin" | "flag" | "pack" | "subscription";
-  cosmetic: Pattern | Skin | Flag | Pack | Subscription | null;
+  type: "pattern" | "skin" | "flag" | "effect" | "pack" | "subscription";
+  cosmetic: Pattern | Skin | Flag | Effect | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
@@ -435,6 +457,18 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `skin:${skinKey}`,
+    });
+  }
+
+  // Effects (boat-trail wakes, etc.) — a cosmetic category like skins/flags.
+  for (const [effectKey, effect] of Object.entries(cosmetics.effects ?? {})) {
+    const rel = effectRelationship(effect, userMeResponse, affiliateCode);
+    result.push({
+      type: "effect",
+      cosmetic: effect,
+      colorPalette: null,
+      relationship: rel,
+      key: `effect:${effectKey}`,
     });
   }
 
@@ -585,11 +619,41 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     }
   }
 
+  // Effects: a per-effectType map (effectType -> effect name). Drop any entry
+  // whose effect no longer exists, has the wrong type, or the user can't access.
+  // Like skins/flags/patterns above, a selection is kept (and left to the
+  // server to validate) when cosmetics or userMe fail to load.
+  const selectedEffects = userSettings.getSelectedEffects();
+  const effects: Record<string, string> = {};
+  for (const [effectType, name] of Object.entries(selectedEffects)) {
+    const effect = cosmetics?.effects?.[name];
+    if (cosmetics && (!effect || effect.effectType !== effectType)) {
+      userSettings.setSelectedEffectName(effectType as EffectType, undefined);
+      continue;
+    }
+    if (effect) {
+      const userMe = await getUserMe();
+      if (userMe) {
+        const flares = userMe.player.flares ?? [];
+        const hasWildcard = flares.includes("effect:*");
+        if (!hasWildcard && !flares.includes(`effect:${effect.name}`)) {
+          userSettings.setSelectedEffectName(
+            effectType as EffectType,
+            undefined,
+          );
+          continue;
+        }
+      }
+    }
+    effects[effectType] = name;
+  }
+
   return {
     flag: flag ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
     skinName,
+    effects: Object.keys(effects).length > 0 ? effects : undefined,
   };
 }
 
@@ -630,6 +694,21 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     if (skin) {
       result.skin = { name: refs.skinName, url: skin.url };
     }
+  }
+
+  if (refs.effects && cosmetics) {
+    const effects: Record<string, PlayerEffect> = {};
+    for (const [effectType, name] of Object.entries(refs.effects)) {
+      const effect = cosmetics.effects?.[name];
+      if (effect && effect.effectType === effectType) {
+        effects[effectType] = {
+          name: effect.name,
+          effectType: effect.effectType,
+          attributes: effect.attributes,
+        };
+      }
+    }
+    if (Object.keys(effects).length > 0) result.effects = effects;
   }
 
   return result;

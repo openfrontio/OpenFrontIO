@@ -11,12 +11,13 @@ import {
 } from "obscenity";
 import countries from "resources/countries.json";
 
-import { Cosmetics } from "../core/CosmeticSchemas";
+import { Cosmetics, EffectType } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
+  PlayerEffect,
   PlayerPattern,
   PlayerSkin,
 } from "../core/Schemas";
@@ -257,8 +258,46 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         return { type: "forbidden", reason: "invalid skin: " + message };
       }
     }
+    if (refs.effects) {
+      for (const [type, name] of Object.entries(refs.effects)) {
+        try {
+          cosmetics.effects ??= {};
+          cosmetics.effects[type] = this.isEffectAllowed(
+            flares,
+            type as EffectType,
+            name,
+          );
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          return { type: "forbidden", reason: "invalid effect: " + message };
+        }
+      }
+    }
 
     return { type: "allowed", cosmetics };
+  }
+
+  isEffectAllowed(
+    flares: string[],
+    effectType: EffectType,
+    name: string,
+  ): PlayerEffect {
+    const found = this.cosmetics.effects?.[name];
+    if (!found) throw new Error(`Effect ${name} not found`);
+    if (found.effectType !== effectType) {
+      throw new Error(`Effect ${name} type mismatch`);
+    }
+    if (
+      flares.includes("effect:*") ||
+      flares.includes(`effect:${found.name}`)
+    ) {
+      return {
+        name: found.name,
+        effectType: found.effectType,
+        attributes: found.attributes,
+      };
+    }
+    throw new Error(`No flares for effect ${name}`);
   }
 
   isSkinAllowed(flares: string[], name: string): PlayerSkin {

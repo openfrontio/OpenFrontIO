@@ -9,6 +9,11 @@ export type Flag = z.infer<typeof FlagSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
+export type Effect = z.infer<typeof EffectSchema>;
+export type EffectType = z.infer<typeof EffectTypeSchema>;
+export type TransportShipTrailAttributes = z.infer<
+  typeof TransportShipTrailAttributesSchema
+>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -85,6 +90,34 @@ export const SkinSchema = CosmeticSchema.extend({
   url: z.string(),
 });
 
+// "effects" is a cosmetic category alongside skins/flags. Each effect declares
+// an `effectType` (the kind of thing it changes); the only type today is
+// "transportShipTrail", whose visual config lives in `attributes`. New effect
+// types are added by extending the EffectSchema union with another member.
+export const EFFECT_TYPES = ["transportShipTrail"] as const;
+export const EffectTypeSchema = z.enum(EFFECT_TYPES);
+
+export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("solid"), color: z.string() }),
+  z.object({ type: z.literal("rainbow") }),
+  z.object({ type: z.literal("pulse"), color: z.string() }),
+  z.object({
+    type: z.literal("gradient"),
+    color: z.string(),
+    color2: z.string(),
+  }),
+]);
+
+export const TransportShipTrailEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("transportShipTrail"),
+  attributes: TransportShipTrailAttributesSchema,
+  url: z.string().optional(),
+});
+
+export const EffectSchema = z.discriminatedUnion("effectType", [
+  TransportShipTrailEffectSchema,
+]);
+
 export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),
   currency: z.enum(["hard", "soft"]),
@@ -105,6 +138,7 @@ export const CosmeticsSchema = z.object({
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
   skins: z.record(z.string(), SkinSchema).optional(),
+  effects: z.record(z.string(), EffectSchema).optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });

@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  Effect,
   Flag,
   Pack,
   Pattern,
@@ -17,6 +18,7 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import "./CosmeticContainer";
 import "./CosmeticInfo";
+import { renderTransportShipTrailSwatch } from "./EffectPreview";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
 
@@ -80,6 +82,9 @@ export class CosmeticButton extends LitElement {
     }
     if (this.activeResolved.type === "subscription") {
       return translateCosmetic("subscriptions", c.name);
+    }
+    if (this.activeResolved.type === "effect") {
+      return translateCosmetic("effects", c.name);
     }
     return translateCosmetic("flags", c.name);
   }
@@ -165,6 +170,20 @@ export class CosmeticButton extends LitElement {
         draggable="false"
         loading="lazy"
       />`;
+    }
+
+    if (this.activeResolved.type === "effect") {
+      const c = this.activeResolved.cosmetic as Effect | null;
+      if (c === null) {
+        // "Default" tile — selecting it clears the effect for that type.
+        return html`<div
+          class="w-full h-full flex items-center justify-center text-white/40 text-xs uppercase"
+        >
+          ${translateText("territory_patterns.pattern.default")}
+        </div>`;
+      }
+      // Only effectType today is transportShipTrail; c.attributes is its style.
+      return renderTransportShipTrailSwatch(c.attributes);
     }
 
     if (this.activeResolved.type === "pack") {
@@ -254,7 +273,7 @@ export class CosmeticButton extends LitElement {
   render() {
     const active = this.activeResolved;
     const c = active.cosmetic;
-    const priced = c as Pattern | Skin | Flag | Pack | null;
+    const priced = c as Pattern | Skin | Flag | Effect | Pack | null;
     const priceHard = priced?.priceHard;
     const priceSoft = priced?.priceSoft;
     const artist = priced?.artist;
