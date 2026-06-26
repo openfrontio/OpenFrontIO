@@ -332,7 +332,7 @@ export const maps: readonly MapInfo[] = [
     id: "China",
     type: GameMapType.China,
     translationKey: "map.china",
-    categories: ["asia"],
+    categories: ["asia", "countries"],
     multiplayerFrequency: 8,
   },
   {
