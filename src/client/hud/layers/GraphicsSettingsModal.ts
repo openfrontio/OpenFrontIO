@@ -425,11 +425,67 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentSandColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.sandColor ??
+      renderDefaults.terrain.sandColor
+    );
+  }
+
+  private currentPlainsColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.plainsColor ??
+      renderDefaults.terrain.plainsColor
+    );
+  }
+
+  private currentHighlandColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.highlandColor ??
+      renderDefaults.terrain.highlandColor
+    );
+  }
+
+  private currentMountainColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.mountainColor ??
+      renderDefaults.terrain.mountainColor
+    );
+  }
+
   private onOceanColorChange(event: Event) {
     const value = (event.target as HTMLInputElement).value.trim();
     const match = HEX_COLOR_RE.exec(value);
     if (!match) return; // ignore partial/invalid hex while typing
     this.patchTerrain({ oceanColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onSandColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return; // ignore partial/invalid hex while typing
+    this.patchTerrain({ sandColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onPlainsColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return;
+    this.patchTerrain({ plainsColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onHighlandColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return;
+    this.patchTerrain({ highlandColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onMountainColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return;
+    this.patchTerrain({ mountainColor: `#${match[1].toLowerCase()}` });
   }
 
   private patchLighting(patch: Partial<GraphicsOverrides["lighting"]>) {
@@ -611,6 +667,10 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
     const oceanColor = this.currentOceanColor();
+    const sandColor = this.currentSandColor();
+    const plainsColor = this.currentPlainsColor();
+    const highlandColor = this.currentHighlandColor();
+    const mountainColor = this.currentMountainColor();
     const nukeColor = this.currentNukeColor();
     const ambientLevel = this.currentAmbientLevel();
     const unitGlow = this.currentUnitGlow();
@@ -1178,6 +1238,114 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 type="color"
                 .value=${oceanColor}
                 @input=${this.onOceanColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.sand_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.sand_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${sandColor}
+                placeholder=${renderDefaults.terrain.sandColor}
+                spellcheck="false"
+                @change=${this.onSandColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${sandColor}
+                @input=${this.onSandColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.plains_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.plains_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${plainsColor}
+                placeholder=${renderDefaults.terrain.plainsColor}
+                spellcheck="false"
+                @change=${this.onPlainsColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${plainsColor}
+                @input=${this.onPlainsColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.highland_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.highland_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${highlandColor}
+                placeholder=${renderDefaults.terrain.highlandColor}
+                spellcheck="false"
+                @change=${this.onHighlandColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${highlandColor}
+                @input=${this.onHighlandColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.mountain_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.mountain_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${mountainColor}
+                placeholder=${renderDefaults.terrain.mountainColor}
+                spellcheck="false"
+                @change=${this.onMountainColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${mountainColor}
+                @input=${this.onMountainColorChange}
                 class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
               />
             </div>

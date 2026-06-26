@@ -64,6 +64,10 @@ export interface RenderSettings {
      * per-depth brightness gradient is preserved relative to this color.
      */
     oceanColor: string;
+    sandColor: string;
+    plainsColor: string;
+    highlandColor: string;
+    mountainColor: string;
   };
   falloutBloom: {
     broilSpeedCold: number;
