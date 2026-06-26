@@ -67,6 +67,9 @@ export function clanApiMockFactory() {
       results: [],
       nextCursor: null,
     })),
+    // ClanDetailView calls this when a clan has a discordUrl; mock the degraded
+    // plain-link result so view tests never reach the real Discord network.
+    fetchDiscordInvite: vi.fn(async (url: string) => ({ url, valid: true })),
   };
 }
 

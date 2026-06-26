@@ -1,9 +1,9 @@
 import { LABELS } from "../config";
-import type { Action, Issue } from "../github";
+import { type Action, hasLabel, type Issue } from "../github";
 
 export function syncApprovalLabel(issue: Issue): Action[] {
-  const hasApproved = issue.labels.includes(LABELS.APPROVED);
-  const hasNotApproved = issue.labels.includes(LABELS.NOT_APPROVED);
+  const hasApproved = hasLabel(issue, LABELS.APPROVED);
+  const hasNotApproved = hasLabel(issue, LABELS.NOT_APPROVED);
   const milestoned = issue.milestone !== null;
   const actions: Action[] = [];
 

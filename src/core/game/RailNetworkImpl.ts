@@ -251,6 +251,7 @@ export class RailNetworkImpl implements RailNetwork {
 
     const maxRange = this.game.config().trainStationMaxRange();
     const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
+    const maxPathSize = this.game.config().railroadMaxSize();
 
     // A City or Port only joins the rail network when a Factory is already in
     // range (see CityExecution/PortExecution). A Factory always becomes a
@@ -300,11 +301,13 @@ export class RailNetworkImpl implements RailNetwork {
       } else {
         continue;
       }
+
       const path = this.pathService.findTilePath(tile, targetTile);
-      if (path.length === 0) continue;
-      paths.push(path);
-      if (neighborStation) {
-        connectedStations.push(neighborStation);
+      if (path.length > 0 && path.length < maxPathSize) {
+        paths.push(path);
+        if (neighborStation) {
+          connectedStations.push(neighborStation);
+        }
       }
     }
 
@@ -375,17 +378,19 @@ export class RailNetworkImpl implements RailNetwork {
 
   private connect(from: TrainStation, to: TrainStation) {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
-    if (path.length === 0) return false;
-    const railroad = new Railroad(from, to, path, this.nextId++);
-    this.game.addUpdate({
-      type: GameUpdateType.RailroadConstructionEvent,
-      id: railroad.id,
-      tiles: railroad.tiles,
-    });
-    from.addRailroad(railroad);
-    to.addRailroad(railroad);
-    this.railGrid.register(railroad);
-    return true;
+    if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
+      const railroad = new Railroad(from, to, path, this.nextId++);
+      this.game.addUpdate({
+        type: GameUpdateType.RailroadConstructionEvent,
+        id: railroad.id,
+        tiles: railroad.tiles,
+      });
+      from.addRailroad(railroad);
+      to.addRailroad(railroad);
+      this.railGrid.register(railroad);
+      return true;
+    }
+    return false;
   }
 
   private distanceFrom(
