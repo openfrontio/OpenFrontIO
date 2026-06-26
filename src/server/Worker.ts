@@ -435,7 +435,15 @@ export async function startWorker() {
           return;
         }
 
-        if (ServerEnv.env() !== GameEnv.Dev) {
+        // Turnstile gates the FIRST join only. An already-admitted player who
+        // reconnects (e.g. a socket drop during the lobby->start transition,
+        // after which the server has cleared their reconnection mapping) must
+        // not be re-challenged: their original Turnstile token is single-use
+        // and was already redeemed, so re-verifying it would always fail.
+        if (
+          ServerEnv.env() !== GameEnv.Dev &&
+          !gm.wasAdmitted(clientMsg.gameID, persistentId)
+        ) {
           const turnstileResult = await verifyTurnstileToken(
             ip,
             clientMsg.turnstileToken,
