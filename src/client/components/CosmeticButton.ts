@@ -85,54 +85,52 @@ export class CosmeticButton extends LitElement {
     return translateCosmetic("flags", c.name);
   }
 
+  /** True when the variants carry colour palettes to show as swatches. */
   private get hasColorRow(): boolean {
-    const type = this.activeResolved.type;
     return (
-      this.variants !== undefined && (type === "pattern" || type === "skin")
+      this.variants !== undefined &&
+      this.variants.some((v) => v.colorPalette !== null)
     );
   }
 
-  /** Row of clickable split-circle colour swatches for pattern variants. */
+  /** Row of clickable split-circle colour swatches, one per palette. */
   private renderColorSwatches(): TemplateResult | typeof nothing {
     if (!this.hasColorRow) {
       return nothing;
     }
-    const variants = this.variants!;
     const activeKey = this.activeResolved.key;
     return html`
       <div
-        class="flex flex-wrap items-center justify-center gap-1.5 w-full min-h-5 px-1"
+        class="flex flex-wrap items-center justify-center gap-1.5 w-full px-1"
       >
-        ${variants.length < 2
-          ? nothing
-          : variants.map((v) => {
-              const primary = v.colorPalette?.primaryColor ?? "#ffffff";
-              const secondary = v.colorPalette?.secondaryColor ?? "#000000";
-              const isActive = v.key === activeKey;
-              const label = v.colorPalette
-                ? translateCosmetic(
-                    "territory_patterns.color_palette",
-                    v.colorPalette.name,
-                  )
-                : "";
-              const outline = isActive
-                ? "0 0 0 2px rgba(255,255,255,0.95)"
-                : "inset 0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(0,0,0,0.45)";
-              return html`<button
-                type="button"
-                title=${label}
-                aria-label=${label}
-                aria-pressed=${isActive}
-                class="w-5 h-5 shrink-0 rounded-full p-0 m-0 appearance-none cursor-pointer outline-none transition-transform duration-150 hover:scale-110 ${isActive
-                  ? "scale-110"
-                  : ""}"
-                style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%); box-shadow: ${outline};"
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  this.activeVariantKey = v.key;
-                }}
-              ></button>`;
-            })}
+        ${this.variants!.map((v) => {
+          const primary = v.colorPalette?.primaryColor ?? "#ffffff";
+          const secondary = v.colorPalette?.secondaryColor ?? "#000000";
+          const isActive = v.key === activeKey;
+          const label = v.colorPalette
+            ? translateCosmetic(
+                "territory_patterns.color_palette",
+                v.colorPalette.name,
+              )
+            : "";
+          const outline = isActive
+            ? "0 0 0 2px rgba(255,255,255,0.95)"
+            : "inset 0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(0,0,0,0.45)";
+          return html`<button
+            type="button"
+            title=${label}
+            aria-label=${label}
+            aria-pressed=${isActive}
+            class="w-5 h-5 shrink-0 rounded-full p-0 m-0 appearance-none cursor-pointer outline-none transition-transform duration-150 hover:scale-110 ${isActive
+              ? "scale-110"
+              : ""}"
+            style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%); box-shadow: ${outline};"
+            @click=${(e: Event) => {
+              e.stopPropagation();
+              this.activeVariantKey = v.key;
+            }}
+          ></button>`;
+        })}
       </div>
     `;
   }
