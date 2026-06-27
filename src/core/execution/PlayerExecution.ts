@@ -40,10 +40,6 @@ export class PlayerExecution implements Execution {
     this.mg = mg;
     this.map = mg.map();
     this.config = mg.config();
-    // Seed the per-player phase offset from id() (identical on every client),
-    // never name(): with the anonymize-names option the username differs per
-    // client, which would stagger removeClusters() onto different ticks and
-    // desync tile ownership.
     this.lastCalc =
       ticks + (simpleHash(this.player.id()) % this.ticksPerClusterCalc);
   }
