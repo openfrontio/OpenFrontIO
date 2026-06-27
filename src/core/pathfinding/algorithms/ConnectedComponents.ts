@@ -54,6 +54,12 @@ export class ConnectedComponents {
         ids = this.upgradeToUint16Array(ids);
       }
 
+      // Cap at 0xFFFE — 0xFFFF is reserved as LAND_MARKER_WIDE after
+      // Uint16Array promotion and must not be assigned to a real component.
+      if (nextId === 0xffff) {
+        break;
+      }
+
       this.floodFillComponent(ids, start, nextId);
     }
 

@@ -192,5 +192,24 @@ describe("ConnectedComponents", () => {
 
       expect(wc.getComponentSize(999)).toBe(0);
     });
+
+    it("never assigns 0xFFFF (LAND_MARKER_WIDE) as a component ID", () => {
+      const map = createGameMap(createIslandMap());
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+
+      // 0xFFFF is reserved after Uint16Array promotion
+      expect(wc.getComponentSize(0xffff)).toBe(0);
+
+      // No tile should have component ID 0xFFFF
+      for (let y = 0; y < map.height(); y++) {
+        for (let x = 0; x < map.width(); x++) {
+          const tile = map.ref(x, y);
+          if (map.isWater(tile)) {
+            expect(wc.getComponentId(tile)).not.toBe(0xffff);
+          }
+        }
+      }
+    });
   });
 });
