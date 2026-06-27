@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameMode, GameType } from "../../../core/game/Game";
+import { GameMode, GameType, RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";
@@ -197,6 +197,7 @@ export class HeadsUpMessage extends LitElement implements Controller {
         ${this.game?.inSpawnPhase() &&
         this.game.config().gameConfig().gameMode === GameMode.FFA &&
         this.game.config().gameConfig().gameType === GameType.Public &&
+        this.game.config().gameConfig().rankedType !== RankedType.OneVOne &&
         !this.hasClosedCollusionWarning
           ? html`
               <div
