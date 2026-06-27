@@ -93,11 +93,11 @@ const effectCosmetics = {
   colorPalettes: {},
   flags: {},
   effects: {
-    transport_ship_trail: {
+    // effectType is the OUTER key; effects carry no effectType field.
+    transportShipTrail: {
       spectrum: {
         name: "spectrum",
-        effectType: "transport_ship_trail" as const,
-        attributes: { type: "rainbow" as const },
+        attributes: { type: "rainbow" },
         url: "",
         affiliateCode: null,
         product: null,
@@ -107,8 +107,7 @@ const effectCosmetics = {
       },
       crimson: {
         name: "crimson",
-        effectType: "transport_ship_trail" as const,
-        attributes: { type: "solid" as const, color: "#e01b24" },
+        attributes: { type: "solid", color: "#e01b24" },
         url: "",
         affiliateCode: null,
         product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
@@ -561,13 +560,13 @@ describe("Skin validation", () => {
 describe("Effect validation in isAllowed", () => {
   test("allows valid effect with wildcard flare", () => {
     const result = effectChecker.isAllowed(["effect:*"], {
-      effects: { transport_ship_trail: "spectrum" },
+      effects: { transportShipTrail: "spectrum" },
     });
     expect(result.type).toBe("allowed");
     if (result.type === "allowed") {
-      expect(result.cosmetics.effects?.transport_ship_trail).toEqual({
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
         name: "spectrum",
-        effectType: "transport_ship_trail",
+        effectType: "transportShipTrail",
         attributes: { type: "rainbow" },
       });
     }
@@ -575,13 +574,11 @@ describe("Effect validation in isAllowed", () => {
 
   test("allows valid effect with exact-match flare", () => {
     const result = effectChecker.isAllowed(["effect:crimson"], {
-      effects: { transport_ship_trail: "crimson" },
+      effects: { transportShipTrail: "crimson" },
     });
     expect(result.type).toBe("allowed");
     if (result.type === "allowed") {
-      expect(
-        result.cosmetics.effects?.transport_ship_trail?.attributes,
-      ).toEqual({
+      expect(result.cosmetics.effects?.transportShipTrail?.attributes).toEqual({
         type: "solid",
         color: "#e01b24",
       });
@@ -590,7 +587,7 @@ describe("Effect validation in isAllowed", () => {
 
   test("rejects effect when user lacks flare", () => {
     const result = effectChecker.isAllowed([], {
-      effects: { transport_ship_trail: "spectrum" },
+      effects: { transportShipTrail: "spectrum" },
     });
     expect(result.type).toBe("forbidden");
     if (result.type === "forbidden") {
@@ -610,7 +607,7 @@ describe("Effect validation in isAllowed", () => {
 
   test("rejects nonexistent effect", () => {
     const result = effectChecker.isAllowed(["effect:*"], {
-      effects: { transport_ship_trail: "ghost" },
+      effects: { transportShipTrail: "ghost" },
     });
     expect(result.type).toBe("forbidden");
     if (result.type === "forbidden") {

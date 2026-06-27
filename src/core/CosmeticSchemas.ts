@@ -90,33 +90,27 @@ export const SkinSchema = CosmeticSchema.extend({
   url: z.string(),
 });
 
-// "effects" is a cosmetic category alongside skins/flags. Each effect declares
-// an `effectType` (the kind of thing it changes); the only type today is
-// "transport_ship_trail", whose visual config lives in `attributes`. New effect
-// types are added by extending the EffectSchema union with another member.
-export const EFFECT_TYPES = ["transport_ship_trail"] as const;
+// "effects" is a cosmetic category alongside skins/flags. The catalog is nested
+// effects[effectType][effectName]; the effectType is the OUTER key, NOT a field
+// on each effect. Both the effectType and the attribute `type` are kept lenient
+// so effectTypes / attribute types we don't recognize don't fail the whole
+// cosmetics parse — the UI simply ignores anything outside EFFECT_TYPES and the
+// known attribute types.
+export const EFFECT_TYPES = ["transportShipTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
-export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("solid"), color: z.string() }),
-  z.object({ type: z.literal("rainbow") }),
-  z.object({ type: z.literal("pulse"), color: z.string() }),
-  z.object({
-    type: z.literal("gradient"),
-    color: z.string(),
-    color2: z.string(),
-  }),
-]);
+// `type` is any string (unknown attribute types tolerated); color/color2 are
+// kept for the known solid / pulse / gradient styles.
+export const TransportShipTrailAttributesSchema = z.object({
+  type: z.string(),
+  color: z.string().optional(),
+  color2: z.string().optional(),
+});
 
-export const TransportShipTrailEffectSchema = CosmeticSchema.extend({
-  effectType: z.literal("transport_ship_trail"),
+export const EffectSchema = CosmeticSchema.extend({
   attributes: TransportShipTrailAttributesSchema,
   url: z.string().optional(),
 });
-
-export const EffectSchema = z.discriminatedUnion("effectType", [
-  TransportShipTrailEffectSchema,
-]);
 
 export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),

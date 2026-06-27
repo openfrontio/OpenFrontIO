@@ -5,10 +5,10 @@ import {
 } from "../src/core/CosmeticSchemas";
 
 describe("Effect cosmetic schemas", () => {
-  const base = { name: "spectrum", product: null, rarity: "legendary" };
+  const base = { name: "spectrum", product: null, rarity: "common" };
 
-  describe("TransportShipTrailAttributesSchema", () => {
-    it("parses each attribute variant", () => {
+  describe("TransportShipTrailAttributesSchema (lenient)", () => {
+    it("parses the known attribute variants", () => {
       expect(
         TransportShipTrailAttributesSchema.safeParse({
           type: "solid",
@@ -34,81 +34,107 @@ describe("Effect cosmetic schemas", () => {
       ).toBe(true);
     });
 
-    it("rejects an unknown attribute type", () => {
+    it("tolerates an unknown attribute type (ignored at render time)", () => {
       expect(
         TransportShipTrailAttributesSchema.safeParse({ type: "sparkle" })
           .success,
-      ).toBe(false);
+      ).toBe(true);
     });
 
-    it("requires color for solid/pulse and both colors for gradient", () => {
-      expect(
-        TransportShipTrailAttributesSchema.safeParse({ type: "solid" }).success,
-      ).toBe(false);
-      expect(
-        TransportShipTrailAttributesSchema.safeParse({
-          type: "gradient",
-          color: "#f00",
-        }).success,
-      ).toBe(false);
+    it("requires a `type`", () => {
+      expect(TransportShipTrailAttributesSchema.safeParse({}).success).toBe(
+        false,
+      );
     });
   });
 
   describe("EffectSchema", () => {
-    it("discriminates an effect on effectType", () => {
+    it("parses an effect (effectType is the catalog key, not a field)", () => {
       expect(
-        EffectSchema.safeParse({
-          ...base,
-          effectType: "transport_ship_trail",
-          attributes: { type: "rainbow" },
-        }).success,
+        EffectSchema.safeParse({ ...base, attributes: { type: "rainbow" } })
+          .success,
       ).toBe(true);
     });
 
-    it("rejects an unknown effectType", () => {
-      expect(
-        EffectSchema.safeParse({
-          ...base,
-          effectType: "explosion",
-          attributes: { type: "rainbow" },
-        }).success,
-      ).toBe(false);
+    it("rejects an effect with no attributes", () => {
+      expect(EffectSchema.safeParse({ ...base }).success).toBe(false);
     });
 
-    it("rejects a transport_ship_trail effect with no attributes", () => {
+    it("tolerates an effect with an unknown attribute type", () => {
       expect(
-        EffectSchema.safeParse({ ...base, effectType: "transport_ship_trail" })
+        EffectSchema.safeParse({ ...base, attributes: { type: "sparkle" } })
           .success,
-      ).toBe(false);
+      ).toBe(true);
     });
   });
 
-  // Exact shape served by the production cosmetics.json (incl. the `url` field
-  // and stripped extras like `description`) — guards against schema drift.
-  it("parses the real cosmetics.json effect entry", () => {
-    const realEffect = {
-      name: "read_transport_trail",
-      effectType: "transport_ship_trail",
-      attributes: { type: "solid", color: "#f91515" },
-      url: "",
-      affiliateCode: null,
-      product: null,
-      rarity: "common",
-    };
-    expect(EffectSchema.safeParse(realEffect).success).toBe(true);
-
+  // Exact shape served by the production cosmetics.json: nested
+  // effects[effectType][effectName], no `effectType` field on the effect, and
+  // extras (e.g. product.priceInCents) stripped.
+  it("parses the real nested cosmetics.json effects", () => {
     const result = CosmeticsSchema.safeParse({
       patterns: {},
       flags: {},
-      // Catalog is nested: effects[effectType][effectName].
-      effects: { transport_ship_trail: { read_transport_trail: realEffect } },
+      effects: {
+        transportShipTrail: {
+          rainbow_ship: {
+            name: "rainbow_ship",
+            attributes: { type: "rainbow" },
+            affiliateCode: null,
+            product: null,
+            priceHard: 123,
+            rarity: "common",
+          },
+          gradient: {
+            name: "gradient",
+            attributes: {
+              type: "gradient",
+              color: "#aea2a2",
+              color2: "#a80000",
+            },
+            affiliateCode: null,
+            product: {
+              price: "$0.99",
+              priceInCents: 99,
+              productId: "prod_x",
+              priceId: "price_x",
+            },
+            rarity: "common",
+          },
+        },
+      },
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(
-        result.data.effects?.transport_ship_trail.read_transport_trail
-          .effectType,
-      ).toBe("transport_ship_trail");
+        result.data.effects?.transportShipTrail?.rainbow_ship?.attributes?.type,
+      ).toBe("rainbow");
     }
+  });
+
+  it("tolerates an unknown effectType (outer key) without failing the parse", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        transportShipTrail: {
+          ship: {
+            name: "ship",
+            attributes: { type: "solid", color: "#fff" },
+            product: null,
+            rarity: "common",
+          },
+        },
+        someFutureEffect: {
+          thing: {
+            name: "thing",
+            attributes: { type: "whatever" },
+            product: null,
+            rarity: "common",
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
   });
 });

@@ -28,6 +28,7 @@ function noneTile(effectType: EffectType): ResolvedCosmetic {
     colorPalette: null,
     relationship: "owned",
     key: `effect:none:${effectType}`,
+    effectType,
   };
 }
 
@@ -84,7 +85,7 @@ export class EffectsGrid extends LitElement {
       (r) =>
         r.type === "effect" &&
         r.cosmetic !== null &&
-        (r.cosmetic as Effect).effectType === effectType,
+        r.effectType === effectType,
     );
     if (this.mode === "purchase") {
       return ofType.filter((r) => r.relationship === "purchasable");

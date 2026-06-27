@@ -386,6 +386,8 @@ export type ResolvedCosmetic = {
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
   key: string;
+  /** For effects only: the effectType (the catalog's outer key, not a field). */
+  effectType?: string;
 };
 
 /**
@@ -461,8 +463,9 @@ export function resolveCosmetics(
   }
 
   // Effects (boat-trail wakes, etc.) — a cosmetic category like skins/flags.
-  // Catalog is nested: effects[effectType][effectName].
-  for (const byName of Object.values(cosmetics.effects ?? {})) {
+  // Catalog is nested: effects[effectType][effectName]. effectType is the outer
+  // key (carried on the resolved item, since it's not a field on the effect).
+  for (const [effectType, byName] of Object.entries(cosmetics.effects ?? {})) {
     for (const [effectKey, effect] of Object.entries(byName)) {
       const rel = effectRelationship(effect, userMeResponse, affiliateCode);
       result.push({
@@ -470,7 +473,8 @@ export function resolveCosmetics(
         cosmetic: effect,
         colorPalette: null,
         relationship: rel,
-        key: `effect:${effectKey}`,
+        key: `effect:${effectType}:${effectKey}`,
+        effectType,
       });
     }
   }
@@ -623,14 +627,14 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   }
 
   // Effects: a per-effectType map (effectType -> effect name). Drop any entry
-  // whose effect no longer exists, has the wrong type, or the user can't access.
-  // Like skins/flags/patterns above, a selection is kept (and left to the
-  // server to validate) when cosmetics or userMe fail to load.
+  // whose effect no longer exists or the user can't access. Like
+  // skins/flags/patterns above, a selection is kept (and left to the server to
+  // validate) when cosmetics or userMe fail to load.
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
   for (const [effectType, name] of Object.entries(selectedEffects)) {
     const effect = cosmetics?.effects?.[effectType]?.[name];
-    if (cosmetics && (!effect || effect.effectType !== effectType)) {
+    if (cosmetics && !effect) {
       userSettings.setSelectedEffectName(effectType as EffectType, undefined);
       continue;
     }
@@ -703,10 +707,10 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     const effects: Record<string, PlayerEffect> = {};
     for (const [effectType, name] of Object.entries(refs.effects)) {
       const effect = cosmetics.effects?.[effectType]?.[name];
-      if (effect && effect.effectType === effectType) {
+      if (effect) {
         effects[effectType] = {
           name: effect.name,
-          effectType: effect.effectType,
+          effectType: effectType as EffectType,
           attributes: effect.attributes,
         };
       }
