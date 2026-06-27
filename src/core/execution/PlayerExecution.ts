@@ -41,7 +41,7 @@ export class PlayerExecution implements Execution {
     this.map = mg.map();
     this.config = mg.config();
     this.lastCalc =
-      ticks + (simpleHash(this.player.name()) % this.ticksPerClusterCalc);
+      ticks + (simpleHash(this.player.id()) % this.ticksPerClusterCalc);
   }
 
   tick(ticks: number) {
