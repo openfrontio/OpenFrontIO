@@ -481,6 +481,18 @@ export class PlayerImpl implements Player {
           this.mg.map().isLand(neighbor) &&
           !this.mg.map().isImpassable(neighbor)
         ) {
+          // Skip nuked (fallout) TerraNullius so that `nearby()` does not
+          // report irradiated unowned land as an expandable neighbor. This
+          // keeps the direct-neighbor scan consistent with
+          // `shoreReachableNeighbors()` (which also filters fallout) and
+          // prevents the early "attack TerraNullius" expansion gate in
+          // AiAttackBehavior.maybeAttack() from firing on nuked-only borders.
+          if (
+            !this.mg.map().hasOwner(neighbor) &&
+            this.mg.map().hasFallout(neighbor)
+          ) {
+            continue;
+          }
           const owner = this.mg.map().ownerID(neighbor);
           if (owner !== this.smallID()) {
             ns.add(
