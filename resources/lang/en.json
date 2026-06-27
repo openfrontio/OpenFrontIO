@@ -457,7 +457,7 @@
   "flag_input": {
     "button_title": "Pick a flag!",
     "search_flag": "Search...",
-    "title": "Select Flag"
+    "title": "Flag"
   },
   "friends": {
     "accept": "Accept",
@@ -1299,7 +1299,7 @@
       "default": "Default"
     },
     "search": "Search...",
-    "select_skin": "Select Skin",
+    "select_skin": "Skin",
     "selected": "selected",
     "title": "Skins"
   },
