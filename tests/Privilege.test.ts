@@ -21,6 +21,12 @@ const bannedWords = [
   "faggot",
   "retard",
   "chair", // Test word to verify custom banned words work
+  // Banned words with a natural double letter: the collapse matcher deduped
+  // these to common substrings ("coons" -> "cons", "boong" -> "bong") and used
+  // to censor innocent names. See the elongation regression tests below.
+  "coons",
+  "boong",
+  "bussy",
 ];
 
 const matcher = createMatcher(bannedWords);
@@ -163,6 +169,32 @@ describe("UsernameCensor", () => {
     test("does not false-positive on words containing banned substrings legitimately", () => {
       // "snigger" is whitelisted in englishDataset
       expect(matcher.hasMatch("snigger")).toBe(false);
+    });
+
+    test("does not censor innocent words that collide with a deduped slur", () => {
+      // The collapse matcher deduped "coons" -> "cons", "boong" -> "bong",
+      // "bussy" -> "busy", "nigger" -> "niger". Without the repeated-letter
+      // guard, every word containing those substrings was censored.
+      expect(matcher.hasMatch("cons")).toBe(false);
+      expect(matcher.hasMatch("console")).toBe(false);
+      expect(matcher.hasMatch("icons")).toBe(false);
+      expect(matcher.hasMatch("constitution")).toBe(false);
+      expect(matcher.hasMatch("busy")).toBe(false);
+      expect(matcher.hasMatch("bong")).toBe(false);
+      expect(matcher.hasMatch("Bongo")).toBe(false);
+      expect(matcher.hasMatch("Nigeria")).toBe(false);
+      expect(matcher.hasMatch("Nigerian")).toBe(false);
+    });
+
+    test("still catches elongated slurs (collapse matcher)", () => {
+      // The repeated-letter guard must not weaken elongation detection: these
+      // all have a real repeated letter in the matched span.
+      expect(matcher.hasMatch("niiigger")).toBe(true);
+      expect(matcher.hasMatch("niiigger123")).toBe(true);
+      expect(matcher.hasMatch("cooons")).toBe(true);
+      expect(matcher.hasMatch("coons")).toBe(true);
+      expect(matcher.hasMatch("boooong")).toBe(true);
+      expect(matcher.hasMatch("bussy")).toBe(true);
     });
 
     test("catches kkk as substring", () => {

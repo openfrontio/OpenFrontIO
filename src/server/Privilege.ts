@@ -90,14 +90,33 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
       skipNonAlphabeticTransformer(),
     ],
   });
+  // A collapse-matcher hit is only a genuine elongation bypass when the matched
+  // text actually repeats a letter (e.g. "niiigger", "cooons", "nigg"). The
+  // deduped patterns collapse a banned word's natural double into a shorter,
+  // common substring ("coons" -> "cons", "boong" -> "bong", "nigger" -> "niger"),
+  // so without this guard the collapse matcher censors innocent names like
+  // "console", "Nigeria", or "busy". A canonical slur with no repeated letter is
+  // identical to its deduped pattern and is still caught by substringMatcher, so
+  // requiring a repeat only drops false positives, never real slurs. The span is
+  // widened by one char each side because a collapsed duplicate at the leading or
+  // trailing edge (e.g. "nigg" matching "nig") falls just outside the match.
+  const elongatedCollapseMatches = (input: string, sorted?: boolean) =>
+    collapseMatcher.getAllMatches(input, sorted).filter((m) =>
+      /(.)\1/.test(
+        input
+          .slice(Math.max(0, m.startIndex - 1), m.endIndex + 2)
+          .toLowerCase()
+          .replace(/[^a-z]/g, ""),
+      ),
+    );
   return {
     hasMatch: (input: string) =>
       input.toLowerCase().includes("kkk") ||
       substringMatcher.hasMatch(input) ||
-      collapseMatcher.hasMatch(input),
+      elongatedCollapseMatches(input).length > 0,
     getAllMatches: (input: string, sorted?: boolean) => [
       ...substringMatcher.getAllMatches(input, sorted),
-      ...collapseMatcher.getAllMatches(input, sorted),
+      ...elongatedCollapseMatches(input, sorted),
     ],
   } as unknown as RegExpMatcher;
 }
