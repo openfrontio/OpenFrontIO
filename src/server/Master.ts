@@ -90,6 +90,11 @@ export async function startMaster() {
 
   log.info(`Instance ID: ${INSTANCE_ID}`);
 
+  // Track which WORKER_ID each cluster worker owns. `worker.process` is a
+  // ChildProcess and does NOT expose the forked env, so the exit handler can't
+  // recover WORKER_ID from worker.process.env — keep an explicit registry.
+  const workerIdByClusterId = new Map<number, number>();
+
   // Fork workers
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {
     const worker = cluster.fork({
@@ -97,20 +102,21 @@ export async function startMaster() {
       INSTANCE_ID,
     });
 
+    workerIdByClusterId.set(worker.id, i);
     lobbyService.registerWorker(i, worker);
     log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
   }
 
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
-    const workerId = (worker as any).process?.env?.WORKER_ID;
+    const workerId = workerIdByClusterId.get(worker.id);
     if (workerId === undefined) {
-      log.error(`worker crashed could not find id`);
+      log.error(`worker crashed could not find id for cluster id ${worker.id}`);
       return;
     }
+    workerIdByClusterId.delete(worker.id);
 
-    const workerIdNum = parseInt(workerId);
-    lobbyService.removeWorker(workerIdNum);
+    lobbyService.removeWorker(workerId);
 
     log.warn(
       `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
@@ -123,7 +129,8 @@ export async function startMaster() {
       INSTANCE_ID,
     });
 
-    lobbyService.registerWorker(workerIdNum, newWorker);
+    workerIdByClusterId.set(newWorker.id, workerId);
+    lobbyService.registerWorker(workerId, newWorker);
     log.info(
       `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
     );

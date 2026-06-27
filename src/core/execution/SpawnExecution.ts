@@ -53,7 +53,12 @@ export class SpawnExecution implements Execution {
     }
 
     player.tiles().forEach((t) => player.relinquish(t));
-    const spawn = this.getSpawn(this.tile);
+    // In random-spawn mode the location must be chosen by the simulation, never
+    // by a client-supplied tile. Ignore this.tile so a forged spawn intent
+    // can't pick its own coordinates.
+    const spawn = this.getSpawn(
+      this.mg.config().isRandomSpawn() ? undefined : this.tile,
+    );
 
     if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);

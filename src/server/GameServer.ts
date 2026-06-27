@@ -541,6 +541,7 @@ export class GameServer {
 
     // Close old WebSocket to prevent resource leaks
     if (client.ws !== ws) {
+      this.websockets.delete(client.ws);
       client.ws.removeAllListeners();
       client.ws.close();
     }
@@ -676,6 +677,7 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
+      this.websockets.delete(client.ws);
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
@@ -683,6 +685,14 @@ export class GameServer {
       if (!this._hasStarted) {
         // Remove persistentId if the game has not started to prevent going over max players
         this.persistentIdToClientId.delete(client.persistentID);
+        // A player left before start: if we dropped back under capacity, clear
+        // the max-players latch so the lobby doesn't commit to a premature
+        // under-capacity start (notably small public lobbies / ranked 1v1).
+        if (
+          this.activeClients.length < (this.gameConfig.maxPlayers ?? Infinity)
+        ) {
+          this.hasReachedMaxPlayerCount = false;
+        }
         // Close lobby when host leaves before game starts
         if (
           !this.isPublic() &&
@@ -716,6 +726,11 @@ export class GameServer {
       // Remove persistentId if the game has not started to prevent going over max players
       if (!this._hasStarted) {
         this.persistentIdToClientId.delete(client.persistentID);
+        if (
+          this.activeClients.length < (this.gameConfig.maxPlayers ?? Infinity)
+        ) {
+          this.hasReachedMaxPlayerCount = false;
+        }
       }
     }
   }
@@ -1016,6 +1031,12 @@ export class GameServer {
   }
 
   phase(): GamePhase {
+    // Once the game has been torn down (e.g. private-lobby host left, or end()
+    // was called) it must be reported Finished so GameManager stops scheduling
+    // and removes it, instead of lingering as a Lobby until max duration.
+    if (this._hasEnded) {
+      return GamePhase.Finished;
+    }
     const now = Date.now();
     const alive: Client[] = [];
     for (const client of this.activeClients) {

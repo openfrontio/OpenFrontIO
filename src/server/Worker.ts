@@ -221,6 +221,16 @@ export async function startWorker() {
 
   registerAdminBotRoutes({ app, gm, workerId, log });
 
+  // SECURITY (known gap, intentionally unfixed for now): this endpoint is
+  // unauthenticated — it validates the schema then forwards the record to the
+  // central API with the server's privileged x-api-key, trusting the
+  // client-supplied players[].persistentID. A caller can submit forged/spam
+  // single-player records, and anyone who learns another account's persistentID
+  // could attribute a forged game to it. Recommended fix: require a Bearer JWT
+  // (client sends getAuthHeader()), verifyClientToken it, and stamp
+  // players[0].persistentID from auth.persistentId instead of trusting the body
+  // (so a leaked persistentID can't forge — only a real JWT can). Open question
+  // is how to treat logged-out singleplayer users (no JWT in prod).
   app.post("/api/archive_singleplayer_game", async (req, res) => {
     try {
       const record = req.body;
@@ -269,6 +279,18 @@ export async function startWorker() {
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
+    // Reap sockets that upgrade but never send a valid join/rejoin. Until a
+    // client authenticates, no GameServer tracks the socket, so nothing else
+    // would ever close it — without this, idle connections accumulate
+    // (Slowloris-style FD exhaustion).
+    let authenticated = false;
+    const authTimeout = setTimeout(() => {
+      if (!authenticated) {
+        ws.close(1008, "join timeout");
+      }
+    }, 30_000);
+    ws.on("close", () => clearTimeout(authTimeout));
+
     ws.on("message", async (message: string) => {
       const ip = getClientIp(req);
 
@@ -320,6 +342,10 @@ export async function startWorker() {
           return;
         }
         const { persistentId, claims } = result;
+
+        // Token verified — the connection is authenticated; stop the reaper.
+        authenticated = true;
+        clearTimeout(authTimeout);
 
         if (claims?.role === "banned") {
           ws.close(1002, "Account Banned");

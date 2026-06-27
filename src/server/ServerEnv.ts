@@ -19,6 +19,10 @@ const JwksSchema = z.object({
 export class ServerEnv {
   private static readonly gameEnv: GameEnv = parseGameEnv(process.env.GAME_ENV);
   private static publicKey: JWK | null = null;
+  private static publicKeyFetchedAt = 0;
+  // Refresh the cached JWKS key periodically so an IdP signing-key rotation
+  // doesn't break all token verification until the process is restarted.
+  private static readonly PUBLIC_KEY_TTL_MS = 60 * 60 * 1000; // 1 hour
 
   // Values that also flow to the client via index.html, but on the server
   // are read from process.env directly. Server code never reaches into
@@ -90,7 +94,12 @@ export class ServerEnv {
       : `https://api.${audience}`;
   }
   static async jwkPublicKey(): Promise<JWK> {
-    if (ServerEnv.publicKey) return ServerEnv.publicKey;
+    if (
+      ServerEnv.publicKey &&
+      Date.now() - ServerEnv.publicKeyFetchedAt < ServerEnv.PUBLIC_KEY_TTL_MS
+    ) {
+      return ServerEnv.publicKey;
+    }
     const jwksUrl = ServerEnv.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
     const response = await fetch(jwksUrl);
@@ -105,6 +114,7 @@ export class ServerEnv {
       throw new Error("Invalid JWKS");
     }
     ServerEnv.publicKey = result.data.keys[0];
+    ServerEnv.publicKeyFetchedAt = Date.now();
     return ServerEnv.publicKey;
   }
   static turnIntervalMs(): number {

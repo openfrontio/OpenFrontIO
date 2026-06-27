@@ -345,6 +345,12 @@ export function createRenderer(
 export class GameRenderer {
   private layerTickState = new Map<Controller, { lastTickAtMs: number }>();
 
+  // Bound once so it can be removed on destroy(); a new GameRenderer is created
+  // per game (join without page reload), so an un-removed listener would pin
+  // this renderer and its transformHandler forever.
+  private readonly onResize = () =>
+    this.transformHandler.updateCanvasBoundingRect();
+
   constructor(
     public transformHandler: TransformHandler,
     public uiState: UIState,
@@ -359,12 +365,14 @@ export class GameRenderer {
 
     this.layers.forEach((l) => l.init?.());
 
-    window.addEventListener("resize", () =>
-      this.transformHandler.updateCanvasBoundingRect(),
-    );
+    window.addEventListener("resize", this.onResize);
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
+  }
+
+  destroy() {
+    window.removeEventListener("resize", this.onResize);
   }
 
   tick() {

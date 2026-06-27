@@ -12,25 +12,30 @@ export interface LocalStatsData {
 let _startTime: number;
 
 function getStats(): LocalStatsData {
-  const statsStr = localStorage.getItem("game-records");
-  return statsStr ? JSON.parse(statsStr) : {};
+  try {
+    const statsStr = localStorage.getItem("game-records");
+    return statsStr ? JSON.parse(statsStr) : {};
+  } catch {
+    // Accessing localStorage throws in sandboxed iframes (e.g. gaming portals)
+    // or when storage is disabled; treat as empty rather than crashing.
+    return {};
+  }
 }
 
 function save(stats: LocalStatsData) {
   // To execute asynchronously
-  setTimeout(
-    () => localStorage.setItem("game-records", JSON.stringify(stats, replacer)),
-    0,
-  );
+  setTimeout(() => {
+    try {
+      localStorage.setItem("game-records", JSON.stringify(stats, replacer));
+    } catch {
+      // Storage unavailable (sandboxed iframe / disabled) — skip persistence.
+    }
+  }, 0);
 }
 
 // The user can quit the game anytime so better save the lobby as soon as the
 // game starts.
 export function startGame(id: GameID, lobby: Partial<GameConfig>) {
-  if (localStorage === undefined) {
-    return;
-  }
-
   _startTime = Date.now();
   const stats = getStats();
   stats[id] = { lobby };
@@ -42,10 +47,6 @@ export function startTime() {
 }
 
 export function endGame(gameRecord: PartialGameRecord) {
-  if (localStorage === undefined) {
-    return;
-  }
-
   const stats = getStats();
   const gameStat = stats[gameRecord.info.gameID];
 
