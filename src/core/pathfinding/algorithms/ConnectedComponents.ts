@@ -48,8 +48,9 @@ export class ConnectedComponents {
 
       nextId++;
 
-      // Dynamically upgrade to Uint16Array when we hit component 254
-      if (nextId === 254 && ids instanceof Uint8Array) {
+      // Dynamically upgrade to Uint16Array before assigning component 254,
+      // because 0xFF (component 254 in Uint8Array) collides with LAND_MARKER.
+      if (nextId === 253 && ids instanceof Uint8Array) {
         ids = this.upgradeToUint16Array(ids);
       }
 
