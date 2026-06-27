@@ -16,6 +16,7 @@ export class ConnectedComponents {
   private readonly lastRowStart: number;
   private readonly queue: Int32Array;
   private componentIds: Uint8Array | Uint16Array | null = null;
+  private _componentSizes: number[] = [];
 
   constructor(
     private readonly map: GameMap,
@@ -32,6 +33,7 @@ export class ConnectedComponents {
     DebugSpan.start("ConnectedComponents:initialize");
     let ids: Uint8Array | Uint16Array = this.createPrefilledIds();
 
+    this._componentSizes = [];
     let nextId = 0;
 
     // Scan all tiles and flood-fill each unvisited water component
@@ -172,6 +174,9 @@ export class ConnectedComponents {
       }
 
       // Fill the entire horizontal span and check above/below for new spans
+      const spanSize = right - left + 1;
+      this._componentSizes[componentId] =
+        (this._componentSizes[componentId] ?? 0) + spanSize;
       for (let x = left; x <= right; x++) {
         ids[x] = componentId;
 
@@ -197,5 +202,10 @@ export class ConnectedComponents {
   getComponentId(tile: TileRef): number {
     if (!this.componentIds) return 0;
     return this.componentIds[tile] ?? 0;
+  }
+
+  /** Returns the number of water tiles in the given component, or 0 if unknown. */
+  getComponentSize(componentId: number): number {
+    return this._componentSizes[componentId] ?? 0;
   }
 }
