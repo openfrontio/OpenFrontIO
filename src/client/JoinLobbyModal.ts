@@ -165,7 +165,9 @@ export class JoinLobbyModal extends BaseModal {
         </div>
 
         ${html`
-          <div class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0">
+          <div
+            class="p-6 lg:p-6 border-t border-white/10 bg-black/60 backdrop-blur-md shrink-0 sticky bottom-0 z-10"
+          >
             <div
               class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
             >
