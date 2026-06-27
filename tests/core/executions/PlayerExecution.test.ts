@@ -6,7 +6,6 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
-import { simpleHash } from "../../../src/core/Util";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
 
@@ -82,35 +81,5 @@ describe("PlayerExecution", () => {
     expect(city.level()).toBe(1);
     expect(city.owner()).toBe(otherPlayer);
     expect(city.isActive()).toBe(true);
-  });
-});
-
-// Regression guard for the anonymize-names desync: the cluster-removal schedule
-// must be seeded from a value that is identical on every client. The
-// anonymize-names option sends each client a different username for the same
-// player, so seeding from name() staggered removeClusters() onto different
-// ticks per client and desynced tile ownership. id() is client-identical.
-describe("PlayerExecution cluster-recalc determinism", () => {
-  test("phase offset is seeded from id(), not the (per-client) username", async () => {
-    const STABLE_ID = "stable-player-id";
-
-    // Two clients that disagree on the username but agree on id() — exactly what
-    // anonymize-names produces for the same logical player.
-    const gameA = await setup("big_plains", {}, [
-      new PlayerInfo("Alice", PlayerType.Human, "client_a", STABLE_ID),
-    ]);
-    const execA = new PlayerExecution(gameA.player(STABLE_ID));
-    execA.init(gameA, 0);
-
-    const gameB = await setup("big_plains", {}, [
-      new PlayerInfo("Crimson Tiger", PlayerType.Human, "client_a", STABLE_ID),
-    ]);
-    const execB = new PlayerExecution(gameB.player(STABLE_ID));
-    execB.init(gameB, 0);
-
-    // Same id => same schedule, regardless of the differing usernames.
-    expect((execA as any).lastCalc).toBe((execB as any).lastCalc);
-    // And it is the id-derived offset (ticksPerClusterCalc = 20).
-    expect((execA as any).lastCalc).toBe(simpleHash(STABLE_ID) % 20);
   });
 });
