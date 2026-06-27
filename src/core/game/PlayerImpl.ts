@@ -478,6 +478,12 @@ export class PlayerImpl implements Player {
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {
         if (this.mg.map().isLand(neighbor)) {
+          if (
+            !this.mg.map().hasOwner(neighbor) &&
+            this.mg.map().hasFallout(neighbor)
+          ) {
+            continue;
+          }
           const owner = this.mg.map().ownerID(neighbor);
           if (owner !== this.smallID()) {
             ns.add(
