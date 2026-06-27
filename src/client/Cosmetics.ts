@@ -6,6 +6,7 @@ import {
   CosmeticsSchema,
   Effect,
   EffectType,
+  findEffect,
   Flag,
   Pack,
   Pattern,
@@ -633,7 +634,7 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
   for (const [effectType, name] of Object.entries(selectedEffects)) {
-    const effect = cosmetics?.effects?.[effectType]?.[name];
+    const effect = findEffect(cosmetics, effectType, name);
     if (cosmetics && !effect) {
       userSettings.setSelectedEffectName(effectType as EffectType, undefined);
       continue;
@@ -706,7 +707,7 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
   if (refs.effects && cosmetics) {
     const effects: Record<string, PlayerEffect> = {};
     for (const [effectType, name] of Object.entries(refs.effects)) {
-      const effect = cosmetics.effects?.[effectType]?.[name];
+      const effect = findEffect(cosmetics, effectType, name);
       if (effect) {
         effects[effectType] = {
           name: effect.name,

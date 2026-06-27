@@ -11,7 +11,7 @@ import {
 } from "obscenity";
 import countries from "resources/countries.json";
 
-import { Cosmetics, EffectType } from "../core/CosmeticSchemas";
+import { Cosmetics, EffectType, findEffect } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
@@ -282,7 +282,7 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     effectType: EffectType,
     name: string,
   ): PlayerEffect {
-    const found = this.cosmetics.effects?.[effectType]?.[name];
+    const found = findEffect(this.cosmetics, effectType, name);
     if (!found) throw new Error(`Effect ${name} not found`);
     if (
       flares.includes("effect:*") ||

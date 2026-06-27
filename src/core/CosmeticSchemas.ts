@@ -138,6 +138,23 @@ export const CosmeticsSchema = z.object({
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });
 
+/**
+ * Resolve an effect in the nested catalog (effects[effectType][effectKey]). The
+ * catalog object key is normally identical to the effect's `name`, but selection
+ * and ownership flares are both name-based, so fall back to a `name`-field search
+ * when the object key differs. Without this fallback a catalog whose key !== name
+ * would make the effect silently unselectable (the selected name never resolves).
+ */
+export function findEffect(
+  cosmetics: Cosmetics | null | undefined,
+  effectType: string,
+  name: string,
+): Effect | undefined {
+  const byName = cosmetics?.effects?.[effectType];
+  if (!byName) return undefined;
+  return byName[name] ?? Object.values(byName).find((e) => e.name === name);
+}
+
 export const DefaultPattern = {
   name: "default",
   patternData: "AAAAAA",

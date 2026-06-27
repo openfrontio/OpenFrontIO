@@ -622,6 +622,43 @@ describe("Effect validation in isAllowed", () => {
       expect(result.cosmetics.effects).toBeUndefined();
     }
   });
+
+  test("resolves an effect whose catalog key differs from its name", () => {
+    // Catalog key "trail_01" but name "spectrum"; selection/flares are
+    // name-based, so the name must still resolve and validate.
+    const checker = new PrivilegeCheckerImpl(
+      {
+        patterns: {},
+        colorPalettes: {},
+        flags: {},
+        effects: {
+          transportShipTrail: {
+            trail_01: {
+              name: "spectrum",
+              attributes: { type: "rainbow" },
+              url: "",
+              affiliateCode: null,
+              product: null,
+              rarity: "legendary",
+            },
+          },
+        },
+      },
+      mockDecoder,
+      bannedWords,
+    );
+    const result = checker.isAllowed(["effect:spectrum"], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+        attributes: { type: "rainbow" },
+      });
+    }
+  });
 });
 
 describe("PrivilegeCheckerImpl#resolveClanTag", () => {

@@ -1,6 +1,8 @@
 import {
+  Cosmetics,
   CosmeticsSchema,
   EffectSchema,
+  findEffect,
   TransportShipTrailAttributesSchema,
 } from "../src/core/CosmeticSchemas";
 
@@ -136,5 +138,54 @@ describe("Effect cosmetic schemas", () => {
       },
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("findEffect", () => {
+  const effect = (name: string) => ({
+    name,
+    attributes: { type: "solid", color: "#fff" } as const,
+    product: null,
+    rarity: "common" as const,
+  });
+
+  it("resolves by the catalog object key (the common key === name case)", () => {
+    const cosmetics = {
+      effects: { transportShipTrail: { spectrum: effect("spectrum") } },
+    } as unknown as Cosmetics;
+    expect(findEffect(cosmetics, "transportShipTrail", "spectrum")?.name).toBe(
+      "spectrum",
+    );
+  });
+
+  it("falls back to the name field when the object key differs", () => {
+    // Catalog key "trail_01" but the effect's name is "spectrum"; selection and
+    // flares are name-based, so the name must still resolve the effect.
+    const cosmetics = {
+      effects: { transportShipTrail: { trail_01: effect("spectrum") } },
+    } as unknown as Cosmetics;
+    expect(findEffect(cosmetics, "transportShipTrail", "spectrum")?.name).toBe(
+      "spectrum",
+    );
+  });
+
+  it("returns undefined for an unknown effect name", () => {
+    const cosmetics = {
+      effects: { transportShipTrail: { spectrum: effect("spectrum") } },
+    } as unknown as Cosmetics;
+    expect(
+      findEffect(cosmetics, "transportShipTrail", "ghost"),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined for an unknown effectType or missing catalog", () => {
+    const cosmetics = {
+      effects: { transportShipTrail: { spectrum: effect("spectrum") } },
+    } as unknown as Cosmetics;
+    expect(findEffect(cosmetics, "wrongType", "spectrum")).toBeUndefined();
+    expect(findEffect(null, "transportShipTrail", "spectrum")).toBeUndefined();
+    expect(
+      findEffect({} as Cosmetics, "transportShipTrail", "x"),
+    ).toBeUndefined();
   });
 });
