@@ -3,7 +3,8 @@
 import { GameMap, TileRef } from "../../game/GameMap";
 import { DebugSpan } from "../../utilities/DebugSpan";
 
-export const LAND_MARKER = 0xff; // Must fit in Uint8Array
+export const LAND_MARKER = 0xff; // Uint8Array sentinel — upgraded to 0xFFFF on Uint16Array promotion
+const LAND_MARKER_WIDE = 0xffff;
 
 /**
  * Connected component labeling for grid-based maps.
@@ -77,19 +78,17 @@ export class ConnectedComponents {
 
   /**
    * Pre-mark all land tiles in the ids array.
-   * Land tiles are marked with 0xFF, water tiles remain 0.
+   * Land tiles are marked with 0xFF (Uint8Array) or 0xFFFF (Uint16Array),
+   * water tiles remain 0.
    */
   private premarkLandTiles(ids: Uint8Array): void {
     for (let i = 0; i < this.numTiles; i++) {
-      ids[i] = this.map.isWater(i) ? 0 : LAND_MARKER;
+      ids[i] = this.map.isWater(i) ? 0 : 0xff;
     }
   }
 
   /**
-   * Pre-mark all land tiles in the ids array.
-   * Land tiles are marked with 0xFF, water tiles remain 0.
-   *
-   * This implementation accesses the terrain data **directly** without GameMap abstraction.
+   * Pre-mark all land tiles in the ids array using direct terrain access.
    * In tests it is 30% to 50% faster than using isWater() method calls.
    * As of 2026-01-05 it reduces avg. time for GWM from 15ms to 10ms.
    */
@@ -107,19 +106,13 @@ export class ConnectedComponents {
 
     for (let i = 0; i < numChunks; i++) {
       const chunk = terrain32[i];
-
-      // Extract bit 7 from each byte, negate, and combine into single 32-bit write
-      // bit 7 = 0 (water) → -(0) = 0x00
-      // bit 7 = 1 (land)  → -(1) = 0xFF (truncated to 8 bits)
       const b0 = -((chunk >> 7) & 1) & 0xff;
       const b1 = -((chunk >> 15) & 1) & 0xff;
       const b2 = -((chunk >> 23) & 1) & 0xff;
-      const b3 = -((chunk >> 31) & 1); // Upper byte, no mask needed
-
+      const b3 = -((chunk >> 31) & 1);
       ids32[i] = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
     }
 
-    // Handle remaining tiles (when numTiles not divisible by 4)
     for (let i = numChunks * 4; i < this.numTiles; i++) {
       ids[i] = -(terrain[i] >> 7);
     }
@@ -127,12 +120,12 @@ export class ConnectedComponents {
 
   /**
    * Upgrade from Uint8Array to Uint16Array when we exceed 254 components.
-   * Direct copy works because both use 0xFF for land marker.
+   * Remaps 0xFF land markers to 0xFFFF so component id 255 is unambiguous.
    */
   private upgradeToUint16Array(ids: Uint8Array): Uint16Array {
     const newIds = new Uint16Array(this.numTiles);
     for (let i = 0; i < this.numTiles; i++) {
-      newIds[i] = ids[i];
+      newIds[i] = ids[i] === LAND_MARKER ? LAND_MARKER_WIDE : ids[i];
     }
     return newIds;
   }
