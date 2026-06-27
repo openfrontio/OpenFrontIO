@@ -93,27 +93,29 @@ const effectCosmetics = {
   colorPalettes: {},
   flags: {},
   effects: {
-    spectrum: {
-      name: "spectrum",
-      effectType: "transportShipTrail" as const,
-      attributes: { type: "rainbow" as const },
-      url: "",
-      affiliateCode: null,
-      product: null,
-      priceSoft: undefined,
-      priceHard: undefined,
-      rarity: "legendary",
-    },
-    crimson: {
-      name: "crimson",
-      effectType: "transportShipTrail" as const,
-      attributes: { type: "solid" as const, color: "#e01b24" },
-      url: "",
-      affiliateCode: null,
-      product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
-      priceSoft: undefined,
-      priceHard: undefined,
-      rarity: "common",
+    transport_ship_trail: {
+      spectrum: {
+        name: "spectrum",
+        effectType: "transport_ship_trail" as const,
+        attributes: { type: "rainbow" as const },
+        url: "",
+        affiliateCode: null,
+        product: null,
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "legendary",
+      },
+      crimson: {
+        name: "crimson",
+        effectType: "transport_ship_trail" as const,
+        attributes: { type: "solid" as const, color: "#e01b24" },
+        url: "",
+        affiliateCode: null,
+        product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "common",
+      },
     },
   },
 };
@@ -559,13 +561,13 @@ describe("Skin validation", () => {
 describe("Effect validation in isAllowed", () => {
   test("allows valid effect with wildcard flare", () => {
     const result = effectChecker.isAllowed(["effect:*"], {
-      effects: { transportShipTrail: "spectrum" },
+      effects: { transport_ship_trail: "spectrum" },
     });
     expect(result.type).toBe("allowed");
     if (result.type === "allowed") {
-      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+      expect(result.cosmetics.effects?.transport_ship_trail).toEqual({
         name: "spectrum",
-        effectType: "transportShipTrail",
+        effectType: "transport_ship_trail",
         attributes: { type: "rainbow" },
       });
     }
@@ -573,11 +575,13 @@ describe("Effect validation in isAllowed", () => {
 
   test("allows valid effect with exact-match flare", () => {
     const result = effectChecker.isAllowed(["effect:crimson"], {
-      effects: { transportShipTrail: "crimson" },
+      effects: { transport_ship_trail: "crimson" },
     });
     expect(result.type).toBe("allowed");
     if (result.type === "allowed") {
-      expect(result.cosmetics.effects?.transportShipTrail?.attributes).toEqual({
+      expect(
+        result.cosmetics.effects?.transport_ship_trail?.attributes,
+      ).toEqual({
         type: "solid",
         color: "#e01b24",
       });
@@ -586,7 +590,7 @@ describe("Effect validation in isAllowed", () => {
 
   test("rejects effect when user lacks flare", () => {
     const result = effectChecker.isAllowed([], {
-      effects: { transportShipTrail: "spectrum" },
+      effects: { transport_ship_trail: "spectrum" },
     });
     expect(result.type).toBe("forbidden");
     if (result.type === "forbidden") {
@@ -594,19 +598,19 @@ describe("Effect validation in isAllowed", () => {
     }
   });
 
-  test("rejects effect when effectType key mismatches", () => {
+  test("rejects effect under an unknown effectType key", () => {
     const result = effectChecker.isAllowed(["effect:*"], {
       effects: { wrongType: "spectrum" },
     });
     expect(result.type).toBe("forbidden");
     if (result.type === "forbidden") {
-      expect(result.reason).toMatch(/type mismatch/);
+      expect(result.reason).toMatch(/Effect spectrum not found/);
     }
   });
 
   test("rejects nonexistent effect", () => {
     const result = effectChecker.isAllowed(["effect:*"], {
-      effects: { transportShipTrail: "ghost" },
+      effects: { transport_ship_trail: "ghost" },
     });
     expect(result.type).toBe("forbidden");
     if (result.type === "forbidden") {

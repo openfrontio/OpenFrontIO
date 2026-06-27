@@ -282,11 +282,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     effectType: EffectType,
     name: string,
   ): PlayerEffect {
-    const found = this.cosmetics.effects?.[name];
+    const found = this.cosmetics.effects?.[effectType]?.[name];
     if (!found) throw new Error(`Effect ${name} not found`);
-    if (found.effectType !== effectType) {
-      throw new Error(`Effect ${name} type mismatch`);
-    }
     if (
       flares.includes("effect:*") ||
       flares.includes(`effect:${found.name}`)

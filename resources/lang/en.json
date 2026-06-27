@@ -396,7 +396,7 @@
     "button_title": "Pick an effect!",
     "title": "Effects",
     "type": {
-      "transportShipTrail": "Boat Trail"
+      "transport_ship_trail": "Boat Trail"
     }
   },
   "error_modal": {

@@ -12,21 +12,21 @@ describe("UserSettings effect selection", () => {
 
   it("sets and reads a per-effectType selection", () => {
     const s = new UserSettings();
-    s.setSelectedEffectName("transportShipTrail", "spectrum");
-    expect(s.getSelectedEffectName("transportShipTrail")).toBe("spectrum");
+    s.setSelectedEffectName("transport_ship_trail", "spectrum");
+    expect(s.getSelectedEffectName("transport_ship_trail")).toBe("spectrum");
   });
 
   it("returns null when nothing is selected", () => {
     expect(
-      new UserSettings().getSelectedEffectName("transportShipTrail"),
+      new UserSettings().getSelectedEffectName("transport_ship_trail"),
     ).toBeNull();
   });
 
   it("clearing the last selection removes the storage key", () => {
     const s = new UserSettings();
-    s.setSelectedEffectName("transportShipTrail", "spectrum");
-    s.setSelectedEffectName("transportShipTrail", undefined);
-    expect(s.getSelectedEffectName("transportShipTrail")).toBeNull();
+    s.setSelectedEffectName("transport_ship_trail", "spectrum");
+    s.setSelectedEffectName("transport_ship_trail", undefined);
+    expect(s.getSelectedEffectName("transport_ship_trail")).toBeNull();
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
@@ -35,9 +35,9 @@ describe("UserSettings effect selection", () => {
     // Seed two types directly (only one real effectType exists today).
     localStorage.setItem(
       EFFECTS_KEY,
-      JSON.stringify({ transportShipTrail: "spectrum", future: "x" }),
+      JSON.stringify({ transport_ship_trail: "spectrum", future: "x" }),
     );
-    s.setSelectedEffectName("transportShipTrail", undefined);
+    s.setSelectedEffectName("transport_ship_trail", undefined);
     expect(s.getSelectedEffects()).toEqual({ future: "x" });
   });
 

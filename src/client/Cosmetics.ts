@@ -461,15 +461,18 @@ export function resolveCosmetics(
   }
 
   // Effects (boat-trail wakes, etc.) — a cosmetic category like skins/flags.
-  for (const [effectKey, effect] of Object.entries(cosmetics.effects ?? {})) {
-    const rel = effectRelationship(effect, userMeResponse, affiliateCode);
-    result.push({
-      type: "effect",
-      cosmetic: effect,
-      colorPalette: null,
-      relationship: rel,
-      key: `effect:${effectKey}`,
-    });
+  // Catalog is nested: effects[effectType][effectName].
+  for (const byName of Object.values(cosmetics.effects ?? {})) {
+    for (const [effectKey, effect] of Object.entries(byName)) {
+      const rel = effectRelationship(effect, userMeResponse, affiliateCode);
+      result.push({
+        type: "effect",
+        cosmetic: effect,
+        colorPalette: null,
+        relationship: rel,
+        key: `effect:${effectKey}`,
+      });
+    }
   }
 
   // Packs
@@ -626,7 +629,7 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
   for (const [effectType, name] of Object.entries(selectedEffects)) {
-    const effect = cosmetics?.effects?.[name];
+    const effect = cosmetics?.effects?.[effectType]?.[name];
     if (cosmetics && (!effect || effect.effectType !== effectType)) {
       userSettings.setSelectedEffectName(effectType as EffectType, undefined);
       continue;
@@ -699,7 +702,7 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
   if (refs.effects && cosmetics) {
     const effects: Record<string, PlayerEffect> = {};
     for (const [effectType, name] of Object.entries(refs.effects)) {
-      const effect = cosmetics.effects?.[name];
+      const effect = cosmetics.effects?.[effectType]?.[name];
       if (effect && effect.effectType === effectType) {
         effects[effectType] = {
           name: effect.name,

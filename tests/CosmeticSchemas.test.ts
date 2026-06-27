@@ -59,7 +59,7 @@ describe("Effect cosmetic schemas", () => {
       expect(
         EffectSchema.safeParse({
           ...base,
-          effectType: "transportShipTrail",
+          effectType: "transport_ship_trail",
           attributes: { type: "rainbow" },
         }).success,
       ).toBe(true);
@@ -75,9 +75,9 @@ describe("Effect cosmetic schemas", () => {
       ).toBe(false);
     });
 
-    it("rejects a transportShipTrail effect with no attributes", () => {
+    it("rejects a transport_ship_trail effect with no attributes", () => {
       expect(
-        EffectSchema.safeParse({ ...base, effectType: "transportShipTrail" })
+        EffectSchema.safeParse({ ...base, effectType: "transport_ship_trail" })
           .success,
       ).toBe(false);
     });
@@ -88,7 +88,7 @@ describe("Effect cosmetic schemas", () => {
   it("parses the real cosmetics.json effect entry", () => {
     const realEffect = {
       name: "read_transport_trail",
-      effectType: "transportShipTrail",
+      effectType: "transport_ship_trail",
       attributes: { type: "solid", color: "#f91515" },
       url: "",
       affiliateCode: null,
@@ -100,13 +100,15 @@ describe("Effect cosmetic schemas", () => {
     const result = CosmeticsSchema.safeParse({
       patterns: {},
       flags: {},
-      effects: { read_transport_trail: realEffect },
+      // Catalog is nested: effects[effectType][effectName].
+      effects: { transport_ship_trail: { read_transport_trail: realEffect } },
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.effects?.read_transport_trail.effectType).toBe(
-        "transportShipTrail",
-      );
+      expect(
+        result.data.effects?.transport_ship_trail.read_transport_trail
+          .effectType,
+      ).toBe("transport_ship_trail");
     }
   });
 });

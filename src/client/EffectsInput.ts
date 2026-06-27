@@ -21,7 +21,7 @@ export class EffectsInput extends LitElement {
   private _onCosmeticSelected = async () => {
     const cosmetics = await getPlayerCosmetics();
     this.trailAttributes =
-      cosmetics.effects?.["transportShipTrail"]?.attributes ?? null;
+      cosmetics.effects?.["transport_ship_trail"]?.attributes ?? null;
   };
 
   private onInputClick(e: Event) {
@@ -40,7 +40,7 @@ export class EffectsInput extends LitElement {
     this._abortController = new AbortController();
     const cosmetics = await getPlayerCosmetics();
     this.trailAttributes =
-      cosmetics.effects?.["transportShipTrail"]?.attributes ?? null;
+      cosmetics.effects?.["transport_ship_trail"]?.attributes ?? null;
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${EFFECTS_KEY}`,
       this._onCosmeticSelected,

@@ -92,9 +92,9 @@ export const SkinSchema = CosmeticSchema.extend({
 
 // "effects" is a cosmetic category alongside skins/flags. Each effect declares
 // an `effectType` (the kind of thing it changes); the only type today is
-// "transportShipTrail", whose visual config lives in `attributes`. New effect
+// "transport_ship_trail", whose visual config lives in `attributes`. New effect
 // types are added by extending the EffectSchema union with another member.
-export const EFFECT_TYPES = ["transportShipTrail"] as const;
+export const EFFECT_TYPES = ["transport_ship_trail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
 export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
@@ -109,7 +109,7 @@ export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
 ]);
 
 export const TransportShipTrailEffectSchema = CosmeticSchema.extend({
-  effectType: z.literal("transportShipTrail"),
+  effectType: z.literal("transport_ship_trail"),
   attributes: TransportShipTrailAttributesSchema,
   url: z.string().optional(),
 });
@@ -138,7 +138,8 @@ export const CosmeticsSchema = z.object({
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
   skins: z.record(z.string(), SkinSchema).optional(),
-  effects: z.record(z.string(), EffectSchema).optional(),
+  // Two-level: effects[effectType][effectName] -> Effect.
+  effects: z.record(z.string(), z.record(z.string(), EffectSchema)).optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });

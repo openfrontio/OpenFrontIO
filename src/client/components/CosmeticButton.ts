@@ -182,7 +182,7 @@ export class CosmeticButton extends LitElement {
           ${translateText("territory_patterns.pattern.default")}
         </div>`;
       }
-      // Only effectType today is transportShipTrail; c.attributes is its style.
+      // Only effectType today is transport_ship_trail; c.attributes is its style.
       return renderTransportShipTrailSwatch(c.attributes);
     }
 
