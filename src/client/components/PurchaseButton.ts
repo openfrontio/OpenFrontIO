@@ -5,8 +5,6 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import "./PlutoniumIcon";
 
-export const DEFAULT_DOLLAR_LABEL_KEY = "territory_patterns.purchase";
-
 const PURCHASE_STYLE_ID = "purchase-button-styles";
 if (!document.getElementById(PURCHASE_STYLE_ID)) {
   const style = document.createElement("style");
@@ -192,9 +190,10 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   rarity: string = "common";
 
-  /** Override the dollar-button label key. */
+  /** Optional action-label key shown before the price (e.g. "Switch"). Empty
+   * shows the price on its own. */
   @property({ type: String })
-  dollarLabelKey: string = DEFAULT_DOLLAR_LABEL_KEY;
+  dollarLabelKey: string = "";
 
   /** Optional suffix appended to the displayed price, e.g. "/mo". Not translated here. */
   @property({ type: String })
@@ -231,15 +230,14 @@ export class PurchaseButton extends LitElement {
   private renderDollarButton() {
     return html`
       <button
-        class="purchase-sparkle-btn relative overflow-hidden w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
+        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
          hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
         <span class="purchase-sparkle-streak"></span>
-        ${translateText(this.dollarLabelKey)}
-        <span class="ml-1 text-white/50"
-          >(${this.product!.price}${this.priceSuffix})</span
-        >
+        ${this.dollarLabelKey
+          ? html`${translateText(this.dollarLabelKey)} `
+          : nothing}${this.product!.price}${this.priceSuffix}
       </button>
     `;
   }
