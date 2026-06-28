@@ -477,6 +477,30 @@ export function resolveCosmetics(
   return result;
 }
 
+/**
+ * Groups resolved cosmetics so that colour-palette variants of the same pattern
+ * collapse into a single entry. Returns an array of groups in first-seen order
+ */
+export function groupCosmeticVariants(
+  items: ResolvedCosmetic[],
+): ResolvedCosmetic[][] {
+  const groups: ResolvedCosmetic[][] = [];
+  const patternGroupByName = new Map<string, number>();
+  for (const item of items) {
+    if (item.type === "pattern" && item.cosmetic !== null) {
+      const name = item.cosmetic.name;
+      const existing = patternGroupByName.get(name);
+      if (existing !== undefined) {
+        groups[existing].push(item);
+        continue;
+      }
+      patternGroupByName.set(name, groups.length);
+    }
+    groups.push([item]);
+  }
+  return groups;
+}
+
 export function resolvedToPlayerPattern(
   resolved: ResolvedCosmetic,
 ): PlayerPattern | null {

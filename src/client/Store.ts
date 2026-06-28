@@ -10,6 +10,7 @@ import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  groupCosmeticVariants,
   purchaseCosmetic,
   resolveCosmetics,
   SUBSCRIPTIONS_ENABLED,
@@ -92,14 +93,17 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
 
+    // Collapse colour-palette variants of the same pattern into one tile; the
+    // variants become clickable colour swatches on the cosmetic-button.
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${items.map(
-          (r) => html`
+        ${groupCosmeticVariants(items).map(
+          (group) => html`
             <cosmetic-button
-              .resolved=${r}
+              .resolved=${group[0]}
+              .variants=${group}
               .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
@@ -264,10 +268,11 @@ export class StoreModal extends BaseModal {
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${items.map(
-          (r) => html`
+        ${groupCosmeticVariants(items).map(
+          (group) => html`
             <cosmetic-button
-              .resolved=${r}
+              .resolved=${group[0]}
+              .variants=${group}
               .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
