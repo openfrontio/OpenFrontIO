@@ -67,6 +67,7 @@ function unit(overrides: Partial<UnitState> = {}): UnitState {
     troops: 0,
     missileTimerQueue: [],
     level: 1,
+    veterancy: 0,
     hasTrainStation: false,
     trainType: null,
     loaded: null,
