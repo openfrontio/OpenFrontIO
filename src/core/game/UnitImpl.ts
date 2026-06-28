@@ -37,6 +37,10 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _level: number = 1;
+  // Warship veterancy: level (0–max) plus running tallies toward the next level.
+  private _veterancy: number = 0;
+  private _transportKills: number = 0;
+  private _tradeCaptures: number = 0;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
@@ -148,6 +152,7 @@ export class UnitImpl implements Unit {
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
+      veterancy: this._veterancy,
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
@@ -220,12 +225,21 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
+  maxHealth(): number {
+    const base = this.info().maxHealth ?? 1;
+    if (this._type === UnitType.Warship && this._veterancy > 0) {
+      const bonus = this.mg.config().warshipVeterancyHealthBonus();
+      return Math.round(base * (1 + this._veterancy * bonus));
+    }
+    return base;
+  }
+
   modifyHealth(delta: number, attacker?: Player): void {
     const previousHealth = this._health;
     const nextHealth = withinInt(
       this._health + toInt(delta),
       0n,
-      toInt(this.info().maxHealth ?? 1),
+      toInt(this.maxHealth()),
     );
 
     if (nextHealth === previousHealth) {
@@ -518,6 +532,61 @@ export class UnitImpl implements Unit {
 
   level(): number {
     return this._level;
+  }
+
+  veterancy(): number {
+    return this._veterancy;
+  }
+
+  /** Raise veterancy by one level (capped), boosting max health and healing
+   *  by the per-level bonus. No-op for non-warships or at the cap. */
+  private increaseVeterancy(): void {
+    if (this._type !== UnitType.Warship) {
+      return;
+    }
+    if (this._veterancy >= this.mg.config().warshipMaxVeterancy()) {
+      return;
+    }
+    this._veterancy++;
+    // Reward the new level by healing the per-level bonus amount, then re-clamp
+    // to the now-higher max health.
+    const base = this.info().maxHealth ?? 0;
+    const bonus = base * this.mg.config().warshipVeterancyHealthBonus();
+    this._health = withinInt(
+      this._health + toInt(bonus),
+      0n,
+      toInt(this.maxHealth()),
+    );
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  recordKill(targetType: UnitType): void {
+    if (this._type !== UnitType.Warship) {
+      return;
+    }
+    if (targetType === UnitType.Warship) {
+      // A killing blow on an enemy warship grants a level outright.
+      this.increaseVeterancy();
+    } else if (targetType === UnitType.TransportShip) {
+      this._transportKills++;
+      const threshold = this.mg.config().warshipVeterancyTransportKills();
+      if (this._transportKills >= threshold) {
+        this._transportKills -= threshold;
+        this.increaseVeterancy();
+      }
+    }
+  }
+
+  recordTradeCapture(): void {
+    if (this._type !== UnitType.Warship) {
+      return;
+    }
+    this._tradeCaptures++;
+    const threshold = this.mg.config().warshipVeterancyTradeCaptures();
+    if (this._tradeCaptures >= threshold) {
+      this._tradeCaptures -= threshold;
+      this.increaseVeterancy();
+    }
   }
 
   setTrainStation(trainStation: boolean): void {

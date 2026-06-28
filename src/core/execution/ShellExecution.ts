@@ -52,7 +52,19 @@ export class ShellExecution implements Execution {
       );
       if (result.status === PathStatus.COMPLETE) {
         this.active = false;
+        const targetType = this.target.type();
+        const targetWasActive = this.target.isActive();
         this.target.modifyHealth(-this.effectOnTarget(), this._owner);
+        // Award veterancy to the firing warship when this shell lands the
+        // killing blow on an enemy warship or transport ship.
+        if (
+          targetWasActive &&
+          !this.target.isActive() &&
+          this.ownerUnit.isActive() &&
+          this.ownerUnit.type() === UnitType.Warship
+        ) {
+          this.ownerUnit.recordKill(targetType);
+        }
         this.shell.setReachedTarget();
         this.shell.delete(false);
         return;
@@ -69,7 +81,16 @@ export class ShellExecution implements Execution {
     const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;
 
-    return Math.round((baseDamage / 250) * damageMultiplier);
+    let damageDealt = (baseDamage / 250) * damageMultiplier;
+
+    // Veteran warships hit harder — scale by the firing unit's veterancy.
+    const veterancy = this.ownerUnit.veterancy();
+    if (veterancy > 0) {
+      const bonus = this.mg.config().warshipVeterancyShellDamageBonus();
+      damageDealt *= 1 + veterancy * bonus;
+    }
+
+    return Math.round(damageDealt);
   }
 
   public getEffectOnTargetForTesting(): number {
