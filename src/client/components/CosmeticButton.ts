@@ -327,7 +327,7 @@ export class CosmeticButton extends LitElement {
         ${this.renderColorSwatches()}
         ${isOwnedSubscription
           ? html`<div
-              class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"
+              class="w-full mt-2 px-2 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-base font-bold text-center"
             >
               ${translateText("store.subscribed")}
             </div>`
