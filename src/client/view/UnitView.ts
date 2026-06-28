@@ -65,6 +65,7 @@ function unitStateFromUpdate(u: UnitUpdate): UnitState {
     troops: u.troops,
     missileTimerQueue: u.missileTimerQueue,
     level: u.level,
+    veterancy: u.veterancy,
     hasTrainStation: u.hasTrainStation,
     trainType: trainTypeToNum(u.trainType),
     loaded: u.loaded ?? null,
@@ -93,6 +94,7 @@ function applyUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.troops = u.troops;
   target.missileTimerQueue = u.missileTimerQueue;
   target.level = u.level;
+  target.veterancy = u.veterancy;
   target.hasTrainStation = u.hasTrainStation;
   target.trainType = trainTypeToNum(u.trainType);
   target.loaded = u.loaded ?? null;
@@ -229,6 +231,23 @@ export class UnitView {
   }
   health(): number {
     return this.state.health ?? 0;
+  }
+  maxHealth(): number {
+    const base = this.gameView.config().unitInfo(this.type()).maxHealth ?? 1;
+    if (this.type() === UnitType.Warship && this.state.veterancy > 0) {
+      const bonus = this.gameView.config().warshipVeterancyHealthBonus();
+      return Math.round(base * (1 + this.state.veterancy * bonus));
+    }
+    return base;
+  }
+  veterancy(): number {
+    return this.state.veterancy;
+  }
+  recordKill(_targetType: UnitType): void {
+    throw new Error("recordKill is not supported on UnitView");
+  }
+  recordTradeCapture(): void {
+    throw new Error("recordTradeCapture is not supported on UnitView");
   }
   isUnderConstruction(): boolean {
     return this.state.underConstruction;

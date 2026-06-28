@@ -1,13 +1,15 @@
 /**
- * BarPass — instanced health/progress bars above units and below structures.
+ * BarPass — instanced health/progress bars and warship veterancy pips.
  *
- * Two draw calls per frame:
+ * Three draw calls per frame (all share one program + instance buffer):
  *   1. Health bars (11x3 tiles, above warships)
  *   2. Progress bars (14x3 tiles, below structures — construction + missile readiness)
+ *   3. Veterancy pips (solid gold rank bars stacked at a warship's bottom-right)
  *
  * Data flow:
  *   UnitState.health / .missileTimerQueue / .constructionStartTick → CPU progress
  *   → instance VBO (x, y, progress) → GPU colored rectangle
+ *   UnitState.veterancy → one instance per level (x, y, slot) → solid gold rect
  */
 
 import type { Config } from "../../../../core/configuration/Config";
@@ -46,6 +48,9 @@ export class BarPass {
   private uColorOrange: WebGLUniformLocation;
   private uColorYellow: WebGLUniformLocation;
   private uColorGreen: WebGLUniformLocation;
+  private uSolid: WebGLUniformLocation;
+  private uSolidColor: WebGLUniformLocation;
+  private uPipStride: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
   private instanceBuf: WebGLBuffer;
@@ -54,9 +59,12 @@ export class BarPass {
   private healthCount = 0;
   private progressData: Float32Array;
   private progressCount = 0;
+  private veterancyData: Float32Array;
+  private veterancyCount = 0;
 
   private mapW: number;
   private warshipMaxHealth: number;
+  private veterancyHealthBonus: number;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -68,6 +76,7 @@ export class BarPass {
     this.settings = settings;
     this.mapW = header.mapWidth;
     this.warshipMaxHealth = config.unitInfo(UnitType.Warship).maxHealth ?? 0;
+    this.veterancyHealthBonus = config.warshipVeterancyHealthBonus();
 
     // --- Shader program ---
     this.program = createProgram(gl, barVertSrc, barFragSrc);
@@ -80,10 +89,14 @@ export class BarPass {
     this.uColorOrange = gl.getUniformLocation(this.program, "uColorOrange")!;
     this.uColorYellow = gl.getUniformLocation(this.program, "uColorYellow")!;
     this.uColorGreen = gl.getUniformLocation(this.program, "uColorGreen")!;
+    this.uSolid = gl.getUniformLocation(this.program, "uSolid")!;
+    this.uSolidColor = gl.getUniformLocation(this.program, "uSolidColor")!;
+    this.uPipStride = gl.getUniformLocation(this.program, "uPipStride")!;
 
     // --- Instance data buffers (CPU-side) ---
     this.healthData = new Float32Array(this.maxBars * FLOATS_PER_INSTANCE);
     this.progressData = new Float32Array(this.maxBars * FLOATS_PER_INSTANCE);
+    this.veterancyData = new Float32Array(this.maxBars * FLOATS_PER_INSTANCE);
 
     // --- VAO: unit quad + instanced data ---
     this.vao = gl.createVertexArray()!;
@@ -123,16 +136,25 @@ export class BarPass {
   ): void {
     this.healthCount = 0;
     this.progressCount = 0;
+    this.veterancyCount = 0;
 
-    // --- Health bars (warships) ---
+    // --- Health bars + veterancy pips (warships) ---
+    // Only warships carry health among mobile units, so this loop is effectively
+    // warship-only.
     for (const unit of mobileUnits.values()) {
-      if (
-        unit.health === null ||
-        unit.health <= 0 ||
-        unit.health >= this.warshipMaxHealth
-      )
-        continue;
-      this.pushHealth(unit, unit.health / this.warshipMaxHealth);
+      if (unit.health === null || unit.health <= 0) continue;
+      // Veteran warships have a higher effective max health. Round to match the
+      // engine's UnitImpl.maxHealth() so a full veteran ship reads as full.
+      const maxHealth = Math.round(
+        this.warshipMaxHealth *
+          (1 + unit.veterancy * this.veterancyHealthBonus),
+      );
+      if (unit.health < maxHealth) {
+        this.pushHealth(unit, unit.health / maxHealth);
+      }
+      if (unit.veterancy > 0) {
+        this.pushVeterancy(unit);
+      }
     }
 
     // --- Progress bars (structures) ---
@@ -145,13 +167,19 @@ export class BarPass {
 
   /** Render bars. Call once per frame after FX, before names. */
   draw(cameraMat: Float32Array): void {
-    if (this.healthCount === 0 && this.progressCount === 0) return;
+    if (
+      this.healthCount === 0 &&
+      this.progressCount === 0 &&
+      this.veterancyCount === 0
+    )
+      return;
 
     const gl = this.gl;
     const b = this.settings.bar;
 
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMat);
+    gl.uniform1f(this.uSolid, 0); // health/progress bars use the colored path
     gl.uniform1f(this.uBorderWidth, b.borderWidth);
     gl.uniform3f(this.uThresholds, b.threshold1, b.threshold2, b.threshold3);
     gl.uniform3f(this.uColorRed, b.colorRedR, b.colorRedG, b.colorRedB);
@@ -196,6 +224,29 @@ export class BarPass {
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.progressCount);
     }
 
+    // Veterancy pips (solid gold rank bars, bottom-right of warship sprites)
+    if (this.veterancyCount > 0) {
+      gl.uniform1f(this.uSolid, 1);
+      gl.uniform3f(this.uSolidColor, b.veterancyR, b.veterancyG, b.veterancyB);
+      gl.uniform1f(this.uPipStride, b.veterancyPipH + b.veterancyPipGap);
+      gl.uniform2f(this.uBarSize, b.veterancyPipW, b.veterancyPipH);
+      gl.uniform2f(
+        this.uBarOffset,
+        b.veterancyPipOffsetX,
+        b.veterancyPipOffsetY,
+      );
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf);
+      gl.bufferSubData(
+        gl.ARRAY_BUFFER,
+        0,
+        this.veterancyData.subarray(
+          0,
+          this.veterancyCount * FLOATS_PER_INSTANCE,
+        ),
+      );
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.veterancyCount);
+    }
+
     gl.bindVertexArray(null);
   }
 
@@ -214,6 +265,20 @@ export class BarPass {
     this.healthData[off + 1] = (unit.pos - this.healthData[off]) / this.mapW;
     this.healthData[off + 2] = progress;
     this.healthCount++;
+  }
+
+  /** Emit one gold pip instance per veterancy level, stacked by slot index. */
+  private pushVeterancy(unit: UnitState): void {
+    const x = unit.pos % this.mapW;
+    const y = (unit.pos - x) / this.mapW;
+    for (let slot = 0; slot < unit.veterancy; slot++) {
+      if (this.veterancyCount >= this.maxBars) return;
+      const off = this.veterancyCount * FLOATS_PER_INSTANCE;
+      this.veterancyData[off] = x;
+      this.veterancyData[off + 1] = y;
+      this.veterancyData[off + 2] = slot; // vertical stack slot, read by the shader
+      this.veterancyCount++;
+    }
   }
 
   private pushProgress(unit: UnitState, progress: number): void {
