@@ -480,7 +480,17 @@ export interface Unit {
   transportShipState(): TransportShipState;
   updateTransportShipState(update: Partial<TransportShipState>): void;
   health(): number;
+  /** Effective max health, including any warship veterancy bonus. */
+  maxHealth(): number;
   modifyHealth(delta: number, attacker?: Player): void;
+
+  // Warship veterancy
+  /** Current veterancy level (0 = none). Always 0 for non-warships. */
+  veterancy(): number;
+  /** Record this warship destroying an enemy unit (drives veterancy gain). */
+  recordKill(targetType: UnitType): void;
+  /** Record this warship capturing a trade ship (drives veterancy gain). */
+  recordTradeCapture(): void;
 
   // Troops
   setTroops(troops: number): void;

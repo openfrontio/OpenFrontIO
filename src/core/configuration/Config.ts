@@ -935,6 +935,33 @@ export class Config {
     return 0.75;
   }
 
+  // --- Warship veterancy ---
+
+  /** Maximum veterancy level a warship can reach. */
+  warshipMaxVeterancy(): number {
+    return 3;
+  }
+
+  /** Max-health boost per veterancy level, as a fraction of base max health. */
+  warshipVeterancyHealthBonus(): number {
+    return 0.2;
+  }
+
+  /** Shell-damage boost per veterancy level, as a fraction of the rolled damage. */
+  warshipVeterancyShellDamageBonus(): number {
+    return 0.2;
+  }
+
+  /** Transport ships a warship must destroy to gain one veterancy level. */
+  warshipVeterancyTransportKills(): number {
+    return 10;
+  }
+
+  /** Trade ships a warship must capture to gain one veterancy level. */
+  warshipVeterancyTradeCaptures(): number {
+    return 25;
+  }
+
   defensePostShellAttackRate(): number {
     return 100;
   }
