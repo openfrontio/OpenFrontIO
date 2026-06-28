@@ -228,8 +228,9 @@ export class UnitImpl implements Unit {
   maxHealth(): number {
     const base = this.info().maxHealth ?? 1;
     if (this._type === UnitType.Warship && this._veterancy > 0) {
-      const bonus = this.mg.config().warshipVeterancyHealthBonus();
-      return Math.round(base * (1 + this._veterancy * bonus));
+      // Integer percent math — keep src/core float-free for determinism.
+      const bonusPercent = this.mg.config().warshipVeterancyHealthBonus();
+      return base + Math.floor((base * this._veterancy * bonusPercent) / 100);
     }
     return base;
   }
@@ -549,9 +550,10 @@ export class UnitImpl implements Unit {
     }
     this._veterancy++;
     // Reward the new level by healing the per-level bonus amount, then re-clamp
-    // to the now-higher max health.
+    // to the now-higher max health. Integer percent math (no float constants).
     const base = this.info().maxHealth ?? 0;
-    const bonus = base * this.mg.config().warshipVeterancyHealthBonus();
+    const bonusPercent = this.mg.config().warshipVeterancyHealthBonus();
+    const bonus = Math.floor((base * bonusPercent) / 100);
     this._health = withinInt(
       this._health + toInt(bonus),
       0n,

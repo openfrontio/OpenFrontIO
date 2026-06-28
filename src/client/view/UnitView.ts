@@ -235,8 +235,11 @@ export class UnitView {
   maxHealth(): number {
     const base = this.gameView.config().unitInfo(this.type()).maxHealth ?? 1;
     if (this.type() === UnitType.Warship && this.state.veterancy > 0) {
-      const bonus = this.gameView.config().warshipVeterancyHealthBonus();
-      return Math.round(base * (1 + this.state.veterancy * bonus));
+      // Mirror the engine's integer UnitImpl.maxHealth().
+      const bonusPercent = this.gameView.config().warshipVeterancyHealthBonus();
+      return (
+        base + Math.floor((base * this.state.veterancy * bonusPercent) / 100)
+      );
     }
     return base;
   }

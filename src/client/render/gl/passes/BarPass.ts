@@ -143,12 +143,14 @@ export class BarPass {
     // warship-only.
     for (const unit of mobileUnits.values()) {
       if (unit.health === null || unit.health <= 0) continue;
-      // Veteran warships have a higher effective max health. Round to match the
-      // engine's UnitImpl.maxHealth() so a full veteran ship reads as full.
-      const maxHealth = Math.round(
-        this.warshipMaxHealth *
-          (1 + unit.veterancy * this.veterancyHealthBonus),
-      );
+      // Veteran warships have a higher effective max health. Mirror the engine's
+      // integer UnitImpl.maxHealth() so a full veteran ship reads as full.
+      const maxHealth =
+        this.warshipMaxHealth +
+        Math.floor(
+          (this.warshipMaxHealth * unit.veterancy * this.veterancyHealthBonus) /
+            100,
+        );
       if (unit.health < maxHealth) {
         this.pushHealth(unit, unit.health / maxHealth);
       }

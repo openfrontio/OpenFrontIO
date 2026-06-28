@@ -942,14 +942,16 @@ export class Config {
     return 3;
   }
 
-  /** Max-health boost per veterancy level, as a fraction of base max health. */
+  /** Max-health boost per veterancy level, as an integer percent of base max
+   *  health. Integer-only to keep src/core deterministic (no float constants). */
   warshipVeterancyHealthBonus(): number {
-    return 0.2;
+    return 20;
   }
 
-  /** Shell-damage boost per veterancy level, as a fraction of the rolled damage. */
+  /** Shell-damage boost per veterancy level, as an integer percent of the
+   *  rolled damage. Integer-only to keep src/core deterministic. */
   warshipVeterancyShellDamageBonus(): number {
-    return 0.2;
+    return 20;
   }
 
   /** Transport ships a warship must destroy to gain one veterancy level. */

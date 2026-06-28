@@ -79,18 +79,19 @@ export class ShellExecution implements Execution {
     const baseDamage = damage ?? 250;
 
     const roll = this.random.nextInt(1, 6);
-    const damageMultiplier = (roll - 1) * 25 + 200;
+    let damageMultiplier = (roll - 1) * 25 + 200;
 
-    let damageDealt = (baseDamage / 250) * damageMultiplier;
-
-    // Veteran warships hit harder — scale by the firing unit's veterancy.
+    // Veteran warships hit harder — scale the (integer) multiplier by the firing
+    // unit's veterancy. Integer percent math keeps src/core float-free.
     const veterancy = this.ownerUnit.veterancy();
     if (veterancy > 0) {
-      const bonus = this.mg.config().warshipVeterancyShellDamageBonus();
-      damageDealt *= 1 + veterancy * bonus;
+      const bonusPercent = this.mg.config().warshipVeterancyShellDamageBonus();
+      damageMultiplier = Math.floor(
+        (damageMultiplier * (100 + veterancy * bonusPercent)) / 100,
+      );
     }
 
-    return Math.round(damageDealt);
+    return Math.round((baseDamage / 250) * damageMultiplier);
   }
 
   public getEffectOnTargetForTesting(): number {

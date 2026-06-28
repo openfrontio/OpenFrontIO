@@ -83,15 +83,16 @@ describe("Warship veterancy", () => {
   test("veterancy boosts max health and heals to the new max", () => {
     const ship = buildWarship(attacker, coastX, 10);
     const base = game.config().unitInfo(UnitType.Warship).maxHealth!;
-    const bonus = game.config().warshipVeterancyHealthBonus();
+    const bonusPercent = game.config().warshipVeterancyHealthBonus();
 
     expect(ship.maxHealth()).toBe(base);
     expect(ship.health()).toBe(base);
 
     ship.recordKill(UnitType.Warship); // veterancy 1
 
-    expect(ship.maxHealth()).toBe(Math.round(base * (1 + bonus)));
-    expect(ship.health()).toBe(Math.round(base * (1 + bonus)));
+    const expected = base + Math.floor((base * 1 * bonusPercent) / 100);
+    expect(ship.maxHealth()).toBe(expected);
+    expect(ship.health()).toBe(expected);
   });
 
   test("non-warships never gain veterancy", () => {
@@ -109,7 +110,7 @@ describe("Warship veterancy", () => {
 
   test("shell damage scales with the firing warship's veterancy", () => {
     const maxVet = game.config().warshipMaxVeterancy();
-    const bonusPerLevel = game.config().warshipVeterancyShellDamageBonus();
+    const bonusPercent = game.config().warshipVeterancyShellDamageBonus();
     const target = buildWarship(defender, coastX + 5, 10);
 
     const baseShooter = buildWarship(attacker, coastX, 10);
@@ -142,8 +143,11 @@ describe("Warship veterancy", () => {
       const dBase = baseShell.getEffectOnTargetForTesting();
       const dVet = vetShell.getEffectOnTargetForTesting();
 
-      // Same seed → same roll, so the veteran's shot is exactly the boosted value.
-      expect(dVet).toBe(Math.round(dBase * (1 + maxVet * bonusPerLevel)));
+      // Same seed → same roll. Base damage is 250, so dBase equals the rolled
+      // multiplier and the veteran's shot is the integer-boosted value.
+      expect(dVet).toBe(
+        Math.floor((dBase * (100 + maxVet * bonusPercent)) / 100),
+      );
       boostedValues.add(dVet);
     }
 
