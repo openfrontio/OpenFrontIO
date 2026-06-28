@@ -539,8 +539,9 @@ export class UnitImpl implements Unit {
     return this._veterancy;
   }
 
-  /** Raise veterancy by one level (capped), boosting max health and healing
-   *  by the per-level bonus. No-op for non-warships or at the cap. */
+  /** Raise veterancy by one level (capped), which raises max health. The ship
+   *  is NOT instantly healed — it heals toward the higher cap normally.
+   *  No-op for non-warships or at the cap. */
   private increaseVeterancy(): void {
     if (this._type !== UnitType.Warship) {
       return;
@@ -549,16 +550,6 @@ export class UnitImpl implements Unit {
       return;
     }
     this._veterancy++;
-    // Reward the new level by healing the per-level bonus amount, then re-clamp
-    // to the now-higher max health. Integer percent math (no float constants).
-    const base = this.info().maxHealth ?? 0;
-    const bonusPercent = this.mg.config().warshipVeterancyHealthBonus();
-    const bonus = Math.floor((base * bonusPercent) / 100);
-    this._health = withinInt(
-      this._health + toInt(bonus),
-      0n,
-      toInt(this.maxHealth()),
-    );
     this.mg.addUpdate(this.toUpdate());
   }
 

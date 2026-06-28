@@ -80,19 +80,24 @@ describe("Warship veterancy", () => {
     expect(ship.veterancy()).toBe(1);
   });
 
-  test("veterancy boosts max health and heals to the new max", () => {
+  test("veterancy raises max health but does not instantly heal", () => {
     const ship = buildWarship(attacker, coastX, 10);
     const base = game.config().unitInfo(UnitType.Warship).maxHealth!;
     const bonusPercent = game.config().warshipVeterancyHealthBonus();
 
+    // Drop below full so a (removed) instant heal would be observable.
+    ship.modifyHealth(-100);
     expect(ship.maxHealth()).toBe(base);
-    expect(ship.health()).toBe(base);
+    expect(ship.health()).toBe(base - 100);
 
     ship.recordKill(UnitType.Warship); // veterancy 1
 
-    const expected = base + Math.floor((base * 1 * bonusPercent) / 100);
-    expect(ship.maxHealth()).toBe(expected);
-    expect(ship.health()).toBe(expected);
+    // The cap rises, but current health is unchanged — the ship heals toward
+    // the new max normally, it does not jump on level-up.
+    expect(ship.maxHealth()).toBe(
+      base + Math.floor((base * 1 * bonusPercent) / 100),
+    );
+    expect(ship.health()).toBe(base - 100);
   });
 
   test("non-warships never gain veterancy", () => {
