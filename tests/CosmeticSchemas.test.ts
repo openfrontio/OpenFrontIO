@@ -5,6 +5,7 @@ import {
   findEffect,
   TransportShipTrailAttributesSchema,
 } from "../src/core/CosmeticSchemas";
+import { PlayerEffectSchema } from "../src/core/Schemas";
 
 describe("Effect cosmetic schemas", () => {
   const base = { name: "spectrum", product: null, rarity: "common" };
@@ -47,6 +48,47 @@ describe("Effect cosmetic schemas", () => {
       expect(TransportShipTrailAttributesSchema.safeParse({}).success).toBe(
         false,
       );
+    });
+  });
+
+  describe("TransportShipTrailAttributesSchema (discriminated styles)", () => {
+    it("keeps the fields of a known style", () => {
+      const solid = TransportShipTrailAttributesSchema.parse({
+        type: "solid",
+        color: "#f00",
+      });
+      expect(solid).toEqual({ type: "solid", color: "#f00" });
+      const gradient = TransportShipTrailAttributesSchema.parse({
+        type: "gradient",
+        color: "#f00",
+        color2: "#00f",
+      });
+      expect(gradient).toEqual({
+        type: "gradient",
+        color: "#f00",
+        color2: "#00f",
+      });
+    });
+
+    it('normalizes an unrecognized style to { type: "unknown" }', () => {
+      expect(
+        TransportShipTrailAttributesSchema.parse({ type: "sparkle" }),
+      ).toEqual({ type: "unknown" });
+    });
+
+    it("normalizes a known style missing required fields to unknown", () => {
+      // solid without color / gradient without color2 don't match their strict
+      // variant, so they degrade to the neutral unknown swatch rather than
+      // failing the parse.
+      expect(
+        TransportShipTrailAttributesSchema.parse({ type: "solid" }),
+      ).toEqual({ type: "unknown" });
+      expect(
+        TransportShipTrailAttributesSchema.parse({
+          type: "gradient",
+          color: "#f00",
+        }),
+      ).toEqual({ type: "unknown" });
     });
   });
 
@@ -187,5 +229,36 @@ describe("findEffect", () => {
     expect(
       findEffect({} as Cosmetics, "transportShipTrail", "x"),
     ).toBeUndefined();
+  });
+});
+
+describe("PlayerEffectSchema (discriminated on effectType)", () => {
+  it("parses the transportShipTrail variant", () => {
+    expect(
+      PlayerEffectSchema.safeParse({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+        attributes: { type: "rainbow" },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown effectType (no matching union variant)", () => {
+    expect(
+      PlayerEffectSchema.safeParse({
+        name: "spectrum",
+        effectType: "glow",
+        attributes: { type: "rainbow" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a variant missing its attributes", () => {
+    expect(
+      PlayerEffectSchema.safeParse({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+      }).success,
+    ).toBe(false);
   });
 });

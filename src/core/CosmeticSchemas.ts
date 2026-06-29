@@ -99,13 +99,27 @@ export const SkinSchema = CosmeticSchema.extend({
 export const EFFECT_TYPES = ["transportShipTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
-// `type` is any string (unknown attribute types tolerated); color/color2 are
-// kept for the known solid / pulse / gradient styles.
-export const TransportShipTrailAttributesSchema = z.object({
-  type: z.string(),
-  color: z.string().optional(),
-  color2: z.string().optional(),
-});
+// Boat-trail styles, discriminated on `type`: each known style carries exactly
+// the fields it uses (rainbow has none; solid/pulse need a color; gradient needs
+// both). A `type` we don't recognize — a style shipped to cosmetics.json before
+// this client updated — normalizes to { type: "unknown" } instead of failing the
+// catalog parse, so one new style never wipes the whole catalog; the renderer
+// shows a neutral swatch. `type` itself stays required.
+export const TransportShipTrailAttributesSchema = z.union([
+  z.discriminatedUnion("type", [
+    z.object({ type: z.literal("solid"), color: z.string() }),
+    z.object({ type: z.literal("rainbow") }),
+    z.object({ type: z.literal("pulse"), color: z.string() }),
+    z.object({
+      type: z.literal("gradient"),
+      color: z.string(),
+      color2: z.string(),
+    }),
+  ]),
+  z
+    .object({ type: z.string() })
+    .transform(() => ({ type: "unknown" as const })),
+]);
 
 export const EffectSchema = CosmeticSchema.extend({
   attributes: TransportShipTrailAttributesSchema,

@@ -97,7 +97,7 @@ const effectCosmetics = {
     transportShipTrail: {
       spectrum: {
         name: "spectrum",
-        attributes: { type: "rainbow" },
+        attributes: { type: "rainbow" } as const,
         url: "",
         affiliateCode: null,
         product: null,
@@ -107,7 +107,7 @@ const effectCosmetics = {
       },
       crimson: {
         name: "crimson",
-        attributes: { type: "solid", color: "#e01b24" },
+        attributes: { type: "solid", color: "#e01b24" } as const,
         url: "",
         affiliateCode: null,
         product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
@@ -635,7 +635,7 @@ describe("Effect validation in isAllowed", () => {
           transportShipTrail: {
             trail_01: {
               name: "spectrum",
-              attributes: { type: "rainbow" },
+              attributes: { type: "rainbow" } as const,
               url: "",
               affiliateCode: null,
               product: null,

@@ -17,7 +17,6 @@ const UNKNOWN_BG = "#444";
 export function renderTransportShipTrailSwatch(
   attributes: TransportShipTrailAttributes,
 ): TemplateResult {
-  const color = attributes.color ?? UNKNOWN_BG;
   switch (attributes.type) {
     case "rainbow":
       return html`<div
@@ -27,21 +26,20 @@ export function renderTransportShipTrailSwatch(
     case "gradient":
       return html`<div
         class="w-full h-full rounded-md"
-        style="background:linear-gradient(90deg,${color},${attributes.color2 ??
-        color});"
+        style="background:linear-gradient(90deg,${attributes.color},${attributes.color2});"
       ></div>`;
     case "pulse":
       return html`<div
         class="w-full h-full rounded-md animate-pulse"
-        style="background:${color};"
+        style="background:${attributes.color};"
       ></div>`;
     case "solid":
       return html`<div
         class="w-full h-full rounded-md"
-        style="background:${color};"
+        style="background:${attributes.color};"
       ></div>`;
     default:
-      // Unknown attribute type — neutral swatch.
+      // Unknown / unrecognized style — neutral swatch.
       return html`<div
         class="w-full h-full rounded-md"
         style="background:${UNKNOWN_BG};"

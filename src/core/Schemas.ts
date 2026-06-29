@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   ColorPaletteSchema,
   CosmeticNameSchema,
-  EffectTypeSchema,
   PatternDataSchema,
   TransportShipTrailAttributesSchema,
 } from "./CosmeticSchemas";
@@ -605,12 +604,16 @@ export const PlayerSkinSchema = z.object({
   url: z.string(),
 });
 
-export const PlayerEffectSchema = z.object({
-  name: CosmeticNameSchema,
-  effectType: EffectTypeSchema,
-  // Widen to an attributes union once a second effectType ships.
-  attributes: TransportShipTrailAttributesSchema,
-});
+// Discriminated on effectType: one variant per effectType, each pairing the
+// effectType literal with its attributes shape. Add a variant when a new
+// effectType ships, e.g. z.object({ effectType: z.literal("glow"), ... }).
+export const PlayerEffectSchema = z.discriminatedUnion("effectType", [
+  z.object({
+    name: CosmeticNameSchema,
+    effectType: z.literal("transportShipTrail"),
+    attributes: TransportShipTrailAttributesSchema,
+  }),
+]);
 
 // Server converts refs to the actual cosmetics here
 export const PlayerCosmeticsSchema = z.object({
