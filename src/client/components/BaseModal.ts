@@ -232,6 +232,9 @@ export abstract class BaseModal extends LitElement {
   }
 
   public close(args?: Record<string, unknown>): void {
+    // If closing was triggered elsewhere while a confirm prompt is pending,
+    // dismiss it (removes the dialog and resolves the awaiting guard as false).
+    this.settleCloseConfirm(false);
     this.unregisterEscapeHandler();
     this.onClose(args);
 
@@ -269,7 +272,11 @@ export abstract class BaseModal extends LitElement {
     if (this.modalEl) {
       this.modalEl.onClose = async () => {
         if (this.isModalOpen) {
-          if (!(await this.confirmBeforeClose())) {
+          const confirmed = await this.confirmBeforeClose();
+          // Bail if a parallel close() settled things while we awaited —
+          // otherwise we'd re-open an already-closed modal.
+          if (!this.isModalOpen) return;
+          if (!confirmed) {
             // Re-open the underlying o-modal since it already closed itself
             this.modalEl?.open();
             return;
@@ -281,6 +288,7 @@ export abstract class BaseModal extends LitElement {
   }
 
   disconnectedCallback() {
+    this.settleCloseConfirm(false);
     this.unregisterEscapeHandler();
     super.disconnectedCallback();
   }
@@ -288,7 +296,9 @@ export abstract class BaseModal extends LitElement {
   private handleKeyDown = async (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.isModalOpen) {
       e.preventDefault();
-      if (!(await this.confirmBeforeClose())) {
+      const confirmed = await this.confirmBeforeClose();
+      // Bail if a parallel close() already closed us while we awaited.
+      if (!confirmed || !this.isModalOpen) {
         return;
       }
       this.close();
