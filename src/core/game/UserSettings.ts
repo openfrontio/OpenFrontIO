@@ -57,6 +57,36 @@ export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const LEADERBOARD_COLUMNS_KEY = "settings.leaderboardColumns";
+
+export type LeaderboardColumnKey =
+  | "tiles"
+  | "gold"
+  | "goldPerMinute"
+  | "maxtroops"
+  | "cities";
+
+const LEADERBOARD_COLUMN_KEYS: LeaderboardColumnKey[] = [
+  "tiles",
+  "gold",
+  "goldPerMinute",
+  "maxtroops",
+  "cities",
+];
+
+const DEFAULT_LEADERBOARD_COLUMNS: LeaderboardColumnKey[] = [
+  "tiles",
+  "gold",
+  "goldPerMinute",
+  "maxtroops",
+];
+
+function isLeaderboardColumnKey(value: unknown): value is LeaderboardColumnKey {
+  return (
+    typeof value === "string" &&
+    LEADERBOARD_COLUMN_KEYS.includes(value as LeaderboardColumnKey)
+  );
+}
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -118,6 +148,47 @@ export class UserSettings {
 
   private setString(key: string, value: string) {
     this.setCached(key, value);
+  }
+
+  leaderboardColumns(): LeaderboardColumnKey[] {
+    const raw = this.getString(LEADERBOARD_COLUMNS_KEY, "");
+    if (!raw) return DEFAULT_LEADERBOARD_COLUMNS.slice();
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const columns = LEADERBOARD_COLUMN_KEYS.filter((key) =>
+          parsed.includes(key),
+        );
+        if (columns.length > 0) return columns;
+      }
+    } catch {
+      // Fall back to defaults below.
+    }
+    return DEFAULT_LEADERBOARD_COLUMNS.slice();
+  }
+
+  setLeaderboardColumns(columns: readonly LeaderboardColumnKey[]): void {
+    const normalized = LEADERBOARD_COLUMN_KEYS.filter((key) =>
+      columns.includes(key),
+    );
+    this.setString(
+      LEADERBOARD_COLUMNS_KEY,
+      JSON.stringify(
+        normalized.length > 0 ? normalized : DEFAULT_LEADERBOARD_COLUMNS,
+      ),
+    );
+  }
+
+  toggleLeaderboardColumn(key: LeaderboardColumnKey): LeaderboardColumnKey[] {
+    if (!isLeaderboardColumnKey(key)) return this.leaderboardColumns();
+    const columns = this.leaderboardColumns();
+    const next = columns.includes(key)
+      ? columns.length === 1
+        ? columns
+        : columns.filter((column) => column !== key)
+      : [...columns, key];
+    this.setLeaderboardColumns(next);
+    return this.leaderboardColumns();
   }
 
   private getFloat(key: string, defaultValue: number): number {

@@ -20,6 +20,7 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     isDisconnected: false,
     tilesOwned: 0,
     gold: 0,
+    goldPerMinute: 0,
     troops: 100,
     isTraitor: false,
     traitorRemainingTicks: 0,
@@ -70,6 +71,17 @@ describe("diffPlayerUpdate", () => {
     const prev = makePlayerUpdate({ gold: 100n, troops: 50, tilesOwned: 5 });
     const next = makePlayerUpdate({ gold: 200n, troops: 75, tilesOwned: 9 });
     expect(diffPlayerUpdate(prev, next)).toBeNull();
+  });
+
+  it("detects goldPerMinute changes", () => {
+    const prev = makePlayerUpdate({ goldPerMinute: 100 });
+    const next = makePlayerUpdate({ goldPerMinute: 250 });
+    const diff = diffPlayerUpdate(prev, next)!;
+    expect(diff).toEqual({
+      type: GameUpdateType.Player,
+      id: "player-a",
+      goldPerMinute: 250,
+    });
   });
 
   it("detects allies array additions", () => {
@@ -353,10 +365,16 @@ describe("applyStateUpdate", () => {
     applyStateUpdate(target, {
       type: GameUpdateType.Player,
       id: "p",
+      goldPerMinute: 500,
+    });
+    applyStateUpdate(target, {
+      type: GameUpdateType.Player,
+      id: "p",
       isAlive: false,
     });
     expect(target.gold).toBe(100);
     expect(target.troops).toBe(250);
+    expect(target.goldPerMinute).toBe(500);
     expect(target.isAlive).toBe(false);
   });
 });

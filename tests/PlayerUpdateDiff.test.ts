@@ -124,9 +124,45 @@ describe("Player update diffing (toUpdate)", () => {
     const full = dora.toUpdate(statsOut);
     expect(full).not.toBeNull();
     expect(full!.gold).toBe(dora.gold());
+    expect(full!.goldPerMinute).toBe(0);
     expect(full!.troops).toBe(dora.troops());
     expect(full!.tilesOwned).toBe(dora.numTilesOwned());
     expect(statsOut).toEqual([]);
+  });
+
+  test("goldPerMinute is positive gold credited during the last 60 seconds", () => {
+    const info = new PlayerInfo(
+      "income",
+      PlayerType.Human,
+      "income_client",
+      "income_id",
+    );
+    game.addPlayer(info);
+    const income = game.player("income_id");
+    income.toUpdate();
+
+    income.addGold(600n);
+    let diff: PlayerUpdate | undefined;
+    for (let i = 0; i < 100; i++) {
+      const updates = game.executeNextTick();
+      diff = (updates[GameUpdateType.Player] as PlayerUpdate[]).find(
+        (u) => u.id === "income_id" && u.goldPerMinute !== undefined,
+      );
+      if (diff !== undefined) break;
+    }
+
+    expect(diff?.goldPerMinute).toBe(600);
+
+    let expired: PlayerUpdate | undefined;
+    for (let i = 0; i < 600; i++) {
+      const updates = game.executeNextTick();
+      expired = (updates[GameUpdateType.Player] as PlayerUpdate[]).find(
+        (u) => u.id === "income_id" && u.goldPerMinute !== undefined,
+      );
+      if (expired?.goldPerMinute === 0) break;
+    }
+
+    expect(expired?.goldPerMinute).toBe(0);
   });
 
   test("adding and removing an embargo shows up in consecutive diffs", () => {

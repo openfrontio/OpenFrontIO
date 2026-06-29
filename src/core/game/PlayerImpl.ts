@@ -90,12 +90,24 @@ Object.freeze(EMPTY_ATTACK_UPDATES);
 Object.freeze(EMPTY_ALLIANCE_VIEWS);
 Object.freeze(EMPTY_EMOJIS);
 
+const GOLD_INCOME_BUCKET_TICKS = 10;
+const GOLD_INCOME_BUCKET_COUNT = 60;
+const GOLD_INCOME_SAMPLE_TICKS = 100;
+
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
   private _troops: bigint;
+  private _goldPerMinute = 0;
+  private lastGoldIncomeSample = -1;
+  private readonly goldIncomeBuckets = Array<bigint>(
+    GOLD_INCOME_BUCKET_COUNT,
+  ).fill(0n);
+  private readonly goldIncomeBucketIds = Array<number>(
+    GOLD_INCOME_BUCKET_COUNT,
+  ).fill(-1);
 
   markedTraitorTick = -1;
   private _betrayalCount: number = 0;
@@ -310,6 +322,7 @@ export class PlayerImpl implements Player {
       isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
+      goldPerMinute: this.goldPerMinute(),
       troops: this.troops(),
       allies: allies,
       embargoes: embargoes,
@@ -1114,6 +1127,7 @@ export class PlayerImpl implements Player {
 
   addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    this.recordGoldIncome(toAdd);
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
@@ -1123,6 +1137,40 @@ export class PlayerImpl implements Player {
         troops: 0,
       });
     }
+  }
+
+  private recordGoldIncome(toAdd: Gold): void {
+    if (toAdd <= 0n) return;
+    const bucketId = this.currentGoldIncomeBucket();
+    const index = bucketId % GOLD_INCOME_BUCKET_COUNT;
+    if (this.goldIncomeBucketIds[index] !== bucketId) {
+      this.goldIncomeBucketIds[index] = bucketId;
+      this.goldIncomeBuckets[index] = 0n;
+    }
+    this.goldIncomeBuckets[index] += toAdd;
+  }
+
+  private goldPerMinute(): number {
+    const bucketId = this.currentGoldIncomeBucket();
+    const sampleId = Math.floor(this.mg.ticks() / GOLD_INCOME_SAMPLE_TICKS);
+    if (sampleId === this.lastGoldIncomeSample) {
+      return this._goldPerMinute;
+    }
+    this.lastGoldIncomeSample = sampleId;
+    const oldestBucketId = bucketId - GOLD_INCOME_BUCKET_COUNT + 1;
+    let total = 0n;
+    for (let i = 0; i < GOLD_INCOME_BUCKET_COUNT; i++) {
+      const id = this.goldIncomeBucketIds[i];
+      if (id >= oldestBucketId && id <= bucketId) {
+        total += this.goldIncomeBuckets[i];
+      }
+    }
+    this._goldPerMinute = Number(total);
+    return this._goldPerMinute;
+  }
+
+  private currentGoldIncomeBucket(): number {
+    return Math.floor(this.mg.ticks() / GOLD_INCOME_BUCKET_TICKS);
   }
 
   removeGold(toRemove: Gold): Gold {

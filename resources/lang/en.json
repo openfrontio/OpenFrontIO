@@ -774,7 +774,10 @@
   },
   "leaderboard": {
     "cities": "Cities",
+    "columns": "Columns",
+    "configure_columns": "Configure columns",
     "gold": "Gold",
+    "gold_per_min": "Gold/min",
     "launchers": "Launchers",
     "maxtroops": "Max troops",
     "owned": "Owned",

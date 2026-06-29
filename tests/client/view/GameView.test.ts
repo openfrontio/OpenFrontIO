@@ -162,6 +162,21 @@ describe("GameView.update — packed channels", () => {
     expect(alice.troops()).toBe(250);
   });
 
+  it("player diffs update goldPerMinute", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })]),
+    );
+
+    const gu = makeEmptyGu(2);
+    gu.updates[GameUpdateType.Player] = [
+      { type: GameUpdateType.Player, id: "alice", goldPerMinute: 750 },
+    ];
+    game.update(gu);
+
+    expect(game.player("alice").goldPerMinute()).toBe(750);
+  });
+
   it("packedAttackUpdates patches troop counts by direction and index", () => {
     const game = makeGameView();
     game.update(

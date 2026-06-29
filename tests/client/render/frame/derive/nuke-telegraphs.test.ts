@@ -33,6 +33,7 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     isDisconnected: false,
     tilesOwned: 0,
     gold: 0,
+    goldPerMinute: 0,
     troops: 0,
     isTraitor: false,
     traitorRemainingTicks: 0,
