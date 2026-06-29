@@ -2,7 +2,8 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
 import type { PurchaseResult } from "../Cosmetics";
-import { PurchaseButton } from "./PurchaseButton";
+import "./PurchaseButton";
+import type { PurchaseButton } from "./PurchaseButton";
 
 type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | string;
 
