@@ -994,6 +994,7 @@
     "unfavorite": "Remove from favourites"
   },
   "matchmaking_button": {
+    "connection_issue": "Couldn't verify your login. Please try again.",
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking.",
@@ -1220,6 +1221,12 @@
     "capacity_note": "Receiver can accept only {amount} right now.",
     "slider_tooltip": "{percent}% • {amount}",
     "title_with_name": "Send Troops to {name}"
+  },
+  "session_expired": {
+    "body": "Your session has expired. Please log in again to continue.",
+    "dismiss": "Dismiss",
+    "log_in": "Log in",
+    "title": "Signed out"
   },
   "single_modal": {
     "bots": "Tribes: ",

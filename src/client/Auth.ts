@@ -196,33 +196,91 @@ async function refreshJwt(): Promise<void> {
   }
 }
 
+// Outcome of the most recent refresh attempt, so callers (e.g. ranked
+// matchmaking) can tell "your session expired" apart from "we couldn't reach
+// the auth server right now".
+export type RefreshOutcome = "ok" | "expired" | "transient";
+let __lastRefreshOutcome: RefreshOutcome = "ok";
+
+export function getLastRefreshOutcome(): RefreshOutcome {
+  return __lastRefreshOutcome;
+}
+
+const REFRESH_MAX_ATTEMPTS = 3;
+
+function refreshBackoffMs(attempt: number): number {
+  // Backoff between attempts: 500ms, then 1000ms.
+  return 500 * 2 ** (attempt - 1);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function notifySessionExpired(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("auth-session-expired"));
+}
+
 async function doRefreshJwt(): Promise<void> {
-  try {
-    console.log("Refreshing jwt");
-    const response = await fetch(getApiBase() + "/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-    });
-    if (response.status !== 200) {
-      console.error("Refresh failed", response);
-      // A non-200 here is usually transient (Cloudflare 5xx/520-524, 429
-      // rate-limit) or an ambiguous edge error. Do NOT revoke the session or
-      // wipe the persistent identity for it — mirror the network-error path
-      // below and let the next refresh recover.
-      __jwt = null;
-      return;
+  // Whether an authenticated session was active before this attempt. Only a
+  // session that dies mid-use should surface the "signed out" UI.
+  const hadSession = __jwt !== null;
+
+  for (let attempt = 1; attempt <= REFRESH_MAX_ATTEMPTS; attempt++) {
+    try {
+      console.log(
+        `Refreshing jwt (attempt ${attempt}/${REFRESH_MAX_ATTEMPTS})`,
+      );
+      const response = await fetch(getApiBase() + "/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (response.status === 200) {
+        const json = await response.json();
+        const { jwt, expiresIn } = json;
+        __expiresAt = Date.now() + expiresIn * 1000;
+        __jwt = jwt;
+        __lastRefreshOutcome = "ok";
+        console.log("Refresh succeeded");
+        return;
+      }
+
+      // 401/403 are definitive: the refresh token is genuinely invalid or
+      // expired, so retrying can't help. Do a "soft" logout — clear the
+      // in-memory JWT but preserve the session cookie + persistent identity —
+      // and let a previously-signed-in user be prompted to log in again.
+      if (response.status === 401 || response.status === 403) {
+        console.error("Refresh rejected — session expired", response.status);
+        __jwt = null;
+        __lastRefreshOutcome = "expired";
+        if (hadSession) notifySessionExpired();
+        return;
+      }
+
+      // Everything else (5xx, 429, ...) is transient — fall through to retry.
+      console.error(
+        `Refresh failed (status ${response.status}), attempt ${attempt}/${REFRESH_MAX_ATTEMPTS}`,
+      );
+    } catch (e) {
+      // Network error / server unreachable — transient, fall through to retry.
+      console.error(
+        `Refresh failed (network), attempt ${attempt}/${REFRESH_MAX_ATTEMPTS}`,
+        e,
+      );
     }
-    const json = await response.json();
-    const { jwt, expiresIn } = json;
-    __expiresAt = Date.now() + expiresIn * 1000;
-    console.log("Refresh succeeded");
-    __jwt = jwt;
-  } catch (e) {
-    console.error("Refresh failed", e);
-    // if server unreachable, just clear jwt
-    __jwt = null;
-    return;
+
+    if (attempt < REFRESH_MAX_ATTEMPTS) {
+      await delay(refreshBackoffMs(attempt));
+    }
   }
+
+  // Transient failures exhausted. Clear the in-memory JWT only — keep the
+  // session cookie and persistent identity so the next refresh can recover.
+  console.error("Refresh failed after retries; staying recoverable");
+  __jwt = null;
+  __lastRefreshOutcome = "transient";
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {

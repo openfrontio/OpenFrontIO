@@ -53,6 +53,15 @@ export async function fetchPlayerById(
   }
 }
 
+// Remembers whether the last successful /users/@me showed a linked account.
+// Used to decide whether a session-expiry should prompt re-login (linked users)
+// or be handled silently (guests). Survives a later auth failure on purpose —
+// it records what the user *was*, which is exactly what we need at that point.
+let __lastKnownLinked = false;
+export function wasLoggedIn(): boolean {
+  return __lastKnownLinked;
+}
+
 let __userMe: Promise<UserMeResponse | false> | null = null;
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
@@ -83,6 +92,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         console.error("Invalid response", error);
         return false;
       }
+      __lastKnownLinked = hasLinkedAccount(result.data);
       return result.data;
     } catch (e) {
       return false;

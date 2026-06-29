@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getUserMe, hasLinkedAccount } from "./Api";
-import { getPlayToken } from "./Auth";
+import { getLastRefreshOutcome, getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -126,6 +126,21 @@ export class MatchmakingModal extends BaseModal {
         userMe.user.google !== undefined ||
         userMe.user.email !== undefined);
     if (!isLoggedIn) {
+      // A transient auth-server hiccup (rather than a genuine "not logged in")
+      // shouldn't bounce the player to the login page — ask them to retry.
+      if (getLastRefreshOutcome() === "transient") {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("matchmaking_button.connection_issue"),
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+        this.close();
+        return;
+      }
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
