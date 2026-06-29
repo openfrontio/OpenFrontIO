@@ -42,9 +42,7 @@ export class InsufficientCurrencyDialog extends LitElement {
       @cancel=${() => this.close()}
       @confirm=${() => {
         this.close();
-        // Open the store's packs tab so they can top up plutonium. Navigate to
-        // the home path (not just the hash) so this also works from in-game
-        // (e.g. the win modal), where the store page lives on the home shell.
+        // Home path (not just hash) so it also works from in-game (win modal).
         window.location.href = "/#modal=store&tab=packs";
       }}
     ></confirm-dialog>`;
