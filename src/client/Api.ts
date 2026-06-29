@@ -1,7 +1,9 @@
+import featuredStreamFallback from "resources/featured-stream.json";
 import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
-import type { NewsItem } from "../core/ApiSchemas";
+import type { FeaturedStreamConfig, NewsItem } from "../core/ApiSchemas";
 import {
+  FeaturedStreamSchema,
   NewsItemSchema,
   PlayerProfile,
   PlayerProfileSchema,
@@ -387,5 +389,27 @@ export async function getNews(): Promise<NewsItem[]> {
   } catch (err) {
     console.warn("getNews: request failed, using fallback", err);
     return newsItemsFallback as NewsItem[];
+  }
+}
+
+// Featured-stream config, served like news.json (API-hosted JSON + bundled fallback).
+export async function getFeaturedStream(): Promise<FeaturedStreamConfig> {
+  try {
+    const res = await fetch(`${getApiBase()}/featured-stream.json`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status !== 200) {
+      console.warn("getFeaturedStream: unexpected status", res.status);
+      return FeaturedStreamSchema.parse(featuredStreamFallback);
+    }
+    const parsed = FeaturedStreamSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("getFeaturedStream: Zod validation failed", parsed.error);
+      return FeaturedStreamSchema.parse(featuredStreamFallback);
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("getFeaturedStream: request failed, using fallback", err);
+    return FeaturedStreamSchema.parse(featuredStreamFallback);
   }
 }

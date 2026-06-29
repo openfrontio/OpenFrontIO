@@ -263,3 +263,18 @@ export const NewsItemSchema = z.object({
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
+
+// Config for the homepage featured-stream panel, served like news.json (a JSON the API
+// hosts, with a bundled fallback). `enabled` is the manual on/off toggle; `channels` is
+// the Twitch channel logins to show (first one that is live wins). Channels are validated
+// to the Twitch login format so a typo'd/garbage value fails the whole config closed (the
+// fetch falls back to the bundled OFF config) instead of flowing into the embed/link.
+const TwitchChannelSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-zA-Z0-9_]{3,25}$/, "invalid Twitch channel login");
+export const FeaturedStreamSchema = z.object({
+  enabled: z.boolean().default(false),
+  channels: z.array(TwitchChannelSchema).default([]),
+});
+export type FeaturedStreamConfig = z.infer<typeof FeaturedStreamSchema>;
