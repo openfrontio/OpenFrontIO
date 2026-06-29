@@ -10,6 +10,7 @@ import {
 import { PlayerPattern } from "../../core/Schemas";
 import {
   PaymentMethod,
+  PurchaseResult,
   ResolvedCosmetic,
   translateCosmetic,
 } from "../Cosmetics";
@@ -32,7 +33,10 @@ export class CosmeticButton extends LitElement {
   onSelect?: (resolved: ResolvedCosmetic) => void;
 
   @property({ type: Function })
-  onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
+  onPurchase?: (
+    resolved: ResolvedCosmetic,
+    method: PaymentMethod,
+  ) => Promise<PurchaseResult>;
 
   /** True if the user already has a subscription (any tier). */
   @property({ type: Boolean })
@@ -290,13 +294,13 @@ export class CosmeticButton extends LitElement {
         .dollarLabelKey=${dollarLabelKey}
         .priceSuffix=${priceSuffix}
         .onPurchaseDollar=${isPurchasable && c?.product
-          ? () => this.onPurchase?.(this.activeResolved, "dollar")
+          ? async () => this.onPurchase?.(this.activeResolved, "dollar")
           : undefined}
         .onPurchaseHard=${isPurchasable && priceHard !== undefined
-          ? () => this.onPurchase?.(this.activeResolved, "hard")
+          ? async () => this.onPurchase?.(this.activeResolved, "hard")
           : undefined}
         .onPurchaseSoft=${isPurchasable && priceSoft !== undefined
-          ? () => this.onPurchase?.(this.activeResolved, "soft")
+          ? async () => this.onPurchase?.(this.activeResolved, "soft")
           : undefined}
         .name=${this.displayName}
       >
