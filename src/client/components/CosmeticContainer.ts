@@ -2,7 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
 import "./PurchaseButton";
-import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 
 type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | string;
 
@@ -159,9 +158,9 @@ export class CosmeticContainer extends LitElement {
   @property({ type: Number })
   priceSoft: number | null = null;
 
-  /** Override the dollar-button label key. */
+  /** Optional action-label key for the dollar button; empty shows price alone. */
   @property({ type: String })
-  dollarLabelKey: string = DEFAULT_DOLLAR_LABEL_KEY;
+  dollarLabelKey: string = "";
 
   /** Optional suffix appended to the displayed price, e.g. "/mo". */
   @property({ type: String })
