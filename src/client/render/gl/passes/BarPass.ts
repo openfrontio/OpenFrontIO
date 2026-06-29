@@ -14,6 +14,7 @@
 
 import type { Config } from "../../../../core/configuration/Config";
 import { UnitType } from "../../../../core/game/Game";
+import { maxHealthWithVeterancy } from "../../../../core/game/Veterancy";
 import type { RendererConfig, UnitState } from "../../types";
 import { UT_MISSILE_SILO, UT_SAM_LAUNCHER } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
@@ -143,14 +144,13 @@ export class BarPass {
     // warship-only.
     for (const unit of mobileUnits.values()) {
       if (unit.health === null || unit.health <= 0) continue;
-      // Veteran warships have a higher effective max health. Mirror the engine's
-      // integer UnitImpl.maxHealth() so a full veteran ship reads as full.
-      const maxHealth =
-        this.warshipMaxHealth +
-        Math.floor(
-          (this.warshipMaxHealth * unit.veterancy * this.veterancyHealthBonus) /
-            100,
-        );
+      // Veteran warships have a higher effective max health, so a full veteran
+      // ship reads as full. Shared with the engine's UnitImpl.maxHealth().
+      const maxHealth = maxHealthWithVeterancy(
+        this.warshipMaxHealth,
+        unit.veterancy,
+        this.veterancyHealthBonus,
+      );
       if (unit.health < maxHealth) {
         this.pushHealth(unit, unit.health / maxHealth);
       }

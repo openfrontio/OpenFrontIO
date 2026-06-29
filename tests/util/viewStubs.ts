@@ -159,7 +159,6 @@ export function makeUnitUpdate(
     markedForDeletion: false,
     missileTimerQueue: [],
     level: 1,
-    veterancy: 0,
     hasTrainStation: false,
     ...overrides,
   };

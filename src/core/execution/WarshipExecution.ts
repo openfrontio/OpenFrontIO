@@ -169,9 +169,14 @@ export class WarshipExecution implements Execution {
     ) {
       return false;
     }
-    if (
-      healthBeforeHealing >= this.mg.config().warshipRetreatHealthThreshold()
-    ) {
+    // Percentage of (veterancy-adjusted) max health, so a tougher veteran ship
+    // retreats at the same relative health as a fresh one. Integer math.
+    const retreatThreshold = Math.floor(
+      (this.warship.maxHealth() *
+        this.mg.config().warshipRetreatHealthPercent()) /
+        100,
+    );
+    if (healthBeforeHealing >= retreatThreshold) {
       return false;
     }
     const ports = this.warship.owner().units(UnitType.Port);

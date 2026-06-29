@@ -65,7 +65,7 @@ function unitStateFromUpdate(u: UnitUpdate): UnitState {
     troops: u.troops,
     missileTimerQueue: u.missileTimerQueue,
     level: u.level,
-    veterancy: u.veterancy,
+    veterancy: u.warshipState?.veterancy ?? 0,
     hasTrainStation: u.hasTrainStation,
     trainType: trainTypeToNum(u.trainType),
     loaded: u.loaded ?? null,
@@ -94,7 +94,7 @@ function applyUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.troops = u.troops;
   target.missileTimerQueue = u.missileTimerQueue;
   target.level = u.level;
-  target.veterancy = u.veterancy;
+  target.veterancy = u.warshipState?.veterancy ?? 0;
   target.hasTrainStation = u.hasTrainStation;
   target.trainType = trainTypeToNum(u.trainType);
   target.loaded = u.loaded ?? null;
@@ -231,17 +231,6 @@ export class UnitView {
   }
   health(): number {
     return this.state.health ?? 0;
-  }
-  maxHealth(): number {
-    const base = this.gameView.config().unitInfo(this.type()).maxHealth ?? 1;
-    if (this.type() === UnitType.Warship && this.state.veterancy > 0) {
-      // Mirror the engine's integer UnitImpl.maxHealth().
-      const bonusPercent = this.gameView.config().warshipVeterancyHealthBonus();
-      return (
-        base + Math.floor((base * this.state.veterancy * bonusPercent) / 100)
-      );
-    }
-    return base;
   }
   veterancy(): number {
     return this.state.veterancy;

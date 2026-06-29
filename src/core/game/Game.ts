@@ -32,6 +32,10 @@ export type WarshipState = {
   retreatPort?: TileRef;
   isInCombat?: boolean;
   lastCombatTick: number;
+  // Veterancy level (0–max) plus a shared integer progress meter fed by
+  // transport kills and trade captures (see UnitImpl.addVeterancyProgress).
+  veterancy: number;
+  veterancyProgress: number;
 };
 
 export type TransportShipState = {
@@ -485,7 +489,7 @@ export interface Unit {
   modifyHealth(delta: number, attacker?: Player): void;
 
   // Warship veterancy
-  /** Current veterancy level (0 = none). Always 0 for non-warships. */
+  /** Current veterancy level from warshipState (0 for non-warships). */
   veterancy(): number;
   /** Record this warship destroying an enemy unit (drives veterancy gain). */
   recordKill(targetType: UnitType): void;

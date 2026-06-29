@@ -16,6 +16,7 @@ import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
+import { maxHealthWithVeterancy } from "./Veterancy";
 
 export class UnitImpl implements Unit {
   private _active = true;
@@ -37,10 +38,6 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _level: number = 1;
-  // Warship veterancy: level (0–max) plus a shared integer progress meter fed
-  // by transport kills and trade captures (see addVeterancyProgress).
-  private _veterancy: number = 0;
-  private _veterancyProgress: number = 0;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
@@ -75,6 +72,8 @@ export class UnitImpl implements Unit {
         state: "patrolling",
         patrolTile: params.patrolTile,
         lastCombatTick: -100,
+        veterancy: 0,
+        veterancyProgress: 0,
       };
     }
     this._targetUnit =
@@ -152,7 +151,6 @@ export class UnitImpl implements Unit {
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
-      veterancy: this._veterancy,
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
@@ -227,12 +225,12 @@ export class UnitImpl implements Unit {
 
   maxHealth(): number {
     const base = this.info().maxHealth ?? 1;
-    if (this._type === UnitType.Warship && this._veterancy > 0) {
-      // Integer percent math — keep src/core float-free for determinism.
-      const bonusPercent = this.mg.config().warshipVeterancyHealthBonus();
-      return base + Math.floor((base * this._veterancy * bonusPercent) / 100);
-    }
-    return base;
+    // veterancy() is 0 for non-warships, so this returns base for them.
+    return maxHealthWithVeterancy(
+      base,
+      this.veterancy(),
+      this.mg.config().warshipVeterancyHealthBonus(),
+    );
   }
 
   modifyHealth(delta: number, attacker?: Player): void {
@@ -386,6 +384,8 @@ export class UnitImpl implements Unit {
       patrolTile: merged.patrolTile,
       retreatPort: merged.retreatPort,
       lastCombatTick: this._warshipState.lastCombatTick,
+      veterancy: this._warshipState.veterancy,
+      veterancyProgress: this._warshipState.veterancyProgress,
     };
     this.mg.addUpdate(this.toUpdate());
   }
@@ -536,31 +536,33 @@ export class UnitImpl implements Unit {
   }
 
   veterancy(): number {
-    return this._veterancy;
+    return this._warshipState?.veterancy ?? 0;
   }
 
   /** Raise veterancy by one level (capped), which raises max health. The ship
    *  is NOT instantly healed — it heals toward the higher cap normally.
    *  No-op for non-warships or at the cap. */
   private increaseVeterancy(): void {
-    if (this._type !== UnitType.Warship) {
+    if (this._warshipState === undefined) {
       return;
     }
-    if (this._veterancy >= this.mg.config().warshipMaxVeterancy()) {
+    if (
+      this._warshipState.veterancy >= this.mg.config().warshipMaxVeterancy()
+    ) {
       return;
     }
-    this._veterancy++;
+    this._warshipState.veterancy++;
     this.mg.addUpdate(this.toUpdate());
   }
 
   recordKill(targetType: UnitType): void {
-    if (this._type !== UnitType.Warship) {
+    if (this._warshipState === undefined) {
       return;
     }
     if (targetType === UnitType.Warship) {
       // Final blow on an enemy warship: instant level, and the partial
       // transport/capture progress toward the next level is wiped.
-      this._veterancyProgress = 0;
+      this._warshipState.veterancyProgress = 0;
       this.increaseVeterancy();
     } else if (targetType === UnitType.TransportShip) {
       this.addVeterancyProgress(UnitType.TransportShip);
@@ -568,7 +570,7 @@ export class UnitImpl implements Unit {
   }
 
   recordTradeCapture(): void {
-    if (this._type !== UnitType.Warship) {
+    if (this._warshipState === undefined) {
       return;
     }
     this.addVeterancyProgress(UnitType.TradeShip);
@@ -585,11 +587,11 @@ export class UnitImpl implements Unit {
    * Overflow carries into the next level (only a warship kill resets it).
    */
   private addVeterancyProgress(source: UnitType): void {
-    if (this._type !== UnitType.Warship) {
+    if (this._warshipState === undefined) {
       return;
     }
     const maxVeterancy = this.mg.config().warshipMaxVeterancy();
-    if (this._veterancy >= maxVeterancy) {
+    if (this._warshipState.veterancy >= maxVeterancy) {
       return;
     }
     const transportThreshold = this.mg
@@ -597,17 +599,17 @@ export class UnitImpl implements Unit {
       .warshipVeterancyTransportKills();
     const captureThreshold = this.mg.config().warshipVeterancyTradeCaptures();
     const pointsPerLevel = transportThreshold * captureThreshold;
-    this._veterancyProgress +=
+    this._warshipState.veterancyProgress +=
       source === UnitType.TransportShip ? captureThreshold : transportThreshold;
     while (
-      this._veterancyProgress >= pointsPerLevel &&
-      this._veterancy < maxVeterancy
+      this._warshipState.veterancyProgress >= pointsPerLevel &&
+      this._warshipState.veterancy < maxVeterancy
     ) {
-      this._veterancyProgress -= pointsPerLevel;
+      this._warshipState.veterancyProgress -= pointsPerLevel;
       this.increaseVeterancy();
     }
-    if (this._veterancy >= maxVeterancy) {
-      this._veterancyProgress = 0;
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      this._warshipState.veterancyProgress = 0;
     }
   }
 
