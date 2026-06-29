@@ -77,10 +77,22 @@ export async function getAuthHeader(): Promise<string> {
   return `Bearer ${jwt}`;
 }
 
-export async function logOut(
-  allSessions: boolean = false,
-  userInitiated: boolean = false,
-): Promise<boolean> {
+export interface LogOutOptions {
+  /** Revoke every session (/auth/revoke) instead of just the current one. */
+  allSessions?: boolean;
+  /**
+   * Set only for an explicit, user-initiated logout — the one case where we
+   * also wipe the local persistent identity + cosmetics. Error-path callers
+   * must leave this false, or a transient failure becomes a permanent new
+   * guest account.
+   */
+  userInitiated?: boolean;
+}
+
+export async function logOut({
+  allSessions = false,
+  userInitiated = false,
+}: LogOutOptions = {}): Promise<boolean> {
   try {
     const response = await fetch(
       getApiBase() + (allSessions ? "/auth/revoke" : "/auth/logout"),

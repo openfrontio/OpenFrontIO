@@ -130,7 +130,7 @@ describe("Auth: refresh resilience and session-expiry handling", () => {
     await logOut(); // error-path / programmatic logout
     expect(localStorage.getItem(PERSISTENT_ID_KEY)).toBe("keep-me-456");
 
-    await logOut(false, true); // the real "Log out" button
+    await logOut({ userInitiated: true }); // the real "Log out" button
     expect(localStorage.getItem(PERSISTENT_ID_KEY)).toBeNull();
   });
 });

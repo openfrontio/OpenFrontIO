@@ -585,7 +585,7 @@ export class AccountModal extends BaseModal {
   }
 
   private async handleLogout() {
-    await logOut(false, true);
+    await logOut({ userInitiated: true });
     this.close();
     // Refresh the page after logout to update the UI state
     window.location.reload();
