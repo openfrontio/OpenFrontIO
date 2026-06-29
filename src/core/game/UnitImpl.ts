@@ -37,10 +37,10 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _level: number = 1;
-  // Warship veterancy: level (0–max) plus running tallies toward the next level.
+  // Warship veterancy: level (0–max) plus a shared integer progress meter fed
+  // by transport kills and trade captures (see addVeterancyProgress).
   private _veterancy: number = 0;
-  private _transportKills: number = 0;
-  private _tradeCaptures: number = 0;
+  private _veterancyProgress: number = 0;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
@@ -558,15 +558,12 @@ export class UnitImpl implements Unit {
       return;
     }
     if (targetType === UnitType.Warship) {
-      // A killing blow on an enemy warship grants a level outright.
+      // Final blow on an enemy warship: instant level, and the partial
+      // transport/capture progress toward the next level is wiped.
+      this._veterancyProgress = 0;
       this.increaseVeterancy();
     } else if (targetType === UnitType.TransportShip) {
-      this._transportKills++;
-      const threshold = this.mg.config().warshipVeterancyTransportKills();
-      if (this._transportKills >= threshold) {
-        this._transportKills -= threshold;
-        this.increaseVeterancy();
-      }
+      this.addVeterancyProgress(UnitType.TransportShip);
     }
   }
 
@@ -574,11 +571,43 @@ export class UnitImpl implements Unit {
     if (this._type !== UnitType.Warship) {
       return;
     }
-    this._tradeCaptures++;
-    const threshold = this.mg.config().warshipVeterancyTradeCaptures();
-    if (this._tradeCaptures >= threshold) {
-      this._tradeCaptures -= threshold;
+    this.addVeterancyProgress(UnitType.TradeShip);
+  }
+
+  /**
+   * Add partial progress toward the next veterancy level from a non-kill source.
+   *
+   * Transports and captures share one integer progress meter. One level =
+   * transportThreshold * captureThreshold points; a transport is worth
+   * `captureThreshold` points and a capture is worth `transportThreshold`
+   * points. That makes `transportThreshold` transports OR `captureThreshold`
+   * captures (or any mix) fill exactly one level — all integer math, no floats.
+   * Overflow carries into the next level (only a warship kill resets it).
+   */
+  private addVeterancyProgress(source: UnitType): void {
+    if (this._type !== UnitType.Warship) {
+      return;
+    }
+    const maxVeterancy = this.mg.config().warshipMaxVeterancy();
+    if (this._veterancy >= maxVeterancy) {
+      return;
+    }
+    const transportThreshold = this.mg
+      .config()
+      .warshipVeterancyTransportKills();
+    const captureThreshold = this.mg.config().warshipVeterancyTradeCaptures();
+    const pointsPerLevel = transportThreshold * captureThreshold;
+    this._veterancyProgress +=
+      source === UnitType.TransportShip ? captureThreshold : transportThreshold;
+    while (
+      this._veterancyProgress >= pointsPerLevel &&
+      this._veterancy < maxVeterancy
+    ) {
+      this._veterancyProgress -= pointsPerLevel;
       this.increaseVeterancy();
+    }
+    if (this._veterancy >= maxVeterancy) {
+      this._veterancyProgress = 0;
     }
   }
 
