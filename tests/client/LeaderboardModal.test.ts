@@ -303,7 +303,7 @@ describe("LeaderboardModal", () => {
       expect(modal.tagName.toLowerCase()).toBe("leaderboard-modal");
     });
 
-    it("should close on Escape when open", () => {
+    it("should close on Escape when open", async () => {
       const mockModalEl = { open: vi.fn(), close: vi.fn() };
       Object.defineProperty(modal, "modalEl", {
         get: () => mockModalEl,
@@ -317,6 +317,9 @@ describe("LeaderboardModal", () => {
       );
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      // handleKeyDown awaits confirmBeforeClose() before closing, so the close
+      // is deferred to a later microtask — flush it before asserting.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect((modal as unknown as { isModalOpen: boolean }).isModalOpen).toBe(
         false,
       );
