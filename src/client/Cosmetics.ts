@@ -14,13 +14,13 @@ import {
   Skin,
   Subscription,
 } from "../core/CosmeticSchemas";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerEffect,
   PlayerPattern,
 } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   changeSubscriptionTier,
   createCheckoutSession,
@@ -65,10 +65,25 @@ export function getLocalSelectedSkin(): { name: string; url: string } | null {
 
 export type PaymentMethod = "dollar" | "hard" | "soft";
 
+/** Returned by {@link purchaseCosmetic} when the player can't afford an item. */
+export interface InsufficientCurrency {
+  /** Display name of the currency, e.g. "Plutonium". */
+  currency: string;
+  /** How much more currency is needed (raw; localized in the dialog text). */
+  shortfall: number;
+  /** Display name of the item being bought. */
+  item: string;
+  /** Whether the currency can be topped up (hard currency only). */
+  canTopUp: boolean;
+}
+
+/** Outcome of a purchase: unaffordable details, or void on success/redirect. */
+export type PurchaseResult = InsufficientCurrency | void;
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
-): Promise<void> {
+): Promise<PurchaseResult> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
   const colorPaletteName = resolved.colorPalette?.name;
@@ -152,12 +167,20 @@ export async function purchaseCosmetic(
       ? (userMe.player.currency?.hard ?? 0)
       : (userMe.player.currency?.soft ?? 0);
   if (balance < price) {
-    alert(translateText("store.not_enough_currency"));
-    if (method === "hard") {
-      // Send the user to the packs tab so they can top up plutonium.
-      window.location.hash = "#modal=store&tab=packs";
-    }
-    return;
+    const currencyName = translateText(
+      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+    );
+    const itemName =
+      resolved.type === "flag"
+        ? translateCosmetic("flags", c.name)
+        : translateCosmetic("territory_patterns.pattern", c.name);
+    return {
+      currency: currencyName,
+      shortfall: price - balance,
+      item: itemName,
+      // Only plutonium can be topped up; caps are dismiss-only.
+      canTopUp: method === "hard",
+    };
   }
 
   const cosmeticType = resolved.type as "pattern" | "skin" | "flag" | "effect";
