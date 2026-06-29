@@ -77,7 +77,10 @@ export async function getAuthHeader(): Promise<string> {
   return `Bearer ${jwt}`;
 }
 
-export async function logOut(allSessions: boolean = false): Promise<boolean> {
+export async function logOut(
+  allSessions: boolean = false,
+  userInitiated: boolean = false,
+): Promise<boolean> {
   try {
     const response = await fetch(
       getApiBase() + (allSessions ? "/auth/revoke" : "/auth/logout"),
@@ -98,9 +101,14 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     return false;
   } finally {
     __jwt = null;
-    localStorage.removeItem(PERSISTENT_ID_KEY);
-    new UserSettings().clearFlag();
-    new UserSettings().setSelectedPatternName(undefined);
+    // Only destroy the local persistent identity / cosmetics on an explicit
+    // user logout. Error-path callers must NOT wipe identity, or a transient
+    // failure turns into a permanent brand-new guest account.
+    if (userInitiated) {
+      localStorage.removeItem(PERSISTENT_ID_KEY);
+      new UserSettings().clearFlag();
+      new UserSettings().setSelectedPatternName(undefined);
+    }
   }
 }
 
@@ -197,7 +205,11 @@ async function doRefreshJwt(): Promise<void> {
     });
     if (response.status !== 200) {
       console.error("Refresh failed", response);
-      logOut();
+      // A non-200 here is usually transient (Cloudflare 5xx/520-524, 429
+      // rate-limit) or an ambiguous edge error. Do NOT revoke the session or
+      // wipe the persistent identity for it — mirror the network-error path
+      // below and let the next refresh recover.
+      __jwt = null;
       return;
     }
     const json = await response.json();

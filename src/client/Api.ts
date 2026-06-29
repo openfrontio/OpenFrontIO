@@ -70,10 +70,11 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
           authorization: `Bearer ${jwt}`,
         },
       });
-      if (response.status === 401) {
-        await logOut();
-        return false;
-      }
+      // A 401 here is treated like any other non-200 (return false). We
+      // deliberately do NOT logOut(): the JWT was just refreshed by userAuth(),
+      // so a 401 from /users/@me is transient/ambiguous and must not revoke the
+      // session or wipe the persistent identity. The backend already made
+      // /users/@me 401 non-authoritative.
       if (response.status !== 200) return false;
       const body = await response.json();
       const result = UserMeResponseSchema.safeParse(body);
