@@ -1,12 +1,15 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { TransportShipTrailAttributes } from "../core/CosmeticSchemas";
+import {
+  findEffect,
+  TransportShipTrailAttributes,
+} from "../core/CosmeticSchemas";
 import {
   EFFECTS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
 } from "../core/game/UserSettings";
 import { renderTransportShipTrailSwatch } from "./components/EffectPreview";
-import { getPlayerCosmetics } from "./Cosmetics";
+import { fetchCosmetics, getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
 
@@ -18,10 +21,24 @@ export class EffectsInput extends LitElement {
 
   private _abortController: AbortController | null = null;
 
-  private _onCosmeticSelected = async () => {
+  // PlayerEffect is just { name, effectType }; resolve the visual style from the
+  // cosmetics catalog by (effectType, name).
+  private async resolveTrailAttributes(): Promise<TransportShipTrailAttributes | null> {
     const cosmetics = await getPlayerCosmetics();
-    this.trailAttributes =
-      cosmetics.effects?.["transportShipTrail"]?.attributes ?? null;
+    const name = cosmetics.effects?.["transportShipTrail"]?.name;
+    if (!name) return null;
+    const effect = findEffect(
+      await fetchCosmetics(),
+      "transportShipTrail",
+      name,
+    );
+    return effect?.effectType === "transportShipTrail"
+      ? effect.attributes
+      : null;
+  }
+
+  private _onCosmeticSelected = async () => {
+    this.trailAttributes = await this.resolveTrailAttributes();
   };
 
   private onInputClick(e: Event) {
@@ -38,9 +55,7 @@ export class EffectsInput extends LitElement {
   async connectedCallback() {
     super.connectedCallback();
     this._abortController = new AbortController();
-    const cosmetics = await getPlayerCosmetics();
-    this.trailAttributes =
-      cosmetics.effects?.["transportShipTrail"]?.attributes ?? null;
+    this.trailAttributes = await this.resolveTrailAttributes();
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${EFFECTS_KEY}`,
       this._onCosmeticSelected,

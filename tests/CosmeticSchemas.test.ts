@@ -254,33 +254,28 @@ describe("findEffect", () => {
   });
 });
 
-describe("PlayerEffectSchema (discriminated on effectType)", () => {
-  it("parses the transportShipTrail variant", () => {
+describe("PlayerEffectSchema (identity: name + effectType)", () => {
+  it("parses a name + effectType (attributes live in the catalog)", () => {
     expect(
       PlayerEffectSchema.safeParse({
         name: "spectrum",
         effectType: "transportShipTrail",
-        attributes: { type: "rainbow" },
       }).success,
     ).toBe(true);
   });
 
-  it("rejects an unknown effectType (no matching union variant)", () => {
+  it("rejects an unknown effectType (not in EFFECT_TYPES)", () => {
     expect(
       PlayerEffectSchema.safeParse({
         name: "spectrum",
         effectType: "glow",
-        attributes: { type: "rainbow" },
       }).success,
     ).toBe(false);
   });
 
-  it("rejects a variant missing its attributes", () => {
-    expect(
-      PlayerEffectSchema.safeParse({
-        name: "spectrum",
-        effectType: "transportShipTrail",
-      }).success,
-    ).toBe(false);
+  it("requires an effectType", () => {
+    expect(PlayerEffectSchema.safeParse({ name: "spectrum" }).success).toBe(
+      false,
+    );
   });
 });

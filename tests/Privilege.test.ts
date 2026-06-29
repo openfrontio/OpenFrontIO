@@ -570,7 +570,6 @@ describe("Effect validation in isAllowed", () => {
       expect(result.cosmetics.effects?.transportShipTrail).toEqual({
         name: "spectrum",
         effectType: "transportShipTrail",
-        attributes: { type: "rainbow" },
       });
     }
   });
@@ -581,9 +580,9 @@ describe("Effect validation in isAllowed", () => {
     });
     expect(result.type).toBe("allowed");
     if (result.type === "allowed") {
-      expect(result.cosmetics.effects?.transportShipTrail?.attributes).toEqual({
-        type: "solid",
-        color: "#e01b24",
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "crimson",
+        effectType: "transportShipTrail",
       });
     }
   });
@@ -659,7 +658,6 @@ describe("Effect validation in isAllowed", () => {
       expect(result.cosmetics.effects?.transportShipTrail).toEqual({
         name: "spectrum",
         effectType: "transportShipTrail",
-        attributes: { type: "rainbow" },
       });
     }
   });

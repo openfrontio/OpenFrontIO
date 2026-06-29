@@ -3,8 +3,8 @@ import { z } from "zod";
 import {
   ColorPaletteSchema,
   CosmeticNameSchema,
+  EffectTypeSchema,
   PatternDataSchema,
-  TransportShipTrailAttributesSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
 import {
@@ -604,16 +604,14 @@ export const PlayerSkinSchema = z.object({
   url: z.string(),
 });
 
-// Discriminated on effectType: one variant per effectType, each pairing the
-// effectType literal with its attributes shape. Add a variant when a new
-// effectType ships, e.g. z.object({ effectType: z.literal("glow"), ... }).
-export const PlayerEffectSchema = z.discriminatedUnion("effectType", [
-  z.object({
-    name: CosmeticNameSchema,
-    effectType: z.literal("transportShipTrail"),
-    attributes: TransportShipTrailAttributesSchema,
-  }),
-]);
+// A resolved effect is just an identity: which effect, of which type. Its
+// attributes (the visual style) are resolved from the cosmetics catalog by
+// (effectType, name), so this needs no per-type variants — a new effectType
+// just becomes a new EFFECT_TYPES entry, no change here.
+export const PlayerEffectSchema = z.object({
+  name: CosmeticNameSchema,
+  effectType: EffectTypeSchema,
+});
 
 // Server converts refs to the actual cosmetics here
 export const PlayerCosmeticsSchema = z.object({

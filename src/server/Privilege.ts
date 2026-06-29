@@ -291,7 +291,6 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       return {
         name: found.name,
         effectType: found.effectType,
-        attributes: found.attributes,
       };
     }
     throw new Error(`No flares for effect ${name}`);

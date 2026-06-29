@@ -712,7 +712,6 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
         effects[effectType] = {
           name: effect.name,
           effectType: effect.effectType,
-          attributes: effect.attributes,
         };
       }
     }
