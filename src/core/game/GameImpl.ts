@@ -1204,6 +1204,9 @@ export class GameImpl implements Game {
   hasWaterComponent(tile: TileRef, component: number): boolean {
     return this._waterManager.hasWaterComponent(tile, component);
   }
+  getWaterComponentSize(tile: TileRef): number | null {
+    return this._waterManager.getWaterComponentSize(tile);
+  }
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);
   }

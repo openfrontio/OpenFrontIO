@@ -78,6 +78,13 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
+/**
+ * Minimum number of full-map water tiles a water body must have for the AI to
+ * consider placing a port on it.  Prevents the AI from wasting ports on tiny
+ * decorative ponds scattered across the map.
+ */
+const MIN_PORT_WATER_COMPONENT_SIZE = 3000;
+
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
@@ -844,7 +851,14 @@ export class NationStructureBehavior {
         // tile a valid port site — skip the component lookup.
         if (this.game.isOcean(neighbor)) return true;
         const comp = this.game.getWaterComponent(neighbor);
-        if (comp !== null && shared.has(comp)) return true;
+        if (comp === null || !shared.has(comp)) continue;
+        // Skip tiny lakes that are too small for meaningful port use (not on Easy).
+        const { difficulty } = this.game.config().gameConfig();
+        if (difficulty !== Difficulty.Easy) {
+          const size = this.game.getWaterComponentSize(neighbor);
+          if (size !== null && size < MIN_PORT_WATER_COMPONENT_SIZE) continue;
+        }
+        return true;
       }
       return false;
     });
