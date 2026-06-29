@@ -982,7 +982,9 @@
     "world": "World"
   },
   "map_component": {
+    "collapse_all": "Collapse all",
     "error": "Error",
+    "expand_all": "Expand all",
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
     "loading": "Loading...",
