@@ -95,7 +95,7 @@ export function initNavigation() {
     const mainEl = document.querySelector("main");
 
     if (mainEl) {
-      mainEl.addEventListener("click", (e: Event) => {
+      mainEl.addEventListener("click", async (e: Event) => {
         const target = e.target as HTMLElement;
         const isPlayPageHidden = document
           .getElementById("page-play")
@@ -118,7 +118,7 @@ export function initNavigation() {
               // Check confirmation guard before closing
               if (
                 typeof openModal.confirmBeforeClose === "function" &&
-                !openModal.confirmBeforeClose()
+                !(await openModal.confirmBeforeClose())
               ) {
                 return;
               }

@@ -552,8 +552,8 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  public confirmBeforeClose(): boolean {
-    return confirm(translateText("host_modal.leave_confirmation"));
+  public confirmBeforeClose(): boolean | Promise<boolean> {
+    return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {

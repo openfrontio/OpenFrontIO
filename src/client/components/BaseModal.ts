@@ -3,6 +3,7 @@ import { property, query, state } from "lit/decorators.js";
 import { modalRouter } from "../ModalRouter";
 import "./baseComponents/Modal";
 import type { OModalTab } from "./baseComponents/Modal";
+import "./ConfirmDialog";
 
 /**
  * Static-ish configuration for the <o-modal> shell.
@@ -38,6 +39,12 @@ export abstract class BaseModal extends LitElement {
   @state() protected isModalOpen = false;
   @state() protected activeTab = "";
   @property({ type: Boolean }) inline = false;
+
+  // Pending close confirmation; when set, renders the inline confirm dialog.
+  @state() private closeConfirm: {
+    message: string;
+    resolve: (ok: boolean) => void;
+  } | null = null;
 
   // Re-entrancy guard: showPage() (for inline modals) re-invokes .open()
   // with no args after we call it. We must not re-run onOpen(undefined)
@@ -91,10 +98,28 @@ export abstract class BaseModal extends LitElement {
 
   /**
    * Guard called before closing via Escape key or click-outside.
-   * Return false to prevent the modal from closing.
+   * Return false (or a promise resolving false) to prevent closing.
    */
-  public confirmBeforeClose(): boolean {
+  public confirmBeforeClose(): boolean | Promise<boolean> {
     return true;
+  }
+
+  /**
+   * Show a styled confirm dialog and resolve to the user's choice. Call from
+   * confirmBeforeClose() to gate closing behind a confirm/cancel prompt.
+   */
+  protected confirmClose(message: string): Promise<boolean> {
+    // Don't stack a second prompt if one is already open.
+    if (this.closeConfirm) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      this.closeConfirm = { message, resolve };
+    });
+  }
+
+  private settleCloseConfirm(ok: boolean) {
+    const pending = this.closeConfirm;
+    this.closeConfirm = null;
+    pending?.resolve(ok);
   }
 
   // ---- Rendering ----
@@ -133,6 +158,14 @@ export abstract class BaseModal extends LitElement {
         ${headerSlot ? html`<div slot="header">${headerSlot}</div>` : null}
         ${body}
       </o-modal>
+      ${this.closeConfirm
+        ? html`<confirm-dialog
+            .message=${this.closeConfirm.message}
+            variant="warning"
+            @confirm=${() => this.settleCloseConfirm(true)}
+            @cancel=${() => this.settleCloseConfirm(false)}
+          ></confirm-dialog>`
+        : null}
     `;
   }
 
@@ -234,9 +267,9 @@ export abstract class BaseModal extends LitElement {
 
   protected firstUpdated(): void {
     if (this.modalEl) {
-      this.modalEl.onClose = () => {
+      this.modalEl.onClose = async () => {
         if (this.isModalOpen) {
-          if (!this.confirmBeforeClose()) {
+          if (!(await this.confirmBeforeClose())) {
             // Re-open the underlying o-modal since it already closed itself
             this.modalEl?.open();
             return;
@@ -252,10 +285,10 @@ export abstract class BaseModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private handleKeyDown = async (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.isModalOpen) {
       e.preventDefault();
-      if (!this.confirmBeforeClose()) {
+      if (!(await this.confirmBeforeClose())) {
         return;
       }
       this.close();
