@@ -6,6 +6,7 @@ import { Cosmetics } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
+import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -17,7 +18,7 @@ import {
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
-type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
+type StoreTab = "patterns" | "flags" | "effects" | "packs" | "subscriptions";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -44,6 +45,7 @@ export class StoreModal extends BaseModal {
           : []),
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
+        { key: "effects", label: translateText("store.effects") },
       ],
     };
   }
@@ -150,6 +152,17 @@ export class StoreModal extends BaseModal {
     `;
   }
 
+  private renderEffectGrid(): TemplateResult {
+    // Grouped by effectType with a sub-header per type (see <effects-grid>),
+    // matching the home selection modal.
+    return html`<effects-grid
+      mode="purchase"
+      .cosmetics=${this.cosmetics}
+      .userMeResponse=${this.userMeResponse}
+      .affiliateCode=${this.affiliateCode}
+    ></effects-grid>`;
+  }
+
   private renderPackGrid(): TemplateResult {
     const items = resolveCosmetics(
       this.cosmetics,
@@ -234,6 +247,8 @@ export class StoreModal extends BaseModal {
         return this.renderPatternGrid();
       case "flags":
         return this.renderFlagGrid();
+      case "effects":
+        return this.renderEffectGrid();
       case "subscriptions":
         return this.renderSubscriptionGrid();
       case "packs":
@@ -252,6 +267,7 @@ export class StoreModal extends BaseModal {
         (r.type === "pattern" ||
           r.type === "skin" ||
           r.type === "flag" ||
+          r.type === "effect" ||
           r.type === "pack") &&
         r.relationship === "purchasable",
     );

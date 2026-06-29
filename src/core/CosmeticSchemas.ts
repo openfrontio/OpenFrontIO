@@ -9,6 +9,13 @@ export type Flag = z.infer<typeof FlagSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
+// An effect cosmetic of any type — discriminated on effectType (today only
+// transportShipTrail; gains a member per effectType).
+export type Effect = z.infer<typeof EffectSchema>;
+export type EffectType = z.infer<typeof EffectTypeSchema>;
+export type TransportShipTrailAttributes = z.infer<
+  typeof TransportShipTrailAttributesSchema
+>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -85,6 +92,49 @@ export const SkinSchema = CosmeticSchema.extend({
   url: z.string(),
 });
 
+// "effects" is a cosmetic category alongside skins/flags. The catalog is nested
+// effects[effectType][effectName], and each effect also carries an effectType
+// field matching its outer key (so an Effect can stand alone / discriminate).
+// effectTypes are listed explicitly in CosmeticsSchema so each type's attributes
+// stay precisely typed; an effectType the client doesn't list is dropped at parse
+// (the UI only handles EFFECT_TYPES), so a new server-side effectType never fails
+// the whole cosmetics parse.
+export const EFFECT_TYPES = ["transportShipTrail"] as const;
+export const EffectTypeSchema = z.enum(EFFECT_TYPES);
+
+// Boat-trail styles, discriminated on `type`: each known style carries exactly
+// the fields it uses (rainbow has none; solid/pulse need a color; gradient needs
+// both). A `type` we don't recognize — a style shipped to cosmetics.json before
+// this client updated — normalizes to { type: "unknown" } instead of failing the
+// catalog parse, so one new style never wipes the whole catalog; the renderer
+// shows a neutral swatch. `type` itself stays required.
+export const TransportShipTrailAttributesSchema = z.union([
+  z.discriminatedUnion("type", [
+    z.object({ type: z.literal("solid"), color: z.string() }),
+    z.object({ type: z.literal("rainbow") }),
+    z.object({ type: z.literal("pulse"), color: z.string() }),
+    z.object({
+      type: z.literal("gradient"),
+      color: z.string(),
+      color2: z.string(),
+    }),
+  ]),
+  z
+    .object({ type: z.string() })
+    .transform(() => ({ type: "unknown" as const })),
+]);
+
+const TransportShipTrailEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("transportShipTrail"),
+  attributes: TransportShipTrailAttributesSchema,
+  url: z.string().optional(),
+});
+
+// Any catalog effect, discriminated on effectType. Add a member per effectType.
+export const EffectSchema = z.discriminatedUnion("effectType", [
+  TransportShipTrailEffectSchema,
+]);
+
 export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),
   currency: z.enum(["hard", "soft"]),
@@ -105,9 +155,41 @@ export const CosmeticsSchema = z.object({
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
   skins: z.record(z.string(), SkinSchema).optional(),
+  // Grouped by effectType. Each effect also carries its own effectType (matching
+  // this outer key) so an Effect stands alone and EffectSchema can discriminate
+  // on it. Add a key per new effectType.
+  effects: z
+    .object({
+      transportShipTrail: z
+        .record(z.string(), TransportShipTrailEffectSchema)
+        .optional(),
+    })
+    .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });
+
+/**
+ * Resolve an effect in the nested catalog (effects[effectType][effectKey]). The
+ * catalog object key is normally identical to the effect's `name`, but selection
+ * and ownership flares are both name-based, so fall back to a `name`-field search
+ * when the object key differs. Without this fallback a catalog whose key !== name
+ * would make the effect silently unselectable (the selected name never resolves).
+ */
+export function findEffect(
+  cosmetics: Cosmetics | null | undefined,
+  effectType: string,
+  name: string,
+): Effect | undefined {
+  // effects is keyed by the known effectTypes; index it by an arbitrary runtime
+  // string (a selection/ref may name a type this client doesn't list).
+  const byType = cosmetics?.effects as
+    | Record<string, Record<string, Effect>>
+    | undefined;
+  const byName = byType?.[effectType];
+  if (!byName) return undefined;
+  return byName[name] ?? Object.values(byName).find((e) => e.name === name);
+}
 
 export const DefaultPattern = {
   name: "default",

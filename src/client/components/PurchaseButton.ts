@@ -1,8 +1,10 @@
 import { html, LitElement, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
+import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
+import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
 
 const PURCHASE_STYLE_ID = "purchase-button-styles";
@@ -200,21 +202,26 @@ export class PurchaseButton extends LitElement {
   priceSuffix: string = "";
 
   @property({ type: Function })
-  onPurchaseDollar?: () => void;
+  onPurchaseDollar?: () => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseHard?: () => void;
+  onPurchaseHard?: () => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseSoft?: () => void;
+  onPurchaseSoft?: () => Promise<PurchaseResult>;
+
+  /** Set when a purchase fails for lack of funds; drives the dialog. */
+  @state() private insufficient: InsufficientCurrency | null = null;
+  private busy = false;
 
   createRenderRoot() {
     return this;
   }
 
-  private handleClick(e: Event, handler?: () => void) {
+  private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
-    if (!handler) return;
+    if (!handler || this.busy) return;
+    this.busy = true;
     const container = this.closest("cosmetic-container") as HTMLElement | null;
     if (container && !container.querySelector(".cosmetic-loading-overlay")) {
       const overlay = document.createElement("div");
@@ -222,9 +229,18 @@ export class PurchaseButton extends LitElement {
       overlay.innerHTML = `<div class="cosmetic-loading-spinner"></div>`;
       container.appendChild(overlay);
     }
-    Promise.resolve(handler()).finally(() => {
-      container?.querySelector(".cosmetic-loading-overlay")?.remove();
-    });
+    Promise.resolve(handler())
+      .then((result) => {
+        if (result) this.insufficient = result;
+      })
+      .finally(() => {
+        this.busy = false;
+        container?.querySelector(".cosmetic-loading-overlay")?.remove();
+      });
+  }
+
+  showInsufficient(result: InsufficientCurrency) {
+    this.insufficient = result;
   }
 
   private renderDollarButton() {
@@ -296,6 +312,10 @@ export class PurchaseButton extends LitElement {
           ${hasSoft ? this.renderSoftButton() : null}
         </div>
       </div>
+      <insufficient-currency-dialog
+        .info=${this.insufficient}
+        @close=${() => (this.insufficient = null)}
+      ></insufficient-currency-dialog>
     `;
   }
 }
