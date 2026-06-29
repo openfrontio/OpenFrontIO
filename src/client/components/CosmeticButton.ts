@@ -19,7 +19,6 @@ import "./CosmeticContainer";
 import "./CosmeticInfo";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
-import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 
 @customElement("cosmetic-button")
 export class CosmeticButton extends LitElement {
@@ -265,12 +264,11 @@ export class CosmeticButton extends LitElement {
     const isSkin = type === "skin";
     const isOwnedSubscription =
       type === "subscription" && active.relationship === "owned";
+    // Switching tiers shows "Switch"; a first-time subscribe shows price only.
     const dollarLabelKey =
-      type === "subscription"
-        ? this.userHasSubscription
-          ? "store.switch_button"
-          : "store.subscribe_button"
-        : DEFAULT_DOLLAR_LABEL_KEY;
+      type === "subscription" && this.userHasSubscription
+        ? "store.switch_button"
+        : "";
     const priceSuffix =
       type === "subscription" ? translateText("store.price_per_month") : "";
     const sizeClass = type === "flag" ? "gap-1 p-1.5 w-36" : "gap-2 p-3 w-48";
@@ -329,9 +327,9 @@ export class CosmeticButton extends LitElement {
         ${this.renderColorSwatches()}
         ${isOwnedSubscription
           ? html`<div
-              class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"
+              class="w-full mt-2 px-2 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-base font-bold text-center"
             >
-              ${translateText("store.current_plan")}
+              ${translateText("store.subscribed")}
             </div>`
           : nothing}
       </cosmetic-container>

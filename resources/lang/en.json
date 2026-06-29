@@ -1253,7 +1253,6 @@
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
-    "current_plan": "Current Plan",
     "flags": "Flags",
     "login_required": "You must be logged in to purchase with currency.",
     "no_flags": "No flags available. Check back later for new items.",
@@ -1266,7 +1265,7 @@
     "price_per_month": "/mo",
     "purchase_failed": "Purchase failed. Please try again.",
     "purchase_success": "Purchase succeeded: {name}",
-    "subscribe_button": "Subscribe",
+    "subscribed": "Subscribed",
     "subscription_purchase_success": "Subscription activated!",
     "subscriptions": "Subscriptions",
     "switch_button": "Switch",
@@ -1288,7 +1287,6 @@
     "pattern": {
       "default": "Default"
     },
-    "purchase": "Purchase",
     "search": "Search...",
     "select_skin": "Select Skin",
     "selected": "selected",
