@@ -313,7 +313,33 @@ export class InputHandler {
       () => {
         this.eventBus.emit(new RefreshGraphicsEvent());
       },
-      (e: KeyboardEvent) => this.activeKeys.has(this.keybinds.altKey),
+      (e: KeyboardEvent) => {
+        if (
+          this.keybinds.altKey === "AltLeft" ||
+          this.keybinds.altKey === "AltRight"
+        ) {
+          return e.altKey && !e.ctrlKey;
+        }
+        if (
+          this.keybinds.altKey === "ControlLeft" ||
+          this.keybinds.altKey === "ControlRight"
+        ) {
+          return e.ctrlKey;
+        }
+        if (
+          this.keybinds.altKey === "ShiftLeft" ||
+          this.keybinds.altKey === "ShiftRight"
+        ) {
+          return e.shiftKey;
+        }
+        if (
+          this.keybinds.altKey === "MetaLeft" ||
+          this.keybinds.altKey === "MetaRight"
+        ) {
+          return e.metaKey;
+        }
+        return this.activeKeys.has(this.keybinds.altKey);
+      },
     );
 
     let buildKeybinds: string[] = [
@@ -1055,5 +1081,6 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
+    this.keybindAndEvent = [];
   }
 }

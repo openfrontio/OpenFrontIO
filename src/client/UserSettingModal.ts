@@ -108,6 +108,15 @@ export class UserSettingModal extends BaseModal {
       isEmojiMenuModAndAltKeyConflict = true;
     }
     if (
+      ((action === "emojiMenuModifier" &&
+        activeKeybinds["altKey"] === "AltRight") ||
+        (action === "altKey" &&
+          activeKeybinds["emojiMenuModifier"] === "AltRight")) &&
+      value === "AltRight"
+    ) {
+      isEmojiMenuModAndAltKeyConflict = true;
+    }
+    if (
       values.includes(value) &&
       value !== "Null" &&
       !isEmojiMenuModAndAltKeyConflict
