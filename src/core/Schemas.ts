@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   ColorPaletteSchema,
   CosmeticNameSchema,
+  EffectTypeSchema,
   PatternDataSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
@@ -142,6 +143,7 @@ export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
+export type PlayerEffect = z.infer<typeof PlayerEffectSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -593,11 +595,22 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
+  // At most one selected effect per effectType: key = effectType, value = effect name.
+  effects: z.record(z.string(), CosmeticNameSchema).optional(),
 });
 
 export const PlayerSkinSchema = z.object({
   name: CosmeticNameSchema,
   url: z.string(),
+});
+
+// A resolved effect is just an identity: which effect, of which type. Its
+// attributes (the visual style) are resolved from the cosmetics catalog by
+// (effectType, name), so this needs no per-type variants — a new effectType
+// just becomes a new EFFECT_TYPES entry, no change here.
+export const PlayerEffectSchema = z.object({
+  name: CosmeticNameSchema,
+  effectType: EffectTypeSchema,
 });
 
 // Server converts refs to the actual cosmetics here
@@ -606,6 +619,8 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
+  // Resolved effects keyed by effectType.
+  effects: z.record(z.string(), PlayerEffectSchema).optional(),
 });
 
 export const PlayerSchema = z.object({

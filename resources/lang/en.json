@@ -392,6 +392,13 @@
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },
+  "effects": {
+    "button_title": "Pick an effect!",
+    "title": "Effects",
+    "type": {
+      "transportShipTrail": "Boat Trail"
+    }
+  },
   "error_modal": {
     "connection_error": "Connection error!",
     "copied": "Copied!",
@@ -450,7 +457,7 @@
   "flag_input": {
     "button_title": "Pick a flag!",
     "search_flag": "Search...",
-    "title": "Select Flag"
+    "title": "Flag"
   },
   "friends": {
     "accept": "Accept",
@@ -1255,8 +1262,10 @@
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "effects": "Effects",
     "flags": "Flags",
     "login_required": "You must be logged in to purchase with currency.",
+    "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
     "no_packs": "No packs available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
@@ -1290,7 +1299,7 @@
       "default": "Default"
     },
     "search": "Search...",
-    "select_skin": "Select Skin",
+    "select_skin": "Skin",
     "selected": "selected",
     "title": "Skins"
   },
