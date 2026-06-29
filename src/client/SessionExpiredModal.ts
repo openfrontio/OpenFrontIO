@@ -1,6 +1,6 @@
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { wasLoggedIn } from "./Api";
+import { wasLinkedAccount } from "./Api";
 import { BaseModal, ModalConfig } from "./components/BaseModal";
 import { translateText } from "./Utils";
 
@@ -23,7 +23,7 @@ export class SessionExpiredModal extends BaseModal {
   }
 
   private onSessionExpired = (): void => {
-    if (!wasLoggedIn()) return;
+    if (!wasLinkedAccount()) return;
     if (this.isOpen()) return;
     this.open();
   };
