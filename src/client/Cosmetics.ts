@@ -387,7 +387,7 @@ export type ResolvedCosmetic = {
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
   key: string;
-  /** For effects only: the effectType (the catalog's outer key, not a field). */
+  /** For effects only: the effectType (also the catalog's outer key). */
   effectType?: string;
 };
 
@@ -464,10 +464,10 @@ export function resolveCosmetics(
   }
 
   // Effects (boat-trail wakes, etc.) — a cosmetic category like skins/flags.
-  // Catalog is nested: effects[effectType][effectName]. effectType is the outer
-  // key (carried on the resolved item, since it's not a field on the effect).
+  // Catalog is nested: effects[effectType][effectName]. We carry effectType (the
+  // outer key, which each effect also stores) on the resolved item.
   for (const [effectType, byName] of Object.entries(cosmetics.effects ?? {})) {
-    for (const [effectKey, effect] of Object.entries(byName)) {
+    for (const [effectKey, effect] of Object.entries(byName ?? {})) {
       const rel = effectRelationship(effect, userMeResponse, affiliateCode);
       result.push({
         type: "effect",
@@ -711,7 +711,7 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
       if (effect) {
         effects[effectType] = {
           name: effect.name,
-          effectType: effectType as EffectType,
+          effectType: effect.effectType,
           attributes: effect.attributes,
         };
       }

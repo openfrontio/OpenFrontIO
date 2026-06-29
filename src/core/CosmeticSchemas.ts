@@ -9,6 +9,8 @@ export type Flag = z.infer<typeof FlagSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
+// An effect cosmetic of any type — discriminated on effectType (today only
+// transportShipTrail; gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
 export type TransportShipTrailAttributes = z.infer<
@@ -91,11 +93,12 @@ export const SkinSchema = CosmeticSchema.extend({
 });
 
 // "effects" is a cosmetic category alongside skins/flags. The catalog is nested
-// effects[effectType][effectName]; the effectType is the OUTER key, NOT a field
-// on each effect. Both the effectType and the attribute `type` are kept lenient
-// so effectTypes / attribute types we don't recognize don't fail the whole
-// cosmetics parse — the UI simply ignores anything outside EFFECT_TYPES and the
-// known attribute types.
+// effects[effectType][effectName], and each effect also carries an effectType
+// field matching its outer key (so an Effect can stand alone / discriminate).
+// effectTypes are listed explicitly in CosmeticsSchema so each type's attributes
+// stay precisely typed; an effectType the client doesn't list is dropped at parse
+// (the UI only handles EFFECT_TYPES), so a new server-side effectType never fails
+// the whole cosmetics parse.
 export const EFFECT_TYPES = ["transportShipTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
@@ -121,10 +124,16 @@ export const TransportShipTrailAttributesSchema = z.union([
     .transform(() => ({ type: "unknown" as const })),
 ]);
 
-export const EffectSchema = CosmeticSchema.extend({
+const TransportShipTrailEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("transportShipTrail"),
   attributes: TransportShipTrailAttributesSchema,
   url: z.string().optional(),
 });
+
+// Any catalog effect, discriminated on effectType. Add a member per effectType.
+export const EffectSchema = z.discriminatedUnion("effectType", [
+  TransportShipTrailEffectSchema,
+]);
 
 export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),
@@ -146,8 +155,16 @@ export const CosmeticsSchema = z.object({
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
   skins: z.record(z.string(), SkinSchema).optional(),
-  // Two-level: effects[effectType][effectName] -> Effect.
-  effects: z.record(z.string(), z.record(z.string(), EffectSchema)).optional(),
+  // Grouped by effectType. Each effect also carries its own effectType (matching
+  // this outer key) so an Effect stands alone and EffectSchema can discriminate
+  // on it. Add a key per new effectType.
+  effects: z
+    .object({
+      transportShipTrail: z
+        .record(z.string(), TransportShipTrailEffectSchema)
+        .optional(),
+    })
+    .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });
@@ -164,7 +181,12 @@ export function findEffect(
   effectType: string,
   name: string,
 ): Effect | undefined {
-  const byName = cosmetics?.effects?.[effectType];
+  // effects is keyed by the known effectTypes; index it by an arbitrary runtime
+  // string (a selection/ref may name a type this client doesn't list).
+  const byType = cosmetics?.effects as
+    | Record<string, Record<string, Effect>>
+    | undefined;
+  const byName = byType?.[effectType];
   if (!byName) return undefined;
   return byName[name] ?? Object.values(byName).find((e) => e.name === name);
 }

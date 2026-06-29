@@ -288,10 +288,9 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       flares.includes("effect:*") ||
       flares.includes(`effect:${found.name}`)
     ) {
-      // effectType is the catalog's outer key, not a field on the effect.
       return {
         name: found.name,
-        effectType,
+        effectType: found.effectType,
         attributes: found.attributes,
       };
     }

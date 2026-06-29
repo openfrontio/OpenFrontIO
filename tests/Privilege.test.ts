@@ -93,10 +93,12 @@ const effectCosmetics = {
   colorPalettes: {},
   flags: {},
   effects: {
-    // effectType is the OUTER key; effects carry no effectType field.
+    // Each effect carries its effectType field (matching the outer key), as the
+    // schema requires.
     transportShipTrail: {
       spectrum: {
         name: "spectrum",
+        effectType: "transportShipTrail" as const,
         attributes: { type: "rainbow" } as const,
         url: "",
         affiliateCode: null,
@@ -107,6 +109,7 @@ const effectCosmetics = {
       },
       crimson: {
         name: "crimson",
+        effectType: "transportShipTrail" as const,
         attributes: { type: "solid", color: "#e01b24" } as const,
         url: "",
         affiliateCode: null,
@@ -635,6 +638,7 @@ describe("Effect validation in isAllowed", () => {
           transportShipTrail: {
             trail_01: {
               name: "spectrum",
+              effectType: "transportShipTrail" as const,
               attributes: { type: "rainbow" } as const,
               url: "",
               affiliateCode: null,

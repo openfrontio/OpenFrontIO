@@ -8,7 +8,12 @@ import {
 import { PlayerEffectSchema } from "../src/core/Schemas";
 
 describe("Effect cosmetic schemas", () => {
-  const base = { name: "spectrum", product: null, rarity: "common" };
+  const base = {
+    name: "spectrum",
+    effectType: "transportShipTrail",
+    product: null,
+    rarity: "common",
+  };
 
   describe("TransportShipTrailAttributesSchema (lenient)", () => {
     it("parses the known attribute variants", () => {
@@ -93,10 +98,12 @@ describe("Effect cosmetic schemas", () => {
   });
 
   describe("EffectSchema", () => {
-    it("parses an effect (effectType is the catalog key, not a field)", () => {
+    it("parses an effect (discriminated on effectType)", () => {
       expect(
-        EffectSchema.safeParse({ ...base, attributes: { type: "rainbow" } })
-          .success,
+        EffectSchema.safeParse({
+          ...base,
+          attributes: { type: "rainbow" },
+        }).success,
       ).toBe(true);
     });
 
@@ -104,16 +111,28 @@ describe("Effect cosmetic schemas", () => {
       expect(EffectSchema.safeParse({ ...base }).success).toBe(false);
     });
 
+    it("rejects an effect with an unknown effectType (no union member)", () => {
+      expect(
+        EffectSchema.safeParse({
+          ...base,
+          effectType: "glow",
+          attributes: { type: "rainbow" },
+        }).success,
+      ).toBe(false);
+    });
+
     it("tolerates an effect with an unknown attribute type", () => {
       expect(
-        EffectSchema.safeParse({ ...base, attributes: { type: "sparkle" } })
-          .success,
+        EffectSchema.safeParse({
+          ...base,
+          attributes: { type: "sparkle" },
+        }).success,
       ).toBe(true);
     });
   });
 
   // Exact shape served by the production cosmetics.json: nested
-  // effects[effectType][effectName], no `effectType` field on the effect, and
+  // effects[effectType][effectName], each effect carrying its effectType, and
   // extras (e.g. product.priceInCents) stripped.
   it("parses the real nested cosmetics.json effects", () => {
     const result = CosmeticsSchema.safeParse({
@@ -123,6 +142,7 @@ describe("Effect cosmetic schemas", () => {
         transportShipTrail: {
           rainbow_ship: {
             name: "rainbow_ship",
+            effectType: "transportShipTrail",
             attributes: { type: "rainbow" },
             affiliateCode: null,
             product: null,
@@ -131,6 +151,7 @@ describe("Effect cosmetic schemas", () => {
           },
           gradient: {
             name: "gradient",
+            effectType: "transportShipTrail",
             attributes: {
               type: "gradient",
               color: "#aea2a2",
@@ -164,6 +185,7 @@ describe("Effect cosmetic schemas", () => {
         transportShipTrail: {
           ship: {
             name: "ship",
+            effectType: "transportShipTrail",
             attributes: { type: "solid", color: "#fff" },
             product: null,
             rarity: "common",
