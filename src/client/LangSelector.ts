@@ -8,6 +8,8 @@ import { formatDebugTranslation } from "./Utils";
 import en from "../../resources/lang/en.json";
 import metadata from "../../resources/lang/metadata.json";
 
+const RTL_LANGUAGES = new Set(["fa", "ar", "he"]);
+
 type LanguageMetadata = {
   code: string;
   native: string;
@@ -97,6 +99,14 @@ export class LangSelector extends LitElement {
     this.defaultTranslations = defaultTranslations;
     this.translations = translations;
     this.currentLang = userLang;
+
+    const isRtl = RTL_LANGUAGES.has(userLang);
+    if (isRtl) {
+      document.documentElement.classList.add("rtl-text");
+    } else {
+      document.documentElement.classList.remove("rtl-text");
+    }
+    document.documentElement.setAttribute("lang", userLang);
 
     await this.loadLanguageList();
     this.applyTranslation();
@@ -200,6 +210,15 @@ export class LangSelector extends LitElement {
     localStorage.setItem("lang", lang);
     this.translations = await this.loadLanguage(lang);
     this.currentLang = lang;
+
+    const isRtl = RTL_LANGUAGES.has(lang);
+    if (isRtl) {
+      document.documentElement.classList.add("rtl-text");
+    } else {
+      document.documentElement.classList.remove("rtl-text");
+    }
+    document.documentElement.setAttribute("lang", lang);
+
     this.applyTranslation();
   }
 
