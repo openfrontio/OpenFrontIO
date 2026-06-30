@@ -89,7 +89,6 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(3).fill("startingGold25M"),
   ...Array<ModifierKey>(6).fill("goldMultiplier"),
   ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
-  ...Array<ModifierKey>(1).fill("isPortsDisabled"),
   ...Array<ModifierKey>(1).fill("isNukesDisabled"),
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
