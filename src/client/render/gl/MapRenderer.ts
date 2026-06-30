@@ -132,6 +132,9 @@ export class MapRenderer {
   updatePalette(paletteData: Float32Array): void {
     this.renderer?.updatePalette(paletteData);
   }
+  updateEffectPalette(effectData: Float32Array): void {
+    this.renderer?.updateEffectPalette(effectData);
+  }
   addPlayers(
     players: PlayerStatic[],
     paletteData: Float32Array,

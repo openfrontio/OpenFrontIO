@@ -1,48 +1,78 @@
-import { html, TemplateResult } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { TransportShipTrailAttributes } from "../../core/CosmeticSchemas";
 
-// A flowing spectrum used for the "rainbow" transport-ship-trail preview.
-const RAINBOW_GRADIENT =
-  "linear-gradient(90deg,#ff0000,#ff8a00,#ffe600,#28c76f,#00a8ff,#7d5fff,#ff0000)";
-
-// Neutral fallback for attribute types we don't recognize.
-const UNKNOWN_BG = "#444";
+// Neutral fallback when a trail has no usable colors.
+const EMPTY_BG = "#444";
 
 /**
- * Render a swatch preview of a transport-ship-trail's attributes, filling its
- * container: solid = flat color, pulse = same color pulsing, rainbow = full
- * spectrum, gradient = two-color blend. Unknown attribute types render a neutral
- * swatch (we ignore types we don't know about).
+ * Swatch preview of a transport-ship-trail effect, filling its container.
+ *
+ * - gradient / single color: a static swatch (flat color or left-to-right
+ *   gradient — a multi-color list reads as a rainbow).
+ * - transition: cross-fades through the colors over time, mirroring the trail
+ *   (each color step lasts 1/frequency seconds, matching the shader).
  */
-export function renderTransportShipTrailSwatch(
-  attributes: TransportShipTrailAttributes,
-): TemplateResult {
-  switch (attributes.type) {
-    case "rainbow":
-      return html`<div
-        class="w-full h-full rounded-md"
-        style="background:${RAINBOW_GRADIENT};"
-      ></div>`;
-    case "gradient":
-      return html`<div
-        class="w-full h-full rounded-md"
-        style="background:linear-gradient(90deg,${attributes.color},${attributes.color2});"
-      ></div>`;
-    case "pulse":
-      return html`<div
-        class="w-full h-full rounded-md animate-pulse"
-        style="background:${attributes.color};"
-      ></div>`;
-    case "solid":
-      return html`<div
-        class="w-full h-full rounded-md"
-        style="background:${attributes.color};"
-      ></div>`;
-    default:
-      // Unknown / unrecognized style — neutral swatch.
-      return html`<div
-        class="w-full h-full rounded-md"
-        style="background:${UNKNOWN_BG};"
-      ></div>`;
+@customElement("trail-swatch")
+export class TrailSwatch extends LitElement {
+  // Named `trail` (not `attributes`) to avoid clashing with Element.attributes.
+  @property({ attribute: false })
+  trail: TransportShipTrailAttributes | null = null;
+
+  private animation: Animation | null = null;
+
+  // Light DOM so the shared Tailwind classes apply.
+  createRenderRoot(): HTMLElement {
+    return this;
+  }
+
+  render(): TemplateResult {
+    const colors = this.trail?.colors ?? [];
+    let background: string;
+    if (colors.length === 0) {
+      background = EMPTY_BG;
+    } else if (this.trail?.type === "transition") {
+      // The animation (see updated) cross-fades from here through the list.
+      background = colors[0];
+    } else if (colors.length === 1) {
+      background = colors[0];
+    } else {
+      background = `linear-gradient(90deg,${colors.join(",")})`;
+    }
+    return html`<div
+      class="w-full h-full rounded-md"
+      style="background:${background};"
+    ></div>`;
+  }
+
+  updated(changed: Map<string, unknown>): void {
+    if (!changed.has("trail")) return;
+    this.animation?.cancel();
+    this.animation = null;
+
+    const attrs = this.trail;
+    if (attrs?.type !== "transition") return;
+    const colors = attrs.colors;
+    if (colors.length < 2 || attrs.frequency <= 0) return;
+
+    const fill = this.querySelector<HTMLElement>("div");
+    if (!fill) return;
+
+    // Cross-fade color0 → color1 → … → color0; each step lasts 1/frequency s,
+    // matching the shader's i = floor(uTime * frequency) mod count.
+    const keyframes = [...colors, colors[0]].map((c) => ({
+      backgroundColor: c,
+    }));
+    this.animation = fill.animate(keyframes, {
+      duration: (colors.length / attrs.frequency) * 1000,
+      iterations: Infinity,
+      easing: "linear",
+    });
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.animation?.cancel();
+    this.animation = null;
   }
 }
