@@ -16,6 +16,7 @@ import {
   purchaseCosmetic,
   resolveCosmetics,
   ResolvedCosmetic,
+  translateCosmetic,
 } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticButton";
@@ -47,6 +48,7 @@ export class EffectsGrid extends LitElement {
     false;
   @property({ type: String }) mode: "select" | "purchase" = "select";
   @property({ attribute: false }) affiliateCode: string | null = null;
+  @property({ type: String }) search = "";
 
   private userSettings = new UserSettings();
   private _onChange = () => this.requestUpdate();
@@ -77,6 +79,17 @@ export class EffectsGrid extends LitElement {
     this.requestUpdate();
   }
 
+  private matchesSearch(r: ResolvedCosmetic): boolean {
+    const q = this.search.trim().toLowerCase();
+    if (!q) return true;
+    const name = (r.cosmetic as Effect | null)?.name;
+    if (!name) return false;
+    return (
+      name.toLowerCase().includes(q) ||
+      translateCosmetic("effects", name).toLowerCase().includes(q)
+    );
+  }
+
   private itemsForType(
     all: ResolvedCosmetic[],
     effectType: EffectType,
@@ -85,15 +98,15 @@ export class EffectsGrid extends LitElement {
       (r) =>
         r.type === "effect" &&
         r.cosmetic !== null &&
-        r.effectType === effectType,
+        r.effectType === effectType &&
+        this.matchesSearch(r),
     );
     if (this.mode === "purchase") {
       return ofType.filter((r) => r.relationship === "purchasable");
     }
-    return [
-      noneTile(effectType),
-      ...ofType.filter((r) => r.relationship === "owned"),
-    ];
+    const owned = ofType.filter((r) => r.relationship === "owned");
+    // The Default tile has no name to match — hide it while searching.
+    return this.search.trim() ? owned : [noneTile(effectType), ...owned];
   }
 
   private renderTile(

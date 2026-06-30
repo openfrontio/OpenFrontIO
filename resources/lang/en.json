@@ -394,6 +394,7 @@
   },
   "effects": {
     "button_title": "Pick an effect!",
+    "search": "Search...",
     "title": "Effects",
     "type": {
       "transportShipTrail": "Boat Trail"
