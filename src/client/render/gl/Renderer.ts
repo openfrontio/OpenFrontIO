@@ -59,11 +59,7 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import {
-  getMaxTrailColors,
-  getPaletteSize,
-  hexToRgb,
-} from "./utils/ColorUtils";
+import { getPaletteSize, hexToRgb, MAX_TRAIL_COLORS } from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
@@ -137,7 +133,7 @@ export class GPURenderer {
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
   // Per-player transport-ship-trail gradient, keyed by smallID (RGBA32F,
-  // 4096×getMaxTrailColors()): row r = color r's rgb; row 0's alpha = color count.
+  // 4096×MAX_TRAIL_COLORS): row r = color r's rgb; row 0's alpha = color count.
   // Sampled by TrailPass.
   private effectTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
@@ -245,14 +241,13 @@ export class GPURenderer {
 
     // Per-player trail-effect texture (one row per gradient color). Starts zeroed
     // (color count 0 everywhere = no effect → trail uses territory color).
-    const maxTrailColors = getMaxTrailColors();
     this.effectTex = createTexture2D(gl, {
       width: palW,
-      height: maxTrailColors,
+      height: MAX_TRAIL_COLORS,
       internalFormat: gl.RGBA32F,
       format: gl.RGBA,
       type: gl.FLOAT,
-      data: new Float32Array(palW * maxTrailColors * 4),
+      data: new Float32Array(palW * MAX_TRAIL_COLORS * 4),
       filter: gl.NEAREST,
     });
 
@@ -662,7 +657,7 @@ export class GPURenderer {
       0,
       0,
       getPaletteSize(),
-      getMaxTrailColors(),
+      MAX_TRAIL_COLORS,
       gl.RGBA,
       gl.FLOAT,
       effectData,

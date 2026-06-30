@@ -11,8 +11,8 @@ export { createRenderSettings, dumpSettings } from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
 export { deepAssign, deepDiff } from "./SettingsUtils";
 export {
+  MAX_TRAIL_COLORS,
   buildTerrainRGBA,
-  getMaxTrailColors,
   getPaletteSize,
 } from "./utils/ColorUtils";
 export { renderDpr } from "./utils/Dpr";

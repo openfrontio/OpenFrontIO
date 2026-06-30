@@ -22,11 +22,7 @@ export function getPaletteSize(): number {
  * texture. Longer catalog color lists are truncated. Shared so the CPU side
  * that fills the texture and the GPU side that allocates it can't drift.
  */
-const MAX_TRAIL_COLORS = 8;
-
-export function getMaxTrailColors(): number {
-  return MAX_TRAIL_COLORS;
-}
+export const MAX_TRAIL_COLORS = 8;
 
 // ---------- Terrain ----------
 
