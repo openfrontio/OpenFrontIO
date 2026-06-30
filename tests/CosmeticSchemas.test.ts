@@ -15,85 +15,56 @@ describe("Effect cosmetic schemas", () => {
     rarity: "common",
   };
 
-  describe("TransportShipTrailAttributesSchema (lenient)", () => {
-    it("parses the known attribute variants", () => {
+  describe("TransportShipTrailAttributesSchema", () => {
+    it("parses a gradient with a color list, colorSize, and movementSpeed", () => {
+      const parsed = TransportShipTrailAttributesSchema.parse({
+        type: "gradient",
+        colors: ["#f00", "#00f"],
+        colorSize: 16,
+        movementSpeed: 0.15,
+      });
+      expect(parsed).toEqual({
+        type: "gradient",
+        colors: ["#f00", "#00f"],
+        colorSize: 16,
+        movementSpeed: 0.15,
+      });
+    });
+
+    it("accepts a single-color list (solid) and an empty list", () => {
       expect(
         TransportShipTrailAttributesSchema.safeParse({
-          type: "solid",
-          color: "#f00",
-        }).success,
-      ).toBe(true);
-      expect(
-        TransportShipTrailAttributesSchema.safeParse({ type: "rainbow" })
-          .success,
-      ).toBe(true);
-      expect(
-        TransportShipTrailAttributesSchema.safeParse({
-          type: "pulse",
-          color: "#0f0",
+          type: "gradient",
+          colors: ["#f00"],
+          colorSize: 16,
+          movementSpeed: 0.15,
         }).success,
       ).toBe(true);
       expect(
         TransportShipTrailAttributesSchema.safeParse({
           type: "gradient",
-          color: "#f00",
-          color2: "#00f",
+          colors: [],
+          colorSize: 16,
+          movementSpeed: 0.15,
         }).success,
       ).toBe(true);
     });
 
-    it("tolerates an unknown attribute type (ignored at render time)", () => {
+    it("requires the gradient type, colors, colorSize, and movementSpeed", () => {
+      // The old solid/rainbow/pulse styles are gone — only gradient remains.
       expect(
-        TransportShipTrailAttributesSchema.safeParse({ type: "sparkle" })
-          .success,
-      ).toBe(true);
-    });
-
-    it("requires a `type`", () => {
+        TransportShipTrailAttributesSchema.safeParse({ type: "solid" }).success,
+      ).toBe(false);
+      // colors, colorSize, and movementSpeed are all required.
+      expect(
+        TransportShipTrailAttributesSchema.safeParse({
+          type: "gradient",
+          colors: ["#f00"],
+        }).success,
+      ).toBe(false);
       expect(TransportShipTrailAttributesSchema.safeParse({}).success).toBe(
         false,
       );
-    });
-  });
-
-  describe("TransportShipTrailAttributesSchema (discriminated styles)", () => {
-    it("keeps the fields of a known style", () => {
-      const solid = TransportShipTrailAttributesSchema.parse({
-        type: "solid",
-        color: "#f00",
-      });
-      expect(solid).toEqual({ type: "solid", color: "#f00" });
-      const gradient = TransportShipTrailAttributesSchema.parse({
-        type: "gradient",
-        color: "#f00",
-        color2: "#00f",
-      });
-      expect(gradient).toEqual({
-        type: "gradient",
-        color: "#f00",
-        color2: "#00f",
-      });
-    });
-
-    it('normalizes an unrecognized style to { type: "unknown" }', () => {
-      expect(
-        TransportShipTrailAttributesSchema.parse({ type: "sparkle" }),
-      ).toEqual({ type: "unknown" });
-    });
-
-    it("normalizes a known style missing required fields to unknown", () => {
-      // solid without color / gradient without color2 don't match their strict
-      // variant, so they degrade to the neutral unknown swatch rather than
-      // failing the parse.
-      expect(
-        TransportShipTrailAttributesSchema.parse({ type: "solid" }),
-      ).toEqual({ type: "unknown" });
-      expect(
-        TransportShipTrailAttributesSchema.parse({
-          type: "gradient",
-          color: "#f00",
-        }),
-      ).toEqual({ type: "unknown" });
     });
   });
 
@@ -102,7 +73,12 @@ describe("Effect cosmetic schemas", () => {
       expect(
         EffectSchema.safeParse({
           ...base,
-          attributes: { type: "rainbow" },
+          attributes: {
+            type: "gradient",
+            colors: ["#f00", "#0f0", "#00f"],
+            colorSize: 16,
+            movementSpeed: 0.15,
+          },
         }).success,
       ).toBe(true);
     });
@@ -116,18 +92,23 @@ describe("Effect cosmetic schemas", () => {
         EffectSchema.safeParse({
           ...base,
           effectType: "glow",
-          attributes: { type: "rainbow" },
+          attributes: {
+            type: "gradient",
+            colors: ["#f00"],
+            colorSize: 16,
+            movementSpeed: 0.15,
+          },
         }).success,
       ).toBe(false);
     });
 
-    it("tolerates an effect with an unknown attribute type", () => {
+    it("rejects an effect with a non-gradient attribute type", () => {
       expect(
         EffectSchema.safeParse({
           ...base,
           attributes: { type: "sparkle" },
         }).success,
-      ).toBe(true);
+      ).toBe(false);
     });
   });
 
@@ -143,7 +124,12 @@ describe("Effect cosmetic schemas", () => {
           rainbow_ship: {
             name: "rainbow_ship",
             effectType: "transportShipTrail",
-            attributes: { type: "rainbow" },
+            attributes: {
+              type: "gradient",
+              colors: ["#ff0000", "#ffe600", "#00a8ff", "#7d5fff"],
+              colorSize: 24,
+              movementSpeed: 0.2,
+            },
             affiliateCode: null,
             product: null,
             priceHard: 123,
@@ -154,8 +140,9 @@ describe("Effect cosmetic schemas", () => {
             effectType: "transportShipTrail",
             attributes: {
               type: "gradient",
-              color: "#aea2a2",
-              color2: "#a80000",
+              colors: ["#aea2a2", "#a80000"],
+              colorSize: 16,
+              movementSpeed: 0.15,
             },
             affiliateCode: null,
             product: {
@@ -172,8 +159,9 @@ describe("Effect cosmetic schemas", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(
-        result.data.effects?.transportShipTrail?.rainbow_ship?.attributes?.type,
-      ).toBe("rainbow");
+        result.data.effects?.transportShipTrail?.rainbow_ship?.attributes
+          ?.colors,
+      ).toEqual(["#ff0000", "#ffe600", "#00a8ff", "#7d5fff"]);
     }
   });
 
@@ -186,7 +174,12 @@ describe("Effect cosmetic schemas", () => {
           ship: {
             name: "ship",
             effectType: "transportShipTrail",
-            attributes: { type: "solid", color: "#fff" },
+            attributes: {
+              type: "gradient",
+              colors: ["#fff"],
+              colorSize: 16,
+              movementSpeed: 0.15,
+            },
             product: null,
             rarity: "common",
           },
@@ -203,12 +196,57 @@ describe("Effect cosmetic schemas", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("drops a newer-shaped effect within a known effectType without failing the catalog", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        transportShipTrail: {
+          good: {
+            name: "good",
+            effectType: "transportShipTrail",
+            attributes: {
+              type: "gradient",
+              colors: ["#fff"],
+              colorSize: 16,
+              movementSpeed: 0.15,
+            },
+            product: null,
+            rarity: "common",
+          },
+          // A newer effect shape this client doesn't understand yet — must be
+          // dropped, not fail the whole catalog parse.
+          future: {
+            name: "future",
+            effectType: "transportShipTrail",
+            attributes: { type: "hologram", intensity: 3 },
+            product: null,
+            rarity: "common",
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const trails = result.data.effects?.transportShipTrail;
+      // The good effect survives...
+      expect(trails?.good?.name).toBe("good");
+      // ...and only the unparseable newer one is dropped.
+      expect(trails?.future).toBeUndefined();
+    }
+  });
 });
 
 describe("findEffect", () => {
   const effect = (name: string) => ({
     name,
-    attributes: { type: "solid", color: "#fff" } as const,
+    attributes: {
+      type: "gradient",
+      colors: ["#fff"],
+      colorSize: 16,
+      movementSpeed: 0.15,
+    } as const,
     product: null,
     rarity: "common" as const,
   });

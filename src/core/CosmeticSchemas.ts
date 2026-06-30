@@ -102,27 +102,20 @@ export const SkinSchema = CosmeticSchema.extend({
 export const EFFECT_TYPES = ["transportShipTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
-// Boat-trail styles, discriminated on `type`: each known style carries exactly
-// the fields it uses (rainbow has none; solid/pulse need a color; gradient needs
-// both). A `type` we don't recognize — a style shipped to cosmetics.json before
-// this client updated — normalizes to { type: "unknown" } instead of failing the
-// catalog parse, so one new style never wipes the whole catalog; the renderer
-// shows a neutral swatch. `type` itself stays required.
-export const TransportShipTrailAttributesSchema = z.union([
-  z.discriminatedUnion("type", [
-    z.object({ type: z.literal("solid"), color: z.string() }),
-    z.object({ type: z.literal("rainbow") }),
-    z.object({ type: z.literal("pulse"), color: z.string() }),
-    z.object({
-      type: z.literal("gradient"),
-      color: z.string(),
-      color2: z.string(),
-    }),
-  ]),
-  z
-    .object({ type: z.string() })
-    .transform(() => ({ type: "unknown" as const })),
-]);
+// A boat trail is a gradient of one or more colors, cycled along the trail. The
+// old solid/rainbow styles are just color lists now: solid = a single color,
+// rainbow = the spectrum, gradient = two or more. The server only ships this
+// "gradient" shape. Colors are unvalidated strings here; the renderer drops any
+// it can't parse (and an empty list falls back to the player's territory color).
+// `colorSize` is how wide each color band is, in tiles (larger = bigger bands);
+// `movementSpeed` is how fast the bands scroll along the trail, in tiles per
+// second (0 = static).
+export const TransportShipTrailAttributesSchema = z.object({
+  type: z.literal("gradient"),
+  colors: z.array(z.string()),
+  colorSize: z.number(),
+  movementSpeed: z.number(),
+});
 
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),
@@ -134,6 +127,23 @@ const TransportShipTrailEffectSchema = CosmeticSchema.extend({
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
 ]);
+
+/**
+ * A record that drops entries failing `schema` instead of failing the whole
+ * parse. Used for the effect catalog: a newer effect the server ships before
+ * this client is updated to understand it is skipped rather than taking patterns,
+ * flags, and skins down with it.
+ */
+function lenientRecord<T extends z.ZodType>(schema: T) {
+  return z.record(z.string(), z.unknown()).transform((rec) => {
+    const out: Record<string, z.infer<T>> = {};
+    for (const [key, value] of Object.entries(rec)) {
+      const parsed = schema.safeParse(value);
+      if (parsed.success) out[key] = parsed.data;
+    }
+    return out;
+  });
+}
 
 export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),
@@ -157,12 +167,15 @@ export const CosmeticsSchema = z.object({
   skins: z.record(z.string(), SkinSchema).optional(),
   // Grouped by effectType. Each effect also carries its own effectType (matching
   // this outer key) so an Effect stands alone and EffectSchema can discriminate
-  // on it. Add a key per new effectType.
+  // on it. Add a key per new effectType. Forward-compat: a brand-new effectType
+  // key is ignored (z.object strips keys it doesn't list), and lenientRecord
+  // extends that to new entries under a known effectType (a dropped effect just
+  // degrades to "no effect" — the trail keeps its territory color).
   effects: z
     .object({
-      transportShipTrail: z
-        .record(z.string(), TransportShipTrailEffectSchema)
-        .optional(),
+      transportShipTrail: lenientRecord(
+        TransportShipTrailEffectSchema,
+      ).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),

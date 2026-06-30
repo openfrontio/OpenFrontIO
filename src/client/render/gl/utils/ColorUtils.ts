@@ -17,6 +17,13 @@ export function getPaletteSize(): number {
   return PALETTE_SIZE;
 }
 
+/**
+ * Max colors per transport-ship-trail gradient = rows in the trail-effect
+ * texture. Longer catalog color lists are truncated. Shared so the CPU side
+ * that fills the texture and the GPU side that allocates it can't drift.
+ */
+export const MAX_TRAIL_COLORS = 8;
+
 // ---------- Terrain ----------
 
 /** Parse a "#rrggbb" (or "rrggbb") hex string into an RGB tuple, or null. */
