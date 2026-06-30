@@ -1,8 +1,13 @@
-import { Colord } from "colord";
+import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
+import {
+  findEffect,
+  type TransportShipTrailAttributes,
+} from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
+import { getCachedCosmetics } from "./Cosmetics";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
@@ -10,6 +15,9 @@ import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
 import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
+// Max colors per trail gradient. Bounds the effect texture's height; longer
+// catalog color lists are truncated. Keep in sync with Renderer's effectTex.
+const MAX_TRAIL_COLORS = 8;
 
 /**
  * The renderer-side glue between GameView (which already builds the full
@@ -24,10 +32,21 @@ const PALETTE_SIZE = 4096;
  */
 export class WebGLFrameBuilder {
   private readonly palette: Float32Array;
+  // Per-player transport-ship-trail gradient, keyed by smallID. Layout is
+  // 4096×MAX_TRAIL_COLORS: row 0 = (color0.rgb, colorCount), row r = (colorR.rgb).
+  // Consumed by TrailPass's effect texture.
+  private readonly effectPalette: Float32Array;
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
 
   private readonly knownSmallIDs = new Set<number>();
+  /**
+   * smallIDs whose trail effect has been resolved into the effect palette.
+   * Separate from knownSmallIDs because effect resolution depends on the
+   * cosmetics catalog, which may not be loaded the tick a player is first seen
+   * — keeping it separate lets us retry next tick instead of skipping forever.
+   */
+  private readonly effectResolved = new Set<number>();
   /**
    * Last spawn tile pushed to the renderer per smallID. Players can re-pick
    * spawn during the spawn phase, so this tracks the latest value rather than
@@ -45,6 +64,7 @@ export class WebGLFrameBuilder {
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
+    this.effectPalette = new Float32Array(PALETTE_SIZE * MAX_TRAIL_COLORS * 4);
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
   }
@@ -52,6 +72,7 @@ export class WebGLFrameBuilder {
   /** Drop internal caches to force a full re-upload of state on the next update(). */
   clearCaches(): void {
     this.knownSmallIDs.clear();
+    this.effectResolved.clear();
     this.lastSpawnTile.clear();
     this.localPlayerSmallID = 0;
     this.skinsInitialized = false;
@@ -85,6 +106,7 @@ export class WebGLFrameBuilder {
 
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
+    this.syncPlayerEffects(gameView);
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
@@ -252,6 +274,72 @@ export class WebGLFrameBuilder {
         this.patternData,
       );
     }
+  }
+
+  /**
+   * Resolve each player's transport-ship-trail effect into the effect palette.
+   * A player's resolved cosmetic is just { name, effectType }; the style and
+   * colors live in the catalog, so we look them up via the cached cosmetics.
+   * Decoupled from syncPlayers' first-seen guard: if the catalog isn't loaded
+   * yet we leave the player unresolved and retry next tick (the trail keeps its
+   * territory color meanwhile). Re-uploads the effect texture only when a
+   * recognized style was actually written.
+   */
+  private syncPlayerEffects(gameView: GameView): void {
+    const catalog = getCachedCosmetics();
+    if (!catalog) return; // Catalog not loaded yet — retry on a later tick.
+    let dirty = false;
+    for (const p of gameView.players()) {
+      const smallID = p.smallID();
+      if (this.effectResolved.has(smallID)) continue;
+      this.effectResolved.add(smallID);
+
+      const trailEffect = p.cosmetics.effects?.["transportShipTrail"];
+      if (!trailEffect) continue; // No effect — nothing to write or upload.
+      const effect = findEffect(
+        catalog,
+        "transportShipTrail",
+        trailEffect.name,
+      );
+      if (effect?.effectType !== "transportShipTrail") continue;
+      if (this.writeEffectEntry(smallID, effect.attributes)) dirty = true;
+    }
+    if (dirty) this.view.updateEffectPalette(this.effectPalette);
+  }
+
+  /**
+   * Encode a player's transport-ship-trail gradient into the effect palette.
+   * Layout matches trail.frag.glsl: row r holds color r's rgb, and the spare
+   * alpha channels carry the gradient's scalar params — row 0's alpha = color
+   * count (0 → the shader falls back to the territory color), row 1's alpha =
+   * colorSize (band width), row 2's alpha = movementSpeed (scroll rate).
+   * colord doesn't throw on a bad color string (it returns black), so unparseable
+   * colors are dropped — leaving an empty list, which falls back to the territory
+   * color rather than rendering black. Returns whether any color was written.
+   */
+  private writeEffectEntry(
+    smallID: number,
+    attrs: TransportShipTrailAttributes,
+  ): boolean {
+    const colors = attrs.colors
+      .map((s) => colord(s))
+      .filter((c) => c.isValid())
+      .slice(0, MAX_TRAIL_COLORS)
+      .map((c) => c.toRgb());
+    for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
+      const off = (r * PALETTE_SIZE + smallID) * 4;
+      const c = colors[r] ?? { r: 0, g: 0, b: 0 };
+      this.effectPalette[off] = c.r / 255;
+      this.effectPalette[off + 1] = c.g / 255;
+      this.effectPalette[off + 2] = c.b / 255;
+      this.effectPalette[off + 3] = 0;
+    }
+    // Scalar params packed into spare alpha channels (rows 0–2 always exist).
+    this.effectPalette[(0 * PALETTE_SIZE + smallID) * 4 + 3] = colors.length;
+    this.effectPalette[(1 * PALETTE_SIZE + smallID) * 4 + 3] = attrs.colorSize;
+    this.effectPalette[(2 * PALETTE_SIZE + smallID) * 4 + 3] =
+      attrs.movementSpeed;
+    return colors.length > 0;
   }
 
   private writePaletteEntry(

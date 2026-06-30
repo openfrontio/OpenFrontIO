@@ -102,27 +102,20 @@ export const SkinSchema = CosmeticSchema.extend({
 export const EFFECT_TYPES = ["transportShipTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
-// Boat-trail styles, discriminated on `type`: each known style carries exactly
-// the fields it uses (rainbow has none; solid/pulse need a color; gradient needs
-// both). A `type` we don't recognize — a style shipped to cosmetics.json before
-// this client updated — normalizes to { type: "unknown" } instead of failing the
-// catalog parse, so one new style never wipes the whole catalog; the renderer
-// shows a neutral swatch. `type` itself stays required.
-export const TransportShipTrailAttributesSchema = z.union([
-  z.discriminatedUnion("type", [
-    z.object({ type: z.literal("solid"), color: z.string() }),
-    z.object({ type: z.literal("rainbow") }),
-    z.object({ type: z.literal("pulse"), color: z.string() }),
-    z.object({
-      type: z.literal("gradient"),
-      color: z.string(),
-      color2: z.string(),
-    }),
-  ]),
-  z
-    .object({ type: z.string() })
-    .transform(() => ({ type: "unknown" as const })),
-]);
+// A boat trail is a gradient of one or more colors, cycled along the trail. The
+// old solid/rainbow styles are just color lists now: solid = a single color,
+// rainbow = the spectrum, gradient = two or more. The server only ships this
+// "gradient" shape. Colors are unvalidated strings here; the renderer drops any
+// it can't parse (and an empty list falls back to the player's territory color).
+// `colorSize` is how wide each color band is, in tiles (larger = bigger bands);
+// `movementSpeed` is how fast the bands scroll along the trail, in tiles per
+// second (0 = static).
+export const TransportShipTrailAttributesSchema = z.object({
+  type: z.literal("gradient"),
+  colors: z.array(z.string()),
+  colorSize: z.number(),
+  movementSpeed: z.number(),
+});
 
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),

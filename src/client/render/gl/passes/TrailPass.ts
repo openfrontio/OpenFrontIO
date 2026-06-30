@@ -24,13 +24,18 @@ export class TrailPass {
   private uCamera: WebGLUniformLocation;
   private uMapSize: WebGLUniformLocation;
   private uTrailAlpha: WebGLUniformLocation;
+  private uTime: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
   private trailTex: WebGLTexture;
   private paletteTex: WebGLTexture;
+  private effectTex: WebGLTexture;
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
+  // Anchor animation time at construction (like NukeTelegraphPass/SamRadiusPass)
+  // so the value stays small and sin()/fract() don't quantize over long sessions.
+  private readonly startTime = performance.now();
 
   /** CPU-side trail state (R8UI, 0=none, 1–255=ownerID). */
   private cpuTrailState: Uint8Array;
@@ -49,6 +54,7 @@ export class TrailPass {
     mapH: number,
     trailTex: WebGLTexture,
     paletteTex: WebGLTexture,
+    effectTex: WebGLTexture,
     settings: RenderSettings,
   ) {
     this.gl = gl;
@@ -57,6 +63,7 @@ export class TrailPass {
     this.mapH = mapH;
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
+    this.effectTex = effectTex;
     this.cpuTrailState = new Uint8Array(mapW * mapH);
 
     this.program = createProgram(
@@ -70,12 +77,14 @@ export class TrailPass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uTrailAlpha = gl.getUniformLocation(this.program, "uTrailAlpha")!;
+    this.uTime = gl.getUniformLocation(this.program, "uTime")!;
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTrailTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 1);
     gl.uniform1i(gl.getUniformLocation(this.program, "uAffiliation"), 2);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uEffect"), 3);
 
     this.vao = createMapQuad(gl, mapW, mapH);
   }
@@ -168,6 +177,7 @@ export class TrailPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1f(this.uTrailAlpha, this.settings.mapOverlay.trailAlpha);
+    gl.uniform1f(this.uTime, (performance.now() - this.startTime) / 1000);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -178,6 +188,8 @@ export class TrailPass {
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, this.affiliationTex);
     }
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);

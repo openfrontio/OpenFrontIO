@@ -99,7 +99,12 @@ const effectCosmetics = {
       spectrum: {
         name: "spectrum",
         effectType: "transportShipTrail" as const,
-        attributes: { type: "rainbow" } as const,
+        attributes: {
+          type: "gradient" as const,
+          colors: ["#ff0000", "#00ff00", "#0000ff"],
+          colorSize: 16,
+          movementSpeed: 0.15,
+        },
         url: "",
         affiliateCode: null,
         product: null,
@@ -110,7 +115,12 @@ const effectCosmetics = {
       crimson: {
         name: "crimson",
         effectType: "transportShipTrail" as const,
-        attributes: { type: "solid", color: "#e01b24" } as const,
+        attributes: {
+          type: "gradient" as const,
+          colors: ["#e01b24"],
+          colorSize: 16,
+          movementSpeed: 0.15,
+        },
         url: "",
         affiliateCode: null,
         product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
@@ -638,7 +648,12 @@ describe("Effect validation in isAllowed", () => {
             trail_01: {
               name: "spectrum",
               effectType: "transportShipTrail" as const,
-              attributes: { type: "rainbow" } as const,
+              attributes: {
+                type: "gradient" as const,
+                colors: ["#ff0000", "#00ff00", "#0000ff"],
+                colorSize: 16,
+                movementSpeed: 0.15,
+              },
               url: "",
               affiliateCode: null,
               product: null,
