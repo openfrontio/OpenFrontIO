@@ -1,0 +1,109 @@
+{
+  "id": "TierraDelFuego",
+  "name": "Tierra Del Fuego",
+  "translation_key": "map.tierradelfuego",
+  "categories": ["south_america", "new"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [1320, 945],
+      "name": "Rio Grande",
+      "flag": "Tierra del Fuego"
+    },
+    {
+      "coordinates": [1283, 1153],
+      "name": "Ushuaia",
+      "flag": "Tierra del Fuego"
+    },
+    {
+      "coordinates": [1452, 1118],
+      "name": "Tolhuin",
+      "flag": "Tierra del Fuego"
+    },
+    {
+      "coordinates": [2226, 351],
+      "name": "Falkland Islands",
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1181, 536],
+      "name": "Rio Gallegos",
+      "flag": "Santa Cruz"
+    },
+    {
+      "coordinates": [1200, 204],
+      "name": "Puerto Santa Cruz",
+      "flag": "Santa Cruz"
+    },
+    {
+      "coordinates": [790, 251],
+      "name": "El Calafate",
+      "flag": "Santa Cruz"
+    },
+    {
+      "coordinates": [1039, 22],
+      "name": "Gobernador Gregores",
+      "flag": "Santa Cruz"
+    },
+    {
+      "coordinates": [1340, 24],
+      "name": "San Julian",
+      "flag": "Santa Cruz"
+    },
+    {
+      "coordinates": [759, 505],
+      "name": "Puerto Natales",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [1363, 1209],
+      "name": "Puerto Williams",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [929, 849],
+      "name": "Punta Arenas",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [1057, 848],
+      "name": "Porvenir",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [755, 368],
+      "name": "Cerro Castillo",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [471, 15],
+      "name": "Puerto Eden",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [910, 609],
+      "name": "Laguna Blanca",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [1086, 972],
+      "name": "Timaukel",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [1162, 782],
+      "name": "Primavera",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [815, 721],
+      "name": "Rio Verde",
+      "flag": "Magallanes"
+    },
+    {
+      "coordinates": [1029, 666],
+      "name": "San Gregorio",
+      "flag": "Magallanes"
+    }
+  ]
+}
