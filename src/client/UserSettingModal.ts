@@ -99,20 +99,10 @@ export class UserSettingModal extends BaseModal {
     //This is so that there is not conflict when remapping altKey and emojiMenuModifier back to default
     let isEmojiMenuModAndAltKeyConflict = false;
     if (
-      ((action === "emojiMenuModifier" &&
-        activeKeybinds["altKey"] === "AltLeft") ||
+      ((action === "emojiMenuModifier" && activeKeybinds["altKey"] === value) ||
         (action === "altKey" &&
-          activeKeybinds["emojiMenuModifier"] === "AltLeft")) &&
-      value === "AltLeft"
-    ) {
-      isEmojiMenuModAndAltKeyConflict = true;
-    }
-    if (
-      ((action === "emojiMenuModifier" &&
-        activeKeybinds["altKey"] === "AltRight") ||
-        (action === "altKey" &&
-          activeKeybinds["emojiMenuModifier"] === "AltRight")) &&
-      value === "AltRight"
+          activeKeybinds["emojiMenuModifier"] === value)) &&
+      (value === "AltLeft" || value === "AltRight")
     ) {
       isEmojiMenuModAndAltKeyConflict = true;
     }
