@@ -82,8 +82,11 @@ export class UserSettingModal extends BaseModal {
   ) {
     const { action, value, key, prevValue } = e.detail;
 
+    // Build the effective keybind map, excluding the action being changed so
+    // its old user override doesn't interfere with the conflict check.
     const activeKeybinds = { ...this.defaultKeybinds };
     for (const [k, v] of Object.entries(this.userKeybinds)) {
+      if (k === action) continue; // exclude current action – we're replacing it
       const normalizedValue = v.value;
       if (normalizedValue === "Null") {
         delete activeKeybinds[k];
@@ -160,10 +163,19 @@ export class UserSettingModal extends BaseModal {
       return;
     }
 
-    this.userKeybinds = {
-      ...this.userKeybinds,
-      [action]: { value: value, key: key },
-    };
+    // Save the new keybind. If the new value matches the default, remove the
+    // override entirely so that localStorage stays clean (no redundant entries).
+    const isDefault = value === this.defaultKeybinds[action];
+    if (isDefault) {
+      const rest = { ...this.userKeybinds };
+      delete rest[action];
+      this.userKeybinds = rest;
+    } else {
+      this.userKeybinds = {
+        ...this.userKeybinds,
+        [action]: { value: value, key: key },
+      };
+    }
     this.userSettings.setKeybinds(this.userKeybinds);
   }
 
