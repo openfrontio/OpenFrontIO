@@ -240,7 +240,7 @@ export class WarshipExecution implements Execution {
     );
 
     // Trade-ship-specific state, lazily computed.
-    let hasPort: boolean | undefined;
+    let hasReachablePort: boolean | undefined;
     let patrolTile: number | undefined;
     let patrolRangeSquared: number | undefined;
     let warshipComponent: number | null | undefined = undefined;
@@ -264,22 +264,29 @@ export class WarshipExecution implements Execution {
       const type = unit.type();
 
       if (includeTradeShips && type === UnitType.TradeShip) {
-        if (hasPort === undefined) {
-          hasPort = owner.unitCount(UnitType.Port) > 0;
+        if (warshipComponent === undefined) {
+          warshipComponent = mg.getWaterComponent(this.warship.tile());
+        }
+        if (hasReachablePort === undefined && warshipComponent !== null) {
+          hasReachablePort = false;
+          for (const port of owner.units(UnitType.Port)) {
+            hasReachablePort = mg.hasWaterComponent(
+              port.tile(),
+              warshipComponent,
+            );
+            if (hasReachablePort) break;
+          }
           patrolTile = this.warship.warshipState().patrolTile;
           patrolRangeSquared = config.warshipPatrolRange() ** 2;
         }
         if (
-          !hasPort ||
+          !hasReachablePort ||
           patrolTile === undefined ||
           unit.isSafeFromPirates() ||
           unit.targetUnit()?.owner() === owner ||
           unit.targetUnit()?.owner().isFriendly(owner)
         ) {
           continue;
-        }
-        if (warshipComponent === undefined) {
-          warshipComponent = mg.getWaterComponent(this.warship.tile());
         }
         if (
           warshipComponent !== null &&
