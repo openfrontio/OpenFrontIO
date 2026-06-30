@@ -15,6 +15,11 @@ export class EffectsModal extends BaseModal {
 
   @state() private cosmetics: Cosmetics | null = null;
   @state() private userMeResponse: UserMeResponse | false = false;
+  @state() private search = "";
+
+  private handleSearch(event: Event) {
+    this.search = (event.target as HTMLInputElement).value;
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -43,6 +48,19 @@ export class EffectsModal extends BaseModal {
           ariaLabel: translateText("common.back"),
           rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
         })}
+
+        <div class="md:flex items-center gap-2 justify-center mt-4">
+          <input
+            class="h-12 w-full max-w-md border border-white/10 bg-black/60
+              rounded-xl shadow-inner text-xl text-center focus:outline-none
+              focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-white/30 transition-all"
+            type="text"
+            placeholder=${translateText("effects.search")}
+            .value=${this.search}
+            @change=${this.handleSearch}
+            @keyup=${this.handleSearch}
+          />
+        </div>
       </div>
     `;
   }
@@ -66,6 +84,7 @@ export class EffectsModal extends BaseModal {
           mode="select"
           .cosmetics=${this.cosmetics}
           .userMeResponse=${this.userMeResponse}
+          .search=${this.search}
         ></effects-grid>
       </div>
     `;
