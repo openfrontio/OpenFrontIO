@@ -33,10 +33,6 @@ import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
-// Subscriptions are not ready yet — flip to true to show them in the store
-// and on the account/profile modal.
-export const SUBSCRIPTIONS_ENABLED = false;
-
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
