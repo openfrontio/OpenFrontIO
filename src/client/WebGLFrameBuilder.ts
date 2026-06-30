@@ -308,11 +308,13 @@ export class WebGLFrameBuilder {
   }
 
   /**
-   * Encode a player's transport-ship-trail gradient into the effect palette.
+   * Encode a player's transport-ship-trail effect into the effect palette.
    * Layout matches trail.frag.glsl: row r holds color r's rgb, and the spare
-   * alpha channels carry the gradient's scalar params — row 0's alpha = color
-   * count (0 → the shader falls back to the territory color), row 1's alpha =
-   * colorSize (band width), row 2's alpha = movementSpeed (scroll rate).
+   * alpha channels (rows 0–3 always exist) carry the scalar params —
+   *   row 0.a = color count (0 → the shader falls back to the territory color),
+   *   row 1.a = styleId (0 = gradient, 1 = transition),
+   *   row 2.a = scalar0 (gradient: colorSize; transition: frequency),
+   *   row 3.a = scalar1 (gradient: movementSpeed; transition: unused).
    * colord doesn't throw on a bad color string (it returns black), so unparseable
    * colors are dropped — leaving an empty list, which falls back to the territory
    * color rather than rendering black. Returns whether any color was written.
@@ -334,11 +336,14 @@ export class WebGLFrameBuilder {
       this.effectPalette[off + 2] = c.b / 255;
       this.effectPalette[off + 3] = 0;
     }
-    // Scalar params packed into spare alpha channels (rows 0–2 always exist).
+    const [styleId, scalar0, scalar1] =
+      attrs.type === "transition"
+        ? [1, attrs.frequency, 0]
+        : [0, attrs.colorSize, attrs.movementSpeed];
     this.effectPalette[(0 * PALETTE_SIZE + smallID) * 4 + 3] = colors.length;
-    this.effectPalette[(1 * PALETTE_SIZE + smallID) * 4 + 3] = attrs.colorSize;
-    this.effectPalette[(2 * PALETTE_SIZE + smallID) * 4 + 3] =
-      attrs.movementSpeed;
+    this.effectPalette[(1 * PALETTE_SIZE + smallID) * 4 + 3] = styleId;
+    this.effectPalette[(2 * PALETTE_SIZE + smallID) * 4 + 3] = scalar0;
+    this.effectPalette[(3 * PALETTE_SIZE + smallID) * 4 + 3] = scalar1;
     return colors.length > 0;
   }
 

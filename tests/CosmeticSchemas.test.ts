@@ -51,7 +51,7 @@ describe("Effect cosmetic schemas", () => {
     });
 
     it("requires the gradient type, colors, colorSize, and movementSpeed", () => {
-      // The old solid/rainbow/pulse styles are gone — only gradient remains.
+      // Unrecognized styles (no discriminated-union member) are rejected.
       expect(
         TransportShipTrailAttributesSchema.safeParse({ type: "solid" }).success,
       ).toBe(false);
@@ -65,6 +65,28 @@ describe("Effect cosmetic schemas", () => {
       expect(TransportShipTrailAttributesSchema.safeParse({}).success).toBe(
         false,
       );
+    });
+
+    it("parses a transition with a color list and frequency", () => {
+      const parsed = TransportShipTrailAttributesSchema.parse({
+        type: "transition",
+        colors: ["#002aff", "#4805ff"],
+        frequency: 1,
+      });
+      expect(parsed).toEqual({
+        type: "transition",
+        colors: ["#002aff", "#4805ff"],
+        frequency: 1,
+      });
+    });
+
+    it("requires frequency for a transition", () => {
+      expect(
+        TransportShipTrailAttributesSchema.safeParse({
+          type: "transition",
+          colors: ["#002aff", "#4805ff"],
+        }).success,
+      ).toBe(false);
     });
   });
 
