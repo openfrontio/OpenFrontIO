@@ -76,15 +76,3 @@ export class TrailSwatch extends LitElement {
     this.animation = null;
   }
 }
-
-/** Render a transport-ship-trail swatch (animated for the transition style). */
-export function renderTransportShipTrailSwatch(
-  attributes: TransportShipTrailAttributes,
-): TemplateResult {
-  // block + full size so the inner swatch fills the host (custom elements are
-  // inline by default, which would collapse the inner w-full/h-full).
-  return html`<trail-swatch
-    class="block w-full h-full"
-    .trail=${attributes}
-  ></trail-swatch>`;
-}
