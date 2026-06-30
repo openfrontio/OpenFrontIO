@@ -102,20 +102,28 @@ export const SkinSchema = CosmeticSchema.extend({
 export const EFFECT_TYPES = ["transportShipTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
-// A boat trail is a gradient of one or more colors, cycled along the trail. The
-// old solid/rainbow styles are just color lists now: solid = a single color,
-// rainbow = the spectrum, gradient = two or more. The server only ships this
-// "gradient" shape. Colors are unvalidated strings here; the renderer drops any
-// it can't parse (and an empty list falls back to the player's territory color).
-// `colorSize` is how wide each color band is, in tiles (larger = bigger bands);
-// `movementSpeed` is how fast the bands scroll along the trail, in tiles per
-// second (0 = static).
-export const TransportShipTrailAttributesSchema = z.object({
-  type: z.literal("gradient"),
-  colors: z.array(z.string()),
-  colorSize: z.number(),
-  movementSpeed: z.number(),
-});
+// A boat trail effect, discriminated on `type`:
+//  - "gradient": the colors form a spatial gradient banded along the trail.
+//    `colorSize` = band width in tiles (larger = bigger bands); `movementSpeed`
+//    = how fast the bands scroll, in tiles/sec (0 = static).
+//  - "transition": the whole trail is one color at a time, cross-fading through
+//    the color list over time. `frequency` = color changes per second.
+// solid = a single-color list; rainbow = the spectrum as a gradient. Colors are
+// unvalidated strings here; the renderer drops any it can't parse (and an empty
+// list falls back to the player's territory color).
+export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("gradient"),
+    colors: z.array(z.string()),
+    colorSize: z.number(),
+    movementSpeed: z.number(),
+  }),
+  z.object({
+    type: z.literal("transition"),
+    colors: z.array(z.string()),
+    frequency: z.number(),
+  }),
+]);
 
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),

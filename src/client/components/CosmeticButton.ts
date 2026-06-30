@@ -19,7 +19,7 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import "./CosmeticContainer";
 import "./CosmeticInfo";
-import { renderTransportShipTrailSwatch } from "./EffectPreview";
+import "./EffectPreview"; // registers <trail-swatch>
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
 
@@ -187,7 +187,10 @@ export class CosmeticButton extends LitElement {
         </div>`;
       }
       // Only effectType today is transportShipTrail; c.attributes is its style.
-      return renderTransportShipTrailSwatch(c.attributes);
+      return html`<trail-swatch
+        class="block w-full h-full"
+        .trail=${c.attributes}
+      ></trail-swatch>`;
     }
 
     if (this.activeResolved.type === "pack") {

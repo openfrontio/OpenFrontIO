@@ -8,7 +8,7 @@ import {
   EFFECTS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
 } from "../core/game/UserSettings";
-import { renderTransportShipTrailSwatch } from "./components/EffectPreview";
+import "./components/EffectPreview"; // registers <trail-swatch>
 import { fetchCosmetics, getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
@@ -87,9 +87,12 @@ export class EffectsInput extends LitElement {
           >
             ${translateText("effects.title")}
           </span>`
-        : html`<span class="w-full h-full p-1.5"
-            >${renderTransportShipTrailSwatch(this.trailAttributes)}</span
-          >`;
+        : html`<span class="w-full h-full p-1.5">
+            <trail-swatch
+              class="block w-full h-full"
+              .trail=${this.trailAttributes}
+            ></trail-swatch>
+          </span>`;
 
     return html`
       <button

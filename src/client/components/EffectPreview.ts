@@ -1,27 +1,78 @@
-import { html, TemplateResult } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { TransportShipTrailAttributes } from "../../core/CosmeticSchemas";
 
 // Neutral fallback when a trail has no usable colors.
 const EMPTY_BG = "#444";
 
 /**
- * Render a swatch preview of a transport-ship-trail's attributes, filling its
- * container. A trail is a list of colors: one color renders as a flat swatch,
- * two or more as a left-to-right gradient (a multi-color list reads as a
- * rainbow). An empty list renders a neutral swatch.
+ * Swatch preview of a transport-ship-trail effect, filling its container.
+ *
+ * - gradient / single color: a static swatch (flat color or left-to-right
+ *   gradient — a multi-color list reads as a rainbow).
+ * - transition: cross-fades through the colors over time, mirroring the trail
+ *   (each color step lasts 1/frequency seconds, matching the shader).
  */
-export function renderTransportShipTrailSwatch(
-  attributes: TransportShipTrailAttributes,
-): TemplateResult {
-  const colors = attributes.colors;
-  const background =
-    colors.length === 0
-      ? EMPTY_BG
-      : colors.length === 1
-        ? colors[0]
-        : `linear-gradient(90deg,${colors.join(",")})`;
-  return html`<div
-    class="w-full h-full rounded-md"
-    style="background:${background};"
-  ></div>`;
+@customElement("trail-swatch")
+export class TrailSwatch extends LitElement {
+  // Named `trail` (not `attributes`) to avoid clashing with Element.attributes.
+  @property({ attribute: false })
+  trail: TransportShipTrailAttributes | null = null;
+
+  private animation: Animation | null = null;
+
+  // Light DOM so the shared Tailwind classes apply.
+  createRenderRoot(): HTMLElement {
+    return this;
+  }
+
+  render(): TemplateResult {
+    const colors = this.trail?.colors ?? [];
+    let background: string;
+    if (colors.length === 0) {
+      background = EMPTY_BG;
+    } else if (this.trail?.type === "transition") {
+      // The animation (see updated) cross-fades from here through the list.
+      background = colors[0];
+    } else if (colors.length === 1) {
+      background = colors[0];
+    } else {
+      background = `linear-gradient(90deg,${colors.join(",")})`;
+    }
+    return html`<div
+      class="w-full h-full rounded-md"
+      style="background:${background};"
+    ></div>`;
+  }
+
+  updated(changed: Map<string, unknown>): void {
+    if (!changed.has("trail")) return;
+    this.animation?.cancel();
+    this.animation = null;
+
+    const attrs = this.trail;
+    if (attrs?.type !== "transition") return;
+    const colors = attrs.colors;
+    if (colors.length < 2 || attrs.frequency <= 0) return;
+
+    const fill = this.querySelector<HTMLElement>("div");
+    if (!fill) return;
+
+    // Cross-fade color0 → color1 → … → color0; each step lasts 1/frequency s,
+    // matching the shader's i = floor(uTime * frequency) mod count.
+    const keyframes = [...colors, colors[0]].map((c) => ({
+      backgroundColor: c,
+    }));
+    this.animation = fill.animate(keyframes, {
+      duration: (colors.length / attrs.frequency) * 1000,
+      iterations: Infinity,
+      easing: "linear",
+    });
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.animation?.cancel();
+    this.animation = null;
+  }
 }
