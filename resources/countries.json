@@ -79,6 +79,16 @@
     "name": "Algeria"
   },
   {
+    "code": "Almohad Dynasty",
+    "continent": "Africa",
+    "name": "Almohad Dynasty"
+  },
+  {
+    "code": "Almoravid Dynasty",
+    "continent": "Africa",
+    "name": "Almoravid Dynasty"
+  },
+  {
     "code": "Amazigh flag",
     "continent": "Africa",
     "name": "Amazigh Flag"
@@ -97,6 +107,11 @@
     "code": "am",
     "continent": "Asia",
     "name": "Armenia"
+  },
+  {
+    "code": "Armenian Kingdom Of Cilicia",
+    "continent": "Asia",
+    "name": "Armenian Kingdom of Cilicia"
   },
   {
     "code": "Armenian SSR",
@@ -205,6 +220,11 @@
     "code": "au",
     "continent": "Oceania",
     "name": "Australia"
+  },
+  {
+    "code": "Ayyubid Dynasty",
+    "continent": "Asia",
+    "name": "Ayyubid Dynasty"
   },
   {
     "code": "Azad Kashmir",
@@ -588,6 +608,16 @@
     "name": "Costa Rica"
   },
   {
+    "code": "County of Edessa",
+    "continent": "Asia",
+    "name": "County of Edessa"
+  },
+  {
+    "code": "County of Tripoli",
+    "continent": "Asia",
+    "name": "County of Tripoli"
+  },
+  {
     "code": "ci",
     "continent": "Africa",
     "name": "Côte d'Ivoire"
@@ -826,6 +856,11 @@
     "continent": "Europe",
     "name": "Fascist Spain",
     "restricted": true
+  },
+  {
+    "code": "Fatimid Caliphate",
+    "continent": "Africa",
+    "name": "Fatimid Caliphate"
   },
   {
     "code": "fm",
@@ -1251,6 +1286,11 @@
     "name": "Khemet"
   },
   {
+    "code": "Kingdom Of Cyprus",
+    "continent": "Europe",
+    "name": "Kingdom of Cyprus"
+  },
+  {
     "code": "Kingdom of Egypt",
     "continent": "Africa",
     "name": "Kingdom of Egypt"
@@ -1530,6 +1570,11 @@
     "code": "Maori flag",
     "continent": "Oceania",
     "name": "Māori Flag"
+  },
+  {
+    "code": "Marinid Dynasty",
+    "continent": "Africa",
+    "name": "Marinid Dynasty"
   },
   {
     "code": "mh",
@@ -1900,6 +1945,11 @@
     "name": "Ontario"
   },
   {
+    "code": "Order Of Malta",
+    "continent": "Europe",
+    "name": "Sovereign Military Order of Malta"
+  },
+  {
     "code": "Oregon (Reverse)",
     "continent": "North America",
     "name": "Oregon (Reverse)"
@@ -2047,6 +2097,11 @@
     "code": "princeedwardisland",
     "continent": "North America",
     "name": "Prince Edward Island"
+  },
+  {
+    "code": "Principality of Antioch",
+    "continent": "Asia",
+    "name": "Principality of Antioch"
   },
   {
     "code": "Principality of Moldavia",
@@ -2310,6 +2365,11 @@
     "name": "Selangor"
   },
   {
+    "code": "Seljuk Empire",
+    "continent": "Asia",
+    "name": "Seljuk Empire"
+  },
+  {
     "code": "sn",
     "continent": "Africa",
     "name": "Senegal"
@@ -2467,6 +2527,11 @@
     "code": "Sultanate of Nejd",
     "continent": "Asia",
     "name": "Sultanate of Nejd"
+  },
+  {
+    "code": "Sultanate Of Rum",
+    "continent": "Asia",
+    "name": "Sultanate of Rum"
   },
   {
     "code": "sr",

@@ -55,6 +55,7 @@ export enum GameMapType {
   Korea = "Korea", // map-generator/assets/maps/korea/info.json
   Labyrinth = "Labyrinth", // map-generator/assets/maps/labyrinth/info.json
   Lemnos = "Lemnos", // map-generator/assets/maps/lemnos/info.json
+  Levant = "Levant", // map-generator/assets/maps/levant/info.json
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
@@ -538,6 +539,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lemnos",
     categories: ["europe"],
     multiplayerFrequency: 3,
+  },
+  {
+    id: "Levant",
+    type: GameMapType.Levant,
+    translationKey: "map.levant",
+    categories: ["asia", "new"],
+    multiplayerFrequency: 5,
   },
   {
     id: "Lisbon",
