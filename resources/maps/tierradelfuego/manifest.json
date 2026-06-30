@@ -1,0 +1,124 @@
+{
+  "categories": ["south_america", "new"],
+  "id": "TierraDelFuego",
+  "map": {
+    "height": 1664,
+    "num_land_tiles": 822917,
+    "width": 2504
+  },
+  "map16x": {
+    "height": 416,
+    "num_land_tiles": 45863,
+    "width": 626
+  },
+  "map4x": {
+    "height": 832,
+    "num_land_tiles": 197190,
+    "width": 1252
+  },
+  "multiplayer_frequency": 5,
+  "name": "Tierra Del Fuego",
+  "nations": [
+    {
+      "coordinates": [1320, 945],
+      "flag": "Tierra del Fuego",
+      "name": "Rio Grande"
+    },
+    {
+      "coordinates": [1283, 1153],
+      "flag": "Tierra del Fuego",
+      "name": "Ushuaia"
+    },
+    {
+      "coordinates": [1452, 1118],
+      "flag": "Tierra del Fuego",
+      "name": "Tolhuin"
+    },
+    {
+      "coordinates": [2226, 351],
+      "flag": "fk",
+      "name": "Falkland Islands"
+    },
+    {
+      "coordinates": [1181, 536],
+      "flag": "Santa Cruz",
+      "name": "Rio Gallegos"
+    },
+    {
+      "coordinates": [1200, 204],
+      "flag": "Santa Cruz",
+      "name": "Puerto Santa Cruz"
+    },
+    {
+      "coordinates": [790, 251],
+      "flag": "Santa Cruz",
+      "name": "El Calafate"
+    },
+    {
+      "coordinates": [1039, 22],
+      "flag": "Santa Cruz",
+      "name": "Gobernador Gregores"
+    },
+    {
+      "coordinates": [1340, 24],
+      "flag": "Santa Cruz",
+      "name": "San Julian"
+    },
+    {
+      "coordinates": [759, 505],
+      "flag": "Magallanes",
+      "name": "Puerto Natales"
+    },
+    {
+      "coordinates": [1363, 1209],
+      "flag": "Magallanes",
+      "name": "Puerto Williams"
+    },
+    {
+      "coordinates": [929, 849],
+      "flag": "Magallanes",
+      "name": "Punta Arenas"
+    },
+    {
+      "coordinates": [1057, 848],
+      "flag": "Magallanes",
+      "name": "Porvenir"
+    },
+    {
+      "coordinates": [755, 368],
+      "flag": "Magallanes",
+      "name": "Cerro Castillo"
+    },
+    {
+      "coordinates": [471, 15],
+      "flag": "Magallanes",
+      "name": "Puerto Eden"
+    },
+    {
+      "coordinates": [910, 609],
+      "flag": "Magallanes",
+      "name": "Laguna Blanca"
+    },
+    {
+      "coordinates": [1086, 972],
+      "flag": "Magallanes",
+      "name": "Timaukel"
+    },
+    {
+      "coordinates": [1162, 782],
+      "flag": "Magallanes",
+      "name": "Primavera"
+    },
+    {
+      "coordinates": [815, 721],
+      "flag": "Magallanes",
+      "name": "Rio Verde"
+    },
+    {
+      "coordinates": [1029, 666],
+      "flag": "Magallanes",
+      "name": "San Gregorio"
+    }
+  ],
+  "translation_key": "map.tierradelfuego"
+}
