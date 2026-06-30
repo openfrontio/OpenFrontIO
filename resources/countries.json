@@ -187,6 +187,11 @@
     "name": "Asturias"
   },
   {
+    "code": "Atacama",
+    "continent": "South America",
+    "name": "Atacama"
+  },
+  {
     "code": "Athens",
     "continent": "Europe",
     "name": "Athens"
@@ -459,6 +464,11 @@
     "name": "Central African Republic"
   },
   {
+    "code": "Chaco",
+    "continent": "South America",
+    "name": "Chaco"
+  },
+  {
     "code": "td",
     "continent": "Africa",
     "name": "Chad"
@@ -507,6 +517,11 @@
     "code": "Choctaw",
     "continent": "North America",
     "name": "Choctaw"
+  },
+  {
+    "code": "Chubut",
+    "continent": "South America",
+    "name": "Chubut"
   },
   {
     "code": "Chuvashia",
@@ -573,9 +588,24 @@
     "name": "Cook Islands"
   },
   {
+    "code": "Coquimbo",
+    "continent": "South America",
+    "name": "Coquimbo"
+  },
+  {
+    "code": "Cordoba (Argentina)",
+    "continent": "South America",
+    "name": "Cordoba (Argentina)"
+  },
+  {
     "code": "cordoba",
     "continent": "Europe",
     "name": "Cordoba"
+  },
+  {
+    "code": "Corrientes",
+    "continent": "South America",
+    "name": "Corrientes"
   },
   {
     "code": "Corsica",
@@ -762,6 +792,11 @@
     "name": "England"
   },
   {
+    "code": "Entre Rios",
+    "continent": "South America",
+    "name": "Entre Rios"
+  },
+  {
     "code": "gq",
     "continent": "Africa",
     "name": "Equatorial Guinea"
@@ -851,6 +886,11 @@
     "code": "Florida",
     "continent": "North America",
     "name": "Florida"
+  },
+  {
+    "code": "Formosa",
+    "continent": "South America",
+    "name": "Formosa"
   },
   {
     "code": "1_Fortriu",
@@ -1176,6 +1216,11 @@
     "name": "Jordan"
   },
   {
+    "code": "Jujuy",
+    "continent": "South America",
+    "name": "Jujuy"
+  },
+  {
     "code": "Kachin",
     "continent": "Asia",
     "name": "Kachin"
@@ -1249,6 +1294,11 @@
     "code": "Khemet",
     "continent": "Africa",
     "name": "Khemet"
+  },
+  {
+    "code": "Kingdom of Araucania and Patagonia",
+    "continent": "South America",
+    "name": "Kingdom of Araucania and Patagonia"
   },
   {
     "code": "Kingdom of Egypt",
@@ -1333,6 +1383,21 @@
     "code": "kg",
     "continent": "Asia",
     "name": "Kyrgyzstan"
+  },
+  {
+    "code": "La Araucania",
+    "continent": "South America",
+    "name": "La Araucania"
+  },
+  {
+    "code": "La Pampa",
+    "continent": "South America",
+    "name": "La Pampa"
+  },
+  {
+    "code": "La Rioja",
+    "continent": "South America",
+    "name": "La Rioja"
   },
   {
     "code": "Labuan",
@@ -1432,6 +1497,16 @@
     "name": "Lithuanian SSR"
   },
   {
+    "code": "Los Lagos",
+    "continent": "South America",
+    "name": "Los Lagos"
+  },
+  {
+    "code": "Los Rios",
+    "continent": "South America",
+    "name": "Los Rios"
+  },
+  {
     "code": "Louisiana",
     "continent": "North America",
     "name": "Louisiana"
@@ -1455,6 +1530,11 @@
     "code": "Macedonia",
     "continent": "Europe",
     "name": "Macedonia"
+  },
+  {
+    "code": "Magallanes",
+    "continent": "South America",
+    "name": "Magallanes"
   },
   {
     "code": "manitoba",
@@ -1567,6 +1647,11 @@
     "name": "Median Empire"
   },
   {
+    "code": "Mendoza",
+    "continent": "South America",
+    "name": "Mendoza"
+  },
+  {
     "code": "1_Mercia",
     "continent": "Europe",
     "name": "Mercia"
@@ -1595,6 +1680,11 @@
     "code": "Minnesota",
     "continent": "North America",
     "name": "Minnesota"
+  },
+  {
+    "code": "Misiones",
+    "continent": "South America",
+    "name": "Misiones"
   },
   {
     "code": "Mississippi",
@@ -1719,6 +1809,11 @@
     "code": "nl",
     "continent": "Europe",
     "name": "Netherlands"
+  },
+  {
+    "code": "Neuquen",
+    "continent": "South America",
+    "name": "Neuquen"
   },
   {
     "code": "neuragic_empire",
@@ -2153,6 +2248,11 @@
     "name": "Rio de Janeiro"
   },
   {
+    "code": "Rio Negro",
+    "continent": "South America",
+    "name": "Rio Negro"
+  },
+  {
     "code": "SPQR",
     "continent": "Europe",
     "name": "Roman Empire"
@@ -2232,6 +2332,11 @@
     "name": "Saint Vincent and the Grenadines"
   },
   {
+    "code": "Salta",
+    "continent": "South America",
+    "name": "Salta"
+  },
+  {
     "code": "Sami flag",
     "continent": "Europe",
     "name": "Sami Flag"
@@ -2240,6 +2345,16 @@
     "code": "ws",
     "continent": "Oceania",
     "name": "Samoa"
+  },
+  {
+    "code": "San Juan",
+    "continent": "South America",
+    "name": "San Juan"
+  },
+  {
+    "code": "San Luis",
+    "continent": "South America",
+    "name": "San Luis"
   },
   {
     "code": "sm",
@@ -2252,8 +2367,18 @@
     "name": "Santa Cruz"
   },
   {
+    "code": "Santa Fe",
+    "continent": "South America",
+    "name": "Santa Fe"
+  },
+  {
     "code": "santa_claus",
     "name": "Santa Claus"
+  },
+  {
+    "code": "Santiago del Estero",
+    "continent": "South America",
+    "name": "Santiago del Estero"
   },
   {
     "code": "st",
@@ -2559,6 +2684,11 @@
     "name": "Tibet"
   },
   {
+    "code": "Tierra del Fuego",
+    "continent": "South America",
+    "name": "Tierra del Fuego"
+  },
+  {
     "code": "tl",
     "continent": "Asia",
     "name": "Timor-Leste"
@@ -2597,6 +2727,11 @@
     "code": "Trucial States",
     "continent": "Asia",
     "name": "Trucial States"
+  },
+  {
+    "code": "Tucuman",
+    "continent": "South America",
+    "name": "Tucuman"
   },
   {
     "code": "tn",
