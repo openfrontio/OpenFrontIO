@@ -59,7 +59,11 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
+import {
+  getMaxTrailColors,
+  getPaletteSize,
+  hexToRgb,
+} from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
@@ -91,10 +95,6 @@ const SAM_RADIUS_HIGHLIGHT_TYPES = new Set([
 ]);
 
 const GRID_VIEW_KEY = "renderer:grid_view_enabled";
-
-// Rows in the trail-effect texture = max colors per trail gradient. Keep in sync
-// with MAX_TRAIL_COLORS in WebGLFrameBuilder (which fills the texture).
-const MAX_TRAIL_COLORS = 8;
 
 export class GPURenderer {
   private gl: WebGL2RenderingContext;
@@ -137,7 +137,7 @@ export class GPURenderer {
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
   // Per-player transport-ship-trail gradient, keyed by smallID (RGBA32F,
-  // 4096×MAX_TRAIL_COLORS): row r = color r's rgb; row 0's alpha = color count.
+  // 4096×getMaxTrailColors()): row r = color r's rgb; row 0's alpha = color count.
   // Sampled by TrailPass.
   private effectTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
@@ -245,13 +245,14 @@ export class GPURenderer {
 
     // Per-player trail-effect texture (one row per gradient color). Starts zeroed
     // (color count 0 everywhere = no effect → trail uses territory color).
+    const maxTrailColors = getMaxTrailColors();
     this.effectTex = createTexture2D(gl, {
       width: palW,
-      height: MAX_TRAIL_COLORS,
+      height: maxTrailColors,
       internalFormat: gl.RGBA32F,
       format: gl.RGBA,
       type: gl.FLOAT,
-      data: new Float32Array(palW * MAX_TRAIL_COLORS * 4),
+      data: new Float32Array(palW * maxTrailColors * 4),
       filter: gl.NEAREST,
     });
 
@@ -661,7 +662,7 @@ export class GPURenderer {
       0,
       0,
       getPaletteSize(),
-      MAX_TRAIL_COLORS,
+      getMaxTrailColors(),
       gl.RGBA,
       gl.FLOAT,
       effectData,

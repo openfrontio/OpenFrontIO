@@ -151,10 +151,30 @@ export const CosmeticsSchema = z.object({
   // Grouped by effectType. Each effect also carries its own effectType (matching
   // this outer key) so an Effect stands alone and EffectSchema can discriminate
   // on it. Add a key per new effectType.
+  //
+  // Forward-compat: a new effect the server ships to cosmetics.json before this
+  // client is updated to understand it must not break the older client. A whole
+  // new effectType key is already tolerated (z.object strips keys it doesn't
+  // list). The lenient record below extends that one level down: a new effect
+  // *entry* under a known effectType, in a shape this client can't parse, is
+  // dropped rather than failing the whole catalog parse — patterns, flags, skins,
+  // and the other effects still load, and the dropped effect degrades to "no
+  // effect" (the trail keeps its territory color).
   effects: z
     .object({
       transportShipTrail: z
-        .record(z.string(), TransportShipTrailEffectSchema)
+        .record(z.string(), z.unknown())
+        .transform((rec) => {
+          const out: Record<
+            string,
+            z.infer<typeof TransportShipTrailEffectSchema>
+          > = {};
+          for (const [key, value] of Object.entries(rec)) {
+            const parsed = TransportShipTrailEffectSchema.safeParse(value);
+            if (parsed.success) out[key] = parsed.data;
+          }
+          return out;
+        })
         .optional(),
     })
     .optional(),

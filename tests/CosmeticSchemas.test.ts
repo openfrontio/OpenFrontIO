@@ -196,6 +196,46 @@ describe("Effect cosmetic schemas", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("drops a newer-shaped effect within a known effectType without failing the catalog", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        transportShipTrail: {
+          good: {
+            name: "good",
+            effectType: "transportShipTrail",
+            attributes: {
+              type: "gradient",
+              colors: ["#fff"],
+              colorSize: 16,
+              movementSpeed: 0.15,
+            },
+            product: null,
+            rarity: "common",
+          },
+          // A newer effect shape this client doesn't understand yet — must be
+          // dropped, not fail the whole catalog parse.
+          future: {
+            name: "future",
+            effectType: "transportShipTrail",
+            attributes: { type: "hologram", intensity: 3 },
+            product: null,
+            rarity: "common",
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const trails = result.data.effects?.transportShipTrail;
+      // The good effect survives...
+      expect(trails?.good?.name).toBe("good");
+      // ...and only the unparseable newer one is dropped.
+      expect(trails?.future).toBeUndefined();
+    }
+  });
 });
 
 describe("findEffect", () => {

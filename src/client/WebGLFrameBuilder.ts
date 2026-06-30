@@ -12,12 +12,16 @@ import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
+// Value import from the leaf module (not the ./render/gl barrel) so non-Vite
+// consumers don't pull in GPURenderer and its shaders — see note above.
+import { getMaxTrailColors } from "./render/gl/utils/ColorUtils";
 import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 // Max colors per trail gradient. Bounds the effect texture's height; longer
-// catalog color lists are truncated. Keep in sync with Renderer's effectTex.
-const MAX_TRAIL_COLORS = 8;
+// catalog color lists are truncated. Shared with the renderer so the buffer this
+// fills and the texture it uploads to can't drift.
+const MAX_TRAIL_COLORS = getMaxTrailColors();
 
 /**
  * The renderer-side glue between GameView (which already builds the full
