@@ -513,6 +513,7 @@
     "duration": "Duration",
     "economy": "Economy",
     "hydros": "Hydros",
+    "load_failed": "Couldn't load the game info",
     "loading_game_info": "Loading game stats",
     "mirv": "MIRV",
     "naval_trade": "Tradeship",

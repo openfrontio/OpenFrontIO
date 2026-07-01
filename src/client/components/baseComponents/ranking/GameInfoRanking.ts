@@ -1,4 +1,7 @@
-import { AnalyticsRecord, PlayerRecord } from "../../../../core/Schemas";
+import {
+  ArchivedAnalyticsRecord,
+  ArchivedPlayerRecord,
+} from "../../../../core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -38,7 +41,7 @@ export interface PlayerInfo {
   mirv: number;
 }
 
-function hasPlayed(player: PlayerRecord): boolean {
+function hasPlayed(player: ArchivedPlayerRecord): boolean {
   return (
     player.stats !== undefined &&
     (player.stats.units !== undefined ||
@@ -51,7 +54,7 @@ export class Ranking {
   private readonly duration: number;
   private players: PlayerInfo[];
 
-  constructor(session: AnalyticsRecord) {
+  constructor(session: ArchivedAnalyticsRecord) {
     this.duration = session.info.duration;
     this.players = this.summarizePlayers(session);
   }
@@ -70,7 +73,7 @@ export class Ranking {
     return this.getScore(player, type);
   }
 
-  private summarizePlayers(session: AnalyticsRecord): PlayerInfo[] {
+  private summarizePlayers(session: ArchivedAnalyticsRecord): PlayerInfo[] {
     const players: Record<string, PlayerInfo> = {};
 
     for (const player of session.info.players) {

@@ -842,6 +842,45 @@ export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 
+// Lenient read-side schemas for archived games (see client fetchGameById).
+// The archive spans every past schema version (e.g. players predate clanTag),
+// so these validate only what the ranking display consumes and tolerate drift
+// everywhere else. The write-side schemas above must stay strict.
+
+export const ArchivedPlayerRecordSchema = z.object({
+  clientID: z.string(),
+  username: z.string(),
+  // Absent on records that predate clan tags; display-only, so accept any.
+  // (.default covers the missing key, .catch covers a malformed value.)
+  clanTag: z.string().nullable().default(null).catch(null),
+  cosmetics: PlayerCosmeticsSchema.optional().catch(undefined),
+  // A stats blob that no longer parses (e.g. a removed unit type) drops just
+  // that player from the ranking instead of the whole record.
+  stats: PlayerStatsSchema.catch(undefined),
+});
+export type ArchivedPlayerRecord = z.infer<typeof ArchivedPlayerRecordSchema>;
+
+export const ArchivedGameEndInfoSchema = z.object({
+  config: z
+    .object({
+      gameMode: z.string().default("").catch(""),
+      gameMap: z.string().default("").catch(""),
+    })
+    .default({ gameMode: "", gameMap: "" })
+    .catch({ gameMode: "", gameMap: "" }),
+  players: ArchivedPlayerRecordSchema.array(),
+  duration: z.number().nonnegative().default(0).catch(0),
+  winner: WinnerSchema.catch(undefined),
+});
+export type ArchivedGameEndInfo = z.infer<typeof ArchivedGameEndInfoSchema>;
+
+export const ArchivedAnalyticsRecordSchema = z.object({
+  info: ArchivedGameEndInfoSchema,
+});
+export type ArchivedAnalyticsRecord = z.infer<
+  typeof ArchivedAnalyticsRecordSchema
+>;
+
 export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: TurnSchema.array(),
 });

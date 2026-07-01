@@ -14,7 +14,10 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
+import {
+  ArchivedAnalyticsRecord,
+  ArchivedAnalyticsRecordSchema,
+} from "../core/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
 
 export async function fetchPlayerById(
@@ -348,7 +351,7 @@ export function hasLinkedAccount(
 
 export async function fetchGameById(
   gameId: string,
-): Promise<AnalyticsRecord | false> {
+): Promise<ArchivedAnalyticsRecord | false> {
   try {
     const url = `${getApiBase()}/game/${encodeURIComponent(gameId)}`;
     const res = await fetch(url, {
@@ -367,7 +370,9 @@ export async function fetchGameById(
     }
 
     const json = await res.json();
-    const parsed = AnalyticsRecordSchema.safeParse(json);
+    // Lenient read-side schema: archived records were written under older
+    // schema versions and must not be rejected wholesale (see Schemas.ts).
+    const parsed = ArchivedAnalyticsRecordSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchGameById: Zod validation failed", parsed.error);
       return false;

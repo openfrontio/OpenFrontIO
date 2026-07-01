@@ -1,7 +1,7 @@
 import { html, LitElement, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../../../core/game/Game";
-import { GameEndInfo } from "../../../../core/Schemas";
+import { ArchivedGameEndInfo } from "../../../../core/Schemas";
 import { fetchGameById } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { renderDuration, translateText } from "../../../Utils";
@@ -24,10 +24,11 @@ export class GameRankingView extends LitElement {
   @property() currentClientID: string | null = null;
 
   @state() private mapImage: string | null = null;
-  @state() private gameInfo: GameEndInfo | null = null;
+  @state() private gameInfo: ArchivedGameEndInfo | null = null;
   @state() private rankedPlayers: PlayerInfo[] = [];
   @state() private rankType = RankType.Lifetime;
   @state() private loading = true;
+  @state() private loadFailed = false;
 
   private ranking: Ranking | null = null;
   // Guards against a stale fetch resolving after the host switched gameId.
@@ -42,6 +43,7 @@ export class GameRankingView extends LitElement {
   private async loadGame() {
     const gen = ++this.asyncGeneration;
     this.loading = true;
+    this.loadFailed = false;
     this.gameInfo = null;
     this.ranking = null;
     this.rankedPlayers = [];
@@ -53,13 +55,17 @@ export class GameRankingView extends LitElement {
     try {
       const session = await fetchGameById(this.gameId);
       if (gen !== this.asyncGeneration) return;
-      if (!session) return;
+      if (!session) {
+        this.loadFailed = true;
+        return;
+      }
       this.gameInfo = session.info;
       this.ranking = new Ranking(session);
       this.updateRanking();
       this.loadMapImage(session.info.config.gameMap);
     } catch (err) {
       console.error("Failed to load game:", err);
+      if (gen === this.asyncGeneration) this.loadFailed = true;
     } finally {
       if (gen === this.asyncGeneration) this.loading = false;
     }
@@ -91,6 +97,24 @@ export class GameRankingView extends LitElement {
       return renderLoadingSpinner(
         translateText("game_info_modal.loading_game_info"),
       );
+    }
+    if (this.loadFailed) {
+      return html`
+        <div
+          class="bg-white/5 rounded-xl border border-white/10 p-8 text-center"
+        >
+          <p class="text-white/40 text-sm mb-3">
+            ${translateText("game_info_modal.load_failed")}
+          </p>
+          <button
+            type="button"
+            @click=${() => void this.loadGame()}
+            class="text-xs font-bold text-white/60 hover:text-white uppercase tracking-wider px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors"
+          >
+            ${translateText("leaderboard_modal.try_again")}
+          </button>
+        </div>
+      `;
     }
     if (this.rankedPlayers.length === 0) {
       return html`
