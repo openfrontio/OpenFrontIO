@@ -1,13 +1,21 @@
-import { EFFECTS_KEY, UserSettings } from "../src/core/game/UserSettings";
+import {
+  EFFECTS_KEY,
+  LEADERBOARD_COLUMNS_KEY,
+  UserSettings,
+} from "../src/core/game/UserSettings";
+
+const DEFAULT_LEADERBOARD_COLUMNS = ["tiles", "gold", "maxtroops"];
+
+function clearUserSettingsCache(): void {
+  (
+    UserSettings as unknown as { cache: Map<string, string | null> }
+  ).cache.clear();
+}
 
 describe("UserSettings effect selection", () => {
   beforeEach(() => {
     localStorage.clear();
-    // UserSettings keeps a static in-memory cache; reset it too so each test
-    // reads fresh from the (cleared) localStorage.
-    (
-      UserSettings as unknown as { cache: Map<string, string | null> }
-    ).cache.clear();
+    clearUserSettingsCache();
   });
 
   it("sets and reads a per-effectType selection", () => {
@@ -44,5 +52,52 @@ describe("UserSettings effect selection", () => {
   it("returns an empty map for a corrupt blob", () => {
     localStorage.setItem(EFFECTS_KEY, "not json");
     expect(new UserSettings().getSelectedEffects()).toEqual({});
+  });
+});
+
+describe("UserSettings leaderboard columns", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    clearUserSettingsCache();
+  });
+
+  it("falls back to defaults for invalid JSON", () => {
+    localStorage.setItem(LEADERBOARD_COLUMNS_KEY, "not-json");
+
+    expect(new UserSettings().leaderboardColumns()).toEqual(
+      DEFAULT_LEADERBOARD_COLUMNS,
+    );
+  });
+
+  it("filters unknown keys", () => {
+    localStorage.setItem(
+      LEADERBOARD_COLUMNS_KEY,
+      JSON.stringify(["gold", "unknown", "maxtroops"]),
+    );
+
+    expect(new UserSettings().leaderboardColumns()).toEqual([
+      "gold",
+      "maxtroops",
+    ]);
+  });
+
+  it("falls back to defaults for empty or fully invalid selections", () => {
+    const settings = new UserSettings();
+
+    settings.setLeaderboardColumns([]);
+    expect(settings.leaderboardColumns()).toEqual(DEFAULT_LEADERBOARD_COLUMNS);
+
+    clearUserSettingsCache();
+    localStorage.setItem(LEADERBOARD_COLUMNS_KEY, JSON.stringify(["unknown"]));
+    expect(new UserSettings().leaderboardColumns()).toEqual(
+      DEFAULT_LEADERBOARD_COLUMNS,
+    );
+  });
+
+  it("keeps the last selected column enabled", () => {
+    const settings = new UserSettings();
+
+    settings.setLeaderboardColumns(["gold"]);
+    expect(settings.toggleLeaderboardColumn("gold")).toEqual(["gold"]);
   });
 });

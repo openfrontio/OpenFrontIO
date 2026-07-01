@@ -803,6 +803,8 @@
   },
   "leaderboard": {
     "cities": "Cities",
+    "columns": "Columns",
+    "configure_columns": "Configure columns",
     "gold": "Gold",
     "launchers": "Launchers",
     "maxtroops": "Max troops",
