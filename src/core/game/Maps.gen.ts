@@ -33,6 +33,7 @@ export enum GameMapType {
   DeglaciatedAntarctica = "Deglaciated Antarctica", // map-generator/assets/maps/deglaciatedantarctica/info.json
   Didier = "Didier", // map-generator/assets/maps/didier/info.json
   DidierFrance = "Didier France", // map-generator/assets/maps/didierfrance/info.json
+  Dungeon = "Dungeon", // map-generator/assets/maps/dungeon/info.json
   Dyslexdria = "Dyslexdria", // map-generator/assets/maps/dyslexdria/info.json
   EastAsia = "East Asia", // map-generator/assets/maps/eastasia/info.json
   Europe = "Europe", // map-generator/assets/maps/europe/info.json
@@ -380,6 +381,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.didierfrance",
     categories: ["arcade"],
     multiplayerFrequency: 1,
+  },
+  {
+    id: "Dungeon",
+    type: GameMapType.Dungeon,
+    translationKey: "map.dungeon",
+    categories: ["new", "arcade"],
+    multiplayerFrequency: 8,
   },
   {
     id: "Dyslexdria",
