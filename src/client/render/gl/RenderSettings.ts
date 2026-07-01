@@ -278,6 +278,7 @@ export interface RenderSettings {
     attackRingScreenPx: number; // screen px — attack ring quad half-size (visible outer ring = 0.8×)
     nukeShockwaveDurationMs: number;
     nukeShockwaveRadiusFactor: number;
+    nukeShockwaveStyle: number; // 0 = classic ring, 1 = EMP energy pulse
     samShockwaveDurationMs: number;
     samShockwaveRadius: number;
     debrisLifetimeMs: number;

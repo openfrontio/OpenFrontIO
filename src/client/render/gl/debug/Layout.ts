@@ -400,6 +400,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       ),
       slider(
         s.fx,
+        "nukeShockwaveStyle",
+        d.fx,
+        0,
+        1,
+        1,
+        "Nuke Style (0 ring · 1 EMP)",
+      ),
+      slider(
+        s.fx,
         "samShockwaveDurationMs",
         d.fx,
         200,
