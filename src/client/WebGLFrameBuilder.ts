@@ -2,6 +2,7 @@ import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import {
+  EFFECT_TYPES,
   findEffect,
   type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
@@ -22,11 +23,15 @@ import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
-// Trail effectTypes in effect-palette block order: index = block (rows
-// block·MAX_TRAIL_COLORS …). MUST match trail.frag.glsl's nuke bit (ship=0,
-// nuke=1) and TRAIL_EFFECT_BLOCKS. The NUKE_TRAIL_BIT in TrailManager selects
-// block 1.
-const TRAIL_EFFECT_TYPES = ["transportShipTrail", "nukeTrail"] as const;
+// EFFECT_TYPES order IS the effect-palette block order: index = block (rows
+// block·MAX_TRAIL_COLORS …). The shader (trail.frag.glsl) picks the block from
+// the trail tile's nuke bit — block 0 = transportShipTrail (nuke bit 0), block 1
+// = nukeTrail (nuke bit 1, set by NUKE_TRAIL_BIT in TrailManager). Reordering
+// EFFECT_TYPES in CosmeticSchemas would silently swap the two trails' colors, so
+// this guard fails the build if the shader-coupled prefix ever drifts.
+const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
+  EFFECT_TYPES;
+void _EFFECT_BLOCK_ORDER;
 
 /**
  * The renderer-side glue between GameView (which already builds the full
@@ -308,8 +313,8 @@ export class WebGLFrameBuilder {
 
       // Resolve each trail effectType into its own block of the effect palette.
       // rowBase block*MAX_TRAIL_COLORS must match the shader's block layout
-      // (ship=0, nuke=1) — see TRAIL_EFFECT_TYPES above and trail.frag.glsl.
-      TRAIL_EFFECT_TYPES.forEach((effectType, block) => {
+      // (ship=0, nuke=1) — see _EFFECT_BLOCK_ORDER above and trail.frag.glsl.
+      EFFECT_TYPES.forEach((effectType, block) => {
         const selected = p.cosmetics.effects?.[effectType];
         if (!selected) return;
         const effect = findEffect(catalog, effectType, selected.name);
