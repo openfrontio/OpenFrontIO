@@ -5,6 +5,7 @@
  * Uses an SDF circle rendered in a unit quad, no texture required.
  */
 
+import type { NukeExplosionRenderParams } from "../../../types";
 import { DynamicInstanceBuffer } from "../../DynamicBuffer";
 import type { RenderSettings } from "../../RenderSettings";
 import { createProgram } from "../../utils/GlUtils";
@@ -16,20 +17,32 @@ import shockwaveVertSrc from "../../shaders/fx/shockwave.vert.glsl?raw";
 // Active state
 // ---------------------------------------------------------------------------
 
+type RGB = readonly [number, number, number];
+
+// Default nuke shockwave (no cosmetic): purple, static, no color cross-fade.
+const DEFAULT_NUKE_COLOR: RGB = [0.6, 0.1, 1];
+// SAM interception keeps the classic white ring (color fields go unused there).
+const WHITE: RGB = [1, 1, 1];
+
 interface ActiveShockwave {
   x: number;
   y: number;
   startMs: number;
   durationMs: number;
   maxRadius: number;
-  isNuke: boolean;
+  style: number; // 0 = classic ring (SAM + no-cosmetic nuke), 1 = EMP
+  color0: RGB;
+  color1: RGB;
+  speed: number; // animation-speed multiplier
+  transitionSpeed: number; // color0↔color1 cross-fade rate (Hz)
 }
 
 // ---------------------------------------------------------------------------
-// Instance data layout: x, y, radius, alpha, isNuke
+// Instance data layout (13 floats):
+//   x, y, radius, alpha, style, color0.rgb, color1.rgb, speed, transitionSpeed
 // ---------------------------------------------------------------------------
 
-const SHOCKWAVE_FLOATS = 5;
+const SHOCKWAVE_FLOATS = 13;
 const SHOCKWAVE_STRIDE = SHOCKWAVE_FLOATS * 4; // bytes
 
 // ---------------------------------------------------------------------------
@@ -44,7 +57,6 @@ export class FxShockwavePass {
   private uCamera: WebGLUniformLocation;
   private uRingWidth: WebGLUniformLocation;
   private uTime: WebGLUniformLocation;
-  private uNukeStyle: WebGLUniformLocation;
   private vao: WebGLVertexArrayObject;
   private instanceBuf: DynamicInstanceBuffer;
   private shockwaveCount = 0;
@@ -60,7 +72,6 @@ export class FxShockwavePass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uRingWidth = gl.getUniformLocation(this.program, "uRingWidth")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;
-    this.uNukeStyle = gl.getUniformLocation(this.program, "uNukeStyle")!;
 
     const glBuf = gl.createBuffer()!;
     this.instanceBuf = new DynamicInstanceBuffer(
@@ -88,10 +99,26 @@ export class FxShockwavePass {
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 4, gl.FLOAT, false, SHOCKWAVE_STRIDE, 0);
     gl.vertexAttribDivisor(1, 1);
-    // location 2: isNuke flag
+    // location 2: style (0 classic, 1 EMP)
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 16);
     gl.vertexAttribDivisor(2, 1);
+    // location 3: color0 rgb
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, SHOCKWAVE_STRIDE, 20);
+    gl.vertexAttribDivisor(3, 1);
+    // location 4: color1 rgb
+    gl.enableVertexAttribArray(4);
+    gl.vertexAttribPointer(4, 3, gl.FLOAT, false, SHOCKWAVE_STRIDE, 32);
+    gl.vertexAttribDivisor(4, 1);
+    // location 5: speed
+    gl.enableVertexAttribArray(5);
+    gl.vertexAttribPointer(5, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 44);
+    gl.vertexAttribDivisor(5, 1);
+    // location 6: transitionSpeed
+    gl.enableVertexAttribArray(6);
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 48);
+    gl.vertexAttribDivisor(6, 1);
 
     gl.bindVertexArray(null);
   }
@@ -100,15 +127,28 @@ export class FxShockwavePass {
   // Spawning
   // -------------------------------------------------------------------------
 
-  pushNukeShockwave(x: number, y: number, nukeRadius: number): void {
+  // params = the firing player's resolved nuke-explosion cosmetic (undefined =
+  // no cosmetic → default purple, default radius/speed).
+  pushNukeShockwave(
+    x: number,
+    y: number,
+    nukeRadius: number,
+    params?: NukeExplosionRenderParams,
+  ): void {
     const fx = this.settings.fx;
+    const radiusFactor = params?.radiusFactor ?? fx.nukeShockwaveRadiusFactor;
     this.active.push({
       x,
       y,
       startMs: this.timeFn(),
       durationMs: fx.nukeShockwaveDurationMs,
-      maxRadius: nukeRadius * fx.nukeShockwaveRadiusFactor,
-      isNuke: true,
+      maxRadius: nukeRadius * radiusFactor,
+      // Cosmetic → EMP; no cosmetic → classic ring (the original nuke look).
+      style: params ? 1 : 0,
+      color0: params?.color0 ?? DEFAULT_NUKE_COLOR,
+      color1: params?.color1 ?? DEFAULT_NUKE_COLOR,
+      speed: params?.speed ?? 1,
+      transitionSpeed: params?.transitionSpeed ?? 0,
     });
   }
 
@@ -120,7 +160,11 @@ export class FxShockwavePass {
       startMs: this.timeFn(),
       durationMs: fx.samShockwaveDurationMs,
       maxRadius: fx.samShockwaveRadius,
-      isNuke: false,
+      style: 0, // SAM interception keeps the classic ring
+      color0: WHITE,
+      color1: WHITE,
+      speed: 1,
+      transitionSpeed: 0,
     });
   }
 
@@ -155,7 +199,15 @@ export class FxShockwavePass {
       data[off + 1] = sw.y;
       data[off + 2] = t * sw.maxRadius;
       data[off + 3] = 1 - t;
-      data[off + 4] = sw.isNuke ? 1 : 0;
+      data[off + 4] = sw.style;
+      data[off + 5] = sw.color0[0];
+      data[off + 6] = sw.color0[1];
+      data[off + 7] = sw.color0[2];
+      data[off + 8] = sw.color1[0];
+      data[off + 9] = sw.color1[1];
+      data[off + 10] = sw.color1[2];
+      data[off + 11] = sw.speed;
+      data[off + 12] = sw.transitionSpeed;
     }
 
     this.shockwaveCount = count;
@@ -172,7 +224,6 @@ export class FxShockwavePass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uRingWidth, this.settings.fx.shockwaveRingWidth);
     gl.uniform1f(this.uTime, this.timeFn() * 0.001);
-    gl.uniform1i(this.uNukeStyle, this.settings.fx.nukeShockwaveStyle);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf.buffer);
     gl.bufferSubData(
       gl.ARRAY_BUFFER,
@@ -182,11 +233,7 @@ export class FxShockwavePass {
       this.shockwaveCount * SHOCKWAVE_FLOATS,
     );
     gl.bindVertexArray(this.vao);
-    // Additive blending gives the energy pulse its electric glow. Restore the
-    // renderer's standard alpha blend afterward so later passes composite normally.
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.shockwaveCount);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
 
   // -------------------------------------------------------------------------

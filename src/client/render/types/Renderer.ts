@@ -107,8 +107,30 @@ export interface DeadUnitFx {
   unitType: string;
   pos: number;
   reachedTarget: boolean;
+  /** Firing player's smallID — resolves their nuke-explosion cosmetic. */
+  ownerSmallID: number;
+  /**
+   * Resolved nuke-explosion render params (the firing player's cosmetic).
+   * Attached by WebGLFrameBuilder before the FX pass consumes the event;
+   * undefined when the owner has no nuke-explosion cosmetic (default FX).
+   */
+  explosion?: NukeExplosionRenderParams;
   /** Ticks since the event occurred (0 = this frame, >0 = seeked past it). */
   tickAge?: number;
+}
+
+/**
+ * A firing player's nuke-explosion cosmetic, resolved from catalog attributes
+ * into renderer-ready values. Colors are rgb in 0..1; radiusFactor multiplies
+ * the blast radius; speed scales the animation; transitionSpeed is the color
+ * cross-fade rate in Hz.
+ */
+export interface NukeExplosionRenderParams {
+  color0: readonly [number, number, number];
+  color1: readonly [number, number, number];
+  radiusFactor: number;
+  speed: number;
+  transitionSpeed: number;
 }
 
 /** Conquest event data for the gold popup + sword sprite FX. */

@@ -3,11 +3,14 @@ precision highp float;
 
 uniform float uRingWidth;
 uniform float uTime;      // seconds — animates procedural styles
-uniform int   uNukeStyle; // nuke shockwave preset: 0 = classic ring, 1 = EMP
 
 in vec2  vLocalPos;
 flat in float vAlpha;   // 1 - lifetime progress (fades out over the effect)
-flat in float vIsNuke;  // 1.0 = nuke event, 0.0 = SAM / other (always classic)
+flat in float vStyle;   // 1.0 = EMP energy pulse, 0.0 = classic ring
+flat in vec3  vColor0;  // EMP: cosmetic color 0
+flat in vec3  vColor1;  // EMP: cosmetic color 1 (cross-fade target)
+flat in float vSpeed;   // EMP: animation-speed multiplier
+flat in float vTransSpeed; // EMP: color0<->color1 cross-fade Hz
 
 out vec4 fragColor;
 
@@ -33,38 +36,39 @@ void classicRing(float dist) {
   fragColor = vec4(1.0, 1.0, 1.0, ring * vAlpha);
 }
 
-// EMP energy pulse — a jagged, crackling cyan ring with rotating lightning
-// arcs and a faint trailing energy fill. Drawn with additive blending.
+// EMP energy pulse — a jagged, crackling ring with rotating lightning arcs and
+// a faint trailing energy fill. Colored by the firing player's cosmetic.
 void empPulse(float dist) {
   float ang = atan(vLocalPos.y, vLocalPos.x); // -pi..pi
+  float tt = uTime * vSpeed;                   // speed-scaled animation time
 
   // Jagged front: perturb the ideal r=1.0 ring by angular + time noise.
-  float n = vnoise(ang * 6.0 + uTime * 6.0)
-          + 0.5 * vnoise(ang * 17.0 - uTime * 11.0);
+  float n = vnoise(ang * 6.0 + tt * 6.0)
+          + 0.5 * vnoise(ang * 17.0 - tt * 11.0);
   float ringR = 0.95 + n * 0.05;
   float ringDist = abs(dist - ringR);
 
   // Thickness flickers per-angle to feel electric.
-  float w = uRingWidth * (1.6 + 0.8 * vnoise(ang * 9.0 + uTime * 20.0));
+  float w = uRingWidth * (1.6 + 0.8 * vnoise(ang * 9.0 + tt * 20.0));
   float ring = 1.0 - smoothstep(0.0, w, ringDist);
 
   // A couple of bright rotating arcs of "lightning" chasing around the ring.
-  float arc = pow(0.5 + 0.5 * sin(ang * 5.0 - uTime * 8.0), 8.0)
-            + pow(0.5 + 0.5 * sin(ang * 8.0 + uTime * 13.0), 12.0);
+  float arc = pow(0.5 + 0.5 * sin(ang * 5.0 - tt * 8.0), 8.0)
+            + pow(0.5 + 0.5 * sin(ang * 8.0 + tt * 13.0), 12.0);
 
   // Faint inner energy fill trailing behind the front.
   float inner = smoothstep(ringR, 0.0, dist) * 0.12
-              * (0.6 + 0.4 * vnoise(ang * 20.0 + uTime * 25.0));
+              * (0.6 + 0.4 * vnoise(ang * 20.0 + tt * 25.0));
 
   float glow = ring * (0.8 + arc) + inner;
   if (glow < 0.01) discard;
 
-  // Electric violet ring; only the concentrated lightning arcs flare to
-  // lavender-white. Driving the whiten by `arc` (not `ring`) keeps the whole
-  // visible ring front purple instead of washing it out.
-  vec3 purple = vec3(0.6, 0.1, 1.0);
-  float hot = clamp(arc * 0.8, 0.0, 1.0);
-  vec3 col = mix(purple, vec3(0.85, 0.7, 1.0), hot);
+  // Base color cross-fades between the two cosmetic colors at transitionSpeed
+  // Hz (transitionSpeed 0 → static color0). Arcs flare toward white.
+  float pulse = 0.5 + 0.5 * sin(uTime * vTransSpeed * 6.2831853);
+  vec3 base = mix(vColor0, vColor1, pulse);
+  vec3 hot = mix(max(vColor0, vColor1), vec3(1.0), 0.4);
+  vec3 col = mix(base, hot, clamp(arc * 0.8, 0.0, 1.0));
 
   // Whole-ring flicker on top of the lifetime fade.
   float life = vAlpha * (0.75 + 0.25 * vnoise(uTime * 30.0));
@@ -73,7 +77,7 @@ void empPulse(float dist) {
 
 void main() {
   float dist = length(vLocalPos);
-  if (vIsNuke > 0.5 && uNukeStyle == 1) {
+  if (vStyle > 0.5) {
     empPulse(dist);
   } else {
     classicRing(dist);

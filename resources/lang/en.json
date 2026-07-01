@@ -397,6 +397,7 @@
     "search": "Search...",
     "title": "Effects",
     "type": {
+      "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
       "transportShipTrail": "Boat Trail"
     }

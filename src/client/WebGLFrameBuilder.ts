@@ -2,8 +2,10 @@ import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import {
-  EFFECT_TYPES,
   findEffect,
+  isTrailEffect,
+  type NukeExplosionAttributes,
+  TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
@@ -13,6 +15,7 @@ import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
+import type { NukeExplosionRenderParams } from "./render/types";
 // Value import from the leaf module (not the ./render/gl barrel) so non-Vite
 // consumers don't pull in GPURenderer and its shaders — see note above.
 import {
@@ -23,15 +26,52 @@ import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
-// EFFECT_TYPES order IS the effect-palette block order: index = block (rows
+// TRAIL_EFFECT_TYPES order IS the effect-palette block order: index = block (rows
 // block·MAX_TRAIL_COLORS …). The shader (trail.frag.glsl) picks the block from
 // the trail tile's nuke bit — block 0 = transportShipTrail (nuke bit 0), block 1
 // = nukeTrail (nuke bit 1, set by NUKE_TRAIL_BIT in TrailManager). Reordering
-// EFFECT_TYPES in CosmeticSchemas would silently swap the two trails' colors, so
-// this guard fails the build if the shader-coupled prefix ever drifts.
+// TRAIL_EFFECT_TYPES in CosmeticSchemas would silently swap the two trails' colors,
+// so this guard fails the build if the shader-coupled order ever drifts.
 const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
-  EFFECT_TYPES;
+  TRAIL_EFFECT_TYPES;
 void _EFFECT_BLOCK_ORDER;
+
+// Default nuke-explosion color (purple) when a cosmetic has no usable color.
+const DEFAULT_EXPLOSION_COLOR: readonly [number, number, number] = [
+  0.6, 0.1, 1,
+];
+// Attribute → render-param mappings, tuned so the reference cosmetic
+// (size 50, speed 50) matches the default look:
+//   radiusFactor = size / 20  → size 50 = 2.5× blast radius
+//   speed        = speed / 50 → speed 50 = 1.0× animation
+//   transitionSpeed passes through as the color cross-fade rate (Hz).
+const EXPLOSION_SIZE_TO_RADIUS = 1 / 20;
+const EXPLOSION_SPEED_DIVISOR = 50;
+
+function toRgb01(s: string): [number, number, number] | null {
+  const c = colord(s);
+  if (!c.isValid()) return null;
+  const { r, g, b } = c.toRgb();
+  return [r / 255, g / 255, b / 255];
+}
+
+/** Resolve a nuke-explosion cosmetic's catalog attributes into render params. */
+function attributesToExplosionParams(
+  attrs: NukeExplosionAttributes,
+): NukeExplosionRenderParams {
+  const colors = attrs.colors
+    .map(toRgb01)
+    .filter((c): c is [number, number, number] => c !== null);
+  const color0 = colors[0] ?? DEFAULT_EXPLOSION_COLOR;
+  const color1 = colors[1] ?? color0; // single color → no cross-fade
+  return {
+    color0,
+    color1,
+    radiusFactor: attrs.size * EXPLOSION_SIZE_TO_RADIUS,
+    speed: attrs.speed / EXPLOSION_SPEED_DIVISOR,
+    transitionSpeed: attrs.transitionSpeed,
+  };
+}
 
 /**
  * The renderer-side glue between GameView (which already builds the full
@@ -128,7 +168,33 @@ export class WebGLFrameBuilder {
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncTerrainDeltas(gameView);
+    this.resolveDeadUnitExplosions(gameView);
     uploadFrameData(this.view, gameView.frameData());
+  }
+
+  /**
+   * Attach the firing player's resolved nuke-explosion cosmetic to each dead
+   * nuke event, so every client renders the shockwave in the owner's colors.
+   * Resolved from the catalog by (nukeExplosion, name) — the same source the
+   * trail palette resolves from — keyed by the unit's owner smallID. Runs
+   * before uploadFrameData so the FX pass sees the params on the event; a player
+   * with no cosmetic is left undefined (the shockwave falls back to its default).
+   */
+  private resolveDeadUnitExplosions(gameView: GameView): void {
+    const deadUnits = gameView.frameData().events.deadUnits;
+    if (deadUnits.length === 0) return;
+    const catalog = getCachedCosmetics();
+    if (!catalog) return; // Catalog not loaded yet — default FX this frame.
+    for (const du of deadUnits) {
+      if (!du.reachedTarget) continue; // SAM interceptions have no explosion cosmetic
+      const player = gameView.playerBySmallID(du.ownerSmallID);
+      if (!player.isPlayer()) continue;
+      const name = player.cosmetics.effects?.nukeExplosion?.name;
+      if (!name) continue;
+      const effect = findEffect(catalog, "nukeExplosion", name);
+      if (!effect || effect.effectType !== "nukeExplosion") continue;
+      du.explosion = attributesToExplosionParams(effect.attributes);
+    }
   }
 
   /**
@@ -314,11 +380,13 @@ export class WebGLFrameBuilder {
       // Resolve each trail effectType into its own block of the effect palette.
       // rowBase block*MAX_TRAIL_COLORS must match the shader's block layout
       // (ship=0, nuke=1) — see _EFFECT_BLOCK_ORDER above and trail.frag.glsl.
-      EFFECT_TYPES.forEach((effectType, block) => {
+      // Only trail effect types render here; nukeExplosion is not a trail.
+      TRAIL_EFFECT_TYPES.forEach((effectType, block) => {
         const selected = p.cosmetics.effects?.[effectType];
         if (!selected) return;
         const effect = findEffect(catalog, effectType, selected.name);
         if (!effect || effect.effectType !== effectType) return;
+        if (!isTrailEffect(effect)) return; // narrows attributes to trail attrs
         const rowBase = block * MAX_TRAIL_COLORS;
         if (this.writeEffectEntry(smallID, effect.attributes, rowBase)) {
           dirty = true;

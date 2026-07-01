@@ -3,6 +3,8 @@ import {
   CosmeticsSchema,
   EffectSchema,
   findEffect,
+  isTrailEffect,
+  NukeExplosionAttributesSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
 import { PlayerEffectSchema } from "../src/core/Schemas";
@@ -371,5 +373,152 @@ describe("PlayerEffectSchema (identity: name + effectType)", () => {
     expect(PlayerEffectSchema.safeParse({ name: "spectrum" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("NukeExplosionAttributesSchema", () => {
+  const atomShockwave = {
+    style: "shockwave",
+    nukeType: "atom",
+    colors: ["#ff0000", "#bb00ff"],
+    size: 50,
+    speed: 50,
+    transitionSpeed: 5,
+  };
+
+  it("parses the atom shockwave attributes", () => {
+    expect(NukeExplosionAttributesSchema.safeParse(atomShockwave).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects an unknown nukeType or style (so it's dropped, not rendered wrong)", () => {
+    expect(
+      NukeExplosionAttributesSchema.safeParse({
+        ...atomShockwave,
+        nukeType: "hydrogen",
+      }).success,
+    ).toBe(false);
+    expect(
+      NukeExplosionAttributesSchema.safeParse({
+        ...atomShockwave,
+        style: "fireball",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires colors, size, speed, and transitionSpeed", () => {
+    expect(
+      NukeExplosionAttributesSchema.safeParse({
+        style: "shockwave",
+        nukeType: "atom",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("nukeExplosion in the cosmetics catalog", () => {
+  it("parses the atom shockwave catalog entry", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        nukeExplosion: {
+          atom_shockwave_purple_red: {
+            name: "atom_shockwave_purple_red",
+            effectType: "nukeExplosion",
+            attributes: {
+              size: 50,
+              speed: 50,
+              colors: ["#ff0000", "#bb00ff"],
+              nukeType: "atom",
+              style: "shockwave",
+              transitionSpeed: 5,
+            },
+            affiliateCode: null,
+            product: null,
+            priceHard: 1,
+            rarity: "common",
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const eff = result.data.effects?.nukeExplosion?.atom_shockwave_purple_red;
+      expect(eff?.effectType).toBe("nukeExplosion");
+      expect(eff?.attributes.colors).toEqual(["#ff0000", "#bb00ff"]);
+    }
+  });
+
+  it("drops a nukeExplosion effect with an unknown nukeType without failing the catalog", () => {
+    const attrs = (nukeType: string) => ({
+      style: "shockwave",
+      nukeType,
+      colors: [],
+      size: 1,
+      speed: 1,
+      transitionSpeed: 1,
+    });
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        nukeExplosion: {
+          atom: {
+            name: "atom",
+            effectType: "nukeExplosion",
+            attributes: attrs("atom"),
+            product: null,
+            rarity: "common",
+          },
+          future: {
+            name: "future",
+            effectType: "nukeExplosion",
+            attributes: attrs("hydrogen"),
+            product: null,
+            rarity: "common",
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.effects?.nukeExplosion?.atom?.name).toBe("atom");
+      expect(result.data.effects?.nukeExplosion?.future).toBeUndefined();
+    }
+  });
+});
+
+describe("isTrailEffect", () => {
+  it("is true for a trail effect and false for a nukeExplosion", () => {
+    const trail = EffectSchema.parse({
+      name: "spectrum",
+      effectType: "transportShipTrail",
+      product: null,
+      rarity: "common",
+      attributes: {
+        type: "gradient",
+        colors: ["#fff"],
+        colorSize: 16,
+        movementSpeed: 0.15,
+      },
+    });
+    const boom = EffectSchema.parse({
+      name: "atom_shockwave_purple_red",
+      effectType: "nukeExplosion",
+      product: null,
+      rarity: "common",
+      attributes: {
+        style: "shockwave",
+        nukeType: "atom",
+        colors: ["#f00"],
+        size: 50,
+        speed: 50,
+        transitionSpeed: 5,
+      },
+    });
+    expect(isTrailEffect(trail)).toBe(true);
+    expect(isTrailEffect(boom)).toBe(false);
   });
 });

@@ -10,11 +10,15 @@ export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 // An effect cosmetic of any type — discriminated on effectType (today
-// transportShipTrail + nukeTrail; gains a member per effectType).
+// transportShipTrail + nukeTrail + nukeExplosion; gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
 // Shared by every trail effectType (transportShipTrail, nukeTrail, …).
 export type TrailEffectAttributes = z.infer<typeof TrailEffectAttributesSchema>;
+// Attributes of a nuke-explosion effect (a detonation FX, not a trail).
+export type NukeExplosionAttributes = z.infer<
+  typeof NukeExplosionAttributesSchema
+>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -98,8 +102,20 @@ export const SkinSchema = CosmeticSchema.extend({
 // stay precisely typed; an effectType the client doesn't list is dropped at parse
 // (the UI only handles EFFECT_TYPES), so a new server-side effectType never fails
 // the whole cosmetics parse.
-export const EFFECT_TYPES = ["transportShipTrail", "nukeTrail"] as const;
+export const EFFECT_TYPES = [
+  "transportShipTrail",
+  "nukeTrail",
+  "nukeExplosion",
+] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
+
+// The subset of effect types that render as trails through the shared trail
+// palette (their attributes are TrailEffectAttributes; block order matches
+// trail.frag.glsl — transportShipTrail=0, nukeTrail=1). nukeExplosion is an
+// effect type but NOT a trail: it's a detonation FX with its own attributes and
+// renders through the FX shockwave pass, so it's excluded here.
+export const TRAIL_EFFECT_TYPES = ["transportShipTrail", "nukeTrail"] as const;
+export type TrailEffectType = (typeof TRAIL_EFFECT_TYPES)[number];
 
 // A trail effect, discriminated on `type`. Shared by every trail effectType
 // (transport-ship trails, nuke trails, …) — the attributes are the same; only
@@ -126,6 +142,21 @@ export const TrailEffectAttributesSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+// A nuke-explosion effect — a detonation FX, not a trail. `style` picks the
+// visual (only "shockwave" today) and `nukeType` the bomb (only "atom" today);
+// both are enums so an effect using a value this client can't render is dropped
+// by lenientRecord instead of rendering wrong. `colors` is the palette and
+// size/speed/transitionSpeed drive the animation (unvalidated numbers/strings —
+// the renderer clamps/drops what it can't use).
+export const NukeExplosionAttributesSchema = z.object({
+  style: z.enum(["shockwave"]),
+  nukeType: z.enum(["atom"]),
+  colors: z.array(z.string()),
+  size: z.number(),
+  speed: z.number(),
+  transitionSpeed: z.number(),
+});
+
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),
   attributes: TrailEffectAttributesSchema,
@@ -138,11 +169,30 @@ const NukeTrailEffectSchema = CosmeticSchema.extend({
   url: z.string().optional(),
 });
 
+const NukeExplosionEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("nukeExplosion"),
+  attributes: NukeExplosionAttributesSchema,
+  url: z.string().optional(),
+});
+
 // Any catalog effect, discriminated on effectType. Add a member per effectType.
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
   NukeTrailEffectSchema,
+  NukeExplosionEffectSchema,
 ]);
+
+/**
+ * True for effects that render through the shared trail palette (their
+ * attributes are TrailEffectAttributes). Narrows the Effect union so callers can
+ * treat `attributes` as trail attributes; a nukeExplosion (or any future
+ * non-trail effect) returns false.
+ */
+export function isTrailEffect(
+  effect: Effect,
+): effect is Extract<Effect, { effectType: TrailEffectType }> {
+  return (TRAIL_EFFECT_TYPES as readonly string[]).includes(effect.effectType);
+}
 
 /**
  * A record that drops entries failing `schema` instead of failing the whole
@@ -193,6 +243,7 @@ export const CosmeticsSchema = z.object({
         TransportShipTrailEffectSchema,
       ).optional(),
       nukeTrail: lenientRecord(NukeTrailEffectSchema).optional(),
+      nukeExplosion: lenientRecord(NukeExplosionEffectSchema).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),

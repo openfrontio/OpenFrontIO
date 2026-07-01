@@ -9,6 +9,7 @@ export type {
   EmojiData,
   GhostPreviewData,
   NameEntry,
+  NukeExplosionRenderParams,
   NukeTelegraphData,
   NukeTrajectoryData,
   PlayerState,
