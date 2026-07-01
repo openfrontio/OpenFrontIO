@@ -7,7 +7,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { TrailManager } from "../../../../src/client/render/frame/TrailManager";
+import {
+  NUKE_TRAIL_BIT,
+  TrailManager,
+} from "../../../../src/client/render/frame/TrailManager";
 import type { UnitState } from "../../../../src/client/render/types";
 import {
   UT_ATOM_BOMB,
@@ -56,15 +59,18 @@ describe("TrailManager", () => {
     const tm = new TrailManager(MAP_W, MAP_H);
     const trail = tm.getTrailState();
 
+    // A nuke's texel carries the owner smallID plus the nuke bit (bit 12).
+    const nukeTexel = 7 | NUKE_TRAIL_BIT;
+
     // First sighting: lastPos === pos at spawn.
     tm.update(units(unit({ pos: ref(2, 2), lastPos: ref(2, 2) })), [1]);
-    expect(trail[ref(2, 2)]).toBe(7);
+    expect(trail[ref(2, 2)]).toBe(nukeTexel);
 
     // Move: lastPos trails pos by a tile. The trail head must reach lastPos
     // (3,2) but NOT the current pos (4,2) — the smoothed sprite occupies the
     // lastPos→pos span this frame.
     tm.update(units(unit({ pos: ref(4, 2), lastPos: ref(3, 2) })), [1]);
-    expect(trail[ref(3, 2)]).toBe(7);
+    expect(trail[ref(3, 2)]).toBe(nukeTexel);
     expect(trail[ref(4, 2)]).toBe(0);
   });
 
@@ -93,10 +99,11 @@ describe("TrailManager", () => {
     const tm = new TrailManager(MAP_W, MAP_H);
     const trail = tm.getTrailState();
 
+    const nukeTexel = 7 | NUKE_TRAIL_BIT;
     tm.update(units(unit({ pos: ref(5, 5), lastPos: ref(5, 5) })), [1]);
     tm.update(units(unit({ pos: ref(7, 5), lastPos: ref(6, 5) })), [1]);
-    expect(trail[ref(5, 5)]).toBe(7);
-    expect(trail[ref(6, 5)]).toBe(7);
+    expect(trail[ref(5, 5)]).toBe(nukeTexel);
+    expect(trail[ref(6, 5)]).toBe(nukeTexel);
 
     // Unit gone from the map → its tiles are cleared.
     tm.update(new Map(), []);

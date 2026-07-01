@@ -2,8 +2,9 @@ import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import {
+  EFFECT_TYPES,
   findEffect,
-  type TransportShipTrailAttributes,
+  type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
@@ -14,10 +15,23 @@ import { uploadFrameData } from "./render/frame/Upload";
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
 // Value import from the leaf module (not the ./render/gl barrel) so non-Vite
 // consumers don't pull in GPURenderer and its shaders — see note above.
-import { MAX_TRAIL_COLORS } from "./render/gl/utils/ColorUtils";
+import {
+  MAX_TRAIL_COLORS,
+  TRAIL_EFFECT_BLOCKS,
+} from "./render/gl/utils/ColorUtils";
 import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
+
+// EFFECT_TYPES order IS the effect-palette block order: index = block (rows
+// block·MAX_TRAIL_COLORS …). The shader (trail.frag.glsl) picks the block from
+// the trail tile's nuke bit — block 0 = transportShipTrail (nuke bit 0), block 1
+// = nukeTrail (nuke bit 1, set by NUKE_TRAIL_BIT in TrailManager). Reordering
+// EFFECT_TYPES in CosmeticSchemas would silently swap the two trails' colors, so
+// this guard fails the build if the shader-coupled prefix ever drifts.
+const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
+  EFFECT_TYPES;
+void _EFFECT_BLOCK_ORDER;
 
 /**
  * The renderer-side glue between GameView (which already builds the full
@@ -32,9 +46,10 @@ const PALETTE_SIZE = 4096;
  */
 export class WebGLFrameBuilder {
   private readonly palette: Float32Array;
-  // Per-player transport-ship-trail gradient, keyed by smallID. Layout is
-  // 4096×MAX_TRAIL_COLORS: row 0 = (color0.rgb, colorCount), row r = (colorR.rgb).
-  // Consumed by TrailPass's effect texture.
+  // Per-player trail-effect palette, keyed by smallID. Layout is
+  // 4096×(MAX_TRAIL_COLORS·TRAIL_EFFECT_BLOCKS): block 0 (rows 0–7) =
+  // transportShipTrail, block 1 (rows 8–15) = nukeTrail. Consumed by TrailPass's
+  // effect texture; the shader picks the block from the trail tile's nuke bit.
   private readonly effectPalette: Float32Array;
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
@@ -64,7 +79,9 @@ export class WebGLFrameBuilder {
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
-    this.effectPalette = new Float32Array(PALETTE_SIZE * MAX_TRAIL_COLORS * 4);
+    this.effectPalette = new Float32Array(
+      PALETTE_SIZE * MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS * 4,
+    );
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
   }
@@ -294,23 +311,28 @@ export class WebGLFrameBuilder {
       if (this.effectResolved.has(smallID)) continue;
       this.effectResolved.add(smallID);
 
-      const trailEffect = p.cosmetics.effects?.["transportShipTrail"];
-      if (!trailEffect) continue; // No effect — nothing to write or upload.
-      const effect = findEffect(
-        catalog,
-        "transportShipTrail",
-        trailEffect.name,
-      );
-      if (effect?.effectType !== "transportShipTrail") continue;
-      if (this.writeEffectEntry(smallID, effect.attributes)) dirty = true;
+      // Resolve each trail effectType into its own block of the effect palette.
+      // rowBase block*MAX_TRAIL_COLORS must match the shader's block layout
+      // (ship=0, nuke=1) — see _EFFECT_BLOCK_ORDER above and trail.frag.glsl.
+      EFFECT_TYPES.forEach((effectType, block) => {
+        const selected = p.cosmetics.effects?.[effectType];
+        if (!selected) return;
+        const effect = findEffect(catalog, effectType, selected.name);
+        if (!effect || effect.effectType !== effectType) return;
+        const rowBase = block * MAX_TRAIL_COLORS;
+        if (this.writeEffectEntry(smallID, effect.attributes, rowBase)) {
+          dirty = true;
+        }
+      });
     }
     if (dirty) this.view.updateEffectPalette(this.effectPalette);
   }
 
   /**
-   * Encode a player's transport-ship-trail effect into the effect palette.
-   * Layout matches trail.frag.glsl: row r holds color r's rgb, and the spare
-   * alpha channels (rows 0–3 always exist) carry the scalar params —
+   * Encode a player's trail effect into one block of the effect palette. The
+   * block starts at row `rowBase` (0 = transportShipTrail, MAX_TRAIL_COLORS =
+   * nukeTrail). Within the block, row r holds color r's rgb, and the spare alpha
+   * channels (rows rowBase+0..3 always exist) carry the scalar params —
    *   row 0.a = color count (0 → the shader falls back to the territory color),
    *   row 1.a = styleId (0 = gradient, 1 = transition),
    *   row 2.a = scalar0 (gradient: colorSize; transition: frequency),
@@ -321,7 +343,8 @@ export class WebGLFrameBuilder {
    */
   private writeEffectEntry(
     smallID: number,
-    attrs: TransportShipTrailAttributes,
+    attrs: TrailEffectAttributes,
+    rowBase: number,
   ): boolean {
     const colors = attrs.colors
       .map((s) => colord(s))
@@ -329,7 +352,7 @@ export class WebGLFrameBuilder {
       .slice(0, MAX_TRAIL_COLORS)
       .map((c) => c.toRgb());
     for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
-      const off = (r * PALETTE_SIZE + smallID) * 4;
+      const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
       const c = colors[r] ?? { r: 0, g: 0, b: 0 };
       this.effectPalette[off] = c.r / 255;
       this.effectPalette[off + 1] = c.g / 255;
@@ -340,10 +363,12 @@ export class WebGLFrameBuilder {
       attrs.type === "transition"
         ? [1, attrs.frequency, 0]
         : [0, attrs.colorSize, attrs.movementSpeed];
-    this.effectPalette[(0 * PALETTE_SIZE + smallID) * 4 + 3] = colors.length;
-    this.effectPalette[(1 * PALETTE_SIZE + smallID) * 4 + 3] = styleId;
-    this.effectPalette[(2 * PALETTE_SIZE + smallID) * 4 + 3] = scalar0;
-    this.effectPalette[(3 * PALETTE_SIZE + smallID) * 4 + 3] = scalar1;
+    const alpha = (row: number) =>
+      ((rowBase + row) * PALETTE_SIZE + smallID) * 4 + 3;
+    this.effectPalette[alpha(0)] = colors.length;
+    this.effectPalette[alpha(1)] = styleId;
+    this.effectPalette[alpha(2)] = scalar0;
+    this.effectPalette[alpha(3)] = scalar1;
     return colors.length > 0;
   }
 

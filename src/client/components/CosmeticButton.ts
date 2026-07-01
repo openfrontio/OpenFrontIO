@@ -186,7 +186,8 @@ export class CosmeticButton extends LitElement {
           ${translateText("territory_patterns.pattern.default")}
         </div>`;
       }
-      // Only effectType today is transportShipTrail; c.attributes is its style.
+      // Every trail effectType (transportShipTrail, nukeTrail) shares the same
+      // attributes shape; c.attributes is the gradient/transition style.
       return html`<trail-swatch
         class="block w-full h-full"
         .trail=${c.attributes}
