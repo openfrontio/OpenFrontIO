@@ -1,6 +1,6 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { TransportShipTrailAttributes } from "../../core/CosmeticSchemas";
+import { TrailEffectAttributes } from "../../core/CosmeticSchemas";
 
 // Neutral fallback when a trail has no usable colors.
 const EMPTY_BG = "#444";
@@ -17,7 +17,7 @@ const EMPTY_BG = "#444";
 export class TrailSwatch extends LitElement {
   // Named `trail` (not `attributes`) to avoid clashing with Element.attributes.
   @property({ attribute: false })
-  trail: TransportShipTrailAttributes | null = null;
+  trail: TrailEffectAttributes | null = null;
 
   private animation: Animation | null = null;
 

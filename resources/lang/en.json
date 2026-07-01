@@ -397,7 +397,8 @@
     "search": "Search...",
     "title": "Effects",
     "type": {
-      "transportShipTrail": "Boat Trail"
+      "transportShipTrail": "Boat Trail",
+      "nukeTrail": "Nuke Trail"
     }
   },
   "error_modal": {

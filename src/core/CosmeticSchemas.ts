@@ -9,13 +9,12 @@ export type Flag = z.infer<typeof FlagSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
-// An effect cosmetic of any type — discriminated on effectType (today only
-// transportShipTrail; gains a member per effectType).
+// An effect cosmetic of any type — discriminated on effectType (today
+// transportShipTrail + nukeTrail; gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
-export type TransportShipTrailAttributes = z.infer<
-  typeof TransportShipTrailAttributesSchema
->;
+// Shared by every trail effectType (transportShipTrail, nukeTrail, …).
+export type TrailEffectAttributes = z.infer<typeof TrailEffectAttributesSchema>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -99,10 +98,12 @@ export const SkinSchema = CosmeticSchema.extend({
 // stay precisely typed; an effectType the client doesn't list is dropped at parse
 // (the UI only handles EFFECT_TYPES), so a new server-side effectType never fails
 // the whole cosmetics parse.
-export const EFFECT_TYPES = ["transportShipTrail"] as const;
+export const EFFECT_TYPES = ["transportShipTrail", "nukeTrail"] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
-// A boat trail effect, discriminated on `type`:
+// A trail effect, discriminated on `type`. Shared by every trail effectType
+// (transport-ship trails, nuke trails, …) — the attributes are the same; only
+// the unit whose trail they color differs.
 //  - "gradient": the colors form a spatial gradient banded along the trail.
 //    `colorSize` = band width in tiles (larger = bigger bands); `movementSpeed`
 //    = how fast the bands scroll, in tiles/sec (0 = static).
@@ -111,7 +112,7 @@ export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 // solid = a single-color list; rainbow = the spectrum as a gradient. Colors are
 // unvalidated strings here; the renderer drops any it can't parse (and an empty
 // list falls back to the player's territory color).
-export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
+export const TrailEffectAttributesSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("gradient"),
     colors: z.array(z.string()),
@@ -127,13 +128,20 @@ export const TransportShipTrailAttributesSchema = z.discriminatedUnion("type", [
 
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),
-  attributes: TransportShipTrailAttributesSchema,
+  attributes: TrailEffectAttributesSchema,
+  url: z.string().optional(),
+});
+
+const NukeTrailEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("nukeTrail"),
+  attributes: TrailEffectAttributesSchema,
   url: z.string().optional(),
 });
 
 // Any catalog effect, discriminated on effectType. Add a member per effectType.
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
+  NukeTrailEffectSchema,
 ]);
 
 /**
@@ -184,6 +192,7 @@ export const CosmeticsSchema = z.object({
       transportShipTrail: lenientRecord(
         TransportShipTrailEffectSchema,
       ).optional(),
+      nukeTrail: lenientRecord(NukeTrailEffectSchema).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),

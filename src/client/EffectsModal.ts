@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
+import { Cosmetics, EFFECT_TYPES } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
@@ -16,6 +16,16 @@ export class EffectsModal extends BaseModal {
   @state() private cosmetics: Cosmetics | null = null;
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private search = "";
+
+  // One tab per trail effectType; BaseModal owns activeTab + renders the bar.
+  protected modalConfig() {
+    return {
+      tabs: EFFECT_TYPES.map((type) => ({
+        key: type,
+        label: translateText(`effects.type.${type}`),
+      })),
+    };
+  }
 
   private handleSearch(event: Event) {
     this.search = (event.target as HTMLInputElement).value;
@@ -65,7 +75,7 @@ export class EffectsModal extends BaseModal {
     `;
   }
 
-  protected renderBody() {
+  protected renderBody(tab: string) {
     return html`
       <div class="flex flex-col">
         <div class="flex justify-center py-3 shrink-0">
@@ -85,6 +95,7 @@ export class EffectsModal extends BaseModal {
           .cosmetics=${this.cosmetics}
           .userMeResponse=${this.userMeResponse}
           .search=${this.search}
+          .effectType=${tab}
         ></effects-grid>
       </div>
     `;

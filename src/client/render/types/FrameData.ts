@@ -23,7 +23,7 @@ export interface FrameData {
   /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
   readonly tileState: Uint16Array;
-  readonly trailState: Uint8Array;
+  readonly trailState: Uint16Array;
   readonly railroadState: Uint8Array;
   readonly units: ReadonlyMap<number, UnitState>;
   readonly players: ReadonlyMap<number, PlayerState>;
