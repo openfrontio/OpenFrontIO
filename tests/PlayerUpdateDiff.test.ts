@@ -83,7 +83,7 @@ describe("Player update diffing (toUpdate)", () => {
     expect(diff!.alliances).toBeUndefined();
   });
 
-  test("stat churn (gold/troops/tilesOwned) travels via statsOut, not the diff", () => {
+  test("stat churn travels via statsOut, not the diff", () => {
     const statsOut: number[] = [];
     alice.toUpdate(statsOut);
     statsOut.length = 0;
@@ -97,6 +97,7 @@ describe("Player update diffing (toUpdate)", () => {
       alice.smallID(),
       alice.numTilesOwned(),
       Number(alice.gold()),
+      123,
       alice.troops(),
     ]);
 
@@ -124,9 +125,90 @@ describe("Player update diffing (toUpdate)", () => {
     const full = dora.toUpdate(statsOut);
     expect(full).not.toBeNull();
     expect(full!.gold).toBe(dora.gold());
+    expect(full!.goldPerMinute).toBe(0);
     expect(full!.troops).toBe(dora.troops());
     expect(full!.tilesOwned).toBe(dora.numTilesOwned());
     expect(statsOut).toEqual([]);
+  });
+
+  test("goldPerMinute is packed from positive gold credited during the last 60 seconds", async () => {
+    const info = new PlayerInfo(
+      "income",
+      PlayerType.Human,
+      "income_client",
+      "income_id",
+    );
+    const incomeGame = await setup("plains", { infiniteTroops: true }, [info]);
+    const income = incomeGame.player("income_id");
+    income.toUpdate();
+
+    income.addGold(600n);
+    incomeGame.executeNextTick();
+    let packed = incomeGame.drainPackedPlayerUpdates();
+    let record: number[] | undefined;
+    for (let i = 0; i + 4 < packed!.length; i += 5) {
+      if (packed![i] === income.smallID()) {
+        record = Array.from(packed!.subarray(i, i + 5));
+      }
+    }
+
+    expect(record).toEqual([
+      income.smallID(),
+      income.numTilesOwned(),
+      Number(income.gold()),
+      600,
+      income.troops(),
+    ]);
+
+    let expired: number[] | undefined;
+    for (let i = 0; i < 600; i++) {
+      incomeGame.executeNextTick();
+      packed = incomeGame.drainPackedPlayerUpdates();
+      if (packed === null) continue;
+      for (let j = 0; j + 4 < packed.length; j += 5) {
+        if (packed[j] === income.smallID()) {
+          expired = Array.from(packed.subarray(j, j + 5));
+        }
+      }
+      if (expired?.[3] === 0) break;
+    }
+
+    expect(expired?.[3]).toBe(0);
+  });
+
+  test("donated gold does not count as recipient income", async () => {
+    const donorInfo = new PlayerInfo(
+      "donor",
+      PlayerType.Human,
+      "donor_client",
+      "donor_id",
+    );
+    const recipientInfo = new PlayerInfo(
+      "recipient",
+      PlayerType.Human,
+      "recipient_client",
+      "recipient_id",
+    );
+    const donationGame = await setup("plains", { infiniteTroops: true }, [
+      donorInfo,
+      recipientInfo,
+    ]);
+    const donor = donationGame.player("donor_id");
+    const recipient = donationGame.player("recipient_id");
+    donor.addGold(1000n);
+    recipient.toUpdate();
+
+    expect(donor.donateGold(recipient, 250n)).toBe(true);
+
+    const statsOut: number[] = [];
+    expect(recipient.toUpdate(statsOut)).toBeNull();
+    expect(statsOut).toEqual([
+      recipient.smallID(),
+      recipient.numTilesOwned(),
+      Number(recipient.gold()),
+      0,
+      recipient.troops(),
+    ]);
   });
 
   test("adding and removing an embargo shows up in consecutive diffs", () => {

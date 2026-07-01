@@ -124,6 +124,7 @@ export function makePlayerUpdate(
     isDisconnected: false,
     tilesOwned: 0,
     gold: 0n,
+    goldPerMinute: 0,
     troops: 100,
     allies: [],
     embargoes: new Set(),

@@ -90,12 +90,23 @@ Object.freeze(EMPTY_ATTACK_UPDATES);
 Object.freeze(EMPTY_ALLIANCE_VIEWS);
 Object.freeze(EMPTY_EMOJIS);
 
+const GOLD_INCOME_BUCKET_TICKS = 10;
+const GOLD_INCOME_BUCKET_COUNT = 60;
+
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
   private _troops: bigint;
+  private goldIncomeTotal = 0n;
+  private lastGoldIncomeBucket = -1;
+  private readonly goldIncomeBuckets = Array<bigint>(
+    GOLD_INCOME_BUCKET_COUNT,
+  ).fill(0n);
+  private readonly goldIncomeBucketIds = Array<number>(
+    GOLD_INCOME_BUCKET_COUNT,
+  ).fill(-1);
 
   markedTraitorTick = -1;
   private _betrayalCount: number = 0;
@@ -159,9 +170,9 @@ export class PlayerImpl implements Player {
    * return only fields that changed since the previous call (a partial
    * `{ type, id, ...changedFields }`), or `null` if nothing changed.
    *
-   * tilesOwned / gold / troops are excluded from partial updates (they churn
+   * tilesOwned / gold / goldPerMinute / troops are excluded from partial updates (they churn
    * for every alive player every tick): when any of them changed, a
-   * `[smallID, tilesOwned, gold, troops]` quad is pushed to `statsOut`
+   * `[smallID, tilesOwned, gold, goldPerMinute, troops]` record is pushed to `statsOut`
    * instead, which GameImpl drains into the transferable
    * `packedPlayerUpdates` buffer. Attack troop counts likewise go to
    * `attackTroopsOut` as `[smallID, direction, index, troops]` quads
@@ -181,12 +192,14 @@ export class PlayerImpl implements Player {
       statsOut !== undefined &&
       (prev.tilesOwned !== full.tilesOwned ||
         prev.gold !== full.gold ||
+        prev.goldPerMinute !== full.goldPerMinute ||
         prev.troops !== full.troops)
     ) {
       statsOut.push(
         full.smallID!,
         full.tilesOwned!,
         Number(full.gold),
+        full.goldPerMinute!,
         full.troops!,
       );
     }
@@ -310,6 +323,7 @@ export class PlayerImpl implements Player {
       isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
+      goldPerMinute: this.goldPerMinute(),
       troops: this.troops(),
       allies: allies,
       embargoes: embargoes,
@@ -986,7 +1000,7 @@ export class PlayerImpl implements Player {
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
-    recipient.addGold(removed);
+    recipient.addGold(removed, undefined, false);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.addUpdate({
@@ -1118,8 +1132,11 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
-  addGold(toAdd: Gold, tile?: TileRef): void {
+  addGold(toAdd: Gold, tile?: TileRef, countAsIncome = true): void {
     this._gold += toAdd;
+    if (countAsIncome) {
+      this.recordGoldIncome(toAdd);
+    }
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
@@ -1129,6 +1146,53 @@ export class PlayerImpl implements Player {
         troops: 0,
       });
     }
+  }
+
+  private recordGoldIncome(toAdd: Gold): void {
+    if (toAdd <= 0n) return;
+    this.advanceGoldIncomeBuckets();
+    const bucketId = this.currentGoldIncomeBucket();
+    const index = bucketId % GOLD_INCOME_BUCKET_COUNT;
+    if (this.goldIncomeBucketIds[index] !== bucketId) {
+      this.goldIncomeTotal -= this.goldIncomeBuckets[index];
+      this.goldIncomeBucketIds[index] = bucketId;
+      this.goldIncomeBuckets[index] = 0n;
+    }
+    this.goldIncomeBuckets[index] += toAdd;
+    this.goldIncomeTotal += toAdd;
+  }
+
+  private goldPerMinute(): number {
+    this.advanceGoldIncomeBuckets();
+    return Number(this.goldIncomeTotal);
+  }
+
+  private advanceGoldIncomeBuckets(): void {
+    const bucketId = this.currentGoldIncomeBucket();
+    if (this.lastGoldIncomeBucket < 0) {
+      this.lastGoldIncomeBucket = bucketId;
+      return;
+    }
+    if (bucketId <= this.lastGoldIncomeBucket) {
+      return;
+    }
+
+    const bucketsToClear = Math.min(
+      bucketId - this.lastGoldIncomeBucket,
+      GOLD_INCOME_BUCKET_COUNT,
+    );
+    for (let offset = 1; offset <= bucketsToClear; offset++) {
+      const nextBucketId = this.lastGoldIncomeBucket + offset;
+      const index = nextBucketId % GOLD_INCOME_BUCKET_COUNT;
+      this.goldIncomeTotal -= this.goldIncomeBuckets[index];
+      this.goldIncomeBucketIds[index] = nextBucketId;
+      this.goldIncomeBuckets[index] = 0n;
+    }
+    this.lastGoldIncomeBucket = bucketId;
+  }
+
+  private currentGoldIncomeBucket(): number {
+    return Math.floor(this.mg.ticks() / GOLD_INCOME_BUCKET_TICKS);
   }
 
   removeGold(toRemove: Gold): Gold {

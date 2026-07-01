@@ -394,19 +394,20 @@ export class GameView implements GameMap {
       player.setEmbargoSmallIDs(smallIDs);
     });
 
-    // Packed per-player stats: [smallID, tilesOwned, gold, troops] quads for
+    // Packed per-player stats: [smallID, tilesOwned, gold, goldPerMinute, troops] records for
     // every player whose stats changed this tick (the per-tick churn that no
     // longer travels in PlayerUpdate objects). Applied after pass 1 so
     // first-emission players exist; their quad carries the same values as
     // the full update, so double-applying is harmless.
     const packedStats = gu.packedPlayerUpdates;
     if (packedStats !== undefined) {
-      for (let i = 0; i + 3 < packedStats.length; i += 4) {
+      for (let i = 0; i + 4 < packedStats.length; i += 5) {
         const state = this._playerStates.get(packedStats[i]);
         if (state === undefined) continue;
         state.tilesOwned = packedStats[i + 1];
         state.gold = packedStats[i + 2];
-        state.troops = packedStats[i + 3];
+        state.goldPerMinute = packedStats[i + 3];
+        state.troops = packedStats[i + 4];
       }
     }
 

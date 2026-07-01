@@ -20,6 +20,7 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     isDisconnected: false,
     tilesOwned: 0,
     gold: 0,
+    goldPerMinute: 0,
     troops: 100,
     isTraitor: false,
     traitorRemainingTicks: 0,
@@ -66,9 +67,19 @@ describe("diffPlayerUpdate", () => {
     expect(diff.hasSpawned).toBeUndefined();
   });
 
-  it("ignores tilesOwned/gold/troops — they travel via packedPlayerUpdates", () => {
-    const prev = makePlayerUpdate({ gold: 100n, troops: 50, tilesOwned: 5 });
-    const next = makePlayerUpdate({ gold: 200n, troops: 75, tilesOwned: 9 });
+  it("ignores stat churn — it travels via packedPlayerUpdates", () => {
+    const prev = makePlayerUpdate({
+      gold: 100n,
+      goldPerMinute: 25,
+      troops: 50,
+      tilesOwned: 5,
+    });
+    const next = makePlayerUpdate({
+      gold: 200n,
+      goldPerMinute: 50,
+      troops: 75,
+      tilesOwned: 9,
+    });
     expect(diffPlayerUpdate(prev, next)).toBeNull();
   });
 
@@ -353,17 +364,23 @@ describe("applyStateUpdate", () => {
     applyStateUpdate(target, {
       type: GameUpdateType.Player,
       id: "p",
+      goldPerMinute: 500,
+    });
+    applyStateUpdate(target, {
+      type: GameUpdateType.Player,
+      id: "p",
       isAlive: false,
     });
     expect(target.gold).toBe(100);
     expect(target.troops).toBe(250);
+    expect(target.goldPerMinute).toBe(500);
     expect(target.isAlive).toBe(false);
   });
 });
 
 describe("diff + apply round-trip", () => {
   it("emitting full first + diff second reconstructs final state", () => {
-    // tilesOwned/gold/troops round-trip via packedPlayerUpdates instead
+    // tilesOwned/gold/goldPerMinute/troops round-trip via packedPlayerUpdates instead
     // (covered in tests/client/view/GameView.test.ts).
     const v0 = makePlayerUpdate({ betrayals: 0, allies: [] });
     const v1 = makePlayerUpdate({ betrayals: 2, allies: [2] });

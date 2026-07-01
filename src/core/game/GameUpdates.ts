@@ -34,8 +34,9 @@ export interface GameUpdateViewData {
    */
   packedMotionPlans?: Uint32Array;
   /**
-   * Packed per-player numeric stats as `[smallID, tilesOwned, gold, troops]`
-   * float64 quads — the fields that change for nearly every alive player
+   * Packed per-player numeric stats as
+   * `[smallID, tilesOwned, gold, goldPerMinute, troops]` float64 records —
+   * the fields that change for nearly every alive player
    * every tick. They travel here (transferred, not structured-cloned) instead
    * of in `PlayerUpdate` object diffs, which only carry them on a player's
    * first emission. Gold is exact in a float64 (game values stay far below
@@ -228,6 +229,7 @@ export interface PlayerUpdate {
   isDisconnected?: boolean;
   tilesOwned?: number;
   gold?: Gold;
+  goldPerMinute?: number;
   troops?: number;
   allies?: number[];
   embargoes?: Set<PlayerID>;

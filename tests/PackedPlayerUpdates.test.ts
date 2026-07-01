@@ -1,6 +1,6 @@
 /**
  * The worker→main tick payload: per-tick numeric stat churn travels on the
- * transferable `packedPlayerUpdates` quad buffer (drained from GameImpl),
+ * transferable `packedPlayerUpdates` record buffer (drained from GameImpl),
  * and `playerNameViewData` is attached only on ticks where the worker
  * recomputed name placements. See GameUpdateViewData in GameUpdates.ts.
  */
@@ -36,22 +36,24 @@ describe("packedPlayerUpdates (GameImpl drain)", () => {
     game.drainPackedPlayerUpdates(); // discard spawn-time churn
   });
 
-  test("a stat change is drained as a [smallID, tiles, gold, troops] quad", () => {
+  test("a stat change is drained as a [smallID, tiles, gold, goldPerMinute, troops] record", () => {
     alice.addGold(500n);
     game.executeNextTick();
     const packed = game.drainPackedPlayerUpdates();
     expect(packed).not.toBeNull();
-    // Find alice's quad (other players may have churned too).
-    let quad: number[] | undefined;
-    for (let i = 0; i + 3 < packed!.length; i += 4) {
+    const expectedGoldPerMinute = 600;
+    // Find alice's record (other players may have churned too).
+    let record: number[] | undefined;
+    for (let i = 0; i + 4 < packed!.length; i += 5) {
       if (packed![i] === alice.smallID()) {
-        quad = Array.from(packed!.subarray(i, i + 4));
+        record = Array.from(packed!.subarray(i, i + 5));
       }
     }
-    expect(quad).toEqual([
+    expect(record).toEqual([
       alice.smallID(),
       alice.numTilesOwned(),
       Number(alice.gold()),
+      expectedGoldPerMinute,
       alice.troops(),
     ]);
   });
@@ -134,17 +136,19 @@ describe("GameRunner payload cadence", () => {
     const gu = byTick.get(game.ticks())!;
     const packed = gu.packedPlayerUpdates;
     expect(packed).toBeDefined();
-    expect(packed!.length % 4).toBe(0);
-    let quad: number[] | undefined;
-    for (let i = 0; i + 3 < packed!.length; i += 4) {
+    expect(packed!.length % 5).toBe(0);
+    const expectedGoldPerMinute = 700;
+    let record: number[] | undefined;
+    for (let i = 0; i + 4 < packed!.length; i += 5) {
       if (packed![i] === alice.smallID()) {
-        quad = Array.from(packed!.subarray(i, i + 4));
+        record = Array.from(packed!.subarray(i, i + 5));
       }
     }
-    expect(quad).toEqual([
+    expect(record).toEqual([
       alice.smallID(),
       alice.numTilesOwned(),
       Number(alice.gold()),
+      expectedGoldPerMinute,
       alice.troops(),
     ]);
     // And the object channel no longer carries the stat fields: alice must
