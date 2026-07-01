@@ -18,7 +18,7 @@ import { SMOOTHED_NUKE_TYPES } from "../types";
 // Bit 12 of the trail texel flags a nuke trail (vs a boat trail); bits 0-11 are
 // the owner smallID. Must match the mask/shift in trail.frag.glsl (owner & 0xFFF,
 // (val >> 12) & 1). SMOOTHED_NUKE_TYPES is exactly the nuke trail set today.
-const NUKE_TRAIL_BIT = 1 << 12;
+export const NUKE_TRAIL_BIT = 1 << 12;
 
 interface UnitTrail {
   // Stamped texel value: owner smallID | (isNuke ? NUKE_TRAIL_BIT : 0).
