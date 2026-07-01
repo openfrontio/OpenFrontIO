@@ -984,7 +984,8 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            Math.floor(100 * this.renderer.uiState.attackRatio),
+            this.myPlayer!.troops(),
           ),
         );
       } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
@@ -1143,7 +1144,8 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            Math.floor(100 * this.renderer.uiState.attackRatio),
+            this.myPlayer!.troops(),
           ),
         );
       }
@@ -1177,12 +1179,23 @@ export class ClientGameRunner {
       mostRecentAttack.attackerID,
     ) as PlayerView;
     if (!attacker) return;
-
-    const counterTroops = Math.min(
-      mostRecentAttack.troops,
-      this.renderer.uiState.attackRatio * this.myPlayer.troops(),
+    this.eventBus.emit(
+      new SendAttackIntentEvent(
+        attacker.id(),
+        Math.ceil(
+          // Ensures the attackRatio is between 1% and the required percentage to defend fully.
+          Math.max(
+            100 *
+              Math.min(
+                this.renderer.uiState.attackRatio,
+                mostRecentAttack.troops / this.myPlayer.troops(),
+              ),
+            1,
+          ),
+        ),
+        this.myPlayer.troops(),
+      ),
     );
-    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private doRequestAllianceUnderCursor(): void {
@@ -1267,7 +1280,8 @@ export class ClientGameRunner {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         tile,
-        this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+        Math.floor(100 * this.renderer.uiState.attackRatio),
+        this.myPlayer.troops(),
       ),
     );
   }

@@ -200,12 +200,23 @@ export class AttacksDisplay extends LitElement implements Controller {
 
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
-
-    const counterTroops = Math.min(
-      attack.troops,
-      this.uiState.attackRatio * myPlayer.troops(),
+    this.eventBus.emit(
+      new SendAttackIntentEvent(
+        attacker.id(),
+        Math.ceil(
+          // Ensures the attackRatio is between 1% and the required percentage to defend fully.
+          Math.max(
+            100 *
+              Math.min(
+                this.uiState.attackRatio,
+                attack.troops / myPlayer.troops(),
+              ),
+            1,
+          ),
+        ),
+        myPlayer.troops(),
+      ),
     );
-    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private renderIncomingAttacks() {

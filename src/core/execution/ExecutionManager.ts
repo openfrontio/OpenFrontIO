@@ -42,11 +42,67 @@ export class Executor {
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
   }
 
-  createExecs(turn: Turn): Execution[] {
-    return turn.intents.map((i) => this.createExec(i));
+  private computeRatio(
+    counterTroopRatio: number,
+    remainingTroopRatio: number,
+    totalRatioUsage: number,
+  ): number {
+    const factor = 100 ** (counterTroopRatio - 1);
+    return Math.floor(
+      (100 * (100 * factor - remainingTroopRatio)) / factor / totalRatioUsage,
+    );
   }
 
-  createExec(intent: StampedIntent): Execution {
+  createExecs(turn: Turn): Execution[] {
+    // In the rare case a client sends multiple troopRatio-orders,
+    // we need to "merge" their orders instead of executing them in parallel.
+    // (two 60% attacks should be one 84% attack, not one 120% attack)
+    // But, they may be of different types/on different targets
+    // (hence we do two (84/120)*60% = 42% attacks).
+    const counterTroopRatio_perClientID = new Map<ClientID, number>();
+    const remainingTroopRatio_perClientID = new Map<ClientID, number>();
+    const totalRatioUsage_perClientID = new Map<ClientID, number>();
+    for (const intent of turn.intents) {
+      switch (intent.type) {
+        case "boat":
+        case "attack": {
+          counterTroopRatio_perClientID.set(
+            intent.clientID,
+            (counterTroopRatio_perClientID.get(intent.clientID) ?? 0) + 1,
+          );
+          remainingTroopRatio_perClientID.set(
+            intent.clientID,
+            (remainingTroopRatio_perClientID.get(intent.clientID) ?? 1) *
+              (100 - intent.troopRatio),
+          );
+          totalRatioUsage_perClientID.set(
+            intent.clientID,
+            (totalRatioUsage_perClientID.get(intent.clientID) ?? 0) +
+              intent.troopRatio,
+          );
+        }
+      }
+    }
+
+    return turn.intents.map((intent) => {
+      switch (intent.type) {
+        case "boat":
+        case "attack":
+          return this.createExec(
+            intent,
+            this.computeRatio(
+              counterTroopRatio_perClientID.get(intent.clientID)!,
+              remainingTroopRatio_perClientID.get(intent.clientID)!,
+              totalRatioUsage_perClientID.get(intent.clientID)!,
+            ),
+          );
+        default:
+          return this.createExec(intent, undefined);
+      }
+    });
+  }
+
+  createExec(intent: StampedIntent, troopRatioFactor = 100): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -57,7 +113,9 @@ export class Executor {
     switch (intent.type) {
       case "attack": {
         return new AttackExecution(
-          intent.troops,
+          Math.floor(
+            (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
+          ),
           player,
           intent.targetID,
           null,
@@ -72,7 +130,13 @@ export class Executor {
       case "spawn":
         return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
-        return new TransportShipExecution(player, intent.dst, intent.troops);
+        return new TransportShipExecution(
+          player,
+          intent.dst,
+          Math.floor(
+            (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
+          ),
+        );
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);
       case "allianceReject":
