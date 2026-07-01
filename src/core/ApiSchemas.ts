@@ -198,14 +198,10 @@ export const PublicPlayerGameSchema = z.object({
   map: z.string(),
   mode: z.string(),
   type: z.string(),
-  // `null` (not absent) for FFA / non-team games.
   playerTeams: z.string().nullable(),
   rankedType: z.string(),
   result: PlayerGameResultSchema,
-  // Mirrors games.num_players nullability — historical rows may not carry one.
   totalPlayers: z.number().int().nonnegative().nullable(),
-  // The identity the player used in this specific game (username/clan tag can
-  // change between games). clanTag is `null` when they weren't repping a clan.
   username: z.string(),
   clanTag: z.string().nullable(),
 });

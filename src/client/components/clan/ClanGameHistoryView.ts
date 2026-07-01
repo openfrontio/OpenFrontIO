@@ -1,6 +1,6 @@
 import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType, GameMode } from "../../../core/game/Game";
+import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
   type ClanGameFilter,
@@ -15,6 +15,7 @@ import {
   formatDayHeader,
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
+import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
 import { renderLoadingSpinner, showToast } from "./ClanShared";
 
 type FilterKey = ClanGameFilter | "all";
@@ -435,7 +436,7 @@ export class ClanGameHistoryView extends LitElement {
         >
           ${this.renderField(
             translateText("clan_modal.history_game_type"),
-            this.formatGameType(game),
+            formatGameType(game),
           )}
           ${mapWebpPath
             ? ""
@@ -590,47 +591,4 @@ export class ClanGameHistoryView extends LitElement {
           }),
     );
   }
-
-  // FFA / Duos / 7 Teams / Humans vs Nations / Ranked 1v1 — derived from
-  // the same fields the bucket filter uses, so the label always agrees
-  // with the active tab.
-  private formatGameType(game: ClanGame): string {
-    if (game.rankedType && game.rankedType !== "unranked") {
-      return translateText("clan_modal.history_type_ranked", {
-        ranked: game.rankedType,
-      });
-    }
-    if (isFfa(game)) {
-      return translateText("clan_modal.history_type_ffa");
-    }
-    const pt = game.playerTeams;
-    if (pt === "Humans Vs Nations") {
-      return translateText("clan_modal.history_type_hvn");
-    }
-    if (pt === "Duos" || pt === "Trios" || pt === "Quads") {
-      return translateText(`clan_modal.history_type_${pt.toLowerCase()}`);
-    }
-    if (pt && /^\d+$/.test(pt)) {
-      return translateText("clan_modal.history_type_n_teams", {
-        count: Number(pt),
-      });
-    }
-    return translateText("clan_modal.history_type_team");
-  }
-}
-
-// FFA is "no team grouping". Match the server's `GameMode.FFA` enum
-// literal first, but fall back to absent `playerTeams` so a row that
-// arrives without the mode field (older row, server bug) still labels
-// as FFA instead of silently degrading to "Team" — which would
-// disagree with the FFA filter bucket that already routed it here.
-function isFfa(game: ClanGame): boolean {
-  if (game.mode === GameMode.FFA) return true;
-  if (
-    game.mode === undefined &&
-    (game.playerTeams === null || game.playerTeams === undefined)
-  ) {
-    return true;
-  }
-  return false;
 }
