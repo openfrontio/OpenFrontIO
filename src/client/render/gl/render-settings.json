@@ -10,13 +10,18 @@
     "unit": true,
     "name": true,
     "falloutBloom": true,
+    "falloutLight": true,
     "railroad": true,
     "fx": true,
     "bar": true,
     "nameDebug": false
   },
   "terrain": {
-    "oceanColor": "#4785b5"
+    "oceanColor": "#4785b5",
+    "sandColor": "#CCCB9E",
+    "plainsColor": "#BEDC8A",
+    "highlandColor": "#DCCB9E",
+    "mountainColor": "#e6e6e6"
   },
   "falloutBloom": {
     "broilSpeedCold": 0.0018,
@@ -70,7 +75,7 @@
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
     "territoryDefenseDarken": 0.85,
-    "territorySaturation": 1,
+    "territorySaturation": 0.85,
     "territoryAlpha": 0.588,
     "coordinateGridOpacity": 0.5,
     "staleNukeBase": 0,
@@ -81,7 +86,7 @@
     "staleNukeB": 0.07,
     "highlightBrighten": 0.25,
     "highlightFillBrighten": 0.15,
-    "highlightThicken": 2,
+    "highlightThicken": 1,
     "defensePostRange": 30,
     "embargoTintRatio": 0.35,
     "friendlyTintRatio": 0.35,
@@ -107,7 +112,7 @@
     "enemyB": 0
   },
   "railroad": {
-    "railMinZoom": 4,
+    "railMinZoom": 3,
     "railFadeRange": 2,
     "railDetailZoom": 6,
     "railAlpha": 1,
@@ -129,7 +134,7 @@
         "iconFill": 0.85
       },
       "Factory": {
-        "scale": 1,
+        "scale": 1.08,
         "iconFill": 0.85
       },
       "Defense Post": {
@@ -148,7 +153,7 @@
     "highlightOutlineWidth": 0.04,
     "highlightDimAlpha": 0.3,
     "fillDarken": 0.65,
-    "borderDarken": 0.35,
+    "borderDarken": 0.1,
     "iconAlpha": 1.0,
     "iconR": 1.0,
     "iconG": 1.0,
@@ -215,6 +220,7 @@
     "nameShadeBot": 0.4,
     "emojiRowOffset": 1.4,
     "statusRowOffset": 1.4,
+    "statusOutlineWidth": 6,
     "hoverFadeAlpha": 0.5,
     "hoverGlowWidth": 5,
     "hoverGlowAlpha": 0.75
@@ -313,7 +319,7 @@
     "selfMaxRad": 30,
     "mateMinRad": 5,
     "mateMaxRad": 14,
-    "animSpeed": 0.005,
+    "animSpeed": 0.008,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },

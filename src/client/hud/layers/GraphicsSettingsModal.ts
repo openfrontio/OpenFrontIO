@@ -115,6 +115,22 @@ function falloffToUnitGlowSlider(falloff: number): number {
 
 const HEX_COLOR_RE = /^#?([0-9a-fA-F]{6})$/;
 
+// The stale-nuke (fallout ground tint) color is stored in render-settings.json
+// as three 0-1 floats; the color picker wants a "#rrggbb" hex string.
+function rgbFloatsToHex(r: number, g: number, b: number): string {
+  const ch = (v: number) =>
+    Math.round(v * 255)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(r)}${ch(g)}${ch(b)}`;
+}
+
+const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
+  renderDefaults.mapOverlay.staleNukeR,
+  renderDefaults.mapOverlay.staleNukeG,
+  renderDefaults.mapOverlay.staleNukeB,
+);
+
 export class ShowGraphicsSettingsModalEvent {
   constructor(
     public readonly isVisible: boolean = true,
@@ -356,6 +372,20 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchMapOverlay({ coordinateGridOpacity: value });
   }
 
+  private currentNukeColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.staleNukeColor ??
+      NUKE_COLOR_DEFAULT
+    );
+  }
+
+  private onNukeColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return; // ignore partial/invalid hex while typing
+    this.patchMapOverlay({ staleNukeColor: `#${match[1].toLowerCase()}` });
+  }
+
   private onRailDrawDistanceChange(event: Event) {
     const drawDistance = parseFloat((event.target as HTMLInputElement).value);
     // Invert: higher draw distance => tracks visible when more zoomed out.
@@ -395,11 +425,67 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentSandColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.sandColor ??
+      renderDefaults.terrain.sandColor
+    );
+  }
+
+  private currentPlainsColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.plainsColor ??
+      renderDefaults.terrain.plainsColor
+    );
+  }
+
+  private currentHighlandColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.highlandColor ??
+      renderDefaults.terrain.highlandColor
+    );
+  }
+
+  private currentMountainColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.mountainColor ??
+      renderDefaults.terrain.mountainColor
+    );
+  }
+
   private onOceanColorChange(event: Event) {
     const value = (event.target as HTMLInputElement).value.trim();
     const match = HEX_COLOR_RE.exec(value);
     if (!match) return; // ignore partial/invalid hex while typing
     this.patchTerrain({ oceanColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onSandColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return; // ignore partial/invalid hex while typing
+    this.patchTerrain({ sandColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onPlainsColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return;
+    this.patchTerrain({ plainsColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onHighlandColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return;
+    this.patchTerrain({ highlandColor: `#${match[1].toLowerCase()}` });
+  }
+
+  private onMountainColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return;
+    this.patchTerrain({ mountainColor: `#${match[1].toLowerCase()}` });
   }
 
   private patchLighting(patch: Partial<GraphicsOverrides["lighting"]>) {
@@ -455,6 +541,14 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchStructure({ classicNumbers: !this.currentClassicNumbers() });
   }
 
+  private currentShowDots(): boolean {
+    return this.userSettings.graphicsOverrides().structure?.showDots ?? true;
+  }
+
+  private onToggleShowDots() {
+    this.patchStructure({ showDots: !this.currentShowDots() });
+  }
+
   private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
     const current = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({
@@ -485,6 +579,17 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private onToggleSpecialEffects() {
     this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
+  }
+
+  private currentFallout(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().passEnabled?.fallout ??
+      renderDefaults.passEnabled.falloutBloom
+    );
+  }
+
+  private onToggleFallout() {
+    this.patchPassEnabled({ fallout: !this.currentFallout() });
   }
 
   /** Whether colorblind mode is currently enabled. */
@@ -552,6 +657,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const iconSize = this.currentIconSize();
     const classicIcons = this.currentClassicIcons();
     const classicNumbers = this.currentClassicNumbers();
+    const showDots = this.currentShowDots();
     const highlightFill = this.currentHighlightFill();
     const highlightBrighten = this.currentHighlightBrighten();
     const highlightThicken = this.currentHighlightThicken();
@@ -561,17 +667,22 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
     const oceanColor = this.currentOceanColor();
+    const sandColor = this.currentSandColor();
+    const plainsColor = this.currentPlainsColor();
+    const highlandColor = this.currentHighlandColor();
+    const mountainColor = this.currentMountainColor();
+    const nukeColor = this.currentNukeColor();
     const ambientLevel = this.currentAmbientLevel();
     const unitGlow = this.currentUnitGlow();
     const colorblind = this.currentColorblind();
 
     return html`
       <div
-        class="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
+        class="modal-overlay fixed inset-0 z-2000 flex items-center p-4 left-0 top-0 h-full w-fit"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto"
+          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md h-full overflow-y-auto"
         >
           <div
             class="flex items-center justify-between p-4 border-b border-slate-600"
@@ -869,6 +980,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
             </button>
 
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleShowDots}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.structure_dots_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.structure_dots_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${showDots
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
             <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
             >
@@ -1113,6 +1243,141 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             </div>
 
             <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.sand_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.sand_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${sandColor}
+                placeholder=${renderDefaults.terrain.sandColor}
+                spellcheck="false"
+                @change=${this.onSandColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${sandColor}
+                @input=${this.onSandColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.plains_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.plains_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${plainsColor}
+                placeholder=${renderDefaults.terrain.plainsColor}
+                spellcheck="false"
+                @change=${this.onPlainsColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${plainsColor}
+                @input=${this.onPlainsColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.highland_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.highland_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${highlandColor}
+                placeholder=${renderDefaults.terrain.highlandColor}
+                spellcheck="false"
+                @change=${this.onHighlandColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${highlandColor}
+                @input=${this.onHighlandColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.mountain_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.mountain_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${mountainColor}
+                placeholder=${renderDefaults.terrain.mountainColor}
+                spellcheck="false"
+                @change=${this.onMountainColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${mountainColor}
+                @input=${this.onMountainColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.nuke_color_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.nuke_color_desc")}
+                </div>
+              </div>
+              <input
+                type="text"
+                .value=${nukeColor}
+                placeholder=${NUKE_COLOR_DEFAULT}
+                spellcheck="false"
+                @change=${this.onNukeColorChange}
+                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+              />
+              <input
+                type="color"
+                .value=${nukeColor}
+                @input=${this.onNukeColorChange}
+                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+              />
+            </div>
+
+            <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
             >
               ${translateText("graphics_setting.section_effects")}
@@ -1132,6 +1397,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleFallout}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.fallout_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.fallout_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.currentFallout()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

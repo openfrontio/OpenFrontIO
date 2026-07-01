@@ -187,13 +187,16 @@ export class BorderComputePass {
   }
 
   /**
-   * Notify that one tile changed owner. Schedules incremental border recompute
-   * for that tile + its 4 cardinal neighbors. Cheap: ~5 points per call.
-   * Caller is responsible for ensuring tileTex contains the new state before
-   * the next draw — TerritoryPass.flushTileTexture takes care of that.
+   * Notify that one tile changed owner (from `prevOwner` to `newOwner`).
+   * Schedules incremental border recompute for that tile + its 4 cardinal
+   * neighbors — or, when the change touches the highlighted owner, a wider box
+   * so the highlight band's inner edge keeps up. Cheap: ~5 points per call in
+   * the common case. Caller is responsible for ensuring tileTex contains the
+   * new state before the next draw — TerritoryPass.flushTileTexture takes care
+   * of that.
    */
-  patchTile(x: number, y: number): void {
-    this.scatter.pushWithNeighbors(x, y);
+  patchTile(x: number, y: number, prevOwner: number, newOwner: number): void {
+    this.scatter.pushWithNeighbors(x, y, prevOwner, newOwner);
   }
 
   /** The border buffer texture (RG8, tile resolution). */

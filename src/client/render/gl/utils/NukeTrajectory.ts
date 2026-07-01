@@ -125,10 +125,19 @@ function refineCrossing(
 
 /**
  * Sample the Bezier curve at regular t intervals and find color threshold
- * t-values for untargetable zones and SAM intercept.
+ * t-values for untargetable zones, SAM intercept, and impassable terrain.
  *
  * Uses binary search refinement for sub-sample precision so that zone
  * boundary markers don't jiggle when the cursor moves.
+ *
+ * @param isBlocked Optional callback: given a continuous (x, y) point on the
+ *                  Bezier, returns true if that point falls on impassable
+ *                  terrain. The scan covers the ENTIRE curve (including the
+ *                  untargetable mid-air zone), because impassable terrain
+ *                  blocks the nuke regardless of targetability. When a
+ *                  blocked point is found, its t-value is merged into
+ *                  `tSamIntercept` (via min) so the existing red-line + red-X
+ *                  machinery renders the trajectory as blocked.
  */
 export function computeTrajectoryThresholds(
   cp: {
@@ -146,6 +155,7 @@ export function computeTrajectoryThresholds(
   dstX: number,
   dstY: number,
   sams: readonly SAMInfo[],
+  isBlocked?: (x: number, y: number) => boolean,
 ): {
   tUntargetableStart: number;
   tUntargetableEnd: number;
@@ -154,6 +164,7 @@ export function computeTrajectoryThresholds(
   let tUntargetableStart = -1;
   let tUntargetableEnd = -1;
   let tSamIntercept = 1.0;
+  let tBlocked = 1.0;
 
   const dt = 1.0 / THRESHOLD_SAMPLES;
 
@@ -232,12 +243,66 @@ export function computeTrajectoryThresholds(
     }
   }
 
+  // Pass 3: find impassable terrain intercept (scan the ENTIRE curve —
+  // impassable terrain blocks the nuke regardless of targetability, so
+  // unlike SAMs we do NOT skip the untargetable mid-air zone).
+  if (isBlocked) {
+    for (let i = 1; i <= THRESHOLD_SAMPLES; i++) {
+      const t = i * dt;
+      const x = bezier(t, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
+      const y = bezier(t, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
+      // Mirror the simulation's tile-sampling: floor to integer tile coords.
+      if (isBlocked(Math.floor(x), Math.floor(y))) {
+        tBlocked = refineBlockedCrossing(cp, isBlocked, t - dt, t);
+        break;
+      }
+    }
+    // Merge: the earlier of SAM intercept and impassable block determines
+    // where the trajectory turns red + shows the X.
+    tSamIntercept = Math.min(tSamIntercept, tBlocked);
+  }
+
   return { tUntargetableStart, tUntargetableEnd, tSamIntercept };
+}
+
+/**
+ * Binary-search for the exact t where the curve first enters a blocked tile.
+ * Unlike refineCrossing (which uses a radial distance test), this tests
+ * isBlocked on the floored integer tile at each subdivision point.
+ */
+function refineBlockedCrossing(
+  cp: {
+    p0x: number;
+    p0y: number;
+    p1x: number;
+    p1y: number;
+    p2x: number;
+    p2y: number;
+    p3x: number;
+    p3y: number;
+  },
+  isBlocked: (x: number, y: number) => boolean,
+  tLo: number,
+  tHi: number,
+): number {
+  for (let i = 0; i < 10; i++) {
+    const tMid = (tLo + tHi) * 0.5;
+    const x = Math.floor(bezier(tMid, cp.p0x, cp.p1x, cp.p2x, cp.p3x));
+    const y = Math.floor(bezier(tMid, cp.p0y, cp.p1y, cp.p2y, cp.p3y));
+    if (isBlocked(x, y)) tHi = tMid;
+    else tLo = tMid;
+  }
+  return (tLo + tHi) * 0.5;
 }
 
 /**
  * Build complete NukeTrajectoryData from source/target positions.
  * Convenience function combining control point + threshold computation.
+ *
+ * @param isBlocked Optional callback: returns true if a floored (x, y) point
+ *                  on the Bezier is impassable terrain. When provided, the
+ *                  trajectory turns red and shows the red X at the first
+ *                  impassable tile (merged with any SAM intercept).
  */
 export function buildNukeTrajectory(
   srcX: number,
@@ -247,6 +312,7 @@ export function buildNukeTrajectory(
   mapH: number,
   directionUp: boolean,
   sams: readonly SAMInfo[],
+  isBlocked?: (x: number, y: number) => boolean,
 ): NukeTrajectoryData {
   const cp = computeNukeControlPoints(
     srcX,
@@ -256,6 +322,14 @@ export function buildNukeTrajectory(
     mapH,
     directionUp,
   );
-  const th = computeTrajectoryThresholds(cp, srcX, srcY, dstX, dstY, sams);
+  const th = computeTrajectoryThresholds(
+    cp,
+    srcX,
+    srcY,
+    dstX,
+    dstY,
+    sams,
+    isBlocked,
+  );
   return { ...cp, ...th };
 }

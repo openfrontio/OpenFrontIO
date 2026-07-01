@@ -41,6 +41,7 @@ export class StatusIconProgram {
   private uStatusRowOffset: WebGLUniformLocation;
   private uFadeOwnerID: WebGLUniformLocation;
   private uHoverFadeAlpha: WebGLUniformLocation;
+  private uStatusOutlinePx: WebGLUniformLocation;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -84,6 +85,12 @@ export class StatusIconProgram {
       gl.getUniformLocation(this.program, "uStatusPad")!,
       sm.pad ?? 0,
     );
+    // Texel size for the outline dilation sampling (static).
+    gl.uniform2f(
+      gl.getUniformLocation(this.program, "uStatusTexel")!,
+      1 / sm.width,
+      1 / sm.height,
+    );
     // Flash window matches the alliance renewal prompt (10 ticks/sec)
     gl.uniform1f(
       gl.getUniformLocation(this.program, "uAllianceFlashWindowSec")!,
@@ -111,6 +118,10 @@ export class StatusIconProgram {
     this.uHoverFadeAlpha = gl.getUniformLocation(
       this.program,
       "uHoverFadeAlpha",
+    )!;
+    this.uStatusOutlinePx = gl.getUniformLocation(
+      this.program,
+      "uStatusOutlinePx",
     )!;
 
     this.loadAtlas();
@@ -213,6 +224,7 @@ export class StatusIconProgram {
     gl.uniform1f(this.uStatusRowOffset, ns.statusRowOffset);
     gl.uniform1f(this.uFadeOwnerID, fadeOwnerID);
     gl.uniform1f(this.uHoverFadeAlpha, ns.hoverFadeAlpha);
+    gl.uniform1f(this.uStatusOutlinePx, ns.statusOutlineWidth);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.playerDataTex);

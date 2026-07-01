@@ -10,7 +10,12 @@ export { applyGraphicsOverrides } from "./RenderOverrides";
 export { createRenderSettings, dumpSettings } from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
 export { deepAssign, deepDiff } from "./SettingsUtils";
-export { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
+export {
+  MAX_TRAIL_COLORS,
+  buildTerrainRGBA,
+  getPaletteSize,
+} from "./utils/ColorUtils";
+export { renderDpr } from "./utils/Dpr";
 export { buildNukeTrajectory, samRange } from "./utils/NukeTrajectory";
 export type { SAMInfo } from "./utils/NukeTrajectory";
 

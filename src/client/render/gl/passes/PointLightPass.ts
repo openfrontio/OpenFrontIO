@@ -5,8 +5,10 @@
  * draw() is pure GPU: uniforms + one drawArraysInstanced call.
  */
 
+import type { Config } from "src/core/configuration/Config";
 import type { RendererConfig, UnitState } from "../../types";
 import {
+  SMOOTHED_NUKE_TYPES,
   UT_ATOM_BOMB,
   UT_CITY,
   UT_DEFENSE_POST,
@@ -65,6 +67,11 @@ const BYTES_PER_LIGHT = FLOATS_PER_LIGHT * 4;
 const MAX_LIGHT_TYPES = 64;
 const MAX_LIGHTS = 12288; // units + structures combined
 
+/** Values per smoothing segment in the flat `smoothSegs` array:
+ *  (lightIdx, lastX, lastY, x, y). Mirrors UnitPass's nuke smoothing so the
+ *  light tracks the smoothly-lerped sprite instead of jumping once per tick. */
+const SMOOTH_SEG_STRIDE = 5;
+
 export class PointLightPass {
   private gl: WebGL2RenderingContext;
   private settings: RenderSettings;
@@ -92,16 +99,26 @@ export class PointLightPass {
   private intensityArr = new Float32Array(MAX_LIGHT_TYPES);
   private paletteData: Float32Array;
 
+  // Per-frame nuke light smoothing: flat SMOOTH_SEG_STRIDE-wide tuples
+  // (lightIdx, lastX, lastY, x, y) recorded each tick, lerped into the light
+  // buffer in draw() so the glow tracks the per-frame-smoothed missile sprite.
+  private smoothSegs: number[] = [];
+  private lastUnitsUpdateMs = 0;
+  /** Simulation tick duration in ms (Config.msPerTick). */
+  private tickIntervalMs: number;
+
   constructor(
     gl: WebGL2RenderingContext,
     header: RendererConfig,
     paletteData: Float32Array,
     settings: RenderSettings,
+    config: Config,
   ) {
     this.gl = gl;
     this.settings = settings;
     this.paletteData = paletteData;
     this.mapW = header.mapWidth;
+    this.tickIntervalMs = config.msPerTick();
 
     // Build type → light config mapping
     this.typeNames = header.unitTypes;
@@ -166,6 +183,8 @@ export class PointLightPass {
   /** Pack all light-emitting entities into the instance buffer and upload. Called every tick. */
   updateLights(units: Map<number, UnitState>): void {
     let count = 0;
+    this.smoothSegs.length = 0;
+    this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
       if (!unit.isActive) continue;
@@ -177,6 +196,11 @@ export class PointLightPass {
 
       const x = unit.pos % this.mapW;
       const y = (unit.pos - x) / this.mapW;
+      if (SMOOTHED_NUKE_TYPES.has(unit.unitType) && unit.lastPos !== unit.pos) {
+        const lx = unit.lastPos % this.mapW;
+        const ly = (unit.lastPos - lx) / this.mapW;
+        this.smoothSegs.push(count, lx, ly, x, y);
+      }
       const off = count * FLOATS_PER_LIGHT;
       const pOff = unit.ownerID * 4;
       this.lightData[off + 0] = x;
@@ -202,12 +226,35 @@ export class PointLightPass {
     }
   }
 
+  /** Lerp smoothed-nuke light positions lastPos→pos by wall-clock progress
+   *  through the current tick and re-upload only the affected instances. */
+  private applySmoothing(): void {
+    const segs = this.smoothSegs;
+    if (segs.length === 0) return;
+    const alpha = Math.min(
+      1,
+      (performance.now() - this.lastUnitsUpdateMs) / this.tickIntervalMs,
+    );
+    const data = this.lightData;
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.lightBuf);
+    for (let i = 0; i < segs.length; i += SMOOTH_SEG_STRIDE) {
+      const idx = segs[i];
+      const off = idx * FLOATS_PER_LIGHT;
+      data[off + 0] = segs[i + 1] + (segs[i + 3] - segs[i + 1]) * alpha;
+      data[off + 1] = segs[i + 2] + (segs[i + 4] - segs[i + 2]) * alpha;
+      gl.bufferSubData(gl.ARRAY_BUFFER, idx * BYTES_PER_LIGHT, data, off, 2);
+    }
+  }
+
   /**
    * Render instanced point lights into the currently bound FBO.
    * Caller must set up additive blending and viewport.
    */
   draw(cameraMatrix: Float32Array): void {
     if (this.lightCount === 0) return;
+
+    this.applySmoothing();
 
     const gl = this.gl;
     const dn = this.settings.lighting;

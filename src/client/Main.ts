@@ -20,6 +20,9 @@ import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import "./EffectsInput";
+import "./EffectsModal";
+import { EffectsModal } from "./EffectsModal";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
@@ -158,6 +161,14 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const email =
     userMeResponse !== false ? userMeResponse.user.email : undefined;
   if (email) {
+    showEmailLoggedIn();
+    return;
+  }
+
+  // Google logins have no avatar; show the same person/email badge as magic-link.
+  const google =
+    userMeResponse !== false ? userMeResponse.user.google : undefined;
+  if (google) {
     showEmailLoggedIn();
     return;
   }
@@ -303,6 +314,7 @@ class Client {
       tag: "territory-patterns-modal",
     });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
+    modalRouter.register("effects", { tag: "effects-modal" });
 
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
@@ -409,6 +421,20 @@ class Client {
       flagInput.addEventListener("flag-input-click", () => {
         if (flagInputModal && flagInputModal instanceof FlagInputModal) {
           flagInputModal.open();
+        }
+      });
+    });
+
+    const effectsModal = document.querySelector(
+      "effects-modal",
+    ) as EffectsModal;
+    if (!effectsModal || !(effectsModal instanceof EffectsModal)) {
+      console.warn("Effects modal element not found");
+    }
+    document.querySelectorAll("effects-input").forEach((effectsInput) => {
+      effectsInput.addEventListener("effects-input-click", () => {
+        if (effectsModal && effectsModal instanceof EffectsModal) {
+          effectsModal.open();
         }
       });
     });
@@ -856,6 +882,7 @@ class Client {
         "language-modal",
         "news-modal",
         "flag-input-modal",
+        "effects-modal",
         "account-button",
         "leaderboard-button",
         "token-login",

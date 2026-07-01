@@ -107,14 +107,20 @@ export class NukeExecution implements Execution {
             const threshold = radiiSq[i0] * (1 - frac) + radiiSq[i1] * frac;
             if (d2 > threshold) continue;
           }
-          result.add(this.mg.ref(px, py));
+          const tile = this.mg.ref(px, py);
+          if (this.mg.isImpassable(tile)) continue;
+          result.add(tile);
         }
       }
       this.tilesToDestroyCache = result;
     } else {
       this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
         const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-        return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
+        return (
+          d2 <= outer2 &&
+          (d2 <= inner2 || rand.chance(2)) &&
+          !this.mg.isImpassable(n)
+        );
       });
     }
     return this.tilesToDestroyCache;
@@ -184,6 +190,17 @@ export class NukeExecution implements Execution {
         return;
       }
       this.src = spawn;
+      // Nuke trajectories cannot pass over impassable terrain, just as they
+      // cannot exceed the map border. Check the full parabola path before
+      // launching; if any tile is impassable, abort the launch.
+      const path = this.pathFinder.findPath(spawn, this.dst) ?? [];
+      for (const tile of path) {
+        if (this.mg.isImpassable(tile)) {
+          console.warn(`nuke trajectory crosses impassable terrain`);
+          this.active = false;
+          return;
+        }
+      }
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
@@ -358,6 +375,10 @@ export class NukeExecution implements Execution {
     for (const [player, numImpactedTiles] of tilesPerPlayers) {
       const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
       const transportShips = player.units(UnitType.TransportShip);
+      const transportShipTroops = new Map<Unit, number>();
+      for (const unit of transportShips) {
+        transportShipTroops.set(unit, unit.troops());
+      }
       const outgoingAttacks = player.outgoingAttacks();
       const maxTroops = config.maxTroops(player);
       // nukeDeathFactor could compute the complete fallout in a single call instead
@@ -383,15 +404,18 @@ export class NukeExecution implements Execution {
           attack.setTroops(attackTroops - deaths);
         }
         for (const unit of transportShips) {
-          const unitTroops = unit.troops();
+          const unitTroops = transportShipTroops.get(unit) ?? unit.troops();
           const deaths = config.nukeDeathFactor(
             this.nukeType,
             unitTroops,
             numTilesLeft,
             maxTroops,
           );
-          unit.setTroops(unitTroops - deaths);
+          transportShipTroops.set(unit, Math.max(0, unitTroops - deaths));
         }
+      }
+      for (const [unit, troops] of transportShipTroops) {
+        unit.setTroops(troops);
       }
     }
 

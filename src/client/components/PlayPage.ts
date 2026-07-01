@@ -96,6 +96,10 @@ export class PlayPage extends LitElement {
                 show-select-label
                 class="shrink-0 lg:hidden h-10 w-10"
               ></flag-input>
+              <effects-input
+                id="effects-input-mobile"
+                class="shrink-0 lg:hidden h-10 w-10"
+              ></effects-input>
             </div>
           </div>
 
@@ -111,6 +115,10 @@ export class PlayPage extends LitElement {
               show-select-label
               class="flex-1 h-full"
             ></flag-input>
+            <effects-input
+              id="effects-input-desktop"
+              class="flex-1 h-full"
+            ></effects-input>
           </div>
         </div>
 

@@ -16,6 +16,7 @@ uniform float uBorderDarken;    // HSV value multiplier on icon border
 uniform float uIconAlpha;       // global multiplier on final icon alpha
 uniform vec3  uIconColor;       // color of the inner icon glyph (was white)
 uniform float uIconDarken;      // >0: glyph = darkened player color instead of uIconColor
+uniform float uLocalPlayerID;
 
 in vec2  vLocalPos;
 in vec2  vAtlasUV;
@@ -63,10 +64,12 @@ float sdPolygon(vec2 p, float R, float n, float rot) {
 // Per-structure-type shape SDF.
 // Atlas indices: 0=City, 1=Port, 2=Factory, 3=DefensePost, 4=SAM, 5=Silo
 float shapeSDF(vec2 p, float R) {
-  if (vAtlasIdx < 0.5 || (vAtlasIdx > 1.5 && vAtlasIdx < 2.5))
-    return length(p) - R;                     // City / Factory → circle
+  if (vAtlasIdx < 0.5)
+    return length(p) - R;                     // City → circle
   if (vAtlasIdx < 1.5)
     return sdPolygon(p, R, 5.0, PI * 0.5);    // Port → pentagon (vertex up)
+  if (vAtlasIdx < 2.5)
+    return sdPolygon(p, R, 6.0, PI / 6.0);    // Factory → hexagon (flat top)
   if (vAtlasIdx < 3.5)
     return sdPolygon(p, R, 8.0, 0.0);         // Defense Post → octagon (flat top)
   if (vAtlasIdx < 4.5)
@@ -102,9 +105,12 @@ void main() {
     fillColor = vec4(198.0/255.0, 198.0/255.0, 198.0/255.0, 1.0);
     borderColor = vec4(127.0/255.0, 127.0/255.0, 127.0/255.0, 1.0);
   } else {
+    int owner = int(vOwnerID + 0.5);
+    int local = int(uLocalPlayerID);
     float u = (vOwnerID + 0.5) / float(PALETTE_SIZE);
     fillColor = texture(uPalette, vec2(u, 0.25));
-    borderColor = texture(uPalette, vec2(u, 0.75));
+    // if local player, use territory color because the border color is grey
+    borderColor = texture(uPalette, vec2(u, owner == local ? 0.25 : 0.75));
     // Darken via HSV value so hue/saturation stay intact
     // vScale < 1.0 = darker, > 1.0 = brighter
     fillColor.rgb = darken(fillColor.rgb, uFillDarken);
@@ -132,8 +138,16 @@ void main() {
     iconAlpha = iconSample.a * borderMask * inBounds;
   }
 
-  // Composite: tinted icon over player-colored shape
-  vec3 glyphColor = uIconDarken > 0.0 ? darken(fillColor.rgb, uIconDarken) : uIconColor;
+  // Composite: tinted icon over player-colored shape.
+  // Classic icons (uIconDarken > 0) tint the glyph with a darkened player
+  // color. When the shape itself is already dark, that darkened glyph blends
+  // into the shape (and the dark territory behind it) and becomes unreadable —
+  // so flip the glyph to the light icon color when the fill is too dark.
+  vec3 glyphColor = uIconColor;
+  if (uIconDarken > 0.0) {
+    float fillLum = dot(fillColor.rgb, vec3(0.299, 0.587, 0.114));
+    glyphColor = fillLum < 0.25 ? uIconColor : darken(fillColor.rgb, uIconDarken);
+  }
   vec3 finalRGB = mix(bgColor.rgb, glyphColor, iconAlpha);
 
   // Red X overlay for units marked for deletion

@@ -103,4 +103,31 @@ describe("Spawn execution", () => {
     // Previous territory from first spawn should be relinquished
     expect(game.owner(10).isPlayer()).toBe(false);
   });
+
+  test("Random spawn ignores client-specified tile", async () => {
+    const playerInfo = new PlayerInfo(
+      `player`,
+      PlayerType.Human,
+      `client_id`,
+      `player_id`,
+    );
+
+    const game = await setup("half_land_half_ocean", { randomSpawn: true }, [
+      playerInfo,
+    ]);
+
+    // Simulate a malicious client sending a spawn intent with a specific tile
+    const maliciousTile = 10;
+    game.addExecution(new SpawnExecution("game_id", playerInfo, maliciousTile));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    const player = game.playerByClientID("client_id")!;
+    expect(player.hasSpawned()).toBe(true);
+    // The spawn tile should NOT be the client-specified tile —
+    // random spawn must bypass the client's choice.
+    expect(player.spawnTile()).not.toBe(maliciousTile);
+    expect(player.spawnTile()).toEqual(expect.any(Number));
+    expect(game.isLand(player.spawnTile()!)).toBe(true);
+  });
 });

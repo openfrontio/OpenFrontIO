@@ -17,6 +17,9 @@ export const GraphicsOverridesSchema = z
         iconSize: z.number(),
         classicIcons: z.boolean(),
         classicNumbers: z.boolean(),
+        // When false, structures keep their full icon at any zoom instead of
+        // collapsing to dots when zoomed out (forces dotsZoomThreshold to 0).
+        showDots: z.boolean(),
       })
       .partial(),
     mapOverlay: z
@@ -27,6 +30,9 @@ export const GraphicsOverridesSchema = z
         territorySaturation: z.number(),
         territoryAlpha: z.number(),
         coordinateGridOpacity: z.number(),
+        // "#rrggbb" hex string; overrides the lingering fallout ground tint
+        // left on territory after a nuke.
+        staleNukeColor: z.string(),
       })
       .partial(),
     railroad: z
@@ -38,6 +44,9 @@ export const GraphicsOverridesSchema = z
     passEnabled: z
       .object({
         fx: z.boolean(),
+        // Nuclear fallout effects: the broiling green territory bloom and its
+        // light emission in day/night mode. Disable to improve performance.
+        fallout: z.boolean(),
       })
       .partial(),
     accessibility: z
@@ -49,6 +58,10 @@ export const GraphicsOverridesSchema = z
       .object({
         // "#rrggbb" hex string; overrides the base ocean (deep water) color.
         oceanColor: z.string(),
+        sandColor: z.string(),
+        plainsColor: z.string(),
+        highlandColor: z.string(),
+        mountainColor: z.string(),
       })
       .partial(),
     lighting: z

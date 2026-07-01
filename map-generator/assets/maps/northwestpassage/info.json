@@ -2,7 +2,7 @@
   "id": "NorthwestPassage",
   "name": "Northwest Passage",
   "translation_key": "map.northwestpassage",
-  "categories": ["new", "north_america"],
+  "categories": ["north_america"],
   "multiplayer_frequency": 5,
   "nations": [
     {

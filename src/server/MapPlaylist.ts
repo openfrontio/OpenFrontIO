@@ -71,7 +71,6 @@ type ModifierKey =
   | "startingGold25M"
   | "goldMultiplier"
   | "isAlliancesDisabled"
-  | "isPortsDisabled"
   | "isNukesDisabled"
   | "isSAMsDisabled"
   | "isPeaceTime"
@@ -89,7 +88,6 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(3).fill("startingGold25M"),
   ...Array<ModifierKey>(6).fill("goldMultiplier"),
   ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
-  ...Array<ModifierKey>(1).fill("isPortsDisabled"),
   ...Array<ModifierKey>(1).fill("isNukesDisabled"),
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
@@ -108,7 +106,6 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
 
 // Maps that are entirely land.
 // - Water nukes forced on 75% of the time (overrides WATER_NUKES_BOOSTED_MAPS)
-// - The "ports disabled" modifier is only allowed when water nukes is on
 const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.TheBox,
   GameMapType.Alps,
@@ -240,11 +237,6 @@ export class MapPlaylist {
       excludedModifiers.push("isWaterNukes", "isNukesDisabled");
     }
 
-    // On full-land maps, ports-disabled is only allowed alongside water nukes
-    if (FULL_LAND_MAPS.has(map) && !boostWaterNukes) {
-      excludedModifiers.push("isPortsDisabled");
-    }
-
     const poolResult = this.getRandomSpecialGameModifiers(
       excludedModifiers,
       undefined,
@@ -258,7 +250,6 @@ export class MapPlaylist {
       goldMultiplier,
       isAlliancesDisabled,
       isHardNations,
-      isPortsDisabled,
       isNukesDisabled,
       isSAMsDisabled,
       isPeaceTime,
@@ -286,7 +277,6 @@ export class MapPlaylist {
           startingGold === undefined &&
           goldMultiplier === undefined &&
           !isAlliancesDisabled &&
-          !isPortsDisabled &&
           !isNukesDisabled &&
           !isSAMsDisabled &&
           !isPeaceTime &&
@@ -303,7 +293,6 @@ export class MapPlaylist {
             startingGold,
             goldMultiplier,
             isAlliancesDisabled,
-            isPortsDisabled,
             isNukesDisabled,
             isSAMsDisabled,
             isPeaceTime,
@@ -329,9 +318,6 @@ export class MapPlaylist {
 
     // Build disabledUnits from modifiers
     const disabledUnits: UnitType[] = [];
-    if (isPortsDisabled) {
-      disabledUnits.push(UnitType.Port);
-    }
     if (isNukesDisabled) {
       disabledUnits.push(
         UnitType.MissileSilo,
@@ -363,7 +349,6 @@ export class MapPlaylist {
         startingGold,
         goldMultiplier,
         isAlliancesDisabled,
-        isPortsDisabled,
         isNukesDisabled,
         isSAMsDisabled,
         isPeaceTime,
@@ -402,7 +387,7 @@ export class MapPlaylist {
       GameMapType.Asia, // 20%
       GameMapType.EuropeClassic, // 20%
     ];
-    const isCompact = Math.random() < 0.5;
+    const isCompact = Math.random() < 0.2;
     return {
       donateGold: false,
       donateTroops: false,
@@ -568,7 +553,6 @@ export class MapPlaylist {
             : undefined,
       goldMultiplier: selected.has("goldMultiplier") ? 2 : undefined,
       isAlliancesDisabled: selected.has("isAlliancesDisabled") || undefined,
-      isPortsDisabled: selected.has("isPortsDisabled") || undefined,
       isNukesDisabled: selected.has("isNukesDisabled") || undefined,
       isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
       isPeaceTime: selected.has("isPeaceTime") || undefined,

@@ -59,7 +59,13 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
+import {
+  getPaletteSize,
+  hexToRgb,
+  MAX_TRAIL_COLORS,
+  TRAIL_EFFECT_BLOCKS,
+} from "./utils/ColorUtils";
+import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
   toScreen,
@@ -131,6 +137,12 @@ export class GPURenderer {
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
+  // Per-player trail-effect palette, keyed by smallID (RGBA32F,
+  // 4096×(MAX_TRAIL_COLORS·TRAIL_EFFECT_BLOCKS)): one MAX_TRAIL_COLORS-row block
+  // per trail effectType (block 0 = transportShipTrail, block 1 = nukeTrail).
+  // Sampled by TrailPass; the shader picks the block from the trail tile's nuke
+  // bit.
+  private effectTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
   private skinAtlas: SkinAtlasArray;
@@ -213,13 +225,13 @@ export class GPURenderer {
     this.camera = new Camera(mapW, mapH);
 
     // --- Terrain (static) ---
-    this.terrainPass = new TerrainPass(
-      gl,
-      terrainBytes,
-      mapW,
-      mapH,
-      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
-    );
+    this.terrainPass = new TerrainPass(gl, terrainBytes, mapW, mapH, {
+      oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+      sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
+      plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
+      highlandColor: hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
+      mountainColor: hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
+    });
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
@@ -231,6 +243,20 @@ export class GPURenderer {
       format: gl.RGBA,
       type: gl.FLOAT,
       data: paletteData,
+      filter: gl.NEAREST,
+    });
+
+    // Per-player trail-effect texture: TRAIL_EFFECT_BLOCKS stacked blocks of
+    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail).
+    // Starts zeroed (color count 0 everywhere = no effect → territory color).
+    const effectRows = MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS;
+    this.effectTex = createTexture2D(gl, {
+      width: palW,
+      height: effectRows,
+      internalFormat: gl.RGBA32F,
+      format: gl.RGBA,
+      type: gl.FLOAT,
+      data: new Float32Array(palW * effectRows * 4),
       filter: gl.NEAREST,
     });
 
@@ -350,8 +376,8 @@ export class GPURenderer {
     // just the affected tiles instead of rebuilding the whole map. A tile
     // changing owner can also flip its defense-coverage flag (same-owner test),
     // so mark the coverage stale too — one coalesced re-stamp happens per frame.
-    this.territoryPass.setBorderPatchConsumer((x, y) => {
-      this.borderPass.patchTile(x, y);
+    this.territoryPass.setBorderPatchConsumer((x, y, prevOwner, newOwner) => {
+      this.borderPass.patchTile(x, y, prevOwner, newOwner);
       this.defenseCoveragePass.markTileDirty(x, y);
     });
     // Territory fill darkens on interior tiles defended by a same-owner post;
@@ -370,13 +396,14 @@ export class GPURenderer {
       this.settings.spawnOverlay,
     );
 
-    // --- Trail (needs trailTex, paletteTex) ---
+    // --- Trail (needs trailTex, paletteTex, effectTex) ---
     this.trailPass = new TrailPass(
       gl,
       mapW,
       mapH,
       this.res.trailTex,
       this.paletteTex,
+      this.effectTex,
       this.settings,
     );
 
@@ -410,6 +437,7 @@ export class GPURenderer {
       header,
       paletteData,
       this.settings,
+      config,
     );
 
     // --- Fallout light (needs tileTex + heatManager; particle flicker is
@@ -568,7 +596,7 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = renderDpr();
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
     this.camera.resize(cssWidth, cssHeight);
@@ -584,7 +612,7 @@ export class GPURenderer {
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint8Array,
+    trailState: Uint16Array,
   ): void {
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
@@ -595,7 +623,7 @@ export class GPURenderer {
   }
 
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -625,6 +653,24 @@ export class GPURenderer {
     this.samRadiusPass.setPaletteData(this.paletteData);
     // Name pass caches per-player colors and bakes them into slot rows
     this.namePass.refreshPlayerColors(this.paletteData);
+  }
+
+  /** Re-upload the per-player trail-effect texture (style + colors by smallID). */
+  updateEffectPalette(effectData: Float32Array): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      getPaletteSize(),
+      MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS,
+      gl.RGBA,
+      gl.FLOAT,
+      effectData,
+    );
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
@@ -777,6 +823,11 @@ export class GPURenderer {
     }
   }
 
+  /** Re-resolve player name strings live (e.g. anonymous-names toggle). */
+  refreshNames(displayNames: Map<string, string>): void {
+    this.namePass.refreshNames(displayNames);
+  }
+
   updateRelations(data: Uint8Array, size: number): void {
     this.borderPass.updateRelations(data, size);
     this.affiliationPalette.updateRelations(data, size);
@@ -828,9 +879,13 @@ export class GPURenderer {
    * settings change needs this explicit rebuild.
    */
   rebuildTerrain(): void {
-    this.terrainPass.setOceanColor(
-      hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
-    );
+    this.terrainPass.setTerrainColors({
+      oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+      sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
+      plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
+      highlandColor: hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
+      mountainColor: hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
+    });
   }
 
   applyConquestEvents(events: ConquestFx[]): void {
@@ -923,6 +978,7 @@ export class GPURenderer {
     if (id === this.localPlayerID) return;
     this.localPlayerID = id;
     this.samRadiusPass.setLocalPlayer(id);
+    this.structurePass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
     this.railroadPass.setLocalPlayer(id);
@@ -1124,7 +1180,7 @@ export class GPURenderer {
   private drawBaseLayer(cam: Float32Array): void {
     const gl = this.gl;
     const pe = this.settings.passEnabled;
-    gl.clearColor(0.04, 0.04, 0.06, 1.0);
+    gl.clearColor(60 / 255, 60 / 255, 60 / 255, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
     if (pe.terrain) this.terrainPass.draw(cam);
@@ -1144,6 +1200,7 @@ export class GPURenderer {
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
+    if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
     this.samRadiusPass.draw(cam);
     this.rangeCirclePass.draw(cam);
     this.nukeTrajectoryPass.draw(cam);
@@ -1155,7 +1212,6 @@ export class GPURenderer {
     this.selectionBoxPass.draw(cam, this.frameTick);
     this.moveIndicatorPass.draw(cam, zoom);
     this.nukeTelegraphPass.draw(cam);
-    if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
     if (pe.trail) this.trailPass.draw(cam);
     if (pe.unit) this.unitPass.drawMissiles(cam);
 
@@ -1216,6 +1272,7 @@ export class GPURenderer {
     this.barPass.dispose();
     disposeGPUResources(this.gl, this.res);
     this.gl.deleteTexture(this.paletteTex);
+    this.gl.deleteTexture(this.effectTex);
     this.gl.deleteTexture(this.patternMetaTex);
     this.gl.deleteTexture(this.patternDataTex);
     this.gl.deleteTexture(this.skinLayerTex);
@@ -1225,5 +1282,9 @@ export class GPURenderer {
     this.gl.deleteTexture(this.sceneTarget.tex);
     this.lastUnits = new Map();
     this.lastStructures = new Map();
+    // Deleting GL resources isn't enough — the context itself counts against
+    // the browser's WebGL context limit until it's GC'd, which is unreliable
+    // on mobile. Explicitly drop it so repeated game starts don't overflow.
+    this.gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }

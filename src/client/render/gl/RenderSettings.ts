@@ -52,6 +52,7 @@ export interface RenderSettings {
     unit: boolean;
     name: boolean;
     falloutBloom: boolean;
+    falloutLight: boolean;
     railroad: boolean;
     fx: boolean;
     bar: boolean;
@@ -63,6 +64,10 @@ export interface RenderSettings {
      * per-depth brightness gradient is preserved relative to this color.
      */
     oceanColor: string;
+    sandColor: string;
+    plainsColor: string;
+    highlandColor: string;
+    mountainColor: string;
   };
   falloutBloom: {
     broilSpeedCold: number;
@@ -259,6 +264,8 @@ export interface RenderSettings {
     nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Dark outline radius (atlas texels) drawn behind the alliance icon; 0 = off. */
+    statusOutlineWidth: number;
     /** Alpha multiplier applied to a name while the cursor is over it. */
     hoverFadeAlpha: number;
     /** White glow behind the hovered player's name: px past the outline. */

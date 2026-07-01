@@ -2,7 +2,7 @@
   "id": "HongKong",
   "name": "Hong Kong",
   "translation_key": "map.hongkong",
-  "categories": ["new", "asia"],
+  "categories": ["asia"],
   "multiplayer_frequency": 6,
   "nations": [
     {

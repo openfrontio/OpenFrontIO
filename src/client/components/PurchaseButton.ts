@@ -1,11 +1,11 @@
 import { html, LitElement, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
+import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
+import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
-
-export const DEFAULT_DOLLAR_LABEL_KEY = "territory_patterns.purchase";
 
 const PURCHASE_STYLE_ID = "purchase-button-styles";
 if (!document.getElementById(PURCHASE_STYLE_ID)) {
@@ -192,30 +192,36 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   rarity: string = "common";
 
-  /** Override the dollar-button label key. */
+  /** Optional action-label key shown before the price (e.g. "Switch"). Empty
+   * shows the price on its own. */
   @property({ type: String })
-  dollarLabelKey: string = DEFAULT_DOLLAR_LABEL_KEY;
+  dollarLabelKey: string = "";
 
   /** Optional suffix appended to the displayed price, e.g. "/mo". Not translated here. */
   @property({ type: String })
   priceSuffix: string = "";
 
   @property({ type: Function })
-  onPurchaseDollar?: () => void;
+  onPurchaseDollar?: () => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseHard?: () => void;
+  onPurchaseHard?: () => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseSoft?: () => void;
+  onPurchaseSoft?: () => Promise<PurchaseResult>;
+
+  /** Set when a purchase fails for lack of funds; drives the dialog. */
+  @state() private insufficient: InsufficientCurrency | null = null;
+  private busy = false;
 
   createRenderRoot() {
     return this;
   }
 
-  private handleClick(e: Event, handler?: () => void) {
+  private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
-    if (!handler) return;
+    if (!handler || this.busy) return;
+    this.busy = true;
     const container = this.closest("cosmetic-container") as HTMLElement | null;
     if (container && !container.querySelector(".cosmetic-loading-overlay")) {
       const overlay = document.createElement("div");
@@ -223,23 +229,31 @@ export class PurchaseButton extends LitElement {
       overlay.innerHTML = `<div class="cosmetic-loading-spinner"></div>`;
       container.appendChild(overlay);
     }
-    Promise.resolve(handler()).finally(() => {
-      container?.querySelector(".cosmetic-loading-overlay")?.remove();
-    });
+    Promise.resolve(handler())
+      .then((result) => {
+        if (result) this.insufficient = result;
+      })
+      .finally(() => {
+        this.busy = false;
+        container?.querySelector(".cosmetic-loading-overlay")?.remove();
+      });
+  }
+
+  showInsufficient(result: InsufficientCurrency) {
+    this.insufficient = result;
   }
 
   private renderDollarButton() {
     return html`
       <button
-        class="purchase-sparkle-btn relative overflow-hidden w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
+        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
          hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
         <span class="purchase-sparkle-streak"></span>
-        ${translateText(this.dollarLabelKey)}
-        <span class="ml-1 text-white/50"
-          >(${this.product!.price}${this.priceSuffix})</span
-        >
+        ${this.dollarLabelKey
+          ? html`${translateText(this.dollarLabelKey)} `
+          : nothing}${this.product!.price}${this.priceSuffix}
       </button>
     `;
   }
@@ -298,6 +312,10 @@ export class PurchaseButton extends LitElement {
           ${hasSoft ? this.renderSoftButton() : null}
         </div>
       </div>
+      <insufficient-currency-dialog
+        .info=${this.insufficient}
+        @close=${() => (this.insufficient = null)}
+      ></insufficient-currency-dialog>
     `;
   }
 }
