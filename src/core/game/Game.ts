@@ -800,6 +800,12 @@ export interface Game extends GameMap {
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
   /**
+   * Returns the approximate number of water tiles in the component
+   * containing `tile`, or null if the tile has no water component. Useful for
+   * filtering tiny water bodies (e.g. preventing AI port placement on ponds).
+   */
+  getWaterComponentSize(tile: TileRef): number | null;
+  /**
    * Returns the set of water components that `player` shares with at least one
    * valid trade partner (cached). Used by nation AI for port-placement
    * heuristics. `null` means no usable water body for ports.

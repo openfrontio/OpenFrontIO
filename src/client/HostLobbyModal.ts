@@ -531,11 +531,9 @@ export class HostLobbyModal extends BaseModal {
         // Clear clipboard so the host doesn't accidentally share a dead link
         void navigator.clipboard.writeText("").catch(() => {});
       });
-    if (this.modalEl) {
-      this.modalEl.onClose = () => {
-        this.close();
-      };
-    }
+    // BaseModal.firstUpdated() owns modalEl.onClose so the o-modal close path
+    // (backdrop / close button) runs confirmBeforeClose(). Don't override it
+    // here — doing so would bypass the leave-lobby confirmation.
     this.loadNationCount();
   }
 
@@ -552,8 +550,8 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  public confirmBeforeClose(): boolean {
-    return confirm(translateText("host_modal.leave_confirmation"));
+  public confirmBeforeClose(): boolean | Promise<boolean> {
+    return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {

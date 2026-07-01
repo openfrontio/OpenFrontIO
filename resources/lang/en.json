@@ -392,6 +392,15 @@
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },
+  "effects": {
+    "button_title": "Pick an effect!",
+    "search": "Search...",
+    "title": "Effects",
+    "type": {
+      "nukeTrail": "Nuke Trail",
+      "transportShipTrail": "Boat Trail"
+    }
+  },
   "error_modal": {
     "connection_error": "Connection error!",
     "copied": "Copied!",
@@ -450,7 +459,7 @@
   "flag_input": {
     "button_title": "Pick a flag!",
     "search_flag": "Search...",
-    "title": "Select Flag"
+    "title": "Flag"
   },
   "friends": {
     "accept": "Accept",
@@ -881,6 +890,7 @@
     "britannia": "Britannia",
     "britanniaclassic": "Britannia (Classic)",
     "caribbean": "Caribbean",
+    "caspiansea": "Caspian Sea",
     "caucasus": "Caucasus",
     "china": "China",
     "choppingblock": "Chopping Block",
@@ -913,6 +923,7 @@
     "korea": "Korea",
     "labyrinth": "Labyrinth",
     "lemnos": "Lemnos",
+    "levant": "Levant",
     "lisbon": "Lisbon",
     "losangeles": "Los Angeles",
     "luna": "Luna",
@@ -946,6 +957,7 @@
     "svalmel": "Svalmel",
     "taiwanstrait": "Taiwan Strait",
     "thebox": "The Box",
+    "tierradelfuego": "Tierra Del Fuego",
     "titan": "Titan",
     "tourney1": "Tourney 2 Teams",
     "tourney2": "Tourney 3 Teams",
@@ -982,7 +994,9 @@
     "world": "World"
   },
   "map_component": {
+    "collapse_all": "Collapse all",
     "error": "Error",
+    "expand_all": "Expand all",
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
     "loading": "Loading...",
@@ -1253,20 +1267,23 @@
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
-    "current_plan": "Current Plan",
+    "effects": "Effects",
     "flags": "Flags",
+    "insufficient_currency_body": "You need {amount, number} more {currency} to buy {item}.",
+    "insufficient_currency_title": "Insufficient {currency}",
     "login_required": "You must be logged in to purchase with currency.",
+    "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
     "no_packs": "No packs available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
-    "not_enough_currency": "Not enough currency for this purchase.",
     "packs": "Packs",
     "patterns": "Skins",
     "price_per_month": "/mo",
+    "purchase_currency": "Purchase {currency}",
     "purchase_failed": "Purchase failed. Please try again.",
     "purchase_success": "Purchase succeeded: {name}",
-    "subscribe_button": "Subscribe",
+    "subscribed": "Subscribed",
     "subscription_purchase_success": "Subscription activated!",
     "subscriptions": "Subscriptions",
     "switch_button": "Switch",
@@ -1288,9 +1305,8 @@
     "pattern": {
       "default": "Default"
     },
-    "purchase": "Purchase",
     "search": "Search...",
-    "select_skin": "Select Skin",
+    "select_skin": "Skin",
     "selected": "selected",
     "title": "Skins"
   },
@@ -1412,6 +1428,8 @@
     "game_speed_up_desc": "Cycle to next game speed (0.5, 1, 2, max). Single player only.",
     "go_to_player_desc": "Toggle zooming in on the player in the beginning of a game.",
     "go_to_player_label": "Go to player on start",
+    "graphics_refresh_modifier": "Graphics refresh modifier",
+    "graphics_refresh_modifier_desc": "Hold this key and R to refresh graphics",
     "graphics_settings_desc": "Adjust how the map looks",
     "graphics_settings_label": "Graphics Settings",
     "ground_attack": "Ground Attack",

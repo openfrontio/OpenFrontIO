@@ -59,7 +59,12 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
+import {
+  getPaletteSize,
+  hexToRgb,
+  MAX_TRAIL_COLORS,
+  TRAIL_EFFECT_BLOCKS,
+} from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
@@ -132,6 +137,12 @@ export class GPURenderer {
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
+  // Per-player trail-effect palette, keyed by smallID (RGBA32F,
+  // 4096×(MAX_TRAIL_COLORS·TRAIL_EFFECT_BLOCKS)): one MAX_TRAIL_COLORS-row block
+  // per trail effectType (block 0 = transportShipTrail, block 1 = nukeTrail).
+  // Sampled by TrailPass; the shader picks the block from the trail tile's nuke
+  // bit.
+  private effectTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
   private skinAtlas: SkinAtlasArray;
@@ -232,6 +243,20 @@ export class GPURenderer {
       format: gl.RGBA,
       type: gl.FLOAT,
       data: paletteData,
+      filter: gl.NEAREST,
+    });
+
+    // Per-player trail-effect texture: TRAIL_EFFECT_BLOCKS stacked blocks of
+    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail).
+    // Starts zeroed (color count 0 everywhere = no effect → territory color).
+    const effectRows = MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS;
+    this.effectTex = createTexture2D(gl, {
+      width: palW,
+      height: effectRows,
+      internalFormat: gl.RGBA32F,
+      format: gl.RGBA,
+      type: gl.FLOAT,
+      data: new Float32Array(palW * effectRows * 4),
       filter: gl.NEAREST,
     });
 
@@ -371,13 +396,14 @@ export class GPURenderer {
       this.settings.spawnOverlay,
     );
 
-    // --- Trail (needs trailTex, paletteTex) ---
+    // --- Trail (needs trailTex, paletteTex, effectTex) ---
     this.trailPass = new TrailPass(
       gl,
       mapW,
       mapH,
       this.res.trailTex,
       this.paletteTex,
+      this.effectTex,
       this.settings,
     );
 
@@ -586,7 +612,7 @@ export class GPURenderer {
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint8Array,
+    trailState: Uint16Array,
   ): void {
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
@@ -597,7 +623,7 @@ export class GPURenderer {
   }
 
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -627,6 +653,24 @@ export class GPURenderer {
     this.samRadiusPass.setPaletteData(this.paletteData);
     // Name pass caches per-player colors and bakes them into slot rows
     this.namePass.refreshPlayerColors(this.paletteData);
+  }
+
+  /** Re-upload the per-player trail-effect texture (style + colors by smallID). */
+  updateEffectPalette(effectData: Float32Array): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      getPaletteSize(),
+      MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS,
+      gl.RGBA,
+      gl.FLOAT,
+      effectData,
+    );
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
@@ -1228,6 +1272,7 @@ export class GPURenderer {
     this.barPass.dispose();
     disposeGPUResources(this.gl, this.res);
     this.gl.deleteTexture(this.paletteTex);
+    this.gl.deleteTexture(this.effectTex);
     this.gl.deleteTexture(this.patternMetaTex);
     this.gl.deleteTexture(this.patternDataTex);
     this.gl.deleteTexture(this.skinLayerTex);

@@ -95,7 +95,7 @@ export function invalidateUserMe() {
 }
 
 export async function purchaseWithCurrency(
-  cosmeticType: "pattern" | "skin" | "flag",
+  cosmeticType: "pattern" | "skin" | "flag" | "effect",
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,

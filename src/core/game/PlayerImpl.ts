@@ -481,6 +481,12 @@ export class PlayerImpl implements Player {
           this.mg.map().isLand(neighbor) &&
           !this.mg.map().isImpassable(neighbor)
         ) {
+          if (
+            !this.mg.map().hasOwner(neighbor) &&
+            this.mg.map().hasFallout(neighbor)
+          ) {
+            continue;
+          }
           const owner = this.mg.map().ownerID(neighbor);
           if (owner !== this.smallID()) {
             ns.add(

@@ -79,6 +79,11 @@ export class GameServer {
   private allClients: Map<ClientID, Client> = new Map();
   // Map persistentID to clientID for reconnection lookup
   private persistentIdToClientId: Map<string, ClientID> = new Map();
+  // persistentIDs that have passed authorization (incl. Turnstile) for this
+  // game at least once. Survives lobby-phase disconnects, unlike
+  // persistentIdToClientId (which is cleared to free up player slots). Lets a
+  // reconnecting player skip the single-use Turnstile re-check.
+  private admittedPersistentIds: Set<string> = new Set();
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
@@ -406,6 +411,15 @@ export class GameServer {
     return clientID;
   }
 
+  // Whether this persistentID has already been admitted (passed Turnstile and
+  // other join authorization) for this game. Used to skip the single-use
+  // Turnstile re-check when an already-admitted player reconnects. Kicked
+  // players are excluded so a kick still forces them back through the gate.
+  public wasAdmitted(persistentID: string): boolean {
+    if (this.kickedPersistentIds.has(persistentID)) return false;
+    return this.admittedPersistentIds.has(persistentID);
+  }
+
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
@@ -488,6 +502,7 @@ export class GameServer {
     // Client connection accepted
     this.websockets.add(client.ws);
     this.persistentIdToClientId.set(client.persistentID, client.clientID);
+    this.admittedPersistentIds.add(client.persistentID);
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);

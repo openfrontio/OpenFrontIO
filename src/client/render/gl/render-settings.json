@@ -18,9 +18,9 @@
   },
   "terrain": {
     "oceanColor": "#4785b5",
-    "sandColor": "#CC9E9E",
-    "plainsColor": "#BECD8A",
-    "highlandColor": "#C8B78A",
+    "sandColor": "#CCCB9E",
+    "plainsColor": "#BEDC8A",
+    "highlandColor": "#DCCB9E",
     "mountainColor": "#e6e6e6"
   },
   "falloutBloom": {
@@ -134,7 +134,7 @@
         "iconFill": 0.85
       },
       "Factory": {
-        "scale": 1,
+        "scale": 1.08,
         "iconFill": 0.85
       },
       "Defense Post": {

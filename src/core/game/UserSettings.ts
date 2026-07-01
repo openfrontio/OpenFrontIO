@@ -2,7 +2,7 @@ import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
 } from "../../client/render/gl/GraphicsOverrides";
-import { Cosmetics } from "../CosmeticSchemas";
+import { Cosmetics, EffectType } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
@@ -42,6 +42,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
+    altKey: "AltLeft",
   };
 }
 
@@ -57,6 +58,7 @@ export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const EFFECTS_KEY = "settings.effects";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -310,6 +312,38 @@ export class UserSettings {
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
+  }
+
+  /**
+   * Selected effect cosmetics, keyed by effectType (at most one per type).
+   * Persisted as a single JSON blob under EFFECTS_KEY.
+   */
+  getSelectedEffects(): Record<string, string> {
+    const raw = this.getString(EFFECTS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  getSelectedEffectName(effectType: EffectType): string | null {
+    return this.getSelectedEffects()[effectType] ?? null;
+  }
+
+  setSelectedEffectName(
+    effectType: EffectType,
+    name: string | undefined,
+  ): void {
+    const map = this.getSelectedEffects();
+    if (name === undefined) delete map[effectType];
+    else map[effectType] = name;
+    if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
+    else this.setString(EFFECTS_KEY, JSON.stringify(map));
   }
 
   backgroundMusicVolume(): number {
