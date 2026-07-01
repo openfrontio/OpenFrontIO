@@ -3,12 +3,12 @@ import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getUserMe, hasLinkedAccount } from "./Api";
-import { getLastRefreshOutcome, getPlayToken } from "./Auth";
+import { getLastAuthOutcome, getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { JoinLobbyEvent } from "./Main";
-import { translateText } from "./Utils";
+import { showToast, translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
@@ -126,32 +126,24 @@ export class MatchmakingModal extends BaseModal {
         userMe.user.google !== undefined ||
         userMe.user.email !== undefined);
     if (!isLoggedIn) {
-      // A transient auth-server hiccup (rather than a genuine "not logged in")
-      // shouldn't bounce the player to the login page — ask them to retry.
-      if (getLastRefreshOutcome() === "transient") {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: translateText("matchmaking_button.connection_issue"),
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-        this.close();
-        return;
-      }
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: translateText("matchmaking_button.must_login"),
-            color: "red",
-            duration: 3000,
-          },
-        }),
+      // Distinguish a transient auth hiccup (server unreachable / 5xx, or a
+      // /users/@me blip) from a genuine "not logged in": only the latter should
+      // bounce the player to the login page; the former just asks them to retry.
+      // `userMe === false` means we couldn't get an answer (transient possible);
+      // a returned-but-unlinked userMe is a confirmed guest who must log in.
+      const transient =
+        userMe === false && getLastAuthOutcome() === "transient";
+      showToast(
+        translateText(
+          transient
+            ? "matchmaking_button.connection_issue"
+            : "matchmaking_button.must_login",
+        ),
+        "red",
+        3000,
       );
       this.close();
-      window.showPage?.("page-account");
+      if (!transient) window.showPage?.("page-account");
       return;
     }
 

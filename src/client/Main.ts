@@ -506,14 +506,19 @@ class Client {
       }
     };
 
-    if ((await userAuth()) === false) {
-      // Not logged in
-      onUserMe(false);
-    } else {
-      // JWT appears to be valid
-      // TODO: Add caching
-      getUserMe().then(onUserMe);
-    }
+    // Resolve auth in the background: a slow/degraded auth server (now retried a
+    // few times) must not delay menu wiring or deep-link lobby joins below. The
+    // join path re-checks auth itself, and refreshes are single-flighted.
+    void userAuth().then((auth) => {
+      if (auth === false) {
+        // Not logged in
+        onUserMe(false);
+      } else {
+        // JWT appears to be valid
+        // TODO: Add caching
+        void getUserMe().then(onUserMe);
+      }
+    });
 
     const settingsModal = document.querySelector(
       "user-setting",

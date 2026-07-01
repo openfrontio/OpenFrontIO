@@ -9,6 +9,11 @@ import { generateCryptoRandomUUID } from "./Utils";
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
+// Remembers whether the signed-in user had a linked account, so a later
+// session-expiry can prompt re-login (linked users) vs. stay silent (guests)
+// even when /users/@me can't be reached at that moment. Persisted (not just
+// in-memory) so it survives a reload and an @me outage; cleared on logout.
+export const LINKED_ACCOUNT_KEY = "was_linked_account";
 
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
@@ -118,6 +123,7 @@ export async function logOut({
     // failure turns into a permanent brand-new guest account.
     if (userInitiated) {
       localStorage.removeItem(PERSISTENT_ID_KEY);
+      localStorage.removeItem(LINKED_ACCOUNT_KEY);
       new UserSettings().clearFlag();
       new UserSettings().setSelectedPatternName(undefined);
     }
@@ -208,25 +214,46 @@ async function refreshJwt(): Promise<void> {
   }
 }
 
-// Outcome of the most recent refresh attempt, so callers (e.g. ranked
-// matchmaking) can tell "your session expired" apart from "we couldn't reach
-// the auth server right now".
-export type RefreshOutcome = "ok" | "expired" | "transient";
-let __lastRefreshOutcome: RefreshOutcome = "ok";
+// Outcome of the most recent authentication check — a /auth/refresh attempt or
+// a /users/@me call — so callers (e.g. ranked matchmaking) can tell "your
+// session expired" apart from "we couldn't reach the auth server right now". It
+// spans both layers because either can be the call that just failed.
+export type AuthOutcome = "ok" | "expired" | "transient";
+let __lastAuthOutcome: AuthOutcome = "ok";
 
-export function getLastRefreshOutcome(): RefreshOutcome {
-  return __lastRefreshOutcome;
+export function getLastAuthOutcome(): AuthOutcome {
+  return __lastAuthOutcome;
+}
+
+// Lets the /users/@me path (Api.ts) record its own outcome into the same signal,
+// so the transient-vs-expired distinction reflects whichever call last ran.
+export function markAuthOutcome(outcome: AuthOutcome): void {
+  __lastAuthOutcome = outcome;
 }
 
 const REFRESH_MAX_ATTEMPTS = 3;
-
-function refreshBackoffMs(attempt: number): number {
-  // Backoff between attempts: 500ms, then 1000ms.
-  return 500 * 2 ** (attempt - 1);
-}
+// Backoff between attempts, indexed by (attempt - 1): 500ms, then 1000ms.
+const REFRESH_BACKOFF_MS = [500, 1000];
+const REFRESH_TIMEOUT_MS = 10_000;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// fetch() with a per-attempt timeout, so a stalled connection can't hang the
+// shared refresh promise (and every caller awaiting it) indefinitely.
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function notifySessionExpired(): void {
@@ -244,39 +271,44 @@ async function doRefreshJwt(): Promise<void> {
       console.log(
         `Refreshing jwt (attempt ${attempt}/${REFRESH_MAX_ATTEMPTS})`,
       );
-      const response = await fetch(getApiBase() + "/auth/refresh", {
-        method: "POST",
-        credentials: "include",
-      });
+      const response = await fetchWithTimeout(
+        getApiBase() + "/auth/refresh",
+        { method: "POST", credentials: "include" },
+        REFRESH_TIMEOUT_MS,
+      );
 
       if (response.status === 200) {
         const json = await response.json();
         const { jwt, expiresIn } = json;
-        __expiresAt = Date.now() + expiresIn * 1000;
-        __jwt = jwt;
-        __lastRefreshOutcome = "ok";
-        console.log("Refresh succeeded");
-        return;
-      }
-
-      // 401/403 are definitive: the refresh token is genuinely invalid or
-      // expired, so retrying can't help. Do a "soft" logout — clear the
-      // in-memory JWT but preserve the session cookie + persistent identity —
-      // and let a previously-signed-in user be prompted to log in again.
-      if (response.status === 401 || response.status === 403) {
+        // A 200 with an unusable body would otherwise corrupt our state
+        // (undefined jwt makes hadSession lie; NaN expiry disables future
+        // refresh). Treat it as a transient failure and retry instead.
+        if (typeof jwt === "string" && typeof expiresIn === "number") {
+          __expiresAt = Date.now() + expiresIn * 1000;
+          __jwt = jwt;
+          __lastAuthOutcome = "ok";
+          console.log("Refresh succeeded");
+          return;
+        }
+        console.error("Refresh returned 200 with an invalid body");
+      } else if (response.status === 401 || response.status === 403) {
+        // 401/403 are definitive: the refresh token is genuinely invalid or
+        // expired, so retrying can't help. Do a "soft" logout — clear the
+        // in-memory JWT but preserve the session cookie + persistent identity —
+        // and let a previously-signed-in user be prompted to log in again.
         console.error("Refresh rejected — session expired", response.status);
         __jwt = null;
-        __lastRefreshOutcome = "expired";
+        __lastAuthOutcome = "expired";
         if (hadSession) notifySessionExpired();
         return;
+      } else {
+        // Everything else (5xx, 429, ...) is transient — fall through to retry.
+        console.error(
+          `Refresh failed (status ${response.status}), attempt ${attempt}/${REFRESH_MAX_ATTEMPTS}`,
+        );
       }
-
-      // Everything else (5xx, 429, ...) is transient — fall through to retry.
-      console.error(
-        `Refresh failed (status ${response.status}), attempt ${attempt}/${REFRESH_MAX_ATTEMPTS}`,
-      );
     } catch (e) {
-      // Network error / server unreachable — transient, fall through to retry.
+      // Network error / timeout / server unreachable — transient, retry.
       console.error(
         `Refresh failed (network), attempt ${attempt}/${REFRESH_MAX_ATTEMPTS}`,
         e,
@@ -284,7 +316,7 @@ async function doRefreshJwt(): Promise<void> {
     }
 
     if (attempt < REFRESH_MAX_ATTEMPTS) {
-      await delay(refreshBackoffMs(attempt));
+      await delay(REFRESH_BACKOFF_MS[attempt - 1] ?? 1000);
     }
   }
 
@@ -292,7 +324,7 @@ async function doRefreshJwt(): Promise<void> {
   // session cookie and persistent identity so the next refresh can recover.
   console.error("Refresh failed after retries; staying recoverable");
   __jwt = null;
-  __lastRefreshOutcome = "transient";
+  __lastAuthOutcome = "transient";
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {

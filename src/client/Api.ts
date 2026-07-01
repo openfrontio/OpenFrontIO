@@ -11,7 +11,12 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
-import { getAuthHeader, logOut, userAuth } from "./Auth";
+import {
+  getAuthHeader,
+  LINKED_ACCOUNT_KEY,
+  markAuthOutcome,
+  userAuth,
+} from "./Auth";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -53,13 +58,13 @@ export async function fetchPlayerById(
   }
 }
 
-// Remembers whether the last successful /users/@me showed a linked account.
-// Used to decide whether a session-expiry should prompt re-login (linked users)
-// or be handled silently (guests). Survives a later auth failure on purpose —
-// it records what the user *was*, which is exactly what we need at that point.
-let __lastKnownLinked = false;
+// Whether the signed-in user had a linked account, used to decide whether a
+// session-expiry should prompt re-login (linked users) or stay silent (guests).
+// Backed by localStorage (LINKED_ACCOUNT_KEY) so it survives a reload and a
+// transient /users/@me outage — it records what the user *was*, which is exactly
+// what we need when the session later expires.
 export function wasLinkedAccount(): boolean {
-  return __lastKnownLinked;
+  return localStorage.getItem(LINKED_ACCOUNT_KEY) === "true";
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
@@ -67,9 +72,11 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
   }
-  __userMe = (async () => {
+  const pending = (async () => {
     try {
       const userAuthResult = await userAuth();
+      // No usable token: refreshJwt() already recorded why (transient/expired),
+      // so don't overwrite that outcome here.
       if (!userAuthResult) return false;
       const { jwt } = userAuthResult;
 
@@ -79,26 +86,49 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
           authorization: `Bearer ${jwt}`,
         },
       });
-      // A 401 here is treated like any other non-200 (return false). We
-      // deliberately do NOT logOut(): the JWT was just refreshed by userAuth(),
-      // so a 401 from /users/@me is transient/ambiguous and must not revoke the
-      // session or wipe the persistent identity. The backend already made
-      // /users/@me 401 non-authoritative.
-      if (response.status !== 200) return false;
+      // A non-200 here (including a 401) is treated as transient/ambiguous, not
+      // an authoritative logout: the JWT was just validated by userAuth(), so we
+      // neither revoke the session nor wipe identity. We record the outcome so
+      // callers can offer "try again" instead of bouncing a valid session.
+      if (response.status !== 200) {
+        markAuthOutcome("transient");
+        return false;
+      }
       const body = await response.json();
       const result = UserMeResponseSchema.safeParse(body);
       if (!result.success) {
         const error = z.prettifyError(result.error);
         console.error("Invalid response", error);
+        markAuthOutcome("transient");
         return false;
       }
-      __lastKnownLinked = hasLinkedAccount(result.data);
+      markAuthOutcome("ok");
+      localStorage.setItem(
+        LINKED_ACCOUNT_KEY,
+        hasLinkedAccount(result.data) ? "true" : "false",
+      );
       return result.data;
     } catch (e) {
+      // Network error reaching /users/@me — transient, not a logout.
+      markAuthOutcome("transient");
       return false;
     }
   })();
-  return __userMe;
+  __userMe = pending;
+  // Only memoize a successful result; a `false` (transient/ambiguous failure)
+  // must not stick for the whole page session, or recovery would need a full
+  // reload. Clear the cache on failure so the next call retries — but only while
+  // we still own the slot, so a stale in-flight request that settles after an
+  // invalidate + newer request can't clobber the newer one.
+  void pending.then(
+    (result) => {
+      if (result === false && __userMe === pending) __userMe = null;
+    },
+    () => {
+      if (__userMe === pending) __userMe = null;
+    },
+  );
+  return pending;
 }
 
 export function invalidateUserMe() {
@@ -126,7 +156,10 @@ export async function purchaseWithCurrency(
       }),
     });
     if (response.status === 401) {
-      await logOut();
+      // A 401 here is ambiguous (a transient/edge rejection is possible), so we
+      // return false WITHOUT logging out — a spurious 401 must not revoke the
+      // session. A genuinely expired token is handled by the central refresh
+      // path on the next authenticated call.
       return false;
     }
     if (!response.ok) {
@@ -189,7 +222,10 @@ export async function cancelSubscription(): Promise<boolean> {
       },
     });
     if (response.status === 401) {
-      await logOut();
+      // A 401 here is ambiguous (a transient/edge rejection is possible), so we
+      // return false WITHOUT logging out — a spurious 401 must not revoke the
+      // session. A genuinely expired token is handled by the central refresh
+      // path on the next authenticated call.
       return false;
     }
     if (!response.ok) {
@@ -223,7 +259,10 @@ export async function changeSubscriptionTier(
       },
     );
     if (response.status === 401) {
-      await logOut();
+      // A 401 here is ambiguous (a transient/edge rejection is possible), so we
+      // return false WITHOUT logging out — a spurious 401 must not revoke the
+      // session. A genuinely expired token is handled by the central refresh
+      // path on the next authenticated call.
       return false;
     }
     if (!response.ok) {
@@ -254,7 +293,10 @@ export async function openSubscriptionPortal(): Promise<string | false> {
       }),
     });
     if (response.status === 401) {
-      await logOut();
+      // A 401 here is ambiguous (a transient/edge rejection is possible), so we
+      // return false WITHOUT logging out — a spurious 401 must not revoke the
+      // session. A genuinely expired token is handled by the central refresh
+      // path on the next authenticated call.
       return false;
     }
     if (!response.ok) {

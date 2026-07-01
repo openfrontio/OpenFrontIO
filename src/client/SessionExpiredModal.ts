@@ -47,18 +47,18 @@ export class SessionExpiredModal extends BaseModal {
       <div class="px-6 py-4 text-gray-800 dark:text-gray-200">
         <p class="mb-6">${translateText("session_expired.body")}</p>
         <div class="flex justify-end gap-3">
-          <button
-            class="px-4 py-2 rounded-md bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+          <o-button
+            variant="secondary"
+            size="md"
+            translationKey="session_expired.dismiss"
             @click=${() => this.close()}
-          >
-            ${translateText("session_expired.dismiss")}
-          </button>
-          <button
-            class="px-4 py-2 rounded-md bg-blue-600 text-white"
+          ></o-button>
+          <o-button
+            variant="primary"
+            size="md"
+            translationKey="session_expired.log_in"
             @click=${() => this.logIn()}
-          >
-            ${translateText("session_expired.log_in")}
-          </button>
+          ></o-button>
         </div>
       </div>
     `;

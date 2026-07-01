@@ -7,7 +7,7 @@ vi.mock("../../src/client/Api", () => ({
   getAudience: () => "localhost",
 }));
 
-import { getLastRefreshOutcome, logOut, userAuth } from "../../src/client/Auth";
+import { getLastAuthOutcome, logOut, userAuth } from "../../src/client/Auth";
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
 
@@ -56,7 +56,7 @@ describe("Auth: refresh resilience and session-expiry handling", () => {
       String(u).includes("/auth/refresh"),
     ).length;
     expect(refreshCalls).toBe(3);
-    expect(getLastRefreshOutcome()).toBe("transient");
+    expect(getLastAuthOutcome()).toBe("transient");
     // Identity preserved and the session is never revoked on a transient blip.
     expect(localStorage.getItem(PERSISTENT_ID_KEY)).toBe("keep-me-123");
     expect(
@@ -84,7 +84,7 @@ describe("Auth: refresh resilience and session-expiry handling", () => {
       String(u).includes("/auth/refresh"),
     ).length;
     expect(refreshCalls).toBe(1);
-    expect(getLastRefreshOutcome()).toBe("expired");
+    expect(getLastAuthOutcome()).toBe("expired");
     expect(localStorage.getItem(PERSISTENT_ID_KEY)).toBe("keep-me-401");
     // No active session existed, so we must not nag with the modal.
     expect(onExpired).not.toHaveBeenCalled();
@@ -115,7 +115,7 @@ describe("Auth: refresh resilience and session-expiry handling", () => {
     await userAuth(); // establishes __jwt via the first (200) refresh
     await userAuth(); // session now active -> second refresh 401s
 
-    expect(getLastRefreshOutcome()).toBe("expired");
+    expect(getLastAuthOutcome()).toBe("expired");
     expect(onExpired).toHaveBeenCalledTimes(1);
     window.removeEventListener("auth-session-expired", onExpired);
   });
