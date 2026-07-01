@@ -255,14 +255,24 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 // SuddenDeath.ts); a side caught below a new wave gets a warnSeconds cooldown
 // before decay. Off unless `enabled`. Times in seconds, all integers so the sim
 // stays deterministic.
-export const SuddenDeathConfigSchema = z.object({
-  enabled: z.boolean().optional(),
-  speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
-  warnSeconds: z.number().int().min(0).optional(),
-  drainStartPercent: z.number().int().min(0).max(100).optional(),
-  drainMaxPercent: z.number().int().min(0).max(100).optional(),
-  drainRampSeconds: z.number().int().min(1).optional(),
-});
+export const SuddenDeathConfigSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
+    warnSeconds: z.number().int().min(0).optional(),
+    drainStartPercent: z.number().int().min(0).max(100).optional(),
+    drainMaxPercent: z.number().int().min(0).max(100).optional(),
+    drainRampSeconds: z.number().int().min(1).optional(),
+  })
+  // Reject a reversed pair (start > max), which would make the drain shrink
+  // over time instead of ramping up.
+  .refine(
+    (c) =>
+      c.drainStartPercent === undefined ||
+      c.drainMaxPercent === undefined ||
+      c.drainStartPercent <= c.drainMaxPercent,
+    { message: "drainStartPercent must be <= drainMaxPercent" },
+  );
 
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
