@@ -1,3 +1,4 @@
+import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import { SuddenDeathExecution } from "../src/core/execution/SuddenDeathExecution";
 import {
   Game,
@@ -483,5 +484,61 @@ describe("SuddenDeathExecution (integration)", () => {
     // The drain is the difference vs the disabled run (isolates it from the
     // normal troop dynamics both runs share).
     expect(on.small.troops()).toBeLessThan(off.small.troops());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Default-config wipe time. Uses the resolved SUDDEN_DEATH_DEFAULTS (no drain
+// overrides) with real troop income (PlayerExecution) flowing every tick, so it
+// pins the advertised "~1 minute from caught to wiped". A pure-drain analysis
+// (ignoring income) under-counts this to ~45s; income offsets the early bleed.
+// ---------------------------------------------------------------------------
+
+describe("SuddenDeathExecution (default drain, with income)", () => {
+  it("wipes a full-troop side in ~1 minute (warn + linear drain)", async () => {
+    // Only enabled + speed set -> drain uses the defaults (warn 10s, 2%->6% /50s).
+    // veryfast is chosen purely so the bar rises fast enough to catch the sliver.
+    const game = await setup(
+      "plains",
+      { instantBuild: true, suddenDeath: { enabled: true, speed: "veryfast" } },
+      [
+        playerInfo("big", PlayerType.Human),
+        playerInfo("small", PlayerType.Human),
+      ],
+    );
+    const big = game.player("big");
+    const small = game.player("small");
+    giveLandTiles(game, big, 4000); // safely above the bar
+    giveLandTiles(game, small, 3); // a sliver, caught once the bar rises
+    game.addExecution(new PlayerExecution(big));
+    game.addExecution(new PlayerExecution(small)); // income every tick
+    game.addExecution(new SuddenDeathExecution());
+
+    // Run until the rising bar catches the sliver, then fill it to a full stack
+    // so we measure the worst-case (longest) wipe from that moment.
+    let caughtTick = -1;
+    for (let i = 0; i < 3000; i++) {
+      game.executeNextTick();
+      if (small.inSuddenDeath()) {
+        caughtTick = game.ticks();
+        break;
+      }
+    }
+    expect(caughtTick).toBeGreaterThan(0);
+    small.setTroops(game.config().maxTroops(small));
+
+    let zeroTick = -1;
+    for (let i = 0; i < 1500; i++) {
+      game.executeNextTick();
+      if (small.troops() <= 0) {
+        zeroTick = game.ticks();
+        break;
+      }
+    }
+    expect(zeroTick).toBeGreaterThan(0);
+    const seconds = (zeroTick - caughtTick) / 10;
+    // ~10s warn + ~50s drain, income included: about a minute (NOT ~45s).
+    expect(seconds).toBeGreaterThan(50);
+    expect(seconds).toBeLessThan(85);
   });
 });
