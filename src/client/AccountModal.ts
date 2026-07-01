@@ -12,6 +12,7 @@ import {
   logOut,
   sendMagicLink,
 } from "./Auth";
+import "./components/baseComponents/ranking/GameRankingView";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -25,6 +26,7 @@ import "./components/FriendsList";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
+import { modalRouter } from "./ModalRouter";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -33,6 +35,9 @@ export class AccountModal extends BaseModal {
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  // When set, the modal shows the game's ranking as a sub-view (like the clan
+  // modal's detail view) instead of the tabbed body; back returns to Games.
+  @state() private rankingGameId: string | null = null;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -77,6 +82,13 @@ export class AccountModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    if (this.rankingGameId !== null) {
+      return modalHeader({
+        title: translateText("game_info_modal.title"),
+        onBack: () => this.closeRanking(),
+        ariaLabel: translateText("common.back"),
+      });
+    }
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
@@ -112,6 +124,11 @@ export class AccountModal extends BaseModal {
     if (this.isLoadingUser || !this.isLinkedAccount()) {
       return {};
     }
+    // Ranking sub-view hides the tab bar; the header's back arrow returns to
+    // the Games tab (activeTab is untouched while the sub-view is open).
+    if (this.rankingGameId !== null) {
+      return {};
+    }
     return {
       tabs: [
         { key: "account", label: translateText("account_modal.tab_account") },
@@ -132,6 +149,17 @@ export class AccountModal extends BaseModal {
       return html`<div class="custom-scrollbar mr-1">
         ${this.renderLoginOptions()}
       </div>`;
+    }
+    if (this.rankingGameId !== null) {
+      return html`
+        <div class="custom-scrollbar mr-1">
+          <div class="p-6">
+            <game-ranking-view
+              .gameId=${this.rankingGameId}
+            ></game-ranking-view>
+          </div>
+        </div>
+      `;
     }
     return html`
       <div class="custom-scrollbar mr-1">
@@ -220,8 +248,22 @@ export class AccountModal extends BaseModal {
         }}
         @view-game=${(e: CustomEvent<{ gameId: string }>) =>
           void this.viewGame(e.detail.gameId)}
+        @view-ranking=${(e: CustomEvent<{ gameId: string }>) =>
+          this.openRanking(e.detail.gameId)}
       ></player-game-history-view>
     `;
+  }
+
+  // The game id is synced to the URL (like the clan modal's `clan` arg) so a
+  // reload or shared link lands back on the same ranking.
+  private openRanking(gameId: string): void {
+    this.rankingGameId = gameId;
+    modalRouter.syncArgs("account", { game: gameId });
+  }
+
+  private closeRanking(): void {
+    this.rankingGameId = null;
+    modalRouter.syncArgs("account", { game: null });
   }
 
   private renderEmptyState(icon: string, message: string): TemplateResult {
@@ -556,6 +598,12 @@ export class AccountModal extends BaseModal {
     this.isLoadingUser = true;
     this.handleLinkResult(args);
 
+    // Deep link straight into a game's ranking sub-view (see openRanking).
+    const game = typeof args?.game === "string" ? args.game.trim() : "";
+    if (game) {
+      this.rankingGameId = game;
+    }
+
     void fetchCosmetics().then((cosmetics) => {
       this.cosmetics = cosmetics;
       this.requestUpdate();
@@ -581,6 +629,7 @@ export class AccountModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.rankingGameId = null;
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );

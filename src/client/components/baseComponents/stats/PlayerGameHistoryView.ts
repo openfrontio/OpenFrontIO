@@ -7,7 +7,6 @@ import {
 } from "../../../../core/ApiSchemas";
 import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
-import { GameInfoModal } from "../../../GameInfoModal";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
@@ -212,19 +211,16 @@ export class PlayerGameHistoryView extends LitElement {
     );
   }
 
-  // Opens the game-info ranking overlay on top of the account modal. The modal
-  // is a global singleton in the document (queried the same way as Main.ts),
-  // so we don't close the account modal — the overlay layers above it.
+  // The host modal presents the ranking as an in-modal sub-view; just hand it
+  // the id (same contract as `view-game` above).
   private showRanking(gameId: string) {
-    const gameInfoModal = document.querySelector(
-      "game-info-modal",
-    ) as GameInfoModal | null;
-    if (!gameInfoModal) {
-      console.warn("Game info modal element not found");
-      return;
-    }
-    void gameInfoModal.loadGame(gameId);
-    gameInfoModal.open();
+    this.dispatchEvent(
+      new CustomEvent<{ gameId: string }>("view-ranking", {
+        detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   render() {
