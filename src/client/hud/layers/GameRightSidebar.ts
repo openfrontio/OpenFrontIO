@@ -302,16 +302,14 @@ export class GameRightSidebar extends LitElement implements Controller {
     if (!sd.enabled || this.hasWinner) return html``;
 
     const elapsed = Math.floor(this.game.elapsedGameSeconds());
-    const land = Math.max(
-      1,
-      this.game.numLandTiles() - this.game.numTilesWithFallout(),
-    );
+    const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
     const requiredTiles = suddenDeathRequiredTiles(sd.speed, land, elapsed);
     const wave = suddenDeathWaveState(sd.speed, elapsed);
     const me = this.game.myPlayer();
     const yourTiles = this.sideTiles(me);
-    const requiredPct = (requiredTiles / land) * 100;
-    const yourPct = (yourTiles / land) * 100;
+    // Match the sim: no land -> no bar, no percentages (avoid div-by-zero / >100%).
+    const requiredPct = land > 0 ? (requiredTiles / land) * 100 : 0;
+    const yourPct = land > 0 ? (yourTiles / land) * 100 : 0;
     const flagged = me?.inSuddenDeath() ?? false;
     const secondsUnder = Math.floor((me?.suddenDeathTicks() ?? 0) / 10);
     const draining = flagged && secondsUnder >= sd.warnSeconds;
