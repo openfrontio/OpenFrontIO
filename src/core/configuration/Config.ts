@@ -17,6 +17,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { SuddenDeathSpeed } from "../game/SuddenDeath";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
@@ -80,6 +81,21 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
+// OFM sudden-death tunables (anti-stall). Off unless enabled in GameConfig.
+// Times in seconds. The required map share rises in waves (levels + times in
+// SuddenDeath.ts, chosen by `speed`). A side caught below the bar gets a
+// warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed to zero: the
+// warn (10s) + the linear drain (~55s from full troops, sooner with fewer troops
+// or a shrinking territory) make ~1 minute from caught to wiped out.
+const SUDDEN_DEATH_DEFAULTS = {
+  enabled: false,
+  speed: "normal" as SuddenDeathSpeed,
+  warnSeconds: 10, // cooldown before decay after the bar catches you
+  drainStartPercent: 2, // starts bleeding at once (already beats troop income)
+  drainMaxPercent: 6,
+  drainRampSeconds: 50, // ramps LINEARLY to the max over this long
+};
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -100,6 +116,20 @@ export class Config {
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
+  }
+
+  // OFM sudden-death config, resolved against defaults. One read per tick.
+  suddenDeathConfig(): typeof SUDDEN_DEATH_DEFAULTS {
+    const c = this._gameConfig.suddenDeath;
+    const d = SUDDEN_DEATH_DEFAULTS;
+    return {
+      enabled: c?.enabled ?? d.enabled,
+      speed: c?.speed ?? d.speed,
+      warnSeconds: c?.warnSeconds ?? d.warnSeconds,
+      drainStartPercent: c?.drainStartPercent ?? d.drainStartPercent,
+      drainMaxPercent: c?.drainMaxPercent ?? d.drainMaxPercent,
+      drainRampSeconds: c?.drainRampSeconds ?? d.drainRampSeconds,
+    };
   }
   spawnImmunityDuration(): Tick {
     return (

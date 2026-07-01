@@ -326,6 +326,8 @@ export class NamePass {
           embargo: false,
           nukeActive: false,
           nukeTargetsMe: false,
+          inSuddenDeath: false,
+          suddenDeathDraining: false,
           traitorRemainingTicks: 0,
           allianceFraction: 0,
           allianceRemainingTicks: 0,
@@ -437,6 +439,8 @@ export class NamePass {
       const crown = sd?.crown ?? false;
       const traitor = sd?.traitor ?? false;
       const disconnected = sd?.disconnected ?? false;
+      const inSuddenDeath = sd?.inSuddenDeath ?? false;
+      const suddenDeathDraining = sd?.suddenDeathDraining ?? false;
       const alliance = sd?.alliance ?? false;
       const allianceReq = sd?.allianceReq ?? false;
       const target = sd?.target ?? false;
@@ -451,6 +455,8 @@ export class NamePass {
         crown !== slot.crown ||
         traitor !== slot.traitor ||
         disconnected !== slot.disconnected ||
+        inSuddenDeath !== slot.inSuddenDeath ||
+        suddenDeathDraining !== slot.suddenDeathDraining ||
         alliance !== slot.alliance ||
         allianceReq !== slot.allianceReq ||
         target !== slot.target ||
@@ -464,6 +470,8 @@ export class NamePass {
         slot.crown = crown;
         slot.traitor = traitor;
         slot.disconnected = disconnected;
+        slot.inSuddenDeath = inSuddenDeath;
+        slot.suddenDeathDraining = suddenDeathDraining;
         slot.alliance = alliance;
         slot.allianceReq = allianceReq;
         slot.target = target;
@@ -549,11 +557,16 @@ export class NamePass {
     d[off + 14] = nameShade;
     d[off + 15] = slot.nameHalfWidth;
 
-    // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]
+    // Column 4: flagLayerIdx, emojiAtlasIdx, smallID, suddenDeath state
+    // (0 none, 1 danger -> blinking skull, 2 draining -> steady skull).
     d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
     d[off + 18] = slot.static.smallID;
-    d[off + 19] = 0;
+    d[off + 19] = slot.suddenDeathDraining
+      ? 2.0
+      : slot.inSuddenDeath
+        ? 1.0
+        : 0.0;
 
     // Column 5: crown, traitor, disconnected, alliance
     d[off + 20] = slot.crown ? 1.0 : 0.0;
@@ -628,7 +641,8 @@ export class NamePass {
         slot.allianceReq ||
         slot.target ||
         slot.embargo ||
-        slot.nukeActive;
+        slot.nukeActive ||
+        slot.inSuddenDeath;
       if (slot.emojiAtlasIdx >= 0) {
         top = wy - lineH * ns.emojiRowOffset;
       } else if (hasStatus) {

@@ -98,6 +98,7 @@ export class PlayerImpl implements Player {
   private _troops: bigint;
 
   markedTraitorTick = -1;
+  markedSuddenDeathTick = -1;
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
@@ -315,6 +316,8 @@ export class PlayerImpl implements Player {
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
+      inSuddenDeath: this.inSuddenDeath(),
+      suddenDeathTicks: this.suddenDeathTicks(),
       targets: targets,
       outgoingEmojis: outgoingEmojis,
       outgoingAttacks: outgoingAttacks,
@@ -734,6 +737,27 @@ export class PlayerImpl implements Player {
 
     // Record stats (only for real Humans)
     this.mg.stats().betray(this);
+  }
+
+  inSuddenDeath(): boolean {
+    return this.markedSuddenDeathTick >= 0;
+  }
+
+  // Ticks spent continuously below the sudden-death bar (0 when not marked).
+  suddenDeathTicks(): number {
+    return this.markedSuddenDeathTick < 0
+      ? 0
+      : this.mg.ticks() - this.markedSuddenDeathTick;
+  }
+
+  enterSuddenDeath(): void {
+    if (this.markedSuddenDeathTick < 0) {
+      this.markedSuddenDeathTick = this.mg.ticks();
+    }
+  }
+
+  clearSuddenDeath(): void {
+    this.markedSuddenDeathTick = -1;
   }
 
   betrayals(): number {

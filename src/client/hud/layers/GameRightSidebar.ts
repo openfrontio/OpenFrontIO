@@ -2,12 +2,17 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
+import { GameMode, GameType, PlayerType } from "../../../core/game/Game";
+import {
+  suddenDeathDrain,
+  suddenDeathRequiredTiles,
+  suddenDeathWaveState,
+} from "../../../core/game/SuddenDeath";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { renderTroops, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -20,6 +25,7 @@ const playIcon = assetUrl("images/PlayIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
+const suddenDeathIcon = assetUrl("images/SuddenDeathSkull.svg");
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Controller {
@@ -50,6 +56,12 @@ export class GameRightSidebar extends LitElement implements Controller {
   private immunityBarVisible = false;
 
   createRenderRoot() {
+    // Stack the timer bar + sudden-death readout, centers aligned (the narrower
+    // one sits centered under the wider one).
+    this.style.display = "flex";
+    this.style.flexDirection = "column";
+    this.style.alignItems = "center";
+    this.style.gap = "6px";
     return this;
   }
 
@@ -263,6 +275,162 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${exitIcon} alt="exit" width="20" height="20" />
         </div>
       </aside>
+      ${this.renderSuddenDeath()}
+    `;
+  }
+
+  // Fortnite-zone-style readout under the timer: the rising minimum-territory
+  // bar, the local player's current share, and status. Empty unless enabled.
+  /** Tiles the local player's side controls: their team's combined territory in
+   *  team modes, otherwise just their own (matches the sim's per-side bar). */
+  private sideTiles(me: ReturnType<GameView["myPlayer"]>): number {
+    if (!me) return 0;
+    const ffa = this.game.config().gameConfig().gameMode === GameMode.FFA;
+    const myTeam = me.team();
+    if (ffa || myTeam === null) return me.numTilesOwned();
+    return this.game
+      .playerViews()
+      .filter(
+        (p) =>
+          p.team() === myTeam && p.isAlive() && p.type() !== PlayerType.Bot,
+      )
+      .reduce((sum, p) => sum + p.numTilesOwned(), 0);
+  }
+
+  private renderSuddenDeath() {
+    const sd = this.game.config().suddenDeathConfig();
+    if (!sd.enabled || this.hasWinner) return html``;
+
+    const elapsed = Math.floor(this.game.elapsedGameSeconds());
+    const land = Math.max(
+      1,
+      this.game.numLandTiles() - this.game.numTilesWithFallout(),
+    );
+    const requiredTiles = suddenDeathRequiredTiles(sd.speed, land, elapsed);
+    const wave = suddenDeathWaveState(sd.speed, elapsed);
+    const me = this.game.myPlayer();
+    const yourTiles = this.sideTiles(me);
+    const requiredPct = (requiredTiles / land) * 100;
+    const yourPct = (yourTiles / land) * 100;
+    const flagged = me?.inSuddenDeath() ?? false;
+    const secondsUnder = Math.floor((me?.suddenDeathTicks() ?? 0) / 10);
+    const draining = flagged && secondsUnder >= sd.warnSeconds;
+    // Safe but within 10% (relative) of the bar: e.g. at 9% when the bar is 10%,
+    // or 0.9% when it's 1%. About to be caught, so it blinks red too.
+    const nearDanger =
+      !flagged && requiredTiles > 0 && yourPct <= requiredPct * 1.1;
+    // In danger (caught/draining) or about to be: everything red.
+    const redAlert = flagged || nearDanger;
+
+    // Status word + detail line.
+    let status: string;
+    let statusClass: string;
+    let detail = "";
+    if (draining && me) {
+      // Drain is a % of max-troop capacity, capped at current troops; show the
+      // actual per-second loss (renderTroops handles the /10 display unit).
+      const chunk = suddenDeathDrain(
+        this.game.config().maxTroops(me),
+        secondsUnder - sd.warnSeconds,
+        sd,
+      );
+      status = translateText("sudden_death.draining", {
+        rate: renderTroops(Math.min(me.troops(), chunk)),
+      });
+      statusClass = "text-red-400 font-bold";
+    } else if (flagged) {
+      // Caught below a wave: count down the cooldown before decay begins.
+      status = translateText("sudden_death.danger");
+      statusClass = "text-red-400 font-bold";
+      detail = translateText("sudden_death.decay_in", {
+        secs: Math.max(0, sd.warnSeconds - secondsUnder),
+      });
+    } else {
+      status = translateText("sudden_death.safe");
+      statusClass = nearDanger ? "text-orange-300 font-bold" : "text-green-400";
+      detail = wave.done
+        ? translateText("sudden_death.final", { pct: wave.currentPercent })
+        : wave.growing
+          ? translateText("sudden_death.growing", { pct: wave.targetPercent })
+          : translateText("sudden_death.next_wave", {
+              pct: wave.targetPercent,
+              time: this.secondsToHms(wave.secondsToNextGrowth),
+            });
+    }
+
+    // Panel edge cue: red pulse when in/near danger, orange pulse in the 10s
+    // window around a wave firing.
+    const edge = redAlert
+      ? "sd-pulse-red"
+      : wave.waveFlash
+        ? "sd-pulse-orange"
+        : "";
+    const panel =
+      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white text-sm";
+
+    return html`
+      <style>
+        @keyframes sd-red {
+          0%,
+          100% {
+            box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+          }
+          50% {
+            box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.95);
+          }
+        }
+        @keyframes sd-orange {
+          0%,
+          100% {
+            box-shadow: 0 0 0 0 rgba(251, 146, 60, 0);
+          }
+          50% {
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.9);
+          }
+        }
+        .sd-pulse-red {
+          animation: sd-red 1s ease-in-out infinite;
+        }
+        .sd-pulse-orange {
+          animation: sd-orange 1.8s ease-in-out infinite;
+        }
+      </style>
+      <div class="${panel} ${edge}">
+        <div class="flex items-center justify-between gap-3">
+          <span
+            class="flex items-center gap-1.5 font-bold tracking-wide text-red-400"
+          >
+            <img src=${suddenDeathIcon} alt="" width="20" height="20" />
+            ${translateText("sudden_death.title")}
+          </span>
+          <span class=${statusClass}>${status}</span>
+        </div>
+        <div class="relative h-2.5 w-52 overflow-hidden rounded bg-gray-600/60">
+          <!-- your held share (green) vs the target threshold (red bar): the gap
+               between them shows how far you are from safe. -->
+          <div
+            class="absolute inset-y-0 left-0 bg-green-400"
+            style="width:${Math.min(100, yourPct)}%"
+          ></div>
+          <div
+            class="absolute inset-y-0 w-0.5 bg-red-500"
+            style="left:${Math.min(100, requiredPct)}%"
+          ></div>
+        </div>
+        <div class="flex items-center justify-between gap-3 text-gray-300">
+          <span>
+            ${translateText("sudden_death.hold", {
+              pct: requiredPct.toFixed(1),
+            })}
+          </span>
+          <span class=${redAlert ? "text-red-300" : "text-green-300"}>
+            ${translateText("sudden_death.you", { pct: yourPct.toFixed(1) })}
+          </span>
+        </div>
+        ${detail
+          ? html`<div class="text-xs text-gray-400">${detail}</div>`
+          : ""}
+      </div>
     `;
   }
 

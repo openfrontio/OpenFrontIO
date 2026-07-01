@@ -75,6 +75,8 @@ export interface PlayerSlot {
   embargo: boolean;
   nukeActive: boolean;
   nukeTargetsMe: boolean;
+  inSuddenDeath: boolean;
+  suddenDeathDraining: boolean;
   traitorRemainingTicks: number;
   allianceFraction: number;
   allianceRemainingTicks: number;

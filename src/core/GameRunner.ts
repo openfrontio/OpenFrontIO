@@ -3,6 +3,7 @@ import { Config } from "./configuration/Config";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
+import { SuddenDeathExecution } from "./execution/SuddenDeathExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -112,6 +113,7 @@ export class GameRunner {
       );
     }
     this.game.addExecution(new WinCheckExecution());
+    this.game.addExecution(new SuddenDeathExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(
         new RecomputeRailClusterExecution(this.game.railNetwork()),

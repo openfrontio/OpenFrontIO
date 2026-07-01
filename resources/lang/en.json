@@ -721,6 +721,7 @@
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
     "starting_in": "Starting in {time}. Click to cancel",
+    "sudden_death": "Sudden death",
     "team_count": "Number of Teams",
     "teams_Duos": "Duos (teams of 2)",
     "teams_Humans Vs Nations": "Humans vs Nations",
@@ -1200,6 +1201,7 @@
     "start": "Start Game",
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
+    "sudden_death": "Sudden death",
     "toggle_achievements": "Toggle achievements",
     "water_nukes": "Water nukes"
   },
@@ -1229,6 +1231,24 @@
     "subscriptions": "Subscriptions",
     "switch_button": "Switch",
     "title": "Store"
+  },
+  "sudden_death": {
+    "danger": "Danger",
+    "decay_in": "Decay in {secs}s",
+    "draining": "Draining -{rate}/s",
+    "final": "Final zone, hold {pct}%",
+    "growing": "Rising to {pct}%",
+    "hold": "Hold ≥ {pct}%",
+    "next_wave": "Next {pct}% in {time}",
+    "safe": "Safe",
+    "title": "Sudden Death",
+    "you": "You {pct}%"
+  },
+  "sudden_death_speed": {
+    "fast": "Fast",
+    "normal": "Normal",
+    "slow": "Slow",
+    "veryfast": "Very Fast"
   },
   "team_colors": {
     "blue": "Blue",

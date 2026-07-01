@@ -11,6 +11,7 @@ import {
   GameType,
   UnitType,
 } from "../core/game/Game";
+import { SuddenDeathSpeed } from "../core/game/SuddenDeath";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
@@ -59,6 +60,8 @@ const DEFAULT_OPTIONS = {
   disabledUnits: [] as UnitType[],
   disableAlliances: false,
   waterNukes: false,
+  suddenDeath: false,
+  suddenDeathSpeed: "normal" as SuddenDeathSpeed,
 } as const;
 
 @customElement("single-player-modal")
@@ -97,6 +100,9 @@ export class SinglePlayerModal extends BaseModal {
   ];
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
+  @state() private suddenDeath: boolean = DEFAULT_OPTIONS.suddenDeath;
+  @state() private suddenDeathSpeed: SuddenDeathSpeed =
+    DEFAULT_OPTIONS.suddenDeathSpeed;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -320,6 +326,11 @@ export class SinglePlayerModal extends BaseModal {
                     labelKey: "single_modal.water_nukes",
                     checked: this.waterNukes,
                   },
+                  {
+                    labelKey: "single_modal.sudden_death",
+                    checked: this.suddenDeath,
+                    suddenDeathSpeed: this.suddenDeathSpeed,
+                  },
                 ],
                 inputCards,
               },
@@ -331,6 +342,8 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
+            @sudden-death-speed-selected=${this
+              .handleConfigSuddenDeathSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -377,6 +390,8 @@ export class SinglePlayerModal extends BaseModal {
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
+      this.suddenDeath !== DEFAULT_OPTIONS.suddenDeath ||
+      this.suddenDeathSpeed !== DEFAULT_OPTIONS.suddenDeathSpeed ||
       this.disabledUnits.length > 0
     );
   }
@@ -405,6 +420,8 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
     this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
+    this.suddenDeath = DEFAULT_OPTIONS.suddenDeath;
+    this.suddenDeathSpeed = DEFAULT_OPTIONS.suddenDeathSpeed;
   }
 
   protected onOpen(): void {
@@ -439,6 +456,11 @@ export class SinglePlayerModal extends BaseModal {
   private handleConfigDifficultySelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
     this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigSuddenDeathSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: SuddenDeathSpeed }>;
+    this.suddenDeathSpeed = customEvent.detail.speed;
   };
 
   private handleConfigGameModeSelected = (e: Event) => {
@@ -489,6 +511,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.water_nukes":
         this.waterNukes = checked;
+        break;
+      case "single_modal.sudden_death":
+        this.suddenDeath = checked;
         break;
       default:
         break;
@@ -698,6 +723,14 @@ export class SinglePlayerModal extends BaseModal {
                 : {}),
               ...(this.disableAlliances ? { disableAlliances: true } : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
+              ...(this.suddenDeath
+                ? {
+                    suddenDeath: {
+                      enabled: true,
+                      speed: this.suddenDeathSpeed,
+                    },
+                  }
+                : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

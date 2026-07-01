@@ -233,6 +233,8 @@ export interface PlayerUpdate {
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;
   traitorRemainingTicks?: number;
+  inSuddenDeath?: boolean;
+  suddenDeathTicks?: number;
   targets?: number[];
   outgoingEmojis?: EmojiMessage[];
   outgoingAttacks?: AttackUpdate[];

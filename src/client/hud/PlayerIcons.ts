@@ -18,6 +18,7 @@ const nukeWhiteIcon = assetUrl("images/NukeIconWhite.svg");
 const questionMarkIcon = assetUrl("images/QuestionMarkIcon.svg");
 const targetIcon = assetUrl("images/TargetIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
+const suddenDeathIcon = assetUrl("images/SuddenDeathSkull.svg");
 
 let allianceIconTemplate: HTMLDivElement | undefined;
 
@@ -25,6 +26,7 @@ export const ALLIANCE_ICON_ID = "alliance" as const;
 const ALLIANCE_PROGRESS_OVERLAY_CLASS = "alliance-progress-overlay";
 const ALLIANCE_QUESTION_MARK_CLASS = "alliance-question-mark";
 export const TRAITOR_ICON_ID = "traitor" as const;
+export const SUDDEN_DEATH_ICON_ID = "sudden-death" as const;
 const CROWN_ICON_ID = "crown" as const;
 const DISCONNECTED_ICON_ID = "disconnected" as const;
 const ALLIANCE_REQUEST_ICON_ID = "alliance-request" as const;
@@ -45,7 +47,8 @@ export type PlayerIconId =
   | typeof TARGET_ICON_ID
   | typeof EMOJI_ICON_ID
   | typeof EMBARGO_ICON_ID
-  | typeof NUKE_ICON_ID;
+  | typeof NUKE_ICON_ID
+  | typeof SUDDEN_DEATH_ICON_ID;
 
 export type PlayerIconKind = typeof IMAGE_ICON_KIND | typeof EMOJI_ICON_KIND;
 
@@ -120,6 +123,15 @@ export function getPlayerIcons(
       id: TRAITOR_ICON_ID,
       kind: IMAGE_ICON_KIND,
       src: traitorIcon,
+    });
+  }
+
+  // Sudden-death skull (anti-stall: below the rising territory bar)
+  if (player.inSuddenDeath()) {
+    icons.push({
+      id: SUDDEN_DEATH_ICON_ID,
+      kind: IMAGE_ICON_KIND,
+      src: suddenDeathIcon,
     });
   }
 

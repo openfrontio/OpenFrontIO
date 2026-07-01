@@ -58,6 +58,7 @@ export function stubConfig(overrides: Partial<Config> = {}): Config {
     disableAlliances: () => false,
     allianceDuration: () => 100,
     deletionMarkDuration: () => 300,
+    suddenDeathConfig: () => ({ warnSeconds: 15 }),
     nukeMagnitudes: () => ({ inner: 0, outer: 0 }),
     nukeAllianceBreakThreshold: () => 0,
     userSettings: () => ({}),

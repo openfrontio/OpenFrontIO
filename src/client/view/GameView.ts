@@ -559,6 +559,7 @@ export class GameView implements GameMap {
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
         this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+      suddenDeathWarnTicks: this._config.suddenDeathConfig().warnSeconds * 10,
     });
     // Relations + clusters depend only on allies/embargoes/teams, which
     // change rarely (teams only when a player is added) — recompute only

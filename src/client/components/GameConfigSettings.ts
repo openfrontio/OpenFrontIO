@@ -17,6 +17,10 @@ import {
   Trios,
   UnitType,
 } from "../../core/game/Game";
+import {
+  SUDDEN_DEATH_SPEEDS,
+  SuddenDeathSpeed,
+} from "../../core/game/SuddenDeath";
 import { TeamCountConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";
 import "./Difficulties";
@@ -65,7 +69,13 @@ function renderTextCardButton(
   cardExtraClass: string,
 ): TemplateResult {
   return html`
-    <button class="${cardClass(active, cardExtraClass)}" @click=${onClick}>
+    <button
+      class="${cardClass(
+        active,
+        cardExtraClass,
+      )} flex items-center justify-center"
+      @click=${onClick}
+    >
       <span class="${CARD_LABEL_CLASS} ${stateTextClass(active)}">
         ${label}
       </span>
@@ -175,6 +185,8 @@ export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
+  // When set, this toggle's card expands to a pace dropdown while it is checked.
+  suddenDeathSpeed?: SuddenDeathSpeed;
 }
 
 export interface GameConfigSettingsData {
@@ -265,6 +277,11 @@ export class GameConfigSettings extends LitElement {
     this.emit("difficulty-selected", { difficulty });
   };
 
+  private handleSuddenDeathSpeedChange = (e: Event) => {
+    const speed = (e.target as HTMLSelectElement).value as SuddenDeathSpeed;
+    this.emit("sudden-death-speed-selected", { speed });
+  };
+
   private handleGameModeSelect = (mode: GameMode) => {
     this.emit("game-mode-selected", { mode });
   };
@@ -304,12 +321,55 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
+    if (toggle.suddenDeathSpeed !== undefined) {
+      return this.renderSuddenDeathToggle(toggle);
+    }
+
     return renderTextCardButton(
       translateText(toggle.labelKey),
       toggle.checked,
       () => this.handleOptionToggle(toggle),
       "p-4 text-center",
     );
+  }
+
+  // Same toggle card as the others, but when on it grows to hold the pace
+  // dropdown. The card toggles on click; the dropdown stops propagation so
+  // changing the pace doesn't flip the toggle.
+  private renderSuddenDeathToggle(toggle: ToggleOptionConfig): TemplateResult {
+    const selected = toggle.suddenDeathSpeed;
+    return html`
+      <div
+        class="${cardClass(
+          toggle.checked,
+          // Centered label; when checked the dropdown is added below it so the
+          // label shifts up and the dropdown is reachable.
+          "p-4 flex flex-col items-center justify-center gap-2 text-center",
+        )}"
+        @click=${() => this.handleOptionToggle(toggle)}
+      >
+        <span class="${CARD_LABEL_CLASS} ${stateTextClass(toggle.checked)}">
+          ${translateText(toggle.labelKey)}
+        </span>
+        ${toggle.checked
+          ? html`
+              <select
+                class="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs"
+                @click=${(e: Event) => e.stopPropagation()}
+                @change=${this.handleSuddenDeathSpeedChange}
+              >
+                ${SUDDEN_DEATH_SPEEDS.map(
+                  (speed) => html`
+                    <option value=${speed} ?selected=${selected === speed}>
+                      ${translateText(`sudden_death_speed.${speed}`)}
+                    </option>
+                  `,
+                )}
+              </select>
+            `
+          : nothing}
+      </div>
+    `;
   }
 
   private renderUnitTypeOptions(disabledUnits: UnitType[]): TemplateResult[] {

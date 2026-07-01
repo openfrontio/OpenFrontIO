@@ -37,6 +37,12 @@ export interface ComputePlayerStatusOptions {
    * Predicate testing if the local player considers `sid` a transitive target.
    */
   isTransitiveTarget?: (sid: number) => boolean;
+  /**
+   * Ticks a side must be below the bar before it drains (sudden death). Past
+   * this the skull holds steady instead of blinking. Omit to treat any flagged
+   * side as draining.
+   */
+  suddenDeathWarnTicks?: number;
 }
 
 /**
@@ -98,6 +104,11 @@ export function computePlayerStatus(
     const crown = sid === crownSmallID;
     const traitor = ps.isTraitor;
     const disconnected = ps.isDisconnected;
+    const inSuddenDeath = ps.inSuddenDeath;
+    // Past the warn grace the side is actively bleeding troops; the skull holds
+    // steady then (vs blinking while merely in danger).
+    const suddenDeathDraining =
+      inSuddenDeath && ps.suddenDeathTicks >= (opts.suddenDeathWarnTicks ?? 0);
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
     // Relative flags
@@ -151,6 +162,7 @@ export function computePlayerStatus(
       crown ||
       traitor ||
       disconnected ||
+      inSuddenDeath ||
       traitorRemainingTicks > 0 ||
       nukeActive ||
       alliance ||
@@ -163,6 +175,8 @@ export function computePlayerStatus(
         crown,
         traitor,
         disconnected,
+        inSuddenDeath,
+        suddenDeathDraining,
         alliance,
         allianceReq,
         target,

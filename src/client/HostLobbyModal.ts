@@ -15,6 +15,7 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
+import { SuddenDeathSpeed } from "../core/game/SuddenDeath";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -80,6 +81,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private suddenDeath: boolean = false;
+  @state() private suddenDeathSpeed: SuddenDeathSpeed = "normal";
   @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
@@ -404,6 +407,11 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.waterNukes,
                   },
                   {
+                    labelKey: "host_modal.sudden_death",
+                    checked: this.suddenDeath,
+                    suddenDeathSpeed: this.suddenDeathSpeed,
+                  },
+                  {
                     labelKey: "host_modal.host_cheats",
                     checked: this.hostCheatsEnabled,
                   },
@@ -433,6 +441,8 @@ export class HostLobbyModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
+            @sudden-death-speed-selected=${this
+              .handleConfigSuddenDeathSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -583,6 +593,8 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.suddenDeath = false;
+    this.suddenDeathSpeed = "normal";
     this.waterNukes = false;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
@@ -626,6 +638,12 @@ export class HostLobbyModal extends BaseModal {
   private handleConfigDifficultySelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
     void this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigSuddenDeathSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: SuddenDeathSpeed }>;
+    this.suddenDeathSpeed = customEvent.detail.speed;
+    this.putGameConfig();
   };
 
   private handleConfigGameModeSelected = (e: Event) => {
@@ -673,6 +691,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.water_nukes":
         this.waterNukes = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.sudden_death":
+        this.suddenDeath = checked;
         this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -1036,6 +1058,9 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
             disableAlliances: this.disableAlliances || null,
+            suddenDeath: this.suddenDeath
+              ? { enabled: true, speed: this.suddenDeathSpeed }
+              : undefined,
             waterNukes: this.waterNukes ? true : null,
             hostCheats: this.hostCheatsEnabled
               ? {

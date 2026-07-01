@@ -241,6 +241,21 @@ const TeamCountConfigSchema = z.union([
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
+// OFM sudden-death (anti-stall). Below a rising share of the map a player (or, in
+// team modes, their whole team) gets skulled and their troops drain to zero. The
+// required share rises in discrete waves (levels + times per `speed`, see
+// SuddenDeath.ts); a side caught below a new wave gets a warnSeconds cooldown
+// before decay. Off unless `enabled`. Times in seconds, all integers so the sim
+// stays deterministic.
+export const SuddenDeathConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
+  warnSeconds: z.number().int().min(0).optional(),
+  drainStartPercent: z.number().int().min(0).max(100).optional(),
+  drainMaxPercent: z.number().int().min(0).max(100).optional(),
+  drainRampSeconds: z.number().int().min(1).optional(),
+});
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -250,6 +265,7 @@ export const GameConfigSchema = z.object({
   gameMode: z.enum(GameMode),
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
+  suddenDeath: SuddenDeathConfigSchema.optional(),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean().optional(),

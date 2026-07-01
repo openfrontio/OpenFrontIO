@@ -58,6 +58,11 @@ export function diffPlayerUpdate(
     "traitorRemainingTicks",
     prev.traitorRemainingTicks === next.traitorRemainingTicks,
   );
+  setIfDifferent("inSuddenDeath", prev.inSuddenDeath === next.inSuddenDeath);
+  setIfDifferent(
+    "suddenDeathTicks",
+    prev.suddenDeathTicks === next.suddenDeathTicks,
+  );
   setIfDifferent("hasSpawned", prev.hasSpawned === next.hasSpawned);
   setIfDifferent("spawnTile", prev.spawnTile === next.spawnTile);
   setIfDifferent("betrayals", prev.betrayals === next.betrayals);
@@ -118,6 +123,10 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {
     target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks);
+  }
+  if (pu.inSuddenDeath !== undefined) target.inSuddenDeath = pu.inSuddenDeath;
+  if (pu.suddenDeathTicks !== undefined) {
+    target.suddenDeathTicks = Math.max(0, pu.suddenDeathTicks);
   }
   if (pu.betrayals !== undefined) target.betrayals = pu.betrayals;
   if (pu.hasSpawned !== undefined) target.hasSpawned = pu.hasSpawned;
