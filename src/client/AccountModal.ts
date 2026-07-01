@@ -1,11 +1,7 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import {
-  PlayerGame,
-  PlayerStatsTree,
-  UserMeResponse,
-} from "../core/ApiSchemas";
+import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
@@ -17,7 +13,8 @@ import {
   sendMagicLink,
 } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
-import "./components/baseComponents/stats/GameList";
+import "./components/baseComponents/stats/PlayerGameHistoryView";
+import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
@@ -39,7 +36,8 @@ export class AccountModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
-  private recentGames: PlayerGame[] = [];
+  // Preserves the Games tab's accumulated list + cursor across tab switches.
+  private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private cosmetics: Cosmetics | null = null;
 
   constructor() {
@@ -48,14 +46,19 @@ export class AccountModal extends BaseModal {
     document.addEventListener("userMeResponse", (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
+        const previousPublicId = this.userMeResponse?.player?.publicId;
         this.userMeResponse = customEvent.detail as UserMeResponse;
-        if (this.userMeResponse?.player?.publicId === undefined) {
+        // Reset whenever the player identity changes (login, or switching to a
+        // different account) so stats/history from the previous player don't
+        // linger.
+        if (this.userMeResponse?.player?.publicId !== previousPublicId) {
           this.statsTree = null;
-          this.recentGames = [];
+          this.gameHistoryCache = null;
+          this.requestUpdate();
         }
       } else {
         this.statsTree = null;
-        this.recentGames = [];
+        this.gameHistoryCache = null;
         this.requestUpdate();
       }
     });
@@ -199,23 +202,25 @@ export class AccountModal extends BaseModal {
   }
 
   private renderGamesTab(): TemplateResult {
-    if (this.recentGames.length === 0) {
+    const publicId = this.userMeResponse?.player?.publicId ?? "";
+    if (!publicId) {
       return this.renderEmptyState(
         "🎮",
         translateText("account_modal.no_games"),
       );
     }
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span class="text-blue-400">🎮</span>
-          ${translateText("game_list.recent_games")}
-        </h3>
-        <game-list
-          .games=${this.recentGames}
-          .onViewGame=${(id: string) => void this.viewGame(id)}
-        ></game-list>
-      </div>
+      <player-game-history-view
+        .publicId=${publicId}
+        .cachedState=${this.gameHistoryCache?.publicId === publicId
+          ? this.gameHistoryCache
+          : null}
+        @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
+          this.gameHistoryCache = e.detail;
+        }}
+        @view-game=${(e: CustomEvent<{ gameId: string }>) =>
+          void this.viewGame(e.detail.gameId)}
+      ></player-game-history-view>
     `;
   }
 
@@ -596,7 +601,6 @@ export class AccountModal extends BaseModal {
         return;
       }
 
-      this.recentGames = data.games;
       this.statsTree = data.stats;
 
       this.requestUpdate();

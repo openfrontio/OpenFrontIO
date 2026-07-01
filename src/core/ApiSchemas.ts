@@ -2,7 +2,7 @@ import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMode, GameType, RankedType } from "./game/Game";
+import { Difficulty, GameMode, RankedType } from "./game/Game";
 
 function stripClanTagFromUsername(username: string): string {
   return username.replace(/^\s*\[[a-zA-Z0-9]{2,5}\]\s*/u, "").trim();
@@ -160,24 +160,67 @@ export const PlayerStatsTreeSchema = z.object({
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
-export const PlayerGameSchema = z.object({
-  gameId: z.string(),
-  start: z.iso.datetime(),
-  mode: z.enum(GameMode),
-  type: z.enum(GameType),
-  map: z.string(),
-  difficulty: z.enum(Difficulty),
-  clientId: z.string().optional(),
-});
-export type PlayerGame = z.infer<typeof PlayerGameSchema>;
-
 export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
-  games: PlayerGameSchema.array(),
   stats: PlayerStatsTreeSchema,
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
+
+// Mode buckets for GET /public/player/:publicId/games — mirrors the clan
+// game-history filter (see ClanGameFilter). Resolved server-side off the
+// games join (mode / ranked_type / player_teams).
+export const PlayerGameModeFilters = ["ffa", "team", "hvn", "ranked"] as const;
+export const PlayerGameModeFilterSchema = z.enum(PlayerGameModeFilters);
+export type PlayerGameModeFilter = z.infer<typeof PlayerGameModeFilterSchema>;
+
+// Game-type split — orthogonal to the mode filter. Matches games.type.
+export const PlayerGameTypeFilters = [
+  "public",
+  "private",
+  "singleplayer",
+] as const;
+export const PlayerGameTypeFilterSchema = z.enum(PlayerGameTypeFilters);
+export type PlayerGameTypeFilter = z.infer<typeof PlayerGameTypeFilterSchema>;
+
+// "incomplete" covers games with no recorded winner (winnerType IS NULL).
+export const PlayerGameResultSchema = z.enum([
+  "victory",
+  "defeat",
+  "incomplete",
+]);
+export type PlayerGameResult = z.infer<typeof PlayerGameResultSchema>;
+
+export const PublicPlayerGameSchema = z.object({
+  gameId: z.string(),
+  start: z.iso.datetime(),
+  durationSeconds: z.number().int().nonnegative(),
+  map: z.string(),
+  mode: z.string(),
+  type: z.string(),
+  // `null` (not absent) for FFA / non-team games.
+  playerTeams: z.string().nullable(),
+  rankedType: z.string(),
+  result: PlayerGameResultSchema,
+  // Mirrors games.num_players nullability — historical rows may not carry one.
+  totalPlayers: z.number().int().nonnegative().nullable(),
+  // The identity the player used in this specific game (username/clan tag can
+  // change between games). clanTag is `null` when they weren't repping a clan.
+  username: z.string(),
+  clanTag: z.string().nullable(),
+});
+export type PublicPlayerGame = z.infer<typeof PublicPlayerGameSchema>;
+
+export const PublicPlayerGamesResponseSchema = z.object({
+  results: PublicPlayerGameSchema.array(),
+  // Opaque continuation token. Round-trip verbatim as the `cursor` query
+  // parameter to fetch the next page; never construct or parse it. `null`
+  // means the server has no more rows to serve.
+  nextCursor: z.string().nullable(),
+});
+export type PublicPlayerGamesResponse = z.infer<
+  typeof PublicPlayerGamesResponseSchema
+>;
 
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
