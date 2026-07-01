@@ -1,29 +1,39 @@
 import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../../core/game/Game";
 import {
-  type ClanGame,
-  type ClanGameFilter,
-  fetchClanGames,
-} from "../../ClanApi";
-import { ClientEnv } from "../../ClientEnv";
-import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
-import { getMapName, renderDuration, translateText } from "../../Utils";
-import "../CopyButton";
+  type PlayerGameModeFilter,
+  type PlayerGameTypeFilter,
+  type PublicPlayerGame,
+} from "../../../../core/ApiSchemas";
+import { GameMapType } from "../../../../core/game/Game";
+import { fetchPublicPlayerGames } from "../../../Api";
+import { GameInfoModal } from "../../../GameInfoModal";
+import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
+import { getMapName, renderDuration, translateText } from "../../../Utils";
+import { renderLoadingSpinner } from "../../BaseModal";
+import "../../CopyButton";
 import {
   formatAbsoluteTime,
   formatDayHeader,
   groupByDay,
-} from "../baseComponents/stats/GameHistoryDates";
-import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
-import { renderLoadingSpinner, showToast } from "./ClanShared";
+} from "./GameHistoryDates";
+import { formatGameType } from "./GameTypeLabels";
 
-type FilterKey = ClanGameFilter | "all";
+type TypeKey = PlayerGameTypeFilter | "all";
+type ModeKey = PlayerGameModeFilter | "all";
 
-// "All" is filter-only; FFA and Team reuse the type-label keys (same
-// English strings); HvN and Ranked have shorter filter labels than their
-// type labels ("Humans vs Nations" / "Ranked 1v1") so keep those split.
-const FILTER_TABS: { key: FilterKey; labelKey: string }[] = [
+// Top row — game-type split (orthogonal to the mode row below). "All" reuses
+// the clan filter label; the rest are account-modal-specific.
+const TYPE_TABS: { key: TypeKey; labelKey: string }[] = [
+  { key: "all", labelKey: "clan_modal.history_filter_all" },
+  { key: "public", labelKey: "account_modal.games_type_public" },
+  { key: "private", labelKey: "account_modal.games_type_private" },
+  { key: "singleplayer", labelKey: "account_modal.games_type_singleplayer" },
+];
+
+// Bottom row — mode buckets. Mirrors the clan history filter exactly (FFA and
+// Team reuse the type-label keys; HvN/Ranked have shorter filter labels).
+const MODE_TABS: { key: ModeKey; labelKey: string }[] = [
   { key: "all", labelKey: "clan_modal.history_filter_all" },
   { key: "ffa", labelKey: "clan_modal.history_type_ffa" },
   { key: "team", labelKey: "clan_modal.history_type_team" },
@@ -31,50 +41,53 @@ const FILTER_TABS: { key: FilterKey; labelKey: string }[] = [
   { key: "ranked", labelKey: "clan_modal.history_filter_ranked" },
 ];
 
-// Cache survives a tab switch within the modal: keep the full
-// accumulated list plus the cursor state so re-entering the tab restores
+// Cache survives a tab switch within the modal: keep the full accumulated list
+// plus the cursor + both active filters so re-entering the Games tab restores
 // the scroll position the user had built up.
-export type ClanGameHistoryCache = {
-  tag: string;
-  filter: FilterKey;
-  games: ClanGame[];
+export type PlayerGameHistoryCache = {
+  publicId: string;
+  typeFilter: TypeKey;
+  modeFilter: ModeKey;
+  games: PublicPlayerGame[];
   nextCursor: string | null;
 };
 
-@customElement("clan-game-history-view")
-export class ClanGameHistoryView extends LitElement {
+@customElement("player-game-history-view")
+export class PlayerGameHistoryView extends LitElement {
   createRenderRoot() {
     return this;
   }
 
-  @property() clanTag = "";
-  @property({ type: Object }) cachedState: ClanGameHistoryCache | null = null;
+  @property() publicId = "";
+  @property({ type: Object }) cachedState: PlayerGameHistoryCache | null = null;
 
-  @state() private games: ClanGame[] = [];
+  @state() private games: PublicPlayerGame[] = [];
   @state() private nextCursor: string | null = null;
   @state() private loading = false;
   // Distinct from `loading` because it controls the inline footer spinner
   // rather than replacing the whole list with a centred spinner.
   @state() private loadingMore = false;
-  @state() private loadState: "ok" | "failed" | "forbidden" = "ok";
+  @state() private loadState: "ok" | "failed" = "ok";
   @state() private appendFailed = false;
-  @state() private filter: FilterKey = "all";
+  @state() private typeFilter: TypeKey = "all";
+  @state() private modeFilter: ModeKey = "all";
   private asyncGeneration = 0;
   private sentinel: HTMLElement | null = null;
   private observer: IntersectionObserver | null = null;
   // Memoise grouping against the current `games` reference so re-renders
-  // triggered by unrelated state (e.g. `loadingMore` flipping) don't
-  // re-walk the accumulated list each time.
-  private groupedFor: ClanGame[] | null = null;
-  private grouped: ReturnType<typeof groupByDay<ClanGame>> = [];
+  // triggered by unrelated state (e.g. `loadingMore` flipping) don't re-walk
+  // the accumulated list each time.
+  private groupedFor: PublicPlayerGame[] | null = null;
+  private grouped: ReturnType<typeof groupByDay<PublicPlayerGame>> = [];
 
   connectedCallback() {
     super.connectedCallback();
-    if (this.cachedState && this.cachedState.tag === this.clanTag) {
+    if (this.cachedState && this.cachedState.publicId === this.publicId) {
       this.games = this.cachedState.games;
       this.nextCursor = this.cachedState.nextCursor;
-      this.filter = this.cachedState.filter;
-    } else if (this.clanTag) {
+      this.typeFilter = this.cachedState.typeFilter;
+      this.modeFilter = this.cachedState.modeFilter;
+    } else if (this.publicId) {
       this.reload();
     }
   }
@@ -85,14 +98,14 @@ export class ClanGameHistoryView extends LitElement {
   }
 
   updated() {
-    // The IntersectionObserver target only exists when there's more to
-    // load AND we're not in the middle of a request — wire it up after
-    // each render so it tracks the current sentinel node.
+    // The IntersectionObserver target only exists when there's more to load AND
+    // we're not mid-request — wire it up after each render so it tracks the
+    // current sentinel node.
     this.ensureObserver();
   }
 
-  // Hard reset on filter change — drop cached games and start fresh from
-  // the newest game.
+  // Hard reset on filter change — drop cached games and start fresh from the
+  // newest game.
   private async reload() {
     this.games = [];
     this.nextCursor = null;
@@ -100,14 +113,20 @@ export class ClanGameHistoryView extends LitElement {
     await this.load({ append: false });
   }
 
-  private setFilter(filter: FilterKey) {
-    if (filter === this.filter) return;
-    this.filter = filter;
+  private setTypeFilter(filter: TypeKey) {
+    if (filter === this.typeFilter) return;
+    this.typeFilter = filter;
+    this.reload();
+  }
+
+  private setModeFilter(filter: ModeKey) {
+    if (filter === this.modeFilter) return;
+    this.modeFilter = filter;
     this.reload();
   }
 
   private async load({ append }: { append: boolean }) {
-    if (!this.clanTag) return;
+    if (!this.publicId) return;
     const gen = ++this.asyncGeneration;
     if (append) {
       this.loadingMore = true;
@@ -117,12 +136,12 @@ export class ClanGameHistoryView extends LitElement {
       this.loadState = "ok";
       this.loadingMore = false;
     }
-    const filterParam = this.filter === "all" ? undefined : this.filter;
-    // Append uses the saved cursor; a fresh load starts from the newest
-    // game (no cursor).
+    // Append uses the saved cursor; a fresh load starts from the newest game
+    // (no cursor).
     const cursor = append ? (this.nextCursor ?? undefined) : undefined;
-    const res = await fetchClanGames(this.clanTag, {
-      filter: filterParam,
+    const res = await fetchPublicPlayerGames(this.publicId, {
+      filter: this.modeFilter === "all" ? undefined : this.modeFilter,
+      type: this.typeFilter === "all" ? undefined : this.typeFilter,
       cursor,
     });
     if (gen !== this.asyncGeneration) return;
@@ -133,7 +152,7 @@ export class ClanGameHistoryView extends LitElement {
         // Keep the games we already have; just surface a retry footer.
         this.appendFailed = true;
       } else {
-        this.loadState = res.error;
+        this.loadState = "failed";
         this.games = [];
         this.nextCursor = null;
       }
@@ -142,10 +161,11 @@ export class ClanGameHistoryView extends LitElement {
     this.games = append ? [...this.games, ...res.results] : res.results;
     this.nextCursor = res.nextCursor;
     this.dispatchEvent(
-      new CustomEvent<ClanGameHistoryCache>("history-updated", {
+      new CustomEvent<PlayerGameHistoryCache>("history-updated", {
         detail: {
-          tag: this.clanTag,
-          filter: this.filter,
+          publicId: this.publicId,
+          typeFilter: this.typeFilter,
+          modeFilter: this.modeFilter,
           games: this.games,
           nextCursor: this.nextCursor,
         },
@@ -181,35 +201,33 @@ export class ClanGameHistoryView extends LitElement {
     this.sentinel = null;
   }
 
-  private async watchReplay(gameId: string) {
-    try {
-      const encoded = encodeURIComponent(gameId);
-      const url = `/${ClientEnv.workerPath(gameId)}/game/${encoded}`;
-      history.pushState({ join: gameId }, "", url);
-      window.dispatchEvent(
-        new CustomEvent("join-changed", { detail: { gameId: encoded } }),
-      );
-      this.dispatchEvent(
-        new CustomEvent("close-clan-modal", { bubbles: true, composed: true }),
-      );
-    } catch {
-      showToast(translateText("clan_modal.error_failed"), "red");
+  private watchReplay(gameId: string) {
+    // Navigation + modal close live in the host modal; just hand it the id.
+    this.dispatchEvent(
+      new CustomEvent<{ gameId: string }>("view-game", {
+        detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  // Opens the game-info ranking overlay on top of the account modal. The modal
+  // is a global singleton in the document (queried the same way as Main.ts),
+  // so we don't close the account modal — the overlay layers above it.
+  private showRanking(gameId: string) {
+    const gameInfoModal = document.querySelector(
+      "game-info-modal",
+    ) as GameInfoModal | null;
+    if (!gameInfoModal) {
+      console.warn("Game info modal element not found");
+      return;
     }
+    void gameInfoModal.loadGame(gameId);
+    gameInfoModal.open();
   }
 
   render() {
-    if (this.loadState === "forbidden") {
-      return html`
-        <div
-          class="bg-white/5 rounded-xl border border-white/10 p-8 text-center"
-        >
-          <p class="text-white/40 text-sm">
-            ${translateText("clan_modal.history_members_only")}
-          </p>
-        </div>
-      `;
-    }
-
     return html`<div class="space-y-3">
       ${this.renderFilters()}${this.renderBody()}
     </div>`;
@@ -217,24 +235,41 @@ export class ClanGameHistoryView extends LitElement {
 
   private renderFilters(): TemplateResult {
     return html`
+      <div class="space-y-2">
+        ${this.renderFilterRow(TYPE_TABS, this.typeFilter, (k) =>
+          this.setTypeFilter(k as TypeKey),
+        )}
+        ${this.renderFilterRow(MODE_TABS, this.modeFilter, (k) =>
+          this.setModeFilter(k as ModeKey),
+        )}
+      </div>
+    `;
+  }
+
+  private renderFilterRow(
+    tabs: { key: string; labelKey: string }[],
+    active: string,
+    onSelect: (key: string) => void,
+  ): TemplateResult {
+    return html`
       <div
         role="tablist"
         class="flex flex-wrap gap-1 p-1 bg-white/5 border border-white/10 rounded-xl"
       >
-        ${FILTER_TABS.map((tab) => {
-          const active = this.filter === tab.key;
-          // "All" gets a full row on mobile (basis-full) and normal sizing
-          // on sm+. The others use basis-20 so "Ranked" stays comfortable
-          // and flex-wrap drops them to a second row when needed.
+        ${tabs.map((tab) => {
+          const isActive = active === tab.key;
+          // "All" gets a full row on mobile (basis-full) and normal sizing on
+          // sm+. The others use basis-20 so longer labels stay comfortable and
+          // flex-wrap drops them to a second line when needed.
           const basis =
             tab.key === "all" ? "basis-full sm:basis-20" : "basis-20";
           return html`
             <button
               type="button"
               role="tab"
-              aria-selected=${active}
-              @click=${() => this.setFilter(tab.key)}
-              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${active
+              aria-selected=${isActive}
+              @click=${() => onSelect(tab.key)}
+              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${isActive
                 ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
                 : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
             >
@@ -280,10 +315,9 @@ export class ClanGameHistoryView extends LitElement {
       `;
     }
 
-    // Group consecutive games by their start day so the user gets a sense
-    // of when each batch was played without us having to render N
-    // standalone date pills. Cached against the `games` reference; `load()`
-    // always assigns a fresh array, so identity comparison is safe.
+    // Group consecutive games by their start day. Cached against the `games`
+    // reference; `load()` always assigns a fresh array, so identity comparison
+    // is safe.
     if (this.groupedFor !== this.games) {
       this.grouped = groupByDay(this.games);
       this.groupedFor = this.games;
@@ -340,10 +374,9 @@ export class ClanGameHistoryView extends LitElement {
         </div>
       `;
     }
-    // Sentinel drives auto-load; the spinner is shown adjacent to it (not
-    // *as* it) so the sentinel node identity stays stable across pages —
-    // otherwise every fetch tears down and recreates the IntersectionObserver
-    // (the spinner replacing the sentinel changed the queried node).
+    // Sentinel drives auto-load; the spinner sits adjacent to it (not *as* it)
+    // so the sentinel node identity stays stable across pages — otherwise every
+    // fetch tears down and recreates the IntersectionObserver.
     return html`
       <div class="py-3">
         <div data-scroll-sentinel aria-hidden="true" class="h-px"></div>
@@ -352,9 +385,9 @@ export class ClanGameHistoryView extends LitElement {
     `;
   }
 
-  private renderGameRow(game: ClanGame): TemplateResult {
-    // getMapData() throws for unknown map values — guard so an unmapped
-    // server response doesn't tank the whole history view.
+  private renderGameRow(game: PublicPlayerGame): TemplateResult {
+    // getMapData() throws for unknown map values — guard so an unmapped server
+    // response doesn't tank the whole history view.
     let mapWebpPath: string | null = null;
     if (game.map) {
       try {
@@ -366,13 +399,6 @@ export class ClanGameHistoryView extends LitElement {
       }
     }
     const mapDisplayName = game.map ? (getMapName(game.map) ?? game.map) : null;
-    // Partition once per row so renderResultBadge + renderPlayerLists
-    // don't each re-walk clanPlayers (matters in 50v50 lobbies).
-    const winners: ClanGame["clanPlayers"] = [];
-    const losers: ClanGame["clanPlayers"] = [];
-    for (const p of game.clanPlayers) {
-      (p.won ? winners : losers).push(p);
-    }
 
     return html`
       <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
@@ -399,7 +425,7 @@ export class ClanGameHistoryView extends LitElement {
                   </div>`
                 : ""}
               <div class="absolute top-2 right-2">
-                ${this.renderResultBadge(game, winners)}
+                ${this.renderResultBadge(game)}
               </div>
               <div
                 class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
@@ -423,13 +449,34 @@ export class ClanGameHistoryView extends LitElement {
               .showVisibilityToggle=${false}
             ></copy-button>
           </div>
-          <button
-            type="button"
-            @click=${() => this.watchReplay(game.gameId)}
-            class="shrink-0 px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
-          >
-            ${translateText("clan_modal.history_watch_replay")}
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              @click=${() => this.showRanking(game.gameId)}
+              class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+            >
+              ${translateText("game_list.ranking")}
+            </button>
+            <button
+              type="button"
+              @click=${() => this.watchReplay(game.gameId)}
+              class="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              ${translateText("clan_modal.history_watch_replay")}
+            </button>
+          </div>
+        </div>
+        <div
+          class="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 justify-items-center text-center border-b border-white/5"
+        >
+          ${this.renderField(
+            translateText("account_modal.games_clan_tag"),
+            game.clanTag ?? "—",
+          )}
+          ${this.renderField(
+            translateText("account_modal.games_username"),
+            game.username,
+          )}
         </div>
         <div
           class="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 justify-items-center text-center"
@@ -444,13 +491,15 @@ export class ClanGameHistoryView extends LitElement {
                 translateText("clan_modal.history_map"),
                 mapDisplayName ?? "—",
               )}
-          ${this.renderPlayersField(game)}
+          ${this.renderField(
+            translateText("clan_modal.history_players"),
+            game.totalPlayers === null ? "—" : `${game.totalPlayers}`,
+          )}
           ${this.renderField(
             translateText("clan_modal.history_duration"),
             renderDuration(game.durationSeconds),
           )}
         </div>
-        ${this.renderPlayerLists(game, winners, losers)}
       </div>
     `;
   }
@@ -468,127 +517,25 @@ export class ClanGameHistoryView extends LitElement {
     `;
   }
 
-  // For FFA / Ranked 1v1 with multiple clan-mates in the same lobby,
-  // calling the whole game a "Victory" because one of 20 won is
-  // misleading — 19 lost. The server now stamps `won` per clan player
-  // so we count exactly. Team/HvN games still surface Victory/Defeat
-  // when the clan plays as a unit (everyone on the winning team won).
-  private renderResultBadge(
-    game: ClanGame,
-    winners: ClanGame["clanPlayers"],
-  ): TemplateResult {
-    const result = game.result;
-    if (!result) return html``;
-
-    const clanCount = game.clanPlayers.length;
-    const winCount = winners.length;
-    const isIndividual =
-      isFfa(game) ||
-      (game.rankedType !== undefined && game.rankedType !== "unranked");
-    const isPartial =
-      isIndividual && clanCount > 1 && winCount > 0 && winCount < clanCount;
-
+  // The player's own outcome. "incomplete" (no recorded winner) gets a neutral
+  // badge rather than collapsing into Defeat, so an unfinished game isn't
+  // mislabelled as a loss in a personal history.
+  private renderResultBadge(game: PublicPlayerGame): TemplateResult {
     let label: string;
     let tint: string;
-    if (isPartial) {
-      label = translateText("clan_modal.history_result_partial", {
-        wins: winCount,
-        total: clanCount,
-      });
-      tint = "text-white bg-amber-500 border-amber-400";
-    } else if (result === "victory") {
+    if (game.result === "victory") {
       label = translateText("clan_modal.history_result_victory");
       tint = "text-white bg-green-600 border-green-500";
-    } else {
+    } else if (game.result === "defeat") {
       label = translateText("clan_modal.history_result_defeat");
       tint = "text-white bg-red-600 border-red-500";
+    } else {
+      label = translateText("account_modal.games_result_incomplete");
+      tint = "text-white bg-gray-500 border-gray-400";
     }
     return html`<span
       class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border shadow-lg ${tint}"
       >${label}</span
     >`;
-  }
-
-  // Split the clan roster into winners and non-winners so the user can
-  // tell at a glance which clan-mates actually won the match — a single
-  // mixed list with crowns was hard to scan, especially in 50v50 lobbies.
-  private renderPlayerLists(
-    game: ClanGame,
-    winners: ClanGame["clanPlayers"],
-    losers: ClanGame["clanPlayers"],
-  ): TemplateResult | string {
-    if (game.clanPlayers.length === 0) return "";
-    return html`
-      ${winners.length > 0
-        ? this.renderPlayerSection(
-            translateText("clan_modal.history_clan_winners"),
-            winners,
-            "text-green-400",
-          )
-        : ""}
-      ${losers.length > 0
-        ? this.renderPlayerSection(
-            translateText("clan_modal.history_clan_members"),
-            losers,
-            "text-white/40",
-          )
-        : ""}
-    `;
-  }
-
-  private renderPlayerSection(
-    label: string,
-    players: ClanGame["clanPlayers"],
-    labelClass: string,
-  ): TemplateResult {
-    return html`
-      <div
-        class="px-4 py-2 border-t border-white/5 text-xs text-white/60 flex flex-wrap items-center gap-x-1 gap-y-1"
-      >
-        <span
-          class="text-[10px] font-bold uppercase tracking-wider mr-1 ${labelClass}"
-          >${label}:</span
-        >
-        ${players.map(
-          (p) => html`
-            <copy-button
-              compact
-              .copyText=${p.publicId}
-              .displayText=${p.username ?? p.publicId}
-              .showVisibilityToggle=${false}
-              .showCopyIcon=${false}
-            ></copy-button>
-          `,
-        )}
-      </div>
-    `;
-  }
-
-  // Ranked games cap clan participation at a single player, so
-  // "1 / N total" is noise — just show the total. FFA can carry
-  // multiple clan members (renderResultBadge already handles partial
-  // wins via clanCount > 1), so it keeps the clan-vs-total breakdown.
-  // Team/HvN keep it too. Historical rows may carry a null
-  // totalPlayers (games.num_players is nullable on the schema); render
-  // "—" rather than "null".
-  private renderPlayersField(game: ClanGame): TemplateResult {
-    const isSingleClanSlot =
-      game.rankedType !== undefined && game.rankedType !== "unranked";
-    const total = game.totalPlayers ?? null;
-    if (isSingleClanSlot) {
-      return this.renderField(
-        translateText("clan_modal.history_players"),
-        total === null ? "—" : `${total}`,
-      );
-    }
-    return this.renderField(
-      translateText("clan_modal.history_clan_players"),
-      total === null
-        ? `${game.clanPlayers.length}`
-        : translateText("clan_modal.history_clan_players_value", {
-            clanCount: game.clanPlayers.length,
-            total,
-          }),
-    );
   }
 }
