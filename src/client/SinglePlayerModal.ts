@@ -391,7 +391,9 @@ export class SinglePlayerModal extends BaseModal {
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
       this.suddenDeath !== DEFAULT_OPTIONS.suddenDeath ||
-      this.suddenDeathSpeed !== DEFAULT_OPTIONS.suddenDeathSpeed ||
+      // Pace only matters when the mode is on (startGame drops it when off).
+      (this.suddenDeath &&
+        this.suddenDeathSpeed !== DEFAULT_OPTIONS.suddenDeathSpeed) ||
       this.disabledUnits.length > 0
     );
   }
