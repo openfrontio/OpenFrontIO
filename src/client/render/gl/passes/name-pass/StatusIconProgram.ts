@@ -169,37 +169,34 @@ export class StatusIconProgram {
     // atlas if the skull asset can't be loaded.
     load(statusAtlasUrl)
       .then(async (atlasImg) => {
-        let skullImg: HTMLImageElement | null;
         try {
-          skullImg = await load(suddenDeathSkullUrl);
+          const skullImg = await load(suddenDeathSkullUrl);
+          const canvas = document.createElement("canvas");
+          canvas.width = sm.width;
+          canvas.height = sm.height;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(atlasImg, 0, 0);
+          const slot = sm.icons.suddenDeath as number;
+          const col = slot % sm.cols;
+          const row = Math.floor(slot / sm.cols);
+          const pad = sm.pad ?? 0;
+          const box = sm.cellSize - 2 * pad;
+          ctx.drawImage(
+            skullImg,
+            col * sm.cellSize + pad,
+            row * sm.cellSize + pad,
+            box,
+            box,
+          );
+          upload(canvas);
         } catch {
-          skullImg = null;
-        }
-        if (skullImg === null) {
+          // Skull load or compositing failed: still upload the bare atlas so
+          // every other status icon renders (only the skull is missing).
           upload(atlasImg);
-          return;
         }
-        const canvas = document.createElement("canvas");
-        canvas.width = sm.width;
-        canvas.height = sm.height;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(atlasImg, 0, 0);
-        const slot = sm.icons.suddenDeath as number;
-        const col = slot % sm.cols;
-        const row = Math.floor(slot / sm.cols);
-        const pad = sm.pad ?? 0;
-        const box = sm.cellSize - 2 * pad;
-        ctx.drawImage(
-          skullImg,
-          col * sm.cellSize + pad,
-          row * sm.cellSize + pad,
-          box,
-          box,
-        );
-        upload(canvas);
       })
       .catch(() => {
-        /* atlas failed to load; nothing to render */
+        /* atlas itself failed to load; nothing to render */
       });
   }
 
