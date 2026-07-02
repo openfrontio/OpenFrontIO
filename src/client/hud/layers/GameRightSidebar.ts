@@ -2,10 +2,10 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, GameType, PlayerType } from "../../../core/game/Game";
+import { GameMode, GameType, PlayerType, Team } from "../../../core/game/Game";
 import {
   suddenDeathDrain,
-  suddenDeathRequiredTiles,
+  suddenDeathSideRequiredTiles,
   suddenDeathWaveState,
 } from "../../../core/game/SuddenDeath";
 import { Controller } from "../../Controller";
@@ -283,18 +283,35 @@ export class GameRightSidebar extends LitElement implements Controller {
   // bar, the local player's current share, and status. Empty unless enabled.
   /** Tiles the local player's side controls: their team's combined territory in
    *  team modes, otherwise just their own (matches the sim's per-side bar). */
-  private sideTiles(me: ReturnType<GameView["myPlayer"]>): number {
-    if (!me) return 0;
+  // The player's "side" (matching the sim): themselves in FFA, their whole team
+  // otherwise. Returns the combined tiles and the headcount (the sim scales the
+  // threshold by headcount, so the HUD needs it too).
+  private sideStats(me: ReturnType<GameView["myPlayer"]>): {
+    tiles: number;
+    size: number;
+  } {
+    if (!me) return { tiles: 0, size: 1 };
     const ffa = this.game.config().gameConfig().gameMode === GameMode.FFA;
     const myTeam = me.team();
-    if (ffa || myTeam === null) return me.numTilesOwned();
-    return this.game
+    if (ffa || myTeam === null) return { tiles: me.numTilesOwned(), size: 1 };
+    const mates = this.game
       .playerViews()
       .filter(
         (p) =>
           p.team() === myTeam && p.isAlive() && p.type() !== PlayerType.Bot,
-      )
-      .reduce((sum, p) => sum + p.numTilesOwned(), 0);
+      );
+    return {
+      tiles: mates.reduce((sum, p) => sum + p.numTilesOwned(), 0),
+      size: mates.length,
+    };
+  }
+
+  // Localized team name (e.g. "Red"), matching TeamStats; falls back to the raw
+  // team id for numbered teams.
+  private teamDisplayName(team: Team): string {
+    const key = `team_colors.${team.toLowerCase()}`;
+    const translated = translateText(key);
+    return translated !== key ? translated : team;
   }
 
   private renderSuddenDeath() {
@@ -303,10 +320,19 @@ export class GameRightSidebar extends LitElement implements Controller {
 
     const elapsed = Math.floor(this.game.elapsedGameSeconds());
     const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
-    const requiredTiles = suddenDeathRequiredTiles(sd.speed, land, elapsed);
-    const wave = suddenDeathWaveState(sd.speed, elapsed);
     const me = this.game.myPlayer();
-    const yourTiles = this.sideTiles(me);
+    const myTeam = me?.team() ?? null;
+    const { tiles: yourTiles, size: mySize } = this.sideStats(me);
+    // Threshold is scaled by the side's headcount (same as the sim).
+    const requiredTiles = suddenDeathSideRequiredTiles(
+      sd.speed,
+      land,
+      elapsed,
+      mySize,
+    );
+    const wave = suddenDeathWaveState(sd.speed, elapsed);
+    // Wave readout percentages scale by headcount too (capped at the whole map).
+    const scalePct = (p: number) => Math.min(100, p * mySize);
     // Match the sim: no land -> no bar, no percentages (avoid div-by-zero / >100%).
     const requiredPct = land > 0 ? (requiredTiles / land) * 100 : 0;
     const yourPct = land > 0 ? (yourTiles / land) * 100 : 0;
@@ -347,11 +373,15 @@ export class GameRightSidebar extends LitElement implements Controller {
       status = translateText("sudden_death.safe");
       statusClass = nearDanger ? "text-orange-300 font-bold" : "text-green-400";
       detail = wave.done
-        ? translateText("sudden_death.final", { pct: wave.currentPercent })
+        ? translateText("sudden_death.final", {
+            pct: scalePct(wave.currentPercent),
+          })
         : wave.growing
-          ? translateText("sudden_death.growing", { pct: wave.targetPercent })
+          ? translateText("sudden_death.growing", {
+              pct: scalePct(wave.targetPercent),
+            })
           : translateText("sudden_death.next_wave", {
-              pct: wave.targetPercent,
+              pct: scalePct(wave.targetPercent),
               time: this.secondsToHms(wave.secondsToNextGrowth),
             });
     }
@@ -422,7 +452,12 @@ export class GameRightSidebar extends LitElement implements Controller {
             })}
           </span>
           <span class=${redAlert ? "text-red-300" : "text-green-300"}>
-            ${translateText("sudden_death.you", { pct: yourPct.toFixed(1) })}
+            ${myTeam !== null
+              ? translateText("sudden_death.your_team", {
+                  team: this.teamDisplayName(myTeam),
+                  pct: yourPct.toFixed(1),
+                })
+              : translateText("sudden_death.you", { pct: yourPct.toFixed(1) })}
           </span>
         </div>
         ${detail

@@ -1300,7 +1300,8 @@
     "next_wave": "Next {pct}% in {time}",
     "safe": "Safe",
     "title": "Sudden Death",
-    "you": "You {pct}%"
+    "you": "You {pct}%",
+    "your_team": "Team {team} {pct}%"
   },
   "sudden_death_speed": {
     "fast": "Fast",
