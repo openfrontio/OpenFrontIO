@@ -30,6 +30,7 @@ import { getUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import "./components/ConfirmDialog";
 import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/InputCard";
@@ -102,9 +103,11 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyStartAt: number | null = null;
   @state() private serverTimeOffset: number = 0;
-  // Subscribers only: whether the "list publicly" toggle is offered/enabled.
+  // Whether this user may actually make the lobby public (subscribers, or
+  // anyone in dev). The toggle itself is always shown.
   @state() private canListPublicly: boolean = false;
   @state() private publiclyListed: boolean = false;
+  @state() private showSubscriptionRequired: boolean = false;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -185,7 +188,14 @@ export class HostLobbyModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return modalHeader({
-      title: translateText("host_modal.title"),
+      titleContent: html`
+        <span
+          class="text-white text-xl lg:text-2xl font-bold uppercase tracking-widest break-words hyphens-auto"
+        >
+          ${translateText("host_modal.title")}
+        </span>
+        ${this.renderVisibilityToggle()}
+      `,
       onBack: () => {
         this.leaveLobbyOnClose = true;
         this.close();
@@ -199,6 +209,42 @@ export class HostLobbyModal extends BaseModal {
         ></copy-button>
       `,
     });
+  }
+
+  // Private/Public segmented toggle in the header. Shown to everyone;
+  // non-subscribers get a subscription-required dialog instead of a listing
+  // request (the server re-checks the subscription regardless).
+  private renderVisibilityToggle() {
+    const segment = (labelKey: string, isPublic: boolean) => html`
+      <button
+        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all ${this
+          .publiclyListed === isPublic
+          ? "bg-malibu-blue text-white"
+          : "text-white/50 hover:text-white"}"
+        @click=${() => this.handleVisibilitySelect(isPublic)}
+      >
+        ${translateText(labelKey)}
+      </button>
+    `;
+    return html`
+      <div
+        class="flex items-center rounded-full border border-white/10 bg-white/5 p-0.5 shrink-0"
+      >
+        ${segment("host_modal.visibility_private", false)}
+        ${segment("host_modal.visibility_public", true)}
+      </div>
+    `;
+  }
+
+  private handleVisibilitySelect(isPublic: boolean) {
+    if (isPublic === this.publiclyListed || !this.lobbyId) {
+      return;
+    }
+    if (isPublic && !this.canListPublicly) {
+      this.showSubscriptionRequired = true;
+      return;
+    }
+    void this.handlePublicListingToggle(isPublic);
   }
 
   protected renderBody() {
@@ -429,14 +475,6 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.water_nukes",
                     checked: this.waterNukes,
                   },
-                  ...(this.canListPublicly && this.lobbyId
-                    ? [
-                        {
-                          labelKey: "host_modal.public_listing",
-                          checked: this.publiclyListed,
-                        },
-                      ]
-                    : []),
                   {
                     labelKey: "host_modal.host_cheats",
                     checked: this.hostCheatsEnabled,
@@ -504,6 +542,24 @@ export class HostLobbyModal extends BaseModal {
             @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
+
+        ${this.showSubscriptionRequired
+          ? html`<confirm-dialog
+              .heading=${translateText(
+                "host_modal.subscription_required_title",
+              )}
+              .message=${translateText("host_modal.subscription_required_body")}
+              variant="warning"
+              .showClose=${true}
+              .buttons=${"confirmOnly"}
+              .confirmText=${translateText("host_modal.view_subscriptions")}
+              @cancel=${() => (this.showSubscriptionRequired = false)}
+              @confirm=${() => {
+                this.showSubscriptionRequired = false;
+                window.location.href = "/#modal=store&tab=subscriptions";
+              }}
+            ></confirm-dialog>`
+          : ""}
       </div>
     `;
   }
@@ -637,6 +693,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatStartingGold = false;
     this.hostCheatStartingGoldValue = undefined;
     this.publiclyListed = false;
+    this.showSubscriptionRequired = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -724,9 +781,6 @@ export class HostLobbyModal extends BaseModal {
       case "host_modal.water_nukes":
         this.waterNukes = checked;
         this.putGameConfig();
-        break;
-      case "host_modal.public_listing":
-        void this.handlePublicListingToggle(checked);
         break;
       case "host_modal.host_cheats":
         this.hostCheatsEnabled = checked;
