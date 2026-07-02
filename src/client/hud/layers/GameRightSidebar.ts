@@ -11,6 +11,7 @@ import {
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
+import { themeProvider } from "../../theme/ThemeProvider";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { renderTroops, translateText } from "../../Utils";
 import { GameView } from "../../view";
@@ -314,6 +315,11 @@ export class GameRightSidebar extends LitElement implements Controller {
     return translated !== key ? translated : team;
   }
 
+  // The team's on-map color as a hex string, for the readout label.
+  private teamColor(team: Team): string {
+    return themeProvider.current().teamColor(team).toHex();
+  }
+
   private renderSuddenDeath() {
     const sd = this.game.config().suddenDeathConfig();
     if (!sd.enabled || this.hasWinner) return html``;
@@ -451,14 +457,18 @@ export class GameRightSidebar extends LitElement implements Controller {
               pct: requiredPct.toFixed(1),
             })}
           </span>
-          <span class=${redAlert ? "text-red-300" : "text-green-300"}>
-            ${myTeam !== null
-              ? translateText("sudden_death.your_team", {
+          ${myTeam !== null
+            ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
+                ${translateText("sudden_death.your_team", {
                   team: this.teamDisplayName(myTeam),
                   pct: yourPct.toFixed(1),
-                })
-              : translateText("sudden_death.you", { pct: yourPct.toFixed(1) })}
-          </span>
+                })}
+              </span>`
+            : html`<span class=${redAlert ? "text-red-300" : "text-green-300"}>
+                ${translateText("sudden_death.you", {
+                  pct: yourPct.toFixed(1),
+                })}
+              </span>`}
         </div>
         ${detail
           ? html`<div class="text-xs text-gray-400">${detail}</div>`

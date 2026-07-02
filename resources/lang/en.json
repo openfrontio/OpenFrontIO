@@ -1301,7 +1301,7 @@
     "safe": "Safe",
     "title": "Sudden Death",
     "you": "You {pct}%",
-    "your_team": "Team {team} {pct}%"
+    "your_team": "{team}: {pct}%"
   },
   "sudden_death_speed": {
     "fast": "Fast",
