@@ -109,10 +109,16 @@ export class GameMapImpl implements GameMap {
   private readonly width_: number;
   private readonly height_: number;
 
-  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
-  private readonly refToX: number[];
-  private readonly refToY: number[];
-  private readonly yToRef: number[];
+  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime.
+  // Typed arrays are used instead of plain JS Array to keep memory tight on large maps:
+  // Uint16Array uses 2 bytes/element vs ~8 bytes for a boxed number, saving ~53 MB on
+  // the Indian Subcontinent map (2000×2220 = 4.44 M tiles).
+  // Coordinates never exceed 65535 for any map in the game, so Uint16 is safe for x/y.
+  // yToRef stores tile refs (up to width*height-1) which can exceed 65535 for large maps,
+  // so it uses Int32Array.
+  private readonly refToX: Uint16Array;
+  private readonly refToY: Uint16Array;
+  private readonly yToRef: Int32Array;
 
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
@@ -146,11 +152,11 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
-    // Precompute the LUTs
+    // Precompute the LUTs using typed arrays (see field declarations for rationale).
     let ref = 0;
-    this.refToX = new Array(width * height);
-    this.refToY = new Array(width * height);
-    this.yToRef = new Array(height);
+    this.refToX = new Uint16Array(width * height);
+    this.refToY = new Uint16Array(width * height);
+    this.yToRef = new Int32Array(height);
     for (let y = 0; y < height; y++) {
       this.yToRef[y] = ref;
       for (let x = 0; x < width; x++) {
