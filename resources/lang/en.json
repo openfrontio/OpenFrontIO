@@ -11,6 +11,12 @@
     "enter_email_address": "Please enter an email address",
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "fetching_account": "Fetching account information...",
+    "games_clan_tag": "Clan Tag",
+    "games_result_incomplete": "Incomplete",
+    "games_type_private": "Private",
+    "games_type_public": "Public",
+    "games_type_singleplayer": "Singleplayer",
+    "games_username": "Username",
     "get_magic_link": "Get Magic Link",
     "google_alt": "Google",
     "link_discord": "Link Discord Account",
@@ -205,6 +211,8 @@
     "history_clan_players": "Clan players",
     "history_clan_players_value": "{clanCount} / {total} total",
     "history_clan_winners": "Clan Member Winners",
+    "history_date_at": "{date} {time}",
+    "history_date_full": "{day} {month} {year}",
     "history_duration": "Duration",
     "history_empty": "No games played yet.",
     "history_end_of_history": "End of history.",
@@ -394,9 +402,15 @@
   },
   "effects": {
     "button_title": "Pick an effect!",
+    "nukeType": {
+      "atom": "Atom",
+      "hydro": "Hydrogen",
+      "mirvWarhead": "MIRV"
+    },
     "search": "Search...",
     "title": "Effects",
     "type": {
+      "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
       "transportShipTrail": "Boat Trail"
     }
@@ -522,15 +536,7 @@
     "war": "War"
   },
   "game_list": {
-    "details": "Details",
-    "difficulty": "Difficulty",
-    "game_id": "Game ID",
-    "map": "Map",
-    "mode": "Mode",
-    "ranking": "Ranking",
-    "recent_games": "Recent Games",
-    "replay": "Replay",
-    "type": "Type"
+    "ranking": "Ranking"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -664,7 +670,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_warship": "Warship",
-    "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to.",
+    "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to. Warships can level up (max level 3) by capturing enemy trade ships and destroying their transport boats and Warships. Leveling up increases the Warship's damage and health.",
     "drag": "drag",
     "exit_confirmation": "Are you sure you want to exit the game?",
     "game_id_tooltip": "Game ID",
