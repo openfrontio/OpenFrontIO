@@ -113,10 +113,25 @@ export class DoomsdayClockPanel extends LitElement {
     // In danger (caught/draining) or about to be: everything red.
     const redAlert = flagged || nearDanger;
 
+    // The zone's own progress, independent of your status. Shown while stable
+    // AND while collapsing, so you can still see the bar rising as you bleed.
+    const zoneDetail = wave.done
+      ? translateText("doomsday_clock.final", {
+          pct: scalePct(wave.currentPercent),
+        })
+      : wave.growing
+        ? translateText("doomsday_clock.growing", {
+            pct: scalePct(wave.targetPercent),
+          })
+        : translateText("doomsday_clock.next_wave", {
+            pct: scalePct(wave.targetPercent),
+            time: this.secondsToHms(wave.secondsToNextGrowth),
+          });
+
     // Status word + detail line.
     let status: string;
     let statusClass: string;
-    let detail = "";
+    let detail: string;
     if (draining && me) {
       // Drain is a % of max-troop capacity, capped at current troops; show the
       // actual per-second loss (renderTroops handles the /10 display unit).
@@ -129,6 +144,7 @@ export class DoomsdayClockPanel extends LitElement {
         rate: renderTroops(Math.min(me.troops(), chunk)),
       });
       statusClass = "text-red-400 font-bold";
+      detail = zoneDetail; // keep the zone readout visible while collapsing
     } else if (flagged) {
       // Caught below a wave: count down the cooldown before decay begins.
       status = translateText("doomsday_clock.unstable");
@@ -139,18 +155,7 @@ export class DoomsdayClockPanel extends LitElement {
     } else {
       status = translateText("doomsday_clock.stable");
       statusClass = nearDanger ? "text-orange-300 font-bold" : "text-green-400";
-      detail = wave.done
-        ? translateText("doomsday_clock.final", {
-            pct: scalePct(wave.currentPercent),
-          })
-        : wave.growing
-          ? translateText("doomsday_clock.growing", {
-              pct: scalePct(wave.targetPercent),
-            })
-          : translateText("doomsday_clock.next_wave", {
-              pct: scalePct(wave.targetPercent),
-              time: this.secondsToHms(wave.secondsToNextGrowth),
-            });
+      detail = zoneDetail;
     }
 
     // Panel edge cue: red pulse when in/near danger, orange pulse in the 10s
