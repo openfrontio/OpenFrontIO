@@ -113,7 +113,9 @@ export class GameRunner {
       );
     }
     this.game.addExecution(new WinCheckExecution());
-    this.game.addExecution(new DoomsdayClockExecution());
+    if (this.game.config().doomsdayClockConfig().enabled) {
+      this.game.addExecution(new DoomsdayClockExecution());
+    }
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(
         new RecomputeRailClusterExecution(this.game.railNetwork()),
