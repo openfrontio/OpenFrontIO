@@ -7,7 +7,10 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";
-import type { GraphicsOverrides } from "../../render/gl";
+import {
+  GraphicsOverridesSchema,
+  type GraphicsOverrides,
+} from "../../render/gl";
 import renderDefaults from "../../render/gl/render-settings.json";
 
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -131,6 +134,55 @@ const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
   renderDefaults.mapOverlay.staleNukeB,
 );
 
+// Each preset replaces the whole overrides object so the resulting look is
+// predictable: anything a preset doesn't set falls back to the
+// render-settings.json defaults. Ids double as translation keys
+// (graphics_setting.preset_<id>).
+const GRAPHICS_PRESETS: { id: string; overrides: GraphicsOverrides }[] = [
+  { id: "default", overrides: {} },
+  {
+    id: "performance",
+    overrides: { passEnabled: { fx: false, fallout: false } },
+  },
+  {
+    id: "atmospheric",
+    overrides: {
+      lighting: {
+        ambient: ambientSliderToValue(6),
+        falloffPower: unitGlowSliderToFalloff(6),
+      },
+    },
+  },
+  {
+    id: "high_contrast",
+    overrides: { mapOverlay: { territorySaturation: 1, territoryAlpha: 1 } },
+  },
+];
+
+const PRESET_CUSTOM = "custom";
+
+/** Structural equality for plain JSON-ish values (used to match presets). */
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    a === null ||
+    b === null
+  ) {
+    return false;
+  }
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) =>
+    deepEqual(
+      (a as Record<string, unknown>)[key],
+      (b as Record<string, unknown>)[key],
+    ),
+  );
+}
+
 export class ShowGraphicsSettingsModalEvent {
   constructor(
     public readonly isVisible: boolean = true,
@@ -155,6 +207,20 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   @property({ type: Boolean })
   wasPausedWhenOpened = false;
+
+  @state()
+  private settingsCopied = false;
+
+  @state()
+  private importError = false;
+
+  @query("#graphics-preset-select")
+  private presetSelect?: HTMLSelectElement;
+
+  @query("#graphics-import-input")
+  private importInput?: HTMLInputElement;
+
+  private copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
   init() {
     this.eventBus.on(ShowGraphicsSettingsModalEvent, (event) => {
@@ -190,6 +256,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   disconnectedCallback() {
     window.removeEventListener("click", this.handleOutsideClick, true);
     window.removeEventListener("keydown", this.handleKeyDown);
+    clearTimeout(this.copiedResetTimer);
     super.disconnectedCallback();
   }
 
@@ -645,6 +712,66 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private currentPresetId(): string {
+    const current = this.userSettings.graphicsOverrides();
+    return (
+      GRAPHICS_PRESETS.find((p) => deepEqual(p.overrides, current))?.id ??
+      PRESET_CUSTOM
+    );
+  }
+
+  private onPresetChange(event: Event) {
+    const id = (event.target as HTMLSelectElement).value;
+    const preset = GRAPHICS_PRESETS.find((p) => p.id === id);
+    if (!preset) return;
+    this.userSettings.setGraphicsOverrides(structuredClone(preset.overrides));
+    this.requestUpdate();
+  }
+
+  private async onCopySettingsClick() {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(this.userSettings.graphicsOverrides()),
+      );
+    } catch {
+      return; // clipboard unavailable (permissions / insecure context)
+    }
+    this.settingsCopied = true;
+    clearTimeout(this.copiedResetTimer);
+    this.copiedResetTimer = setTimeout(() => {
+      this.settingsCopied = false;
+    }, 2000);
+  }
+
+  private onImportSettingsClick() {
+    const input = this.importInput;
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    try {
+      const parsed = GraphicsOverridesSchema.safeParse(JSON.parse(text));
+      if (parsed.success) {
+        this.userSettings.setGraphicsOverrides(parsed.data);
+        input.value = "";
+        this.importError = false;
+        this.requestUpdate();
+        return;
+      }
+    } catch {
+      // invalid JSON — fall through to the error state
+    }
+    this.importError = true;
+  }
+
+  updated() {
+    // <select>.value can't be bound in the template (options render after the
+    // property would be committed), so sync it after each render — this also
+    // snaps the dropdown back to the matching preset after a reset/import.
+    if (this.presetSelect) {
+      this.presetSelect.value = this.currentPresetId();
+    }
+  }
+
   render() {
     if (!this.isVisible) return null;
 
@@ -675,6 +802,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const ambientLevel = this.currentAmbientLevel();
     const unitGlow = this.currentUnitGlow();
     const colorblind = this.currentColorblind();
+    const presetId = this.currentPresetId();
 
     return html`
       <div
@@ -710,6 +838,43 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           <div class="p-4 flex flex-col gap-3">
             <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+            >
+              ${translateText("graphics_setting.section_presets")}
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.preset_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.preset_desc")}
+                </div>
+              </div>
+              <select
+                id="graphics-preset-select"
+                @change=${this.onPresetChange}
+                class="px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white cursor-pointer"
+              >
+                ${presetId === PRESET_CUSTOM
+                  ? html`<option value=${PRESET_CUSTOM} selected>
+                      ${translateText("graphics_setting.preset_custom")}
+                    </option>`
+                  : null}
+                ${GRAPHICS_PRESETS.map(
+                  (p) => html`
+                    <option value=${p.id} ?selected=${p.id === presetId}>
+                      ${translateText(`graphics_setting.preset_${p.id}`)}
+                    </option>
+                  `,
+                )}
+              </select>
+            </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
             >
               ${translateText("graphics_setting.section_lighting")}
             </div>
@@ -1445,6 +1610,64 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                   : translateText("user_setting.off")}
               </div>
             </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_share")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onCopySettingsClick}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.copy_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.copy_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.settingsCopied
+                  ? translateText("graphics_setting.copied")
+                  : ""}
+              </div>
+            </button>
+
+            <div
+              class="flex flex-col gap-2 w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div>
+                <div class="font-medium">
+                  ${translateText("graphics_setting.import_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.import_desc")}
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <input
+                  id="graphics-import-input"
+                  type="text"
+                  placeholder="{ ... }"
+                  spellcheck="false"
+                  class="flex-1 min-w-0 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+                />
+                <button
+                  class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded-sm text-sm"
+                  @click=${this.onImportSettingsClick}
+                >
+                  ${translateText("graphics_setting.import_button")}
+                </button>
+              </div>
+              ${this.importError
+                ? html`<div class="text-sm text-red-400">
+                    ${translateText("graphics_setting.import_invalid")}
+                  </div>`
+                : null}
+            </div>
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button
