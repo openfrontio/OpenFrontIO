@@ -57,10 +57,10 @@ const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
     pauseSeconds: 30,
     levels: LEVELS,
   },
-  // grace 4:30, 3:00 ramps -> reaches at 7:30/11/14:30/18/21:30/25 min.
+  // grace 4:30, 2:50 ramps -> reaches at 7:20/10:40/14/17:20/20:40/24 min.
   fast: {
     graceSeconds: 270,
-    rampSeconds: 180,
+    rampSeconds: 170,
     pauseSeconds: 30,
     levels: LEVELS,
   },
