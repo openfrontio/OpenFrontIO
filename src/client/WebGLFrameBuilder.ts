@@ -81,13 +81,16 @@ function attributesToExplosionParams(
     .map(toRgb01)
     .filter((c): c is [number, number, number] => c !== null)
     .slice(0, MAX_NUKE_EXPLOSION_COLORS);
-  return {
+  const base = {
     colors: colors.length > 0 ? colors : [DEFAULT_NUKE_EXPLOSION_COLOR],
     maxRadius: attrs.size / 2,
     speed: attrs.speed,
     thickness: attrs.thickness,
     transitionSpeed: attrs.transitionSpeed,
   };
+  return attrs.type === "sparkles"
+    ? { ...base, type: "sparkles", density: attrs.density }
+    : { ...base, type: "shockwave" };
 }
 
 /**

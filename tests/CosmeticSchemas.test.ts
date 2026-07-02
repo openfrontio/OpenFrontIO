@@ -407,6 +407,31 @@ describe("NukeExplosionAttributesSchema", () => {
     }
   });
 
+  it("parses both visual types (shockwave, sparkles)", () => {
+    expect(NukeExplosionAttributesSchema.safeParse(atomShockwave).success).toBe(
+      true,
+    );
+    expect(
+      NukeExplosionAttributesSchema.safeParse({
+        ...atomShockwave,
+        type: "sparkles",
+        density: 150,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("sparkles require a positive density", () => {
+    for (const density of [undefined, 0, -50]) {
+      expect(
+        NukeExplosionAttributesSchema.safeParse({
+          ...atomShockwave,
+          type: "sparkles",
+          density,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
   it("rejects an unknown nukeType or type (so it's dropped, not rendered wrong)", () => {
     expect(
       NukeExplosionAttributesSchema.safeParse({
@@ -478,6 +503,40 @@ describe("nukeExplosion in the cosmetics catalog", () => {
       const eff = result.data.effects?.nukeExplosion?.atom_shockwave_purple_red;
       expect(eff?.effectType).toBe("nukeExplosion");
       expect(eff?.attributes.colors).toEqual(["#ff0000", "#bb00ff"]);
+    }
+  });
+
+  it("parses the rgb sparkles catalog entry", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        nukeExplosion: {
+          rgb_nuke_sparkles: {
+            name: "rgb_nuke_sparkles",
+            effectType: "nukeExplosion",
+            attributes: {
+              size: 250,
+              type: "sparkles",
+              speed: 10,
+              colors: ["#ff0000", "#ffffff", "#0033ff"],
+              nukeType: "atom",
+              thickness: 3,
+              transitionSpeed: 3,
+              density: 150,
+            },
+            affiliateCode: null,
+            product: null,
+            priceHard: 1,
+            rarity: "common",
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const eff = result.data.effects?.nukeExplosion?.rgb_nuke_sparkles;
+      expect(eff?.attributes.type).toBe("sparkles");
     }
   });
 
