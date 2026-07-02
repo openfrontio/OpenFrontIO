@@ -83,11 +83,13 @@ class FakePlayer {
     this.troopCount -= removed;
     return removed;
   }
+  // Mirrors PlayerImpl: a dead player is never in sudden death (the mark is
+  // never cleared on death, so both are gated on isAlive()).
   inSuddenDeath(): boolean {
-    return this.markedTick >= 0;
+    return this.alive && this.markedTick >= 0;
   }
   suddenDeathTicks(): number {
-    return this.markedTick < 0 ? 0 : this.game.now - this.markedTick;
+    return this.inSuddenDeath() ? this.game.now - this.markedTick : 0;
   }
   enterSuddenDeath(): void {
     if (this.markedTick < 0) this.markedTick = this.game.now;
@@ -215,6 +217,20 @@ describe("SuddenDeathExecution (logic)", () => {
     runAt(exec, game, WAVE_TICK + 20);
     expect(b.inSuddenDeath()).toBe(false);
     expect(b.troops()).toBe(afterDrain); // drain stopped
+  });
+
+  it("drops the mark once a flagged player dies (no stuck panel or churn)", () => {
+    // Nothing clears the mark on death, so inSuddenDeath()/suddenDeathTicks()
+    // must gate on isAlive() to avoid a permanently "Draining" panel and a
+    // per-tick update delta for an eliminated player.
+    const { game, b } = twoPlayerGame(400, 100);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(b.inSuddenDeath()).toBe(true);
+
+    b.kill();
+    expect(b.inSuddenDeath()).toBe(false);
+    expect(b.suddenDeathTicks()).toBe(0);
   });
 
   it("applies to nations like players and excludes map bots", () => {

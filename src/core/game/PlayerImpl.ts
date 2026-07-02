@@ -744,15 +744,18 @@ export class PlayerImpl implements Player {
     this.mg.stats().betray(this);
   }
 
+  // A dead player is never "in sudden death": nothing clears the mark on death
+  // (the execution only processes alive contenders), so gate on isAlive() to
+  // avoid a stuck skull/panel and per-tick update churn for eliminated players.
   inSuddenDeath(): boolean {
-    return this.markedSuddenDeathTick >= 0;
+    return this.isAlive() && this.markedSuddenDeathTick >= 0;
   }
 
-  // Ticks spent continuously below the sudden-death bar (0 when not marked).
+  // Ticks spent continuously below the sudden-death bar (0 when not marked or dead).
   suddenDeathTicks(): number {
-    return this.markedSuddenDeathTick < 0
-      ? 0
-      : this.mg.ticks() - this.markedSuddenDeathTick;
+    return this.inSuddenDeath()
+      ? this.mg.ticks() - this.markedSuddenDeathTick
+      : 0;
   }
 
   enterSuddenDeath(): void {
