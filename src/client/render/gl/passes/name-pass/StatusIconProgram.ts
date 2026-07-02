@@ -18,7 +18,6 @@ import { createProgram } from "../../utils/GlUtils";
 import type { ParsedAtlas } from "./Types";
 
 const statusAtlasUrl = assetUrl("atlases/status-atlas.png");
-const suddenDeathSkullUrl = assetUrl("images/SuddenDeathSkull.svg");
 
 const MAX_STATUS_ICONS = 9;
 
@@ -129,18 +128,9 @@ export class StatusIconProgram {
 
   private loadAtlas(): void {
     const gl = this.gl;
-    const sm = statusAtlasMeta as any;
-
-    const load = (url: string): Promise<HTMLImageElement> =>
-      new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = url;
-      });
-
-    const upload = (source: TexImageSource): void => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texParameteri(
@@ -151,53 +141,12 @@ export class StatusIconProgram {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        source,
-      );
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
       gl.generateMipmap(gl.TEXTURE_2D);
       this.statusAtlasTex = tex;
       this.atlasReady = true;
     };
-
-    // Composite the sudden-death skull into the atlas's free cell in-browser, so
-    // it never has to be baked into the committed PNG. Falls back to the bare
-    // atlas if the skull asset can't be loaded.
-    load(statusAtlasUrl)
-      .then(async (atlasImg) => {
-        try {
-          const skullImg = await load(suddenDeathSkullUrl);
-          const canvas = document.createElement("canvas");
-          canvas.width = sm.width;
-          canvas.height = sm.height;
-          const ctx = canvas.getContext("2d")!;
-          ctx.drawImage(atlasImg, 0, 0);
-          const slot = sm.icons.suddenDeath as number;
-          const col = slot % sm.cols;
-          const row = Math.floor(slot / sm.cols);
-          const pad = sm.pad ?? 0;
-          const box = sm.cellSize - 2 * pad;
-          ctx.drawImage(
-            skullImg,
-            col * sm.cellSize + pad,
-            row * sm.cellSize + pad,
-            box,
-            box,
-          );
-          upload(canvas);
-        } catch {
-          // Skull load or compositing failed: still upload the bare atlas so
-          // every other status icon renders (only the skull is missing).
-          upload(atlasImg);
-        }
-      })
-      .catch(() => {
-        /* atlas itself failed to load; nothing to render */
-      });
+    img.src = statusAtlasUrl;
   }
 
   draw(
