@@ -64,9 +64,22 @@ export class SuddenDeathExecution implements Execution {
 
     const land = mg.numLandTiles() - mg.numTilesWithFallout();
 
-    for (const members of sides) {
-      let tiles = 0;
-      for (const m of members) tiles += m.numTilesOwned();
+    // The leading side (the crown holder in FFA, the top team otherwise) is
+    // never doomed. Sudden death culls the challengers toward the leader, so the
+    // leader always keeps its army: the game can never freeze with every
+    // remaining side bled to zero, and the final wave squeezes out everyone but
+    // the leader -> a single winner. First side with the most tiles wins ties
+    // (deterministic: sides are built in a fixed order).
+    const sideTiles = sides.map((members) =>
+      members.reduce((sum, m) => sum + m.numTilesOwned(), 0),
+    );
+    let leaderIdx = 0;
+    for (let i = 1; i < sideTiles.length; i++) {
+      if (sideTiles[i] > sideTiles[leaderIdx]) leaderIdx = i;
+    }
+
+    for (let i = 0; i < sides.length; i++) {
+      const members = sides[i];
       // Threshold scales with the side's headcount: a team of N must hold N× a
       // solo player's share (FFA sides are size 1, unscaled).
       const required = suddenDeathSideRequiredTiles(
@@ -75,9 +88,9 @@ export class SuddenDeathExecution implements Execution {
         elapsed,
         members.length,
       );
-      // A side below the bar skulls and drains every one of its members; a side
-      // back above it clears them all.
-      if (tiles < required) {
+      // A non-leading side below the bar skulls and drains every member; the
+      // leader (and any side above the bar) clears them all.
+      if (i !== leaderIdx && sideTiles[i] < required) {
         for (const m of members) {
           m.enterSuddenDeath();
           const secondsUnder = Math.floor(m.suddenDeathTicks() / 10);

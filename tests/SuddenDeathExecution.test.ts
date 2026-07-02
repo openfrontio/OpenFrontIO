@@ -233,18 +233,34 @@ describe("SuddenDeathExecution (logic)", () => {
     expect(b.suddenDeathTicks()).toBe(0);
   });
 
+  it("never dooms the leading side, even below the bar (no all-drained stalemate)", () => {
+    // Both sides below the 200 bar; the larger (a) is the crown, so it is spared
+    // and keeps its army to close the game instead of everyone bleeding to zero.
+    const { game, a, b } = twoPlayerGame(150, 100);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(a.inSuddenDeath()).toBe(false); // leader, spared
+    expect(b.inSuddenDeath()).toBe(true); // challenger, doomed
+    runAt(exec, game, WAVE_TICK + 30);
+    expect(a.troops()).toBe(1000); // never drained
+    expect(b.troops()).toBeLessThan(1000); // bled
+  });
+
   it("applies to nations like players and excludes map bots", () => {
     const game = new FakeGame(1000, sdConfig(), []);
+    const leader = new FakePlayer(game, 400, 1000, PlayerType.Human);
     const human = new FakePlayer(game, 100, 1000, PlayerType.Human);
     const nation = new FakePlayer(game, 50, 1000, PlayerType.Nation);
     const bot = new FakePlayer(game, 5, 1000, PlayerType.Bot);
-    game.ps = [human, nation, bot];
+    game.ps = [leader, human, nation, bot];
     const exec = makeExec(game);
-    // Bar is 200; human (100) and nation (50) are below it, the bot is exempt.
+    // Bar 200; leader (400) is crown-exempt; human (100) and nation (50) are
+    // below it; the bot is exempt by type.
     runAt(exec, game, WAVE_TICK);
     expect(human.inSuddenDeath()).toBe(true);
     expect(nation.inSuddenDeath()).toBe(true); // a nation is treated like a player
     expect(bot.inSuddenDeath()).toBe(false); // map bots are never subject to it
+    expect(leader.inSuddenDeath()).toBe(false); // the crown is never doomed
     runAt(exec, game, WAVE_TICK + 10);
     expect(nation.troops()).toBeLessThan(1000); // drained like a player
     expect(bot.troops()).toBe(1000); // untouched
@@ -320,9 +336,10 @@ describe("SuddenDeathExecution (teams)", () => {
 
   it("scales the threshold by team size (a bigger team must hold more)", () => {
     // base bar 200. Red is 3 members -> threshold 600; Blue is 1 -> threshold 200.
+    // Blue leads on tiles (crown-exempt), so Red is squeezed purely by its size.
     const { game, players } = teamGame([
-      { team: "Red", tiles: [200, 200, 100] }, // 500 combined, < 600 -> flagged
-      { team: "Blue", tiles: [300] }, // 300 >= 200 -> safe
+      { team: "Red", tiles: [200, 200, 100] }, // 500 combined, < 600, not leader
+      { team: "Blue", tiles: [700] }, // leader, and 700 >= 200 -> safe
     ]);
     const [red1, red2, red3, blue1] = players;
     const exec = makeExec(game);
@@ -330,7 +347,7 @@ describe("SuddenDeathExecution (teams)", () => {
     expect(red1.inSuddenDeath()).toBe(true); // 500 < 200x3
     expect(red2.inSuddenDeath()).toBe(true);
     expect(red3.inSuddenDeath()).toBe(true);
-    expect(blue1.inSuddenDeath()).toBe(false); // 300 >= 200x1
+    expect(blue1.inSuddenDeath()).toBe(false); // leader
   });
 
   it("idles when only one team remains", () => {
