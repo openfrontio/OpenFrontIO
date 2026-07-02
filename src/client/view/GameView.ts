@@ -627,6 +627,7 @@ export class GameView implements GameMap {
         unitType: u.unitType,
         pos: u.pos,
         reachedTarget: u.reachedTarget,
+        ownerSmallID: u.ownerID,
       });
     }
     const myID = this._myPlayer?.id();

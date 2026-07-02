@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import {
   Effect,
   Flag,
+  isNukeExplosionEffect,
   Pack,
   Pattern,
   Skin,
@@ -19,7 +20,7 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import "./CosmeticContainer";
 import "./CosmeticInfo";
-import "./EffectPreview"; // registers <trail-swatch>
+import "./EffectPreview"; // registers <trail-swatch> + <shockwave-swatch>
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
 
@@ -186,8 +187,15 @@ export class CosmeticButton extends LitElement {
           ${translateText("territory_patterns.pattern.default")}
         </div>`;
       }
-      // Every trail effectType (transportShipTrail, nukeTrail) shares the same
-      // attributes shape; c.attributes is the gradient/transition style.
+      // Nuke explosions preview as an expanding ring; every trail effectType
+      // (transportShipTrail, nukeTrail) shares the same attributes shape and
+      // previews as a color swatch.
+      if (isNukeExplosionEffect(c)) {
+        return html`<shockwave-swatch
+          class="block w-full h-full"
+          .explosion=${c.attributes}
+        ></shockwave-swatch>`;
+      }
       return html`<trail-swatch
         class="block w-full h-full"
         .trail=${c.attributes}

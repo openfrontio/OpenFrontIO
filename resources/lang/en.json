@@ -402,9 +402,15 @@
   },
   "effects": {
     "button_title": "Pick an effect!",
+    "nukeType": {
+      "atom": "Atom",
+      "hydro": "Hydrogen",
+      "mirvWarhead": "MIRV"
+    },
     "search": "Search...",
     "title": "Effects",
     "type": {
+      "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
       "transportShipTrail": "Boat Trail"
     }

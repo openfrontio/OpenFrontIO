@@ -595,7 +595,8 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
-  // At most one selected effect per effectType: key = effectType, value = effect name.
+  // One selected effect per slot: key = slot (effectType for trails, nukeType for
+  // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
 });
 
@@ -619,7 +620,8 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
-  // Resolved effects keyed by effectType.
+  // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
+  // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
 });
 

@@ -10,11 +10,15 @@ export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 // An effect cosmetic of any type — discriminated on effectType (today
-// transportShipTrail + nukeTrail; gains a member per effectType).
+// transportShipTrail + nukeTrail + nukeExplosion; gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
 // Shared by every trail effectType (transportShipTrail, nukeTrail, …).
 export type TrailEffectAttributes = z.infer<typeof TrailEffectAttributesSchema>;
+// Attributes of a nuke-explosion effect (a detonation FX, not a trail).
+export type NukeExplosionAttributes = z.infer<
+  typeof NukeExplosionAttributesSchema
+>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -98,8 +102,20 @@ export const SkinSchema = CosmeticSchema.extend({
 // stay precisely typed; an effectType the client doesn't list is dropped at parse
 // (the UI only handles EFFECT_TYPES), so a new server-side effectType never fails
 // the whole cosmetics parse.
-export const EFFECT_TYPES = ["transportShipTrail", "nukeTrail"] as const;
+export const EFFECT_TYPES = [
+  "transportShipTrail",
+  "nukeTrail",
+  "nukeExplosion",
+] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
+
+// The subset of effect types that render as trails through the shared trail
+// palette (their attributes are TrailEffectAttributes; block order matches
+// trail.frag.glsl — transportShipTrail=0, nukeTrail=1). nukeExplosion is an
+// effect type but NOT a trail: it's a detonation FX with its own attributes and
+// renders through the FX shockwave pass, so it's excluded here.
+export const TRAIL_EFFECT_TYPES = ["transportShipTrail", "nukeTrail"] as const;
+export type TrailEffectType = (typeof TRAIL_EFFECT_TYPES)[number];
 
 // A trail effect, discriminated on `type`. Shared by every trail effectType
 // (transport-ship trails, nuke trails, …) — the attributes are the same; only
@@ -126,6 +142,30 @@ export const TrailEffectAttributesSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+// The bomb a nuke-explosion effect applies to. The store/selection UI groups
+// nukeExplosion effects into one tab per type. Enum, so an effect for a bomb
+// this client doesn't know is dropped by lenientRecord (not rendered wrong).
+export const NUKE_EXPLOSION_TYPES = ["atom", "hydro", "mirvWarhead"] as const;
+export type NukeExplosionType = (typeof NUKE_EXPLOSION_TYPES)[number];
+
+// A nuke-explosion effect — a detonation FX, not a trail. `type` picks the
+// visual (only "shockwave" today) and `nukeType` the bomb; both are enums so an
+// effect using a value this client can't render is dropped by lenientRecord
+// instead of rendering wrong. `colors` is the palette; size (final ring width
+// in tiles), speed (tiles/s the width grows), thickness (ring band thickness
+// in tiles), and transitionSpeed (palette colors/s) drive the animation. size
+// and thickness must be positive — a non-positive value hits undefined shader
+// behavior, so the entry is dropped like the enums; the renderer clamps speed.
+export const NukeExplosionAttributesSchema = z.object({
+  type: z.enum(["shockwave"]),
+  nukeType: z.enum(NUKE_EXPLOSION_TYPES),
+  colors: z.array(z.string()),
+  size: z.number().positive(),
+  speed: z.number(),
+  thickness: z.number().positive(),
+  transitionSpeed: z.number(),
+});
+
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),
   attributes: TrailEffectAttributesSchema,
@@ -138,11 +178,92 @@ const NukeTrailEffectSchema = CosmeticSchema.extend({
   url: z.string().optional(),
 });
 
+const NukeExplosionEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("nukeExplosion"),
+  attributes: NukeExplosionAttributesSchema,
+  url: z.string().optional(),
+});
+
 // Any catalog effect, discriminated on effectType. Add a member per effectType.
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
   NukeTrailEffectSchema,
+  NukeExplosionEffectSchema,
 ]);
+
+/**
+ * True for effects that render through the shared trail palette (their
+ * attributes are TrailEffectAttributes). Narrows the Effect union so callers can
+ * treat `attributes` as trail attributes; a nukeExplosion (or any future
+ * non-trail effect) returns false.
+ */
+export function isTrailEffect(
+  effect: Effect,
+): effect is Extract<Effect, { effectType: TrailEffectType }> {
+  return (TRAIL_EFFECT_TYPES as readonly string[]).includes(effect.effectType);
+}
+
+/** Narrows an Effect to a nuke-explosion effect (exposes its nukeType). */
+export function isNukeExplosionEffect(
+  effect: Effect,
+): effect is Extract<Effect, { effectType: "nukeExplosion" }> {
+  return effect.effectType === "nukeExplosion";
+}
+
+/**
+ * A player selects one effect per "slot". A slot is the effectType for trails
+ * (transportShipTrail, nukeTrail) and the nukeType for nuke explosions (atom,
+ * hydro, mirvWarhead) — so a player can equip a distinct explosion per bomb.
+ * Returns the effectType a slot resolves to for catalog lookup, or undefined for
+ * an unknown/stale slot (e.g. a bare "nukeExplosion" key from before this split).
+ */
+export function effectTypeForSlot(slot: string): EffectType | undefined {
+  if ((NUKE_EXPLOSION_TYPES as readonly string[]).includes(slot)) {
+    return "nukeExplosion";
+  }
+  if ((TRAIL_EFFECT_TYPES as readonly string[]).includes(slot)) {
+    return slot as EffectType;
+  }
+  return undefined;
+}
+
+/**
+ * Whether `effect` may occupy selection `slot`: the slot's effectType matches,
+ * and for a nuke-explosion slot the effect's nukeType matches the slot (so an
+ * atom effect can only sit in the atom slot, etc.).
+ */
+export function effectMatchesSlot(effect: Effect, slot: string): boolean {
+  if (effect.effectType !== effectTypeForSlot(slot)) return false;
+  if (isNukeExplosionEffect(effect)) return effect.attributes.nukeType === slot;
+  return true;
+}
+
+/**
+ * Resolve a selection slot + effect name against the catalog: look up the
+ * slot's effectType (effectTypeForSlot) and require the found effect to fit
+ * the slot (effectMatchesSlot). Returns undefined for an unknown slot, a
+ * missing effect, or a slot mismatch.
+ */
+export function findEffectForSlot(
+  cosmetics: Cosmetics | null | undefined,
+  slot: string,
+  name: string,
+): Effect | undefined {
+  const effectType = effectTypeForSlot(slot);
+  const effect = effectType
+    ? findEffect(cosmetics, effectType, name)
+    : undefined;
+  return effect && effectMatchesSlot(effect, slot) ? effect : undefined;
+}
+
+// Slots put nukeType and effectType names in one flat string namespace
+// (effectTypeForSlot disambiguates by list membership), so the two enums must
+// stay disjoint — a nukeType named like an effectType would silently hijack
+// that slot. This guard fails the build if they ever collide.
+type _SlotCollision = Extract<NukeExplosionType, EffectType>;
+const _SLOT_NAMESPACES_DISJOINT: _SlotCollision extends never ? true : false =
+  true;
+void _SLOT_NAMESPACES_DISJOINT;
 
 /**
  * A record that drops entries failing `schema` instead of failing the whole
@@ -193,6 +314,7 @@ export const CosmeticsSchema = z.object({
         TransportShipTrailEffectSchema,
       ).optional(),
       nukeTrail: lenientRecord(NukeTrailEffectSchema).optional(),
+      nukeExplosion: lenientRecord(NukeExplosionEffectSchema).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),

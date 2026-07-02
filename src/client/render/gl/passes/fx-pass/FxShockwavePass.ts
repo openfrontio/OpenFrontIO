@@ -5,6 +5,11 @@
  * Uses an SDF circle rendered in a unit quad, no texture required.
  */
 
+import {
+  DEFAULT_NUKE_EXPLOSION_COLOR,
+  MAX_NUKE_EXPLOSION_COLORS,
+  type NukeExplosionRenderParams,
+} from "../../../types";
 import { DynamicInstanceBuffer } from "../../DynamicBuffer";
 import type { RenderSettings } from "../../RenderSettings";
 import { createProgram } from "../../utils/GlUtils";
@@ -16,19 +21,33 @@ import shockwaveVertSrc from "../../shaders/fx/shockwave.vert.glsl?raw";
 // Active state
 // ---------------------------------------------------------------------------
 
+type RGB = readonly [number, number, number];
+
+// SAM interception keeps the classic white ring (color fields go unused there).
+const WHITE: RGB = [1, 1, 1];
+
 interface ActiveShockwave {
   x: number;
   y: number;
   startMs: number;
   durationMs: number;
   maxRadius: number;
+  style: number; // 0 = classic ring (SAM + no-cosmetic nuke), 1 = EMP
+  colors: readonly RGB[]; // 1..MAX_NUKE_EXPLOSION_COLORS palette, never empty
+  speed: number; // crackle-animation multiplier (effect pace vs the default)
+  transitionSpeed: number; // palette step rate (colors/s); 0 = static, <0 = reverse
+  thickness: number; // EMP ring band thickness (world tiles); unused by classic
 }
 
 // ---------------------------------------------------------------------------
-// Instance data layout: x, y, radius, alpha
+// Instance data layout (21 floats):
+//   x, y, radius, alpha, style, color0..color3 (rgb each), colorCount, speed,
+//   transitionSpeed, thickness. Unused color slots repeat the last palette
+//   color so the shader can take a max over all four.
 // ---------------------------------------------------------------------------
 
-const SHOCKWAVE_FLOATS = 4;
+const SHOCKWAVE_FLOATS = 21;
+const SHOCKWAVE_STRIDE = SHOCKWAVE_FLOATS * 4; // bytes
 
 // ---------------------------------------------------------------------------
 // FxShockwavePass
@@ -41,6 +60,7 @@ export class FxShockwavePass {
   private program: WebGLProgram;
   private uCamera: WebGLUniformLocation;
   private uRingWidth: WebGLUniformLocation;
+  private uTime: WebGLUniformLocation;
   private vao: WebGLVertexArrayObject;
   private instanceBuf: DynamicInstanceBuffer;
   private shockwaveCount = 0;
@@ -55,6 +75,7 @@ export class FxShockwavePass {
     this.program = createProgram(gl, shockwaveVertSrc, shockwaveFragSrc);
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uRingWidth = gl.getUniformLocation(this.program, "uRingWidth")!;
+    this.uTime = gl.getUniformLocation(this.program, "uTime")!;
 
     const glBuf = gl.createBuffer()!;
     this.instanceBuf = new DynamicInstanceBuffer(
@@ -78,9 +99,43 @@ export class FxShockwavePass {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, glBuf);
+    // location 1: x, y, radius, alpha
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, SHOCKWAVE_STRIDE, 0);
     gl.vertexAttribDivisor(1, 1);
+    // location 2: style (0 classic, 1 EMP)
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 16);
+    gl.vertexAttribDivisor(2, 1);
+    // locations 3-6: color0..color3 rgb
+    for (let i = 0; i < MAX_NUKE_EXPLOSION_COLORS; i++) {
+      gl.enableVertexAttribArray(3 + i);
+      gl.vertexAttribPointer(
+        3 + i,
+        3,
+        gl.FLOAT,
+        false,
+        SHOCKWAVE_STRIDE,
+        20 + i * 12,
+      );
+      gl.vertexAttribDivisor(3 + i, 1);
+    }
+    // location 7: colorCount
+    gl.enableVertexAttribArray(7);
+    gl.vertexAttribPointer(7, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 68);
+    gl.vertexAttribDivisor(7, 1);
+    // location 8: speed
+    gl.enableVertexAttribArray(8);
+    gl.vertexAttribPointer(8, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 72);
+    gl.vertexAttribDivisor(8, 1);
+    // location 9: transitionSpeed
+    gl.enableVertexAttribArray(9);
+    gl.vertexAttribPointer(9, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 76);
+    gl.vertexAttribDivisor(9, 1);
+    // location 10: thickness
+    gl.enableVertexAttribArray(10);
+    gl.vertexAttribPointer(10, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 80);
+    gl.vertexAttribDivisor(10, 1);
 
     gl.bindVertexArray(null);
   }
@@ -89,14 +144,43 @@ export class FxShockwavePass {
   // Spawning
   // -------------------------------------------------------------------------
 
-  pushNukeShockwave(x: number, y: number, nukeRadius: number): void {
+  // params = the firing player's resolved nuke-explosion cosmetic (undefined =
+  // no cosmetic → default purple, default radius/speed).
+  pushNukeShockwave(
+    x: number,
+    y: number,
+    nukeRadius: number,
+    params?: NukeExplosionRenderParams,
+  ): void {
     const fx = this.settings.fx;
+    // Cosmetic speed = world tiles/s the ring's WIDTH grows, so the effect
+    // lasts width / speed seconds. Clamped so a bad catalog value can't make
+    // the ring near-immortal (speed → 0) or a single-frame strobe.
+    let durationMs = fx.nukeShockwaveDurationMs;
+    if (params) {
+      const widthPx = params.maxRadius * 2;
+      durationMs = Math.min(
+        Math.max((widthPx / Math.max(params.speed, 0.001)) * 1000, 100),
+        15_000,
+      );
+    }
+    // The shader's crackle animation runs on a multiplier of real time; pace
+    // it to how fast this effect plays relative to the default duration.
+    const speed = fx.nukeShockwaveDurationMs / durationMs;
     this.active.push({
       x,
       y,
       startMs: this.timeFn(),
-      durationMs: fx.nukeShockwaveDurationMs,
-      maxRadius: nukeRadius * fx.nukeShockwaveRadiusFactor,
+      durationMs,
+      // Cosmetic maxRadius is absolute (world tiles); the default look scales
+      // with the bomb's blast radius.
+      maxRadius: params?.maxRadius ?? nukeRadius * fx.nukeShockwaveRadiusFactor,
+      // Cosmetic → EMP; no cosmetic → classic ring (the original nuke look).
+      style: params ? 1 : 0,
+      colors: params?.colors ?? [DEFAULT_NUKE_EXPLOSION_COLOR],
+      speed,
+      transitionSpeed: params?.transitionSpeed ?? 0,
+      thickness: params?.thickness ?? 0,
     });
   }
 
@@ -108,6 +192,11 @@ export class FxShockwavePass {
       startMs: this.timeFn(),
       durationMs: fx.samShockwaveDurationMs,
       maxRadius: fx.samShockwaveRadius,
+      style: 0, // SAM interception keeps the classic ring
+      colors: [WHITE],
+      speed: 1,
+      transitionSpeed: 0,
+      thickness: 0, // classic style uses uRingWidth
     });
   }
 
@@ -142,6 +231,19 @@ export class FxShockwavePass {
       data[off + 1] = sw.y;
       data[off + 2] = t * sw.maxRadius;
       data[off + 3] = 1 - t;
+      data[off + 4] = sw.style;
+      // Pad unused slots with the last palette color (see layout note above).
+      for (let j = 0; j < MAX_NUKE_EXPLOSION_COLORS; j++) {
+        const c = sw.colors[Math.min(j, sw.colors.length - 1)];
+        const co = off + 5 + j * 3;
+        data[co] = c[0];
+        data[co + 1] = c[1];
+        data[co + 2] = c[2];
+      }
+      data[off + 17] = Math.min(sw.colors.length, MAX_NUKE_EXPLOSION_COLORS);
+      data[off + 18] = sw.speed;
+      data[off + 19] = sw.transitionSpeed;
+      data[off + 20] = sw.thickness;
     }
 
     this.shockwaveCount = count;
@@ -157,6 +259,7 @@ export class FxShockwavePass {
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uRingWidth, this.settings.fx.shockwaveRingWidth);
+    gl.uniform1f(this.uTime, this.timeFn() * 0.001);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf.buffer);
     gl.bufferSubData(
       gl.ARRAY_BUFFER,
