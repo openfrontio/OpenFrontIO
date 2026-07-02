@@ -11,6 +11,7 @@ import { TileRef } from "../src/core/game/GameMap";
 import {
   suddenDeathDrain,
   suddenDeathRequiredTiles,
+  suddenDeathSideRequiredTiles,
   suddenDeathWaveState,
 } from "../src/core/game/SuddenDeath";
 import { playerInfo, setup } from "./util/Setup";
@@ -252,7 +253,8 @@ describe("SuddenDeathExecution (logic)", () => {
 
 describe("SuddenDeathExecution (teams)", () => {
   function teamGame(teams: { team: string; tiles: number[] }[]) {
-    const game = new FakeGame(1000, sdConfig(), []); // bar = 200
+    // base bar 200 @ land 1000; a team's threshold = 200 x its member count.
+    const game = new FakeGame(1000, sdConfig(), []);
     game.gameMode = GameMode.Team;
     const players: FakePlayer[] = [];
     for (const t of teams) {
@@ -267,9 +269,10 @@ describe("SuddenDeathExecution (teams)", () => {
   }
 
   it("judges a team on combined territory and skulls every member when below", () => {
-    // bar 200. Red 200+200=400 safe; Blue 50+50=100 below -> both Blue skulled.
+    // Both teams size 2 -> threshold 200x2=400. Red 250+250=500 safe;
+    // Blue 50+50=100 below -> both Blue skulled.
     const { game, players } = teamGame([
-      { team: "Red", tiles: [200, 200] },
+      { team: "Red", tiles: [250, 250] },
       { team: "Blue", tiles: [50, 50] },
     ]);
     const [red1, red2, blue1, blue2] = players;
@@ -286,9 +289,10 @@ describe("SuddenDeathExecution (teams)", () => {
   });
 
   it("spares a tiny member whose team is collectively above the bar", () => {
-    // bar 200. Red 240+20=260 -> safe, so the 20-tile member is NOT skulled.
+    // Size 2 -> threshold 400. Red 400+40=440 -> safe, so the 40-tile member
+    // is NOT skulled.
     const { game, players } = teamGame([
-      { team: "Red", tiles: [240, 20] },
+      { team: "Red", tiles: [400, 40] },
       { team: "Blue", tiles: [50, 50] },
     ]);
     const [, redTiny, blue1] = players;
@@ -296,6 +300,21 @@ describe("SuddenDeathExecution (teams)", () => {
     runAt(exec, game, WAVE_TICK);
     expect(redTiny.inSuddenDeath()).toBe(false); // team is collectively safe
     expect(blue1.inSuddenDeath()).toBe(true);
+  });
+
+  it("scales the threshold by team size (a bigger team must hold more)", () => {
+    // base bar 200. Red is 3 members -> threshold 600; Blue is 1 -> threshold 200.
+    const { game, players } = teamGame([
+      { team: "Red", tiles: [200, 200, 100] }, // 500 combined, < 600 -> flagged
+      { team: "Blue", tiles: [300] }, // 300 >= 200 -> safe
+    ]);
+    const [red1, red2, red3, blue1] = players;
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(red1.inSuddenDeath()).toBe(true); // 500 < 200x3
+    expect(red2.inSuddenDeath()).toBe(true);
+    expect(red3.inSuddenDeath()).toBe(true);
+    expect(blue1.inSuddenDeath()).toBe(false); // 300 >= 200x1
   });
 
   it("idles when only one team remains", () => {
@@ -341,6 +360,19 @@ describe("suddenDeathRequiredTiles (ramping waves)", () => {
       prev = r;
     }
     expect(suddenDeathRequiredTiles("normal", 0, 1800)).toBe(0);
+  });
+});
+
+describe("suddenDeathSideRequiredTiles (headcount scaling)", () => {
+  const land = 10000;
+
+  it("scales the base share by side size and caps at the whole map", () => {
+    // veryfast at 900s is the final 30% wave -> base 3000 tiles.
+    expect(suddenDeathRequiredTiles("veryfast", land, 900)).toBe(3000);
+    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 1)).toBe(3000); // solo
+    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 2)).toBe(6000); // 2x
+    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 4)).toBe(10000); // capped
+    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 0)).toBe(3000); // min size 1
   });
 });
 

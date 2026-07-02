@@ -8,7 +8,7 @@ import {
 } from "../game/Game";
 import {
   suddenDeathDrain,
-  suddenDeathRequiredTiles,
+  suddenDeathSideRequiredTiles,
 } from "../game/SuddenDeath";
 
 /**
@@ -63,11 +63,18 @@ export class SuddenDeathExecution implements Execution {
     }
 
     const land = mg.numLandTiles() - mg.numTilesWithFallout();
-    const required = suddenDeathRequiredTiles(cfg.speed, land, elapsed);
 
     for (const members of sides) {
       let tiles = 0;
       for (const m of members) tiles += m.numTilesOwned();
+      // Threshold scales with the side's headcount: a team of N must hold N× a
+      // solo player's share (FFA sides are size 1, unscaled).
+      const required = suddenDeathSideRequiredTiles(
+        cfg.speed,
+        land,
+        elapsed,
+        members.length,
+      );
       // A side below the bar skulls and drains every one of its members; a side
       // back above it clears them all.
       if (tiles < required) {

@@ -95,8 +95,8 @@ function requiredBasisPoints(speed: SuddenDeathSpeed, elapsed: number): number {
 }
 
 /**
- * Minimum tiles a side (a player in FFA, a whole team otherwise) must own at
- * `elapsed` game seconds. One floored integer ratio, so every client agrees.
+ * Base minimum tiles one player must own at `elapsed` game seconds. One floored
+ * integer ratio, so every client agrees.
  */
 export function suddenDeathRequiredTiles(
   speed: SuddenDeathSpeed,
@@ -105,6 +105,22 @@ export function suddenDeathRequiredTiles(
 ): number {
   if (land <= 0) return 0;
   return Math.floor((requiredBasisPoints(speed, elapsed) * land) / 10000);
+}
+
+/**
+ * Threshold a whole side must hold: the base per-player share scaled by the
+ * side's headcount, so a team of N must hold N× what a solo player holds (FFA
+ * sides are size 1, i.e. unscaled). Capped at the whole map. Shared by the sim
+ * and the HUD so the two always agree.
+ */
+export function suddenDeathSideRequiredTiles(
+  speed: SuddenDeathSpeed,
+  land: number,
+  elapsed: number,
+  sideSize: number,
+): number {
+  const base = suddenDeathRequiredTiles(speed, land, elapsed);
+  return Math.min(land, base * Math.max(1, sideSize));
 }
 
 export interface SuddenDeathWaveState {
