@@ -324,10 +324,14 @@ export class GameRightSidebar extends LitElement implements Controller {
     const sd = this.game.config().suddenDeathConfig();
     if (!sd.enabled || this.hasWinner) return html``;
 
+    // Personal readout: no meaning for a spectator or an eliminated player, and
+    // a 0-tile "me" would otherwise pulse red-alert forever once the bar rises.
+    const me = this.game.myPlayer();
+    if (!me?.isAlive()) return html``;
+
     const elapsed = Math.floor(this.game.elapsedGameSeconds());
     const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
-    const me = this.game.myPlayer();
-    const myTeam = me?.team() ?? null;
+    const myTeam = me.team() ?? null;
     const { tiles: yourTiles, size: mySize } = this.sideStats(me);
     // Threshold is scaled by the side's headcount (same as the sim).
     const requiredTiles = suddenDeathSideRequiredTiles(
