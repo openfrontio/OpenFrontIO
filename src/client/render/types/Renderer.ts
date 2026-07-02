@@ -96,6 +96,7 @@ export interface UnitState {
   troops: number;
   missileTimerQueue: number[];
   level: number;
+  veterancy: number;
   hasTrainStation: boolean;
   trainType: number | null; // 0=Engine, 1=TailEngine, 2=Carriage
   loaded: boolean | null;
