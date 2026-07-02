@@ -11,6 +11,12 @@
     "enter_email_address": "Please enter an email address",
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "fetching_account": "Fetching account information...",
+    "games_clan_tag": "Clan Tag",
+    "games_result_incomplete": "Incomplete",
+    "games_type_private": "Private",
+    "games_type_public": "Public",
+    "games_type_singleplayer": "Singleplayer",
+    "games_username": "Username",
     "get_magic_link": "Get Magic Link",
     "google_alt": "Google",
     "link_discord": "Link Discord Account",
@@ -205,6 +211,8 @@
     "history_clan_players": "Clan players",
     "history_clan_players_value": "{clanCount} / {total} total",
     "history_clan_winners": "Clan Member Winners",
+    "history_date_at": "{date} {time}",
+    "history_date_full": "{day} {month} {year}",
     "history_duration": "Duration",
     "history_empty": "No games played yet.",
     "history_end_of_history": "End of history.",
@@ -397,6 +405,7 @@
     "search": "Search...",
     "title": "Effects",
     "type": {
+      "nukeTrail": "Nuke Trail",
       "transportShipTrail": "Boat Trail"
     }
   },
@@ -521,15 +530,7 @@
     "war": "War"
   },
   "game_list": {
-    "details": "Details",
-    "difficulty": "Difficulty",
-    "game_id": "Game ID",
-    "map": "Map",
-    "mode": "Mode",
-    "ranking": "Ranking",
-    "recent_games": "Recent Games",
-    "replay": "Replay",
-    "type": "Type"
+    "ranking": "Ranking"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -921,6 +922,7 @@
     "korea": "Korea",
     "labyrinth": "Labyrinth",
     "lemnos": "Lemnos",
+    "levant": "Levant",
     "lisbon": "Lisbon",
     "losangeles": "Los Angeles",
     "luna": "Luna",
@@ -954,6 +956,7 @@
     "svalmel": "Svalmel",
     "taiwanstrait": "Taiwan Strait",
     "thebox": "The Box",
+    "tierradelfuego": "Tierra Del Fuego",
     "titan": "Titan",
     "tourney1": "Tourney 2 Teams",
     "tourney2": "Tourney 3 Teams",

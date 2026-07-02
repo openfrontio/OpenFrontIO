@@ -150,11 +150,10 @@ export class WarshipExecution implements Execution {
   }
 
   private isFullyHealed(): boolean {
-    const maxHealth = this.mg.config().unitInfo(UnitType.Warship).maxHealth;
-    if (typeof maxHealth !== "number") {
+    if (!this.warship.hasHealth()) {
       return true;
     }
-    return this.warship.health() >= maxHealth;
+    return this.warship.health() >= this.warship.maxHealth();
   }
 
   private shouldStartRepairRetreat(
@@ -170,9 +169,14 @@ export class WarshipExecution implements Execution {
     ) {
       return false;
     }
-    if (
-      healthBeforeHealing >= this.mg.config().warshipRetreatHealthThreshold()
-    ) {
+    // Percentage of (veterancy-adjusted) max health, so a tougher veteran ship
+    // retreats at the same relative health as a fresh one. Integer math.
+    const retreatThreshold = Math.floor(
+      (this.warship.maxHealth() *
+        this.mg.config().warshipRetreatHealthPercent()) /
+        100,
+    );
+    if (healthBeforeHealing >= retreatThreshold) {
       return false;
     }
     const ports = this.warship.owner().units(UnitType.Port);
@@ -640,6 +644,7 @@ export class WarshipExecution implements Execution {
 
       if (dist <= 5) {
         this.warship.owner().captureUnit(target);
+        this.warship.recordTradeCapture();
         this.warship.setTargetUnit(undefined);
         this.warship.touch();
         return;
@@ -659,6 +664,7 @@ export class WarshipExecution implements Execution {
       switch (result.status) {
         case PathStatus.COMPLETE:
           this.warship.owner().captureUnit(target);
+          this.warship.recordTradeCapture();
           this.warship.setTargetUnit(undefined);
           this.warship.touch();
           return;

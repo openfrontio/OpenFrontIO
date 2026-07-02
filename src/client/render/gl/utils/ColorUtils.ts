@@ -18,11 +18,19 @@ export function getPaletteSize(): number {
 }
 
 /**
- * Max colors per transport-ship-trail gradient = rows in the trail-effect
- * texture. Longer catalog color lists are truncated. Shared so the CPU side
- * that fills the texture and the GPU side that allocates it can't drift.
+ * Max colors per trail gradient = rows per block in the trail-effect texture.
+ * Longer catalog color lists are truncated. Shared so the CPU side that fills
+ * the texture and the GPU side that allocates it can't drift.
  */
 export const MAX_TRAIL_COLORS = 8;
+
+/**
+ * The trail-effect texture stacks one MAX_TRAIL_COLORS-row block per trail
+ * effectType: block 0 = transportShipTrail, block 1 = nukeTrail (matching the
+ * nuke bit in trail.frag.glsl). Bump this if another trailed effectType is added
+ * (and add its rowBase branch to the shader).
+ */
+export const TRAIL_EFFECT_BLOCKS = 2;
 
 // ---------- Terrain ----------
 

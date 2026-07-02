@@ -3,7 +3,7 @@ import {
   CosmeticsSchema,
   EffectSchema,
   findEffect,
-  TransportShipTrailAttributesSchema,
+  TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
 import { PlayerEffectSchema } from "../src/core/Schemas";
 
@@ -15,9 +15,9 @@ describe("Effect cosmetic schemas", () => {
     rarity: "common",
   };
 
-  describe("TransportShipTrailAttributesSchema", () => {
+  describe("TrailEffectAttributesSchema", () => {
     it("parses a gradient with a color list, colorSize, and movementSpeed", () => {
-      const parsed = TransportShipTrailAttributesSchema.parse({
+      const parsed = TrailEffectAttributesSchema.parse({
         type: "gradient",
         colors: ["#f00", "#00f"],
         colorSize: 16,
@@ -33,7 +33,7 @@ describe("Effect cosmetic schemas", () => {
 
     it("accepts a single-color list (solid) and an empty list", () => {
       expect(
-        TransportShipTrailAttributesSchema.safeParse({
+        TrailEffectAttributesSchema.safeParse({
           type: "gradient",
           colors: ["#f00"],
           colorSize: 16,
@@ -41,7 +41,7 @@ describe("Effect cosmetic schemas", () => {
         }).success,
       ).toBe(true);
       expect(
-        TransportShipTrailAttributesSchema.safeParse({
+        TrailEffectAttributesSchema.safeParse({
           type: "gradient",
           colors: [],
           colorSize: 16,
@@ -53,22 +53,20 @@ describe("Effect cosmetic schemas", () => {
     it("requires the gradient type, colors, colorSize, and movementSpeed", () => {
       // Unrecognized styles (no discriminated-union member) are rejected.
       expect(
-        TransportShipTrailAttributesSchema.safeParse({ type: "solid" }).success,
+        TrailEffectAttributesSchema.safeParse({ type: "solid" }).success,
       ).toBe(false);
       // colors, colorSize, and movementSpeed are all required.
       expect(
-        TransportShipTrailAttributesSchema.safeParse({
+        TrailEffectAttributesSchema.safeParse({
           type: "gradient",
           colors: ["#f00"],
         }).success,
       ).toBe(false);
-      expect(TransportShipTrailAttributesSchema.safeParse({}).success).toBe(
-        false,
-      );
+      expect(TrailEffectAttributesSchema.safeParse({}).success).toBe(false);
     });
 
     it("parses a transition with a color list and frequency", () => {
-      const parsed = TransportShipTrailAttributesSchema.parse({
+      const parsed = TrailEffectAttributesSchema.parse({
         type: "transition",
         colors: ["#002aff", "#4805ff"],
         frequency: 1,
@@ -82,7 +80,7 @@ describe("Effect cosmetic schemas", () => {
 
     it("requires frequency for a transition", () => {
       expect(
-        TransportShipTrailAttributesSchema.safeParse({
+        TrailEffectAttributesSchema.safeParse({
           type: "transition",
           colors: ["#002aff", "#4805ff"],
         }).success,
@@ -100,6 +98,22 @@ describe("Effect cosmetic schemas", () => {
             colors: ["#f00", "#0f0", "#00f"],
             colorSize: 16,
             movementSpeed: 0.15,
+          },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("parses a nukeTrail effect (same attributes, different effectType)", () => {
+      expect(
+        EffectSchema.safeParse({
+          ...base,
+          name: "tiel_red_gradient_nuke_trail",
+          effectType: "nukeTrail",
+          attributes: {
+            type: "gradient",
+            colors: ["#ff0000", "#00ffb3"],
+            colorSize: 0.5,
+            movementSpeed: 2,
           },
         }).success,
       ).toBe(true);
@@ -176,6 +190,22 @@ describe("Effect cosmetic schemas", () => {
             rarity: "common",
           },
         },
+        nukeTrail: {
+          tiel_red_gradient_nuke_trail: {
+            name: "tiel_red_gradient_nuke_trail",
+            effectType: "nukeTrail",
+            attributes: {
+              type: "gradient",
+              colors: ["#ff0000", "#00ffb3"],
+              colorSize: 0.5,
+              movementSpeed: 2,
+            },
+            affiliateCode: null,
+            product: null,
+            priceHard: 1,
+            rarity: "common",
+          },
+        },
       },
     });
     expect(result.success).toBe(true);
@@ -184,6 +214,10 @@ describe("Effect cosmetic schemas", () => {
         result.data.effects?.transportShipTrail?.rainbow_ship?.attributes
           ?.colors,
       ).toEqual(["#ff0000", "#ffe600", "#00a8ff", "#7d5fff"]);
+      expect(
+        result.data.effects?.nukeTrail?.tiel_red_gradient_nuke_trail
+          ?.effectType,
+      ).toBe("nukeTrail");
     }
   });
 

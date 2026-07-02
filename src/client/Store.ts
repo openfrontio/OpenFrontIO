@@ -14,7 +14,6 @@ import {
   groupCosmeticVariants,
   purchaseCosmetic,
   resolveCosmetics,
-  SUBSCRIPTIONS_ENABLED,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -35,14 +34,7 @@ export class StoreModal extends BaseModal {
     return {
       tabs: [
         { key: "packs", label: translateText("store.packs") },
-        ...(SUBSCRIPTIONS_ENABLED
-          ? [
-              {
-                key: "subscriptions",
-                label: translateText("store.subscriptions"),
-              },
-            ]
-          : []),
+        { key: "subscriptions", label: translateText("store.subscriptions") },
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
         { key: "effects", label: translateText("store.effects") },
@@ -153,10 +145,11 @@ export class StoreModal extends BaseModal {
   }
 
   private renderEffectGrid(): TemplateResult {
-    // Grouped by effectType with a sub-header per type (see <effects-grid>),
-    // matching the home selection modal.
+    // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
+    // type's grid. Tabs are always present, even when a type has nothing to buy.
     return html`<effects-grid
       mode="purchase"
+      tabbed
       .cosmetics=${this.cosmetics}
       .userMeResponse=${this.userMeResponse}
       .affiliateCode=${this.affiliateCode}

@@ -1,8 +1,9 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  EFFECT_TYPES,
   findEffect,
-  TransportShipTrailAttributes,
+  TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
 import {
   EFFECTS_KEY,
@@ -15,26 +16,26 @@ import { translateText } from "./Utils";
 
 @customElement("effects-input")
 export class EffectsInput extends LitElement {
-  // The selected transport-ship-trail attributes, if any (one effectType today).
+  // The selected trail effect's attributes for the button preview, if any.
   // Not named `attributes` — that collides with HTMLElement.attributes.
-  @state() private trailAttributes: TransportShipTrailAttributes | null = null;
+  @state() private trailAttributes: TrailEffectAttributes | null = null;
 
   private _abortController: AbortController | null = null;
 
   // PlayerEffect is just { name, effectType }; resolve the visual style from the
-  // cosmetics catalog by (effectType, name).
-  private async resolveTrailAttributes(): Promise<TransportShipTrailAttributes | null> {
+  // cosmetics catalog by (effectType, name). The button shows a single swatch,
+  // so preview the first selected trail effect across effectTypes (boat trail
+  // before nuke trail, per EFFECT_TYPES order).
+  private async resolveTrailAttributes(): Promise<TrailEffectAttributes | null> {
     const cosmetics = await getPlayerCosmetics();
-    const name = cosmetics.effects?.["transportShipTrail"]?.name;
-    if (!name) return null;
-    const effect = findEffect(
-      await fetchCosmetics(),
-      "transportShipTrail",
-      name,
-    );
-    return effect?.effectType === "transportShipTrail"
-      ? effect.attributes
-      : null;
+    const catalog = await fetchCosmetics();
+    for (const effectType of EFFECT_TYPES) {
+      const name = cosmetics.effects?.[effectType]?.name;
+      if (!name) continue;
+      const effect = findEffect(catalog, effectType, name);
+      if (effect) return effect.attributes;
+    }
+    return null;
   }
 
   private _onCosmeticSelected = async () => {

@@ -59,7 +59,12 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { getPaletteSize, hexToRgb, MAX_TRAIL_COLORS } from "./utils/ColorUtils";
+import {
+  getPaletteSize,
+  hexToRgb,
+  MAX_TRAIL_COLORS,
+  TRAIL_EFFECT_BLOCKS,
+} from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
@@ -132,9 +137,11 @@ export class GPURenderer {
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
-  // Per-player transport-ship-trail gradient, keyed by smallID (RGBA32F,
-  // 4096×MAX_TRAIL_COLORS): row r = color r's rgb; row 0's alpha = color count.
-  // Sampled by TrailPass.
+  // Per-player trail-effect palette, keyed by smallID (RGBA32F,
+  // 4096×(MAX_TRAIL_COLORS·TRAIL_EFFECT_BLOCKS)): one MAX_TRAIL_COLORS-row block
+  // per trail effectType (block 0 = transportShipTrail, block 1 = nukeTrail).
+  // Sampled by TrailPass; the shader picks the block from the trail tile's nuke
+  // bit.
   private effectTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
@@ -239,15 +246,17 @@ export class GPURenderer {
       filter: gl.NEAREST,
     });
 
-    // Per-player trail-effect texture (one row per gradient color). Starts zeroed
-    // (color count 0 everywhere = no effect → trail uses territory color).
+    // Per-player trail-effect texture: TRAIL_EFFECT_BLOCKS stacked blocks of
+    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail).
+    // Starts zeroed (color count 0 everywhere = no effect → territory color).
+    const effectRows = MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
-      height: MAX_TRAIL_COLORS,
+      height: effectRows,
       internalFormat: gl.RGBA32F,
       format: gl.RGBA,
       type: gl.FLOAT,
-      data: new Float32Array(palW * MAX_TRAIL_COLORS * 4),
+      data: new Float32Array(palW * effectRows * 4),
       filter: gl.NEAREST,
     });
 
@@ -603,7 +612,7 @@ export class GPURenderer {
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint8Array,
+    trailState: Uint16Array,
   ): void {
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
@@ -614,7 +623,7 @@ export class GPURenderer {
   }
 
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -657,7 +666,7 @@ export class GPURenderer {
       0,
       0,
       getPaletteSize(),
-      MAX_TRAIL_COLORS,
+      MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS,
       gl.RGBA,
       gl.FLOAT,
       effectData,

@@ -919,8 +919,10 @@ export class Config {
     return 5;
   }
 
-  warshipRetreatHealthThreshold(): number {
-    return 750;
+  /** Health at or below which a warship retreats to repair, as a percent of its
+   *  (veterancy-adjusted) max health, so the threshold scales with max health. */
+  warshipRetreatHealthPercent(): number {
+    return 75;
   }
 
   warshipPassiveHealing(): number {
@@ -933,6 +935,35 @@ export class Config {
 
   warshipPortSwitchThreshold(): number {
     return 0.75;
+  }
+
+  // --- Warship veterancy ---
+
+  /** Maximum veterancy level a warship can reach. */
+  warshipMaxVeterancy(): number {
+    return 3;
+  }
+
+  /** Max-health boost per veterancy level, as an integer percent of base max
+   *  health. Integer-only to keep src/core deterministic (no float constants). */
+  warshipVeterancyHealthBonus(): number {
+    return 20;
+  }
+
+  /** Shell-damage boost per veterancy level, as an integer percent of the
+   *  rolled damage. Integer-only to keep src/core deterministic. */
+  warshipVeterancyShellDamageBonus(): number {
+    return 20;
+  }
+
+  /** Transport ships a warship must destroy to gain one veterancy level. */
+  warshipVeterancyTransportKills(): number {
+    return 10;
+  }
+
+  /** Trade ships a warship must capture to gain one veterancy level. */
+  warshipVeterancyTradeCaptures(): number {
+    return 25;
   }
 
   defensePostShellAttackRate(): number {
