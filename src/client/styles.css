@@ -664,3 +664,35 @@ news-button .active button::after {
 .remove-player-btn:hover {
   background: #ff6666;
 }
+
+/* Hide bottom rail ads in-game to prevent blocking controls and spawn phase selection */
+body.in-game [id^="pw-oop-bottom_rail"],
+body.in-game [id*="bottom_rail"],
+body.in-game [class*="bottom-rail"],
+body.in-game [id^="pw-bottom_rail"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Prevent the in-game bottom-left ad wrapper from blocking map interactions on empty space */
+#in-game-promo-container {
+  pointer-events: none !important;
+}
+#in-game-promo-container > div {
+  pointer-events: auto !important;
+}
+
+/* Ensure out-of-page/anchor ads remain behind the bottom HUD (z-index 200) */
+[id^="pw-oop-"],
+[class*="pw-oop-"],
+[class*="pw-ad-"] {
+  z-index: 50 !important;
+}
+
+/* Prevent Google AdSense from overflowing/distorting parent modal containers */
+google-ad,
+.adsbygoogle {
+  max-height: 250px !important;
+  overflow: hidden !important;
+}
