@@ -1246,6 +1246,8 @@
     "max_timer": "Game length (minutes)",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "max_timer_placeholder": "Mins",
+    "medals_earned": "Medals",
+    "medals_of_maps": "out of {total} maps",
     "nations": "Nations: ",
     "nations_disabled": "Disabled",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
