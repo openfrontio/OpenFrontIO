@@ -6,6 +6,7 @@ import {
   Effect,
   EFFECT_TYPES,
   EffectType,
+  isNukeExplosionEffect,
   NUKE_EXPLOSION_TYPES,
   NukeExplosionType,
 } from "../../core/CosmeticSchemas";
@@ -154,10 +155,8 @@ export class EffectsGrid extends LitElement {
   // The nukeType attribute of a nukeExplosion effect, else null (trail effects
   // and the Default tile have none).
   private nukeTypeOf(r: ResolvedCosmetic): string | null {
-    const attrs = (r.cosmetic as Effect | null)?.attributes as
-      | { nukeType?: string }
-      | undefined;
-    return attrs?.nukeType ?? null;
+    const c = r.cosmetic as Effect | null;
+    return c && isNukeExplosionEffect(c) ? c.attributes.nukeType : null;
   }
 
   // Secondary sub-tab bar for the nukeExplosion type: one pill per nukeType
@@ -214,13 +213,15 @@ export class EffectsGrid extends LitElement {
     const types: readonly EffectType[] = activeType
       ? [activeType]
       : EFFECT_TYPES;
-    // nukeExplosion is split into per-nukeType sub-tabs when it's the single
-    // active type; filter its items to the active nukeType (keep the Default tile).
+    // nukeExplosion is split into per-nukeType sub-tabs: items are always
+    // filtered to the active nukeType (keep the Default tile) so the Default
+    // tile's slot matches what's on screen. The sub-tab bar renders at the top
+    // when nukeExplosion is the single active type, else inside its section.
     const showNukeTabs = activeType === "nukeExplosion";
     const sections = types
       .map((type) => {
         let items = this.itemsForType(all, type);
-        if (type === "nukeExplosion" && showNukeTabs) {
+        if (type === "nukeExplosion") {
           items = items.filter(
             (r) =>
               r.cosmetic === null || this.nukeTypeOf(r) === this.activeNukeType,
@@ -254,6 +255,9 @@ export class EffectsGrid extends LitElement {
                     >
                       ${translateText(`effects.type.${s.type}`)}
                     </h3>`}
+                ${!activeType && s.type === "nukeExplosion"
+                  ? this.renderNukeTypeTabBar()
+                  : nothing}
                 <div
                   class="flex flex-wrap gap-4 justify-center items-stretch content-start"
                 >

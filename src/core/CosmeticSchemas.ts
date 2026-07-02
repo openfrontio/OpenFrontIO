@@ -153,15 +153,16 @@ export type NukeExplosionType = (typeof NUKE_EXPLOSION_TYPES)[number];
 // effect using a value this client can't render is dropped by lenientRecord
 // instead of rendering wrong. `colors` is the palette; size (final ring width
 // in tiles), speed (tiles/s the width grows), thickness (ring band thickness
-// in tiles), and transitionSpeed (palette colors/s) drive the animation (the
-// renderer clamps/drops what it can't use).
+// in tiles), and transitionSpeed (palette colors/s) drive the animation. size
+// and thickness must be positive — a non-positive value hits undefined shader
+// behavior, so the entry is dropped like the enums; the renderer clamps speed.
 export const NukeExplosionAttributesSchema = z.object({
   type: z.enum(["shockwave"]),
   nukeType: z.enum(NUKE_EXPLOSION_TYPES),
   colors: z.array(z.string()),
-  size: z.number(),
+  size: z.number().positive(),
   speed: z.number(),
-  thickness: z.number(),
+  thickness: z.number().positive(),
   transitionSpeed: z.number(),
 });
 

@@ -422,6 +422,20 @@ describe("NukeExplosionAttributesSchema", () => {
     ).toBe(false);
   });
 
+  it("rejects non-positive size and thickness (dropped, not rendered wrong)", () => {
+    for (const patch of [
+      { size: 0 },
+      { size: -50 },
+      { thickness: 0 },
+      { thickness: -4 },
+    ]) {
+      expect(
+        NukeExplosionAttributesSchema.safeParse({ ...atomShockwave, ...patch })
+          .success,
+      ).toBe(false);
+    }
+  });
+
   it("requires colors, size, speed, thickness, and transitionSpeed", () => {
     expect(
       NukeExplosionAttributesSchema.safeParse({

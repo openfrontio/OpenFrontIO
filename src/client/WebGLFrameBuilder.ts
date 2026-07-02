@@ -7,6 +7,7 @@ import {
   isNukeExplosionEffect,
   isTrailEffect,
   type NukeExplosionAttributes,
+  type NukeExplosionType,
   TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
@@ -55,9 +56,9 @@ void _EFFECT_BLOCK_ORDER;
 //   thickness = the ring band's thickness in world tiles.
 //   transitionSpeed passes through as the palette step rate (colors/s).
 
-// Detonating bomb → nuke-explosion slot (values match NUKE_EXPLOSION_TYPES).
+// Detonating bomb → nuke-explosion slot.
 // Only these unit types produce a shockwave; plain MIRV splits and never detonates.
-const UNIT_TYPE_TO_NUKE_TYPE: Readonly<Record<string, string>> = {
+const UNIT_TYPE_TO_NUKE_TYPE: Readonly<Record<string, NukeExplosionType>> = {
   [UT_ATOM_BOMB]: "atom",
   [UT_HYDROGEN_BOMB]: "hydro",
   [UT_MIRV_WARHEAD]: "mirvWarhead",
