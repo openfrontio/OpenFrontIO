@@ -38,8 +38,8 @@ interface WaveSchedule {
 // Same levels everywhere (the ofstats FFA territory median, then a final 55%
 // squeeze); the presets only change the pace. The median run is 3/5/10/20/30%;
 // normal hits it dead on at 10/15/20/25/30 min. The 6th wave (55%) only one side
-// can hold, so — together with the crown exemption — it forces out everyone but
-// the leader for a single winner. slow is ~20% slower, fast ~20% faster, very
+// can hold, so, together with the crown exemption, it forces out everyone but
+// the leader for a single winner. slow is ~20% slower, fast ~30% faster, very
 // fast 50% faster.
 const LEVELS = [300, 500, 1000, 2000, 3000, 5500]; // 3, 5, 10, 20, 30, 55%
 const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
@@ -57,10 +57,10 @@ const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
     pauseSeconds: 30,
     levels: LEVELS,
   },
-  // grace 4:30, 3:30 ramps -> reaches at 8/12/16/20/24/28 min.
+  // grace 4:30, 3:00 ramps -> reaches at 7:30/11/14:30/18/21:30/25 min.
   fast: {
     graceSeconds: 270,
-    rampSeconds: 210,
+    rampSeconds: 180,
     pauseSeconds: 30,
     levels: LEVELS,
   },

@@ -386,7 +386,7 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
     // 30% waypoint, then the 6th wave to 55% one cycle later.
     expect(doomsdayClockRequiredTiles("normal", land, 1800)).toBe(3000); // 30% @ 30:00
     expect(doomsdayClockRequiredTiles("normal", land, 2100)).toBe(5500); // 55% @ 35:00
-    expect(doomsdayClockRequiredTiles("fast", land, 1680)).toBe(5500); // 55% @ 28:00
+    expect(doomsdayClockRequiredTiles("fast", land, 1500)).toBe(5500); // 55% @ 25:00
     expect(doomsdayClockRequiredTiles("veryfast", land, 1050)).toBe(5500); // 55% @ 17:30
     expect(doomsdayClockRequiredTiles("slow", land, 2520)).toBe(5500); // 55% @ 42:00
   });
