@@ -1,6 +1,10 @@
 import { Worker } from "cluster";
 import winston from "winston";
-import { PublicGameInfo, PublicGameType } from "../core/Schemas";
+import {
+  PublicGameInfo,
+  PublicGameType,
+  SCHEDULED_PUBLIC_GAME_TYPES,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
   MasterCreateGame,
@@ -85,6 +89,7 @@ export class MasterLobbyService {
       ffa: [],
       team: [],
       special: [],
+      hosted: [],
     };
 
     for (const lobby of lobbies) {
@@ -103,6 +108,18 @@ export class MasterLobbyService {
         return a.startsAt - b.startsAt;
       });
     }
+
+    // One listed lobby per creator, cluster-wide. Workers enforce this at
+    // listing time, but two workers can list concurrently between broadcasts;
+    // dropping duplicates here (deterministically, after the sort above)
+    // keeps the extra lobby from ever being advertised.
+    const seenCreators = new Set<string>();
+    result.hosted = result.hosted.filter((lobby) => {
+      if (lobby.creatorID === undefined) return true;
+      if (seenCreators.has(lobby.creatorID)) return false;
+      seenCreators.add(lobby.creatorID);
+      return true;
+    });
 
     return result;
   }
@@ -131,7 +148,9 @@ export class MasterLobbyService {
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies();
 
-    for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
+    // Scheduled types only: hosted lobbies are started by their host, never
+    // given a countdown or replaced by the master.
+    for (const type of SCHEDULED_PUBLIC_GAME_TYPES) {
       const lobbies = lobbiesByType[type];
 
       // Always ensure the next lobby has a timer, even if we already have 2+

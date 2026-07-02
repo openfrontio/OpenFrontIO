@@ -139,6 +139,13 @@ export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
 
+// Whether the player currently has subscriber entitlements (e.g. may list a
+// private lobby publicly). Trialing counts; past_due/canceled do not.
+export function hasActiveSubscription(userMe: UserMeResponse): boolean {
+  const status = userMe.player.subscription?.status;
+  return status === "active" || status === "trialing";
+}
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,

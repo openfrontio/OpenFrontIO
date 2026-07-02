@@ -1,0 +1,400 @@
+import EventEmitter from "events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WebSocket } from "ws";
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  GameType,
+} from "../../src/core/game/Game";
+import { PublicGameInfo, PublicGames } from "../../src/core/Schemas";
+import { GameManager } from "../../src/server/GameManager";
+import { GameServer, hashPersistentID } from "../../src/server/GameServer";
+import { MasterLobbyService } from "../../src/server/MasterLobbyService";
+import { ServerEnv } from "../../src/server/ServerEnv";
+import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
+
+vi.mock("../../src/server/Logger", () => ({
+  logger: {
+    child: () => ({
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+    }),
+  },
+}));
+
+vi.mock("../../src/server/PollingLoop", () => ({
+  startPolling: vi.fn(),
+}));
+
+const mockLogger: any = {
+  child: vi.fn().mockReturnThis(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+};
+
+const CREATOR = "11111111-1111-4111-8111-111111111111";
+const OTHER_CREATOR = "22222222-2222-4222-8222-222222222222";
+
+function makeGame(
+  id = "test-game",
+  creatorPersistentID: string | undefined = CREATOR,
+  config: Record<string, unknown> = {},
+) {
+  return new GameServer(
+    id,
+    mockLogger,
+    Date.now(),
+    { gameType: GameType.Private, ...config } as any,
+    creatorPersistentID,
+  );
+}
+
+describe("GameServer listing", () => {
+  it("is unlisted by default and toggles via setListed", () => {
+    const game = makeGame();
+    expect(game.isListed()).toBe(false);
+    game.setListed(true);
+    expect(game.isListed()).toBe(true);
+    game.setListed(false);
+    expect(game.isListed()).toBe(false);
+  });
+
+  it("cannot be listed through update_game_config", () => {
+    const game = makeGame();
+    const result = game.handleIntent(
+      { type: "update_game_config", config: { listed: true } } as any,
+      {
+        clientID: "c1",
+        isLobbyCreator: true,
+        isAdmin: false,
+        isAdminBot: false,
+      },
+    );
+    expect(result.status).toBe(200);
+    expect(game.isListed()).toBe(false);
+  });
+
+  it("identifies its creator", () => {
+    const game = makeGame();
+    expect(game.isCreator(CREATOR)).toBe(true);
+    expect(game.isCreator(OTHER_CREATOR)).toBe(false);
+  });
+
+  it("never matches a creator when created without one", () => {
+    const game = new GameServer("no-creator", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
+    expect(game.isCreator(CREATOR)).toBe(false);
+    expect(game.hashedCreatorID()).toBeUndefined();
+  });
+
+  it("exposes a stable hash of the creator id, not the raw id", () => {
+    const game = makeGame();
+    const hashed = game.hashedCreatorID();
+    expect(hashed).toBe(hashPersistentID(CREATOR));
+    expect(hashed).not.toContain(CREATOR);
+    expect(hashed).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe("GameManager.listedLobbies", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("returns only listed private lobbies still in the lobby phase", () => {
+    const gm = new GameManager(mockLogger);
+    const unlisted = gm.createGame("g-unlisted", undefined, CREATOR)!;
+    const listed = gm.createGame("g-listed", undefined, CREATOR)!;
+    listed.setListed(true);
+
+    expect(gm.listedLobbies().map((g) => g.id)).toEqual(["g-listed"]);
+    expect(gm.publicLobbies()).toEqual([]);
+    expect(unlisted.isListed()).toBe(false);
+  });
+
+  it("excludes public games even if flagged listed", () => {
+    const gm = new GameManager(mockLogger);
+    const pub = gm.createGame(
+      "g-public",
+      { gameType: GameType.Public } as any,
+      undefined,
+    )!;
+    pub.setListed(true);
+
+    expect(gm.listedLobbies()).toEqual([]);
+    expect(gm.publicLobbies().map((g) => g.id)).toEqual(["g-public"]);
+  });
+
+  it("drops a listed lobby once its game starts", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-started", undefined, CREATOR)!;
+    game.setListed(true);
+    expect(gm.listedLobbies()).toHaveLength(1);
+
+    (game as any)._hasStarted = true;
+    expect(gm.listedLobbies()).toEqual([]);
+  });
+});
+
+function hostedLobby(
+  gameID: string,
+  creatorID: string | undefined,
+  extra: Partial<PublicGameInfo> = {},
+): PublicGameInfo {
+  return {
+    gameID,
+    numClients: 0,
+    publicGameType: "hosted",
+    creatorID,
+    ...extra,
+  };
+}
+
+describe("MasterLobbyService hosted lobbies", () => {
+  function createService() {
+    vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(2);
+    vi.spyOn(ServerEnv, "workerIndex").mockReturnValue(1);
+    vi.spyOn(ServerEnv, "gameCreationRate").mockReturnValue(60_000);
+    const playlist = {
+      gameConfig: vi.fn().mockResolvedValue({ gameType: GameType.Public }),
+    };
+    const log = { info: vi.fn(), error: vi.fn() } as any;
+    const service = new MasterLobbyService(playlist as any, log);
+
+    const workers = [1, 2].map((id) => {
+      const worker = new EventEmitter();
+      (worker as any).send = vi.fn();
+      service.registerWorker(id, worker as any);
+      return worker;
+    });
+    return { service, workers };
+  }
+
+  function sentMessages(worker: EventEmitter): any[] {
+    return ((worker as any).send as ReturnType<typeof vi.fn>).mock.calls.map(
+      (c) => c[0],
+    );
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("aggregates hosted lobbies and dedupes by creator across workers", () => {
+    const { service, workers } = createService();
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [
+        hostedLobby("bbb", "creator-a"),
+        hostedLobby("ccc", "creator-b"),
+      ],
+    });
+    // Same creator listed a second lobby on another worker before the first
+    // broadcast landed; only the stable-sort winner may survive.
+    workers[1].emit("message", {
+      type: "lobbyList",
+      lobbies: [hostedLobby("aaa", "creator-a")],
+    });
+
+    (service as any).broadcastLobbies();
+
+    const broadcast = sentMessages(workers[0]).find(
+      (m) => m.type === "lobbiesBroadcast",
+    );
+    expect(broadcast).toBeDefined();
+    const hosted = broadcast.publicGames.games.hosted;
+    expect(hosted.map((l: PublicGameInfo) => l.gameID)).toEqual(["aaa", "ccc"]);
+  });
+
+  it("never schedules or sets countdowns on hosted lobbies", async () => {
+    const { service, workers } = createService();
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [hostedLobby("hosted1", "creator-a")],
+    });
+
+    await (service as any).maybeScheduleLobby();
+
+    for (const worker of workers) {
+      for (const msg of sentMessages(worker)) {
+        if (msg.type === "updateLobby") {
+          expect(msg.gameID).not.toBe("hosted1");
+        }
+        if (msg.type === "createGame") {
+          expect(msg.publicGameType).not.toBe("hosted");
+        }
+      }
+    }
+    // The scheduled types still get their replacement lobbies.
+    const created = workers.flatMap((w) =>
+      sentMessages(w).filter((m) => m.type === "createGame"),
+    );
+    expect(created.map((m) => m.publicGameType).sort()).toEqual([
+      "ffa",
+      "special",
+      "team",
+    ]);
+  });
+});
+
+describe("WorkerLobbyService hosted lobbies", () => {
+  let service: WorkerLobbyService;
+  let gm: any;
+  let sendToMaster: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    gm = {
+      publicLobbies: vi.fn().mockReturnValue([]),
+      listedLobbies: vi.fn().mockReturnValue([]),
+      game: vi.fn().mockReturnValue(null),
+    };
+    const server = new EventEmitter();
+    service = new WorkerLobbyService(
+      server as any,
+      { handleUpgrade: vi.fn() } as any,
+      gm,
+      mockLogger,
+    );
+    // Never touch the real process IPC channel: vitest forks use it.
+    sendToMaster = vi.fn();
+    (service as any).sendToMaster = sendToMaster;
+  });
+
+  function emitBroadcast(games: PublicGames["games"], serverTime = 1000) {
+    (service as any).handleMasterMessage({
+      type: "lobbiesBroadcast",
+      publicGames: { serverTime, games },
+    });
+  }
+
+  function connectClient() {
+    const ws = {
+      send: vi.fn(),
+      on: vi.fn(),
+      readyState: WebSocket.OPEN,
+    };
+    (service as any).lobbiesWss.emit("connection", ws);
+    return ws;
+  }
+
+  function sentPayloads(ws: { send: ReturnType<typeof vi.fn> }): any[] {
+    return ws.send.mock.calls.map((c) => JSON.parse(c[0]));
+  }
+
+  it("reports listed lobbies to master as hosted, with creatorID and without host-only config", () => {
+    const game = makeGame("hosted-g1", CREATOR, {
+      allowedPublicIds: ["p1"],
+      nameReveals: ["c1"],
+      nameRevealPublicIds: ["p2"],
+    });
+    game.setListed(true);
+    gm.listedLobbies.mockReturnValue([game]);
+
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+
+    const lobbyList = sendToMaster.mock.calls
+      .map((c: any[]) => c[0])
+      .find((m: any) => m.type === "lobbyList");
+    expect(lobbyList.lobbies).toHaveLength(1);
+    const reported = lobbyList.lobbies[0];
+    expect(reported.publicGameType).toBe("hosted");
+    expect(reported.creatorID).toBe(hashPersistentID(CREATOR));
+    expect(reported.gameConfig.allowedPublicIds).toBeUndefined();
+    expect(reported.gameConfig.nameReveals).toBeUndefined();
+    expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
+  });
+
+  it("strips creatorID from broadcasts and primed snapshots sent to clients", () => {
+    const ws = connectClient();
+    emitBroadcast({
+      ffa: [],
+      team: [],
+      special: [],
+      hosted: [hostedLobby("g1", "secret-hash")],
+    });
+
+    const full = sentPayloads(ws).find((p) => p.type === "full");
+    expect(full.games.hosted[0].gameID).toBe("g1");
+    expect(full.games.hosted[0].creatorID).toBeUndefined();
+
+    // A client connecting after the broadcast gets the primed snapshot,
+    // which must be sanitized too.
+    const lateWs = connectClient();
+    const primed = sentPayloads(lateWs)[0];
+    expect(primed.type).toBe("full");
+    expect(primed.games.hosted[0].creatorID).toBeUndefined();
+  });
+
+  it("re-sends a full when a hosted lobby's config changes without a gameID change", () => {
+    const ws = connectClient();
+    // A schema-valid config: an invalid one would be rejected by the IPC
+    // message parse and the broadcast silently dropped.
+    const games = (gameMap: GameMapType) => ({
+      ffa: [],
+      team: [],
+      special: [],
+      hosted: [
+        hostedLobby("g1", "hash", {
+          gameConfig: {
+            gameMap,
+            difficulty: Difficulty.Easy,
+            donateGold: false,
+            donateTroops: false,
+            gameType: GameType.Private,
+            gameMode: GameMode.FFA,
+            gameMapSize: GameMapSize.Normal,
+            nations: "default",
+            bots: 0,
+            infiniteGold: false,
+            infiniteTroops: false,
+            instantBuild: false,
+            randomSpawn: false,
+          } as any,
+        }),
+      ],
+    });
+
+    emitBroadcast(games(GameMapType.World), 1000);
+    emitBroadcast(games(GameMapType.World), 2000); // unchanged -> counts delta
+    emitBroadcast(games(GameMapType.Europe), 3000); // host changed map -> fresh full
+
+    const types = sentPayloads(ws).map((p) => p.type);
+    expect(types).toEqual(["full", "counts", "full"]);
+  });
+
+  describe("creatorHasListedLobby", () => {
+    it("finds other lobbies by the same creator in the master broadcast", () => {
+      emitBroadcast({
+        ffa: [],
+        team: [],
+        special: [],
+        hosted: [hostedLobby("g1", "hash-a")],
+      });
+
+      expect(service.creatorHasListedLobby("hash-a", "other-game")).toBe(true);
+      // The lobby being toggled itself does not count.
+      expect(service.creatorHasListedLobby("hash-a", "g1")).toBe(false);
+      expect(service.creatorHasListedLobby("hash-b", "other-game")).toBe(false);
+    });
+
+    it("also checks this worker's own lobbies, ahead of the broadcast", () => {
+      const game = makeGame("local-g1", CREATOR);
+      game.setListed(true);
+      gm.listedLobbies.mockReturnValue([game]);
+
+      const hash = hashPersistentID(CREATOR);
+      expect(service.creatorHasListedLobby(hash, "other-game")).toBe(true);
+      expect(service.creatorHasListedLobby(hash, "local-g1")).toBe(false);
+    });
+  });
+});

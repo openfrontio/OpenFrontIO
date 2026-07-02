@@ -150,7 +150,19 @@ export type PublicGames = z.infer<typeof PublicGamesSchema>;
 export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
 export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
 
-export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
+export const PublicGameTypeSchema = z.enum([
+  "ffa",
+  "team",
+  "special",
+  "hosted",
+]);
+
+// Lobby types the master schedules from the map playlist. "hosted" is
+// excluded: those are player-created private lobbies that a subscriber has
+// listed publicly, and the host (not the master) controls their lifecycle.
+export const SCHEDULED_PUBLIC_GAME_TYPES = ["ffa", "team", "special"] as const;
+export type ScheduledPublicGameType =
+  (typeof SCHEDULED_PUBLIC_GAME_TYPES)[number];
 
 export const UsernameSchema = z
   .string()
@@ -186,11 +198,17 @@ export const PublicGameInfoSchema = z.object({
   startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
+  // Hosted lobbies only: hash of the creator's persistentID, used
+  // master<->worker to enforce one listed lobby per creator. Stripped by
+  // WorkerLobbyService before lobby info is sent to browser clients.
+  creatorID: z.string().optional(),
 });
 
 export const PublicGamesSchema = z.object({
   serverTime: z.number(),
-  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  // partialRecord: every consumer already treats buckets as optional, and it
+  // lets clients tolerate servers that don't send every lobby type.
+  games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 // Wire message sent from server to lobby WebSocket clients.
@@ -199,7 +217,7 @@ export const PublicGamesSchema = z.object({
 export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
   serverTime: z.number(),
-  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 export const PublicLobbyCountsSchema = z.object({

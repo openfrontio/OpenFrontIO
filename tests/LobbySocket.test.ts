@@ -124,6 +124,17 @@ describe("PublicLobbySocket.handleMessage", () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
+  it("patches counts onto hosted lobbies too", () => {
+    const { callback, dispatch } = makeSocket();
+    dispatch(fullMessage(1000, { hosted: [lobby("h1", 2, "hosted")] }));
+    callback.mockClear();
+
+    dispatch(countsMessage(1500, { h1: 6 }));
+
+    const arg = callback.mock.calls[0][0];
+    expect(arg.games.hosted).toEqual([lobby("h1", 6, "hosted")]);
+  });
+
   it("does not mutate the previously-delivered snapshot when applying counts", () => {
     const { callback, dispatch } = makeSocket();
     dispatch(fullMessage(1000, { ffa: [lobby("g1", 3)] }));
