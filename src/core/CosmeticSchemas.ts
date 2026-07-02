@@ -149,22 +149,37 @@ export const NUKE_EXPLOSION_TYPES = ["atom", "hydro", "mirvWarhead"] as const;
 export type NukeExplosionType = (typeof NUKE_EXPLOSION_TYPES)[number];
 
 // A nuke-explosion effect — a detonation FX, not a trail. `type` picks the
-// visual (only "shockwave" today) and `nukeType` the bomb; both are enums so an
-// effect using a value this client can't render is dropped by lenientRecord
-// instead of rendering wrong. `colors` is the palette; size (final ring width
-// in tiles), speed (tiles/s the width grows), thickness (ring band thickness
-// in tiles), and transitionSpeed (palette colors/s) drive the animation. size
-// and thickness must be positive — a non-positive value hits undefined shader
-// behavior, so the entry is dropped like the enums; the renderer clamps speed.
-export const NukeExplosionAttributesSchema = z.object({
-  type: z.enum(["shockwave"]),
-  nukeType: z.enum(NUKE_EXPLOSION_TYPES),
-  colors: z.array(z.string()),
-  size: z.number().positive(),
-  speed: z.number(),
-  thickness: z.number().positive(),
-  transitionSpeed: z.number(),
-});
+// visual (an expanding "shockwave" ring, or a firework burst of twinkling
+// "sparkles") and `nukeType` the bomb; a value this client can't render is
+// dropped by lenientRecord instead of rendering wrong. Shared knobs:
+// `colors` is the palette; size (final effect width in tiles), speed (tiles/s
+// the width grows), thickness (ring band thickness — or average sparkle size,
+// glints vary ±50% around it — in tiles), and transitionSpeed (palette
+// colors/s) drive the animation. Sparkles also take density — roughly how
+// many sparkles the burst contains. size, thickness, and density must be
+// positive — a non-positive value hits undefined shader behavior, so the
+// entry is dropped like the enums; the renderer clamps speed and density.
+export const NukeExplosionAttributesSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("shockwave"),
+    nukeType: z.enum(NUKE_EXPLOSION_TYPES),
+    colors: z.array(z.string()),
+    size: z.number().positive(),
+    speed: z.number(),
+    thickness: z.number().positive(),
+    transitionSpeed: z.number(),
+  }),
+  z.object({
+    type: z.literal("sparkles"),
+    nukeType: z.enum(NUKE_EXPLOSION_TYPES),
+    colors: z.array(z.string()),
+    size: z.number().positive(),
+    speed: z.number(),
+    thickness: z.number().positive(),
+    transitionSpeed: z.number(),
+    density: z.number().positive(),
+  }),
+]);
 
 const TransportShipTrailEffectSchema = CosmeticSchema.extend({
   effectType: z.literal("transportShipTrail"),

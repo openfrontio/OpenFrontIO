@@ -170,3 +170,142 @@ export class ShockwaveSwatch extends LitElement {
     this.animations = [];
   }
 }
+
+// Deterministic 0..1 from an index (shader-style hash) so dot positions are
+// stable across re-renders without storing state. The fixed offsets below
+// (101/211/307) decouple the position/twinkle/size hashes from the dot count.
+function dotRand(n: number): number {
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Preview of a nuke-explosion sparkles burst: a firework — dots start at the
+ * center and ride outward (the whole burst scales up, mirroring the in-game
+ * front-normalized anchoring), twinkling on the way and fading at the end of
+ * the loop. Loop duration is size / speed (clamped watchable), dot count
+ * follows density, dot size follows thickness/size, and each dot takes a
+ * palette color by index; the colors cycle at transitionSpeed steps/s
+ * (negative = reverse), like in game.
+ */
+@customElement("sparkles-swatch")
+export class SparklesSwatch extends LitElement {
+  @property({ attribute: false })
+  explosion: NukeExplosionAttributes | null = null;
+
+  private animations: Animation[] = [];
+
+  // Light DOM so the shared Tailwind classes apply.
+  createRenderRoot(): HTMLElement {
+    return this;
+  }
+
+  // Dot count follows the cosmetic's density (≈ total glints in the burst),
+  // clamped to keep the DOM preview cheap.
+  private dotCount(): number {
+    const attrs = this.explosion;
+    const density = attrs?.type === "sparkles" ? attrs.density : 10;
+    return Math.round(Math.min(Math.max(density, 4), 40));
+  }
+
+  render(): TemplateResult {
+    // Dots are positioned on a uniform disc (sqrt for area-uniformity) at
+    // deterministic hashed angles, as a fraction of the container.
+    return html`<div data-box class="relative w-full h-full overflow-hidden">
+      ${Array.from({ length: this.dotCount() }, (_, i) => {
+        const ang = dotRand(i) * 2 * Math.PI;
+        const dist = Math.sqrt(dotRand(i + 101)) * 42; // % of box
+        const left = 50 + Math.cos(ang) * dist;
+        const top = 50 + Math.sin(ang) * dist;
+        return html`<div
+          data-dot
+          class="absolute rounded-full"
+          style="left:${left}%;top:${top}%;transform:translate(-50%,-50%);opacity:0;"
+        ></div>`;
+      })}
+    </div>`;
+  }
+
+  updated(changed: Map<string, unknown>): void {
+    if (!changed.has("explosion")) return;
+    for (const a of this.animations) a.cancel();
+    this.animations = [];
+
+    const attrs = this.explosion;
+    const box = this.querySelector<HTMLElement>("[data-box]");
+    if (!attrs || !box) return;
+    const dots = this.querySelectorAll<HTMLElement>("[data-dot]");
+    if (dots.length === 0) return;
+    const colors =
+      attrs.colors.length > 0 ? attrs.colors : [DEFAULT_RING_COLOR];
+
+    // Average dot size ∝ thickness/size, measured against the tile, like the
+    // ring's border thickness; each dot varies ±50% around it, like in game.
+    const d = box.clientWidth || 100;
+    const ratio = attrs.size > 0 ? attrs.thickness / attrs.size : 0.05;
+    const px = Math.min(Math.max(ratio * d, 3), d / 4);
+
+    // One loop = the in-game pace (size / speed seconds), clamped watchable.
+    const durS = Math.min(
+      Math.max(attrs.size / Math.max(attrs.speed, 0.001), 0.6),
+      3,
+    );
+
+    // The whole burst expands from the center — dots keep their layout
+    // positions and the container scales up, so each dot rides outward
+    // radially (matching the shader's front-normalized anchoring) — and
+    // everything fades together at the end of the loop.
+    this.animations.push(
+      box.animate(
+        [
+          { transform: "scale(0.05)", opacity: 1, offset: 0 },
+          { transform: "scale(1)", opacity: 1, offset: 0.75 },
+          { transform: "scale(1)", opacity: 0, offset: 1 },
+        ],
+        { duration: durS * 1000, iterations: Infinity, easing: "linear" },
+      ),
+    );
+
+    dots.forEach((dot, i) => {
+      const dotPx = px * (0.5 + dotRand(i + 307));
+      dot.style.width = `${dotPx}px`;
+      dot.style.height = `${dotPx}px`;
+      dot.style.backgroundColor = colors[i % colors.length];
+
+      // Continuous twinkle on a hashed phase, independent of the loop. Kept
+      // shallow — in game the glints stay opaque and twinkle in brightness.
+      this.animations.push(
+        dot.animate([{ opacity: 1 }, { opacity: 0.65 }, { opacity: 1 }], {
+          duration: (0.5 + dotRand(i + 211) * 0.6) * 1000,
+          iterations: Infinity,
+          easing: "ease-in-out",
+        }),
+      );
+
+      // Palette cycle at transitionSpeed steps/s, rotated by the dot's own
+      // palette index (mirroring the shader's per-glint offset).
+      if (colors.length >= 2 && attrs.transitionSpeed !== 0) {
+        const list = attrs.transitionSpeed > 0 ? colors : [...colors].reverse();
+        const start = i % list.length;
+        const rotated = [...list.slice(start), ...list.slice(0, start)];
+        this.animations.push(
+          dot.animate(
+            [...rotated, rotated[0]].map((c) => ({ backgroundColor: c })),
+            {
+              duration:
+                (colors.length / Math.abs(attrs.transitionSpeed)) * 1000,
+              iterations: Infinity,
+              easing: "linear",
+            },
+          ),
+        );
+      }
+    });
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    for (const a of this.animations) a.cancel();
+    this.animations = [];
+  }
+}

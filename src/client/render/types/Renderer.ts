@@ -128,23 +128,34 @@ export const MAX_NUKE_EXPLOSION_COLORS = 4;
 
 /**
  * A firing player's nuke-explosion cosmetic, resolved from catalog attributes
- * into renderer-ready values. `colors` is the palette the effect cycles
- * through (1..MAX_NUKE_EXPLOSION_COLORS rgb in 0..1, never empty);
- * maxRadius is the ring's final radius in world tiles when it fades out
+ * into renderer-ready values. `type` picks the visual — an expanding
+ * "shockwave" ring, or a firework burst of twinkling "sparkles" that ride
+ * outward from the center with the expanding front.
+ * `colors` is the palette the effect cycles through
+ * (1..MAX_NUKE_EXPLOSION_COLORS rgb in 0..1, never empty);
+ * maxRadius is the effect's final radius in world tiles when it fades out
  * (absolute — it does NOT scale with the bomb's blast radius); speed is the
- * rate the ring's width grows in world tiles/s (the effect lasts
- * 2·maxRadius / speed seconds); thickness is the ring band's thickness in
- * world tiles (constant while the ring expands); transitionSpeed is the
- * palette step rate in colors/s (0 = static first color, negative = reverse
- * cycle) — same semantics as the trail shader's transition frequency.
+ * rate the effect's width grows in world tiles/s (the effect lasts
+ * 2·maxRadius / speed seconds); thickness is the ring band's thickness — or
+ * the average sparkle size, glints hash-vary ±50% around it — in world tiles
+ * (constant while the effect expands);
+ * transitionSpeed is the palette step rate in colors/s (0 = static, negative
+ * = reverse cycle) — same semantics as the trail shader's transition
+ * frequency (sparkles hash a per-sparkle palette offset on top).
+ * Sparkles additionally carry density — roughly the total number of glints
+ * in the burst (the renderer derives its grid pitch from it, clamped sane).
  */
-export interface NukeExplosionRenderParams {
+interface NukeExplosionRenderParamsBase {
   colors: readonly (readonly [number, number, number])[];
   maxRadius: number;
   speed: number;
   thickness: number;
   transitionSpeed: number;
 }
+
+export type NukeExplosionRenderParams =
+  | (NukeExplosionRenderParamsBase & { type: "shockwave" })
+  | (NukeExplosionRenderParamsBase & { type: "sparkles"; density: number });
 
 /** Default nuke-explosion color (purple) when a cosmetic has no usable color. */
 export const DEFAULT_NUKE_EXPLOSION_COLOR: readonly [number, number, number] = [

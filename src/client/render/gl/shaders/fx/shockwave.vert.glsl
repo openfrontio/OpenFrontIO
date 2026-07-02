@@ -3,7 +3,7 @@ precision highp float;
 
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec4 aInstData; // x, y, radius, alpha
-layout(location = 2) in float aStyle;   // 1.0 = EMP energy pulse, 0.0 = classic ring
+layout(location = 2) in float aStyle;   // 0 = classic ring, 1 = EMP pulse, 2 = sparkles
 layout(location = 3) in vec3 aColor0;   // EMP: palette color 0
 layout(location = 4) in vec3 aColor1;   // EMP: palette color 1
 layout(location = 5) in vec3 aColor2;   // EMP: palette color 2
@@ -12,6 +12,7 @@ layout(location = 7) in float aColorCount; // active palette size (1..4)
 layout(location = 8) in float aSpeed;   // animation-speed multiplier
 layout(location = 9) in float aTransSpeed; // palette step rate (colors/s)
 layout(location = 10) in float aThickness; // EMP: ring band thickness (world tiles)
+layout(location = 11) in float aCell;   // sparkles: grid pitch (front-normalized)
 
 uniform mat3 uCamera;
 
@@ -26,6 +27,7 @@ flat out float vColorCount;
 flat out float vSpeed;
 flat out float vTransSpeed;
 flat out float vThickness;
+flat out float vCell;
 flat out float vRadius;  // current ring radius (world tiles) — converts
                          // absolute thickness into local ring units
 
@@ -45,6 +47,7 @@ void main() {
   vSpeed = aSpeed;
   vTransSpeed = aTransSpeed;
   vThickness = aThickness;
+  vCell = aCell;
   vRadius = r;
 
   // Quad extent: ring radius plus the full band thickness. The band is

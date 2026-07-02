@@ -32,21 +32,22 @@ interface ActiveShockwave {
   startMs: number;
   durationMs: number;
   maxRadius: number;
-  style: number; // 0 = classic ring (SAM + no-cosmetic nuke), 1 = EMP
+  style: number; // 0 = classic ring (SAM + no-cosmetic nuke), 1 = EMP, 2 = sparkles
   colors: readonly RGB[]; // 1..MAX_NUKE_EXPLOSION_COLORS palette, never empty
   speed: number; // crackle-animation multiplier (effect pace vs the default)
   transitionSpeed: number; // palette step rate (colors/s); 0 = static, <0 = reverse
-  thickness: number; // EMP ring band thickness (world tiles); unused by classic
+  thickness: number; // ring band / avg sparkle size (world tiles); unused by classic
+  cell: number; // sparkles grid pitch (front-normalized); 0 for other styles
 }
 
 // ---------------------------------------------------------------------------
-// Instance data layout (21 floats):
+// Instance data layout (22 floats):
 //   x, y, radius, alpha, style, color0..color3 (rgb each), colorCount, speed,
-//   transitionSpeed, thickness. Unused color slots repeat the last palette
-//   color so the shader can take a max over all four.
+//   transitionSpeed, thickness, cell. Unused color slots repeat the last
+//   palette color so the shader can take a max over all four.
 // ---------------------------------------------------------------------------
 
-const SHOCKWAVE_FLOATS = 21;
+const SHOCKWAVE_FLOATS = 22;
 const SHOCKWAVE_STRIDE = SHOCKWAVE_FLOATS * 4; // bytes
 
 // ---------------------------------------------------------------------------
@@ -103,7 +104,7 @@ export class FxShockwavePass {
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 4, gl.FLOAT, false, SHOCKWAVE_STRIDE, 0);
     gl.vertexAttribDivisor(1, 1);
-    // location 2: style (0 classic, 1 EMP)
+    // location 2: style (0 classic, 1 EMP, 2 sparkles)
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 16);
     gl.vertexAttribDivisor(2, 1);
@@ -136,6 +137,10 @@ export class FxShockwavePass {
     gl.enableVertexAttribArray(10);
     gl.vertexAttribPointer(10, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 80);
     gl.vertexAttribDivisor(10, 1);
+    // location 11: cell (sparkles grid pitch)
+    gl.enableVertexAttribArray(11);
+    gl.vertexAttribPointer(11, 1, gl.FLOAT, false, SHOCKWAVE_STRIDE, 84);
+    gl.vertexAttribDivisor(11, 1);
 
     gl.bindVertexArray(null);
   }
@@ -167,6 +172,15 @@ export class FxShockwavePass {
     // The shader's crackle animation runs on a multiplier of real time; pace
     // it to how fast this effect plays relative to the default duration.
     const speed = fx.nukeShockwaveDurationMs / durationMs;
+    // Sparkles: density ≈ total glints in the burst. The unit disc holds
+    // π/cell² grid cells and ~2/3 survive dropout, so cell = √((2π/3)/d).
+    // Clamped so a bad catalog value can't degenerate into per-pixel noise
+    // or an empty burst.
+    let cell = 0;
+    if (params?.type === "sparkles") {
+      const density = Math.min(Math.max(params.density, 2), 5000);
+      cell = Math.sqrt((2 * Math.PI) / 3 / density);
+    }
     this.active.push({
       x,
       y,
@@ -175,12 +189,14 @@ export class FxShockwavePass {
       // Cosmetic maxRadius is absolute (world tiles); the default look scales
       // with the bomb's blast radius.
       maxRadius: params?.maxRadius ?? nukeRadius * fx.nukeShockwaveRadiusFactor,
-      // Cosmetic → EMP; no cosmetic → classic ring (the original nuke look).
-      style: params ? 1 : 0,
+      // Cosmetic type → its style; no cosmetic → classic ring (the original
+      // nuke look).
+      style: params ? (params.type === "sparkles" ? 2 : 1) : 0,
       colors: params?.colors ?? [DEFAULT_NUKE_EXPLOSION_COLOR],
       speed,
       transitionSpeed: params?.transitionSpeed ?? 0,
       thickness: params?.thickness ?? 0,
+      cell,
     });
   }
 
@@ -197,6 +213,7 @@ export class FxShockwavePass {
       speed: 1,
       transitionSpeed: 0,
       thickness: 0, // classic style uses uRingWidth
+      cell: 0,
     });
   }
 
@@ -244,6 +261,7 @@ export class FxShockwavePass {
       data[off + 18] = sw.speed;
       data[off + 19] = sw.transitionSpeed;
       data[off + 20] = sw.thickness;
+      data[off + 21] = sw.cell;
     }
 
     this.shockwaveCount = count;
