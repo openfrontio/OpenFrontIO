@@ -1048,6 +1048,9 @@ export class GameView implements GameMap {
   config(): Config {
     return this._config;
   }
+  isSpectator(): boolean {
+    return !this.myPlayer()?.isAlive() || this._config.isReplay();
+  }
   units(...types: UnitType[]): UnitView[] {
     if (types.length === 0) {
       return Array.from(this._units.values()).filter((u) => u.isActive());
