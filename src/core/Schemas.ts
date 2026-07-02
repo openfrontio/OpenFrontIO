@@ -251,28 +251,13 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 // Doomsday Clock (anti-stall). Below a rising share of the map a player (or, in
 // team modes, their whole team) gets skulled and their troops drain to zero. The
-// required share rises in discrete waves (levels + times per `speed`, see
-// DoomsdayClock.ts); a side caught below a new wave gets a warnSeconds cooldown
-// before decay. Off unless `enabled`. Times in seconds, all integers so the sim
-// stays deterministic.
-export const DoomsdayClockConfigSchema = z
-  .object({
-    enabled: z.boolean().optional(),
-    speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
-    warnSeconds: z.number().int().min(0).optional(),
-    drainStartPercent: z.number().int().min(0).max(100).optional(),
-    drainMaxPercent: z.number().int().min(0).max(100).optional(),
-    drainRampSeconds: z.number().int().min(1).optional(),
-  })
-  // Reject a reversed pair (start > max), which would make the drain shrink
-  // over time instead of ramping up.
-  .refine(
-    (c) =>
-      c.drainStartPercent === undefined ||
-      c.drainMaxPercent === undefined ||
-      c.drainStartPercent <= c.drainMaxPercent,
-    { message: "drainStartPercent must be <= drainMaxPercent" },
-  );
+// required share rises in discrete waves per the `speed` preset (see
+// DoomsdayClock.ts). Only `enabled` and `speed` are wire-configurable; the
+// drain/warn tuning lives in DOOMSDAY_CLOCK_DEFAULTS (Config.ts).
+export const DoomsdayClockConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
+});
 
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),

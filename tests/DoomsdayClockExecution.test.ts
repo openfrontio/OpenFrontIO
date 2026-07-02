@@ -507,14 +507,11 @@ function giveLandTiles(game: Game, player: Player, n: number): number {
 }
 
 describe("DoomsdayClockExecution (integration)", () => {
-  // Steepest preset; we run past its grace (180s) into the waves.
+  // Steepest preset; we run past its grace (180s) into the waves. Drain tuning
+  // is internal now, so this exercises the default drain (warn 10s, 2%->6%/50s).
   const SD = {
     enabled: true,
     speed: "veryfast" as const,
-    warnSeconds: 1,
-    drainStartPercent: 25,
-    drainMaxPercent: 80,
-    drainRampSeconds: 5,
   };
   const TICKS = 3000; // 300s of game time -> veryfast holding its 3% wave
 

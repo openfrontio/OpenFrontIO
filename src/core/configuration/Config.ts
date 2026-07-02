@@ -125,10 +125,11 @@ export class Config {
     return {
       enabled: c?.enabled ?? d.enabled,
       speed: c?.speed ?? d.speed,
-      warnSeconds: c?.warnSeconds ?? d.warnSeconds,
-      drainStartPercent: c?.drainStartPercent ?? d.drainStartPercent,
-      drainMaxPercent: c?.drainMaxPercent ?? d.drainMaxPercent,
-      drainRampSeconds: c?.drainRampSeconds ?? d.drainRampSeconds,
+      // Drain/warn tuning is internal (not wire-configurable): always defaults.
+      warnSeconds: d.warnSeconds,
+      drainStartPercent: d.drainStartPercent,
+      drainMaxPercent: d.drainMaxPercent,
+      drainRampSeconds: d.drainRampSeconds,
     };
   }
   spawnImmunityDuration(): Tick {
