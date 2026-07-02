@@ -1,4 +1,4 @@
-import { TemplateResult, html } from "lit";
+import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
@@ -9,6 +9,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  maps,
   UnitType,
 } from "../core/game/Game";
 import { TeamCountConfig } from "../core/Schemas";
@@ -18,6 +19,7 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
+import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics } from "./Cosmetics";
@@ -61,6 +63,38 @@ const DEFAULT_OPTIONS = {
   waterNukes: false,
 } as const;
 
+// A map earns achievements only if it has nations to conquer — the same rule
+// MapDisplay uses to decide whether to draw medals. Maps without nations (e.g.
+// Baikal Nuke Wars) must be excluded from the medal totals. The manifests are
+// fetched once and cached for the page session; concurrent callers share the
+// in-flight promise so we never fetch them twice.
+let eligibleMapsCache: Set<GameMapType> | null = null;
+let eligibleMapsPromise: Promise<Set<GameMapType>> | null = null;
+
+async function loadAchievementEligibleMaps(): Promise<Set<GameMapType>> {
+  if (eligibleMapsCache) return eligibleMapsCache;
+  eligibleMapsPromise ??= (async () => {
+    const eligible = new Set<GameMapType>();
+    await Promise.all(
+      maps.map(async (m) => {
+        try {
+          const manifest = await terrainMapFileLoader
+            .getMapData(m.type)
+            .manifest();
+          if (manifest.nations.length > 0) {
+            eligible.add(m.type);
+          }
+        } catch {
+          // Skip maps whose manifest fails to load rather than miscount them.
+        }
+      }),
+    );
+    eligibleMapsCache = eligible;
+    return eligible;
+  })();
+  return eligibleMapsPromise;
+}
+
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
   protected routerName = "single-player";
@@ -84,6 +118,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private teamCount: TeamCountConfig = DEFAULT_OPTIONS.teamCount;
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
+  // Maps that support achievements (have nations). null until loaded — the
+  // medal overview shows a placeholder total meanwhile.
+  @state() private eligibleMaps: Set<GameMapType> | null = null;
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private goldMultiplier: boolean = DEFAULT_OPTIONS.goldMultiplier;
   @state() private goldMultiplierValue: number | undefined =
@@ -119,7 +156,28 @@ export class SinglePlayerModal extends BaseModal {
 
   private toggleAchievements = () => {
     this.showAchievements = !this.showAchievements;
+    if (this.showAchievements) void this.ensureEligibleMaps();
   };
+
+  private async ensureEligibleMaps() {
+    if (this.eligibleMaps) return;
+    this.eligibleMaps = await loadAchievementEligibleMaps();
+  }
+
+  // Medals earned per difficulty, counted only on achievement-eligible maps.
+  private medalCounts(): Record<Difficulty, number> {
+    const counts: Record<Difficulty, number> = {
+      [Difficulty.Easy]: 0,
+      [Difficulty.Medium]: 0,
+      [Difficulty.Hard]: 0,
+      [Difficulty.Impossible]: 0,
+    };
+    for (const [map, difficulties] of this.mapWins) {
+      if (this.eligibleMaps && !this.eligibleMaps.has(map)) continue;
+      for (const difficulty of difficulties) counts[difficulty]++;
+    }
+    return counts;
+  }
 
   private handleUserMeResponse = (
     event: CustomEvent<UserMeResponse | false>,
@@ -178,24 +236,72 @@ export class SinglePlayerModal extends BaseModal {
       ariaLabel: translateText("common.back"),
       rightContent: hasLinkedAccount(this.userMeResponse)
         ? html`<button
-            @click=${this.toggleAchievements}
-            class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
-              .showAchievements
-              ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-              : "text-white/60"}"
-          >
-            <img
-              src=${assetUrl("images/MedalIconWhite.svg")}
-              class="w-4 h-4 opacity-80 shrink-0"
-              style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
-            />
-            <span
-              class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
-              >${translateText("single_modal.toggle_achievements")}</span
+              @click=${this.toggleAchievements}
+              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
+                .showAchievements
+                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                : "text-white/60"}"
             >
-          </button>`
+              <img
+                src=${assetUrl("images/MedalIconWhite.svg")}
+                class="w-4 h-4 opacity-80 shrink-0"
+                style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
+              />
+              <span
+                class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+                >${translateText("single_modal.toggle_achievements")}</span
+              >
+            </button>
+            ${this.showAchievements ? this.renderMedalOverview() : null}`
         : this.renderNotLoggedInBanner(),
     });
+  }
+
+  // Compact summary that expands under the header while achievements are on:
+  // each colored medal with how many maps you've earned it on, plus the shared
+  // "out of N maps" total (N = achievement-eligible maps).
+  private renderMedalOverview(): TemplateResult {
+    const counts = this.medalCounts();
+    const total = this.eligibleMaps?.size ?? null;
+    return html`<div class="basis-full w-full">
+      <div
+        class="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5 rounded-xl border border-yellow-500/20 bg-yellow-500/5"
+      >
+        <span
+          class="text-[11px] font-bold uppercase tracking-wider text-yellow-400/80 shrink-0"
+        >
+          ${translateText("single_modal.medals_earned")}
+        </span>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          ${MEDAL_ORDER.map((difficulty) =>
+            this.renderMedalStat(difficulty, counts[difficulty]),
+          )}
+        </div>
+        <span
+          class="ml-auto text-[11px] font-semibold uppercase tracking-wider text-white/40 shrink-0"
+        >
+          ${translateText("single_modal.medals_of_maps", {
+            total: total ?? "…",
+          })}
+        </span>
+      </div>
+    </div>`;
+  }
+
+  private renderMedalStat(
+    difficulty: Difficulty,
+    count: number,
+  ): TemplateResult {
+    return html`<div
+      class="flex items-center gap-1.5"
+      title=${translateText(`difficulty.${difficulty.toLowerCase()}`)}
+    >
+      ${medalIcon(difficulty, "w-4 h-4")}
+      <span class="text-xs font-medium text-white/50 hidden sm:inline"
+        >${translateText(`difficulty.${difficulty.toLowerCase()}`)}</span
+      >
+      <span class="text-sm font-bold text-white tabular-nums">${count}</span>
+    </div>`;
   }
 
   protected renderBody() {
