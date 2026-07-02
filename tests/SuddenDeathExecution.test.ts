@@ -375,14 +375,16 @@ describe("suddenDeathRequiredTiles (ramping waves)", () => {
     expect(suddenDeathRequiredTiles("normal", land, 600)).toBe(300); // ramp done -> 3%
     expect(suddenDeathRequiredTiles("normal", land, 615)).toBe(300); // pause holds 3%
     expect(suddenDeathRequiredTiles("normal", land, 630)).toBe(300); // next ramp starts at 3%
-    expect(suddenDeathRequiredTiles("normal", land, 9999)).toBe(3000); // final 30%
+    expect(suddenDeathRequiredTiles("normal", land, 9999)).toBe(5500); // final 55%
   });
 
-  it("reaches 30% at each preset's own end time", () => {
-    expect(suddenDeathRequiredTiles("normal", land, 1800)).toBe(3000); // 30:00
-    expect(suddenDeathRequiredTiles("fast", land, 1440)).toBe(3000); // 24:00
-    expect(suddenDeathRequiredTiles("veryfast", land, 900)).toBe(3000); // 15:00
-    expect(suddenDeathRequiredTiles("slow", land, 2160)).toBe(3000); // 36:00
+  it("passes 30% then reaches the final 55% squeeze per preset", () => {
+    // 30% waypoint, then the 6th wave to 55% one cycle later.
+    expect(suddenDeathRequiredTiles("normal", land, 1800)).toBe(3000); // 30% @ 30:00
+    expect(suddenDeathRequiredTiles("normal", land, 2100)).toBe(5500); // 55% @ 35:00
+    expect(suddenDeathRequiredTiles("fast", land, 1680)).toBe(5500); // 55% @ 28:00
+    expect(suddenDeathRequiredTiles("veryfast", land, 1050)).toBe(5500); // 55% @ 17:30
+    expect(suddenDeathRequiredTiles("slow", land, 2520)).toBe(5500); // 55% @ 42:00
   });
 
   it("never decreases, and is zero for no land", () => {
@@ -442,9 +444,9 @@ describe("suddenDeathWaveState", () => {
   });
 
   it("marks done after the last ramp", () => {
-    const s = suddenDeathWaveState("veryfast", 950); // last ramp done (@900) = 30%
+    const s = suddenDeathWaveState("veryfast", 1100); // past the final ramp (@1050) = 55%
     expect(s.done).toBe(true);
-    expect(s.currentPercent).toBe(30);
+    expect(s.currentPercent).toBe(55);
     expect(s.secondsToNextGrowth).toBe(0);
   });
 });

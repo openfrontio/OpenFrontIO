@@ -35,34 +35,36 @@ interface WaveSchedule {
 // Grace once, then a repeating cycle of [ramp up over rampSeconds] + [hold for
 // pauseSeconds]. The share rises linearly during each ramp and is flat during
 // the grace and every pause. Easy to tune: change grace, ramp, pause, or levels.
-// Same 3/5/10/20/30% levels everywhere (the ofstats FFA territory median); the
-// presets only change the pace. normal hits the median dead on: 3% at 10:00, 5%
-// at 15, 10% at 20, 20% at 25, 30% at 30. slow is ~20% slower, fast ~20% faster
-// (done by 24:00), very fast 50% faster (done by 15:00).
-const LEVELS = [300, 500, 1000, 2000, 3000]; // 3, 5, 10, 20, 30%
+// Same levels everywhere (the ofstats FFA territory median, then a final 55%
+// squeeze); the presets only change the pace. The median run is 3/5/10/20/30%;
+// normal hits it dead on at 10/15/20/25/30 min. The 6th wave (55%) only one side
+// can hold, so — together with the crown exemption — it forces out everyone but
+// the leader for a single winner. slow is ~20% slower, fast ~20% faster, very
+// fast 50% faster.
+const LEVELS = [300, 500, 1000, 2000, 3000, 5500]; // 3, 5, 10, 20, 30, 55%
 const SCHEDULES: Record<SuddenDeathSpeed, WaveSchedule> = {
-  // grace 5:30, 4:30 ramps + 30s pauses -> 3/5/10/20/30% at 10/15/20/25/30 min.
+  // grace 5:30, 4:30 ramps + 30s pauses -> 3/5/10/20/30/55% at 10/15/20/25/30/35 min.
   normal: {
     graceSeconds: 330,
     rampSeconds: 270,
     pauseSeconds: 30,
     levels: LEVELS,
   },
-  // grace 6:30, 5:30 ramps -> reaches at 12/18/24/30/36 min.
+  // grace 6:30, 5:30 ramps -> reaches at 12/18/24/30/36/42 min.
   slow: {
     graceSeconds: 390,
     rampSeconds: 330,
     pauseSeconds: 30,
     levels: LEVELS,
   },
-  // grace 4:30, 3:30 ramps -> reaches at 8/12/16/20/24 min.
+  // grace 4:30, 3:30 ramps -> reaches at 8/12/16/20/24/28 min.
   fast: {
     graceSeconds: 270,
     rampSeconds: 210,
     pauseSeconds: 30,
     levels: LEVELS,
   },
-  // grace 3:00, 2:00 ramps -> reaches at 5/7:30/10/12:30/15 min.
+  // grace 3:00, 2:00 ramps -> reaches at 5/7:30/10/12:30/15/17:30 min.
   veryfast: {
     graceSeconds: 180,
     rampSeconds: 120,
