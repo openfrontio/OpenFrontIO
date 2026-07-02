@@ -538,11 +538,11 @@ export interface Player {
   isAlive(): boolean;
   isTraitor(): boolean;
   markTraitor(): void;
-  // OFM sudden-death (anti-stall): marked when below the rising territory bar.
-  inSuddenDeath(): boolean;
-  suddenDeathTicks(): number;
-  enterSuddenDeath(): void;
-  clearSuddenDeath(): void;
+  // OFM doomsday-clock (anti-stall): marked when below the rising territory bar.
+  inDoomsdayClock(): boolean;
+  doomsdayClockTicks(): number;
+  enterDoomsdayClock(): void;
+  clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 

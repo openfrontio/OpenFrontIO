@@ -62,8 +62,8 @@ export interface PlayerState {
   troops: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;
-  inSuddenDeath: boolean;
-  markedSuddenDeathTick: number;
+  inDoomsdayClock: boolean;
+  markedDoomsdayClockTick: number;
   betrayals: number;
   hasSpawned: boolean;
   /** TileRef the player picked as their spawn (undefined if not yet spawned). */
@@ -145,8 +145,8 @@ export interface PlayerStatusData {
   embargo: boolean;
   nukeActive: boolean;
   nukeTargetsMe: boolean;
-  inSuddenDeath: boolean;
-  suddenDeathDraining: boolean;
+  inDoomsdayClock: boolean;
+  doomsdayClockDraining: boolean;
   traitorRemainingTicks: number;
   allianceFraction: number;
   allianceRemainingTicks: number;

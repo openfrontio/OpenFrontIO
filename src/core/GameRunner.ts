@@ -1,9 +1,9 @@
 import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
+import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
-import { SuddenDeathExecution } from "./execution/SuddenDeathExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -113,7 +113,7 @@ export class GameRunner {
       );
     }
     this.game.addExecution(new WinCheckExecution());
-    this.game.addExecution(new SuddenDeathExecution());
+    this.game.addExecution(new DoomsdayClockExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(
         new RecomputeRailClusterExecution(this.game.railNetwork()),

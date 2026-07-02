@@ -98,7 +98,7 @@ export class PlayerImpl implements Player {
   private _troops: bigint;
 
   markedTraitorTick = -1;
-  markedSuddenDeathTick = -1;
+  markedDoomsdayClockTick = -1;
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
@@ -316,8 +316,8 @@ export class PlayerImpl implements Player {
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
-      inSuddenDeath: this.inSuddenDeath(),
-      markedSuddenDeathTick: this.markedSuddenDeathTick,
+      inDoomsdayClock: this.inDoomsdayClock(),
+      markedDoomsdayClockTick: this.markedDoomsdayClockTick,
       targets: targets,
       outgoingEmojis: outgoingEmojis,
       outgoingAttacks: outgoingAttacks,
@@ -744,28 +744,28 @@ export class PlayerImpl implements Player {
     this.mg.stats().betray(this);
   }
 
-  // A dead player is never "in sudden death": nothing clears the mark on death
+  // A dead player is never "in doomsday clock": nothing clears the mark on death
   // (the execution only processes alive contenders), so gate on isAlive() to
   // avoid a stuck skull/panel and per-tick update churn for eliminated players.
-  inSuddenDeath(): boolean {
-    return this.isAlive() && this.markedSuddenDeathTick >= 0;
+  inDoomsdayClock(): boolean {
+    return this.isAlive() && this.markedDoomsdayClockTick >= 0;
   }
 
-  // Ticks spent continuously below the sudden-death bar (0 when not marked or dead).
-  suddenDeathTicks(): number {
-    return this.inSuddenDeath()
-      ? this.mg.ticks() - this.markedSuddenDeathTick
+  // Ticks spent continuously below the doomsday-clock bar (0 when not marked or dead).
+  doomsdayClockTicks(): number {
+    return this.inDoomsdayClock()
+      ? this.mg.ticks() - this.markedDoomsdayClockTick
       : 0;
   }
 
-  enterSuddenDeath(): void {
-    if (this.markedSuddenDeathTick < 0) {
-      this.markedSuddenDeathTick = this.mg.ticks();
+  enterDoomsdayClock(): void {
+    if (this.markedDoomsdayClockTick < 0) {
+      this.markedDoomsdayClockTick = this.mg.ticks();
     }
   }
 
-  clearSuddenDeath(): void {
-    this.markedSuddenDeathTick = -1;
+  clearDoomsdayClock(): void {
+    this.markedDoomsdayClockTick = -1;
   }
 
   betrayals(): number {

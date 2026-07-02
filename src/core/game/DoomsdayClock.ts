@@ -1,6 +1,6 @@
 /**
- * Sudden-death threshold math, shared by the authoritative sim
- * (SuddenDeathExecution) and the client HUD readout so the two always agree.
+ * Doomsday Clock threshold math, shared by the authoritative sim
+ * (DoomsdayClockExecution) and the client HUD readout so the two always agree.
  *
  * The required share of the map rises in WAVES (a battle-royale zone): one flat
  * grace at the very start, then each wave grows the share up LINEARLY over
@@ -11,10 +11,10 @@
  * warn countdown, then bleeds troops. Integer-only and floored, deterministic.
  */
 
-export type SuddenDeathSpeed = "slow" | "normal" | "fast" | "veryfast";
+export type DoomsdayClockSpeed = "slow" | "normal" | "fast" | "veryfast";
 
 /** In selector order. */
-export const SUDDEN_DEATH_SPEEDS: SuddenDeathSpeed[] = [
+export const DOOMSDAY_CLOCK_SPEEDS: DoomsdayClockSpeed[] = [
   "slow",
   "normal",
   "fast",
@@ -42,7 +42,7 @@ interface WaveSchedule {
 // the leader for a single winner. slow is ~20% slower, fast ~20% faster, very
 // fast 50% faster.
 const LEVELS = [300, 500, 1000, 2000, 3000, 5500]; // 3, 5, 10, 20, 30, 55%
-const SCHEDULES: Record<SuddenDeathSpeed, WaveSchedule> = {
+const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
   // grace 5:30, 4:30 ramps + 30s pauses -> 3/5/10/20/30/55% at 10/15/20/25/30/35 min.
   normal: {
     graceSeconds: 330,
@@ -73,7 +73,7 @@ const SCHEDULES: Record<SuddenDeathSpeed, WaveSchedule> = {
   },
 };
 
-function schedule(speed: SuddenDeathSpeed): WaveSchedule {
+function schedule(speed: DoomsdayClockSpeed): WaveSchedule {
   return SCHEDULES[speed] ?? SCHEDULES.normal;
 }
 
@@ -82,7 +82,10 @@ function schedule(speed: SuddenDeathSpeed): WaveSchedule {
  * the grace, then a linear ramp to each successive level with a flat pause after
  * each. Integer-only (floored) so every client agrees.
  */
-function requiredBasisPoints(speed: SuddenDeathSpeed, elapsed: number): number {
+function requiredBasisPoints(
+  speed: DoomsdayClockSpeed,
+  elapsed: number,
+): number {
   const s = schedule(speed);
   if (elapsed <= s.graceSeconds) return 0;
   const cycle = s.rampSeconds + s.pauseSeconds;
@@ -100,8 +103,8 @@ function requiredBasisPoints(speed: SuddenDeathSpeed, elapsed: number): number {
  * Base minimum tiles one player must own at `elapsed` game seconds. One floored
  * integer ratio, so every client agrees.
  */
-export function suddenDeathRequiredTiles(
-  speed: SuddenDeathSpeed,
+export function doomsdayClockRequiredTiles(
+  speed: DoomsdayClockSpeed,
   land: number,
   elapsed: number,
 ): number {
@@ -115,17 +118,17 @@ export function suddenDeathRequiredTiles(
  * sides are size 1, i.e. unscaled). Capped at the whole map. Shared by the sim
  * and the HUD so the two always agree.
  */
-export function suddenDeathSideRequiredTiles(
-  speed: SuddenDeathSpeed,
+export function doomsdayClockSideRequiredTiles(
+  speed: DoomsdayClockSpeed,
   land: number,
   elapsed: number,
   sideSize: number,
 ): number {
-  const base = suddenDeathRequiredTiles(speed, land, elapsed);
+  const base = doomsdayClockRequiredTiles(speed, land, elapsed);
   return Math.min(land, base * Math.max(1, sideSize));
 }
 
-export interface SuddenDeathWaveState {
+export interface DoomsdayClockWaveState {
   /** Required share right now, as a percent of the map (ramps during a wave). */
   currentPercent: number;
   /** The share the current (or next) ramp climbs to. */
@@ -144,10 +147,10 @@ export interface SuddenDeathWaveState {
  * Display-only companion for the HUD: the live share, whether it is ramping or
  * holding, and the cue window. Lives here so the schedule is defined once.
  */
-export function suddenDeathWaveState(
-  speed: SuddenDeathSpeed,
+export function doomsdayClockWaveState(
+  speed: DoomsdayClockSpeed,
   elapsed: number,
-): SuddenDeathWaveState {
+): DoomsdayClockWaveState {
   const s = schedule(speed);
   const currentPercent = requiredBasisPoints(speed, elapsed) / 100;
   const cycle = s.rampSeconds + s.pauseSeconds;
@@ -194,7 +197,7 @@ export function suddenDeathWaveState(
   };
 }
 
-export interface SuddenDeathDrainConfig {
+export interface DoomsdayClockDrainConfig {
   drainStartPercent: number;
   drainMaxPercent: number;
   drainRampSeconds: number;
@@ -209,10 +212,10 @@ export interface SuddenDeathDrainConfig {
  * at the side's current troops (removeTroops does, and the HUD shows
  * min(current, this)). Shared by the sim and the HUD.
  */
-export function suddenDeathDrain(
+export function doomsdayClockDrain(
   maxTroops: number,
   secondsPastWarn: number,
-  cfg: SuddenDeathDrainConfig,
+  cfg: DoomsdayClockDrainConfig,
 ): number {
   const t = Math.max(0, secondsPastWarn);
   const r = cfg.drainRampSeconds;

@@ -1,5 +1,11 @@
+import { DoomsdayClockExecution } from "../src/core/execution/DoomsdayClockExecution";
 import { PlayerExecution } from "../src/core/execution/PlayerExecution";
-import { SuddenDeathExecution } from "../src/core/execution/SuddenDeathExecution";
+import {
+  doomsdayClockDrain,
+  doomsdayClockRequiredTiles,
+  doomsdayClockSideRequiredTiles,
+  doomsdayClockWaveState,
+} from "../src/core/game/DoomsdayClock";
 import {
   Game,
   GameMode,
@@ -8,12 +14,6 @@ import {
   Team,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
-import {
-  suddenDeathDrain,
-  suddenDeathRequiredTiles,
-  suddenDeathSideRequiredTiles,
-  suddenDeathWaveState,
-} from "../src/core/game/SuddenDeath";
 import { playerInfo, setup } from "./util/Setup";
 
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ import { playerInfo, setup } from "./util/Setup";
 
 const WAVE_TICK = 7600; // elapsed 760s -> veryfast 20% hold (bar 200 @ land 1000)
 
-type SDConfig = ReturnType<ReturnType<Game["config"]>["suddenDeathConfig"]>;
+type SDConfig = ReturnType<ReturnType<Game["config"]>["doomsdayClockConfig"]>;
 
 function sdConfig(over: Partial<SDConfig> = {}): SDConfig {
   return {
@@ -83,18 +83,18 @@ class FakePlayer {
     this.troopCount -= removed;
     return removed;
   }
-  // Mirrors PlayerImpl: a dead player is never in sudden death (the mark is
+  // Mirrors PlayerImpl: a dead player is never in doomsday clock (the mark is
   // never cleared on death, so both are gated on isAlive()).
-  inSuddenDeath(): boolean {
+  inDoomsdayClock(): boolean {
     return this.alive && this.markedTick >= 0;
   }
-  suddenDeathTicks(): number {
-    return this.inSuddenDeath() ? this.game.now - this.markedTick : 0;
+  doomsdayClockTicks(): number {
+    return this.inDoomsdayClock() ? this.game.now - this.markedTick : 0;
   }
-  enterSuddenDeath(): void {
+  enterDoomsdayClock(): void {
     if (this.markedTick < 0) this.markedTick = this.game.now;
   }
-  clearSuddenDeath(): void {
+  clearDoomsdayClock(): void {
     this.markedTick = -1;
   }
 }
@@ -124,7 +124,7 @@ class FakeGame {
   }
   config() {
     return {
-      suddenDeathConfig: () => this.sd,
+      doomsdayClockConfig: () => this.sd,
       gameConfig: () => ({ gameMode: this.gameMode }),
       maxTroops: (p: FakePlayer) => p.maxTroops(),
     };
@@ -132,18 +132,22 @@ class FakeGame {
 }
 
 // Advance the fake clock to a given tick (multiple of 10) and run the exec once.
-function runAt(exec: SuddenDeathExecution, game: FakeGame, tick: number): void {
+function runAt(
+  exec: DoomsdayClockExecution,
+  game: FakeGame,
+  tick: number,
+): void {
   game.now = tick;
   exec.tick(tick);
 }
 
-function makeExec(game: FakeGame): SuddenDeathExecution {
-  const exec = new SuddenDeathExecution();
+function makeExec(game: FakeGame): DoomsdayClockExecution {
+  const exec = new DoomsdayClockExecution();
   exec.init(game as unknown as Game, 0);
   return exec;
 }
 
-describe("SuddenDeathExecution (logic)", () => {
+describe("DoomsdayClockExecution (logic)", () => {
   // land 1000, veryfast 20% wave -> bar = 200 at WAVE_TICK.
   function twoPlayerGame(
     aTiles: number,
@@ -161,7 +165,7 @@ describe("SuddenDeathExecution (logic)", () => {
     const { game, b } = twoPlayerGame(400, 100, { enabled: false });
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(b.inSuddenDeath()).toBe(false);
+    expect(b.inDoomsdayClock()).toBe(false);
     expect(b.troops()).toBe(1000);
   });
 
@@ -170,7 +174,7 @@ describe("SuddenDeathExecution (logic)", () => {
     const { game, b } = twoPlayerGame(400, 100);
     const exec = makeExec(game);
     runAt(exec, game, 500); // elapsed 50s < 180s (grace)
-    expect(b.inSuddenDeath()).toBe(false);
+    expect(b.inDoomsdayClock()).toBe(false);
     expect(b.troops()).toBe(1000);
   });
 
@@ -178,15 +182,15 @@ describe("SuddenDeathExecution (logic)", () => {
     const { game, a, b } = twoPlayerGame(400, 100);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK); // bar = 200
-    expect(a.inSuddenDeath()).toBe(false);
-    expect(b.inSuddenDeath()).toBe(true);
+    expect(a.inDoomsdayClock()).toBe(false);
+    expect(b.inDoomsdayClock()).toBe(true);
   });
 
   it("warns before draining, then drains harder over time", () => {
     const { game, b } = twoPlayerGame(400, 100); // b below the 200 bar
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK); // flagged this tick, 0s under -> within the warn
-    expect(b.inSuddenDeath()).toBe(true);
+    expect(b.inDoomsdayClock()).toBe(true);
     expect(b.troops()).toBe(1000); // no drain yet
 
     runAt(exec, game, WAVE_TICK + 10); // 1s under -> 10% of max(1000) = 100
@@ -202,7 +206,7 @@ describe("SuddenDeathExecution (logic)", () => {
     for (let t = WAVE_TICK; t <= WAVE_TICK + 1000; t += 10)
       runAt(exec, game, t);
     expect(b.troops()).toBe(0);
-    expect(b.inSuddenDeath()).toBe(true);
+    expect(b.inDoomsdayClock()).toBe(true);
   });
 
   it("clears the mark and stops draining when a player climbs back above the bar", () => {
@@ -211,26 +215,26 @@ describe("SuddenDeathExecution (logic)", () => {
     runAt(exec, game, WAVE_TICK);
     runAt(exec, game, WAVE_TICK + 10); // drained once
     const afterDrain = b.troops();
-    expect(b.inSuddenDeath()).toBe(true);
+    expect(b.inDoomsdayClock()).toBe(true);
 
     b.tiles = 400; // recovered above the bar
     runAt(exec, game, WAVE_TICK + 20);
-    expect(b.inSuddenDeath()).toBe(false);
+    expect(b.inDoomsdayClock()).toBe(false);
     expect(b.troops()).toBe(afterDrain); // drain stopped
   });
 
   it("drops the mark once a flagged player dies (no stuck panel or churn)", () => {
-    // Nothing clears the mark on death, so inSuddenDeath()/suddenDeathTicks()
+    // Nothing clears the mark on death, so inDoomsdayClock()/doomsdayClockTicks()
     // must gate on isAlive() to avoid a permanently "Draining" panel and a
     // per-tick update delta for an eliminated player.
     const { game, b } = twoPlayerGame(400, 100);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(b.inSuddenDeath()).toBe(true);
+    expect(b.inDoomsdayClock()).toBe(true);
 
     b.kill();
-    expect(b.inSuddenDeath()).toBe(false);
-    expect(b.suddenDeathTicks()).toBe(0);
+    expect(b.inDoomsdayClock()).toBe(false);
+    expect(b.doomsdayClockTicks()).toBe(0);
   });
 
   it("never dooms the leading side, even below the bar (no all-drained stalemate)", () => {
@@ -239,8 +243,8 @@ describe("SuddenDeathExecution (logic)", () => {
     const { game, a, b } = twoPlayerGame(150, 100);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(a.inSuddenDeath()).toBe(false); // leader, spared
-    expect(b.inSuddenDeath()).toBe(true); // challenger, doomed
+    expect(a.inDoomsdayClock()).toBe(false); // leader, spared
+    expect(b.inDoomsdayClock()).toBe(true); // challenger, doomed
     runAt(exec, game, WAVE_TICK + 30);
     expect(a.troops()).toBe(1000); // never drained
     expect(b.troops()).toBeLessThan(1000); // bled
@@ -257,10 +261,10 @@ describe("SuddenDeathExecution (logic)", () => {
     // Bar 200; leader (400) is crown-exempt; human (100) and nation (50) are
     // below it; the bot is exempt by type.
     runAt(exec, game, WAVE_TICK);
-    expect(human.inSuddenDeath()).toBe(true);
-    expect(nation.inSuddenDeath()).toBe(true); // a nation is treated like a player
-    expect(bot.inSuddenDeath()).toBe(false); // map bots are never subject to it
-    expect(leader.inSuddenDeath()).toBe(false); // the crown is never doomed
+    expect(human.inDoomsdayClock()).toBe(true);
+    expect(nation.inDoomsdayClock()).toBe(true); // a nation is treated like a player
+    expect(bot.inDoomsdayClock()).toBe(false); // map bots are never subject to it
+    expect(leader.inDoomsdayClock()).toBe(false); // the crown is never doomed
     runAt(exec, game, WAVE_TICK + 10);
     expect(nation.troops()).toBeLessThan(1000); // drained like a player
     expect(bot.troops()).toBe(1000); // untouched
@@ -283,7 +287,7 @@ describe("SuddenDeathExecution (logic)", () => {
 // member shares the fate (skull + drain together).
 // ---------------------------------------------------------------------------
 
-describe("SuddenDeathExecution (teams)", () => {
+describe("DoomsdayClockExecution (teams)", () => {
   function teamGame(teams: { team: string; tiles: number[] }[]) {
     // base bar 200 @ land 1000; a team's threshold = 200 x its member count.
     const game = new FakeGame(1000, sdConfig(), []);
@@ -310,10 +314,10 @@ describe("SuddenDeathExecution (teams)", () => {
     const [red1, red2, blue1, blue2] = players;
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(red1.inSuddenDeath()).toBe(false);
-    expect(red2.inSuddenDeath()).toBe(false);
-    expect(blue1.inSuddenDeath()).toBe(true);
-    expect(blue2.inSuddenDeath()).toBe(true);
+    expect(red1.inDoomsdayClock()).toBe(false);
+    expect(red2.inDoomsdayClock()).toBe(false);
+    expect(blue1.inDoomsdayClock()).toBe(true);
+    expect(blue2.inDoomsdayClock()).toBe(true);
     runAt(exec, game, WAVE_TICK + 10); // past the warn -> both Blue members drain
     expect(blue1.troops()).toBeLessThan(1000);
     expect(blue2.troops()).toBeLessThan(1000);
@@ -330,8 +334,8 @@ describe("SuddenDeathExecution (teams)", () => {
     const [, redTiny, blue1] = players;
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(redTiny.inSuddenDeath()).toBe(false); // team is collectively safe
-    expect(blue1.inSuddenDeath()).toBe(true);
+    expect(redTiny.inDoomsdayClock()).toBe(false); // team is collectively safe
+    expect(blue1.inDoomsdayClock()).toBe(true);
   });
 
   it("scales the threshold by team size (a bigger team must hold more)", () => {
@@ -344,18 +348,18 @@ describe("SuddenDeathExecution (teams)", () => {
     const [red1, red2, red3, blue1] = players;
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(red1.inSuddenDeath()).toBe(true); // 500 < 200x3
-    expect(red2.inSuddenDeath()).toBe(true);
-    expect(red3.inSuddenDeath()).toBe(true);
-    expect(blue1.inSuddenDeath()).toBe(false); // leader
+    expect(red1.inDoomsdayClock()).toBe(true); // 500 < 200x3
+    expect(red2.inDoomsdayClock()).toBe(true);
+    expect(red3.inDoomsdayClock()).toBe(true);
+    expect(blue1.inDoomsdayClock()).toBe(false); // leader
   });
 
   it("idles when only one team remains", () => {
     const { game, players } = teamGame([{ team: "Red", tiles: [50, 50] }]);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(players[0].inSuddenDeath()).toBe(false);
-    expect(players[1].inSuddenDeath()).toBe(false);
+    expect(players[0].inDoomsdayClock()).toBe(false);
+    expect(players[1].inDoomsdayClock()).toBe(false);
   });
 });
 
@@ -364,56 +368,58 @@ describe("SuddenDeathExecution (teams)", () => {
 // exact thresholds and wave cues the sim and the HUD both depend on.
 // ---------------------------------------------------------------------------
 
-describe("suddenDeathRequiredTiles (ramping waves)", () => {
+describe("doomsdayClockRequiredTiles (ramping waves)", () => {
   const land = 10000;
 
   it("is 0 through the grace, ramps linearly, then holds during the pause", () => {
     // normal: grace 330s, then a 270s ramp 0->3%, then a 30s hold, ...
-    expect(suddenDeathRequiredTiles("normal", land, 200)).toBe(0); // in the grace
-    expect(suddenDeathRequiredTiles("normal", land, 330)).toBe(0); // grace ends
-    expect(suddenDeathRequiredTiles("normal", land, 465)).toBe(150); // halfway up -> 1.5%
-    expect(suddenDeathRequiredTiles("normal", land, 600)).toBe(300); // ramp done -> 3%
-    expect(suddenDeathRequiredTiles("normal", land, 615)).toBe(300); // pause holds 3%
-    expect(suddenDeathRequiredTiles("normal", land, 630)).toBe(300); // next ramp starts at 3%
-    expect(suddenDeathRequiredTiles("normal", land, 9999)).toBe(5500); // final 55%
+    expect(doomsdayClockRequiredTiles("normal", land, 200)).toBe(0); // in the grace
+    expect(doomsdayClockRequiredTiles("normal", land, 330)).toBe(0); // grace ends
+    expect(doomsdayClockRequiredTiles("normal", land, 465)).toBe(150); // halfway up -> 1.5%
+    expect(doomsdayClockRequiredTiles("normal", land, 600)).toBe(300); // ramp done -> 3%
+    expect(doomsdayClockRequiredTiles("normal", land, 615)).toBe(300); // pause holds 3%
+    expect(doomsdayClockRequiredTiles("normal", land, 630)).toBe(300); // next ramp starts at 3%
+    expect(doomsdayClockRequiredTiles("normal", land, 9999)).toBe(5500); // final 55%
   });
 
   it("passes 30% then reaches the final 55% squeeze per preset", () => {
     // 30% waypoint, then the 6th wave to 55% one cycle later.
-    expect(suddenDeathRequiredTiles("normal", land, 1800)).toBe(3000); // 30% @ 30:00
-    expect(suddenDeathRequiredTiles("normal", land, 2100)).toBe(5500); // 55% @ 35:00
-    expect(suddenDeathRequiredTiles("fast", land, 1680)).toBe(5500); // 55% @ 28:00
-    expect(suddenDeathRequiredTiles("veryfast", land, 1050)).toBe(5500); // 55% @ 17:30
-    expect(suddenDeathRequiredTiles("slow", land, 2520)).toBe(5500); // 55% @ 42:00
+    expect(doomsdayClockRequiredTiles("normal", land, 1800)).toBe(3000); // 30% @ 30:00
+    expect(doomsdayClockRequiredTiles("normal", land, 2100)).toBe(5500); // 55% @ 35:00
+    expect(doomsdayClockRequiredTiles("fast", land, 1680)).toBe(5500); // 55% @ 28:00
+    expect(doomsdayClockRequiredTiles("veryfast", land, 1050)).toBe(5500); // 55% @ 17:30
+    expect(doomsdayClockRequiredTiles("slow", land, 2520)).toBe(5500); // 55% @ 42:00
   });
 
   it("never decreases, and is zero for no land", () => {
     let prev = 0;
     for (let t = 0; t <= 2400; t += 5) {
-      const r = suddenDeathRequiredTiles("normal", land, t);
+      const r = doomsdayClockRequiredTiles("normal", land, t);
       expect(r).toBeGreaterThanOrEqual(prev);
       prev = r;
     }
-    expect(suddenDeathRequiredTiles("normal", 0, 1800)).toBe(0);
+    expect(doomsdayClockRequiredTiles("normal", 0, 1800)).toBe(0);
   });
 });
 
-describe("suddenDeathSideRequiredTiles (headcount scaling)", () => {
+describe("doomsdayClockSideRequiredTiles (headcount scaling)", () => {
   const land = 10000;
 
   it("scales the base share by side size and caps at the whole map", () => {
     // veryfast at 900s is the final 30% wave -> base 3000 tiles.
-    expect(suddenDeathRequiredTiles("veryfast", land, 900)).toBe(3000);
-    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 1)).toBe(3000); // solo
-    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 2)).toBe(6000); // 2x
-    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 4)).toBe(10000); // capped
-    expect(suddenDeathSideRequiredTiles("veryfast", land, 900, 0)).toBe(3000); // min size 1
+    expect(doomsdayClockRequiredTiles("veryfast", land, 900)).toBe(3000);
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 1)).toBe(3000); // solo
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 2)).toBe(6000); // 2x
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 4)).toBe(
+      10000,
+    ); // capped
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 0)).toBe(3000); // min size 1
   });
 });
 
-describe("suddenDeathWaveState", () => {
+describe("doomsdayClockWaveState", () => {
   it("reports the live share and target while ramping", () => {
-    const s = suddenDeathWaveState("normal", 465); // mid the first ramp (0->3%)
+    const s = doomsdayClockWaveState("normal", 465); // mid the first ramp (0->3%)
     expect(s.currentPercent).toBe(1.5);
     expect(s.targetPercent).toBe(3);
     expect(s.growing).toBe(true);
@@ -422,7 +428,7 @@ describe("suddenDeathWaveState", () => {
   });
 
   it("counts down to the next ramp during a pause", () => {
-    const s = suddenDeathWaveState("normal", 615); // in the first pause (600-630)
+    const s = doomsdayClockWaveState("normal", 615); // in the first pause (600-630)
     expect(s.growing).toBe(false);
     expect(s.currentPercent).toBe(3); // held at the level just reached
     expect(s.targetPercent).toBe(5); // next ramp climbs to 5%
@@ -430,7 +436,7 @@ describe("suddenDeathWaveState", () => {
   });
 
   it("counts down through the grace", () => {
-    const s = suddenDeathWaveState("normal", 200);
+    const s = doomsdayClockWaveState("normal", 200);
     expect(s.currentPercent).toBe(0);
     expect(s.targetPercent).toBe(3);
     expect(s.secondsToNextGrowth).toBe(130); // first ramp at 330
@@ -438,20 +444,20 @@ describe("suddenDeathWaveState", () => {
 
   it("flags the 10s window (5s each side) around a ramp starting", () => {
     // veryfast first ramp starts at 180s.
-    expect(suddenDeathWaveState("veryfast", 176).waveFlash).toBe(true); // 4s before
-    expect(suddenDeathWaveState("veryfast", 184).waveFlash).toBe(true); // 4s after
-    expect(suddenDeathWaveState("veryfast", 250).waveFlash).toBe(false); // mid-ramp
+    expect(doomsdayClockWaveState("veryfast", 176).waveFlash).toBe(true); // 4s before
+    expect(doomsdayClockWaveState("veryfast", 184).waveFlash).toBe(true); // 4s after
+    expect(doomsdayClockWaveState("veryfast", 250).waveFlash).toBe(false); // mid-ramp
   });
 
   it("marks done after the last ramp", () => {
-    const s = suddenDeathWaveState("veryfast", 1100); // past the final ramp (@1050) = 55%
+    const s = doomsdayClockWaveState("veryfast", 1100); // past the final ramp (@1050) = 55%
     expect(s.done).toBe(true);
     expect(s.currentPercent).toBe(55);
     expect(s.secondsToNextGrowth).toBe(0);
   });
 });
 
-describe("suddenDeathDrain", () => {
+describe("doomsdayClockDrain", () => {
   const cfg = {
     drainStartPercent: 10,
     drainMaxPercent: 80,
@@ -459,24 +465,24 @@ describe("suddenDeathDrain", () => {
   };
 
   it("starts gentle and grows linearly, capping at the max", () => {
-    expect(suddenDeathDrain(1000, 0, cfg)).toBe(100); // 10%
-    expect(suddenDeathDrain(1000, 1, cfg)).toBe(330); // 33%
-    expect(suddenDeathDrain(1000, 2, cfg)).toBe(560); // 56%
-    expect(suddenDeathDrain(1000, 3, cfg)).toBe(800); // capped at 80%
-    expect(suddenDeathDrain(1000, 100, cfg)).toBe(800);
+    expect(doomsdayClockDrain(1000, 0, cfg)).toBe(100); // 10%
+    expect(doomsdayClockDrain(1000, 1, cfg)).toBe(330); // 33%
+    expect(doomsdayClockDrain(1000, 2, cfg)).toBe(560); // 56%
+    expect(doomsdayClockDrain(1000, 3, cfg)).toBe(800); // capped at 80%
+    expect(doomsdayClockDrain(1000, 100, cfg)).toBe(800);
     // linear: each step before the cap removes the same amount more
-    const d0 = suddenDeathDrain(1000, 0, cfg);
-    const d1 = suddenDeathDrain(1000, 1, cfg);
-    const d2 = suddenDeathDrain(1000, 2, cfg);
+    const d0 = doomsdayClockDrain(1000, 0, cfg);
+    const d1 = doomsdayClockDrain(1000, 1, cfg);
+    const d2 = doomsdayClockDrain(1000, 2, cfg);
     expect(d1 - d0).toBe(d2 - d1);
   });
 
   it("removes at least one troop and never less", () => {
-    expect(suddenDeathDrain(1, 0, cfg)).toBe(1); // floor(0.1) -> min 1
+    expect(doomsdayClockDrain(1, 0, cfg)).toBe(1); // floor(0.1) -> min 1
   });
 
   it("treats time before the warn window as zero", () => {
-    expect(suddenDeathDrain(1000, -5, cfg)).toBe(100); // clamped to start %
+    expect(doomsdayClockDrain(1000, -5, cfg)).toBe(100); // clamped to start %
   });
 });
 
@@ -500,7 +506,7 @@ function giveLandTiles(game: Game, player: Player, n: number): number {
   return count;
 }
 
-describe("SuddenDeathExecution (integration)", () => {
+describe("DoomsdayClockExecution (integration)", () => {
   // Steepest preset; we run past its grace (180s) into the waves.
   const SD = {
     enabled: true,
@@ -515,7 +521,7 @@ describe("SuddenDeathExecution (integration)", () => {
   async function buildGame(enabled: boolean) {
     const game = await setup(
       "plains",
-      { instantBuild: true, suddenDeath: { ...SD, enabled } },
+      { instantBuild: true, doomsdayClock: { ...SD, enabled } },
       [
         playerInfo("big", PlayerType.Human),
         playerInfo("small", PlayerType.Human),
@@ -524,7 +530,7 @@ describe("SuddenDeathExecution (integration)", () => {
     const big = game.player("big");
     const small = game.player("small");
     // Size the slices to the bar at the point we stop.
-    const bar = suddenDeathRequiredTiles(
+    const bar = doomsdayClockRequiredTiles(
       "veryfast",
       game.numLandTiles(),
       TICKS / 10,
@@ -535,7 +541,7 @@ describe("SuddenDeathExecution (integration)", () => {
     small.setTroops(50_000);
     // setup() builds the game via createGame, not GameRunner, so the execution
     // GameRunner normally registers must be added here.
-    game.addExecution(new SuddenDeathExecution());
+    game.addExecution(new DoomsdayClockExecution());
     for (let i = 0; i < TICKS; i++) game.executeNextTick();
     return { big, small };
   }
@@ -544,9 +550,9 @@ describe("SuddenDeathExecution (integration)", () => {
     const on = await buildGame(true);
     const off = await buildGame(false);
 
-    expect(on.small.inSuddenDeath()).toBe(true);
-    expect(on.big.inSuddenDeath()).toBe(false);
-    expect(off.small.inSuddenDeath()).toBe(false);
+    expect(on.small.inDoomsdayClock()).toBe(true);
+    expect(on.big.inDoomsdayClock()).toBe(false);
+    expect(off.small.inDoomsdayClock()).toBe(false);
 
     // The drain is the difference vs the disabled run (isolates it from the
     // normal troop dynamics both runs share).
@@ -555,19 +561,22 @@ describe("SuddenDeathExecution (integration)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Default-config wipe time. Uses the resolved SUDDEN_DEATH_DEFAULTS (no drain
+// Default-config wipe time. Uses the resolved DOOMSDAY_CLOCK_DEFAULTS (no drain
 // overrides) with real troop income (PlayerExecution) flowing every tick, so it
 // pins the advertised "~1 minute from caught to wiped". A pure-drain analysis
 // (ignoring income) under-counts this to ~45s; income offsets the early bleed.
 // ---------------------------------------------------------------------------
 
-describe("SuddenDeathExecution (default drain, with income)", () => {
+describe("DoomsdayClockExecution (default drain, with income)", () => {
   it("wipes a full-troop side in ~1 minute (warn + linear drain)", async () => {
     // Only enabled + speed set -> drain uses the defaults (warn 10s, 2%->6% /50s).
     // veryfast is chosen purely so the bar rises fast enough to catch the sliver.
     const game = await setup(
       "plains",
-      { instantBuild: true, suddenDeath: { enabled: true, speed: "veryfast" } },
+      {
+        instantBuild: true,
+        doomsdayClock: { enabled: true, speed: "veryfast" },
+      },
       [
         playerInfo("big", PlayerType.Human),
         playerInfo("small", PlayerType.Human),
@@ -579,14 +588,14 @@ describe("SuddenDeathExecution (default drain, with income)", () => {
     giveLandTiles(game, small, 3); // a sliver, caught once the bar rises
     game.addExecution(new PlayerExecution(big));
     game.addExecution(new PlayerExecution(small)); // income every tick
-    game.addExecution(new SuddenDeathExecution());
+    game.addExecution(new DoomsdayClockExecution());
 
     // Run until the rising bar catches the sliver, then fill it to a full stack
     // so we measure the worst-case (longest) wipe from that moment.
     let caughtTick = -1;
     for (let i = 0; i < 3000; i++) {
       game.executeNextTick();
-      if (small.inSuddenDeath()) {
+      if (small.inDoomsdayClock()) {
         caughtTick = game.ticks();
         break;
       }

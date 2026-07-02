@@ -2,7 +2,7 @@
  * StatusIconProgram — instanced status icons above player names.
  *
  * Renders up to 9 status icons per player (crown, traitor, disconnected,
- * alliance, alliance request, target, embargo, nuke, sudden-death skull). Each
+ * alliance, alliance request, target, embargo, nuke, doomsday-clock skull). Each
  * instance reads individual float flags to decide whether to draw.
  *
  * Owns: shader program, uniform locations, status atlas texture.

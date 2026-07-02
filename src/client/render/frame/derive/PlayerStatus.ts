@@ -38,11 +38,11 @@ export interface ComputePlayerStatusOptions {
    */
   isTransitiveTarget?: (sid: number) => boolean;
   /**
-   * Ticks a side must be below the bar before it drains (sudden death). Past
+   * Ticks a side must be below the bar before it drains (doomsday clock). Past
    * this the skull holds steady instead of blinking. Omit to treat any flagged
    * side as draining.
    */
-  suddenDeathWarnTicks?: number;
+  doomsdayClockWarnTicks?: number;
 }
 
 /**
@@ -104,13 +104,13 @@ export function computePlayerStatus(
     const crown = sid === crownSmallID;
     const traitor = ps.isTraitor;
     const disconnected = ps.isDisconnected;
-    const inSuddenDeath = ps.inSuddenDeath;
+    const inDoomsdayClock = ps.inDoomsdayClock;
     // Past the warn grace the side is actively bleeding troops; the skull holds
     // steady then (vs blinking while merely in danger).
-    const suddenDeathDraining =
-      inSuddenDeath &&
-      (opts.tick ?? 0) - ps.markedSuddenDeathTick >=
-        (opts.suddenDeathWarnTicks ?? 0);
+    const doomsdayClockDraining =
+      inDoomsdayClock &&
+      (opts.tick ?? 0) - ps.markedDoomsdayClockTick >=
+        (opts.doomsdayClockWarnTicks ?? 0);
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
     // Relative flags
@@ -164,7 +164,7 @@ export function computePlayerStatus(
       crown ||
       traitor ||
       disconnected ||
-      inSuddenDeath ||
+      inDoomsdayClock ||
       traitorRemainingTicks > 0 ||
       nukeActive ||
       alliance ||
@@ -177,8 +177,8 @@ export function computePlayerStatus(
         crown,
         traitor,
         disconnected,
-        inSuddenDeath,
-        suddenDeathDraining,
+        inDoomsdayClock,
+        doomsdayClockDraining,
         alliance,
         allianceReq,
         target,

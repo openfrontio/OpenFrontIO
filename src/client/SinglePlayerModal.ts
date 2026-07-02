@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
+import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -11,7 +12,6 @@ import {
   GameType,
   UnitType,
 } from "../core/game/Game";
-import { SuddenDeathSpeed } from "../core/game/SuddenDeath";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
@@ -60,8 +60,8 @@ const DEFAULT_OPTIONS = {
   disabledUnits: [] as UnitType[],
   disableAlliances: false,
   waterNukes: false,
-  suddenDeath: false,
-  suddenDeathSpeed: "normal" as SuddenDeathSpeed,
+  doomsdayClock: false,
+  doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
 } as const;
 
 @customElement("single-player-modal")
@@ -100,9 +100,9 @@ export class SinglePlayerModal extends BaseModal {
   ];
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
-  @state() private suddenDeath: boolean = DEFAULT_OPTIONS.suddenDeath;
-  @state() private suddenDeathSpeed: SuddenDeathSpeed =
-    DEFAULT_OPTIONS.suddenDeathSpeed;
+  @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
+  @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
+    DEFAULT_OPTIONS.doomsdayClockSpeed;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -327,9 +327,9 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "single_modal.sudden_death",
-                    checked: this.suddenDeath,
-                    suddenDeathSpeed: this.suddenDeathSpeed,
+                    labelKey: "single_modal.doomsday_clock",
+                    checked: this.doomsdayClock,
+                    doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
                 ],
                 inputCards,
@@ -342,8 +342,8 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
-            @sudden-death-speed-selected=${this
-              .handleConfigSuddenDeathSpeedSelected}
+            @doomsday-clock-speed-selected=${this
+              .handleConfigDoomsdayClockSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -390,10 +390,10 @@ export class SinglePlayerModal extends BaseModal {
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
-      this.suddenDeath !== DEFAULT_OPTIONS.suddenDeath ||
+      this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
       // Pace only matters when the mode is on (startGame drops it when off).
-      (this.suddenDeath &&
-        this.suddenDeathSpeed !== DEFAULT_OPTIONS.suddenDeathSpeed) ||
+      (this.doomsdayClock &&
+        this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
       this.disabledUnits.length > 0
     );
   }
@@ -422,8 +422,8 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
     this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
-    this.suddenDeath = DEFAULT_OPTIONS.suddenDeath;
-    this.suddenDeathSpeed = DEFAULT_OPTIONS.suddenDeathSpeed;
+    this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
+    this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
   }
 
   protected onOpen(): void {
@@ -460,9 +460,9 @@ export class SinglePlayerModal extends BaseModal {
     this.handleDifficultySelection(customEvent.detail.difficulty);
   };
 
-  private handleConfigSuddenDeathSpeedSelected = (e: Event) => {
-    const customEvent = e as CustomEvent<{ speed: SuddenDeathSpeed }>;
-    this.suddenDeathSpeed = customEvent.detail.speed;
+  private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: DoomsdayClockSpeed }>;
+    this.doomsdayClockSpeed = customEvent.detail.speed;
   };
 
   private handleConfigGameModeSelected = (e: Event) => {
@@ -514,8 +514,8 @@ export class SinglePlayerModal extends BaseModal {
       case "single_modal.water_nukes":
         this.waterNukes = checked;
         break;
-      case "single_modal.sudden_death":
-        this.suddenDeath = checked;
+      case "single_modal.doomsday_clock":
+        this.doomsdayClock = checked;
         break;
       default:
         break;
@@ -725,11 +725,11 @@ export class SinglePlayerModal extends BaseModal {
                 : {}),
               ...(this.disableAlliances ? { disableAlliances: true } : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
-              ...(this.suddenDeath
+              ...(this.doomsdayClock
                 ? {
-                    suddenDeath: {
+                    doomsdayClock: {
                       enabled: true,
-                      speed: this.suddenDeathSpeed,
+                      speed: this.doomsdayClockSpeed,
                     },
                   }
                 : {}),

@@ -1,4 +1,8 @@
 import {
+  doomsdayClockDrain,
+  doomsdayClockSideRequiredTiles,
+} from "../game/DoomsdayClock";
+import {
   Execution,
   Game,
   GameMode,
@@ -6,30 +10,26 @@ import {
   PlayerType,
   Team,
 } from "../game/Game";
-import {
-  suddenDeathDrain,
-  suddenDeathSideRequiredTiles,
-} from "../game/SuddenDeath";
 
 /**
- * OFM sudden-death (anti-stall). Once armed, every alive side must hold a rising
+ * OFM doomsday-clock (anti-stall). Once armed, every alive side must hold a rising
  * share of the whole map: each player in FFA, each whole team in team modes (so
  * a team is judged on its combined territory and every member shares the fate).
  * The bar rises in discrete waves (battle-royale zone), stepping up to each
- * wave's level (chosen by the speed preset, see SuddenDeath.ts) and holding. As
+ * wave's level (chosen by the speed preset, see DoomsdayClock.ts) and holding. As
  * it rises the bottom is cut, which forces consolidation and guarantees a finish.
  *
- * A side below the bar is marked (inSuddenDeath -> blinking skull on the client)
+ * A side below the bar is marked (inDoomsdayClock -> blinking skull on the client)
  * and, after the warn window, every member bleeds an escalating percentage of
  * their troops until the side recovers or hits zero. Climbing back above the bar
  * clears the mark and stops the drain.
  *
  * Deterministic: integer-only. The threshold is one floored integer ratio (see
- * SuddenDeath.ts) and the drain a floored percentage, no floating-point. Off
+ * DoomsdayClock.ts) and the drain a floored percentage, no floating-point. Off
  * unless enabled in the GameConfig. Runs once per second (every 10 ticks), like
  * WinCheckExecution.
  */
-export class SuddenDeathExecution implements Execution {
+export class DoomsdayClockExecution implements Execution {
   private active = true;
   private mg: Game | null = null;
 
@@ -41,11 +41,11 @@ export class SuddenDeathExecution implements Execution {
     if (ticks % 10 !== 0) return; // once per second
     if (this.mg === null) throw new Error("Not initialized");
     const mg = this.mg;
-    const cfg = mg.config().suddenDeathConfig();
+    const cfg = mg.config().doomsdayClockConfig();
     if (!cfg.enabled) return;
 
     const elapsed = mg.elapsedGameSeconds();
-    // Humans and Nations are subject to sudden death; the small map bots are not
+    // Humans and Nations are subject to doomsday clock; the small map bots are not
     // (the !== Bot idiom used across the codebase).
     const contenders = mg
       .players()
@@ -58,14 +58,14 @@ export class SuddenDeathExecution implements Execution {
     // A winner is already inevitable (one side left): idle. Before the first
     // wave the bar is 0, so nobody is flagged anyway.
     if (sides.length < 2) {
-      for (const p of contenders) p.clearSuddenDeath();
+      for (const p of contenders) p.clearDoomsdayClock();
       return;
     }
 
     const land = mg.numLandTiles() - mg.numTilesWithFallout();
 
     // The leading side (the crown holder in FFA, the top team otherwise) is
-    // never doomed. Sudden death culls the challengers toward the leader, so the
+    // never doomed. Doomsday Clock culls the challengers toward the leader, so the
     // leader always keeps its army: the game can never freeze with every
     // remaining side bled to zero, and the final wave squeezes out everyone but
     // the leader -> a single winner. First side with the most tiles wins ties
@@ -82,7 +82,7 @@ export class SuddenDeathExecution implements Execution {
       const members = sides[i];
       // Threshold scales with the side's headcount: a team of N must hold N× a
       // solo player's share (FFA sides are size 1, unscaled).
-      const required = suddenDeathSideRequiredTiles(
+      const required = doomsdayClockSideRequiredTiles(
         cfg.speed,
         land,
         elapsed,
@@ -92,10 +92,10 @@ export class SuddenDeathExecution implements Execution {
       // leader (and any side above the bar) clears them all.
       if (i !== leaderIdx && sideTiles[i] < required) {
         for (const m of members) {
-          m.enterSuddenDeath();
-          const secondsUnder = Math.floor(m.suddenDeathTicks() / 10);
+          m.enterDoomsdayClock();
+          const secondsUnder = Math.floor(m.doomsdayClockTicks() / 10);
           if (secondsUnder >= cfg.warnSeconds) {
-            const chunk = suddenDeathDrain(
+            const chunk = doomsdayClockDrain(
               mg.config().maxTroops(m),
               secondsUnder - cfg.warnSeconds,
               cfg,
@@ -104,7 +104,7 @@ export class SuddenDeathExecution implements Execution {
           }
         }
       } else {
-        for (const m of members) m.clearSuddenDeath();
+        for (const m of members) m.clearDoomsdayClock();
       }
     }
   }

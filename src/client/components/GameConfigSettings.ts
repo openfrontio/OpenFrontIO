@@ -8,6 +8,10 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  DoomsdayClockSpeed,
+} from "../../core/game/DoomsdayClock";
+import {
   Difficulty,
   Duos,
   GameMapType,
@@ -17,10 +21,6 @@ import {
   Trios,
   UnitType,
 } from "../../core/game/Game";
-import {
-  SUDDEN_DEATH_SPEEDS,
-  SuddenDeathSpeed,
-} from "../../core/game/SuddenDeath";
 import { TeamCountConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";
 import "./Difficulties";
@@ -186,7 +186,7 @@ export interface ToggleOptionConfig {
   checked: boolean;
   hidden?: boolean;
   // When set, this toggle's card expands to a pace dropdown while it is checked.
-  suddenDeathSpeed?: SuddenDeathSpeed;
+  doomsdayClockSpeed?: DoomsdayClockSpeed;
 }
 
 export interface GameConfigSettingsData {
@@ -277,9 +277,9 @@ export class GameConfigSettings extends LitElement {
     this.emit("difficulty-selected", { difficulty });
   };
 
-  private handleSuddenDeathSpeedChange = (e: Event) => {
-    const speed = (e.target as HTMLSelectElement).value as SuddenDeathSpeed;
-    this.emit("sudden-death-speed-selected", { speed });
+  private handleDoomsdayClockSpeedChange = (e: Event) => {
+    const speed = (e.target as HTMLSelectElement).value as DoomsdayClockSpeed;
+    this.emit("doomsday-clock-speed-selected", { speed });
   };
 
   private handleGameModeSelect = (mode: GameMode) => {
@@ -321,8 +321,8 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
-    if (toggle.suddenDeathSpeed !== undefined) {
-      return this.renderSuddenDeathToggle(toggle);
+    if (toggle.doomsdayClockSpeed !== undefined) {
+      return this.renderDoomsdayClockToggle(toggle);
     }
 
     return renderTextCardButton(
@@ -336,8 +336,10 @@ export class GameConfigSettings extends LitElement {
   // Same toggle card as the others, but when on it grows to hold the pace
   // dropdown. The card toggles on click; the dropdown stops propagation so
   // changing the pace doesn't flip the toggle.
-  private renderSuddenDeathToggle(toggle: ToggleOptionConfig): TemplateResult {
-    const selected = toggle.suddenDeathSpeed;
+  private renderDoomsdayClockToggle(
+    toggle: ToggleOptionConfig,
+  ): TemplateResult {
+    const selected = toggle.doomsdayClockSpeed;
     return html`
       <div
         class="${cardClass(
@@ -356,12 +358,12 @@ export class GameConfigSettings extends LitElement {
               <select
                 class="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs"
                 @click=${(e: Event) => e.stopPropagation()}
-                @change=${this.handleSuddenDeathSpeedChange}
+                @change=${this.handleDoomsdayClockSpeedChange}
               >
-                ${SUDDEN_DEATH_SPEEDS.map(
+                ${DOOMSDAY_CLOCK_SPEEDS.map(
                   (speed) => html`
                     <option value=${speed} ?selected=${selected === speed}>
-                      ${translateText(`sudden_death_speed.${speed}`)}
+                      ${translateText(`doomsday_clock_speed.${speed}`)}
                     </option>
                   `,
                 )}

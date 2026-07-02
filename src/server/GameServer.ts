@@ -252,8 +252,8 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
-    if (gameConfig.suddenDeath !== undefined) {
-      this.gameConfig.suddenDeath = gameConfig.suddenDeath;
+    if (gameConfig.doomsdayClock !== undefined) {
+      this.gameConfig.doomsdayClock = gameConfig.doomsdayClock;
     }
     if (gameConfig.anonymizeNames !== undefined) {
       this.gameConfig.anonymizeNames = gameConfig.anonymizeNames;

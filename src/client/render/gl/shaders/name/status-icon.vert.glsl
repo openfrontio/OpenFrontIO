@@ -45,7 +45,7 @@ out float vHoverAlpha;
 
 // Status flag float array — indexed by icon slot.
 // Slot mapping: 0=crown, 1=traitor, 2=disconnected, 3=alliance,
-//               4=allianceReq, 5=target, 6=embargo, 7=nukeActive, 8=suddenDeath
+//               4=allianceReq, 5=target, 6=embargo, 7=nukeActive, 8=doomsdayClock
 float statusFlag[9];
 
 // Read status flags from pd4.w/pd5/pd6 into the statusFlag array.
@@ -61,7 +61,7 @@ void readStatusFlags(int playerIdx) {
   statusFlag[5] = pd6.y; // target
   statusFlag[6] = pd6.z; // embargo
   statusFlag[7] = pd6.w; // nukeActive
-  statusFlag[8] = pd4.w; // suddenDeath
+  statusFlag[8] = pd4.w; // doomsdayClock
 }
 
 // Count active icons with index < pos.
@@ -187,7 +187,7 @@ void main() {
     atlasIdx = (pd7.x > 0.5) ? 7 : 8;
   }
   if (iconSlot == 8) {
-    atlasIdx = 10; // sudden-death skull
+    atlasIdx = 10; // doomsday-clock skull
   }
 
   // Only the alliance icon (slot 3) gets the dark outline.
@@ -268,7 +268,7 @@ void main() {
     }
   }
 
-  // Sudden-death skull: slot 8. Blinks ~2 Hz while in danger (flag 1.0); holds
+  // Doomsday Clock skull: slot 8. Blinks ~2 Hz while in danger (flag 1.0); holds
   // steady once the side is draining (flag 2.0).
   if (iconSlot == 8) {
     vFlashAlpha = (statusFlag[8] < 1.5)

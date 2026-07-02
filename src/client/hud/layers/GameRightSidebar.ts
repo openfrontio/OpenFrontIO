@@ -2,12 +2,12 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, GameType, PlayerType, Team } from "../../../core/game/Game";
 import {
-  suddenDeathDrain,
-  suddenDeathSideRequiredTiles,
-  suddenDeathWaveState,
-} from "../../../core/game/SuddenDeath";
+  doomsdayClockDrain,
+  doomsdayClockSideRequiredTiles,
+  doomsdayClockWaveState,
+} from "../../../core/game/DoomsdayClock";
+import { GameMode, GameType, PlayerType, Team } from "../../../core/game/Game";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
@@ -26,7 +26,7 @@ const playIcon = assetUrl("images/PlayIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
-const suddenDeathIcon = assetUrl("images/SuddenDeathSkull.svg");
+const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Controller {
@@ -57,7 +57,7 @@ export class GameRightSidebar extends LitElement implements Controller {
   private immunityBarVisible = false;
 
   createRenderRoot() {
-    // Stack the timer bar + sudden-death readout, centers aligned (the narrower
+    // Stack the timer bar + doomsday-clock readout, centers aligned (the narrower
     // one sits centered under the wider one).
     this.style.display = "flex";
     this.style.flexDirection = "column";
@@ -276,7 +276,7 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${exitIcon} alt="exit" width="20" height="20" />
         </div>
       </aside>
-      ${this.renderSuddenDeath()}
+      ${this.renderDoomsdayClock()}
     `;
   }
 
@@ -320,8 +320,8 @@ export class GameRightSidebar extends LitElement implements Controller {
     return themeProvider.current().teamColor(team).toHex();
   }
 
-  private renderSuddenDeath() {
-    const sd = this.game.config().suddenDeathConfig();
+  private renderDoomsdayClock() {
+    const sd = this.game.config().doomsdayClockConfig();
     if (!sd.enabled || this.hasWinner) return html``;
 
     // Personal readout: no meaning for a spectator or an eliminated player, and
@@ -334,20 +334,20 @@ export class GameRightSidebar extends LitElement implements Controller {
     const myTeam = me.team() ?? null;
     const { tiles: yourTiles, size: mySize } = this.sideStats(me);
     // Threshold is scaled by the side's headcount (same as the sim).
-    const requiredTiles = suddenDeathSideRequiredTiles(
+    const requiredTiles = doomsdayClockSideRequiredTiles(
       sd.speed,
       land,
       elapsed,
       mySize,
     );
-    const wave = suddenDeathWaveState(sd.speed, elapsed);
+    const wave = doomsdayClockWaveState(sd.speed, elapsed);
     // Wave readout percentages scale by headcount too (capped at the whole map).
     const scalePct = (p: number) => Math.min(100, p * mySize);
     // Match the sim: no land -> no bar, no percentages (avoid div-by-zero / >100%).
     const requiredPct = land > 0 ? (requiredTiles / land) * 100 : 0;
     const yourPct = land > 0 ? (yourTiles / land) * 100 : 0;
-    const flagged = me?.inSuddenDeath() ?? false;
-    const secondsUnder = Math.floor((me?.suddenDeathTicks() ?? 0) / 10);
+    const flagged = me?.inDoomsdayClock() ?? false;
+    const secondsUnder = Math.floor((me?.doomsdayClockTicks() ?? 0) / 10);
     const draining = flagged && secondsUnder >= sd.warnSeconds;
     // Safe but within 10% (relative) of the bar: e.g. at 9% when the bar is 10%,
     // or 0.9% when it's 1%. About to be caught, so it blinks red too.
@@ -363,34 +363,34 @@ export class GameRightSidebar extends LitElement implements Controller {
     if (draining && me) {
       // Drain is a % of max-troop capacity, capped at current troops; show the
       // actual per-second loss (renderTroops handles the /10 display unit).
-      const chunk = suddenDeathDrain(
+      const chunk = doomsdayClockDrain(
         this.game.config().maxTroops(me),
         secondsUnder - sd.warnSeconds,
         sd,
       );
-      status = translateText("sudden_death.draining", {
+      status = translateText("doomsday_clock.collapsing", {
         rate: renderTroops(Math.min(me.troops(), chunk)),
       });
       statusClass = "text-red-400 font-bold";
     } else if (flagged) {
       // Caught below a wave: count down the cooldown before decay begins.
-      status = translateText("sudden_death.danger");
+      status = translateText("doomsday_clock.unstable");
       statusClass = "text-red-400 font-bold";
-      detail = translateText("sudden_death.decay_in", {
+      detail = translateText("doomsday_clock.decay_in", {
         secs: Math.max(0, sd.warnSeconds - secondsUnder),
       });
     } else {
-      status = translateText("sudden_death.safe");
+      status = translateText("doomsday_clock.stable");
       statusClass = nearDanger ? "text-orange-300 font-bold" : "text-green-400";
       detail = wave.done
-        ? translateText("sudden_death.final", {
+        ? translateText("doomsday_clock.final", {
             pct: scalePct(wave.currentPercent),
           })
         : wave.growing
-          ? translateText("sudden_death.growing", {
+          ? translateText("doomsday_clock.growing", {
               pct: scalePct(wave.targetPercent),
             })
-          : translateText("sudden_death.next_wave", {
+          : translateText("doomsday_clock.next_wave", {
               pct: scalePct(wave.targetPercent),
               time: this.secondsToHms(wave.secondsToNextGrowth),
             });
@@ -438,8 +438,8 @@ export class GameRightSidebar extends LitElement implements Controller {
           <span
             class="flex items-center gap-1.5 font-bold tracking-wide text-red-400"
           >
-            <img src=${suddenDeathIcon} alt="" width="20" height="20" />
-            ${translateText("sudden_death.title")}
+            <img src=${doomsdayClockIcon} alt="" width="20" height="20" />
+            ${translateText("doomsday_clock.title")}
           </span>
           <span class=${statusClass}>${status}</span>
         </div>
@@ -457,19 +457,19 @@ export class GameRightSidebar extends LitElement implements Controller {
         </div>
         <div class="flex items-center justify-between gap-3 text-gray-300">
           <span>
-            ${translateText("sudden_death.hold", {
+            ${translateText("doomsday_clock.hold", {
               pct: requiredPct.toFixed(1),
             })}
           </span>
           ${myTeam !== null
             ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
-                ${translateText("sudden_death.your_team", {
+                ${translateText("doomsday_clock.your_team", {
                   team: this.teamDisplayName(myTeam),
                   pct: yourPct.toFixed(1),
                 })}
               </span>`
             : html`<span class=${redAlert ? "text-red-300" : "text-green-300"}>
-                ${translateText("sudden_death.you", {
+                ${translateText("doomsday_clock.you", {
                   pct: yourPct.toFixed(1),
                 })}
               </span>`}

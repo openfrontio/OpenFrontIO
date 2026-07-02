@@ -8,6 +8,7 @@ import {
   translateText,
 } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
+import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -15,7 +16,6 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
-import { SuddenDeathSpeed } from "../core/game/SuddenDeath";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -80,8 +80,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
-  @state() private suddenDeath: boolean = false;
-  @state() private suddenDeathSpeed: SuddenDeathSpeed = "normal";
+  @state() private doomsdayClock: boolean = false;
+  @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
   @state() private anonymizeNames: boolean = false;
   @state() private nameReveals: string[] = [];
   @state() private whitelistEnabled: boolean = false;
@@ -427,9 +427,9 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "host_modal.sudden_death",
-                    checked: this.suddenDeath,
-                    suddenDeathSpeed: this.suddenDeathSpeed,
+                    labelKey: "host_modal.doomsday_clock",
+                    checked: this.doomsdayClock,
+                    doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
                   {
                     labelKey: "host_modal.host_cheats",
@@ -461,8 +461,8 @@ export class HostLobbyModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
-            @sudden-death-speed-selected=${this
-              .handleConfigSuddenDeathSpeedSelected}
+            @doomsday-clock-speed-selected=${this
+              .handleConfigDoomsdayClockSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -613,8 +613,8 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
-    this.suddenDeath = false;
-    this.suddenDeathSpeed = "normal";
+    this.doomsdayClock = false;
+    this.doomsdayClockSpeed = "normal";
     this.anonymizeNames = false;
     this.nameReveals = [];
     this.whitelistEnabled = false;
@@ -664,9 +664,9 @@ export class HostLobbyModal extends BaseModal {
     void this.handleDifficultySelection(customEvent.detail.difficulty);
   };
 
-  private handleConfigSuddenDeathSpeedSelected = (e: Event) => {
-    const customEvent = e as CustomEvent<{ speed: SuddenDeathSpeed }>;
-    this.suddenDeathSpeed = customEvent.detail.speed;
+  private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: DoomsdayClockSpeed }>;
+    this.doomsdayClockSpeed = customEvent.detail.speed;
     this.putGameConfig();
   };
 
@@ -721,8 +721,8 @@ export class HostLobbyModal extends BaseModal {
         this.waterNukes = checked;
         this.putGameConfig();
         break;
-      case "host_modal.sudden_death":
-        this.suddenDeath = checked;
+      case "host_modal.doomsday_clock":
+        this.doomsdayClock = checked;
         this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -1111,8 +1111,8 @@ export class HostLobbyModal extends BaseModal {
             // Send {enabled:false} (not undefined) when off: undefined is dropped
             // by JSON.stringify, so the server's "!== undefined" merge would keep a
             // previously-enabled config and the toggle could never turn off.
-            suddenDeath: this.suddenDeath
-              ? { enabled: true, speed: this.suddenDeathSpeed }
+            doomsdayClock: this.doomsdayClock
+              ? { enabled: true, speed: this.doomsdayClockSpeed }
               : { enabled: false },
             anonymizeNames: this.anonymizeNames,
             nameReveals: this.nameReveals,
