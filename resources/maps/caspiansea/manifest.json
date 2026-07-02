@@ -1,8 +1,5 @@
 {
-  "categories": [
-    "asia",
-    "new"
-  ],
+  "categories": ["asia", "new"],
   "id": "CaspianSea",
   "map": {
     "height": 1728,
@@ -23,98 +20,62 @@
   "name": "Caspian Sea",
   "nations": [
     {
-      "coordinates": [
-        927,
-        426
-      ],
+      "coordinates": [927, 426],
       "flag": "kz",
       "name": "Mangystau"
     },
     {
-      "coordinates": [
-        914,
-        1270
-      ],
+      "coordinates": [914, 1270],
       "flag": "tm",
       "name": "Turkmenistan"
     },
     {
-      "coordinates": [
-        574,
-        24
-      ],
+      "coordinates": [574, 24],
       "flag": "kz",
       "name": "Atyrau"
     },
     {
-      "coordinates": [
-        633,
-        678
-      ],
+      "coordinates": [633, 678],
       "flag": "kz",
       "name": "Aktau"
     },
     {
-      "coordinates": [
-        807,
-        1705
-      ],
+      "coordinates": [807, 1705],
       "flag": "ir",
       "name": "Tehran"
     },
     {
-      "coordinates": [
-        398,
-        1647
-      ],
+      "coordinates": [398, 1647],
       "flag": "ir",
       "name": "Gilan"
     },
     {
-      "coordinates": [
-        69,
-        1350
-      ],
+      "coordinates": [69, 1350],
       "flag": "am",
       "name": "Armenia"
     },
     {
-      "coordinates": [
-        128,
-        1658
-      ],
+      "coordinates": [128, 1658],
       "flag": "ir",
       "name": "Tabriz"
     },
     {
-      "coordinates": [
-        302,
-        1154
-      ],
+      "coordinates": [302, 1154],
       "flag": "az",
       "name": "Azerbaijan"
     },
     {
-      "coordinates": [
-        203,
-        91
-      ],
+      "coordinates": [203, 91],
       "flag": "ru",
       "name": "Astrakhan"
     },
     {
-      "coordinates": [
-        96,
-        744
-      ],
+      "coordinates": [96, 744],
       "flag": "ru",
       "name": "Dagestan"
     },
     {
-      "coordinates": [
-        21,
-        310
-      ],
+      "coordinates": [21, 310],
       "flag": "ru",
       "name": "Kalmykia"
     }
