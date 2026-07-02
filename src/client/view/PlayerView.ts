@@ -82,7 +82,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
     inSuddenDeath: pu.inSuddenDeath ?? false,
-    suddenDeathTicks: Math.max(0, pu.suddenDeathTicks ?? 0),
+    markedSuddenDeathTick: pu.markedSuddenDeathTick ?? -1,
     betrayals: pu.betrayals!,
     hasSpawned: pu.hasSpawned!,
     spawnTile: pu.spawnTile,
@@ -596,7 +596,9 @@ export class PlayerView {
     return this.state.inSuddenDeath;
   }
   suddenDeathTicks(): number {
-    return this.state.suddenDeathTicks;
+    return this.inSuddenDeath()
+      ? this.game.ticks() - this.state.markedSuddenDeathTick
+      : 0;
   }
   betrayals(): number {
     return this.state.betrayals;

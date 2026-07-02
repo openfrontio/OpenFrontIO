@@ -317,7 +317,7 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
       inSuddenDeath: this.inSuddenDeath(),
-      suddenDeathTicks: this.suddenDeathTicks(),
+      markedSuddenDeathTick: this.markedSuddenDeathTick,
       targets: targets,
       outgoingEmojis: outgoingEmojis,
       outgoingAttacks: outgoingAttacks,

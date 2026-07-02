@@ -108,7 +108,9 @@ export function computePlayerStatus(
     // Past the warn grace the side is actively bleeding troops; the skull holds
     // steady then (vs blinking while merely in danger).
     const suddenDeathDraining =
-      inSuddenDeath && ps.suddenDeathTicks >= (opts.suddenDeathWarnTicks ?? 0);
+      inSuddenDeath &&
+      (opts.tick ?? 0) - ps.markedSuddenDeathTick >=
+        (opts.suddenDeathWarnTicks ?? 0);
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
     // Relative flags

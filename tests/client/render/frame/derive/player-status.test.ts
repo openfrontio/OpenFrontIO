@@ -33,7 +33,7 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     isTraitor: false,
     traitorRemainingTicks: 0,
     inSuddenDeath: false,
-    suddenDeathTicks: 0,
+    markedSuddenDeathTick: -1,
     betrayals: 0,
     hasSpawned: true,
     lastDeleteUnitTick: 0,

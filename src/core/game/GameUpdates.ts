@@ -234,7 +234,7 @@ export interface PlayerUpdate {
   isTraitor?: boolean;
   traitorRemainingTicks?: number;
   inSuddenDeath?: boolean;
-  suddenDeathTicks?: number;
+  markedSuddenDeathTick?: number;
   targets?: number[];
   outgoingEmojis?: EmojiMessage[];
   outgoingAttacks?: AttackUpdate[];
