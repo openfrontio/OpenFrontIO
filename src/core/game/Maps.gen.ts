@@ -327,7 +327,7 @@ export const maps: readonly MapInfo[] = [
     id: "CaspianSea",
     type: GameMapType.CaspianSea,
     translationKey: "map.caspiansea",
-    categories: ["asia"],
+    categories: ["asia", "new"],
     multiplayerFrequency: 5,
   },
   {
@@ -827,7 +827,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.TwoLakes,
     translationKey: "map.twolakes",
     categories: ["europe"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 4,
   },
   {
     id: "UnitedStates",

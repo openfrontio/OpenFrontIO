@@ -134,7 +134,13 @@
   },
   {
     "code": "aq",
+    "continent": "Antarctica",
     "name": "Antarctica"
+  },
+  {
+    "code": "Antarctica (True South)",
+    "continent": "Antarctica",
+    "name": "True South"
   },
   {
     "code": "antipope",
@@ -353,6 +359,11 @@
     "code": "br",
     "continent": "South America",
     "name": "Brazil"
+  },
+  {
+    "code": "British Antarctic Territory",
+    "continent": "Antarctica",
+    "name": "British Antarctic Territory"
   },
   {
     "code": "britishcolumbia",
@@ -1004,6 +1015,11 @@
     "code": "Georgian SSR",
     "continent": "Asia",
     "name": "Georgian SSR"
+  },
+  {
+    "code": "German Confederation",
+    "continent": "Europe",
+    "name": "German Confederation"
   },
   {
     "code": "German Empire",
