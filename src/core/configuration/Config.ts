@@ -81,7 +81,7 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
-// OFM doomsday-clock tunables (anti-stall). Off unless enabled in GameConfig.
+// Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
 // Times in seconds. The required map share rises in waves (levels + times in
 // DoomsdayClock.ts, chosen by `speed`). A side caught below the bar gets a
 // warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed to zero: the
@@ -118,7 +118,7 @@ export class Config {
     return 30 * 10; // 30 seconds
   }
 
-  // OFM doomsday-clock config, resolved against defaults. One read per tick.
+  // Doomsday Clock config, resolved against defaults. One read per tick.
   doomsdayClockConfig(): typeof DOOMSDAY_CLOCK_DEFAULTS {
     const c = this._gameConfig.doomsdayClock;
     const d = DOOMSDAY_CLOCK_DEFAULTS;

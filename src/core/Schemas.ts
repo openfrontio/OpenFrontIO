@@ -249,7 +249,7 @@ const TeamCountConfigSchema = z.union([
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
-// OFM doomsday-clock (anti-stall). Below a rising share of the map a player (or, in
+// Doomsday Clock (anti-stall). Below a rising share of the map a player (or, in
 // team modes, their whole team) gets skulled and their troops drain to zero. The
 // required share rises in discrete waves (levels + times per `speed`, see
 // DoomsdayClock.ts); a side caught below a new wave gets a warnSeconds cooldown
