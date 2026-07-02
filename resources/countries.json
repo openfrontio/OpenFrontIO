@@ -360,6 +360,11 @@
     "name": "British Columbia"
   },
   {
+    "code": "Flag_of_Hong_Kong_(1959-1997)",
+    "continent": "Asia",
+    "name": "British Hong Kong"
+  },
+  {
     "code": "io",
     "continent": "Asia",
     "name": "British Indian Ocean Territory"
@@ -769,6 +774,11 @@
     "code": "east_germany",
     "continent": "Europe",
     "name": "East Germany"
+  },
+  {
+    "code": "Eastern_Turkistan_Flag",
+    "continent": "Asia",
+    "name": "East Turkestan"
   },
   {
     "code": "ec",
@@ -1587,6 +1597,11 @@
     "name": "Macau"
   },
   {
+    "code": "Ma_Clique_Flag",
+    "continent": "Asia",
+    "name": "Ma Clique"
+  },
+  {
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
@@ -1645,6 +1660,11 @@
     "code": "mt",
     "continent": "Europe",
     "name": "Malta"
+  },
+  {
+    "code": "Flag_of_Manchukuo",
+    "continent": "Asia",
+    "name": "Manchukuo"
   },
   {
     "code": "Maori flag",
@@ -2692,6 +2712,11 @@
     "code": "sy",
     "continent": "Asia",
     "name": "Syria"
+  },
+  {
+    "code": "Flag_of_Taiping_Heavenly_Kingdom",
+    "continent": "Asia",
+    "name": "Taiping Heavenly Kingdom"
   },
   {
     "code": "tw",
