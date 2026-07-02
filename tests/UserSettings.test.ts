@@ -45,4 +45,16 @@ describe("UserSettings effect selection", () => {
     localStorage.setItem(EFFECTS_KEY, "not json");
     expect(new UserSettings().getSelectedEffects()).toEqual({});
   });
+
+  it("keeps per-nukeType nuke-explosion slots independent", () => {
+    const s = new UserSettings();
+    s.setSelectedEffectName("atom", "atom_boom");
+    s.setSelectedEffectName("hydro", "hydro_boom");
+    expect(s.getSelectedEffectName("atom")).toBe("atom_boom");
+    expect(s.getSelectedEffectName("hydro")).toBe("hydro_boom");
+    // Clearing one bomb's slot leaves the others intact.
+    s.setSelectedEffectName("atom", undefined);
+    expect(s.getSelectedEffectName("atom")).toBeNull();
+    expect(s.getSelectedEffectName("hydro")).toBe("hydro_boom");
+  });
 });

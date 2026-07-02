@@ -5,7 +5,8 @@ import {
   Cosmetics,
   CosmeticsSchema,
   Effect,
-  EffectType,
+  effectMatchesSlot,
+  effectTypeForSlot,
   findEffect,
   Flag,
   Pack,
@@ -646,16 +647,20 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     }
   }
 
-  // Effects: a per-effectType map (effectType -> effect name). Drop any entry
-  // whose effect no longer exists or the user can't access. Like
-  // skins/flags/patterns above, a selection is kept (and left to the server to
-  // validate) when cosmetics or userMe fail to load.
+  // Effects: a per-slot map (slot -> effect name). A slot is the effectType for
+  // trails and the nukeType for nuke explosions (see effectTypeForSlot). Drop any
+  // entry whose effect no longer exists, doesn't fit the slot, or the user can't
+  // access. Like skins/flags/patterns above, a selection is kept (and left to the
+  // server to validate) when cosmetics or userMe fail to load.
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
-  for (const [effectType, name] of Object.entries(selectedEffects)) {
-    const effect = findEffect(cosmetics, effectType, name);
-    if (cosmetics && !effect) {
-      userSettings.setSelectedEffectName(effectType as EffectType, undefined);
+  for (const [slot, name] of Object.entries(selectedEffects)) {
+    const effectType = effectTypeForSlot(slot);
+    const effect = effectType
+      ? findEffect(cosmetics, effectType, name)
+      : undefined;
+    if (cosmetics && (!effect || !effectMatchesSlot(effect, slot))) {
+      userSettings.setSelectedEffectName(slot, undefined);
       continue;
     }
     if (effect) {
@@ -664,15 +669,12 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("effect:*");
         if (!hasWildcard && !flares.includes(`effect:${effect.name}`)) {
-          userSettings.setSelectedEffectName(
-            effectType as EffectType,
-            undefined,
-          );
+          userSettings.setSelectedEffectName(slot, undefined);
           continue;
         }
       }
     }
-    effects[effectType] = name;
+    effects[slot] = name;
   }
 
   return {
@@ -725,13 +727,13 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
 
   if (refs.effects && cosmetics) {
     const effects: Record<string, PlayerEffect> = {};
-    for (const [effectType, name] of Object.entries(refs.effects)) {
-      const effect = findEffect(cosmetics, effectType, name);
-      if (effect) {
-        effects[effectType] = {
-          name: effect.name,
-          effectType: effect.effectType,
-        };
+    for (const [slot, name] of Object.entries(refs.effects)) {
+      const effectType = effectTypeForSlot(slot);
+      const effect = effectType
+        ? findEffect(cosmetics, effectType, name)
+        : undefined;
+      if (effect && effectMatchesSlot(effect, slot)) {
+        effects[slot] = { name: effect.name, effectType: effect.effectType };
       }
     }
     if (Object.keys(effects).length > 0) result.effects = effects;

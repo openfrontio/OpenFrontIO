@@ -1,8 +1,12 @@
 import {
   Cosmetics,
   CosmeticsSchema,
+  Effect,
+  effectMatchesSlot,
   EffectSchema,
+  effectTypeForSlot,
   findEffect,
+  isNukeExplosionEffect,
   isTrailEffect,
   NukeExplosionAttributesSchema,
   TrailEffectAttributesSchema,
@@ -378,7 +382,7 @@ describe("PlayerEffectSchema (identity: name + effectType)", () => {
 
 describe("NukeExplosionAttributesSchema", () => {
   const atomShockwave = {
-    style: "shockwave",
+    type: "shockwave",
     nukeType: "atom",
     colors: ["#ff0000", "#bb00ff"],
     size: 50,
@@ -392,7 +396,16 @@ describe("NukeExplosionAttributesSchema", () => {
     );
   });
 
-  it("rejects an unknown nukeType or style (so it's dropped, not rendered wrong)", () => {
+  it("parses all three nukeTypes (atom, hydro, mirvWarhead)", () => {
+    for (const nukeType of ["atom", "hydro", "mirvWarhead"]) {
+      expect(
+        NukeExplosionAttributesSchema.safeParse({ ...atomShockwave, nukeType })
+          .success,
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an unknown nukeType or type (so it's dropped, not rendered wrong)", () => {
     expect(
       NukeExplosionAttributesSchema.safeParse({
         ...atomShockwave,
@@ -402,7 +415,7 @@ describe("NukeExplosionAttributesSchema", () => {
     expect(
       NukeExplosionAttributesSchema.safeParse({
         ...atomShockwave,
-        style: "fireball",
+        type: "fireball",
       }).success,
     ).toBe(false);
   });
@@ -410,7 +423,7 @@ describe("NukeExplosionAttributesSchema", () => {
   it("requires colors, size, speed, and transitionSpeed", () => {
     expect(
       NukeExplosionAttributesSchema.safeParse({
-        style: "shockwave",
+        type: "shockwave",
         nukeType: "atom",
       }).success,
     ).toBe(false);
@@ -432,7 +445,7 @@ describe("nukeExplosion in the cosmetics catalog", () => {
               speed: 50,
               colors: ["#ff0000", "#bb00ff"],
               nukeType: "atom",
-              style: "shockwave",
+              type: "shockwave",
               transitionSpeed: 5,
             },
             affiliateCode: null,
@@ -453,7 +466,7 @@ describe("nukeExplosion in the cosmetics catalog", () => {
 
   it("drops a nukeExplosion effect with an unknown nukeType without failing the catalog", () => {
     const attrs = (nukeType: string) => ({
-      style: "shockwave",
+      type: "shockwave",
       nukeType,
       colors: [],
       size: 1,
@@ -510,7 +523,7 @@ describe("isTrailEffect", () => {
       product: null,
       rarity: "common",
       attributes: {
-        style: "shockwave",
+        type: "shockwave",
         nukeType: "atom",
         colors: ["#f00"],
         size: 50,
@@ -520,5 +533,59 @@ describe("isTrailEffect", () => {
     });
     expect(isTrailEffect(trail)).toBe(true);
     expect(isTrailEffect(boom)).toBe(false);
+  });
+});
+
+describe("effect selection slots", () => {
+  const trail: Effect = EffectSchema.parse({
+    name: "spectrum",
+    effectType: "transportShipTrail",
+    product: null,
+    rarity: "common",
+    attributes: {
+      type: "gradient",
+      colors: ["#fff"],
+      colorSize: 16,
+      movementSpeed: 0.15,
+    },
+  });
+  const atomBoom: Effect = EffectSchema.parse({
+    name: "atom_boom",
+    effectType: "nukeExplosion",
+    product: null,
+    rarity: "common",
+    attributes: {
+      type: "shockwave",
+      nukeType: "atom",
+      colors: ["#f00"],
+      size: 50,
+      speed: 50,
+      transitionSpeed: 5,
+    },
+  });
+
+  it("isNukeExplosionEffect narrows nukeExplosion effects", () => {
+    expect(isNukeExplosionEffect(atomBoom)).toBe(true);
+    expect(isNukeExplosionEffect(trail)).toBe(false);
+  });
+
+  it("effectTypeForSlot maps trail slots to themselves and nukeTypes to nukeExplosion", () => {
+    expect(effectTypeForSlot("transportShipTrail")).toBe("transportShipTrail");
+    expect(effectTypeForSlot("nukeTrail")).toBe("nukeTrail");
+    expect(effectTypeForSlot("atom")).toBe("nukeExplosion");
+    expect(effectTypeForSlot("hydro")).toBe("nukeExplosion");
+    expect(effectTypeForSlot("mirvWarhead")).toBe("nukeExplosion");
+    // A bare "nukeExplosion" is no longer a valid slot (selection is per nukeType).
+    expect(effectTypeForSlot("nukeExplosion")).toBeUndefined();
+    expect(effectTypeForSlot("bogus")).toBeUndefined();
+  });
+
+  it("effectMatchesSlot ties a nuke effect to its own nukeType slot", () => {
+    expect(effectMatchesSlot(atomBoom, "atom")).toBe(true);
+    expect(effectMatchesSlot(atomBoom, "hydro")).toBe(false);
+    expect(effectMatchesSlot(atomBoom, "mirvWarhead")).toBe(false);
+    // A trail matches its effectType slot, not a nukeType slot.
+    expect(effectMatchesSlot(trail, "transportShipTrail")).toBe(true);
+    expect(effectMatchesSlot(trail, "atom")).toBe(false);
   });
 });

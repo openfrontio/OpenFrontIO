@@ -22,6 +22,11 @@ import {
   MAX_TRAIL_COLORS,
   TRAIL_EFFECT_BLOCKS,
 } from "./render/gl/utils/ColorUtils";
+import {
+  UT_ATOM_BOMB,
+  UT_HYDROGEN_BOMB,
+  UT_MIRV_WARHEAD,
+} from "./render/types/UnitType";
 import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
@@ -47,6 +52,14 @@ const DEFAULT_EXPLOSION_COLOR: readonly [number, number, number] = [
 //   transitionSpeed passes through as the color cross-fade rate (Hz).
 const EXPLOSION_SIZE_TO_RADIUS = 1 / 20;
 const EXPLOSION_SPEED_DIVISOR = 50;
+
+// Detonating bomb → nuke-explosion slot (values match NUKE_EXPLOSION_TYPES).
+// Only these unit types produce a shockwave; plain MIRV splits and never detonates.
+const UNIT_TYPE_TO_NUKE_TYPE: Readonly<Record<string, string>> = {
+  [UT_ATOM_BOMB]: "atom",
+  [UT_HYDROGEN_BOMB]: "hydro",
+  [UT_MIRV_WARHEAD]: "mirvWarhead",
+};
 
 function toRgb01(s: string): [number, number, number] | null {
   const c = colord(s);
@@ -175,10 +188,11 @@ export class WebGLFrameBuilder {
   /**
    * Attach the firing player's resolved nuke-explosion cosmetic to each dead
    * nuke event, so every client renders the shockwave in the owner's colors.
-   * Resolved from the catalog by (nukeExplosion, name) — the same source the
-   * trail palette resolves from — keyed by the unit's owner smallID. Runs
-   * before uploadFrameData so the FX pass sees the params on the event; a player
-   * with no cosmetic is left undefined (the shockwave falls back to its default).
+   * The effect is per-bomb-type: the detonating unit maps to a nukeType slot
+   * (atom / hydro / mirvWarhead) and we resolve the player's selection for THAT
+   * slot, so an atom effect only shows on atom bombs, etc. Runs before
+   * uploadFrameData so the FX pass sees the params on the event; a player with no
+   * selection for that bomb is left undefined (the shockwave falls back to default).
    */
   private resolveDeadUnitExplosions(gameView: GameView): void {
     const deadUnits = gameView.frameData().events.deadUnits;
@@ -187,9 +201,11 @@ export class WebGLFrameBuilder {
     if (!catalog) return; // Catalog not loaded yet — default FX this frame.
     for (const du of deadUnits) {
       if (!du.reachedTarget) continue; // SAM interceptions have no explosion cosmetic
+      const nukeType = UNIT_TYPE_TO_NUKE_TYPE[du.unitType];
+      if (!nukeType) continue; // not a shockwave-producing bomb
       const player = gameView.playerBySmallID(du.ownerSmallID);
       if (!player.isPlayer()) continue;
-      const name = player.cosmetics.effects?.nukeExplosion?.name;
+      const name = player.cosmetics.effects?.[nukeType]?.name;
       if (!name) continue;
       const effect = findEffect(catalog, "nukeExplosion", name);
       if (!effect || effect.effectType !== "nukeExplosion") continue;

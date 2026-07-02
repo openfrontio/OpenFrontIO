@@ -142,15 +142,20 @@ export const TrailEffectAttributesSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-// A nuke-explosion effect — a detonation FX, not a trail. `style` picks the
-// visual (only "shockwave" today) and `nukeType` the bomb (only "atom" today);
-// both are enums so an effect using a value this client can't render is dropped
-// by lenientRecord instead of rendering wrong. `colors` is the palette and
-// size/speed/transitionSpeed drive the animation (unvalidated numbers/strings —
-// the renderer clamps/drops what it can't use).
+// The bomb a nuke-explosion effect applies to. The store/selection UI groups
+// nukeExplosion effects into one tab per type. Enum, so an effect for a bomb
+// this client doesn't know is dropped by lenientRecord (not rendered wrong).
+export const NUKE_EXPLOSION_TYPES = ["atom", "hydro", "mirvWarhead"] as const;
+export type NukeExplosionType = (typeof NUKE_EXPLOSION_TYPES)[number];
+
+// A nuke-explosion effect — a detonation FX, not a trail. `type` picks the
+// visual (only "shockwave" today) and `nukeType` the bomb; both are enums so an
+// effect using a value this client can't render is dropped by lenientRecord
+// instead of rendering wrong. `colors` is the palette and size/speed/
+// transitionSpeed drive the animation (the renderer clamps/drops what it can't use).
 export const NukeExplosionAttributesSchema = z.object({
-  style: z.enum(["shockwave"]),
-  nukeType: z.enum(["atom"]),
+  type: z.enum(["shockwave"]),
+  nukeType: z.enum(NUKE_EXPLOSION_TYPES),
   colors: z.array(z.string()),
   size: z.number(),
   speed: z.number(),
@@ -192,6 +197,41 @@ export function isTrailEffect(
   effect: Effect,
 ): effect is Extract<Effect, { effectType: TrailEffectType }> {
   return (TRAIL_EFFECT_TYPES as readonly string[]).includes(effect.effectType);
+}
+
+/** Narrows an Effect to a nuke-explosion effect (exposes its nukeType). */
+export function isNukeExplosionEffect(
+  effect: Effect,
+): effect is Extract<Effect, { effectType: "nukeExplosion" }> {
+  return effect.effectType === "nukeExplosion";
+}
+
+/**
+ * A player selects one effect per "slot". A slot is the effectType for trails
+ * (transportShipTrail, nukeTrail) and the nukeType for nuke explosions (atom,
+ * hydro, mirvWarhead) — so a player can equip a distinct explosion per bomb.
+ * Returns the effectType a slot resolves to for catalog lookup, or undefined for
+ * an unknown/stale slot (e.g. a bare "nukeExplosion" key from before this split).
+ */
+export function effectTypeForSlot(slot: string): EffectType | undefined {
+  if ((NUKE_EXPLOSION_TYPES as readonly string[]).includes(slot)) {
+    return "nukeExplosion";
+  }
+  if ((TRAIL_EFFECT_TYPES as readonly string[]).includes(slot)) {
+    return slot as EffectType;
+  }
+  return undefined;
+}
+
+/**
+ * Whether `effect` may occupy selection `slot`: the slot's effectType matches,
+ * and for a nuke-explosion slot the effect's nukeType matches the slot (so an
+ * atom effect can only sit in the atom slot, etc.).
+ */
+export function effectMatchesSlot(effect: Effect, slot: string): boolean {
+  if (effect.effectType !== effectTypeForSlot(slot)) return false;
+  if (isNukeExplosionEffect(effect)) return effect.attributes.nukeType === slot;
+  return true;
 }
 
 /**

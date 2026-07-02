@@ -129,6 +129,26 @@ const effectCosmetics = {
         rarity: "common",
       },
     },
+    nukeExplosion: {
+      atom_boom: {
+        name: "atom_boom",
+        effectType: "nukeExplosion" as const,
+        attributes: {
+          type: "shockwave" as const,
+          nukeType: "atom" as const,
+          colors: ["#ff0000", "#7300ff"],
+          size: 50,
+          speed: 50,
+          transitionSpeed: 5,
+        },
+        url: "",
+        affiliateCode: null,
+        product: null,
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "common",
+      },
+    },
   },
 };
 const effectChecker = new PrivilegeCheckerImpl(
@@ -604,6 +624,29 @@ describe("Effect validation in isAllowed", () => {
     expect(result.type).toBe("forbidden");
     if (result.type === "forbidden") {
       expect(result.reason).toMatch(/invalid effect/);
+    }
+  });
+
+  test("allows a nuke-explosion effect in its matching nukeType slot", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { atom: "atom_boom" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.atom).toEqual({
+        name: "atom_boom",
+        effectType: "nukeExplosion",
+      });
+    }
+  });
+
+  test("rejects a nuke-explosion effect in a mismatched nukeType slot", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { hydro: "atom_boom" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/not found for slot hydro/);
     }
   });
 

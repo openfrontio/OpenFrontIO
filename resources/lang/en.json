@@ -394,6 +394,11 @@
   },
   "effects": {
     "button_title": "Pick an effect!",
+    "nukeType": {
+      "atom": "Atom",
+      "hydro": "Hydrogen",
+      "mirv": "MIRV"
+    },
     "search": "Search...",
     "title": "Effects",
     "type": {
