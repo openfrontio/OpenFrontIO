@@ -191,8 +191,9 @@ export function joinLobby(
           if (startingModal) {
             startingModal.classList.add("hidden");
           }
-          // No GPU-accelerated WebGL2: gate with an actionable message rather
-          // than the generic crash modal (the game would crawl at ~1fps).
+          // No usable WebGL2 (software-rendered, fingerprint-capped, or
+          // missing): gate with an actionable message rather than the generic
+          // crash modal (the game would crawl at ~1fps or render black).
           if (e instanceof GLUnavailableError) {
             showGLGate(e.glStatus);
             return;
@@ -333,7 +334,7 @@ function createWebGLView(
     );
   } catch (e) {
     if (e instanceof GLUnavailableError) {
-      trackGLInit(e.glStatus, e.renderer);
+      trackGLInit(e.glStatus, e.renderer, e.maxTextureSize);
     }
     // The renderer never took ownership of the canvas, so remove it here —
     // otherwise it lingers in the DOM holding a (possibly software) GL context.

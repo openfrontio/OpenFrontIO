@@ -205,16 +205,21 @@ export class GPURenderer {
     this.raf = raf;
     this.caf = caf;
 
-    // Demand a GPU-accelerated context. A software (SwiftShader) or missing
-    // WebGL2 context throws GLUnavailableError, which the game-start path turns
-    // into an actionable gate instead of letting the game crawl at ~1fps.
+    // Demand a GPU-accelerated context with usable texture limits. A software
+    // (SwiftShader), fingerprinting-capped, or missing WebGL2 context throws
+    // GLUnavailableError, which the game-start path turns into an actionable
+    // gate instead of letting the game crawl at ~1fps or render black.
     const res = initGL(canvas, {
       alpha: false,
       antialias: false,
       powerPreference: "high-performance",
     });
     if (res.status !== "ok") {
-      throw new GLUnavailableError(res.status, res.renderer);
+      throw new GLUnavailableError(
+        res.status,
+        res.renderer,
+        res.status === "limited" ? res.maxTextureSize : undefined,
+      );
     }
     const gl = res.gl;
     this.gl = gl;

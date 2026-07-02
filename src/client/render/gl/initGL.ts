@@ -10,10 +10,20 @@
  */
 
 import type { WebGLGateStatus } from "../../components/WebGLGate";
+import { getPaletteSize } from "./utils/ColorUtils";
 
 export type GLResult =
   | { gl: WebGL2RenderingContext; status: "ok" }
-  | { gl: null; status: "software" | "unsupported"; renderer: string };
+  | { gl: null; status: "software" | "unsupported"; renderer: string }
+  | { gl: null; status: "limited"; renderer: string; maxTextureSize: number };
+
+// The renderer unconditionally allocates a PALETTE_SIZE-wide (4096) palette
+// texture, so a context whose MAX_TEXTURE_SIZE is below that can't run the
+// game: the oversized texImage2D calls fail silently and everything renders
+// black (#4357). In practice this means fingerprinting protection —
+// privacy.resistFingerprinting (on by default in LibreWolf, opt-in in
+// Firefox) caps MAX_TEXTURE_SIZE at 2048.
+const REQUIRED_TEXTURE_SIZE = getPaletteSize();
 
 // Renderer strings reported by software WebGL backends. Mirrors the detection
 // in utilities/Diagnostic.ts.
@@ -52,6 +62,12 @@ export function initGL(
     if (SOFTWARE_RENDERER.test(renderer)) {
       return { gl: null, status: "software", renderer };
     }
+    // Fingerprinting protection caps texture sizes on an otherwise
+    // hardware-accelerated context; the game would render black (#4357).
+    const maxTextureSize = Number(accel.getParameter(accel.MAX_TEXTURE_SIZE));
+    if (maxTextureSize < REQUIRED_TEXTURE_SIZE) {
+      return { gl: null, status: "limited", renderer, maxTextureSize };
+    }
     return { gl: accel, status: "ok" };
   }
 
@@ -72,8 +88,9 @@ export function initGL(
  */
 export class GLUnavailableError extends Error {
   constructor(
-    readonly glStatus: "software" | "unsupported",
+    readonly glStatus: "software" | "unsupported" | "limited",
     readonly renderer: string,
+    readonly maxTextureSize?: number,
   ) {
     super(`WebGL2 unavailable: ${glStatus}`);
     this.name = "GLUnavailableError";
@@ -87,12 +104,16 @@ export class GLUnavailableError extends Error {
  * otherwise.
  */
 export function trackGLInit(
-  status: "ok" | "software" | "unsupported",
+  status: "ok" | "software" | "unsupported" | "limited",
   renderer: string,
+  maxTextureSize?: number,
 ): void {
   window.gtag?.("event", "gl_init", {
     status,
     renderer: status === "ok" ? "" : renderer,
+    ...(maxTextureSize !== undefined && {
+      max_texture_size: maxTextureSize,
+    }),
   });
 }
 

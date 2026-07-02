@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-export type WebGLGateStatus = "software" | "unsupported";
+export type WebGLGateStatus = "software" | "unsupported" | "limited";
 
 // Hard-block troubleshooting screen seen by a tiny fraction of sessions (no
 // GPU-accelerated WebGL2). The content is intentionally NOT translated — it's
@@ -43,16 +43,39 @@ const STEP_SECTIONS: ReadonlyArray<{ title: string; steps: string[] }> = [
   },
 ];
 
+// Shown for the "limited" status: WebGL works but texture sizes are capped
+// below what the game needs, so the map renders black (#4357). The only known
+// cause is fingerprinting protection (privacy.resistFingerprinting — on by
+// default in LibreWolf and Mullvad Browser, opt-in in Firefox).
+const LIMITED_SECTIONS: ReadonlyArray<{ title: string; steps: string[] }> = [
+  {
+    title: "Firefox / LibreWolf / Mullvad Browser",
+    steps: [
+      "Type about:config in the address bar and press Enter (accept any warning prompts).",
+      "Search for privacy.resistFingerprinting.exemptedDomains.",
+      `Add ${window.location.hostname} to the value (comma-separated if other domains are already listed).`,
+      "Restart your browser.",
+    ],
+  },
+];
+
+const LIMITED_NOTES: string[] = [
+  "This keeps fingerprinting protection active everywhere else — only this site is exempted.",
+  "Alternatively, set privacy.resistFingerprinting to false to turn the protection off entirely.",
+];
+
 const SAFARI_NOTES: string[] = [
   "Mac: WebGL is on by default. If it has been restricted, open Safari > Settings (or Preferences) > Websites > WebGL and set WebGL to Allow or On for this site or globally.",
   "iPhone/iPad: WebGL is natively supported and always on for iOS 8 and later.",
 ];
 
 /**
- * Full-screen blocking gate shown when a GPU-accelerated WebGL2 context can't
- * be obtained — software rendering (~1fps) or no WebGL2 at all. Shows how to
- * turn hardware acceleration / WebGL back on across the most popular browsers.
- * Shown imperatively from the game-start path.
+ * Full-screen blocking gate shown when a usable WebGL2 context can't be
+ * obtained — software rendering (~1fps), no WebGL2 at all, or texture sizes
+ * capped by fingerprinting protection. Shows how to turn hardware
+ * acceleration / WebGL back on (or exempt the site from fingerprinting
+ * protection) across the most popular browsers. Shown imperatively from the
+ * game-start path.
  */
 @customElement("webgl-gate")
 export class WebGLGate extends LitElement {
@@ -64,13 +87,21 @@ export class WebGLGate extends LitElement {
   }
 
   render() {
+    const limited = this.status === "limited";
     const software = this.status === "software";
-    const title = software
-      ? "Hardware acceleration is off"
-      : "WebGL2 not supported";
-    const intro = software
-      ? "Your browser is rendering without GPU acceleration, so the game can't run smoothly. Here is how to activate it across the most popular web browsers:"
-      : "Your browser doesn't support WebGL2, which this game requires. Here is how to enable it across the most popular web browsers:";
+    const title = limited
+      ? "Your browser is limiting WebGL"
+      : software
+        ? "Hardware acceleration is off"
+        : "WebGL2 not supported";
+    const intro = limited
+      ? 'A privacy setting is capping WebGL texture sizes below what the game needs, so the map would render black. This is usually "resist fingerprinting" protection, which is on by default in some Firefox-based browsers. Here is how to exempt this site:'
+      : software
+        ? "Your browser is rendering without GPU acceleration, so the game can't run smoothly. Here is how to activate it across the most popular web browsers:"
+        : "Your browser doesn't support WebGL2, which this game requires. Here is how to enable it across the most popular web browsers:";
+    const sections = limited ? LIMITED_SECTIONS : STEP_SECTIONS;
+    const notesTitle = limited ? "Notes" : "Safari";
+    const notes = limited ? LIMITED_NOTES : SAFARI_NOTES;
 
     return html`
       <div
@@ -81,7 +112,7 @@ export class WebGLGate extends LitElement {
         >
           <h2 class="text-xl font-bold mb-3">${title}</h2>
           <p class="text-sm leading-relaxed text-white/85 mb-5">${intro}</p>
-          ${STEP_SECTIONS.map(
+          ${sections.map(
             (section) => html`
               <section class="mb-5">
                 <h3 class="text-sm font-bold text-white mb-1.5">
@@ -96,11 +127,11 @@ export class WebGLGate extends LitElement {
             `,
           )}
           <section class="mb-0">
-            <h3 class="text-sm font-bold text-white mb-1.5">Safari</h3>
+            <h3 class="text-sm font-bold text-white mb-1.5">${notesTitle}</h3>
             <ul
               class="pl-5 list-disc text-sm leading-relaxed text-white/85 space-y-1.5"
             >
-              ${SAFARI_NOTES.map((note) => html`<li>${note}</li>`)}
+              ${notes.map((note) => html`<li>${note}</li>`)}
             </ul>
           </section>
         </div>
