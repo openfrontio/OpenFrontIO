@@ -65,16 +65,20 @@ const DEFAULT_OPTIONS = {
 
 // A map earns achievements only if it has nations to conquer — the same rule
 // MapDisplay uses to decide whether to draw medals. Maps without nations (e.g.
-// Baikal Nuke Wars) must be excluded from the medal totals. The manifests are
-// fetched once and cached for the page session; concurrent callers share the
-// in-flight promise so we never fetch them twice.
+// Baikal Nuke Wars) must be excluded from the medal totals. The complete set is
+// cached for the page session and concurrent callers share the in-flight
+// promise so we never fetch the manifests twice. A load that hits any fetch
+// error resolves to null (not a partial set) and clears the shared promise, so
+// a transient failure retries on the next call rather than locking in an
+// undercount for the whole session.
 let eligibleMapsCache: Set<GameMapType> | null = null;
-let eligibleMapsPromise: Promise<Set<GameMapType>> | null = null;
+let eligibleMapsPromise: Promise<Set<GameMapType> | null> | null = null;
 
-async function loadAchievementEligibleMaps(): Promise<Set<GameMapType>> {
+async function loadAchievementEligibleMaps(): Promise<Set<GameMapType> | null> {
   if (eligibleMapsCache) return eligibleMapsCache;
   eligibleMapsPromise ??= (async () => {
     const eligible = new Set<GameMapType>();
+    let hadFailure = false;
     await Promise.all(
       maps.map(async (m) => {
         try {
@@ -85,10 +89,16 @@ async function loadAchievementEligibleMaps(): Promise<Set<GameMapType>> {
             eligible.add(m.type);
           }
         } catch {
-          // Skip maps whose manifest fails to load rather than miscount them.
+          // A missing manifest would undercount the total; remember the failure
+          // so we don't cache this incomplete set below.
+          hadFailure = true;
         }
       }),
     );
+    if (hadFailure) {
+      eligibleMapsPromise = null; // allow a later call to retry
+      return null;
+    }
     eligibleMapsCache = eligible;
     return eligible;
   })();
@@ -161,7 +171,10 @@ export class SinglePlayerModal extends BaseModal {
 
   private async ensureEligibleMaps() {
     if (this.eligibleMaps) return;
-    this.eligibleMaps = await loadAchievementEligibleMaps();
+    const eligible = await loadAchievementEligibleMaps();
+    // Leave eligibleMaps null on a failed/incomplete load so the overview keeps
+    // its placeholder total and the next toggle retries.
+    if (eligible) this.eligibleMaps = eligible;
   }
 
   // Medals earned per difficulty, counted only on achievement-eligible maps.
@@ -172,8 +185,11 @@ export class SinglePlayerModal extends BaseModal {
       [Difficulty.Hard]: 0,
       [Difficulty.Impossible]: 0,
     };
+    // Until eligibility is loaded, count nothing — otherwise the overview would
+    // briefly include wins on non-eligible maps before the manifests resolve.
+    if (!this.eligibleMaps) return counts;
     for (const [map, difficulties] of this.mapWins) {
-      if (this.eligibleMaps && !this.eligibleMaps.has(map)) continue;
+      if (!this.eligibleMaps.has(map)) continue;
       for (const difficulty of difficulties) counts[difficulty]++;
     }
     return counts;
