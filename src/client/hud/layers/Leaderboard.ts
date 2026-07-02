@@ -3,17 +3,29 @@ import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { renderTroops, translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
+import { UnitType } from "../../../core/game/Game";
 import { Controller } from "../../Controller";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { formatPercentage, renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+
+type SortKey =
+  | "tiles"
+  | "gold"
+  | "goldPerMinute"
+  | "troops"
+  | "maxtroops"
+  | "cities";
 
 interface Entry {
   name: string;
   position: number;
   score: string;
   gold: string;
+  goldPerMinute: string;
+  troops: string;
   maxTroops: string;
+  cities: string;
   isMyPlayer: boolean;
   isOnSameTeam: boolean;
   player: PlayerView;
@@ -30,7 +42,7 @@ export class Leaderboard extends LitElement implements Controller {
   private showTopFive = true;
 
   @state()
-  private _sortKey: "tiles" | "gold" | "maxtroops" = "tiles";
+  private _sortKey: SortKey = "tiles";
 
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
@@ -57,7 +69,7 @@ export class Leaderboard extends LitElement implements Controller {
     this.updateLeaderboard();
   }
 
-  private setSort(key: "tiles" | "gold" | "maxtroops") {
+  private setSort(key: SortKey) {
     if (this._sortKey === key) {
       this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -83,6 +95,7 @@ export class Leaderboard extends LitElement implements Controller {
 
     const sorted: PlayerViewTroopsCache[] = this.game
       .playerViews()
+      .filter((p) => p.isAlive())
       .map((p) => ({ pv: p, maxTroops: maxTroops(p) }));
 
     switch (this._sortKey) {
@@ -91,8 +104,24 @@ export class Leaderboard extends LitElement implements Controller {
           compare(Number(a.pv.gold()), Number(b.pv.gold())),
         );
         break;
+      case "goldPerMinute":
+        sorted.sort((a, b) =>
+          compare(a.pv.goldPerMinute(), b.pv.goldPerMinute()),
+        );
+        break;
+      case "troops":
+        sorted.sort((a, b) => compare(a.pv.troops(), b.pv.troops()));
+        break;
       case "maxtroops":
         sorted.sort((a, b) => compare(a.maxTroops, b.maxTroops));
+        break;
+      case "cities":
+        sorted.sort((a, b) =>
+          compare(
+            a.pv.totalUnitLevels(UnitType.City),
+            b.pv.totalUnitLevels(UnitType.City),
+          ),
+        );
         break;
       default:
         sorted.sort((a, b) =>
@@ -103,10 +132,7 @@ export class Leaderboard extends LitElement implements Controller {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const alivePlayers = sorted.filter((player) => player.pv.isAlive());
-    const playersToShow = this.showTopFive
-      ? alivePlayers.slice(0, 5)
-      : alivePlayers;
+    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
 
     this.players = playersToShow.map((playerCache, index) => {
       const player = playerCache.pv;
@@ -118,7 +144,10 @@ export class Leaderboard extends LitElement implements Controller {
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
+        goldPerMinute: renderNumber(player.goldPerMinute()),
+        troops: renderTroops(player.troops()),
         maxTroops: renderTroops(maxTroops),
+        cities: renderNumber(player.totalUnitLevels(UnitType.City)),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
           myPlayer !== null &&
@@ -149,7 +178,10 @@ export class Leaderboard extends LitElement implements Controller {
             myPlayer.numTilesOwned() / this.game.numLandTiles(),
           ),
           gold: renderNumber(myPlayer.gold()),
+          goldPerMinute: renderNumber(myPlayer.goldPerMinute()),
+          troops: renderTroops(myPlayer.troops()),
           maxTroops: renderTroops(myPlayerMaxTroops),
+          cities: renderNumber(myPlayer.totalUnitLevels(UnitType.City)),
           isMyPlayer: true,
           isOnSameTeam: true,
           player: myPlayer,
@@ -179,7 +211,7 @@ export class Leaderboard extends LitElement implements Controller {
       >
         <div
           class="grid bg-gray-800/85 w-full text-xs md:text-xs lg:text-sm rounded-lg overflow-hidden"
-          style="grid-template-columns: minmax(24px, 30px) minmax(60px, 100px) minmax(45px, 70px) minmax(40px, 55px) minmax(55px, 105px);"
+          style="grid-template-columns: minmax(24px, 30px) minmax(60px, 100px) minmax(45px, 70px) minmax(40px, 55px) minmax(56px, 82px) minmax(55px, 95px) minmax(55px, 105px) minmax(42px, 62px);"
         >
           <div class="contents font-bold bg-gray-700/60">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
@@ -214,10 +246,43 @@ export class Leaderboard extends LitElement implements Controller {
             </div>
             <div
               class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              @click=${() => this.setSort("goldPerMinute")}
+            >
+              ${translateText("leaderboard.gold_per_min")}
+              ${this._sortKey === "goldPerMinute"
+                ? this._sortOrder === "asc"
+                  ? "⬆️"
+                  : "⬇️"
+                : ""}
+            </div>
+            <div
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              @click=${() => this.setSort("troops")}
+            >
+              ${translateText("leaderboard.troops")}
+              ${this._sortKey === "troops"
+                ? this._sortOrder === "asc"
+                  ? "⬆️"
+                  : "⬇️"
+                : ""}
+            </div>
+            <div
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
               @click=${() => this.setSort("maxtroops")}
             >
               ${translateText("leaderboard.maxtroops")}
               ${this._sortKey === "maxtroops"
+                ? this._sortOrder === "asc"
+                  ? "⬆️"
+                  : "⬇️"
+                : ""}
+            </div>
+            <div
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              @click=${() => this.setSort("cities")}
+            >
+              ${translateText("leaderboard.cities")}
+              ${this._sortKey === "cities"
                 ? this._sortOrder === "asc"
                   ? "⬆️"
                   : "⬇️"
@@ -273,7 +338,31 @@ export class Leaderboard extends LitElement implements Controller {
                     ? "border-b border-slate-500"
                     : ""}"
                 >
+                  ${player.goldPerMinute}
+                </div>
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
+                  ${player.troops}
+                </div>
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
                   ${player.maxTroops}
+                </div>
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
+                  ${player.cities}
                 </div>
               </div>
             `,

@@ -21,7 +21,7 @@ import {
  * apply line in applyStateUpdate below. A field missing here is never diffed,
  * so its changes silently never reach the main thread after the first update.
  *
- * EXCEPTION: tilesOwned / gold / troops are deliberately NOT diffed here.
+ * EXCEPTION: tilesOwned / gold / goldPerMinute / troops are deliberately NOT diffed here.
  * They change for nearly every alive player every tick, so they travel on
  * the transferable `GameUpdateViewData.packedPlayerUpdates` channel instead
  * (see PlayerImpl.toUpdate) and appear in PlayerUpdate objects only on a
@@ -52,7 +52,7 @@ export function diffPlayerUpdate(
   setIfDifferent("playerType", prev.playerType === next.playerType);
   setIfDifferent("isAlive", prev.isAlive === next.isAlive);
   setIfDifferent("isDisconnected", prev.isDisconnected === next.isDisconnected);
-  // tilesOwned / gold / troops intentionally absent — see EXCEPTION above.
+  // tilesOwned / gold / goldPerMinute / troops intentionally absent — see EXCEPTION above.
   setIfDifferent("isTraitor", prev.isTraitor === next.isTraitor);
   setIfDifferent(
     "traitorRemainingTicks",
@@ -114,6 +114,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
     target.isDisconnected = pu.isDisconnected;
   if (pu.tilesOwned !== undefined) target.tilesOwned = pu.tilesOwned;
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
+  if (pu.goldPerMinute !== undefined) target.goldPerMinute = pu.goldPerMinute;
   if (pu.troops !== undefined) target.troops = pu.troops;
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {

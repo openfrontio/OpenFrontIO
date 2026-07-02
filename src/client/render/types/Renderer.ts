@@ -59,6 +59,7 @@ export interface PlayerState {
   isDisconnected: boolean;
   tilesOwned: number;
   gold: number;
+  goldPerMinute: number;
   troops: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;

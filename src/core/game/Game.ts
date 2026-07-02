@@ -571,7 +571,7 @@ export interface Player {
 
   // Resources & Troops
   gold(): Gold;
-  addGold(toAdd: Gold, tile?: TileRef): void;
+  addGold(toAdd: Gold, tile?: TileRef, countAsIncome?: boolean): void;
   removeGold(toRemove: Gold): Gold;
   troops(): number;
   setTroops(troops: number): void;

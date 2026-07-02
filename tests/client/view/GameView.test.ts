@@ -143,7 +143,7 @@ describe("GameView.update — players", () => {
 });
 
 describe("GameView.update — packed channels", () => {
-  it("packedPlayerUpdates quads update tilesOwned/gold/troops in place", () => {
+  it("packedPlayerUpdates records update tilesOwned/gold/goldPerMinute/troops in place", () => {
     const game = makeGameView();
     game.update(
       withPlayers(1, [
@@ -152,13 +152,14 @@ describe("GameView.update — packed channels", () => {
     );
 
     const gu = makeEmptyGu(2);
-    // [smallID, tilesOwned, gold, troops]
-    gu.packedPlayerUpdates = new Float64Array([1, 42, 999, 250]);
+    // [smallID, tilesOwned, gold, goldPerMinute, troops]
+    gu.packedPlayerUpdates = new Float64Array([1, 42, 999, 750, 250]);
     game.update(gu);
 
     const alice = game.player("alice");
     expect(alice.numTilesOwned()).toBe(42);
     expect(alice.gold()).toBe(999n);
+    expect(alice.goldPerMinute()).toBe(750);
     expect(alice.troops()).toBe(250);
   });
 
@@ -214,7 +215,7 @@ describe("GameView.update — packed channels", () => {
       withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })]),
     );
     const gu = makeEmptyGu(2);
-    gu.packedPlayerUpdates = new Float64Array([99, 1, 1, 1]);
+    gu.packedPlayerUpdates = new Float64Array([99, 1, 1, 1, 1]);
     gu.packedAttackUpdates = new Float64Array([1, 0, 5, 123, 99, 1, 0, 7]);
     expect(() => game.update(gu)).not.toThrow();
   });
@@ -291,7 +292,7 @@ describe("GameView.update — packed channels", () => {
     );
     const bigGold = 2 ** 52 + 11; // integer, exactly representable in f64
     const gu = makeEmptyGu(2);
-    gu.packedPlayerUpdates = new Float64Array([1, 0, bigGold, 0]);
+    gu.packedPlayerUpdates = new Float64Array([1, 0, bigGold, 0, 0]);
     game.update(gu);
     expect(game.player("alice").gold()).toBe(BigInt(bigGold));
   });
