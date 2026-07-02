@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { hasActiveSubscription } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -193,6 +194,74 @@ export async function startWorker() {
       workerIndex: workerId,
       workerPath: ServerEnv.workerPath(id),
     });
+  });
+
+  // Toggle whether a private lobby is visible in the public lobby browser.
+  // Creator-only; listing requires an active subscription (checked fresh
+  // against the API) and is limited to one listed lobby per creator.
+  app.post("/api/game/:id/listing", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    }
+    const { listed } = parsed.data;
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    if (!game.isCreator(auth.persistentId)) {
+      return res
+        .status(403)
+        .json({ error: "Only the lobby creator can change its listing" });
+    }
+    if (game.isPublic() || game.hasStarted()) {
+      return res.status(409).json({ error: "Game cannot be listed" });
+    }
+
+    if (listed) {
+      // Dev has no subscription backend; skip the check so the feature is
+      // testable locally (same precedent as Turnstile).
+      if (ServerEnv.env() !== GameEnv.Dev) {
+        const userMe = await getUserMe(token);
+        if (userMe.type === "error") {
+          log.warn(
+            `listing rejected, user me fetch failed: ${userMe.message}`,
+            {
+              gameID: req.params.id,
+            },
+          );
+          return res.status(403).json({ error: "subscription_required" });
+        }
+        if (!hasActiveSubscription(userMe.response)) {
+          return res.status(403).json({ error: "subscription_required" });
+        }
+      }
+
+      const creatorID = game.hashedCreatorID();
+      if (
+        creatorID !== undefined &&
+        lobbyService.creatorHasListedLobby(creatorID, game.id)
+      ) {
+        return res.status(409).json({ error: "listing_limit_reached" });
+      }
+    }
+
+    game.setListed(listed);
+    log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
+      gameID: game.id,
+    });
+    res.json({ listed });
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {

@@ -19,12 +19,11 @@ export class WorkerLobbyService {
   // Most recent snapshot from master, serialized on demand for new
   // connections so they don't have to wait for the next broadcast.
   private lastPublicGames: PublicGames | null = null;
-  // Sorted gameIDs of the last full we broadcast, or null if we've never
-  // broadcast one. When the set changes we send a fresh full; otherwise a
-  // counts-only delta is enough. This relies on master creating a new lobby
-  // whenever it sets startsAt on the previous one, so structural state
-  // (startsAt, gameConfig) rides along with a gameID change. Null (not "")
-  // is used so that an empty-lobby first broadcast still emits a full.
+  // Fingerprint (sorted per-lobby tokens of gameID + browser-visible config)
+  // of the last full we broadcast, or null if we've never broadcast one. When
+  // it changes we send a fresh full; otherwise a counts-only delta is enough.
+  // Null (not "") is used so that an empty-lobby first broadcast still emits
+  // a full.
   private lastFullGameIds: string | null = null;
 
   constructor(
@@ -43,62 +42,69 @@ export class WorkerLobbyService {
   }
 
   private setupIPCListener() {
-    process.on("message", (raw: unknown) => {
-      const result = MasterMessageSchema.safeParse(raw);
-      if (!result.success) {
-        this.log.error("Invalid IPC message from master:", raw);
-        return;
-      }
+    process.on("message", (raw: unknown) => this.handleMasterMessage(raw));
+  }
 
-      const msg = result.data;
-      switch (msg.type) {
-        case "lobbiesBroadcast":
-          this.lastPublicGames = msg.publicGames;
-          // Forward message to all clients
-          this.broadcastLobbiesToClients(msg.publicGames);
-          // Update master with my lobby info
-          this.sendMyLobbiesToMaster();
-          break;
-        case "createGame": {
-          if (this.gm.game(msg.gameID) !== null) {
-            this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
-            return;
-          }
-          this.log.info(`Creating public game ${msg.gameID} from master`);
-          const game = this.gm.createGame(
-            msg.gameID,
-            msg.gameConfig,
-            undefined,
-            undefined,
-            msg.publicGameType,
-          );
-          if (game === null) {
-            this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
-          }
-          break;
+  // Separate from setupIPCListener so tests can dispatch messages without
+  // touching the real process IPC channel (which vitest forks use).
+  private handleMasterMessage(raw: unknown) {
+    const result = MasterMessageSchema.safeParse(raw);
+    if (!result.success) {
+      this.log.error("Invalid IPC message from master:", raw);
+      return;
+    }
+
+    const msg = result.data;
+    switch (msg.type) {
+      case "lobbiesBroadcast":
+        this.lastPublicGames = msg.publicGames;
+        // Forward message to all clients
+        this.broadcastLobbiesToClients(msg.publicGames);
+        // Update master with my lobby info
+        this.sendMyLobbiesToMaster();
+        break;
+      case "createGame": {
+        if (this.gm.game(msg.gameID) !== null) {
+          this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
+          return;
         }
-        case "updateLobby": {
-          const game = this.gm.game(msg.gameID);
-          if (!game) {
-            this.log.warn("cannot update game, not found", {
-              gameID: msg.gameID,
-            });
-            return;
-          }
-          game.setStartsAt(msg.startsAt);
-          break;
+        this.log.info(`Creating public game ${msg.gameID} from master`);
+        const game = this.gm.createGame(
+          msg.gameID,
+          msg.gameConfig,
+          undefined,
+          undefined,
+          msg.publicGameType,
+        );
+        if (game === null) {
+          this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
         }
+        break;
       }
-    });
+      case "updateLobby": {
+        const game = this.gm.game(msg.gameID);
+        if (!game) {
+          this.log.warn("cannot update game, not found", {
+            gameID: msg.gameID,
+          });
+          return;
+        }
+        game.setStartsAt(msg.startsAt);
+        break;
+      }
+    }
   }
 
   sendReady(workerId: number) {
-    const msg: WorkerReady = { type: "workerReady", workerId };
+    this.sendToMaster({ type: "workerReady", workerId });
+  }
+
+  private sendToMaster(msg: WorkerReady | WorkerLobbyList) {
     process.send?.(msg);
   }
 
   private sendMyLobbiesToMaster() {
-    const lobbies = this.gm
+    const publicLobbies = this.gm
       .publicLobbies()
       .map((g) => g.gameInfo())
       .map((gi) => {
@@ -110,7 +116,68 @@ export class WorkerLobbyService {
           publicGameType: gi.publicGameType!,
         } satisfies PublicGameInfo;
       });
-    process.send?.({ type: "lobbyList", lobbies } satisfies WorkerLobbyList);
+    // Subscriber-listed private lobbies. creatorID (a hash of the creator's
+    // persistentID) rides along for the one-listed-lobby-per-creator check;
+    // sanitizeGames strips it before anything reaches browsers. Host-only
+    // config fields (whitelist, name reveals) are dropped here — the lobby
+    // browser doesn't need them.
+    const hostedLobbies = this.gm.listedLobbies().map((g) => {
+      const gi = g.gameInfo();
+      return {
+        gameID: gi.gameID,
+        numClients: gi.clients?.length ?? 0,
+        startsAt: gi.startsAt,
+        gameConfig: gi.gameConfig && {
+          ...gi.gameConfig,
+          allowedPublicIds: undefined,
+          nameReveals: undefined,
+          nameRevealPublicIds: undefined,
+        },
+        publicGameType: "hosted",
+        creatorID: g.hashedCreatorID(),
+      } satisfies PublicGameInfo;
+    });
+    this.sendToMaster({
+      type: "lobbyList",
+      lobbies: [...publicLobbies, ...hostedLobbies],
+    } satisfies WorkerLobbyList);
+  }
+
+  // Whether the creator (hashed persistentID) already has a listed lobby
+  // other than `excludeGameID`. Checks the cluster-wide view from the last
+  // master broadcast plus this worker's own lobbies (fresher than the
+  // broadcast interval).
+  public creatorHasListedLobby(
+    hashedCreatorID: string,
+    excludeGameID: string,
+  ): boolean {
+    const broadcast = this.lastPublicGames?.games["hosted"] ?? [];
+    if (
+      broadcast.some(
+        (l) => l.gameID !== excludeGameID && l.creatorID === hashedCreatorID,
+      )
+    ) {
+      return true;
+    }
+    return this.gm
+      .listedLobbies()
+      .some(
+        (g) =>
+          g.id !== excludeGameID && g.hashedCreatorID() === hashedCreatorID,
+      );
+  }
+
+  // Strips worker/master-internal fields (creatorID) before lobby info is
+  // sent to browser clients.
+  private sanitizeGames(games: PublicGames["games"]): PublicGames["games"] {
+    const sanitized: PublicGames["games"] = {};
+    for (const [type, list] of Object.entries(games) as [
+      keyof PublicGames["games"],
+      PublicGameInfo[],
+    ][]) {
+      sanitized[type] = list.map(({ creatorID: _creatorID, ...rest }) => rest);
+    }
+    return sanitized;
   }
 
   private setupUpgradeHandler() {
@@ -138,7 +205,7 @@ export class WorkerLobbyService {
         const fullJson = JSON.stringify({
           type: "full",
           serverTime: this.lastPublicGames.serverTime,
-          games: this.lastPublicGames.games,
+          games: this.sanitizeGames(this.lastPublicGames.games),
         } satisfies PublicLobbyMessage);
         ws.send(fullJson);
       }
@@ -167,14 +234,20 @@ export class WorkerLobbyService {
   }
 
   private broadcastLobbiesToClients(publicGames: PublicGames) {
-    const gameIds: string[] = [];
+    // Per-lobby token covers everything the lobby browser renders besides
+    // player counts: hosted lobbies can change map/mode/etc. without a
+    // gameID change, and those edits must trigger a fresh full.
+    const lobbyTokens: string[] = [];
     for (const list of Object.values(publicGames.games)) {
       for (const lobby of list) {
-        gameIds.push(lobby.gameID);
+        const gc = lobby.gameConfig;
+        lobbyTokens.push(
+          `${lobby.gameID}:${gc?.gameMap}:${gc?.gameMode}:${gc?.playerTeams}:${gc?.maxPlayers}:${lobby.startsAt}`,
+        );
       }
     }
-    gameIds.sort();
-    const fingerprint = gameIds.join(",");
+    lobbyTokens.sort();
+    const fingerprint = lobbyTokens.join(",");
     const shouldSendFull = fingerprint !== this.lastFullGameIds;
 
     let payload: PublicLobbyMessage;
@@ -182,7 +255,7 @@ export class WorkerLobbyService {
       payload = {
         type: "full",
         serverTime: publicGames.serverTime,
-        games: publicGames.games,
+        games: this.sanitizeGames(publicGames.games),
       };
       this.lastFullGameIds = fingerprint;
     } else {

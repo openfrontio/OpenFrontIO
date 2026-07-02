@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
@@ -55,6 +56,10 @@ export interface IntentActor {
 export interface IntentOutcome {
   status: number;
   error?: string;
+}
+
+export function hashPersistentID(persistentID: string): string {
+  return createHash("sha256").update(persistentID).digest("hex");
 }
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
@@ -126,6 +131,12 @@ export class GameServer {
   private static readonly MAX_PENDING_LIVE_STATS_ROUNDS = 20;
 
   private _hasEnded = false;
+
+  // Whether this private lobby is visible in the public lobby browser.
+  // Deliberately kept out of gameConfig so update_game_config can't set it;
+  // only the authenticated /api/game/:id/listing endpoint may (it verifies
+  // the creator's subscription).
+  private listed = false;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -1110,6 +1121,30 @@ export class GameServer {
 
   public isPublic(): boolean {
     return this.gameConfig.gameType === GameType.Public;
+  }
+
+  public isListed(): boolean {
+    return this.listed;
+  }
+
+  public setListed(listed: boolean): void {
+    this.listed = listed;
+  }
+
+  public isCreator(persistentId: string): boolean {
+    return (
+      this.creatorPersistentID !== undefined &&
+      this.creatorPersistentID === persistentId
+    );
+  }
+
+  // Hash of the creator's persistentID, safe to share between master and
+  // workers (never sent to browsers) for the one-listed-lobby-per-creator
+  // check. The raw persistentID must not leave this class.
+  public hashedCreatorID(): string | undefined {
+    return this.creatorPersistentID === undefined
+      ? undefined
+      : hashPersistentID(this.creatorPersistentID);
   }
 
   public kickClient(

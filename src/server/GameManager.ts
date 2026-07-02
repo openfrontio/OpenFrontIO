@@ -28,6 +28,14 @@ export class GameManager {
     );
   }
 
+  // Private lobbies a subscriber has listed in the public lobby browser.
+  // Leaving the Lobby phase (start/fill/expiry) delists them automatically.
+  public listedLobbies(): GameServer[] {
+    return Array.from(this.games.values()).filter(
+      (g) => g.phase() === GamePhase.Lobby && !g.isPublic() && g.isListed(),
+    );
+  }
+
   joinClient(
     client: Client,
     gameID: GameID,

@@ -7,6 +7,8 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
+import { hasActiveSubscription } from "../core/ApiSchemas";
+import { GameEnv } from "../core/configuration/Config";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -24,6 +26,7 @@ import {
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
+import { getUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -99,6 +102,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyStartAt: number | null = null;
   @state() private serverTimeOffset: number = 0;
+  // Subscribers only: whether the "list publicly" toggle is offered/enabled.
+  @state() private canListPublicly: boolean = false;
+  @state() private publiclyListed: boolean = false;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -423,6 +429,14 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.water_nukes",
                     checked: this.waterNukes,
                   },
+                  ...(this.canListPublicly && this.lobbyId
+                    ? [
+                        {
+                          labelKey: "host_modal.public_listing",
+                          checked: this.publiclyListed,
+                        },
+                      ]
+                    : []),
                   {
                     labelKey: "host_modal.host_cheats",
                     checked: this.hostCheatsEnabled,
@@ -496,6 +510,13 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.startLobbyUpdates();
+    void getUserMe().then((userMe) => {
+      // Dev skips the subscription gate (matching the server) so the
+      // listing flow is testable locally.
+      this.canListPublicly =
+        ClientEnv.env() === GameEnv.Dev ||
+        (userMe !== false && hasActiveSubscription(userMe));
+    });
     // The server mints the game id, so we don't know it until createLobby
     // resolves. clientID is assigned by the server when we join the lobby.
 
@@ -615,6 +636,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatGoldMultiplierValue = undefined;
     this.hostCheatStartingGold = false;
     this.hostCheatStartingGoldValue = undefined;
+    this.publiclyListed = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -702,6 +724,9 @@ export class HostLobbyModal extends BaseModal {
       case "host_modal.water_nukes":
         this.waterNukes = checked;
         this.putGameConfig();
+        break;
+      case "host_modal.public_listing":
+        void this.handlePublicListingToggle(checked);
         break;
       case "host_modal.host_cheats":
         this.hostCheatsEnabled = checked;
@@ -1027,6 +1052,49 @@ export class HostLobbyModal extends BaseModal {
     this.whitelistEnabled = checked;
     this.putGameConfig();
   };
+
+  // Server-authoritative: it re-verifies the subscription and enforces one
+  // listed lobby per creator, so a failed request reverts the toggle.
+  private async handlePublicListingToggle(checked: boolean) {
+    this.publiclyListed = checked;
+    try {
+      const token = await getPlayToken();
+      const response = await fetch(
+        `/${ClientEnv.workerPath(this.lobbyId)}/api/game/${this.lobbyId}/listing`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ listed: checked }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        this.publiclyListed = !checked;
+        this.showListingError(body?.error);
+      }
+    } catch (error) {
+      console.error("Error updating lobby listing:", error);
+      this.publiclyListed = !checked;
+      this.showListingError();
+    }
+  }
+
+  private showListingError(serverError?: string) {
+    const key =
+      serverError === "subscription_required"
+        ? "private_lobby.listing_requires_subscription"
+        : serverError === "listing_limit_reached"
+          ? "private_lobby.listing_limit_reached"
+          : "private_lobby.listing_failed";
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: { message: translateText(key), duration: 3000, color: "red" },
+      }),
+    );
+  }
 
   private handleAllowedPublicIdsChange = (e: Event) => {
     this.allowedPublicIds = (e.target as HTMLInputElement).value;
