@@ -1,6 +1,9 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { TrailEffectAttributes } from "../../core/CosmeticSchemas";
+import {
+  NukeExplosionAttributes,
+  TrailEffectAttributes,
+} from "../../core/CosmeticSchemas";
 
 // Neutral fallback when a trail has no usable colors.
 const EMPTY_BG = "#444";
@@ -74,5 +77,96 @@ export class TrailSwatch extends LitElement {
     super.disconnectedCallback();
     this.animation?.cancel();
     this.animation = null;
+  }
+}
+
+// Fallback ring color when a shockwave has no usable colors (matches the
+// renderer's default purple).
+const DEFAULT_RING_COLOR = "#9919ff";
+
+/**
+ * Preview of a nuke-explosion shockwave: a ring expanding from the center and
+ * fading out, looping. Mirrors the in-game semantics — loop duration is
+ * size / speed (clamped watchable), border thickness follows thickness/size,
+ * and the color cycles through the palette at transitionSpeed steps/s
+ * (negative = reverse).
+ */
+@customElement("shockwave-swatch")
+export class ShockwaveSwatch extends LitElement {
+  @property({ attribute: false })
+  explosion: NukeExplosionAttributes | null = null;
+
+  private animations: Animation[] = [];
+
+  // Light DOM so the shared Tailwind classes apply.
+  createRenderRoot(): HTMLElement {
+    return this;
+  }
+
+  render(): TemplateResult {
+    return html`<div
+      class="w-full h-full flex items-center justify-center overflow-hidden"
+    >
+      <div data-ring class="rounded-full" style="width:85%;height:85%;"></div>
+    </div>`;
+  }
+
+  updated(changed: Map<string, unknown>): void {
+    if (!changed.has("explosion")) return;
+    for (const a of this.animations) a.cancel();
+    this.animations = [];
+
+    const attrs = this.explosion;
+    const ring = this.querySelector<HTMLElement>("[data-ring]");
+    if (!attrs || !ring) return;
+    const colors =
+      attrs.colors.length > 0 ? attrs.colors : [DEFAULT_RING_COLOR];
+
+    // Border thickness ∝ thickness/size, measured against the tile; a
+    // thickness ≥ size/2 renders as a filled disc, like in game.
+    const d = ring.clientWidth || 100;
+    const ratio = attrs.size > 0 ? attrs.thickness / attrs.size : 0.1;
+    const px = Math.min(Math.max(ratio * d, 2), d / 2);
+    ring.style.borderStyle = "solid";
+    ring.style.borderWidth = `${px}px`;
+    ring.style.borderColor = colors[0];
+
+    // Expansion + fade, looping at the in-game pace (size / speed seconds),
+    // clamped so extreme catalog values still read as an explosion.
+    const durS = Math.min(
+      Math.max(attrs.size / Math.max(attrs.speed, 0.001), 0.6),
+      3,
+    );
+    this.animations.push(
+      ring.animate(
+        [
+          { transform: "scale(0.1)", opacity: 1 },
+          { transform: "scale(1)", opacity: 0 },
+        ],
+        { duration: durS * 1000, iterations: Infinity, easing: "linear" },
+      ),
+    );
+
+    // Palette cycle at transitionSpeed steps/s (one full cycle =
+    // count / |transitionSpeed| s); 0 or a single color stays static.
+    if (colors.length >= 2 && attrs.transitionSpeed !== 0) {
+      const list = attrs.transitionSpeed > 0 ? colors : [...colors].reverse();
+      this.animations.push(
+        ring.animate(
+          [...list, list[0]].map((c) => ({ borderColor: c })),
+          {
+            duration: (colors.length / Math.abs(attrs.transitionSpeed)) * 1000,
+            iterations: Infinity,
+            easing: "linear",
+          },
+        ),
+      );
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    for (const a of this.animations) a.cancel();
+    this.animations = [];
   }
 }

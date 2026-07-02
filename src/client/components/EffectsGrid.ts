@@ -6,6 +6,9 @@ import {
   Effect,
   EFFECT_TYPES,
   EffectType,
+  isNukeExplosionEffect,
+  NUKE_EXPLOSION_TYPES,
+  NukeExplosionType,
 } from "../../core/CosmeticSchemas";
 import {
   EFFECTS_KEY,
@@ -58,6 +61,9 @@ export class EffectsGrid extends LitElement {
   // Render an internal tab bar (one tab per effectType), one type at a time.
   @property({ type: Boolean }) tabbed = false;
   @state() private activeType: EffectType = EFFECT_TYPES[0];
+  // Active nuke-explosion sub-tab (atom / hydro / mirv); only shown for the
+  // nukeExplosion effectType, which groups its effects by nukeType.
+  @state() private activeNukeType: NukeExplosionType = NUKE_EXPLOSION_TYPES[0];
 
   private userSettings = new UserSettings();
   private _onChange = () => this.requestUpdate();
@@ -82,10 +88,19 @@ export class EffectsGrid extends LitElement {
     return this;
   }
 
-  private select(effectType: EffectType, name: string | null) {
-    this.userSettings.setSelectedEffectName(effectType, name ?? undefined);
+  // slot = effectType for trails, or the active nukeType for nuke explosions.
+  private select(slot: string, name: string | null) {
+    this.userSettings.setSelectedEffectName(slot, name ?? undefined);
     // Stay rendered; the change event re-renders this grid and the home button.
     this.requestUpdate();
+  }
+
+  // The selection slot for a tile: for nuke explosions the effect's own nukeType
+  // (one selection per bomb type; the Default tile has none, so use the active
+  // sub-tab), else the effectType itself.
+  private slotForTile(effectType: EffectType, r: ResolvedCosmetic): string {
+    if (effectType !== "nukeExplosion") return effectType;
+    return this.nukeTypeOf(r) ?? this.activeNukeType;
   }
 
   private matchesSearch(r: ResolvedCosmetic): boolean {
@@ -118,10 +133,7 @@ export class EffectsGrid extends LitElement {
     return this.search.trim() ? owned : [noneTile(effectType), ...owned];
   }
 
-  private renderTile(
-    effectType: EffectType,
-    r: ResolvedCosmetic,
-  ): TemplateResult {
+  private renderTile(slot: string, r: ResolvedCosmetic): TemplateResult {
     if (this.mode === "purchase") {
       return html`<cosmetic-button
         .resolved=${r}
@@ -129,15 +141,42 @@ export class EffectsGrid extends LitElement {
       ></cosmetic-button>`;
     }
     const name = (r.cosmetic as Effect | null)?.name ?? null;
-    const selected = this.userSettings.getSelectedEffectName(effectType);
+    const selected = this.userSettings.getSelectedEffectName(slot);
     const isSelected =
       (name === null && selected === null) ||
       (name !== null && selected === name);
     return html`<cosmetic-button
       .resolved=${r}
       .selected=${isSelected}
-      .onSelect=${() => this.select(effectType, name)}
+      .onSelect=${() => this.select(slot, name)}
     ></cosmetic-button>`;
+  }
+
+  // The nukeType attribute of a nukeExplosion effect, else null (trail effects
+  // and the Default tile have none).
+  private nukeTypeOf(r: ResolvedCosmetic): string | null {
+    const c = r.cosmetic as Effect | null;
+    return c && isNukeExplosionEffect(c) ? c.attributes.nukeType : null;
+  }
+
+  // Secondary sub-tab bar for the nukeExplosion type: one pill per nukeType
+  // (atom / hydro / mirv). Sits below the effectType label; always all three.
+  private renderNukeTypeTabBar(): TemplateResult {
+    return html`
+      <div class="flex items-center justify-center gap-2 px-4 pt-3">
+        ${NUKE_EXPLOSION_TYPES.map((nt) => {
+          const active = this.activeNukeType === nt;
+          return html`<button
+            class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors ${active
+              ? "bg-blue-600 text-white"
+              : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"}"
+            @click=${() => (this.activeNukeType = nt)}
+          >
+            ${translateText(`effects.nukeType.${nt}`)}
+          </button>`;
+        })}
+      </div>
+    `;
   }
 
   // Store's sub-tab bar: one tab per effectType, always present, styled like the
@@ -174,8 +213,22 @@ export class EffectsGrid extends LitElement {
     const types: readonly EffectType[] = activeType
       ? [activeType]
       : EFFECT_TYPES;
+    // nukeExplosion is split into per-nukeType sub-tabs: items are always
+    // filtered to the active nukeType (keep the Default tile) so the Default
+    // tile's slot matches what's on screen. The sub-tab bar renders at the top
+    // when nukeExplosion is the single active type, else inside its section.
+    const showNukeTabs = activeType === "nukeExplosion";
     const sections = types
-      .map((type) => ({ type, items: this.itemsForType(all, type) }))
+      .map((type) => {
+        let items = this.itemsForType(all, type);
+        if (type === "nukeExplosion") {
+          items = items.filter(
+            (r) =>
+              r.cosmetic === null || this.nukeTypeOf(r) === this.activeNukeType,
+          );
+        }
+        return { type, items };
+      })
       .filter((s) => s.items.length > 0);
 
     let panel: TemplateResult;
@@ -202,10 +255,15 @@ export class EffectsGrid extends LitElement {
                     >
                       ${translateText(`effects.type.${s.type}`)}
                     </h3>`}
+                ${!activeType && s.type === "nukeExplosion"
+                  ? this.renderNukeTypeTabBar()
+                  : nothing}
                 <div
                   class="flex flex-wrap gap-4 justify-center items-stretch content-start"
                 >
-                  ${s.items.map((r) => this.renderTile(s.type, r))}
+                  ${s.items.map((r) =>
+                    this.renderTile(this.slotForTile(s.type, r), r),
+                  )}
                 </div>
               </div>
             `,
@@ -214,6 +272,9 @@ export class EffectsGrid extends LitElement {
       `;
     }
 
-    return this.tabbed ? html`${this.renderTabBar()}${panel}` : panel;
+    const nukeTabs = showNukeTabs ? this.renderNukeTypeTabBar() : nothing;
+    return this.tabbed
+      ? html`${this.renderTabBar()}${nukeTabs}${panel}`
+      : html`${nukeTabs}${panel}`;
   }
 }
