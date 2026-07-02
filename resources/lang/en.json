@@ -96,6 +96,7 @@
     "defend": {
       "ally": "[P1] is my ally!",
       "build_posts": "Build Defense Posts!",
+      "build_sam_site": "Build a SAM site!",
       "defend": "Defend [P1]!",
       "defend_from": "Defend from [P1]!",
       "dont_attack": "Don’t attack [P1]!"
@@ -134,6 +135,7 @@
       "coastline": "Please let me get a coastline.",
       "fun": "This game is fun!",
       "go": "Let’s go!",
+      "great_supine_protoplasmic_invertebrate_jellies": "Great supine protoplasmic invertebrate jellies",
       "pr": "When will my PR finally get merged...?",
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
