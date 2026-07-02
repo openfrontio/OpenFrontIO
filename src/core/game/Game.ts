@@ -538,7 +538,7 @@ export interface Player {
   isAlive(): boolean;
   isTraitor(): boolean;
   markTraitor(): void;
-  // OFM doomsday-clock (anti-stall): marked when below the rising territory bar.
+  // Doomsday Clock (anti-stall): marked when below the rising territory bar.
   inDoomsdayClock(): boolean;
   doomsdayClockTicks(): number;
   enterDoomsdayClock(): void;

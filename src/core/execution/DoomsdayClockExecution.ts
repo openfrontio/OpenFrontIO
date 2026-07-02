@@ -12,7 +12,7 @@ import {
 } from "../game/Game";
 
 /**
- * OFM doomsday-clock (anti-stall). Once armed, every alive side must hold a rising
+ * Doomsday Clock (anti-stall). Once armed, every side must hold a rising
  * share of the whole map: each player in FFA, each whole team in team modes (so
  * a team is judged on its combined territory and every member shares the fate).
  * The bar rises in discrete waves (battle-royale zone), stepping up to each
@@ -45,11 +45,10 @@ export class DoomsdayClockExecution implements Execution {
     if (!cfg.enabled) return;
 
     const elapsed = mg.elapsedGameSeconds();
-    // Humans and Nations are subject to doomsday clock; the small map bots are not
-    // (the !== Bot idiom used across the codebase).
-    const contenders = mg
-      .players()
-      .filter((p) => p.type() !== PlayerType.Bot && p.isAlive());
+    // Humans and Nations are subject to it; the small map bots are not (the
+    // !== Bot idiom used across the codebase). players() already returns only
+    // alive players.
+    const contenders = mg.players().filter((p) => p.type() !== PlayerType.Bot);
 
     // The bar applies per side: each player in FFA, each whole team otherwise.
     const ffa = mg.config().gameConfig().gameMode === GameMode.FFA;

@@ -114,7 +114,7 @@ class FakeGame {
     return Math.floor(this.now / 10);
   }
   players(): FakePlayer[] {
-    return this.ps;
+    return this.ps.filter((p) => p.isAlive()); // match GameImpl.players(): alive only
   }
   numLandTiles(): number {
     return this.land;
