@@ -111,20 +111,18 @@ describe("initGL", () => {
     }
   });
 
-  it("reports limited when MAX_TEXTURE_SIZE is below the palette size (fingerprinting cap)", () => {
+  it("reports limited (but still returns the context) when MAX_TEXTURE_SIZE is below the palette size", () => {
     // privacy.resistFingerprinting (LibreWolf default, Firefox opt-in) caps
     // MAX_TEXTURE_SIZE at 2048 on an otherwise hardware-accelerated context;
     // the 4096-wide palette texture then fails silently and the map renders
-    // black (#4357).
-    stubGetContext({
-      accelerated: fakeContext("AMD Radeon", 2048),
-      probe: null,
-    });
+    // with black areas (#4357). The player is warned but may continue.
+    const accel = fakeContext("AMD Radeon", 2048);
+    stubGetContext({ accelerated: accel, probe: null });
 
     const res = initGL(document.createElement("canvas"));
 
     expect(res.status).toBe("limited");
-    expect(res.gl).toBeNull();
+    expect(res.gl).toBe(accel);
     if (res.status === "limited") {
       expect(res.renderer).toBe("AMD Radeon");
       expect(res.maxTextureSize).toBe(2048);
@@ -170,12 +168,5 @@ describe("GLUnavailableError", () => {
     expect(err.name).toBe("GLUnavailableError");
     expect(err.glStatus).toBe("software");
     expect(err.renderer).toBe("SwiftShader");
-  });
-
-  it("carries the capped texture size for the limited status", () => {
-    const err = new GLUnavailableError("limited", "AMD Radeon", 2048);
-
-    expect(err.glStatus).toBe("limited");
-    expect(err.maxTextureSize).toBe(2048);
   });
 });

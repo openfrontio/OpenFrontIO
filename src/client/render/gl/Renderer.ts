@@ -103,6 +103,13 @@ export class GPURenderer {
   private camera: Camera;
   private res: GPUResources;
 
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  readonly glLimited: { renderer: string; maxTextureSize: number } | null;
+
   // Passes
   private terrainPass: TerrainPass;
   private territoryPass: TerritoryPass;
@@ -205,22 +212,24 @@ export class GPURenderer {
     this.raf = raf;
     this.caf = caf;
 
-    // Demand a GPU-accelerated context with usable texture limits. A software
-    // (SwiftShader), fingerprinting-capped, or missing WebGL2 context throws
-    // GLUnavailableError, which the game-start path turns into an actionable
-    // gate instead of letting the game crawl at ~1fps or render black.
+    // Demand a GPU-accelerated context. A software (SwiftShader) or missing
+    // WebGL2 context throws GLUnavailableError, which the game-start path
+    // turns into an actionable gate instead of letting the game crawl at
+    // ~1fps. A fingerprint-capped context ("limited" — MAX_TEXTURE_SIZE below
+    // the palette width, #4357) proceeds anyway; glLimited lets the owner
+    // warn the player that the map may render with black areas.
     const res = initGL(canvas, {
       alpha: false,
       antialias: false,
       powerPreference: "high-performance",
     });
-    if (res.status !== "ok") {
-      throw new GLUnavailableError(
-        res.status,
-        res.renderer,
-        res.status === "limited" ? res.maxTextureSize : undefined,
-      );
+    if (res.gl === null) {
+      throw new GLUnavailableError(res.status, res.renderer);
     }
+    this.glLimited =
+      res.status === "limited"
+        ? { renderer: res.renderer, maxTextureSize: res.maxTextureSize }
+        : null;
     const gl = res.gl;
     this.gl = gl;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);

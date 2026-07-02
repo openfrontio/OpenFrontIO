@@ -191,9 +191,8 @@ export function joinLobby(
           if (startingModal) {
             startingModal.classList.add("hidden");
           }
-          // No usable WebGL2 (software-rendered, fingerprint-capped, or
-          // missing): gate with an actionable message rather than the generic
-          // crash modal (the game would crawl at ~1fps or render black).
+          // No GPU-accelerated WebGL2: gate with an actionable message rather
+          // than the generic crash modal (the game would crawl at ~1fps).
           if (e instanceof GLUnavailableError) {
             showGLGate(e.glStatus);
             return;
@@ -334,14 +333,25 @@ function createWebGLView(
     );
   } catch (e) {
     if (e instanceof GLUnavailableError) {
-      trackGLInit(e.glStatus, e.renderer, e.maxTextureSize);
+      trackGLInit(e.glStatus, e.renderer);
     }
     // The renderer never took ownership of the canvas, so remove it here —
     // otherwise it lingers in the DOM holding a (possibly software) GL context.
     glCanvas.remove();
     throw e;
   }
-  trackGLInit("ok", "");
+  // Fingerprint-capped context (#4357): the game runs, but the map may render
+  // with black areas. Warn with fix instructions; the player can continue.
+  if (view.glLimited) {
+    trackGLInit(
+      "limited",
+      view.glLimited.renderer,
+      view.glLimited.maxTextureSize,
+    );
+    showGLGate("limited");
+  } else {
+    trackGLInit("ok", "");
+  }
 
   (window as unknown as { __webglView?: unknown }).__webglView = view;
 
