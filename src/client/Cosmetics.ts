@@ -5,9 +5,7 @@ import {
   Cosmetics,
   CosmeticsSchema,
   Effect,
-  effectMatchesSlot,
-  effectTypeForSlot,
-  findEffect,
+  findEffectForSlot,
   Flag,
   Pack,
   Pattern,
@@ -655,11 +653,8 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
   for (const [slot, name] of Object.entries(selectedEffects)) {
-    const effectType = effectTypeForSlot(slot);
-    const effect = effectType
-      ? findEffect(cosmetics, effectType, name)
-      : undefined;
-    if (cosmetics && (!effect || !effectMatchesSlot(effect, slot))) {
+    const effect = findEffectForSlot(cosmetics, slot, name);
+    if (cosmetics && !effect) {
       userSettings.setSelectedEffectName(slot, undefined);
       continue;
     }
@@ -728,11 +723,8 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
   if (refs.effects && cosmetics) {
     const effects: Record<string, PlayerEffect> = {};
     for (const [slot, name] of Object.entries(refs.effects)) {
-      const effectType = effectTypeForSlot(slot);
-      const effect = effectType
-        ? findEffect(cosmetics, effectType, name)
-        : undefined;
-      if (effect && effectMatchesSlot(effect, slot)) {
+      const effect = findEffectForSlot(cosmetics, slot, name);
+      if (effect) {
         effects[slot] = { name: effect.name, effectType: effect.effectType };
       }
     }

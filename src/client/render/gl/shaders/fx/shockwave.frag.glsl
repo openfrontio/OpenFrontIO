@@ -7,10 +7,23 @@ uniform float uTime;      // seconds — animates procedural styles
 in vec2  vLocalPos;
 flat in float vAlpha;   // 1 - lifetime progress (fades out over the effect)
 flat in float vStyle;   // 1.0 = EMP energy pulse, 0.0 = classic ring
-flat in vec3  vColor0;  // EMP: cosmetic color 0
-flat in vec3  vColor1;  // EMP: cosmetic color 1 (cross-fade target)
+flat in vec3  vColor0;  // EMP: palette color 0
+flat in vec3  vColor1;  // EMP: palette color 1
+flat in vec3  vColor2;  // EMP: palette color 2 (pads repeat the last color)
+flat in vec3  vColor3;  // EMP: palette color 3 (pads repeat the last color)
+flat in float vColorCount; // active palette size (1..4)
 flat in float vSpeed;   // EMP: animation-speed multiplier
-flat in float vTransSpeed; // EMP: color0<->color1 cross-fade Hz
+flat in float vTransSpeed; // EMP: palette step rate (colors/s)
+flat in float vThickness; // EMP: ring band thickness (world tiles)
+flat in float vRadius;  // current ring radius (world tiles)
+
+// Palette lookup by (already-wrapped) index.
+vec3 colorAt(float i) {
+  if (i < 0.5) return vColor0;
+  if (i < 1.5) return vColor1;
+  if (i < 2.5) return vColor2;
+  return vColor3;
+}
 
 out vec4 fragColor;
 
@@ -48,8 +61,11 @@ void empPulse(float dist) {
   float ringR = 0.95 + n * 0.05;
   float ringDist = abs(dist - ringR);
 
-  // Thickness flickers per-angle to feel electric.
-  float w = uRingWidth * (1.6 + 0.8 * vnoise(ang * 9.0 + tt * 20.0));
+  // Band half-width in local units (dist 1.0 = vRadius world tiles), so the
+  // cosmetic's thickness stays constant in tiles while the ring expands.
+  // Per-angle flicker (averages ~1.0×) keeps it feeling electric.
+  float halfW = 0.5 * vThickness / max(vRadius, 0.001);
+  float w = halfW * (0.7 + 0.6 * vnoise(ang * 9.0 + tt * 20.0));
   float ring = 1.0 - smoothstep(0.0, w, ringDist);
 
   // A couple of bright rotating arcs of "lightning" chasing around the ring.
@@ -63,15 +79,21 @@ void empPulse(float dist) {
   float glow = ring * (0.8 + arc) + inner;
   if (glow < 0.01) discard;
 
-  // Base color cross-fades between the two cosmetic colors at transitionSpeed
-  // Hz (transitionSpeed 0 → static color0). Arcs flare toward white.
-  float pulse = 0.5 + 0.5 * sin(uTime * vTransSpeed * 6.2831853);
-  vec3 base = mix(vColor0, vColor1, pulse);
-  vec3 hot = mix(max(vColor0, vColor1), vec3(1.0), 0.4);
+  // Base color cycles through the whole palette (color0 → color1 → … → wrap)
+  // at transitionSpeed steps/s, like the trail shader's transition (0 →
+  // static color0, negative → reverse cycle). Arcs flare toward white.
+  float idx = uTime * vTransSpeed;
+  vec3 base = mix(
+    colorAt(mod(floor(idx), vColorCount)),
+    colorAt(mod(floor(idx) + 1.0, vColorCount)),
+    fract(idx));
+  // Padded slots repeat a real color, so this max spans the active palette.
+  vec3 bright = max(max(vColor0, vColor1), max(vColor2, vColor3));
+  vec3 hot = mix(bright, vec3(1.0), 0.4);
   vec3 col = mix(base, hot, clamp(arc * 0.8, 0.0, 1.0));
 
-  // Whole-ring flicker on top of the lifetime fade.
-  float life = vAlpha * (0.75 + 0.25 * vnoise(uTime * 30.0));
+  // Whole-ring flicker on top of the lifetime fade (speed-scaled like the rest).
+  float life = vAlpha * (0.75 + 0.25 * vnoise(tt * 30.0));
   fragColor = vec4(col, clamp(glow, 0.0, 1.0) * life);
 }
 

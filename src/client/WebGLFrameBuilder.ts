@@ -3,6 +3,8 @@ import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import {
   findEffect,
+  findEffectForSlot,
+  isNukeExplosionEffect,
   isTrailEffect,
   type NukeExplosionAttributes,
   TRAIL_EFFECT_TYPES,
@@ -15,7 +17,11 @@ import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
-import type { NukeExplosionRenderParams } from "./render/types";
+import {
+  DEFAULT_NUKE_EXPLOSION_COLOR,
+  MAX_NUKE_EXPLOSION_COLORS,
+  type NukeExplosionRenderParams,
+} from "./render/types";
 // Value import from the leaf module (not the ./render/gl barrel) so non-Vite
 // consumers don't pull in GPURenderer and its shaders — see note above.
 import {
@@ -41,17 +47,13 @@ const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
   TRAIL_EFFECT_TYPES;
 void _EFFECT_BLOCK_ORDER;
 
-// Default nuke-explosion color (purple) when a cosmetic has no usable color.
-const DEFAULT_EXPLOSION_COLOR: readonly [number, number, number] = [
-  0.6, 0.1, 1,
-];
-// Attribute → render-param mappings, tuned so the reference cosmetic
-// (size 50, speed 50) matches the default look:
-//   radiusFactor = size / 20  → size 50 = 2.5× blast radius
-//   speed        = speed / 50 → speed 50 = 1.0× animation
-//   transitionSpeed passes through as the color cross-fade rate (Hz).
-const EXPLOSION_SIZE_TO_RADIUS = 1 / 20;
-const EXPLOSION_SPEED_DIVISOR = 50;
+// Attribute → render-param mappings:
+//   size      = the ring's final WIDTH (diameter) in world tiles when it fades
+//               out — absolute, so maxRadius = size / 2 regardless of bomb type.
+//   speed     = world tiles/s the ring's width grows, so the effect lasts
+//               size / speed seconds (the pass clamps the duration).
+//   thickness = the ring band's thickness in world tiles.
+//   transitionSpeed passes through as the palette step rate (colors/s).
 
 // Detonating bomb → nuke-explosion slot (values match NUKE_EXPLOSION_TYPES).
 // Only these unit types produce a shockwave; plain MIRV splits and never detonates.
@@ -72,16 +74,17 @@ function toRgb01(s: string): [number, number, number] | null {
 function attributesToExplosionParams(
   attrs: NukeExplosionAttributes,
 ): NukeExplosionRenderParams {
+  // The shader cycles through the whole palette; the instance layout carries
+  // at most MAX_NUKE_EXPLOSION_COLORS, extras are dropped.
   const colors = attrs.colors
     .map(toRgb01)
-    .filter((c): c is [number, number, number] => c !== null);
-  const color0 = colors[0] ?? DEFAULT_EXPLOSION_COLOR;
-  const color1 = colors[1] ?? color0; // single color → no cross-fade
+    .filter((c): c is [number, number, number] => c !== null)
+    .slice(0, MAX_NUKE_EXPLOSION_COLORS);
   return {
-    color0,
-    color1,
-    radiusFactor: attrs.size * EXPLOSION_SIZE_TO_RADIUS,
-    speed: attrs.speed / EXPLOSION_SPEED_DIVISOR,
+    colors: colors.length > 0 ? colors : [DEFAULT_NUKE_EXPLOSION_COLOR],
+    maxRadius: attrs.size / 2,
+    speed: attrs.speed,
+    thickness: attrs.thickness,
     transitionSpeed: attrs.transitionSpeed,
   };
 }
@@ -203,12 +206,19 @@ export class WebGLFrameBuilder {
       if (!du.reachedTarget) continue; // SAM interceptions have no explosion cosmetic
       const nukeType = UNIT_TYPE_TO_NUKE_TYPE[du.unitType];
       if (!nukeType) continue; // not a shockwave-producing bomb
-      const player = gameView.playerBySmallID(du.ownerSmallID);
+      // playerBySmallID throws on an unknown smallID; a stale/bad event must
+      // not kill the frame builder — skip it (default FX).
+      let player: ReturnType<GameView["playerBySmallID"]>;
+      try {
+        player = gameView.playerBySmallID(du.ownerSmallID);
+      } catch {
+        continue;
+      }
       if (!player.isPlayer()) continue;
       const name = player.cosmetics.effects?.[nukeType]?.name;
       if (!name) continue;
-      const effect = findEffect(catalog, "nukeExplosion", name);
-      if (!effect || effect.effectType !== "nukeExplosion") continue;
+      const effect = findEffectForSlot(catalog, nukeType, name);
+      if (!effect || !isNukeExplosionEffect(effect)) continue;
       du.explosion = attributesToExplosionParams(effect.attributes);
     }
   }

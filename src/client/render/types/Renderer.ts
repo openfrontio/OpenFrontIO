@@ -120,18 +120,35 @@ export interface DeadUnitFx {
 }
 
 /**
+ * Max palette colors a shockwave instance can carry (vertex-attribute budget);
+ * a longer cosmetic palette is truncated.
+ */
+export const MAX_NUKE_EXPLOSION_COLORS = 4;
+
+/**
  * A firing player's nuke-explosion cosmetic, resolved from catalog attributes
- * into renderer-ready values. Colors are rgb in 0..1; radiusFactor multiplies
- * the blast radius; speed scales the animation; transitionSpeed is the color
- * cross-fade rate in Hz.
+ * into renderer-ready values. `colors` is the palette the effect cycles
+ * through (1..MAX_NUKE_EXPLOSION_COLORS rgb in 0..1, never empty);
+ * maxRadius is the ring's final radius in world tiles when it fades out
+ * (absolute — it does NOT scale with the bomb's blast radius); speed is the
+ * rate the ring's width grows in world tiles/s (the effect lasts
+ * 2·maxRadius / speed seconds); thickness is the ring band's thickness in
+ * world tiles (constant while the ring expands); transitionSpeed is the
+ * palette step rate in colors/s (0 = static first color, negative = reverse
+ * cycle) — same semantics as the trail shader's transition frequency.
  */
 export interface NukeExplosionRenderParams {
-  color0: readonly [number, number, number];
-  color1: readonly [number, number, number];
-  radiusFactor: number;
+  colors: readonly (readonly [number, number, number])[];
+  maxRadius: number;
   speed: number;
+  thickness: number;
   transitionSpeed: number;
 }
+
+/** Default nuke-explosion color (purple) when a cosmetic has no usable color. */
+export const DEFAULT_NUKE_EXPLOSION_COLOR: readonly [number, number, number] = [
+  0.6, 0.1, 1,
+];
 
 /** Conquest event data for the gold popup + sword sprite FX. */
 export interface ConquestFx {

@@ -6,6 +6,7 @@ import {
   EffectSchema,
   effectTypeForSlot,
   findEffect,
+  findEffectForSlot,
   isNukeExplosionEffect,
   isTrailEffect,
   NukeExplosionAttributesSchema,
@@ -387,6 +388,7 @@ describe("NukeExplosionAttributesSchema", () => {
     colors: ["#ff0000", "#bb00ff"],
     size: 50,
     speed: 50,
+    thickness: 4,
     transitionSpeed: 5,
   };
 
@@ -420,7 +422,7 @@ describe("NukeExplosionAttributesSchema", () => {
     ).toBe(false);
   });
 
-  it("requires colors, size, speed, and transitionSpeed", () => {
+  it("requires colors, size, speed, thickness, and transitionSpeed", () => {
     expect(
       NukeExplosionAttributesSchema.safeParse({
         type: "shockwave",
@@ -443,6 +445,7 @@ describe("nukeExplosion in the cosmetics catalog", () => {
             attributes: {
               size: 50,
               speed: 50,
+              thickness: 4,
               colors: ["#ff0000", "#bb00ff"],
               nukeType: "atom",
               type: "shockwave",
@@ -471,6 +474,7 @@ describe("nukeExplosion in the cosmetics catalog", () => {
       colors: [],
       size: 1,
       speed: 1,
+      thickness: 1,
       transitionSpeed: 1,
     });
     const result = CosmeticsSchema.safeParse({
@@ -528,6 +532,7 @@ describe("isTrailEffect", () => {
         colors: ["#f00"],
         size: 50,
         speed: 50,
+        thickness: 4,
         transitionSpeed: 5,
       },
     });
@@ -560,6 +565,7 @@ describe("effect selection slots", () => {
       colors: ["#f00"],
       size: 50,
       speed: 50,
+      thickness: 4,
       transitionSpeed: 5,
     },
   });
@@ -587,5 +593,36 @@ describe("effect selection slots", () => {
     // A trail matches its effectType slot, not a nukeType slot.
     expect(effectMatchesSlot(trail, "transportShipTrail")).toBe(true);
     expect(effectMatchesSlot(trail, "atom")).toBe(false);
+  });
+
+  it("findEffectForSlot resolves a slot + name against the catalog", () => {
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        transportShipTrail: { spectrum: trail },
+        nukeExplosion: { atom_boom: atomBoom },
+      },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    const catalog = parsed.data;
+
+    expect(findEffectForSlot(catalog, "atom", "atom_boom")?.name).toBe(
+      "atom_boom",
+    );
+    expect(
+      findEffectForSlot(catalog, "transportShipTrail", "spectrum")?.name,
+    ).toBe("spectrum");
+    // Slot mismatch: an atom effect can't fill the hydro slot.
+    expect(findEffectForSlot(catalog, "hydro", "atom_boom")).toBeUndefined();
+    // A bare effectType is not a nuke-explosion slot.
+    expect(
+      findEffectForSlot(catalog, "nukeExplosion", "atom_boom"),
+    ).toBeUndefined();
+    expect(findEffectForSlot(catalog, "atom", "missing")).toBeUndefined();
+    expect(findEffectForSlot(catalog, "bogus", "atom_boom")).toBeUndefined();
+    // No catalog (failed load) resolves nothing.
+    expect(findEffectForSlot(null, "atom", "atom_boom")).toBeUndefined();
   });
 });

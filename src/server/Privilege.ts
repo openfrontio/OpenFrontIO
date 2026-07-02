@@ -11,12 +11,7 @@ import {
 } from "obscenity";
 import countries from "resources/countries.json";
 
-import {
-  Cosmetics,
-  effectMatchesSlot,
-  effectTypeForSlot,
-  findEffect,
-} from "../core/CosmeticSchemas";
+import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
@@ -280,11 +275,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 
   // slot = effectType (trails) or nukeType (nuke explosions); see effectTypeForSlot.
   isEffectAllowed(flares: string[], slot: string, name: string): PlayerEffect {
-    const effectType = effectTypeForSlot(slot);
-    const found = effectType
-      ? findEffect(this.cosmetics, effectType, name)
-      : undefined;
-    if (!found || !effectMatchesSlot(found, slot)) {
+    const found = findEffectForSlot(this.cosmetics, slot, name);
+    if (!found) {
       throw new Error(`Effect ${name} not found for slot ${slot}`);
     }
     if (

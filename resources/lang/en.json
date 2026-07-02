@@ -397,7 +397,7 @@
     "nukeType": {
       "atom": "Atom",
       "hydro": "Hydrogen",
-      "mirv": "MIRV"
+      "mirvWarhead": "MIRV"
     },
     "search": "Search...",
     "title": "Effects",

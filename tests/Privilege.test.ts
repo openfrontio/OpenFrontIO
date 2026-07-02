@@ -139,6 +139,7 @@ const effectCosmetics = {
           colors: ["#ff0000", "#7300ff"],
           size: 50,
           speed: 50,
+          thickness: 4,
           transitionSpeed: 5,
         },
         url: "",

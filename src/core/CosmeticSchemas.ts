@@ -151,14 +151,17 @@ export type NukeExplosionType = (typeof NUKE_EXPLOSION_TYPES)[number];
 // A nuke-explosion effect — a detonation FX, not a trail. `type` picks the
 // visual (only "shockwave" today) and `nukeType` the bomb; both are enums so an
 // effect using a value this client can't render is dropped by lenientRecord
-// instead of rendering wrong. `colors` is the palette and size/speed/
-// transitionSpeed drive the animation (the renderer clamps/drops what it can't use).
+// instead of rendering wrong. `colors` is the palette; size (final ring width
+// in tiles), speed (tiles/s the width grows), thickness (ring band thickness
+// in tiles), and transitionSpeed (palette colors/s) drive the animation (the
+// renderer clamps/drops what it can't use).
 export const NukeExplosionAttributesSchema = z.object({
   type: z.enum(["shockwave"]),
   nukeType: z.enum(NUKE_EXPLOSION_TYPES),
   colors: z.array(z.string()),
   size: z.number(),
   speed: z.number(),
+  thickness: z.number(),
   transitionSpeed: z.number(),
 });
 
@@ -233,6 +236,33 @@ export function effectMatchesSlot(effect: Effect, slot: string): boolean {
   if (isNukeExplosionEffect(effect)) return effect.attributes.nukeType === slot;
   return true;
 }
+
+/**
+ * Resolve a selection slot + effect name against the catalog: look up the
+ * slot's effectType (effectTypeForSlot) and require the found effect to fit
+ * the slot (effectMatchesSlot). Returns undefined for an unknown slot, a
+ * missing effect, or a slot mismatch.
+ */
+export function findEffectForSlot(
+  cosmetics: Cosmetics | null | undefined,
+  slot: string,
+  name: string,
+): Effect | undefined {
+  const effectType = effectTypeForSlot(slot);
+  const effect = effectType
+    ? findEffect(cosmetics, effectType, name)
+    : undefined;
+  return effect && effectMatchesSlot(effect, slot) ? effect : undefined;
+}
+
+// Slots put nukeType and effectType names in one flat string namespace
+// (effectTypeForSlot disambiguates by list membership), so the two enums must
+// stay disjoint — a nukeType named like an effectType would silently hijack
+// that slot. This guard fails the build if they ever collide.
+type _SlotCollision = Extract<NukeExplosionType, EffectType>;
+const _SLOT_NAMESPACES_DISJOINT: _SlotCollision extends never ? true : false =
+  true;
+void _SLOT_NAMESPACES_DISJOINT;
 
 /**
  * A record that drops entries failing `schema` instead of failing the whole
