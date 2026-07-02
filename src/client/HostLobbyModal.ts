@@ -1108,9 +1108,12 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
             disableAlliances: this.disableAlliances || null,
+            // Send {enabled:false} (not undefined) when off: undefined is dropped
+            // by JSON.stringify, so the server's "!== undefined" merge would keep a
+            // previously-enabled config and the toggle could never turn off.
             suddenDeath: this.suddenDeath
               ? { enabled: true, speed: this.suddenDeathSpeed }
-              : undefined,
+              : { enabled: false },
             anonymizeNames: this.anonymizeNames,
             nameReveals: this.nameReveals,
             allowedPublicIds: this.whitelistEnabled
