@@ -61,10 +61,10 @@ import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import {
+  EFFECT_PALETTE_BLOCKS,
   getPaletteSize,
   hexToRgb,
   MAX_TRAIL_COLORS,
-  TRAIL_EFFECT_BLOCKS,
 } from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
@@ -267,10 +267,11 @@ export class GPURenderer {
       filter: gl.NEAREST,
     });
 
-    // Per-player trail-effect texture: TRAIL_EFFECT_BLOCKS stacked blocks of
-    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail).
-    // Starts zeroed (color count 0 everywhere = no effect → territory color).
-    const effectRows = MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS;
+    // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
+    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
+    // block 2 = structures). Starts zeroed (color count 0 everywhere = no
+    // effect → territory/player color).
+    const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
       height: effectRows,
@@ -511,6 +512,7 @@ export class GPURenderer {
       gl,
       header,
       this.paletteTex,
+      this.effectTex,
       this.settings,
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
@@ -676,7 +678,7 @@ export class GPURenderer {
     this.namePass.refreshPlayerColors(this.paletteData);
   }
 
-  /** Re-upload the per-player trail-effect texture (style + colors by smallID). */
+  /** Re-upload the per-player effect texture (style + colors by smallID). */
   updateEffectPalette(effectData: Float32Array): void {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
@@ -687,7 +689,7 @@ export class GPURenderer {
       0,
       0,
       getPaletteSize(),
-      MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS,
+      MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS,
       gl.RGBA,
       gl.FLOAT,
       effectData,
@@ -980,6 +982,7 @@ export class GPURenderer {
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
+    this.structurePass.setHighlightOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);

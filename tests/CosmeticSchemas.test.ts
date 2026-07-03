@@ -580,6 +580,91 @@ describe("nukeExplosion in the cosmetics catalog", () => {
   });
 });
 
+describe("structures effects", () => {
+  const gradient = {
+    name: "rwb_structure_gradient",
+    effectType: "structures",
+    attributes: {
+      type: "gradient",
+      colors: ["#f00000", "#ffffff", "#1000f5"],
+      colorSize: 5,
+      movementSpeed: 5,
+    },
+    affiliateCode: null,
+    product: null,
+    rarity: "common",
+  };
+  const transition = {
+    name: "rwb_structure_transistion",
+    effectType: "structures",
+    attributes: {
+      type: "transition",
+      colors: ["#ff0000", "#ffffff", "#0008ff"],
+      frequency: 5,
+    },
+    affiliateCode: null,
+    product: null,
+    priceHard: 1,
+    rarity: "common",
+  };
+
+  it("parses the gradient and transition catalog entries", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        structures: {
+          rwb_structure_gradient: gradient,
+          rwb_structure_transistion: transition,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(
+        result.data.effects?.structures?.rwb_structure_gradient?.attributes
+          .type,
+      ).toBe("gradient");
+      expect(
+        result.data.effects?.structures?.rwb_structure_transistion?.attributes
+          .type,
+      ).toBe("transition");
+    }
+  });
+
+  it("resolves the structures slot (slot = effectType)", () => {
+    expect(effectTypeForSlot("structures")).toBe("structures");
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: { structures: { rwb_structure_gradient: gradient } },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(
+      findEffectForSlot(parsed.data, "structures", "rwb_structure_gradient")
+        ?.name,
+    ).toBe("rwb_structure_gradient");
+  });
+
+  it("shares trail attribute shapes but is not a trail effect", () => {
+    const eff = EffectSchema.parse(gradient);
+    // Renders through the structures palette block, not a trail block.
+    expect(isTrailEffect(eff)).toBe(false);
+    expect(effectMatchesSlot(eff, "structures")).toBe(true);
+    expect(effectMatchesSlot(eff, "transportShipTrail")).toBe(false);
+  });
+
+  it("rejects a structures effect with an unknown attribute type", () => {
+    expect(
+      EffectSchema.safeParse({
+        ...gradient,
+        attributes: { type: "sparkle", colors: [] },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("isTrailEffect", () => {
   it("is true for a trail effect and false for a nukeExplosion", () => {
     const trail = EffectSchema.parse({
