@@ -1201,7 +1201,7 @@
     "open_lobbies": "Open Lobbies",
     "pvp_immunity": "PVP immunity duration",
     "starting_gold": "Starting Gold",
-    "title": "Join Private Lobby",
+    "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."
   },
   "public_game_modifier": {
