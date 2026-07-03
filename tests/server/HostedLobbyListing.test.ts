@@ -8,8 +8,13 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
+import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
-import { GameServer, hashPersistentID } from "../../src/server/GameServer";
+import {
+  GamePhase,
+  GameServer,
+  hashPersistentID,
+} from "../../src/server/GameServer";
 import {
   InternalGameInfo,
   InternalPublicGames,
@@ -179,6 +184,87 @@ describe("GameManager.listedLobbies", () => {
 
     (game as any)._hasStarted = true;
     expect(gm.listedLobbies()).toEqual([]);
+  });
+});
+
+describe("host-left lobby teardown", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  function fakeWs() {
+    const ws = new EventEmitter() as any;
+    ws.readyState = WebSocket.OPEN;
+    ws.send = vi.fn();
+    ws.close = vi.fn();
+    return ws;
+  }
+
+  function makeClient(clientID: string, persistentID: string, ws: any) {
+    return new Client(
+      clientID,
+      persistentID,
+      null,
+      null,
+      undefined,
+      "1.2.3.4",
+      `user_${clientID}`,
+      null,
+      ws,
+      undefined,
+      undefined,
+      [],
+    );
+  }
+
+  it("ends, delists and prunes an unstarted lobby when the host leaves", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-host-leaves", undefined, CREATOR)!;
+    game.setListed(true);
+
+    const hostWs = fakeWs();
+    const guestWs = fakeWs();
+    expect(game.joinClient(makeClient("host", CREATOR, hostWs))).toBe("joined");
+    expect(game.joinClient(makeClient("guest", OTHER_CREATOR, guestWs))).toBe(
+      "joined",
+    );
+    expect(gm.listedLobbies()).toHaveLength(1);
+
+    hostWs.emit("close");
+
+    // Remaining players are kicked and the ghost leaves the listing...
+    expect(guestWs.close).toHaveBeenCalled();
+    expect(game.phase()).toBe(GamePhase.Finished);
+    expect(gm.listedLobbies()).toEqual([]);
+
+    // ...and the next manager tick prunes the game entirely, freeing the
+    // creator's one-listing quota.
+    gm.tick();
+    expect(gm.game("g-host-leaves")).toBeNull();
+  });
+
+  it("tears down even when the host socket was already dead on join", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-dead-socket", undefined, CREATOR)!;
+    game.setListed(true);
+
+    const hostWs = fakeWs();
+    hostWs.readyState = WebSocket.CLOSED;
+    game.joinClient(makeClient("host", CREATOR, hostWs));
+
+    expect(game.phase()).toBe(GamePhase.Finished);
+    expect(gm.listedLobbies()).toEqual([]);
+  });
+
+  it("rejects joins into an ended lobby before it is pruned", () => {
+    const game = makeGame();
+    (game as any)._hasEnded = true;
+    expect(game.joinClient({} as any)).toBe("rejected");
   });
 });
 

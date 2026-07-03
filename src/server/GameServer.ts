@@ -443,6 +443,11 @@ export class GameServer {
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
+    // e.g. the host left an unstarted lobby and GameManager hasn't pruned
+    // it yet.
+    if (this._hasEnded) {
+      return "rejected";
+    }
     if (this.kickedPersistentIds.has(client.persistentID)) {
       return "kicked";
     }
@@ -696,27 +701,7 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== client.clientID,
-      );
-
-      if (!this._hasStarted) {
-        // Remove persistentId if the game has not started to prevent going over max players
-        this.persistentIdToClientId.delete(client.persistentID);
-        // Close lobby when host leaves before game starts
-        if (
-          !this.isPublic() &&
-          client.persistentID === this.creatorPersistentID
-        ) {
-          this.log.info("Host left, closing lobby", {
-            gameID: this.id,
-          });
-          for (const c of [...this.activeClients]) {
-            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
-          }
-          this._hasEnded = true;
-        }
-      }
+      this.handleClientDisconnect(client);
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -724,19 +709,40 @@ export class GameServer {
       }
     });
 
-    // Check if WebSocket already closed before we added the listener (race condition)
+    // Check if WebSocket already closed before we added the listener (race
+    // condition) — the 'close' event has already fired, so the handler above
+    // will never run for this client.
     if (client.ws.readyState >= 2) {
       this.log.info("client WebSocket already closing/closed, removing", {
         clientID: client.clientID,
         readyState: client.ws.readyState,
       });
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== client.clientID,
-      );
-      // Remove persistentId if the game has not started to prevent going over max players
-      if (!this._hasStarted) {
-        this.persistentIdToClientId.delete(client.persistentID);
+      this.handleClientDisconnect(client);
+    }
+  }
+
+  private handleClientDisconnect(client: Client) {
+    this.activeClients = this.activeClients.filter(
+      (c) => c.clientID !== client.clientID,
+    );
+
+    if (this._hasStarted) {
+      return;
+    }
+    // Remove persistentId if the game has not started to prevent going over max players
+    this.persistentIdToClientId.delete(client.persistentID);
+    // Close lobby when host leaves before game starts: without a host it can
+    // never start, and a listed one would haunt the lobby browser and hold
+    // the creator's one-listing quota. phase() reports Finished once ended,
+    // so GameManager's next tick prunes it.
+    if (!this.isPublic() && client.persistentID === this.creatorPersistentID) {
+      this.log.info("Host left, closing lobby", {
+        gameID: this.id,
+      });
+      for (const c of [...this.activeClients]) {
+        this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
       }
+      this._hasEnded = true;
     }
   }
 
@@ -1036,6 +1042,13 @@ export class GameServer {
   }
 
   phase(): GamePhase {
+    // An ended game (e.g. an unstarted lobby whose host left) must report
+    // Finished: GameManager prunes on Finished, and a ghost that kept
+    // reporting Lobby would stay advertised in the lobby browser and hold
+    // the creator's one-listing quota until the max-duration cutoff.
+    if (this._hasEnded) {
+      return GamePhase.Finished;
+    }
     const now = Date.now();
     const alive: Client[] = [];
     for (const client of this.activeClients) {
