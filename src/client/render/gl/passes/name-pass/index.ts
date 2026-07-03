@@ -342,6 +342,8 @@ export class NamePass {
           embargo: false,
           nukeActive: false,
           nukeTargetsMe: false,
+          inDoomsdayClock: false,
+          doomsdayClockDraining: false,
           traitorRemainingTicks: 0,
           allianceFraction: 0,
           allianceRemainingTicks: 0,
@@ -453,6 +455,8 @@ export class NamePass {
       const crown = sd?.crown ?? false;
       const traitor = sd?.traitor ?? false;
       const disconnected = sd?.disconnected ?? false;
+      const inDoomsdayClock = sd?.inDoomsdayClock ?? false;
+      const doomsdayClockDraining = sd?.doomsdayClockDraining ?? false;
       const alliance = sd?.alliance ?? false;
       const allianceReq = sd?.allianceReq ?? false;
       const target = sd?.target ?? false;
@@ -467,6 +471,8 @@ export class NamePass {
         crown !== slot.crown ||
         traitor !== slot.traitor ||
         disconnected !== slot.disconnected ||
+        inDoomsdayClock !== slot.inDoomsdayClock ||
+        doomsdayClockDraining !== slot.doomsdayClockDraining ||
         alliance !== slot.alliance ||
         allianceReq !== slot.allianceReq ||
         target !== slot.target ||
@@ -480,6 +486,8 @@ export class NamePass {
         slot.crown = crown;
         slot.traitor = traitor;
         slot.disconnected = disconnected;
+        slot.inDoomsdayClock = inDoomsdayClock;
+        slot.doomsdayClockDraining = doomsdayClockDraining;
         slot.alliance = alliance;
         slot.allianceReq = allianceReq;
         slot.target = target;
@@ -565,11 +573,16 @@ export class NamePass {
     d[off + 14] = nameShade;
     d[off + 15] = slot.nameHalfWidth;
 
-    // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]
+    // Column 4: flagLayerIdx, emojiAtlasIdx, smallID, doomsdayClock state
+    // (0 none, 1 danger -> blinking skull, 2 draining -> steady skull).
     d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
     d[off + 18] = slot.static.smallID;
-    d[off + 19] = 0;
+    d[off + 19] = slot.doomsdayClockDraining
+      ? 2.0
+      : slot.inDoomsdayClock
+        ? 1.0
+        : 0.0;
 
     // Column 5: crown, traitor, disconnected, alliance
     d[off + 20] = slot.crown ? 1.0 : 0.0;
@@ -644,7 +657,8 @@ export class NamePass {
         slot.allianceReq ||
         slot.target ||
         slot.embargo ||
-        slot.nukeActive;
+        slot.nukeActive ||
+        slot.inDoomsdayClock;
       if (slot.emojiAtlasIdx >= 0) {
         top = wy - lineH * ns.emojiRowOffset;
       } else if (hasStatus) {

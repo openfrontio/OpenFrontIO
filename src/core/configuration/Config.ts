@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
   Game,
@@ -80,6 +81,21 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
+// Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
+// Times in seconds. The required map share rises in waves (levels + times in
+// DoomsdayClock.ts, chosen by `speed`). A side caught below the bar gets a
+// warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed to zero: the
+// warn (10s) + the linear drain (~55s from full troops, sooner with fewer troops
+// or a shrinking territory) make ~1 minute from caught to wiped out.
+const DOOMSDAY_CLOCK_DEFAULTS = {
+  enabled: false,
+  speed: "normal" as DoomsdayClockSpeed,
+  warnSeconds: 10, // cooldown before decay after the bar catches you
+  drainStartPercent: 2, // starts bleeding at once (already beats troop income)
+  drainMaxPercent: 6,
+  drainRampSeconds: 50, // ramps LINEARLY to the max over this long
+};
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -100,6 +116,21 @@ export class Config {
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
+  }
+
+  // Doomsday Clock config, resolved against defaults. One read per tick.
+  doomsdayClockConfig(): typeof DOOMSDAY_CLOCK_DEFAULTS {
+    const c = this._gameConfig.doomsdayClock;
+    const d = DOOMSDAY_CLOCK_DEFAULTS;
+    return {
+      enabled: c?.enabled ?? d.enabled,
+      speed: c?.speed ?? d.speed,
+      // Drain/warn tuning is internal (not wire-configurable): always defaults.
+      warnSeconds: d.warnSeconds,
+      drainStartPercent: d.drainStartPercent,
+      drainMaxPercent: d.drainMaxPercent,
+      drainRampSeconds: d.drainRampSeconds,
+    };
   }
   spawnImmunityDuration(): Tick {
     return (

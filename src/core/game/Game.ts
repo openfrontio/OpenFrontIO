@@ -552,6 +552,11 @@ export interface Player {
   isAlive(): boolean;
   isTraitor(): boolean;
   markTraitor(): void;
+  // Doomsday Clock (anti-stall): marked when below the rising territory bar.
+  inDoomsdayClock(): boolean;
+  doomsdayClockTicks(): number;
+  enterDoomsdayClock(): void;
+  clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 

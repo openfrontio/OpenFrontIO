@@ -400,6 +400,25 @@
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },
+  "doomsday_clock": {
+    "collapsing": "Collapsing -{rate}/s",
+    "decay_in": "Decay in {secs}s",
+    "final": "Final zone, hold {pct}%",
+    "growing": "Rising to {pct}%",
+    "hold": "Hold ≥ {pct}%",
+    "next_wave": "Next {pct}% in {time}",
+    "stable": "Stable",
+    "title": "Doomsday Clock",
+    "unstable": "Unstable",
+    "you": "You {pct}%",
+    "your_team": "{team}: {pct}%"
+  },
+  "doomsday_clock_speed": {
+    "fast": "Fast",
+    "normal": "Normal",
+    "slow": "Slow",
+    "veryfast": "Very Fast"
+  },
   "effects": {
     "button_title": "Pick an effect!",
     "nukeType": {
@@ -740,6 +759,7 @@
     "disable_alliances": "Disable alliances",
     "donate_gold": "Donate gold",
     "donate_troops": "Donate troops",
+    "doomsday_clock": "Doomsday Clock",
     "empty_team": "Empty",
     "empty_teams": "Empty Teams",
     "enables_title": "Disable Units",
@@ -1244,6 +1264,7 @@
     "bots_disabled": "Disabled",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "doomsday_clock": "Doomsday Clock",
     "enables_title": "Disable Units",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
