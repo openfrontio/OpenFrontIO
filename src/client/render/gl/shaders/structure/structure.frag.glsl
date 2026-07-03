@@ -175,12 +175,14 @@ void main() {
   // fill with their effect (raw catalog colors, like trails — no darken). The
   // border keeps the player color so ownership stays readable. Skipped for
   // alt view and construction gray.
+  bool effectActive = false;
   if (uAltView == 0 && vUnderConstruction < 0.5) {
     int effOwner = int(vOwnerID + 0.5);
     if (effOwner == int(uHoverOwner + 0.5) && effOwner > 0) {
       vec3 effectRGB;
       if (structuresEffectColor(effOwner, effectRGB)) {
         fillColor.rgb = effectRGB;
+        effectActive = true;
       }
     }
   }
@@ -208,15 +210,21 @@ void main() {
   // Classic icons (uIconDarken > 0) tint the glyph with a darkened player
   // color. When the shape itself is already dark, that darkened glyph blends
   // into the shape (and the dark territory behind it) and becomes unreadable —
-  // so shift the glyph toward the light icon color as the fill darkens. The
-  // shift is a smooth fade around the old 0.25 cutoff, not a hard flip, so an
-  // animated structures-effect fill cross-fades the glyph instead of
-  // snapping it between black and white.
+  // so flip the glyph to the light icon color when the fill is too dark.
+  // While the structures effect is animating the fill, the flip becomes a
+  // smooth luminance fade so the glyph cross-fades instead of snapping;
+  // without the effect this is the classic hard threshold, pixel-identical
+  // to having no cosmetic equipped.
   vec3 glyphColor = uIconColor;
   if (uIconDarken > 0.0) {
     float fillLum = dot(fillColor.rgb, vec3(0.299, 0.587, 0.114));
-    float t = smoothstep(0.25, 0.45, fillLum); // 0 = dark fill → light glyph
-    glyphColor = mix(uIconColor, darken(fillColor.rgb, uIconDarken), t);
+    if (effectActive) {
+      float t = smoothstep(0.25, 0.45, fillLum); // 0 = dark fill → light glyph
+      glyphColor = mix(uIconColor, darken(fillColor.rgb, uIconDarken), t);
+    } else {
+      glyphColor =
+        fillLum < 0.25 ? uIconColor : darken(fillColor.rgb, uIconDarken);
+    }
   }
   vec3 finalRGB = mix(bgColor.rgb, glyphColor, iconAlpha);
 
