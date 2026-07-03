@@ -94,6 +94,10 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   drainStartPercent: 2, // starts bleeding at once (already beats troop income)
   drainMaxPercent: 6,
   drainRampSeconds: 50, // ramps LINEARLY to the max over this long
+  // Warships bleed on the same start + ramp but to a much higher ceiling than
+  // troops, so a fleet at full attrition sinks in ~2s (50% of a ship's max
+  // health per second) instead of riding out the gentle troop rate. Ships only.
+  warshipDrainMaxPercent: 50,
 };
 
 export class Config {
@@ -130,6 +134,7 @@ export class Config {
       drainStartPercent: d.drainStartPercent,
       drainMaxPercent: d.drainMaxPercent,
       drainRampSeconds: d.drainRampSeconds,
+      warshipDrainMaxPercent: d.warshipDrainMaxPercent,
     };
   }
   spawnImmunityDuration(): Tick {
