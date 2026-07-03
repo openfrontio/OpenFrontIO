@@ -5,7 +5,6 @@ import { AbstractGraphAStar } from "./AStar.AbstractGraph";
 import { AStarWaterBounded } from "./AStar.WaterBounded";
 import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { BFSGrid } from "./BFS.Grid";
-import { LAND_MARKER } from "./ConnectedComponents";
 
 export class AStarWaterHierarchical implements PathFinder<number> {
   private tileBFS: BFSGrid;
@@ -314,7 +313,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       this.map.height(),
       tile,
       maxDistance,
-      (t: TileRef) => this.graph.getComponentId(t) !== LAND_MARKER,
+      (t: TileRef) => this.map.isWater(t),
       (t: TileRef, _dist: number) => {
         const tileX = this.map.x(t);
         const tileY = this.map.y(t);
