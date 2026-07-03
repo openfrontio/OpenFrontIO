@@ -70,6 +70,17 @@ describe("Neighbor iteration", () => {
     });
   });
 
+  // forEachNeighborNSWE's contract is exact order equality with neighbors(),
+  // including at edges and corners, so order-sensitive code can use the two
+  // interchangeably.
+  test("forEachNeighborNSWE matches map.neighbors() exactly (contents and order) for every tile", () => {
+    game.forEachTile((tile) => {
+      const out: TileRef[] = [];
+      game.forEachNeighborNSWE(tile, (n) => out.push(n));
+      expect(out).toEqual(game.map().neighbors(tile));
+    });
+  });
+
   test("forEachNeighborWithDiag visits all 8 neighbors in dx-major order", () => {
     const tile = game.ref(5, 7);
     expect(collectNeighborsWithDiag(tile)).toEqual([

@@ -33,6 +33,9 @@ import {
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
 
+// Reusable neighbor buffer for hot loops; the simulation is single-threaded.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+
 export class AiAttackBehavior {
   private botAttackTroopsSent: number = 0;
 
@@ -52,20 +55,24 @@ export class AiAttackBehavior {
       throw new Error("not initialized");
     }
 
-    const border = Array.from(this.player.borderTiles())
-      .flatMap((t) => this.game.neighbors(t))
-      .filter(
-        (t) =>
-          this.game.isLand(t) &&
-          !this.game.isImpassable(t) &&
-          this.game.ownerID(t) !== this.player?.smallID(),
-      );
+    // Neighbor visit order matters here: the set's insertion order feeds the
+    // stable troop-count sort below, so ties keep border-discovery order.
+    const borderingPlayerSet = new Set<Player>();
+    let borderHasNonNukedTerraNullius = false;
+    const smallID = this.player.smallID();
+    const visit = (t: number) => {
+      if (!this.game.isLand(t) || this.game.isImpassable(t)) return;
+      if (this.game.ownerID(t) === smallID) return;
+      const owner = this.game.playerBySmallID(this.game.ownerID(t));
+      if (owner.isPlayer()) borderingPlayerSet.add(owner);
+      if (!this.game.hasOwner(t) && !this.game.hasFallout(t)) {
+        borderHasNonNukedTerraNullius = true;
+      }
+    };
+    for (const t of this.player.borderTiles()) {
+      this.game.forEachNeighborNSWE(t, visit);
+    }
     const playerNeighbors = this.player.nearby();
-    const borderingPlayerSet = new Set<Player>(
-      border
-        .map((t) => this.game.playerBySmallID(this.game.ownerID(t)))
-        .filter((o): o is Player => o.isPlayer()),
-    );
     for (const n of playerNeighbors) {
       if (n.isPlayer()) borderingPlayerSet.add(n);
     }
@@ -81,7 +88,7 @@ export class AiAttackBehavior {
 
     // Attack TerraNullius but not nuked territory (direct border or across a river)
     const hasNonNukedTerraNullius =
-      border.some((t) => !this.game.hasOwner(t) && !this.game.hasFallout(t)) ||
+      borderHasNonNukedTerraNullius ||
       playerNeighbors.some((n) => !n.isPlayer());
     if (hasNonNukedTerraNullius) {
       if (this.sendAttack(this.game.terraNullius())) return;
@@ -548,8 +555,13 @@ export class AiAttackBehavior {
       return false;
     }
 
+    // Boolean result, so neighbor order doesn't matter; a reused scratch
+    // buffer keeps this allocation-free and allows early exit.
+    const nbuf = NEIGHBOR_SCRATCH;
     for (const tile of this.player.borderTiles()) {
-      for (const neighbor of this.game.neighbors(tile)) {
+      const n = this.game.neighbors4(tile, nbuf);
+      for (let i = 0; i < n; i++) {
+        const neighbor = nbuf[i];
         if (
           this.game.isLand(neighbor) &&
           !this.game.hasOwner(neighbor) &&
