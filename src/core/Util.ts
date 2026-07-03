@@ -127,7 +127,7 @@ export function simpleHash(str: string): number {
 
 export function calculateBoundingBox(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): { min: Cell; max: Cell } {
   let minX = Infinity,
     minY = Infinity,

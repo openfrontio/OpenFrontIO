@@ -120,14 +120,14 @@ describe("PlayerImpl", () => {
       );
     });
 
-    test("four or more types (Set path) and no match", () => {
+    test("array of types (Set path) and no match", () => {
       expect(
-        player.units(
+        player.units([
           UnitType.City,
           UnitType.DefensePost,
           UnitType.MissileSilo,
           UnitType.Port,
-        ),
+        ]),
       ).toEqual(
         expected(UnitType.City, UnitType.DefensePost, UnitType.MissileSilo),
       );
