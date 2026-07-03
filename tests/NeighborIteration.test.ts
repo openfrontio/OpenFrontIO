@@ -70,9 +70,9 @@ describe("Neighbor iteration", () => {
     });
   });
 
-  // forEachNeighborNSWE exists so order-sensitive code can drop neighbors()
-  // without changing simulation behavior — exact order equality is the
-  // contract, including at edges and corners.
+  // forEachNeighborNSWE's contract is exact order equality with neighbors(),
+  // including at edges and corners, so order-sensitive code can use the two
+  // interchangeably.
   test("forEachNeighborNSWE matches map.neighbors() exactly (contents and order) for every tile", () => {
     game.forEachTile((tile) => {
       const out: TileRef[] = [];

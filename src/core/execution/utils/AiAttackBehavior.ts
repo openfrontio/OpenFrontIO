@@ -55,9 +55,8 @@ export class AiAttackBehavior {
       throw new Error("not initialized");
     }
 
-    // Single pass over border neighbors (in neighbors() order, so the set's
-    // insertion order — which feeds a stable sort below — is unchanged from
-    // the old flatMap/filter/map chain).
+    // Neighbor visit order matters here: the set's insertion order feeds the
+    // stable troop-count sort below, so ties keep border-discovery order.
     const borderingPlayerSet = new Set<Player>();
     let borderHasNonNukedTerraNullius = false;
     const smallID = this.player.smallID();

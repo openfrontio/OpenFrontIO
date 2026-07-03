@@ -368,9 +368,9 @@ export class PlayerImpl implements Player {
       return this._units;
     }
 
-    // Matches are gathered into a reusable scratch buffer and copied out with
-    // a single exact-size slice, so each call performs one right-sized
-    // allocation instead of repeated push-growth reallocations.
+    // Hot path. Matches are gathered into a reusable scratch buffer and
+    // copied out with an exact-size slice, so each call allocates exactly
+    // one right-sized result array.
     const scratch = UNITS_SCRATCH;
     let n = 0;
 
@@ -508,8 +508,6 @@ export class PlayerImpl implements Player {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
 
-    // Iterate border tiles directly (same order as the filtered-array version)
-    // instead of materializing the shore-tile array on every call.
     let shoreIdx = 0;
     for (const border of this.borderTiles()) {
       if (!map.isShore(border)) continue;

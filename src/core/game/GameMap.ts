@@ -40,9 +40,9 @@ export interface GameMap {
   // Zero-allocation neighbor iteration (cardinal only), in W, E, N, S order.
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
   // Zero-allocation neighbor iteration (cardinal only) in the same N, S, W, E
-  // order as neighbors(). Use this when replacing a neighbors() call in
-  // order-sensitive code (e.g. anything feeding sets/arrays whose iteration
-  // order affects the simulation).
+  // order as neighbors(). Use this in order-sensitive code — anything feeding
+  // sets/arrays whose iteration order affects the simulation — where
+  // forEachNeighbor's W, E, N, S order would change behavior.
   forEachNeighborNSWE(
     ref: TileRef,
     callback: (neighbor: TileRef) => void,

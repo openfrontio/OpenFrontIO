@@ -33,8 +33,8 @@ export class SpatialQuery {
   ): TileRef | null {
     const map = this.game.map();
 
-    // Track the first candidate at the minimum Manhattan distance — same
-    // result as the old collect-then-stable-sort, without the array.
+    // Strict < keeps the first candidate on distance ties, so the winner
+    // depends only on the deterministic BFS visit order.
     let best: TileRef | null = null;
     let bestDist = Infinity;
     for (const tile of map.bfs(
