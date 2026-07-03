@@ -1172,6 +1172,12 @@ export class GameView implements GameMap {
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void {
     this._map.forEachNeighbor(ref, callback);
   }
+  forEachNeighborNSWE(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    this._map.forEachNeighborNSWE(ref, callback);
+  }
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }

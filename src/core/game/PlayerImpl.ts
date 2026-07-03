@@ -84,6 +84,13 @@ const EMPTY_ATTACK_UPDATES: AttackUpdate[] = [];
 const EMPTY_ALLIANCE_VIEWS: AllianceView[] = [];
 const EMPTY_EMOJIS: EmojiMessage[] = [];
 const EMPTY_EMBARGOES = new Set<string>();
+// Reusable buffers for hot loops. The simulation is single-threaded and these
+// are fully consumed before any re-entrant call, so sharing is safe.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+const UNITS_SCRATCH: Unit[] = [];
+// N, S, W, E — the sampling directions used by shoreReachableNeighbors().
+const SHORE_DIRECTIONS_DX = [0, 0, -1, 1];
+const SHORE_DIRECTIONS_DY = [-1, 1, 0, 0];
 Object.freeze(EMPTY_NUMBER_ARRAY);
 Object.freeze(EMPTY_STRING_ARRAY);
 Object.freeze(EMPTY_ATTACK_UPDATES);
@@ -361,53 +368,41 @@ export class PlayerImpl implements Player {
       return this._units;
     }
 
+    // Matches are gathered into a reusable scratch buffer and copied out with
+    // a single exact-size slice, so each call performs one right-sized
+    // allocation instead of repeated push-growth reallocations.
+    const scratch = UNITS_SCRATCH;
+    let n = 0;
+
     // Fast paths for common small arity calls to avoid Set allocation.
     if (len === 1) {
       const t0 = types[0]!;
-      const out: Unit[] = [];
       for (const u of this._units) {
-        if (u.type() === t0) out.push(u);
+        if (u.type() === t0) scratch[n++] = u;
       }
-      return out;
-    }
-
-    if (len === 2) {
+    } else if (len === 2) {
       const t0 = types[0]!;
       const t1 = types[1]!;
-      if (t0 === t1) {
-        const out: Unit[] = [];
-        for (const u of this._units) {
-          if (u.type() === t0) out.push(u);
-        }
-        return out;
-      }
-      const out: Unit[] = [];
       for (const u of this._units) {
         const t = u.type();
-        if (t === t0 || t === t1) out.push(u);
+        if (t === t0 || t === t1) scratch[n++] = u;
       }
-      return out;
-    }
-
-    if (len === 3) {
+    } else if (len === 3) {
       const t0 = types[0]!;
       const t1 = types[1]!;
       const t2 = types[2]!;
       // Keep semantics identical for duplicates in types by using direct comparisons.
-      const out: Unit[] = [];
       for (const u of this._units) {
         const t = u.type();
-        if (t === t0 || t === t1 || t === t2) out.push(u);
+        if (t === t0 || t === t1 || t === t2) scratch[n++] = u;
       }
-      return out;
+    } else {
+      const ts = new Set(types);
+      for (const u of this._units) {
+        if (ts.has(u.type())) scratch[n++] = u;
+      }
     }
-
-    const ts = new Set(types);
-    const out: Unit[] = [];
-    for (const u of this._units) {
-      if (ts.has(u.type())) out.push(u);
-    }
-    return out;
+    return scratch.slice(0, n);
   }
 
   private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
@@ -454,9 +449,13 @@ export class PlayerImpl implements Player {
   }
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
+    const map = this.mg.map();
+    const otherID = other.smallID();
+    const nbuf = NEIGHBOR_SCRATCH;
     for (const border of this._borderTiles) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().ownerID(neighbor) === other.smallID()) {
+      const n = map.neighbors4(border, nbuf);
+      for (let i = 0; i < n; i++) {
+        if (map.ownerID(nbuf[i]) === otherID) {
           return true;
         }
       }
@@ -478,26 +477,23 @@ export class PlayerImpl implements Player {
 
   nearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
-    for (const border of this.borderTiles()) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (
-          this.mg.map().isLand(neighbor) &&
-          !this.mg.map().isImpassable(neighbor)
-        ) {
-          if (
-            !this.mg.map().hasOwner(neighbor) &&
-            this.mg.map().hasFallout(neighbor)
-          ) {
-            continue;
-          }
-          const owner = this.mg.map().ownerID(neighbor);
-          if (owner !== this.smallID()) {
-            ns.add(
-              this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
-            );
-          }
+    const map = this.mg.map();
+    const smallID = this.smallID();
+    const visit = (neighbor: TileRef) => {
+      if (map.isLand(neighbor) && !map.isImpassable(neighbor)) {
+        if (!map.hasOwner(neighbor) && map.hasFallout(neighbor)) {
+          return;
+        }
+        const owner = map.ownerID(neighbor);
+        if (owner !== smallID) {
+          ns.add(
+            this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+          );
         }
       }
+    };
+    for (const border of this.borderTiles()) {
+      map.forEachNeighborNSWE(border, visit);
     }
     for (const n of this.shoreReachableNeighbors()) {
       ns.add(n);
@@ -511,21 +507,21 @@ export class PlayerImpl implements Player {
   private shoreReachableNeighbors(): Set<Player | TerraNullius> {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
-    const shores = Array.from(this.borderTiles()).filter((t) => map.isShore(t));
-    const directions: [number, number][] = [
-      [0, -1],
-      [0, 1],
-      [-1, 0],
-      [1, 0],
-    ];
 
-    for (let i = 0; i < shores.length; i += 10) {
-      const border = shores[i];
+    // Iterate border tiles directly (same order as the filtered-array version)
+    // instead of materializing the shore-tile array on every call.
+    let shoreIdx = 0;
+    for (const border of this.borderTiles()) {
+      if (!map.isShore(border)) continue;
+      // Visit every 10th shore tile.
+      if (shoreIdx++ % 10 !== 0) continue;
 
       const bx = map.x(border);
       const by = map.y(border);
 
-      for (const [dx, dy] of directions) {
+      for (let d = 0; d < 4; d++) {
+        const dx = SHORE_DIRECTIONS_DX[d];
+        const dy = SHORE_DIRECTIONS_DY[d];
         // Only follow directions that immediately enter water; land-adjacent
         // directions are already covered by the direct neighbors() loop.
         const x1 = bx + dx;

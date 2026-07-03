@@ -32,25 +32,25 @@ export class SpatialQuery {
     predicate: (t: TileRef) => boolean,
   ): TileRef | null {
     const map = this.game.map();
-    const candidates: TileRef[] = [];
 
+    // Track the first candidate at the minimum Manhattan distance — same
+    // result as the old collect-then-stable-sort, without the array.
+    let best: TileRef | null = null;
+    let bestDist = Infinity;
     for (const tile of map.bfs(
       from,
       (_, t) => map.manhattanDist(from, t) <= maxDist,
     )) {
       if (predicate(tile)) {
-        candidates.push(tile);
+        const dist = map.manhattanDist(from, tile);
+        if (dist < bestDist) {
+          best = tile;
+          bestDist = dist;
+        }
       }
     }
 
-    if (candidates.length === 0) return null;
-
-    // Sort by Manhattan distance to find actual nearest
-    candidates.sort(
-      (a, b) => map.manhattanDist(from, a) - map.manhattanDist(from, b),
-    );
-
-    return candidates[0];
+    return best;
   }
 
   /**

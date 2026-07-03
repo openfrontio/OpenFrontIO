@@ -39,6 +39,14 @@ export interface GameMap {
   neighbors(ref: TileRef): TileRef[];
   // Zero-allocation neighbor iteration (cardinal only), in W, E, N, S order.
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
+  // Zero-allocation neighbor iteration (cardinal only) in the same N, S, W, E
+  // order as neighbors(). Use this when replacing a neighbors() call in
+  // order-sensitive code (e.g. anything feeding sets/arrays whose iteration
+  // order affects the simulation).
+  forEachNeighborNSWE(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void;
   // Writes the cardinal neighbors of ref into out (W, E, N, S order) and
   // returns the count. out must have length >= 4; reuse it across calls to
   // avoid allocation in hot loops.
@@ -395,6 +403,19 @@ export class GameMapImpl implements GameMap {
     if (ref < (this.height_ - 1) * w) callback(ref + w);
   }
 
+  forEachNeighborNSWE(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    const w = this.width_;
+    const x = this.refToX[ref];
+
+    if (ref >= w) callback(ref - w);
+    if (ref < (this.height_ - 1) * w) callback(ref + w);
+    if (x !== 0) callback(ref - 1);
+    if (x !== w - 1) callback(ref + 1);
+  }
+
   neighbors4(ref: TileRef, out: TileRef[]): number {
     const w = this.width_;
     const x = this.refToX[ref];
@@ -480,15 +501,24 @@ export class GameMapImpl implements GameMap {
       q.push(tile);
     }
 
+    // Neighbors are enumerated inline in the same order as neighbors() to
+    // avoid allocating an array per visited tile.
+    const w = this.width_;
+    const southLimit = (this.height_ - 1) * w;
+    const visit = (n: TileRef) => {
+      if (!seen.has(n) && filter(this, n)) {
+        seen.add(n);
+        q.push(n);
+      }
+    };
     while (q.length > 0) {
       const curr = q.pop();
       if (curr === undefined) continue;
-      for (const n of this.neighbors(curr)) {
-        if (!seen.has(n) && filter(this, n)) {
-          seen.add(n);
-          q.push(n);
-        }
-      }
+      const x = this.refToX[curr];
+      if (curr >= w) visit(curr - w);
+      if (curr < southLimit) visit(curr + w);
+      if (x !== 0) visit(curr - 1);
+      if (x !== w - 1) visit(curr + 1);
     }
     return seen;
   }
