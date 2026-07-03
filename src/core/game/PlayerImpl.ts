@@ -88,6 +88,7 @@ const EMPTY_EMBARGOES = new Set<string>();
 // are fully consumed before any re-entrant call, so sharing is safe.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
 const UNITS_SCRATCH: Unit[] = [];
+const TYPE_SET_SCRATCH = new Set<UnitType>();
 // N, S, W, E — the sampling directions used by shoreReachableNeighbors().
 const SHORE_DIRECTIONS_DX = [0, 0, -1, 1];
 const SHORE_DIRECTIONS_DY = [-1, 1, 0, 0];
@@ -362,44 +363,51 @@ export class PlayerImpl implements Player {
     return this.playerInfo.playerType;
   }
 
-  units(...types: UnitType[]): Unit[] {
-    const len = types.length;
-    if (len === 0) {
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
+  units(
+    first?: UnitType | readonly UnitType[],
+    second?: UnitType,
+    third?: UnitType,
+  ): Unit[] {
+    if (first === undefined) {
       return this._units;
     }
 
     // Hot path. Matches are gathered into a reusable scratch buffer and
     // copied out with an exact-size slice, so each call allocates exactly
-    // one right-sized result array.
+    // one right-sized result array. Fixed-arity parameters (rather than a
+    // rest parameter) avoid allocating an argument array per call.
     const scratch = UNITS_SCRATCH;
     let n = 0;
 
-    // Fast paths for common small arity calls to avoid Set allocation.
-    if (len === 1) {
-      const t0 = types[0]!;
-      for (const u of this._units) {
-        if (u.type() === t0) scratch[n++] = u;
+    if (Array.isArray(first)) {
+      const types = first as readonly UnitType[];
+      if (types.length === 0) {
+        return this._units;
       }
-    } else if (len === 2) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      for (const u of this._units) {
-        const t = u.type();
-        if (t === t0 || t === t1) scratch[n++] = u;
+      const ts = TYPE_SET_SCRATCH;
+      ts.clear();
+      for (const t of types) {
+        ts.add(t);
       }
-    } else if (len === 3) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      const t2 = types[2]!;
-      // Keep semantics identical for duplicates in types by using direct comparisons.
-      for (const u of this._units) {
-        const t = u.type();
-        if (t === t0 || t === t1 || t === t2) scratch[n++] = u;
-      }
-    } else {
-      const ts = new Set(types);
       for (const u of this._units) {
         if (ts.has(u.type())) scratch[n++] = u;
+      }
+    } else if (second === undefined) {
+      for (const u of this._units) {
+        if (u.type() === first) scratch[n++] = u;
+      }
+    } else if (third === undefined) {
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === first || t === second) scratch[n++] = u;
+      }
+    } else {
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === first || t === second || t === third) scratch[n++] = u;
       }
     }
     return scratch.slice(0, n);

@@ -8,6 +8,16 @@ type Owner = Player | TerraNullius;
 
 const REFINE_MAX_SEARCH_AREA = 100 * 100;
 
+// Per-game BFS scratch (generation-stamped visited array + reusable stack) so
+// bfsNearest allocates nothing per query. Keyed by game because SpatialQuery
+// instances are created per call site.
+interface BfsScratch {
+  visited: Uint32Array;
+  gen: number;
+  stack: TileRef[];
+}
+const bfsScratches = new WeakMap<Game, BfsScratch>();
+
 export class SpatialQuery {
   private boundedAStar: AStarWaterBounded | null = null;
 
@@ -26,28 +36,63 @@ export class SpatialQuery {
    * Find nearest tile matching predicate using BFS traversal.
    * Uses Manhattan distance filter, ignores terrain barriers.
    */
+  private bfsScratch(): BfsScratch {
+    const map = this.game.map();
+    const totalTiles = map.width() * map.height();
+    let s = bfsScratches.get(this.game);
+    if (!s || s.visited.length < totalTiles) {
+      s = { visited: new Uint32Array(totalTiles), gen: 0, stack: [] };
+      bfsScratches.set(this.game, s);
+    }
+    return s;
+  }
+
   private bfsNearest(
     from: TileRef,
     maxDist: number,
     predicate: (t: TileRef) => boolean,
   ): TileRef | null {
     const map = this.game.map();
+    const scratch = this.bfsScratch();
+    scratch.gen++;
+    if (scratch.gen === 0xffffffff) {
+      scratch.visited.fill(0);
+      scratch.gen = 1;
+    }
+    const gen = scratch.gen;
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
 
-    // Strict < keeps the first candidate on distance ties, so the winner
-    // depends only on the deterministic BFS visit order.
+    // Strict < keeps the first candidate at the minimum distance, so the
+    // winner depends only on the deterministic traversal order (LIFO with
+    // neighbors visited in the shared N, S, W, E order).
     let best: TileRef | null = null;
     let bestDist = Infinity;
-    for (const tile of map.bfs(
-      from,
-      (_, t) => map.manhattanDist(from, t) <= maxDist,
-    )) {
-      if (predicate(tile)) {
-        const dist = map.manhattanDist(from, tile);
+
+    const mark = (t: TileRef) => {
+      visited[t] = gen;
+      stack.push(t);
+      if (predicate(t)) {
+        const dist = map.manhattanDist(from, t);
         if (dist < bestDist) {
-          best = tile;
+          best = t;
           bestDist = dist;
         }
       }
+    };
+
+    if (maxDist >= 0) {
+      mark(from);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && map.manhattanDist(from, n) <= maxDist) {
+        mark(n);
+      }
+    };
+    while (stack.length > 0) {
+      const curr = stack.pop()!;
+      map.forEachNeighbor(curr, visit);
     }
 
     return best;

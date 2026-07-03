@@ -584,7 +584,13 @@ export interface Player {
   removeTroops(troops: number): number;
 
   // Units
-  units(...types: UnitType[]): Unit[];
+  // Fixed-arity + array overloads instead of a rest parameter: the rest array
+  // would be allocated on every call, and this is one of the hottest calls in
+  // the simulation. With no arguments the player's live unit array is
+  // returned — do not mutate it; typed queries return a fresh snapshot array.
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
@@ -758,7 +764,10 @@ export interface Game extends GameMap {
 
   // Units
   unit(id: number): Unit | undefined;
-  units(...types: UnitType[]): Unit[];
+  // See Player.units() for why this is not a rest parameter.
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
   hasUnitNearby(
