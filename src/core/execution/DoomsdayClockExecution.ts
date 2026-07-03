@@ -9,6 +9,7 @@ import {
   Player,
   PlayerType,
   Team,
+  UnitType,
 } from "../game/Game";
 
 /**
@@ -94,12 +95,24 @@ export class DoomsdayClockExecution implements Execution {
           m.enterDoomsdayClock();
           const secondsUnder = Math.floor(m.doomsdayClockTicks() / 10);
           if (secondsUnder >= cfg.warnSeconds) {
+            const secondsPastWarn = secondsUnder - cfg.warnSeconds;
             const chunk = doomsdayClockDrain(
               mg.config().maxTroops(m),
-              secondsUnder - cfg.warnSeconds,
+              secondsPastWarn,
               cfg,
             );
             m.removeTroops(chunk); // caps at current troops
+            // The navy bleeds the same way: the same percentage ramp applied to
+            // each warship's (veterancy-adjusted) max health, so a doomed side's
+            // fleet decays in lockstep with its troops. Passing no attacker makes
+            // each destruction environmental, never a credited kill (see
+            // UnitImpl.delete); healing is suppressed for flagged owners in
+            // WarshipExecution.healWarship so the decay actually lands.
+            for (const ws of m.units(UnitType.Warship)) {
+              ws.modifyHealth(
+                -doomsdayClockDrain(ws.maxHealth(), secondsPastWarn, cfg),
+              );
+            }
           }
         }
       } else {

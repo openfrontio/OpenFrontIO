@@ -44,8 +44,32 @@ function sdConfig(over: Partial<SDConfig> = {}): SDConfig {
   };
 }
 
+// A stand-in warship: tracks HP and whether a destroyer (kill credit) was ever
+// passed to modifyHealth. Doomsday decay must pass none, so destruction is
+// environmental and never scores a kill (see UnitImpl.delete).
+class FakeWarship {
+  destroyed = false;
+  attackerWasPassed = false;
+  constructor(
+    private hp: number,
+    private readonly hpMax: number,
+  ) {}
+  maxHealth(): number {
+    return this.hpMax;
+  }
+  health(): number {
+    return this.hp;
+  }
+  modifyHealth(delta: number, attacker?: unknown): void {
+    if (attacker !== undefined) this.attackerWasPassed = true;
+    this.hp = Math.max(0, Math.min(this.hpMax, this.hp + delta));
+    if (this.hp === 0) this.destroyed = true;
+  }
+}
+
 class FakePlayer {
   markedTick = -1;
+  warships: FakeWarship[] = [];
   readonly troopMax: number;
   constructor(
     private game: FakeGame,
@@ -96,6 +120,11 @@ class FakePlayer {
   }
   clearDoomsdayClock(): void {
     this.markedTick = -1;
+  }
+  // The exec calls units(UnitType.Warship); we ignore the filter and hand back
+  // this side's warships.
+  units(..._types: unknown[]): FakeWarship[] {
+    return this.warships;
   }
 }
 
@@ -279,6 +308,65 @@ describe("DoomsdayClockExecution (logic)", () => {
       return b.troops();
     };
     expect(run()).toBe(run());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Warship decay: a flagged (sub-threshold, non-leader) side's warships bleed HP
+// on the same ramp as its troops, are destroyed with no attacker (never a
+// credited kill), and the leader's fleet is spared.
+// ---------------------------------------------------------------------------
+
+describe("DoomsdayClockExecution (warship decay)", () => {
+  // b (100 tiles) is below the 200 bar at WAVE_TICK and is flagged; a (400) is
+  // the leader and is spared. maxTroops == warship maxHealth == 1000, so troop
+  // and warship losses come out numerically identical (same % ramp).
+  function warshipGame(bShips: FakeWarship[], aShips: FakeWarship[] = []) {
+    const game = new FakeGame(1000, sdConfig(), []);
+    const a = new FakePlayer(game, 400, 1000); // leader, above the bar
+    const b = new FakePlayer(game, 100, 1000); // below the bar
+    a.warships = aShips;
+    b.warships = bShips;
+    game.ps = [a, b];
+    return { game, a, b };
+  }
+
+  it("sinks a flagged side's warships on the same ramp as its troops", () => {
+    const ship = new FakeWarship(1000, 1000);
+    const { game, b } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK); // flag b (within the warn window)
+    runAt(exec, game, WAVE_TICK + 10); // 1s under -> 0s past warn -> 10% of max
+    expect(b.troops()).toBe(900); // troops: 10% of 1000
+    expect(ship.health()).toBe(900); // warship: identical 10% of 1000
+  });
+
+  it("destroys warships with no attacker, so decay never scores a kill", () => {
+    const ship = new FakeWarship(50, 1000); // less HP than one tick of drain
+    const { game } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    runAt(exec, game, WAVE_TICK + 10); // 10% of 1000 = 100 dmg > 50 hp
+    expect(ship.destroyed).toBe(true);
+    expect(ship.attackerWasPassed).toBe(false); // environmental, no kill credit
+  });
+
+  it("spares the leader's warships", () => {
+    const leaderShip = new FakeWarship(1000, 1000);
+    const { game } = warshipGame([new FakeWarship(1000, 1000)], [leaderShip]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    runAt(exec, game, WAVE_TICK + 30); // well past the warn window
+    expect(leaderShip.health()).toBe(1000);
+  });
+
+  it("does not damage warships during the warn window", () => {
+    const ship = new FakeWarship(1000, 1000);
+    const { game, b } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK); // flagged this tick, 0s under -> within warn
+    expect(b.inDoomsdayClock()).toBe(true);
+    expect(ship.health()).toBe(1000);
   });
 });
 
