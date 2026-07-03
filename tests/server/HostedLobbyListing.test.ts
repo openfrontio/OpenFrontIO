@@ -8,9 +8,12 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
-import { PublicGameInfo, PublicGames } from "../../src/core/Schemas";
 import { GameManager } from "../../src/server/GameManager";
 import { GameServer, hashPersistentID } from "../../src/server/GameServer";
+import {
+  InternalGameInfo,
+  InternalPublicGames,
+} from "../../src/server/IPCBridgeSchema";
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { ServerEnv } from "../../src/server/ServerEnv";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
@@ -99,6 +102,39 @@ describe("GameServer listing", () => {
     expect(hashed).not.toContain(CREATOR);
     expect(hashed).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  it("reports a join whitelist only when non-empty", () => {
+    expect(makeGame().hasJoinWhitelist()).toBe(false);
+    expect(
+      makeGame("g", CREATOR, { allowedPublicIds: [] }).hasJoinWhitelist(),
+    ).toBe(false);
+    expect(
+      makeGame("g", CREATOR, { allowedPublicIds: ["p1"] }).hasJoinWhitelist(),
+    ).toBe(true);
+  });
+
+  it("delists when a join whitelist is added via config update", () => {
+    const game = makeGame();
+    game.setListed(true);
+
+    game.updateGameConfig({ allowedPublicIds: [] });
+    expect(game.isListed()).toBe(true);
+
+    game.updateGameConfig({ allowedPublicIds: ["p1"] });
+    expect(game.isListed()).toBe(false);
+  });
+
+  it("exposes the listed flag in gameInfo for private lobbies only", () => {
+    const game = makeGame();
+    expect(game.gameInfo().listed).toBe(false);
+    game.setListed(true);
+    expect(game.gameInfo().listed).toBe(true);
+
+    const pub = new GameServer("pub", mockLogger, Date.now(), {
+      gameType: GameType.Public,
+    } as any);
+    expect(pub.gameInfo().listed).toBeUndefined();
+  });
 });
 
 describe("GameManager.listedLobbies", () => {
@@ -149,8 +185,8 @@ describe("GameManager.listedLobbies", () => {
 function hostedLobby(
   gameID: string,
   creatorID: string | undefined,
-  extra: Partial<PublicGameInfo> = {},
-): PublicGameInfo {
+  extra: Partial<InternalGameInfo> = {},
+): InternalGameInfo {
   return {
     gameID,
     numClients: 0,
@@ -213,7 +249,56 @@ describe("MasterLobbyService hosted lobbies", () => {
     );
     expect(broadcast).toBeDefined();
     const hosted = broadcast.publicGames.games.hosted;
-    expect(hosted.map((l: PublicGameInfo) => l.gameID)).toEqual(["aaa", "ccc"]);
+    expect(hosted.map((l: InternalGameInfo) => l.gameID)).toEqual([
+      "aaa",
+      "ccc",
+    ]);
+  });
+
+  it("delists a dedup loser only after two consecutive losing broadcasts", () => {
+    const { service, workers } = createService();
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [hostedLobby("bbb", "creator-a")],
+    });
+    workers[1].emit("message", {
+      type: "lobbyList",
+      lobbies: [hostedLobby("aaa", "creator-a")],
+    });
+
+    (service as any).broadcastLobbies();
+    (service as any).broadcastLobbies();
+
+    const broadcasts = sentMessages(workers[0]).filter(
+      (m) => m.type === "lobbiesBroadcast",
+    );
+    // First loss could be a stale worker report; only the second in a row
+    // triggers the delist.
+    expect(broadcasts[0].delistGameIDs).toBeUndefined();
+    expect(broadcasts[1].delistGameIDs).toEqual(["bbb"]);
+  });
+
+  it("does not delist when the duplicate disappears after one broadcast", () => {
+    const { service, workers } = createService();
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [hostedLobby("bbb", "creator-a")],
+    });
+    workers[1].emit("message", {
+      type: "lobbyList",
+      lobbies: [hostedLobby("aaa", "creator-a")],
+    });
+    (service as any).broadcastLobbies();
+
+    // The losing entry was stale: the next report no longer contains it.
+    workers[0].emit("message", { type: "lobbyList", lobbies: [] });
+    (service as any).broadcastLobbies();
+
+    for (const msg of sentMessages(workers[0])) {
+      if (msg.type === "lobbiesBroadcast") {
+        expect(msg.delistGameIDs).toBeUndefined();
+      }
+    }
   });
 
   it("never schedules or sets countdowns on hosted lobbies", async () => {
@@ -270,10 +355,15 @@ describe("WorkerLobbyService hosted lobbies", () => {
     (service as any).sendToMaster = sendToMaster;
   });
 
-  function emitBroadcast(games: PublicGames["games"], serverTime = 1000) {
+  function emitBroadcast(
+    games: InternalPublicGames["games"],
+    serverTime = 1000,
+    delistGameIDs?: string[],
+  ) {
     (service as any).handleMasterMessage({
       type: "lobbiesBroadcast",
       publicGames: { serverTime, games },
+      delistGameIDs,
     });
   }
 
@@ -396,5 +486,41 @@ describe("WorkerLobbyService hosted lobbies", () => {
       expect(service.creatorHasListedLobby(hash, "other-game")).toBe(true);
       expect(service.creatorHasListedLobby(hash, "local-g1")).toBe(false);
     });
+
+    it("ignores stale broadcast entries for own games no longer listed", () => {
+      // The lobby was just delisted on this worker, but the master broadcast
+      // still contains it for a round-trip or two. Local state wins so the
+      // creator can immediately list a new lobby.
+      const game = makeGame("stale-g1", CREATOR);
+      game.setListed(false);
+      gm.game.mockImplementation((id: string) =>
+        id === "stale-g1" ? game : null,
+      );
+      const hash = hashPersistentID(CREATOR);
+      emitBroadcast({
+        ffa: [],
+        team: [],
+        special: [],
+        hosted: [hostedLobby("stale-g1", hash)],
+      });
+
+      expect(service.creatorHasListedLobby(hash, "other-game")).toBe(false);
+
+      game.setListed(true);
+      expect(service.creatorHasListedLobby(hash, "other-game")).toBe(true);
+    });
+  });
+
+  it("clears the listed flag when the master delists a duplicate", () => {
+    const game = makeGame("dup-g1", CREATOR);
+    game.setListed(true);
+    gm.game.mockImplementation((id: string) => (id === "dup-g1" ? game : null));
+
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] }, 1000, [
+      "dup-g1",
+      "not-mine",
+    ]);
+
+    expect(game.isListed()).toBe(false);
   });
 });

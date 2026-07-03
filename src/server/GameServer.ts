@@ -259,6 +259,12 @@ export class GameServer {
     }
     if (gameConfig.allowedPublicIds !== undefined) {
       this.gameConfig.allowedPublicIds = gameConfig.allowedPublicIds;
+      // A join whitelist and public listing are mutually exclusive: a listed
+      // lobby must be joinable by anyone who finds it in the lobby browser.
+      if (this.listed && this.hasJoinWhitelist()) {
+        this.listed = false;
+        this.log.info("delisted lobby: join whitelist enabled");
+      }
     }
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
@@ -1102,6 +1108,7 @@ export class GameServer {
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+      listed: this.isPublic() ? undefined : this.listed,
     };
   }
 
@@ -1132,6 +1139,13 @@ export class GameServer {
 
   public setListed(listed: boolean): void {
     this.listed = listed;
+  }
+
+  // Whether joining is restricted to an allowlist of publicIds. A lobby with
+  // a join whitelist must not be publicly listed (it would advertise a lobby
+  // that rejects every joiner).
+  public hasJoinWhitelist(): boolean {
+    return (this.gameConfig.allowedPublicIds?.length ?? 0) > 0;
   }
 
   public isCreator(persistentId: string): boolean {

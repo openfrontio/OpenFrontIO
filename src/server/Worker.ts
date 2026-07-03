@@ -230,6 +230,13 @@ export async function startWorker() {
     }
 
     if (listed) {
+      // A whitelisted lobby would be advertised to everyone yet reject every
+      // joiner; the whitelist itself is stripped from the broadcast, so
+      // browsers could not even tell why.
+      if (game.hasJoinWhitelist()) {
+        return res.status(409).json({ error: "listing_whitelist_enabled" });
+      }
+
       // Dev has no subscription backend; skip the check so the feature is
       // testable locally (same precedent as Turnstile).
       if (ServerEnv.env() !== GameEnv.Dev) {

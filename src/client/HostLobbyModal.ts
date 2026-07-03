@@ -5,6 +5,7 @@ import {
   calculateServerTimeOffset,
   getSecondsUntilServerTimestamp,
   renderDuration,
+  showToast,
   translateText,
 } from "../client/Utils";
 import { hasActiveSubscription } from "../core/ApiSchemas";
@@ -121,6 +122,11 @@ export class HostLobbyModal extends BaseModal {
 
   private leaveLobbyOnClose = true;
 
+  // Guards against overlapping listing requests: rapid Public/Private clicks
+  // could otherwise be applied out of order by the server, leaving the UI
+  // showing the opposite of the real listed state.
+  private listingRequestInFlight = false;
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
@@ -133,6 +139,12 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
+    }
+    // The server can delist on its own (join whitelist enabled, duplicate
+    // creator resolved by the master); follow its state unless our own
+    // toggle request is mid-flight.
+    if (!this.listingRequestInFlight && lobby.listed !== undefined) {
+      this.publiclyListed = lobby.listed;
     }
   };
 
@@ -240,7 +252,11 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private handleVisibilitySelect(isPublic: boolean) {
-    if (isPublic === this.publiclyListed || !this.lobbyId) {
+    if (
+      this.listingRequestInFlight ||
+      isPublic === this.publiclyListed ||
+      !this.lobbyId
+    ) {
       return;
     }
     if (isPublic && !this.canListPublicly) {
@@ -1132,6 +1148,7 @@ export class HostLobbyModal extends BaseModal {
   // Server-authoritative: it re-verifies the subscription and enforces one
   // listed lobby per creator, so a failed request reverts the toggle.
   private async handlePublicListingToggle(checked: boolean) {
+    this.listingRequestInFlight = true;
     this.publiclyListed = checked;
     try {
       const token = await getPlayToken();
@@ -1146,15 +1163,19 @@ export class HostLobbyModal extends BaseModal {
           body: JSON.stringify({ listed: checked }),
         },
       );
+      const body = await response.json().catch(() => null);
       if (!response.ok) {
-        const body = await response.json().catch(() => null);
         this.publiclyListed = !checked;
         this.showListingError(body?.error);
+      } else if (typeof body?.listed === "boolean") {
+        this.publiclyListed = body.listed;
       }
     } catch (error) {
       console.error("Error updating lobby listing:", error);
       this.publiclyListed = !checked;
       this.showListingError();
+    } finally {
+      this.listingRequestInFlight = false;
     }
   }
 
@@ -1164,12 +1185,10 @@ export class HostLobbyModal extends BaseModal {
         ? "private_lobby.listing_requires_subscription"
         : serverError === "listing_limit_reached"
           ? "private_lobby.listing_limit_reached"
-          : "private_lobby.listing_failed";
-    window.dispatchEvent(
-      new CustomEvent("show-message", {
-        detail: { message: translateText(key), duration: 3000, color: "red" },
-      }),
-    );
+          : serverError === "listing_whitelist_enabled"
+            ? "private_lobby.listing_whitelist_enabled"
+            : "private_lobby.listing_failed";
+    showToast(translateText(key), "red", 3000);
   }
 
   private handleAllowedPublicIdsChange = (e: Event) => {

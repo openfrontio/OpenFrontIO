@@ -1,29 +1,72 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import {
+  GameConfig,
   PublicGameInfo,
   PublicGames,
   PublicLobbyMessage,
 } from "../core/Schemas";
 import { GameManager } from "./GameManager";
 import {
+  InternalGameInfo,
+  InternalPublicGames,
   MasterMessageSchema,
   WorkerLobbyList,
   WorkerReady,
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
 
+// Explicit allowlist of the game config advertised for a listed private
+// lobby. Host-only fields (join whitelist, name reveals) must never reach
+// browsers, so fields are copied one by one: a new GameConfig field stays out
+// of the broadcast until it is deliberately added here, and a new required
+// field is a compile error that forces that decision.
+function publicLobbyGameConfig(gc: GameConfig): GameConfig {
+  return {
+    gameMap: gc.gameMap,
+    gameMapSize: gc.gameMapSize,
+    difficulty: gc.difficulty,
+    gameType: gc.gameType,
+    gameMode: gc.gameMode,
+    rankedType: gc.rankedType,
+    publicGameModifiers: gc.publicGameModifiers,
+    nations: gc.nations,
+    bots: gc.bots,
+    donateGold: gc.donateGold,
+    donateTroops: gc.donateTroops,
+    infiniteGold: gc.infiniteGold,
+    infiniteTroops: gc.infiniteTroops,
+    instantBuild: gc.instantBuild,
+    disableNavMesh: gc.disableNavMesh,
+    disableAlliances: gc.disableAlliances,
+    disableClanTags: gc.disableClanTags,
+    liveStatsEnabled: gc.liveStatsEnabled,
+    anonymizeNames: gc.anonymizeNames,
+    waterNukes: gc.waterNukes,
+    randomSpawn: gc.randomSpawn,
+    maxPlayers: gc.maxPlayers,
+    maxTimerValue: gc.maxTimerValue,
+    startDelay: gc.startDelay,
+    spawnImmunityDuration: gc.spawnImmunityDuration,
+    disabledUnits: gc.disabledUnits,
+    playerTeams: gc.playerTeams,
+    goldMultiplier: gc.goldMultiplier,
+    startingGold: gc.startingGold,
+    hostCheats: gc.hostCheats,
+  };
+}
+
 export class WorkerLobbyService {
   private readonly lobbiesWss: WebSocketServer;
   private readonly lobbyClients: Set<WebSocket> = new Set();
   // Most recent snapshot from master, serialized on demand for new
   // connections so they don't have to wait for the next broadcast.
-  private lastPublicGames: PublicGames | null = null;
-  // Fingerprint (sorted per-lobby tokens of gameID + browser-visible config)
-  // of the last full we broadcast, or null if we've never broadcast one. When
-  // it changes we send a fresh full; otherwise a counts-only delta is enough.
-  // Null (not "") is used so that an empty-lobby first broadcast still emits
-  // a full.
+  private lastPublicGames: InternalPublicGames | null = null;
+  // Fingerprint (sorted per-lobby JSON of everything clients receive except
+  // player counts) of the last full we broadcast, or null if we've never
+  // broadcast one. When it changes we send a fresh full; otherwise a
+  // counts-only delta is enough. Null (not "") is used so that an
+  // empty-lobby first broadcast still emits a full.
   private lastFullGameIds: string | null = null;
 
   constructor(
@@ -57,6 +100,16 @@ export class WorkerLobbyService {
     const msg = result.data;
     switch (msg.type) {
       case "lobbiesBroadcast":
+        // The master resolved a duplicate-creator race: clear the loser's
+        // listed flag so this worker's state follows the broadcast. Done
+        // before sendMyLobbiesToMaster so the next report reflects it.
+        for (const gameID of msg.delistGameIDs ?? []) {
+          const game = this.gm.game(gameID);
+          if (game?.isListed()) {
+            game.setListed(false);
+            this.log.info(`delisted by master: duplicate creator`, { gameID });
+          }
+        }
         this.lastPublicGames = msg.publicGames;
         // Forward message to all clients
         this.broadcastLobbiesToClients(msg.publicGames);
@@ -118,24 +171,18 @@ export class WorkerLobbyService {
       });
     // Subscriber-listed private lobbies. creatorID (a hash of the creator's
     // persistentID) rides along for the one-listed-lobby-per-creator check;
-    // sanitizeGames strips it before anything reaches browsers. Host-only
-    // config fields (whitelist, name reveals) are dropped here — the lobby
-    // browser doesn't need them.
+    // sanitizeGames strips it before anything reaches browsers. The config is
+    // reduced to the publicLobbyGameConfig allowlist.
     const hostedLobbies = this.gm.listedLobbies().map((g) => {
       const gi = g.gameInfo();
       return {
         gameID: gi.gameID,
         numClients: gi.clients?.length ?? 0,
         startsAt: gi.startsAt,
-        gameConfig: gi.gameConfig && {
-          ...gi.gameConfig,
-          allowedPublicIds: undefined,
-          nameReveals: undefined,
-          nameRevealPublicIds: undefined,
-        },
+        gameConfig: gi.gameConfig && publicLobbyGameConfig(gi.gameConfig),
         publicGameType: "hosted",
         creatorID: g.hashedCreatorID(),
-      } satisfies PublicGameInfo;
+      } satisfies InternalGameInfo;
     });
     this.sendToMaster({
       type: "lobbyList",
@@ -153,9 +200,17 @@ export class WorkerLobbyService {
   ): boolean {
     const broadcast = this.lastPublicGames?.games["hosted"] ?? [];
     if (
-      broadcast.some(
-        (l) => l.gameID !== excludeGameID && l.creatorID === hashedCreatorID,
-      )
+      broadcast.some((l) => {
+        if (l.gameID === excludeGameID || l.creatorID !== hashedCreatorID) {
+          return false;
+        }
+        // Broadcast entries lag a delist by up to two master cycles. For
+        // games this worker owns, local state is authoritative — a
+        // just-delisted lobby must not block the creator from listing a
+        // new one.
+        const local = this.gm.game(l.gameID);
+        return local === null || local.isListed();
+      })
     ) {
       return true;
     }
@@ -168,14 +223,19 @@ export class WorkerLobbyService {
   }
 
   // Strips worker/master-internal fields (creatorID) before lobby info is
-  // sent to browser clients.
-  private sanitizeGames(games: PublicGames["games"]): PublicGames["games"] {
+  // sent to browser clients, converting InternalGameInfo to the
+  // browser-facing PublicGameInfo.
+  private sanitizeGames(
+    games: InternalPublicGames["games"],
+  ): PublicGames["games"] {
     const sanitized: PublicGames["games"] = {};
     for (const [type, list] of Object.entries(games) as [
       keyof PublicGames["games"],
-      PublicGameInfo[],
+      InternalGameInfo[],
     ][]) {
-      sanitized[type] = list.map(({ creatorID: _creatorID, ...rest }) => rest);
+      sanitized[type] = list.map(
+        ({ creatorID: _creatorID, ...rest }): PublicGameInfo => rest,
+      );
     }
     return sanitized;
   }
@@ -233,17 +293,18 @@ export class WorkerLobbyService {
     });
   }
 
-  private broadcastLobbiesToClients(publicGames: PublicGames) {
-    // Per-lobby token covers everything the lobby browser renders besides
-    // player counts: hosted lobbies can change map/mode/etc. without a
-    // gameID change, and those edits must trigger a fresh full.
+  private broadcastLobbiesToClients(publicGames: InternalPublicGames) {
+    // Per-lobby token is the JSON of exactly what clients receive, minus the
+    // player count: hosted lobbies can change config without a gameID
+    // change, and anything a client could render must trigger a fresh full.
+    // Fingerprinting the sanitized payload keeps "what forces a full" and
+    // "what clients see" from drifting apart.
+    const sanitizedGames = this.sanitizeGames(publicGames.games);
     const lobbyTokens: string[] = [];
-    for (const list of Object.values(publicGames.games)) {
+    for (const list of Object.values(sanitizedGames)) {
       for (const lobby of list) {
-        const gc = lobby.gameConfig;
-        lobbyTokens.push(
-          `${lobby.gameID}:${gc?.gameMap}:${gc?.gameMode}:${gc?.playerTeams}:${gc?.maxPlayers}:${lobby.startsAt}`,
-        );
+        // JSON.stringify drops undefined-valued keys, excluding the count.
+        lobbyTokens.push(JSON.stringify({ ...lobby, numClients: undefined }));
       }
     }
     lobbyTokens.sort();
@@ -255,7 +316,7 @@ export class WorkerLobbyService {
       payload = {
         type: "full",
         serverTime: publicGames.serverTime,
-        games: this.sanitizeGames(publicGames.games),
+        games: sanitizedGames,
       };
       this.lastFullGameIds = fingerprint;
     } else {

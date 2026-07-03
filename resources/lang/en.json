@@ -1195,6 +1195,7 @@
     "listing_failed": "Failed to update the lobby listing. Please try again.",
     "listing_limit_reached": "You already have a publicly listed lobby.",
     "listing_requires_subscription": "An active subscription is required to list a lobby publicly.",
+    "listing_whitelist_enabled": "Disable the join whitelist to list your lobby publicly.",
     "no_open_lobbies": "No open lobbies right now",
     "not_found": "Lobby not found. Please check the ID and try again.",
     "open_lobbies": "Open Lobbies",

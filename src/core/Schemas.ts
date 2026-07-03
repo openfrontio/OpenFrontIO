@@ -160,9 +160,16 @@ export const PublicGameTypeSchema = z.enum([
 // Lobby types the master schedules from the map playlist. "hosted" is
 // excluded: those are player-created private lobbies that a subscriber has
 // listed publicly, and the host (not the master) controls their lifecycle.
-export const SCHEDULED_PUBLIC_GAME_TYPES = ["ffa", "team", "special"] as const;
-export type ScheduledPublicGameType =
-  (typeof SCHEDULED_PUBLIC_GAME_TYPES)[number];
+// Derived from PublicGameTypeSchema so a new lobby type is scheduled by
+// default and opting out is the explicit act.
+export const ScheduledPublicGameTypeSchema = PublicGameTypeSchema.exclude([
+  "hosted",
+]);
+export const SCHEDULED_PUBLIC_GAME_TYPES =
+  ScheduledPublicGameTypeSchema.options;
+export type ScheduledPublicGameType = z.infer<
+  typeof ScheduledPublicGameTypeSchema
+>;
 
 export const UsernameSchema = z
   .string()
@@ -190,18 +197,23 @@ export const GameInfoSchema = z.object({
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
+  // Private lobbies only: whether the lobby is publicly listed. Server-owned
+  // (only /api/game/:id/listing sets it); carried in lobby info so the host
+  // UI stays in sync when the server delists (whitelist enabled, duplicate
+  // creator resolved by the master).
+  listed: z.boolean().optional(),
 });
 
+// Browser-facing lobby info. Master/worker-internal fields (the creator hash
+// used for the one-listed-lobby-per-creator check) live on
+// InternalGameInfoSchema in IPCBridgeSchema.ts, so client payloads cannot
+// carry them by construction.
 export const PublicGameInfoSchema = z.object({
   gameID: z.string(),
   numClients: z.number(),
   startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
-  // Hosted lobbies only: hash of the creator's persistentID, used
-  // master<->worker to enforce one listed lobby per creator. Stripped by
-  // WorkerLobbyService before lobby info is sent to browser clients.
-  creatorID: z.string().optional(),
 });
 
 export const PublicGamesSchema = z.object({
