@@ -26,9 +26,11 @@
         padding-left: env(safe-area-inset-left);
       }
 
-      /* Prevent Playwire bottom rail from affecting flex layout */
+      /* Prevent Playwire bottom rail from affecting flex layout,
+         and keep it below the bottom HUD (z-[200]) so it can't cover the control panel */
       [id^="pw-oop-bottom_rail"] {
         position: fixed !important;
+        z-index: 150 !important;
       }
 
       /* Ensure full viewport height on iOS */
