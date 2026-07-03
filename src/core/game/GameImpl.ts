@@ -1134,12 +1134,6 @@ export class GameImpl implements Game {
   forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void {
     this._map.forEachNeighbor(tile, callback);
   }
-  forEachNeighborNSWE(
-    tile: TileRef,
-    callback: (neighbor: TileRef) => void,
-  ): void {
-    this._map.forEachNeighborNSWE(tile, callback);
-  }
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }

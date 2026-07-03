@@ -37,19 +37,13 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
-  // Zero-allocation neighbor iteration (cardinal only), in W, E, N, S order.
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors(). All cardinal-neighbor helpers share this order so
+  // they are interchangeable even in order-sensitive simulation code.
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
-  // Zero-allocation neighbor iteration (cardinal only) in the same N, S, W, E
-  // order as neighbors(). Use this in order-sensitive code — anything feeding
-  // sets/arrays whose iteration order affects the simulation — where
-  // forEachNeighbor's W, E, N, S order would change behavior.
-  forEachNeighborNSWE(
-    ref: TileRef,
-    callback: (neighbor: TileRef) => void,
-  ): void;
-  // Writes the cardinal neighbors of ref into out (W, E, N, S order) and
-  // returns the count. out must have length >= 4; reuse it across calls to
-  // avoid allocation in hot loops.
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. out must have length >= 4; reuse it
+  // across calls to avoid allocation in hot loops.
   neighbors4(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration including diagonals, in dx-major
   // order: (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1).
@@ -397,19 +391,6 @@ export class GameMapImpl implements GameMap {
     const w = this.width_;
     const x = this.refToX[ref];
 
-    if (x !== 0) callback(ref - 1);
-    if (x !== w - 1) callback(ref + 1);
-    if (ref >= w) callback(ref - w);
-    if (ref < (this.height_ - 1) * w) callback(ref + w);
-  }
-
-  forEachNeighborNSWE(
-    ref: TileRef,
-    callback: (neighbor: TileRef) => void,
-  ): void {
-    const w = this.width_;
-    const x = this.refToX[ref];
-
     if (ref >= w) callback(ref - w);
     if (ref < (this.height_ - 1) * w) callback(ref + w);
     if (x !== 0) callback(ref - 1);
@@ -421,10 +402,10 @@ export class GameMapImpl implements GameMap {
     const x = this.refToX[ref];
     let n = 0;
 
-    if (x !== 0) out[n++] = ref - 1;
-    if (x !== w - 1) out[n++] = ref + 1;
     if (ref >= w) out[n++] = ref - w;
     if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
+    if (x !== 0) out[n++] = ref - 1;
+    if (x !== w - 1) out[n++] = ref + 1;
     return n;
   }
 

@@ -703,15 +703,12 @@ export interface Game extends GameMap {
   map(): GameMap;
   miniMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;
-  // Zero-allocation neighbor iteration (cardinal only) to avoid creating arrays
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors().
   forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void;
-  // Same, but in neighbors() N, S, W, E order — for order-sensitive code.
-  forEachNeighborNSWE(
-    tile: TileRef,
-    callback: (neighbor: TileRef) => void,
-  ): void;
-  // Writes the cardinal neighbors of ref into out (W, E, N, S order) and
-  // returns the count. Reuse out across calls to avoid allocation.
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. Reuse out across calls to avoid
+  // allocation.
   neighbors4(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration for performance-critical cluster calculation
   // Alternative to neighborsWithDiag() that returns arrays
