@@ -66,6 +66,45 @@ describe("Warship", () => {
     expect(warship.health()).toBe(maxHealth - 9);
   });
 
+  test("Warship does not heal while its owner is doomed (Doomsday Clock)", async () => {
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      expect(typeof maxHealth).toBe("number");
+      throw new Error("unreachable");
+    }
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      {
+        patrolTile: game.ref(coastX + 1, 10),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+    // inDoomsdayClock() requires isAlive() (owns >=1 tile); a flagged player
+    // always does, so give this one a tile to mirror a real game.
+    player1.conquer(game.ref(coastX, 10));
+    game.executeNextTick();
+
+    // Damaged next to a port, it heals normally (+1 passive heal per tick).
+    warship.modifyHealth(-10);
+    expect(warship.health()).toBe(maxHealth - 10);
+    game.executeNextTick();
+    expect(warship.health()).toBe(maxHealth - 9);
+
+    // Once the owner is flagged by the clock, healing is suppressed even next to
+    // a port, so the decay in DoomsdayClockExecution can actually sink the fleet.
+    player1.enterDoomsdayClock();
+    game.executeNextTick();
+    expect(warship.health()).toBe(maxHealth - 9); // no heal while doomed
+
+    // Climbing back above the bar clears the mark and healing resumes.
+    player1.clearDoomsdayClock();
+    game.executeNextTick();
+    expect(warship.health()).toBe(maxHealth - 8);
+  });
+
   test("Warship captures trade if player has port", async () => {
     const portTile = game.ref(coastX, 10);
     player1.buildUnit(UnitType.Port, portTile, {});

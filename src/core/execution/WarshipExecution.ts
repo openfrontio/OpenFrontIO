@@ -122,6 +122,10 @@ export class WarshipExecution implements Execution {
 
   private healWarship(): void {
     const owner = this.warship.owner();
+    // A doomed side (below the Doomsday Clock bar) cannot repair its navy, so the
+    // decay in DoomsdayClockExecution actually sinks warships instead of being
+    // out-healed at a port. Inert when the mode is off: the mark is never set.
+    if (owner.inDoomsdayClock()) return;
     const passiveHealing = this.mg.config().warshipPassiveHealing();
     const passiveHealingRange = this.mg.config().warshipPassiveHealingRange();
     const passiveHealingRangeSquared =
