@@ -188,8 +188,9 @@ export class CosmeticButton extends LitElement {
         </div>`;
       }
       // Nuke explosions preview per visual type (expanding ring or sparkle
-      // burst); every trail effectType (transportShipTrail, nukeTrail) shares
-      // the same attributes shape and previews as a color swatch.
+      // burst); every trail effectType (transportShipTrail, nukeTrail) and the
+      // structures effect share the same attribute shapes and preview as a
+      // color swatch.
       if (isNukeExplosionEffect(c)) {
         if (c.attributes.type === "sparkles") {
           return html`<sparkles-swatch

@@ -431,6 +431,7 @@
     "type": {
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
+      "structures": "Structures",
       "transportShipTrail": "Boat Trail"
     }
   },
