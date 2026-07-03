@@ -127,20 +127,33 @@ export function simpleHash(str: string): number {
 
 export function calculateBoundingBox(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): { min: Cell; max: Cell } {
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
     maxY = -Infinity;
 
-  for (const tile of borderTiles) {
+  const visit = (tile: TileRef) => {
     const x = gm.x(tile);
     const y = gm.y(tile);
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x);
     maxY = Math.max(maxY, y);
+  };
+  // Indexed/forEach paths: for..of over a large Set (player border sets)
+  // allocates an iterator-result object per element.
+  if (Array.isArray(borderTiles)) {
+    for (let i = 0; i < borderTiles.length; i++) {
+      visit(borderTiles[i]);
+    }
+  } else if (borderTiles instanceof Set) {
+    borderTiles.forEach(visit);
+  } else {
+    for (const tile of borderTiles) {
+      visit(tile);
+    }
   }
 
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
