@@ -1,4 +1,3 @@
-import { Cell } from "../../game/Game";
 import { GameMap, TileRef } from "../../game/GameMap";
 import { PathFinder } from "../types";
 
@@ -32,97 +31,94 @@ export class MiniMapTransformer implements PathFinder<number> {
       return null;
     }
 
-    // Convert minimap TileRefs → Cells
-    const cellPath = path.map(
-      (ref) => new Cell(this.miniMap.x(ref), this.miniMap.y(ref)),
-    );
+    // Upscale minimap path to main-map refs. All coordinate work stays
+    // numeric (paths can be thousands of points, so per-point wrapper
+    // objects are significant churn).
+    const upscaledPath = this.upscalePath(path);
 
     // For multi-source, find closest source to path start
-    const upscaledPath = this.upscalePath(cellPath);
-    let cellFrom: Cell | undefined;
+    let srcRef: TileRef | undefined;
     if (Array.isArray(from)) {
       if (upscaledPath.length > 0) {
-        const pathStart = upscaledPath[0];
+        const startX = this.map.x(upscaledPath[0]);
+        const startY = this.map.y(upscaledPath[0]);
         let minDist = Infinity;
         for (const f of from) {
-          const fx = this.map.x(f);
-          const fy = this.map.y(f);
-          const dist = Math.abs(fx - pathStart.x) + Math.abs(fy - pathStart.y);
+          const dist =
+            Math.abs(this.map.x(f) - startX) + Math.abs(this.map.y(f) - startY);
           if (dist < minDist) {
             minDist = dist;
-            cellFrom = new Cell(fx, fy);
+            srcRef = f;
           }
         }
       }
     } else {
-      cellFrom = new Cell(this.map.x(from), this.map.y(from));
+      srcRef = from;
     }
-    const cellTo = new Cell(this.map.x(to), this.map.y(to));
-    const upscaled = this.fixExtremes(upscaledPath, cellTo, cellFrom);
-
-    return upscaled.map((c) => this.map.ref(c.x, c.y));
+    return this.fixExtremes(upscaledPath, to, srcRef);
   }
 
-  private upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
-    const scaledPath = path.map(
-      (point) => new Cell(point.x * scaleFactor, point.y * scaleFactor),
-    );
+  /**
+   * Scale a minimap path up to main-map refs, inserting interpolated points
+   * so consecutive path tiles stay adjacent.
+   */
+  private upscalePath(path: TileRef[], scaleFactor: number = 2): TileRef[] {
+    const mini = this.miniMap;
+    const main = this.map;
+    const smoothPath: TileRef[] = [];
 
-    const smoothPath: Cell[] = [];
+    for (let i = 0; i < path.length - 1; i++) {
+      const curX = mini.x(path[i]) * scaleFactor;
+      const curY = mini.y(path[i]) * scaleFactor;
+      const nextX = mini.x(path[i + 1]) * scaleFactor;
+      const nextY = mini.y(path[i + 1]) * scaleFactor;
 
-    for (let i = 0; i < scaledPath.length - 1; i++) {
-      const current = scaledPath[i];
-      const next = scaledPath[i + 1];
+      smoothPath.push(main.ref(curX, curY));
 
-      smoothPath.push(current);
-
-      const dx = next.x - current.x;
-      const dy = next.y - current.y;
-      const distance = Math.max(Math.abs(dx), Math.abs(dy));
-      const steps = distance;
+      const dx = nextX - curX;
+      const dy = nextY - curY;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
 
       for (let step = 1; step < steps; step++) {
         smoothPath.push(
-          new Cell(
-            Math.round(current.x + (dx * step) / steps),
-            Math.round(current.y + (dy * step) / steps),
+          main.ref(
+            Math.round(curX + (dx * step) / steps),
+            Math.round(curY + (dy * step) / steps),
           ),
         );
       }
     }
 
-    if (scaledPath.length > 0) {
-      smoothPath.push(scaledPath[scaledPath.length - 1]);
+    if (path.length > 0) {
+      const last = path[path.length - 1];
+      smoothPath.push(
+        main.ref(mini.x(last) * scaleFactor, mini.y(last) * scaleFactor),
+      );
     }
 
     return smoothPath;
   }
 
-  private fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
-    if (cellSrc !== undefined) {
-      const srcIndex = this.findCell(upscaled, cellSrc);
+  private fixExtremes(
+    upscaled: TileRef[],
+    dst: TileRef,
+    src?: TileRef,
+  ): TileRef[] {
+    if (src !== undefined) {
+      const srcIndex = upscaled.indexOf(src);
       if (srcIndex === -1) {
-        upscaled.unshift(cellSrc);
+        upscaled.unshift(src);
       } else if (srcIndex !== 0) {
         upscaled = upscaled.slice(srcIndex);
       }
     }
 
-    const dstIndex = this.findCell(upscaled, cellDst);
+    const dstIndex = upscaled.indexOf(dst);
     if (dstIndex === -1) {
-      upscaled.push(cellDst);
+      upscaled.push(dst);
     } else if (dstIndex !== upscaled.length - 1) {
       upscaled = upscaled.slice(0, dstIndex + 1);
     }
     return upscaled;
-  }
-
-  private findCell(cells: Cell[], target: Cell): number {
-    for (let i = 0; i < cells.length; i++) {
-      if (cells[i].x === target.x && cells[i].y === target.y) {
-        return i;
-      }
-    }
-    return -1;
   }
 }
