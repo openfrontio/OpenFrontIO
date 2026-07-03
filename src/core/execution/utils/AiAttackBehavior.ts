@@ -70,7 +70,7 @@ export class AiAttackBehavior {
       }
     };
     for (const t of this.player.borderTiles()) {
-      this.game.forEachNeighborNSWE(t, visit);
+      this.game.forEachNeighbor(t, visit);
     }
     const playerNeighbors = this.player.nearby();
     for (const n of playerNeighbors) {

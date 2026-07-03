@@ -493,7 +493,7 @@ export class PlayerImpl implements Player {
       }
     };
     for (const border of this.borderTiles()) {
-      map.forEachNeighborNSWE(border, visit);
+      map.forEachNeighbor(border, visit);
     }
     for (const n of this.shoreReachableNeighbors()) {
       ns.add(n);
