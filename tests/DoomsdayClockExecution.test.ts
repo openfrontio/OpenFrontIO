@@ -40,6 +40,7 @@ function sdConfig(over: Partial<SDConfig> = {}): SDConfig {
     drainStartPercent: 10,
     drainMaxPercent: 80,
     drainRampSeconds: 3,
+    warshipDrainMaxPercent: 100, // ships ramp to a higher ceiling than troops
     ...over,
   };
 }
@@ -313,14 +314,16 @@ describe("DoomsdayClockExecution (logic)", () => {
 
 // ---------------------------------------------------------------------------
 // Warship decay: a flagged (sub-threshold, non-leader) side's warships bleed HP
-// on the same ramp as its troops, are destroyed with no attacker (never a
-// credited kill), and the leader's fleet is spared.
+// on the troop start + ramp but toward a much higher ceiling, so at full
+// attrition they sink in ~2s. Destroyed with no attacker (never a credited
+// kill); the leader's fleet is spared.
 // ---------------------------------------------------------------------------
 
 describe("DoomsdayClockExecution (warship decay)", () => {
   // b (100 tiles) is below the 200 bar at WAVE_TICK and is flagged; a (400) is
-  // the leader and is spared. maxTroops == warship maxHealth == 1000, so troop
-  // and warship losses come out numerically identical (same % ramp).
+  // the leader and is spared. maxTroops == warship maxHealth == 1000, so at the
+  // start of the ramp troop and warship losses are numerically identical; they
+  // diverge later as warships climb to their higher ceiling.
   function warshipGame(bShips: FakeWarship[], aShips: FakeWarship[] = []) {
     const game = new FakeGame(1000, sdConfig(), []);
     const a = new FakePlayer(game, 400, 1000); // leader, above the bar
@@ -331,14 +334,28 @@ describe("DoomsdayClockExecution (warship decay)", () => {
     return { game, a, b };
   }
 
-  it("sinks a flagged side's warships on the same ramp as its troops", () => {
+  it("matches the troop drain at the start of the ramp", () => {
     const ship = new FakeWarship(1000, 1000);
     const { game, b } = warshipGame([ship]);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK); // flag b (within the warn window)
-    runAt(exec, game, WAVE_TICK + 10); // 1s under -> 0s past warn -> 10% of max
+    runAt(exec, game, WAVE_TICK + 10); // 1s under -> 0s past warn -> drainStart 10%
     expect(b.troops()).toBe(900); // troops: 10% of 1000
-    expect(ship.health()).toBe(900); // warship: identical 10% of 1000
+    expect(ship.health()).toBe(900); // warship: identical at the start (same 10%)
+  });
+
+  it("scuttles a warship in one tick at full attrition (its own high ceiling)", () => {
+    // Once the side is fully ramped, a fresh full-HP warship is destroyed in a
+    // single tick at warshipDrainMaxPercent (100% here). The troop max (80%)
+    // would leave it at 200 HP, so destruction proves the ship uses its own
+    // higher ceiling, not the troop rate.
+    const { game, b } = warshipGame([]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK); // flag b (starts the side's attrition clock)
+    const fresh = new FakeWarship(1000, 1000);
+    b.warships = [fresh]; // appears once the side is fully ramped
+    runAt(exec, game, WAVE_TICK + 70); // secondsPastWarn 6 >= ramp 3 -> max
+    expect(fresh.destroyed).toBe(true);
   });
 
   it("destroys warships with no attacker, so decay never scores a kill", () => {
