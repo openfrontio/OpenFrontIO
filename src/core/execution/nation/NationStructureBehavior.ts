@@ -129,6 +129,9 @@ const UNDER_ATTACK_THREAT_RATIO = 0.35;
  */
 const DEFENSE_POST_RATIO_PER_POST = 0.4;
 
+// Reusable neighbor buffer for hot loops; the simulation is single-threaded.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -256,16 +259,21 @@ export class NationStructureBehavior {
     const attackerSet = new Set(landAttacks.map((a) => a.attacker()));
     if (attackerSet.size === 0) return [];
 
+    // Set.forEach + a reused neighbor buffer: border sets are huge, and
+    // for..of over a Set allocates an iterator-result object per element.
+    // "Any neighbor is an attacker" is order-insensitive.
     const frontTiles: TileRef[] = [];
-    outer: for (const borderTile of player.borderTiles()) {
-      for (const neighbor of game.neighbors(borderTile)) {
-        const owner = game.owner(neighbor);
+    const nbuf = NEIGHBOR_SCRATCH;
+    player.borderTiles().forEach((borderTile) => {
+      const n = game.neighbors4(borderTile, nbuf);
+      for (let i = 0; i < n; i++) {
+        const owner = game.owner(nbuf[i]);
         if (attackerSet.has(owner as Player)) {
           frontTiles.push(borderTile);
-          continue outer;
+          return;
         }
       }
-    }
+    });
     return frontTiles;
   }
 

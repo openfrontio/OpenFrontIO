@@ -703,6 +703,13 @@ describe("NationStructureBehavior.getAttackFrontTiles", () => {
     return {
       config: () => ({ nukeMagnitudes: () => ({ outer: 50 }) }),
       neighbors: neighborsFn,
+      neighbors4: (tile: number, out: number[]) => {
+        const ns = neighborsFn(tile);
+        for (let i = 0; i < ns.length; i++) {
+          out[i] = ns[i];
+        }
+        return ns.length;
+      },
       owner: ownerFn,
     };
   }

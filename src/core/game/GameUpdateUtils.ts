@@ -31,6 +31,43 @@ export function diffPlayerUpdate(
   prev: PlayerUpdate,
   next: PlayerUpdate,
 ): PlayerUpdate | null {
+  // Fast path: this runs for every player every tick and usually finds no
+  // changes (tilesOwned/gold/troops travel separately) — return without
+  // allocating anything. The comparisons repeat below only for the rare
+  // changed player.
+  if (
+    prev.clientID === next.clientID &&
+    prev.name === next.name &&
+    prev.displayName === next.displayName &&
+    prev.team === next.team &&
+    prev.smallID === next.smallID &&
+    prev.playerType === next.playerType &&
+    prev.isAlive === next.isAlive &&
+    prev.isDisconnected === next.isDisconnected &&
+    prev.isTraitor === next.isTraitor &&
+    prev.traitorRemainingTicks === next.traitorRemainingTicks &&
+    prev.inDoomsdayClock === next.inDoomsdayClock &&
+    prev.markedDoomsdayClockTick === next.markedDoomsdayClockTick &&
+    prev.hasSpawned === next.hasSpawned &&
+    prev.spawnTile === next.spawnTile &&
+    prev.betrayals === next.betrayals &&
+    prev.lastDeleteUnitTick === next.lastDeleteUnitTick &&
+    prev.isLobbyCreator === next.isLobbyCreator &&
+    numberArrayEqual(prev.allies, next.allies) &&
+    numberArrayEqual(prev.targets, next.targets) &&
+    stringArrayEqual(
+      prev.outgoingAllianceRequests,
+      next.outgoingAllianceRequests,
+    ) &&
+    stringSetEqual(prev.embargoes, next.embargoes) &&
+    emojiArrayEqual(prev.outgoingEmojis, next.outgoingEmojis) &&
+    attackArrayMembershipEqual(prev.outgoingAttacks, next.outgoingAttacks) &&
+    attackArrayMembershipEqual(prev.incomingAttacks, next.incomingAttacks) &&
+    allianceArrayEqual(prev.alliances, next.alliances)
+  ) {
+    return null;
+  }
+
   const diff: PlayerUpdate = { type: GameUpdateType.Player, id: next.id };
   let changed = false;
 

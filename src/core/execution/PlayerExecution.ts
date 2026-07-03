@@ -339,18 +339,23 @@ export class PlayerExecution implements Execution {
 
     const clusters: TileRef[][] = [];
 
-    for (const startTile of borderTiles) {
-      if (visited[startTile] === currentGen) continue;
+    // Set.forEach instead of for..of: iterating a large Set allocates an
+    // iterator-result object per element, and border sets can be huge.
+    const neighborFn = (tile: TileRef, cb: (neighbor: TileRef) => void) =>
+      this.mg.forEachNeighborWithDiag(tile, cb);
+    const includeFn = (tile: TileRef) => borderTiles.has(tile);
+    borderTiles.forEach((startTile) => {
+      if (visited[startTile] === currentGen) return;
 
       const cluster = this.floodFillWithGen(
         currentGen,
         visited,
         [startTile],
-        (tile, cb) => this.mg.forEachNeighborWithDiag(tile, cb),
-        (tile) => borderTiles.has(tile),
+        neighborFn,
+        includeFn,
       );
       clusters.push(cluster);
-    }
+    });
     return clusters;
   }
 
