@@ -58,6 +58,14 @@ export function diffPlayerUpdate(
     "traitorRemainingTicks",
     prev.traitorRemainingTicks === next.traitorRemainingTicks,
   );
+  setIfDifferent(
+    "inDoomsdayClock",
+    prev.inDoomsdayClock === next.inDoomsdayClock,
+  );
+  setIfDifferent(
+    "markedDoomsdayClockTick",
+    prev.markedDoomsdayClockTick === next.markedDoomsdayClockTick,
+  );
   setIfDifferent("hasSpawned", prev.hasSpawned === next.hasSpawned);
   setIfDifferent("spawnTile", prev.spawnTile === next.spawnTile);
   setIfDifferent("betrayals", prev.betrayals === next.betrayals);
@@ -118,6 +126,11 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {
     target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks);
+  }
+  if (pu.inDoomsdayClock !== undefined)
+    target.inDoomsdayClock = pu.inDoomsdayClock;
+  if (pu.markedDoomsdayClockTick !== undefined) {
+    target.markedDoomsdayClockTick = pu.markedDoomsdayClockTick;
   }
   if (pu.betrayals !== undefined) target.betrayals = pu.betrayals;
   if (pu.hasSpawned !== undefined) target.hasSpawned = pu.hasSpawned;

@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
+import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -59,6 +60,8 @@ const DEFAULT_OPTIONS = {
   disabledUnits: [] as UnitType[],
   disableAlliances: false,
   waterNukes: false,
+  doomsdayClock: false,
+  doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
 } as const;
 
 @customElement("single-player-modal")
@@ -97,6 +100,9 @@ export class SinglePlayerModal extends BaseModal {
   ];
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
+  @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
+  @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
+    DEFAULT_OPTIONS.doomsdayClockSpeed;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -320,6 +326,11 @@ export class SinglePlayerModal extends BaseModal {
                     labelKey: "single_modal.water_nukes",
                     checked: this.waterNukes,
                   },
+                  {
+                    labelKey: "single_modal.doomsday_clock",
+                    checked: this.doomsdayClock,
+                    doomsdayClockSpeed: this.doomsdayClockSpeed,
+                  },
                 ],
                 inputCards,
               },
@@ -331,6 +342,8 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
+            @doomsday-clock-speed-selected=${this
+              .handleConfigDoomsdayClockSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -377,6 +390,10 @@ export class SinglePlayerModal extends BaseModal {
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
+      this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
+      // Pace only matters when the mode is on (startGame drops it when off).
+      (this.doomsdayClock &&
+        this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
       this.disabledUnits.length > 0
     );
   }
@@ -405,6 +422,8 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
     this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
+    this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
+    this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
   }
 
   protected onOpen(): void {
@@ -439,6 +458,11 @@ export class SinglePlayerModal extends BaseModal {
   private handleConfigDifficultySelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
     this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: DoomsdayClockSpeed }>;
+    this.doomsdayClockSpeed = customEvent.detail.speed;
   };
 
   private handleConfigGameModeSelected = (e: Event) => {
@@ -489,6 +513,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.water_nukes":
         this.waterNukes = checked;
+        break;
+      case "single_modal.doomsday_clock":
+        this.doomsdayClock = checked;
         break;
       default:
         break;
@@ -698,6 +725,14 @@ export class SinglePlayerModal extends BaseModal {
                 : {}),
               ...(this.disableAlliances ? { disableAlliances: true } : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
+              ...(this.doomsdayClock
+                ? {
+                    doomsdayClock: {
+                      enabled: true,
+                      speed: this.doomsdayClockSpeed,
+                    },
+                  }
+                : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

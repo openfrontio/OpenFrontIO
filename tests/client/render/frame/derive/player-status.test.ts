@@ -32,6 +32,8 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     troops: 0,
     isTraitor: false,
     traitorRemainingTicks: 0,
+    inDoomsdayClock: false,
+    markedDoomsdayClockTick: -1,
     betrayals: 0,
     hasSpawned: true,
     lastDeleteUnitTick: 0,
