@@ -1,5 +1,7 @@
 {
-  "categories": ["tournament"],
+  "categories": [
+    "tournament"
+  ],
   "id": "Tourney1",
   "map": {
     "height": 1500,
@@ -20,11 +22,17 @@
   "name": "Tourney 2 Teams",
   "nations": [
     {
-      "coordinates": [177, 510],
+      "coordinates": [
+        177,
+        510
+      ],
       "name": "Left"
     },
     {
-      "coordinates": [847, 511],
+      "coordinates": [
+        847,
+        511
+      ],
       "name": "Right"
     }
   ],
