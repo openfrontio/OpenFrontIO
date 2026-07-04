@@ -1,5 +1,7 @@
 {
-  "categories": ["tournament"],
+  "categories": [
+    "tournament"
+  ],
   "id": "Tourney3",
   "map": {
     "height": 1500,
@@ -20,19 +22,31 @@
   "name": "Tourney 4 Teams",
   "nations": [
     {
-      "coordinates": [437, 410],
+      "coordinates": [
+        437,
+        410
+      ],
       "name": "North West"
     },
     {
-      "coordinates": [1066, 408],
+      "coordinates": [
+        1066,
+        408
+      ],
       "name": "North East"
     },
     {
-      "coordinates": [433, 1088],
+      "coordinates": [
+        433,
+        1088
+      ],
       "name": "South West"
     },
     {
-      "coordinates": [1068, 1075],
+      "coordinates": [
+        1068,
+        1075
+      ],
       "name": "South East"
     }
   ],
