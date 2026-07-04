@@ -274,3 +274,41 @@ export function summarizeAllocationProfile(
   sites.sort((a, b) => b.selfBytes - a.selfBytes);
   return { sites, totalBytes };
 }
+
+// ── Live-heap footprint checkpoints ──
+
+export interface FootprintCheckpoint {
+  label: string;
+  /** used_heap_size after a forced full GC — the live set. */
+  liveHeapBytes: number;
+  totalHeapBytes: number;
+  externalBytes: number;
+  arrayBuffersBytes: number;
+  rssBytes: number;
+}
+
+/**
+ * Forces a full GC (twice, so objects freed by finalizers in the first pass
+ * are also collected) and returns the resulting heap statistics. Requires the
+ * process to run with --expose-gc; returns null otherwise.
+ */
+export function takeFootprintCheckpoint(
+  label: string,
+): FootprintCheckpoint | null {
+  const gc = (globalThis as { gc?: () => void }).gc;
+  if (gc === undefined) {
+    return null;
+  }
+  gc();
+  gc();
+  const heap = v8.getHeapStatistics();
+  const mem = process.memoryUsage();
+  return {
+    label,
+    liveHeapBytes: heap.used_heap_size,
+    totalHeapBytes: heap.total_heap_size,
+    externalBytes: mem.external,
+    arrayBuffersBytes: mem.arrayBuffers,
+    rssBytes: mem.rss,
+  };
+}

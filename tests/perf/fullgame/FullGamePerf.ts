@@ -24,8 +24,16 @@
  *                        [--seed perf-default] [--top 30] [--window 1000]
  *                        [--no-cpu-profile] [--no-exec-profile]
  *                        [--no-gc-profile] [--no-alloc-profile]
+ *                        [--footprint] [--snapshot-at 0,2000,12000]
+ *
+ * --footprint records the live heap (used heap after a forced full GC) at
+ * every --window boundary; it requires NODE_OPTIONS=--expose-gc.
+ * --snapshot-at writes .heapsnapshot files at the given game-phase ticks
+ * (0 = right after the spawn phase) for offline attribution; summarize them
+ * with tests/perf/fullgame/HeapSnapshotSummary.ts.
  */
 import fs from "fs";
+import v8 from "node:v8";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Config } from "../../../src/core/configuration/Config";
@@ -47,11 +55,13 @@ import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
 import { simpleHash } from "../../../src/core/Util";
 import {
   AllocationSampler,
+  FootprintCheckpoint,
   GcTracker,
   HeapSampler,
   HeapWindow,
   summarizeAllocationProfile,
   summarizeGcEvents,
+  takeFootprintCheckpoint,
 } from "./GcProfiler";
 import { NodeGameMapLoader } from "./NodeGameMapLoader";
 import {
@@ -81,6 +91,8 @@ interface Options {
   execProfile: boolean;
   gcProfile: boolean;
   allocProfile: boolean;
+  footprint: boolean;
+  snapshotAt: number[];
 }
 
 function resolveMap(name: string): GameMapType {
@@ -109,6 +121,8 @@ function parseArgs(argv: string[]): Options {
     execProfile: true,
     gcProfile: true,
     allocProfile: true,
+    footprint: false,
+    snapshotAt: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -153,6 +167,14 @@ function parseArgs(argv: string[]): Options {
         break;
       case "--no-alloc-profile":
         opts.allocProfile = false;
+        break;
+      case "--footprint":
+        opts.footprint = true;
+        break;
+      case "--snapshot-at":
+        opts.snapshotAt = next()
+          .split(",")
+          .map((v) => parseInt(v, 10));
         break;
       default:
         throw new Error(`unknown argument: ${arg}`);
@@ -272,6 +294,28 @@ async function main(): Promise<void> {
   gcTracker?.start();
   const heapSampler = opts.gcProfile ? new HeapSampler() : null;
 
+  const footprints: FootprintCheckpoint[] = [];
+  const recordFootprint = (label: string): void => {
+    if (!opts.footprint) return;
+    const cp = takeFootprintCheckpoint(label);
+    if (cp === null) {
+      throw new Error(
+        "--footprint requires the gc() global; run with NODE_OPTIONS=--expose-gc",
+      );
+    }
+    footprints.push(cp);
+  };
+  const snapshotDir = path.join(PROJECT_ROOT, "tests/perf/output");
+  const writeSnapshot = (label: string): void => {
+    fs.mkdirSync(snapshotDir, { recursive: true });
+    const file = path.join(
+      snapshotDir,
+      `fullgame-${opts.map.replace(/\W+/g, "_")}-${opts.seed}-${label}.heapsnapshot`,
+    );
+    console.log(`Writing heap snapshot ${path.relative(PROJECT_ROOT, file)}…`);
+    v8.writeHeapSnapshot(file);
+  };
+
   let turnNumber = 0;
   const runTick = (stats: TickStats): boolean => {
     runner.addTurn({ turnNumber: turnNumber++, intents: [] });
@@ -302,6 +346,10 @@ async function main(): Promise<void> {
   );
 
   heapSampler?.closeWindow("spawn");
+  recordFootprint(`spawn (tick ${game.ticks() - 1})`);
+  if (opts.snapshotAt.includes(0)) {
+    writeSnapshot("tick0");
+  }
 
   // Main game phase, under the CPU profiler and allocation sampler.
   const cpuProfiler = opts.cpuProfile ? new CpuProfiler() : null;
@@ -328,6 +376,10 @@ async function main(): Promise<void> {
     if ((i + 1) % opts.window === 0 || i === opts.ticks - 1) {
       heapSampler?.closeWindow(`${windowStartTick}-${game.ticks() - 1}`);
       windowStartTick = game.ticks();
+      recordFootprint(`tick ${game.ticks() - 1}`);
+    }
+    if (opts.snapshotAt.includes(i + 1)) {
+      writeSnapshot(`tick${i + 1}`);
     }
   }
   const gamePhaseMs = performance.now() - gameStart_;
@@ -371,6 +423,23 @@ async function main(): Promise<void> {
     `Slowest ticks: ` +
       summary.slowest.map((s) => `#${s.tick} (${fmtMs(s.ms)}ms)`).join(", "),
   );
+
+  if (footprints.length > 0) {
+    console.log(`\n--- Live-heap footprint (after forced full GC) ---`);
+    console.log(
+      table(
+        ["checkpoint", "live MB", "total MB", "ext MB", "arrbuf MB", "rss MB"],
+        footprints.map((cp) => [
+          cp.label,
+          fmtMB(cp.liveHeapBytes),
+          fmtMB(cp.totalHeapBytes),
+          fmtMB(cp.externalBytes),
+          fmtMB(cp.arrayBuffersBytes),
+          fmtMB(cp.rssBytes),
+        ]),
+      ),
+    );
+  }
 
   if (opts.execProfile) {
     console.log(`\n--- Time by Execution class ---`);
