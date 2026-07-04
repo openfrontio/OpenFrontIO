@@ -2,39 +2,46 @@
   "categories": [
     "tournament"
   ],
-  "id": "Tourney1",
+  "id": "Tourney2",
   "map": {
     "height": 1500,
-    "num_land_tiles": 984577,
+    "num_land_tiles": 1024327,
     "width": 1500
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 60237,
+    "num_land_tiles": 62691,
     "width": 375
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 244567,
+    "num_land_tiles": 254300,
     "width": 750
   },
   "multiplayer_frequency": 0,
-  "name": "Tourney 2 Teams",
+  "name": "Tourney 3 Teams",
   "nations": [
     {
       "coordinates": [
-        177,
-        510
+        339,
+        987
       ],
-      "name": "Left"
+      "name": "South West"
     },
     {
       "coordinates": [
-        847,
-        511
+        1162,
+        990
       ],
-      "name": "Right"
+      "name": "South East"
+    },
+    {
+      "coordinates": [
+        750,
+        278
+      ],
+      "name": "North"
     }
   ],
-  "translation_key": "map.tourney1"
+  "translation_key": "map.tourney2"
 }
