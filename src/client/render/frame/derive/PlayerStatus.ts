@@ -37,6 +37,12 @@ export interface ComputePlayerStatusOptions {
    * Predicate testing if the local player considers `sid` a transitive target.
    */
   isTransitiveTarget?: (sid: number) => boolean;
+  /**
+   * Ticks a side must be below the bar before it drains (doomsday clock). Past
+   * this the skull holds steady instead of blinking. Omit to treat any flagged
+   * side as draining.
+   */
+  doomsdayClockWarnTicks?: number;
 }
 
 /**
@@ -98,6 +104,13 @@ export function computePlayerStatus(
     const crown = sid === crownSmallID;
     const traitor = ps.isTraitor;
     const disconnected = ps.isDisconnected;
+    const inDoomsdayClock = ps.inDoomsdayClock;
+    // Past the warn grace the side is actively bleeding troops; the skull holds
+    // steady then (vs blinking while merely in danger).
+    const doomsdayClockDraining =
+      inDoomsdayClock &&
+      (opts.tick ?? 0) - ps.markedDoomsdayClockTick >=
+        (opts.doomsdayClockWarnTicks ?? 0);
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
     // Relative flags
@@ -151,6 +164,7 @@ export function computePlayerStatus(
       crown ||
       traitor ||
       disconnected ||
+      inDoomsdayClock ||
       traitorRemainingTicks > 0 ||
       nukeActive ||
       alliance ||
@@ -163,6 +177,8 @@ export function computePlayerStatus(
         crown,
         traitor,
         disconnected,
+        inDoomsdayClock,
+        doomsdayClockDraining,
         alliance,
         allianceReq,
         target,

@@ -27,6 +27,7 @@ import type {
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
+import { GLUnavailableError, initGL } from "./initGL";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
@@ -60,10 +61,10 @@ import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import {
+  EFFECT_PALETTE_BLOCKS,
   getPaletteSize,
   hexToRgb,
   MAX_TRAIL_COLORS,
-  TRAIL_EFFECT_BLOCKS,
 } from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
@@ -101,6 +102,13 @@ export class GPURenderer {
   private gl: WebGL2RenderingContext;
   private camera: Camera;
   private res: GPUResources;
+
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  readonly glLimited: { renderer: string; maxTextureSize: number } | null;
 
   // Passes
   private terrainPass: TerrainPass;
@@ -204,12 +212,25 @@ export class GPURenderer {
     this.raf = raf;
     this.caf = caf;
 
-    const gl = canvas.getContext("webgl2", {
+    // Demand a GPU-accelerated context. A software (SwiftShader) or missing
+    // WebGL2 context throws GLUnavailableError, which the game-start path
+    // turns into an actionable gate instead of letting the game crawl at
+    // ~1fps. A fingerprint-capped context ("limited" — MAX_TEXTURE_SIZE below
+    // the palette width, #4357) proceeds anyway; glLimited lets the owner
+    // warn the player that the map may render with black areas.
+    const res = initGL(canvas, {
       alpha: false,
       antialias: false,
       powerPreference: "high-performance",
     });
-    if (!gl) throw new Error("WebGL2 not supported");
+    if (res.gl === null) {
+      throw new GLUnavailableError(res.status, res.renderer);
+    }
+    this.glLimited =
+      res.status === "limited"
+        ? { renderer: res.renderer, maxTextureSize: res.maxTextureSize }
+        : null;
+    const gl = res.gl;
     this.gl = gl;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
@@ -246,10 +267,11 @@ export class GPURenderer {
       filter: gl.NEAREST,
     });
 
-    // Per-player trail-effect texture: TRAIL_EFFECT_BLOCKS stacked blocks of
-    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail).
-    // Starts zeroed (color count 0 everywhere = no effect → territory color).
-    const effectRows = MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS;
+    // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
+    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
+    // block 2 = structures). Starts zeroed (color count 0 everywhere = no
+    // effect → territory/player color).
+    const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
       height: effectRows,
@@ -490,6 +512,7 @@ export class GPURenderer {
       gl,
       header,
       this.paletteTex,
+      this.effectTex,
       this.settings,
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
@@ -655,7 +678,7 @@ export class GPURenderer {
     this.namePass.refreshPlayerColors(this.paletteData);
   }
 
-  /** Re-upload the per-player trail-effect texture (style + colors by smallID). */
+  /** Re-upload the per-player effect texture (style + colors by smallID). */
   updateEffectPalette(effectData: Float32Array): void {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
@@ -666,7 +689,7 @@ export class GPURenderer {
       0,
       0,
       getPaletteSize(),
-      MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS,
+      MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS,
       gl.RGBA,
       gl.FLOAT,
       effectData,
@@ -959,6 +982,7 @@ export class GPURenderer {
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
+    this.structurePass.setHighlightOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);

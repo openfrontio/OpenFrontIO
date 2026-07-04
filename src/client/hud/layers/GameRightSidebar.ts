@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
+import "../../components/DoomsdayClockPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
@@ -50,6 +51,12 @@ export class GameRightSidebar extends LitElement implements Controller {
   private immunityBarVisible = false;
 
   createRenderRoot() {
+    // Stack the timer bar + doomsday-clock readout, centers aligned (the narrower
+    // one sits centered under the wider one).
+    this.style.display = "flex";
+    this.style.flexDirection = "column";
+    this.style.alignItems = "center";
+    this.style.gap = "6px";
     return this;
   }
 
@@ -263,6 +270,11 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${exitIcon} alt="exit" width="20" height="20" />
         </div>
       </aside>
+      <doomsday-clock-panel
+        .game=${this.game}
+        .hasWinner=${this.hasWinner}
+        .refreshKey=${this.timer}
+      ></doomsday-clock-panel>
     `;
   }
 

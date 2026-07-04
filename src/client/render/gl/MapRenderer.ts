@@ -104,6 +104,15 @@ export class MapRenderer {
     this.onContextRestored?.();
   };
 
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  get glLimited(): { renderer: string; maxTextureSize: number } | null {
+    return this.renderer?.glLimited ?? null;
+  }
+
   // ---- Camera ----
 
   setCameraState(x: number, y: number, z: number): void {

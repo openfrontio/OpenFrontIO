@@ -66,6 +66,45 @@ describe("Warship", () => {
     expect(warship.health()).toBe(maxHealth - 9);
   });
 
+  test("Warship does not heal while its owner is doomed (Doomsday Clock)", async () => {
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      expect(typeof maxHealth).toBe("number");
+      throw new Error("unreachable");
+    }
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      {
+        patrolTile: game.ref(coastX + 1, 10),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+    // inDoomsdayClock() requires isAlive() (owns >=1 tile); a flagged player
+    // always does, so give this one a tile to mirror a real game.
+    player1.conquer(game.ref(coastX, 10));
+    game.executeNextTick();
+
+    // Damaged next to a port, it heals normally (+1 passive heal per tick).
+    warship.modifyHealth(-10);
+    expect(warship.health()).toBe(maxHealth - 10);
+    game.executeNextTick();
+    expect(warship.health()).toBe(maxHealth - 9);
+
+    // Once the owner is flagged by the clock, healing is suppressed even next to
+    // a port, so the decay in DoomsdayClockExecution can actually sink the fleet.
+    player1.enterDoomsdayClock();
+    game.executeNextTick();
+    expect(warship.health()).toBe(maxHealth - 9); // no heal while doomed
+
+    // Climbing back above the bar clears the mark and healing resumes.
+    player1.clearDoomsdayClock();
+    game.executeNextTick();
+    expect(warship.health()).toBe(maxHealth - 8);
+  });
+
   test("Warship captures trade if player has port", async () => {
     const portTile = game.ref(coastX, 10);
     player1.buildUnit(UnitType.Port, portTile, {});
@@ -325,7 +364,7 @@ describe("Warship", () => {
     }
 
     game.config().warshipPortHealingBonusPerLevel = () => 0;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipRetreatHealthPercent = () => 60;
 
     const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
     const warship = player1.buildUnit(
@@ -362,7 +401,7 @@ describe("Warship", () => {
     game.config().warshipPassiveHealing = () => 0;
     game.config().warshipPortHealingBonusPerLevel = () => 6;
     game.config().warshipDockingRange = () => 5;
-    game.config().warshipRetreatHealthThreshold = () => 900;
+    game.config().warshipRetreatHealthPercent = () => 90;
 
     const portTile = game.ref(coastX, 10);
     player1.buildUnit(UnitType.Port, portTile, {});
@@ -395,7 +434,7 @@ describe("Warship", () => {
   test("Warship waits at port when capacity is full", async () => {
     game.config().warshipPassiveHealing = () => 0;
     game.config().warshipDockingRange = () => 5;
-    game.config().warshipRetreatHealthThreshold = () => 900;
+    game.config().warshipRetreatHealthPercent = () => 90;
 
     const portTile = game.ref(coastX, 10);
     const warship1Tile = game.ref(coastX + 1, 11);
@@ -448,7 +487,7 @@ describe("Warship", () => {
     game.config().warshipPassiveHealing = () => 0;
     game.config().warshipPortHealingBonusPerLevel = () => 0;
     game.config().warshipDockingRange = () => 5;
-    game.config().warshipRetreatHealthThreshold = () => 900;
+    game.config().warshipRetreatHealthPercent = () => 90;
 
     const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
     const warship = player1.buildUnit(
@@ -524,7 +563,7 @@ describe("Warship", () => {
   });
 
   test("Warship cancels retreat if no friendly port is reachable by water", async () => {
-    game.config().warshipRetreatHealthThreshold = () => 900;
+    game.config().warshipRetreatHealthPercent = () => 90;
 
     player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
     const warship = player1.buildUnit(
@@ -551,7 +590,7 @@ describe("Warship", () => {
 
   test("Low-health warship retreats AND fires at nearby enemy warship", async () => {
     game.config().warshipPortHealingBonusPerLevel = () => 0;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipRetreatHealthPercent = () => 60;
     game.config().warshipTargettingRange = () => 5;
     game.config().warshipShellAttackRate = () => 10_000;
 
@@ -587,7 +626,7 @@ describe("Warship", () => {
 
   test("Retreating warship aggroes nearby enemy transport before continuing retreat", async () => {
     game.config().warshipPortHealingBonusPerLevel = () => 0;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipRetreatHealthPercent = () => 60;
     game.config().warshipTargettingRange = () => 5;
     game.config().warshipShellAttackRate = () => 10_000;
 
@@ -634,7 +673,7 @@ describe("Warship", () => {
 
   test("Manual MoveWarshipExecution cancels retreat and keeps manual order", async () => {
     game.config().warshipPortHealingBonusPerLevel = () => 0;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipRetreatHealthPercent = () => 60;
 
     const homePortTile = game.ref(coastX, 10);
     player1.buildUnit(UnitType.Port, homePortTile, {});
@@ -668,7 +707,7 @@ describe("Warship", () => {
 
   test("Manual MoveWarshipExecution suppresses auto-retreat for 5 seconds before retreat starts", async () => {
     game.config().warshipPortHealingBonusPerLevel = () => 0;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipRetreatHealthPercent = () => 60;
 
     player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
 
@@ -760,7 +799,7 @@ describe("Warship", () => {
   test("Docked warship is not targeted by enemy warship", async () => {
     game.config().warshipPassiveHealing = () => 0;
     game.config().warshipDockingRange = () => 5;
-    game.config().warshipRetreatHealthThreshold = () => 900;
+    game.config().warshipRetreatHealthPercent = () => 90;
     game.config().warshipTargettingRange = () => 20;
 
     const portTile = game.ref(coastX, 10);
@@ -800,7 +839,7 @@ describe("Warship", () => {
 
   test("Retreating warship continues moving to port after firing back", async () => {
     game.config().warshipPortHealingBonusPerLevel = () => 0;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipRetreatHealthPercent = () => 60;
     game.config().warshipTargettingRange = () => 5;
     game.config().warshipShellAttackRate = () => 10_000;
 
