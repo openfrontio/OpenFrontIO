@@ -13,6 +13,7 @@ import {
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
 
 function isEnumValue<T extends Record<string, string | number>>(
@@ -569,7 +570,7 @@ export interface Player {
 
   // Territory
   tiles(): ReadonlySet<TileRef>;
-  borderTiles(): ReadonlySet<TileRef>;
+  borderTiles(): ReadonlyTileSet;
   numTilesOwned(): number;
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;

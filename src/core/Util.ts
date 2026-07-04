@@ -2,6 +2,7 @@ import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
+import { TileSet } from "./game/TileSet";
 import {
   GameConfig,
   GameID,
@@ -148,7 +149,7 @@ export function calculateBoundingBox(
     for (let i = 0; i < borderTiles.length; i++) {
       visit(borderTiles[i]);
     }
-  } else if (borderTiles instanceof Set) {
+  } else if (borderTiles instanceof Set || borderTiles instanceof TileSet) {
     borderTiles.forEach(visit);
   } else {
     for (const tile of borderTiles) {
@@ -213,7 +214,7 @@ export function getMode<T>(counts: Map<T, number>): T | null {
 
 export function calculateBoundingBoxCenter(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): Cell {
   const { min, max } = calculateBoundingBox(gm, borderTiles);
   return boundingBoxCenter({ min, max });
