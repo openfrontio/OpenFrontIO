@@ -1,5 +1,9 @@
 import { Game, Player, TerraNullius } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "../../game/TileTraversalScratch";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinding } from "../PathFinder";
 import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
@@ -7,16 +11,6 @@ import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
 type Owner = Player | TerraNullius;
 
 const REFINE_MAX_SEARCH_AREA = 100 * 100;
-
-// Per-game BFS scratch (generation-stamped visited array + reusable stack) so
-// bfsNearest allocates nothing per query. Keyed by game because SpatialQuery
-// instances are created per call site.
-interface BfsScratch {
-  visited: Uint32Array;
-  gen: number;
-  stack: TileRef[];
-}
-const bfsScratches = new WeakMap<Game, BfsScratch>();
 
 export class SpatialQuery {
   private boundedAStar: AStarWaterBounded | null = null;
@@ -36,30 +30,14 @@ export class SpatialQuery {
    * Find nearest tile matching predicate using BFS traversal.
    * Uses Manhattan distance filter, ignores terrain barriers.
    */
-  private bfsScratch(): BfsScratch {
-    const map = this.game.map();
-    const totalTiles = map.width() * map.height();
-    let s = bfsScratches.get(this.game);
-    if (!s || s.visited.length < totalTiles) {
-      s = { visited: new Uint32Array(totalTiles), gen: 0, stack: [] };
-      bfsScratches.set(this.game, s);
-    }
-    return s;
-  }
-
   private bfsNearest(
     from: TileRef,
     maxDist: number,
     predicate: (t: TileRef) => boolean,
   ): TileRef | null {
     const map = this.game.map();
-    const scratch = this.bfsScratch();
-    scratch.gen++;
-    if (scratch.gen === 0xffffffff) {
-      scratch.visited.fill(0);
-      scratch.gen = 1;
-    }
-    const gen = scratch.gen;
+    const scratch = tileTraversalScratch(this.game);
+    const gen = bumpTraversalGeneration(scratch);
     const visited = scratch.visited;
     const stack = scratch.stack;
     stack.length = 0;

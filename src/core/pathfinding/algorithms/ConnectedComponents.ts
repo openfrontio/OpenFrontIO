@@ -15,7 +15,9 @@ export class ConnectedComponents {
   private readonly height: number;
   private readonly numTiles: number;
   private readonly lastRowStart: number;
-  private readonly queue: Int32Array;
+  // Flood-fill work queue; exists only while initialize() runs — a
+  // numTiles-sized Int32Array is ~8 MB per instance on large maps.
+  private queue: Int32Array | null = null;
   private componentIds: Uint8Array | Uint16Array | null = null;
   private _componentSizes: number[] = [];
 
@@ -27,11 +29,11 @@ export class ConnectedComponents {
     this.height = map.height();
     this.numTiles = this.width * this.height;
     this.lastRowStart = (this.height - 1) * this.width;
-    this.queue = new Int32Array(this.numTiles);
   }
 
   initialize(): void {
     DebugSpan.start("ConnectedComponents:initialize");
+    this.queue = new Int32Array(this.numTiles);
     let ids: Uint8Array | Uint16Array = this.createPrefilledIds();
 
     this._componentSizes = [];
@@ -64,6 +66,7 @@ export class ConnectedComponents {
     }
 
     this.componentIds = ids;
+    this.queue = null;
     DebugSpan.end();
   }
 
@@ -148,12 +151,13 @@ export class ConnectedComponents {
     start: number,
     componentId: number,
   ): void {
+    const queue = this.queue!;
     let head = 0;
     let tail = 0;
-    this.queue[tail++] = start;
+    queue[tail++] = start;
 
     while (head < tail) {
-      const seed = this.queue[head++]!;
+      const seed = queue[head++]!;
 
       // Skip if already processed
       if (ids[seed] !== 0) continue;
@@ -184,7 +188,7 @@ export class ConnectedComponents {
         if (x >= this.width) {
           const above = x - this.width;
           if (ids[above] === 0) {
-            this.queue[tail++] = above;
+            queue[tail++] = above;
           }
         }
 
@@ -192,7 +196,7 @@ export class ConnectedComponents {
         if (x < this.lastRowStart) {
           const below = x + this.width;
           if (ids[below] === 0) {
-            this.queue[tail++] = below;
+            queue[tail++] = below;
           }
         }
       }

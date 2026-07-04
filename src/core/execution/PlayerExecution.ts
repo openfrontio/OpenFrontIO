@@ -8,17 +8,12 @@ import {
   UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+  TileTraversalScratch,
+} from "../game/TileTraversalScratch";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
-
-interface ClusterTraversalState {
-  visited: Uint32Array;
-  gen: number;
-  // Reusable DFS stack for flood fills; cleared at the start of each fill.
-  stack: TileRef[];
-}
-
-// Per-game traversal state used by calculateClusters() to avoid per-player buffers.
-const traversalStates = new WeakMap<Game, ClusterTraversalState>();
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -370,28 +365,12 @@ export class PlayerExecution implements Execution {
     return this.active;
   }
 
-  private traversalState(): ClusterTraversalState {
-    const totalTiles = this.mg.width() * this.mg.height();
-    let state = traversalStates.get(this.mg);
-    if (!state || state.visited.length < totalTiles) {
-      state = {
-        visited: new Uint32Array(totalTiles),
-        gen: 0,
-        stack: [],
-      };
-      traversalStates.set(this.mg, state);
-    }
-    return state;
+  private traversalState(): TileTraversalScratch {
+    return tileTraversalScratch(this.mg);
   }
 
   private bumpGeneration(): number {
-    const state = this.traversalState();
-    state.gen++;
-    if (state.gen === 0xffffffff) {
-      state.visited.fill(0);
-      state.gen = 1;
-    }
-    return state.gen;
+    return bumpTraversalGeneration(this.traversalState());
   }
 
   private floodFillWithGen(
