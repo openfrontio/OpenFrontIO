@@ -18,7 +18,10 @@ export interface StepperConfig<T> {
  * Generic over any PathFinder<T> implementation.
  */
 export class PathFinderStepper<T> implements SteppingPathFinder<T> {
-  private path: T[] | null = null;
+  // Numeric paths (TileRefs) are stored as a Uint32Array: steppers hold their
+  // whole path for the unit's entire journey, and paths across large maps run
+  // to thousands of nodes, so halving the per-node size matters in aggregate.
+  private path: T[] | Uint32Array | null = null;
   private pathIndex = 0;
   private lastTo: T | null = null;
 
@@ -58,24 +61,29 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
 
     // Compute path if not cached
     if (this.path === null) {
+      let path: T[] | null;
       try {
-        this.path = this.finder.findPath(from, to);
+        path = this.finder.findPath(from, to);
       } catch (err) {
         console.error("PathFinder threw an error during findPath", err);
         return { status: PathStatus.NOT_FOUND };
       }
 
-      if (this.path === null) {
+      if (path === null) {
         return { status: PathStatus.NOT_FOUND };
       }
 
+      this.path =
+        path.length > 0 && typeof path[0] === "number"
+          ? new Uint32Array(path as number[])
+          : path;
       this.pathIndex = 0;
-      if (this.path.length > 0 && this.config.equals(this.path[0], from)) {
+      if (path.length > 0 && this.config.equals(path[0], from)) {
         this.pathIndex = 1;
       }
     }
 
-    const expectedPos = this.path[this.pathIndex - 1];
+    const expectedPos = this.path[this.pathIndex - 1] as T;
     if (this.pathIndex > 0 && !this.config.equals(from, expectedPos)) {
       this.invalidate();
       this.lastTo = to;
@@ -88,7 +96,7 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
     }
 
     // Return next step
-    const nextNode = this.path[this.pathIndex];
+    const nextNode = this.path[this.pathIndex] as T;
     this.pathIndex++;
 
     return { status: PathStatus.NEXT, node: nextNode };
