@@ -93,6 +93,7 @@ interface Options {
   allocProfile: boolean;
   footprint: boolean;
   snapshotAt: number[];
+  waterNukes: boolean;
 }
 
 function resolveMap(name: string): GameMapType {
@@ -123,6 +124,7 @@ function parseArgs(argv: string[]): Options {
     allocProfile: true,
     footprint: false,
     snapshotAt: [],
+    waterNukes: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -176,6 +178,9 @@ function parseArgs(argv: string[]): Options {
           .split(",")
           .map((v) => parseInt(v, 10));
         break;
+      case "--water-nukes":
+        opts.waterNukes = true;
+        break;
       default:
         throw new Error(`unknown argument: ${arg}`);
     }
@@ -225,6 +230,7 @@ async function main(): Promise<void> {
     infiniteTroops: false,
     instantBuild: false,
     randomSpawn: false,
+    waterNukes: opts.waterNukes ? true : undefined,
   };
   const gameStart: GameStartInfo = {
     gameID: opts.seed,
