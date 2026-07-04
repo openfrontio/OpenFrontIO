@@ -253,6 +253,11 @@
     "name": "Azerbaijan SSR"
   },
   {
+    "code": "pt-azores",
+    "continent": "Europe",
+    "name": "Azores"
+  },
+  {
     "code": "Aztec Empire",
     "continent": "North America",
     "name": "Aztec Empire"
