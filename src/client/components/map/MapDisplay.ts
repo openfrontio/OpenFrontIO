@@ -1,12 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import medalIconRaw from "../../../../resources/images/MedalIconWhite.svg?raw";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
 import { starIcon } from "./MapFavorites";
-
-const medalMaskUrl = `url('data:image/svg+xml;utf8,${encodeURIComponent(medalIconRaw)}') no-repeat center / contain`;
+import { MEDAL_ORDER, medalIcon } from "./Medals";
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -177,30 +175,10 @@ export class MapDisplay extends LitElement {
   }
 
   private renderMedals() {
-    const medalOrder: Difficulty[] = [
-      Difficulty.Easy,
-      Difficulty.Medium,
-      Difficulty.Hard,
-      Difficulty.Impossible,
-    ];
-    const colors: Record<Difficulty, string> = {
-      [Difficulty.Easy]: "var(--medal-easy)",
-      [Difficulty.Medium]: "var(--medal-medium)",
-      [Difficulty.Hard]: "var(--medal-hard)",
-      [Difficulty.Impossible]: "var(--medal-impossible)",
-    };
     const wins = this.readWins();
-    return medalOrder.map((medal) => {
-      const earned = wins.has(medal);
-      const mask = medalMaskUrl;
-      return html`<div
-        class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
-        style="background-color:${colors[
-          medal
-        ]}; mask: ${mask}; -webkit-mask: ${mask};"
-        title=${translateText(`difficulty.${medal.toLowerCase()}`)}
-      ></div>`;
-    });
+    return MEDAL_ORDER.map((medal) =>
+      medalIcon(medal, "w-5 h-5", wins.has(medal)),
+    );
   }
 
   private readWins(): Set<Difficulty> {

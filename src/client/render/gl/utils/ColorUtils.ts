@@ -25,12 +25,16 @@ export function getPaletteSize(): number {
 export const MAX_TRAIL_COLORS = 8;
 
 /**
- * The trail-effect texture stacks one MAX_TRAIL_COLORS-row block per trail
- * effectType: block 0 = transportShipTrail, block 1 = nukeTrail (matching the
- * nuke bit in trail.frag.glsl). Bump this if another trailed effectType is added
- * (and add its rowBase branch to the shader).
+ * The effect-palette texture stacks one MAX_TRAIL_COLORS-row block per
+ * trail-styled effectType: block 0 = transportShipTrail, block 1 = nukeTrail
+ * (matching the nuke bit in trail.frag.glsl), block 2 = structures (read by
+ * structure.frag.glsl). Bump this if another trail-styled effectType is added
+ * (and give its consumer shader the new rowBase).
  */
-export const TRAIL_EFFECT_BLOCKS = 2;
+export const EFFECT_PALETTE_BLOCKS = 3;
+
+/** Block index of the structures effect within the effect-palette texture. */
+export const STRUCTURES_EFFECT_BLOCK = 2;
 
 // ---------- Terrain ----------
 

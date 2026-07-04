@@ -1,8 +1,9 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
-  EFFECT_TYPES,
   findEffect,
+  isTrailEffect,
+  TRAIL_EFFECT_TYPES,
   TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
 import {
@@ -23,17 +24,18 @@ export class EffectsInput extends LitElement {
   private _abortController: AbortController | null = null;
 
   // PlayerEffect is just { name, effectType }; resolve the visual style from the
-  // cosmetics catalog by (effectType, name). The button shows a single swatch,
-  // so preview the first selected trail effect across effectTypes (boat trail
-  // before nuke trail, per EFFECT_TYPES order).
+  // cosmetics catalog by (effectType, name). The button shows a single trail
+  // swatch, so preview the first selected trail effect across trail effectTypes
+  // (boat trail before nuke trail, per TRAIL_EFFECT_TYPES order). nukeExplosion
+  // is not a trail and has no swatch preview here.
   private async resolveTrailAttributes(): Promise<TrailEffectAttributes | null> {
     const cosmetics = await getPlayerCosmetics();
     const catalog = await fetchCosmetics();
-    for (const effectType of EFFECT_TYPES) {
+    for (const effectType of TRAIL_EFFECT_TYPES) {
       const name = cosmetics.effects?.[effectType]?.name;
       if (!name) continue;
       const effect = findEffect(catalog, effectType, name);
-      if (effect) return effect.attributes;
+      if (effect && isTrailEffect(effect)) return effect.attributes;
     }
     return null;
   }

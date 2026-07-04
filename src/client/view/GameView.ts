@@ -559,6 +559,8 @@ export class GameView implements GameMap {
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
         this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+      doomsdayClockWarnTicks:
+        this._config.doomsdayClockConfig().warnSeconds * 10,
     });
     // Relations + clusters depend only on allies/embargoes/teams, which
     // change rarely (teams only when a player is added) — recompute only
@@ -627,6 +629,7 @@ export class GameView implements GameMap {
         unitType: u.unitType,
         pos: u.pos,
         reachedTarget: u.reachedTarget,
+        ownerSmallID: u.ownerID,
       });
     }
     const myID = this._myPlayer?.id();

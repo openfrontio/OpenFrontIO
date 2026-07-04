@@ -48,17 +48,20 @@ export class SharedWaterCache {
 
       let hasOcean = false;
       const lakes = new Set<number>();
+      // The lake set is only membership-tested, so neighbor visit order does
+      // not matter — use the allocation-free iterator.
+      const visit = (neighbor: number) => {
+        if (!game.isWater(neighbor)) return;
+        if (game.isOcean(neighbor)) {
+          hasOcean = true;
+          return;
+        }
+        const comp = game.getWaterComponent(neighbor);
+        if (comp !== null) lakes.add(comp);
+      };
       for (const tile of player.borderTiles()) {
         if (!game.isShore(tile)) continue;
-        for (const neighbor of game.neighbors(tile)) {
-          if (!game.isWater(neighbor)) continue;
-          if (game.isOcean(neighbor)) {
-            hasOcean = true;
-            continue;
-          }
-          const comp = game.getWaterComponent(neighbor);
-          if (comp !== null) lakes.add(comp);
-        }
+        game.forEachNeighbor(tile, visit);
       }
       playerToWater.set(player, { hasOcean, lakes });
 

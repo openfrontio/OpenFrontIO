@@ -11,6 +11,12 @@
     "enter_email_address": "Please enter an email address",
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "fetching_account": "Fetching account information...",
+    "games_clan_tag": "Clan Tag",
+    "games_result_incomplete": "Incomplete",
+    "games_type_private": "Private",
+    "games_type_public": "Public",
+    "games_type_singleplayer": "Singleplayer",
+    "games_username": "Username",
     "get_magic_link": "Get Magic Link",
     "google_alt": "Google",
     "link_discord": "Link Discord Account",
@@ -205,6 +211,8 @@
     "history_clan_players": "Clan players",
     "history_clan_players_value": "{clanCount} / {total} total",
     "history_clan_winners": "Clan Member Winners",
+    "history_date_at": "{date} {time}",
+    "history_date_full": "{day} {month} {year}",
     "history_duration": "Duration",
     "history_empty": "No games played yet.",
     "history_end_of_history": "End of history.",
@@ -392,12 +400,38 @@
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },
+  "doomsday_clock": {
+    "collapsing": "Collapsing -{rate}/s",
+    "decay_in": "Decay in {secs}s",
+    "final": "Final zone, hold {pct}%",
+    "growing": "Rising to {pct}%",
+    "hold": "Hold ≥ {pct}%",
+    "next_wave": "Next {pct}% in {time}",
+    "stable": "Stable",
+    "title": "Doomsday Clock",
+    "unstable": "Unstable",
+    "you": "You {pct}%",
+    "your_team": "{team}: {pct}%"
+  },
+  "doomsday_clock_speed": {
+    "fast": "Fast",
+    "normal": "Normal",
+    "slow": "Slow",
+    "veryfast": "Very Fast"
+  },
   "effects": {
     "button_title": "Pick an effect!",
+    "nukeType": {
+      "atom": "Atom",
+      "hydro": "Hydrogen",
+      "mirvWarhead": "MIRV"
+    },
     "search": "Search...",
     "title": "Effects",
     "type": {
+      "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
+      "structures": "Structures",
       "transportShipTrail": "Boat Trail"
     }
   },
@@ -522,15 +556,7 @@
     "war": "War"
   },
   "game_list": {
-    "details": "Details",
-    "difficulty": "Difficulty",
-    "game_id": "Game ID",
-    "map": "Map",
-    "mode": "Mode",
-    "ranking": "Ranking",
-    "recent_games": "Recent Games",
-    "replay": "Replay",
-    "type": "Type"
+    "ranking": "Ranking"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -664,7 +690,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_warship": "Warship",
-    "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to.",
+    "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to. Warships can level up (max level 3) by capturing enemy trade ships and destroying their transport boats and Warships. Leveling up increases the Warship's damage and health.",
     "drag": "drag",
     "exit_confirmation": "Are you sure you want to exit the game?",
     "game_id_tooltip": "Game ID",
@@ -734,6 +760,7 @@
     "disable_alliances": "Disable alliances",
     "donate_gold": "Donate gold",
     "donate_troops": "Donate troops",
+    "doomsday_clock": "Doomsday Clock",
     "empty_team": "Empty",
     "empty_teams": "Empty Teams",
     "enables_title": "Disable Units",
@@ -892,6 +919,7 @@
     "caribbean": "Caribbean",
     "caspiansea": "Caspian Sea",
     "caucasus": "Caucasus",
+    "china": "China",
     "choppingblock": "Chopping Block",
     "conakry": "Conakry",
     "danishstraits": "Danish Straits",
@@ -1237,6 +1265,7 @@
     "bots_disabled": "Disabled",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "doomsday_clock": "Doomsday Clock",
     "enables_title": "Disable Units",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
@@ -1246,6 +1275,8 @@
     "max_timer": "Game length (minutes)",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "max_timer_placeholder": "Mins",
+    "medals_earned": "Medals",
+    "medals_of_maps": "out of {total} maps",
     "nations": "Nations: ",
     "nations_disabled": "Disabled",
     "options_changed_no_achievements": "Custom settings – achievements disabled",

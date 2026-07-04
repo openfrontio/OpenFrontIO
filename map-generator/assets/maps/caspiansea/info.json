@@ -2,7 +2,7 @@
   "name": "Caspian Sea",
   "id": "CaspianSea",
   "translation_key": "map.caspiansea",
-  "categories": ["asia"],
+  "categories": ["asia", "new"],
   "multiplayer_frequency": 5,
   "nations": [
     {

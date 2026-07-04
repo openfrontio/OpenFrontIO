@@ -249,6 +249,16 @@ const TeamCountConfigSchema = z.union([
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
+// Doomsday Clock (anti-stall). Below a rising share of the map a player (or, in
+// team modes, their whole team) gets skulled and their troops drain to zero. The
+// required share rises in discrete waves per the `speed` preset (see
+// DoomsdayClock.ts). Only `enabled` and `speed` are wire-configurable; the
+// drain/warn tuning lives in DOOMSDAY_CLOCK_DEFAULTS (Config.ts).
+export const DoomsdayClockConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
+});
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -258,6 +268,7 @@ export const GameConfigSchema = z.object({
   gameMode: z.enum(GameMode),
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
+  doomsdayClock: DoomsdayClockConfigSchema.optional(),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean().optional(),
@@ -595,7 +606,8 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
-  // At most one selected effect per effectType: key = effectType, value = effect name.
+  // One selected effect per slot: key = slot (effectType for trails, nukeType for
+  // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
 });
 
@@ -619,7 +631,8 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
-  // Resolved effects keyed by effectType.
+  // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
+  // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
 });
 
