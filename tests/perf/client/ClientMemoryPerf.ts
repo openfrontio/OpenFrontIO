@@ -64,6 +64,8 @@ interface Checkpoint {
   wallMs: number;
   jsHeapUsedBytes: number;
   jsHeapTotalBytes: number;
+  backingStoreBytes: number;
+  embedderHeapBytes: number;
   domNodes: number;
   jsEventListeners: number;
   documents: number;
@@ -183,7 +185,7 @@ function printReport(checkpoints: Checkpoint[], opts: Options): void {
     `\n=== Main-thread memory (map=${opts.map}, bots=${opts.bots}) ===`,
   );
   console.log(
-    `${"label".padEnd(12)} ${"ticks".padStart(6)} ${"heapUsed".padStart(9)} ${"heapTotal".padStart(10)} ${"domNodes".padStart(9)} ${"listeners".padStart(9)} ${"ticks/s".padStart(8)}`,
+    `${"label".padEnd(12)} ${"ticks".padStart(6)} ${"heapUsed".padStart(9)} ${"heapTotal".padStart(10)} ${"buffers".padStart(9)} ${"domNodes".padStart(9)} ${"listeners".padStart(9)} ${"ticks/s".padStart(8)}`,
   );
   let prev: Checkpoint | null = null;
   for (const c of checkpoints) {
@@ -194,7 +196,7 @@ function printReport(checkpoints: Checkpoint[], opts: Options): void {
           )
         : "-";
     console.log(
-      `${c.label.padEnd(12)} ${String(c.ticks).padStart(6)} ${fmtMB(c.jsHeapUsedBytes).padStart(6)} MB ${fmtMB(c.jsHeapTotalBytes).padStart(7)} MB ${String(c.domNodes).padStart(9)} ${String(c.jsEventListeners).padStart(9)} ${rate.padStart(8)}`,
+      `${c.label.padEnd(12)} ${String(c.ticks).padStart(6)} ${fmtMB(c.jsHeapUsedBytes).padStart(6)} MB ${fmtMB(c.jsHeapTotalBytes).padStart(7)} MB ${fmtMB(c.backingStoreBytes).padStart(6)} MB ${String(c.domNodes).padStart(9)} ${String(c.jsEventListeners).padStart(9)} ${rate.padStart(8)}`,
     );
     prev = c;
   }
@@ -275,6 +277,14 @@ async function main(): Promise<void> {
       const m = new Map<string, number>(
         metrics.map((x: { name: string; value: number }) => [x.name, x.value]),
       );
+      // JSHeapUsedSize excludes ArrayBuffer backing stores — where most
+      // render-layer memory lives. Newer CDP reports them here.
+      const usage = (await cdp.send("Runtime.getHeapUsage")) as {
+        usedSize: number;
+        totalSize: number;
+        backingStorageSize?: number;
+        embedderHeapUsedSize?: number;
+      };
       const state = await gameState(page);
       const c: Checkpoint = {
         label,
@@ -282,13 +292,15 @@ async function main(): Promise<void> {
         wallMs: Date.now() - startWall,
         jsHeapUsedBytes: m.get("JSHeapUsedSize") ?? 0,
         jsHeapTotalBytes: m.get("JSHeapTotalSize") ?? 0,
+        backingStoreBytes: usage.backingStorageSize ?? 0,
+        embedderHeapBytes: usage.embedderHeapUsedSize ?? 0,
         domNodes: m.get("Nodes") ?? 0,
         jsEventListeners: m.get("JSEventListeners") ?? 0,
         documents: m.get("Documents") ?? 0,
       };
       checkpoints.push(c);
       console.log(
-        `[checkpoint] ${label}: tick ${c.ticks}, heap ${fmtMB(c.jsHeapUsedBytes)} MB used / ${fmtMB(c.jsHeapTotalBytes)} MB total, ${c.domNodes} DOM nodes`,
+        `[checkpoint] ${label}: tick ${c.ticks}, heap ${fmtMB(c.jsHeapUsedBytes)} MB used / ${fmtMB(c.jsHeapTotalBytes)} MB total, buffers ${fmtMB(c.backingStoreBytes)} MB, ${c.domNodes} DOM nodes`,
       );
       return c;
     };
