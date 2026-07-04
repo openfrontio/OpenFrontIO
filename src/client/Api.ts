@@ -391,6 +391,17 @@ export async function fetchPlayerLeaderboard(
     });
 
     if (!res.ok) {
+      if (res.status === 400) {
+        try {
+          const json = await res.json();
+          const message = json?.message ?? json?.error;
+          if (typeof message === "string" && message.toLowerCase().includes("page")) {
+            return "reached_limit";
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
       console.warn(
         "fetchPlayerLeaderboard: unexpected status",
         res.status,
