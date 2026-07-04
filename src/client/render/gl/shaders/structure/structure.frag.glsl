@@ -4,6 +4,15 @@ precision highp float;
 uniform sampler2D uPalette;
 uniform sampler2D uAtlas;
 uniform sampler2D uAffiliation;   // 256×2 RGBA8 — row 1 = unit affiliation
+uniform sampler2D uEffect;        // RGBA32F — shared effect palette, keyed by
+                                  //   ownerID. The structures block starts at row
+                                  //   STRUCT_EFFECT_ROW_BASE; same layout as
+                                  //   trail.frag.glsl (row r = color r's rgb;
+                                  //   row 0.a = count, 1.a = styleId,
+                                  //   2.a = scalar0, 3.a = scalar1)
+uniform float uTime;              // seconds, for animated effect styles
+uniform float uHoverOwner;        // smallID of the hovered territory's owner
+                                  //   (0 = none) — gates the structures effect
 uniform float uDotsThreshold;
 uniform float uGhostAlpha;       // 1.0 = normal, <1.0 = ghost transparency
 uniform vec3  uOutlineColor;     // ghost outline color (vec3(0) = no outline)
@@ -47,6 +56,49 @@ vec3 darken(vec3 rgb, float vScale) {
   vec3 hsv = rgb2hsv(rgb);
   hsv.z *= vScale;
   return hsv2rgb(hsv);
+}
+
+// The owner's structures cosmetic color, if equipped. Reads the structures
+// block of the shared effect palette; the gradient/transition math mirrors
+// trail.frag.glsl so the same catalog attributes look identical on both.
+// Returns false when the owner has no structures effect (count 0).
+bool structuresEffectColor(int owner, out vec3 color) {
+  const int rowBase = STRUCT_EFFECT_ROW_BASE;
+  int count = int(texelFetch(uEffect, ivec2(owner, rowBase), 0).a + 0.5);
+  if (count <= 0) return false;
+  if (count == 1) {
+    // Single color — flat recolor.
+    color = texelFetch(uEffect, ivec2(owner, rowBase), 0).rgb;
+  } else if (int(texelFetch(uEffect, ivec2(owner, rowBase + 1), 0).a + 0.5) == 1) {
+    // transition — one color at a time, cross-fading through the list.
+    // frequency = color changes per second.
+    float frequency = texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a;
+    float t = uTime * frequency;
+    int i = int(t) % count;
+    int j = (i + 1) % count;
+    vec3 a = texelFetch(uEffect, ivec2(owner, rowBase + i), 0).rgb;
+    vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
+    color = mix(a, b, fract(t));
+  } else {
+    // gradient — the palette spans the icon's diagonal once, so the whole
+    // gradient is visible across the shape (world-space banding like the
+    // trail's would put the entire icon inside one band and read as a flat
+    // color). It scrolls along the diagonal at the trail-equivalent pace:
+    // one full slide every colorSize · 4 · count / movementSpeed seconds,
+    // so both knobs keep their trail timing semantics.
+    float colorSize = max(texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a, 0.001);
+    float movementSpeed = texelFetch(uEffect, ivec2(owner, rowBase + 3), 0).a;
+    float dn = (vLocalPos.x + vLocalPos.y) * 0.5; // icon diagonal, -0.5..0.5
+    float phase =
+      fract(dn - uTime * movementSpeed / (colorSize * 4.0 * float(count)));
+    float f = phase * float(count);
+    int i = int(f) % count;
+    int j = (i + 1) % count;
+    vec3 a = texelFetch(uEffect, ivec2(owner, rowBase + i), 0).rgb;
+    vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
+    color = mix(a, b, fract(f));
+  }
+  return true;
 }
 
 #define PI 3.14159265
@@ -119,6 +171,22 @@ void main() {
     borderColor.a = 1.0;
   }
 
+  // structures cosmetic: while the owner's territory is hovered, recolor the
+  // fill with their effect (raw catalog colors, like trails — no darken). The
+  // border keeps the player color so ownership stays readable. Skipped for
+  // alt view and construction gray.
+  bool effectActive = false;
+  if (uAltView == 0 && vUnderConstruction < 0.5) {
+    int effOwner = int(vOwnerID + 0.5);
+    if (effOwner == int(uHoverOwner + 0.5) && effOwner > 0) {
+      vec3 effectRGB;
+      if (structuresEffectColor(effOwner, effectRGB)) {
+        fillColor.rgb = effectRGB;
+        effectActive = true;
+      }
+    }
+  }
+
   vec4 bgColor = mix(borderColor, fillColor, borderMask);
 
   // Sample icon from atlas (white on transparent)
@@ -143,10 +211,20 @@ void main() {
   // color. When the shape itself is already dark, that darkened glyph blends
   // into the shape (and the dark territory behind it) and becomes unreadable —
   // so flip the glyph to the light icon color when the fill is too dark.
+  // While the structures effect is animating the fill, the flip becomes a
+  // smooth luminance fade so the glyph cross-fades instead of snapping;
+  // without the effect this is the classic hard threshold, pixel-identical
+  // to having no cosmetic equipped.
   vec3 glyphColor = uIconColor;
   if (uIconDarken > 0.0) {
     float fillLum = dot(fillColor.rgb, vec3(0.299, 0.587, 0.114));
-    glyphColor = fillLum < 0.25 ? uIconColor : darken(fillColor.rgb, uIconDarken);
+    if (effectActive) {
+      float t = smoothstep(0.25, 0.45, fillLum); // 0 = dark fill → light glyph
+      glyphColor = mix(uIconColor, darken(fillColor.rgb, uIconDarken), t);
+    } else {
+      glyphColor =
+        fillLum < 0.25 ? uIconColor : darken(fillColor.rgb, uIconDarken);
+    }
   }
   vec3 finalRGB = mix(bgColor.rgb, glyphColor, iconAlpha);
 

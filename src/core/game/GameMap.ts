@@ -37,11 +37,13 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
-  // Zero-allocation neighbor iteration (cardinal only), in W, E, N, S order.
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors(). All cardinal-neighbor helpers share this order so
+  // they are interchangeable even in order-sensitive simulation code.
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
-  // Writes the cardinal neighbors of ref into out (W, E, N, S order) and
-  // returns the count. out must have length >= 4; reuse it across calls to
-  // avoid allocation in hot loops.
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. out must have length >= 4; reuse it
+  // across calls to avoid allocation in hot loops.
   neighbors4(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration including diagonals, in dx-major
   // order: (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1).
@@ -109,10 +111,16 @@ export class GameMapImpl implements GameMap {
   private readonly width_: number;
   private readonly height_: number;
 
-  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
-  private readonly refToX: number[];
-  private readonly refToY: number[];
-  private readonly yToRef: number[];
+  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime.
+  // Typed arrays are used instead of plain JS Array to keep memory tight on large maps:
+  // Uint16Array uses 2 bytes/element vs ~8 bytes for a boxed number, saving ~53 MB on
+  // the Indian Subcontinent map (2000×2220 = 4.44 M tiles).
+  // Coordinates never exceed 65535 for any map in the game, so Uint16 is safe for x/y.
+  // yToRef stores tile refs (up to width*height-1) which can exceed 65535 for large maps,
+  // so it uses Int32Array.
+  private readonly refToX: Uint16Array;
+  private readonly refToY: Uint16Array;
+  private readonly yToRef: Int32Array;
 
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
@@ -146,11 +154,11 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
-    // Precompute the LUTs
+    // Precompute the LUTs using typed arrays (see field declarations for rationale).
     let ref = 0;
-    this.refToX = new Array(width * height);
-    this.refToY = new Array(width * height);
-    this.yToRef = new Array(height);
+    this.refToX = new Uint16Array(width * height);
+    this.refToY = new Uint16Array(width * height);
+    this.yToRef = new Int32Array(height);
     for (let y = 0; y < height; y++) {
       this.yToRef[y] = ref;
       for (let x = 0; x < width; x++) {
@@ -389,10 +397,10 @@ export class GameMapImpl implements GameMap {
     const w = this.width_;
     const x = this.refToX[ref];
 
-    if (x !== 0) callback(ref - 1);
-    if (x !== w - 1) callback(ref + 1);
     if (ref >= w) callback(ref - w);
     if (ref < (this.height_ - 1) * w) callback(ref + w);
+    if (x !== 0) callback(ref - 1);
+    if (x !== w - 1) callback(ref + 1);
   }
 
   neighbors4(ref: TileRef, out: TileRef[]): number {
@@ -400,10 +408,10 @@ export class GameMapImpl implements GameMap {
     const x = this.refToX[ref];
     let n = 0;
 
-    if (x !== 0) out[n++] = ref - 1;
-    if (x !== w - 1) out[n++] = ref + 1;
     if (ref >= w) out[n++] = ref - w;
     if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
+    if (x !== 0) out[n++] = ref - 1;
+    if (x !== w - 1) out[n++] = ref + 1;
     return n;
   }
 
@@ -480,15 +488,24 @@ export class GameMapImpl implements GameMap {
       q.push(tile);
     }
 
+    // Neighbors are enumerated inline in the same order as neighbors() to
+    // avoid allocating an array per visited tile.
+    const w = this.width_;
+    const southLimit = (this.height_ - 1) * w;
+    const visit = (n: TileRef) => {
+      if (!seen.has(n) && filter(this, n)) {
+        seen.add(n);
+        q.push(n);
+      }
+    };
     while (q.length > 0) {
       const curr = q.pop();
       if (curr === undefined) continue;
-      for (const n of this.neighbors(curr)) {
-        if (!seen.has(n) && filter(this, n)) {
-          seen.add(n);
-          q.push(n);
-        }
-      }
+      const x = this.refToX[curr];
+      if (curr >= w) visit(curr - w);
+      if (curr < southLimit) visit(curr + w);
+      if (x !== 0) visit(curr - 1);
+      if (x !== w - 1) visit(curr + 1);
     }
     return seen;
   }
