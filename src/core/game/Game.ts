@@ -479,6 +479,8 @@ export interface Unit {
   transportShipState(): TransportShipState;
   updateTransportShipState(update: Partial<TransportShipState>): void;
   health(): number;
+  /** Max health from unit info (1 for units without health). */
+  maxHealth(): number;
   modifyHealth(delta: number, attacker?: Player): void;
 
   // Troops

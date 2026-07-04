@@ -185,6 +185,9 @@ export class UnitImpl implements Unit {
   health(): number {
     return Number(this._health);
   }
+  maxHealth(): number {
+    return this.info().maxHealth ?? 1;
+  }
   hasHealth(): boolean {
     return this.info().maxHealth !== undefined;
   }
