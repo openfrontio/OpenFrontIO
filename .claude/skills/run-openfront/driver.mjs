@@ -23,7 +23,8 @@ export const BASE_URL = process.env.OPENFRONT_URL ?? "http://localhost:9000";
 //                   of CPU per frame, and an unthrottled rAF loop starves the
 //                   main thread (timers, the singleplayer turn loop, input).
 //                   ~1000 is a good value; frames still render for screenshots.
-export async function launch({ viewport, rafIntervalMs } = {}) {
+//   args          - extra Chromium flags appended to the defaults.
+export async function launch({ viewport, rafIntervalMs, args } = {}) {
   const env = { ...process.env };
   const libs = path.join(CACHE, "extracted", "usr", "lib", "x86_64-linux-gnu");
   if (fs.existsSync(libs)) {
@@ -33,7 +34,7 @@ export async function launch({ viewport, rafIntervalMs } = {}) {
     env.FONTCONFIG_FILE = path.join(CACHE, "fonts.conf");
   }
   const browser = await chromium.launch({
-    args: ["--no-sandbox", "--disable-gpu"],
+    args: ["--no-sandbox", "--disable-gpu", ...(args ?? [])],
     env,
   });
   const context = await browser.newContext({

@@ -16,6 +16,7 @@
     "perf": "npx tsx tests/perf/run-all.ts",
     "perf:game": "npx tsx tests/perf/fullgame/FullGamePerf.ts",
     "perf:client": "npx tsx tests/perf/client/ClientUpdatePerf.ts",
+    "perf:client-mem": "npx tsx tests/perf/client/ClientMemoryPerf.ts",
     "test:coverage": "vitest run --coverage",
     "format": "prettier --ignore-unknown --write .",
     "format:map-generator": "cd map-generator && go fmt .",
