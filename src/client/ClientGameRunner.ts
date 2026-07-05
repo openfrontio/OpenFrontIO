@@ -1188,11 +1188,7 @@ export class ClientGameRunner {
         Math.ceil(
           // Ensures the attackRatio is between 1% and the required percentage to defend fully.
           Math.max(
-            100 *
-              Math.min(
-                this.renderer.uiState.attackRatio,
-                maxAttackRatio,
-              ),
+            100 * Math.min(this.renderer.uiState.attackRatio, maxAttackRatio),
             1,
           ),
         ),
