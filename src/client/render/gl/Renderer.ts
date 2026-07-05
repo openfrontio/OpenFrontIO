@@ -23,7 +23,6 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
@@ -653,7 +652,10 @@ export class GPURenderer {
     this.trailPass.setLiveRef(trailState);
   }
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 
