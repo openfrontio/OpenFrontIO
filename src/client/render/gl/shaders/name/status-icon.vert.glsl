@@ -24,6 +24,7 @@ uniform float uStatusCols;   // columns in atlas
 uniform float uStatusAtlasW; // atlas texture width
 uniform float uStatusAtlasH; // atlas texture height
 uniform float uStatusPad;    // transparent padding in texels per side
+uniform float uStatusOutlinePx; // dark-outline radius in atlas texels (0 = off)
 
 // Configurable layout
 uniform float uStatusRowOffset;  // row Y offset (multiples of uFontBase * nameWorldScale)
@@ -39,6 +40,7 @@ flat out float vAllianceFraction; // 0 = no drain effect, >0 = active drain
 flat out vec2 vFadedUV0;         // top-left UV of faded alliance cell
 flat out vec2 vFadedUV1;         // bottom-right UV of faded alliance cell
 flat out float vFlashAlpha;      // traitor flash opacity (1.0 = fully visible)
+flat out float vOutline;         // 1.0 = alliance icon, draw a dark outline
 out float vHoverAlpha;
 
 // Status flag float array — indexed by icon slot.
@@ -103,6 +105,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vOutline = 0.0;
     vHoverAlpha = 1.0;
     return;
   }
@@ -120,6 +123,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vOutline = 0.0;
     vHoverAlpha = 1.0;
     return;
   }
@@ -149,6 +153,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vOutline = 0.0;
     vHoverAlpha = 1.0;
     return;
   }
@@ -180,23 +185,41 @@ void main() {
     atlasIdx = (pd7.x > 0.5) ? 7 : 8;
   }
 
+  // Only the alliance icon (slot 3) gets the dark outline.
+  vOutline = (iconSlot == 3) ? 1.0 : 0.0;
+
   // Fade the status row along with the rest of the name plate when the cursor
   // is over any part of it. Hit test runs on the CPU (NamePass).
   vHoverAlpha = (uFadeOwnerID > 0.0 && pd4.z == uFadeOwnerID)
     ? uHoverFadeAlpha : 1.0;
 
-  // Quad world position
-  vec2 iconOrigin = vec2(iconX, iconY);
-  vec2 worldPos = iconOrigin + aPos * vec2(iconWorldSize, iconWorldSize);
+  // Dark-outline margin: grow the alliance icon's quad outward into the cell's
+  // transparent padding so the outline halo isn't clipped at the quad edge.
+  // The icon content keeps its size; only the quad's bounding box grows. Other
+  // icons keep marginWorld = 0 and render pixel-identically.
+  float iconTexels = uStatusCell - 2.0 * uStatusPad;
+  float marginTex = (vOutline > 0.5 && uStatusOutlinePx > 0.0)
+    ? min(uStatusPad - 2.0, uStatusOutlinePx + 2.0)
+    : 0.0;
+  float marginWorld = marginTex * (iconWorldSize / iconTexels);
+
+  // Quad world position (expanded by the outline margin, centred on the icon)
+  vec2 iconOrigin = vec2(iconX, iconY) - vec2(marginWorld);
+  float quadSize = iconWorldSize + 2.0 * marginWorld;
+  vec2 worldPos = iconOrigin + aPos * vec2(quadSize, quadSize);
 
   // Camera transform
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 
+  // vLocalUV in icon-content space: 0..1 over the icon, <0/>1 in the outline
+  // margin. This keeps the drain math below unchanged and samples the
+  // transparent padding (never a neighbour) when the quad is expanded.
+  vLocalUV = (aPos * quadSize - marginWorld) / iconWorldSize;
+
   // UV from atlas grid (padded to avoid mipmap bleed)
   vec4 uv = cellUV(atlasIdx);
-  vUV = vec2(mix(uv.x, uv.z, aPos.x), mix(uv.y, uv.w, aPos.y));
-  vLocalUV = aPos;
+  vUV = vec2(mix(uv.x, uv.z, vLocalUV.x), mix(uv.y, uv.w, vLocalUV.y));
 
   // Alliance drain: slot 3 = alliance icon
   float allianceFrac = pd7.z;

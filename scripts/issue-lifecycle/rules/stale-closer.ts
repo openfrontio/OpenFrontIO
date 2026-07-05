@@ -4,6 +4,7 @@ import {
   type Action,
   type Issue,
   type IssueComment,
+  hasLabel,
   isBotUser,
   listIssueComments,
 } from "../github";
@@ -35,12 +36,12 @@ export async function checkStale(
   now: Date = new Date(),
 ): Promise<Action[]> {
   if (issue.milestone !== null) return [];
-  if (issue.labels.includes(LABELS.KEEP_OPEN)) return [];
+  if (hasLabel(issue, LABELS.KEEP_OPEN)) return [];
 
   const comments = await listIssueComments(octokit, issue.number);
   const lastActivityIso = latestNonBotActivityIso(issue, comments);
   const daysSinceActivity = daysBetween(lastActivityIso, now);
-  const hasStaleLabel = issue.labels.includes(LABELS.STALE);
+  const hasStaleLabel = hasLabel(issue, LABELS.STALE);
   const authorLogin = issue.user?.login ?? "there";
 
   if (hasStaleLabel && daysSinceActivity < STALE_WARN_DAYS) {

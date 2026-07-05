@@ -17,3 +17,7 @@ A clear and concise description of any alternative solutions or features you've 
 
 **Additional context**
 Add any other context or screenshots about the feature request here.
+
+**Assignment**
+
+- [ ] I'd like to be assigned to this issue and work on it myself

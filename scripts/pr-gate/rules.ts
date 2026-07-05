@@ -2,6 +2,7 @@ import {
   APPROVED_ISSUE_LABEL,
   LABELS,
   SMALL_FIX_LINE_THRESHOLD,
+  TRUSTED_BOT_AUTHORS,
   TRUSTED_REPO_PERMISSIONS,
 } from "./config";
 
@@ -50,6 +51,16 @@ export function parseLinkedIssues(body: string | null): number[] {
 export function checkBypass(pr: PRMetadata): RuleResult {
   if (pr.labels.includes(LABELS.BYPASS)) {
     return { action: "pass", reason: `PR has "${LABELS.BYPASS}" label` };
+  }
+  return { action: "next" };
+}
+
+export function checkTrustedBot(pr: PRMetadata): RuleResult {
+  if ((TRUSTED_BOT_AUTHORS as readonly string[]).includes(pr.user.login)) {
+    return {
+      action: "pass",
+      reason: `Author "${pr.user.login}" is a trusted bot`,
+    };
   }
   return { action: "next" };
 }
@@ -112,6 +123,9 @@ export async function evaluate(
 ): Promise<RuleResult> {
   const r0 = checkBypass(pr);
   if (r0.action !== "next") return r0;
+
+  const rBot = checkTrustedBot(pr);
+  if (rBot.action !== "next") return rBot;
 
   const r1 = await checkRepoAccess(pr, getRepoPermission);
   if (r1.action !== "next") return r1;

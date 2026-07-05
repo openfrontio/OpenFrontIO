@@ -226,7 +226,7 @@
       "name": "Zapopan"
     }
   ],
-  "categories": ["new", "arcade"],
+  "categories": ["arcade"],
   "id": "Labyrinth",
   "map": {
     "height": 1360,

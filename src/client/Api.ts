@@ -282,13 +282,14 @@ export function getAudience() {
   return domainname;
 }
 
-// Check if the user's account is linked to a Discord or email account.
+// Check if the user's account is linked to a Discord, Google, or email account.
 export function hasLinkedAccount(
   userMeResponse: UserMeResponse | false,
 ): boolean {
   return (
     userMeResponse !== false &&
     (userMeResponse.user?.discord !== undefined ||
+      userMeResponse.user?.google !== undefined ||
       userMeResponse.user?.email !== undefined)
   );
 }

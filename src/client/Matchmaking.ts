@@ -122,7 +122,9 @@ export class MatchmakingModal extends BaseModal {
     const isLoggedIn =
       userMe &&
       userMe.user &&
-      (userMe.user.discord !== undefined || userMe.user.email !== undefined);
+      (userMe.user.discord !== undefined ||
+        userMe.user.google !== undefined ||
+        userMe.user.email !== undefined);
     if (!isLoggedIn) {
       window.dispatchEvent(
         new CustomEvent("show-message", {

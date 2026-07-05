@@ -82,10 +82,6 @@ export async function startMaster() {
 
   lobbyService = new MasterLobbyService(playlist, log);
 
-  // Generate admin token for worker authentication
-  const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
-  process.env.ADMIN_TOKEN = ADMIN_TOKEN;
-
   const INSTANCE_ID =
     ServerEnv.env() === GameEnv.Dev
       ? "DEV_ID"
@@ -98,7 +94,6 @@ export async function startMaster() {
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {
     const worker = cluster.fork({
       WORKER_ID: i,
-      ADMIN_TOKEN,
       INSTANCE_ID,
     });
 
@@ -125,7 +120,6 @@ export async function startMaster() {
     // Restart the worker with the same ID
     const newWorker = cluster.fork({
       WORKER_ID: workerId,
-      ADMIN_TOKEN,
       INSTANCE_ID,
     });
 

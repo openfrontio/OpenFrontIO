@@ -245,6 +245,22 @@ export class NamePass {
   }
 
   /**
+   * Replace cached name strings (e.g. after the anonymous-names setting toggles)
+   * and force a re-upload on the next updateNames pass. slot.static is the same
+   * object as the playerByID entry, so updating displayName here is what the
+   * nameLen === 0 re-upload branch reads.
+   */
+  refreshNames(displayNames: Map<string, string>): void {
+    for (const [id, name] of displayNames) {
+      const p = this.playerByID.get(id);
+      if (p === undefined) continue;
+      p.displayName = name;
+      const slot = this.slots.get(id);
+      if (slot !== undefined) slot.nameLen = 0;
+    }
+  }
+
+  /**
    * Request the texture layer for a slot's flag (called once at slot creation).
    * If the image is already loaded the layer index is set immediately; otherwise
    * the slot joins a wait list and is updated when the image arrives.

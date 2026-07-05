@@ -416,17 +416,12 @@ export class PlayerImpl implements Player {
     }
   }
 
-  // Count of units built by the player, including construction
+  // Count of units built by the player, including those still under
+  // construction. recordUnitConstructed() is called in buildUnit() the moment a
+  // unit is created (while still under construction), so numUnitsConstructed
+  // already accounts for in-progress builds — don't re-count them.
   unitsConstructed(type: UnitType): number {
-    const built = this.numUnitsConstructed[type] ?? 0;
-    let constructing = 0;
-    for (const unit of this._units) {
-      if (unit.type() !== type) continue;
-      if (!unit.isUnderConstruction()) continue;
-      constructing++;
-    }
-    const total = constructing + built;
-    return total;
+    return this.numUnitsConstructed[type] ?? 0;
   }
 
   // Count of units owned by the player, not including construction
@@ -482,7 +477,10 @@ export class PlayerImpl implements Player {
     const ns: Set<Player | TerraNullius> = new Set();
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().isLand(neighbor)) {
+        if (
+          this.mg.map().isLand(neighbor) &&
+          !this.mg.map().isImpassable(neighbor)
+        ) {
           const owner = this.mg.map().ownerID(neighbor);
           if (owner !== this.smallID()) {
             ns.add(
@@ -531,6 +529,7 @@ export class PlayerImpl implements Player {
         if (!map.isValidCoord(nx, ny)) continue;
         const tile = map.ref(nx, ny);
         if (!map.isLand(tile)) continue;
+        if (map.isImpassable(tile)) continue;
         if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
         const owner = map.ownerID(tile);
         if (owner !== this.smallID()) {
@@ -1385,6 +1384,10 @@ export class PlayerImpl implements Player {
     if (mg.isSpawnImmunityActive()) {
       return false;
     }
+    // Impassable terrain cannot be nuked.
+    if (mg.isImpassable(tile)) {
+      return false;
+    }
     const owner = this.mg.owner(tile);
     // Allow nuking teammates after the game is over (aftergame fun)
     const gameOver = mg.getWinner() !== null;
@@ -1468,7 +1471,7 @@ export class PlayerImpl implements Player {
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
-    return this.mg.isLand(tile) ? tile : false;
+    return this.mg.isLand(tile) && !this.mg.isImpassable(tile) ? tile : false;
   }
 
   landBasedStructureSpawn(
@@ -1625,7 +1628,7 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    if (!this.mg.isLand(tile)) {
+    if (!this.mg.isLand(tile) || this.mg.isImpassable(tile)) {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
@@ -1634,7 +1637,7 @@ export class PlayerImpl implements Player {
       for (const t of this.mg.bfs(
         tile,
         andFN(
-          (gm, t) => !gm.hasOwner(t) && gm.isLand(t),
+          (gm, t) => !gm.hasOwner(t) && gm.isLand(t) && !gm.isImpassable(t),
           manhattanDistFN(tile, 200),
         ),
       )) {

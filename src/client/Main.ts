@@ -162,6 +162,14 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     return;
   }
 
+  // Google logins have no avatar; show the same person/email badge as magic-link.
+  const google =
+    userMeResponse !== false ? userMeResponse.user.google : undefined;
+  if (google) {
+    showEmailLoggedIn();
+    return;
+  }
+
   showSignIn();
 }
 

@@ -402,7 +402,7 @@ export class MapPlaylist {
       GameMapType.Asia, // 20%
       GameMapType.EuropeClassic, // 20%
     ];
-    const isCompact = Math.random() < 0.5;
+    const isCompact = Math.random() < 0.2;
     return {
       donateGold: false,
       donateTroops: false,
