@@ -187,6 +187,31 @@ describe("GameManager.listedLobbies", () => {
   });
 });
 
+function fakeWs() {
+  const ws = new EventEmitter() as any;
+  ws.readyState = WebSocket.OPEN;
+  ws.send = vi.fn();
+  ws.close = vi.fn();
+  return ws;
+}
+
+function makeClient(clientID: string, persistentID: string, ws: any) {
+  return new Client(
+    clientID,
+    persistentID,
+    null,
+    null,
+    undefined,
+    "1.2.3.4",
+    `user_${clientID}`,
+    null,
+    ws,
+    undefined,
+    undefined,
+    [],
+  );
+}
+
 describe("host-left lobby teardown", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -196,31 +221,6 @@ describe("host-left lobby teardown", () => {
     vi.clearAllTimers();
     vi.useRealTimers();
   });
-
-  function fakeWs() {
-    const ws = new EventEmitter() as any;
-    ws.readyState = WebSocket.OPEN;
-    ws.send = vi.fn();
-    ws.close = vi.fn();
-    return ws;
-  }
-
-  function makeClient(clientID: string, persistentID: string, ws: any) {
-    return new Client(
-      clientID,
-      persistentID,
-      null,
-      null,
-      undefined,
-      "1.2.3.4",
-      `user_${clientID}`,
-      null,
-      ws,
-      undefined,
-      undefined,
-      [],
-    );
-  }
 
   it("ends, delists and prunes an unstarted lobby when the host leaves", () => {
     const gm = new GameManager(mockLogger);
@@ -265,6 +265,104 @@ describe("host-left lobby teardown", () => {
     const game = makeGame();
     (game as any)._hasEnded = true;
     expect(game.joinClient({} as any)).toBe("rejected");
+  });
+});
+
+describe("listed lobby host powers", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  const asHost = {
+    clientID: "host",
+    isLobbyCreator: true,
+    isAdmin: false,
+    isAdminBot: false,
+  };
+
+  it("reports host cheats only when a cheat is actually granted", () => {
+    expect(makeGame().hasHostCheats()).toBe(false);
+    expect(makeGame("g", CREATOR, { hostCheats: {} }).hasHostCheats()).toBe(
+      false,
+    );
+    expect(
+      makeGame("g", CREATOR, {
+        hostCheats: { infiniteGold: false, infiniteTroops: false },
+      }).hasHostCheats(),
+    ).toBe(false);
+    expect(
+      makeGame("g", CREATOR, {
+        hostCheats: { infiniteGold: true },
+      }).hasHostCheats(),
+    ).toBe(true);
+    expect(
+      makeGame("g", CREATOR, {
+        hostCheats: { goldMultiplier: 2 },
+      }).hasHostCheats(),
+    ).toBe(true);
+  });
+
+  it("blocks host kicks while listed; admins still can", () => {
+    const game = makeGame("g-kick");
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
+    game.setListed(true);
+
+    const kick = { type: "kick_player", targetClientID: "guest" } as any;
+    expect(game.handleIntent(kick, asHost).status).toBe(403);
+
+    // Unlisting restores the host's kick power.
+    game.setListed(false);
+    expect(game.handleIntent(kick, asHost).status).toBe(200);
+  });
+
+  it("lets admins kick in a listed lobby", () => {
+    const game = makeGame("g-admin-kick");
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
+    game.setListed(true);
+
+    const asAdmin = {
+      clientID: "admin",
+      isLobbyCreator: false,
+      isAdmin: true,
+      isAdminBot: false,
+    };
+    expect(
+      game.handleIntent(
+        { type: "kick_player", targetClientID: "guest" } as any,
+        asAdmin,
+      ).status,
+    ).toBe(200);
+  });
+
+  it("rejects enabling host cheats while listed", () => {
+    const game = makeGame();
+    game.setListed(true);
+
+    const cheats = {
+      type: "update_game_config",
+      config: { hostCheats: { infiniteGold: true } },
+    } as any;
+    expect(game.handleIntent(cheats, asHost).status).toBe(409);
+    expect(game.hasHostCheats()).toBe(false);
+
+    // A neutral hostCheats block still goes through (the client always
+    // sends the field), as do real cheats once the lobby is unlisted.
+    expect(
+      game.handleIntent(
+        { type: "update_game_config", config: { hostCheats: {} } } as any,
+        asHost,
+      ).status,
+    ).toBe(200);
+    game.setListed(false);
+    expect(game.handleIntent(cheats, asHost).status).toBe(200);
+    expect(game.hasHostCheats()).toBe(true);
   });
 });
 

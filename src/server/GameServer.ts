@@ -69,6 +69,18 @@ const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
+// Whether the host-only cheat block actually grants anything: mere presence
+// isn't enough, the client can send hostCheats with every field off.
+function hostCheatsEnabled(hc: GameConfig["hostCheats"]): boolean {
+  return (
+    hc !== undefined &&
+    (hc.infiniteGold === true ||
+      hc.infiniteTroops === true ||
+      typeof hc.goldMultiplier === "number" ||
+      typeof hc.startingGold === "number")
+  );
+}
+
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
 
@@ -310,6 +322,16 @@ export class GameServer {
             error: "only the lobby creator or an admin can kick players",
           };
         }
+        // A listed lobby recruits strangers from the public browser; letting
+        // the host kick them is a griefing vector. Admins keep the power for
+        // moderation. The listed flag survives game start on purpose, so a
+        // publicly recruited game stays kick-free like a real public game.
+        if (this.isListed() && !actor.isAdmin) {
+          return {
+            status: 403,
+            error: "the host cannot kick players in a publicly listed lobby",
+          };
+        }
         // Resolve the target to a clientID: an explicit clientID, or an account
         // publicId matched against allClients (a superset of activeClients that
         // retains disconnected players), so a disconnected account can still be
@@ -356,6 +378,16 @@ export class GameServer {
         }
         if (stamped.config.gameType === GameType.Public) {
           return { status: 400, error: "cannot change a game to public" };
+        }
+        // Host cheats give the host an asymmetric advantage over players
+        // recruited from the lobby browser. Listing is likewise rejected
+        // while cheats are on (Worker's listing endpoint), so a listed
+        // lobby can never have them.
+        if (this.isListed() && hostCheatsEnabled(stamped.config.hostCheats)) {
+          return {
+            status: 409,
+            error: "cannot enable host cheats in a publicly listed lobby",
+          };
         }
         this.updateGameConfig(stamped.config);
         return { status: 200 };
@@ -1159,6 +1191,12 @@ export class GameServer {
   // that rejects every joiner).
   public hasJoinWhitelist(): boolean {
     return (this.gameConfig.allowedPublicIds?.length ?? 0) > 0;
+  }
+
+  // Whether any host-only cheat is actually granted. A lobby with host
+  // cheats must not be publicly listed.
+  public hasHostCheats(): boolean {
+    return hostCheatsEnabled(this.gameConfig.hostCheats);
   }
 
   public isCreator(persistentId: string): boolean {

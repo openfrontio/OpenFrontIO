@@ -499,16 +499,23 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
-                  {
-                    labelKey: "host_modal.host_cheats",
-                    checked: this.hostCheatsEnabled,
-                  },
+                  // Host cheats and public listing are mutually exclusive
+                  // (the server rejects both combinations), so the controls
+                  // disappear while the lobby is listed.
+                  ...(this.publiclyListed
+                    ? []
+                    : [
+                        {
+                          labelKey: "host_modal.host_cheats",
+                          checked: this.hostCheatsEnabled,
+                        },
+                      ]),
                 ],
                 inputCards,
               },
               hostCheats: {
                 titleKey: "host_modal.host_cheats",
-                visible: this.hostCheatsEnabled,
+                visible: this.hostCheatsEnabled && !this.publiclyListed,
                 toggles: [
                   {
                     labelKey: "host_modal.infinite_gold",
@@ -549,7 +556,9 @@ export class HostLobbyModal extends BaseModal {
             .currentClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
-            .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            .onKickPlayer=${this.publiclyListed
+              ? undefined
+              : (clientID: string) => this.kickPlayer(clientID)}
             .onToggleNameReveal=${(clientID: string) =>
               this.toggleNameReveal(clientID)}
             .nameReveals=${this.nameReveals}
@@ -1187,7 +1196,9 @@ export class HostLobbyModal extends BaseModal {
           ? "private_lobby.listing_limit_reached"
           : serverError === "listing_whitelist_enabled"
             ? "private_lobby.listing_whitelist_enabled"
-            : "private_lobby.listing_failed";
+            : serverError === "listing_host_cheats_enabled"
+              ? "private_lobby.listing_host_cheats_enabled"
+              : "private_lobby.listing_failed";
     showToast(translateText(key), "red", 3000);
   }
 

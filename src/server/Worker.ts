@@ -237,6 +237,13 @@ export async function startWorker() {
         return res.status(409).json({ error: "listing_whitelist_enabled" });
       }
 
+      // Host cheats give the host an asymmetric advantage over players
+      // recruited from the lobby browser. Enabling them while listed is
+      // likewise rejected (GameServer's update_game_config handling).
+      if (game.hasHostCheats()) {
+        return res.status(409).json({ error: "listing_host_cheats_enabled" });
+      }
+
       // Dev has no subscription backend; skip the check so the feature is
       // testable locally (same precedent as Turnstile).
       if (ServerEnv.env() !== GameEnv.Dev) {
