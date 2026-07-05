@@ -202,7 +202,7 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   priceSuffix: string = "";
 
-  /** Display name of the item, used in the plutonium confirmation dialog. */
+  /** Display name of the item, used in the currency confirmation dialog. */
   @property({ type: String })
   itemName: string = "";
 
@@ -217,8 +217,8 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** True while the plutonium confirmation dialog is open. */
-  @state() private confirmingHard = false;
+  /** Which currency purchase is awaiting confirmation, if any. */
+  @state() private confirmingCurrency: "hard" | "soft" | null = null;
   private busy = false;
 
   createRenderRoot() {
@@ -230,10 +230,12 @@ export class PurchaseButton extends LitElement {
     this.executePurchase(handler);
   }
 
-  /** Opens the plutonium confirmation dialog; the purchase runs on confirm. */
-  requestHardPurchase() {
-    if (!this.onPurchaseHard || this.busy) return;
-    this.confirmingHard = true;
+  /** Opens the currency confirmation dialog; the purchase runs on confirm. */
+  requestCurrencyPurchase(method: "hard" | "soft") {
+    const handler =
+      method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
+    if (!handler || this.busy) return;
+    this.confirmingCurrency = method;
   }
 
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
@@ -282,7 +284,7 @@ export class PurchaseButton extends LitElement {
          hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
         @click=${(e: Event) => {
           e.stopPropagation();
-          this.requestHardPurchase();
+          this.requestCurrencyPurchase("hard");
         }}
       >
         <plutonium-icon .size=${20} style="margin-top:3px"></plutonium-icon>
@@ -296,7 +298,10 @@ export class PurchaseButton extends LitElement {
       <button
         class="purchase-sparkle-btn-soft relative overflow-hidden w-full px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-amber-700 hover:border-amber-600 hover:text-white hover:shadow-[0_0_20px_rgba(217,119,6,0.6)]"
-        @click=${(e: Event) => this.handleClick(e, this.onPurchaseSoft)}
+        @click=${(e: Event) => {
+          e.stopPropagation();
+          this.requestCurrencyPurchase("soft");
+        }}
       >
         <cap-icon .size=${22} style="margin-top:3px"></cap-icon>
         ${this.priceSoft!.toLocaleString()}
@@ -332,20 +337,31 @@ export class PurchaseButton extends LitElement {
           ${hasSoft ? this.renderSoftButton() : null}
         </div>
       </div>
-      ${this.confirmingHard
+      ${this.confirmingCurrency
         ? html`<confirm-dialog
             .heading=${translateText("store.confirm_purchase_title")}
             .message=${translateText("store.confirm_purchase_body", {
               item: this.itemName,
-              amount: this.priceHard ?? 0,
-              currency: translateText("cosmetics.hard"),
+              amount:
+                (this.confirmingCurrency === "hard"
+                  ? this.priceHard
+                  : this.priceSoft) ?? 0,
+              currency: translateText(
+                this.confirmingCurrency === "hard"
+                  ? "cosmetics.hard"
+                  : "cosmetics.soft",
+              ),
             })}
             variant="warning"
             @confirm=${() => {
-              this.confirmingHard = false;
-              this.executePurchase(this.onPurchaseHard);
+              const handler =
+                this.confirmingCurrency === "hard"
+                  ? this.onPurchaseHard
+                  : this.onPurchaseSoft;
+              this.confirmingCurrency = null;
+              this.executePurchase(handler);
             }}
-            @cancel=${() => (this.confirmingHard = false)}
+            @cancel=${() => (this.confirmingCurrency = null)}
           ></confirm-dialog>`
         : nothing}
       <insufficient-currency-dialog
