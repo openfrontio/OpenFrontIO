@@ -1138,6 +1138,9 @@ export class ClientGameRunner {
       mostRecentAttack.attackerID,
     ) as PlayerView;
     if (!attacker) return;
+    const myTroops = this.myPlayer.troops();
+    const maxAttackRatio =
+      myTroops > 0 ? mostRecentAttack.troops / myTroops : 1;
     this.eventBus.emit(
       new SendAttackIntentEvent(
         attacker.id(),
@@ -1147,12 +1150,12 @@ export class ClientGameRunner {
             100 *
               Math.min(
                 this.renderer.uiState.attackRatio,
-                mostRecentAttack.troops / this.myPlayer.troops(),
+                maxAttackRatio,
               ),
             1,
           ),
         ),
-        this.myPlayer.troops(),
+        myTroops,
       ),
     );
   }
