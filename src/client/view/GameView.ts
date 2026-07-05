@@ -81,6 +81,14 @@ export class GameView implements GameMap {
   private _teams = new Map<number, string>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
+  /**
+   * Active units grouped by owner smallID, built lazily at most once per
+   * tick. Keeps per-player unit queries (PlayerView.units) at O(own units)
+   * instead of O(all units) — the leaderboard asks for every player's units
+   * in one pass, which is O(players × units) without this.
+   */
+  private _unitsByOwner = new Map<number, UnitView[]>();
+  private _unitsByOwnerStale = true;
 
   // ── FrameData accumulators (renderer-bound state) ─────────────────────
   private trailManager!: TrailManager;
@@ -261,6 +269,9 @@ export class GameView implements GameMap {
   }
 
   public update(gu: GameUpdateViewData) {
+    // Unit set/ownership changes below; rebuild the owner index on demand.
+    this._unitsByOwnerStale = true;
+
     this.toDelete.forEach((id) => {
       this._units.delete(id);
       this._unitStates.delete(id);
@@ -1058,6 +1069,28 @@ export class GameView implements GameMap {
     return Array.from(this._units.values()).filter(
       (u) => u.isActive() && types.includes(u.type()),
     );
+  }
+
+  /**
+   * Active units owned by the given player (smallID). The grouping is built
+   * lazily at most once per tick; the returned array must not be mutated.
+   */
+  unitsOwnedBy(ownerSmallID: number): readonly UnitView[] {
+    if (this._unitsByOwnerStale) {
+      this._unitsByOwnerStale = false;
+      this._unitsByOwner.clear();
+      for (const u of this._units.values()) {
+        if (!u.isActive()) continue;
+        const sid = u.state.ownerID;
+        const arr = this._unitsByOwner.get(sid);
+        if (arr === undefined) {
+          this._unitsByOwner.set(sid, [u]);
+        } else {
+          arr.push(u);
+        }
+      }
+    }
+    return this._unitsByOwner.get(ownerSmallID) ?? [];
   }
   unit(id: number): UnitView | undefined {
     return this._units.get(id);

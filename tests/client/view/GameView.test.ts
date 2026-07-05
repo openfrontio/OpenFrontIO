@@ -771,3 +771,88 @@ describe("GameView.frameData() — renderer contract", () => {
     expect(relationMatrix[3 * relationSize + 1]).toBe(RELATION_NEUTRAL);
   });
 });
+
+describe("GameView.unitsOwnedBy — per-tick owner index", () => {
+  function withUnits(
+    tick: number,
+    units: ReturnType<typeof makeUnitUpdate>[],
+    players: ReturnType<typeof makePlayerUpdate>[] = [],
+  ) {
+    const gu = makeEmptyGu(tick);
+    gu.updates[GameUpdateType.Unit] = units;
+    gu.updates[GameUpdateType.Player] = players;
+    return gu;
+  }
+
+  it("groups active units by owner smallID", () => {
+    const game = makeGameView();
+    game.update(
+      withUnits(1, [
+        makeUnitUpdate({ id: 1, ownerID: 1, unitType: UnitType.City }),
+        makeUnitUpdate({ id: 2, ownerID: 1, unitType: UnitType.Port }),
+        makeUnitUpdate({ id: 3, ownerID: 2, unitType: UnitType.City }),
+      ]),
+    );
+    expect(game.unitsOwnedBy(1).map((u) => u.id())).toEqual([1, 2]);
+    expect(game.unitsOwnedBy(2).map((u) => u.id())).toEqual([3]);
+    expect(game.unitsOwnedBy(99)).toEqual([]);
+  });
+
+  it("excludes inactive units", () => {
+    const game = makeGameView();
+    game.update(
+      withUnits(1, [
+        makeUnitUpdate({ id: 1, ownerID: 1, isActive: true }),
+        makeUnitUpdate({ id: 2, ownerID: 1, isActive: false }),
+      ]),
+    );
+    expect(game.unitsOwnedBy(1).map((u) => u.id())).toEqual([1]);
+  });
+
+  it("reflects ownership changes on the next tick (capture)", () => {
+    const game = makeGameView();
+    game.update(withUnits(1, [makeUnitUpdate({ id: 1, ownerID: 1 })]));
+    expect(game.unitsOwnedBy(1)).toHaveLength(1);
+    expect(game.unitsOwnedBy(2)).toHaveLength(0);
+
+    game.update(withUnits(2, [makeUnitUpdate({ id: 1, ownerID: 2 })]));
+    expect(game.unitsOwnedBy(1)).toHaveLength(0);
+    expect(game.unitsOwnedBy(2)).toHaveLength(1);
+  });
+
+  it("reflects unit death on the tick it happens", () => {
+    const game = makeGameView();
+    game.update(withUnits(1, [makeUnitUpdate({ id: 1, ownerID: 1 })]));
+    expect(game.unitsOwnedBy(1)).toHaveLength(1);
+
+    game.update(
+      withUnits(2, [makeUnitUpdate({ id: 1, ownerID: 1, isActive: false })]),
+    );
+    expect(game.unitsOwnedBy(1)).toHaveLength(0);
+  });
+
+  it("PlayerView.units() filters the owner's units by type", () => {
+    const game = makeGameView();
+    const gu = withUnits(
+      1,
+      [
+        makeUnitUpdate({ id: 1, ownerID: 1, unitType: UnitType.City }),
+        makeUnitUpdate({ id: 2, ownerID: 1, unitType: UnitType.Port }),
+        makeUnitUpdate({ id: 3, ownerID: 1, unitType: UnitType.City }),
+        makeUnitUpdate({ id: 4, ownerID: 2, unitType: UnitType.City }),
+      ],
+      [
+        makePlayerUpdate({ id: "alice", smallID: 1 }),
+        makePlayerUpdate({ id: "bob", smallID: 2 }),
+      ],
+    );
+    game.update(gu);
+
+    const alice = game.player("alice");
+    expect(alice.units(UnitType.City).map((u) => u.id())).toEqual([1, 3]);
+    expect(alice.units().map((u) => u.id())).toEqual([1, 2, 3]);
+    // Returned arrays are copies — mutating them must not corrupt the index.
+    alice.units().pop();
+    expect(alice.units()).toHaveLength(3);
+  });
+});
