@@ -1295,6 +1295,8 @@
     "change_tier_success": "Switched to {tier}.",
     "checkout_failed": "Failed to create checkout session.",
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
+    "confirm_purchase_body": "Buy {item} for {amount, number} {currency}?",
+    "confirm_purchase_title": "Confirm Purchase",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
     "effects": "Effects",
