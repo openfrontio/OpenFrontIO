@@ -984,7 +984,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            Math.floor(100 * this.renderer.uiState.attackRatio),
+            Math.floor(Math.max(100 * this.renderer.uiState.attackRatio, 1)),
             this.myPlayer!.troops(),
           ),
         );
@@ -1144,7 +1144,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            Math.floor(100 * this.renderer.uiState.attackRatio),
+            Math.floor(Math.max(100 * this.renderer.uiState.attackRatio, 1)),
             this.myPlayer!.troops(),
           ),
         );
@@ -1279,7 +1279,7 @@ export class ClientGameRunner {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         tile,
-        Math.floor(100 * this.renderer.uiState.attackRatio),
+        Math.floor(Math.max(100 * this.renderer.uiState.attackRatio, 1)),
         this.myPlayer.troops(),
       ),
     );
