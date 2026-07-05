@@ -102,6 +102,15 @@ export class Executor {
     });
   }
 
+  private applyTroopFactor(
+    troopRatioFactor: number,
+    intent: { troopRatio: number; troopCount: number },
+  ): number {
+    return Math.floor(
+      (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
+    );
+  }
+
   createExec(intent: StampedIntent, troopRatioFactor = 100): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
@@ -113,9 +122,7 @@ export class Executor {
     switch (intent.type) {
       case "attack": {
         return new AttackExecution(
-          Math.floor(
-            (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
-          ),
+          this.applyTroopFactor(troopRatioFactor, intent),
           player,
           intent.targetID,
           null,
@@ -133,9 +140,7 @@ export class Executor {
         return new TransportShipExecution(
           player,
           intent.dst,
-          Math.floor(
-            (troopRatioFactor * intent.troopRatio * intent.troopCount) / 10000,
-          ),
+          this.applyTroopFactor(troopRatioFactor, intent),
         );
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);
