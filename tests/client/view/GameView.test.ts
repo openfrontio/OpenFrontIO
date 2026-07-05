@@ -663,23 +663,21 @@ describe("GameView.frameData() — renderer contract", () => {
     game.update(gu2);
     const ct = game.frameData().changedTiles;
     expect(ct).not.toBeNull();
-    expect(ct!.map((t) => t.ref).sort((a, b) => a - b)).toEqual([3, 5, 9]);
+    expect([...ct!].sort((a, b) => a - b)).toEqual([3, 5, 9]);
   });
 
-  it("changedTiles scratch array is reused across ticks (no per-tick alloc)", () => {
+  it("changedTiles holds only the current tick's refs", () => {
     const game = makeGameView({ width: 4, height: 4 });
     game.update(makeEmptyGu(1)); // first populate (changedTiles = null)
     const gu2 = makeEmptyGu(2);
     gu2.packedTileUpdates = new Uint32Array([1, 0]);
     game.update(gu2);
-    const ct1 = game.frameData().changedTiles;
+    expect(game.frameData().changedTiles).toEqual([1]);
 
     const gu3 = makeEmptyGu(3);
     gu3.packedTileUpdates = new Uint32Array([2, 0]);
     game.update(gu3);
-    const ct2 = game.frameData().changedTiles;
-
-    expect(ct2).toBe(ct1); // same array instance
+    expect(game.frameData().changedTiles).toEqual([2]);
   });
 
   it("frame.units is === gameView.unitStates() (same long-lived map)", () => {

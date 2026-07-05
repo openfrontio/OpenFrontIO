@@ -101,6 +101,10 @@ export class NamePass {
   private stringRow: Uint8Array;
   private cursorRow: Float32Array;
 
+  /** Slots refreshed per updateNames call: index % UPDATE_SLICES === phase. */
+  private static readonly UPDATE_SLICES = 4;
+  private slicePhase = 0;
+
   // Hovered player's small ID (0 = no highlight, matches TerritoryPass).
   private highlightOwnerID = 0;
   // Cursor in world coords — fades names under it (far off-map = no fade).
@@ -338,9 +342,26 @@ export class NamePass {
       }
     }
 
+    // Round-robin time slicing: each call refreshes 1/UPDATE_SLICES of the
+    // slots, spreading the per-player diff work across game ticks (full
+    // refresh every UPDATE_SLICES ticks ≈ 400 ms — under the 500 ms troop
+    // text cadence, and name positions lerp continuously anyway). Slots
+    // without a written name (new player, refreshNames reset) and snap
+    // passes (seek) are always processed so nothing pops in late.
+    const phase = this.slicePhase;
+    this.slicePhase = (phase + 1) % NamePass.UPDATE_SLICES;
+
     for (const [playerID, entry] of names) {
       const slot = this.slots.get(playerID);
       if (!slot) continue;
+
+      if (
+        !snap &&
+        slot.nameLen !== 0 &&
+        slot.index % NamePass.UPDATE_SLICES !== phase
+      ) {
+        continue;
+      }
 
       // Per-player state straight from the caller's map — smallID is the key.
       const ps = players.get(slot.static.smallID);

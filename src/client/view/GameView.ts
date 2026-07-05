@@ -34,7 +34,7 @@ import { computePlayerStatus } from "../render/frame/derive/PlayerStatus";
 import { buildRelationMatrix } from "../render/frame/derive/RelationMatrix";
 import { RailroadCache } from "../render/frame/RailroadCache";
 import { TrailManager } from "../render/frame/TrailManager";
-import type { FrameData, NameEntry, TilePair } from "../render/types";
+import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
@@ -96,7 +96,6 @@ export class GameView implements GameMap {
   /** Long-lived NameEntry map for the renderer's NamePass. */
   private _names = new Map<string, NameEntry>();
   /** Reusable scratch buffers for per-tick deltas. */
-  private readonly _changedTilesScratch: TilePair[] = [];
   private readonly _trailIdsScratch: number[] = [];
   /**
    * The single long-lived FrameData object. Fields are mutated in place each
@@ -175,9 +174,9 @@ export class GameView implements GameMap {
     this.railroadCache = new RailroadCache(mapW, mapH);
 
     // Long-lived FrameData. Most fields are mutable references to long-lived
-    // buffers (tileState, trailState, etc.); some (_changedTilesScratch,
-    // derived arrays) are reused each tick. Properties marked `readonly` on
-    // FrameData only prevent reassignment, not mutation through the reference.
+    // buffers (tileState, trailState, etc.); changedTiles points at this
+    // tick's updatedTiles. Properties marked `readonly` on FrameData only
+    // prevent reassignment, not mutation through the reference.
     // events: fresh arrays we own; cleared and repopulated each tick.
     this._frame = {
       tick: 0,
@@ -193,7 +192,7 @@ export class GameView implements GameMap {
         conquestEvents: [],
         bonusEvents: [],
       },
-      changedTiles: this._changedTilesScratch,
+      changedTiles: null,
       railroadDirty: false,
       revealedRailTiles: this.railroadCache.revealedRailTiles,
       trailDirtyRowMin: 0,
@@ -448,7 +447,12 @@ export class GameView implements GameMap {
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
-      unit.lastPos = unit.lastPos.slice(-1);
+      // Only trim when a move appended a position — slicing a ≤1-element
+      // array would allocate an identical array per unit per tick, and most
+      // units (structures) never move.
+      if (unit.lastPos.length > 1) {
+        unit.lastPos = unit.lastPos.slice(-1);
+      }
     }
     gu.updates[GameUpdateType.Unit].forEach((update) => {
       let unit = this._units.get(update.id);
@@ -523,12 +527,6 @@ export class GameView implements GameMap {
       this._unitStates as Map<number, import("../render/types").UnitState>,
       this._trailIdsScratch,
     );
-
-    // Changed-tile delta refs (zero-copy: state field unused in live mode).
-    this._changedTilesScratch.length = 0;
-    for (let i = 0; i < this.updatedTiles.length; i++) {
-      this._changedTilesScratch.push({ ref: this.updatedTiles[i], state: 0 });
-    }
 
     // Names map — rebuilt only when a placement record arrived or a player
     // was added (nameData values cannot change between those ticks). Entry
@@ -619,7 +617,9 @@ export class GameView implements GameMap {
       f.structuresDirty = true; // force initial structure upload
       this._firstPopulate = false;
     } else {
-      f.changedTiles = this._changedTilesScratch;
+      // Live reference to this tick's changed refs — consumers copy what
+      // they keep (TerritoryPass buckets them synchronously in the upload).
+      f.changedTiles = this.updatedTiles;
     }
 
     // Reset transient flags for next tick.

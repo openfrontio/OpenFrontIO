@@ -12,7 +12,6 @@
  * uploads across render frames.
  */
 
-import type { TilePair } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
@@ -229,11 +228,14 @@ export class TerritoryPass {
    * Stable per-ref hash means repeated updates to the same tile stay in
    * arrival order in the same bucket — last write wins when drained.
    */
-  applyLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  applyLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     const N = this.nBuckets;
     const buckets = this.dripBuckets;
     for (let i = 0; i < changedTiles.length; i++) {
-      const ref = changedTiles[i].ref;
+      const ref = changedTiles[i];
       const b = ((ref * 2654435761) >>> 0) % N;
       buckets[b].push(ref, tileState[ref]);
     }
