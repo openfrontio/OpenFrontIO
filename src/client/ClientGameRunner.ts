@@ -70,10 +70,13 @@ import {
   applyGraphicsOverrides,
   createRenderSettings,
   deepAssign,
+  GLUnavailableError,
   MapRenderer,
   preloadAtlasData,
   renderDpr,
   type RenderSettings,
+  showGLGate,
+  trackGLInit,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
@@ -188,6 +191,12 @@ export function joinLobby(
           if (startingModal) {
             startingModal.classList.add("hidden");
           }
+          // No GPU-accelerated WebGL2: gate with an actionable message rather
+          // than the generic crash modal (the game would crawl at ~1fps).
+          if (e instanceof GLUnavailableError) {
+            showGLGate(e.glStatus);
+            return;
+          }
           showErrorModal(
             e.message,
             e.stack,
@@ -266,12 +275,20 @@ function createWebGLView(
   const mapWidth = gameMap.width();
   const mapHeight = gameMap.height();
 
-  const terrainBytes = new Uint8Array(mapWidth * mapHeight);
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-      terrainBytes[y * mapWidth + x] = gameMap.terrainByte(gameMap.ref(x, y));
+  // Provider, not a buffer: per-tile terrain bytes are map-sized (8 MB on
+  // the giant map), so consumers regenerate them on demand (initial bake,
+  // context restore, theme change) instead of anyone retaining a copy.
+  // gameMap is updated live by water-nuke conversions, so a regenerated
+  // array always reflects them.
+  const terrainSource = (): Uint8Array => {
+    const terrainBytes = new Uint8Array(mapWidth * mapHeight);
+    for (let y = 0; y < mapHeight; y++) {
+      for (let x = 0; x < mapWidth; x++) {
+        terrainBytes[y * mapWidth + x] = gameMap.terrainByte(gameMap.ref(x, y));
+      }
     }
-  }
+    return terrainBytes;
+  };
 
   const glCanvas = createCanvas();
   glCanvas.id = "webgl-debug-canvas";
@@ -296,26 +313,53 @@ function createWebGLView(
   };
 
   const palette = new Float32Array(4096 * 2 * 4);
-  const view = new MapRenderer(
-    glCanvas,
-    {
-      mapWidth,
-      mapHeight,
-      unitTypes: [...ALL_UNIT_TYPES],
-      players: [],
-      // Pre-allocate renderer textures for up to 1024 players. We add players
-      // dynamically via view.addPlayers() as they come in from the simulation,
-      // but the NamePass / palette / relation matrix all need a static upper
-      // bound at construction time.
-      maxPlayers: 1024,
-    },
-    terrainBytes,
-    palette,
-    config,
-    settings,
-    captureRaf,
-    captureCaf,
-  );
+  // Log the GPU init result on every session so we can size the real % of
+  // users on software/missing WebGL2. MapRenderer constructs the GL context;
+  // a non-accelerated context throws GLUnavailableError (handled by the
+  // game-start catch, which shows the gate).
+  let view: MapRenderer;
+  try {
+    view = new MapRenderer(
+      glCanvas,
+      {
+        mapWidth,
+        mapHeight,
+        unitTypes: [...ALL_UNIT_TYPES],
+        players: [],
+        // Pre-allocate renderer textures for up to 1024 players. We add players
+        // dynamically via view.addPlayers() as they come in from the simulation,
+        // but the NamePass / palette / relation matrix all need a static upper
+        // bound at construction time.
+        maxPlayers: 1024,
+      },
+      terrainSource,
+      palette,
+      config,
+      settings,
+      captureRaf,
+      captureCaf,
+    );
+  } catch (e) {
+    if (e instanceof GLUnavailableError) {
+      trackGLInit(e.glStatus, e.renderer);
+    }
+    // The renderer never took ownership of the canvas, so remove it here —
+    // otherwise it lingers in the DOM holding a (possibly software) GL context.
+    glCanvas.remove();
+    throw e;
+  }
+  // Fingerprint-capped context (#4357): the game runs, but the map may render
+  // with black areas. Warn with fix instructions; the player can continue.
+  if (view.glLimited) {
+    trackGLInit(
+      "limited",
+      view.glLimited.renderer,
+      view.glLimited.maxTextureSize,
+    );
+    showGLGate("limited");
+  } else {
+    trackGLInit("ok", "");
+  }
 
   (window as unknown as { __webglView?: unknown }).__webglView = view;
 

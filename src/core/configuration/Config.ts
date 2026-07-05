@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
   Game,
@@ -80,6 +81,25 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
+// Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
+// Times in seconds. The required map share rises in waves (levels + times in
+// DoomsdayClock.ts, chosen by `speed`). A side caught below the bar gets a
+// warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed to zero: the
+// warn (10s) + the linear drain (~55s from full troops, sooner with fewer troops
+// or a shrinking territory) make ~1 minute from caught to wiped out.
+const DOOMSDAY_CLOCK_DEFAULTS = {
+  enabled: false,
+  speed: "normal" as DoomsdayClockSpeed,
+  warnSeconds: 10, // cooldown before decay after the bar catches you
+  drainStartPercent: 2, // starts bleeding at once (already beats troop income)
+  drainMaxPercent: 6,
+  drainRampSeconds: 50, // ramps LINEARLY to the max over this long
+  // Warships bleed on the same start + ramp but to a much higher ceiling than
+  // troops, so a fleet at full attrition sinks in ~2s (50% of a ship's max
+  // health per second) instead of riding out the gentle troop rate. Ships only.
+  warshipDrainMaxPercent: 50,
+};
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -100,6 +120,22 @@ export class Config {
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
+  }
+
+  // Doomsday Clock config, resolved against defaults. One read per tick.
+  doomsdayClockConfig(): typeof DOOMSDAY_CLOCK_DEFAULTS {
+    const c = this._gameConfig.doomsdayClock;
+    const d = DOOMSDAY_CLOCK_DEFAULTS;
+    return {
+      enabled: c?.enabled ?? d.enabled,
+      speed: c?.speed ?? d.speed,
+      // Drain/warn tuning is internal (not wire-configurable): always defaults.
+      warnSeconds: d.warnSeconds,
+      drainStartPercent: d.drainStartPercent,
+      drainMaxPercent: d.drainMaxPercent,
+      drainRampSeconds: d.drainRampSeconds,
+      warshipDrainMaxPercent: d.warshipDrainMaxPercent,
+    };
   }
   spawnImmunityDuration(): Tick {
     return (
@@ -242,6 +278,9 @@ export class Config {
   }
   trainStationMaxRange(): number {
     return 110;
+  }
+  railroadMaxSize(): number {
+    return this.trainStationMaxRange() * 1.4142;
   }
 
   tradeShipGold(dist: number, player: Player | PlayerView): Gold {
@@ -916,8 +955,10 @@ export class Config {
     return 5;
   }
 
-  warshipRetreatHealthThreshold(): number {
-    return 750;
+  /** Health at or below which a warship retreats to repair, as a percent of its
+   *  (veterancy-adjusted) max health, so the threshold scales with max health. */
+  warshipRetreatHealthPercent(): number {
+    return 75;
   }
 
   warshipPassiveHealing(): number {
@@ -930,6 +971,35 @@ export class Config {
 
   warshipPortSwitchThreshold(): number {
     return 0.75;
+  }
+
+  // --- Warship veterancy ---
+
+  /** Maximum veterancy level a warship can reach. */
+  warshipMaxVeterancy(): number {
+    return 3;
+  }
+
+  /** Max-health boost per veterancy level, as an integer percent of base max
+   *  health. Integer-only to keep src/core deterministic (no float constants). */
+  warshipVeterancyHealthBonus(): number {
+    return 20;
+  }
+
+  /** Shell-damage boost per veterancy level, as an integer percent of the
+   *  rolled damage. Integer-only to keep src/core deterministic. */
+  warshipVeterancyShellDamageBonus(): number {
+    return 20;
+  }
+
+  /** Transport ships a warship must destroy to gain one veterancy level. */
+  warshipVeterancyTransportKills(): number {
+    return 10;
+  }
+
+  /** Trade ships a warship must capture to gain one veterancy level. */
+  warshipVeterancyTradeCaptures(): number {
+    return 25;
   }
 
   defensePostShellAttackRate(): number {

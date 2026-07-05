@@ -49,9 +49,13 @@ export class GameManager {
     return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
   }
 
+  wasAdmitted(gameID: GameID, persistentID: string): boolean {
+    return this.games.get(gameID)?.wasAdmitted(persistentID) ?? false;
+  }
+
   createGame(
     id: GameID,
-    gameConfig: GameConfig | undefined,
+    gameConfig: Partial<GameConfig> | undefined,
     creatorPersistentID?: string,
     startsAt?: number,
     publicGameType?: PublicGameType,

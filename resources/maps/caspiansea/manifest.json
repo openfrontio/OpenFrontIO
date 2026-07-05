@@ -1,0 +1,100 @@
+{
+  "categories": ["asia", "new"],
+  "id": "CaspianSea",
+  "map": {
+    "height": 1728,
+    "num_land_tiles": 951192,
+    "width": 1008
+  },
+  "map16x": {
+    "height": 432,
+    "num_land_tiles": 58158,
+    "width": 252
+  },
+  "map4x": {
+    "height": 864,
+    "num_land_tiles": 235925,
+    "width": 504
+  },
+  "multiplayer_frequency": 5,
+  "name": "Caspian Sea",
+  "nations": [
+    {
+      "coordinates": [927, 426],
+      "flag": "kz",
+      "name": "Mangystau"
+    },
+    {
+      "coordinates": [914, 1270],
+      "flag": "tm",
+      "name": "Turkmenistan"
+    },
+    {
+      "coordinates": [574, 24],
+      "flag": "kz",
+      "name": "Atyrau"
+    },
+    {
+      "coordinates": [633, 678],
+      "flag": "kz",
+      "name": "Aktau"
+    },
+    {
+      "coordinates": [807, 1705],
+      "flag": "ir",
+      "name": "Tehran"
+    },
+    {
+      "coordinates": [398, 1647],
+      "flag": "ir",
+      "name": "Gilan"
+    },
+    {
+      "coordinates": [69, 1350],
+      "flag": "am",
+      "name": "Armenia"
+    },
+    {
+      "coordinates": [128, 1658],
+      "flag": "ir",
+      "name": "Tabriz"
+    },
+    {
+      "coordinates": [302, 1154],
+      "flag": "az",
+      "name": "Azerbaijan"
+    },
+    {
+      "coordinates": [203, 91],
+      "flag": "ru",
+      "name": "Astrakhan"
+    },
+    {
+      "coordinates": [96, 744],
+      "flag": "ru",
+      "name": "Dagestan"
+    },
+    {
+      "coordinates": [21, 310],
+      "flag": "ru",
+      "name": "Kalmykia"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1728,
+        "width": 504,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1728,
+        "width": 504,
+        "x": 504,
+        "y": 0
+      }
+    ]
+  },
+  "translation_key": "map.caspiansea"
+}

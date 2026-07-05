@@ -8,6 +8,7 @@ import {
   translateText,
 } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
+import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -24,7 +25,6 @@ import {
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -80,6 +80,10 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private doomsdayClock: boolean = false;
+  @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
+  @state() private anonymizeNames: boolean = false;
+  @state() private nameReveals: string[] = [];
   @state() private whitelistEnabled: boolean = false;
   @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
@@ -415,8 +419,17 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.disableAlliances,
                   },
                   {
+                    labelKey: "host_modal.anonymous_players",
+                    checked: this.anonymizeNames,
+                  },
+                  {
                     labelKey: "host_modal.water_nukes",
                     checked: this.waterNukes,
+                  },
+                  {
+                    labelKey: "host_modal.doomsday_clock",
+                    checked: this.doomsdayClock,
+                    doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
                   {
                     labelKey: "host_modal.host_cheats",
@@ -448,6 +461,8 @@ export class HostLobbyModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
+            @doomsday-clock-speed-selected=${this
+              .handleConfigDoomsdayClockSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -467,6 +482,10 @@ export class HostLobbyModal extends BaseModal {
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            .onToggleNameReveal=${(clientID: string) =>
+              this.toggleNameReveal(clientID)}
+            .nameReveals=${this.nameReveals}
+            .anonymizeNames=${this.anonymizeNames}
           ></lobby-player-view>
         </div>
 
@@ -487,26 +506,24 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.startLobbyUpdates();
-    this.lobbyId = generateID();
-    // Note: clientID will be assigned by server when we join the lobby
-    // lobbyCreatorClientID stays empty until then
-
-    // Copy immediately so the host can share the link without waiting for the
-    // server. If lobby creation fails, clear the clipboard to avoid a dead link.
-    void this.constructUrl().then(async (url) => {
-      this.updateLobbyHistory(url);
-      await this.updateComplete;
-      void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
-    });
+    // The server mints the game id, so we don't know it until createLobby
+    // resolves. clientID is assigned by the server when we join the lobby.
 
     // Pass auth token for creator identification (server extracts persistentID from it)
-    createLobby(this.lobbyId)
+    createLobby()
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
         crazyGamesSDK.showInviteButton(this.lobbyId);
+
+        // Now that we have the id, build and copy the share link. If lobby
+        // creation fails, the catch below clears the clipboard.
+        const url = await this.constructUrl();
+        this.updateLobbyHistory(url);
+        await this.updateComplete;
+        void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
       })
       .then(() => {
         this.dispatchEvent(
@@ -524,11 +541,9 @@ export class HostLobbyModal extends BaseModal {
         // Clear clipboard so the host doesn't accidentally share a dead link
         void navigator.clipboard.writeText("").catch(() => {});
       });
-    if (this.modalEl) {
-      this.modalEl.onClose = () => {
-        this.close();
-      };
-    }
+    // BaseModal.firstUpdated() owns modalEl.onClose so the o-modal close path
+    // (backdrop / close button) runs confirmBeforeClose(). Don't override it
+    // here — doing so would bypass the leave-lobby confirmation.
     this.loadNationCount();
   }
 
@@ -545,8 +560,8 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  public confirmBeforeClose(): boolean {
-    return confirm(translateText("host_modal.leave_confirmation"));
+  public confirmBeforeClose(): boolean | Promise<boolean> {
+    return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {
@@ -598,6 +613,10 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.doomsdayClock = false;
+    this.doomsdayClockSpeed = "normal";
+    this.anonymizeNames = false;
+    this.nameReveals = [];
     this.whitelistEnabled = false;
     this.allowedPublicIds = "";
     this.waterNukes = false;
@@ -645,6 +664,12 @@ export class HostLobbyModal extends BaseModal {
     void this.handleDifficultySelection(customEvent.detail.difficulty);
   };
 
+  private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: DoomsdayClockSpeed }>;
+    this.doomsdayClockSpeed = customEvent.detail.speed;
+    this.putGameConfig();
+  };
+
   private handleConfigGameModeSelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ mode: GameMode }>;
     void this.handleGameModeSelection(customEvent.detail.mode);
@@ -688,8 +713,16 @@ export class HostLobbyModal extends BaseModal {
         this.disableAlliances = checked;
         this.putGameConfig();
         break;
+      case "host_modal.anonymous_players":
+        this.anonymizeNames = checked;
+        this.putGameConfig();
+        break;
       case "host_modal.water_nukes":
         this.waterNukes = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.doomsday_clock":
+        this.doomsdayClock = checked;
         this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -1075,6 +1108,14 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
             disableAlliances: this.disableAlliances || null,
+            // Send {enabled:false} (not undefined) when off: undefined is dropped
+            // by JSON.stringify, so the server's "!== undefined" merge would keep a
+            // previously-enabled config and the toggle could never turn off.
+            doomsdayClock: this.doomsdayClock
+              ? { enabled: true, speed: this.doomsdayClockSpeed }
+              : { enabled: false },
+            anonymizeNames: this.anonymizeNames,
+            nameReveals: this.nameReveals,
             allowedPublicIds: this.whitelistEnabled
               ? (this.parseAllowedPublicIds() ?? [])
               : [],
@@ -1100,6 +1141,13 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  private toggleNameReveal(clientID: string) {
+    this.nameReveals = this.nameReveals.includes(clientID)
+      ? this.nameReveals.filter((c) => c !== clientID)
+      : [...this.nameReveals, clientID];
+    this.putGameConfig();
   }
 
   private async toggleGameStartTimer() {
@@ -1149,21 +1197,20 @@ export class HostLobbyModal extends BaseModal {
   }
 }
 
-async function createLobby(gameID: string): Promise<GameInfo> {
+async function createLobby(): Promise<GameInfo> {
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
   try {
-    const response = await fetch(
-      `/${ClientEnv.workerPath(gameID)}/api/create_game/${gameID}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+    // No worker prefix and no id: nginx (prod) / the vite dev proxy randomly
+    // routes to a worker, which mints a self-owned id and returns it.
+    const response = await fetch(`/api/create_game`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-    );
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

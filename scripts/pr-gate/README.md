@@ -5,10 +5,11 @@ Deterministic GitHub Action that auto-closes PRs that don't follow the project's
 ## Gate logic (first match wins)
 
 1. **Maintainer bypass** — PR carries the `bypass-pr-check` label → pass. Apply this label and reopen if the gate closed something you wanted through.
-2. **Org/repo member bypass** — `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR` → pass.
-3. **Approved-work bypass** — PR body links an issue (via `Closes #N` / `Fixes #N` / `Resolves #N`) that carries the `approved` label, and the PR author is in the issue's assignees → pass.
-4. **Small-fix bypass** — `additions + deletions ≤ 50` → pass + apply `small-fix` label.
-5. **Otherwise** — apply `auto-closed-needs-issue` label, post rejection comment, close.
+2. **Trusted-bot bypass** — PR author is a trusted bot (e.g. `dependabot[bot]`) → pass. List is in `TRUSTED_BOT_AUTHORS`.
+3. **Org/repo member bypass** — `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR` → pass.
+4. **Approved-work bypass** — PR body links an issue (via `Closes #N` / `Fixes #N` / `Resolves #N`) that carries the `approved` label, and the PR author is in the issue's assignees → pass.
+5. **Small-fix bypass** — `additions + deletions ≤ 50` → pass + apply `small-fix` label.
+6. **Otherwise** — apply `auto-closed-needs-issue` label, post rejection comment, close.
 
 ## Local testing
 

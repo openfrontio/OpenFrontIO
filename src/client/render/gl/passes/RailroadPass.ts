@@ -108,11 +108,23 @@ export class RailroadPass {
   private mapH: number;
   private settings: RenderSettings;
 
-  private cpuRailroadState: Uint8Array;
+  /**
+   * Reference to the caller-owned railroad state (RailroadCache's array;
+   * stable identity, mutated in place). The pass keeps no copy — the array
+   * must stay current until the flush. Null until the first upload.
+   */
+  private liveRailroadRef: Uint8Array | null = null;
   private railroadDirty = false;
 
-  private cpuGhostRailState: Uint8Array;
-  private ghostRailDirty = false;
+  /**
+   * Current ghost overlay content, sparse: tile ref → texel value (1-6 =
+   * orientation, 7 = overlap highlight). Ghost paths cover at most a few
+   * thousand tiles, so tracking them beats a full-map array + full-map
+   * texture upload per preview change.
+   */
+  private ghostTiles = new Map<number, number>();
+  /** Pending ghost texel writes, interleaved [ref, value, …]. */
+  private ghostOps: number[] = [];
   private ghostOwnerID = 0;
 
   private localPlayerID = 0;
@@ -132,8 +144,6 @@ export class RailroadPass {
     this.tileTex = tileTex;
     this.paletteTex = paletteTex;
     this.settings = settings;
-    this.cpuRailroadState = new Uint8Array(mapW * mapH);
-    this.cpuGhostRailState = new Uint8Array(mapW * mapH);
 
     this.program = createProgram(
       gl,
@@ -187,14 +197,14 @@ export class RailroadPass {
       filter: gl.NEAREST,
     });
 
-    // R8UI railroad texture
+    // R8UI railroad texture (null data = zero-initialized per the WebGL spec)
     this.railroadTex = createTexture2D(gl, {
       width: mapW,
       height: mapH,
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: this.cpuRailroadState,
+      data: null,
       filter: gl.NEAREST,
     });
 
@@ -205,7 +215,7 @@ export class RailroadPass {
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: this.cpuGhostRailState,
+      data: null,
       filter: gl.NEAREST,
     });
 
@@ -213,7 +223,7 @@ export class RailroadPass {
   }
 
   uploadRailroadState(railroadState: Uint8Array): void {
-    this.cpuRailroadState.set(railroadState);
+    this.liveRailroadRef = railroadState;
     this.railroadDirty = true;
   }
 
@@ -257,7 +267,7 @@ export class RailroadPass {
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
-    this.cpuGhostRailState.fill(0);
+    const next = new Map<number, number>();
 
     if (data) {
       const maxRef = this.mapW * this.mapH;
@@ -268,7 +278,7 @@ export class RailroadPass {
         const tiles = this.computePathOrientations(path);
         for (const t of tiles) {
           if (t.ref >= 0 && t.ref < maxRef) {
-            this.cpuGhostRailState[t.ref] = t.type + 1;
+            next.set(t.ref, t.type + 1);
           }
         }
       }
@@ -277,7 +287,7 @@ export class RailroadPass {
       // overlappingRailroads contains resolved tile refs (not rail IDs)
       for (const ref of data.overlappingRailroads) {
         if (ref >= 0 && ref < maxRef) {
-          this.cpuGhostRailState[ref] = 7;
+          next.set(ref, 7);
         }
       }
 
@@ -286,13 +296,25 @@ export class RailroadPass {
       this.ghostOwnerID = 0;
     }
 
-    this.ghostRailDirty = true;
+    // Queue texel writes for the diff: clear tiles that left the ghost,
+    // (re)write tiles whose value is new or changed.
+    for (const ref of this.ghostTiles.keys()) {
+      if (!next.has(ref)) this.ghostOps.push(ref, 0);
+    }
+    for (const [ref, value] of next) {
+      if (this.ghostTiles.get(ref) !== value) this.ghostOps.push(ref, value);
+    }
+    this.ghostTiles = next;
   }
 
   /** Draw the railroad overlay. Must be called with alpha blending enabled. */
   draw(cameraMatrix: Float32Array, zoom: number): void {
     const gl = this.gl;
     const rs = this.settings.railroad;
+
+    // Flush queued ghost texel writes even when faded out, so the op queue
+    // can't grow unboundedly while the player previews at low zoom.
+    this.flushGhostOps();
 
     // Fade out as zoom drops below railMinZoom; fully invisible at railMinZoom - railFadeRange
     const fadeRange = Math.max(rs.railFadeRange, 0);
@@ -305,8 +327,8 @@ export class RailroadPass {
         : Math.min(1, Math.max(0, (zoom - fadeStart) / fadeRange));
     if (fade <= 0) return;
 
-    // Flush CPU railroad state → GPU
-    if (this.railroadDirty) {
+    // Flush railroad state → GPU
+    if (this.railroadDirty && this.liveRailroadRef !== null) {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.railroadTex);
       gl.texSubImage2D(
@@ -318,27 +340,9 @@ export class RailroadPass {
         this.mapH,
         gl.RED_INTEGER,
         gl.UNSIGNED_BYTE,
-        this.cpuRailroadState,
+        this.liveRailroadRef,
       );
       this.railroadDirty = false;
-    }
-
-    // Flush ghost railroad state → GPU
-    if (this.ghostRailDirty) {
-      gl.activeTexture(gl.TEXTURE4);
-      gl.bindTexture(gl.TEXTURE_2D, this.ghostRailTex);
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        this.mapW,
-        this.mapH,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        this.cpuGhostRailState,
-      );
-      this.ghostRailDirty = false;
     }
 
     gl.useProgram(this.program);
@@ -376,6 +380,39 @@ export class RailroadPass {
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  /**
+   * Apply queued ghost texel writes to the ghost texture, one texel per
+   * texSubImage2D. Ghost diffs are path-sized (at most a few thousand
+   * texels), far cheaper than the full-map upload a dense mirror needs.
+   */
+  private flushGhostOps(): void {
+    const ops = this.ghostOps;
+    if (ops.length === 0) return;
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this.ghostRailTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    const scratch = new Uint8Array(1);
+    for (let i = 0; i < ops.length; i += 2) {
+      const ref = ops[i];
+      const x = ref % this.mapW;
+      const y = (ref - x) / this.mapW;
+      scratch[0] = ops[i + 1];
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        x,
+        y,
+        1,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        scratch,
+      );
+    }
+    ops.length = 0;
   }
 
   // ---- Rail orientation computation ----

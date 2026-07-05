@@ -6,17 +6,18 @@ import { Cosmetics } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
+import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  groupCosmeticVariants,
   purchaseCosmetic,
   resolveCosmetics,
-  SUBSCRIPTIONS_ENABLED,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
-type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
+type StoreTab = "patterns" | "flags" | "effects" | "packs" | "subscriptions";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -33,16 +34,10 @@ export class StoreModal extends BaseModal {
     return {
       tabs: [
         { key: "packs", label: translateText("store.packs") },
-        ...(SUBSCRIPTIONS_ENABLED
-          ? [
-              {
-                key: "subscriptions",
-                label: translateText("store.subscriptions"),
-              },
-            ]
-          : []),
+        { key: "subscriptions", label: translateText("store.subscriptions") },
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
+        { key: "effects", label: translateText("store.effects") },
       ],
     };
   }
@@ -92,14 +87,17 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
 
+    // Collapse colour-palette variants of the same pattern into one tile; the
+    // variants become clickable colour swatches on the cosmetic-button.
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${items.map(
-          (r) => html`
+        ${groupCosmeticVariants(items).map(
+          (group) => html`
             <cosmetic-button
-              .resolved=${r}
+              .resolved=${group[0]}
+              .variants=${group}
               .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
@@ -144,6 +142,18 @@ export class StoreModal extends BaseModal {
         )}
       </div>
     `;
+  }
+
+  private renderEffectGrid(): TemplateResult {
+    // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
+    // type's grid. Tabs are always present, even when a type has nothing to buy.
+    return html`<effects-grid
+      mode="purchase"
+      tabbed
+      .cosmetics=${this.cosmetics}
+      .userMeResponse=${this.userMeResponse}
+      .affiliateCode=${this.affiliateCode}
+    ></effects-grid>`;
   }
 
   private renderPackGrid(): TemplateResult {
@@ -230,6 +240,8 @@ export class StoreModal extends BaseModal {
         return this.renderPatternGrid();
       case "flags":
         return this.renderFlagGrid();
+      case "effects":
+        return this.renderEffectGrid();
       case "subscriptions":
         return this.renderSubscriptionGrid();
       case "packs":
@@ -248,6 +260,7 @@ export class StoreModal extends BaseModal {
         (r.type === "pattern" ||
           r.type === "skin" ||
           r.type === "flag" ||
+          r.type === "effect" ||
           r.type === "pack") &&
         r.relationship === "purchasable",
     );
@@ -264,10 +277,11 @@ export class StoreModal extends BaseModal {
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${items.map(
-          (r) => html`
+        ${groupCosmeticVariants(items).map(
+          (group) => html`
             <cosmetic-button
-              .resolved=${r}
+              .resolved=${group[0]}
+              .variants=${group}
               .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,

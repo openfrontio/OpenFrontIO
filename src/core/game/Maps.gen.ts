@@ -25,7 +25,9 @@ export enum GameMapType {
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
+  CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
+  China = "China", // map-generator/assets/maps/china/info.json
   ChoppingBlock = "Chopping Block", // map-generator/assets/maps/choppingblock/info.json
   Conakry = "Conakry", // map-generator/assets/maps/conakry/info.json
   DanishStraits = "Danish Straits", // map-generator/assets/maps/danishstraits/info.json
@@ -55,6 +57,7 @@ export enum GameMapType {
   Korea = "Korea", // map-generator/assets/maps/korea/info.json
   Labyrinth = "Labyrinth", // map-generator/assets/maps/labyrinth/info.json
   Lemnos = "Lemnos", // map-generator/assets/maps/lemnos/info.json
+  Levant = "Levant", // map-generator/assets/maps/levant/info.json
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
@@ -86,6 +89,7 @@ export enum GameMapType {
   Svalmel = "Svalmel", // map-generator/assets/maps/svalmel/info.json
   TaiwanStrait = "Taiwan Strait", // map-generator/assets/maps/taiwanstrait/info.json
   TheBox = "The Box", // map-generator/assets/maps/thebox/info.json
+  TierraDelFuego = "Tierra Del Fuego", // map-generator/assets/maps/tierradelfuego/info.json
   Titan = "Titan", // map-generator/assets/maps/titan/info.json
   Tourney1 = "Tourney 2 Teams", // map-generator/assets/maps/tourney1/info.json
   Tourney2 = "Tourney 3 Teams", // map-generator/assets/maps/tourney2/info.json
@@ -93,6 +97,7 @@ export enum GameMapType {
   Tourney4 = "Tourney 8 Teams", // map-generator/assets/maps/tourney4/info.json
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
+  UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
@@ -115,6 +120,7 @@ export type MapCategory =
   | "south_america"
   | "oceania"
   | "antarctica"
+  | "countries"
   | "cosmic"
   | "fictional"
   | "arcade"
@@ -133,6 +139,7 @@ export const mapCategoryOrder: readonly MapCategory[] = [
   "south_america",
   "oceania",
   "antarctica",
+  "countries",
   "cosmic",
   "fictional",
   "arcade",
@@ -319,11 +326,25 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 5,
   },
   {
+    id: "CaspianSea",
+    type: GameMapType.CaspianSea,
+    translationKey: "map.caspiansea",
+    categories: ["asia", "new"],
+    multiplayerFrequency: 5,
+  },
+  {
     id: "Caucasus",
     type: GameMapType.Caucasus,
     translationKey: "map.caucasus",
     categories: ["europe", "asia"],
     multiplayerFrequency: 5,
+  },
+  {
+    id: "China",
+    type: GameMapType.China,
+    translationKey: "map.china",
+    categories: ["asia", "countries", "new"],
+    multiplayerFrequency: 8,
   },
   {
     id: "ChoppingBlock",
@@ -535,6 +556,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lemnos",
     categories: ["europe"],
     multiplayerFrequency: 3,
+  },
+  {
+    id: "Levant",
+    type: GameMapType.Levant,
+    translationKey: "map.levant",
+    categories: ["asia", "new"],
+    multiplayerFrequency: 5,
   },
   {
     id: "Lisbon",
@@ -761,6 +789,13 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 3,
   },
   {
+    id: "TierraDelFuego",
+    type: GameMapType.TierraDelFuego,
+    translationKey: "map.tierradelfuego",
+    categories: ["south_america", "new"],
+    multiplayerFrequency: 5,
+  },
+  {
     id: "Titan",
     type: GameMapType.Titan,
     translationKey: "map.titan",
@@ -808,7 +843,14 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.TwoLakes,
     translationKey: "map.twolakes",
     categories: ["europe"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 4,
+  },
+  {
+    id: "UnitedStates",
+    type: GameMapType.UnitedStates,
+    translationKey: "map.unitedstates",
+    categories: ["north_america", "new", "countries"],
+    multiplayerFrequency: 9,
   },
   {
     id: "Venice",

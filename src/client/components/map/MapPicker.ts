@@ -71,6 +71,17 @@ export class MapPicker extends LitElement {
     this.expandedCategories = expanded;
   }
 
+  private get allCategories(): MapCategory[] {
+    return mapCategoryOrder.filter((categoryKey) => categoryKey !== "featured");
+  }
+
+  private toggleExpandAll() {
+    this.expandedCategories =
+      this.expandedCategories.size > 0
+        ? new Set()
+        : new Set(this.allCategories);
+  }
+
   private preventImageDrag(event: DragEvent) {
     event.preventDefault();
   }
@@ -183,11 +194,42 @@ export class MapPicker extends LitElement {
 
   private renderAllTab() {
     return html`<div class="space-y-3">
-      ${mapCategoryOrder
-        .filter((categoryKey) => categoryKey !== "featured")
-        .map((categoryKey) =>
-          this.renderCategoryBar(categoryKey, mapsInCategory(categoryKey)),
-        )}
+      ${this.allCategories.map((categoryKey) =>
+        this.renderCategoryBar(categoryKey, mapsInCategory(categoryKey)),
+      )}
+    </div>`;
+  }
+
+  private renderExpandToggle() {
+    const anyExpanded = this.expandedCategories.size > 0;
+    return html`<div
+      class="shrink-0 rounded-xl border border-white/10 bg-black/20 p-1"
+    >
+      <button
+        type="button"
+        aria-expanded=${anyExpanded}
+        title=${anyExpanded
+          ? translateText("map_component.collapse_all")
+          : translateText("map_component.expand_all")}
+        @click=${() => this.toggleExpandAll()}
+        class="h-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white/60 hover:text-white transition-all active:scale-95"
+      >
+        <svg
+          class="w-3 h-3 shrink-0 transition-transform duration-200 ${anyExpanded
+            ? "rotate-180"
+            : ""}"
+          viewBox="0 0 12 12"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M2 4l4 5 4-5z" />
+        </svg>
+        <span class="hidden sm:inline">
+          ${anyExpanded
+            ? translateText("map_component.collapse_all")
+            : translateText("map_component.expand_all")}
+        </span>
+      </button>
     </div>`;
   }
 
@@ -271,24 +313,25 @@ export class MapPicker extends LitElement {
     const isSearching = this.searchQuery.trim().length > 0;
     return html`
       <div class="space-y-8">
-        <div class="w-full">
+        <div class="w-full flex items-center gap-2">
           ${isSearching
             ? null
             : html`<div
-                role="tablist"
-                aria-label="${translateText("map.map")}"
-                class="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
-              >
-                ${this.renderTabButton(
-                  "featured",
-                  translateText("map.featured"),
-                )}
-                ${this.renderTabButton("all", translateText("map.all"))}
-                ${this.renderTabButton(
-                  "favorites",
-                  translateText("map.favorites"),
-                )}
-              </div>`}
+                  role="tablist"
+                  aria-label="${translateText("map.map")}"
+                  class="flex-1 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+                >
+                  ${this.renderTabButton(
+                    "featured",
+                    translateText("map.featured"),
+                  )}
+                  ${this.renderTabButton("all", translateText("map.all"))}
+                  ${this.renderTabButton(
+                    "favorites",
+                    translateText("map.favorites"),
+                  )}
+                </div>
+                ${this.activeTab === "all" ? this.renderExpandToggle() : null}`}
         </div>
         ${isSearching ? this.renderSearchResults() : this.renderActiveTab()}
         <div

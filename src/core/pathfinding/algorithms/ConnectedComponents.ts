@@ -3,7 +3,8 @@
 import { GameMap, TileRef } from "../../game/GameMap";
 import { DebugSpan } from "../../utilities/DebugSpan";
 
-export const LAND_MARKER = 0xff; // Must fit in Uint8Array
+export const LAND_MARKER = 0xff; // Uint8Array sentinel — upgraded to 0xFFFF on Uint16Array promotion
+const LAND_MARKER_WIDE = 0xffff;
 
 /**
  * Connected component labeling for grid-based maps.
@@ -14,8 +15,11 @@ export class ConnectedComponents {
   private readonly height: number;
   private readonly numTiles: number;
   private readonly lastRowStart: number;
-  private readonly queue: Int32Array;
+  // Flood-fill work queue; exists only while initialize() runs — a
+  // numTiles-sized Int32Array is ~8 MB per instance on large maps.
+  private queue: Int32Array | null = null;
   private componentIds: Uint8Array | Uint16Array | null = null;
+  private _componentSizes: number[] = [];
 
   constructor(
     private readonly map: GameMap,
@@ -25,13 +29,14 @@ export class ConnectedComponents {
     this.height = map.height();
     this.numTiles = this.width * this.height;
     this.lastRowStart = (this.height - 1) * this.width;
-    this.queue = new Int32Array(this.numTiles);
   }
 
   initialize(): void {
     DebugSpan.start("ConnectedComponents:initialize");
+    this.queue = new Int32Array(this.numTiles);
     let ids: Uint8Array | Uint16Array = this.createPrefilledIds();
 
+    this._componentSizes = [];
     let nextId = 0;
 
     // Scan all tiles and flood-fill each unvisited water component
@@ -45,15 +50,23 @@ export class ConnectedComponents {
 
       nextId++;
 
-      // Dynamically upgrade to Uint16Array when we hit component 254
-      if (nextId === 254 && ids instanceof Uint8Array) {
+      // Dynamically upgrade to Uint16Array before assigning component 254,
+      // because 0xFF (component 254 in Uint8Array) collides with LAND_MARKER.
+      if (nextId === 253 && ids instanceof Uint8Array) {
         ids = this.upgradeToUint16Array(ids);
+      }
+
+      // Cap at 0xFFFE — 0xFFFF is reserved as LAND_MARKER_WIDE after
+      // Uint16Array promotion and must not be assigned to a real component.
+      if (nextId === 0xffff) {
+        break;
       }
 
       this.floodFillComponent(ids, start, nextId);
     }
 
     this.componentIds = ids;
+    this.queue = null;
     DebugSpan.end();
   }
 
@@ -75,19 +88,17 @@ export class ConnectedComponents {
 
   /**
    * Pre-mark all land tiles in the ids array.
-   * Land tiles are marked with 0xFF, water tiles remain 0.
+   * Land tiles are marked with 0xFF (Uint8Array) or 0xFFFF (Uint16Array),
+   * water tiles remain 0.
    */
   private premarkLandTiles(ids: Uint8Array): void {
     for (let i = 0; i < this.numTiles; i++) {
-      ids[i] = this.map.isWater(i) ? 0 : LAND_MARKER;
+      ids[i] = this.map.isWater(i) ? 0 : 0xff;
     }
   }
 
   /**
-   * Pre-mark all land tiles in the ids array.
-   * Land tiles are marked with 0xFF, water tiles remain 0.
-   *
-   * This implementation accesses the terrain data **directly** without GameMap abstraction.
+   * Pre-mark all land tiles in the ids array using direct terrain access.
    * In tests it is 30% to 50% faster than using isWater() method calls.
    * As of 2026-01-05 it reduces avg. time for GWM from 15ms to 10ms.
    */
@@ -105,19 +116,13 @@ export class ConnectedComponents {
 
     for (let i = 0; i < numChunks; i++) {
       const chunk = terrain32[i];
-
-      // Extract bit 7 from each byte, negate, and combine into single 32-bit write
-      // bit 7 = 0 (water) → -(0) = 0x00
-      // bit 7 = 1 (land)  → -(1) = 0xFF (truncated to 8 bits)
       const b0 = -((chunk >> 7) & 1) & 0xff;
       const b1 = -((chunk >> 15) & 1) & 0xff;
       const b2 = -((chunk >> 23) & 1) & 0xff;
-      const b3 = -((chunk >> 31) & 1); // Upper byte, no mask needed
-
+      const b3 = -((chunk >> 31) & 1);
       ids32[i] = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
     }
 
-    // Handle remaining tiles (when numTiles not divisible by 4)
     for (let i = numChunks * 4; i < this.numTiles; i++) {
       ids[i] = -(terrain[i] >> 7);
     }
@@ -125,12 +130,12 @@ export class ConnectedComponents {
 
   /**
    * Upgrade from Uint8Array to Uint16Array when we exceed 254 components.
-   * Direct copy works because both use 0xFF for land marker.
+   * Remaps 0xFF land markers to 0xFFFF so component id 255 is unambiguous.
    */
   private upgradeToUint16Array(ids: Uint8Array): Uint16Array {
     const newIds = new Uint16Array(this.numTiles);
     for (let i = 0; i < this.numTiles; i++) {
-      newIds[i] = ids[i];
+      newIds[i] = ids[i] === LAND_MARKER ? LAND_MARKER_WIDE : ids[i];
     }
     return newIds;
   }
@@ -146,12 +151,13 @@ export class ConnectedComponents {
     start: number,
     componentId: number,
   ): void {
+    const queue = this.queue!;
     let head = 0;
     let tail = 0;
-    this.queue[tail++] = start;
+    queue[tail++] = start;
 
     while (head < tail) {
-      const seed = this.queue[head++]!;
+      const seed = queue[head++]!;
 
       // Skip if already processed
       if (ids[seed] !== 0) continue;
@@ -172,6 +178,9 @@ export class ConnectedComponents {
       }
 
       // Fill the entire horizontal span and check above/below for new spans
+      const spanSize = right - left + 1;
+      this._componentSizes[componentId] =
+        (this._componentSizes[componentId] ?? 0) + spanSize;
       for (let x = left; x <= right; x++) {
         ids[x] = componentId;
 
@@ -179,7 +188,7 @@ export class ConnectedComponents {
         if (x >= this.width) {
           const above = x - this.width;
           if (ids[above] === 0) {
-            this.queue[tail++] = above;
+            queue[tail++] = above;
           }
         }
 
@@ -187,7 +196,7 @@ export class ConnectedComponents {
         if (x < this.lastRowStart) {
           const below = x + this.width;
           if (ids[below] === 0) {
-            this.queue[tail++] = below;
+            queue[tail++] = below;
           }
         }
       }
@@ -197,5 +206,10 @@ export class ConnectedComponents {
   getComponentId(tile: TileRef): number {
     if (!this.componentIds) return 0;
     return this.componentIds[tile] ?? 0;
+  }
+
+  /** Returns the number of water tiles in the given component, or 0 if unknown. */
+  getComponentSize(componentId: number): number {
+    return this._componentSizes[componentId] ?? 0;
   }
 }

@@ -88,6 +88,76 @@ const skinChecker = new PrivilegeCheckerImpl(
   bannedWords,
 );
 
+const effectCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  effects: {
+    // Each effect carries its effectType field (matching the outer key), as the
+    // schema requires.
+    transportShipTrail: {
+      spectrum: {
+        name: "spectrum",
+        effectType: "transportShipTrail" as const,
+        attributes: {
+          type: "gradient" as const,
+          colors: ["#ff0000", "#00ff00", "#0000ff"],
+          colorSize: 16,
+          movementSpeed: 0.15,
+        },
+        url: "",
+        affiliateCode: null,
+        product: null,
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "legendary",
+      },
+      crimson: {
+        name: "crimson",
+        effectType: "transportShipTrail" as const,
+        attributes: {
+          type: "gradient" as const,
+          colors: ["#e01b24"],
+          colorSize: 16,
+          movementSpeed: 0.15,
+        },
+        url: "",
+        affiliateCode: null,
+        product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "common",
+      },
+    },
+    nukeExplosion: {
+      atom_boom: {
+        name: "atom_boom",
+        effectType: "nukeExplosion" as const,
+        attributes: {
+          type: "shockwave" as const,
+          nukeType: "atom" as const,
+          colors: ["#ff0000", "#7300ff"],
+          size: 50,
+          speed: 50,
+          thickness: 4,
+          transitionSpeed: 5,
+        },
+        url: "",
+        affiliateCode: null,
+        product: null,
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "common",
+      },
+    },
+  },
+};
+const effectChecker = new PrivilegeCheckerImpl(
+  effectCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
 describe("UsernameCensor", () => {
   describe("isProfane (via matcher.hasMatch)", () => {
     test("detects exact banned words", () => {
@@ -518,6 +588,137 @@ describe("Skin validation", () => {
       });
       expect(result.type).toBe("forbidden");
     });
+  });
+});
+
+describe("Effect validation in isAllowed", () => {
+  test("allows valid effect with wildcard flare", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+      });
+    }
+  });
+
+  test("allows valid effect with exact-match flare", () => {
+    const result = effectChecker.isAllowed(["effect:crimson"], {
+      effects: { transportShipTrail: "crimson" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "crimson",
+        effectType: "transportShipTrail",
+      });
+    }
+  });
+
+  test("rejects effect when user lacks flare", () => {
+    const result = effectChecker.isAllowed([], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/invalid effect/);
+    }
+  });
+
+  test("allows a nuke-explosion effect in its matching nukeType slot", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { atom: "atom_boom" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.atom).toEqual({
+        name: "atom_boom",
+        effectType: "nukeExplosion",
+      });
+    }
+  });
+
+  test("rejects a nuke-explosion effect in a mismatched nukeType slot", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { hydro: "atom_boom" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/not found for slot hydro/);
+    }
+  });
+
+  test("rejects effect under an unknown effectType key", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { wrongType: "spectrum" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/Effect spectrum not found/);
+    }
+  });
+
+  test("rejects nonexistent effect", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { transportShipTrail: "ghost" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/Effect ghost not found/);
+    }
+  });
+
+  test("no effects in refs leaves cosmetics.effects undefined", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {});
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects).toBeUndefined();
+    }
+  });
+
+  test("resolves an effect whose catalog key differs from its name", () => {
+    // Catalog key "trail_01" but name "spectrum"; selection/flares are
+    // name-based, so the name must still resolve and validate.
+    const checker = new PrivilegeCheckerImpl(
+      {
+        patterns: {},
+        colorPalettes: {},
+        flags: {},
+        effects: {
+          transportShipTrail: {
+            trail_01: {
+              name: "spectrum",
+              effectType: "transportShipTrail" as const,
+              attributes: {
+                type: "gradient" as const,
+                colors: ["#ff0000", "#00ff00", "#0000ff"],
+                colorSize: 16,
+                movementSpeed: 0.15,
+              },
+              url: "",
+              affiliateCode: null,
+              product: null,
+              rarity: "legendary",
+            },
+          },
+        },
+      },
+      mockDecoder,
+      bannedWords,
+    );
+    const result = checker.isAllowed(["effect:spectrum"], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+      });
+    }
   });
 });
 

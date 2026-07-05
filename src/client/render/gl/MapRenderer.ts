@@ -47,7 +47,10 @@ export class MapRenderer {
   constructor(
     private canvas: HTMLCanvasElement,
     private header: RendererConfig,
-    private terrainBytes: Uint8Array,
+    // Called (not stored) whenever terrain bytes are needed — initial bake
+    // and every context restore. Regenerating on demand avoids retaining a
+    // map-sized buffer for the rare restore path.
+    private terrainSource: () => Uint8Array,
     private paletteData: Float32Array,
     private config: Config,
     // Resolved render settings (defaults + overrides). Held so the same object
@@ -79,7 +82,7 @@ export class MapRenderer {
     this.renderer = new GPURenderer(
       this.canvas,
       this.header,
-      this.terrainBytes,
+      this.terrainSource,
       this.paletteData,
       this.config,
       this.settings,
@@ -104,6 +107,15 @@ export class MapRenderer {
     this.onContextRestored?.();
   };
 
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  get glLimited(): { renderer: string; maxTextureSize: number } | null {
+    return this.renderer?.glLimited ?? null;
+  }
+
   // ---- Camera ----
 
   setCameraState(x: number, y: number, z: number): void {
@@ -116,7 +128,7 @@ export class MapRenderer {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -125,12 +137,15 @@ export class MapRenderer {
   /** Upload full tile + trail state without resetting bloom (for live play). */
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint8Array,
+    trailState: Uint16Array,
   ): void {
     this.renderer?.uploadTileAndTrailState(tileState, trailState);
   }
   updatePalette(paletteData: Float32Array): void {
     this.renderer?.updatePalette(paletteData);
+  }
+  updateEffectPalette(effectData: Float32Array): void {
+    this.renderer?.updateEffectPalette(effectData);
   }
   addPlayers(
     players: PlayerStatic[],

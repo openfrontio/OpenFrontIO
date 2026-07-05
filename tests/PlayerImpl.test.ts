@@ -76,6 +76,65 @@ describe("PlayerImpl", () => {
     expect(cityToUpgrade).toBe(false);
   });
 
+  describe("units() type filtering", () => {
+    beforeEach(() => {
+      player.buildUnit(UnitType.City, game.ref(0, 0), {});
+      player.buildUnit(UnitType.DefensePost, game.ref(11, 0), {});
+      player.buildUnit(UnitType.City, game.ref(0, 11), {});
+      player.buildUnit(UnitType.MissileSilo, game.ref(11, 11), {});
+    });
+
+    // Reference implementation: filter _units preserving insertion order.
+    function expected(...types: UnitType[]) {
+      const ts = new Set(types);
+      return player.units().filter((u) => ts.has(u.type()));
+    }
+
+    test("single type returns matching units in insertion order", () => {
+      expect(player.units(UnitType.City)).toEqual(expected(UnitType.City));
+      expect(player.units(UnitType.City)).toHaveLength(2);
+    });
+
+    test("returns a fresh array, not the internal or shared buffer", () => {
+      const a = player.units(UnitType.City);
+      const b = player.units(UnitType.City);
+      expect(a).not.toBe(b);
+      expect(a).not.toBe(player.units());
+      // Mutating one result must not affect a later query.
+      a.length = 0;
+      expect(player.units(UnitType.City)).toHaveLength(2);
+    });
+
+    test("two and three types return the union in insertion order", () => {
+      expect(player.units(UnitType.City, UnitType.MissileSilo)).toEqual(
+        expected(UnitType.City, UnitType.MissileSilo),
+      );
+      expect(
+        player.units(UnitType.City, UnitType.DefensePost, UnitType.MissileSilo),
+      ).toEqual(
+        expected(UnitType.City, UnitType.DefensePost, UnitType.MissileSilo),
+      );
+      // Duplicate types don't duplicate results.
+      expect(player.units(UnitType.City, UnitType.City)).toEqual(
+        expected(UnitType.City),
+      );
+    });
+
+    test("array of types (Set path) and no match", () => {
+      expect(
+        player.units([
+          UnitType.City,
+          UnitType.DefensePost,
+          UnitType.MissileSilo,
+          UnitType.Port,
+        ]),
+      ).toEqual(
+        expected(UnitType.City, UnitType.DefensePost, UnitType.MissileSilo),
+      );
+      expect(player.units(UnitType.Port)).toEqual([]);
+    });
+  });
+
   test("Can't send alliance requests when dead", () => {
     // conquer other
     const otherTiles = other.tiles();

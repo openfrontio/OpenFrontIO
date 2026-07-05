@@ -182,6 +182,21 @@ export class WaterManager {
     return false;
   }
 
+  /**
+   * Returns the approximate number of water tiles in the component
+   * containing `tile`, or null if the tile has no water component.
+   *
+   * The underlying ConnectedComponents are computed on the 2× downsampled
+   * minimap, so each minimap tile represents up to 4 full-map tiles.  We
+   * multiply by 4 to give callers a value in full-map-tile units.
+   */
+  getWaterComponentSize(tile: TileRef): number | null {
+    const componentId = this.getWaterComponent(tile);
+    if (componentId === null) return null;
+    if (!this._miniWaterGraph) return 0;
+    return this._miniWaterGraph.getComponentSize(componentId) * 4;
+  }
+
   private finalizeWaterChanges(
     convertedTiles: TileRef[],
     changedTiles: TileRef[],
