@@ -200,19 +200,14 @@ export class AttacksDisplay extends LitElement implements Controller {
 
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
+    const myTroops = myPlayer.troops();
+    const maxAttackRatio = myTroops > 0 ? attack.troops / myTroops : 1;
     this.eventBus.emit(
       new SendAttackIntentEvent(
         attacker.id(),
         Math.ceil(
           // Ensures the attackRatio is between 1% and the required percentage to defend fully.
-          Math.max(
-            100 *
-              Math.min(
-                this.uiState.attackRatio,
-                attack.troops / myPlayer.troops(),
-              ),
-            1,
-          ),
+          Math.max(100 * Math.min(this.uiState.attackRatio, maxAttackRatio), 1),
         ),
         myPlayer.troops(),
       ),
