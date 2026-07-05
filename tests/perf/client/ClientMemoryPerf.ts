@@ -215,8 +215,10 @@ async function main(): Promise<void> {
   // the dynamic imports below.
   process.env.OPENFRONT_URL = `http://localhost:${opts.port}`;
   const { launch, gotoHome, openSoloModal } =
+    // @ts-expect-error untyped .mjs skill module
     await import("../../../.claude/skills/run-openfront/driver.mjs");
   const { startSoloGame, spawn, waitForSpawnPhaseEnd, gameState } =
+    // @ts-expect-error untyped .mjs skill module
     await import("../../../.claude/skills/run-openfront/game.mjs");
 
   let browser: { close(): Promise<void> } | null = null;
@@ -379,6 +381,12 @@ async function main(): Promise<void> {
     }
     // Anything requested beyond the reached tick range.
     await takeDueSnapshots(Number.MAX_SAFE_INTEGER);
+
+    // End-of-run screenshot — a cheap rendering sanity check (a black map
+    // means the GL pipeline broke even if no pageerror surfaced).
+    const shotPath = path.join(opts.outDir, "client-final.png");
+    await page.screenshot({ path: shotPath });
+    console.log(`[screenshot] ${shotPath}`);
 
     printReport(checkpoints, opts);
     const finalState = await gameState(page);
