@@ -344,6 +344,14 @@ export class CosmeticContainer extends LitElement {
       this.onPurchaseSoft,
     ].filter(Boolean);
     if (handlers.length === 1 && !this._loading) {
+      // Plutonium purchases go through the confirmation dialog instead of
+      // firing immediately.
+      if (handlers[0] === this.onPurchaseHard) {
+        (
+          this.querySelector("purchase-button") as PurchaseButton | null
+        )?.requestHardPurchase();
+        return;
+      }
       this._loading = true;
       this._showLoadingOverlay();
       Promise.resolve(handlers[0]!())
@@ -468,6 +476,7 @@ export class CosmeticContainer extends LitElement {
             .rarity=${this.rarity}
             .dollarLabelKey=${this.dollarLabelKey}
             .priceSuffix=${this.priceSuffix}
+            .itemName=${this.name}
             .onPurchaseDollar=${this.onPurchaseDollar}
             .onPurchaseHard=${this.onPurchaseHard}
             .onPurchaseSoft=${this.onPurchaseSoft}

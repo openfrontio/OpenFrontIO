@@ -4,6 +4,7 @@ import { Product } from "../../core/CosmeticSchemas";
 import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
+import "./ConfirmDialog";
 import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
 
@@ -201,6 +202,10 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   priceSuffix: string = "";
 
+  /** Display name of the item, used in the plutonium confirmation dialog. */
+  @property({ type: String })
+  itemName: string = "";
+
   @property({ type: Function })
   onPurchaseDollar?: () => Promise<PurchaseResult>;
 
@@ -212,6 +217,8 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
+  /** True while the plutonium confirmation dialog is open. */
+  @state() private confirmingHard = false;
   private busy = false;
 
   createRenderRoot() {
@@ -220,6 +227,16 @@ export class PurchaseButton extends LitElement {
 
   private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
+    this.executePurchase(handler);
+  }
+
+  /** Opens the plutonium confirmation dialog; the purchase runs on confirm. */
+  requestHardPurchase() {
+    if (!this.onPurchaseHard || this.busy) return;
+    this.confirmingHard = true;
+  }
+
+  private executePurchase(handler?: () => Promise<PurchaseResult>) {
     if (!handler || this.busy) return;
     this.busy = true;
     const container = this.closest("cosmetic-container") as HTMLElement | null;
@@ -263,7 +280,10 @@ export class PurchaseButton extends LitElement {
       <button
         class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
-        @click=${(e: Event) => this.handleClick(e, this.onPurchaseHard)}
+        @click=${(e: Event) => {
+          e.stopPropagation();
+          this.requestHardPurchase();
+        }}
       >
         <plutonium-icon .size=${20} style="margin-top:3px"></plutonium-icon>
         ${this.priceHard!.toLocaleString()}
@@ -312,6 +332,22 @@ export class PurchaseButton extends LitElement {
           ${hasSoft ? this.renderSoftButton() : null}
         </div>
       </div>
+      ${this.confirmingHard
+        ? html`<confirm-dialog
+            .heading=${translateText("store.confirm_purchase_title")}
+            .message=${translateText("store.confirm_purchase_body", {
+              item: this.itemName,
+              amount: this.priceHard ?? 0,
+              currency: translateText("cosmetics.hard"),
+            })}
+            variant="warning"
+            @confirm=${() => {
+              this.confirmingHard = false;
+              this.executePurchase(this.onPurchaseHard);
+            }}
+            @cancel=${() => (this.confirmingHard = false)}
+          ></confirm-dialog>`
+        : nothing}
       <insufficient-currency-dialog
         .info=${this.insufficient}
         @close=${() => (this.insufficient = null)}
