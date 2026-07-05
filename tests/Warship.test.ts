@@ -12,7 +12,6 @@ import { PathStatus } from "../src/core/pathfinding/types";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
-
 const coastX = 7;
 let game: Game;
 let player1: Player;
@@ -37,7 +36,7 @@ describe("Warship", () => {
   });
   afterEach(() => {
     vi.restoreAllMocks();
-  })
+  });
   test("Warship heals only if player has port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
     if (typeof maxHealth !== "number") {
