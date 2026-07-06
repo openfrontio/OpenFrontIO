@@ -1,0 +1,144 @@
+{
+  "categories": ["europe", "new"],
+  "id": "Scandinavia",
+  "map": {
+    "height": 2240,
+    "num_land_tiles": 2476530,
+    "width": 2004
+  },
+  "map16x": {
+    "height": 560,
+    "num_land_tiles": 145726,
+    "width": 501
+  },
+  "map4x": {
+    "height": 1120,
+    "num_land_tiles": 605398,
+    "width": 1002
+  },
+  "multiplayer_frequency": 7,
+  "name": "Scandinavia",
+  "nations": [
+    {
+      "coordinates": [419, 1426],
+      "flag": "no",
+      "name": "Norway"
+    },
+    {
+      "coordinates": [811, 1499],
+      "flag": "se",
+      "name": "Sweden"
+    },
+    {
+      "coordinates": [513, 1893],
+      "flag": "dk",
+      "name": "Denmark"
+    },
+    {
+      "coordinates": [734, 2170],
+      "flag": "de",
+      "name": "Germany"
+    },
+    {
+      "coordinates": [276, 2227],
+      "flag": "nl",
+      "name": "Netherlands"
+    },
+    {
+      "coordinates": [1381, 1251],
+      "flag": "fi",
+      "name": "Finland"
+    },
+    {
+      "coordinates": [1466, 1479],
+      "flag": "ee",
+      "name": "Estonia"
+    },
+    {
+      "coordinates": [1329, 1789],
+      "flag": "lv",
+      "name": "Latvia"
+    },
+    {
+      "coordinates": [1394, 1994],
+      "flag": "lt",
+      "name": "Lithuania"
+    },
+    {
+      "coordinates": [1057, 2129],
+      "flag": "pl",
+      "name": "Poland"
+    },
+    {
+      "coordinates": [1761, 2096],
+      "flag": "by",
+      "name": "Belarus"
+    },
+    {
+      "coordinates": [1262, 896],
+      "flag": "fi",
+      "name": "Ostrobothnia"
+    },
+    {
+      "coordinates": [1750, 796],
+      "flag": "ru",
+      "name": "Karelia"
+    },
+    {
+      "coordinates": [1798, 278],
+      "flag": "ru",
+      "name": "Murmansk"
+    },
+    {
+      "coordinates": [1418, 468],
+      "flag": "fi",
+      "name": "Lapland"
+    },
+    {
+      "coordinates": [1733, 1325],
+      "flag": "ru",
+      "name": "St. Petersburg"
+    },
+    {
+      "coordinates": [1670, 1724],
+      "flag": "ru",
+      "name": "Pskov"
+    },
+    {
+      "coordinates": [2007, 1727],
+      "flag": "ru",
+      "name": "Tver"
+    },
+    {
+      "coordinates": [781, 1865],
+      "flag": "se",
+      "name": "Skåne"
+    },
+    {
+      "coordinates": [1110, 1374],
+      "flag": "ax",
+      "name": "Aland Islands"
+    },
+    {
+      "coordinates": [911, 1121],
+      "flag": "se",
+      "name": "Norrland"
+    },
+    {
+      "coordinates": [1028, 714],
+      "flag": "se",
+      "name": "Norrbotten"
+    },
+    {
+      "coordinates": [891, 443],
+      "flag": "no",
+      "name": "Troms"
+    },
+    {
+      "coordinates": [1304, 159],
+      "flag": "no",
+      "name": "Finnmark"
+    }
+  ],
+  "translation_key": "map.scandinavia"
+}
