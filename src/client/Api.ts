@@ -315,6 +315,25 @@ export async function openSubscriptionPortal(): Promise<string | false> {
   }
 }
 
+// GET /api/game/:id on the game server (worker) — whether the game is a
+// publicly listed lobby. False on any failure: callers use this to hide
+// host powers that the server blocks in listed games anyway, so the safe
+// default is to change nothing.
+export async function fetchLobbyListed(gameID: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `/${ClientEnv.workerPath(gameID)}/api/game/${gameID}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return false;
+    const json = await res.json();
+    return json?.listed === true;
+  } catch (e) {
+    console.warn("fetchLobbyListed: request failed", e);
+    return false;
+  }
+}
+
 // POST /api/game/:id/listing on the game server (worker) — toggles whether a
 // private lobby appears in the public lobby browser. Creator-only and
 // server-authoritative (subscription, whitelist/cheat and quota checks).
