@@ -695,6 +695,14 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
+  // Close as part of the lobby -> game transition (e.g. auto-start of a
+  // listed lobby): the host is entering the game, not leaving the lobby, so
+  // closing must not disconnect them (the server would tear the lobby down).
+  public closeWithoutLeaving() {
+    this.leaveLobbyOnClose = false;
+    this.close();
+  }
+
   public confirmBeforeClose(): boolean | Promise<boolean> {
     return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }

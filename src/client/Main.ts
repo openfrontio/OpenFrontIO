@@ -870,9 +870,12 @@ class Client {
         .getElementById("username-validation-error")
         ?.classList.add("hidden");
       this.joinModal?.closeWithoutLeaving();
+      // Same for the host: the game is starting (possibly a server-initiated
+      // auto-start of a listed lobby), so closing the modal must not leave
+      // the lobby — that would disconnect the host and tear the game down.
+      this.hostModal?.closeWithoutLeaving();
       [
         "single-player-modal",
-        "host-lobby-modal",
         "game-starting-modal",
         "game-top-bar",
         "help-modal",
