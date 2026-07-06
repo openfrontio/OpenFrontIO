@@ -222,6 +222,40 @@ export async function createCheckoutSession(
   }
 }
 
+export async function createCustomCurrencyCheckout(
+  hardAmount: number,
+): Promise<string | false> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/stripe/create-custom-currency-checkout`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: await getAuthHeader(),
+        },
+        body: JSON.stringify({
+          hardAmount: hardAmount,
+          hostname: window.location.origin,
+        }),
+      },
+    );
+    if (!response.ok) {
+      console.error(
+        "createCustomCurrencyCheckout: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const json = await response.json();
+    return json.url;
+  } catch (e) {
+    console.error("createCustomCurrencyCheckout: request failed", e);
+    return false;
+  }
+}
+
 export async function cancelSubscription(): Promise<boolean> {
   try {
     const response = await fetch(`${getApiBase()}/subscriptions/@me/cancel`, {
