@@ -25,7 +25,6 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
@@ -47,7 +46,10 @@ export class MapRenderer {
   constructor(
     private canvas: HTMLCanvasElement,
     private header: RendererConfig,
-    private terrainBytes: Uint8Array,
+    // Called (not stored) whenever terrain bytes are needed — initial bake
+    // and every context restore. Regenerating on demand avoids retaining a
+    // map-sized buffer for the rare restore path.
+    private terrainSource: () => Uint8Array,
     private paletteData: Float32Array,
     private config: Config,
     // Resolved render settings (defaults + overrides). Held so the same object
@@ -79,7 +81,7 @@ export class MapRenderer {
     this.renderer = new GPURenderer(
       this.canvas,
       this.header,
-      this.terrainBytes,
+      this.terrainSource,
       this.paletteData,
       this.config,
       this.settings,
@@ -121,7 +123,10 @@ export class MapRenderer {
 
   // ---- Data upload ----
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(

@@ -100,7 +100,13 @@ function main(): void {
     }
   }
 
-  const nodeName = (i: number): string => strings[nodes[i * NF + N_NAME]];
+  // Cap at one short line: string-type node names are the full string
+  // content (e.g. an entire script source for external strings).
+  const nodeName = (i: number): string => {
+    const raw = strings[nodes[i * NF + N_NAME]] ?? "";
+    const firstLine = raw.split("\n", 1)[0];
+    return firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine;
+  };
   const nodeType = (i: number): string => nodeTypes[nodes[i * NF + N_TYPE]];
   const edgeLabel = (i: number): string =>
     retainerEdge[i] === -2 ? "[]" : (strings[retainerEdge[i]] ?? "?");

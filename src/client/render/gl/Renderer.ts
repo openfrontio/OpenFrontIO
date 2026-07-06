@@ -23,7 +23,6 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
@@ -197,7 +196,7 @@ export class GPURenderer {
   constructor(
     canvas: HTMLCanvasElement,
     header: RendererConfig,
-    terrainBytes: Uint8Array,
+    terrainSource: () => Uint8Array,
     paletteData: Float32Array,
     config: Config,
     settings: RenderSettings,
@@ -246,13 +245,25 @@ export class GPURenderer {
     this.camera = new Camera(mapW, mapH);
 
     // --- Terrain (static) ---
-    this.terrainPass = new TerrainPass(gl, terrainBytes, mapW, mapH, {
-      oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
-      sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
-      plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
-      highlandColor: hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
-      mountainColor: hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
-    });
+    // Bake once and let the array go — nothing below retains map-sized
+    // terrain bytes; re-bakes call terrainSource again.
+    const terrainBytes = terrainSource();
+    this.terrainPass = new TerrainPass(
+      gl,
+      terrainSource,
+      terrainBytes,
+      mapW,
+      mapH,
+      {
+        oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+        sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
+        plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
+        highlandColor:
+          hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
+        mountainColor:
+          hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
+      },
+    );
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
@@ -641,7 +652,10 @@ export class GPURenderer {
     this.trailPass.setLiveRef(trailState);
   }
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 

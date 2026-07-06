@@ -8,7 +8,6 @@ import type {
   NukeTelegraphData,
   PlayerState,
   PlayerStatusData,
-  TilePair,
   UnitState,
 } from "../types";
 
@@ -21,7 +20,10 @@ export interface FrameUploadTarget {
     tileState: Uint16Array,
     trailState: Uint16Array,
   ): void;
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void;
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void;
   uploadLiveTrailDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,

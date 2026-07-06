@@ -173,11 +173,6 @@ export interface ConquestFx {
   tickAge?: number;
 }
 
-export interface TilePair {
-  ref: number;
-  state: number;
-}
-
 export interface NameEntry {
   playerID: string;
   x: number;
