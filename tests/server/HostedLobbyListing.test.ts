@@ -570,6 +570,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
       allowedPublicIds: ["p1"],
       nameReveals: ["c1"],
       nameRevealPublicIds: ["p2"],
+      hostCheats: { infiniteGold: true },
     });
     game.setListed(true);
     gm.listedLobbies.mockReturnValue([game]);
@@ -586,6 +587,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.allowedPublicIds).toBeUndefined();
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
+    expect(reported.gameConfig.hostCheats).toBeUndefined();
   });
 
   it("strips creatorID from broadcasts and primed snapshots sent to clients", () => {

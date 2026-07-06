@@ -16,44 +16,18 @@ import {
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
 
-// Explicit allowlist of the game config advertised for a listed private
-// lobby. Host-only fields (join whitelist, name reveals) must never reach
-// browsers, so fields are copied one by one: a new GameConfig field stays out
-// of the broadcast until it is deliberately added here, and a new required
-// field is a compile error that forces that decision.
+// The game config advertised for a listed private lobby: everything the
+// host configured minus host-only fields. The server already rejects
+// enabling the whitelist or host cheats while listed; stripping them here
+// just keeps host-only data off the wire. A new host-only GameConfig field
+// must be added to this delete list.
 function publicLobbyGameConfig(gc: GameConfig): GameConfig {
-  return {
-    gameMap: gc.gameMap,
-    gameMapSize: gc.gameMapSize,
-    difficulty: gc.difficulty,
-    gameType: gc.gameType,
-    gameMode: gc.gameMode,
-    rankedType: gc.rankedType,
-    publicGameModifiers: gc.publicGameModifiers,
-    nations: gc.nations,
-    bots: gc.bots,
-    donateGold: gc.donateGold,
-    donateTroops: gc.donateTroops,
-    infiniteGold: gc.infiniteGold,
-    infiniteTroops: gc.infiniteTroops,
-    instantBuild: gc.instantBuild,
-    disableNavMesh: gc.disableNavMesh,
-    disableAlliances: gc.disableAlliances,
-    disableClanTags: gc.disableClanTags,
-    liveStatsEnabled: gc.liveStatsEnabled,
-    anonymizeNames: gc.anonymizeNames,
-    waterNukes: gc.waterNukes,
-    randomSpawn: gc.randomSpawn,
-    maxPlayers: gc.maxPlayers,
-    maxTimerValue: gc.maxTimerValue,
-    startDelay: gc.startDelay,
-    spawnImmunityDuration: gc.spawnImmunityDuration,
-    disabledUnits: gc.disabledUnits,
-    playerTeams: gc.playerTeams,
-    goldMultiplier: gc.goldMultiplier,
-    startingGold: gc.startingGold,
-    hostCheats: gc.hostCheats,
-  };
+  const sanitized = { ...gc };
+  delete sanitized.allowedPublicIds;
+  delete sanitized.nameReveals;
+  delete sanitized.nameRevealPublicIds;
+  delete sanitized.hostCheats;
+  return sanitized;
 }
 
 export class WorkerLobbyService {
