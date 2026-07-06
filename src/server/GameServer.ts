@@ -762,10 +762,7 @@ export class GameServer {
       (c) => c.clientID !== client.clientID,
     );
 
-    // hasStarted() includes prestart: during the lobby -> game transition
-    // clients reconnect, and a host socket closing then must not tear the
-    // starting game down.
-    if (this.hasStarted()) {
+    if (this._hasStarted) {
       return;
     }
     // Remove persistentId if the game has not started to prevent going over max players

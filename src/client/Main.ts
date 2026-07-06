@@ -869,10 +869,13 @@ class Client {
       document
         .getElementById("username-validation-error")
         ?.classList.add("hidden");
-      // The host modal must close FIRST: closing any page-modal navigates
-      // via showPage, which force-closes the currently visible page. If that
-      // hits the host modal while leaveLobbyOnClose is still armed, the host
-      // leaves the lobby mid game-start.
+      // Disarm BOTH lobby modals before closing either: closing any
+      // page-modal navigates via showPage, which force-closes the currently
+      // visible page — the other lobby modal. If that one is still armed,
+      // its onClose leaves the lobby and disconnects the player mid
+      // game-start (host or joiner, depending on close order).
+      this.hostModal?.disarmLeaveOnClose();
+      this.joinModal?.disarmLeaveOnClose();
       this.hostModal?.closeWithoutLeaving();
       this.joinModal?.closeWithoutLeaving();
       [

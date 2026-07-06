@@ -338,6 +338,10 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    // Re-armed here (not in onClose's reset) so that once
+    // disarmLeaveOnClose() runs, no close cascade can re-arm it and
+    // disconnect the player mid game-start.
+    this.leaveLobbyOnClose = true;
     void this.hostedLobbySocket.start();
     const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
     const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
@@ -453,7 +457,6 @@ export class JoinLobbyModal extends BaseModal {
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
-    this.leaveLobbyOnClose = true;
   }
 
   disconnectedCallback() {
@@ -474,8 +477,17 @@ export class JoinLobbyModal extends BaseModal {
     this.close();
   }
 
-  public closeWithoutLeaving() {
+  // Closing this modal is part of the game-start transition, not the player
+  // leaving. Kept separate from closeWithoutLeaving because closing ANY
+  // page-modal navigates via showPage, which force-closes the currently
+  // visible page — so all lobby modals must be disarmed before any of them
+  // is closed.
+  public disarmLeaveOnClose() {
     this.leaveLobbyOnClose = false;
+  }
+
+  public closeWithoutLeaving() {
+    this.disarmLeaveOnClose();
     this.close();
   }
 

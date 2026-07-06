@@ -703,8 +703,15 @@ export class HostLobbyModal extends BaseModal {
   // Close as part of the lobby -> game transition (e.g. auto-start of a
   // listed lobby): the host is entering the game, not leaving the lobby, so
   // closing must not disconnect them (the server would tear the lobby down).
-  public closeWithoutLeaving() {
+  // disarmLeaveOnClose is separate because closing ANY page-modal navigates
+  // via showPage, which force-closes the currently visible page — so all
+  // lobby modals must be disarmed before any of them is closed.
+  public disarmLeaveOnClose() {
     this.leaveLobbyOnClose = false;
+  }
+
+  public closeWithoutLeaving() {
+    this.disarmLeaveOnClose();
     this.close();
   }
 

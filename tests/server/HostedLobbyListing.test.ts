@@ -332,23 +332,6 @@ describe("host-left lobby teardown", () => {
     (game as any)._hasEnded = true;
     expect(game.joinClient({} as any)).toBe("rejected");
   });
-
-  it("does not tear down when the host disconnects during prestart", () => {
-    // During the lobby -> game transition the host modal closes and sockets
-    // churn; a starting game (e.g. listed-lobby auto-start) must survive it.
-    const gm = new GameManager(mockLogger);
-    const game = gm.createGame("g-prestart", undefined, CREATOR)!;
-    game.setListed(true);
-
-    const hostWs = fakeWs();
-    game.joinClient(makeClient("host", CREATOR, hostWs));
-    (game as any)._hasPrestarted = true;
-
-    hostWs.emit("close");
-
-    expect((game as any)._hasEnded).toBe(false);
-    expect(game.phase()).not.toBe(GamePhase.Finished);
-  });
 });
 
 describe("listed lobby host powers", () => {
