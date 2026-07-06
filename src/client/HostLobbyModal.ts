@@ -1196,16 +1196,16 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private showListingError(serverError?: string) {
-    const key =
-      serverError === "subscription_required"
-        ? "private_lobby.listing_requires_subscription"
-        : serverError === "listing_limit_reached"
-          ? "private_lobby.listing_limit_reached"
-          : serverError === "listing_whitelist_enabled"
-            ? "private_lobby.listing_whitelist_enabled"
-            : serverError === "listing_host_cheats_enabled"
-              ? "private_lobby.listing_host_cheats_enabled"
-              : "private_lobby.listing_failed";
+    let key = "private_lobby.listing_failed";
+    if (serverError === "subscription_required") {
+      key = "private_lobby.listing_requires_subscription";
+    } else if (serverError === "listing_limit_reached") {
+      key = "private_lobby.listing_limit_reached";
+    } else if (serverError === "listing_whitelist_enabled") {
+      key = "private_lobby.listing_whitelist_enabled";
+    } else if (serverError === "listing_host_cheats_enabled") {
+      key = "private_lobby.listing_host_cheats_enabled";
+    }
     showToast(translateText(key), "red", 3000);
   }
 
