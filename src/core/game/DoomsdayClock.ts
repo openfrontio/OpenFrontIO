@@ -22,53 +22,57 @@ export const DOOMSDAY_CLOCK_SPEEDS: DoomsdayClockSpeed[] = [
 ];
 
 interface WaveSchedule {
-  /** Flat 0% for this long at the very start (the one grace period). */
+  /** Flat 0% for this long at the very start: a COMBAT-ONLY window — the clock
+   *  does not touch real players early; eliminations there come from fighting. */
   graceSeconds: number;
-  /** Each wave grows its share up linearly over this long. */
-  rampSeconds: number;
-  /** Flat hold after each ramp before the next one starts. */
-  pauseSeconds: number;
+  /** Per-wave: wave i grows its share up linearly over rampSeconds[i]. */
+  rampSeconds: number[];
+  /** Per-wave: flat hold after wave i's ramp before the next one starts. */
+  pauseSeconds: number[];
   /** Share (basis points, 100 = 1%) reached at the end of each ramp, ascending. */
   levels: number[];
 }
 
-// Grace once, then a repeating cycle of [ramp up over rampSeconds] + [hold for
-// pauseSeconds]. The share rises linearly during each ramp and is flat during
-// the grace and every pause. Easy to tune: change grace, ramp, pause, or levels.
-// Same levels everywhere (the ofstats FFA territory median, then a final 55%
-// squeeze); the presets only change the pace. The median run is 3/5/10/20/30%;
-// normal hits it dead on at 10/15/20/25/30 min. The 6th wave (55%) only one side
-// can hold, so, together with the crown exemption, it forces out everyone but
-// the leader for a single winner. slow is ~20% slower, fast ~30% faster, very
-// fast 50% faster.
-const LEVELS = [300, 500, 1000, 2000, 3000, 5500]; // 3, 5, 10, 20, 30, 55%
+// Grace once (a long COMBAT-ONLY window — 0% bar, the clock ignores everyone),
+// then per wave a [ramp up over rampSeconds[i]] + [hold for pauseSeconds[i]]. The
+// share rises linearly during each ramp and is flat during the grace and pauses.
+//
+// Design: the clock is a STALEMATE-BREAKER, not an early-game culler. It stays at
+// 0% for the first 10 minutes (combat decides the early game), then a 6-wave
+// squeeze climbs to 55% by the preset's cap. Levels accelerate (4/9/16/26/40/55%)
+// so the endgame tightens; the 6th wave (55%) only one side can hold, so — with
+// the crown exemption — it forces out everyone but the leader for a single winner.
+// Grace is a flat 10:00 on every preset; presets differ only in how long the
+// squeeze takes: 55% at 45/35/25/15 min for slow/normal/fast/veryfast.
+const LEVELS = [400, 900, 1600, 2600, 4000, 5500]; // 4, 9, 16, 26, 40, 55%
 const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
-  // grace 5:30, 4:30 ramps + 30s pauses -> 3/5/10/20/30/55% at 10/15/20/25/30/35 min.
+  // grace 10:00, then six ~208s ramps + 50s pauses -> 55% at 35:00.
   normal: {
-    graceSeconds: 330,
-    rampSeconds: 270,
-    pauseSeconds: 30,
+    graceSeconds: 600,
+    rampSeconds: [208, 208, 208, 208, 208, 210],
+    pauseSeconds: [50, 50, 50, 50, 50, 0],
     levels: LEVELS,
   },
-  // grace 6:30, 5:30 ramps -> reaches at 12/18/24/30/36/42 min.
+  // grace 10:00, then six ~292s ramps + 70s pauses -> 55% at 45:00.
   slow: {
-    graceSeconds: 390,
-    rampSeconds: 330,
-    pauseSeconds: 30,
+    graceSeconds: 600,
+    rampSeconds: [292, 292, 292, 292, 292, 290],
+    pauseSeconds: [70, 70, 70, 70, 70, 0],
     levels: LEVELS,
   },
-  // grace 4:30, 2:50 ramps -> reaches at 7:20/10:40/14/17:20/20:40/24 min.
+  // grace 10:00, then six 125s ramps + 30s pauses -> 4/9/16/26/40/55% at
+  // 12:05/14:40/17:15/19:50/22:25/25:00.
   fast: {
-    graceSeconds: 270,
-    rampSeconds: 170,
-    pauseSeconds: 30,
+    graceSeconds: 600,
+    rampSeconds: [125, 125, 125, 125, 125, 125],
+    pauseSeconds: [30, 30, 30, 30, 30, 0],
     levels: LEVELS,
   },
-  // grace 3:00, 2:00 ramps -> reaches at 5/7:30/10/12:30/15/17:30 min.
+  // grace 10:00, then six 40s ramps + 12s pauses -> 55% at 15:00 (tight squeeze).
   veryfast: {
-    graceSeconds: 180,
-    rampSeconds: 120,
-    pauseSeconds: 30,
+    graceSeconds: 600,
+    rampSeconds: [40, 40, 40, 40, 40, 40],
+    pauseSeconds: [12, 12, 12, 12, 12, 0],
     levels: LEVELS,
   },
 };
@@ -88,15 +92,18 @@ function requiredBasisPoints(
 ): number {
   const s = schedule(speed);
   if (elapsed <= s.graceSeconds) return 0;
-  const cycle = s.rampSeconds + s.pauseSeconds;
-  const t = elapsed - s.graceSeconds;
-  const i = Math.floor(t / cycle);
-  if (i >= s.levels.length) return s.levels[s.levels.length - 1];
-  const into = t - i * cycle;
-  const prev = i === 0 ? 0 : s.levels[i - 1];
-  const target = s.levels[i];
-  if (into >= s.rampSeconds) return target; // in the pause: hold
-  return prev + Math.floor(((target - prev) * into) / s.rampSeconds);
+  let t = elapsed - s.graceSeconds;
+  let prev = 0;
+  for (let i = 0; i < s.levels.length; i++) {
+    const ramp = s.rampSeconds[i];
+    const target = s.levels[i];
+    if (t < ramp) return prev + Math.floor(((target - prev) * t) / ramp); // ramping
+    t -= ramp;
+    if (t < s.pauseSeconds[i]) return target; // in the pause: hold
+    t -= s.pauseSeconds[i];
+    prev = target;
+  }
+  return s.levels[s.levels.length - 1];
 }
 
 /**
@@ -153,7 +160,6 @@ export function doomsdayClockWaveState(
 ): DoomsdayClockWaveState {
   const s = schedule(speed);
   const currentPercent = requiredBasisPoints(speed, elapsed) / 100;
-  const cycle = s.rampSeconds + s.pauseSeconds;
   const n = s.levels.length;
   const last = s.levels[n - 1] / 100;
 
@@ -169,31 +175,42 @@ export function doomsdayClockWaveState(
     };
   }
 
-  const t = elapsed - s.graceSeconds;
-  const i = Math.floor(t / cycle);
-  if (i >= n) {
-    return {
-      currentPercent,
-      targetPercent: last,
-      growing: false,
-      secondsToNextGrowth: 0,
-      waveFlash: false,
-      done: true,
-    };
+  // Walk the per-wave ramp/pause segments to locate the current wave.
+  let t = elapsed - s.graceSeconds;
+  for (let i = 0; i < n; i++) {
+    const ramp = s.rampSeconds[i];
+    const pause = s.pauseSeconds[i];
+    const isLast = i === n - 1;
+    if (t < ramp) {
+      return {
+        currentPercent,
+        targetPercent: s.levels[i] / 100,
+        growing: true,
+        secondsToNextGrowth: 0,
+        waveFlash: t <= 5, // just started ramping
+        done: false,
+      };
+    }
+    t -= ramp;
+    if (t < pause) {
+      return {
+        currentPercent,
+        targetPercent: (isLast ? s.levels[i] : s.levels[i + 1]) / 100,
+        growing: false,
+        secondsToNextGrowth: isLast ? 0 : pause - t,
+        waveFlash: !isLast && pause - t <= 5, // next ramp imminent
+        done: isLast,
+      };
+    }
+    t -= pause;
   }
-
-  const into = t - i * cycle;
-  const growing = into < s.rampSeconds;
-  const isLast = i === n - 1;
-  const nextRampStart = s.graceSeconds + (i + 1) * cycle;
   return {
     currentPercent,
-    targetPercent: (growing || isLast ? s.levels[i] : s.levels[i + 1]) / 100,
-    growing,
-    secondsToNextGrowth: growing || isLast ? 0 : nextRampStart - elapsed,
-    // 5s into a ramp (just started) or 5s before the next ramp begins.
-    waveFlash: into <= 5 || (!isLast && nextRampStart - elapsed <= 5),
-    done: isLast && !growing,
+    targetPercent: last,
+    growing: false,
+    secondsToNextGrowth: 0,
+    waveFlash: false,
+    done: true,
   };
 }
 
@@ -204,18 +221,20 @@ export interface DoomsdayClockDrainConfig {
 }
 
 /**
- * Troops a skulled side loses this second: a LINEAR ramp from drainStartPercent
- * up to drainMaxPercent over drainRampSeconds. It is a percentage of the side's
- * MAX troop capacity (not current), so it outpaces troop income from the first
- * second and accelerates as it grows, driving the side to zero in ~55s from full
- * troops (sooner with fewer troops or a shrinking territory). The caller caps it
- * at the side's current troops (removeTroops does, and the HUD shows
- * min(current, this)). Shared by the sim and the HUD.
+ * Troops (or warship health) a skulled side loses this second: a ramp from
+ * drainStartPercent up to drainMaxPercent over drainRampSeconds, as a percentage
+ * of MAX capacity/health (not current), so it outpaces income from the first
+ * second. `curveExponent` shapes the ramp: 1 = LINEAR (troops → ~1:30 to zero
+ * from full); >1 = CONVEX (warships → stays near the gentle start for most of the
+ * ramp, then spikes hard, so a ship caught early lasts ~as long as troops but a
+ * side at full attrition loses ships in ~2s). The caller caps it at the side's
+ * current value. Deterministic (floored); Math.pow is stable across JS engines.
  */
 export function doomsdayClockDrain(
   maxTroops: number,
   secondsPastWarn: number,
   cfg: DoomsdayClockDrainConfig,
+  curveExponent = 1,
 ): number {
   const t = Math.max(0, secondsPastWarn);
   const r = cfg.drainRampSeconds;
@@ -223,6 +242,7 @@ export function doomsdayClockDrain(
   const pct =
     r <= 0 || t >= r
       ? cfg.drainMaxPercent
-      : cfg.drainStartPercent + Math.floor((span * t) / r);
+      : cfg.drainStartPercent +
+        Math.floor(span * Math.pow(t / r, curveExponent));
   return Math.max(1, Math.floor((maxTroops * pct) / 100));
 }
