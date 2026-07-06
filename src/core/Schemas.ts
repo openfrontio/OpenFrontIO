@@ -358,6 +358,7 @@ export const GameConfigSchema = z.object({
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
+  customAllianceDuration: z.number().int().min(0).max(15).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),

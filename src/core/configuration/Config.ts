@@ -213,7 +213,12 @@ export class Config {
     return this._gameConfig.disableNavMesh ?? false;
   }
   disableAlliances(): boolean {
-    return this._gameConfig.disableAlliances ?? false;
+    // customAllianceDuration === 0 disables alliances (the "custom alliances"
+    // control at 0). The legacy boolean is still honored for older configs.
+    return (
+      this._gameConfig.customAllianceDuration === 0 ||
+      (this._gameConfig.disableAlliances ?? false)
+    );
   }
   waterNukes(): boolean {
     return this._gameConfig.waterNukes ?? false;
@@ -560,6 +565,10 @@ export class Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
+    // Host can set a custom alliance duration in minutes (1-15); 0 disables
+    // alliances (see disableAlliances). Falls back to the 5 minute default.
+    const m = this._gameConfig.customAllianceDuration;
+    if (typeof m === "number" && m > 0) return m * 60 * 10;
     return 300 * 10; // 5 minutes.
   }
   temporaryEmbargoDuration(): Tick {
