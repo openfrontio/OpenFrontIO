@@ -362,19 +362,26 @@ export class HostLobbyModal extends BaseModal {
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
-      html`<toggle-input-card
-        .labelKey=${"host_modal.player_whitelist"}
-        .checked=${this.whitelistEnabled}
-        .inputType=${"text"}
-        .inputId=${"allowed-public-ids"}
-        .inputValue=${this.allowedPublicIds}
-        .inputAriaLabel=${translateText("host_modal.player_whitelist")}
-        .inputPlaceholder=${translateText(
-          "host_modal.player_whitelist_placeholder",
-        )}
-        .onToggle=${this.handleWhitelistToggle}
-        .onChange=${this.handleAllowedPublicIdsChange}
-      ></toggle-input-card>`,
+      // A join whitelist and public listing are mutually exclusive (the
+      // server rejects both combinations), so the control disappears while
+      // the lobby is listed.
+      ...(this.publiclyListed
+        ? []
+        : [
+            html`<toggle-input-card
+              .labelKey=${"host_modal.player_whitelist"}
+              .checked=${this.whitelistEnabled}
+              .inputType=${"text"}
+              .inputId=${"allowed-public-ids"}
+              .inputValue=${this.allowedPublicIds}
+              .inputAriaLabel=${translateText("host_modal.player_whitelist")}
+              .inputPlaceholder=${translateText(
+                "host_modal.player_whitelist_placeholder",
+              )}
+              .onToggle=${this.handleWhitelistToggle}
+              .onChange=${this.handleAllowedPublicIdsChange}
+            ></toggle-input-card>`,
+          ]),
     ];
 
     const hostCheatInputCards = [
