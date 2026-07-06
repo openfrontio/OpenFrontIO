@@ -15,7 +15,11 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
+import {
+  GameConfig,
+  ScheduledPublicGameType,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
@@ -122,13 +126,13 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
 ];
 
 export class MapPlaylist {
-  private playlists: Record<PublicGameType, GameMapType[]> = {
+  private playlists: Record<ScheduledPublicGameType, GameMapType[]> = {
     ffa: [],
     special: [],
     team: [],
   };
 
-  public async gameConfig(type: PublicGameType): Promise<GameConfig> {
+  public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     if (type === "special") {
       return this.getSpecialConfig();
     }
@@ -410,7 +414,7 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: PublicGameType): GameMapType {
+  private getNextMap(type: ScheduledPublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {
       playlist.push(...this.generateNewPlaylist(type));
@@ -418,7 +422,7 @@ export class MapPlaylist {
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(type: PublicGameType): GameMapType[] {
+  private generateNewPlaylist(type: ScheduledPublicGameType): GameMapType[] {
     const maps = this.buildMapsList(type);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
@@ -467,7 +471,7 @@ export class MapPlaylist {
     return false;
   }
 
-  private buildMapsList(type: PublicGameType): GameMapType[] {
+  private buildMapsList(type: ScheduledPublicGameType): GameMapType[] {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
