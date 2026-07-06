@@ -179,7 +179,8 @@ export const MAX_HOSTED_LOBBIES = 10;
 // How long a lobby may stay publicly listed before it starts automatically,
 // so hosts can't sit on a listing indefinitely. Unlisting cancels the
 // deadline; relisting starts a fresh one.
-export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
+// TODO: restore to 5 minutes after testing.
+export const HOSTED_LOBBY_AUTO_START_MS = 30 * 1000;
 
 export const UsernameSchema = z
   .string()
