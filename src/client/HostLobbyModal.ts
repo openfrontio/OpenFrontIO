@@ -633,6 +633,11 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(): void {
+    // Re-armed here (not in onClose's reset) so that once
+    // closeWithoutLeaving() disarms it, no close cascade — e.g. another
+    // modal's close() navigating via showPage, which force-closes this one —
+    // can re-arm it and disconnect the host mid game-start.
+    this.leaveLobbyOnClose = true;
     this.startLobbyUpdates();
     void getUserMe().then((userMe) => {
       // Dev skips the subscription gate (matching the server) so the
@@ -773,8 +778,6 @@ export class HostLobbyModal extends BaseModal {
     this.publiclyListed = false;
     this.showSubscriptionRequired = false;
     this.autoStartAt = null;
-
-    this.leaveLobbyOnClose = true;
   }
 
   private async handleSelectRandomMap() {

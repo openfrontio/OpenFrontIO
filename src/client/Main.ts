@@ -869,11 +869,12 @@ class Client {
       document
         .getElementById("username-validation-error")
         ?.classList.add("hidden");
-      this.joinModal?.closeWithoutLeaving();
-      // Same for the host: the game is starting (possibly a server-initiated
-      // auto-start of a listed lobby), so closing the modal must not leave
-      // the lobby — that would disconnect the host and tear the game down.
+      // The host modal must close FIRST: closing any page-modal navigates
+      // via showPage, which force-closes the currently visible page. If that
+      // hits the host modal while leaveLobbyOnClose is still armed, the host
+      // leaves the lobby mid game-start.
       this.hostModal?.closeWithoutLeaving();
+      this.joinModal?.closeWithoutLeaving();
       [
         "single-player-modal",
         "game-starting-modal",
