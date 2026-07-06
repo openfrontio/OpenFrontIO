@@ -101,7 +101,7 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   // the clock the full ramp, ships sink in ~2s (50%/s). Ships only.
   warshipDrainStartPercent: 1,
   warshipDrainMaxPercent: 50,
-  warshipDrainCurveExponent: 6, // >1 = convex: stays gentle early, then spikes
+  warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
 };
 
 export class Config {
