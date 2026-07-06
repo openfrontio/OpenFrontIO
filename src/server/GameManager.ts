@@ -126,6 +126,9 @@ export class GameManager {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {
       const phase = game.phase();
+      if (phase === GamePhase.Lobby) {
+        game.maybeAutoStartListed();
+      }
       if (phase === GamePhase.Active) {
         if (!game.hasStarted()) {
           // Prestart tells clients to start loading the game.

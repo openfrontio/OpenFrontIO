@@ -1,4 +1,4 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -112,6 +112,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private canListPublicly: boolean = false;
   @state() private publiclyListed: boolean = false;
   @state() private showSubscriptionRequired: boolean = false;
+  // Server timestamp when the listed lobby auto-starts (from lobby info).
+  @state() private autoStartAt: number | null = null;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -146,6 +148,7 @@ export class HostLobbyModal extends BaseModal {
     if (!this.listingRequestInFlight && lobby.listed !== undefined) {
       this.publiclyListed = lobby.listed;
     }
+    this.autoStartAt = lobby.autoStartAt ?? null;
   };
 
   private getRandomString(): string {
@@ -248,7 +251,30 @@ export class HostLobbyModal extends BaseModal {
         ${segment("host_modal.visibility_private", false)}
         ${segment("host_modal.visibility_public", true)}
       </div>
+      ${this.renderAutoStartTimer()}
     `;
+  }
+
+  // Countdown until the listed lobby starts automatically (hosts can't sit
+  // on a public listing). Hidden once the real start countdown is running —
+  // the Start button shows that one.
+  private renderAutoStartTimer() {
+    if (
+      !this.publiclyListed ||
+      this.autoStartAt === null ||
+      this.lobbyStartAt !== null
+    ) {
+      return nothing;
+    }
+    const seconds = getSecondsUntilServerTimestamp(
+      this.autoStartAt,
+      this.serverTimeOffset,
+    );
+    return html`<span
+      class="text-amber-300 text-xs font-bold tabular-nums shrink-0"
+      title=${translateText("host_modal.auto_start_timer")}
+      >${renderDuration(seconds)}</span
+    >`;
   }
 
   private handleVisibilitySelect(isPublic: boolean) {
@@ -738,6 +764,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatStartingGoldValue = undefined;
     this.publiclyListed = false;
     this.showSubscriptionRequired = false;
+    this.autoStartAt = null;
 
     this.leaveLobbyOnClose = true;
   }

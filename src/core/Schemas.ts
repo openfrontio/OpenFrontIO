@@ -176,6 +176,11 @@ export type ScheduledPublicGameType = z.infer<
 // and delists any overflow as the authoritative backstop.
 export const MAX_HOSTED_LOBBIES = 10;
 
+// How long a lobby may stay publicly listed before it starts automatically,
+// so hosts can't sit on a listing indefinitely. Unlisting cancels the
+// deadline; relisting starts a fresh one.
+export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
+
 export const UsernameSchema = z
   .string()
   .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
@@ -207,6 +212,9 @@ export const GameInfoSchema = z.object({
   // UI stays in sync when the server delists (whitelist enabled, duplicate
   // creator resolved by the master).
   listed: z.boolean().optional(),
+  // Listed lobbies only: server timestamp when the lobby starts
+  // automatically (hosts can't sit on a public listing indefinitely).
+  autoStartAt: z.number().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash

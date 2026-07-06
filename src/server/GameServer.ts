@@ -15,6 +15,7 @@ import {
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
   Intent,
   LiveStats,
   PlayerLiveStats,
@@ -149,6 +150,9 @@ export class GameServer {
   // only the authenticated /api/game/:id/listing endpoint may (it verifies
   // the creator's subscription).
   private listed = false;
+  // When the lobby was listed; drives the auto-start deadline. Cleared on
+  // delist, so relisting starts a fresh deadline.
+  private listedAt?: number;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -274,7 +278,7 @@ export class GameServer {
       // A join whitelist and public listing are mutually exclusive: a listed
       // lobby must be joinable by anyone who finds it in the lobby browser.
       if (this.listed && this.hasJoinWhitelist()) {
-        this.listed = false;
+        this.setListed(false);
         this.log.info("delisted lobby: join whitelist enabled");
       }
     }
@@ -1154,6 +1158,7 @@ export class GameServer {
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
       listed: this.isPublic() ? undefined : this.listed,
+      autoStartAt: this.autoStartAt(),
     };
   }
 
@@ -1183,7 +1188,38 @@ export class GameServer {
   }
 
   public setListed(listed: boolean): void {
+    if (this.listed === listed) {
+      // Duplicate toggles must not extend the auto-start deadline.
+      return;
+    }
     this.listed = listed;
+    this.listedAt = listed ? Date.now() : undefined;
+  }
+
+  // Deadline after which a listed lobby starts automatically, so hosts
+  // can't sit on a public listing indefinitely.
+  public autoStartAt(): number | undefined {
+    return this.listed && this.listedAt !== undefined
+      ? this.listedAt + HOSTED_LOBBY_AUTO_START_MS
+      : undefined;
+  }
+
+  // Called from GameManager's tick while in the Lobby phase: once the
+  // listed deadline passes, arm the normal start countdown (same path as
+  // the host's Start button). Cancelling the countdown re-arms it on the
+  // next tick, so the only way out is to unlist.
+  public maybeAutoStartListed(): void {
+    if (this.hasStarted() || this.startsAt !== undefined) {
+      return;
+    }
+    const deadline = this.autoStartAt();
+    if (deadline === undefined || Date.now() < deadline) {
+      return;
+    }
+    this.log.info("listed lobby reached auto-start deadline, starting", {
+      gameID: this.id,
+    });
+    this.setStartsAt(Date.now() + (this.gameConfig.startDelay ?? 0) * 1000);
   }
 
   // Whether joining is restricted to an allowlist of publicIds. A lobby with

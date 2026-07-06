@@ -8,7 +8,10 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
-import { MAX_HOSTED_LOBBIES } from "../../src/core/Schemas";
+import {
+  HOSTED_LOBBY_AUTO_START_MS,
+  MAX_HOSTED_LOBBIES,
+} from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
 import {
@@ -185,6 +188,68 @@ describe("GameManager.listedLobbies", () => {
 
     (game as any)._hasStarted = true;
     expect(gm.listedLobbies()).toEqual([]);
+  });
+});
+
+describe("listed lobby auto-start", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("tracks the deadline from when the lobby was listed", () => {
+    const game = makeGame();
+    expect(game.autoStartAt()).toBeUndefined();
+
+    game.setListed(true);
+    const deadline = Date.now() + HOSTED_LOBBY_AUTO_START_MS;
+    expect(game.autoStartAt()).toBe(deadline);
+    expect(game.gameInfo().autoStartAt).toBe(deadline);
+
+    // A duplicate toggle must not extend the deadline...
+    vi.setSystemTime(Date.now() + 60_000);
+    game.setListed(true);
+    expect(game.autoStartAt()).toBe(deadline);
+
+    // ...unlisting cancels it, and relisting starts a fresh one.
+    game.setListed(false);
+    expect(game.autoStartAt()).toBeUndefined();
+    game.setListed(true);
+    expect(game.autoStartAt()).toBe(Date.now() + HOSTED_LOBBY_AUTO_START_MS);
+  });
+
+  it("arms the start countdown only once the deadline passes", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame(
+      "g-auto-start",
+      { startDelay: 30 } as any,
+      CREATOR,
+    )!;
+    game.setListed(true);
+
+    vi.setSystemTime(Date.now() + HOSTED_LOBBY_AUTO_START_MS - 1000);
+    gm.tick();
+    expect(game.gameInfo().startsAt).toBeUndefined();
+
+    vi.setSystemTime(Date.now() + 2000);
+    gm.tick();
+    expect(game.gameInfo().startsAt).toBe(Date.now() + 30_000);
+    // Still listed while the start countdown runs (the phase change on
+    // start delists).
+    expect(gm.listedLobbies()).toHaveLength(1);
+  });
+
+  it("never auto-starts an unlisted lobby", () => {
+    const gm = new GameManager(mockLogger);
+    const game = gm.createGame("g-manual", undefined, CREATOR)!;
+
+    vi.setSystemTime(Date.now() + HOSTED_LOBBY_AUTO_START_MS * 2);
+    gm.tick();
+    expect(game.gameInfo().startsAt).toBeUndefined();
   });
 });
 

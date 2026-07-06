@@ -753,6 +753,7 @@
   "host_modal": {
     "anonymous_players": "Anonymous players",
     "assigned_teams": "Assigned Teams",
+    "auto_start_timer": "Time until the game starts automatically",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
     "compact_map": "Compact Map",
