@@ -196,6 +196,18 @@ export class WorkerLobbyService {
       );
   }
 
+  // Cluster-wide count of listed hosted lobbies: the master broadcast plus
+  // this worker's own listed lobbies that haven't reached it yet. Approximate
+  // by up to a broadcast round-trip; the master's cap is the backstop.
+  public hostedLobbyCount(): number {
+    const broadcast = this.lastPublicGames?.games["hosted"] ?? [];
+    const broadcastIds = new Set(broadcast.map((l) => l.gameID));
+    const localExtra = this.gm
+      .listedLobbies()
+      .filter((g) => !broadcastIds.has(g.id)).length;
+    return broadcast.length + localExtra;
+  }
+
   // Strips worker/master-internal fields (creatorID) before lobby info is
   // sent to browser clients, converting InternalGameInfo to the
   // browser-facing PublicGameInfo.

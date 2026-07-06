@@ -171,6 +171,11 @@ export type ScheduledPublicGameType = z.infer<
   typeof ScheduledPublicGameTypeSchema
 >;
 
+// Cluster-wide cap on subscriber-listed (hosted) lobbies, to prevent listing
+// spam. Workers reject listings past the cap; the master caps the broadcast
+// and delists any overflow as the authoritative backstop.
+export const MAX_HOSTED_LOBBIES = 25;
+
 export const UsernameSchema = z
   .string()
   .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)

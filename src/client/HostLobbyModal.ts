@@ -1205,6 +1205,8 @@ export class HostLobbyModal extends BaseModal {
       key = "private_lobby.listing_whitelist_enabled";
     } else if (serverError === "listing_host_cheats_enabled") {
       key = "private_lobby.listing_host_cheats_enabled";
+    } else if (serverError === "listing_full") {
+      key = "private_lobby.listing_full";
     }
     showToast(translateText(key), "red", 3000);
   }

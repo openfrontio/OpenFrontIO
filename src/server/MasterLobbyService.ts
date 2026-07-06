@@ -1,6 +1,10 @@
 import { Worker } from "cluster";
 import winston from "winston";
-import { PublicGameType, SCHEDULED_PUBLIC_GAME_TYPES } from "../core/Schemas";
+import {
+  MAX_HOSTED_LOBBIES,
+  PublicGameType,
+  SCHEDULED_PUBLIC_GAME_TYPES,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
   InternalGameInfo,
@@ -25,10 +29,11 @@ export class MasterLobbyService {
   private readonly workerLobbies = new Map<number, InternalGameInfo[]>();
   private readonly readyWorkers = new Set<number>();
   // gameID => consecutive broadcast cycles a hosted lobby has lost the
-  // per-creator dedup. Losing once can be a stale worker report (a delisted
-  // lobby lingers for one report round-trip); losing twice means two lobbies
-  // by the same creator really are listed, and the loser gets delisted.
-  private readonly dedupLoserStreaks = new Map<string, number>();
+  // per-creator dedup or overflowed the cluster-wide cap. Losing once can be
+  // a stale worker report (a delisted lobby lingers for one report
+  // round-trip); losing twice means the conflict is real, and the loser gets
+  // delisted.
+  private readonly loserStreaks = new Map<string, number>();
   private started = false;
 
   constructor(
@@ -86,7 +91,7 @@ export class MasterLobbyService {
 
   private getAllLobbies(): {
     games: Record<PublicGameType, InternalGameInfo[]>;
-    dedupLosers: string[];
+    losers: string[];
   } {
     const lobbies = Array.from(this.workerLobbies.values()).flat();
 
@@ -122,46 +127,56 @@ export class MasterLobbyService {
     // listed flag — otherwise it would stay flagged Public on its worker
     // while never appearing in any browser.
     const seenCreators = new Set<string>();
-    const dedupLosers: string[] = [];
+    const losers: string[] = [];
     result.hosted = result.hosted.filter((lobby) => {
       if (lobby.creatorID === undefined) return true;
       if (seenCreators.has(lobby.creatorID)) {
-        dedupLosers.push(lobby.gameID);
+        losers.push(lobby.gameID);
         return false;
       }
       seenCreators.add(lobby.creatorID);
       return true;
     });
 
-    return { games: result, dedupLosers };
+    // Cluster-wide cap to prevent listing spam. Workers reject listings past
+    // the cap too, but their view lags by a broadcast round-trip; overflow
+    // (deterministically the sort losers) is delisted like dedup losers.
+    if (result.hosted.length > MAX_HOSTED_LOBBIES) {
+      for (const lobby of result.hosted.slice(MAX_HOSTED_LOBBIES)) {
+        losers.push(lobby.gameID);
+      }
+      result.hosted = result.hosted.slice(0, MAX_HOSTED_LOBBIES);
+    }
+
+    return { games: result, losers };
   }
 
-  // Dedup losers are only delisted after losing two consecutive broadcast
-  // cycles: a single loss can be a stale worker report (a just-delisted lobby
-  // lingers for one report round-trip), and delisting on it would clear the
-  // creator's only real listed lobby.
-  private delistGameIDs(dedupLosers: string[]): string[] {
-    const loserSet = new Set(dedupLosers);
-    for (const gameID of this.dedupLoserStreaks.keys()) {
-      if (!loserSet.has(gameID)) this.dedupLoserStreaks.delete(gameID);
+  // Losers (creator dedup or cap overflow) are only delisted after losing
+  // two consecutive broadcast cycles: a single loss can be a stale worker
+  // report (a just-delisted lobby lingers for one report round-trip), and
+  // delisting on it would clear a legitimately listed lobby.
+  private delistGameIDs(losers: string[]): string[] {
+    const loserSet = new Set(losers);
+    for (const gameID of this.loserStreaks.keys()) {
+      if (!loserSet.has(gameID)) this.loserStreaks.delete(gameID);
     }
     const delist: string[] = [];
-    for (const gameID of dedupLosers) {
-      const streak = (this.dedupLoserStreaks.get(gameID) ?? 0) + 1;
-      this.dedupLoserStreaks.set(gameID, streak);
+    for (const gameID of losers) {
+      const streak = (this.loserStreaks.get(gameID) ?? 0) + 1;
+      this.loserStreaks.set(gameID, streak);
       if (streak >= 2) delist.push(gameID);
     }
     if (delist.length > 0) {
       this.log.info(
-        `delisting hosted lobbies with duplicate creators: ${delist.join(", ")}`,
+        `delisting hosted lobbies (duplicate creator or over cap): ${delist.join(", ")}`,
       );
     }
     return delist;
   }
 
   private broadcastLobbies() {
-    const { games, dedupLosers } = this.getAllLobbies();
-    const delist = this.delistGameIDs(dedupLosers);
+    const { games, losers } = this.getAllLobbies();
+    const delist = this.delistGameIDs(losers);
     const msg = {
       type: "lobbiesBroadcast",
       publicGames: {

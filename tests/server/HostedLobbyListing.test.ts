@@ -8,6 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
+import { MAX_HOSTED_LOBBIES } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
 import {
@@ -462,6 +463,28 @@ describe("MasterLobbyService hosted lobbies", () => {
     expect(broadcasts[1].delistGameIDs).toEqual(["bbb"]);
   });
 
+  it("caps hosted lobbies at MAX_HOSTED_LOBBIES and delists the overflow", () => {
+    const { service, workers } = createService();
+    const lobbies = Array.from({ length: MAX_HOSTED_LOBBIES + 1 }, (_, i) =>
+      hostedLobby(`g${String(i).padStart(2, "0")}`, `creator-${i}`),
+    );
+    workers[0].emit("message", { type: "lobbyList", lobbies });
+
+    (service as any).broadcastLobbies();
+    (service as any).broadcastLobbies();
+
+    const broadcasts = sentMessages(workers[0]).filter(
+      (m) => m.type === "lobbiesBroadcast",
+    );
+    expect(broadcasts[0].publicGames.games.hosted).toHaveLength(
+      MAX_HOSTED_LOBBIES,
+    );
+    // The sort loser (highest gameID) is dropped from the broadcast and,
+    // after two consecutive losing cycles, delisted.
+    expect(broadcasts[0].delistGameIDs).toBeUndefined();
+    expect(broadcasts[1].delistGameIDs).toEqual([`g${MAX_HOSTED_LOBBIES}`]);
+  });
+
   it("does not delist when the duplicate disappears after one broadcast", () => {
     const { service, workers } = createService();
     workers[0].emit("message", {
@@ -695,6 +718,29 @@ describe("WorkerLobbyService hosted lobbies", () => {
       game.setListed(true);
       expect(service.creatorHasListedLobby(hash, "other-game")).toBe(true);
     });
+  });
+
+  it("counts broadcast lobbies plus local listed ones not yet reported", () => {
+    const local = makeGame("local-g1", CREATOR);
+    local.setListed(true);
+    gm.listedLobbies.mockReturnValue([local]);
+
+    emitBroadcast({
+      ffa: [],
+      team: [],
+      special: [],
+      hosted: [hostedLobby("g1", "hash-a"), hostedLobby("g2", "hash-b")],
+    });
+    expect(service.hostedLobbyCount()).toBe(3);
+
+    // Once the local lobby reaches the broadcast it only counts once.
+    emitBroadcast({
+      ffa: [],
+      team: [],
+      special: [],
+      hosted: [hostedLobby("g1", "hash-a"), hostedLobby("local-g1", "hash-c")],
+    });
+    expect(service.hostedLobbyCount()).toBe(2);
   });
 
   it("clears the listed flag when the master delists a duplicate", () => {

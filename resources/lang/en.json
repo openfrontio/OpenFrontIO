@@ -1193,6 +1193,7 @@
     "join_lobby": "Join Lobby",
     "joined_waiting": "Lobby joined! Waiting for host to start...",
     "listing_failed": "Failed to update the lobby listing. Please try again.",
+    "listing_full": "The public lobby list is full. Please try again later.",
     "listing_host_cheats_enabled": "Disable host cheats to list your lobby publicly.",
     "listing_limit_reached": "You already have a publicly listed lobby.",
     "listing_requires_subscription": "An active subscription is required to list a lobby publicly.",

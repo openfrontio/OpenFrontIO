@@ -12,6 +12,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
+  MAX_HOSTED_LOBBIES,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
@@ -268,6 +269,12 @@ export async function startWorker() {
         lobbyService.creatorHasListedLobby(creatorID, game.id)
       ) {
         return res.status(409).json({ error: "listing_limit_reached" });
+      }
+
+      // Cluster-wide cap to prevent listing spam. Approximate here (the
+      // broadcast lags by ~1s); the master's cap is the backstop.
+      if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
+        return res.status(409).json({ error: "listing_full" });
       }
     }
 
