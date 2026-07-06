@@ -15,7 +15,8 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
-import { getAuthHeader, logOut, userAuth } from "./Auth";
+import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
+import { ClientEnv } from "./ClientEnv";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -311,6 +312,42 @@ export async function openSubscriptionPortal(): Promise<string | false> {
   } catch (e) {
     console.error("openSubscriptionPortal: request failed", e);
     return false;
+  }
+}
+
+// POST /api/game/:id/listing on the game server (worker) — toggles whether a
+// private lobby appears in the public lobby browser. Creator-only and
+// server-authoritative (subscription, whitelist/cheat and quota checks).
+// On failure, `error` is the server's rejection code when available (e.g.
+// "subscription_required", "listing_limit_reached", "listing_full").
+export async function setLobbyListed(
+  gameID: string,
+  listed: boolean,
+): Promise<{ ok: true; listed: boolean } | { ok: false; error?: string }> {
+  try {
+    const token = await getPlayToken();
+    const response = await fetch(
+      `/${ClientEnv.workerPath(gameID)}/api/game/${gameID}/listing`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ listed }),
+      },
+    );
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      return { ok: false, error: body?.error };
+    }
+    return {
+      ok: true,
+      listed: typeof body?.listed === "boolean" ? body.listed : listed,
+    };
+  } catch (e) {
+    console.error("setLobbyListed: request failed", e);
+    return { ok: false };
   }
 }
 

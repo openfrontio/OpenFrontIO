@@ -28,7 +28,7 @@ import {
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
-import { getUserMe } from "./Api";
+import { getUserMe, setLobbyListed } from "./Api";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -1161,38 +1161,19 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
-  // Server-authoritative: it re-verifies the subscription and enforces one
-  // listed lobby per creator, so a failed request reverts the toggle.
+  // Server-authoritative: it re-verifies the subscription and enforces the
+  // listing limits, so a failed request reverts the toggle.
   private async handlePublicListingToggle(checked: boolean) {
     this.listingRequestInFlight = true;
     this.publiclyListed = checked;
-    try {
-      const token = await getPlayToken();
-      const response = await fetch(
-        `/${ClientEnv.workerPath(this.lobbyId)}/api/game/${this.lobbyId}/listing`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ listed: checked }),
-        },
-      );
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        this.publiclyListed = !checked;
-        this.showListingError(body?.error);
-      } else if (typeof body?.listed === "boolean") {
-        this.publiclyListed = body.listed;
-      }
-    } catch (error) {
-      console.error("Error updating lobby listing:", error);
+    const result = await setLobbyListed(this.lobbyId, checked);
+    if (result.ok) {
+      this.publiclyListed = result.listed;
+    } else {
       this.publiclyListed = !checked;
-      this.showListingError();
-    } finally {
-      this.listingRequestInFlight = false;
+      this.showListingError(result.error);
     }
+    this.listingRequestInFlight = false;
   }
 
   private showListingError(serverError?: string) {
