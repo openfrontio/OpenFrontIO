@@ -633,6 +633,11 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(): void {
+    // Re-armed here (not in onClose's reset) so that once
+    // closeWithoutLeaving() disarms it, no close cascade — e.g. another
+    // modal's close() navigating via showPage, which force-closes this one —
+    // can re-arm it and disconnect the host mid game-start.
+    this.leaveLobbyOnClose = true;
     this.startLobbyUpdates();
     void getUserMe().then((userMe) => {
       // Dev skips the subscription gate (matching the server) so the
@@ -693,6 +698,21 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  // Close as part of the lobby -> game transition (e.g. auto-start of a
+  // listed lobby): the host is entering the game, not leaving the lobby, so
+  // closing must not disconnect them (the server would tear the lobby down).
+  // disarmLeaveOnClose is separate because closing ANY page-modal navigates
+  // via showPage, which force-closes the currently visible page — so all
+  // lobby modals must be disarmed before any of them is closed.
+  public disarmLeaveOnClose() {
+    this.leaveLobbyOnClose = false;
+  }
+
+  public closeWithoutLeaving() {
+    this.disarmLeaveOnClose();
+    this.close();
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
@@ -765,8 +785,6 @@ export class HostLobbyModal extends BaseModal {
     this.publiclyListed = false;
     this.showSubscriptionRequired = false;
     this.autoStartAt = null;
-
-    this.leaveLobbyOnClose = true;
   }
 
   private async handleSelectRandomMap() {
