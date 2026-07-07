@@ -187,12 +187,15 @@ export class WebGLFrameBuilder {
     this.view.refreshNames(displayNames);
   }
 
+  private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncPlayerEffects(gameView);
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
+    this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
     this.resolveDeadUnitExplosions(gameView);
     uploadFrameData(this.view, gameView.frameData());
@@ -326,6 +329,49 @@ export class WebGLFrameBuilder {
       });
     }
     this.view.updateSpawnOverlay(true, centers);
+  }
+
+  /**
+   * Small-player glow: when the lobby toggle is on and the game is past
+   * halftime (or 10 minutes in an uncapped lobby), collect the alive human
+   * players holding <=1% of the map and push their smallIDs so the glow pass
+   * radiates around their territory. Client-only visual, recomputed each tick.
+   */
+  private syncSmallPlayerGlow(gameView: GameView): void {
+    const cfg = gameView.config().gameConfig();
+    if (cfg.highlightSmallPlayers !== true || gameView.inSpawnPhase()) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    // Gate: half the configured timer, or 10 minutes when uncapped.
+    const maxTimerMin = cfg.maxTimerValue;
+    const gateSeconds =
+      maxTimerMin !== null && maxTimerMin !== undefined
+        ? (maxTimerMin * 60) / 2
+        : 600;
+    if (gameView.elapsedGameSeconds() < gateSeconds) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    // "% of the map" uses the same denominator the leaderboard/win-check use.
+    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
+    if (denom <= 0) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    const set = this.highlightSetBuf;
+    set.fill(0);
+    let any = false;
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
+        continue;
+      }
+      if (p.numTilesOwned() / denom <= 0.01) {
+        set[p.smallID()] = 1;
+        any = true;
+      }
+    }
+    this.view.updateSmallPlayerGlow(any ? set : null);
   }
 
   private syncPlayers(gameView: GameView): void {

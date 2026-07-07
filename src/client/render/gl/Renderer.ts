@@ -48,6 +48,7 @@ import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
 import { SelectionBoxPass } from "./passes/SelectionBoxPass";
 import { SkinAtlasArray } from "./passes/SkinAtlasArray";
+import { SmallPlayerGlowPass } from "./passes/SmallPlayerGlowPass";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import { SpawnOverlayPass } from "./passes/SpawnOverlayPass";
 import { StructureLevelPass } from "./passes/StructureLevelPass";
@@ -140,6 +141,7 @@ export class GPURenderer {
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
   private spawnOverlayPass: SpawnOverlayPass;
+  private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
 
   private paletteTex: WebGLTexture;
@@ -427,6 +429,14 @@ export class GPURenderer {
       mapH,
       this.res.tileTex,
       this.settings.spawnOverlay,
+    );
+
+    this.smallPlayerGlowPass = new SmallPlayerGlowPass(
+      gl,
+      mapW,
+      mapH,
+      this.res.tileTex,
+      this.settings.smallPlayerGlow,
     );
 
     // --- Trail (needs trailTex, paletteTex, effectTex) ---
@@ -988,6 +998,10 @@ export class GPURenderer {
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
 
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.smallPlayerGlowPass.update(set);
+  }
+
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
@@ -1235,6 +1249,7 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.spawnOverlayPass.draw(cam);
+    this.smallPlayerGlowPass.draw(cam);
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
@@ -1293,6 +1308,7 @@ export class GPURenderer {
     this.affiliationPalette.dispose();
     this.coordinateGridPass.dispose();
     this.spawnOverlayPass.dispose();
+    this.smallPlayerGlowPass.dispose();
     this.railroadPass.dispose();
     this.rangeCirclePass.dispose();
     this.samRadiusPass.dispose();

@@ -331,6 +331,12 @@
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
   },
+  "smallPlayerGlow": {
+    "radius": 5,
+    "color": [1.0, 0.92, 0.35],
+    "alpha": 0.85,
+    "pulseSpeed": 0.004
+  },
   "altView": {
     "gridFontSize": 24,
     "recolorStructures": true

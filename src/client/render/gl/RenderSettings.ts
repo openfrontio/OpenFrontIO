@@ -380,6 +380,12 @@ export interface RenderSettings {
     gradientInnerEdge: number; // static gradient inner ramp end (0–1)
     gradientSolidEnd: number; // static gradient solid band end (0–1)
   };
+  smallPlayerGlow: {
+    radius: number; // glow reach in tiles (shader MAX_R caps this at 6)
+    color: number[]; // RGB, each 0–1
+    alpha: number; // peak opacity (0–1)
+    pulseSpeed: number; // breath animation speed
+  };
   altView: {
     gridFontSize: number;
     recolorStructures: boolean;
