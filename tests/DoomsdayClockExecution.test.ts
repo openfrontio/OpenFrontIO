@@ -533,6 +533,7 @@ describe("doomsdayClockWaveState", () => {
     expect(s.targetPercent).toBe(4);
     expect(s.growing).toBe(true);
     expect(s.secondsToNextGrowth).toBe(0);
+    expect(s.secondsToTarget).toBe(104); // 208s ramp, 104s elapsed into it
     expect(s.done).toBe(false);
   });
 
@@ -542,6 +543,7 @@ describe("doomsdayClockWaveState", () => {
     expect(s.currentPercent).toBe(4); // held at the level just reached
     expect(s.targetPercent).toBe(9); // next ramp climbs to 9%
     expect(s.secondsToNextGrowth).toBe(28); // next ramp starts at 858
+    expect(s.secondsToTarget).toBe(0); // not rising, so no rise countdown
   });
 
   it("counts down through the grace", () => {

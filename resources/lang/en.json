@@ -404,7 +404,7 @@
     "collapsing": "Collapsing -{rate}/s",
     "decay_in": "Decay in {secs}s",
     "final": "Final zone, hold {pct}%",
-    "growing": "Rising to {pct}%",
+    "growing": "Rising to {pct}% in {time}",
     "hold": "Hold ≥ {pct}%",
     "next_wave": "Next {pct}% in {time}",
     "stable": "Stable",

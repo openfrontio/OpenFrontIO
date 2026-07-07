@@ -144,6 +144,8 @@ export interface DoomsdayClockWaveState {
   growing: boolean;
   /** Seconds until the next ramp begins (0 while growing or once done). */
   secondsToNextGrowth: number;
+  /** Seconds until the current rise reaches its target level (0 unless growing). */
+  secondsToTarget: number;
   /** Within 5s before or after a ramp starting (the orange cue window). */
   waveFlash: boolean;
   /** True once the final level has been reached. */
@@ -170,6 +172,7 @@ export function doomsdayClockWaveState(
       targetPercent: s.levels[0] / 100,
       growing: false,
       secondsToNextGrowth: s.graceSeconds - elapsed,
+      secondsToTarget: 0,
       waveFlash: s.graceSeconds - elapsed <= 5,
       done: false,
     };
@@ -187,6 +190,7 @@ export function doomsdayClockWaveState(
         targetPercent: s.levels[i] / 100,
         growing: true,
         secondsToNextGrowth: 0,
+        secondsToTarget: ramp - t, // reaches this wave's level when the ramp ends
         waveFlash: t <= 5, // just started ramping
         done: false,
       };
@@ -198,6 +202,7 @@ export function doomsdayClockWaveState(
         targetPercent: (isLast ? s.levels[i] : s.levels[i + 1]) / 100,
         growing: false,
         secondsToNextGrowth: isLast ? 0 : pause - t,
+        secondsToTarget: 0,
         waveFlash: !isLast && pause - t <= 5, // next ramp imminent
         done: isLast,
       };
@@ -209,6 +214,7 @@ export function doomsdayClockWaveState(
     targetPercent: last,
     growing: false,
     secondsToNextGrowth: 0,
+    secondsToTarget: 0,
     waveFlash: false,
     done: true,
   };
