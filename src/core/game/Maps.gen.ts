@@ -77,6 +77,7 @@ export enum GameMapType {
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
+  Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Sierpinski = "Sierpinski", // map-generator/assets/maps/sierpinski/info.json
   SouthAmerica = "South America", // map-generator/assets/maps/southamerica/info.json
@@ -698,6 +699,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["cosmic"],
     multiplayerFrequency: 6,
     specialTeamCount: 2,
+  },
+  {
+    id: "Russia",
+    type: GameMapType.Russia,
+    translationKey: "map.russia",
+    categories: ["europe", "asia", "new", "countries"],
+    multiplayerFrequency: 8,
   },
   {
     id: "SanFrancisco",
