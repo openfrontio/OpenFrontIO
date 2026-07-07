@@ -1484,7 +1484,7 @@
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
-    "highlight_small_players_desc": "Glow players holding 0.2% or less of the map so you can spot them.",
+    "highlight_small_players_desc": "Glow players holding 0.2% or less of the map so you can spot them, starting one minute into the game.",
     "highlight_small_players_label": "Highlight small players",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",

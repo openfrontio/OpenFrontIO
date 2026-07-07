@@ -337,14 +337,14 @@ export class WebGLFrameBuilder {
    * Small-player glow: when the client "Highlight small players" setting is on,
    * collect the alive human players holding <=0.2% of the map and push their
    * smallIDs so the glow pass radiates around their territory. Skips the first
-   * 30 seconds of play so everyone's tiny starting territory doesn't glow.
+   * minute of play so everyone's tiny starting territory doesn't glow.
    * Client-only view, recomputed each tick — toggle it live in the settings.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
     if (
       !this.userSettings.highlightSmallPlayers() ||
       gameView.inSpawnPhase() ||
-      gameView.elapsedGameSeconds() < 30
+      gameView.elapsedGameSeconds() < 60
     ) {
       this.view.updateSmallPlayerGlow(null);
       return;
