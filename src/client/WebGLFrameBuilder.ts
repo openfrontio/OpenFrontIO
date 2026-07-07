@@ -335,22 +335,31 @@ export class WebGLFrameBuilder {
 
   /**
    * Small-player glow: when the client "Highlight small players" setting is on,
-   * collect the alive human players holding <=0.1% of the map and push their
+   * collect the alive human players holding <=0.2% of the map and push their
    * smallIDs so the glow pass radiates around their territory. Skips the first
    * 30 seconds of play so everyone's tiny starting territory doesn't glow.
    * Client-only view, recomputed each tick — toggle it live in the settings.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
-    if (
-      !this.userSettings.highlightSmallPlayers() ||
-      gameView.inSpawnPhase() ||
-      gameView.elapsedGameSeconds() < 30
-    ) {
+    const on = this.userSettings.highlightSmallPlayers();
+    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
+    // TEMP DEBUG: remove once the glow is verified.
+    if ((this.dbgGlowTick++ & 15) === 0) {
+      const me = gameView.myPlayer();
+      // eslint-disable-next-line no-console
+      console.debug(
+        `[small-glow] on=${on} spawn=${gameView.inSpawnPhase()} t=${gameView
+          .elapsedGameSeconds()
+          .toFixed(0)}s myFrac=${
+          me && denom > 0 ? (me.numTilesOwned() / denom).toFixed(5) : "n/a"
+        } thr=0.001`,
+      );
+    }
+    if (!on || gameView.inSpawnPhase() || gameView.elapsedGameSeconds() < 30) {
       this.view.updateSmallPlayerGlow(null);
       return;
     }
     // "% of the map" uses the same denominator the leaderboard/win-check use.
-    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
     if (denom <= 0) {
       this.view.updateSmallPlayerGlow(null);
       return;
@@ -358,14 +367,21 @@ export class WebGLFrameBuilder {
     const set = this.highlightSetBuf;
     set.fill(0);
     let any = false;
+    let flagged = 0;
     for (const p of gameView.players()) {
       if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
         continue;
       }
-      if (p.numTilesOwned() / denom <= 0.001) {
+      if (p.numTilesOwned() / denom <= 0.002) {
         set[p.smallID()] = 1;
         any = true;
+        flagged++;
       }
+    }
+    // TEMP DEBUG
+    if (any) {
+      // eslint-disable-next-line no-console
+      console.debug(`[small-glow] flagged ${flagged} small human(s) → glow ON`);
     }
     this.view.updateSmallPlayerGlow(any ? set : null);
   }
