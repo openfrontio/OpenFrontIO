@@ -47,6 +47,7 @@ export enum GameMapType {
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
   Halkidiki = "Halkidiki", // map-generator/assets/maps/halkidiki/info.json
   Hawaii = "Hawaii", // map-generator/assets/maps/hawaii/info.json
+  hecatestrait = "Hecate Strait", // map-generator/assets/maps/hecatestrait/info.json
   HongKong = "Hong Kong", // map-generator/assets/maps/hongkong/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
@@ -482,6 +483,13 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Hawaii,
     translationKey: "map.hawaii",
     categories: ["oceania"],
+    multiplayerFrequency: 4,
+  },
+  {
+    id: "hecatestrait",
+    type: GameMapType.hecatestrait,
+    translationKey: "map.hecatestrait",
+    categories: ["north_america", "new"],
     multiplayerFrequency: 4,
   },
   {
