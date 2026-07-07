@@ -183,6 +183,24 @@ export async function startWorker() {
       return res.status(409).json({ error: "Game ID already exists" });
     }
 
+    // Let a finished private lobby spin up a successor on this same worker (id
+    // sharding + GameManager both live here). Same creator, default settings —
+    // the host reconfigures in the host view. Only wired for private games, so
+    // the "reuse lobby" feature is inherently private-only.
+    game.createSuccessorLobby = () => {
+      const successorId = ServerEnv.generateGameIdForWorker(workerId);
+      if (successorId === null) {
+        log.warn(`Failed to mint successor game id on worker ${workerId}`);
+        return null;
+      }
+      const successor = gm.createGame(
+        successorId,
+        undefined,
+        creatorPersistentID,
+      );
+      return successor === null ? null : successorId;
+    };
+
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
     log.info(

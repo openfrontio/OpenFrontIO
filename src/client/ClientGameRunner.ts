@@ -53,6 +53,7 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
+  NewLobbyEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -919,6 +920,12 @@ export class ClientGameRunner {
           false,
           "error_modal.connection_error",
         );
+      }
+      if (message.type === "new_lobby") {
+        // The host reused this private lobby: surface the successor id so the
+        // group can hop over. NewLobbyPrompt navigates the host and prompts
+        // everyone else.
+        this.eventBus.emit(new NewLobbyEvent(message.gameID));
       }
       if (message.type === "turn") {
         if (

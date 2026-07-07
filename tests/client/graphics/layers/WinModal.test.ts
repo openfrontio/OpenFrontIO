@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RankedType } from "../../../../src/core/game/Game";
+import { GameType, RankedType } from "../../../../src/core/game/Game";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {
@@ -112,6 +112,36 @@ describe("WinModal Requeue", () => {
       const url = new URL("http://localhost:9000/");
       const hasRequeue = url.searchParams.has("requeue");
       expect(hasRequeue).toBe(false);
+    });
+  });
+
+  // Mirrors WinModal.canReuseLobby: the "New lobby" button only shows to the
+  // creator of a finished private game.
+  describe("new lobby button visibility", () => {
+    const canReuseLobby = (
+      gameEnded: boolean,
+      isLobbyCreator: boolean,
+      gameType: GameType,
+    ) => gameEnded && isLobbyCreator && gameType === GameType.Private;
+
+    it("shows for the host of a finished private game", () => {
+      expect(canReuseLobby(true, true, GameType.Private)).toBe(true);
+    });
+
+    it("is hidden until the game has ended", () => {
+      expect(canReuseLobby(false, true, GameType.Private)).toBe(false);
+    });
+
+    it("is hidden for non-host players", () => {
+      expect(canReuseLobby(true, false, GameType.Private)).toBe(false);
+    });
+
+    it("is hidden in public games", () => {
+      expect(canReuseLobby(true, true, GameType.Public)).toBe(false);
+    });
+
+    it("is hidden in singleplayer games", () => {
+      expect(canReuseLobby(true, true, GameType.Singleplayer)).toBe(false);
     });
   });
 });

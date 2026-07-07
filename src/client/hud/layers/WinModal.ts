@@ -7,7 +7,7 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { RankedType } from "../../../core/game/Game";
+import { GameType, RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticButton";
@@ -19,7 +19,7 @@ import {
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
-import { SendWinnerEvent } from "../../Transport";
+import { SendCreateNextLobbyEvent, SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
 
 @customElement("win-modal")
@@ -34,6 +34,16 @@ export class WinModal extends LitElement implements Controller {
 
   @state()
   showButtons = false;
+
+  // True once the game has actually ended (a Win update arrived), as opposed to
+  // the local player merely dying mid-game. Gates the "New lobby" button.
+  @state()
+  private gameEnded = false;
+
+  // Set once the host has asked for a successor lobby, to avoid firing again
+  // while we wait for the server's broadcast to navigate us away.
+  @state()
+  private newLobbyRequested = false;
 
   @state()
   private isWin = false;
@@ -88,6 +98,18 @@ export class WinModal extends LitElement implements Controller {
                   class="flex-1"
                   translationKey="win_modal.requeue"
                   @click=${this._handleRequeue}
+                ></o-button>
+              `
+            : null}
+          ${this.canReuseLobby
+            ? html`
+                <o-button
+                  variant="primary"
+                  width="block"
+                  class="flex-1"
+                  translationKey="win_modal.new_lobby"
+                  ?disabled=${this.newLobbyRequested}
+                  @click=${this._handleNewLobby}
                 ></o-button>
               `
             : null}
@@ -254,6 +276,28 @@ export class WinModal extends LitElement implements Controller {
     window.location.href = "/?requeue";
   }
 
+  // Only the creator of a finished private game may reuse the lobby. In replays
+  // and singleplayer there is no host to serve the request, and both are ruled
+  // out here (no lobby creator / not a private game).
+  private get canReuseLobby(): boolean {
+    return (
+      this.gameEnded &&
+      this.game?.myPlayer()?.isLobbyCreator() === true &&
+      this.game?.config().gameConfig().gameType === GameType.Private
+    );
+  }
+
+  private _handleNewLobby() {
+    if (this.newLobbyRequested) {
+      return;
+    }
+    this.newLobbyRequested = true;
+    this.requestUpdate();
+    // Ask this game's server to create the successor lobby and broadcast its id.
+    // NewLobbyPrompt navigates us to the host view once the broadcast arrives.
+    this.eventBus.emit(new SendCreateNextLobbyEvent());
+  }
+
   init() {}
 
   tick() {
@@ -272,6 +316,9 @@ export class WinModal extends LitElement implements Controller {
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
     winUpdates.forEach((wu) => {
+      // The game is over (as opposed to the local player dying); enables the
+      // host's "New lobby" button.
+      this.gameEnded = true;
       if (wu.winner === undefined) {
         // ...
       } else if (wu.winner[0] === "team") {

@@ -11,6 +11,7 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameID,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
@@ -22,6 +23,7 @@ import {
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerLobbyInfoMessage,
+  ServerNewLobbyMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -130,6 +132,18 @@ export class GameServer {
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private visibleAt?: number;
+
+  // The successor lobby this game has already spawned, if any. Kept so a repeated
+  // "create_next_lobby" (e.g. a double click) re-broadcasts the same id instead
+  // of minting another lobby.
+  private successorLobbyId: GameID | null = null;
+
+  // Mints a successor private lobby (same creator, default settings) and returns
+  // its id. Injected by the worker that owns this game's shard, because id
+  // sharding and GameManager access both live at the worker layer. Left
+  // undefined for games that must not spawn a successor (public games), which is
+  // how this feature stays private-only.
+  public createSuccessorLobby?: () => GameID | null;
 
   constructor(
     public readonly id: string,
@@ -658,6 +672,10 @@ export class GameServer {
             this.handleLiveStats(client, clientMsg);
             break;
           }
+          case "create_next_lobby": {
+            this.handleCreateNextLobby(client);
+            break;
+          }
           default: {
             this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
               clientID: client.clientID,
@@ -810,6 +828,45 @@ export class GameServer {
           lobby: shared ?? this.gameInfo(c.clientID),
           myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
+        c.ws.send(msg);
+      }
+    });
+  }
+
+  // The lobby creator asked (from the win screen) to reuse this private lobby for
+  // another game. Spawn a successor lobby once and tell everyone still connected
+  // its id so they can hop over without re-sharing a link.
+  private handleCreateNextLobby(client: Client) {
+    if (client.clientID !== this.lobbyCreatorID) {
+      this.log.warn("non-creator tried to create a successor lobby, ignoring", {
+        clientID: client.clientID,
+      });
+      return;
+    }
+    // No factory means this game isn't allowed to spawn a successor (public
+    // games). Idempotent: reuse an already-minted successor for repeat clicks.
+    if (this.successorLobbyId === null) {
+      const newId = this.createSuccessorLobby?.() ?? null;
+      if (newId === null) {
+        this.log.warn("could not create successor lobby", { gameID: this.id });
+        return;
+      }
+      this.successorLobbyId = newId;
+      this.log.info("created successor lobby", {
+        gameID: this.id,
+        successorID: newId,
+      });
+    }
+    this.broadcastNewLobby(this.successorLobbyId);
+  }
+
+  private broadcastNewLobby(gameID: GameID) {
+    const msg = JSON.stringify({
+      type: "new_lobby",
+      gameID,
+    } satisfies ServerNewLobbyMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
         c.ws.send(msg);
       }
     });

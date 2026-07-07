@@ -101,7 +101,8 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientCreateNextLobbyMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -110,7 +111,8 @@ export type ServerMessage =
   | ServerDesyncMessage
   | ServerPrestartMessage
   | ServerErrorMessage
-  | ServerLobbyInfoMessage;
+  | ServerLobbyInfoMessage
+  | ServerNewLobbyMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -123,6 +125,7 @@ export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
 export type ServerLobbyInfoMessage = z.infer<
   typeof ServerLobbyInfoMessageSchema
 >;
+export type ServerNewLobbyMessage = z.infer<typeof ServerNewLobbyMessageSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientSendLiveStatsMessage = z.infer<
   typeof ClientSendLiveStatsSchema
@@ -135,6 +138,9 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientCreateNextLobbyMessage = z.infer<
+  typeof ClientCreateNextLobbySchema
+>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -714,6 +720,14 @@ export const ServerLobbyInfoMessageSchema = z.object({
   myClientID: ID,
 });
 
+// Broadcast by a finished private game's server to every still-connected client
+// when the host starts a successor lobby, so the whole group can hop to the new
+// game without re-sharing the link. gameID is the freshly minted successor.
+export const ServerNewLobbyMessageSchema = z.object({
+  type: z.literal("new_lobby"),
+  gameID: ID,
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -722,6 +736,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerDesyncSchema,
   ServerErrorSchema,
   ServerLobbyInfoMessageSchema,
+  ServerNewLobbyMessageSchema,
 ]);
 
 //
@@ -802,6 +817,14 @@ export const ClientRejoinMessageSchema = z.object({
   token: TokenSchema,
 });
 
+// Sent by the lobby creator from the win screen to ask this game's server to
+// spin up a successor private lobby (same creator, default settings) and
+// broadcast its id to everyone. The server authorizes by clientID, so no
+// payload is needed.
+export const ClientCreateNextLobbySchema = z.object({
+  type: z.literal("create_next_lobby"),
+});
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientSendLiveStatsSchema,
@@ -811,6 +834,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientCreateNextLobbySchema,
 ]);
 
 //
