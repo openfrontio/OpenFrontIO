@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
@@ -14,6 +15,7 @@ import {
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
   Intent,
   LiveStats,
   PlayerLiveStats,
@@ -57,12 +59,28 @@ export interface IntentOutcome {
   error?: string;
 }
 
+export function hashPersistentID(persistentID: string): string {
+  return createHash("sha256").update(persistentID).digest("hex");
+}
+
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_ADMIN = "kick_reason.admin";
 const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
+
+// Whether the host-only cheat block actually grants anything: mere presence
+// isn't enough, the client can send hostCheats with every field off.
+function hostCheatsEnabled(hc: GameConfig["hostCheats"]): boolean {
+  return (
+    hc !== undefined &&
+    (hc.infiniteGold === true ||
+      hc.infiniteTroops === true ||
+      typeof hc.goldMultiplier === "number" ||
+      typeof hc.startingGold === "number")
+  );
+}
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
@@ -126,6 +144,15 @@ export class GameServer {
   private static readonly MAX_PENDING_LIVE_STATS_ROUNDS = 20;
 
   private _hasEnded = false;
+
+  // Whether this private lobby is visible in the public lobby browser.
+  // Deliberately kept out of gameConfig so update_game_config can't set it;
+  // only the authenticated /api/game/:id/listing endpoint may (it verifies
+  // the creator's subscription).
+  private listed = false;
+  // When the lobby was listed; drives the auto-start deadline. Cleared on
+  // delist, so relisting starts a fresh deadline.
+  private listedAt?: number;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -248,6 +275,12 @@ export class GameServer {
     }
     if (gameConfig.allowedPublicIds !== undefined) {
       this.gameConfig.allowedPublicIds = gameConfig.allowedPublicIds;
+      // A join whitelist and public listing are mutually exclusive: a listed
+      // lobby must be joinable by anyone who finds it in the lobby browser.
+      if (this.listed && this.hasJoinWhitelist()) {
+        this.setListed(false);
+        this.log.info("delisted lobby: join whitelist enabled");
+      }
     }
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
@@ -291,6 +324,16 @@ export class GameServer {
           return {
             status: 403,
             error: "only the lobby creator or an admin can kick players",
+          };
+        }
+        // A listed lobby recruits strangers from the public browser; letting
+        // the host kick them is a griefing vector. Admins keep the power for
+        // moderation. The listed flag survives game start on purpose, so a
+        // publicly recruited game stays kick-free like a real public game.
+        if (this.isListed() && !actor.isAdmin) {
+          return {
+            status: 403,
+            error: "the host cannot kick players in a publicly listed lobby",
           };
         }
         // Resolve the target to a clientID: an explicit clientID, or an account
@@ -339,6 +382,16 @@ export class GameServer {
         }
         if (stamped.config.gameType === GameType.Public) {
           return { status: 400, error: "cannot change a game to public" };
+        }
+        // Host cheats give the host an asymmetric advantage over players
+        // recruited from the lobby browser. Listing is likewise rejected
+        // while cheats are on (Worker's listing endpoint), so a listed
+        // lobby can never have them.
+        if (this.isListed() && hostCheatsEnabled(stamped.config.hostCheats)) {
+          return {
+            status: 409,
+            error: "cannot enable host cheats in a publicly listed lobby",
+          };
         }
         this.updateGameConfig(stamped.config);
         return { status: 200 };
@@ -426,6 +479,11 @@ export class GameServer {
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
+    // e.g. the host left an unstarted lobby and GameManager hasn't pruned
+    // it yet.
+    if (this._hasEnded) {
+      return "rejected";
+    }
     if (this.kickedPersistentIds.has(client.persistentID)) {
       return "kicked";
     }
@@ -679,27 +737,7 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== client.clientID,
-      );
-
-      if (!this._hasStarted) {
-        // Remove persistentId if the game has not started to prevent going over max players
-        this.persistentIdToClientId.delete(client.persistentID);
-        // Close lobby when host leaves before game starts
-        if (
-          !this.isPublic() &&
-          client.persistentID === this.creatorPersistentID
-        ) {
-          this.log.info("Host left, closing lobby", {
-            gameID: this.id,
-          });
-          for (const c of [...this.activeClients]) {
-            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
-          }
-          this._hasEnded = true;
-        }
-      }
+      this.handleClientDisconnect(client);
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -707,19 +745,43 @@ export class GameServer {
       }
     });
 
-    // Check if WebSocket already closed before we added the listener (race condition)
+    // Check if WebSocket already closed before we added the listener (race
+    // condition) — the 'close' event has already fired, so the handler above
+    // will never run for this client.
     if (client.ws.readyState >= 2) {
       this.log.info("client WebSocket already closing/closed, removing", {
         clientID: client.clientID,
         readyState: client.ws.readyState,
       });
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== client.clientID,
-      );
-      // Remove persistentId if the game has not started to prevent going over max players
-      if (!this._hasStarted) {
-        this.persistentIdToClientId.delete(client.persistentID);
+      this.handleClientDisconnect(client);
+    }
+  }
+
+  private handleClientDisconnect(client: Client) {
+    this.activeClients = this.activeClients.filter(
+      (c) => c.clientID !== client.clientID,
+    );
+
+    // hasStarted() includes prestart: during the lobby -> game transition
+    // clients reconnect, and a host socket closing then must not tear the
+    // starting game down.
+    if (this.hasStarted()) {
+      return;
+    }
+    // Remove persistentId if the game has not started to prevent going over max players
+    this.persistentIdToClientId.delete(client.persistentID);
+    // Close lobby when host leaves before game starts: without a host it can
+    // never start, and a listed one would haunt the lobby browser and hold
+    // the creator's one-listing quota. phase() reports Finished once ended,
+    // so GameManager's next tick prunes it.
+    if (!this.isPublic() && client.persistentID === this.creatorPersistentID) {
+      this.log.info("Host left, closing lobby", {
+        gameID: this.id,
+      });
+      for (const c of [...this.activeClients]) {
+        this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
       }
+      this._hasEnded = true;
     }
   }
 
@@ -1019,6 +1081,13 @@ export class GameServer {
   }
 
   phase(): GamePhase {
+    // An ended game (e.g. an unstarted lobby whose host left) must report
+    // Finished: GameManager prunes on Finished, and a ghost that kept
+    // reporting Lobby would stay advertised in the lobby browser and hold
+    // the creator's one-listing quota until the max-duration cutoff.
+    if (this._hasEnded) {
+      return GamePhase.Finished;
+    }
     const now = Date.now();
     const alive: Client[] = [];
     for (const client of this.activeClients) {
@@ -1091,6 +1160,8 @@ export class GameServer {
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+      listed: this.isPublic() ? undefined : this.listed,
+      autoStartAt: this.autoStartAt(),
     };
   }
 
@@ -1113,6 +1184,74 @@ export class GameServer {
 
   public isPublic(): boolean {
     return this.gameConfig.gameType === GameType.Public;
+  }
+
+  public isListed(): boolean {
+    return this.listed;
+  }
+
+  public setListed(listed: boolean): void {
+    if (this.listed === listed) {
+      // Duplicate toggles must not extend the auto-start deadline.
+      return;
+    }
+    this.listed = listed;
+    this.listedAt = listed ? Date.now() : undefined;
+  }
+
+  // Deadline after which a listed lobby starts automatically, so hosts
+  // can't sit on a public listing indefinitely.
+  public autoStartAt(): number | undefined {
+    return this.listed && this.listedAt !== undefined
+      ? this.listedAt + HOSTED_LOBBY_AUTO_START_MS
+      : undefined;
+  }
+
+  // Called from GameManager's tick while in the Lobby phase: once the
+  // listed deadline passes, arm the normal start countdown (same path as
+  // the host's Start button). Cancelling the countdown re-arms it on the
+  // next tick, so the only way out is to unlist.
+  public maybeAutoStartListed(): void {
+    if (this.hasStarted() || this.startsAt !== undefined) {
+      return;
+    }
+    const deadline = this.autoStartAt();
+    if (deadline === undefined || Date.now() < deadline) {
+      return;
+    }
+    this.log.info("listed lobby reached auto-start deadline, starting", {
+      gameID: this.id,
+    });
+    this.setStartsAt(Date.now() + (this.gameConfig.startDelay ?? 0) * 1000);
+  }
+
+  // Whether joining is restricted to an allowlist of publicIds. A lobby with
+  // a join whitelist must not be publicly listed (it would advertise a lobby
+  // that rejects every joiner).
+  public hasJoinWhitelist(): boolean {
+    return (this.gameConfig.allowedPublicIds?.length ?? 0) > 0;
+  }
+
+  // Whether any host-only cheat is actually granted. A lobby with host
+  // cheats must not be publicly listed.
+  public hasHostCheats(): boolean {
+    return hostCheatsEnabled(this.gameConfig.hostCheats);
+  }
+
+  public isCreator(persistentId: string): boolean {
+    return (
+      this.creatorPersistentID !== undefined &&
+      this.creatorPersistentID === persistentId
+    );
+  }
+
+  // Hash of the creator's persistentID, safe to share between master and
+  // workers (never sent to browsers) for the one-listed-lobby-per-creator
+  // check. The raw persistentID must not leave this class.
+  public hashedCreatorID(): string | undefined {
+    return this.creatorPersistentID === undefined
+      ? undefined
+      : hashPersistentID(this.creatorPersistentID);
   }
 
   public kickClient(

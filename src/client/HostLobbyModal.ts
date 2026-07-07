@@ -1,12 +1,15 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
   calculateServerTimeOffset,
   getSecondsUntilServerTimestamp,
   renderDuration,
+  showToast,
   translateText,
 } from "../client/Utils";
+import { hasActiveSubscription } from "../core/ApiSchemas";
+import { GameEnv } from "../core/configuration/Config";
 import { EventBus } from "../core/EventBus";
 import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
@@ -25,9 +28,11 @@ import {
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
+import { getUserMe, setLobbyListed } from "./Api";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import "./components/ConfirmDialog";
 import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/InputCard";
@@ -102,6 +107,13 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyStartAt: number | null = null;
   @state() private serverTimeOffset: number = 0;
+  // Whether this user may actually make the lobby public (subscribers, or
+  // anyone in dev). The toggle itself is always shown.
+  @state() private canListPublicly: boolean = false;
+  @state() private publiclyListed: boolean = false;
+  @state() private showSubscriptionRequired: boolean = false;
+  // Server timestamp when the listed lobby auto-starts (from lobby info).
+  @state() private autoStartAt: number | null = null;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -111,6 +123,11 @@ export class HostLobbyModal extends BaseModal {
   private userSettings = new UserSettings();
 
   private leaveLobbyOnClose = true;
+
+  // Guards against overlapping listing requests: rapid Public/Private clicks
+  // could otherwise be applied out of order by the server, leaving the UI
+  // showing the opposite of the real listed state.
+  private listingRequestInFlight = false;
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
@@ -125,6 +142,13 @@ export class HostLobbyModal extends BaseModal {
     if (lobby.clients) {
       this.clients = lobby.clients;
     }
+    // The server can delist on its own (join whitelist enabled, duplicate
+    // creator resolved by the master); follow its state unless our own
+    // toggle request is mid-flight.
+    if (!this.listingRequestInFlight && lobby.listed !== undefined) {
+      this.publiclyListed = lobby.listed;
+    }
+    this.autoStartAt = lobby.autoStartAt ?? null;
   };
 
   private getRandomString(): string {
@@ -182,7 +206,14 @@ export class HostLobbyModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return modalHeader({
-      title: translateText("host_modal.title"),
+      titleContent: html`
+        <span
+          class="text-white text-xl lg:text-2xl font-bold uppercase tracking-widest break-words hyphens-auto"
+        >
+          ${translateText("host_modal.title")}
+        </span>
+        ${this.renderVisibilityToggle()}
+      `,
       onBack: () => {
         this.leaveLobbyOnClose = true;
         this.close();
@@ -196,6 +227,69 @@ export class HostLobbyModal extends BaseModal {
         ></copy-button>
       `,
     });
+  }
+
+  // Private/Public segmented toggle in the header. Shown to everyone;
+  // non-subscribers get a subscription-required dialog instead of a listing
+  // request (the server re-checks the subscription regardless).
+  private renderVisibilityToggle() {
+    const segment = (labelKey: string, isPublic: boolean) => html`
+      <button
+        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all ${this
+          .publiclyListed === isPublic
+          ? "bg-malibu-blue text-white"
+          : "text-white/50 hover:text-white"}"
+        @click=${() => this.handleVisibilitySelect(isPublic)}
+      >
+        ${translateText(labelKey)}
+      </button>
+    `;
+    return html`
+      <div
+        class="flex items-center rounded-full border border-white/10 bg-white/5 p-0.5 shrink-0"
+      >
+        ${segment("host_modal.visibility_private", false)}
+        ${segment("host_modal.visibility_public", true)}
+      </div>
+      ${this.renderAutoStartTimer()}
+    `;
+  }
+
+  // Countdown until the listed lobby starts automatically (hosts can't sit
+  // on a public listing). Hidden once the real start countdown is running —
+  // the Start button shows that one.
+  private renderAutoStartTimer() {
+    if (
+      !this.publiclyListed ||
+      this.autoStartAt === null ||
+      this.lobbyStartAt !== null
+    ) {
+      return nothing;
+    }
+    const seconds = getSecondsUntilServerTimestamp(
+      this.autoStartAt,
+      this.serverTimeOffset,
+    );
+    return html`<span
+      class="text-amber-300 text-xs font-bold tabular-nums shrink-0"
+      title=${translateText("host_modal.auto_start_timer")}
+      >${renderDuration(seconds)}</span
+    >`;
+  }
+
+  private handleVisibilitySelect(isPublic: boolean) {
+    if (
+      this.listingRequestInFlight ||
+      isPublic === this.publiclyListed ||
+      !this.lobbyId
+    ) {
+      return;
+    }
+    if (isPublic && !this.canListPublicly) {
+      this.showSubscriptionRequired = true;
+      return;
+    }
+    void this.handlePublicListingToggle(isPublic);
   }
 
   protected renderBody() {
@@ -294,19 +388,26 @@ export class HostLobbyModal extends BaseModal {
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
-      html`<toggle-input-card
-        .labelKey=${"host_modal.player_whitelist"}
-        .checked=${this.whitelistEnabled}
-        .inputType=${"text"}
-        .inputId=${"allowed-public-ids"}
-        .inputValue=${this.allowedPublicIds}
-        .inputAriaLabel=${translateText("host_modal.player_whitelist")}
-        .inputPlaceholder=${translateText(
-          "host_modal.player_whitelist_placeholder",
-        )}
-        .onToggle=${this.handleWhitelistToggle}
-        .onChange=${this.handleAllowedPublicIdsChange}
-      ></toggle-input-card>`,
+      // A join whitelist and public listing are mutually exclusive (the
+      // server rejects both combinations), so the control disappears while
+      // the lobby is listed.
+      ...(this.publiclyListed
+        ? []
+        : [
+            html`<toggle-input-card
+              .labelKey=${"host_modal.player_whitelist"}
+              .checked=${this.whitelistEnabled}
+              .inputType=${"text"}
+              .inputId=${"allowed-public-ids"}
+              .inputValue=${this.allowedPublicIds}
+              .inputAriaLabel=${translateText("host_modal.player_whitelist")}
+              .inputPlaceholder=${translateText(
+                "host_modal.player_whitelist_placeholder",
+              )}
+              .onToggle=${this.handleWhitelistToggle}
+              .onChange=${this.handleAllowedPublicIdsChange}
+            ></toggle-input-card>`,
+          ]),
     ];
 
     const hostCheatInputCards = [
@@ -431,16 +532,23 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
-                  {
-                    labelKey: "host_modal.host_cheats",
-                    checked: this.hostCheatsEnabled,
-                  },
+                  // Host cheats and public listing are mutually exclusive
+                  // (the server rejects both combinations), so the controls
+                  // disappear while the lobby is listed.
+                  ...(this.publiclyListed
+                    ? []
+                    : [
+                        {
+                          labelKey: "host_modal.host_cheats",
+                          checked: this.hostCheatsEnabled,
+                        },
+                      ]),
                 ],
                 inputCards,
               },
               hostCheats: {
                 titleKey: "host_modal.host_cheats",
-                visible: this.hostCheatsEnabled,
+                visible: this.hostCheatsEnabled && !this.publiclyListed,
                 toggles: [
                   {
                     labelKey: "host_modal.infinite_gold",
@@ -481,7 +589,9 @@ export class HostLobbyModal extends BaseModal {
             .currentClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
-            .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            .onKickPlayer=${this.publiclyListed
+              ? undefined
+              : (clientID: string) => this.kickPlayer(clientID)}
             .onToggleNameReveal=${(clientID: string) =>
               this.toggleNameReveal(clientID)}
             .nameReveals=${this.nameReveals}
@@ -500,12 +610,42 @@ export class HostLobbyModal extends BaseModal {
             @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
+
+        ${this.showSubscriptionRequired
+          ? html`<confirm-dialog
+              .heading=${translateText(
+                "host_modal.subscription_required_title",
+              )}
+              .message=${translateText("host_modal.subscription_required_body")}
+              variant="warning"
+              .showClose=${true}
+              .buttons=${"confirmOnly"}
+              .confirmText=${translateText("host_modal.view_subscriptions")}
+              @cancel=${() => (this.showSubscriptionRequired = false)}
+              @confirm=${() => {
+                this.showSubscriptionRequired = false;
+                window.location.href = "/#modal=store&tab=subscriptions";
+              }}
+            ></confirm-dialog>`
+          : ""}
       </div>
     `;
   }
 
   protected onOpen(): void {
+    // Re-armed here (not in onClose's reset) so that once
+    // closeWithoutLeaving() disarms it, no close cascade — e.g. another
+    // modal's close() navigating via showPage, which force-closes this one —
+    // can re-arm it and disconnect the host mid game-start.
+    this.leaveLobbyOnClose = true;
     this.startLobbyUpdates();
+    void getUserMe().then((userMe) => {
+      // Dev skips the subscription gate (matching the server) so the
+      // listing flow is testable locally.
+      this.canListPublicly =
+        ClientEnv.env() === GameEnv.Dev ||
+        (userMe !== false && hasActiveSubscription(userMe));
+    });
     // The server mints the game id, so we don't know it until createLobby
     // resolves. clientID is assigned by the server when we join the lobby.
 
@@ -558,6 +698,21 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  // Close as part of the lobby -> game transition (e.g. auto-start of a
+  // listed lobby): the host is entering the game, not leaving the lobby, so
+  // closing must not disconnect them (the server would tear the lobby down).
+  // disarmLeaveOnClose is separate because closing ANY page-modal navigates
+  // via showPage, which force-closes the currently visible page — so all
+  // lobby modals must be disarmed before any of them is closed.
+  public disarmLeaveOnClose() {
+    this.leaveLobbyOnClose = false;
+  }
+
+  public closeWithoutLeaving() {
+    this.disarmLeaveOnClose();
+    this.close();
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
@@ -627,8 +782,9 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatGoldMultiplierValue = undefined;
     this.hostCheatStartingGold = false;
     this.hostCheatStartingGoldValue = undefined;
-
-    this.leaveLobbyOnClose = true;
+    this.publiclyListed = false;
+    this.showSubscriptionRequired = false;
+    this.autoStartAt = null;
   }
 
   private async handleSelectRandomMap() {
@@ -1049,6 +1205,37 @@ export class HostLobbyModal extends BaseModal {
     this.whitelistEnabled = checked;
     this.putGameConfig();
   };
+
+  // Server-authoritative: it re-verifies the subscription and enforces the
+  // listing limits, so a failed request reverts the toggle.
+  private async handlePublicListingToggle(checked: boolean) {
+    this.listingRequestInFlight = true;
+    this.publiclyListed = checked;
+    const result = await setLobbyListed(this.lobbyId, checked);
+    if (result.ok) {
+      this.publiclyListed = result.listed;
+    } else {
+      this.publiclyListed = !checked;
+      this.showListingError(result.error);
+    }
+    this.listingRequestInFlight = false;
+  }
+
+  private showListingError(serverError?: string) {
+    let key = "private_lobby.listing_failed";
+    if (serverError === "subscription_required") {
+      key = "private_lobby.listing_requires_subscription";
+    } else if (serverError === "listing_limit_reached") {
+      key = "private_lobby.listing_limit_reached";
+    } else if (serverError === "listing_whitelist_enabled") {
+      key = "private_lobby.listing_whitelist_enabled";
+    } else if (serverError === "listing_host_cheats_enabled") {
+      key = "private_lobby.listing_host_cheats_enabled";
+    } else if (serverError === "listing_full") {
+      key = "private_lobby.listing_full";
+    }
+    showToast(translateText(key), "red", 3000);
+  }
 
   private handleAllowedPublicIdsChange = (e: Event) => {
     this.allowedPublicIds = (e.target as HTMLInputElement).value;
