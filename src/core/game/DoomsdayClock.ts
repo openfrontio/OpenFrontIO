@@ -220,6 +220,25 @@ export interface DoomsdayClockDrainConfig {
   drainRampSeconds: number;
 }
 
+// Fixed-point scale for the convex drain curve. (t/r)^exponent is evaluated as a
+// fraction of this via repeated integer multiply, so the ramp never touches a
+// float and lands bit-identically on every client in the lockstep sim.
+const DRAIN_CURVE_SCALE = 1_000_000;
+
+/**
+ * (t/r)^exponent as a fraction of DRAIN_CURVE_SCALE, integer-only. Squares down
+ * from 1.0 with a floored multiply per step; t <= r and exponent >= 2, so the
+ * intermediates stay well inside Number.MAX_SAFE_INTEGER.
+ */
+function drainCurveFraction(t: number, r: number, exponent: number): number {
+  const ratio = Math.floor((t * DRAIN_CURVE_SCALE) / r); // in [0, SCALE]
+  let acc = DRAIN_CURVE_SCALE; // represents 1.0
+  for (let i = 0; i < exponent; i++) {
+    acc = Math.floor((acc * ratio) / DRAIN_CURVE_SCALE);
+  }
+  return acc;
+}
+
 /**
  * Troops (or warship health) a skulled side loses this second: a ramp from
  * drainStartPercent up to drainMaxPercent over drainRampSeconds, as a percentage
@@ -228,7 +247,8 @@ export interface DoomsdayClockDrainConfig {
  * from full); >1 = CONVEX (warships → stays near the gentle start for most of the
  * ramp, then spikes hard, so a ship caught early lasts ~as long as troops but a
  * side at full attrition loses ships in ~2s). The caller caps it at the side's
- * current value. Deterministic (floored); Math.pow is stable across JS engines.
+ * current value. Integer-only and floored throughout — no floats — so the drain
+ * is deterministic across clients (required by the lockstep sim).
  */
 export function doomsdayClockDrain(
   maxTroops: number,
@@ -239,10 +259,18 @@ export function doomsdayClockDrain(
   const t = Math.max(0, secondsPastWarn);
   const r = cfg.drainRampSeconds;
   const span = cfg.drainMaxPercent - cfg.drainStartPercent;
-  const pct =
-    r <= 0 || t >= r
-      ? cfg.drainMaxPercent
-      : cfg.drainStartPercent +
-        Math.floor(span * Math.pow(t / r, curveExponent));
+  let pct = cfg.drainMaxPercent;
+  if (r > 0 && t < r) {
+    // Linear is the exact integer form the sim has always used; the convex case
+    // reshapes it through the fixed-point curve above (still integer-only).
+    const grown =
+      curveExponent <= 1
+        ? Math.floor((span * t) / r)
+        : Math.floor(
+            (span * drainCurveFraction(t, r, curveExponent)) /
+              DRAIN_CURVE_SCALE,
+          );
+    pct = cfg.drainStartPercent + grown;
+  }
   return Math.max(1, Math.floor((maxTroops * pct) / 100));
 }

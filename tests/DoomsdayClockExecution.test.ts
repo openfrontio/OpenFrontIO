@@ -593,6 +593,37 @@ describe("doomsdayClockDrain", () => {
   it("treats time before the warn window as zero", () => {
     expect(doomsdayClockDrain(1000, -5, cfg)).toBe(100); // clamped to start %
   });
+
+  it("shapes a convex curve (exponent > 1): gentle early, steep late, integer-only", () => {
+    // Warship-style ramp: start 1%, max 50% over 90s, exponent 8. Integer-only
+    // (no floats) so it's deterministic in the lockstep sim.
+    const ship = {
+      drainStartPercent: 1,
+      drainMaxPercent: 50,
+      drainRampSeconds: 90,
+    };
+    const at = (t: number) => doomsdayClockDrain(10000, t, ship, 8);
+
+    expect(at(0)).toBe(100); // 1% of 10000 at the very start
+    expect(at(90)).toBe(5000); // 50% once fully ramped
+    expect(at(200)).toBe(5000); // holds at the max past the ramp
+
+    // Convex: at the ramp midpoint it's still far below the linear midpoint
+    // (which would be ~25%); the bulk of the attrition is back-loaded.
+    expect(at(45)).toBeLessThan(at(90) / 4);
+
+    // Monotonic non-decreasing, and every value an integer.
+    let prev = -1;
+    for (let t = 0; t <= 90; t++) {
+      const v = at(t);
+      expect(Number.isInteger(v)).toBe(true);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+
+    // Deterministic: identical inputs give identical output.
+    expect(at(37)).toBe(at(37));
+  });
 });
 
 // ---------------------------------------------------------------------------
