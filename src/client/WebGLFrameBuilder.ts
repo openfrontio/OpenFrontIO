@@ -45,6 +45,9 @@ const PALETTE_SIZE = 4096;
 // map; the glow is suppressed for a grace window after the game starts.
 const SMALL_PLAYER_MAX_MAP_FRACTION = 0.002; // 0.2%
 const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
+// The set is a visual aid, not tick-critical, so rescan ~once a second
+// (10 ticks) instead of every tick.
+const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
 
 // The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
@@ -195,6 +198,7 @@ export class WebGLFrameBuilder {
 
   private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
   private readonly userSettings = new UserSettings();
+  private glowRescanTick = 0;
 
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
@@ -343,7 +347,7 @@ export class WebGLFrameBuilder {
    * collect the alive human players holding <=0.2% of the map and push their
    * smallIDs so the glow pass radiates around their territory. Skips the first
    * minute of play so everyone's tiny starting territory doesn't glow.
-   * Client-only view, recomputed each tick — toggle it live in the settings.
+   * Client-only view — toggle it live in the settings.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
     if (
@@ -354,6 +358,10 @@ export class WebGLFrameBuilder {
       this.view.updateSmallPlayerGlow(null);
       return;
     }
+    // Throttle the per-player scan + upload; the glow keeps rendering the last
+    // set between rescans. (The above off/spawn/grace checks stay per-tick so
+    // toggling the setting off is responsive.)
+    if (this.glowRescanTick++ % SMALL_PLAYER_GLOW_RESCAN_TICKS !== 0) return;
     // "% of the map" uses the same denominator the leaderboard/win-check use.
     const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
     if (denom <= 0) {
