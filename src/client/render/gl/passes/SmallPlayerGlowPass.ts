@@ -53,6 +53,7 @@ export class SmallPlayerGlowPass {
   private quadVao: WebGLVertexArrayObject;
 
   private active = false;
+  private dirty = false; // aura needs rebuilding (set changed)
   private animTime = 0;
   private lastTime = 0;
 
@@ -160,6 +161,7 @@ export class SmallPlayerGlowPass {
       set,
     );
     this.active = true;
+    this.dirty = true;
   }
 
   draw(cameraMatrix: Float32Array): void {
@@ -180,37 +182,42 @@ export class SmallPlayerGlowPass {
     this.lastTime = now;
     const pulse = 0.5 + 0.5 * Math.sin(this.animTime);
 
-    gl.disable(gl.BLEND);
+    // Rebuild the blurred aura only when the set changed (~1/s); its inputs
+    // don't move faster than that. The composite below still runs every frame.
+    if (this.dirty) {
+      gl.disable(gl.BLEND);
 
-    // Extract the small-player mask at sub-tile resolution.
-    gl.useProgram(this.extractProg);
-    gl.uniform2f(this.uExtractMapSize, this.mapW, this.mapH);
-    toTarget(gl, a, () => {
+      // Extract the small-player mask at sub-tile resolution.
+      gl.useProgram(this.extractProg);
+      gl.uniform2f(this.uExtractMapSize, this.mapW, this.mapH);
+      toTarget(gl, a, () => {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.setTex);
+        gl.bindVertexArray(this.quadVao);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      });
+
+      // Separable blur: horizontal into B, vertical back into A.
+      gl.useProgram(this.blurProg);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this.setTex);
-      gl.bindVertexArray(this.quadVao);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-    });
+      toTarget(gl, b, () => {
+        gl.uniform2f(this.uBlurDir, 1 / a.w, 0);
+        gl.bindTexture(gl.TEXTURE_2D, a.tex);
+        gl.bindVertexArray(this.quadVao);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      });
+      toTarget(gl, a, () => {
+        gl.uniform2f(this.uBlurDir, 0, 1 / b.h);
+        gl.bindTexture(gl.TEXTURE_2D, b.tex);
+        gl.bindVertexArray(this.quadVao);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      });
+      this.dirty = false;
+    }
 
-    // Separable blur: horizontal into B, vertical back into A.
-    gl.useProgram(this.blurProg);
-    gl.activeTexture(gl.TEXTURE0);
-    toTarget(gl, b, () => {
-      gl.uniform2f(this.uBlurDir, 1 / a.w, 0);
-      gl.bindTexture(gl.TEXTURE_2D, a.tex);
-      gl.bindVertexArray(this.quadVao);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-    });
-    toTarget(gl, a, () => {
-      gl.uniform2f(this.uBlurDir, 0, 1 / b.h);
-      gl.bindTexture(gl.TEXTURE_2D, b.tex);
-      gl.bindVertexArray(this.quadVao);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-    });
-
-    // Composite the blurred aura over the map (premultiplied, additive).
+    // Composite the cached aura over the map every frame (premultiplied).
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE);
     toScreen(gl, canvas.width, canvas.height, () => {
