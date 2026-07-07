@@ -173,7 +173,9 @@ export class SmallPlayerGlowPass {
 
     const now = performance.now();
     if (this.lastTime > 0) {
-      this.animTime += (now - this.lastTime) * s.pulseSpeed;
+      // Clamp the delta so a long gap (grace period, or a backgrounded tab
+      // pausing rAF) doesn't leap the pulse to a random phase on resume.
+      this.animTime += Math.min(now - this.lastTime, 100) * s.pulseSpeed;
     }
     this.lastTime = now;
     const pulse = 0.5 + 0.5 * Math.sin(this.animTime);
