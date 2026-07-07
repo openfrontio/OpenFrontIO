@@ -88,6 +88,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private doomsdayClock: boolean = false;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
   @state() private anonymizeNames: boolean = false;
+  @state() private highlightSmallPlayers: boolean = false;
   @state() private nameReveals: string[] = [];
   @state() private whitelistEnabled: boolean = false;
   @state() private allowedPublicIds: string = "";
@@ -524,6 +525,10 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.anonymizeNames,
                   },
                   {
+                    labelKey: "host_modal.highlight_small_players",
+                    checked: this.highlightSmallPlayers,
+                  },
+                  {
                     labelKey: "host_modal.water_nukes",
                     checked: this.waterNukes,
                   },
@@ -771,6 +776,7 @@ export class HostLobbyModal extends BaseModal {
     this.doomsdayClock = false;
     this.doomsdayClockSpeed = "normal";
     this.anonymizeNames = false;
+    this.highlightSmallPlayers = false;
     this.nameReveals = [];
     this.whitelistEnabled = false;
     this.allowedPublicIds = "";
@@ -871,6 +877,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.anonymous_players":
         this.anonymizeNames = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.highlight_small_players":
+        this.highlightSmallPlayers = checked;
         this.putGameConfig();
         break;
       case "host_modal.water_nukes":
@@ -1302,6 +1312,7 @@ export class HostLobbyModal extends BaseModal {
               ? { enabled: true, speed: this.doomsdayClockSpeed }
               : { enabled: false },
             anonymizeNames: this.anonymizeNames,
+            highlightSmallPlayers: this.highlightSmallPlayers,
             nameReveals: this.nameReveals,
             allowedPublicIds: this.whitelistEnabled
               ? (this.parseAllowedPublicIds() ?? [])

@@ -273,6 +273,10 @@ export class GameServer {
       this.gameConfig.disableAlliances =
         gameConfig.disableAlliances ?? undefined;
     }
+    if (gameConfig.highlightSmallPlayers !== undefined) {
+      this.gameConfig.highlightSmallPlayers =
+        gameConfig.highlightSmallPlayers ?? undefined;
+    }
     if (gameConfig.allowedPublicIds !== undefined) {
       this.gameConfig.allowedPublicIds = gameConfig.allowedPublicIds;
       // A join whitelist and public listing are mutually exclusive: a listed
