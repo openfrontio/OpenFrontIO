@@ -90,18 +90,30 @@ export class UsernameInput extends LitElement {
     });
   }
 
+  // True once a CrazyGames account has been signed in, so that a later logout
+  // (auth listener firing with `null`) reverts to a guest username instead of
+  // keeping the CrazyGames name.
+  private crazyGamesLoggedIn = false;
+
   connectedCallback() {
     super.connectedCallback();
     this.loadStoredUsername();
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
+        this.crazyGamesLoggedIn = true;
         this.baseUsername = username;
         this.validateAndStore();
       }
     });
     crazyGamesSDK.addAuthListener((user) => {
       if (user) {
+        this.crazyGamesLoggedIn = true;
         this.baseUsername = user.username;
+        this.validateAndStore();
+      } else if (this.crazyGamesLoggedIn) {
+        // Logged out of CrazyGames — revert to a fresh guest username.
+        this.crazyGamesLoggedIn = false;
+        this.baseUsername = genAnonUsername();
         this.validateAndStore();
       }
     });

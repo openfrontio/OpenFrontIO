@@ -35,6 +35,7 @@ import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { showInGameConfirm } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
@@ -586,6 +587,13 @@ class Client {
       onJoinChanged();
     };
 
+    const leaveGame = () => {
+      crazyGamesSDK.gameplayStop().then(() => {
+        // redirect to the home page
+        window.location.href = "/";
+      });
+    };
+
     const onPopState = () => {
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
@@ -593,23 +601,20 @@ class Client {
         if (!this.lobbyHandle.stop()) {
           console.info("Player is active, ask before leaving game");
 
-          const isConfirmed = confirm(
-            translateText("help_modal.exit_confirmation"),
+          // We can't block navigation on an async confirmation, so restore the
+          // history entry immediately and only leave once the player confirms.
+          history.pushState(null, "", this.currentUrl);
+          showInGameConfirm(translateText("help_modal.exit_confirmation")).then(
+            (isConfirmed) => {
+              if (isConfirmed) leaveGame();
+            },
           );
-
-          if (!isConfirmed) {
-            // Rollback navigator history
-            history.pushState(null, "", this.currentUrl);
-            return;
-          }
+          return;
         }
 
         console.info("Player is not active, leave the game immediately");
 
-        crazyGamesSDK.gameplayStop().then(() => {
-          // redirect to the home page
-          window.location.href = "/";
-        });
+        leaveGame();
       } else {
         console.info("Game not active, handle hash update");
 
