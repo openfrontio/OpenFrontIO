@@ -62,7 +62,6 @@ const DEFAULT_OPTIONS = {
   disabledUnits: [] as UnitType[],
   disableAlliances: false,
   waterNukes: false,
-  highlightSmallPlayers: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
 } as const;
@@ -148,8 +147,6 @@ export class SinglePlayerModal extends BaseModal {
   ];
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
-  @state() private highlightSmallPlayers: boolean =
-    DEFAULT_OPTIONS.highlightSmallPlayers;
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
@@ -452,10 +449,6 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "single_modal.highlight_small_players",
-                    checked: this.highlightSmallPlayers,
-                  },
-                  {
                     labelKey: "single_modal.doomsday_clock",
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
@@ -519,7 +512,6 @@ export class SinglePlayerModal extends BaseModal {
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
-      this.highlightSmallPlayers !== DEFAULT_OPTIONS.highlightSmallPlayers ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
@@ -552,7 +544,6 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
     this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
-    this.highlightSmallPlayers = DEFAULT_OPTIONS.highlightSmallPlayers;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
   }
@@ -644,9 +635,6 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.water_nukes":
         this.waterNukes = checked;
-        break;
-      case "single_modal.highlight_small_players":
-        this.highlightSmallPlayers = checked;
         break;
       case "single_modal.doomsday_clock":
         this.doomsdayClock = checked;
@@ -859,9 +847,6 @@ export class SinglePlayerModal extends BaseModal {
                 : {}),
               ...(this.disableAlliances ? { disableAlliances: true } : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
-              ...(this.highlightSmallPlayers
-                ? { highlightSmallPlayers: true }
-                : {}),
               ...(this.doomsdayClock
                 ? {
                     doomsdayClock: {

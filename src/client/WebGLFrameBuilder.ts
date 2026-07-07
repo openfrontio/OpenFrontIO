@@ -14,6 +14,7 @@ import {
 } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { getCachedCosmetics } from "./Cosmetics";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
@@ -188,6 +189,7 @@ export class WebGLFrameBuilder {
   }
 
   private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
+  private readonly userSettings = new UserSettings();
 
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
@@ -332,24 +334,13 @@ export class WebGLFrameBuilder {
   }
 
   /**
-   * Small-player glow: when the lobby toggle is on and the game is past
-   * halftime (or 10 minutes in an uncapped lobby), collect the alive human
-   * players holding <=1% of the map and push their smallIDs so the glow pass
-   * radiates around their territory. Client-only visual, recomputed each tick.
+   * Small-player glow: when the client "Highlight small players" setting is on,
+   * collect the alive human players holding <=1% of the map and push their
+   * smallIDs so the glow pass radiates around their territory. Client-only
+   * view, recomputed each tick — toggle it live in the in-game settings.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
-    const cfg = gameView.config().gameConfig();
-    if (cfg.highlightSmallPlayers !== true || gameView.inSpawnPhase()) {
-      this.view.updateSmallPlayerGlow(null);
-      return;
-    }
-    // Gate: half the configured timer, or 10 minutes when uncapped.
-    const maxTimerMin = cfg.maxTimerValue;
-    const gateSeconds =
-      maxTimerMin !== null && maxTimerMin !== undefined
-        ? (maxTimerMin * 60) / 2
-        : 600;
-    if (gameView.elapsedGameSeconds() < gateSeconds) {
+    if (!this.userSettings.highlightSmallPlayers() || gameView.inSpawnPhase()) {
       this.view.updateSmallPlayerGlow(null);
       return;
     }
