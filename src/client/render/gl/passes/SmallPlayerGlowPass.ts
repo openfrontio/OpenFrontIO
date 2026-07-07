@@ -4,13 +4,15 @@
  * the fragment shader searches a small tile neighborhood so scattered fragments
  * each radiate their own halo and merge into a clean glow.
  *
- * Active only while the highlight set is non-empty (the lobby toggle is on and
- * the game is past halftime) — otherwise draw() is a no-op and costs nothing.
+ * Active only while the highlight set is non-empty (the "Highlight small
+ * players" setting is on and the grace period has passed) — otherwise draw() is
+ * a no-op and costs nothing.
  */
 
 import type { RenderSettings } from "../RenderSettings";
 import glowFragSrc from "../shaders/small-player-glow/small-player-glow.frag.glsl?raw";
 import glowVertSrc from "../shaders/small-player-glow/small-player-glow.vert.glsl?raw";
+import { getPaletteSize } from "../utils/ColorUtils";
 import {
   createFullscreenQuad,
   createProgram,
@@ -19,8 +21,8 @@ import {
 } from "../utils/GlUtils";
 import { TILE_DEFINES } from "../utils/TileCodec";
 
-// 1 px per owner smallID; matches PALETTE_SIZE (OWNER_MASK max + 1).
-const SET_TEX_WIDTH = 4096;
+// 1 px per owner smallID (indexed by owner); sized to the palette.
+const SET_TEX_WIDTH = getPaletteSize();
 
 export class SmallPlayerGlowPass {
   private gl: WebGL2RenderingContext;
@@ -128,7 +130,7 @@ export class SmallPlayerGlowPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1i(this.uRadius, Math.round(s.radius));
-    gl.uniform3f(this.uGlowColor, s.color[0], s.color[1], s.color[2]);
+    gl.uniform3fv(this.uGlowColor, s.color);
     gl.uniform1f(this.uGlowAlpha, s.alpha);
     gl.uniform1f(this.uPulse, pulse);
 

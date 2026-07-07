@@ -41,6 +41,11 @@ import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
+// A human player counts as "small" (and glows) at or below this fraction of the
+// map; the glow is suppressed for a grace window after the game starts.
+const SMALL_PLAYER_MAX_MAP_FRACTION = 0.002; // 0.2%
+const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
+
 // The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
 // transportShipTrail (nuke bit 0), block 1 = nukeTrail (nuke bit 1, set by
@@ -344,7 +349,7 @@ export class WebGLFrameBuilder {
     if (
       !this.userSettings.highlightSmallPlayers() ||
       gameView.inSpawnPhase() ||
-      gameView.elapsedGameSeconds() < 60
+      gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
     ) {
       this.view.updateSmallPlayerGlow(null);
       return;
@@ -362,7 +367,7 @@ export class WebGLFrameBuilder {
       if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
         continue;
       }
-      if (p.numTilesOwned() / denom <= 0.002) {
+      if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
         set[p.smallID()] = 1;
         any = true;
       }
