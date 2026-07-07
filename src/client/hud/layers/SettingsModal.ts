@@ -19,6 +19,7 @@ import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
+const highlightIcon = assetUrl("images/HighlightIconWhite.svg");
 const mouseIcon = assetUrl("images/MouseIconWhite.svg");
 const ninjaIcon = assetUrl("images/NinjaIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -355,7 +356,7 @@ export class SettingsModal extends LitElement implements Controller {
               @click="${this.onToggleHighlightSmallPlayersButtonClick}"
             >
               <img
-                src=${swordIcon}
+                src=${highlightIcon}
                 alt="highlightSmallPlayers"
                 width="20"
                 height="20"

@@ -20,7 +20,7 @@ out vec4 fragColor;
 
 // Constant loop bound (GLSL ES 3.00 wants a constant bound + dynamic break,
 // mirroring border-compute.frag.glsl). uRadius clamps the effective radius.
-const int MAX_R = 6;
+const int MAX_R = 10;
 
 bool highlighted(ivec2 c) {
   if (c.x < 0 || c.y < 0 || c.x >= int(uMapSize.x) || c.y >= int(uMapSize.y))
@@ -33,6 +33,9 @@ bool highlighted(ivec2 c) {
 void main() {
   ivec2 tc = ivec2(floor(vWorldPos));
   float R = float(uRadius);
+  // Breathing aura: the reach grows and shrinks, and the alpha fades fully to
+  // 0 at the trough so the glow visibly pulses in and out.
+  float reach = R * (0.4 + 0.6 * uPulse);
   float best = 1e9;
 
   for (int dy = -MAX_R; dy <= MAX_R; dy++) {
@@ -45,10 +48,10 @@ void main() {
     }
   }
 
-  if (best > R) discard;
-  // 1.0 at a highlighted tile, easing to 0 at the radius edge.
-  float glow = 1.0 - smoothstep(0.0, R, best);
-  float a = uGlowAlpha * glow * (0.6 + 0.4 * uPulse);
+  if (best > reach) discard;
+  // 1.0 at a highlighted tile, easing to 0 at the current reach.
+  float glow = 1.0 - smoothstep(0.0, reach, best);
+  float a = uGlowAlpha * glow * uPulse;
   if (a <= 0.001) discard;
   fragColor = vec4(uGlowColor, a);
 }
