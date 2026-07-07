@@ -2,11 +2,9 @@
 precision highp float;
 precision highp usampler2D;
 
-// Extract pass: at sub-tile resolution, emit 1 where a "small" player owns a
-// tile, else 0. Because small-player territory is sparse (often single tiles),
-// each output cell scans its whole TILE_SCALE x TILE_SCALE tile block rather
-// than point-sampling, so no lone tile is missed. The result is then blurred
-// into the soft radiating aura. OWNER_MASK and TILE_SCALE are injected.
+// Emit 1 where a "small" player owns a tile. Territory is sparse (often lone
+// tiles), so each cell scans its whole TILE_SCALE block instead of point-
+// sampling, else single tiles get missed. OWNER_MASK/TILE_SCALE are injected.
 
 uniform usampler2D uTileTex;      // R16UI — tile state (owner in low bits)
 uniform usampler2D uHighlightSet; // R8UI, 1px per owner — 1 = highlighted
