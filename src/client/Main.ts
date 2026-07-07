@@ -714,6 +714,13 @@ class Client {
         return;
       }
 
+      if (type === "custom_currency") {
+        // Plutonium is credited asynchronously by the Stripe webhook; the
+        // balance refreshes from /users/@me on the next load.
+        alertAndStrip(translateText("store.custom_currency_purchase_success"));
+        return;
+      }
+
       if (type === "subscription_tier") {
         alert(translateText("store.subscription_purchase_success"));
         strip();
