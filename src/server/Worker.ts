@@ -30,6 +30,7 @@ import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
+import { wireSuccessorLobby } from "./SuccessorLobby";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -185,21 +186,20 @@ export async function startWorker() {
 
     // Let a finished private lobby spin up a successor on this same worker (id
     // sharding + GameManager both live here). Same creator, default settings —
-    // the host reconfigures in the host view. Only wired for private games, so
-    // the "reuse lobby" feature is inherently private-only.
-    game.createSuccessorLobby = () => {
-      const successorId = ServerEnv.generateGameIdForWorker(workerId);
-      if (successorId === null) {
-        log.warn(`Failed to mint successor game id on worker ${workerId}`);
-        return null;
-      }
-      const successor = gm.createGame(
-        successorId,
-        undefined,
-        creatorPersistentID,
-      );
-      return successor === null ? null : successorId;
-    };
+    // the host reconfigures in the host view. Every successor is wired the same
+    // way, so the group can reuse the lobby game after game, not just once. Only
+    // wired for private games, so the "reuse lobby" feature is private-only.
+    wireSuccessorLobby(game, creatorPersistentID, {
+      mintId: () => {
+        const successorId = ServerEnv.generateGameIdForWorker(workerId);
+        if (successorId === null) {
+          log.warn(`Failed to mint successor game id on worker ${workerId}`);
+        }
+        return successorId;
+      },
+      createGame: (successorId, creator) =>
+        gm.createGame(successorId, undefined, creator),
+    });
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";

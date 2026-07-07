@@ -66,7 +66,7 @@ export class NewLobbyPrompt extends LitElement implements Controller {
     }
     return html`
       <div
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[10010] flex items-center gap-3 bg-gray-800/90 text-white px-4 py-3 rounded-lg shadow-2xl backdrop-blur-xs max-w-[90%]"
+        class="fixed top-4 left-1/2 -translate-x-1/2 z-[10010] flex items-center gap-3 bg-gray-800/90 text-white px-4 py-3 rounded-lg shadow-2xl backdrop-blur-xs max-w-[90%]"
       >
         <span>${translateText("new_lobby_prompt.message")}</span>
         <o-button

@@ -1055,6 +1055,7 @@
     "teams_title": "Teams"
   },
   "new_lobby_prompt": {
+    "confirm": "Start a new lobby? All players will be invited to join.",
     "dismiss": "Dismiss",
     "join": "Join",
     "message": "Host started a new lobby"

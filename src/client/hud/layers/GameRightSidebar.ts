@@ -7,7 +7,11 @@ import "../../components/DoomsdayClockPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
-import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
+import {
+  PauseGameIntentEvent,
+  SendCreateNextLobbyEvent,
+  SendWinnerEvent,
+} from "../../Transport";
 import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
@@ -18,6 +22,7 @@ const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const FastForwardIconSolid = assetUrl("images/FastForwardIconSolidWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
 const playIcon = assetUrl("images/PlayIconWhite.svg");
+const newLobbyIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
@@ -47,6 +52,10 @@ export class GameRightSidebar extends LitElement implements Controller {
 
   private hasWinner = false;
   private isLobbyCreator = false;
+  private isPrivateLobby = false;
+  // Guards the in-game "New lobby" button so a double click doesn't fire twice
+  // before we navigate to the successor lobby.
+  private newLobbyRequested = false;
   private spawnBarVisible = false;
   private immunityBarVisible = false;
 
@@ -64,6 +73,8 @@ export class GameRightSidebar extends LitElement implements Controller {
     this._isSinglePlayer =
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
+    this.isPrivateLobby =
+      this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
@@ -191,6 +202,20 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
+  private onNewLobbyButtonClick() {
+    if (this.newLobbyRequested) return;
+    // Confirm so a stray click next to pause/exit doesn't yank everyone into a
+    // new lobby mid-game.
+    const isConfirmed = confirm(translateText("new_lobby_prompt.confirm"));
+    if (!isConfirmed) return;
+    this.newLobbyRequested = true;
+    this.requestUpdate();
+    // Same path as the win screen's "New lobby": ask the server to create the
+    // successor lobby and broadcast it. NewLobbyPrompt then navigates us (the
+    // host) to the new host view when the broadcast arrives.
+    this.eventBus.emit(new SendCreateNextLobbyEvent());
+  }
+
   private async onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
@@ -282,6 +307,9 @@ export class GameRightSidebar extends LitElement implements Controller {
     const isReplayOrSingleplayer =
       this._isSinglePlayer || this.game?.config()?.isReplay();
     const showPauseButton = isReplayOrSingleplayer || this.isLobbyCreator;
+    // The host of a private lobby can start a fresh lobby at any time, without
+    // waiting to die or for the game to end.
+    const showNewLobbyButton = this.isLobbyCreator && this.isPrivateLobby;
 
     return html`
       ${isReplayOrSingleplayer
@@ -302,6 +330,24 @@ export class GameRightSidebar extends LitElement implements Controller {
               <img
                 src=${this.isPaused ? playIcon : pauseIcon}
                 alt="play/pause"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+      ${showNewLobbyButton
+        ? html`
+            <div
+              class="cursor-pointer ${this.newLobbyRequested
+                ? "opacity-50 pointer-events-none"
+                : ""}"
+              @click=${this.onNewLobbyButtonClick}
+              title=${translateText("win_modal.new_lobby")}
+            >
+              <img
+                src=${newLobbyIcon}
+                alt=${translateText("win_modal.new_lobby")}
                 width="20"
                 height="20"
               />
