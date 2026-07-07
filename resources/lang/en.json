@@ -406,7 +406,7 @@
     "final": "Final zone, hold {pct}%",
     "growing": "Rising to {pct}% in {time}",
     "hold": "Hold ≥ {pct}%",
-    "next_wave": "Next {pct}% in {time}",
+    "next_wave": "Starts rising to {pct}% in {time}",
     "stable": "Stable",
     "title": "Doomsday Clock",
     "unstable": "Unstable",
