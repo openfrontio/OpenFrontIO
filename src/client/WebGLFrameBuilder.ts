@@ -335,12 +335,17 @@ export class WebGLFrameBuilder {
 
   /**
    * Small-player glow: when the client "Highlight small players" setting is on,
-   * collect the alive human players holding <=1% of the map and push their
-   * smallIDs so the glow pass radiates around their territory. Client-only
-   * view, recomputed each tick — toggle it live in the in-game settings.
+   * collect the alive human players holding <=0.1% of the map and push their
+   * smallIDs so the glow pass radiates around their territory. Skips the first
+   * 30 seconds of play so everyone's tiny starting territory doesn't glow.
+   * Client-only view, recomputed each tick — toggle it live in the settings.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
-    if (!this.userSettings.highlightSmallPlayers() || gameView.inSpawnPhase()) {
+    if (
+      !this.userSettings.highlightSmallPlayers() ||
+      gameView.inSpawnPhase() ||
+      gameView.elapsedGameSeconds() < 30
+    ) {
       this.view.updateSmallPlayerGlow(null);
       return;
     }
@@ -357,7 +362,7 @@ export class WebGLFrameBuilder {
       if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
         continue;
       }
-      if (p.numTilesOwned() / denom <= 0.01) {
+      if (p.numTilesOwned() / denom <= 0.001) {
         set[p.smallID()] = 1;
         any = true;
       }
