@@ -179,11 +179,24 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 
 // On CrazyGames the player's identity comes from the CrazyGames SDK, not our
 // backend user object. Show their avatar + username when signed in (clicking
-// opens the account modal), or a "Sign in" button that opens CrazyGames' own
-// auth prompt when they're a guest.
+// opens the account modal), or a "Sign in" affordance that opens CrazyGames'
+// own auth prompt when they're a guest. Applies to every account entry point:
+// the desktop nav pill, the mobile hamburger item, and the homepage top bar
+// (which layout is visible depends on viewport width).
 async function updateCrazyGamesNavButton() {
+  if (!crazyGamesSDK.isOnCrazyGames()) return;
   const profile = await crazyGamesSDK.getUserProfile();
+  const signInText = translateText("main.sign_in");
 
+  // Bypass the data-page router (which would open the account modal) and hand
+  // off to CrazyGames' own sign-in prompt instead.
+  const promptSignIn = (e: Event) => {
+    e.stopPropagation();
+    e.preventDefault();
+    void crazyGamesSDK.showAuthPrompt();
+  };
+
+  // Desktop nav pill: avatar + person icon + text.
   const desktopButton = document.getElementById(
     "nav-account-button",
   ) as HTMLButtonElement | null;
@@ -191,17 +204,10 @@ async function updateCrazyGamesNavButton() {
     "nav-account-avatar",
   ) as HTMLImageElement | null;
   const personIconEl = document.getElementById("nav-account-person-icon");
-  const emailBadgeEl = document.getElementById("nav-account-email-badge");
-  const signInTextEl = document.getElementById("nav-account-signin-text");
-  const mobileButton = document.getElementById(
-    "mobile-nav-account-button",
-  ) as HTMLButtonElement | null;
-
   // CrazyGames accounts have no email, so the email badge is always hidden.
-  emailBadgeEl?.classList.add("hidden");
-
+  document.getElementById("nav-account-email-badge")?.classList.add("hidden");
+  const signInTextEl = document.getElementById("nav-account-signin-text");
   if (profile) {
-    // Signed in: avatar + username. Clicking routes to page-account as usual.
     if (avatarEl) {
       avatarEl.alt = profile.username;
       avatarEl.src = profile.profilePictureUrl;
@@ -214,34 +220,46 @@ async function updateCrazyGamesNavButton() {
     }
     desktopButton?.classList.remove("border", "border-white/20");
     if (desktopButton) desktopButton.onclick = null;
-    if (mobileButton) {
-      mobileButton.textContent = profile.username;
-      mobileButton.onclick = null;
+  } else {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    if (signInTextEl) {
+      signInTextEl.textContent = signInText;
+      signInTextEl.classList.remove("hidden");
     }
-    return;
+    desktopButton?.classList.add("border", "border-white/20");
+    if (desktopButton) desktopButton.onclick = promptSignIn;
   }
 
-  // Guest: "Sign in" that hands off to CrazyGames' own auth prompt instead of
-  // the account modal.
-  const signInText = translateText("main.sign_in");
-  const promptSignIn = (e: Event) => {
-    // Bypass the data-page router (which would open the account modal).
-    e.stopPropagation();
-    e.preventDefault();
-    void crazyGamesSDK.showAuthPrompt();
-  };
-
-  avatarEl?.classList.add("hidden");
-  personIconEl?.classList.remove("hidden");
-  if (signInTextEl) {
-    signInTextEl.textContent = signInText;
-    signInTextEl.classList.remove("hidden");
-  }
-  desktopButton?.classList.add("border", "border-white/20");
-  if (desktopButton) desktopButton.onclick = promptSignIn;
+  // Mobile hamburger menu item: text only.
+  const mobileButton = document.getElementById(
+    "mobile-nav-account-button",
+  ) as HTMLButtonElement | null;
   if (mobileButton) {
-    mobileButton.textContent = signInText;
-    mobileButton.onclick = promptSignIn;
+    mobileButton.textContent = profile ? profile.username : signInText;
+    mobileButton.onclick = profile ? null : promptSignIn;
+  }
+
+  // Homepage top bar (narrow layout): avatar or person icon only.
+  const topBarButton = document.getElementById(
+    "crazygames-account-btn",
+  ) as HTMLButtonElement | null;
+  const topBarAvatar = document.getElementById(
+    "crazygames-account-avatar",
+  ) as HTMLImageElement | null;
+  const topBarIcon = document.getElementById("crazygames-account-icon");
+  if (profile) {
+    if (topBarAvatar) {
+      topBarAvatar.alt = profile.username;
+      topBarAvatar.src = profile.profilePictureUrl;
+      topBarAvatar.classList.remove("hidden");
+    }
+    topBarIcon?.classList.add("hidden");
+    if (topBarButton) topBarButton.onclick = null;
+  } else {
+    topBarAvatar?.classList.add("hidden");
+    topBarIcon?.classList.remove("hidden");
+    if (topBarButton) topBarButton.onclick = promptSignIn;
   }
 }
 
@@ -1188,6 +1206,10 @@ const bootstrap = () => {
   // Also hide elements after a short delay to catch late-rendered components
   setTimeout(hideCrazyGamesElements, 100);
   setTimeout(hideCrazyGamesElements, 500);
+
+  // Populate the CrazyGames account buttons once the nav/top-bar have rendered
+  // (onUserMe also refreshes them after auth and on mid-session sign-in).
+  setTimeout(() => void updateCrazyGamesNavButton(), 500);
 };
 
 if (document.readyState === "loading") {
