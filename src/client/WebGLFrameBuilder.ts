@@ -359,8 +359,9 @@ export class WebGLFrameBuilder {
       return;
     }
     // Throttle the per-player scan + upload; the glow keeps rendering the last
-    // set between rescans. (The above off/spawn/grace checks stay per-tick so
-    // toggling the setting off is responsive.)
+    // set between rescans. The off/spawn/grace checks above run every tick, so
+    // toggling off takes effect on the next tick (deferred while the game is
+    // paused, since ticks stop; it clears on unpause).
     if (this.glowRescanTick++ % SMALL_PLAYER_GLOW_RESCAN_TICKS !== 0) return;
     // "% of the map" uses the same denominator the leaderboard/win-check use.
     const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();

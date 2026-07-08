@@ -9,14 +9,15 @@ import type { RenderSettings } from "../RenderSettings";
 import blurFragSrc from "../shaders/shared/blur.frag.glsl?raw";
 import fullscreenNoUvVertSrc from "../shaders/shared/fullscreen-no-uv.vert.glsl?raw";
 import fullscreenVertSrc from "../shaders/shared/fullscreen.vert.glsl?raw";
+import compositeVertSrc from "../shaders/shared/map-quad.vert.glsl?raw";
 import compositeFragSrc from "../shaders/small-player-glow/composite.frag.glsl?raw";
-import compositeVertSrc from "../shaders/small-player-glow/composite.vert.glsl?raw";
 import extractFragSrc from "../shaders/small-player-glow/extract.frag.glsl?raw";
 import { getPaletteSize } from "../utils/ColorUtils";
 import {
   createFullscreenQuad,
   createMapQuad,
   createProgram,
+  createRenderTarget,
   createTexture2D,
   type RenderTarget,
   shaderSrc,
@@ -109,36 +110,15 @@ export class SmallPlayerGlowPass {
       filter: gl.NEAREST,
     });
 
-    const bw = Math.max(1, Math.floor(mapW / BLOOM_TILE_SCALE));
-    const bh = Math.max(1, Math.floor(mapH / BLOOM_TILE_SCALE));
-    this.targetA = this.createTarget(bw, bh);
-    this.targetB = this.createTarget(bw, bh);
+    // ceil (not floor) so a partial tile block at the map's right/bottom edge
+    // still gets a bloom cell — otherwise an edge player on a map whose size
+    // isn't a multiple of the scale gets no glow.
+    const bw = Math.max(1, Math.ceil(mapW / BLOOM_TILE_SCALE));
+    const bh = Math.max(1, Math.ceil(mapH / BLOOM_TILE_SCALE));
+    this.targetA = createRenderTarget(gl, bw, bh);
+    this.targetB = createRenderTarget(gl, bw, bh);
     this.mapVao = createMapQuad(gl, mapW, mapH);
     this.quadVao = createFullscreenQuad(gl);
-  }
-
-  private createTarget(w: number, h: number): RenderTarget {
-    const gl = this.gl;
-    const tex = createTexture2D(gl, {
-      width: w,
-      height: h,
-      internalFormat: gl.RGBA8,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE,
-      data: null,
-      filter: gl.LINEAR,
-    });
-    const fbo = gl.createFramebuffer()!;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.framebufferTexture2D(
-      gl.FRAMEBUFFER,
-      gl.COLOR_ATTACHMENT0,
-      gl.TEXTURE_2D,
-      tex,
-      0,
-    );
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return { fbo, tex, w, h };
   }
 
   /** Push the highlight set (1 byte per owner smallID), or null to disable. */
@@ -217,9 +197,11 @@ export class SmallPlayerGlowPass {
       this.dirty = false;
     }
 
-    // Composite the cached aura over the map every frame (premultiplied).
+    // Composite the cached aura over the map every frame. Premultiplied-over
+    // (not pure additive) so the glow keeps its color over bright terrain
+    // instead of washing out to white.
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     toScreen(gl, canvas.width, canvas.height, () => {
       gl.useProgram(this.compositeProg);
       gl.uniformMatrix3fv(this.uCompositeCam, false, cameraMatrix);

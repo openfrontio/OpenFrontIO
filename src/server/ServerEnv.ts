@@ -123,7 +123,7 @@ export class ServerEnv {
     return ServerEnv.workerPortByIndex(ServerEnv.workerIndex(gameID));
   }
   static workerPortByIndex(index: number): number {
-    return 3001 + index;
+    return 4001 + index;
   }
   // Generate a game id that hashes to `workerId`, so requests for the game route
   // back to this worker. Rejection sampling: each id lands on a uniformly-random
