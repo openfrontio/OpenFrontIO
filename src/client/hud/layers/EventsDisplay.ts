@@ -32,7 +32,25 @@ import {
   translateText,
 } from "../../Utils";
 
-const pluralizeUnit = (u: string) => u === "City" ? "Cities" : u === "Factory" ? "Factories" : u + "s";
+const UNIT_TRANSLATION_KEYS: Record<string, string> = {
+  "City": "unit_type.city",
+  "Port": "unit_type.port",
+  "Defense Post": "unit_type.defense_post",
+  "SAM Launcher": "unit_type.sam_launcher",
+  "Missile Silo": "unit_type.missile_silo",
+  "Factory": "unit_type.factory",
+  "Warship": "unit_type.warship",
+  "Transport": "unit_type.boat",
+  "Atom Bomb": "unit_type.atom_bomb",
+  "Hydrogen Bomb": "unit_type.hydrogen_bomb",
+  "MIRV": "unit_type.mirv",
+};
+
+const getTranslatedUnitName = (unitType: string, plural: boolean): string => {
+  const key = UNIT_TRANSLATION_KEYS[unitType];
+  if (!key) return unitType;
+  return translateText(plural ? `unit_type_plural.${key}` : `unit_type.${key}`);
+};
 
 function parseInboundNuke(m: string): { player: string; nukeType: string } | null {
   if (m.endsWith(" - atom bomb inbound")) return { player: m.slice(0, -20), nukeType: "atom" };
@@ -43,9 +61,23 @@ function parseInboundNuke(m: string): { player: string; nukeType: string } | nul
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _unused = [
+  "events_display.atom_bomb_inbound",
   "events_display.atom_bomb_inbound_plural",
+  "events_display.hydrogen_bomb_inbound",
   "events_display.hydrogen_bomb_inbound_plural",
+  "events_display.mirv_inbound",
   "events_display.mirv_inbound_plural",
+  "unit_type_plural.atom_bomb",
+  "unit_type_plural.boat",
+  "unit_type_plural.city",
+  "unit_type_plural.defense_post",
+  "unit_type_plural.factory",
+  "unit_type_plural.hydrogen_bomb",
+  "unit_type_plural.mirv",
+  "unit_type_plural.missile_silo",
+  "unit_type_plural.port",
+  "unit_type_plural.sam_launcher",
+  "unit_type_plural.warship",
 ];
 
 interface GameEvent {
@@ -272,7 +304,7 @@ export class EventsDisplay extends LitElement implements Controller {
         if (event.unitView) existing.unitView = event.unitView;
         if (event.focusID) existing.focusID = event.focusID;
 
-        const u = pluralizeUnit(existing.unitType ?? "");
+        const u = getTranslatedUnitName(existing.unitType ?? "", true);
         const n = existing.targetPlayerName ?? "";
         const c = existing.count;
 
@@ -299,8 +331,13 @@ export class EventsDisplay extends LitElement implements Controller {
     if (event.playerID !== null && (!myPlayer || myPlayer.smallID() !== event.playerID)) return;
     if (event.message === "events_display.received_gold_from_captured_ship") return;
 
+    const params = { ...event.params };
+    if (params.unit) {
+      params.unit = getTranslatedUnitName(String(params.unit), false);
+    }
+
     const description = event.message.startsWith("events_display.")
-      ? translateText(event.message, event.params ?? {})
+      ? translateText(event.message, params)
       : event.message;
 
     let groupKey: string | undefined;
@@ -583,8 +620,14 @@ export class EventsDisplay extends LitElement implements Controller {
     if (!myPlayer || myPlayer.smallID() !== event.playerID) return;
 
     const parsed = parseInboundNuke(event.message);
+    let description = event.message;
+    if (parsed) {
+      const k = "events_display." + parsed.nukeType + (parsed.nukeType === "mirv" ? "" : "_bomb") + "_inbound";
+      description = translateText(k, { name: parsed.player });
+    }
+
     this.addEvent({
-      description: event.message,
+      description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,

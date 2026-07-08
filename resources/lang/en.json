@@ -461,6 +461,7 @@
     "alliance_request_sent": "Alliance request sent to {name}.",
     "alliance_request_status": "{name} {status} your alliance request",
     "atom_bomb_detonated": "{name} - atom bomb detonated",
+    "atom_bomb_inbound": "{name} - atom bomb inbound",
     "atom_bomb_inbound_plural": "{name} - {count} atom bombs inbound",
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
     "attack_request": "{name} requests you attack {target}",
@@ -472,8 +473,10 @@
     "duration_seconds_plural": "{seconds} seconds",
     "focus": "Focus",
     "hydrogen_bomb_detonated": "{name} - hydrogen bomb detonated",
+    "hydrogen_bomb_inbound": "{name} - hydrogen bomb inbound",
     "hydrogen_bomb_inbound_plural": "{name} - {count} hydrogen bombs inbound",
     "ignore": "Ignore",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV INBOUND ⚠️⚠️⚠️",
     "mirv_inbound_plural": "⚠️⚠️⚠️ {name} - {count} MIRVs INBOUND ⚠️⚠️⚠️",
     "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV warhead intercepted} other {{count} MIRV warheads intercepted}}",
     "missile_intercepted": "Missile intercepted {unit}",
@@ -1416,6 +1419,19 @@
     "port": "Port",
     "sam_launcher": "SAM Launcher",
     "warship": "Warship"
+  },
+  "unit_type_plural": {
+    "atom_bomb": "Atom Bombs",
+    "boat": "Boats",
+    "city": "Cities",
+    "defense_post": "Defense Posts",
+    "factory": "Factories",
+    "hydrogen_bomb": "Hydrogen Bombs",
+    "mirv": "MIRVs",
+    "missile_silo": "Missile Silos",
+    "port": "Ports",
+    "sam_launcher": "SAM Launchers",
+    "warship": "Warships"
   },
   "user_setting": {
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
