@@ -22,6 +22,7 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
@@ -301,6 +302,14 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.BosphorusStraits,
     translationKey: "map.bosphorusstraits",
     categories: ["europe", "asia"],
+    multiplayerFrequency: 3,
+    specialTeamCount: 2,
+  },
+  {
+    id: "BranchingPaths",
+    type: GameMapType.BranchingPaths,
+    translationKey: "map.branchingpaths",
+    categories: ["arcade", "fictional"],
     multiplayerFrequency: 3,
     specialTeamCount: 2,
   },
