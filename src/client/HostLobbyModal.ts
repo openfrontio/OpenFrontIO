@@ -364,7 +364,7 @@ export class HostLobbyModal extends BaseModal {
         .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
         .defaultInputValue=${0}
         .minValidOnEnable=${0}
-        .zeroLabel=${translateText("common.disabled")}
+        .zeroLabel=${`(${translateText("public_game_modifier.disable_alliances")})`}
         .onToggle=${this.handleCustomAlliancesToggle}
         .onInput=${this.handleCustomAllianceMinutesInput}
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}

@@ -164,7 +164,7 @@ export class ToggleInputCard extends LitElement {
           this.zeroLabel !== undefined &&
           this.toOptionalNumber(this.inputValue) === 0
             ? html`<div
-                class="mt-1 text-center text-[10px] leading-none text-white/60"
+                class="pointer-events-none absolute left-0 right-0 top-full mt-0.5 text-center text-[10px] leading-none text-white/70"
               >
                 ${this.zeroLabel}
               </div>`
