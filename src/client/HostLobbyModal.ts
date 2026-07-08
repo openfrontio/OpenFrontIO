@@ -84,7 +84,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
-  @state() private disableAlliances: boolean = false;
+  @state() private customAlliances: boolean = false;
+  @state() private customAllianceMinutes: number | undefined = undefined;
   @state() private doomsdayClock: boolean = false;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
   @state() private anonymizeNames: boolean = false;
@@ -353,6 +354,22 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleSpawnImmunityDurationKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
+        .labelKey=${"host_modal.custom_alliances"}
+        .checked=${this.customAlliances}
+        .inputMin=${0}
+        .inputMax=${15}
+        .inputStep=${1}
+        .inputValue=${this.customAllianceMinutes}
+        .inputAriaLabel=${translateText("host_modal.custom_alliances")}
+        .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
+        .defaultInputValue=${0}
+        .minValidOnEnable=${0}
+        .zeroLabel=${`(${translateText("public_game_modifier.disable_alliances")})`}
+        .onToggle=${this.handleCustomAlliancesToggle}
+        .onInput=${this.handleCustomAllianceMinutesInput}
+        .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
         .labelKey=${"host_modal.gold_multiplier"}
         .checked=${this.goldMultiplier}
         .inputId=${"gold-multiplier-value"}
@@ -514,10 +531,6 @@ export class HostLobbyModal extends BaseModal {
                   {
                     labelKey: "host_modal.compact_map",
                     checked: this.compactMap,
-                  },
-                  {
-                    labelKey: "host_modal.disable_alliances",
-                    checked: this.disableAlliances,
                   },
                   {
                     labelKey: "host_modal.anonymous_players",
@@ -767,7 +780,8 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
-    this.disableAlliances = false;
+    this.customAlliances = false;
+    this.customAllianceMinutes = undefined;
     this.doomsdayClock = false;
     this.doomsdayClockSpeed = "normal";
     this.anonymizeNames = false;
@@ -864,10 +878,6 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.compact_map":
         this.handleCompactMapChange(checked);
-        break;
-      case "host_modal.disable_alliances":
-        this.disableAlliances = checked;
-        this.putGameConfig();
         break;
       case "host_modal.anonymous_players":
         this.anonymizeNames = checked;
@@ -997,6 +1007,29 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
+    this.putGameConfig();
+  };
+
+  private handleCustomAlliancesToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.customAlliances = checked;
+    this.customAllianceMinutes = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleCustomAllianceMinutesKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleCustomAllianceMinutesInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, { min: 0, max: 15 });
+    if (value === undefined) {
+      return;
+    }
+    this.customAllianceMinutes = value;
     this.putGameConfig();
   };
 
@@ -1294,7 +1327,9 @@ export class HostLobbyModal extends BaseModal {
               this.startingGold === true && this.startingGoldValue !== undefined
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : null,
-            disableAlliances: this.disableAlliances || null,
+            customAllianceDuration: this.customAlliances
+              ? (this.customAllianceMinutes ?? 0)
+              : null,
             // Send {enabled:false} (not undefined) when off: undefined is dropped
             // by JSON.stringify, so the server's "!== undefined" merge would keep a
             // previously-enabled config and the toggle could never turn off.
