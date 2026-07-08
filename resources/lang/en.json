@@ -437,6 +437,7 @@
   },
   "error_modal": {
     "connection_error": "Connection error!",
+    "connection_refused": "Connection refused: {reason}",
     "copied": "Copied!",
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
