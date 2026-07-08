@@ -3,6 +3,7 @@ import { base64url } from "jose";
 import { assetUrl } from "../core/AssetUrls";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
@@ -10,6 +11,14 @@ import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
 import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
+
+// A human player counts as "small" (and glows) at or below this fraction of the
+// map; the glow is suppressed for a grace window after the game starts.
+const SMALL_PLAYER_MAX_MAP_FRACTION = 0.002; // 0.2%
+const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
+// The set is a visual aid, not tick-critical, so rescan ~once a second
+// (10 ticks) instead of every tick.
+const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
 
 /**
  * The renderer-side glue between GameView (which already builds the full
@@ -83,11 +92,16 @@ export class WebGLFrameBuilder {
     this.view.refreshNames(displayNames);
   }
 
+  private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
+  private readonly userSettings = new UserSettings();
+  private glowRescanTick = 0;
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
+    this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
     uploadFrameData(this.view, gameView.frameData());
   }
@@ -185,6 +199,48 @@ export class WebGLFrameBuilder {
       });
     }
     this.view.updateSpawnOverlay(true, centers);
+  }
+
+  /**
+   * Small-player glow: when the client "Highlight small players" setting is on,
+   * collect the alive human players holding <=0.2% of the map and push their
+   * smallIDs so the glow pass radiates around their territory. Skips the first
+   * minute of play so everyone's tiny starting territory doesn't glow.
+   * Client-only view — toggle it live in the settings.
+   */
+  private syncSmallPlayerGlow(gameView: GameView): void {
+    if (
+      !this.userSettings.highlightSmallPlayers() ||
+      gameView.inSpawnPhase() ||
+      gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
+    ) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    // Throttle the per-player scan + upload; the glow keeps rendering the last
+    // set between rescans. The off/spawn/grace checks above run every tick, so
+    // toggling off takes effect on the next tick (deferred while the game is
+    // paused, since ticks stop; it clears on unpause).
+    if (this.glowRescanTick++ % SMALL_PLAYER_GLOW_RESCAN_TICKS !== 0) return;
+    // "% of the map" uses the same denominator the leaderboard/win-check use.
+    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
+    if (denom <= 0) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    const set = this.highlightSetBuf;
+    set.fill(0);
+    let any = false;
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
+        continue;
+      }
+      if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
+        set[p.smallID()] = 1;
+        any = true;
+      }
+    }
+    this.view.updateSmallPlayerGlow(any ? set : null);
   }
 
   private syncPlayers(gameView: GameView): void {

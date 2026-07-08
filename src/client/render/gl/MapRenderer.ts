@@ -222,6 +222,11 @@ export class MapRenderer {
     this.renderer?.updateSpawnOverlay(inSpawnPhase, centers);
   }
 
+  /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.renderer?.updateSmallPlayerGlow(set);
+  }
+
   // ---- Selection box ----
 
   /** Set multiple selected units (multi-select). Pass [] to clear. */
