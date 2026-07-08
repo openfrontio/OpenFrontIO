@@ -263,6 +263,11 @@
     "name": "Aztec Empire"
   },
   {
+    "code": "DE-BW",
+    "continent": "Europe",
+    "name": "Baden-Württemberg"
+  },
+  {
     "code": "bs",
     "continent": "North America",
     "name": "Bahamas"
@@ -307,6 +312,16 @@
     "name": "Basque Country"
   },
   {
+    "code": "DE-BY",
+    "continent": "Europe",
+    "name": "Bavaria"
+  },
+  {
+    "code": "DE-BY-L",
+    "continent": "Europe",
+    "name": "Bavaria (Lozenges)"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -325,6 +340,11 @@
     "code": "bj",
     "continent": "Africa",
     "name": "Benin"
+  },
+  {
+    "code": "DE-BE",
+    "continent": "Europe",
+    "name": "Berlin"
   },
   {
     "code": "bm",
@@ -361,9 +381,19 @@
     "name": "Bouvet Island"
   },
   {
+    "code": "DE-BB",
+    "continent": "Europe",
+    "name": "Brandenburg"
+  },
+  {
     "code": "br",
     "continent": "South America",
     "name": "Brazil"
+  },
+  {
+    "code": "DE-HB",
+    "continent": "Europe",
+    "name": "Bremen"
   },
   {
     "code": "British Antarctic Territory",
@@ -1133,6 +1163,11 @@
     "name": "Haiti"
   },
   {
+    "code": "DE-HH",
+    "continent": "Europe",
+    "name": "Hamburg"
+  },
+  {
     "code": "Hawaii",
     "continent": "Oceania",
     "name": "Hawaii"
@@ -1140,6 +1175,11 @@
   {
     "code": "hm",
     "name": "Heard Island and McDonald Islands"
+  },
+  {
+    "code": "DE-HE",
+    "continent": "Europe",
+    "name": "Hesse"
   },
   {
     "code": "va",
@@ -1588,6 +1628,11 @@
     "name": "Louisiana"
   },
   {
+    "code": "DE-NI",
+    "continent": "Europe",
+    "name": "Lower Saxony"
+  },
+  {
     "code": "Lower Silesia",
     "continent": "Europe",
     "name": "Lower Silesia"
@@ -1731,6 +1776,11 @@
     "code": "yt",
     "continent": "Africa",
     "name": "Mayotte"
+  },
+  {
+    "code": "DE-MV",
+    "continent": "Europe",
+    "name": "Mecklenburg-Vorpommern"
   },
   {
     "code": "Median Empire",
@@ -2019,6 +2069,11 @@
     "code": "mk",
     "continent": "Europe",
     "name": "North Macedonia"
+  },
+  {
+    "code": "DE-NW",
+    "continent": "Europe",
+    "name": "North Rhine-Westphalia"
   },
   {
     "code": "northern_ireland",
@@ -2337,6 +2392,11 @@
     "code": "re",
     "continent": "Africa",
     "name": "Réunion"
+  },
+  {
+    "code": "DE-RP",
+    "continent": "Europe",
+    "name": "Rhineland-Palatinate"
   },
   {
     "code": "Rhode_Island",
@@ -2798,6 +2858,11 @@
     "name": "Rwanda"
   },
   {
+    "code": "DE-SL",
+    "continent": "Europe",
+    "name": "Saarland"
+  },
+  {
     "code": "Saba kingdom",
     "continent": "Asia",
     "name": "Saba Kingdom"
@@ -2924,6 +2989,21 @@
     "code": "sa",
     "continent": "Asia",
     "name": "Saudi Arabia"
+  },
+  {
+    "code": "DE-SN",
+    "continent": "Europe",
+    "name": "Saxony"
+  },
+  {
+    "code": "DE-ST",
+    "continent": "Europe",
+    "name": "Saxony-Anhalt"
+  },
+  {
+    "code": "DE-SH",
+    "continent": "Europe",
+    "name": "Schleswig-Holstein"
   },
   {
     "code": "gb-sct",
@@ -3208,6 +3288,11 @@
     "code": "th",
     "continent": "Asia",
     "name": "Thailand"
+  },
+  {
+    "code": "DE-TH",
+    "continent": "Europe",
+    "name": "Thuringia"
   },
   {
     "code": "tibet",

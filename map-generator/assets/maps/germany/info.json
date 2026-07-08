@@ -1,0 +1,105 @@
+{
+  "id": "Germany",
+  "name": "Germany",
+  "translation_key": "map.germany",
+  "categories": ["europe", "new"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [688, 396],
+      "name": "Hamburg",
+      "strength": 2,
+      "flag": "DE-HH"
+    },
+    {
+      "coordinates": [717, 311],
+      "name": "Schleswig-Holstein",
+      "strength": 2,
+      "flag": "DE-SH"
+    },
+    {
+      "coordinates": [561, 537],
+      "name": "Bremen",
+      "strength": 2,
+      "flag": "DE-HB"
+    },
+    {
+      "coordinates": [399, 592],
+      "name": "Lower Saxony",
+      "strength": 2,
+      "flag": "DE-NI"
+    },
+    {
+      "coordinates": [336, 803],
+      "name": "North Rhine-Westphalia",
+      "strength": 2,
+      "flag": "DE-NW"
+    },
+    {
+      "coordinates": [279, 1129],
+      "name": "Saarland",
+      "strength": 2,
+      "flag": "DE-SL"
+    },
+    {
+      "coordinates": [362, 1042],
+      "name": "Rhineland-Palatinate",
+      "strength": 2,
+      "flag": "DE-RP"
+    },
+    {
+      "coordinates": [602, 1207],
+      "name": "Baden-Württemberg",
+      "strength": 2,
+      "flag": "DE-BW"
+    },
+    {
+      "coordinates": [627, 900],
+      "name": "Hesse",
+      "strength": 2,
+      "flag": "DE-HE"
+    },
+    {
+      "coordinates": [941, 1139],
+      "name": "Bavaria",
+      "strength": 2,
+      "flag": "DE-BY-L"
+    },
+    {
+      "coordinates": [1077, 836],
+      "name": "Saxony",
+      "strength": 2,
+      "flag": "DE-SN"
+    },
+    {
+      "coordinates": [883, 648],
+      "name": "Saxony-Anhalt",
+      "strength": 2,
+      "flag": "DE-ST"
+    },
+    {
+      "coordinates": [861, 863],
+      "name": "Thuringia",
+      "strength": 2,
+      "flag": "DE-TH"
+    },
+    {
+      "coordinates": [1026, 370],
+      "name": "Mecklenburg-Vorpommern",
+      "strength": 2,
+      "flag": "DE-MV"
+    },
+    {
+      "coordinates": [1189, 590],
+      "name": "Berlin",
+      "strength": 2,
+      "flag": "DE-BE"
+    },
+    {
+      "coordinates": [1254, 708],
+      "name": "Brandenburg",
+      "strength": 2,
+      "flag": "DE-BB"
+    }
+  ]
+}
