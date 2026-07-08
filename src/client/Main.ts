@@ -177,6 +177,74 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   showSignIn();
 }
 
+// On CrazyGames the player's identity comes from the CrazyGames SDK, not our
+// backend user object. Show their avatar + username when signed in (clicking
+// opens the account modal), or a "Sign in" button that opens CrazyGames' own
+// auth prompt when they're a guest.
+async function updateCrazyGamesNavButton() {
+  const profile = await crazyGamesSDK.getUserProfile();
+
+  const desktopButton = document.getElementById(
+    "nav-account-button",
+  ) as HTMLButtonElement | null;
+  const avatarEl = document.getElementById(
+    "nav-account-avatar",
+  ) as HTMLImageElement | null;
+  const personIconEl = document.getElementById("nav-account-person-icon");
+  const emailBadgeEl = document.getElementById("nav-account-email-badge");
+  const signInTextEl = document.getElementById("nav-account-signin-text");
+  const mobileButton = document.getElementById(
+    "mobile-nav-account-button",
+  ) as HTMLButtonElement | null;
+
+  // CrazyGames accounts have no email, so the email badge is always hidden.
+  emailBadgeEl?.classList.add("hidden");
+
+  if (profile) {
+    // Signed in: avatar + username. Clicking routes to page-account as usual.
+    if (avatarEl) {
+      avatarEl.alt = profile.username;
+      avatarEl.src = profile.profilePictureUrl;
+      avatarEl.classList.remove("hidden");
+    }
+    personIconEl?.classList.add("hidden");
+    if (signInTextEl) {
+      signInTextEl.textContent = profile.username;
+      signInTextEl.classList.remove("hidden");
+    }
+    desktopButton?.classList.remove("border", "border-white/20");
+    if (desktopButton) desktopButton.onclick = null;
+    if (mobileButton) {
+      mobileButton.textContent = profile.username;
+      mobileButton.onclick = null;
+    }
+    return;
+  }
+
+  // Guest: "Sign in" that hands off to CrazyGames' own auth prompt instead of
+  // the account modal.
+  const signInText = translateText("main.sign_in");
+  const promptSignIn = (e: Event) => {
+    // Bypass the data-page router (which would open the account modal).
+    e.stopPropagation();
+    e.preventDefault();
+    void crazyGamesSDK.showAuthPrompt();
+  };
+
+  avatarEl?.classList.add("hidden");
+  personIconEl?.classList.remove("hidden");
+  if (signInTextEl) {
+    signInTextEl.textContent = signInText;
+    signInTextEl.classList.remove("hidden");
+  }
+  desktopButton?.classList.add("border", "border-white/20");
+  if (desktopButton) desktopButton.onclick = promptSignIn;
+  if (mobileButton) {
+    mobileButton.textContent = signInText;
+    mobileButton.onclick = promptSignIn;
+  }
+}
+
 declare global {
   interface Window {
     turnstile: any;
@@ -504,7 +572,11 @@ class Client {
     }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      updateAccountNavButton(userMeResponse);
+      if (crazyGamesSDK.isOnCrazyGames()) {
+        void updateCrazyGamesNavButton();
+      } else {
+        updateAccountNavButton(userMeResponse);
+      }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();

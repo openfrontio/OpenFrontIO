@@ -1,3 +1,8 @@
+export interface CrazyGamesUser {
+  username: string;
+  profilePictureUrl: string;
+}
+
 declare global {
   interface Window {
     CrazyGames?: {
@@ -5,16 +10,11 @@ declare global {
         init: () => Promise<void>;
         user: {
           isUserAccountAvailable: boolean;
-          getUser(): Promise<{
-            username: string;
-          } | null>;
+          getUser(): Promise<CrazyGamesUser | null>;
           getUserToken(): Promise<string>;
+          showAuthPrompt(): Promise<CrazyGamesUser | null>;
           addAuthListener: (
-            listener: (
-              user: {
-                username: string;
-              } | null,
-            ) => void,
+            listener: (user: CrazyGamesUser | null) => void,
           ) => void;
         };
         ad: {
@@ -168,12 +168,36 @@ export class CrazyGamesSDK {
     }
   }
 
+  // Returns the signed-in CrazyGames user (username + avatar), or null if
+  // accounts aren't available here or no user is signed in.
+  async getUserProfile(): Promise<CrazyGamesUser | null> {
+    const isReady = await this.ready();
+    if (!isReady) {
+      return null;
+    }
+    try {
+      return await window.CrazyGames!.SDK.user.getUser();
+    } catch (e) {
+      console.log("error getting CrazyGames user: ", e);
+      return null;
+    }
+  }
+
+  // Opens CrazyGames' own sign-in prompt. On success the auth listener fires,
+  // which drives our re-auth. Resolves regardless of outcome (e.g. cancelled).
+  async showAuthPrompt(): Promise<void> {
+    if (!(await this.ready())) {
+      return;
+    }
+    try {
+      await window.CrazyGames!.SDK.user.showAuthPrompt();
+    } catch (e) {
+      console.log("CrazyGames auth prompt dismissed: ", e);
+    }
+  }
+
   async addAuthListener(
-    listener: (
-      user: {
-        username: string;
-      } | null,
-    ) => void,
+    listener: (user: CrazyGamesUser | null) => void,
   ): Promise<void> {
     if (!(await this.ready())) {
       return;
