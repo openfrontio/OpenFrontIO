@@ -124,6 +124,7 @@ export class DoomsdayClockPanel extends LitElement {
       : wave.growing
         ? translateText("doomsday_clock.growing", {
             pct: scalePct(wave.targetPercent),
+            time: this.secondsToHms(wave.secondsToTarget),
           })
         : translateText("doomsday_clock.next_wave", {
             pct: scalePct(wave.targetPercent),

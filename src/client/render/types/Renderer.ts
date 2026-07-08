@@ -193,6 +193,7 @@ export interface PlayerStatusData {
   nukeTargetsMe: boolean;
   inDoomsdayClock: boolean;
   doomsdayClockDraining: boolean;
+  doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;
   allianceRemainingTicks: number;
