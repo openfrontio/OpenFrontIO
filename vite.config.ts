@@ -236,7 +236,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __ASSET_MANIFEST__: JSON.stringify(assetManifest),
       "process.env.WEBSOCKET_URL": JSON.stringify(
-        isProduction ? "" : "localhost:4000",
+        isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
@@ -269,13 +269,13 @@ export default defineConfig(({ mode }) => {
       open: process.env.SKIP_BROWSER_OPEN !== "true",
       proxy: {
         "/lobbies": {
-          target: "ws://localhost:4000",
+          target: "ws://localhost:3000",
           ws: true,
           changeOrigin: true,
         },
         // Worker proxies
         "/w0": {
-          target: "ws://localhost:4001",
+          target: "ws://localhost:3001",
           ws: true,
           secure: false,
           changeOrigin: true,
@@ -283,7 +283,7 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/w0/, ""),
         },
         "/w1": {
-          target: "ws://localhost:4002",
+          target: "ws://localhost:3002",
           ws: true,
           secure: false,
           changeOrigin: true,
@@ -292,7 +292,7 @@ export default defineConfig(({ mode }) => {
         },
         // API proxies
         "/api": {
-          target: "http://localhost:4000",
+          target: "http://localhost:3000",
           changeOrigin: true,
           secure: false,
         },
