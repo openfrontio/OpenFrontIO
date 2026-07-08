@@ -167,12 +167,17 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   }
 
   private pauseGame(pause: boolean) {
+    // CrazyGames: report gameplay as stopped whenever this settings menu is open,
+    // and resumed when it closes — unless the game was already paused when opened.
+    if (pause) {
+      crazyGamesSDK.gameplayStop();
+    } else if (!this.wasPausedWhenOpened) {
+      crazyGamesSDK.gameplayStart();
+    }
+
+    // Only pause the simulation itself when we own the pause (singleplayer or
+    // lobby creator).
     if (this.shouldPause && !this.wasPausedWhenOpened) {
-      if (pause) {
-        crazyGamesSDK.gameplayStop();
-      } else {
-        crazyGamesSDK.gameplayStart();
-      }
       this.eventBus.emit(new PauseGameIntentEvent(pause));
     }
   }
