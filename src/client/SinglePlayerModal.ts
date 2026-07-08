@@ -58,7 +58,8 @@ const DEFAULT_OPTIONS = {
   startingGold: false,
   startingGoldValue: undefined as number | undefined,
   disabledUnits: [] as UnitType[],
-  disableAlliances: false,
+  customAlliances: false,
+  customAllianceMinutes: undefined as number | undefined,
   waterNukes: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
@@ -98,7 +99,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [
     ...DEFAULT_OPTIONS.disabledUnits,
   ];
-  @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
+  @state() private customAlliances: boolean = DEFAULT_OPTIONS.customAlliances;
+  @state() private customAllianceMinutes: number | undefined =
+    DEFAULT_OPTIONS.customAllianceMinutes;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
@@ -257,6 +260,22 @@ export class SinglePlayerModal extends BaseModal {
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.custom_alliances"}
+        .checked=${this.customAlliances}
+        .inputMin=${0}
+        .inputMax=${15}
+        .inputStep=${1}
+        .inputValue=${this.customAllianceMinutes}
+        .inputAriaLabel=${translateText("single_modal.custom_alliances")}
+        .inputPlaceholder=${translateText("single_modal.mins_placeholder")}
+        .defaultInputValue=${0}
+        .minValidOnEnable=${0}
+        .zeroLabel=${`(${translateText("public_game_modifier.disable_alliances")})`}
+        .onToggle=${this.handleCustomAlliancesToggle}
+        .onInput=${this.handleCustomAllianceMinutesInput}
+        .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
+      ></toggle-input-card>`,
     ];
 
     return html`
@@ -317,10 +336,6 @@ export class SinglePlayerModal extends BaseModal {
                   {
                     labelKey: "single_modal.compact_map",
                     checked: this.compactMap,
-                  },
-                  {
-                    labelKey: "single_modal.disable_alliances",
-                    checked: this.disableAlliances,
                   },
                   {
                     labelKey: "single_modal.water_nukes",
@@ -388,7 +403,8 @@ export class SinglePlayerModal extends BaseModal {
       this.gameMode !== DEFAULT_OPTIONS.gameMode ||
       this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
-      this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
+      this.customAlliances !== DEFAULT_OPTIONS.customAlliances ||
+      this.customAllianceMinutes !== DEFAULT_OPTIONS.customAllianceMinutes ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
       // Pace only matters when the mode is on (startGame drops it when off).
@@ -420,7 +436,8 @@ export class SinglePlayerModal extends BaseModal {
     this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
     this.startingGold = DEFAULT_OPTIONS.startingGold;
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
-    this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
+    this.customAlliances = DEFAULT_OPTIONS.customAlliances;
+    this.customAllianceMinutes = DEFAULT_OPTIONS.customAllianceMinutes;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
@@ -508,9 +525,6 @@ export class SinglePlayerModal extends BaseModal {
       case "single_modal.compact_map":
         this.handleCompactMapChange(checked);
         break;
-      case "single_modal.disable_alliances":
-        this.disableAlliances = checked;
-        break;
       case "single_modal.water_nukes":
         this.waterNukes = checked;
         break;
@@ -572,6 +586,27 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.startingGold = checked;
     this.startingGoldValue = toOptionalNumber(value);
+  };
+
+  private handleCustomAlliancesToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.customAlliances = checked;
+    this.customAllianceMinutes = toOptionalNumber(value);
+  };
+
+  private handleCustomAllianceMinutesKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
+
+  private handleCustomAllianceMinutesInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, { min: 0, max: 15 });
+    if (value === undefined) {
+      return;
+    }
+    this.customAllianceMinutes = value;
   };
 
   private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
@@ -723,7 +758,9 @@ export class SinglePlayerModal extends BaseModal {
                     ),
                   }
                 : {}),
-              ...(this.disableAlliances ? { disableAlliances: true } : {}),
+              ...(this.customAlliances
+                ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+                : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
               ...(this.doomsdayClock
                 ? {

@@ -505,13 +505,22 @@ export class JoinLobbyModal extends BaseModal {
           .value=${`x${c.goldMultiplier}`}
         ></lobby-config-item>`,
       );
-    if (c.disableAlliances)
+    if (c.customAllianceDuration === 0 || c.disableAlliances)
       cards.push(
         html`<lobby-config-item
           .label=${translateText(
             "public_game_modifier.disable_alliances_label",
           )}
           .value=${translateText("common.disabled")}
+        ></lobby-config-item>`,
+      );
+    else if (typeof c.customAllianceDuration === "number")
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText(
+            "public_game_modifier.disable_alliances_label",
+          )}
+          .value=${`${c.customAllianceDuration}m`}
         ></lobby-config-item>`,
       );
     if (c.waterNukes)

@@ -246,6 +246,10 @@ export class GameServer {
       this.gameConfig.disableAlliances =
         gameConfig.disableAlliances ?? undefined;
     }
+    if (gameConfig.customAllianceDuration !== undefined) {
+      this.gameConfig.customAllianceDuration =
+        gameConfig.customAllianceDuration ?? undefined;
+    }
     if (gameConfig.allowedPublicIds !== undefined) {
       this.gameConfig.allowedPublicIds = gameConfig.allowedPublicIds;
     }
