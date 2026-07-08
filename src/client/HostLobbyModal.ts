@@ -364,6 +364,7 @@ export class HostLobbyModal extends BaseModal {
         .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
         .defaultInputValue=${0}
         .minValidOnEnable=${0}
+        .zeroLabel=${translateText("common.disabled")}
         .onToggle=${this.handleCustomAlliancesToggle}
         .onInput=${this.handleCustomAllianceMinutesInput}
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}

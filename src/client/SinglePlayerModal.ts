@@ -393,6 +393,7 @@ export class SinglePlayerModal extends BaseModal {
         .inputPlaceholder=${translateText("single_modal.mins_placeholder")}
         .defaultInputValue=${0}
         .minValidOnEnable=${0}
+        .zeroLabel=${translateText("common.disabled")}
         .onToggle=${this.handleCustomAlliancesToggle}
         .onInput=${this.handleCustomAllianceMinutesInput}
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
