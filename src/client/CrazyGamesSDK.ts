@@ -4,9 +4,11 @@ declare global {
       SDK: {
         init: () => Promise<void>;
         user: {
+          isUserAccountAvailable: boolean;
           getUser(): Promise<{
             username: string;
           } | null>;
+          getUserToken(): Promise<string>;
           addAuthListener: (
             listener: (
               user: {
@@ -144,6 +146,24 @@ export class CrazyGamesSDK {
       return (await window.CrazyGames!.SDK.user.getUser())?.username ?? null;
     } catch (e) {
       console.log("error getting CrazyGames username: ", e);
+      return null;
+    }
+  }
+
+  // Returns a fresh CrazyGames-signed user token to exchange with our backend,
+  // or null if accounts aren't available here or no user is signed in.
+  // CrazyGames recommends fetching this fresh each time rather than caching it.
+  async getUserToken(): Promise<string | null> {
+    if (!(await this.ready())) {
+      return null;
+    }
+    try {
+      if (!window.CrazyGames!.SDK.user.isUserAccountAvailable) {
+        return null;
+      }
+      return await window.CrazyGames!.SDK.user.getUserToken();
+    } catch (e) {
+      console.log("error getting CrazyGames user token: ", e);
       return null;
     }
   }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { generateCryptoRandomUUID } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
@@ -189,6 +190,15 @@ async function refreshJwt(): Promise<void> {
 }
 
 async function doRefreshJwt(): Promise<void> {
+  if (crazyGamesSDK.isOnCrazyGames()) {
+    const token = await crazyGamesSDK.getUserToken();
+    if (token) {
+      // Signed-in CrazyGames account: exchange their token for our session.
+      // No CrazyGames account / not signed in falls through to the guest flow
+      // below.
+      return doCrazyGamesLogin(token);
+    }
+  }
   try {
     console.log("Refreshing jwt");
     const response = await fetch(getApiBase() + "/auth/refresh", {
@@ -211,6 +221,41 @@ async function doRefreshJwt(): Promise<void> {
     __jwt = null;
     return;
   }
+}
+
+// Exchange a CrazyGames user token for our session. On CrazyGames the refresh
+// cookie isn't usable (SameSite=Lax, cross-site iframe), so we re-exchange on
+// expiry instead of hitting /auth/refresh.
+async function doCrazyGamesLogin(token: string): Promise<void> {
+  try {
+    console.log("Logging in with CrazyGames");
+    const response = await fetch(getApiBase() + "/auth/crazygames", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    if (response.status !== 200) {
+      console.error("CrazyGames login failed", response);
+      __jwt = null;
+      return;
+    }
+    const json = await response.json();
+    const { jwt, expiresIn } = json;
+    __expiresAt = Date.now() + expiresIn * 1000;
+    console.log("CrazyGames login succeeded");
+    __jwt = jwt;
+  } catch (e) {
+    console.error("CrazyGames login failed", e);
+    __jwt = null;
+  }
+}
+
+// Called when the CrazyGames auth state changes mid-session (e.g. the player
+// signs in): drop the cached session so userAuth() re-exchanges the new token.
+export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
+  __jwt = null;
+  __expiresAt = 0;
+  return userAuth();
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {

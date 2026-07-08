@@ -15,7 +15,7 @@ import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
@@ -533,6 +533,15 @@ class Client {
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
+
+    // Re-run auth when the player signs into CrazyGames mid-session. Logout
+    // reloads the page, so only login needs handling here.
+    crazyGamesSDK.addAuthListener(() => {
+      invalidateUserMe();
+      reauthAfterCrazyGamesChange().then((result) =>
+        result === false ? onUserMe(false) : getUserMe().then(onUserMe),
+      );
+    });
 
     const settingsModal = document.querySelector(
       "user-setting",
