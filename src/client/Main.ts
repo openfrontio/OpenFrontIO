@@ -14,6 +14,8 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { adGatekeeper } from "./AdGatekeeper";
+import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./ClanModal";
@@ -507,6 +509,22 @@ class Client {
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
+      // Ad-eligible users only: paid/adfree users must never load Admiral (its
+      // adblock popup fires autonomously once the payload runs). Start watching
+      // adblock state; once a blocker is ever detected the in-game ad is
+      // suppressed forever (persisted) — those users are highly ad-sensitive.
+      if (window.adsEnabled) {
+        loadAdmiral();
+        // Admiral's read is more reliable than our DOM bait, so use it as a
+        // fast initial signal. A blocker that whitelists this site still shows
+        // ads, so "blocked" means adblocking AND not whitelisted.
+        onAdmiralMeasured((res) => {
+          adGatekeeper.seed(
+            res.adblocking === true && res.whitelisted !== true,
+          );
+        });
+        adGatekeeper.start();
+      }
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
