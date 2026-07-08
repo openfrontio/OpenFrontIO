@@ -48,6 +48,7 @@ import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
 import { SelectionBoxPass } from "./passes/SelectionBoxPass";
 import { SkinAtlasArray } from "./passes/SkinAtlasArray";
+import { SmallPlayerGlowPass } from "./passes/SmallPlayerGlowPass";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import { SpawnOverlayPass } from "./passes/SpawnOverlayPass";
 import { StructureLevelPass } from "./passes/StructureLevelPass";
@@ -140,6 +141,7 @@ export class GPURenderer {
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
   private spawnOverlayPass: SpawnOverlayPass;
+  private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
 
   private paletteTex: WebGLTexture;
@@ -427,6 +429,14 @@ export class GPURenderer {
       mapH,
       this.res.tileTex,
       this.settings.spawnOverlay,
+    );
+
+    this.smallPlayerGlowPass = new SmallPlayerGlowPass(
+      gl,
+      mapW,
+      mapH,
+      this.res.tileTex,
+      this.settings.smallPlayerGlow,
     );
 
     // --- Trail (needs trailTex, paletteTex, effectTex) ---
@@ -988,6 +998,10 @@ export class GPURenderer {
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
 
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.smallPlayerGlowPass.update(set);
+  }
+
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
@@ -1245,6 +1259,8 @@ export class GPURenderer {
     this.crosshairPass.draw(cam);
     if (pe.structure) this.structurePass.draw(cam, zoom);
     if (pe.structure) this.structureLevelPass.draw(cam, zoom);
+    // Small-player glow draws after structures so buildings can't hide it.
+    this.smallPlayerGlowPass.draw(cam);
     if (pe.bar) this.barPass.draw(cam);
     this.updateSelectionBox();
     this.selectionBoxPass.draw(cam, this.frameTick);
@@ -1293,6 +1309,7 @@ export class GPURenderer {
     this.affiliationPalette.dispose();
     this.coordinateGridPass.dispose();
     this.spawnOverlayPass.dispose();
+    this.smallPlayerGlowPass.dispose();
     this.railroadPass.dispose();
     this.rangeCirclePass.dispose();
     this.samRadiusPass.dispose();
