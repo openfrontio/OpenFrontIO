@@ -32,6 +32,22 @@ import {
   translateText,
 } from "../../Utils";
 
+const pluralizeUnit = (u: string) => u === "City" ? "Cities" : u === "Factory" ? "Factories" : u + "s";
+
+function parseInboundNuke(m: string): { player: string; nukeType: string } | null {
+  if (m.endsWith(" - atom bomb inbound")) return { player: m.slice(0, -20), nukeType: "atom" };
+  if (m.endsWith(" - hydrogen bomb inbound")) return { player: m.slice(0, -24), nukeType: "hydrogen" };
+  if (m.startsWith("⚠️⚠️⚠️ ") && m.endsWith(" - MIRV INBOUND ⚠️⚠️⚠️")) return { player: m.slice(7, -22), nukeType: "mirv" };
+  return null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _unused = [
+  "events_display.atom_bomb_inbound_plural",
+  "events_display.hydrogen_bomb_inbound_plural",
+  "events_display.mirv_inbound_plural",
+];
+
 interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
@@ -41,6 +57,10 @@ interface GameEvent {
   onDelete?: () => void;
   focusID?: number;
   unitView?: UnitView;
+  groupKey?: string;
+  count?: number;
+  unitType?: string;
+  targetPlayerName?: string;
 }
 
 const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
@@ -242,40 +262,70 @@ export class EventsDisplay extends LitElement implements Controller {
   }
 
   private addEvent(event: GameEvent) {
+    if (event.groupKey) {
+      const existing = this.events.find(
+        (e) => e.groupKey === event.groupKey && this.game.ticks() - e.createdAt <= 30
+      );
+      if (existing) {
+        existing.count = (existing.count ?? 1) + 1;
+        existing.createdAt = this.game.ticks();
+        if (event.unitView) existing.unitView = event.unitView;
+        if (event.focusID) existing.focusID = event.focusID;
+
+        const u = pluralizeUnit(existing.unitType ?? "");
+        const n = existing.targetPlayerName ?? "";
+        const c = existing.count;
+
+        if (existing.groupKey?.startsWith("destroyed_")) {
+          existing.description = translateText("events_display.unit_destroyed_plural", { count: c, unit: u });
+        } else if (existing.groupKey?.startsWith("captured_")) {
+          existing.description = translateText("events_display.unit_captured_plural", { count: c, unit: u, name: n });
+        } else if (existing.groupKey?.startsWith("lost_")) {
+          existing.description = translateText("events_display.unit_lost_plural", { count: c, unit: u, name: n });
+        } else if (existing.groupKey?.startsWith("inbound_")) {
+          const k = "events_display." + existing.unitType + (existing.unitType === "mirv" ? "" : "_bomb") + "_inbound_plural";
+          existing.description = translateText(k, { count: c, name: n });
+        }
+        this.requestUpdate();
+        return;
+      }
+    }
     this.events = [...this.events, event];
     this.requestUpdate();
   }
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (
-      event.playerID !== null &&
-      (!myPlayer || myPlayer.smallID() !== event.playerID)
-    ) {
-      return;
+    if (event.playerID !== null && (!myPlayer || myPlayer.smallID() !== event.playerID)) return;
+    if (event.message === "events_display.received_gold_from_captured_ship") return;
+
+    const description = event.message.startsWith("events_display.")
+      ? translateText(event.message, event.params ?? {})
+      : event.message;
+
+    let groupKey: string | undefined;
+    const unitType = String(event.params?.unit ?? "");
+    const targetPlayerName = String(event.params?.name ?? "");
+
+    if (event.message === "events_display.unit_destroyed") {
+      groupKey = `destroyed_${unitType}`;
+    } else if (event.message === "events_display.unit_captured") {
+      groupKey = `captured_${unitType}_${targetPlayerName}`;
+    } else if (event.message === "events_display.unit_lost") {
+      groupKey = `lost_${unitType}_${targetPlayerName}`;
     }
 
-    // Captured trade-ship gold is surfaced as a transient +gold pip in
-    // control-panel rather than as a scroll-list entry.
-    if (event.message === "events_display.received_gold_from_captured_ship") {
-      return;
-    }
-
-    let description: string = event.message;
-    if (event.message.startsWith("events_display.")) {
-      description = translateText(event.message, event.params ?? {});
-    }
-
-    const unitView =
-      event.unitID !== undefined ? this.game.unit(event.unitID) : undefined;
     this.addEvent({
-      description: description,
+      description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
-      unitView: unitView,
+      unitView: event.unitID !== undefined ? this.game.unit(event.unitID) : undefined,
       focusID: event.focusPlayerID,
+      groupKey,
+      unitType,
+      targetPlayerName,
     });
   }
 
@@ -530,20 +580,19 @@ export class EventsDisplay extends LitElement implements Controller {
 
   onUnitIncomingEvent(event: UnitIncomingUpdate) {
     const myPlayer = this.game.myPlayer();
+    if (!myPlayer || myPlayer.smallID() !== event.playerID) return;
 
-    if (!myPlayer || myPlayer.smallID() !== event.playerID) {
-      return;
-    }
-
-    const unitView = this.game.unit(event.unitID);
-
+    const parsed = parseInboundNuke(event.message);
     this.addEvent({
       description: event.message,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
-      unitView: unitView,
+      unitView: this.game.unit(event.unitID),
+      groupKey: parsed ? `inbound_${parsed.nukeType}_${parsed.player}` : undefined,
+      unitType: parsed?.nukeType,
+      targetPlayerName: parsed?.player,
     });
   }
 
