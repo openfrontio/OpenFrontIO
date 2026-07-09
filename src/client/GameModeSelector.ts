@@ -187,7 +187,8 @@ export class GameModeSelector extends LitElement {
                       ${this.renderSpecialLobbyCard(special)}
                     </div>`
                   : nothing}
-                ${teams
+                <!-- Trojo:workhere -->
+                ${teams 
                   ? html`<div class="flex-1 min-h-0">
                       ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
                     </div>`
