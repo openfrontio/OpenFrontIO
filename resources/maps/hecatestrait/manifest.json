@@ -6,17 +6,17 @@
   "id": "hecatestrait",
   "map": {
     "height": 1932,
-    "num_land_tiles": 2267758,
+    "num_land_tiles": 2267717,
     "width": 2248
   },
   "map16x": {
     "height": 483,
-    "num_land_tiles": 132519,
+    "num_land_tiles": 132518,
     "width": 562
   },
   "map4x": {
     "height": 966,
-    "num_land_tiles": 553189,
+    "num_land_tiles": 553178,
     "width": 1124
   },
   "multiplayer_frequency": 4,
