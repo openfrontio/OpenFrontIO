@@ -666,7 +666,11 @@ export class HostLobbyModal extends BaseModal {
     const existingLobbyId =
       typeof args?.existingLobbyId === "string" ? args.existingLobbyId : null;
     if (existingLobbyId !== null) {
-      void this.attachToExistingLobby(existingLobbyId);
+      this.attachToExistingLobby(existingLobbyId).catch(() => {
+        // Clear clipboard so the host doesn't accidentally share a dead link,
+        // matching the createLobby() failure path below.
+        void navigator.clipboard.writeText("").catch(() => {});
+      });
       this.loadNationCount();
       return;
     }

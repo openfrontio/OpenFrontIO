@@ -9,6 +9,7 @@ import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import {
+  NewLobbyEvent,
   PauseGameIntentEvent,
   SendCreateNextLobbyEvent,
   SendWinnerEvent,
@@ -59,6 +60,7 @@ export class GameRightSidebar extends LitElement implements Controller {
   // Guards the in-game "New lobby" button so a double click doesn't fire twice
   // before we navigate to the successor lobby.
   private newLobbyRequested = false;
+  private newLobbyFallbackTimer: number | null = null;
   private spawnBarVisible = false;
   private immunityBarVisible = false;
 
@@ -92,6 +94,16 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       this.requestUpdate();
+    });
+
+    this.eventBus.on(NewLobbyEvent, () => {
+      // Successor lobby confirmed — NewLobbyPrompt takes over (navigates the
+      // host away). Cancel the re-enable fallback so the button can't flick
+      // back on while the redirect is in flight.
+      if (this.newLobbyFallbackTimer !== null) {
+        window.clearTimeout(this.newLobbyFallbackTimer);
+        this.newLobbyFallbackTimer = null;
+      }
     });
 
     this.eventBus.on(TogglePauseIntentEvent, () => {
@@ -217,6 +229,14 @@ export class GameRightSidebar extends LitElement implements Controller {
     // successor lobby and broadcast it. NewLobbyPrompt then navigates us (the
     // host) to the new host view when the broadcast arrives.
     this.eventBus.emit(new SendCreateNextLobbyEvent());
+    // Re-enable if the server never confirms the successor lobby (creation
+    // failed server-side, message dropped) so the host isn't stuck with a
+    // permanently dead button.
+    this.newLobbyFallbackTimer = window.setTimeout(() => {
+      this.newLobbyFallbackTimer = null;
+      this.newLobbyRequested = false;
+      this.requestUpdate();
+    }, 10_000);
   }
 
   private async onExitButtonClick() {
