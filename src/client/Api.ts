@@ -147,6 +147,42 @@ export function invalidateUserMe() {
   __userMe = null;
 }
 
+// POST /marketing/consent — record the player's marketing-email choice
+// (client-driven consent). Called by the consent toast and account settings.
+// Invalidates the cached /users/@me so the new decision is reflected on the
+// next read. Returns true on success.
+export async function setMarketingConsent(
+  consented: boolean,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/marketing/consent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ consented }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "setMarketingConsent: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    invalidateUserMe();
+    return true;
+  } catch (e) {
+    console.error("setMarketingConsent: request failed", e);
+    return false;
+  }
+}
+
 export async function purchaseWithCurrency(
   cosmeticType: "pattern" | "skin" | "flag" | "effect",
   cosmeticName: string,

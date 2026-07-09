@@ -1,10 +1,15 @@
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
+import {
+  fetchPlayerById,
+  getUserMe,
+  invalidateUserMe,
+  setMarketingConsent,
+} from "./Api";
 import {
   discordLogin,
   googleLogin,
@@ -38,6 +43,7 @@ export class AccountModal extends BaseModal {
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
+  @state() private consentBusy: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -142,6 +148,10 @@ export class AccountModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "friends", label: translateText("account_modal.tab_friends") },
+        {
+          key: "settings",
+          label: translateText("account_modal.tab_settings"),
+        },
       ],
     };
   }
@@ -174,9 +184,110 @@ export class AccountModal extends BaseModal {
         return this.renderGamesTab();
       case "friends":
         return this.renderFriendsTab();
+      case "settings":
+        return this.renderSettingsTab();
       default:
         return this.renderAccountTab();
     }
+  }
+
+  // Persistent marketing-consent control (client-driven consent). Mirrors the
+  // post-login toast: a player can turn email updates on/off any time here, or
+  // — when there's no verified email on the account — is told to link one.
+  private renderSettingsTab(): TemplateResult {
+    const consent = this.userMeResponse?.player?.marketingConsent;
+    const hasEmail = consent?.hasEmail ?? false;
+    const on = consent?.consented === "approved";
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="text-white font-medium">
+              ${translateText("account_modal.marketing_title")}
+            </div>
+            <div class="text-white/50 text-sm mt-1">
+              ${hasEmail
+                ? translateText("account_modal.marketing_desc")
+                : translateText("account_modal.marketing_no_email")}
+            </div>
+          </div>
+          ${hasEmail
+            ? html`<button
+                role="switch"
+                aria-checked=${on ? "true" : "false"}
+                aria-label=${translateText("account_modal.marketing_title")}
+                ?disabled=${this.consentBusy}
+                @click=${() => this.setConsent(!on)}
+                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${on
+                  ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+                  : "bg-white/15"}"
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${on
+                    ? "translate-x-6"
+                    : "translate-x-1"}"
+                ></span>
+              </button>`
+            : nothing}
+        </div>
+        ${hasEmail ? nothing : this.renderEmailBinding()}
+      </div>
+    `;
+  }
+
+  // No verified email on the account yet. Offer both ways to attach one:
+  // a magic link to a plain email (the backend associates a not-yet-registered
+  // email with the current session — the "new-association" path), or linking a
+  // Google account. Reuses the login form's email field/handlers.
+  private renderEmailBinding(): TemplateResult {
+    return html`
+      <div class="mt-4 space-y-3">
+        <input
+          type="email"
+          .value=${this.email}
+          @input=${this.handleEmailInput}
+          placeholder=${translateText("account_modal.email_placeholder")}
+          class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
+        />
+        <o-button
+          variant="primary"
+          width="block"
+          size="md"
+          translationKey="account_modal.get_magic_link"
+          @click=${this.handleSubmit}
+        ></o-button>
+        <div class="flex items-center gap-4 py-1">
+          <div class="h-px bg-white/10 flex-1"></div>
+          <span
+            class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
+          >
+            ${translateText("account_modal.or")}
+          </span>
+          <div class="h-px bg-white/10 flex-1"></div>
+        </div>
+        ${this.renderLinkGoogleButton()}
+      </div>
+    `;
+  }
+
+  private async setConsent(consented: boolean): Promise<void> {
+    const consent = this.userMeResponse?.player?.marketingConsent;
+    if (!consent || this.consentBusy) return;
+    const previous = consent.consented;
+    const next = consented ? "approved" : "denied";
+    if (previous === next) return;
+
+    // Optimistic: reflect the new state immediately, revert if the request fails.
+    this.consentBusy = true;
+    consent.consented = next;
+    this.requestUpdate();
+
+    const ok = await setMarketingConsent(consented);
+    if (!ok) {
+      consent.consented = previous;
+    }
+    this.consentBusy = false;
+    this.requestUpdate();
   }
 
   private renderFriendsTab(): TemplateResult {

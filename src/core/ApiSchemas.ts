@@ -132,6 +132,16 @@ export const UserMeResponseSchema = z.object({
         cancelAtPeriodEnd: z.boolean(),
       })
       .nullable(),
+    // Marketing-email consent state (client-driven consent). `consented` is the
+    // player's current decision; `hasEmail` is whether a verified contact email
+    // exists to subscribe. Optional so an older API without the field is treated
+    // as "no consent UI".
+    marketingConsent: z
+      .object({
+        consented: z.enum(["approved", "denied", "no_response"]),
+        hasEmail: z.boolean(),
+      })
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
