@@ -4,8 +4,13 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { fetchPlayerById, getUserMe } from "./Api";
-import { discordLogin, logOut, sendMagicLink } from "./Auth";
+import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
+import {
+  discordLogin,
+  logOut,
+  reauthAfterCrazyGamesChange,
+  sendMagicLink,
+} from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -19,6 +24,7 @@ import "./components/FriendsList";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics, SUBSCRIPTIONS_ENABLED } from "./Cosmetics";
+import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -27,6 +33,9 @@ export class AccountModal extends BaseModal {
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
+  // from the SDK, not our backend user object.
+  @state() private crazyGamesUser: CrazyGamesUser | null = null;
 
   private userMeResponse: UserMeResponse | null = null;
   private cosmetics: Cosmetics | null = null;
@@ -38,6 +47,9 @@ export class AccountModal extends BaseModal {
     super();
 
     document.addEventListener("userMeResponse", (event: Event) => {
+      // A CrazyGames sign-in fires userMeResponse (via Main's auth listener);
+      // re-fetch the SDK profile so the modal leaves the sign-in screen.
+      this.refreshCrazyGamesUser();
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         const previousPublicId = this.userMeResponse?.player?.publicId;
@@ -55,6 +67,16 @@ export class AccountModal extends BaseModal {
         this.gameHistoryCache = null;
         this.requestUpdate();
       }
+    });
+  }
+
+  // Refresh the signed-in CrazyGames identity from the SDK. No-op off
+  // CrazyGames; drives isLinkedAccount() so the modal shows the profile.
+  private refreshCrazyGamesUser() {
+    if (!crazyGamesSDK.isOnCrazyGames()) return;
+    void crazyGamesSDK.getUserProfile().then((user) => {
+      this.crazyGamesUser = user;
+      this.requestUpdate();
     });
   }
 
@@ -99,7 +121,13 @@ export class AccountModal extends BaseModal {
 
   private isLinkedAccount(): boolean {
     const me = this.userMeResponse?.user;
-    return !!(me?.discord ?? me?.email);
+    // The CrazyGames identity only counts once the backend token exchange
+    // produced a session — otherwise a failed exchange would show a dead
+    // "connected as" view with no way to retry.
+    return (
+      !!(me?.discord ?? me?.email) ||
+      (!!this.crazyGamesUser && this.userMeResponse !== null)
+    );
   }
 
   protected modalConfig() {
@@ -124,7 +152,9 @@ export class AccountModal extends BaseModal {
     }
     if (!this.isLinkedAccount()) {
       return html`<div class="custom-scrollbar mr-1">
-        ${this.renderLoginOptions()}
+        ${crazyGamesSDK.isOnCrazyGames()
+          ? this.renderCrazyGamesSignIn()
+          : this.renderLoginOptions()}
       </div>`;
     }
     return html`
@@ -153,6 +183,9 @@ export class AccountModal extends BaseModal {
   }
 
   private renderAccountTab(): TemplateResult {
+    if (this.crazyGamesUser) {
+      return this.renderCrazyGamesAccount(this.crazyGamesUser);
+    }
     return html`
       <div class="flex flex-col gap-6">
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
@@ -171,6 +204,59 @@ export class AccountModal extends BaseModal {
           </div>
         </div>
         ${this.renderSubscriptionPanel()}
+      </div>
+    `;
+  }
+
+  // CrazyGames "connected as" view: avatar + username from the SDK, plus
+  // currency/subscription. No Discord/Google/email link or logout (CrazyGames
+  // owns the account and its logout).
+  private renderCrazyGamesAccount(user: CrazyGamesUser): TemplateResult {
+    return html`
+      <div class="flex flex-col gap-6">
+        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+          <div class="flex flex-col items-center gap-4">
+            <div
+              class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
+            >
+              ${translateText("account_modal.connected_as")}
+            </div>
+            <div class="flex flex-col items-center gap-3">
+              <img
+                src=${user.profilePictureUrl}
+                alt=${user.username}
+                class="w-16 h-16 rounded-full object-cover"
+                referrerpolicy="no-referrer"
+              />
+              <div class="text-white text-lg font-medium">${user.username}</div>
+              ${this.renderCurrency()}
+            </div>
+          </div>
+        </div>
+        ${this.renderSubscriptionPanel()}
+      </div>
+    `;
+  }
+
+  // Shown when a CrazyGames guest opens the modal: hand off to CrazyGames' own
+  // sign-in prompt (no Discord/Google/email on CrazyGames).
+  private renderCrazyGamesSignIn(): TemplateResult {
+    return html`
+      <div class="flex items-center justify-center p-6 min-h-full">
+        <div
+          class="w-full max-w-md bg-white/5 rounded-2xl border border-white/10 p-8 text-center"
+        >
+          <p class="text-white/50 text-sm font-medium mb-6">
+            ${translateText("account_modal.sign_in_desc")}
+          </p>
+          <o-button
+            variant="primary"
+            width="block"
+            size="md"
+            translationKey="main.sign_in"
+            @click=${this.handleCrazyGamesSignIn}
+          ></o-button>
+        </div>
       </div>
     `;
   }
@@ -418,12 +504,28 @@ export class AccountModal extends BaseModal {
     }
   }
 
+  // CrazyGames sign-in: after their prompt completes, exchange the new token
+  // for a session and refresh the modal so it shows the signed-in profile.
+  private async handleCrazyGamesSignIn() {
+    await crazyGamesSDK.showAuthPrompt();
+    const profile = await crazyGamesSDK.getUserProfile();
+    if (!profile) return; // prompt cancelled / still not signed in
+    invalidateUserMe();
+    await reauthAfterCrazyGamesChange();
+    const userMe = await getUserMe();
+    if (userMe) this.userMeResponse = userMe;
+    this.crazyGamesUser = profile;
+    this.requestUpdate();
+  }
+
   private handleDiscordLogin() {
     discordLogin();
   }
 
   protected onOpen(): void {
     this.isLoadingUser = true;
+
+    this.refreshCrazyGamesUser();
 
     if (SUBSCRIPTIONS_ENABLED) {
       void fetchCosmetics().then((cosmetics) => {

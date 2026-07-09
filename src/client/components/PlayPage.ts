@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import "./NewsBox";
 
 @customElement("play-page")
@@ -59,10 +60,44 @@ export class PlayPage extends LitElement {
               />
             </div>
 
-            <div
-              aria-hidden="true"
-              class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
-            ></div>
+            ${crazyGamesSDK.isOnCrazyGames()
+              ? html`
+                  <button
+                    id="crazygames-account-btn"
+                    data-page="page-account"
+                    class="nav-menu-item col-start-3 justify-self-end h-10 shrink-0 flex items-center justify-center rounded-full overflow-hidden text-white/90 cursor-pointer"
+                    data-i18n-aria-label="main.account"
+                    data-i18n-title="main.account"
+                  >
+                    <img
+                      id="crazygames-account-avatar"
+                      class="hidden w-8 h-8 rounded-full object-cover"
+                      alt=""
+                      referrerpolicy="no-referrer"
+                    />
+                    <svg
+                      id="crazygames-account-icon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      class="w-7 h-7"
+                    >
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                      <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+                    </svg>
+                  </button>
+                `
+              : html`
+                  <div
+                    aria-hidden="true"
+                    class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
+                  ></div>
+                `}
           </div>
         </div>
 
