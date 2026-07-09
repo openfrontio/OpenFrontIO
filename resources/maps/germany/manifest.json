@@ -3,7 +3,7 @@
   "id": "Germany",
   "map": {
     "height": 1516,
-    "num_land_tiles": 1072927,
+    "num_land_tiles": 1072928,
     "width": 1548
   },
   "map16x": {
@@ -13,7 +13,7 @@
   },
   "map4x": {
     "height": 758,
-    "num_land_tiles": 265158,
+    "num_land_tiles": 265159,
     "width": 774
   },
   "multiplayer_frequency": 5,
