@@ -33,17 +33,17 @@ import {
 } from "../../Utils";
 
 const UNIT_TRANSLATION_KEYS: Record<string, string> = {
-  "City": "unit_type.city",
-  "Port": "unit_type.port",
-  "Defense Post": "unit_type.defense_post",
-  "SAM Launcher": "unit_type.sam_launcher",
-  "Missile Silo": "unit_type.missile_silo",
-  "Factory": "unit_type.factory",
-  "Warship": "unit_type.warship",
-  "Transport": "unit_type.boat",
-  "Atom Bomb": "unit_type.atom_bomb",
-  "Hydrogen Bomb": "unit_type.hydrogen_bomb",
-  "MIRV": "unit_type.mirv",
+  City: "city",
+  Port: "port",
+  "Defense Post": "defense_post",
+  "SAM Launcher": "sam_launcher",
+  "Missile Silo": "missile_silo",
+  Factory: "factory",
+  Warship: "warship",
+  Transport: "boat",
+  "Atom Bomb": "atom_bomb",
+  "Hydrogen Bomb": "hydrogen_bomb",
+  MIRV: "mirv",
 };
 
 const getTranslatedUnitName = (unitType: string, plural: boolean): string => {
@@ -52,10 +52,15 @@ const getTranslatedUnitName = (unitType: string, plural: boolean): string => {
   return translateText(plural ? `unit_type_plural.${key}` : `unit_type.${key}`);
 };
 
-function parseInboundNuke(m: string): { player: string; nukeType: string } | null {
-  if (m.endsWith(" - atom bomb inbound")) return { player: m.slice(0, -20), nukeType: "atom" };
-  if (m.endsWith(" - hydrogen bomb inbound")) return { player: m.slice(0, -24), nukeType: "hydrogen" };
-  if (m.startsWith("⚠️⚠️⚠️ ") && m.endsWith(" - MIRV INBOUND ⚠️⚠️⚠️")) return { player: m.slice(7, -22), nukeType: "mirv" };
+function parseInboundNuke(
+  m: string,
+): { player: string; nukeType: string } | null {
+  if (m.endsWith(" - atom bomb inbound"))
+    return { player: m.slice(0, -20), nukeType: "atom" };
+  if (m.endsWith(" - hydrogen bomb inbound"))
+    return { player: m.slice(0, -24), nukeType: "hydrogen" };
+  if (m.startsWith("⚠️⚠️⚠️ ") && m.endsWith(" - MIRV INBOUND ⚠️⚠️⚠️"))
+    return { player: m.slice(7, -22), nukeType: "mirv" };
   return null;
 }
 
@@ -296,7 +301,9 @@ export class EventsDisplay extends LitElement implements Controller {
   private addEvent(event: GameEvent) {
     if (event.groupKey) {
       const existing = this.events.find(
-        (e) => e.groupKey === event.groupKey && this.game.ticks() - e.createdAt <= 30
+        (e) =>
+          e.groupKey === event.groupKey &&
+          this.game.ticks() - e.createdAt <= 30,
       );
       if (existing) {
         existing.count = (existing.count ?? 1) + 1;
@@ -309,13 +316,26 @@ export class EventsDisplay extends LitElement implements Controller {
         const c = existing.count;
 
         if (existing.groupKey?.startsWith("destroyed_")) {
-          existing.description = translateText("events_display.unit_destroyed_plural", { count: c, unit: u });
+          existing.description = translateText(
+            "events_display.unit_destroyed_plural",
+            { count: c, unit: u },
+          );
         } else if (existing.groupKey?.startsWith("captured_")) {
-          existing.description = translateText("events_display.unit_captured_plural", { count: c, unit: u, name: n });
+          existing.description = translateText(
+            "events_display.unit_captured_plural",
+            { count: c, unit: u, name: n },
+          );
         } else if (existing.groupKey?.startsWith("lost_")) {
-          existing.description = translateText("events_display.unit_lost_plural", { count: c, unit: u, name: n });
+          existing.description = translateText(
+            "events_display.unit_lost_plural",
+            { count: c, unit: u, name: n },
+          );
         } else if (existing.groupKey?.startsWith("inbound_")) {
-          const k = "events_display." + existing.unitType + (existing.unitType === "mirv" ? "" : "_bomb") + "_inbound_plural";
+          const k =
+            "events_display." +
+            existing.unitType +
+            (existing.unitType === "mirv" ? "" : "_bomb") +
+            "_inbound_plural";
           existing.description = translateText(k, { count: c, name: n });
         }
         this.requestUpdate();
@@ -328,8 +348,13 @@ export class EventsDisplay extends LitElement implements Controller {
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (event.playerID !== null && (!myPlayer || myPlayer.smallID() !== event.playerID)) return;
-    if (event.message === "events_display.received_gold_from_captured_ship") return;
+    if (
+      event.playerID !== null &&
+      (!myPlayer || myPlayer.smallID() !== event.playerID)
+    )
+      return;
+    if (event.message === "events_display.received_gold_from_captured_ship")
+      return;
 
     const params = { ...event.params };
     if (params.unit) {
@@ -358,7 +383,8 @@ export class EventsDisplay extends LitElement implements Controller {
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
-      unitView: event.unitID !== undefined ? this.game.unit(event.unitID) : undefined,
+      unitView:
+        event.unitID !== undefined ? this.game.unit(event.unitID) : undefined,
       focusID: event.focusPlayerID,
       groupKey,
       unitType,
@@ -622,7 +648,11 @@ export class EventsDisplay extends LitElement implements Controller {
     const parsed = parseInboundNuke(event.message);
     let description = event.message;
     if (parsed) {
-      const k = "events_display." + parsed.nukeType + (parsed.nukeType === "mirv" ? "" : "_bomb") + "_inbound";
+      const k =
+        "events_display." +
+        parsed.nukeType +
+        (parsed.nukeType === "mirv" ? "" : "_bomb") +
+        "_inbound";
       description = translateText(k, { name: parsed.player });
     }
 
@@ -633,7 +663,9 @@ export class EventsDisplay extends LitElement implements Controller {
       highlight: true,
       createdAt: this.game.ticks(),
       unitView: this.game.unit(event.unitID),
-      groupKey: parsed ? `inbound_${parsed.nukeType}_${parsed.player}` : undefined,
+      groupKey: parsed
+        ? `inbound_${parsed.nukeType}_${parsed.player}`
+        : undefined,
       unitType: parsed?.nukeType,
       targetPlayerName: parsed?.player,
     });
