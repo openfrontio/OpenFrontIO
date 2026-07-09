@@ -337,6 +337,14 @@ export class EventsDisplay extends LitElement implements Controller {
             (existing.unitType === "mirv" ? "" : "_bomb") +
             "_inbound_plural";
           existing.description = translateText(k, { count: c, name: n });
+        } else if (existing.groupKey?.startsWith("intercepted_")) {
+          existing.description = translateText(
+            "events_display.missile_intercepted_plural",
+            {
+              count: c,
+              unit: getTranslatedUnitName(existing.unitType ?? "", true),
+            },
+          );
         }
         this.requestUpdate();
         return;
@@ -375,6 +383,8 @@ export class EventsDisplay extends LitElement implements Controller {
       groupKey = `captured_${unitType}_${targetPlayerName}`;
     } else if (event.message === "events_display.unit_lost") {
       groupKey = `lost_${unitType}_${targetPlayerName}`;
+    } else if (event.message === "events_display.missile_intercepted") {
+      groupKey = `intercepted_${unitType}`;
     }
 
     this.addEvent({
