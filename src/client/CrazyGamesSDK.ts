@@ -1,18 +1,20 @@
+export interface CrazyGamesUser {
+  username: string;
+  profilePictureUrl: string;
+}
+
 declare global {
   interface Window {
     CrazyGames?: {
       SDK: {
         init: () => Promise<void>;
         user: {
-          getUser(): Promise<{
-            username: string;
-          } | null>;
+          isUserAccountAvailable: boolean;
+          getUser(): Promise<CrazyGamesUser | null>;
+          getUserToken(): Promise<string>;
+          showAuthPrompt(): Promise<CrazyGamesUser | null>;
           addAuthListener: (
-            listener: (
-              user: {
-                username: string;
-              } | null,
-            ) => void,
+            listener: (user: CrazyGamesUser | null) => void,
           ) => void;
         };
         ad: {
@@ -58,8 +60,10 @@ declare global {
 export class CrazyGamesSDK {
   private initialized = false;
   private isGameplayActive = false;
-  private readyPromise: Promise<void>;
-  private resolveReady!: () => void;
+  // Resolves true once the SDK initialized, false once init definitively
+  // failed (not on CrazyGames, SDK never loaded, init threw).
+  private readyPromise: Promise<boolean>;
+  private resolveReady!: (ready: boolean) => void;
 
   constructor() {
     this.readyPromise = new Promise((resolve) => {
@@ -72,9 +76,17 @@ export class CrazyGamesSDK {
       setTimeout(() => resolve(false), 3000);
     });
 
-    const ready = this.readyPromise.then(() => true);
+    return Promise.race([this.readyPromise, timeout]);
+  }
 
-    return Promise.race([ready, timeout]);
+  // Like ready() but without the 3s cap: waits for maybeInit() to actually
+  // finish (SDK load alone can take ~10s on a slow network). Use this for
+  // auth-critical calls, where a premature false logs the player out.
+  private whenReady(): Promise<boolean> {
+    if (!this.isOnCrazyGames()) {
+      return Promise.resolve(false);
+    }
+    return this.readyPromise;
   }
 
   isOnCrazyGames(): boolean {
@@ -110,6 +122,7 @@ export class CrazyGamesSDK {
 
     if (!this.isOnCrazyGames()) {
       console.log("Not running on CrazyGames platform, not initializing SDK");
+      this.resolveReady(false);
       return;
     }
 
@@ -122,16 +135,18 @@ export class CrazyGamesSDK {
 
     if (typeof window.CrazyGames === "undefined") {
       console.warn("CrazyGames SDK not available");
+      this.resolveReady(false);
       return;
     }
 
     try {
       await window.CrazyGames.SDK.init();
       this.initialized = true;
-      this.resolveReady();
+      this.resolveReady(true);
       console.log("CrazyGames SDK initialized");
     } catch (error) {
       console.error("Failed to initialize CrazyGames SDK:", error);
+      this.resolveReady(false);
     }
   }
 
@@ -148,14 +163,55 @@ export class CrazyGamesSDK {
     }
   }
 
+  // Returns a fresh CrazyGames-signed user token to exchange with our backend,
+  // or null if accounts aren't available here or no user is signed in.
+  // CrazyGames recommends fetching this fresh each time rather than caching it.
+  async getUserToken(): Promise<string | null> {
+    if (!(await this.whenReady())) {
+      return null;
+    }
+    try {
+      if (!window.CrazyGames!.SDK.user.isUserAccountAvailable) {
+        return null;
+      }
+      return await window.CrazyGames!.SDK.user.getUserToken();
+    } catch (e) {
+      console.log("error getting CrazyGames user token: ", e);
+      return null;
+    }
+  }
+
+  // Returns the signed-in CrazyGames user (username + avatar), or null if
+  // accounts aren't available here or no user is signed in.
+  async getUserProfile(): Promise<CrazyGamesUser | null> {
+    if (!(await this.whenReady())) {
+      return null;
+    }
+    try {
+      return await window.CrazyGames!.SDK.user.getUser();
+    } catch (e) {
+      console.log("error getting CrazyGames user: ", e);
+      return null;
+    }
+  }
+
+  // Opens CrazyGames' own sign-in prompt. On success the auth listener fires,
+  // which drives our re-auth. Resolves regardless of outcome (e.g. cancelled).
+  async showAuthPrompt(): Promise<void> {
+    if (!(await this.whenReady())) {
+      return;
+    }
+    try {
+      await window.CrazyGames!.SDK.user.showAuthPrompt();
+    } catch (e) {
+      console.log("CrazyGames auth prompt dismissed: ", e);
+    }
+  }
+
   async addAuthListener(
-    listener: (
-      user: {
-        username: string;
-      } | null,
-    ) => void,
+    listener: (user: CrazyGamesUser | null) => void,
   ): Promise<void> {
-    if (!(await this.ready())) {
+    if (!(await this.whenReady())) {
       return;
     }
 

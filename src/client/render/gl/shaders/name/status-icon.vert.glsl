@@ -268,12 +268,19 @@ void main() {
     }
   }
 
-  // Doomsday Clock skull: slot 8. Blinks ~2 Hz while in danger (flag 1.0); holds
-  // steady once the side is draining (flag 2.0).
+  // Doomsday Clock skull: slot 8. While in danger (flag 1.0-1.49) the skull
+  // blinks and speeds up as the warn countdown runs out — the progress 0->1 is
+  // packed into the flag's fraction. Base ~2 Hz plus a p^2 phase term so it
+  // accelerates toward the drain (same trick as the alliance-renewal flash
+  // above, which keeps the phase continuous). Holds steady once draining (>=1.5).
   if (iconSlot == 8) {
-    vFlashAlpha = (statusFlag[8] < 1.5)
-      ? 0.35 + 0.65 * (0.5 + 0.5 * cos(uTime * 2.0 * 6.2832))
-      : 1.0;
+    if (statusFlag[8] < 1.5) {
+      float p = clamp((statusFlag[8] - 1.0) / 0.49, 0.0, 1.0);
+      float phase = uTime * 2.0 + p * p * 40.0;
+      vFlashAlpha = 0.35 + 0.65 * (0.5 + 0.5 * cos(phase * 6.2832));
+    } else {
+      vFlashAlpha = 1.0;
+    }
   }
 
   vDiscard = 0;

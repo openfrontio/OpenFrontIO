@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
+import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -218,14 +219,15 @@ export function joinLobby(
           }),
         );
       } else if (message.error === "kick_reason.host_left") {
-        alert(translateText("kick_reason.host_left"));
-        document.dispatchEvent(
-          new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
-            bubbles: true,
-            composed: true,
-          }),
-        );
+        showInGameAlert(translateText("kick_reason.host_left")).then(() => {
+          document.dispatchEvent(
+            new CustomEvent("leave-lobby", {
+              detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+              bubbles: true,
+              composed: true,
+            }),
+          );
+        });
       } else {
         showErrorModal(
           message.error,
