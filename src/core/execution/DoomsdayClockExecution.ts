@@ -44,11 +44,13 @@ export class DoomsdayClockExecution implements Execution {
     const mg = this.mg;
     const cfg = mg.config().doomsdayClockConfig();
     if (!cfg.enabled) return;
-    // Warships bleed on the same start + ramp as troops but toward a much higher
-    // ceiling (warshipDrainMaxPercent), so a fleet at full attrition sinks in
-    // ~2s. Only the max differs from the troop drain.
+    // Warships bleed on their OWN gentler start + higher ceiling, and (via the
+    // curve exponent passed to the drain below) a STEEP convex ramp: a ship
+    // caught when its side is first doomed lasts ~as long as troops, but a side
+    // that has been under the clock the full ramp loses ships in ~2s.
     const warshipDrainCfg = {
       ...cfg,
+      drainStartPercent: cfg.warshipDrainStartPercent,
       drainMaxPercent: cfg.warshipDrainMaxPercent,
     };
 
@@ -122,6 +124,7 @@ export class DoomsdayClockExecution implements Execution {
                   ws.maxHealth(),
                   secondsPastWarn,
                   warshipDrainCfg,
+                  cfg.warshipDrainCurveExponent,
                 ),
               );
             }

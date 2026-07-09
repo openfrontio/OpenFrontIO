@@ -403,9 +403,11 @@ export class PlayerView {
   }
 
   units(...types: UnitType[]): UnitView[] {
-    return this.game
-      .units(...types)
-      .filter((u) => u.owner().smallID() === this.smallID());
+    const owned = this.game.unitsOwnedBy(this.smallID());
+    if (types.length === 0) {
+      return [...owned];
+    }
+    return owned.filter((u) => types.includes(u.type()));
   }
 
   nameLocation(): NameViewData | undefined {

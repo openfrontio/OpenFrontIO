@@ -5,7 +5,6 @@ import type {
   NukeTelegraphData,
   PlayerState,
   PlayerStatusData,
-  TilePair,
   UnitState,
 } from "./Renderer";
 
@@ -37,11 +36,11 @@ export interface FrameData {
   // ── Upload hints ──────────────────────────────────────────────────────
 
   /**
-   * Changed tiles this frame for delta uploads.
+   * Changed tile refs this frame for delta uploads.
    * - `null` → no delta info; full upload needed (first tick)
    * - array → only these tiles changed (empty = skip upload)
    */
-  readonly changedTiles: TilePair[] | null;
+  readonly changedTiles: readonly number[] | null;
   readonly railroadDirty: boolean;
   readonly revealedRailTiles: number[];
 

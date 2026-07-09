@@ -25,7 +25,6 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
@@ -124,7 +123,10 @@ export class MapRenderer {
 
   // ---- Data upload ----
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(
@@ -235,6 +237,11 @@ export class MapRenderer {
   /** Update spawn phase overlay (tile highlights + breathing rings). */
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
     this.renderer?.updateSpawnOverlay(inSpawnPhase, centers);
+  }
+
+  /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.renderer?.updateSmallPlayerGlow(set);
   }
 
   // ---- Selection box ----

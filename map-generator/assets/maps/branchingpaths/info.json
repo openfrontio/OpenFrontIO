@@ -1,0 +1,105 @@
+{
+  "id": "BranchingPaths",
+  "name": "Branching Paths",
+  "translation_key": "map.branchingpaths",
+  "categories": ["arcade", "fictional"],
+  "multiplayer_frequency": 3,
+  "special_team_count": 2,
+  "nations": [
+    {
+      "coordinates": [1240, 1431],
+      "name": "Last Hold",
+      "strength": 1
+    },
+    {
+      "coordinates": [1128, 1407],
+      "name": "First Wall",
+      "strength": 1
+    },
+    {
+      "coordinates": [1319, 1351],
+      "name": "Second Wall",
+      "strength": 1
+    },
+    {
+      "coordinates": [1272, 1540],
+      "name": "Third Wall",
+      "strength": 1
+    },
+    {
+      "coordinates": [1238, 35],
+      "name": "Scorching Rays",
+      "strength": 1
+    },
+    {
+      "coordinates": [17, 2139],
+      "name": "Frozen Winds",
+      "strength": 1
+    },
+    {
+      "coordinates": [2471, 2143],
+      "name": "Barren Plains",
+      "strength": 1
+    },
+    {
+      "coordinates": [1839, 1769],
+      "name": "Thriving Farmland",
+      "strength": 1
+    },
+    {
+      "coordinates": [642, 1783],
+      "name": "Desperate Farmland",
+      "strength": 1
+    },
+    {
+      "coordinates": [1232, 743],
+      "name": "Stable Farmland",
+      "strength": 1
+    },
+    {
+      "coordinates": [1271, 1896],
+      "name": "Border Town",
+      "strength": 1
+    },
+    {
+      "coordinates": [801, 1224],
+      "name": "Border Village",
+      "strength": 1
+    },
+    {
+      "coordinates": [1617, 1171],
+      "name": "Border Hamlet",
+      "strength": 1
+    },
+    {
+      "coordinates": [932, 1667],
+      "name": "City of Trade",
+      "strength": 1
+    },
+    {
+      "coordinates": [1607, 1580],
+      "name": "City of Craftsmen",
+      "strength": 1
+    },
+    {
+      "coordinates": [1189, 1047],
+      "name": "City of Industry",
+      "strength": 1
+    },
+    {
+      "coordinates": [1243, 1666],
+      "name": "Fishing Town",
+      "strength": 1
+    },
+    {
+      "coordinates": [1031, 1316],
+      "name": "Fishing Village",
+      "strength": 1
+    },
+    {
+      "coordinates": [1446, 1314],
+      "name": "Fishing Hamlet",
+      "strength": 1
+    }
+  ]
+}
