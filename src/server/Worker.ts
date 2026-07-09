@@ -12,6 +12,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
+  ID,
   MAX_HOSTED_LOBBIES,
   PartialGameRecordSchema,
   ServerErrorMessage,
@@ -23,6 +24,7 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
+import type { GameServer } from "./GameServer";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
@@ -32,7 +34,6 @@ import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
-import { wireSuccessorLobby } from "./SuccessorLobby";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -174,6 +175,50 @@ export async function startWorker() {
         .json({ error: "Cannot create public games via this endpoint" });
     }
 
+    // Reuse-lobby flow: ?previous=<gameID> marks this creation as the successor
+    // of a finished private game, so its remaining players get told the new id
+    // and can hop over without re-sharing a link. The previous game lives on
+    // this same worker (callers hit /wX/api/create_game for it), which is also
+    // where the successor is minted. Going through this endpoint (instead of a
+    // websocket message) keeps game creation behind its rate limits.
+    let previousGame: GameServer | null = null;
+    if (req.query.previous !== undefined) {
+      const prevId = ID.safeParse(req.query.previous);
+      if (!prevId.success) {
+        return res.status(400).json({ error: "Invalid previous game id" });
+      }
+      previousGame = gm.game(prevId.data);
+      if (previousGame === null) {
+        return res.status(404).json({ error: "Previous game not found" });
+      }
+      if (!previousGame.isCreator(creatorPersistentID)) {
+        return res.status(403).json({
+          error: "Only the lobby creator can create a successor lobby",
+        });
+      }
+      // Reusing a lobby is a private-lobby feature: a public game's players
+      // never opted into following a host to another game.
+      if (previousGame.isPublic()) {
+        return res
+          .status(403)
+          .json({ error: "Public games cannot spawn a successor lobby" });
+      }
+      // Idempotent: a repeat request (e.g. a double click) reuses the already
+      // minted successor instead of creating another one.
+      const existingId = previousGame.successorLobby();
+      const existing = existingId !== null ? gm.game(existingId) : null;
+      if (existingId !== null && existing !== null) {
+        previousGame.setSuccessorLobby(existingId); // re-broadcast for late joiners
+        return res.json({
+          ...existing.gameInfo(),
+          workerIndex: workerId,
+          workerPath: ServerEnv.workerPath(existingId),
+        });
+      }
+      // A recorded successor that no longer exists (already cleaned up) falls
+      // through and gets replaced by a fresh lobby.
+    }
+
     const id = ServerEnv.generateGameIdForWorker(workerId);
     if (id === null) {
       log.warn(`Failed to mint game id on worker ${workerId}`);
@@ -186,22 +231,10 @@ export async function startWorker() {
       return res.status(409).json({ error: "Game ID already exists" });
     }
 
-    // Let a finished private lobby spin up a successor on this same worker (id
-    // sharding + GameManager both live here). Same creator, default settings —
-    // the host reconfigures in the host view. Every successor is wired the same
-    // way, so the group can reuse the lobby game after game, not just once. Only
-    // wired for private games, so the "reuse lobby" feature is private-only.
-    wireSuccessorLobby(game, creatorPersistentID, {
-      mintId: () => {
-        const successorId = ServerEnv.generateGameIdForWorker(workerId);
-        if (successorId === null) {
-          log.warn(`Failed to mint successor game id on worker ${workerId}`);
-        }
-        return successorId;
-      },
-      createGame: (successorId, creator) =>
-        gm.createGame(successorId, undefined, creator),
-    });
+    // Tell the previous game about its successor: it remembers the id (for
+    // idempotency) and broadcasts it to everyone still connected. Done after
+    // creation so a failed creation never broadcasts a dead id.
+    previousGame?.setSuccessorLobby(id);
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";

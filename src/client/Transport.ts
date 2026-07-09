@@ -12,7 +12,6 @@ import {
 import { TileRef } from "../core/game/GameMap";
 import {
   AllPlayersStats,
-  ClientCreateNextLobbyMessage,
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
@@ -167,12 +166,6 @@ export class SendHashEvent implements GameEvent {
   ) {}
 }
 
-// Emitted by the win screen when the lobby creator asks to reuse the lobby for
-// another game. Transport turns it into a "create_next_lobby" server message.
-export class SendCreateNextLobbyEvent implements GameEvent {
-  constructor() {}
-}
-
 // Emitted when the server tells us the host started a successor lobby, carrying
 // the new game id to move the group to.
 export class NewLobbyEvent implements GameEvent {
@@ -291,10 +284,6 @@ export class Transport {
 
     this.eventBus.on(SendToggleGameStartTimer, (e) =>
       this.onSendToggleGameStartTimer(e),
-    );
-
-    this.eventBus.on(SendCreateNextLobbyEvent, () =>
-      this.onSendCreateNextLobby(),
     );
   }
 
@@ -690,14 +679,6 @@ export class Transport {
 
   private onSendToggleGameStartTimer(event: SendToggleGameStartTimer) {
     this.sendIntent({ type: "toggle_game_start_timer" });
-  }
-
-  private onSendCreateNextLobby() {
-    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      this.sendMsg({
-        type: "create_next_lobby",
-      } satisfies ClientCreateNextLobbyMessage);
-    }
   }
 
   private sendIntent(intent: Intent) {

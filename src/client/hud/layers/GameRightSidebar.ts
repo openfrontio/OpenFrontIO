@@ -3,17 +3,14 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
+import { createNextLobby } from "../../Api";
+import { ClientEnv } from "../../ClientEnv";
 import "../../components/DoomsdayClockPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { showInGameConfirm } from "../../InGameModal";
+import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
-import {
-  NewLobbyEvent,
-  PauseGameIntentEvent,
-  SendCreateNextLobbyEvent,
-  SendWinnerEvent,
-} from "../../Transport";
+import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
@@ -60,7 +57,6 @@ export class GameRightSidebar extends LitElement implements Controller {
   // Guards the in-game "New lobby" button so a double click doesn't fire twice
   // before we navigate to the successor lobby.
   private newLobbyRequested = false;
-  private newLobbyFallbackTimer: number | null = null;
   private spawnBarVisible = false;
   private immunityBarVisible = false;
 
@@ -94,16 +90,6 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       this.requestUpdate();
-    });
-
-    this.eventBus.on(NewLobbyEvent, () => {
-      // Successor lobby confirmed — NewLobbyPrompt takes over (navigates the
-      // host away). Cancel the re-enable fallback so the button can't flick
-      // back on while the redirect is in flight.
-      if (this.newLobbyFallbackTimer !== null) {
-        window.clearTimeout(this.newLobbyFallbackTimer);
-        this.newLobbyFallbackTimer = null;
-      }
     });
 
     this.eventBus.on(TogglePauseIntentEvent, () => {
@@ -217,26 +203,32 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
-  private onNewLobbyButtonClick() {
+  private async onNewLobbyButtonClick() {
     if (this.newLobbyRequested) return;
     // Confirm so a stray click next to pause/exit doesn't yank everyone into a
     // new lobby mid-game.
-    const isConfirmed = confirm(translateText("new_lobby_prompt.confirm"));
+    const isConfirmed = await showInGameConfirm(
+      translateText("new_lobby_prompt.confirm"),
+      { variant: "warning" },
+    );
     if (!isConfirmed) return;
+    if (this.newLobbyRequested) return; // clicked again while confirming
     this.newLobbyRequested = true;
     this.requestUpdate();
-    // Same path as the win screen's "New lobby": ask the server to create the
-    // successor lobby and broadcast it. NewLobbyPrompt then navigates us (the
-    // host) to the new host view when the broadcast arrives.
-    this.eventBus.emit(new SendCreateNextLobbyEvent());
-    // Re-enable if the server never confirms the successor lobby (creation
-    // failed server-side, message dropped) so the host isn't stuck with a
-    // permanently dead button.
-    this.newLobbyFallbackTimer = window.setTimeout(() => {
-      this.newLobbyFallbackTimer = null;
+    try {
+      // The worker mints the successor lobby and has the current game
+      // broadcast its id, so everyone else gets the NewLobbyPrompt. We (the
+      // host) navigate straight to the new host view from the response.
+      const lobby = await createNextLobby(this.game.gameID());
+      const id = lobby.gameID;
+      // ?host routes the creator back into the host view on load.
+      window.location.href = `${window.location.origin}/${ClientEnv.workerPath(id)}/game/${id}?host`;
+    } catch (error) {
+      console.error("Failed to create successor lobby", error);
       this.newLobbyRequested = false;
       this.requestUpdate();
-    }, 10_000);
+      void showInGameAlert(translateText("new_lobby_prompt.failed"));
+    }
   }
 
   private async onExitButtonClick() {

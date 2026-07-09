@@ -101,8 +101,7 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage
-  | ClientCreateNextLobbyMessage;
+  | ClientHashMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -138,9 +137,6 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
-export type ClientCreateNextLobbyMessage = z.infer<
-  typeof ClientCreateNextLobbySchema
->;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -861,14 +857,6 @@ export const ClientRejoinMessageSchema = z.object({
   token: TokenSchema,
 });
 
-// Sent by the lobby creator from the win screen to ask this game's server to
-// spin up a successor private lobby (same creator, default settings) and
-// broadcast its id to everyone. The server authorizes by clientID, so no
-// payload is needed.
-export const ClientCreateNextLobbySchema = z.object({
-  type: z.literal("create_next_lobby"),
-});
-
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientSendLiveStatsSchema,
@@ -878,7 +866,6 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
-  ClientCreateNextLobbySchema,
 ]);
 
 //

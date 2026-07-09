@@ -14,7 +14,11 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
+import {
+  AnalyticsRecord,
+  AnalyticsRecordSchema,
+  GameInfo,
+} from "../core/Schemas";
 import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
 
@@ -402,6 +406,33 @@ export async function setLobbyListed(
     console.error("setLobbyListed: request failed", e);
     return { ok: false };
   }
+}
+
+// POST /wX/api/create_game?previous=<gameID>, targeted at the worker that owns
+// the finished game — mints a successor private lobby (same creator, default
+// settings) and has the old game broadcast the new id to everyone still
+// connected. Returns the successor's info; the caller navigates the host there.
+// Idempotent server-side: repeat calls return the same successor.
+export async function createNextLobby(
+  previousGameID: string,
+): Promise<GameInfo> {
+  const token = await getPlayToken();
+  const response = await fetch(
+    `/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("createNextLobby: server error response:", errorText);
+    throw new Error(`create next lobby failed: HTTP ${response.status}`);
+  }
+  return (await response.json()) as GameInfo;
 }
 
 export function getApiBase() {

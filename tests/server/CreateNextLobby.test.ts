@@ -1,23 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-// Pass client messages through untouched so the test can drive the message
-// handler directly (mirrors KickPlayerAuthorization.test).
-vi.mock("../../src/core/Schemas", async () => {
-  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
-  return {
-    ...actual,
-    GameStartInfoSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ServerPrestartMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-    ClientMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
-  };
-});
-
 import { GameType } from "../../src/core/game/Game";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
@@ -69,11 +50,10 @@ function newLobbyBroadcasts(ws: ReturnType<typeof makeMockWs>): string[] {
     );
 }
 
-async function sendCreateNextLobby(ws: ReturnType<typeof makeMockWs>) {
-  await ws.trigger("message", JSON.stringify({ type: "create_next_lobby" }));
-}
-
-describe("GameServer - create_next_lobby", () => {
+// The worker's create_game?previous= flow calls setSuccessorLobby on the
+// finished game after minting the successor: the game must remember the id
+// (so repeat requests reuse it) and broadcast it to everyone still connected.
+describe("GameServer - successor lobby", () => {
   let mockLogger: any;
 
   beforeEach(() => {
@@ -101,11 +81,8 @@ describe("GameServer - create_next_lobby", () => {
     );
   }
 
-  it("lobby creator spawns a successor and broadcasts it to everyone", async () => {
+  it("broadcasts the successor id to everyone still connected", () => {
     const game = makeGame("creator-pid");
-    const factory = vi.fn(() => SUCCESSOR_ID);
-    game.createSuccessorLobby = factory;
-
     const { client: creator, ws: creatorWs } = makeClient(
       "creator-cid",
       "creator-pid",
@@ -114,65 +91,41 @@ describe("GameServer - create_next_lobby", () => {
     game.joinClient(creator);
     game.joinClient(other);
 
-    await sendCreateNextLobby(creatorWs);
+    game.setSuccessorLobby(SUCCESSOR_ID);
 
-    expect(factory).toHaveBeenCalledTimes(1);
     expect(newLobbyBroadcasts(creatorWs)).toHaveLength(1);
     expect(newLobbyBroadcasts(otherWs)).toHaveLength(1);
     expect(newLobbyBroadcasts(otherWs)[0]).toContain(SUCCESSOR_ID);
   });
 
-  it("ignores the request from a non-creator", async () => {
+  it("remembers the successor id so repeat requests can reuse it", () => {
     const game = makeGame("creator-pid");
-    const factory = vi.fn(() => SUCCESSOR_ID);
-    game.createSuccessorLobby = factory;
+    expect(game.successorLobby()).toBeNull();
 
-    const { client: creator, ws: creatorWs } = makeClient(
-      "creator-cid",
-      "creator-pid",
-    );
-    const { client: rando, ws: randoWs } = makeClient("rando-cid", "rando-pid");
-    game.joinClient(creator);
-    game.joinClient(rando);
+    game.setSuccessorLobby(SUCCESSOR_ID);
 
-    await sendCreateNextLobby(randoWs);
-
-    expect(factory).not.toHaveBeenCalled();
-    expect(newLobbyBroadcasts(randoWs)).toHaveLength(0);
-    expect(newLobbyBroadcasts(creatorWs)).toHaveLength(0);
+    expect(game.successorLobby()).toBe(SUCCESSOR_ID);
   });
 
-  it("is idempotent: repeat clicks reuse the same successor", async () => {
+  it("re-broadcasts on a repeat call (double click) with the same id", () => {
     const game = makeGame("creator-pid");
-    const factory = vi.fn(() => SUCCESSOR_ID);
-    game.createSuccessorLobby = factory;
-
     const { client: creator, ws: creatorWs } = makeClient(
       "creator-cid",
       "creator-pid",
     );
     game.joinClient(creator);
 
-    await sendCreateNextLobby(creatorWs);
-    await sendCreateNextLobby(creatorWs);
+    game.setSuccessorLobby(SUCCESSOR_ID);
+    game.setSuccessorLobby(SUCCESSOR_ID);
 
-    // Created once, re-broadcast on the second click.
-    expect(factory).toHaveBeenCalledTimes(1);
     expect(newLobbyBroadcasts(creatorWs)).toHaveLength(2);
+    expect(game.successorLobby()).toBe(SUCCESSOR_ID);
   });
 
-  it("does nothing when the game cannot spawn a successor (no factory)", async () => {
+  it("authorizes successor creation by creator persistentID", () => {
     const game = makeGame("creator-pid");
-    // No createSuccessorLobby wired (e.g. a public game).
-
-    const { client: creator, ws: creatorWs } = makeClient(
-      "creator-cid",
-      "creator-pid",
-    );
-    game.joinClient(creator);
-
-    await sendCreateNextLobby(creatorWs);
-
-    expect(newLobbyBroadcasts(creatorWs)).toHaveLength(0);
+    // The worker checks isCreator() before minting a successor.
+    expect(game.isCreator("creator-pid")).toBe(true);
+    expect(game.isCreator("rando-pid")).toBe(false);
   });
 });

@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ClientMessageSchema, ServerMessageSchema } from "../src/core/Schemas";
+import { ServerMessageSchema } from "../src/core/Schemas";
 
-// Wire messages that power reusing a private lobby for back-to-back games:
-// the creator's "create_next_lobby" request and the server's "new_lobby"
-// broadcast carrying the successor's id.
+// Wire message that powers reusing a private lobby for back-to-back games:
+// the server's "new_lobby" broadcast carrying the successor's id. (Creation
+// itself goes through the rate-limited create_game?previous= HTTP endpoint,
+// not the websocket.)
 describe("reuse-lobby wire messages", () => {
-  it("accepts a create_next_lobby client message", () => {
-    const parsed = ClientMessageSchema.safeParse({ type: "create_next_lobby" });
-    expect(parsed.success).toBe(true);
-  });
-
   it("accepts a new_lobby server message with a valid game id", () => {
     const parsed = ServerMessageSchema.safeParse({
       type: "new_lobby",
