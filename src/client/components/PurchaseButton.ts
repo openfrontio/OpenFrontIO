@@ -184,6 +184,10 @@ export class PurchaseButton extends LitElement {
   @property({ type: Object })
   product: Product | null = null;
 
+  /** Price shown for a direct dollar checkout without a catalog product. */
+  @property({ type: String })
+  dollarPrice: string = "";
+
   @property({ type: Number })
   priceHard: number | null = null;
 
@@ -263,6 +267,9 @@ export class PurchaseButton extends LitElement {
   }
 
   private renderDollarButton() {
+    const price = this.dollarPrice || this.product?.price;
+    if (!price) return nothing;
+
     return html`
       <button
         class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
@@ -272,7 +279,7 @@ export class PurchaseButton extends LitElement {
         <span class="purchase-sparkle-streak"></span>
         ${this.dollarLabelKey
           ? html`${translateText(this.dollarLabelKey)} `
-          : nothing}${this.product!.price}${this.priceSuffix}
+          : nothing}${price}${this.priceSuffix}
       </button>
     `;
   }
@@ -310,7 +317,8 @@ export class PurchaseButton extends LitElement {
   }
 
   render() {
-    const hasDollar = this.product && this.onPurchaseDollar;
+    const hasDollar =
+      (this.product ?? this.dollarPrice) && this.onPurchaseDollar;
     const hasHard = this.priceHard !== null && this.onPurchaseHard;
     const hasSoft = this.priceSoft !== null && this.onPurchaseSoft;
 

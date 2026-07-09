@@ -15,10 +15,11 @@ import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./EffectsInput";
 import "./EffectsModal";
@@ -504,7 +505,11 @@ class Client {
     }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      updateAccountNavButton(userMeResponse);
+      if (crazyGamesSDK.isOnCrazyGames()) {
+        void updateCrazyGamesNavButton();
+      } else {
+        updateAccountNavButton(userMeResponse);
+      }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
@@ -533,6 +538,15 @@ class Client {
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
+
+    // Re-run auth when the player signs into CrazyGames mid-session. Logout
+    // reloads the page, so only login needs handling here.
+    crazyGamesSDK.addAuthListener(() => {
+      invalidateUserMe();
+      reauthAfterCrazyGamesChange().then((result) =>
+        result === false ? onUserMe(false) : getUserMe().then(onUserMe),
+      );
+    });
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -1122,6 +1136,10 @@ const bootstrap = () => {
   // Also hide elements after a short delay to catch late-rendered components
   setTimeout(hideCrazyGamesElements, 100);
   setTimeout(hideCrazyGamesElements, 500);
+
+  // Populate the CrazyGames account buttons once the nav/top-bar have rendered
+  // (onUserMe also refreshes them after auth and on mid-session sign-in).
+  setTimeout(() => void updateCrazyGamesNavButton(), 500);
 };
 
 if (document.readyState === "loading") {
