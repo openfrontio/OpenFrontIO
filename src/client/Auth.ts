@@ -252,10 +252,25 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
 
 // Called when the CrazyGames auth state changes mid-session (e.g. the player
 // signs in): drop the cached session so userAuth() re-exchanges the new token.
+// Single-flight: Main's auth listener and the account modal's sign-in handler
+// can both react to the same sign-in; sharing one exchange keeps them from
+// racing on __jwt. Any refresh already in flight is allowed to settle first so
+// its stale result can't satisfy the reauth.
+let __reauthPromise: Promise<UserAuth> | null = null;
 export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
-  __jwt = null;
-  __expiresAt = 0;
-  return userAuth();
+  __reauthPromise ??= (async () => {
+    try {
+      if (__refreshPromise) {
+        await __refreshPromise.catch(() => {});
+      }
+      __jwt = null;
+      __expiresAt = 0;
+      return await userAuth();
+    } finally {
+      __reauthPromise = null;
+    }
+  })();
+  return __reauthPromise;
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {

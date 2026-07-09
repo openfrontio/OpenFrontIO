@@ -44,7 +44,7 @@ import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
-import { initNavigation } from "./Navigation";
+import { closeMobileSidebar, initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
 import "./SinglePlayerModal";
@@ -189,10 +189,12 @@ async function updateCrazyGamesNavButton() {
   const signInText = translateText("main.sign_in");
 
   // Bypass the data-page router (which would open the account modal) and hand
-  // off to CrazyGames' own sign-in prompt instead.
+  // off to CrazyGames' own sign-in prompt instead. stopPropagation also skips
+  // the router's sidebar cleanup, so close it ourselves.
   const promptSignIn = (e: Event) => {
     e.stopPropagation();
     e.preventDefault();
+    closeMobileSidebar();
     void crazyGamesSDK.showAuthPrompt();
   };
 
@@ -215,6 +217,9 @@ async function updateCrazyGamesNavButton() {
     }
     personIconEl?.classList.add("hidden");
     if (signInTextEl) {
+      // The translation pass rewrites every [data-i18n] element's text, which
+      // would clobber the username — drop the attribute while it holds one.
+      signInTextEl.removeAttribute("data-i18n");
       signInTextEl.textContent = profile.username;
       signInTextEl.classList.remove("hidden");
     }
@@ -224,6 +229,8 @@ async function updateCrazyGamesNavButton() {
     avatarEl?.classList.add("hidden");
     personIconEl?.classList.remove("hidden");
     if (signInTextEl) {
+      // Restore so language changes keep the label translated.
+      signInTextEl.setAttribute("data-i18n", "main.sign_in");
       signInTextEl.textContent = signInText;
       signInTextEl.classList.remove("hidden");
     }
@@ -231,12 +238,18 @@ async function updateCrazyGamesNavButton() {
     if (desktopButton) desktopButton.onclick = promptSignIn;
   }
 
-  // Mobile hamburger menu item: text only.
+  // Mobile hamburger menu item: text only. Same data-i18n handling as above.
   const mobileButton = document.getElementById(
     "mobile-nav-account-button",
   ) as HTMLButtonElement | null;
   if (mobileButton) {
-    mobileButton.textContent = profile ? profile.username : signInText;
+    if (profile) {
+      mobileButton.removeAttribute("data-i18n");
+      mobileButton.textContent = profile.username;
+    } else {
+      mobileButton.setAttribute("data-i18n", "main.sign_in");
+      mobileButton.textContent = signInText;
+    }
     mobileButton.onclick = profile ? null : promptSignIn;
   }
 

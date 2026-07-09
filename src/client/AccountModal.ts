@@ -123,7 +123,13 @@ export class AccountModal extends BaseModal {
 
   private isLinkedAccount(): boolean {
     const me = this.userMeResponse?.user;
-    return !!(me?.discord ?? me?.google ?? me?.email) || !!this.crazyGamesUser;
+    // The CrazyGames identity only counts once the backend token exchange
+    // produced a session — otherwise a failed exchange would show a dead
+    // "connected as" view with no way to retry.
+    return (
+      !!(me?.discord ?? me?.google ?? me?.email) ||
+      (!!this.crazyGamesUser && this.userMeResponse !== null)
+    );
   }
 
   protected modalConfig() {
