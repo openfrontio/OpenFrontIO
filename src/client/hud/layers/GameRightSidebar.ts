@@ -63,33 +63,51 @@ export class GameRightSidebar extends LitElement implements Controller {
     return this;
   }
 
+  private onSpawnBarVisible = (e: SpawnBarVisibleEvent) => {
+    this.spawnBarVisible = e.visible;
+    this.updateParentOffset();
+  };
+
+  private onImmunityBarVisible = (e: ImmunityBarVisibleEvent) => {
+    this.immunityBarVisible = e.visible;
+    this.updateParentOffset();
+  };
+
+  private onSendWinner = () => {
+    this.hasWinner = true;
+    this.requestUpdate();
+  };
+
+  private onTogglePause = () => {
+    const isReplayOrSingleplayer =
+      this._isSinglePlayer || this.game?.config()?.isReplay();
+    if (isReplayOrSingleplayer || this.isLobbyCreator) {
+      this.onPauseButtonClick();
+    }
+  };
+
   init() {
     this._isSinglePlayer =
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this._isVisible = true;
+    // Reset per-game state — this element is a page-lifetime singleton.
+    this.hasWinner = false;
+    this.isPaused = false;
+    this.isLobbyCreator = false;
+    this.timer = 0;
+    this.spawnBarVisible = false;
+    this.immunityBarVisible = false;
 
-    this.eventBus.on(SpawnBarVisibleEvent, (e) => {
-      this.spawnBarVisible = e.visible;
-      this.updateParentOffset();
-    });
-    this.eventBus.on(ImmunityBarVisibleEvent, (e) => {
-      this.immunityBarVisible = e.visible;
-      this.updateParentOffset();
-    });
+    this.eventBus.off(SpawnBarVisibleEvent, this.onSpawnBarVisible);
+    this.eventBus.off(ImmunityBarVisibleEvent, this.onImmunityBarVisible);
+    this.eventBus.off(SendWinnerEvent, this.onSendWinner);
+    this.eventBus.off(TogglePauseIntentEvent, this.onTogglePause);
 
-    this.eventBus.on(SendWinnerEvent, () => {
-      this.hasWinner = true;
-      this.requestUpdate();
-    });
-
-    this.eventBus.on(TogglePauseIntentEvent, () => {
-      const isReplayOrSingleplayer =
-        this._isSinglePlayer || this.game?.config()?.isReplay();
-      if (isReplayOrSingleplayer || this.isLobbyCreator) {
-        this.onPauseButtonClick();
-      }
-    });
+    this.eventBus.on(SpawnBarVisibleEvent, this.onSpawnBarVisible);
+    this.eventBus.on(ImmunityBarVisibleEvent, this.onImmunityBarVisible);
+    this.eventBus.on(SendWinnerEvent, this.onSendWinner);
+    this.eventBus.on(TogglePauseIntentEvent, this.onTogglePause);
 
     this.requestUpdate();
   }

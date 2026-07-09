@@ -116,6 +116,8 @@ export class GameImpl implements Game {
   private _waterManager: WaterManager;
   private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
+  /** Victims already processed by conquerPlayer — prevents repeat gold/kills. */
+  private _conqueredPlayerIDs = new Set<PlayerID>();
 
   constructor(
     private _humans: PlayerInfo[],
@@ -1248,7 +1250,16 @@ export class GameImpl implements Game {
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);
   }
+  hasConqueredPlayer(id: PlayerID): boolean {
+    return this._conqueredPlayerIDs.has(id);
+  }
+
   conquerPlayer(conqueror: Player, conquered: Player) {
+    if (this._conqueredPlayerIDs.has(conquered.id())) {
+      return;
+    }
+    this._conqueredPlayerIDs.add(conquered.id());
+
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
       const ships = conquered
         .units()
@@ -1289,7 +1300,7 @@ export class GameImpl implements Game {
         "events_display.received_gold_from_conquest",
         MessageType.CONQUERED_PLAYER,
         conqueror.id(),
-        gold,
+        goldCaptured,
         {
           gold: renderNumber(goldCaptured),
           name: conquered.displayName(),

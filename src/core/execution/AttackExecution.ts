@@ -245,12 +245,16 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    if (this.attack.retreating()) {
+    // Check isActive before retreating: an external cancel (e.g. opposing
+    // attack merge) can delete() the attack while a retreat is in flight.
+    // Without this, the retreating() early-return spins forever and never
+    // refunds troops.
+    if (!this.attack.isActive()) {
+      this.active = false;
       return;
     }
 
-    if (!this.attack.isActive()) {
-      this.active = false;
+    if (this.attack.retreating()) {
       return;
     }
 
@@ -385,6 +389,9 @@ export class AttackExecution implements Execution {
   private handleDeadDefender() {
     if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
     const target: Player = this.target;
+    // Island survivors can sit under the 100-tile threshold for many ticks;
+    // only conquer once so gold/kills aren't recorded repeatedly.
+    if (this.mg.hasConqueredPlayer(target.id())) return;
 
     this.mg.conquerPlayer(this._owner, target);
 

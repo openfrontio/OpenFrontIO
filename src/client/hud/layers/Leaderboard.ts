@@ -146,7 +146,7 @@ export class Leaderboard extends LitElement implements Controller {
           name: myPlayer.displayName(),
           position: place,
           score: formatPercentage(
-            myPlayer.numTilesOwned() / this.game.numLandTiles(),
+            myPlayer.numTilesOwned() / numTilesWithoutFallout,
           ),
           gold: renderNumber(myPlayer.gold()),
           maxTroops: renderTroops(myPlayerMaxTroops),

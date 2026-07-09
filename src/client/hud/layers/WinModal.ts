@@ -254,7 +254,13 @@ export class WinModal extends LitElement implements Controller {
     window.location.href = "/?requeue";
   }
 
-  init() {}
+  init() {
+    // Reset per-game state — this element is a page-lifetime singleton.
+    this.hasShownDeathModal = false;
+    this.isVisible = false;
+    this.showButtons = false;
+    this.isWin = false;
+  }
 
   tick() {
     const myPlayer = this.game.myPlayer();

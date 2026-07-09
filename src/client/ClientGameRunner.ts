@@ -702,6 +702,7 @@ export class ClientGameRunner {
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private connectionCheckTimeout: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
 
   private lastTickReceiveTime: number = 0;
@@ -778,7 +779,9 @@ export class ClientGameRunner {
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
-    setTimeout(() => {
+    this.connectionCheckTimeout = setTimeout(() => {
+      this.connectionCheckTimeout = null;
+      if (!this.isActive) return;
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
         1000,
@@ -984,6 +987,11 @@ export class ClientGameRunner {
     this.isActive = false;
     this.worker.cleanup();
     this.transport.leaveGame();
+    this.input.destroy();
+    if (this.connectionCheckTimeout) {
+      clearTimeout(this.connectionCheckTimeout);
+      this.connectionCheckTimeout = null;
+    }
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
@@ -1339,7 +1347,7 @@ export class ClientGameRunner {
   }
 
   private onConnectionCheck() {
-    if (this.transport.isLocal) {
+    if (!this.isActive || this.transport.isLocal) {
       return;
     }
     const now = Date.now();

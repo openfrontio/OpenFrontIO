@@ -829,6 +829,8 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
+  /** True after conquerPlayer has already run for this victim this game. */
+  hasConqueredPlayer(id: PlayerID): boolean;
   miniWaterHPA(): PathFinder<number> | null;
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;

@@ -50,6 +50,14 @@ export class ActionableEvents extends LitElement implements Controller {
   private alliancesCheckedAt = new Map<number, Tick>();
   @state() private _isVisible = false;
 
+  init() {
+    // HUD elements are page-lifetime singletons reused across games.
+    this.events = [];
+    this.alliancesCheckedAt.clear();
+    this._isVisible = false;
+    this.active = false;
+  }
+
   private updateMap = [
     [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
     [
@@ -115,20 +123,29 @@ export class ActionableEvents extends LitElement implements Controller {
       }
     }
 
-    const remainingEvents = this.events.filter(
-      (event) =>
-        (event.duration === undefined ||
-          this.game.ticks() - event.createdAt < event.duration) &&
-        (event.type !== MessageType.ALLIANCE_REQUEST ||
-          // We remove Alliance Requests if the requestor is dead.
-          ((
-            this.game.playerBySmallID(event.requestorID) as PlayerView
-          ).isAlive() &&
-            // We remove Alliance Requests if the requestor is no longer requesting an alliance with us.
-            (
-              this.game.playerBySmallID(event.requestorID) as PlayerView
-            ).isRequestingAllianceWith(this.game.myPlayer() as PlayerView))),
-    );
+    const remainingEvents = this.events.filter((event) => {
+      if (
+        event.duration !== undefined &&
+        this.game.ticks() - event.createdAt >= event.duration
+      ) {
+        return false;
+      }
+      if (event.type !== MessageType.ALLIANCE_REQUEST) {
+        return true;
+      }
+      // Drop stale cards from a previous game (unknown small IDs throw).
+      let requestor: PlayerView;
+      try {
+        requestor = this.game.playerBySmallID(event.requestorID) as PlayerView;
+      } catch {
+        return false;
+      }
+      // Remove Alliance Requests if the requestor is dead or no longer requesting.
+      return (
+        requestor.isAlive() &&
+        requestor.isRequestingAllianceWith(this.game.myPlayer() as PlayerView)
+      );
+    });
 
     if (this.events.length !== remainingEvents.length) {
       this.events = remainingEvents;

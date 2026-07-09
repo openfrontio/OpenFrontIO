@@ -144,10 +144,20 @@ export class EventsDisplay extends LitElement implements Controller {
     this.events = [];
   }
 
+  private onAllianceRequestSent = (e: SendAllianceRequestIntentEvent) => {
+    this.onAllianceRequestSentConfirmation(e);
+  };
+
   init() {
+    // Clear carried-over events from a previous game on this page-lifetime singleton.
+    this.events = [];
+    this.eventBus.off(
+      SendAllianceRequestIntentEvent,
+      this.onAllianceRequestSent,
+    );
     this.eventBus.on(
       SendAllianceRequestIntentEvent,
-      this.onAllianceRequestSentConfirmation.bind(this),
+      this.onAllianceRequestSent,
     );
   }
 

@@ -633,7 +633,11 @@ export class UnitImpl implements Unit {
   decreaseLevel(destroyer?: Player): void {
     this._level--;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
-      this._missileTimerQueue.pop();
+      // Only drop a cooldown when every remaining slot was on cooldown.
+      // Otherwise the lost slot was ready and the active cooldown must stay.
+      if (this._missileTimerQueue.length > this._level) {
+        this._missileTimerQueue.pop();
+      }
     }
     if (this._level <= 0) {
       this.delete(true, destroyer);
