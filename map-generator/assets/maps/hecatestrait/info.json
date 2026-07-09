@@ -1,5 +1,5 @@
 {
-  "id": "hecatestrait",
+  "id": "Hecatestrait",
   "name": "Hecate Strait",
   "translation_key": "map.hecatestrait",
   "categories": [ "north_america", "new" ],
@@ -7,7 +7,7 @@
   "nations": [
     {
       "coordinates": [ 421, 628 ],
-      "name": "Old Massett Village Council",
+      "name": "Old Massett Village",
       "strength": 2,
       "flag": "haida_flag"
     },
@@ -79,12 +79,12 @@
     },
     {
       "coordinates": [ 1028, 173 ],
-      "name": "Gingolx Village Government",
+      "name": "Gingolx Village",
       "strength": 2
     },
     {
       "coordinates": [ 1134, 159 ],
-      "name": "Laxgalts'ap Village Government",
+      "name": "Laxgalts'ap Village",
       "strength": 1
     },
     {
@@ -94,7 +94,7 @@
     },
     {
       "coordinates": [ 1273, 68 ],
-      "name": "Gitlaxt'aamix Village Government",
+      "name": "Gitlaxt'aamix Village",
       "strength": 1
     },
     {
@@ -150,7 +150,7 @@
     },
     {
       "coordinates": [ 2165, 525 ],
-      "name": "Ts’il Kaz Koh",
+      "name": "Ts'il Kaz Koh",
       "strength": 1
     }
   ]
