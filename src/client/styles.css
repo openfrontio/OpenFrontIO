@@ -58,6 +58,17 @@
     color: var(--color-gray-400);
   }
 
+  .custom-plutonium-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .custom-plutonium-input::-webkit-outer-spin-button,
+  .custom-plutonium-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
