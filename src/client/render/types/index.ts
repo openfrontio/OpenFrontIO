@@ -21,7 +21,6 @@ export type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "./Renderer";
 

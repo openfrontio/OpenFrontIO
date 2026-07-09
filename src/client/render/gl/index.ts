@@ -26,6 +26,5 @@ export type {
   PlayerState,
   PlayerStatic,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";

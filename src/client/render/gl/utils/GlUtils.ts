@@ -175,6 +175,37 @@ export function toScreen(
   draw();
 }
 
+/**
+ * Create an RGBA8 render target (texture + FBO), LINEAR-filtered and clamped.
+ * For offscreen passes that ping-pong (blur, bloom).
+ */
+export function createRenderTarget(
+  gl: WebGL2RenderingContext,
+  w: number,
+  h: number,
+): RenderTarget {
+  const tex = createTexture2D(gl, {
+    width: w,
+    height: h,
+    internalFormat: gl.RGBA8,
+    format: gl.RGBA,
+    type: gl.UNSIGNED_BYTE,
+    data: null,
+    filter: gl.LINEAR,
+  });
+  const fbo = gl.createFramebuffer()!;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(
+    gl.FRAMEBUFFER,
+    gl.COLOR_ATTACHMENT0,
+    gl.TEXTURE_2D,
+    tex,
+    0,
+  );
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return { fbo, tex, w, h };
+}
+
 export function createMapQuad(
   gl: WebGL2RenderingContext,
   mapWidth: number,
