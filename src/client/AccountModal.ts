@@ -4,12 +4,13 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { fetchPlayerById, getUserMe } from "./Api";
+import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
   discordLogin,
   googleLogin,
   linkGoogle,
   logOut,
+  reauthAfterCrazyGamesChange,
   sendMagicLink,
 } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -48,6 +49,9 @@ export class AccountModal extends BaseModal {
     super();
 
     document.addEventListener("userMeResponse", (event: Event) => {
+      // A CrazyGames sign-in fires userMeResponse (via Main's auth listener);
+      // re-fetch the SDK profile so the modal leaves the sign-in screen.
+      this.refreshCrazyGamesUser();
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         const previousPublicId = this.userMeResponse?.player?.publicId;
@@ -65,6 +69,16 @@ export class AccountModal extends BaseModal {
         this.gameHistoryCache = null;
         this.requestUpdate();
       }
+    });
+  }
+
+  // Refresh the signed-in CrazyGames identity from the SDK. No-op off
+  // CrazyGames; drives isLinkedAccount() so the modal shows the profile.
+  private refreshCrazyGamesUser() {
+    if (!crazyGamesSDK.isOnCrazyGames()) return;
+    void crazyGamesSDK.getUserProfile().then((user) => {
+      this.crazyGamesUser = user;
+      this.requestUpdate();
     });
   }
 
@@ -236,7 +250,7 @@ export class AccountModal extends BaseModal {
             width="block"
             size="md"
             translationKey="main.sign_in"
-            @click=${() => void crazyGamesSDK.showAuthPrompt()}
+            @click=${this.handleCrazyGamesSignIn}
           ></o-button>
         </div>
       </div>
@@ -559,6 +573,20 @@ export class AccountModal extends BaseModal {
     }
   }
 
+  // CrazyGames sign-in: after their prompt completes, exchange the new token
+  // for a session and refresh the modal so it shows the signed-in profile.
+  private async handleCrazyGamesSignIn() {
+    await crazyGamesSDK.showAuthPrompt();
+    const profile = await crazyGamesSDK.getUserProfile();
+    if (!profile) return; // prompt cancelled / still not signed in
+    invalidateUserMe();
+    await reauthAfterCrazyGamesChange();
+    const userMe = await getUserMe();
+    if (userMe) this.userMeResponse = userMe;
+    this.crazyGamesUser = profile;
+    this.requestUpdate();
+  }
+
   private handleDiscordLogin() {
     discordLogin();
   }
@@ -618,12 +646,7 @@ export class AccountModal extends BaseModal {
     this.isLoadingUser = true;
     this.handleLinkResult(args);
 
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.getUserProfile().then((user) => {
-        this.crazyGamesUser = user;
-        this.requestUpdate();
-      });
-    }
+    this.refreshCrazyGamesUser();
 
     void fetchCosmetics().then((cosmetics) => {
       this.cosmetics = cosmetics;
