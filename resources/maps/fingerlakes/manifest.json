@@ -1,0 +1,25 @@
+{
+  "categories": [
+    "fictional"
+  ],
+  "id": "fingerlakes",
+  "map": {
+    "height": 1376,
+    "num_land_tiles": 1824491,
+    "width": 1468
+  },
+  "map16x": {
+    "height": 344,
+    "num_land_tiles": 110598,
+    "width": 367
+  },
+  "map4x": {
+    "height": 688,
+    "num_land_tiles": 451479,
+    "width": 734
+  },
+  "multiplayer_frequency": 4,
+  "name": "fingerlakes",
+  "nations": [],
+  "translation_key": "map.fingerlakes"
+}

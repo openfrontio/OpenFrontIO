@@ -1,0 +1,10 @@
+{
+  "id": "fingerlakes",
+  "name": "fingerlakes",
+  "translation_key": "map.fingerlakes",
+  "categories": [
+    "fictional"
+  ],
+  "multiplayer_frequency": 4,
+  "nations": []
+}
