@@ -34,7 +34,7 @@ import { computePlayerStatus } from "../render/frame/derive/PlayerStatus";
 import { buildRelationMatrix } from "../render/frame/derive/RelationMatrix";
 import { RailroadCache } from "../render/frame/RailroadCache";
 import { TrailManager } from "../render/frame/TrailManager";
-import type { FrameData, NameEntry, TilePair } from "../render/types";
+import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
@@ -81,6 +81,14 @@ export class GameView implements GameMap {
   private _teams = new Map<number, string>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
+  /**
+   * Active units grouped by owner smallID, built lazily at most once per
+   * tick. Keeps per-player unit queries (PlayerView.units) at O(own units)
+   * instead of O(all units) — the leaderboard asks for every player's units
+   * in one pass, which is O(players × units) without this.
+   */
+  private _unitsByOwner = new Map<number, UnitView[]>();
+  private _unitsByOwnerStale = true;
 
   // ── FrameData accumulators (renderer-bound state) ─────────────────────
   private trailManager!: TrailManager;
@@ -88,7 +96,6 @@ export class GameView implements GameMap {
   /** Long-lived NameEntry map for the renderer's NamePass. */
   private _names = new Map<string, NameEntry>();
   /** Reusable scratch buffers for per-tick deltas. */
-  private readonly _changedTilesScratch: TilePair[] = [];
   private readonly _trailIdsScratch: number[] = [];
   /**
    * The single long-lived FrameData object. Fields are mutated in place each
@@ -167,9 +174,9 @@ export class GameView implements GameMap {
     this.railroadCache = new RailroadCache(mapW, mapH);
 
     // Long-lived FrameData. Most fields are mutable references to long-lived
-    // buffers (tileState, trailState, etc.); some (_changedTilesScratch,
-    // derived arrays) are reused each tick. Properties marked `readonly` on
-    // FrameData only prevent reassignment, not mutation through the reference.
+    // buffers (tileState, trailState, etc.); changedTiles points at this
+    // tick's updatedTiles. Properties marked `readonly` on FrameData only
+    // prevent reassignment, not mutation through the reference.
     // events: fresh arrays we own; cleared and repopulated each tick.
     this._frame = {
       tick: 0,
@@ -185,7 +192,7 @@ export class GameView implements GameMap {
         conquestEvents: [],
         bonusEvents: [],
       },
-      changedTiles: this._changedTilesScratch,
+      changedTiles: null,
       railroadDirty: false,
       revealedRailTiles: this.railroadCache.revealedRailTiles,
       trailDirtyRowMin: 0,
@@ -261,6 +268,9 @@ export class GameView implements GameMap {
   }
 
   public update(gu: GameUpdateViewData) {
+    // Unit set/ownership changes below; rebuild the owner index on demand.
+    this._unitsByOwnerStale = true;
+
     this.toDelete.forEach((id) => {
       this._units.delete(id);
       this._unitStates.delete(id);
@@ -437,7 +447,12 @@ export class GameView implements GameMap {
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
-      unit.lastPos = unit.lastPos.slice(-1);
+      // Only trim when a move appended a position — slicing a ≤1-element
+      // array would allocate an identical array per unit per tick, and most
+      // units (structures) never move.
+      if (unit.lastPos.length > 1) {
+        unit.lastPos = unit.lastPos.slice(-1);
+      }
     }
     gu.updates[GameUpdateType.Unit].forEach((update) => {
       let unit = this._units.get(update.id);
@@ -513,12 +528,6 @@ export class GameView implements GameMap {
       this._trailIdsScratch,
     );
 
-    // Changed-tile delta refs (zero-copy: state field unused in live mode).
-    this._changedTilesScratch.length = 0;
-    for (let i = 0; i < this.updatedTiles.length; i++) {
-      this._changedTilesScratch.push({ ref: this.updatedTiles[i], state: 0 });
-    }
-
     // Names map — rebuilt only when a placement record arrived or a player
     // was added (nameData values cannot change between those ticks). Entry
     // order is irrelevant for the renderer.
@@ -559,6 +568,8 @@ export class GameView implements GameMap {
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
         this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+      doomsdayClockWarnTicks:
+        this._config.doomsdayClockConfig().warnSeconds * 10,
     });
     // Relations + clusters depend only on allies/embargoes/teams, which
     // change rarely (teams only when a player is added) — recompute only
@@ -606,7 +617,9 @@ export class GameView implements GameMap {
       f.structuresDirty = true; // force initial structure upload
       this._firstPopulate = false;
     } else {
-      f.changedTiles = this._changedTilesScratch;
+      // Live reference to this tick's changed refs — consumers copy what
+      // they keep (TerritoryPass buckets them synchronously in the upload).
+      f.changedTiles = this.updatedTiles;
     }
 
     // Reset transient flags for next tick.
@@ -627,6 +640,7 @@ export class GameView implements GameMap {
         unitType: u.unitType,
         pos: u.pos,
         reachedTarget: u.reachedTarget,
+        ownerSmallID: u.ownerID,
       });
     }
     const myID = this._myPlayer?.id();
@@ -1055,6 +1069,28 @@ export class GameView implements GameMap {
     return Array.from(this._units.values()).filter(
       (u) => u.isActive() && types.includes(u.type()),
     );
+  }
+
+  /**
+   * Active units owned by the given player (smallID). The grouping is built
+   * lazily at most once per tick; the returned array must not be mutated.
+   */
+  unitsOwnedBy(ownerSmallID: number): readonly UnitView[] {
+    if (this._unitsByOwnerStale) {
+      this._unitsByOwnerStale = false;
+      this._unitsByOwner.clear();
+      for (const u of this._units.values()) {
+        if (!u.isActive()) continue;
+        const sid = u.state.ownerID;
+        const arr = this._unitsByOwner.get(sid);
+        if (arr === undefined) {
+          this._unitsByOwner.set(sid, [u]);
+        } else {
+          arr.push(u);
+        }
+      }
+    }
+    return this._unitsByOwner.get(ownerSmallID) ?? [];
   }
   unit(id: number): UnitView | undefined {
     return this._units.get(id);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
   Game,
@@ -80,6 +81,29 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
+// Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
+// Times in seconds. The required map share rises in waves (levels + times in
+// DoomsdayClock.ts, chosen by `speed`). A side caught below the bar gets a
+// warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed to zero: the
+// warn (30s) + the linear drain (~90s from full troops, sooner with fewer troops
+// or a shrinking territory) make ~2 minutes from caught to wiped out.
+const DOOMSDAY_CLOCK_DEFAULTS = {
+  enabled: false,
+  speed: "normal" as DoomsdayClockSpeed,
+  warnSeconds: 30, // cooldown (the flashing danger cue) before decay begins
+  drainStartPercent: 2, // starts bleeding at once (already beats troop income)
+  drainMaxPercent: 5,
+  drainRampSeconds: 90, // ramps LINEARLY to the max over this long (~1:30 to zero)
+  // Warships bleed on their OWN gentler start + a STEEP (convex) ramp to a much
+  // higher ceiling. A ship caught when its side is first doomed lasts about as
+  // long as troops (the low start + no income ≈ the troop net rate), but the rate
+  // curves up sharply (warshipDrainCurveExponent), so once a side has been under
+  // the clock the full ramp, ships sink in ~2s (50%/s). Ships only.
+  warshipDrainStartPercent: 1,
+  warshipDrainMaxPercent: 50,
+  warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
+};
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -100,6 +124,24 @@ export class Config {
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
+  }
+
+  // Doomsday Clock config, resolved against defaults. One read per tick.
+  doomsdayClockConfig(): typeof DOOMSDAY_CLOCK_DEFAULTS {
+    const c = this._gameConfig.doomsdayClock;
+    const d = DOOMSDAY_CLOCK_DEFAULTS;
+    return {
+      enabled: c?.enabled ?? d.enabled,
+      speed: c?.speed ?? d.speed,
+      // Drain/warn tuning is internal (not wire-configurable): always defaults.
+      warnSeconds: d.warnSeconds,
+      drainStartPercent: d.drainStartPercent,
+      drainMaxPercent: d.drainMaxPercent,
+      drainRampSeconds: d.drainRampSeconds,
+      warshipDrainStartPercent: d.warshipDrainStartPercent,
+      warshipDrainMaxPercent: d.warshipDrainMaxPercent,
+      warshipDrainCurveExponent: d.warshipDrainCurveExponent,
+    };
   }
   spawnImmunityDuration(): Tick {
     return (
@@ -177,7 +219,12 @@ export class Config {
     return this._gameConfig.disableNavMesh ?? false;
   }
   disableAlliances(): boolean {
-    return this._gameConfig.disableAlliances ?? false;
+    // customAllianceDuration === 0 disables alliances (the "custom alliances"
+    // control at 0). The legacy boolean is still honored for older configs.
+    return (
+      this._gameConfig.customAllianceDuration === 0 ||
+      (this._gameConfig.disableAlliances ?? false)
+    );
   }
   waterNukes(): boolean {
     return this._gameConfig.waterNukes ?? false;
@@ -524,6 +571,10 @@ export class Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
+    // Host can set a custom alliance duration in minutes (1-15); 0 disables
+    // alliances (see disableAlliances). Falls back to the 5 minute default.
+    const m = this._gameConfig.customAllianceDuration;
+    if (typeof m === "number" && m > 0) return m * 60 * 10;
     return 300 * 10; // 5 minutes.
   }
   temporaryEmbargoDuration(): Tick {

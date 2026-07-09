@@ -1,9 +1,9 @@
 /**
  * StatusIconProgram — instanced status icons above player names.
  *
- * Renders up to 8 status icons per player (crown, traitor, disconnected,
- * alliance, alliance request, target, embargo, nuke). Each instance reads
- * individual float flags from pd5/pd6 to decide whether to draw.
+ * Renders up to 9 status icons per player (crown, traitor, disconnected,
+ * alliance, alliance request, target, embargo, nuke, doomsday-clock skull). Each
+ * instance reads individual float flags to decide whether to draw.
  *
  * Owns: shader program, uniform locations, status atlas texture.
  * The shared playerDataTex is passed in but not owned/deleted.
@@ -19,7 +19,7 @@ import type { ParsedAtlas } from "./Types";
 
 const statusAtlasUrl = assetUrl("atlases/status-atlas.png");
 
-const MAX_STATUS_ICONS = 8;
+const MAX_STATUS_ICONS = 9;
 
 export class StatusIconProgram {
   private gl: WebGL2RenderingContext;

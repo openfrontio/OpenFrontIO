@@ -1,5 +1,6 @@
 import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
+import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
@@ -112,6 +113,9 @@ export class GameRunner {
       );
     }
     this.game.addExecution(new WinCheckExecution());
+    if (this.game.config().doomsdayClockConfig().enabled) {
+      this.game.addExecution(new DoomsdayClockExecution());
+    }
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(
         new RecomputeRailClusterExecution(this.game.railNetwork()),
@@ -271,7 +275,9 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return {
-      borderTiles: player.borderTiles(),
+      // Copy into a plain Set: this result crosses the worker boundary via
+      // structured clone, which TileSet does not survive.
+      borderTiles: new Set(player.borderTiles()),
     } as PlayerBorderTiles;
   }
 

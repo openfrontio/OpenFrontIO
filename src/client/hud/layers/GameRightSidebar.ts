@@ -3,8 +3,10 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
+import "../../components/DoomsdayClockPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
@@ -44,12 +46,20 @@ export class GameRightSidebar extends LitElement implements Controller {
   @state()
   private timer: number = 0;
 
+  // CrazyGames provides its own fullscreen control in the game frame, so hide ours.
+  private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
   private hasWinner = false;
   private isLobbyCreator = false;
   private spawnBarVisible = false;
   private immunityBarVisible = false;
 
   createRenderRoot() {
+    // Stack the timer bar + doomsday-clock readout, centers aligned (the narrower
+    // one sits centered under the wider one).
+    this.style.display = "flex";
+    this.style.flexDirection = "column";
+    this.style.alignItems = "center";
+    this.style.gap = "6px";
     return this;
   }
 
@@ -187,7 +197,7 @@ export class GameRightSidebar extends LitElement implements Controller {
   private async onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm(
+      const isConfirmed = await showInGameConfirm(
         translateText("help_modal.exit_confirmation"),
       );
       if (!isConfirmed) return;
@@ -243,7 +253,7 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
-        ${document.fullscreenEnabled
+        ${document.fullscreenEnabled && !this.onCrazyGames
           ? html`<div
               class="cursor-pointer"
               @click=${this.onFullscreenButtonClick}
@@ -263,6 +273,11 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${exitIcon} alt="exit" width="20" height="20" />
         </div>
       </aside>
+      <doomsday-clock-panel
+        .game=${this.game}
+        .hasWinner=${this.hasWinner}
+        .refreshKey=${this.timer}
+      ></doomsday-clock-panel>
     `;
   }
 

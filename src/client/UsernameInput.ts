@@ -93,6 +93,11 @@ export class UsernameInput extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadStoredUsername();
+    // On CrazyGames the account username is applied here but never persisted
+    // (see loadStoredUsername / validateAndStore), so logging out — which
+    // reloads the whole page — falls back to a fresh guest username instead of
+    // keeping the account name. addAuthListener only fires on login; CrazyGames
+    // refreshes the page on logout, so there is no logout event to handle.
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
         this.baseUsername = username;
@@ -125,11 +130,14 @@ export class UsernameInput extends LitElement {
   }
 
   private loadStoredUsername() {
-    const storedUsername = localStorage.getItem(usernameKey);
+    // On CrazyGames the username is never persisted, so ignore any stored value
+    // and start from a fresh guest name; the account name (if signed in) is
+    // applied afterwards in connectedCallback.
+    const storedUsername = this.onCrazyGames
+      ? null
+      : localStorage.getItem(usernameKey);
     if (storedUsername) {
-      if (!this.onCrazyGames) {
-        this.clanTag = localStorage.getItem(clanTagKey) ?? "";
-      }
+      this.clanTag = localStorage.getItem(clanTagKey) ?? "";
       this.baseUsername = storedUsername;
       this.validateAndStore();
       this.startClanCheck();
@@ -280,8 +288,10 @@ export class UsernameInput extends LitElement {
     const result = validateUsername(trimmedBase);
     this._isValid = result.isValid;
     if (result.isValid) {
-      localStorage.setItem(usernameKey, trimmedBase);
+      // Never persist on CrazyGames: keeping localStorage empty means a logout
+      // (page reload) restores a guest username instead of the account name.
       if (!this.onCrazyGames) {
+        localStorage.setItem(usernameKey, trimmedBase);
         localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
       }
       this.validationError = "";

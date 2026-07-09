@@ -150,7 +150,36 @@ export type PublicGames = z.infer<typeof PublicGamesSchema>;
 export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
 export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
 
-export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
+export const PublicGameTypeSchema = z.enum([
+  "ffa",
+  "team",
+  "special",
+  "hosted",
+]);
+
+// Lobby types the master schedules from the map playlist. "hosted" is
+// excluded: those are player-created private lobbies that a subscriber has
+// listed publicly, and the host (not the master) controls their lifecycle.
+// Derived from PublicGameTypeSchema so a new lobby type is scheduled by
+// default and opting out is the explicit act.
+export const ScheduledPublicGameTypeSchema = PublicGameTypeSchema.exclude([
+  "hosted",
+]);
+export const SCHEDULED_PUBLIC_GAME_TYPES =
+  ScheduledPublicGameTypeSchema.options;
+export type ScheduledPublicGameType = z.infer<
+  typeof ScheduledPublicGameTypeSchema
+>;
+
+// Cluster-wide cap on subscriber-listed (hosted) lobbies, to prevent listing
+// spam. Workers reject listings past the cap; the master caps the broadcast
+// and delists any overflow as the authoritative backstop.
+export const MAX_HOSTED_LOBBIES = 10;
+
+// How long a lobby may stay publicly listed before it starts automatically,
+// so hosts can't sit on a listing indefinitely. Unlisting cancels the
+// deadline; relisting starts a fresh one.
+export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 
 export const UsernameSchema = z
   .string()
@@ -178,8 +207,20 @@ export const GameInfoSchema = z.object({
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
+  // Private lobbies only: whether the lobby is publicly listed. Server-owned
+  // (only /api/game/:id/listing sets it); carried in lobby info so the host
+  // UI stays in sync when the server delists (whitelist enabled, duplicate
+  // creator resolved by the master).
+  listed: z.boolean().optional(),
+  // Listed lobbies only: server timestamp when the lobby starts
+  // automatically (hosts can't sit on a public listing indefinitely).
+  autoStartAt: z.number().optional(),
 });
 
+// Browser-facing lobby info. Master/worker-internal fields (the creator hash
+// used for the one-listed-lobby-per-creator check) live on
+// InternalGameInfoSchema in IPCBridgeSchema.ts, so client payloads cannot
+// carry them by construction.
 export const PublicGameInfoSchema = z.object({
   gameID: z.string(),
   numClients: z.number(),
@@ -190,7 +231,9 @@ export const PublicGameInfoSchema = z.object({
 
 export const PublicGamesSchema = z.object({
   serverTime: z.number(),
-  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  // partialRecord: every consumer already treats buckets as optional, and it
+  // lets clients tolerate servers that don't send every lobby type.
+  games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 // Wire message sent from server to lobby WebSocket clients.
@@ -199,7 +242,7 @@ export const PublicGamesSchema = z.object({
 export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
   serverTime: z.number(),
-  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 export const PublicLobbyCountsSchema = z.object({
@@ -249,6 +292,16 @@ const TeamCountConfigSchema = z.union([
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
+// Doomsday Clock (anti-stall). Below a rising share of the map a player (or, in
+// team modes, their whole team) gets skulled and their troops drain to zero. The
+// required share rises in discrete waves per the `speed` preset (see
+// DoomsdayClock.ts). Only `enabled` and `speed` are wire-configurable; the
+// drain/warn tuning lives in DOOMSDAY_CLOCK_DEFAULTS (Config.ts).
+export const DoomsdayClockConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
+});
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -258,6 +311,7 @@ export const GameConfigSchema = z.object({
   gameMode: z.enum(GameMode),
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
+  doomsdayClock: DoomsdayClockConfigSchema.optional(),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean().optional(),
@@ -304,6 +358,7 @@ export const GameConfigSchema = z.object({
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
+  customAllianceDuration: z.number().int().min(0).max(15).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
@@ -595,7 +650,8 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
-  // At most one selected effect per effectType: key = effectType, value = effect name.
+  // One selected effect per slot: key = slot (effectType for trails, nukeType for
+  // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
 });
 
@@ -619,7 +675,8 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
-  // Resolved effects keyed by effectType.
+  // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
+  // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
 });
 

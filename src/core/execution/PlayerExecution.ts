@@ -8,15 +8,12 @@ import {
   UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+  TileTraversalScratch,
+} from "../game/TileTraversalScratch";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
-
-interface ClusterTraversalState {
-  visited: Uint32Array;
-  gen: number;
-}
-
-// Per-game traversal state used by calculateClusters() to avoid per-player buffers.
-const traversalStates = new WeakMap<Game, ClusterTraversalState>();
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -125,9 +122,9 @@ export class PlayerExecution implements Execution {
 
     // Find the largest cluster with a single linear scan (O(n)).
     let largestIndex = 0;
-    let largestSize = clusters[0].size;
+    let largestSize = clusters[0].length;
     for (let i = 1; i < clusters.length; i++) {
-      const size = clusters[i].size;
+      const size = clusters[i].length;
       if (size > largestSize) {
         largestSize = size;
         largestIndex = i;
@@ -158,7 +155,7 @@ export class PlayerExecution implements Execution {
   }
 
   private surroundedBySamePlayer(
-    cluster: Set<TileRef>,
+    cluster: readonly TileRef[],
     clusterBox: { min: Cell; max: Cell },
   ): false | Player {
     const enemies = new Set<number>();
@@ -211,7 +208,7 @@ export class PlayerExecution implements Execution {
     return false;
   }
 
-  private isSurrounded(cluster: Set<TileRef>): boolean {
+  private isSurrounded(cluster: readonly TileRef[]): boolean {
     let hasEnemy = false;
     let minX = Infinity,
       minY = Infinity,
@@ -246,7 +243,7 @@ export class PlayerExecution implements Execution {
     return inscribed(enemyBox, clusterBox);
   }
 
-  private removeCluster(cluster: Set<TileRef>) {
+  private removeCluster(cluster: readonly TileRef[]) {
     for (const t of cluster) {
       if (this.mg?.ownerID(t) !== this.player?.smallID()) {
         // Other removeCluster operations could change tile owners,
@@ -260,8 +257,8 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const firstTile = cluster.values().next().value;
-    if (!firstTile) {
+    const firstTile = cluster[0];
+    if (firstTile === undefined) {
       return;
     }
 
@@ -273,7 +270,7 @@ export class PlayerExecution implements Execution {
       (tile) => this.mg.ownerID(tile) === this.player.smallID(),
     );
 
-    if (this.player.numTilesOwned() === tiles.size) {
+    if (this.player.numTilesOwned() === tiles.length) {
       this.mg.conquerPlayer(capturing, this.player);
     }
 
@@ -282,7 +279,7 @@ export class PlayerExecution implements Execution {
     }
   }
 
-  private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
+  private getCapturingPlayer(cluster: readonly TileRef[]): Player | null {
     const neighbors = new Map<Player, number>();
     const map = this.map;
     const mySmallID = this.player.smallID();
@@ -327,7 +324,7 @@ export class PlayerExecution implements Execution {
     return getMode(neighbors);
   }
 
-  private calculateClusters(): Set<TileRef>[] {
+  private calculateClusters(): TileRef[][] {
     const borderTiles = this.player.borderTiles();
     if (borderTiles.size === 0) return [];
 
@@ -335,20 +332,25 @@ export class PlayerExecution implements Execution {
     const currentGen = this.bumpGeneration();
     const visited = state.visited;
 
-    const clusters: Set<TileRef>[] = [];
+    const clusters: TileRef[][] = [];
 
-    for (const startTile of borderTiles) {
-      if (visited[startTile] === currentGen) continue;
+    // Set.forEach instead of for..of: iterating a large Set allocates an
+    // iterator-result object per element, and border sets can be huge.
+    const neighborFn = (tile: TileRef, cb: (neighbor: TileRef) => void) =>
+      this.mg.forEachNeighborWithDiag(tile, cb);
+    const includeFn = (tile: TileRef) => borderTiles.has(tile);
+    borderTiles.forEach((startTile) => {
+      if (visited[startTile] === currentGen) return;
 
       const cluster = this.floodFillWithGen(
         currentGen,
         visited,
         [startTile],
-        (tile, cb) => this.mg.forEachNeighborWithDiag(tile, cb),
-        (tile) => borderTiles.has(tile),
+        neighborFn,
+        includeFn,
       );
       clusters.push(cluster);
-    }
+    });
     return clusters;
   }
 
@@ -363,27 +365,12 @@ export class PlayerExecution implements Execution {
     return this.active;
   }
 
-  private traversalState(): ClusterTraversalState {
-    const totalTiles = this.mg.width() * this.mg.height();
-    let state = traversalStates.get(this.mg);
-    if (!state || state.visited.length < totalTiles) {
-      state = {
-        visited: new Uint32Array(totalTiles),
-        gen: 0,
-      };
-      traversalStates.set(this.mg, state);
-    }
-    return state;
+  private traversalState(): TileTraversalScratch {
+    return tileTraversalScratch(this.mg);
   }
 
   private bumpGeneration(): number {
-    const state = this.traversalState();
-    state.gen++;
-    if (state.gen === 0xffffffff) {
-      state.visited.fill(0);
-      state.gen = 1;
-    }
-    return state.gen;
+    return bumpTraversalGeneration(this.traversalState());
   }
 
   private floodFillWithGen(
@@ -392,15 +379,19 @@ export class PlayerExecution implements Execution {
     startTiles: TileRef[],
     neighborFn: (tile: TileRef, callback: (neighbor: TileRef) => void) => void,
     includeFn: (tile: TileRef) => boolean,
-  ): Set<TileRef> {
-    const result = new Set<TileRef>();
-    const stack: TileRef[] = [];
+  ): TileRef[] {
+    // The visited generation array already deduplicates, so the result can be
+    // a plain array (in mark order) — far cheaper than a Set of the same
+    // size. The DFS stack is reused across fills via the traversal state.
+    const result: TileRef[] = [];
+    const stack = this.traversalState().stack;
+    stack.length = 0;
 
     for (const start of startTiles) {
       if (visited[start] === currentGen) continue;
       if (!includeFn(start)) continue;
       visited[start] = currentGen;
-      result.add(start);
+      result.push(start);
       stack.push(start);
     }
 
@@ -412,7 +403,7 @@ export class PlayerExecution implements Execution {
         return;
       }
       visited[neighbor] = currentGen;
-      result.add(neighbor);
+      result.push(neighbor);
       stack.push(neighbor);
     };
 

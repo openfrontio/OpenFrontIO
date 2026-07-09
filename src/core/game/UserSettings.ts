@@ -2,7 +2,7 @@ import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
 } from "../../client/render/gl/GraphicsOverrides";
-import { Cosmetics, EffectType } from "../CosmeticSchemas";
+import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
@@ -139,6 +139,10 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
+  highlightSmallPlayers() {
+    return this.getBool("settings.highlightSmallPlayers", false);
+  }
+
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
@@ -189,6 +193,13 @@ export class UserSettings {
 
   toggleEmojis() {
     this.setBool("settings.emojis", !this.emojis());
+  }
+
+  toggleHighlightSmallPlayers() {
+    this.setBool(
+      "settings.highlightSmallPlayers",
+      !this.highlightSmallPlayers(),
+    );
   }
 
   // Performance overlay specifically needs a direct setter for Shift-D
@@ -315,8 +326,9 @@ export class UserSettings {
   }
 
   /**
-   * Selected effect cosmetics, keyed by effectType (at most one per type).
-   * Persisted as a single JSON blob under EFFECTS_KEY.
+   * Selected effect cosmetics, keyed by selection slot (at most one per slot).
+   * A slot is the effectType for trails and the nukeType for nuke explosions —
+   * see effectTypeForSlot. Persisted as a single JSON blob under EFFECTS_KEY.
    */
   getSelectedEffects(): Record<string, string> {
     const raw = this.getString(EFFECTS_KEY, "");
@@ -331,17 +343,14 @@ export class UserSettings {
     }
   }
 
-  getSelectedEffectName(effectType: EffectType): string | null {
-    return this.getSelectedEffects()[effectType] ?? null;
+  getSelectedEffectName(slot: string): string | null {
+    return this.getSelectedEffects()[slot] ?? null;
   }
 
-  setSelectedEffectName(
-    effectType: EffectType,
-    name: string | undefined,
-  ): void {
+  setSelectedEffectName(slot: string, name: string | undefined): void {
     const map = this.getSelectedEffects();
-    if (name === undefined) delete map[effectType];
-    else map[effectType] = name;
+    if (name === undefined) delete map[slot];
+    else map[slot] = name;
     if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
     else this.setString(EFFECTS_KEY, JSON.stringify(map));
   }

@@ -26,9 +26,15 @@ vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
   actionButton: vi.fn((props: unknown) => props),
 }));
 
+vi.mock("../../../../src/client/InGameModal", () => ({
+  showInGameConfirm: vi.fn(),
+  showInGameAlert: vi.fn(),
+}));
+
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
 import { PlayerModerationModal } from "../../../../src/client/hud/layers/PlayerModerationModal";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
+import { showInGameConfirm } from "../../../../src/client/InGameModal";
 import { SendKickPlayerIntentEvent } from "../../../../src/client/Transport";
 import { PlayerView } from "../../../../src/client/view";
 import { PlayerType } from "../../../../src/core/game/Game";
@@ -120,15 +126,12 @@ describe("PlayerPanel - kick player moderation", () => {
 });
 
 describe("PlayerModerationModal - kick confirmation", () => {
-  const originalConfirm = globalThis.confirm;
-
   afterEach(() => {
     vi.clearAllMocks();
-    globalThis.confirm = originalConfirm;
   });
 
-  test("emits SendKickPlayerIntentEvent and dispatches kicked when confirmed", () => {
-    (globalThis as any).confirm = vi.fn(() => true);
+  test("emits SendKickPlayerIntentEvent and dispatches kicked when confirmed", async () => {
+    (showInGameConfirm as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
     const modal = new PlayerModerationModal();
     const eventBus = { emit: vi.fn() };
@@ -148,7 +151,7 @@ describe("PlayerModerationModal - kick confirmation", () => {
     const kickedListener = vi.fn();
     modal.addEventListener("kicked", kickedListener as any);
 
-    (modal as any).handleKickClick({ stopPropagation: vi.fn() });
+    await (modal as any).handleKickClick({ stopPropagation: vi.fn() });
 
     expect(eventBus.emit).toHaveBeenCalledTimes(1);
     const event = eventBus.emit.mock.calls[0][0] as SendKickPlayerIntentEvent;
@@ -160,8 +163,8 @@ describe("PlayerModerationModal - kick confirmation", () => {
     expect(kickedEvent.detail).toEqual({ playerId: "2" });
   });
 
-  test("does not emit when confirmation is cancelled", () => {
-    (globalThis as any).confirm = vi.fn(() => false);
+  test("does not emit when confirmation is cancelled", async () => {
+    (showInGameConfirm as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
     const modal = new PlayerModerationModal();
     const eventBus = { emit: vi.fn() };
@@ -181,7 +184,7 @@ describe("PlayerModerationModal - kick confirmation", () => {
     const kickedListener = vi.fn();
     modal.addEventListener("kicked", kickedListener as any);
 
-    (modal as any).handleKickClick({ stopPropagation: vi.fn() });
+    await (modal as any).handleKickClick({ stopPropagation: vi.fn() });
 
     expect(eventBus.emit).not.toHaveBeenCalled();
     expect(kickedListener).not.toHaveBeenCalled();

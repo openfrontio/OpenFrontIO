@@ -15,10 +15,11 @@ import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./EffectsInput";
 import "./EffectsModal";
@@ -35,6 +36,7 @@ import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { showInGameConfirm } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
@@ -180,6 +182,7 @@ declare global {
   interface Window {
     turnstile: any;
     adsEnabled: boolean;
+    gtag?: (...args: any[]) => void;
     PageOS: {
       session: {
         newPageView: () => void;
@@ -502,7 +505,11 @@ class Client {
     }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      updateAccountNavButton(userMeResponse);
+      if (crazyGamesSDK.isOnCrazyGames()) {
+        void updateCrazyGamesNavButton();
+      } else {
+        updateAccountNavButton(userMeResponse);
+      }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
@@ -531,6 +538,15 @@ class Client {
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
+
+    // Re-run auth when the player signs into CrazyGames mid-session. Logout
+    // reloads the page, so only login needs handling here.
+    crazyGamesSDK.addAuthListener(() => {
+      invalidateUserMe();
+      reauthAfterCrazyGamesChange().then((result) =>
+        result === false ? onUserMe(false) : getUserMe().then(onUserMe),
+      );
+    });
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -585,6 +601,13 @@ class Client {
       onJoinChanged();
     };
 
+    const leaveGame = () => {
+      crazyGamesSDK.gameplayStop().then(() => {
+        // redirect to the home page
+        window.location.href = "/";
+      });
+    };
+
     const onPopState = () => {
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
@@ -592,23 +615,20 @@ class Client {
         if (!this.lobbyHandle.stop()) {
           console.info("Player is active, ask before leaving game");
 
-          const isConfirmed = confirm(
-            translateText("help_modal.exit_confirmation"),
+          // We can't block navigation on an async confirmation, so restore the
+          // history entry immediately and only leave once the player confirms.
+          history.pushState(null, "", this.currentUrl);
+          showInGameConfirm(translateText("help_modal.exit_confirmation")).then(
+            (isConfirmed) => {
+              if (isConfirmed) leaveGame();
+            },
           );
-
-          if (!isConfirmed) {
-            // Rollback navigator history
-            history.pushState(null, "", this.currentUrl);
-            return;
-          }
+          return;
         }
 
         console.info("Player is not active, leave the game immediately");
 
-        crazyGamesSDK.gameplayStop().then(() => {
-          // redirect to the home page
-          window.location.href = "/";
-        });
+        leaveGame();
       } else {
         console.info("Game not active, handle hash update");
 
@@ -710,6 +730,13 @@ class Client {
       const type = params.get("type");
       if (type === "currency_pack") {
         alertAndStrip(translateText("store.currency_pack_purchase_success"));
+        return;
+      }
+
+      if (type === "custom_currency") {
+        // Plutonium is credited asynchronously by the Stripe webhook; the
+        // balance refreshes from /users/@me on the next load.
+        alertAndStrip(translateText("store.custom_currency_purchase_success"));
         return;
       }
 
@@ -868,10 +895,17 @@ class Client {
       document
         .getElementById("username-validation-error")
         ?.classList.add("hidden");
+      // Disarm BOTH lobby modals before closing either: closing any
+      // page-modal navigates via showPage, which force-closes the currently
+      // visible page — the other lobby modal. If that one is still armed,
+      // its onClose leaves the lobby and disconnects the player mid
+      // game-start (host or joiner, depending on close order).
+      this.hostModal?.disarmLeaveOnClose();
+      this.joinModal?.disarmLeaveOnClose();
+      this.hostModal?.closeWithoutLeaving();
       this.joinModal?.closeWithoutLeaving();
       [
         "single-player-modal",
-        "host-lobby-modal",
         "game-starting-modal",
         "game-top-bar",
         "help-modal",
@@ -1087,6 +1121,10 @@ const bootstrap = () => {
   // Also hide elements after a short delay to catch late-rendered components
   setTimeout(hideCrazyGamesElements, 100);
   setTimeout(hideCrazyGamesElements, 500);
+
+  // Populate the CrazyGames account buttons once the nav/top-bar have rendered
+  // (onUserMe also refreshes them after auth and on mid-session sign-in).
+  setTimeout(() => void updateCrazyGamesNavButton(), 500);
 };
 
 if (document.readyState === "loading") {

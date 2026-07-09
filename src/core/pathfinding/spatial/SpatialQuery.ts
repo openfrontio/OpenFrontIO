@@ -1,5 +1,9 @@
 import { Game, Player, TerraNullius } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "../../game/TileTraversalScratch";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinding } from "../PathFinder";
 import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
@@ -32,25 +36,44 @@ export class SpatialQuery {
     predicate: (t: TileRef) => boolean,
   ): TileRef | null {
     const map = this.game.map();
-    const candidates: TileRef[] = [];
+    const scratch = tileTraversalScratch(this.game);
+    const gen = bumpTraversalGeneration(scratch);
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
 
-    for (const tile of map.bfs(
-      from,
-      (_, t) => map.manhattanDist(from, t) <= maxDist,
-    )) {
-      if (predicate(tile)) {
-        candidates.push(tile);
+    // Strict < keeps the first candidate at the minimum distance, so the
+    // winner depends only on the deterministic traversal order (LIFO with
+    // neighbors visited in the shared N, S, W, E order).
+    let best: TileRef | null = null;
+    let bestDist = Infinity;
+
+    const mark = (t: TileRef) => {
+      visited[t] = gen;
+      stack.push(t);
+      if (predicate(t)) {
+        const dist = map.manhattanDist(from, t);
+        if (dist < bestDist) {
+          best = t;
+          bestDist = dist;
+        }
       }
+    };
+
+    if (maxDist >= 0) {
+      mark(from);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && map.manhattanDist(from, n) <= maxDist) {
+        mark(n);
+      }
+    };
+    while (stack.length > 0) {
+      const curr = stack.pop()!;
+      map.forEachNeighbor(curr, visit);
     }
 
-    if (candidates.length === 0) return null;
-
-    // Sort by Manhattan distance to find actual nearest
-    candidates.sort(
-      (a, b) => map.manhattanDist(from, a) - map.manhattanDist(from, b),
-    );
-
-    return candidates[0];
+    return best;
   }
 
   /**

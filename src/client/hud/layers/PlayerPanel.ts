@@ -5,6 +5,7 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
+  GameType,
   PlayerActions,
   PlayerProfile,
   PlayerType,
@@ -12,6 +13,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { fetchLobbyListed } from "../../Api";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -73,6 +75,9 @@ export class PlayerPanel extends LitElement implements Controller {
   @state() private suppressNextHide: boolean = false;
   @state() private moderationTarget: PlayerView | null = null;
   @state() private playerRole: string | null = null;
+  // Whether this game is a publicly listed lobby. Kept out of
+  // GameStartInfo (never touches records), so it's fetched from the worker.
+  @state() private gameListed = false;
 
   setRole(role: string | null): void {
     this.playerRole = role;
@@ -112,6 +117,13 @@ export class PlayerPanel extends LitElement implements Controller {
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
     if (!this.ctModal) {
       console.warn("ChatModal element not found in DOM");
+    }
+
+    // Only private games can be listed.
+    if (this.g.config().gameConfig().gameType === GameType.Private) {
+      void fetchLobbyListed(this.g.gameID()).then((listed) => {
+        this.gameListed = listed;
+      });
     }
   }
 
@@ -456,6 +468,9 @@ export class PlayerPanel extends LitElement implements Controller {
     isAdmin: boolean,
   ) {
     if (!my.isLobbyCreator() && !isAdmin) return html``;
+    // The host of a publicly listed game cannot kick (server-enforced), so
+    // don't offer the panel; admins keep it for moderation.
+    if (this.gameListed && !isAdmin) return html``;
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`

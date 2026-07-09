@@ -25,7 +25,6 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
@@ -47,7 +46,10 @@ export class MapRenderer {
   constructor(
     private canvas: HTMLCanvasElement,
     private header: RendererConfig,
-    private terrainBytes: Uint8Array,
+    // Called (not stored) whenever terrain bytes are needed — initial bake
+    // and every context restore. Regenerating on demand avoids retaining a
+    // map-sized buffer for the rare restore path.
+    private terrainSource: () => Uint8Array,
     private paletteData: Float32Array,
     private config: Config,
     // Resolved render settings (defaults + overrides). Held so the same object
@@ -79,7 +81,7 @@ export class MapRenderer {
     this.renderer = new GPURenderer(
       this.canvas,
       this.header,
-      this.terrainBytes,
+      this.terrainSource,
       this.paletteData,
       this.config,
       this.settings,
@@ -104,6 +106,15 @@ export class MapRenderer {
     this.onContextRestored?.();
   };
 
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  get glLimited(): { renderer: string; maxTextureSize: number } | null {
+    return this.renderer?.glLimited ?? null;
+  }
+
   // ---- Camera ----
 
   setCameraState(x: number, y: number, z: number): void {
@@ -112,7 +123,10 @@ export class MapRenderer {
 
   // ---- Data upload ----
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(
@@ -223,6 +237,11 @@ export class MapRenderer {
   /** Update spawn phase overlay (tile highlights + breathing rings). */
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
     this.renderer?.updateSpawnOverlay(inSpawnPhase, centers);
+  }
+
+  /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.renderer?.updateSmallPlayerGlow(set);
   }
 
   // ---- Selection box ----
