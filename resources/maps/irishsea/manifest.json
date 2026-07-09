@@ -1,0 +1,337 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [170, 1199],
+      "flag": "ie",
+      "name": "Dun Laoghaire"
+    },
+    {
+      "coordinates": [195, 1248],
+      "flag": "ie",
+      "name": "Bray"
+    },
+    {
+      "coordinates": [190, 1488],
+      "flag": "ie",
+      "name": "Arklow"
+    },
+    {
+      "coordinates": [27, 1255],
+      "flag": "ie",
+      "name": "Naas"
+    },
+    {
+      "coordinates": [137, 935],
+      "flag": "ie",
+      "name": "Drogheda"
+    },
+    {
+      "coordinates": [77, 865],
+      "flag": "ie",
+      "name": "Ardee"
+    },
+    {
+      "coordinates": [9, 1003],
+      "flag": "ie",
+      "name": "Navan"
+    },
+    {
+      "coordinates": [6, 665],
+      "flag": "ie",
+      "name": "Monaghan"
+    },
+    {
+      "coordinates": [360, 408],
+      "flag": "northern_ireland",
+      "name": "Bangor"
+    },
+    {
+      "coordinates": [118, 522],
+      "flag": "northern_ireland",
+      "name": "Portadown"
+    },
+    {
+      "coordinates": [211, 595],
+      "flag": "northern_ireland",
+      "name": "Banbridge"
+    },
+    {
+      "coordinates": [186, 372],
+      "flag": "northern_ireland",
+      "name": "Antrim"
+    },
+    {
+      "coordinates": [308, 281],
+      "flag": "northern_ireland",
+      "name": "Larne"
+    },
+    {
+      "coordinates": [59, 123],
+      "flag": "northern_ireland",
+      "name": "Coleraine"
+    },
+    {
+      "coordinates": [382, 4],
+      "flag": "gb-sct",
+      "name": "Campbeltown"
+    },
+    {
+      "coordinates": [783, 242],
+      "flag": "gb-sct",
+      "name": "Wigtown"
+    },
+    {
+      "coordinates": [752, 122],
+      "flag": "gb-sct",
+      "name": "Newton Stewart"
+    },
+    {
+      "coordinates": [668, 23],
+      "flag": "gb-sct",
+      "name": "Girvan"
+    },
+    {
+      "coordinates": [1149, 111],
+      "flag": "gb-sct",
+      "name": "Lockerbie"
+    },
+    {
+      "coordinates": [1267, 181],
+      "flag": "gb-sct",
+      "name": "Gretna"
+    },
+    {
+      "coordinates": [1106, 402],
+      "flag": "GB-CMA",
+      "name": "Workington"
+    },
+    {
+      "coordinates": [1214, 404],
+      "flag": "GB-CMA",
+      "name": "Cockermouth"
+    },
+    {
+      "coordinates": [1229, 471],
+      "flag": "GB-CMA",
+      "name": "Keswick"
+    },
+    {
+      "coordinates": [1334, 397],
+      "flag": "GB-CMA",
+      "name": "Penrith"
+    },
+    {
+      "coordinates": [1287, 547],
+      "flag": "GB-CMA",
+      "name": "Windermere"
+    },
+    {
+      "coordinates": [1333, 598],
+      "flag": "GB-CMA",
+      "name": "Kendal"
+    },
+    {
+      "coordinates": [1378, 644],
+      "flag": "GB-CMA",
+      "name": "Kirkby Lonsdale"
+    },
+    {
+      "coordinates": [1218, 705],
+      "flag": "GB-CMA",
+      "name": "Barrow-in-Furness"
+    },
+    {
+      "coordinates": [1262, 1045],
+      "flag": "GB-Merseyside",
+      "name": "Sefton"
+    },
+    {
+      "coordinates": [1261, 1164],
+      "flag": "GB-Merseyside",
+      "name": "Wirral"
+    },
+    {
+      "coordinates": [1352, 1091],
+      "flag": "GB-Merseyside",
+      "name": "Knowsley"
+    },
+    {
+      "coordinates": [1335, 753],
+      "flag": "GB-LAN",
+      "name": "Morecambe"
+    },
+    {
+      "coordinates": [1284, 899],
+      "flag": "GB-LAN",
+      "name": "Blackpool"
+    },
+    {
+      "coordinates": [1300, 1011],
+      "flag": "GB-LAN",
+      "name": "Ormskirk"
+    },
+    {
+      "coordinates": [1390, 1192],
+      "flag": "GB-CHE",
+      "name": "Warrington"
+    },
+    {
+      "coordinates": [717, 1197],
+      "flag": "gb-wls",
+      "name": "Holyhead"
+    },
+    {
+      "coordinates": [994, 1218],
+      "flag": "gb-wls",
+      "name": "Conwy"
+    },
+    {
+      "coordinates": [865, 1397],
+      "flag": "gb-wls",
+      "name": "Portmadoc"
+    },
+    {
+      "coordinates": [781, 1432],
+      "flag": "gb-wls",
+      "name": "Pwllheli"
+    },
+    {
+      "coordinates": [1069, 1372],
+      "flag": "gb-wls",
+      "name": "Betws-y-Coed"
+    },
+    {
+      "coordinates": [1259, 1247],
+      "flag": "gb-wls",
+      "name": "Queensferry"
+    },
+    {
+      "coordinates": [1209, 1405],
+      "flag": "gb-wls",
+      "name": "Llangollenes"
+    },
+    {
+      "coordinates": [854, 1303],
+      "flag": "gb-wls",
+      "name": "Caernarfon"
+    }
+  ],
+  "categories": ["europe", "new"],
+  "id": "IrishSea",
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 978363,
+    "width": 1400
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 58780,
+    "width": 350
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 241209,
+    "width": 700
+  },
+  "multiplayer_frequency": 5,
+  "name": "Irish Sea",
+  "nations": [
+    {
+      "coordinates": [771, 744],
+      "flag": "im",
+      "name": "Isle of Man"
+    },
+    {
+      "coordinates": [1380, 914],
+      "flag": "GB-LAN",
+      "name": "Preston"
+    },
+    {
+      "coordinates": [109, 779],
+      "flag": "ie",
+      "name": "Dundalk"
+    },
+    {
+      "coordinates": [163, 1096],
+      "flag": "ie",
+      "name": "Dublin"
+    },
+    {
+      "coordinates": [212, 1392],
+      "flag": "ie",
+      "name": "Wicklow"
+    },
+    {
+      "coordinates": [1326, 206],
+      "flag": "GB-CMA",
+      "name": "Carlisle"
+    },
+    {
+      "coordinates": [259, 467],
+      "flag": "northern_ireland",
+      "name": "Belfast"
+    },
+    {
+      "coordinates": [143, 236],
+      "flag": "northern_ireland",
+      "name": "Ballymena"
+    },
+    {
+      "coordinates": [1326, 776],
+      "flag": "GB-LAN",
+      "name": "Lancaster"
+    },
+    {
+      "coordinates": [1323, 1142],
+      "flag": "GB-Merseyside",
+      "name": "Liverpool"
+    },
+    {
+      "coordinates": [1108, 477],
+      "flag": "GB-CMA",
+      "name": "Whitehaven"
+    },
+    {
+      "coordinates": [903, 1268],
+      "flag": "gb-wls",
+      "name": "Bangor"
+    },
+    {
+      "coordinates": [1108, 1222],
+      "flag": "gb-wls",
+      "name": "St Asaph"
+    },
+    {
+      "coordinates": [1301, 1329],
+      "flag": "gb-wls",
+      "name": "Wrexham"
+    },
+    {
+      "coordinates": [927, 266],
+      "flag": "gb-sct",
+      "name": "Kirkcudbright"
+    },
+    {
+      "coordinates": [603, 274],
+      "flag": "gb-sct",
+      "name": "Stranraer"
+    },
+    {
+      "coordinates": [1128, 116],
+      "flag": "gb-sct",
+      "name": "Dumfries"
+    },
+    {
+      "coordinates": [22, 553],
+      "flag": "northern_ireland",
+      "name": "Armagh"
+    },
+    {
+      "coordinates": [139, 698],
+      "flag": "northern_ireland",
+      "name": "Newry"
+    }
+  ],
+  "special_team_count": 3,
+  "translation_key": "map.irishsea"
+}

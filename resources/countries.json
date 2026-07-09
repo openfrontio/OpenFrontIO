@@ -555,6 +555,11 @@
     "name": "Cherokee"
   },
   {
+    "code": "GB-CHE",
+    "continent": "Europe",
+    "name": "Cheshire"
+  },
+  {
     "code": "Chickasaw",
     "continent": "North America",
     "name": "Chickasaw"
@@ -721,6 +726,11 @@
     "code": "cu",
     "continent": "North America",
     "name": "Cuba"
+  },
+  {
+    "code": "GB-CMA",
+    "continent": "Europe",
+    "name": "Cumbria"
   },
   {
     "code": "cw",
@@ -1272,6 +1282,11 @@
     "name": "Ireland"
   },
   {
+    "code": "Ireland Green Harp",
+    "continent": "Europe",
+    "name": "Green Harp"
+  },
+  {
     "code": "Haudenosaunee",
     "continent": "North America",
     "name": "Iroquois Confederacy"
@@ -1427,6 +1442,11 @@
     "name": "Kingdom of Iraq"
   },
   {
+    "code": "Kingdom of Ireland",
+    "continent": "Europe",
+    "name": "Kingdom of Ireland"
+  },
+  {
     "code": "italy",
     "continent": "Europe",
     "name": "Kingdom of Italy"
@@ -1529,6 +1549,11 @@
     "code": "Lakotah",
     "continent": "North America",
     "name": "Lakotah"
+  },
+  {
+    "code": "GB-LAN",
+    "continent": "Europe",
+    "name": "Lancashire"
   },
   {
     "code": "la",
@@ -1796,6 +1821,11 @@
     "code": "1_Mercia",
     "continent": "Europe",
     "name": "Mercia"
+  },
+  {
+    "code": "GB-Merseyside",
+    "continent": "Europe",
+    "name": "Merseyside"
   },
   {
     "code": "mx",

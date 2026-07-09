@@ -52,6 +52,7 @@ export enum GameMapType {
   HongKong = "Hong Kong", // map-generator/assets/maps/hongkong/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
+  IrishSea = "Irish Sea", // map-generator/assets/maps/irishsea/info.json
   Italia = "Italia", // map-generator/assets/maps/italia/info.json
   Japan = "Japan", // map-generator/assets/maps/japan/info.json
   JuanDeFucaStrait = "Juan De Fuca Strait", // map-generator/assets/maps/juandefucastrait/info.json
@@ -522,6 +523,14 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.indiansubcontinent",
     categories: ["asia"],
     multiplayerFrequency: 8,
+  },
+  {
+    id: "IrishSea",
+    type: GameMapType.IrishSea,
+    translationKey: "map.irishsea",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 5,
+    specialTeamCount: 3,
   },
   {
     id: "Italia",
