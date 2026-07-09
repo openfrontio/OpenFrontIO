@@ -50,8 +50,21 @@ describe("marketing-consent-toast", () => {
   });
 
   async function shown(): Promise<boolean> {
+    // Flush any in-flight async decide() (it awaits setMarketingConsent).
+    await new Promise((r) => setTimeout(r, 0));
     await el.updateComplete;
     return el.querySelector('[role="dialog"]') !== null;
+  }
+
+  // Click the button whose accessible name / text matches, e.g. the "yes" or
+  // "no" action or the dismiss ("dismiss") X.
+  function clickButton(match: RegExp): void {
+    const btn = [...el.querySelectorAll("button")].find((b) =>
+      match.test(
+        `${b.getAttribute("aria-label") ?? ""} ${b.textContent ?? ""}`,
+      ),
+    );
+    btn?.click();
   }
 
   it("shows when consent is undecided and an email is on file", async () => {
@@ -76,20 +89,45 @@ describe("marketing-consent-toast", () => {
     expect(await shown()).toBe(false);
   });
 
-  it("records the choice and does not reappear after answering", async () => {
+  it("records approval on 'yes' and does not reappear", async () => {
     fireUserMe(userMe("no_response", true));
     expect(await shown()).toBe(true);
 
-    const yes = [...el.querySelectorAll("button")].find((b) =>
-      (b.textContent ?? "").includes("marketing_consent.yes"),
-    );
-    yes?.click();
-
-    expect(setMarketingConsent).toHaveBeenCalledWith(true);
+    clickButton(/marketing_consent\.yes/);
     expect(await shown()).toBe(false);
+    expect(setMarketingConsent).toHaveBeenCalledWith(true);
 
     // Re-firing the undecided state must not resurrect the prompt.
     fireUserMe(userMe("no_response", true));
     expect(await shown()).toBe(false);
+  });
+
+  it("records a denial on 'no thanks'", async () => {
+    fireUserMe(userMe("no_response", true));
+    expect(await shown()).toBe(true);
+
+    clickButton(/marketing_consent\.no/);
+    expect(await shown()).toBe(false);
+    expect(setMarketingConsent).toHaveBeenCalledWith(false);
+  });
+
+  it("records nothing on a subtle dismiss (X) — leaves state undecided", async () => {
+    fireUserMe(userMe("no_response", true));
+    expect(await shown()).toBe(true);
+
+    clickButton(/marketing_consent\.dismiss/);
+    expect(await shown()).toBe(false);
+    expect(setMarketingConsent).not.toHaveBeenCalled();
+  });
+
+  it("keeps the toast up when the write fails (no silent success)", async () => {
+    setMarketingConsent.mockResolvedValueOnce(false);
+    fireUserMe(userMe("no_response", true));
+    expect(await shown()).toBe(true);
+
+    clickButton(/marketing_consent\.yes/);
+    expect(setMarketingConsent).toHaveBeenCalledWith(true);
+    // The request failed, so the prompt stays visible for a retry.
+    expect(await shown()).toBe(true);
   });
 });

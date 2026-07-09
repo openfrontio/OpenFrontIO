@@ -242,20 +242,7 @@ export class AccountModal extends BaseModal {
   private renderEmailBinding(): TemplateResult {
     return html`
       <div class="mt-4 space-y-3">
-        <input
-          type="email"
-          .value=${this.email}
-          @input=${this.handleEmailInput}
-          placeholder=${translateText("account_modal.email_placeholder")}
-          class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
-        />
-        <o-button
-          variant="primary"
-          width="block"
-          size="md"
-          translationKey="account_modal.get_magic_link"
-          @click=${this.handleSubmit}
-        ></o-button>
+        ${this.renderEmailField()}
         <div class="flex items-center gap-4 py-1">
           <div class="h-px bg-white/10 flex-1"></div>
           <span
@@ -267,6 +254,28 @@ export class AccountModal extends BaseModal {
         </div>
         ${this.renderLinkGoogleButton()}
       </div>
+    `;
+  }
+
+  // Shared email input + "get magic link" button, used by both the sign-in form
+  // and the Account Settings bind-an-email state so their styling and handlers
+  // stay in sync.
+  private renderEmailField(): TemplateResult {
+    return html`
+      <input
+        type="email"
+        .value=${this.email}
+        @input=${this.handleEmailInput}
+        placeholder=${translateText("account_modal.email_placeholder")}
+        class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
+      />
+      <o-button
+        variant="primary"
+        width="block"
+        size="md"
+        translationKey="account_modal.get_magic_link"
+        @click=${this.handleSubmit}
+      ></o-button>
     `;
   }
 
@@ -629,29 +638,7 @@ export class AccountModal extends BaseModal {
             </div>
 
             <!-- Email Recovery -->
-            <div class="space-y-3">
-              <div class="relative group">
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  .value="${this.email}"
-                  @input="${this.handleEmailInput}"
-                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
-                  placeholder="${translateText(
-                    "account_modal.email_placeholder",
-                  )}"
-                  required
-                />
-              </div>
-              <o-button
-                variant="primary"
-                width="block"
-                size="md"
-                translationKey="account_modal.get_magic_link"
-                @click=${this.handleSubmit}
-              ></o-button>
-            </div>
+            <div class="space-y-3">${this.renderEmailField()}</div>
           </div>
 
           <div class="mt-8 text-center border-t border-white/10 pt-6">

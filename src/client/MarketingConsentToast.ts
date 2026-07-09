@@ -19,9 +19,11 @@ import { translateText } from "./Utils";
 export class MarketingConsentToast extends LitElement {
   @state() private visible = false;
   @state() private busy = false;
+  @state() private errored = false;
 
-  // Once the player answers (or we record a dismissal) don't show it again for
-  // the rest of this session, even if userMeResponse fires again.
+  // Set once the player acts on the prompt this session (answers or dismisses)
+  // so it doesn't reappear until the next load. Not persisted — a dismissal
+  // leaves the server decision at no_response, so it asks again next visit.
   private answered = false;
 
   private onUserMeResponse = (event: Event) => {
@@ -48,14 +50,31 @@ export class MarketingConsentToast extends LitElement {
     document.removeEventListener("userMeResponse", this.onUserMeResponse);
   }
 
+  // Record an explicit decision ("Yes please" -> approved, "No thanks" ->
+  // denied). Awaits the write and disables the buttons while it's in flight, so
+  // a failure surfaces (the toast stays, with an error) instead of a silent
+  // false success that would re-nag on the next load.
   private async decide(consented: boolean) {
     if (this.busy) return;
     this.busy = true;
-    this.answered = true;
-    // Hide optimistically so it never nags; the request records the decision.
-    void setMarketingConsent(consented);
-    this.visible = false;
+    this.errored = false;
+    const ok = await setMarketingConsent(consented);
     this.busy = false;
+    if (ok) {
+      this.answered = true;
+      this.visible = false;
+    } else {
+      this.errored = true;
+    }
+  }
+
+  // A subtle close (the X) is not an objection: it records nothing and leaves
+  // the server decision at no_response, only hiding the prompt for this session
+  // so it asks again on a later visit. Only "No thanks" records a denial.
+  private dismiss() {
+    if (this.busy) return;
+    this.answered = true;
+    this.visible = false;
   }
 
   render() {
@@ -95,7 +114,7 @@ export class MarketingConsentToast extends LitElement {
             class="shrink-0 grid place-items-center w-5 h-5 -mt-0.5 -mr-0.5 rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
             aria-label=${translateText("marketing_consent.dismiss")}
             ?disabled=${this.busy}
-            @click=${() => this.decide(false)}
+            @click=${() => this.dismiss()}
           >
             <svg
               width="13"
@@ -127,6 +146,11 @@ export class MarketingConsentToast extends LitElement {
             ${translateText("marketing_consent.yes")}
           </button>
         </div>
+        ${this.errored
+          ? html`<div class="mt-2 text-[10px] text-red-400">
+              ${translateText("marketing_consent.error")}
+            </div>`
+          : nothing}
       </div>
     `;
   }
