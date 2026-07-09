@@ -1,12 +1,14 @@
 import {
   GoogleUser,
   GoogleUserSchema,
+  hasActiveSubscription,
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
   PlayerProfileSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
+  UserMeResponse,
 } from "../src/core/ApiSchemas";
 
 describe("GoogleUserSchema", () => {
@@ -198,5 +200,67 @@ describe("PublicPlayerGamesResponseSchema", () => {
     expect(
       PublicPlayerGamesResponseSchema.safeParse({ results: [] }).success,
     ).toBe(false);
+  });
+});
+
+describe("hasActiveSubscription", () => {
+  function userMeWith(
+    subscription: UserMeResponse["player"]["subscription"],
+  ): UserMeResponse {
+    return {
+      user: {},
+      player: {
+        publicId: "p1",
+        adfree: false,
+        achievements: { singleplayerMap: [] },
+        friends: [],
+        subscription,
+      },
+    };
+  }
+
+  it("is true for an active subscription", () => {
+    expect(
+      hasActiveSubscription(
+        userMeWith({
+          tier: "supporter",
+          status: "active",
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is true while trialing", () => {
+    expect(
+      hasActiveSubscription(
+        userMeWith({
+          tier: "supporter",
+          status: "trialing",
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for canceled or past_due subscriptions", () => {
+    for (const status of ["canceled", "past_due", "incomplete"]) {
+      expect(
+        hasActiveSubscription(
+          userMeWith({
+            tier: "supporter",
+            status,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+          }),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("is false without a subscription", () => {
+    expect(hasActiveSubscription(userMeWith(null))).toBe(false);
   });
 });

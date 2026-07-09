@@ -6,6 +6,7 @@ import { GameType } from "../../../core/game/Game";
 import "../../components/DoomsdayClockPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import {
   PauseGameIntentEvent,
@@ -50,6 +51,8 @@ export class GameRightSidebar extends LitElement implements Controller {
   @state()
   private timer: number = 0;
 
+  // CrazyGames provides its own fullscreen control in the game frame, so hide ours.
+  private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
   private hasWinner = false;
   private isLobbyCreator = false;
   private isPrivateLobby = false;
@@ -219,7 +222,7 @@ export class GameRightSidebar extends LitElement implements Controller {
   private async onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm(
+      const isConfirmed = await showInGameConfirm(
         translateText("help_modal.exit_confirmation"),
       );
       if (!isConfirmed) return;
@@ -275,7 +278,7 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
-        ${document.fullscreenEnabled
+        ${document.fullscreenEnabled && !this.onCrazyGames
           ? html`<div
               class="cursor-pointer"
               @click=${this.onFullscreenButtonClick}

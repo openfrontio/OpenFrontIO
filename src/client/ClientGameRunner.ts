@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
+import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -219,14 +220,15 @@ export function joinLobby(
           }),
         );
       } else if (message.error === "kick_reason.host_left") {
-        alert(translateText("kick_reason.host_left"));
-        document.dispatchEvent(
-          new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
-            bubbles: true,
-            composed: true,
-          }),
-        );
+        showInGameAlert(translateText("kick_reason.host_left")).then(() => {
+          document.dispatchEvent(
+            new CustomEvent("leave-lobby", {
+              detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+              bubbles: true,
+              composed: true,
+            }),
+          );
+        });
       } else {
         showErrorModal(
           message.error,
@@ -276,12 +278,20 @@ function createWebGLView(
   const mapWidth = gameMap.width();
   const mapHeight = gameMap.height();
 
-  const terrainBytes = new Uint8Array(mapWidth * mapHeight);
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-      terrainBytes[y * mapWidth + x] = gameMap.terrainByte(gameMap.ref(x, y));
+  // Provider, not a buffer: per-tile terrain bytes are map-sized (8 MB on
+  // the giant map), so consumers regenerate them on demand (initial bake,
+  // context restore, theme change) instead of anyone retaining a copy.
+  // gameMap is updated live by water-nuke conversions, so a regenerated
+  // array always reflects them.
+  const terrainSource = (): Uint8Array => {
+    const terrainBytes = new Uint8Array(mapWidth * mapHeight);
+    for (let y = 0; y < mapHeight; y++) {
+      for (let x = 0; x < mapWidth; x++) {
+        terrainBytes[y * mapWidth + x] = gameMap.terrainByte(gameMap.ref(x, y));
+      }
     }
-  }
+    return terrainBytes;
+  };
 
   const glCanvas = createCanvas();
   glCanvas.id = "webgl-debug-canvas";
@@ -325,7 +335,7 @@ function createWebGLView(
         // bound at construction time.
         maxPlayers: 1024,
       },
-      terrainBytes,
+      terrainSource,
       palette,
       config,
       settings,

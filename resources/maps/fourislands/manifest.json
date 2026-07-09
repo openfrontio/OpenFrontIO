@@ -3,17 +3,17 @@
   "id": "FourIslands",
   "map": {
     "height": 1500,
-    "num_land_tiles": 517044,
+    "num_land_tiles": 517506,
     "width": 1500
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 31134,
+    "num_land_tiles": 31175,
     "width": 375
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 127635,
+    "num_land_tiles": 127769,
     "width": 750
   },
   "multiplayer_frequency": 4,

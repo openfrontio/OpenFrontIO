@@ -15,6 +15,9 @@ export class ToggleInputCard extends LitElement {
   @property({ attribute: false }) inputValue?: number | string;
   @property({ attribute: false }) inputAriaLabel?: string;
   @property({ attribute: false }) inputPlaceholder?: string;
+  // Optional hint shown under the input when its value is 0 (e.g. "Disabled"),
+  // so a 0 that means "off" isn't cryptic.
+  @property({ attribute: false }) zeroLabel?: string;
   @property({ attribute: false }) defaultInputValue?: number | string;
   @property({ attribute: false }) minValidOnEnable?: number;
   @property({ attribute: false }) onToggle?: (
@@ -157,6 +160,15 @@ export class ToggleInputCard extends LitElement {
             @change=${this.onChange}
             @keydown=${this.onKeyDown}
           />
+          ${this.checked &&
+          this.zeroLabel !== undefined &&
+          this.toOptionalNumber(this.inputValue) === 0
+            ? html`<div
+                class="pointer-events-none absolute left-0 right-0 top-full mt-0.5 text-center text-[10px] leading-none text-white/70"
+              >
+                ${this.zeroLabel}
+              </div>`
+            : nothing}
         </div>
       </div>
     `;

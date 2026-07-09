@@ -37,11 +37,13 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
-  // Zero-allocation neighbor iteration (cardinal only), in W, E, N, S order.
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors(). All cardinal-neighbor helpers share this order so
+  // they are interchangeable even in order-sensitive simulation code.
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
-  // Writes the cardinal neighbors of ref into out (W, E, N, S order) and
-  // returns the count. out must have length >= 4; reuse it across calls to
-  // avoid allocation in hot loops.
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. out must have length >= 4; reuse it
+  // across calls to avoid allocation in hot loops.
   neighbors4(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration including diagonals, in dx-major
   // order: (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1).
@@ -109,10 +111,12 @@ export class GameMapImpl implements GameMap {
   private readonly width_: number;
   private readonly height_: number;
 
-  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
-  private readonly refToX: number[];
-  private readonly refToY: number[];
-  private readonly yToRef: number[];
+  // Row-start ref per y, so ref(x, y) avoids a multiply. x/y are derived from
+  // a ref arithmetically (ref % width, ref / width) rather than via per-tile
+  // lookup tables — two Uint16 tables cost 4 bytes per tile (~32 MB on the
+  // largest maps) and their random-access reads miss cache more often than
+  // the division costs.
+  private readonly yToRef: Int32Array;
 
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
@@ -146,18 +150,9 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
-    // Precompute the LUTs
-    let ref = 0;
-    this.refToX = new Array(width * height);
-    this.refToY = new Array(width * height);
-    this.yToRef = new Array(height);
+    this.yToRef = new Int32Array(height);
     for (let y = 0; y < height; y++) {
-      this.yToRef[y] = ref;
-      for (let x = 0; x < width; x++) {
-        this.refToX[ref] = x;
-        this.refToY[ref] = y;
-        ref++;
-      }
+      this.yToRef[y] = y * width;
     }
   }
   numTilesWithFallout(): number {
@@ -172,15 +167,15 @@ export class GameMapImpl implements GameMap {
   }
 
   isValidRef(ref: TileRef): boolean {
-    return ref >= 0 && ref < this.refToX.length;
+    return ref >= 0 && ref < this.width_ * this.height_;
   }
 
   x(ref: TileRef): number {
-    return this.refToX[ref];
+    return ref % this.width_;
   }
 
   y(ref: TileRef): number {
-    return this.refToY[ref];
+    return (ref / this.width_) | 0;
   }
 
   cell(ref: TileRef): Cell {
@@ -226,7 +221,7 @@ export class GameMapImpl implements GameMap {
       return false;
     }
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
     if (x !== 0 && this.isOcean(ref - 1)) return true;
     if (x !== w - 1 && this.isOcean(ref + 1)) return true;
     if (ref >= w && this.isOcean(ref - w)) return true;
@@ -322,7 +317,7 @@ export class GameMapImpl implements GameMap {
 
   isBorder(ref: TileRef): boolean {
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
     const owner = this.ownerID(ref);
     if (x !== 0 && this.ownerID(ref - 1) !== owner) return true;
     if (x !== w - 1 && this.ownerID(ref + 1) !== owner) return true;
@@ -375,7 +370,7 @@ export class GameMapImpl implements GameMap {
   neighbors(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
 
     if (ref >= w) neighbors.push(ref - w);
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
@@ -387,23 +382,23 @@ export class GameMapImpl implements GameMap {
 
   forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void {
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
 
-    if (x !== 0) callback(ref - 1);
-    if (x !== w - 1) callback(ref + 1);
     if (ref >= w) callback(ref - w);
     if (ref < (this.height_ - 1) * w) callback(ref + w);
+    if (x !== 0) callback(ref - 1);
+    if (x !== w - 1) callback(ref + 1);
   }
 
   neighbors4(ref: TileRef, out: TileRef[]): number {
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
     let n = 0;
 
-    if (x !== 0) out[n++] = ref - 1;
-    if (x !== w - 1) out[n++] = ref + 1;
     if (ref >= w) out[n++] = ref - w;
     if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
+    if (x !== 0) out[n++] = ref - 1;
+    if (x !== w - 1) out[n++] = ref + 1;
     return n;
   }
 
@@ -412,7 +407,7 @@ export class GameMapImpl implements GameMap {
     callback: (neighbor: TileRef) => void,
   ): void {
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
     const hasN = ref >= w;
     const hasS = ref < (this.height_ - 1) * w;
 
@@ -480,15 +475,24 @@ export class GameMapImpl implements GameMap {
       q.push(tile);
     }
 
+    // Neighbors are enumerated inline in the same order as neighbors() to
+    // avoid allocating an array per visited tile.
+    const w = this.width_;
+    const southLimit = (this.height_ - 1) * w;
+    const visit = (n: TileRef) => {
+      if (!seen.has(n) && filter(this, n)) {
+        seen.add(n);
+        q.push(n);
+      }
+    };
     while (q.length > 0) {
       const curr = q.pop();
       if (curr === undefined) continue;
-      for (const n of this.neighbors(curr)) {
-        if (!seen.has(n) && filter(this, n)) {
-          seen.add(n);
-          q.push(n);
-        }
-      }
+      const x = curr % w;
+      if (curr >= w) visit(curr - w);
+      if (curr < southLimit) visit(curr + w);
+      if (x !== 0) visit(curr - 1);
+      if (x !== w - 1) visit(curr + 1);
     }
     return seen;
   }

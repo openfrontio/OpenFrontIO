@@ -2,6 +2,7 @@ import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   NukeExplosionAttributes,
+  StructuresEffectAttributes,
   TrailEffectAttributes,
 } from "../../core/CosmeticSchemas";
 
@@ -9,7 +10,8 @@ import {
 const EMPTY_BG = "#444";
 
 /**
- * Swatch preview of a transport-ship-trail effect, filling its container.
+ * Swatch preview of a trail-styled effect (trails and the structures effect
+ * share the same gradient/transition attribute shapes), filling its container.
  *
  * - gradient / single color: a static swatch (flat color or left-to-right
  *   gradient — a multi-color list reads as a rainbow).
@@ -20,7 +22,7 @@ const EMPTY_BG = "#444";
 export class TrailSwatch extends LitElement {
   // Named `trail` (not `attributes`) to avoid clashing with Element.attributes.
   @property({ attribute: false })
-  trail: TrailEffectAttributes | null = null;
+  trail: TrailEffectAttributes | StructuresEffectAttributes | null = null;
 
   private animation: Animation | null = null;
 

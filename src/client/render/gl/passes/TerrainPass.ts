@@ -40,7 +40,12 @@ export class TerrainPass {
 
   constructor(
     private gl: WebGL2RenderingContext,
-    private terrainBytes: Uint8Array,
+    // Regenerates current per-tile terrain bytes (reflecting water-nuke
+    // conversions) for the rare full re-bake in setTerrainColors. A provider
+    // instead of a retained buffer: terrain bytes are map-sized (8 MB on the
+    // giant map).
+    private terrainSource: () => Uint8Array,
+    terrainBytes: Uint8Array,
     mapW: number,
     mapH: number,
     terrainColors?: TerrainColorOverrides,
@@ -86,7 +91,12 @@ export class TerrainPass {
       this.mapH,
       gl.RGBA,
       gl.UNSIGNED_BYTE,
-      buildTerrainRGBA(this.terrainBytes, this.mapW, this.mapH, terrainColors),
+      buildTerrainRGBA(
+        this.terrainSource(),
+        this.mapW,
+        this.mapH,
+        terrainColors,
+      ),
     );
   }
 
@@ -94,10 +104,8 @@ export class TerrainPass {
    * Update a subset of terrain tiles in-place (e.g. land→water from a water
    * nuke). `bytes[i]` is the new terrain byte for `refs[i]` (parallel arrays).
    * One 1×1 texSubImage2D per ref — fine for the small bursts a single nuke
-   * produces.
-   *
-   * Also writes back into `terrainBytes` so a later full re-upload (e.g.
-   * setTerrainColor) reflects these conversions instead of reverting them.
+   * produces. A later full re-upload (setTerrainColors) regenerates from
+   * terrainSource, whose backing game map already reflects these conversions.
    */
   applyTerrainDelta(refs: readonly number[], bytes: Uint8Array): void {
     if (refs.length === 0) return;
@@ -108,7 +116,6 @@ export class TerrainPass {
       const ref = refs[i];
       const x = ref % this.mapW;
       const y = (ref - x) / this.mapW;
-      this.terrainBytes[ref] = bytes[i];
       encodeTerrainTile(bytes[i], this.pixelScratch, 0, this.terrainColors);
       gl.texSubImage2D(
         gl.TEXTURE_2D,

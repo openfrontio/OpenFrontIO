@@ -173,11 +173,6 @@ export interface ConquestFx {
   tickAge?: number;
 }
 
-export interface TilePair {
-  ref: number;
-  state: number;
-}
-
 export interface NameEntry {
   playerID: string;
   x: number;
@@ -198,6 +193,7 @@ export interface PlayerStatusData {
   nukeTargetsMe: boolean;
   inDoomsdayClock: boolean;
   doomsdayClockDraining: boolean;
+  doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;
   allianceRemainingTicks: number;

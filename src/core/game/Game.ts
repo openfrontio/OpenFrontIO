@@ -13,6 +13,7 @@ import {
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
 
 function isEnumValue<T extends Record<string, string | number>>(
@@ -569,7 +570,7 @@ export interface Player {
 
   // Territory
   tiles(): ReadonlySet<TileRef>;
-  borderTiles(): ReadonlySet<TileRef>;
+  borderTiles(): ReadonlyTileSet;
   numTilesOwned(): number;
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
@@ -584,7 +585,13 @@ export interface Player {
   removeTroops(troops: number): number;
 
   // Units
-  units(...types: UnitType[]): Unit[];
+  // Fixed-arity + array overloads instead of a rest parameter: the rest array
+  // would be allocated on every call, and this is one of the hottest calls in
+  // the simulation. With no arguments the player's live unit array is
+  // returned — do not mutate it; typed queries return a fresh snapshot array.
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
@@ -703,8 +710,13 @@ export interface Game extends GameMap {
   map(): GameMap;
   miniMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;
-  // Zero-allocation neighbor iteration (cardinal only) to avoid creating arrays
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors().
   forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void;
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. Reuse out across calls to avoid
+  // allocation.
+  neighbors4(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration for performance-critical cluster calculation
   // Alternative to neighborsWithDiag() that returns arrays
   // Avoids creating intermediate arrays and uses a callback for better performance
@@ -753,7 +765,10 @@ export interface Game extends GameMap {
 
   // Units
   unit(id: number): Unit | undefined;
-  units(...types: UnitType[]): Unit[];
+  // See Player.units() for why this is not a rest parameter.
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
   hasUnitNearby(

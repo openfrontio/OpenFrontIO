@@ -12,6 +12,7 @@ import { createGame, L, W } from "./_fixtures";
 describe("PathFinding.Water", () => {
   let game: Game;
   let worldGame: Game;
+  let giantWorldGame: Game;
 
   function createPathFinder(g: Game = game): SteppingPathFinder<TileRef> {
     return PathFinding.Water(g);
@@ -20,6 +21,7 @@ describe("PathFinding.Water", () => {
   beforeAll(async () => {
     game = await setup("ocean_and_land");
     worldGame = await setup("world", { disableNavMesh: false });
+    giantWorldGame = await setup("giantworldmap", { disableNavMesh: false });
   });
 
   describe("findPath", () => {
@@ -272,6 +274,25 @@ describe("PathFinding.Water", () => {
       );
 
       expect(path).not.toBeNull();
+    });
+  });
+
+  describe("Giant World Map routes", () => {
+    it("routes correctly in promoted components", () => {
+      const pathFinder = createPathFinder(giantWorldGame);
+      const map = giantWorldGame.map();
+
+      // Coordinates inside Component 459 in map4x (promoted)
+      const from = map.ref(2616, 452);
+      const to = map.ref(2676, 474);
+
+      expect(map.isWater(from)).toBe(true);
+      expect(map.isWater(to)).toBe(true);
+
+      const path = pathFinder.findPath(from, to);
+      expect(path).not.toBeNull();
+      expect(path![0]).toBe(from);
+      expect(path![path!.length - 1]).toBe(to);
     });
   });
 });

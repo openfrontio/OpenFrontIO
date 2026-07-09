@@ -275,7 +275,9 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return {
-      borderTiles: player.borderTiles(),
+      // Copy into a plain Set: this result crosses the worker boundary via
+      // structured clone, which TileSet does not survive.
+      borderTiles: new Set(player.borderTiles()),
     } as PlayerBorderTiles;
   }
 

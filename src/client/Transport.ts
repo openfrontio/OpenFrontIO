@@ -31,7 +31,9 @@ import {
 import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { showInGameAlert } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
+import { translateText } from "./Utils";
 import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
@@ -404,8 +406,11 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (event.code === 1002) {
-        // TODO: make this a modal
-        alert(`connection refused: ${event.reason}`);
+        showInGameAlert(
+          translateText("error_modal.connection_refused", {
+            reason: event.reason,
+          }),
+        );
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();

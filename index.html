@@ -26,9 +26,23 @@
         padding-left: env(safe-area-inset-left);
       }
 
-      /* Prevent Playwire bottom rail from affecting flex layout */
+      /* Prevent Playwire bottom rail from affecting flex layout,
+         and keep it below the bottom HUD (z-[200]) so it can't cover the control panel */
       [id^="pw-oop-bottom_rail"] {
         position: fixed !important;
+        z-index: 150 !important;
+      }
+
+      /* Google Funding Choices CCPA link override */
+      .fc-dns-link,
+      .fc-ccpa-root,
+      .fc-consent-root {
+        position: fixed !important;
+        z-index: 999999 !important;
+      }
+      .fc-dns-link {
+        bottom: 15px !important;
+        left: 15px !important;
       }
 
       /* Ensure full viewport height on iOS */

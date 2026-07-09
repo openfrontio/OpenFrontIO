@@ -6,6 +6,7 @@ import { Cosmetics } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
+import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -163,14 +164,8 @@ export class StoreModal extends BaseModal {
       this.affiliateCode,
     ).filter((r) => r.type === "pack" && r.relationship === "purchasable");
 
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_packs")}
-      </div>`;
-    }
-
+    // The custom-amount card is always purchasable (priced inline server-side,
+    // no catalog entry), and follows the fixed packs at the end of the grid.
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
@@ -183,6 +178,7 @@ export class StoreModal extends BaseModal {
             ></cosmetic-button>
           `,
         )}
+        <custom-currency-card></custom-currency-card>
       </div>
     `;
   }

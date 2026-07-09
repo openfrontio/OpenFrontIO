@@ -1,9 +1,10 @@
 /**
  * TrailPass — boat + nuke trail lines.
  *
- * Owns the CPU-side trail state (R16UI: 0=none, bits 0-11=ownerID, bit 12=nuke
- * trail), the dirty-row bookkeeping for partial GPU uploads, and the trail
+ * Owns the dirty-row bookkeeping for partial GPU uploads and the trail
  * fragment shader that draws the colored breadcrumb behind moving units.
+ * Trail state itself (R16UI: 0=none, bits 0-11=ownerID, bit 12=nuke trail)
+ * is referenced from the caller's array, not copied.
  */
 
 import type { RenderSettings } from "../RenderSettings";
@@ -37,11 +38,14 @@ export class TrailPass {
   // so the value stays small and sin()/fract() don't quantize over long sessions.
   private readonly startTime = performance.now();
 
-  /** CPU-side trail state (R16UI: 0=none, owner in bits 0-11, nuke bit 12). */
-  private cpuTrailState: Uint16Array;
   private trailsDirty = false;
 
-  /** Live-game reference — bypasses memcpy. Null for replay path. */
+  /**
+   * Reference to the caller-owned trail state (R16UI: 0=none, owner in bits
+   * 0-11, nuke bit 12). Every upload entry point provides it, so the pass
+   * keeps no copy of its own; the caller's array must stay current until the
+   * flush. Null until the first upload.
+   */
   private liveTrailRef: Uint16Array | null = null;
 
   /** Dirty row range for partial trail upload. Infinity/-1 = full upload. */
@@ -64,7 +68,6 @@ export class TrailPass {
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
     this.effectTex = effectTex;
-    this.cpuTrailState = new Uint16Array(mapW * mapH);
 
     this.program = createProgram(
       gl,
@@ -128,8 +131,9 @@ export class TrailPass {
   /** Flush trail texture to GPU. Called once per render frame in uploadTextures. */
   flushTexture(): void {
     if (!this.trailsDirty) return;
+    const src = this.liveTrailRef;
+    if (src === null) return; // dirty is only ever set alongside the ref
     const gl = this.gl;
-    const src = this.liveTrailRef ?? this.cpuTrailState;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.trailTex);
 

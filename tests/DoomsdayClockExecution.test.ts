@@ -23,12 +23,14 @@ import { playerInfo, setup } from "./util/Setup";
 // the pure-function tests further down; the end-to-end integration against the
 // real simulation is the final test.
 //
-// The exec reads the real "veryfast" waves. WAVE_TICK sits in the 20% hold
-// window (elapsed 750-780), so the bar is a stable 20% of the map (land 1000 ->
-// bar 200) while the drain/flag logic is exercised.
+// The exec reads the real "veryfast" waves. WAVE_TICK sits in the 26% hold
+// window (elapsed 796-808), so the bar is a stable 26% of the map (land 1000 ->
+// bar 260) while the drain/flag logic is exercised. b(100) stays below it and
+// a(400) above, so the flag/drain assertions (which depend on the drain config,
+// not the exact bar) are unchanged.
 // ---------------------------------------------------------------------------
 
-const WAVE_TICK = 7600; // elapsed 760s -> veryfast 20% hold (bar 200 @ land 1000)
+const WAVE_TICK = 8000; // elapsed 800s -> veryfast 26% hold (bar 260 @ land 1000)
 
 type SDConfig = ReturnType<ReturnType<Game["config"]>["doomsdayClockConfig"]>;
 
@@ -40,12 +42,39 @@ function sdConfig(over: Partial<SDConfig> = {}): SDConfig {
     drainStartPercent: 10,
     drainMaxPercent: 80,
     drainRampSeconds: 3,
+    warshipDrainStartPercent: 10, // fixture: same start as troops (linear curve below)
+    warshipDrainMaxPercent: 100, // ships ramp to a higher ceiling than troops
+    warshipDrainCurveExponent: 1, // fixture uses a linear ramp for exact numbers
     ...over,
   };
 }
 
+// A stand-in warship: tracks HP and whether a destroyer (kill credit) was ever
+// passed to modifyHealth. Doomsday decay must pass none, so destruction is
+// environmental and never scores a kill (see UnitImpl.delete).
+class FakeWarship {
+  destroyed = false;
+  attackerWasPassed = false;
+  constructor(
+    private hp: number,
+    private readonly hpMax: number,
+  ) {}
+  maxHealth(): number {
+    return this.hpMax;
+  }
+  health(): number {
+    return this.hp;
+  }
+  modifyHealth(delta: number, attacker?: unknown): void {
+    if (attacker !== undefined) this.attackerWasPassed = true;
+    this.hp = Math.max(0, Math.min(this.hpMax, this.hp + delta));
+    if (this.hp === 0) this.destroyed = true;
+  }
+}
+
 class FakePlayer {
   markedTick = -1;
+  warships: FakeWarship[] = [];
   readonly troopMax: number;
   constructor(
     private game: FakeGame,
@@ -96,6 +125,11 @@ class FakePlayer {
   }
   clearDoomsdayClock(): void {
     this.markedTick = -1;
+  }
+  // The exec calls units(UnitType.Warship); we ignore the filter and hand back
+  // this side's warships.
+  units(..._types: unknown[]): FakeWarship[] {
+    return this.warships;
   }
 }
 
@@ -283,6 +317,81 @@ describe("DoomsdayClockExecution (logic)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Warship decay: a flagged (sub-threshold, non-leader) side's warships bleed HP
+// on the troop start + ramp but toward a much higher ceiling, so at full
+// attrition they sink in ~2s. Destroyed with no attacker (never a credited
+// kill); the leader's fleet is spared.
+// ---------------------------------------------------------------------------
+
+describe("DoomsdayClockExecution (warship decay)", () => {
+  // b (100 tiles) is below the 200 bar at WAVE_TICK and is flagged; a (400) is
+  // the leader and is spared. maxTroops == warship maxHealth == 1000, so at the
+  // start of the ramp troop and warship losses are numerically identical; they
+  // diverge later as warships climb to their higher ceiling.
+  function warshipGame(bShips: FakeWarship[], aShips: FakeWarship[] = []) {
+    const game = new FakeGame(1000, sdConfig(), []);
+    const a = new FakePlayer(game, 400, 1000); // leader, above the bar
+    const b = new FakePlayer(game, 100, 1000); // below the bar
+    a.warships = aShips;
+    b.warships = bShips;
+    game.ps = [a, b];
+    return { game, a, b };
+  }
+
+  it("matches the troop drain at the start of the ramp", () => {
+    const ship = new FakeWarship(1000, 1000);
+    const { game, b } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK); // flag b (within the warn window)
+    runAt(exec, game, WAVE_TICK + 10); // 1s under -> 0s past warn -> drainStart 10%
+    expect(b.troops()).toBe(900); // troops: 10% of 1000
+    expect(ship.health()).toBe(900); // warship: identical at the start (same 10%)
+  });
+
+  it("scuttles a warship in one tick at full attrition (its own high ceiling)", () => {
+    // Once the side is fully ramped, a fresh full-HP warship is destroyed in a
+    // single tick at warshipDrainMaxPercent (100% here). The troop max (80%)
+    // would leave it at 200 HP, so destruction proves the ship uses its own
+    // higher ceiling, not the troop rate.
+    const { game, b } = warshipGame([]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK); // flag b (starts the side's attrition clock)
+    const fresh = new FakeWarship(1000, 1000);
+    b.warships = [fresh]; // appears once the side is fully ramped
+    runAt(exec, game, WAVE_TICK + 70); // secondsPastWarn 6 >= ramp 3 -> max
+    expect(fresh.destroyed).toBe(true);
+  });
+
+  it("destroys warships with no attacker, so decay never scores a kill", () => {
+    const ship = new FakeWarship(50, 1000); // less HP than one tick of drain
+    const { game } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    runAt(exec, game, WAVE_TICK + 10); // 10% of 1000 = 100 dmg > 50 hp
+    expect(ship.destroyed).toBe(true);
+    expect(ship.attackerWasPassed).toBe(false); // environmental, no kill credit
+  });
+
+  it("spares the leader's warships", () => {
+    const leaderShip = new FakeWarship(1000, 1000);
+    const { game } = warshipGame([new FakeWarship(1000, 1000)], [leaderShip]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    runAt(exec, game, WAVE_TICK + 30); // well past the warn window
+    expect(leaderShip.health()).toBe(1000);
+  });
+
+  it("does not damage warships during the warn window", () => {
+    const ship = new FakeWarship(1000, 1000);
+    const { game, b } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK); // flagged this tick, 0s under -> within warn
+    expect(b.inDoomsdayClock()).toBe(true);
+    expect(ship.health()).toBe(1000);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Team modes: the bar applies to a whole team's combined territory, and every
 // member shares the fate (skull + drain together).
 // ---------------------------------------------------------------------------
@@ -372,23 +481,23 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
   const land = 10000;
 
   it("is 0 through the grace, ramps linearly, then holds during the pause", () => {
-    // normal: grace 330s, then a 270s ramp 0->3%, then a 30s hold, ...
-    expect(doomsdayClockRequiredTiles("normal", land, 200)).toBe(0); // in the grace
-    expect(doomsdayClockRequiredTiles("normal", land, 330)).toBe(0); // grace ends
-    expect(doomsdayClockRequiredTiles("normal", land, 465)).toBe(150); // halfway up -> 1.5%
-    expect(doomsdayClockRequiredTiles("normal", land, 600)).toBe(300); // ramp done -> 3%
-    expect(doomsdayClockRequiredTiles("normal", land, 615)).toBe(300); // pause holds 3%
-    expect(doomsdayClockRequiredTiles("normal", land, 630)).toBe(300); // next ramp starts at 3%
+    // normal: grace 600s, then a 208s ramp 0->4%, then a 50s hold, ...
+    expect(doomsdayClockRequiredTiles("normal", land, 300)).toBe(0); // in the grace
+    expect(doomsdayClockRequiredTiles("normal", land, 600)).toBe(0); // grace ends
+    expect(doomsdayClockRequiredTiles("normal", land, 704)).toBe(200); // halfway up -> 2%
+    expect(doomsdayClockRequiredTiles("normal", land, 808)).toBe(400); // ramp done -> 4%
+    expect(doomsdayClockRequiredTiles("normal", land, 830)).toBe(400); // pause holds 4%
+    expect(doomsdayClockRequiredTiles("normal", land, 858)).toBe(400); // next ramp starts at 4%
     expect(doomsdayClockRequiredTiles("normal", land, 9999)).toBe(5500); // final 55%
   });
 
-  it("passes 30% then reaches the final 55% squeeze per preset", () => {
-    // 30% waypoint, then the 6th wave to 55% one cycle later.
-    expect(doomsdayClockRequiredTiles("normal", land, 1800)).toBe(3000); // 30% @ 30:00
-    expect(doomsdayClockRequiredTiles("normal", land, 2100)).toBe(5500); // 55% @ 35:00
-    expect(doomsdayClockRequiredTiles("fast", land, 1440)).toBe(5500); // 55% @ 24:00
-    expect(doomsdayClockRequiredTiles("veryfast", land, 1050)).toBe(5500); // 55% @ 17:30
-    expect(doomsdayClockRequiredTiles("slow", land, 2520)).toBe(5500); // 55% @ 42:00
+  it("reaches the 40% wave then the final 55% squeeze per preset", () => {
+    // 40% waypoint (5th wave), then the 6th wave to 55% at the preset cap.
+    expect(doomsdayClockRequiredTiles("normal", land, 1850)).toBe(4000); // 40% wave
+    expect(doomsdayClockRequiredTiles("normal", land, 2110)).toBe(5500); // 55% @ 35:00
+    expect(doomsdayClockRequiredTiles("fast", land, 1510)).toBe(5500); // 55% @ 25:00
+    expect(doomsdayClockRequiredTiles("veryfast", land, 910)).toBe(5500); // 55% @ 15:00
+    expect(doomsdayClockRequiredTiles("slow", land, 2710)).toBe(5500); // 55% @ 45:00
   });
 
   it("never decreases, and is zero for no land", () => {
@@ -406,51 +515,53 @@ describe("doomsdayClockSideRequiredTiles (headcount scaling)", () => {
   const land = 10000;
 
   it("scales the base share by side size and caps at the whole map", () => {
-    // veryfast at 900s is the final 30% wave -> base 3000 tiles.
-    expect(doomsdayClockRequiredTiles("veryfast", land, 900)).toBe(3000);
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 1)).toBe(3000); // solo
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 2)).toBe(6000); // 2x
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 4)).toBe(
+    // veryfast at 800s sits in the 26% hold -> base 2600 tiles.
+    expect(doomsdayClockRequiredTiles("veryfast", land, 800)).toBe(2600);
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 1)).toBe(2600); // solo
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 2)).toBe(5200); // 2x
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 4)).toBe(
       10000,
-    ); // capped
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 900, 0)).toBe(3000); // min size 1
+    ); // 10400 capped at the map
+    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 0)).toBe(2600); // min size 1
   });
 });
 
 describe("doomsdayClockWaveState", () => {
   it("reports the live share and target while ramping", () => {
-    const s = doomsdayClockWaveState("normal", 465); // mid the first ramp (0->3%)
-    expect(s.currentPercent).toBe(1.5);
-    expect(s.targetPercent).toBe(3);
+    const s = doomsdayClockWaveState("normal", 704); // mid the first ramp (0->4%)
+    expect(s.currentPercent).toBe(2);
+    expect(s.targetPercent).toBe(4);
     expect(s.growing).toBe(true);
     expect(s.secondsToNextGrowth).toBe(0);
+    expect(s.secondsToTarget).toBe(104); // 208s ramp, 104s elapsed into it
     expect(s.done).toBe(false);
   });
 
   it("counts down to the next ramp during a pause", () => {
-    const s = doomsdayClockWaveState("normal", 615); // in the first pause (600-630)
+    const s = doomsdayClockWaveState("normal", 830); // in the first pause (808-858)
     expect(s.growing).toBe(false);
-    expect(s.currentPercent).toBe(3); // held at the level just reached
-    expect(s.targetPercent).toBe(5); // next ramp climbs to 5%
-    expect(s.secondsToNextGrowth).toBe(15); // next ramp starts at 630
+    expect(s.currentPercent).toBe(4); // held at the level just reached
+    expect(s.targetPercent).toBe(9); // next ramp climbs to 9%
+    expect(s.secondsToNextGrowth).toBe(28); // next ramp starts at 858
+    expect(s.secondsToTarget).toBe(0); // not rising, so no rise countdown
   });
 
   it("counts down through the grace", () => {
     const s = doomsdayClockWaveState("normal", 200);
     expect(s.currentPercent).toBe(0);
-    expect(s.targetPercent).toBe(3);
-    expect(s.secondsToNextGrowth).toBe(130); // first ramp at 330
+    expect(s.targetPercent).toBe(4);
+    expect(s.secondsToNextGrowth).toBe(400); // first ramp at 600
   });
 
   it("flags the 10s window (5s each side) around a ramp starting", () => {
-    // veryfast first ramp starts at 180s.
-    expect(doomsdayClockWaveState("veryfast", 176).waveFlash).toBe(true); // 4s before
-    expect(doomsdayClockWaveState("veryfast", 184).waveFlash).toBe(true); // 4s after
-    expect(doomsdayClockWaveState("veryfast", 250).waveFlash).toBe(false); // mid-ramp
+    // veryfast first ramp starts at 600s.
+    expect(doomsdayClockWaveState("veryfast", 596).waveFlash).toBe(true); // 4s before
+    expect(doomsdayClockWaveState("veryfast", 604).waveFlash).toBe(true); // 4s after
+    expect(doomsdayClockWaveState("veryfast", 620).waveFlash).toBe(false); // mid-ramp
   });
 
   it("marks done after the last ramp", () => {
-    const s = doomsdayClockWaveState("veryfast", 1100); // past the final ramp (@1050) = 55%
+    const s = doomsdayClockWaveState("veryfast", 1100); // past the final ramp (@900) = 55%
     expect(s.done).toBe(true);
     expect(s.currentPercent).toBe(55);
     expect(s.secondsToNextGrowth).toBe(0);
@@ -484,6 +595,37 @@ describe("doomsdayClockDrain", () => {
   it("treats time before the warn window as zero", () => {
     expect(doomsdayClockDrain(1000, -5, cfg)).toBe(100); // clamped to start %
   });
+
+  it("shapes a convex curve (exponent > 1): gentle early, steep late, integer-only", () => {
+    // Warship-style ramp: start 1%, max 50% over 90s, exponent 8. Integer-only
+    // (no floats) so it's deterministic in the lockstep sim.
+    const ship = {
+      drainStartPercent: 1,
+      drainMaxPercent: 50,
+      drainRampSeconds: 90,
+    };
+    const at = (t: number) => doomsdayClockDrain(10000, t, ship, 8);
+
+    expect(at(0)).toBe(100); // 1% of 10000 at the very start
+    expect(at(90)).toBe(5000); // 50% once fully ramped
+    expect(at(200)).toBe(5000); // holds at the max past the ramp
+
+    // Convex: at the ramp midpoint it's still far below the linear midpoint
+    // (which would be ~25%); the bulk of the attrition is back-loaded.
+    expect(at(45)).toBeLessThan(at(90) / 4);
+
+    // Monotonic non-decreasing, and every value an integer.
+    let prev = -1;
+    for (let t = 0; t <= 90; t++) {
+      const v = at(t);
+      expect(Number.isInteger(v)).toBe(true);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+
+    // Deterministic: identical inputs give identical output.
+    expect(at(37)).toBe(at(37));
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -507,13 +649,13 @@ function giveLandTiles(game: Game, player: Player, n: number): number {
 }
 
 describe("DoomsdayClockExecution (integration)", () => {
-  // Steepest preset; we run past its grace (180s) into the waves. Drain tuning
-  // is internal now, so this exercises the default drain (warn 10s, 2%->6%/50s).
+  // Steepest preset; we run past its grace (600s) into the waves. Drain tuning
+  // is internal now, so this exercises the default drain (warn 30s, 2%->5%/90s).
   const SD = {
     enabled: true,
     speed: "veryfast" as const,
   };
-  const TICKS = 3000; // 300s of game time -> veryfast holding its 3% wave
+  const TICKS = 6500; // 650s of game time -> veryfast holding its 4% wave
 
   async function buildGame(enabled: boolean) {
     const game = await setup(
@@ -565,8 +707,8 @@ describe("DoomsdayClockExecution (integration)", () => {
 // ---------------------------------------------------------------------------
 
 describe("DoomsdayClockExecution (default drain, with income)", () => {
-  it("wipes a full-troop side in ~1 minute (warn + linear drain)", async () => {
-    // Only enabled + speed set -> drain uses the defaults (warn 10s, 2%->6% /50s).
+  it("wipes a full-troop side in ~2 minutes (warn + linear drain)", async () => {
+    // Only enabled + speed set -> drain uses the defaults (warn 30s, 2%->5% /90s).
     // veryfast is chosen purely so the bar rises fast enough to catch the sliver.
     const game = await setup(
       "plains",
@@ -590,7 +732,8 @@ describe("DoomsdayClockExecution (default drain, with income)", () => {
     // Run until the rising bar catches the sliver, then fill it to a full stack
     // so we measure the worst-case (longest) wipe from that moment.
     let caughtTick = -1;
-    for (let i = 0; i < 3000; i++) {
+    for (let i = 0; i < 8000; i++) {
+      // grace is 600s now -> the bar only rises after ~6000 ticks
       game.executeNextTick();
       if (small.inDoomsdayClock()) {
         caughtTick = game.ticks();
@@ -601,7 +744,7 @@ describe("DoomsdayClockExecution (default drain, with income)", () => {
     small.setTroops(game.config().maxTroops(small));
 
     let zeroTick = -1;
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < 2500; i++) {
       game.executeNextTick();
       if (small.troops() <= 0) {
         zeroTick = game.ticks();
@@ -610,8 +753,8 @@ describe("DoomsdayClockExecution (default drain, with income)", () => {
     }
     expect(zeroTick).toBeGreaterThan(0);
     const seconds = (zeroTick - caughtTick) / 10;
-    // ~10s warn + ~50s drain, income included: about a minute (NOT ~45s).
-    expect(seconds).toBeGreaterThan(50);
-    expect(seconds).toBeLessThan(85);
+    // ~30s warn + the slower drain, income included: about two minutes.
+    expect(seconds).toBeGreaterThan(90);
+    expect(seconds).toBeLessThan(150);
   });
 });

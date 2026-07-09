@@ -99,7 +99,7 @@ export class NationNukeBehavior {
     }
     const range = this.game.config().nukeMagnitudes(nukeType).outer;
 
-    const structures = nukeTarget.units(...Structures.types);
+    const structures = nukeTarget.units(Structures.types);
     const structureTiles = structures.map((u) => u.tile());
     const difficulty = this.game.config().gameConfig().difficulty;
     // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
@@ -284,7 +284,7 @@ export class NationNukeBehavior {
       if (this.player.isFriendly(other)) continue;
       const tilesOwned = other.numTilesOwned();
       if (tilesOwned === 0) continue;
-      const structures = other.units(...Structures.types);
+      const structures = other.units(Structures.types);
       let levelSum = 0;
       for (const s of structures) levelSum += s.level();
       // Skip players with too few structures regardless of density

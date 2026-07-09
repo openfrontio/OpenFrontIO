@@ -10,7 +10,8 @@ export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 // An effect cosmetic of any type — discriminated on effectType (today
-// transportShipTrail + nukeTrail + nukeExplosion; gains a member per effectType).
+// transportShipTrail + nukeTrail + nukeExplosion + structures; gains a member
+// per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
 // Shared by every trail effectType (transportShipTrail, nukeTrail, …).
@@ -18,6 +19,10 @@ export type TrailEffectAttributes = z.infer<typeof TrailEffectAttributesSchema>;
 // Attributes of a nuke-explosion effect (a detonation FX, not a trail).
 export type NukeExplosionAttributes = z.infer<
   typeof NukeExplosionAttributesSchema
+>;
+// Attributes of a structures effect (recolors structure icons, not a trail).
+export type StructuresEffectAttributes = z.infer<
+  typeof StructuresEffectAttributesSchema
 >;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
@@ -106,6 +111,7 @@ export const EFFECT_TYPES = [
   "transportShipTrail",
   "nukeTrail",
   "nukeExplosion",
+  "structures",
 ] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
@@ -199,11 +205,45 @@ const NukeExplosionEffectSchema = CosmeticSchema.extend({
   url: z.string().optional(),
 });
 
+// Structures-effect attributes, discriminated on `type`. Structurally the
+// same shapes as the trail attributes today, but structures are not trails —
+// separate schema, and the spatial semantics differ:
+//  - "gradient": the palette spans each structure icon's diagonal once (a
+//    visible gradient across the shape), sliding one full cycle every
+//    colorSize · 4 · count / movementSpeed seconds (the trail-equivalent pace).
+//  - "transition": the whole icon is one color at a time, cross-fading through
+//    the list. `frequency` = color changes per second.
+// Colors are unvalidated strings; the renderer drops any it can't parse (and
+// an empty list leaves the structure on its normal player color).
+export const StructuresEffectAttributesSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("gradient"),
+    colors: z.array(z.string()),
+    colorSize: z.number(),
+    movementSpeed: z.number(),
+  }),
+  z.object({
+    type: z.literal("transition"),
+    colors: z.array(z.string()),
+    frequency: z.number(),
+  }),
+]);
+
+// Recolors the owner's structures (city, port, factory, defense post, SAM,
+// silo) with gradient / transition styles. Shown while the owner's territory
+// is hovered; structures otherwise keep their normal player colors.
+const StructuresEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("structures"),
+  attributes: StructuresEffectAttributesSchema,
+  url: z.string().optional(),
+});
+
 // Any catalog effect, discriminated on effectType. Add a member per effectType.
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
   NukeTrailEffectSchema,
   NukeExplosionEffectSchema,
+  StructuresEffectSchema,
 ]);
 
 /**
@@ -226,17 +266,21 @@ export function isNukeExplosionEffect(
 }
 
 /**
- * A player selects one effect per "slot". A slot is the effectType for trails
- * (transportShipTrail, nukeTrail) and the nukeType for nuke explosions (atom,
- * hydro, mirvWarhead) — so a player can equip a distinct explosion per bomb.
- * Returns the effectType a slot resolves to for catalog lookup, or undefined for
- * an unknown/stale slot (e.g. a bare "nukeExplosion" key from before this split).
+ * A player selects one effect per "slot". A slot is the effectType itself for
+ * per-type effects (transportShipTrail, nukeTrail, structures) and the
+ * nukeType for nuke explosions (atom, hydro, mirvWarhead) — so a player can
+ * equip a distinct explosion per bomb. Returns the effectType a slot resolves
+ * to for catalog lookup, or undefined for an unknown/stale slot (e.g. a bare
+ * "nukeExplosion" key from before the per-nukeType split).
  */
 export function effectTypeForSlot(slot: string): EffectType | undefined {
   if ((NUKE_EXPLOSION_TYPES as readonly string[]).includes(slot)) {
     return "nukeExplosion";
   }
-  if ((TRAIL_EFFECT_TYPES as readonly string[]).includes(slot)) {
+  if (
+    (EFFECT_TYPES as readonly string[]).includes(slot) &&
+    slot !== "nukeExplosion"
+  ) {
     return slot as EffectType;
   }
   return undefined;
@@ -330,6 +374,7 @@ export const CosmeticsSchema = z.object({
       ).optional(),
       nukeTrail: lenientRecord(NukeTrailEffectSchema).optional(),
       nukeExplosion: lenientRecord(NukeExplosionEffectSchema).optional(),
+      structures: lenientRecord(StructuresEffectSchema).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),

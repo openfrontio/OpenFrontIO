@@ -9,6 +9,7 @@ import {
   Player,
   PlayerType,
   Team,
+  UnitType,
 } from "../game/Game";
 
 /**
@@ -43,6 +44,15 @@ export class DoomsdayClockExecution implements Execution {
     const mg = this.mg;
     const cfg = mg.config().doomsdayClockConfig();
     if (!cfg.enabled) return;
+    // Warships bleed on their OWN gentler start + higher ceiling, and (via the
+    // curve exponent passed to the drain below) a STEEP convex ramp: a ship
+    // caught when its side is first doomed lasts ~as long as troops, but a side
+    // that has been under the clock the full ramp loses ships in ~2s.
+    const warshipDrainCfg = {
+      ...cfg,
+      drainStartPercent: cfg.warshipDrainStartPercent,
+      drainMaxPercent: cfg.warshipDrainMaxPercent,
+    };
 
     const elapsed = mg.elapsedGameSeconds();
     // Humans and Nations are subject to it; the small map bots are not (the
@@ -94,12 +104,30 @@ export class DoomsdayClockExecution implements Execution {
           m.enterDoomsdayClock();
           const secondsUnder = Math.floor(m.doomsdayClockTicks() / 10);
           if (secondsUnder >= cfg.warnSeconds) {
+            const secondsPastWarn = secondsUnder - cfg.warnSeconds;
             const chunk = doomsdayClockDrain(
               mg.config().maxTroops(m),
-              secondsUnder - cfg.warnSeconds,
+              secondsPastWarn,
               cfg,
             );
             m.removeTroops(chunk); // caps at current troops
+            // The navy bleeds on the same ramp but toward warshipDrainCfg's far
+            // higher ceiling (see above), so a doomed side's fleet is scuttled
+            // fast at full attrition. A percentage of each warship's (veterancy-
+            // adjusted) max health; passing no attacker makes each destruction
+            // environmental, never a credited kill (see UnitImpl.delete). Healing
+            // is suppressed for flagged owners in WarshipExecution.healWarship so
+            // the decay actually lands.
+            for (const ws of m.units(UnitType.Warship)) {
+              ws.modifyHealth(
+                -doomsdayClockDrain(
+                  ws.maxHealth(),
+                  secondsPastWarn,
+                  warshipDrainCfg,
+                  cfg.warshipDrainCurveExponent,
+                ),
+              );
+            }
           }
         }
       } else {

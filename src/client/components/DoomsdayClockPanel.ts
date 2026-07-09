@@ -17,8 +17,9 @@ const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
  * The Doomsday Clock readout: a self-contained panel showing the rising bar, the
  * side's share vs the threshold, the stage (Stable/Unstable/Collapsing) and the
  * wave countdown. Embedded by game-right-sidebar so it stacks (centered) under
- * the game timer; it hides itself when the mode is off, after a winner, or for a
- * spectator/eliminated player.
+ * the game timer; it hides only when the mode is off or after a winner. A
+ * spectator, replay viewer, or eliminated / not-spawned player still sees the
+ * zone-only readout (rising bar + wave countdown, no personal status line).
  */
 @customElement("doomsday-clock-panel")
 export class DoomsdayClockPanel extends LitElement {
@@ -79,16 +80,17 @@ export class DoomsdayClockPanel extends LitElement {
   render() {
     const sd = this.game?.config().doomsdayClockConfig();
     const me = this.game?.myPlayer();
-    // Personal readout: no meaning when off, after a winner, or for a spectator
-    // / eliminated player (a 0-tile "me" would also pulse red-alert forever).
-    const visible =
-      !!sd?.enabled && !this.hasWinner && (me?.isAlive() ?? false);
+    // Show whenever the mode is on and there's no winner yet. A spectator, a
+    // replay viewer, or a not-spawned / eliminated player has no live side, so
+    // `live` is false and they get the zone-only readout (rising bar + countdown).
+    const visible = !!sd?.enabled && !this.hasWinner;
     this.style.display = visible ? "block" : "none";
-    if (!visible || !me || !sd) return html``;
+    if (!visible || !sd) return html``;
 
+    const live = !!me && me.isAlive();
     const elapsed = Math.floor(this.game.elapsedGameSeconds());
     const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
-    const myTeam = me.team() ?? null;
+    const myTeam = me?.team() ?? null;
     const { tiles: yourTiles, size: mySize } = this.sideStats(me);
     // Threshold is scaled by the side's headcount (same as the sim).
     const requiredTiles = doomsdayClockSideRequiredTiles(
@@ -109,7 +111,7 @@ export class DoomsdayClockPanel extends LitElement {
     // Safe but within 10% (relative) of the bar: e.g. at 9% when the bar is 10%,
     // or 0.9% when it's 1%. About to be caught, so it blinks red too.
     const nearDanger =
-      !flagged && requiredTiles > 0 && yourPct <= requiredPct * 1.1;
+      live && !flagged && requiredTiles > 0 && yourPct <= requiredPct * 1.1;
     // In danger (caught/draining) or about to be: everything red.
     const redAlert = flagged || nearDanger;
 
@@ -122,17 +124,20 @@ export class DoomsdayClockPanel extends LitElement {
       : wave.growing
         ? translateText("doomsday_clock.growing", {
             pct: scalePct(wave.targetPercent),
+            time: this.secondsToHms(wave.secondsToTarget),
           })
         : translateText("doomsday_clock.next_wave", {
             pct: scalePct(wave.targetPercent),
             time: this.secondsToHms(wave.secondsToNextGrowth),
           });
 
-    // Status word + detail line.
-    let status: string;
-    let statusClass: string;
-    let detail: string;
-    if (draining && me) {
+    // Status word + detail line. Spectators, replay viewers, and eliminated /
+    // not-spawned players have no live side, so they see just the zone readout
+    // (no personal status word). Detail defaults to the zone readout for everyone.
+    let status = "";
+    let statusClass = "";
+    let detail = zoneDetail;
+    if (live && draining && me) {
       // Drain is a % of max-troop capacity, capped at current troops; show the
       // actual per-second loss (renderTroops handles the /10 display unit).
       const chunk = doomsdayClockDrain(
@@ -144,18 +149,16 @@ export class DoomsdayClockPanel extends LitElement {
         rate: renderTroops(Math.min(me.troops(), chunk)),
       });
       statusClass = "text-red-400 font-bold";
-      detail = zoneDetail; // keep the zone readout visible while collapsing
-    } else if (flagged) {
+    } else if (live && flagged) {
       // Caught below a wave: count down the cooldown before decay begins.
       status = translateText("doomsday_clock.unstable");
       statusClass = "text-red-400 font-bold";
       detail = translateText("doomsday_clock.decay_in", {
         secs: Math.max(0, sd.warnSeconds - secondsUnder),
       });
-    } else {
+    } else if (live) {
       status = translateText("doomsday_clock.stable");
       statusClass = nearDanger ? "text-orange-300 font-bold" : "text-green-400";
-      detail = zoneDetail;
     }
 
     // Panel edge cue: red pulse when in/near danger, orange pulse in the 10s
@@ -223,18 +226,22 @@ export class DoomsdayClockPanel extends LitElement {
               pct: requiredPct.toFixed(1),
             })}
           </span>
-          ${myTeam !== null
-            ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
-                ${translateText("doomsday_clock.your_team", {
-                  team: this.teamDisplayName(myTeam),
-                  pct: yourPct.toFixed(1),
-                })}
-              </span>`
-            : html`<span class=${redAlert ? "text-red-300" : "text-green-300"}>
-                ${translateText("doomsday_clock.you", {
-                  pct: yourPct.toFixed(1),
-                })}
-              </span>`}
+          ${live
+            ? myTeam !== null
+              ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
+                  ${translateText("doomsday_clock.your_team", {
+                    team: this.teamDisplayName(myTeam),
+                    pct: yourPct.toFixed(1),
+                  })}
+                </span>`
+              : html`<span
+                  class=${redAlert ? "text-red-300" : "text-green-300"}
+                >
+                  ${translateText("doomsday_clock.you", {
+                    pct: yourPct.toFixed(1),
+                  })}
+                </span>`
+            : ""}
         </div>
         ${detail
           ? html`<div class="text-xs text-gray-400">${detail}</div>`

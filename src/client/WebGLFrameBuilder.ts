@@ -8,11 +8,13 @@ import {
   isTrailEffect,
   type NukeExplosionAttributes,
   type NukeExplosionType,
+  type StructuresEffectAttributes,
   TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { getCachedCosmetics } from "./Cosmetics";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
@@ -26,8 +28,9 @@ import {
 // Value import from the leaf module (not the ./render/gl barrel) so non-Vite
 // consumers don't pull in GPURenderer and its shaders — see note above.
 import {
+  EFFECT_PALETTE_BLOCKS,
   MAX_TRAIL_COLORS,
-  TRAIL_EFFECT_BLOCKS,
+  STRUCTURES_EFFECT_BLOCK,
 } from "./render/gl/utils/ColorUtils";
 import {
   UT_ATOM_BOMB,
@@ -38,15 +41,26 @@ import type { GameView } from "./view";
 
 const PALETTE_SIZE = 4096;
 
-// TRAIL_EFFECT_TYPES order IS the effect-palette block order: index = block (rows
-// block·MAX_TRAIL_COLORS …). The shader (trail.frag.glsl) picks the block from
-// the trail tile's nuke bit — block 0 = transportShipTrail (nuke bit 0), block 1
-// = nukeTrail (nuke bit 1, set by NUKE_TRAIL_BIT in TrailManager). Reordering
-// TRAIL_EFFECT_TYPES in CosmeticSchemas would silently swap the two trails' colors,
-// so this guard fails the build if the shader-coupled order ever drifts.
+// A human player counts as "small" (and glows) at or below this fraction of the
+// map; the glow is suppressed for a grace window after the game starts.
+const SMALL_PLAYER_MAX_MAP_FRACTION = 0.002; // 0.2%
+const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
+// The set is a visual aid, not tick-critical, so rescan ~once a second
+// (10 ticks) instead of every tick.
+const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
+
+// The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
+// trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
+// transportShipTrail (nuke bit 0), block 1 = nukeTrail (nuke bit 1, set by
+// NUKE_TRAIL_BIT in TrailManager) — and structure.frag.glsl reads block
+// STRUCTURES_EFFECT_BLOCK (2). Reordering TRAIL_EFFECT_TYPES in CosmeticSchemas
+// (or moving the structures block) would silently swap effect colors, so these
+// guards fail the build if the shader-coupled order ever drifts.
 const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
   TRAIL_EFFECT_TYPES;
 void _EFFECT_BLOCK_ORDER;
+const _STRUCTURES_BLOCK_IS_2: 2 = STRUCTURES_EFFECT_BLOCK;
+void _STRUCTURES_BLOCK_IS_2;
 
 // Attribute → render-param mappings:
 //   size      = the ring's final WIDTH (diameter) in world tiles when it fades
@@ -106,10 +120,11 @@ function attributesToExplosionParams(
  */
 export class WebGLFrameBuilder {
   private readonly palette: Float32Array;
-  // Per-player trail-effect palette, keyed by smallID. Layout is
-  // 4096×(MAX_TRAIL_COLORS·TRAIL_EFFECT_BLOCKS): block 0 (rows 0–7) =
-  // transportShipTrail, block 1 (rows 8–15) = nukeTrail. Consumed by TrailPass's
-  // effect texture; the shader picks the block from the trail tile's nuke bit.
+  // Per-player effect palette, keyed by smallID. Layout is
+  // 4096×(MAX_TRAIL_COLORS·EFFECT_PALETTE_BLOCKS): block 0 (rows 0–7) =
+  // transportShipTrail, block 1 (rows 8–15) = nukeTrail, block 2 (rows 16–23)
+  // = structures. Consumed by TrailPass (block from the trail tile's nuke bit)
+  // and StructurePass (block 2).
   private readonly effectPalette: Float32Array;
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
@@ -140,7 +155,7 @@ export class WebGLFrameBuilder {
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
     this.effectPalette = new Float32Array(
-      PALETTE_SIZE * MAX_TRAIL_COLORS * TRAIL_EFFECT_BLOCKS * 4,
+      PALETTE_SIZE * MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS * 4,
     );
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
@@ -181,12 +196,17 @@ export class WebGLFrameBuilder {
     this.view.refreshNames(displayNames);
   }
 
+  private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
+  private readonly userSettings = new UserSettings();
+  private glowRescanTick = 0;
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncPlayerEffects(gameView);
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
+    this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
     this.resolveDeadUnitExplosions(gameView);
     uploadFrameData(this.view, gameView.frameData());
@@ -322,6 +342,48 @@ export class WebGLFrameBuilder {
     this.view.updateSpawnOverlay(true, centers);
   }
 
+  /**
+   * Small-player glow: when the client "Highlight small players" setting is on,
+   * collect the alive human players holding <=0.2% of the map and push their
+   * smallIDs so the glow pass radiates around their territory. Skips the first
+   * minute of play so everyone's tiny starting territory doesn't glow.
+   * Client-only view — toggle it live in the settings.
+   */
+  private syncSmallPlayerGlow(gameView: GameView): void {
+    if (
+      !this.userSettings.highlightSmallPlayers() ||
+      gameView.inSpawnPhase() ||
+      gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
+    ) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    // Throttle the per-player scan + upload; the glow keeps rendering the last
+    // set between rescans. The off/spawn/grace checks above run every tick, so
+    // toggling off takes effect on the next tick (deferred while the game is
+    // paused, since ticks stop; it clears on unpause).
+    if (this.glowRescanTick++ % SMALL_PLAYER_GLOW_RESCAN_TICKS !== 0) return;
+    // "% of the map" uses the same denominator the leaderboard/win-check use.
+    const denom = gameView.numLandTiles() - gameView.numTilesWithFallout();
+    if (denom <= 0) {
+      this.view.updateSmallPlayerGlow(null);
+      return;
+    }
+    const set = this.highlightSetBuf;
+    set.fill(0);
+    let any = false;
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.type() !== PlayerType.Human || !p.isAlive()) {
+        continue;
+      }
+      if (p.numTilesOwned() / denom <= SMALL_PLAYER_MAX_MAP_FRACTION) {
+        set[p.smallID()] = 1;
+        any = true;
+      }
+    }
+    this.view.updateSmallPlayerGlow(any ? set : null);
+  }
+
   private syncPlayers(gameView: GameView): void {
     if (!this.skinsInitialized) {
       this.skinsInitialized = true;
@@ -407,16 +469,21 @@ export class WebGLFrameBuilder {
       if (this.effectResolved.has(smallID)) continue;
       this.effectResolved.add(smallID);
 
-      // Resolve each trail effectType into its own block of the effect palette.
-      // rowBase block*MAX_TRAIL_COLORS must match the shader's block layout
-      // (ship=0, nuke=1) — see _EFFECT_BLOCK_ORDER above and trail.frag.glsl.
-      // Only trail effect types render here; nukeExplosion is not a trail.
-      TRAIL_EFFECT_TYPES.forEach((effectType, block) => {
+      // Resolve each trail-styled effectType into its own block of the effect
+      // palette. rowBase block*MAX_TRAIL_COLORS must match the consumer
+      // shaders' block layout (ship=0, nuke=1 in trail.frag.glsl; structures=2
+      // in structure.frag.glsl) — see _EFFECT_BLOCK_ORDER above. nukeExplosion
+      // is not trail-styled and renders through the FX pass instead.
+      const blockOrder = [...TRAIL_EFFECT_TYPES, "structures"] as const;
+      blockOrder.forEach((effectType, block) => {
         const selected = p.cosmetics.effects?.[effectType];
         if (!selected) return;
         const effect = findEffect(catalog, effectType, selected.name);
         if (!effect || effect.effectType !== effectType) return;
-        if (!isTrailEffect(effect)) return; // narrows attributes to trail attrs
+        // Narrows attributes to trail attrs (structures share the shape).
+        if (!isTrailEffect(effect) && effect.effectType !== "structures") {
+          return;
+        }
         const rowBase = block * MAX_TRAIL_COLORS;
         if (this.writeEffectEntry(smallID, effect.attributes, rowBase)) {
           dirty = true;
@@ -427,9 +494,9 @@ export class WebGLFrameBuilder {
   }
 
   /**
-   * Encode a player's trail effect into one block of the effect palette. The
-   * block starts at row `rowBase` (0 = transportShipTrail, MAX_TRAIL_COLORS =
-   * nukeTrail). Within the block, row r holds color r's rgb, and the spare alpha
+   * Encode a player's trail-styled effect into one block of the effect palette.
+   * The block starts at row `rowBase` (block · MAX_TRAIL_COLORS; see
+   * _EFFECT_BLOCK_ORDER). Within the block, row r holds color r's rgb, and the spare alpha
    * channels (rows rowBase+0..3 always exist) carry the scalar params —
    *   row 0.a = color count (0 → the shader falls back to the territory color),
    *   row 1.a = styleId (0 = gradient, 1 = transition),
@@ -441,7 +508,7 @@ export class WebGLFrameBuilder {
    */
   private writeEffectEntry(
     smallID: number,
-    attrs: TrailEffectAttributes,
+    attrs: TrailEffectAttributes | StructuresEffectAttributes,
     rowBase: number,
   ): boolean {
     const colors = attrs.colors
