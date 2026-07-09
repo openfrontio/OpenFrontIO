@@ -157,7 +157,9 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
-        <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
+        <ios-add-to-home-screen-banner
+          class="no-crazygames"
+        ></ios-add-to-home-screen-banner>
 
         <!-- Game cards grid -->
         ${this.lobbies === null
