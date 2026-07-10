@@ -1,8 +1,8 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { UserMeResponse } from "../core/ApiSchemas";
-import { setMarketingConsent } from "./Api";
-import { translateText } from "./Utils";
+import type { UserMeResponse } from "../../core/ApiSchemas";
+import { setMarketingConsent } from "../Api";
+import { translateText } from "../Utils";
 
 /**
  * A small, non-blocking prompt docked in the top-right corner that asks a
@@ -82,7 +82,7 @@ export class MarketingConsentToast extends LitElement {
 
     return html`
       <div
-        class="fixed right-4 top-16 z-[10000] w-[236px] max-w-[calc(100vw-2rem)] bg-surface border border-white/10 rounded-xl shadow-[var(--shadow-malibu-blue)] p-3"
+        class="fixed top-16 z-[10000] left-4 right-4 w-auto sm:left-auto sm:right-4 sm:w-[236px] bg-surface border border-white/10 rounded-xl shadow-[var(--shadow-malibu-blue)] p-3"
         role="dialog"
         aria-label=${translateText("marketing_consent.title")}
       >

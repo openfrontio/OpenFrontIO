@@ -1049,7 +1049,7 @@
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
     "dismiss": "Dismiss",
-    "error": "Couldn't save that — please try again.",
+    "error": "Couldn't save that. Please try again.",
     "no": "No thanks",
     "title": "Keep up with OpenFront?",
     "yes": "Yes please"

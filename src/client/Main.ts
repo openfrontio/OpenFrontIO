@@ -42,7 +42,6 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
 import "./LeaderboardModal";
-import "./MarketingConsentToast";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
@@ -68,6 +67,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";

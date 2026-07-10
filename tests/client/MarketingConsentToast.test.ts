@@ -8,7 +8,7 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string) => key,
 }));
 
-import { MarketingConsentToast } from "../../src/client/MarketingConsentToast";
+import { MarketingConsentToast } from "../../src/client/components/MarketingConsentToast";
 
 type Consent = "approved" | "denied" | "no_response";
 
