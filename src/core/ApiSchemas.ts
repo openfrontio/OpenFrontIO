@@ -309,3 +309,28 @@ export const NewsItemSchema = z.object({
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
+
+// Promo overlay shown on top of a public lobby card: short video, then a
+// fade to a static info card. `slot` picks which of the three lobby-selector
+// card positions it takes over (0 = ffa, 1 = special, 2 = team); `interval`
+// shows it once every N game cycles observed in that slot; `ttl` is how long
+// (ms) the static card phase stays up before auto-dismissing.
+export const LobbyCardOverlaySchema = z.object({
+  slot: z.number(),
+  interval: z.number(),
+  ttl: z.number(),
+  video: z.object({
+    url: z.string(),
+    videoLength: z.number(),
+  }),
+  image: z.object({
+    url: z.string(),
+  }),
+  displayInfo: z.object({
+    title: z.string(),
+    subtitle: z.string(),
+    count: z.number().optional(),
+  }),
+  linkTo: z.url(),
+});
+export type LobbyCardOverlay = z.infer<typeof LobbyCardOverlaySchema>;

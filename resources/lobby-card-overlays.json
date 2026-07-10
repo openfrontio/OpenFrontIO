@@ -1,0 +1,20 @@
+[
+  {
+    "slot": 2,
+    "interval": 5,
+    "ttl": 15000,
+    "video": {
+      "url": "/videos/promo/spring-tournament.mp4",
+      "videoLength": 6
+    },
+    "image": {
+      "url": "/images/promo/spring-tournament-trophy.png"
+    },
+    "displayInfo": {
+      "title": "Spring Tournament",
+      "subtitle": "Sign up now",
+      "count": 40
+    },
+    "linkTo": "https://discord.gg/openfront"
+  }
+]

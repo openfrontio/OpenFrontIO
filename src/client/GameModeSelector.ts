@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
+import type { LobbyCardOverlay } from "../core/ApiSchemas";
 import {
   Duos,
   GameMapType,
@@ -10,6 +11,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { getLobbyCardOverlays } from "./Api";
 import "./components/IOSAddToHomeScreenBanner";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -29,6 +31,23 @@ import {
 
 const CARD_BG = "bg-surface";
 
+// Lobby-card-overlay slots, in the order the three public-lobby card
+// positions appear in render(): main ffa card, then special, then team.
+const OVERLAY_SLOT_KEYS = ["ffa", "special", "team"] as const;
+const SLOT_FFA = 0;
+const SLOT_SPECIAL = 1;
+const SLOT_TEAM = 2;
+
+const OVERLAY_FADE_MS = 500;
+
+type OverlayPhase = "video" | "fading" | "card";
+
+interface ActiveOverlay {
+  slot: number;
+  overlay: LobbyCardOverlay;
+  phase: OverlayPhase;
+}
+
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
@@ -36,6 +55,16 @@ export class GameModeSelector extends LitElement {
   @state() private inputValid: boolean = true;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
+
+  @state() private overlays: LobbyCardOverlay[] = [];
+  @state() private activeOverlays: Map<number, ActiveOverlay> = new Map();
+  // Per-slot count of distinct games observed, used to trigger an overlay
+  // every `interval` game cycles.
+  private overlaySlotState: Map<
+    number,
+    { lastGameId?: string; count: number }
+  > = new Map();
+  private overlayTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
@@ -68,6 +97,11 @@ export class GameModeSelector extends LitElement {
     if (usernameInput) {
       this.inputValid = usernameInput.canPlay();
     }
+    getLobbyCardOverlays()
+      .then((overlays) => {
+        this.overlays = overlays;
+      })
+      .catch((e) => console.error("Failed to load lobby card overlays", e));
   }
 
   disconnectedCallback() {
@@ -76,6 +110,10 @@ export class GameModeSelector extends LitElement {
       "username-validity-change",
       this.handleValidityChange,
     );
+    for (const timer of this.overlayTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.overlayTimers.clear();
     super.disconnectedCallback();
   }
 
@@ -120,6 +158,91 @@ export class GameModeSelector extends LitElement {
           );
       }
     }
+
+    this.checkOverlayTriggers();
+  }
+
+  // Bumps each overlay's per-slot game counter whenever that slot's lobby
+  // changes, and triggers the overlay once the counter hits `interval`.
+  private checkOverlayTriggers() {
+    for (const overlay of this.overlays) {
+      const slotKey = OVERLAY_SLOT_KEYS[overlay.slot];
+      const lobby = slotKey ? this.lobbies?.games?.[slotKey]?.[0] : undefined;
+      if (!lobby || overlay.interval <= 0) continue;
+
+      const slotState = this.overlaySlotState.get(overlay.slot) ?? {
+        count: 0,
+      };
+      if (lobby.gameID === slotState.lastGameId) continue;
+
+      slotState.lastGameId = lobby.gameID;
+      slotState.count += 1;
+      this.overlaySlotState.set(overlay.slot, slotState);
+
+      if (
+        slotState.count % overlay.interval === 0 &&
+        !this.activeOverlays.has(overlay.slot)
+      ) {
+        this.triggerOverlay(overlay);
+      }
+    }
+  }
+
+  private setOverlayTimer(slot: number, ms: number, fn: () => void) {
+    const existing = this.overlayTimers.get(slot);
+    if (existing) clearTimeout(existing);
+    this.overlayTimers.set(slot, setTimeout(fn, ms));
+  }
+
+  private clearOverlayTimer(slot: number) {
+    const existing = this.overlayTimers.get(slot);
+    if (existing) {
+      clearTimeout(existing);
+      this.overlayTimers.delete(slot);
+    }
+  }
+
+  private setActiveOverlay(slot: number, active: ActiveOverlay | null) {
+    const next = new Map(this.activeOverlays);
+    if (active) {
+      next.set(slot, active);
+    } else {
+      next.delete(slot);
+    }
+    this.activeOverlays = next;
+  }
+
+  private triggerOverlay(overlay: LobbyCardOverlay) {
+    const slot = overlay.slot;
+    this.setActiveOverlay(slot, { slot, overlay, phase: "video" });
+    // Fallback in case the video fails to load and 'ended' never fires.
+    this.setOverlayTimer(slot, (overlay.video.videoLength + 2) * 1000, () =>
+      this.advanceOverlayToFading(slot),
+    );
+  }
+
+  private advanceOverlayToFading(slot: number) {
+    const active = this.activeOverlays.get(slot);
+    if (!active || active.phase !== "video") return;
+    this.setActiveOverlay(slot, { ...active, phase: "fading" });
+    this.setOverlayTimer(slot, OVERLAY_FADE_MS, () =>
+      this.advanceOverlayToCard(slot),
+    );
+  }
+
+  private advanceOverlayToCard(slot: number) {
+    const active = this.activeOverlays.get(slot);
+    if (!active || active.phase !== "fading") return;
+    this.setActiveOverlay(slot, { ...active, phase: "card" });
+    this.setOverlayTimer(slot, active.overlay.ttl, () =>
+      this.dismissOverlay(slot),
+    );
+  }
+
+  private dismissOverlay(slot: number) {
+    if (!this.activeOverlays.has(slot)) return;
+    this.clearOverlayTimer(slot);
+    this.setActiveOverlay(slot, null);
   }
 
   render() {
@@ -176,7 +299,7 @@ export class GameModeSelector extends LitElement {
               <!-- Left col: main card (desktop only) -->
               ${ffa
                 ? html`<div class="hidden sm:block">
-                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                    ${this.renderCard(SLOT_FFA, ffa)}
                   </div>`
                 : nothing}
 
@@ -184,30 +307,25 @@ export class GameModeSelector extends LitElement {
               <div class="hidden sm:flex sm:flex-col sm:gap-4">
                 ${special
                   ? html`<div class="flex-1 min-h-0">
-                      ${this.renderSpecialLobbyCard(special)}
+                      ${this.renderCard(SLOT_SPECIAL, special)}
                     </div>`
                   : nothing}
-                <!-- Trojo:workhere -->
-                ${teams 
+                ${teams
                   ? html`<div class="flex-1 min-h-0">
-                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                      ${this.renderCard(SLOT_TEAM, teams)}
                     </div>`
                   : nothing}
               </div>
 
               <!-- Mobile: special, ffa, teams inline -->
               <div class="sm:hidden">
-                ${special ? this.renderSpecialLobbyCard(special) : nothing}
+                ${special ? this.renderCard(SLOT_SPECIAL, special) : nothing}
               </div>
               <div class="sm:hidden">
-                ${ffa
-                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-                  : nothing}
+                ${ffa ? this.renderCard(SLOT_FFA, ffa) : nothing}
               </div>
               <div class="sm:hidden">
-                ${teams
-                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-                  : nothing}
+                ${teams ? this.renderCard(SLOT_TEAM, teams) : nothing}
               </div>
             </div>`}
 
@@ -242,7 +360,13 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private renderSpecialLobbyCard(lobby: PublicGameInfo) {
+  // Renders the normal lobby card for a slot, or its promo overlay when one
+  // is active for that slot.
+  private renderCard(slot: number, lobby: PublicGameInfo) {
+    const active = this.activeOverlays.get(slot);
+    if (active) {
+      return this.renderNewsOverlayCard(active);
+    }
     return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
   }
 
@@ -416,6 +540,102 @@ export class GameModeSelector extends LitElement {
           </h3>
         </div>
       </button>
+    `;
+  }
+
+  // Renders a triggered promo overlay: a short video that plays over the
+  // card, holds on its last frame, fades out, and reveals a static info
+  // card underneath (title/count, subtitle + link, image), closable early.
+  private renderNewsOverlayCard(active: ActiveOverlay) {
+    const { overlay, phase, slot } = active;
+    const showVideo = phase !== "card";
+
+    return html`
+      <div
+        class="relative w-full h-44 sm:h-full text-white rounded-2xl overflow-hidden bg-surface"
+      >
+        ${showVideo
+          ? html`<video
+              class="absolute inset-0 w-full h-full object-cover transition-opacity ease-out ${phase ===
+              "fading"
+                ? "opacity-0"
+                : "opacity-100"}"
+              style="transition-duration: ${OVERLAY_FADE_MS}ms"
+              src="${overlay.video.url}"
+              autoplay
+              muted
+              playsinline
+              @ended=${() => this.advanceOverlayToFading(slot)}
+            ></video>`
+          : nothing}
+        ${phase === "card"
+          ? html`
+              <a
+                href="${overlay.linkTo}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="absolute inset-0 flex items-center gap-3 px-4 py-3"
+              >
+                <div class="flex-1 min-w-0">
+                  <h3
+                    class="text-base sm:text-lg font-bold uppercase tracking-wider truncate"
+                  >
+                    ${overlay.displayInfo.title}
+                    ${overlay.displayInfo.count !== undefined
+                      ? html`<span class="text-white/60"
+                          >${overlay.displayInfo.count}</span
+                        >`
+                      : nothing}
+                  </h3>
+                  <p
+                    class="flex items-center gap-1 text-xs text-white/70 uppercase tracking-wider truncate"
+                  >
+                    ${overlay.displayInfo.subtitle}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-3 w-3 shrink-0"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
+                        clip-rule="evenodd"
+                      ></path>
+                    </svg>
+                  </p>
+                </div>
+                ${overlay.image.url
+                  ? html`<img
+                      src="${overlay.image.url}"
+                      alt=""
+                      class="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                    />`
+                  : nothing}
+              </a>
+              <button
+                @click=${(e: Event) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this.dismissOverlay(slot);
+                }}
+                aria-label="${translateText("news_box.dismiss")}"
+                class="absolute top-2 right-2 p-1 rounded-full bg-black/40 text-white/70 hover:text-white transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-3.5 h-3.5"
+                >
+                  <path
+                    d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+                  />
+                </svg>
+              </button>
+            `
+          : nothing}
+      </div>
     `;
   }
 
