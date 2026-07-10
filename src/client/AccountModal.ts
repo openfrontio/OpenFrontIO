@@ -148,10 +148,7 @@ export class AccountModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "friends", label: translateText("account_modal.tab_friends") },
-        {
-          key: "settings",
-          label: translateText("account_modal.tab_settings"),
-        },
+        { key: "settings", label: translateText("account_modal.tab_settings") },
       ],
     };
   }
