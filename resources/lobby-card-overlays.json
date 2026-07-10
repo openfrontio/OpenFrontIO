@@ -1,14 +1,15 @@
 [
   {
     "slot": 2,
-    "interval": 5,
+    "offset": 0,
+    "interval": 1,
     "ttl": 15000,
     "video": {
-      "url": "/videos/promo/spring-tournament.mp4",
+      "url": "/videos/promo/ofm_card_intro.mp4",
       "videoLength": 6
     },
     "image": {
-      "url": "/images/promo/spring-tournament-trophy.png"
+      "url": "/images/promo/trohpy.png"
     },
     "displayInfo": {
       "title": "Spring Tournament",
