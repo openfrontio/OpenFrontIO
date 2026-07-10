@@ -398,7 +398,8 @@
     "per_day": "/day",
     "rare": "Rare",
     "soft": "Caps",
-    "uncommon": "Uncommon"
+    "uncommon": "Uncommon",
+    "usd_value": "Value: {usd}"
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
