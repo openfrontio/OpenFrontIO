@@ -1,0 +1,321 @@
+{
+  "id": "Scandinavia",
+  "name": "Scandinavia",
+  "translation_key": "map.scandinavia",
+  "categories": ["europe", "new"],
+  "multiplayer_frequency": 7,
+  "nations": [
+    {
+      "coordinates": [419, 1426],
+      "name": "Norway",
+      "flag": "no"
+    },
+    {
+      "coordinates": [811, 1499],
+      "name": "Sweden",
+      "flag": "se"
+    },
+    {
+      "coordinates": [513, 1893],
+      "name": "Denmark",
+      "flag": "dk"
+    },
+    {
+      "coordinates": [734, 2170],
+      "name": "Germany",
+      "flag": "de"
+    },
+    {
+      "coordinates": [276, 2227],
+      "name": "Netherlands",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [1381, 1251],
+      "name": "Finland",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1466, 1479],
+      "name": "Estonia",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [1329, 1789],
+      "name": "Latvia",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1394, 1994],
+      "name": "Lithuania",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [1057, 2129],
+      "name": "Poland",
+      "flag": "pl"
+    },
+    {
+      "coordinates": [1761, 2096],
+      "name": "Belarus",
+      "flag": "by"
+    },
+    {
+      "coordinates": [1262, 896],
+      "name": "Ostrobothnia",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1750, 796],
+      "name": "Karelia",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1798, 278],
+      "name": "Murmansk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1418, 468],
+      "name": "Lapland",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1733, 1325],
+      "name": "St. Petersburg",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1670, 1724],
+      "name": "Pskov",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [2007, 1727],
+      "name": "Tver",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [781, 1865],
+      "name": "Skåne",
+      "flag": "se"
+    },
+    {
+      "coordinates": [1110, 1374],
+      "name": "Aland Islands",
+      "flag": "ax"
+    },
+    {
+      "coordinates": [911, 1121],
+      "name": "Norrland",
+      "flag": "se"
+    },
+    {
+      "coordinates": [1028, 714],
+      "name": "Norrbotten",
+      "flag": "se"
+    },
+    {
+      "coordinates": [891, 443],
+      "name": "Troms",
+      "flag": "no"
+    },
+    {
+      "coordinates": [1304, 159],
+      "name": "Finnmark",
+      "flag": "no"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [1063, 1699],
+      "name": "Gotland",
+      "flag": "se"
+    },
+    {
+      "coordinates": [952, 1810],
+      "name": "Kalmar",
+      "flag": "se"
+    },
+    {
+      "coordinates": [1226, 2004],
+      "name": "Kaliningrad",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [650, 1974],
+      "name": "Zealand",
+      "flag": "dk"
+    },
+    {
+      "coordinates": [421, 1588],
+      "name": "Telemark",
+      "flag": "no"
+    },
+    {
+      "coordinates": [1668, 946],
+      "name": "North Karelia",
+      "flag": "North karelia"
+    },
+    {
+      "coordinates": [1545, 980],
+      "name": "Savonia",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1811, 1533],
+      "name": "Novgorod",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1198, 2148],
+      "name": "Pomerania",
+      "flag": "prussia"
+    },
+    {
+      "coordinates": [1307, 1550],
+      "name": "Saaremaa",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [689, 920],
+      "name": "Trøndelag",
+      "flag": "no"
+    },
+    {
+      "coordinates": [765, 1148],
+      "name": "Jämtland",
+      "flag": "se"
+    },
+    {
+      "coordinates": [482, 1257],
+      "name": "Innlandet",
+      "flag": "no"
+    },
+    {
+      "coordinates": [315, 1344],
+      "name": "Vestland",
+      "flag": "no"
+    },
+    {
+      "coordinates": [728, 1688],
+      "name": "Västra Götaland",
+      "flag": "se"
+    },
+    {
+      "coordinates": [869, 1756],
+      "name": "Jönköping",
+      "flag": "se"
+    },
+    {
+      "coordinates": [1012, 1454],
+      "name": "Stockholm County",
+      "flag": "se"
+    },
+    {
+      "coordinates": [926, 1307],
+      "name": "Gävleborg",
+      "flag": "se"
+    },
+    {
+      "coordinates": [507, 2162],
+      "name": "Schleswig",
+      "flag": "prussia"
+    },
+    {
+      "coordinates": [833, 2208],
+      "name": "Mecklenberg",
+      "flag": "de"
+    },
+    {
+      "coordinates": [454, 2231],
+      "name": "Bremen",
+      "flag": "de"
+    },
+    {
+      "coordinates": [1290, 342],
+      "name": "Sapmi",
+      "flag": "Sami flag"
+    },
+    {
+      "coordinates": [971, 877],
+      "name": "Västerbotten",
+      "flag": "se"
+    },
+    {
+      "coordinates": [1452, 1283],
+      "name": "Uusimaa",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1211, 1286],
+      "name": "Finland Proper",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1344, 1078],
+      "name": "Birkaland",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1503, 747],
+      "name": "Kainuu",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1957, 1217],
+      "name": "Leningrad",
+      "flag": "ussr"
+    },
+    {
+      "coordinates": [1985, 2189],
+      "name": "Smolensk",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1285, 1887],
+      "name": "Lithuania Minor",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [1592, 2071],
+      "name": "Dainava",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [1444, 2176],
+      "name": "Sudovia",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [1766, 1925],
+      "name": "Vitsebsk",
+      "flag": "by"
+    },
+    {
+      "coordinates": [1756, 2232],
+      "name": "Minsk",
+      "flag": "by"
+    },
+    {
+      "coordinates": [1487, 1615],
+      "name": "Southern Estonia",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [1412, 1721],
+      "name": "Vidzeme",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1556, 1791],
+      "name": "Latgale",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1439, 1860],
+      "name": "Zemgale",
+      "flag": "lv"
+    }
+  ]
+}
