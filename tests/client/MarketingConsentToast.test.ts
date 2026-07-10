@@ -130,4 +130,24 @@ describe("marketing-consent-toast", () => {
     // The request failed, so the prompt stays visible for a retry.
     expect(await shown()).toBe(true);
   });
+
+  // Responsive layout: a full-width top banner on small screens (so it doesn't
+  // crop text on phones like the 14 Pro Max) and a top-right 236px card on sm+.
+  // jsdom has no layout engine to evaluate media queries, so assert the
+  // Tailwind classes that drive the two layouts are present.
+  it("uses a full-width banner on mobile and a top-right card on sm+", async () => {
+    fireUserMe(userMe("no_response", true));
+    await el.updateComplete;
+    const dialog = el.querySelector('[role="dialog"]') as HTMLElement;
+    const cls = dialog.className;
+
+    // Mobile (default): pinned left+right, auto width → spans the viewport.
+    for (const c of ["left-4", "right-4", "w-auto"]) {
+      expect(cls).toContain(c);
+    }
+    // sm+ (tablet/desktop): release the left edge and become a fixed 236px card.
+    for (const c of ["sm:left-auto", "sm:right-4", "sm:w-[236px]"]) {
+      expect(cls).toContain(c);
+    }
+  });
 });
