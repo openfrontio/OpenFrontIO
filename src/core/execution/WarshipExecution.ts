@@ -266,16 +266,13 @@ export class WarshipExecution implements Execution {
       if (includeTradeShips && type === UnitType.TradeShip) {
         if (warshipComponent === undefined) {
           warshipComponent = mg.getWaterComponent(this.warship.tile());
-        }
-        if (hasReachablePort === undefined && warshipComponent !== null) {
-          hasReachablePort = false;
-          for (const port of owner.units(UnitType.Port)) {
-            hasReachablePort = mg.hasWaterComponent(
-              port.tile(),
-              warshipComponent,
-            );
-            if (hasReachablePort) break;
-          }
+          hasReachablePort =
+            warshipComponent !== null &&
+            owner
+              .units(UnitType.Port)
+              .some((port) =>
+                mg.hasWaterComponent(port.tile(), warshipComponent!),
+              );
           patrolTile = this.warship.warshipState().patrolTile;
           patrolRangeSquared = config.warshipPatrolRange() ** 2;
         }
@@ -285,12 +282,6 @@ export class WarshipExecution implements Execution {
           unit.isSafeFromPirates() ||
           unit.targetUnit()?.owner() === owner ||
           unit.targetUnit()?.owner().isFriendly(owner)
-        ) {
-          continue;
-        }
-        if (
-          warshipComponent !== null &&
-          !mg.hasWaterComponent(unit.tile(), warshipComponent)
         ) {
           continue;
         }
