@@ -270,8 +270,12 @@ export class WarshipExecution implements Execution {
             warshipComponent !== null &&
             owner
               .units(UnitType.Port)
-              .some((port) =>
-                mg.hasWaterComponent(port.tile(), warshipComponent!),
+              .some(
+                (port) =>
+                  port.isActive() &&
+                  !port.isMarkedForDeletion() &&
+                  !port.isUnderConstruction() &&
+                  mg.hasWaterComponent(port.tile(), warshipComponent!),
               );
           patrolTile = this.warship.warshipState().patrolTile;
           patrolRangeSquared = config.warshipPatrolRange() ** 2;
