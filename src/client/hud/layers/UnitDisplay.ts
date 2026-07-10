@@ -120,9 +120,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div class="border-t border-white/10 p-0.5 w-full">
-        <div
-          class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto"
-        >
+        <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
           ${this.renderUnitItem(
             cityIcon,
             this._cities,
