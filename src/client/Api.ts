@@ -2,6 +2,10 @@ import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
 import type { NewsItem } from "../core/ApiSchemas";
 import {
+  ClaimAllRewardsResponse,
+  ClaimAllRewardsResponseSchema,
+  ClaimRewardResponse,
+  ClaimRewardResponseSchema,
   NewsItemSchema,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
@@ -218,6 +222,87 @@ export async function purchaseWithCurrency(
     return true;
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
+    return false;
+  }
+}
+
+// POST /rewards/:rewardId/claim — claims a single unclaimed reward and
+// credits the balance atomically. "not_found" covers unknown, already-claimed
+// and other players' rewards (indistinguishable by design); the usual cause is
+// a double-click or a second device claiming first, so callers should re-fetch
+// /users/@me and re-render rather than surface an error.
+export async function claimReward(
+  rewardId: string,
+): Promise<ClaimRewardResponse | "not_found" | false> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/rewards/${encodeURIComponent(rewardId)}/claim`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: await getAuthHeader(),
+        },
+      },
+    );
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (response.status === 404) return "not_found";
+    if (!response.ok) {
+      console.error(
+        "claimReward: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const parsed = ClaimRewardResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("claimReward: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.error("claimReward: request failed", e);
+    return false;
+  }
+}
+
+// POST /rewards/claim-all — claims all pending rewards in one transaction.
+// Succeeds (with an empty `claimed`) even when nothing is pending.
+export async function claimAllRewards(): Promise<
+  ClaimAllRewardsResponse | false
+> {
+  try {
+    const response = await fetch(`${getApiBase()}/rewards/claim-all`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "claimAllRewards: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const parsed = ClaimAllRewardsResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("claimAllRewards: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.error("claimAllRewards: request failed", e);
     return false;
   }
 }

@@ -75,6 +75,39 @@ const SingleplayerMapAchievementSchema = z.object({
   difficulty: z.enum(Difficulty),
 });
 
+// An unclaimed subscription reward from GET /users/@me. `id` and `amount` are
+// stringified bigints — keep them as strings (amount can in principle exceed
+// Number.MAX_SAFE_INTEGER). `reason` is open-ended server-side; fall back to
+// `note` for unknown values rather than exhausting on an enum.
+export const RewardSchema = z.object({
+  id: z.string(),
+  currencyType: z.enum(["soft", "hard"]),
+  amount: z.string(),
+  reason: z.string(),
+  note: z.string().nullable(),
+});
+export type Reward = z.infer<typeof RewardSchema>;
+
+const CurrencyBalancesSchema = z.object({
+  soft: z.coerce.number(),
+  hard: z.coerce.number(),
+});
+
+// POST /rewards/:rewardId/claim and /rewards/claim-all both return the
+// post-claim balances so the UI can update without re-fetching /users/@me.
+export const ClaimRewardResponseSchema = z.object({
+  currency: CurrencyBalancesSchema,
+});
+export type ClaimRewardResponse = z.infer<typeof ClaimRewardResponseSchema>;
+
+export const ClaimAllRewardsResponseSchema = z.object({
+  claimed: z.array(z.object({ id: z.string() })),
+  currency: CurrencyBalancesSchema,
+});
+export type ClaimAllRewardsResponse = z.infer<
+  typeof ClaimAllRewardsResponseSchema
+>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -97,12 +130,9 @@ export const UserMeResponseSchema = z.object({
           .optional(),
       })
       .optional(),
-    currency: z
-      .object({
-        soft: z.coerce.number(),
-        hard: z.coerce.number(),
-      })
-      .optional(),
+    currency: CurrencyBalancesSchema.optional(),
+    // Unclaimed rewards — NOT included in `currency` balances until claimed.
+    rewards: RewardSchema.array().optional(),
     clans: z
       .array(
         z.object({

@@ -1,4 +1,6 @@
 import {
+  ClaimAllRewardsResponseSchema,
+  ClaimRewardResponseSchema,
   GoogleUser,
   GoogleUserSchema,
   hasActiveSubscription,
@@ -8,7 +10,9 @@ import {
   PlayerProfileSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
+  RewardSchema,
   UserMeResponse,
+  UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
 describe("GoogleUserSchema", () => {
@@ -200,6 +204,136 @@ describe("PublicPlayerGamesResponseSchema", () => {
     expect(
       PublicPlayerGamesResponseSchema.safeParse({ results: [] }).success,
     ).toBe(false);
+  });
+});
+
+describe("RewardSchema", () => {
+  const validReward = {
+    id: "42",
+    currencyType: "hard",
+    amount: "500",
+    reason: "subscription_signup_bonus",
+    note: "Subscription signup bonus (Gold)",
+  };
+
+  it("accepts a fully-populated reward", () => {
+    expect(RewardSchema.safeParse(validReward).success).toBe(true);
+  });
+
+  it("keeps id and amount as strings (bigints can exceed MAX_SAFE_INTEGER)", () => {
+    const result = RewardSchema.safeParse({
+      ...validReward,
+      amount: "9007199254740993",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe("42");
+      expect(result.data.amount).toBe("9007199254740993");
+    }
+  });
+
+  it("accepts note: null", () => {
+    expect(RewardSchema.safeParse({ ...validReward, note: null }).success).toBe(
+      true,
+    );
+  });
+
+  it("accepts an unknown reason (open-ended by design)", () => {
+    expect(
+      RewardSchema.safeParse({ ...validReward, reason: "future_source" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown currencyType", () => {
+    expect(
+      RewardSchema.safeParse({ ...validReward, currencyType: "gems" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema rewards", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player with unclaimed rewards", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        rewards: [
+          {
+            id: "42",
+            currencyType: "soft",
+            amount: "150",
+            reason: "subscription_daily",
+            note: "Daily Gold subscription reward (5 days)",
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.rewards).toHaveLength(1);
+    }
+  });
+
+  it("accepts a response without rewards (older API versions)", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(true);
+  });
+});
+
+describe("claim response schemas", () => {
+  it("coerces claim balances from bigint strings to numbers", () => {
+    const result = ClaimRewardResponseSchema.safeParse({
+      id: "42",
+      currencyType: "hard",
+      amount: "500",
+      claimedAt: "2026-07-09T18:03:11.000Z",
+      currency: { soft: "1200", hard: "850" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.currency).toEqual({ soft: 1200, hard: 850 });
+    }
+  });
+
+  it("accepts a claim-all with nothing pending", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.claimed).toEqual([]);
+    }
+  });
+
+  it("accepts a claim-all with claimed rewards", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [
+        {
+          id: "42",
+          currencyType: "hard",
+          amount: "500",
+          reason: "subscription_signup_bonus",
+          note: null,
+          claimedAt: "2026-07-09T18:03:11.000Z",
+        },
+      ],
+      currency: { soft: "1200", hard: "850" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.claimed).toEqual([{ id: "42" }]);
+    }
   });
 });
 
