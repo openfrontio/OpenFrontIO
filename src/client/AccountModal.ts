@@ -142,23 +142,18 @@ export class AccountModal extends BaseModal {
     if (this.isLoadingUser || !this.isLinkedAccount()) {
       return {};
     }
-    const tabs = [
-      { key: "account", label: translateText("account_modal.tab_account") },
-      { key: "stats", label: translateText("account_modal.tab_stats") },
-      { key: "games", label: translateText("account_modal.tab_games") },
-      { key: "friends", label: translateText("account_modal.tab_friends") },
-    ];
-    // Only expose the consent settings tab when the API actually provided
-    // consent state. If marketingConsent is absent (older API), the schema
-    // treats it as "no consent UI" — showing the tab would render a misleading
-    // "link an email" prompt to users who may already have one.
-    if (this.userMeResponse?.player?.marketingConsent !== undefined) {
-      tabs.push({
-        key: "settings",
-        label: translateText("account_modal.tab_settings"),
-      });
-    }
-    return { tabs };
+    return {
+      tabs: [
+        { key: "account", label: translateText("account_modal.tab_account") },
+        { key: "stats", label: translateText("account_modal.tab_stats") },
+        { key: "games", label: translateText("account_modal.tab_games") },
+        { key: "friends", label: translateText("account_modal.tab_friends") },
+        {
+          key: "settings",
+          label: translateText("account_modal.tab_settings"),
+        },
+      ],
+    };
   }
 
   protected renderBody(tab: string) {
@@ -201,8 +196,12 @@ export class AccountModal extends BaseModal {
   // — when there's no verified email on the account — is told to link one.
   private renderSettingsTab(): TemplateResult {
     const consent = this.userMeResponse?.player?.marketingConsent;
-    const hasEmail = consent?.hasEmail ?? false;
-    const on = consent?.consented === "approved";
+    // The API didn't return consent state (older backend). The tab is always
+    // shown, but with nothing to configure it stays empty rather than showing
+    // a misleading "link an email" prompt.
+    if (!consent) return html``;
+    const hasEmail = consent.hasEmail;
+    const on = consent.consented === "approved";
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div class="flex items-start justify-between gap-4">
