@@ -166,6 +166,12 @@ export class SendHashEvent implements GameEvent {
   ) {}
 }
 
+// Emitted when the server tells us the host started a successor lobby, carrying
+// the new game id to move the group to.
+export class NewLobbyEvent implements GameEvent {
+  constructor(public readonly gameID: string) {}
+}
+
 export class MoveWarshipIntentEvent implements GameEvent {
   constructor(
     public readonly unitIds: number[],

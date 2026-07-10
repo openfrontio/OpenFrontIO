@@ -1086,6 +1086,13 @@
     "teams_of": "{teamCount} teams of {playersPerTeam}",
     "teams_title": "Teams"
   },
+  "new_lobby_prompt": {
+    "confirm": "Start a new lobby? All players will be invited to join.",
+    "dismiss": "Dismiss",
+    "failed": "Could not create a new lobby. Please try again.",
+    "join": "Join",
+    "message": "Host started a new lobby"
+  },
   "news": {
     "title": "Release Notes"
   },
@@ -1587,6 +1594,7 @@
     "join_server": "Join Server",
     "keep": "Keep Playing",
     "nation_won": "Nation {nation} has won!",
+    "new_lobby": "New Lobby",
     "other_team": "{team} team has won!",
     "other_won": "{player} has won!",
     "requeue": "Play Again",
