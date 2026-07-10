@@ -310,14 +310,6 @@ export const NewsItemSchema = z.object({
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
-// Promo overlay shown on top of a public lobby card: short video, then a
-// fade to a static info card. `slot` picks which of the three lobby-selector
-// card positions it takes over (0 = ffa, 1 = special, 2 = team); `interval`
-// shows it once every N game cycles observed in that slot; `offset` shifts
-// which cycles within that interval it lands on, so multiple overlays on the
-// same slot can alternate (e.g. two overlays with interval 2, offsets 0 and
-// 1, take turns every other cycle); `ttl` is how long (ms) the static card
-// phase stays up before auto-dismissing.
 export const LobbyCardOverlaySchema = z.object({
   slot: z.number(),
   interval: z.number(),

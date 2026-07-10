@@ -31,8 +31,6 @@ import {
 
 const CARD_BG = "bg-surface";
 
-// Lobby-card-overlay slots, in the order the three public-lobby card
-// positions appear in render(): main ffa card, then special, then team.
 const OVERLAY_SLOT_KEYS = ["ffa", "special", "team"] as const;
 const SLOT_FFA = 0;
 const SLOT_SPECIAL = 1;
@@ -58,21 +56,12 @@ export class GameModeSelector extends LitElement {
 
   @state() private overlays: LobbyCardOverlay[] = [];
   @state() private activeOverlays: Map<number, ActiveOverlay> = new Map();
-  // Per-slot count of distinct games observed, used to trigger an overlay
-  // every `interval` game cycles.
   private overlaySlotState: Map<
     number,
     { lastGameId?: string; count: number }
   > = new Map();
-  // Tracks the slot count each overlay last evaluated a trigger decision for,
-  // so a dismissed overlay isn't immediately re-triggered by the next poll
-  // when the underlying lobby's game (and thus the count) hasn't changed.
   private overlayLastHandledCount = new WeakMap<LobbyCardOverlay, number>();
-  // Drives the video->fading->card phase chain: only one "next transition"
-  // timer is ever pending per slot, so scheduling a new one replaces it.
   private overlayTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
-  // Independent of the phase chain: `ttl` is the total time an overlay stays
-  // up (video included), counted from the moment it first appears.
   private overlayDismissTimers: Map<number, ReturnType<typeof setTimeout>> =
     new Map();
 
@@ -153,8 +142,6 @@ export class GameModeSelector extends LitElement {
     for (const game of allGames) {
       const mapType = game.gameConfig?.gameMap as GameMapType;
       if (mapType && !this.mapAspectRatios.has(mapType)) {
-        // New Map reference triggers Lit reactivity; placeholder ratio 1 lets
-        // has() guard against duplicate in-flight fetches.
         this.mapAspectRatios = new Map(this.mapAspectRatios).set(mapType, 1);
         const mapData = terrainMapFileLoader.getMapData(mapType);
         mapData
@@ -170,11 +157,6 @@ export class GameModeSelector extends LitElement {
           .catch((e) =>
             console.error(`Failed to load manifest for ${mapType}`, e),
           );
-        // Warm the browser cache for the card thumbnail. The <img> for a
-        // lobby card isn't in the DOM while a promo overlay covers its slot
-        // (renderOverlayCard renders instead of renderLobbyCard), so without
-        // this the thumbnail only starts fetching once the overlay is
-        // dismissed.
         new Image().src = mapData.webpPath;
       }
     }
@@ -182,10 +164,6 @@ export class GameModeSelector extends LitElement {
     this.checkOverlayTriggers();
   }
 
-  // Bumps each slot's game counter (shared by every overlay on that slot)
-  // whenever its lobby changes, then lets each overlay independently decide
-  // whether it's its turn to trigger — so multiple overlays on the same slot
-  // can alternate via distinct `offset`s instead of all firing together.
   private checkOverlayTriggers() {
     const slotsSeen = new Set<number>();
     for (const overlay of this.overlays) {
@@ -210,8 +188,6 @@ export class GameModeSelector extends LitElement {
       if (overlay.interval <= 0) continue;
       const slotState = this.overlaySlotState.get(overlay.slot);
       if (!slotState) continue;
-      // Only act once per distinct count value, so re-polling after a
-      // dismissal (with no new game cycle) doesn't immediately re-trigger.
       if (this.overlayLastHandledCount.get(overlay) === slotState.count) {
         continue;
       }
@@ -251,18 +227,10 @@ export class GameModeSelector extends LitElement {
   private triggerOverlay(overlay: LobbyCardOverlay) {
     const slot = overlay.slot;
     this.setActiveOverlay(slot, { slot, overlay, phase: "entering" });
-    // Fallback in case 'loadeddata' never fires (slow network, codec issue,
-    // etc.) -- reveal the video anyway so the overlay doesn't stay invisible.
     setTimeout(() => this.handleVideoReady(slot), 800);
-    // Fallback in case the video fails to load and neither 'timeupdate' nor
-    // 'ended' ever fire. The normal path is handleVideoTimeUpdate below,
-    // which watches actual playback progress so the fade lines up with the
-    // real video length even if it drifts from the declared videoLength.
     this.setOverlayTimer(slot, (overlay.video.videoLength + 2) * 1000, () =>
       this.advanceOverlayToFading(slot),
     );
-    // `ttl` is the total time the overlay stays up, video included, so this
-    // starts counting now rather than once the static card phase begins.
     const existingDismiss = this.overlayDismissTimers.get(slot);
     if (existingDismiss) clearTimeout(existingDismiss);
     this.overlayDismissTimers.set(
@@ -271,10 +239,6 @@ export class GameModeSelector extends LitElement {
     );
   }
 
-  // Flips "entering" -> "video" once the video actually has a frame to show
-  // (the 'loadeddata' event), so the CSS opacity transition lines up with
-  // real playback instead of firing before there's anything visible to fade
-  // in from.
   private handleVideoReady(slot: number) {
     const active = this.activeOverlays.get(slot);
     if (active?.phase === "entering") {
@@ -282,10 +246,6 @@ export class GameModeSelector extends LitElement {
     }
   }
 
-  // Starts the fade once actual playback enters its last OVERLAY_FADE_MS, so
-  // the video dissolves into the card instead of snapping once it ends.
-  // Driven by real playback progress rather than the declared videoLength,
-  // which may not match the video file exactly.
   private handleVideoTimeUpdate(slot: number, e: Event) {
     const video = e.currentTarget as HTMLVideoElement;
     if (!isFinite(video.duration)) return;
@@ -620,18 +580,9 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  // Renders a triggered promo overlay: a short video that plays over the
-  // card, then dissolves (during its own last OVERLAY_FADE_MS) into a static
-  // info card underneath (title, image, subtitle + player count), closable
-  // early. The card is mounted as soon as fading starts so the video
-  // dissolves directly into it instead of a blank surface.
   private renderOverlayCard(active: ActiveOverlay) {
     const { overlay, phase, slot } = active;
     const showVideo = phase !== "card";
-    // Title/image only appear once the video dissolves away; the count,
-    // bottom bar, and dismiss button stay up the whole time (on top of the
-    // video) so the card is clickable/closable and shows the count from the
-    // start.
     const showReveal = phase === "fading" || phase === "card";
 
     return html`
