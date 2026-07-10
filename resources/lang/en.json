@@ -5,6 +5,9 @@
     "cancel_subscription_failed": "Failed to cancel subscription. Please try again or use Manage.",
     "cancel_subscription_success": "Subscription canceled. Access continues until the end of the billing period.",
     "change_tier": "Change Tier",
+    "claim": "Claim",
+    "claim_all": "Claim All",
+    "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
     "email_placeholder": "Enter your email address",
@@ -37,6 +40,8 @@
     "public_player_id": "Public Player ID:",
     "reactivate_subscription": "Reactivate",
     "recovery_email_sent": "Recovery email sent to {email}",
+    "reward_daily": "Daily subscription reward",
+    "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
     "stats_overview": "Stats Overview",
     "sub_price_monthly": "{price}/mo",
@@ -57,6 +62,7 @@
     "tab_games": "Games",
     "tab_stats": "Stats",
     "title": "Account",
+    "unclaimed_rewards": "Unclaimed Rewards",
     "your_subscription": "Your Subscription"
   },
   "build_menu": {
@@ -1261,6 +1267,9 @@
     "fastest_game_speed": "Max",
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
+  },
+  "rewards_modal": {
+    "title": "Rewards"
   },
   "select_lang": {
     "title": "Select Language"

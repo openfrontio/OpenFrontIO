@@ -23,6 +23,8 @@ import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
+import "./components/RewardsPanel";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
@@ -205,7 +207,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -235,7 +237,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -316,6 +318,28 @@ export class AccountModal extends BaseModal {
       </div>
     `;
   }
+
+  private renderRewardsPanel(): TemplateResult | "" {
+    const rewards = this.userMeResponse?.player?.rewards ?? [];
+    if (rewards.length === 0) return "";
+    return html`<rewards-panel
+      .rewards=${rewards}
+      @rewards-changed=${this.handleRewardsChanged}
+    ></rewards-panel>`;
+  }
+
+  // A claim moved unclaimed rewards into the balances; both were returned by
+  // the claim endpoint, so update in place instead of re-fetching /users/@me.
+  private handleRewardsChanged = (
+    event: CustomEvent<RewardsChangedDetail>,
+  ): void => {
+    if (!this.userMeResponse) return;
+    this.userMeResponse.player.rewards = event.detail.rewards;
+    if (event.detail.currency) {
+      this.userMeResponse.player.currency = event.detail.currency;
+    }
+    this.requestUpdate();
+  };
 
   private renderSubscriptionPanel(): TemplateResult | "" {
     const sub = this.userMeResponse?.player?.subscription;
