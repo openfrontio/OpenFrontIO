@@ -30,6 +30,9 @@
     "linked_to_google_email": "Linked to Google ({email})",
     "log_out": "Log Out",
     "manage_subscription": "Manage",
+    "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
+    "marketing_no_email": "Link an email to your account to subscribe to updates.",
+    "marketing_title": "Email updates",
     "no_games": "No games played yet.",
     "no_stats": "No stats available yet. Play some games to start tracking.",
     "not_found": "Not Found",
@@ -55,6 +58,7 @@
     "tab_account": "Account",
     "tab_friends": "Friends",
     "tab_games": "Games",
+    "tab_settings": "Settings",
     "tab_stats": "Stats",
     "title": "Account",
     "your_subscription": "Your Subscription"
@@ -1041,6 +1045,14 @@
     "search_maps": "Search maps...",
     "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
+  },
+  "marketing_consent": {
+    "body": "News and updates by email. Change it anytime in your account.",
+    "dismiss": "Dismiss",
+    "error": "Couldn't save that. Please try again.",
+    "no": "No thanks",
+    "title": "Keep up with OpenFront?",
+    "yes": "Yes please"
   },
   "matchmaking_button": {
     "description": "(ALPHA)",
