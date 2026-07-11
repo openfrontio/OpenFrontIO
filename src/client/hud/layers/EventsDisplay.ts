@@ -291,8 +291,11 @@ export class EventsDisplay extends LitElement implements Controller {
         }
 
         if (existing.messageKey) {
-          const params = { ...existing.messageParams, count: existing.count };
-          if (params.unit) {
+          const params: Record<string, string | number> = {
+            ...existing.messageParams,
+            count: existing.count,
+          };
+          if (existing.messageParams?.unit) {
             params.unit = getTranslatedUnitName(
               existing.unitType ?? "",
               existing.count > 1,
