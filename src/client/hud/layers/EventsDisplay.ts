@@ -52,38 +52,11 @@ const getTranslatedUnitName = (unitType: string, plural: boolean): string => {
   return translateText(plural ? `unit_type_plural.${key}` : `unit_type.${key}`);
 };
 
-function parseInboundNuke(
-  m: string,
-): { player: string; nukeType: string } | null {
-  if (m.endsWith(" - atom bomb inbound"))
-    return { player: m.slice(0, -20), nukeType: "atom" };
-  if (m.endsWith(" - hydrogen bomb inbound"))
-    return { player: m.slice(0, -24), nukeType: "hydrogen" };
-  if (m.startsWith("⚠️⚠️⚠️ ") && m.endsWith(" - MIRV INBOUND ⚠️⚠️⚠️"))
-    return { player: m.slice(7, -22), nukeType: "mirv" };
-  return null;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _unused = [
-  "events_display.atom_bomb_inbound",
-  "events_display.atom_bomb_inbound_plural",
-  "events_display.hydrogen_bomb_inbound",
-  "events_display.hydrogen_bomb_inbound_plural",
-  "events_display.mirv_inbound",
-  "events_display.mirv_inbound_plural",
-  "unit_type_plural.atom_bomb",
-  "unit_type_plural.boat",
-  "unit_type_plural.city",
-  "unit_type_plural.defense_post",
-  "unit_type_plural.factory",
-  "unit_type_plural.hydrogen_bomb",
-  "unit_type_plural.mirv",
-  "unit_type_plural.missile_silo",
-  "unit_type_plural.port",
-  "unit_type_plural.sam_launcher",
-  "unit_type_plural.warship",
-];
+const INBOUND_NUKE_KEYS: Record<number, string> = {
+  [MessageType.NUKE_INBOUND]: "events_display.atom_bomb_inbound",
+  [MessageType.HYDROGEN_BOMB_INBOUND]: "events_display.hydrogen_bomb_inbound",
+  [MessageType.MIRV_INBOUND]: "events_display.mirv_inbound",
+};
 
 interface GameEvent {
   description: string;
@@ -98,6 +71,8 @@ interface GameEvent {
   count?: number;
   unitType?: string;
   targetPlayerName?: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
 }
 
 const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
@@ -308,43 +283,22 @@ export class EventsDisplay extends LitElement implements Controller {
       if (existing) {
         existing.count = (existing.count ?? 1) + 1;
         existing.createdAt = this.game.ticks();
-        if (event.unitView) existing.unitView = event.unitView;
-        if (event.focusID) existing.focusID = event.focusID;
+        if (event.unitView !== undefined) {
+          existing.unitView = event.unitView;
+        }
+        if (event.focusID !== undefined) {
+          existing.focusID = event.focusID;
+        }
 
-        const u = getTranslatedUnitName(existing.unitType ?? "", true);
-        const n = existing.targetPlayerName ?? "";
-        const c = existing.count;
-
-        if (existing.groupKey?.startsWith("destroyed_")) {
-          existing.description = translateText(
-            "events_display.unit_destroyed_plural",
-            { count: c, unit: u },
-          );
-        } else if (existing.groupKey?.startsWith("captured_")) {
-          existing.description = translateText(
-            "events_display.unit_captured_plural",
-            { count: c, unit: u, name: n },
-          );
-        } else if (existing.groupKey?.startsWith("lost_")) {
-          existing.description = translateText(
-            "events_display.unit_lost_plural",
-            { count: c, unit: u, name: n },
-          );
-        } else if (existing.groupKey?.startsWith("inbound_")) {
-          const k =
-            "events_display." +
-            existing.unitType +
-            (existing.unitType === "mirv" ? "" : "_bomb") +
-            "_inbound_plural";
-          existing.description = translateText(k, { count: c, name: n });
-        } else if (existing.groupKey?.startsWith("intercepted_")) {
-          existing.description = translateText(
-            "events_display.missile_intercepted_plural",
-            {
-              count: c,
-              unit: getTranslatedUnitName(existing.unitType ?? "", true),
-            },
-          );
+        if (existing.messageKey) {
+          const params = { ...existing.messageParams, count: existing.count };
+          if (params.unit) {
+            params.unit = getTranslatedUnitName(
+              existing.unitType ?? "",
+              existing.count > 1,
+            );
+          }
+          existing.description = translateText(existing.messageKey, params);
         }
         this.requestUpdate();
         return;
@@ -359,10 +313,15 @@ export class EventsDisplay extends LitElement implements Controller {
     if (
       event.playerID !== null &&
       (!myPlayer || myPlayer.smallID() !== event.playerID)
-    )
+    ) {
       return;
-    if (event.message === "events_display.received_gold_from_captured_ship")
+    }
+
+    // Captured trade-ship gold is surfaced as a transient +gold pip in
+    // control-panel rather than as a scroll-list entry.
+    if (event.message === "events_display.received_gold_from_captured_ship") {
       return;
+    }
 
     const params = { ...event.params };
     if (params.unit) {
@@ -370,7 +329,7 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     const description = event.message.startsWith("events_display.")
-      ? translateText(event.message, params)
+      ? translateText(event.message, { ...params, count: 1 })
       : event.message;
 
     let groupKey: string | undefined;
@@ -397,8 +356,15 @@ export class EventsDisplay extends LitElement implements Controller {
         event.unitID !== undefined ? this.game.unit(event.unitID) : undefined,
       focusID: event.focusPlayerID,
       groupKey,
+      count: 1,
       unitType,
       targetPlayerName,
+      messageKey: event.message.startsWith("events_display.")
+        ? event.message
+        : undefined,
+      messageParams: event.message.startsWith("events_display.")
+        ? event.params
+        : undefined,
     });
   }
 
@@ -653,17 +619,32 @@ export class EventsDisplay extends LitElement implements Controller {
 
   onUnitIncomingEvent(event: UnitIncomingUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || myPlayer.smallID() !== event.playerID) return;
+    if (!myPlayer || myPlayer.smallID() !== event.playerID) {
+      return;
+    }
 
-    const parsed = parseInboundNuke(event.message);
     let description = event.message;
-    if (parsed) {
-      const k =
-        "events_display." +
-        parsed.nukeType +
-        (parsed.nukeType === "mirv" ? "" : "_bomb") +
-        "_inbound";
-      description = translateText(k, { name: parsed.player });
+    let groupKey: string | undefined;
+    let unitType: string | undefined;
+    let messageKey: string | undefined;
+    let messageParams: Record<string, string | number> | undefined;
+
+    if (event.attackerName) {
+      messageKey = INBOUND_NUKE_KEYS[event.messageType];
+      if (messageKey) {
+        messageParams = { name: event.attackerName };
+        description = translateText(messageKey, { ...messageParams, count: 1 });
+        if (event.messageType === MessageType.NUKE_INBOUND) {
+          unitType = "Atom Bomb";
+          groupKey = `inbound_atom_${event.attackerName}`;
+        } else if (event.messageType === MessageType.HYDROGEN_BOMB_INBOUND) {
+          unitType = "Hydrogen Bomb";
+          groupKey = `inbound_hydrogen_${event.attackerName}`;
+        } else if (event.messageType === MessageType.MIRV_INBOUND) {
+          unitType = "MIRV";
+          groupKey = `inbound_mirv_${event.attackerName}`;
+        }
+      }
     }
 
     this.addEvent({
@@ -673,11 +654,12 @@ export class EventsDisplay extends LitElement implements Controller {
       highlight: true,
       createdAt: this.game.ticks(),
       unitView: this.game.unit(event.unitID),
-      groupKey: parsed
-        ? `inbound_${parsed.nukeType}_${parsed.player}`
-        : undefined,
-      unitType: parsed?.nukeType,
-      targetPlayerName: parsed?.player,
+      groupKey,
+      count: 1,
+      unitType,
+      targetPlayerName: event.attackerName,
+      messageKey,
+      messageParams,
     });
   }
 

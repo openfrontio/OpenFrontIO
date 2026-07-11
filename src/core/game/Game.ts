@@ -809,6 +809,7 @@ export interface Game extends GameMap {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+    attackerName?: string,
   ): void;
 
   displayChat(

@@ -345,6 +345,9 @@ export class UnitImpl implements Unit {
   }
 
   private displayMessageOnDeleted(): void {
+    if (!this._owner.isAlive()) {
+      return;
+    }
     // Only warships, transport ships, and structures are worth notifying about; everything
     // else is either visible on the map or too low-stakes to surface.
     if (

@@ -220,6 +220,7 @@ export class NukeExecution implements Execution {
             `${this.player.displayName()} - atom bomb inbound`,
             MessageType.NUKE_INBOUND,
             target.id(),
+            this.player.displayName(),
           );
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
@@ -228,6 +229,7 @@ export class NukeExecution implements Execution {
             `${this.player.displayName()} - hydrogen bomb inbound`,
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
+            this.player.displayName(),
           );
         }
 
