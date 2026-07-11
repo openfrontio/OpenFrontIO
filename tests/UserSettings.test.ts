@@ -67,22 +67,22 @@ describe("UserSettings highlight small players", () => {
     ).cache.clear();
   });
 
-  it("defaults to off", () => {
-    expect(new UserSettings().highlightSmallPlayers()).toBe(false);
+  it("defaults to on", () => {
+    expect(new UserSettings().highlightSmallPlayers()).toBe(true);
   });
 
-  it("toggles on and off", () => {
+  it("toggles off and on", () => {
     const s = new UserSettings();
     s.toggleHighlightSmallPlayers();
-    expect(s.highlightSmallPlayers()).toBe(true);
-    s.toggleHighlightSmallPlayers();
     expect(s.highlightSmallPlayers()).toBe(false);
+    s.toggleHighlightSmallPlayers();
+    expect(s.highlightSmallPlayers()).toBe(true);
   });
 
   it("shares state across instances via the static cache", () => {
     // The settings modal and the renderer's frame builder each hold their own
     // UserSettings; a toggle in one must be visible to the other.
     new UserSettings().toggleHighlightSmallPlayers();
-    expect(new UserSettings().highlightSmallPlayers()).toBe(true);
+    expect(new UserSettings().highlightSmallPlayers()).toBe(false);
   });
 });

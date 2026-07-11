@@ -140,7 +140,7 @@ export class UserSettings {
   }
 
   highlightSmallPlayers() {
-    return this.getBool("settings.highlightSmallPlayers", false);
+    return this.getBool("settings.highlightSmallPlayers", true);
   }
 
   performanceOverlay() {
