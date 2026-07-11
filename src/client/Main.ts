@@ -48,6 +48,7 @@ import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
+import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { StoreModal } from "./Store";
 import "./TerritoryPatternsModal";
@@ -67,6 +68,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
@@ -265,6 +267,7 @@ class Client {
   private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private rewardsModal: RewardsModal;
   private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
@@ -504,6 +507,11 @@ class Client {
       console.warn("Matchmaking modal element not found");
     }
 
+    this.rewardsModal = document.querySelector("rewards-modal") as RewardsModal;
+    if (!this.rewardsModal || !(this.rewardsModal instanceof RewardsModal)) {
+      console.warn("Rewards modal element not found");
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (crazyGamesSDK.isOnCrazyGames()) {
         void updateCrazyGamesNavButton();
@@ -527,6 +535,17 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
+
+        // Unclaimed-rewards popup — only on a clean homepage load, never over
+        // a deep link (join URL, #modal=..., #purchase-completed, ...).
+        const rewards = userMeResponse.player.rewards ?? [];
+        if (
+          rewards.length > 0 &&
+          window.location.pathname === "/" &&
+          window.location.hash === ""
+        ) {
+          this.rewardsModal?.openWithRewards(rewards);
+        }
       }
     };
 
@@ -801,6 +820,21 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // ?host means the lobby creator is returning to a successor lobby they
+      // reused from the win screen: reopen the host view bound to the existing
+      // lobby instead of the join flow. Non-creators who hit this URL still get
+      // treated as normal joiners by the server.
+      const returningAsHost = new URLSearchParams(window.location.search).has(
+        "host",
+      );
+      if (returningAsHost) {
+        // open() reveals the inline page itself (it calls showPage internally).
+        // Calling showPage first would open the modal once with no args and
+        // spuriously create a lobby before this attach call runs.
+        this.hostModal.open({ existingLobbyId: lobbyId });
+        console.log(`reopening host lobby ${lobbyId}`);
+        return;
+      }
       window.showPage?.("page-join-lobby");
       this.joinModal.open({ lobbyId });
       console.log(`joining lobby ${lobbyId}`);

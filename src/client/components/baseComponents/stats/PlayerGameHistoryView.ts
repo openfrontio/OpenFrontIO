@@ -455,7 +455,7 @@ export class PlayerGameHistoryView extends LitElement {
               @click=${() => this.showRanking(game.gameId)}
               class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
             >
-              ${translateText("game_list.ranking")}
+              ${translateText("game_list.stats")}
             </button>
             <button
               type="button"

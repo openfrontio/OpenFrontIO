@@ -5,6 +5,9 @@
     "cancel_subscription_failed": "Failed to cancel subscription. Please try again or use Manage.",
     "cancel_subscription_success": "Subscription canceled. Access continues until the end of the billing period.",
     "change_tier": "Change Tier",
+    "claim": "Claim",
+    "claim_all": "Claim All",
+    "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
     "email_placeholder": "Enter your email address",
@@ -30,6 +33,9 @@
     "linked_to_google_email": "Linked to Google ({email})",
     "log_out": "Log Out",
     "manage_subscription": "Manage",
+    "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
+    "marketing_no_email": "Link an email to your account to subscribe to updates.",
+    "marketing_title": "Email updates",
     "no_games": "No games played yet.",
     "no_stats": "No stats available yet. Play some games to start tracking.",
     "not_found": "Not Found",
@@ -37,6 +43,8 @@
     "public_player_id": "Public Player ID:",
     "reactivate_subscription": "Reactivate",
     "recovery_email_sent": "Recovery email sent to {email}",
+    "reward_daily": "Daily subscription reward",
+    "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
     "stats_overview": "Stats Overview",
     "sub_price_monthly": "{price}/mo",
@@ -55,8 +63,10 @@
     "tab_account": "Account",
     "tab_friends": "Friends",
     "tab_games": "Games",
+    "tab_settings": "Settings",
     "tab_stats": "Stats",
     "title": "Account",
+    "unclaimed_rewards": "Unclaimed Rewards",
     "your_subscription": "Your Subscription"
   },
   "build_menu": {
@@ -388,7 +398,8 @@
     "per_day": "/day",
     "rare": "Rare",
     "soft": "Caps",
-    "uncommon": "Uncommon"
+    "uncommon": "Uncommon",
+    "usd_value": "Value: {usd}"
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
@@ -557,7 +568,7 @@
     "war": "War"
   },
   "game_list": {
-    "ranking": "Ranking"
+    "stats": "Stats"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -954,6 +965,7 @@
     "hongkong": "Hong Kong",
     "iceland": "Iceland",
     "indiansubcontinent": "Indian Subcontinent",
+    "irishsea": "Irish Sea",
     "italia": "Italia",
     "japan": "Japan",
     "juandefucastrait": "Juan De Fuca Strait",
@@ -985,6 +997,7 @@
     "random": "Random",
     "russia": "Russia",
     "sanfrancisco": "San Francisco",
+    "scandinavia": "Scandinavia",
     "sierpinski": "Sierpinski",
     "southamerica": "South America",
     "southeastasia": "Southeast Asia",
@@ -1043,6 +1056,14 @@
     "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
   },
+  "marketing_consent": {
+    "body": "News and updates by email. Change it anytime in your account.",
+    "dismiss": "Dismiss",
+    "error": "Couldn't save that. Please try again.",
+    "no": "No thanks",
+    "title": "Keep up with OpenFront?",
+    "yes": "Yes please"
+  },
   "matchmaking_button": {
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
@@ -1065,6 +1086,13 @@
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",
     "teams_title": "Teams"
+  },
+  "new_lobby_prompt": {
+    "confirm": "Start a new lobby? All players will be invited to join.",
+    "dismiss": "Dismiss",
+    "failed": "Could not create a new lobby. Please try again.",
+    "join": "Join",
+    "message": "Host started a new lobby"
   },
   "news": {
     "title": "Release Notes"
@@ -1263,6 +1291,9 @@
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
   },
+  "rewards_modal": {
+    "title": "Rewards"
+  },
   "select_lang": {
     "title": "Select Language"
   },
@@ -1311,7 +1342,6 @@
   },
   "store": {
     "already_subscribed": "Already subscribed.",
-    "buy_for": "Buy for {price}",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
     "change_tier_success": "Switched to {tier}.",
     "checkout_failed": "Failed to create checkout session.",
@@ -1320,7 +1350,7 @@
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
-    "custom_amount": "Custom Amount",
+    "custom_amount": "Choose Amount",
     "custom_currency_purchase_success": "Plutonium purchase successful!",
     "effects": "Effects",
     "flags": "Flags",
@@ -1333,6 +1363,7 @@
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
     "packs": "Packs",
     "patterns": "Skins",
+    "plutonium_amount": "Plutonium amount",
     "price_per_month": "/mo",
     "purchase_currency": "Purchase {currency}",
     "purchase_failed": "Purchase failed. Please try again.",
@@ -1564,6 +1595,7 @@
     "join_server": "Join Server",
     "keep": "Keep Playing",
     "nation_won": "Nation {nation} has won!",
+    "new_lobby": "New Lobby",
     "other_team": "{team} team has won!",
     "other_won": "{player} has won!",
     "requeue": "Play Again",

@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
-import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { GameView } from "../../view";
 
 const AD_TYPES = [
@@ -52,16 +51,8 @@ export class InGamePromo extends LitElement implements Controller {
   }
 
   private showAd(): void {
-    console.log(
-      `[InGamePromo] showAd called, isOnCrazyGames=${crazyGamesSDK.isOnCrazyGames()}`,
-    );
     if (window.innerWidth < 1100) return;
     if (window.innerHeight < 750) return;
-
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      this.showCrazyGamesAd();
-      return;
-    }
 
     if (!window.adsEnabled) return;
 
@@ -71,25 +62,6 @@ export class InGamePromo extends LitElement implements Controller {
     this.updateComplete.then(() => {
       this.loadAd();
       this.checkForAds();
-    });
-  }
-
-  private showCrazyGamesAd(): void {
-    console.log(
-      `[InGamePromo] showCrazyGamesAd called, isReady=${crazyGamesSDK.isReady()}, width=${window.innerWidth}, height=${window.innerHeight}`,
-    );
-    if (!crazyGamesSDK.isReady()) {
-      console.log(
-        "[InGamePromo] CrazyGames SDK not ready, skipping in-game ad",
-      );
-      return;
-    }
-
-    this.requestUpdate();
-
-    this.updateComplete.then(() => {
-      console.log("[InGamePromo] DOM updated, calling createBottomLeftAd");
-      crazyGamesSDK.createBottomLeftAd();
     });
   }
 
@@ -145,13 +117,6 @@ export class InGamePromo extends LitElement implements Controller {
     }
     this.adsVisible = false;
     this.destroyBottomRail();
-
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      crazyGamesSDK.clearBottomLeftAd();
-      this.shouldShow = false;
-      this.requestUpdate();
-      return;
-    }
 
     if (!window.ramp) {
       console.warn("Playwire RAMP not available for in-game ad");
