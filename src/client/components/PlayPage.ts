@@ -17,6 +17,7 @@ export class PlayPage extends LitElement {
         class="flex flex-col gap-2 w-full px-0 lg:px-4 min-h-0"
       >
         <token-login class="absolute"></token-login>
+        <rewards-modal class="absolute"></rewards-modal>
 
         <!-- Mobile: Fixed top bar -->
         <div

@@ -110,7 +110,8 @@ export type ServerMessage =
   | ServerDesyncMessage
   | ServerPrestartMessage
   | ServerErrorMessage
-  | ServerLobbyInfoMessage;
+  | ServerLobbyInfoMessage
+  | ServerNewLobbyMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -123,6 +124,7 @@ export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
 export type ServerLobbyInfoMessage = z.infer<
   typeof ServerLobbyInfoMessageSchema
 >;
+export type ServerNewLobbyMessage = z.infer<typeof ServerNewLobbyMessageSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientSendLiveStatsMessage = z.infer<
   typeof ClientSendLiveStatsSchema
@@ -758,6 +760,14 @@ export const ServerLobbyInfoMessageSchema = z.object({
   myClientID: ID,
 });
 
+// Broadcast by a finished private game's server to every still-connected client
+// when the host starts a successor lobby, so the whole group can hop to the new
+// game without re-sharing the link. gameID is the freshly minted successor.
+export const ServerNewLobbyMessageSchema = z.object({
+  type: z.literal("new_lobby"),
+  gameID: ID,
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -766,6 +776,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerDesyncSchema,
   ServerErrorSchema,
   ServerLobbyInfoMessageSchema,
+  ServerNewLobbyMessageSchema,
 ]);
 
 //

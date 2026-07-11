@@ -4,6 +4,10 @@ import { z } from "zod";
 import type { LobbyCardOverlay, NewsItem } from "../core/ApiSchemas";
 import {
   LobbyCardOverlaySchema,
+  ClaimAllRewardsResponse,
+  ClaimAllRewardsResponseSchema,
+  ClaimRewardResponse,
+  ClaimRewardResponseSchema,
   NewsItemSchema,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
@@ -16,7 +20,11 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
+import {
+  AnalyticsRecord,
+  AnalyticsRecordSchema,
+  GameInfo,
+} from "../core/Schemas";
 import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
 
@@ -149,6 +157,42 @@ export function invalidateUserMe() {
   __userMe = null;
 }
 
+// POST /marketing/consent — record the player's marketing-email choice
+// (client-driven consent). Called by the consent toast and account settings.
+// Invalidates the cached /users/@me so the new decision is reflected on the
+// next read. Returns true on success.
+export async function setMarketingConsent(
+  consented: boolean,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/marketing/consent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ consented }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "setMarketingConsent: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    invalidateUserMe();
+    return true;
+  } catch (e) {
+    console.error("setMarketingConsent: request failed", e);
+    return false;
+  }
+}
+
 export async function purchaseWithCurrency(
   cosmeticType: "pattern" | "skin" | "flag" | "effect",
   cosmeticName: string,
@@ -184,6 +228,87 @@ export async function purchaseWithCurrency(
     return true;
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
+    return false;
+  }
+}
+
+// POST /rewards/:rewardId/claim — claims a single unclaimed reward and
+// credits the balance atomically. "not_found" covers unknown, already-claimed
+// and other players' rewards (indistinguishable by design); the usual cause is
+// a double-click or a second device claiming first, so callers should re-fetch
+// /users/@me and re-render rather than surface an error.
+export async function claimReward(
+  rewardId: string,
+): Promise<ClaimRewardResponse | "not_found" | false> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/rewards/${encodeURIComponent(rewardId)}/claim`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: await getAuthHeader(),
+        },
+      },
+    );
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (response.status === 404) return "not_found";
+    if (!response.ok) {
+      console.error(
+        "claimReward: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const parsed = ClaimRewardResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("claimReward: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.error("claimReward: request failed", e);
+    return false;
+  }
+}
+
+// POST /rewards/claim-all — claims all pending rewards in one transaction.
+// Succeeds (with an empty `claimed`) even when nothing is pending.
+export async function claimAllRewards(): Promise<
+  ClaimAllRewardsResponse | false
+> {
+  try {
+    const response = await fetch(`${getApiBase()}/rewards/claim-all`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "claimAllRewards: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const parsed = ClaimAllRewardsResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("claimAllRewards: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.error("claimAllRewards: request failed", e);
     return false;
   }
 }
@@ -404,6 +529,33 @@ export async function setLobbyListed(
     console.error("setLobbyListed: request failed", e);
     return { ok: false };
   }
+}
+
+// POST /wX/api/create_game?previous=<gameID>, targeted at the worker that owns
+// the finished game — mints a successor private lobby (same creator, default
+// settings) and has the old game broadcast the new id to everyone still
+// connected. Returns the successor's info; the caller navigates the host there.
+// Idempotent server-side: repeat calls return the same successor.
+export async function createNextLobby(
+  previousGameID: string,
+): Promise<GameInfo> {
+  const token = await getPlayToken();
+  const response = await fetch(
+    `/${ClientEnv.workerPath(previousGameID)}/api/create_game?previous=${previousGameID}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("createNextLobby: server error response:", errorText);
+    throw new Error(`create next lobby failed: HTTP ${response.status}`);
+  }
+  return (await response.json()) as GameInfo;
 }
 
 export function getApiBase() {

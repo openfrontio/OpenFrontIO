@@ -12,6 +12,7 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameID,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
@@ -24,6 +25,7 @@ import {
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerLobbyInfoMessage,
+  ServerNewLobbyMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -157,6 +159,11 @@ export class GameServer {
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private visibleAt?: number;
+
+  // The successor lobby this game has already spawned, if any. Kept so a
+  // repeated create_game?previous= call (e.g. a double click) reuses the same
+  // id instead of minting another lobby.
+  private successorLobbyId: GameID | null = null;
 
   constructor(
     public readonly id: string,
@@ -876,6 +883,35 @@ export class GameServer {
           lobby: shared ?? this.gameInfo(c.clientID),
           myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
+        c.ws.send(msg);
+      }
+    });
+  }
+
+  // The worker created a successor lobby for this game (the host asked to
+  // reuse the private lobby via create_game?previous=). Remember it so repeat
+  // requests reuse the same lobby, and tell everyone still connected its id so
+  // they can hop over without re-sharing a link.
+  public setSuccessorLobby(gameID: GameID) {
+    this.successorLobbyId = gameID;
+    this.log.info("successor lobby created", {
+      gameID: this.id,
+      successorID: gameID,
+    });
+    this.broadcastNewLobby(gameID);
+  }
+
+  public successorLobby(): GameID | null {
+    return this.successorLobbyId;
+  }
+
+  private broadcastNewLobby(gameID: GameID) {
+    const msg = JSON.stringify({
+      type: "new_lobby",
+      gameID,
+    } satisfies ServerNewLobbyMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
         c.ws.send(msg);
       }
     });
