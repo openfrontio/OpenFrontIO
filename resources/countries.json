@@ -1168,6 +1168,11 @@
     "name": "Hamburg"
   },
   {
+    "code": "Haida",
+    "continent": "North America",
+    "name": "Haida"
+  },
+  {
     "code": "Hawaii",
     "continent": "Oceania",
     "name": "Hawaii"
