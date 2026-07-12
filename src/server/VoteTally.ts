@@ -22,10 +22,13 @@ export class VoteRound<T> {
   }
 
   // Returns the winning value once some candidate holds a strict majority of
-  // `totalUniqueIPs` (votes * 2 >= total), else null.
+  // `totalUniqueIPs` (votes * 2 > total), else null. A tie (e.g. 1 of 2 IPs)
+  // does not count as a majority: with exactly 2 electors, both must agree,
+  // otherwise one of two players in a 1v1 could unilaterally declare
+  // themselves the winner. (#4136)
   result(totalUniqueIPs: number): { value: T; votes: number } | null {
     for (const candidate of this.candidates.values()) {
-      if (candidate.ips.size * 2 >= totalUniqueIPs) {
+      if (candidate.ips.size * 2 > totalUniqueIPs) {
         return { value: candidate.value, votes: candidate.ips.size };
       }
     }
