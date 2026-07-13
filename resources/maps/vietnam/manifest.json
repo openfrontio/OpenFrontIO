@@ -1,201 +1,327 @@
 {
   "additionalNations": [
     {
-      "coordinates": [1085, 1363],
+      "coordinates": [
+        1085,
+        1363
+      ],
       "flag": "vn",
       "name": "Ha Tinh"
     },
     {
-      "coordinates": [1093, 766],
+      "coordinates": [
+        1093,
+        766
+      ],
       "flag": "vn",
       "name": "Ninh Binh"
     },
     {
-      "coordinates": [1158, 696],
+      "coordinates": [
+        1158,
+        696
+      ],
       "flag": "vn",
       "name": "Hung Yen"
     },
     {
-      "coordinates": [1237, 514],
+      "coordinates": [
+        1237,
+        514
+      ],
       "flag": "vn",
       "name": "Bac Ninh"
     },
     {
-      "coordinates": [1184, 362],
+      "coordinates": [
+        1184,
+        362
+      ],
       "flag": "vn",
       "name": "Lang Son"
     },
     {
-      "coordinates": [984, 384],
+      "coordinates": [
+        984,
+        384
+      ],
       "flag": "vn",
       "name": "Thai Nguyen"
     },
     {
-      "coordinates": [832, 658],
+      "coordinates": [
+        832,
+        658
+      ],
       "flag": "vn",
       "name": "Phu Tho"
     },
     {
-      "coordinates": [383, 419],
+      "coordinates": [
+        383,
+        419
+      ],
       "flag": "vn",
       "name": "Dien Bien"
     },
     {
-      "coordinates": [559, 261],
+      "coordinates": [
+        559,
+        261
+      ],
       "flag": "vn",
       "name": "Lai Chau"
     },
     {
-      "coordinates": [1086, 216],
+      "coordinates": [
+        1086,
+        216
+      ],
       "flag": "vn",
       "name": "Cao Bang"
     },
     {
-      "coordinates": [748, 406],
+      "coordinates": [
+        748,
+        406
+      ],
       "flag": "vn",
       "name": "Lao Cai"
     },
     {
-      "coordinates": [1656, 2179],
+      "coordinates": [
+        1656,
+        2179
+      ],
       "flag": "South Vietnam",
       "name": "Quang Ngai"
     },
     {
-      "coordinates": [1693, 2401],
+      "coordinates": [
+        1693,
+        2401
+      ],
       "flag": "South Vietnam",
       "name": "Gia Lai"
     },
     {
-      "coordinates": [1744, 2797],
+      "coordinates": [
+        1744,
+        2797
+      ],
       "flag": "South Vietnam",
       "name": "Khanh Hoa"
     },
     {
-      "coordinates": [1373, 2862],
+      "coordinates": [
+        1373,
+        2862
+      ],
       "flag": "South Vietnam",
       "name": "Dong Nai"
     },
     {
-      "coordinates": [1034, 3089],
+      "coordinates": [
+        1034,
+        3089
+      ],
       "flag": "South Vietnam",
       "name": "Dong Thap"
     },
     {
-      "coordinates": [1146, 3248],
+      "coordinates": [
+        1146,
+        3248
+      ],
       "flag": "South Vietnam",
       "name": "Vinh Long"
     },
     {
-      "coordinates": [885, 3379],
+      "coordinates": [
+        885,
+        3379
+      ],
       "flag": "South Vietnam",
       "name": "Ca Mau"
     },
     {
-      "coordinates": [898, 3175],
+      "coordinates": [
+        898,
+        3175
+      ],
       "flag": "South Vietnam",
       "name": "An GIang"
     },
     {
-      "coordinates": [1180, 2921],
+      "coordinates": [
+        1180,
+        2921
+      ],
       "flag": "South Vietnam",
       "name": "Tay Ninh"
     }
   ],
-  "categories": ["new", "countries", "asia"],
+  "categories": [
+    "new",
+    "countries",
+    "asia"
+  ],
   "id": "vietnam",
   "map": {
     "height": 3560,
-    "num_land_tiles": 1508984,
+    "num_land_tiles": 1504115,
     "width": 1976
   },
   "map16x": {
     "height": 890,
-    "num_land_tiles": 90633,
+    "num_land_tiles": 90607,
     "width": 494
   },
   "map4x": {
     "height": 1780,
-    "num_land_tiles": 371483,
+    "num_land_tiles": 371352,
     "width": 988
   },
   "multiplayer_frequency": 4,
   "name": "vietnam",
   "nations": [
     {
-      "coordinates": [1227, 3020],
+      "coordinates": [
+        1227,
+        3020
+      ],
       "flag": "South Vietnam",
       "name": "Saigon"
     },
     {
-      "coordinates": [1038, 3287],
+      "coordinates": [
+        1038,
+        3287
+      ],
       "flag": "South Vietnam",
       "name": "Can Tho"
     },
     {
-      "coordinates": [1670, 2588],
+      "coordinates": [
+        1670,
+        2588
+      ],
       "flag": "South Vietnam",
       "name": "Dak Lak"
     },
     {
-      "coordinates": [1633, 1983],
+      "coordinates": [
+        1633,
+        1983
+      ],
       "flag": "South Vietnam",
       "name": "Da Nang"
     },
     {
-      "coordinates": [1549, 2868],
+      "coordinates": [
+        1549,
+        2868
+      ],
       "flag": "South Vietnam",
       "name": "Lam Dong"
     },
     {
-      "coordinates": [1547, 1822],
+      "coordinates": [
+        1547,
+        1822
+      ],
       "flag": "South Vietnam",
       "name": "Hue"
     },
     {
-      "coordinates": [617, 3129],
+      "coordinates": [
+        617,
+        3129
+      ],
       "flag": "South Vietnam",
       "name": "Phu Quoc"
     },
     {
-      "coordinates": [899, 1045],
+      "coordinates": [
+        899,
+        1045
+      ],
       "flag": "vn",
       "name": "Nghe An"
     },
     {
-      "coordinates": [1248, 1584],
+      "coordinates": [
+        1248,
+        1584
+      ],
       "flag": "South Vietnam",
       "name": "Quang Tri"
     },
     {
-      "coordinates": [1000, 830],
+      "coordinates": [
+        1000,
+        830
+      ],
       "flag": "vn",
       "name": "Thanh Hoa"
     },
     {
-      "coordinates": [1016, 584],
+      "coordinates": [
+        1016,
+        584
+      ],
       "flag": "vn",
       "name": "Ha Noi"
     },
     {
-      "coordinates": [1224, 628],
+      "coordinates": [
+        1224,
+        628
+      ],
       "flag": "vn",
       "name": "Hai Phong"
     },
     {
-      "coordinates": [1426, 487],
+      "coordinates": [
+        1426,
+        487
+      ],
       "flag": "vn",
       "name": "Quang Ninh"
     },
     {
-      "coordinates": [853, 237],
+      "coordinates": [
+        853,
+        237
+      ],
       "flag": "vn",
       "name": "Tuyen Quang"
     },
     {
-      "coordinates": [609, 538],
+      "coordinates": [
+        609,
+        538
+      ],
       "flag": "vn",
       "name": "Son La"
     }
   ],
+  "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1360,
+        "width": 1976,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 2200,
+        "width": 1976,
+        "x": 0,
+        "y": 1360
+      }
+    ]
+  },
   "translation_key": "map.vietnam"
 }

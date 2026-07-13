@@ -858,6 +858,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.vietnam",
     categories: ["new", "countries", "asia"],
     multiplayerFrequency: 4,
+    specialTeamCount: 2,
   },
   {
     id: "WarshipWarship",
