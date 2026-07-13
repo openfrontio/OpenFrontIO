@@ -1,0 +1,336 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [148, 66],
+      "flag": "bj",
+      "name": "Cotonou"
+    },
+    {
+      "coordinates": [398, 7],
+      "flag": "ng",
+      "name": "Ikeja"
+    },
+    {
+      "coordinates": [1056, 198],
+      "flag": "ng",
+      "name": "Sapele"
+    },
+    {
+      "coordinates": [1262, 88],
+      "flag": "ng",
+      "name": "Asaba"
+    },
+    {
+      "coordinates": [1335, 88],
+      "flag": "ng",
+      "name": "Awka"
+    },
+    {
+      "coordinates": [815, 31],
+      "flag": "ng",
+      "name": "Ondo"
+    },
+    {
+      "coordinates": [628, 20],
+      "flag": "ng",
+      "name": "Epe"
+    },
+    {
+      "coordinates": [1335, 320],
+      "flag": "ng",
+      "name": "Owerri"
+    },
+    {
+      "coordinates": [1491, 254],
+      "flag": "ng",
+      "name": "Umuahia"
+    },
+    {
+      "coordinates": [1479, 388],
+      "flag": "ng",
+      "name": "Aba"
+    },
+    {
+      "coordinates": [1576, 430],
+      "flag": "ng",
+      "name": "Uyo"
+    },
+    {
+      "coordinates": [1058, 491],
+      "flag": "ng",
+      "name": "Forcados"
+    },
+    {
+      "coordinates": [1175, 476],
+      "flag": "ng",
+      "name": "Yenagoa"
+    },
+    {
+      "coordinates": [1244, 352],
+      "flag": "ng",
+      "name": "Omoko"
+    },
+    {
+      "coordinates": [1748, 23],
+      "flag": "ng",
+      "name": "Ogoja"
+    },
+    {
+      "coordinates": [1674, 193],
+      "flag": "ng",
+      "name": "Ikom"
+    },
+    {
+      "coordinates": [1314, 210],
+      "flag": "ng",
+      "name": "Onitsha"
+    },
+    {
+      "coordinates": [1863, 563],
+      "flag": "cm",
+      "name": "Buea"
+    },
+    {
+      "coordinates": [2126, 706],
+      "flag": "cm",
+      "name": "Edea"
+    },
+    {
+      "coordinates": [2105, 839],
+      "flag": "cm",
+      "name": "Kribi"
+    },
+    {
+      "coordinates": [2300, 725],
+      "flag": "cm",
+      "name": "Eseka"
+    },
+    {
+      "coordinates": [2017, 389],
+      "flag": "cm",
+      "name": "Nkongsamba"
+    },
+    {
+      "coordinates": [1877, 204],
+      "flag": "cm",
+      "name": "Mamfe"
+    },
+    {
+      "coordinates": [2181, 7],
+      "flag": "cm",
+      "name": "Kumbo"
+    },
+    {
+      "coordinates": [2486, 522],
+      "flag": "cm",
+      "name": "Ntui"
+    },
+    {
+      "coordinates": [2333, 404],
+      "flag": "cm",
+      "name": "Bafia"
+    },
+    {
+      "coordinates": [2236, 904],
+      "flag": "cm",
+      "name": "Ebolowa"
+    },
+    {
+      "coordinates": [2250, 1066],
+      "flag": "cm",
+      "name": "Ambam"
+    },
+    {
+      "coordinates": [2469, 985],
+      "flag": "cm",
+      "name": "Sangmelima"
+    },
+    {
+      "coordinates": [1751, 812],
+      "flag": "gq",
+      "name": "Luba"
+    },
+    {
+      "coordinates": [2011, 1344],
+      "flag": "gq",
+      "name": "Acalayong"
+    },
+    {
+      "coordinates": [2009, 1287],
+      "flag": "gq",
+      "name": "Mbini"
+    },
+    {
+      "coordinates": [2454, 1241],
+      "flag": "gq",
+      "name": "Mongomo"
+    },
+    {
+      "coordinates": [2037, 2180],
+      "flag": "ga",
+      "name": "Sette Cama"
+    },
+    {
+      "coordinates": [2305, 1967],
+      "flag": "ga",
+      "name": "Mouila"
+    },
+    {
+      "coordinates": [2474, 2150],
+      "flag": "ga",
+      "name": "Ndende"
+    },
+    {
+      "coordinates": [2298, 1622],
+      "flag": "ga",
+      "name": "Ndojole"
+    },
+    {
+      "coordinates": [2145, 1595],
+      "flag": "ga",
+      "name": "Kango"
+    },
+    {
+      "coordinates": [2465, 1442],
+      "flag": "ga",
+      "name": "Lara"
+    },
+    {
+      "coordinates": [1990, 1652],
+      "flag": "ga",
+      "name": "Foulenzem"
+    }
+  ],
+  "categories": ["africa", "new"],
+  "id": "GulfOfGuinea",
+  "map": {
+    "height": 2200,
+    "num_land_tiles": 1788041,
+    "width": 2500
+  },
+  "map16x": {
+    "height": 550,
+    "num_land_tiles": 109223,
+    "width": 625
+  },
+  "map4x": {
+    "height": 1100,
+    "num_land_tiles": 443514,
+    "width": 1250
+  },
+  "multiplayer_frequency": 5,
+  "name": "Gulf Of Guinea",
+  "nations": [
+    {
+      "coordinates": [1807, 739],
+      "flag": "gq",
+      "name": "Malabo"
+    },
+    {
+      "coordinates": [1463, 1251],
+      "flag": "st",
+      "name": "Principe"
+    },
+    {
+      "coordinates": [1299, 1567],
+      "flag": "st",
+      "name": "Sao Tome"
+    },
+    {
+      "coordinates": [1035, 1992],
+      "flag": "gq-an",
+      "name": "Annobon"
+    },
+    {
+      "coordinates": [1987, 1535],
+      "flag": "ga",
+      "name": "Libreville"
+    },
+    {
+      "coordinates": [2468, 700],
+      "flag": "cm",
+      "name": "Yaounde"
+    },
+    {
+      "coordinates": [2058, 611],
+      "flag": "cm",
+      "name": "Douala"
+    },
+    {
+      "coordinates": [1695, 401],
+      "flag": "ng",
+      "name": "Calabar"
+    },
+    {
+      "coordinates": [1371, 464],
+      "flag": "ng",
+      "name": "Port Harcourt"
+    },
+    {
+      "coordinates": [2096, 1167],
+      "flag": "gq",
+      "name": "Bata"
+    },
+    {
+      "coordinates": [2334, 1238],
+      "flag": "gq",
+      "name": "Ciudad de la Paz"
+    },
+    {
+      "coordinates": [1796, 1793],
+      "flag": "ga",
+      "name": "Port-Gentil"
+    },
+    {
+      "coordinates": [1096, 281],
+      "flag": "ng",
+      "name": "Warri"
+    },
+    {
+      "coordinates": [1055, 69],
+      "flag": "ng",
+      "name": "Benin City"
+    },
+    {
+      "coordinates": [1516, 55],
+      "flag": "ng",
+      "name": "Enugu"
+    },
+    {
+      "coordinates": [2180, 225],
+      "flag": "cm",
+      "name": "Bafoussam"
+    },
+    {
+      "coordinates": [2099, 75],
+      "flag": "cm",
+      "name": "Bamenda"
+    },
+    {
+      "coordinates": [475, 37],
+      "flag": "ng",
+      "name": "Lagos"
+    },
+    {
+      "coordinates": [265, 48],
+      "flag": "bj",
+      "name": "Porto-Novo"
+    },
+    {
+      "coordinates": [19, 109],
+      "flag": "tg",
+      "name": "Lome"
+    },
+    {
+      "coordinates": [2197, 1809],
+      "flag": "ga",
+      "name": "Lambarene"
+    },
+    {
+      "coordinates": [1926, 2023],
+      "flag": "ga",
+      "name": "Omboue"
+    }
+  ],
+  "translation_key": "map.gulfofguinea"
+}
