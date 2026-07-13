@@ -97,7 +97,7 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
   ...Array<ModifierKey>(4).fill("isWaterNukes"),
-  ...Array<ModifierKey>(2).fill("isDoomsdayClock"),
+  ...Array<ModifierKey>(4).fill("isDoomsdayClock"),
 ];
 
 // Speeds the Doomsday Clock can roll at when it lands in the rotation. Picked
