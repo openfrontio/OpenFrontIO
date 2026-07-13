@@ -14,7 +14,10 @@ import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
-import { GameView } from "../view";
+import { GameView, UnitView } from "../view";
+import { Unit, UnitType } from "../../core/game/Game";
+import { TileRef } from "src/core/game/GameMap";
+
 
 export class HoverHighlightController implements Controller {
   private lastOwnerID = 0;
@@ -35,11 +38,30 @@ export class HoverHighlightController implements Controller {
     this.view.setMouseWorldPos(world.x, world.y);
 
     const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
+    if (!this.game.isValidCoord(cell.x, cell.y)) return
+
     let ownerID = 0;
-    if (this.game.isValidCoord(cell.x, cell.y)) {
-      const ref = this.game.ref(cell.x, cell.y);
+    
+
+    const ref = this.game.ref(cell.x, cell.y);
+    if (this.game.isLand(ref)) {
       ownerID = this.game.tileState(ref) & OWNER_MASK;
+    } else {
+      const units = this.game
+        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
+        // Avoid square root for performance; 50px radius = 2500px²
+        .filter((u) => this.game.euclideanDistSquared(ref, u.tile()) < 2500)
+        .sort((a: UnitView, b: UnitView) => {
+          const distA = this.game.euclideanDistSquared(ref, a.tile());
+          const distB = this.game.euclideanDistSquared(ref, b.tile());
+          return distA - distB;
+        });
+      
+      if (units.length > 0) {
+        ownerID = units[0].owner().smallID();
+      }
     }
+    
     if (ownerID === this.lastOwnerID) return;
     this.lastOwnerID = ownerID;
     this.view.setHighlightOwner(ownerID);
