@@ -540,12 +540,10 @@ export class GameServer {
       clientIP: ipAnonymize(client.ip),
     });
 
-    // Matchmade games (allowedPublicIds set) are pinned to exact accounts,
-    // so the same-IP cap below adds nothing there and would lock out
-    // legitimate same-NAT players the matcher grouped together.
-    const identityGated = (this.gameConfig.allowedPublicIds?.length ?? 0) > 0;
+    // Skipped in dev: local testing (multi-tab, the matchmaking e2e) is
+    // inherently same-IP.
     if (
-      !identityGated &&
+      ServerEnv.env() !== GameEnv.Dev &&
       this.gameConfig.gameType === GameType.Public &&
       this.activeClients.filter(
         (c) => c.ip === client.ip && c.clientID !== client.clientID,
