@@ -6,6 +6,8 @@ import { Cosmetics } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
+import "./components/CurrencyDisplay";
+import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -59,11 +61,23 @@ export class StoreModal extends BaseModal {
   }
 
   private renderHeader(): TemplateResult {
+    const currency =
+      this.userMeResponse === false
+        ? undefined
+        : this.userMeResponse.player.currency;
     return modalHeader({
       title: translateText("store.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+      rightContent: html`<div class="flex items-center gap-4">
+        ${currency
+          ? html`<currency-display
+              .hard=${currency.hard}
+              .soft=${currency.soft}
+            ></currency-display>`
+          : ""}
+        <not-logged-in-warning></not-logged-in-warning>
+      </div>`,
     });
   }
 
@@ -163,14 +177,8 @@ export class StoreModal extends BaseModal {
       this.affiliateCode,
     ).filter((r) => r.type === "pack" && r.relationship === "purchasable");
 
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_packs")}
-      </div>`;
-    }
-
+    // The custom-amount card is always purchasable (priced inline server-side,
+    // no catalog entry), and follows the fixed packs at the end of the grid.
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
@@ -183,6 +191,7 @@ export class StoreModal extends BaseModal {
             ></cosmetic-button>
           `,
         )}
+        <custom-currency-card></custom-currency-card>
       </div>
     `;
   }

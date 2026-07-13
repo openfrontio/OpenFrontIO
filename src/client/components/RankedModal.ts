@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { getUserMe, hasLinkedAccount } from "../Api";
 import { userAuth } from "../Auth";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
 import { modalHeader } from "./ui/ModalHeader";
@@ -14,6 +15,14 @@ export class RankedModal extends BaseModal {
   @state() private elo: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
+  // CrazyGames players authenticate through the SDK, not a linked
+  // Discord/Google/email account, so track that separately for ranked.
+  @state() private crazyGamesSignedIn = false;
+
+  // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
+  private isRankedEligible(): boolean {
+    return hasLinkedAccount(this.userMeResponse) || this.crazyGamesSignedIn;
+  }
 
   constructor() {
     super();
@@ -50,7 +59,7 @@ export class RankedModal extends BaseModal {
       return;
     }
 
-    if (hasLinkedAccount(this.userMeResponse)) {
+    if (this.isRankedEligible()) {
       this.elo =
         this.userMeResponse &&
         this.userMeResponse.player.leaderboard?.oneVone?.elo
@@ -66,6 +75,9 @@ export class RankedModal extends BaseModal {
     try {
       const userMe = await getUserMe();
       this.userMeResponse = userMe;
+      this.crazyGamesSignedIn =
+        crazyGamesSDK.isOnCrazyGames() &&
+        (await crazyGamesSDK.getUserProfile()) !== null;
     } catch (error) {
       console.error("Failed to fetch user profile for ranked modal", error);
       this.userMeResponse = false;
@@ -95,7 +107,7 @@ export class RankedModal extends BaseModal {
           ${this.renderCard(
             translateText("mode_selector.ranked_1v1_title"),
             this.errorMessage ??
-              (hasLinkedAccount(this.userMeResponse)
+              (this.isRankedEligible()
                 ? translateText("matchmaking_modal.elo", { elo: this.elo })
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked(),

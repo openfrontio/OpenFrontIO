@@ -1,0 +1,419 @@
+{
+  "id": "Russia",
+  "name": "Russia",
+  "translation_key": "map.russia",
+  "categories": ["europe", "asia", "new", "countries"],
+  "multiplayer_frequency": 8,
+  "nations": [
+    {
+      "coordinates": [715, 415],
+      "name": "Murmansk",
+      "flag": "RU-MUR"
+    },
+    {
+      "coordinates": [519, 551],
+      "name": "Karelia",
+      "flag": "RU-KR"
+    },
+    {
+      "coordinates": [719, 617],
+      "name": "Arkhangelsk",
+      "flag": "RU-ARK"
+    },
+    {
+      "coordinates": [599, 753],
+      "name": "Vologda",
+      "flag": "RU-VLG"
+    },
+    {
+      "coordinates": [1110, 878],
+      "name": "Komi Republic",
+      "flag": "RU-KO"
+    },
+    {
+      "coordinates": [1093, 641],
+      "name": "Nenets Autonomous Okrug",
+      "flag": "RU-NEN"
+    },
+    {
+      "coordinates": [360, 639],
+      "name": "Saint Petersburg",
+      "flag": "RU-SPE"
+    },
+    {
+      "coordinates": [463, 686],
+      "name": "Leningrad",
+      "flag": "RU-LEN"
+    },
+    {
+      "coordinates": [86, 691],
+      "name": "Kaliningrad",
+      "flag": "RU-KGD"
+    },
+    {
+      "coordinates": [298, 707],
+      "name": "Pskov",
+      "flag": "RU-PSK"
+    },
+    {
+      "coordinates": [382, 725],
+      "name": "Novgorod",
+      "flag": "RU-NGR"
+    },
+    {
+      "coordinates": [398, 791],
+      "name": "Tver",
+      "flag": "RU-TVE"
+    },
+    {
+      "coordinates": [249, 910],
+      "name": "Bryansk",
+      "flag": "RU-BRY"
+    },
+    {
+      "coordinates": [276, 841],
+      "name": "Smolensk",
+      "flag": "RU-SMO"
+    },
+    {
+      "coordinates": [463, 892],
+      "name": "Moscow",
+      "flag": "RU-MOW"
+    },
+    {
+      "coordinates": [247, 1006],
+      "name": "Kursk",
+      "flag": "RU-KRS"
+    },
+    {
+      "coordinates": [281, 1093],
+      "name": "Belgorod",
+      "flag": "RU-BEL"
+    },
+    {
+      "coordinates": [391, 1168],
+      "name": "Voronezh",
+      "flag": "RU-VOR"
+    },
+    {
+      "coordinates": [293, 1190],
+      "name": "Rostov",
+      "flag": "RU-ROS"
+    },
+    {
+      "coordinates": [217, 1252],
+      "name": "Krasnodar",
+      "flag": "RU-KDA"
+    },
+    {
+      "coordinates": [180, 1328],
+      "name": "Adygea",
+      "flag": "Circassia"
+    },
+    {
+      "coordinates": [287, 1386],
+      "name": "Stavropol",
+      "flag": "RU-STA"
+    },
+    {
+      "coordinates": [317, 1321],
+      "name": "Kalmykia",
+      "flag": "RU-KL"
+    },
+    {
+      "coordinates": [390, 1402],
+      "name": "Astrakhan",
+      "flag": "RU-AST"
+    },
+    {
+      "coordinates": [309, 1474],
+      "name": "Dagestan",
+      "flag": "RU-DA"
+    },
+    {
+      "coordinates": [160, 1378],
+      "name": "Karachay-Cherkessia",
+      "flag": "RU-KC"
+    },
+    {
+      "coordinates": [186, 1416],
+      "name": "Kabardino-Balkaria",
+      "flag": "RU-KB"
+    },
+    {
+      "coordinates": [216, 1449],
+      "name": "North Ossetia",
+      "flag": "RU-SE"
+    },
+    {
+      "coordinates": [270, 1528],
+      "name": "Chechnya",
+      "flag": "RU-CE"
+    },
+    {
+      "coordinates": [250, 1475],
+      "name": "Ingushetia",
+      "flag": "RU-IN"
+    },
+    {
+      "coordinates": [406, 1239],
+      "name": "Volgograd",
+      "flag": "RU-VGG"
+    },
+    {
+      "coordinates": [374, 880],
+      "name": "Kaluga",
+      "flag": "RU-KLU"
+    },
+    {
+      "coordinates": [323, 995],
+      "name": "Oryol",
+      "flag": "RU-ORL"
+    },
+    {
+      "coordinates": [358, 1077],
+      "name": "Lipetsk",
+      "flag": "RU-LIP"
+    },
+    {
+      "coordinates": [397, 985],
+      "name": "Tula",
+      "flag": "RU-TUL"
+    },
+    {
+      "coordinates": [441, 1054],
+      "name": "Ryazan",
+      "flag": "RU-RYA"
+    },
+    {
+      "coordinates": [443, 1127],
+      "name": "Tambov",
+      "flag": "RU-TAM"
+    },
+    {
+      "coordinates": [518, 823],
+      "name": "Yaroslavl",
+      "flag": "RU-YAR"
+    },
+    {
+      "coordinates": [685, 822],
+      "name": "Kostroma",
+      "flag": "RU-KOS"
+    },
+    {
+      "coordinates": [563, 923],
+      "name": "Vladimir",
+      "flag": "RU-VLA"
+    },
+    {
+      "coordinates": [623, 883],
+      "name": "Ivanovo",
+      "flag": "RU-IVA"
+    },
+    {
+      "coordinates": [523, 969],
+      "name": "Nizhny Novgorod",
+      "flag": "RU-NIZ"
+    },
+    {
+      "coordinates": [506, 1208],
+      "name": "Saratov",
+      "flag": "RU-SAR"
+    },
+    {
+      "coordinates": [644, 1183],
+      "name": "Samara",
+      "flag": "RU-SAM"
+    },
+    {
+      "coordinates": [602, 1120],
+      "name": "Ulyanovsk",
+      "flag": "RU-ULY"
+    },
+    {
+      "coordinates": [521, 1104],
+      "name": "Penza",
+      "flag": "RU-PNZ"
+    },
+    {
+      "coordinates": [515, 1038],
+      "name": "Mordovia",
+      "flag": "RU-MO"
+    },
+    {
+      "coordinates": [761, 863],
+      "name": "Kirov",
+      "flag": "RU-KIR"
+    },
+    {
+      "coordinates": [580, 1004],
+      "name": "Mari El",
+      "flag": "RU-ME"
+    },
+    {
+      "coordinates": [653, 960],
+      "name": "Chuvashia",
+      "flag": "Chuvashia"
+    },
+    {
+      "coordinates": [706, 1060],
+      "name": "Tatarstan",
+      "flag": "RU-TA"
+    },
+    {
+      "coordinates": [675, 1285],
+      "name": "Orenburg",
+      "flag": "RU-ORE"
+    },
+    {
+      "coordinates": [780, 1144],
+      "name": "Bashkortostan",
+      "flag": "RU-BA"
+    },
+    {
+      "coordinates": [794, 939],
+      "name": "Udmurtia",
+      "flag": "RU-UD"
+    },
+    {
+      "coordinates": [874, 996],
+      "name": "Perm",
+      "flag": "RU-PER"
+    },
+    {
+      "coordinates": [809, 1259],
+      "name": "Chelyabinsk",
+      "flag": "RU-CHE"
+    },
+    {
+      "coordinates": [951, 1131],
+      "name": "Kurgan",
+      "flag": "RU-KGN"
+    },
+    {
+      "coordinates": [1000, 997],
+      "name": "Sverdlovsk",
+      "flag": "RU-SVE"
+    },
+    {
+      "coordinates": [1310, 749],
+      "name": "Yamalo-Nenets",
+      "flag": "RU-YAN"
+    },
+    {
+      "coordinates": [1327, 950],
+      "name": "Khanty-Mansi",
+      "flag": "RU-KHM"
+    },
+    {
+      "coordinates": [1065, 1144],
+      "name": "Tyumen",
+      "flag": "RU-TYU"
+    },
+    {
+      "coordinates": [1134, 1206],
+      "name": "Omsk",
+      "flag": "RU-OMS"
+    },
+    {
+      "coordinates": [1482, 1098],
+      "name": "Tomsk",
+      "flag": "RU-TOM"
+    },
+    {
+      "coordinates": [1405, 1311],
+      "name": "Novosibirsk",
+      "flag": "RU-NVS"
+    },
+    {
+      "coordinates": [1231, 1339],
+      "name": "Altai",
+      "flag": "RU-ALT"
+    },
+    {
+      "coordinates": [1458, 1545],
+      "name": "Gorno-Altai",
+      "flag": "RU-AL"
+    },
+    {
+      "coordinates": [1520, 1247],
+      "name": "Kemerovo",
+      "flag": "RU-KEM"
+    },
+    {
+      "coordinates": [1536, 1393],
+      "name": "Khakassia",
+      "flag": "RU-KK"
+    },
+    {
+      "coordinates": [1698, 1523],
+      "name": "Tuva",
+      "flag": "RU-TY"
+    },
+    {
+      "coordinates": [1740, 838],
+      "name": "Krasnoyarsk",
+      "flag": "RU-KYA"
+    },
+    {
+      "coordinates": [1947, 1332],
+      "name": "Irkutsk",
+      "flag": "RU-IRK"
+    },
+    {
+      "coordinates": [2266, 844],
+      "name": "Sakha",
+      "flag": "RU-SA"
+    },
+    {
+      "coordinates": [2020, 1404],
+      "name": "Buryatia",
+      "flag": "RU-BU"
+    },
+    {
+      "coordinates": [2511, 1368],
+      "name": "Amur",
+      "flag": "RU-AMU"
+    },
+    {
+      "coordinates": [2615, 1164],
+      "name": "Khabarovsk",
+      "flag": "RU-KHA"
+    },
+    {
+      "coordinates": [2654, 1377],
+      "name": "Jewish Autonomous Oblast",
+      "flag": "RU-YEV"
+    },
+    {
+      "coordinates": [2733, 1502],
+      "name": "Primorsky",
+      "flag": "RU-PRI"
+    },
+    {
+      "coordinates": [2851, 1222],
+      "name": "Sakhalin",
+      "flag": "RU-SAK"
+    },
+    {
+      "coordinates": [2782, 711],
+      "name": "Magadan",
+      "flag": "RU-MAG"
+    },
+    {
+      "coordinates": [3090, 923],
+      "name": "Kamchatka",
+      "flag": "RU-KAM"
+    },
+    {
+      "coordinates": [2956, 223],
+      "name": "Chukotka",
+      "flag": "RU-CHU"
+    },
+    {
+      "coordinates": [2224, 1452],
+      "name": "Zabaykalsky",
+      "flag": "RU-ZAB"
+    }
+  ]
+}

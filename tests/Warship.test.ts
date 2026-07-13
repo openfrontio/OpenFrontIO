@@ -34,7 +34,9 @@ describe("Warship", () => {
     // Advance past the manualMoveRetreatDisabledDuration window.
     executeTicks(game, 50);
   });
-
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   test("Warship heals only if player has port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
     if (typeof maxHealth !== "number") {
@@ -148,6 +150,41 @@ describe("Warship", () => {
         targetUnit: player1.buildUnit(UnitType.Port, game.ref(coastX, 11), {}),
       },
     );
+
+    expect(tradeShip.owner().id()).toBe(player2.id());
+    // Let plenty of time for warship to potentially capture trade ship
+    for (let i = 0; i < 10; i++) {
+      game.executeNextTick();
+    }
+
+    expect(tradeShip.owner().id()).toBe(player2.id());
+  });
+
+  test("Warship doesn't capture trade if there is no port on it's water component", async () => {
+    const portTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    const tradeShip = player2.buildUnit(
+      UnitType.TradeShip,
+      game.ref(coastX + 1, 11),
+      {
+        targetUnit: player1.buildUnit(UnitType.Port, game.ref(coastX, 11), {}),
+      },
+    );
+
+    const warshipTile = warship.tile();
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile) =>
+      tile === warshipTile ? 1 : 2,
+    );
+    vi.spyOn(game, "hasWaterComponent").mockReturnValue(false);
 
     expect(tradeShip.owner().id()).toBe(player2.id());
     // Let plenty of time for warship to potentially capture trade ship

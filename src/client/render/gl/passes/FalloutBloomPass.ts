@@ -27,11 +27,11 @@ import type { HeatManager } from "../utils/HeatManager";
 import { TILE_DEFINES } from "../utils/TileCodec";
 
 import compositeFragSrc from "../shaders/fallout-bloom/composite.frag.glsl?raw";
-import compositeVertSrc from "../shaders/fallout-bloom/composite.vert.glsl?raw";
 import extractFragSrc from "../shaders/fallout-bloom/extract.frag.glsl?raw";
 import blurFragSrc from "../shaders/shared/blur.frag.glsl?raw";
 import fullscreenNoUvVertSrc from "../shaders/shared/fullscreen-no-uv.vert.glsl?raw";
 import fullscreenVertSrc from "../shaders/shared/fullscreen.vert.glsl?raw";
+import compositeVertSrc from "../shaders/shared/map-quad.vert.glsl?raw";
 
 export class FalloutBloomPass {
   private gl: WebGL2RenderingContext;

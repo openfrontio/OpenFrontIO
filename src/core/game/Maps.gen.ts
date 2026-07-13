@@ -22,6 +22,7 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
@@ -42,6 +43,7 @@ export enum GameMapType {
   FaroeIslands = "Faroe Islands", // map-generator/assets/maps/faroeislands/info.json
   FourIslands = "Four Islands", // map-generator/assets/maps/fourislands/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
+  Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
@@ -50,6 +52,7 @@ export enum GameMapType {
   HongKong = "Hong Kong", // map-generator/assets/maps/hongkong/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
+  IrishSea = "Irish Sea", // map-generator/assets/maps/irishsea/info.json
   Italia = "Italia", // map-generator/assets/maps/italia/info.json
   Japan = "Japan", // map-generator/assets/maps/japan/info.json
   JuanDeFucaStrait = "Juan De Fuca Strait", // map-generator/assets/maps/juandefucastrait/info.json
@@ -77,7 +80,9 @@ export enum GameMapType {
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
+  Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
+  Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
   Sierpinski = "Sierpinski", // map-generator/assets/maps/sierpinski/info.json
   SouthAmerica = "South America", // map-generator/assets/maps/southamerica/info.json
   SoutheastAsia = "SoutheastAsia", // map-generator/assets/maps/southeastasia/info.json
@@ -305,6 +310,14 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
   },
   {
+    id: "BranchingPaths",
+    type: GameMapType.BranchingPaths,
+    translationKey: "map.branchingpaths",
+    categories: ["arcade", "fictional"],
+    multiplayerFrequency: 3,
+    specialTeamCount: 2,
+  },
+  {
     id: "Britannia",
     type: GameMapType.Britannia,
     translationKey: "map.britannia",
@@ -450,6 +463,13 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 5,
   },
   {
+    id: "Germany",
+    type: GameMapType.Germany,
+    translationKey: "map.germany",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 5,
+  },
+  {
     id: "GiantWorldMap",
     type: GameMapType.GiantWorldMap,
     translationKey: "map.giantworldmap",
@@ -505,6 +525,14 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.indiansubcontinent",
     categories: ["asia"],
     multiplayerFrequency: 8,
+  },
+  {
+    id: "IrishSea",
+    type: GameMapType.IrishSea,
+    translationKey: "map.irishsea",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 5,
+    specialTeamCount: 3,
   },
   {
     id: "Italia",
@@ -701,11 +729,25 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
   },
   {
+    id: "Russia",
+    type: GameMapType.Russia,
+    translationKey: "map.russia",
+    categories: ["europe", "asia", "new", "countries"],
+    multiplayerFrequency: 8,
+  },
+  {
     id: "SanFrancisco",
     type: GameMapType.SanFrancisco,
     translationKey: "map.sanfrancisco",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+  },
+  {
+    id: "Scandinavia",
+    type: GameMapType.Scandinavia,
+    translationKey: "map.scandinavia",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 7,
   },
   {
     id: "Sierpinski",
