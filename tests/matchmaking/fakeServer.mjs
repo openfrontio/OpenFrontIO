@@ -57,12 +57,21 @@ export async function startFakeMatchmakingServer() {
 
   const wss = new WebSocketServer({
     server,
-    // Real worker rejects a missing instance_id with HTTP 400 pre-upgrade.
-    verifyClient: ({ req }) =>
-      new URL(req.url, "http://localhost").searchParams.has("instance_id"),
+    // Real worker rejects a missing instance_id or an unknown mode with
+    // HTTP 400 pre-upgrade. mode is optional; omitted means 1v1.
+    verifyClient: ({ req }) => {
+      const params = new URL(req.url, "http://localhost").searchParams;
+      const mode = params.get("mode");
+      return (
+        params.has("instance_id") &&
+        (mode === null || mode === "1v1" || mode === "2v2")
+      );
+    },
   });
 
-  wss.on("connection", (ws) => {
+  wss.on("connection", (ws, req) => {
+    // Raw mode param (null when omitted) so tests can assert 1v1 omits it.
+    const mode = new URL(req.url, "http://localhost").searchParams.get("mode");
     ws.on("message", (raw) => {
       let msg;
       try {
@@ -71,7 +80,7 @@ export async function startFakeMatchmakingServer() {
         return;
       }
       if (msg.type !== "join") return;
-      state.joins.push({ jwt: msg.jwt, at: Date.now() });
+      state.joins.push({ jwt: msg.jwt, mode, at: Date.now() });
       if (state.rejectNextJoin) {
         state.rejectNextJoin = false;
         ws.close(1008, "Invalid session");

@@ -125,6 +125,7 @@ export enum GameMode {
 
 export enum RankedType {
   OneVOne = "1v1",
+  TwoVTwo = "2v2",
 }
 
 export const isGameMode = (value: unknown): value is GameMode =>
@@ -419,6 +420,9 @@ export class PlayerInfo {
     public readonly isLobbyCreator: boolean = false,
     public readonly clanTag: string | null = null,
     public readonly friends: ClientID[] = [],
+    // Server-pinned team slot (index into the game's team list) for
+    // matchmade team games; null = assign normally.
+    public readonly teamIndex: number | null = null,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }

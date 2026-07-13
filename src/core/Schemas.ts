@@ -690,6 +690,10 @@ export const PlayerSchema = z.object({
   cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
   friends: z.array(ID).optional(),
+  // Server-stamped team slot for matchmade team games (index into the
+  // game's team list). Feeds deterministic team assignment, so it must be
+  // identical for every client (like clanTag/friends).
+  teamIndex: z.number().int().nonnegative().optional(),
 });
 
 export const GameStartInfoSchema = z.object({

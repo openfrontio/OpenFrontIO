@@ -27,8 +27,16 @@ Prerequisite: `npm run dev` (app on :9000). No API worker needed.
 Real integration against the **API worker on `localhost:8787`**. Two browser
 players join the real queue through the real modal; the dev game server's
 `/matchmaking/checkin` long-poll receives the assignment and creates the
-game; the test asserts both players get the same `gameId` and dispatch
-`join-lobby` once the game exists.
+game; the test asserts all players get the same `gameId`, dispatch
+`join-lobby` once the game exists, that the game carries the mode's config,
+and that the `allowedPublicIds` allowlist admits every matched player.
+
+Modes:
+
+- default: 1v1 with two players
+- `MM_MODE=2v2 npm run test:matchmaking:e2e`: four players into the 2v2
+  queue; additionally rides the real flow into the started game and asserts
+  the in-game team split is 2 vs 2 and identical on every client.
 
 Prerequisites:
 

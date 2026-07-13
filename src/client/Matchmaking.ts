@@ -18,6 +18,9 @@ export class MatchmakingModal extends BaseModal {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private intentionalClose = false;
+  // Which queue to join; set by Main from the open-matchmaking event
+  // before the modal opens.
+  public mode: "1v1" | "2v2" = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
@@ -34,7 +37,11 @@ export class MatchmakingModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return modalHeader({
-      title: translateText("matchmaking_modal.title"),
+      title: translateText(
+        this.mode === "2v2"
+          ? "matchmaking_modal.title_2v2"
+          : "matchmaking_modal.title",
+      ),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
     });
@@ -80,7 +87,7 @@ export class MatchmakingModal extends BaseModal {
       this.connectTimeout = null;
     }
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -184,9 +191,11 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo =
-      userMe.player.leaderboard?.oneVone?.elo ??
-      translateText("matchmaking_modal.no_elo");
+    const row =
+      this.mode === "2v2"
+        ? userMe.player.leaderboard?.twoVtwo
+        : userMe.player.leaderboard?.oneVone;
+    this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;

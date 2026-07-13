@@ -128,6 +128,11 @@ export const UserMeResponseSchema = z.object({
             elo: z.number().optional(),
           })
           .optional(),
+        twoVtwo: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
       })
       .optional(),
     currency: CurrencyBalancesSchema.optional(),

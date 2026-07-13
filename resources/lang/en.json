@@ -1077,6 +1077,7 @@
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
+    "title_2v2": "2v2 Ranked Matchmaking (ALPHA)",
     "waiting_for_game": "Waiting for game to start..."
   },
   "mode_selector": {
@@ -1208,6 +1209,7 @@
     "public": "Public",
     "ranked": "Ranked",
     "ranked_1v1": "1v1",
+    "ranked_2v2": "2v2",
     "solo": "Solo",
     "stats_games_played": "Games Played",
     "stats_losses": "Losses",
