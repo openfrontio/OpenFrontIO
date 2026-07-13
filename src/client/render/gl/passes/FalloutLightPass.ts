@@ -24,9 +24,9 @@ import type { HeatManager } from "../utils/HeatManager";
 import { TILE_DEFINES } from "../utils/TileCodec";
 
 import falloutCompositeFragSrc from "../shaders/day-night/fallout-composite.frag.glsl?raw";
-import falloutCompositeVertSrc from "../shaders/day-night/fallout-composite.vert.glsl?raw";
 import falloutLightFragSrc from "../shaders/day-night/fallout-light.frag.glsl?raw";
 import fullscreenNoUvVertSrc from "../shaders/shared/fullscreen-no-uv.vert.glsl?raw";
+import falloutCompositeVertSrc from "../shaders/shared/map-quad.vert.glsl?raw";
 
 export class FalloutLightPass {
   private gl: WebGL2RenderingContext;

@@ -5,6 +5,9 @@
     "cancel_subscription_failed": "Failed to cancel subscription. Please try again or use Manage.",
     "cancel_subscription_success": "Subscription canceled. Access continues until the end of the billing period.",
     "change_tier": "Change Tier",
+    "claim": "Claim",
+    "claim_all": "Claim All",
+    "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
     "email_placeholder": "Enter your email address",
@@ -30,6 +33,9 @@
     "linked_to_google_email": "Linked to Google ({email})",
     "log_out": "Log Out",
     "manage_subscription": "Manage",
+    "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
+    "marketing_no_email": "Link an email to your account to subscribe to updates.",
+    "marketing_title": "Email updates",
     "no_games": "No games played yet.",
     "no_stats": "No stats available yet. Play some games to start tracking.",
     "not_found": "Not Found",
@@ -37,6 +43,8 @@
     "public_player_id": "Public Player ID:",
     "reactivate_subscription": "Reactivate",
     "recovery_email_sent": "Recovery email sent to {email}",
+    "reward_daily": "Daily subscription reward",
+    "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
     "stats_overview": "Stats Overview",
     "sub_price_monthly": "{price}/mo",
@@ -55,8 +63,10 @@
     "tab_account": "Account",
     "tab_friends": "Friends",
     "tab_games": "Games",
+    "tab_settings": "Settings",
     "tab_stats": "Stats",
     "title": "Account",
+    "unclaimed_rewards": "Unclaimed Rewards",
     "your_subscription": "Your Subscription"
   },
   "build_menu": {
@@ -388,7 +398,8 @@
     "per_day": "/day",
     "rare": "Rare",
     "soft": "Caps",
-    "uncommon": "Uncommon"
+    "uncommon": "Uncommon",
+    "usd_value": "Value: {usd}"
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
@@ -404,9 +415,9 @@
     "collapsing": "Collapsing -{rate}/s",
     "decay_in": "Decay in {secs}s",
     "final": "Final zone, hold {pct}%",
-    "growing": "Rising to {pct}%",
+    "growing": "Will reach {pct}% in {time}",
     "hold": "Hold ≥ {pct}%",
-    "next_wave": "Next {pct}% in {time}",
+    "next_wave": "Starts rising to {pct}% in {time}",
     "stable": "Stable",
     "title": "Doomsday Clock",
     "unstable": "Unstable",
@@ -437,6 +448,7 @@
   },
   "error_modal": {
     "connection_error": "Connection error!",
+    "connection_refused": "Connection refused: {reason}",
     "copied": "Copied!",
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
@@ -556,7 +568,7 @@
     "war": "War"
   },
   "game_list": {
-    "ranking": "Ranking"
+    "stats": "Stats"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -753,11 +765,12 @@
   "host_modal": {
     "anonymous_players": "Anonymous players",
     "assigned_teams": "Assigned Teams",
+    "auto_start_timer": "Time until the game starts automatically",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
     "compact_map": "Compact Map",
     "crowded": "Crowded modifier",
-    "disable_alliances": "Disable alliances",
+    "custom_alliances": "Alliance Duration",
     "donate_gold": "Donate gold",
     "donate_troops": "Donate troops",
     "doomsday_clock": "Doomsday Clock",
@@ -794,13 +807,18 @@
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
     "starting_in": "Starting in {time}. Click to cancel",
+    "subscription_required_body": "You must be subscribed to make your lobby public.",
+    "subscription_required_title": "Subscription Required",
     "team_count": "Number of Teams",
     "teams_Duos": "Duos (teams of 2)",
     "teams_Humans Vs Nations": "Humans vs Nations",
     "teams_Quads": "Quads (teams of 4)",
     "teams_Trios": "Trios (teams of 3)",
-    "title": "Create Private Lobby",
+    "title": "Create Lobby",
     "toggle_name_reveal": "Toggle whether this player can see real names",
+    "view_subscriptions": "View Subscriptions",
+    "visibility_private": "Private",
+    "visibility_public": "Public",
     "waiting": "Waiting for players...",
     "water_nukes": "Water nukes"
   },
@@ -914,6 +932,7 @@
     "betweentwoseas": "Between Two Seas",
     "blacksea": "Black Sea",
     "bosphorusstraits": "Bosphorus Straits",
+    "branchingpaths": "Branching Paths",
     "britannia": "Britannia",
     "britanniaclassic": "Britannia (Classic)",
     "caribbean": "Caribbean",
@@ -936,6 +955,7 @@
     "featured": "Featured",
     "fourislands": "Four Islands",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
+    "germany": "Germany",
     "giantworldmap": "Giant World Map",
     "greatlakes": "Great Lakes",
     "gulfofstlawrence": "Gulf of St. Lawrence",
@@ -944,6 +964,7 @@
     "hongkong": "Hong Kong",
     "iceland": "Iceland",
     "indiansubcontinent": "Indian Subcontinent",
+    "irishsea": "Irish Sea",
     "italia": "Italia",
     "japan": "Japan",
     "juandefucastrait": "Juan De Fuca Strait",
@@ -973,7 +994,9 @@
     "passage": "Passage",
     "pluto": "Pluto",
     "random": "Random",
+    "russia": "Russia",
     "sanfrancisco": "San Francisco",
+    "scandinavia": "Scandinavia",
     "sierpinski": "Sierpinski",
     "southamerica": "South America",
     "southeastasia": "Southeast Asia",
@@ -1033,6 +1056,14 @@
     "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
   },
+  "marketing_consent": {
+    "body": "News and updates by email. Change it anytime in your account.",
+    "dismiss": "Dismiss",
+    "error": "Couldn't save that. Please try again.",
+    "no": "No thanks",
+    "title": "Keep up with OpenFront?",
+    "yes": "Yes please"
+  },
   "matchmaking_button": {
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
@@ -1055,6 +1086,13 @@
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",
     "teams_title": "Teams"
+  },
+  "new_lobby_prompt": {
+    "confirm": "Start a new lobby? All players will be invited to join.",
+    "dismiss": "Dismiss",
+    "failed": "Could not create a new lobby. Please try again.",
+    "join": "Join",
+    "message": "Host started a new lobby"
   },
   "news": {
     "title": "Release Notes"
@@ -1188,10 +1226,18 @@
     "host_cheats": "Host Cheats",
     "join_lobby": "Join Lobby",
     "joined_waiting": "Lobby joined! Waiting for host to start...",
+    "listing_failed": "Failed to update the lobby listing. Please try again.",
+    "listing_full": "The public lobby list is full. Please try again later.",
+    "listing_host_cheats_enabled": "Disable host cheats to list your lobby publicly.",
+    "listing_limit_reached": "You already have a publicly listed lobby.",
+    "listing_requires_subscription": "An active subscription is required to list a lobby publicly.",
+    "listing_whitelist_enabled": "Disable the join whitelist to list your lobby publicly.",
+    "no_open_lobbies": "No open lobbies right now",
     "not_found": "Lobby not found. Please check the ID and try again.",
+    "open_lobbies": "Open Lobbies",
     "pvp_immunity": "PVP immunity duration",
     "starting_gold": "Starting Gold",
-    "title": "Join Private Lobby",
+    "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."
   },
   "public_game_modifier": {
@@ -1245,6 +1291,9 @@
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
   },
+  "rewards_modal": {
+    "title": "Rewards"
+  },
   "select_lang": {
     "title": "Select Language"
   },
@@ -1265,7 +1314,7 @@
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
     "compact_map": "Compact Map",
-    "disable_alliances": "Disable alliances",
+    "custom_alliances": "Alliance Duration",
     "doomsday_clock": "Doomsday Clock",
     "enables_title": "Disable Units",
     "gold_multiplier": "Gold multiplier",
@@ -1278,6 +1327,7 @@
     "max_timer_placeholder": "Mins",
     "medals_earned": "Medals",
     "medals_of_maps": "out of {total} maps",
+    "mins_placeholder": "Mins",
     "nations": "Nations: ",
     "nations_disabled": "Disabled",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
@@ -1300,6 +1350,8 @@
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "custom_amount": "Choose Amount",
+    "custom_currency_purchase_success": "Plutonium purchase successful!",
     "effects": "Effects",
     "flags": "Flags",
     "insufficient_currency_body": "You need {amount, number} more {currency} to buy {item}.",
@@ -1307,11 +1359,11 @@
     "login_required": "You must be logged in to purchase with currency.",
     "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
-    "no_packs": "No packs available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
     "packs": "Packs",
     "patterns": "Skins",
+    "plutonium_amount": "Plutonium amount",
     "price_per_month": "/mo",
     "purchase_currency": "Purchase {currency}",
     "purchase_failed": "Purchase failed. Please try again.",
@@ -1469,6 +1521,8 @@
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
+    "highlight_small_players_desc": "Add a glow to small players so they're easy to find.",
+    "highlight_small_players_label": "Highlight small players",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
@@ -1541,6 +1595,7 @@
     "join_server": "Join Server",
     "keep": "Keep Playing",
     "nation_won": "Nation {nation} has won!",
+    "new_lobby": "New Lobby",
     "other_team": "{team} team has won!",
     "other_won": "{player} has won!",
     "requeue": "Play Again",

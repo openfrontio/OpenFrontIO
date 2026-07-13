@@ -263,6 +263,11 @@
     "name": "Aztec Empire"
   },
   {
+    "code": "DE-BW",
+    "continent": "Europe",
+    "name": "Baden-Württemberg"
+  },
+  {
     "code": "bs",
     "continent": "North America",
     "name": "Bahamas"
@@ -307,6 +312,16 @@
     "name": "Basque Country"
   },
   {
+    "code": "DE-BY",
+    "continent": "Europe",
+    "name": "Bavaria"
+  },
+  {
+    "code": "DE-BY-L",
+    "continent": "Europe",
+    "name": "Bavaria (Lozenges)"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -325,6 +340,11 @@
     "code": "bj",
     "continent": "Africa",
     "name": "Benin"
+  },
+  {
+    "code": "DE-BE",
+    "continent": "Europe",
+    "name": "Berlin"
   },
   {
     "code": "bm",
@@ -361,9 +381,19 @@
     "name": "Bouvet Island"
   },
   {
+    "code": "DE-BB",
+    "continent": "Europe",
+    "name": "Brandenburg"
+  },
+  {
     "code": "br",
     "continent": "South America",
     "name": "Brazil"
+  },
+  {
+    "code": "DE-HB",
+    "continent": "Europe",
+    "name": "Bremen"
   },
   {
     "code": "British Antarctic Territory",
@@ -525,6 +555,11 @@
     "name": "Cherokee"
   },
   {
+    "code": "GB-CHE",
+    "continent": "Europe",
+    "name": "Cheshire"
+  },
+  {
     "code": "Chickasaw",
     "continent": "North America",
     "name": "Chickasaw"
@@ -674,6 +709,11 @@
     "name": "Côte d'Ivoire"
   },
   {
+    "code": "crimea",
+    "continent": "Europe",
+    "name": "Crimea"
+  },
+  {
     "code": "hr",
     "continent": "Europe",
     "name": "Croatia"
@@ -686,6 +726,11 @@
     "code": "cu",
     "continent": "North America",
     "name": "Cuba"
+  },
+  {
+    "code": "GB-CMA",
+    "continent": "Europe",
+    "name": "Cumbria"
   },
   {
     "code": "cw",
@@ -1128,6 +1173,11 @@
     "name": "Haiti"
   },
   {
+    "code": "DE-HH",
+    "continent": "Europe",
+    "name": "Hamburg"
+  },
+  {
     "code": "Hawaii",
     "continent": "Oceania",
     "name": "Hawaii"
@@ -1135,6 +1185,11 @@
   {
     "code": "hm",
     "name": "Heard Island and McDonald Islands"
+  },
+  {
+    "code": "DE-HE",
+    "continent": "Europe",
+    "name": "Hesse"
   },
   {
     "code": "va",
@@ -1225,6 +1280,11 @@
     "code": "ie",
     "continent": "Europe",
     "name": "Ireland"
+  },
+  {
+    "code": "Ireland Green Harp",
+    "continent": "Europe",
+    "name": "Green Harp"
   },
   {
     "code": "Haudenosaunee",
@@ -1382,6 +1442,11 @@
     "name": "Kingdom of Iraq"
   },
   {
+    "code": "Kingdom of Ireland",
+    "continent": "Europe",
+    "name": "Kingdom of Ireland"
+  },
+  {
     "code": "italy",
     "continent": "Europe",
     "name": "Kingdom of Italy"
@@ -1486,6 +1551,11 @@
     "name": "Lakotah"
   },
   {
+    "code": "GB-LAN",
+    "continent": "Europe",
+    "name": "Lancashire"
+  },
+  {
     "code": "la",
     "continent": "Asia",
     "name": "Laos"
@@ -1581,6 +1651,11 @@
     "code": "Louisiana",
     "continent": "North America",
     "name": "Louisiana"
+  },
+  {
+    "code": "DE-NI",
+    "continent": "Europe",
+    "name": "Lower Saxony"
   },
   {
     "code": "Lower Silesia",
@@ -1728,6 +1803,11 @@
     "name": "Mayotte"
   },
   {
+    "code": "DE-MV",
+    "continent": "Europe",
+    "name": "Mecklenburg-Vorpommern"
+  },
+  {
     "code": "Median Empire",
     "continent": "Asia",
     "name": "Median Empire"
@@ -1741,6 +1821,11 @@
     "code": "1_Mercia",
     "continent": "Europe",
     "name": "Mercia"
+  },
+  {
+    "code": "GB-Merseyside",
+    "continent": "Europe",
+    "name": "Merseyside"
   },
   {
     "code": "mx",
@@ -2014,6 +2099,11 @@
     "code": "mk",
     "continent": "Europe",
     "name": "North Macedonia"
+  },
+  {
+    "code": "DE-NW",
+    "continent": "Europe",
+    "name": "North Rhine-Westphalia"
   },
   {
     "code": "northern_ireland",
@@ -2334,6 +2424,11 @@
     "name": "Réunion"
   },
   {
+    "code": "DE-RP",
+    "continent": "Europe",
+    "name": "Rhineland-Palatinate"
+  },
+  {
     "code": "Rhode_Island",
     "continent": "North America",
     "name": "Rhode Island"
@@ -2373,6 +2468,416 @@
     "name": "Russia"
   },
   {
+    "code": "RU-AL",
+    "continent": "Asia",
+    "name": "Altai Republic"
+  },
+  {
+    "code": "RU-ALT",
+    "continent": "Asia",
+    "name": "Altai Krai"
+  },
+  {
+    "code": "RU-AMU",
+    "continent": "Asia",
+    "name": "Amur Oblast"
+  },
+  {
+    "code": "RU-ARK",
+    "continent": "Europe",
+    "name": "Arkhangelsk Oblast"
+  },
+  {
+    "code": "RU-AST",
+    "continent": "Europe",
+    "name": "Astrakhan Oblast"
+  },
+  {
+    "code": "RU-BA",
+    "continent": "Europe",
+    "name": "Republic of Bashkortostan"
+  },
+  {
+    "code": "RU-BEL",
+    "continent": "Europe",
+    "name": "Belgorod Oblast"
+  },
+  {
+    "code": "RU-BRY",
+    "continent": "Europe",
+    "name": "Bryansk Oblast"
+  },
+  {
+    "code": "RU-BU",
+    "continent": "Asia",
+    "name": "Republic of Buryatia"
+  },
+  {
+    "code": "RU-CE",
+    "continent": "Europe",
+    "name": "Chechen Republic"
+  },
+  {
+    "code": "RU-CHE",
+    "continent": "Asia",
+    "name": "Chelyabinsk Oblast"
+  },
+  {
+    "code": "RU-CHU",
+    "continent": "Asia",
+    "name": "Chukotka Autonomous Okrug"
+  },
+  {
+    "code": "RU-DA",
+    "continent": "Europe",
+    "name": "Republic of Dagestan"
+  },
+  {
+    "code": "RU-IN",
+    "continent": "Europe",
+    "name": "Republic of Ingushetia"
+  },
+  {
+    "code": "RU-IRK",
+    "continent": "Asia",
+    "name": "Irkutsk Oblast"
+  },
+  {
+    "code": "RU-IVA",
+    "continent": "Europe",
+    "name": "Ivanovo Oblast"
+  },
+  {
+    "code": "RU-SA",
+    "continent": "Asia",
+    "name": "Sakha Republic"
+  },
+  {
+    "code": "RU-KAM",
+    "continent": "Asia",
+    "name": "Kamchatka Krai"
+  },
+  {
+    "code": "RU-KB",
+    "continent": "Europe",
+    "name": "Kabardino-Balkar Republic"
+  },
+  {
+    "code": "RU-KC",
+    "continent": "Europe",
+    "name": "Karachay-Cherkess Republic"
+  },
+  {
+    "code": "RU-KDA",
+    "continent": "Europe",
+    "name": "Krasnodar Krai"
+  },
+  {
+    "code": "RU-KEM",
+    "continent": "Asia",
+    "name": "Kemerovo Oblast"
+  },
+  {
+    "code": "RU-KGD",
+    "continent": "Europe",
+    "name": "Kaliningrad Oblast"
+  },
+  {
+    "code": "RU-KHA",
+    "continent": "Asia",
+    "name": "Khabarovsk Krai"
+  },
+  {
+    "code": "RU-KHM",
+    "continent": "Asia",
+    "name": "Khanty-Mansi Autonomous Okrug"
+  },
+  {
+    "code": "RU-KIR",
+    "continent": "Europe",
+    "name": "Kirov Oblast"
+  },
+  {
+    "code": "RU-KK",
+    "continent": "Asia",
+    "name": "Republic of Khakassia"
+  },
+  {
+    "code": "RU-KL",
+    "continent": "Europe",
+    "name": "Republic of Kalmykia"
+  },
+  {
+    "code": "RU-KLU",
+    "continent": "Europe",
+    "name": "Kaluga Oblast"
+  },
+  {
+    "code": "RU-KO",
+    "continent": "Europe",
+    "name": "Komi Republic"
+  },
+  {
+    "code": "RU-KOS",
+    "continent": "Europe",
+    "name": "Kostroma Oblast"
+  },
+  {
+    "code": "RU-KR",
+    "continent": "Europe",
+    "name": "Republic of Karelia"
+  },
+  {
+    "code": "RU-KRS",
+    "continent": "Europe",
+    "name": "Kursk Oblast"
+  },
+  {
+    "code": "RU-KYA",
+    "continent": "Asia",
+    "name": "Krasnoyarsk Krai"
+  },
+  {
+    "code": "RU-KGN",
+    "continent": "Asia",
+    "name": "Kurgan Oblast"
+  },
+  {
+    "code": "RU-LEN",
+    "continent": "Europe",
+    "name": "Leningrad Oblast"
+  },
+  {
+    "code": "RU-LIP",
+    "continent": "Europe",
+    "name": "Lipetsk Oblast"
+  },
+  {
+    "code": "RU-MAG",
+    "continent": "Asia",
+    "name": "Magadan Oblast"
+  },
+  {
+    "code": "RU-ME",
+    "continent": "Europe",
+    "name": "Mari El Republic"
+  },
+  {
+    "code": "RU-ME (2006–2011)",
+    "continent": "Europe",
+    "name": "Mari El (2006-2011)"
+  },
+  {
+    "code": "RU-MO",
+    "continent": "Europe",
+    "name": "Republic of Mordovia"
+  },
+  {
+    "code": "RU-MOS",
+    "continent": "Europe",
+    "name": "Moscow Oblast"
+  },
+  {
+    "code": "RU-MOW",
+    "continent": "Europe",
+    "name": "Moscow"
+  },
+  {
+    "code": "RU-MUR",
+    "continent": "Europe",
+    "name": "Murmansk Oblast"
+  },
+  {
+    "code": "RU-NEN",
+    "continent": "Europe",
+    "name": "Nenets Autonomous Okrug"
+  },
+  {
+    "code": "RU-NGR",
+    "continent": "Europe",
+    "name": "Novgorod Oblast"
+  },
+  {
+    "code": "RU-NIZ",
+    "continent": "Europe",
+    "name": "Nizhny Novgorod Oblast"
+  },
+  {
+    "code": "RU-NVS",
+    "continent": "Asia",
+    "name": "Novosibirsk Oblast"
+  },
+  {
+    "code": "RU-OMS",
+    "continent": "Asia",
+    "name": "Omsk Oblast"
+  },
+  {
+    "code": "RU-ORE",
+    "continent": "Europe",
+    "name": "Orenburg Oblast"
+  },
+  {
+    "code": "RU-ORL",
+    "continent": "Europe",
+    "name": "Oryol Oblast"
+  },
+  {
+    "code": "RU-PNZ",
+    "continent": "Europe",
+    "name": "Penza Oblast"
+  },
+  {
+    "code": "RU-PER",
+    "continent": "Europe",
+    "name": "Perm Krai"
+  },
+  {
+    "code": "RU-PRI",
+    "continent": "Asia",
+    "name": "Primorsky Krai"
+  },
+  {
+    "code": "RU-PSK",
+    "continent": "Europe",
+    "name": "Pskov Oblast"
+  },
+  {
+    "code": "RU-ROS",
+    "continent": "Europe",
+    "name": "Rostov Oblast"
+  },
+  {
+    "code": "RU-RYA",
+    "continent": "Europe",
+    "name": "Ryazan Oblast"
+  },
+  {
+    "code": "RU-SAM",
+    "continent": "Europe",
+    "name": "Samara Oblast"
+  },
+  {
+    "code": "RU-SAR",
+    "continent": "Europe",
+    "name": "Saratov Oblast"
+  },
+  {
+    "code": "RU-SAK",
+    "continent": "Asia",
+    "name": "Sakhalin Oblast"
+  },
+  {
+    "code": "RU-SE",
+    "continent": "Europe",
+    "name": "North Ossetia-Alania"
+  },
+  {
+    "code": "RU-SPE",
+    "continent": "Europe",
+    "name": "Saint Petersburg"
+  },
+  {
+    "code": "RU-SMO",
+    "continent": "Europe",
+    "name": "Smolensk Oblast"
+  },
+  {
+    "code": "RU-STA",
+    "continent": "Europe",
+    "name": "Stavropol Krai"
+  },
+  {
+    "code": "RU-SVE",
+    "continent": "Asia",
+    "name": "Sverdlovsk Oblast"
+  },
+  {
+    "code": "RU-TAM",
+    "continent": "Europe",
+    "name": "Tambov Oblast"
+  },
+  {
+    "code": "RU-TA",
+    "continent": "Europe",
+    "name": "Republic of Tatarstan"
+  },
+  {
+    "code": "RU-TOM",
+    "continent": "Asia",
+    "name": "Tomsk Oblast"
+  },
+  {
+    "code": "RU-TUL",
+    "continent": "Europe",
+    "name": "Tula Oblast"
+  },
+  {
+    "code": "RU-TY",
+    "continent": "Asia",
+    "name": "Tuva Republic"
+  },
+  {
+    "code": "RU-TVE",
+    "continent": "Europe",
+    "name": "Tver Oblast"
+  },
+  {
+    "code": "RU-TYU",
+    "continent": "Asia",
+    "name": "Tyumen Oblast"
+  },
+  {
+    "code": "RU-UD",
+    "continent": "Europe",
+    "name": "Udmurt Republic"
+  },
+  {
+    "code": "RU-ULY",
+    "continent": "Europe",
+    "name": "Ulyanovsk Oblast"
+  },
+  {
+    "code": "RU-VGG",
+    "continent": "Europe",
+    "name": "Volgograd Oblast"
+  },
+  {
+    "code": "RU-VLA",
+    "continent": "Europe",
+    "name": "Vladimir Oblast"
+  },
+  {
+    "code": "RU-VOR",
+    "continent": "Europe",
+    "name": "Voronezh Oblast"
+  },
+  {
+    "code": "RU-VLG",
+    "continent": "Europe",
+    "name": "Vologda Oblast"
+  },
+  {
+    "code": "RU-YAN",
+    "continent": "Asia",
+    "name": "Yamalo-Nenets Autonomous Okrug"
+  },
+  {
+    "code": "RU-YAR",
+    "continent": "Europe",
+    "name": "Yaroslavl Oblast"
+  },
+  {
+    "code": "RU-YEV",
+    "continent": "Asia",
+    "name": "Jewish Autonomous Oblast"
+  },
+  {
+    "code": "RU-ZAB",
+    "continent": "Asia",
+    "name": "Zabaykalsky Krai"
+  },
+  {
     "code": "Russian SSR",
     "continent": "Europe",
     "name": "Russian SSR"
@@ -2381,6 +2886,11 @@
     "code": "rw",
     "continent": "Africa",
     "name": "Rwanda"
+  },
+  {
+    "code": "DE-SL",
+    "continent": "Europe",
+    "name": "Saarland"
   },
   {
     "code": "Saba kingdom",
@@ -2511,6 +3021,21 @@
     "name": "Saudi Arabia"
   },
   {
+    "code": "DE-SN",
+    "continent": "Europe",
+    "name": "Saxony"
+  },
+  {
+    "code": "DE-ST",
+    "continent": "Europe",
+    "name": "Saxony-Anhalt"
+  },
+  {
+    "code": "DE-SH",
+    "continent": "Europe",
+    "name": "Schleswig-Holstein"
+  },
+  {
     "code": "gb-sct",
     "continent": "Europe",
     "name": "Scotland"
@@ -2544,6 +3069,11 @@
     "code": "rs",
     "continent": "Europe",
     "name": "Serbia"
+  },
+  {
+    "code": "sevastopol",
+    "continent": "Europe",
+    "name": "Sevastopol"
   },
   {
     "code": "seville",
@@ -2788,6 +3318,11 @@
     "code": "th",
     "continent": "Asia",
     "name": "Thailand"
+  },
+  {
+    "code": "DE-TH",
+    "continent": "Europe",
+    "name": "Thuringia"
   },
   {
     "code": "tibet",

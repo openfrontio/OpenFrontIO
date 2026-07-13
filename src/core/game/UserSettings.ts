@@ -139,6 +139,10 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
+  highlightSmallPlayers() {
+    return this.getBool("settings.highlightSmallPlayers", false);
+  }
+
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
@@ -189,6 +193,13 @@ export class UserSettings {
 
   toggleEmojis() {
     this.setBool("settings.emojis", !this.emojis());
+  }
+
+  toggleHighlightSmallPlayers() {
+    this.setBool(
+      "settings.highlightSmallPlayers",
+      !this.highlightSmallPlayers(),
+    );
   }
 
   // Performance overlay specifically needs a direct setter for Shift-D

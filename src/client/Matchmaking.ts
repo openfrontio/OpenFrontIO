@@ -7,6 +7,7 @@ import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
@@ -119,13 +120,20 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    const isLoggedIn =
-      userMe &&
-      userMe.user &&
-      (userMe.user.discord !== undefined ||
-        userMe.user.google !== undefined ||
-        userMe.user.email !== undefined);
-    if (!isLoggedIn) {
+    // CrazyGames players authenticate through the SDK rather than a linked
+    // Discord/Google/email account, so a signed-in CrazyGames user counts as
+    // logged in for ranked.
+    const crazyGamesSignedIn =
+      crazyGamesSDK.isOnCrazyGames() &&
+      (await crazyGamesSDK.getUserProfile()) !== null;
+    if (!this.isModalOpen) {
+      return;
+    }
+
+    if (
+      userMe === false ||
+      (!hasLinkedAccount(userMe) && !crazyGamesSignedIn)
+    ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {

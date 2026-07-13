@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
+import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -53,6 +54,7 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
+  NewLobbyEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -218,14 +220,15 @@ export function joinLobby(
           }),
         );
       } else if (message.error === "kick_reason.host_left") {
-        alert(translateText("kick_reason.host_left"));
-        document.dispatchEvent(
-          new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
-            bubbles: true,
-            composed: true,
-          }),
-        );
+        showInGameAlert(translateText("kick_reason.host_left")).then(() => {
+          document.dispatchEvent(
+            new CustomEvent("leave-lobby", {
+              detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+              bubbles: true,
+              composed: true,
+            }),
+          );
+        });
       } else {
         showErrorModal(
           message.error,
@@ -927,6 +930,12 @@ export class ClientGameRunner {
           false,
           "error_modal.connection_error",
         );
+      }
+      if (message.type === "new_lobby") {
+        // The host reused this private lobby: surface the successor id so the
+        // group can hop over. NewLobbyPrompt navigates the host and prompts
+        // everyone else.
+        this.eventBus.emit(new NewLobbyEvent(message.gameID));
       }
       if (message.type === "turn") {
         if (
