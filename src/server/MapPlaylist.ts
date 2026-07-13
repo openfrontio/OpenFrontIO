@@ -100,6 +100,16 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(2).fill("isDoomsdayClock"),
 ];
 
+// Speeds the Doomsday Clock can roll at when it lands in the rotation. Picked
+// per game (see getSpecialConfig) so the pacing varies instead of always being
+// the same preset.
+const DOOMSDAY_ROTATION_SPEEDS = [
+  "slow",
+  "normal",
+  "fast",
+  "veryfast",
+] as const;
+
 // Maps where water nukes have a higher chance on top of the normal pool
 // Water nukes are especially fun here
 const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
@@ -364,10 +374,16 @@ export class MapPlaylist {
         isWaterNukes,
         isDoomsdayClock,
       },
-      // Rolled into the rotation: enable the anti-stall clock at the default
-      // pace. Speed is fixed here (not from the pool) to keep the badge simple.
+      // Rolled into the rotation: enable the anti-stall clock at a speed picked
+      // per game so the pacing varies across the presets.
       doomsdayClock: isDoomsdayClock
-        ? { enabled: true, speed: "normal" }
+        ? {
+            enabled: true,
+            speed:
+              DOOMSDAY_ROTATION_SPEEDS[
+                Math.floor(Math.random() * DOOMSDAY_ROTATION_SPEEDS.length)
+              ],
+          }
         : undefined,
       startingGold,
       goldMultiplier,
