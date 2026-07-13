@@ -570,7 +570,7 @@ export interface Player {
   spawnTile(): TileRef | undefined;
 
   // Territory
-  tiles(): ReadonlySet<TileRef>;
+  tiles(): ReadonlyTileSet;
   borderTiles(): ReadonlyTileSet;
   numTilesOwned(): number;
   conquer(tile: TileRef): void;
