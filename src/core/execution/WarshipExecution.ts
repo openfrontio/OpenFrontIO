@@ -71,6 +71,16 @@ export class WarshipExecution implements Execution {
     this.healWarship();
     this.handleManualPatrolOverride();
 
+    // A doomed side cannot repair its navy (see healWarship), so retreating to
+    // a port only pulls a warship out of the fight to idle there forever. Undock
+    // or abort any retreat and keep patrolling until the side recovers.
+    if (
+      this.warship.owner().inDoomsdayClock() &&
+      this.warship.warshipState().state !== "patrolling"
+    ) {
+      this.cancelRepairRetreat();
+    }
+
     if (this.warship.warshipState().state === "docked") {
       if (this.currentRetreatPort() === undefined) {
         this.cancelRepairRetreat();
@@ -165,6 +175,11 @@ export class WarshipExecution implements Execution {
     healthBeforeHealing = this.warship.health(),
   ): boolean {
     if (this.warship.warshipState().state !== "patrolling") {
+      return false;
+    }
+    // A doomed side cannot repair (see healWarship), so there is nothing to
+    // retreat for; stay on patrol instead of idling at a port.
+    if (this.warship.owner().inDoomsdayClock()) {
       return false;
     }
     const manualMoveRetreatDisabledDuration = 50;

@@ -5,6 +5,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Unit,
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
@@ -103,6 +104,53 @@ describe("Warship", () => {
     player1.clearDoomsdayClock();
     game.executeNextTick();
     expect(warship.health()).toBe(maxHealth - 8);
+  });
+
+  // A crippled warship normally retreats to a port to heal (threshold 75%).
+  function crippledWarshipWithPort(): Unit {
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      throw new Error("warship has no maxHealth");
+    }
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      { patrolTile: game.ref(coastX + 1, 10) },
+    );
+    game.addExecution(new WarshipExecution(warship));
+    player1.conquer(game.ref(coastX, 10)); // owns a tile -> isAlive() for the clock
+    game.executeNextTick();
+    // Drop to ~5%, well below the 75% retreat threshold.
+    const low = Math.max(1, Math.floor(maxHealth * 0.05));
+    warship.modifyHealth(low - warship.health());
+    expect(warship.warshipState().state).toBe("patrolling");
+    return warship;
+  }
+
+  test("Crippled warship retreats to a port when not doomed", async () => {
+    const warship = crippledWarshipWithPort();
+    executeTicks(game, 10);
+    // Baseline: it leaves patrol to retreat/dock at the port.
+    expect(warship.warshipState().state).not.toBe("patrolling");
+  });
+
+  test("Doomed warship stays on patrol instead of retreating", async () => {
+    const warship = crippledWarshipWithPort();
+    player1.enterDoomsdayClock();
+    executeTicks(game, 10);
+    // A doomed side cannot heal, so the warship must not peel off to a port.
+    expect(warship.warshipState().state).toBe("patrolling");
+  });
+
+  test("Doomed warship undocks and returns to patrol", async () => {
+    const warship = crippledWarshipWithPort();
+    executeTicks(game, 10);
+    expect(warship.warshipState().state).not.toBe("patrolling");
+    // Falling under the bar mid-repair sends it back to patrol, not idling.
+    player1.enterDoomsdayClock();
+    game.executeNextTick();
+    expect(warship.warshipState().state).toBe("patrolling");
   });
 
   test("Warship captures trade if player has port", async () => {
