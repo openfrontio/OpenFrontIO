@@ -137,8 +137,11 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
-  highlightSmallPlayers() {
-    return this.getBool("settings.highlightSmallPlayers", false);
+  highlightGlowStrength() {
+    // 0 = off, 1 = default; capped at 5 (the 500% slider max) so a value
+    // persisted from an older, larger range can't display/apply above it.
+    const v = this.getFloat("settings.highlightGlowStrength", 1);
+    return Math.min(5, Math.max(0, v));
   }
 
   performanceOverlay() {
@@ -193,11 +196,8 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
-  toggleHighlightSmallPlayers() {
-    this.setBool(
-      "settings.highlightSmallPlayers",
-      !this.highlightSmallPlayers(),
-    );
+  setHighlightGlowStrength(value: number) {
+    this.setFloat("settings.highlightGlowStrength", value);
   }
 
   // Performance overlay specifically needs a direct setter for Shift-D

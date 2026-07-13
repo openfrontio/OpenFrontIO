@@ -917,6 +917,10 @@ export class GPURenderer {
     this.smallPlayerGlowPass.update(set);
   }
 
+  setSmallPlayerGlowStrength(strength: number): void {
+    this.smallPlayerGlowPass.setGlowStrength(strength);
+  }
+
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
