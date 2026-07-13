@@ -73,6 +73,8 @@ export class PlayerExecution implements Execution {
       // we fell, + 1 (we are the last of them). players() is alive-only and we
       // just dropped to zero tiles, so it already excludes us. Bots are fill, not
       // competitors, so they don't count. Deterministic (same on every client).
+      // Fallback path: conquest deaths are stamped in GameImpl.conquerPlayer (so a
+      // game-ending tick still records it); setDeathPosition is first-write-wins.
       const stillStanding = this.mg
         .players()
         .filter((p) => p.type() !== PlayerType.Bot).length;

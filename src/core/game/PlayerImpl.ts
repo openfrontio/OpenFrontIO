@@ -146,6 +146,9 @@ export class PlayerImpl implements Player {
   // Stamped in the sim so the admin bot can score kills + placement live, off the
   // live snapshot instead of the post-game record.
   private _killedBy: ClientID | null = null;
+  // Separate flag, not `_killedBy === null`, because null is a VALID recorded
+  // killer (a bot/nation elimination): once stamped it must not be overwritten.
+  private _killedByStamped = false;
   private _deathPosition: number | null = null;
 
   /**
@@ -619,7 +622,9 @@ export class PlayerImpl implements Player {
   // from recordKill (the conqueror's clientID, null for a bot/nation killer);
   // deathPosition from PlayerExecution when the player hits zero tiles.
   markKilledBy(clientID: ClientID | null): void {
-    this._killedBy ??= clientID;
+    if (this._killedByStamped) return;
+    this._killedByStamped = true;
+    this._killedBy = clientID;
   }
 
   setDeathPosition(position: number): void {
