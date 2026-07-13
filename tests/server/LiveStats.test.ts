@@ -63,6 +63,8 @@ describe("GameServer.handleLiveStats", () => {
       gold: "100",
       isAlive: true,
       team: null,
+      killedBy: null,
+      deathPosition: null,
     },
   ];
 
@@ -89,6 +91,7 @@ describe("GameServer.handleLiveStats", () => {
     // 2 of 3 IPs -> consensus.
     expect(game.liveStats()).toEqual({
       turn: 100,
+      winner: null,
       players: [
         {
           ...players[0],
@@ -151,6 +154,7 @@ describe("GameServer.handleLiveStats", () => {
     report(game, clients[1], 200, snapshot(42));
     expect(game.liveStats()).toEqual({
       turn: 200,
+      winner: null,
       players: [
         {
           ...snapshot(42)[0],

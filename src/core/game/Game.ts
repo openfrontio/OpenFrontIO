@@ -551,6 +551,12 @@ export interface Player {
 
   // State & Properties
   isAlive(): boolean;
+  // OFM live standings (see PlayerImpl): eliminator's clientID (null while alive
+  // or a non-client killer) + finishing position at elimination. Stamped once.
+  killedBy(): ClientID | null;
+  deathPosition(): number | null;
+  markKilledBy(clientID: ClientID | null): void;
+  setDeathPosition(position: number): void;
   isTraitor(): boolean;
   markTraitor(): void;
   // Doomsday Clock (anti-stall): marked when below the rising territory bar.

@@ -140,6 +140,13 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  // OFM live standings: the eliminator's clientID (null while alive, or when the
+  // kill has no client owner e.g. a bot/nation), and the finishing position at
+  // elimination (count of non-bot players still alive then; null while alive).
+  // Stamped in the sim so the admin bot can score kills + placement live, off the
+  // live snapshot instead of the post-game record.
+  private _killedBy: ClientID | null = null;
+  private _deathPosition: number | null = null;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -318,6 +325,8 @@ export class PlayerImpl implements Player {
       playerType: this.type(),
       isAlive: this.isAlive(),
       isDisconnected: this.isDisconnected(),
+      killedBy: this.killedBy(),
+      deathPosition: this.deathPosition(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
@@ -596,6 +605,25 @@ export class PlayerImpl implements Player {
 
   isAlive(): boolean {
     return this._tiles.size > 0;
+  }
+
+  killedBy(): ClientID | null {
+    return this._killedBy;
+  }
+
+  deathPosition(): number | null {
+    return this._deathPosition;
+  }
+
+  // Stamped once at elimination (idempotent, first write wins). killedBy is set
+  // from recordKill (the conqueror's clientID, null for a bot/nation killer);
+  // deathPosition from PlayerExecution when the player hits zero tiles.
+  markKilledBy(clientID: ClientID | null): void {
+    this._killedBy ??= clientID;
+  }
+
+  setDeathPosition(position: number): void {
+    this._deathPosition ??= position;
   }
 
   hasSpawned(): boolean {

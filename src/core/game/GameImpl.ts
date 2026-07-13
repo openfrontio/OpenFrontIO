@@ -1304,6 +1304,9 @@ export class GameImpl implements Game {
 
     // OFM: per-kill log for standings (humans-only filtered in recordKill).
     this.stats().recordKill(conqueror, conquered, this.ticks());
+    // OFM live standings: attribute the elimination so the live snapshot can
+    // credit the kill (null when the conqueror has no client, e.g. a bot/nation).
+    conquered.markKilledBy(conqueror.clientID());
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,

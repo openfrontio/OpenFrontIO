@@ -4,6 +4,7 @@ import {
   Execution,
   Game,
   Player,
+  PlayerType,
   Structures,
   UnitType,
 } from "../game/Game";
@@ -68,6 +69,14 @@ export class PlayerExecution implements Execution {
     if (!this.player.isAlive()) {
       this.removeOnDeath();
       this.active = false;
+      // OFM live standings: finishing place = non-bot players still standing when
+      // we fell, + 1 (we are the last of them). players() is alive-only and we
+      // just dropped to zero tiles, so it already excludes us. Bots are fill, not
+      // competitors, so they don't count. Deterministic (same on every client).
+      const stillStanding = this.mg
+        .players()
+        .filter((p) => p.type() !== PlayerType.Bot).length;
+      this.player.setDeathPosition(stillStanding + 1);
       this.mg.stats().playerKilled(this.player, ticks);
       return;
     }
