@@ -86,10 +86,8 @@ export class MatchmakingModal extends BaseModal {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
     }
-    // mode is omitted for 1v1 so an API without mode support keeps working.
-    const modeParam = this.mode === "2v2" ? "&mode=2v2" : "";
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}${modeParam}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");

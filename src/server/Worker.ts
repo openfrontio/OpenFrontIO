@@ -738,8 +738,7 @@ function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
             gameId: gameId,
             ccu: gm.activeClients(),
             instanceId: process.env.INSTANCE_ID,
-            // Omitted for 1v1 so an API without mode support keeps working.
-            ...(mode === "2v2" ? { mode } : {}),
+            mode,
           }),
           signal: controller.signal,
         });

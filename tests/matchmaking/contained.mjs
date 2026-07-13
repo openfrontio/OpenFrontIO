@@ -85,10 +85,7 @@ try {
   await resetAndConnect();
   await joinCountReaches(1, 8000);
   c.check("join sent after connect", true);
-  c.check(
-    "1v1 join omits the mode param (backward compatible)",
-    (await joins())[0].mode === null,
-  );
+  c.check("1v1 join sends mode=1v1", (await joins())[0].mode === "1v1");
 
   // 2. Deploy/restart: server drops the socket abruptly -> reconnect + rejoin
   await control("kill");
