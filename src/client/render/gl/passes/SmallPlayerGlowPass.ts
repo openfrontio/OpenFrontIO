@@ -5,7 +5,6 @@
  * A no-op unless the highlight set is non-empty.
  */
 
-import { UserSettings } from "../../../../core/game/UserSettings";
 import type { RenderSettings } from "../RenderSettings";
 import blurFragSrc from "../shaders/shared/blur.frag.glsl?raw";
 import fullscreenNoUvVertSrc from "../shaders/shared/fullscreen-no-uv.vert.glsl?raw";
@@ -59,7 +58,7 @@ export class SmallPlayerGlowPass {
   private animTime = 0;
   private lastTime = 0;
   private lastPasses = 1; // last width the aura was blurred at (to detect change)
-  private readonly userSettings = new UserSettings();
+  private glowStrength = 1; // pushed via setGlowStrength; 0 = off, 1 = default, capped at 5
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -124,6 +123,16 @@ export class SmallPlayerGlowPass {
     this.quadVao = createFullscreenQuad(gl);
   }
 
+  /**
+   * Push the glow Strength (0 = off, 1 = default, capped at 5). The client reads
+   * it from UserSettings and pushes it here so the pass stays a pure consumer
+   * (passes never read game/DOM state directly); pushing on the settings-changed
+   * event keeps it live even while the settings modal has the sim paused.
+   */
+  setGlowStrength(strength: number): void {
+    this.glowStrength = strength;
+  }
+
   /** Push the highlight set (1 byte per owner smallID), or null to disable. */
   update(set: Uint8Array | null): void {
     if (set === null) {
@@ -171,9 +180,9 @@ export class SmallPlayerGlowPass {
   }
 
   draw(cameraMatrix: Float32Array): void {
-    // Read the user Strength every frame (not tick-gated) so the slider is
+    // Strength is pushed by the client (not tick-gated), so a slider change is
     // live even while the sim is paused (e.g. the settings modal is open).
-    const strength = this.userSettings.highlightGlowStrength();
+    const strength = this.glowStrength;
     if (!this.active || strength <= 0) return;
 
     const gl = this.gl;

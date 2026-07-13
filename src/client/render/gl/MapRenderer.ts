@@ -244,6 +244,11 @@ export class MapRenderer {
     this.renderer?.updateSmallPlayerGlow(set);
   }
 
+  /** Set the small-player glow Strength (0 = off, 1 = default, capped at 5). */
+  setSmallPlayerGlowStrength(strength: number): void {
+    this.renderer?.setSmallPlayerGlowStrength(strength);
+  }
+
   // ---- Selection box ----
 
   /** Set multiple selected units (multi-select). Pass [] to clear. */
