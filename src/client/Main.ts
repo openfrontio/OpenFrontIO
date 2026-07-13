@@ -854,16 +854,24 @@ class Client {
       window.location.href = "/";
     }
 
-    if (this.consumeRequeueUrl()) {
-      document.dispatchEvent(new CustomEvent("open-matchmaking"));
+    const requeueMode = this.consumeRequeueUrl();
+    if (requeueMode !== null) {
+      document.dispatchEvent(
+        new CustomEvent("open-matchmaking", {
+          detail: { mode: requeueMode },
+        }),
+      );
     }
   }
 
-  private consumeRequeueUrl(): boolean {
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // null when the URL has no requeue param.
+  private consumeRequeueUrl(): "1v1" | "2v2" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
-      return false;
+      return null;
     }
+    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -871,7 +879,7 @@ class Client {
       (searchParams.toString() ? `?${searchParams.toString()}` : "") +
       window.location.hash;
     history.replaceState(null, "", newUrl);
-    return true;
+    return mode;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {

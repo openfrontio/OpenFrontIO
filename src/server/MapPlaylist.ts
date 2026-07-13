@@ -431,9 +431,7 @@ export class MapPlaylist {
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
-      // No rankedType: game ingestion still only accepts "1v1", so 2v2
-      // games are reported like ordinary team games until 2v2 ingestion
-      // ships in the API.
+      rankedType: RankedType.TwoVTwo,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: isCompact ? 10 : 15,

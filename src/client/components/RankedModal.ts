@@ -13,6 +13,7 @@ export class RankedModal extends BaseModal {
   protected routerName = "ranked";
 
   @state() private elo: number | string = "...";
+  @state() private elo2v2: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
   // CrazyGames players authenticate through the SDK, not a linked
@@ -56,20 +57,23 @@ export class RankedModal extends BaseModal {
   private updateElo() {
     if (this.errorMessage) {
       this.elo = translateText("map_component.error");
+      this.elo2v2 = translateText("map_component.error");
       return;
     }
 
     if (this.isRankedEligible()) {
-      this.elo =
-        this.userMeResponse &&
-        this.userMeResponse.player.leaderboard?.oneVone?.elo
-          ? this.userMeResponse.player.leaderboard.oneVone.elo
-          : translateText("matchmaking_modal.no_elo");
+      const leaderboard = this.userMeResponse
+        ? this.userMeResponse.player.leaderboard
+        : undefined;
+      const noElo = translateText("matchmaking_modal.no_elo");
+      this.elo = leaderboard?.oneVone?.elo ?? noElo;
+      this.elo2v2 = leaderboard?.twoVtwo?.elo ?? noElo;
     }
   }
 
   protected override async onOpen(): Promise<void> {
     this.elo = "...";
+    this.elo2v2 = "...";
     this.errorMessage = null;
 
     try {
@@ -83,6 +87,7 @@ export class RankedModal extends BaseModal {
       this.userMeResponse = false;
       this.errorMessage = translateText("map_component.error");
       this.elo = translateText("map_component.error");
+      this.elo2v2 = translateText("map_component.error");
     } finally {
       this.updateElo();
     }
@@ -114,10 +119,9 @@ export class RankedModal extends BaseModal {
           )}
           ${this.renderCard(
             translateText("mode_selector.ranked_2v2_title"),
-            // No 2v2 leaderboard data until 2v2 ingestion ships in the API.
             this.errorMessage ??
               (this.isRankedEligible()
-                ? translateText("matchmaking_modal.no_elo")
+                ? translateText("matchmaking_modal.elo", { elo: this.elo2v2 })
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked("2v2"),
           )}

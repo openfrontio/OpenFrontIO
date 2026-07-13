@@ -193,15 +193,11 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    if (this.mode === "2v2") {
-      // No 2v2 leaderboard data until 2v2 ingestion ships in the API;
-      // everyone matches at the default rating.
-      this.elo = translateText("matchmaking_modal.no_elo");
-    } else {
-      this.elo =
-        userMe.player.leaderboard?.oneVone?.elo ??
-        translateText("matchmaking_modal.no_elo");
-    }
+    const row =
+      this.mode === "2v2"
+        ? userMe.player.leaderboard?.twoVtwo
+        : userMe.player.leaderboard?.oneVone;
+    this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;

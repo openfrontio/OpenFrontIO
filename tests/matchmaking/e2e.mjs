@@ -187,10 +187,11 @@ try {
   const info = await fetchGameInfo(gameId);
   if (MODE === "2v2") {
     c.check(
-      "2v2 game config: Team mode, 2 teams, 4 max players",
+      "2v2 game config: Team mode, 2 teams, 4 max players, ranked 2v2",
       info?.gameConfig?.gameMode === "Team" &&
         info?.gameConfig?.playerTeams === 2 &&
-        info?.gameConfig?.maxPlayers === 4,
+        info?.gameConfig?.maxPlayers === 4 &&
+        info?.gameConfig?.rankedType === "2v2",
     );
   } else {
     c.check(
