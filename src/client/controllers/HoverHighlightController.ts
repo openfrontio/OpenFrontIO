@@ -15,8 +15,7 @@ import { MapRenderer } from "../render/gl";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 import { GameView, UnitView } from "../view";
-import { Unit, UnitType } from "../../core/game/Game";
-import { TileRef } from "src/core/game/GameMap";
+import { UnitType } from "../../core/game/Game";
 
 
 export class HoverHighlightController implements Controller {
