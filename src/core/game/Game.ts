@@ -148,6 +148,7 @@ export interface PublicGameModifiers {
   isSAMsDisabled?: boolean;
   isPeaceTime?: boolean;
   isWaterNukes?: boolean;
+  isDoomsdayClock?: boolean;
 }
 
 export interface UnitInfo {

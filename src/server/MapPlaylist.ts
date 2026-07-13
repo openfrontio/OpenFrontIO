@@ -78,7 +78,8 @@ type ModifierKey =
   | "isNukesDisabled"
   | "isSAMsDisabled"
   | "isPeaceTime"
-  | "isWaterNukes";
+  | "isWaterNukes"
+  | "isDoomsdayClock";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 // Weights are roughly informed by the community "favorite modifier" poll.
@@ -96,6 +97,7 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
   ...Array<ModifierKey>(4).fill("isWaterNukes"),
+  ...Array<ModifierKey>(2).fill("isDoomsdayClock"),
 ];
 
 // Maps where water nukes have a higher chance on top of the normal pool
@@ -258,6 +260,7 @@ export class MapPlaylist {
       isSAMsDisabled,
       isPeaceTime,
       isWaterNukes,
+      isDoomsdayClock,
     } = poolResult;
     if (boostWaterNukes) {
       isWaterNukes = true;
@@ -284,7 +287,8 @@ export class MapPlaylist {
           !isNukesDisabled &&
           !isSAMsDisabled &&
           !isPeaceTime &&
-          !isWaterNukes
+          !isWaterNukes &&
+          !isDoomsdayClock
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
@@ -301,6 +305,7 @@ export class MapPlaylist {
             isSAMsDisabled,
             isPeaceTime,
             isWaterNukes,
+            isDoomsdayClock,
           } = fallback);
           ({ isHardNations } = fallback);
         }
@@ -357,7 +362,13 @@ export class MapPlaylist {
         isSAMsDisabled,
         isPeaceTime,
         isWaterNukes,
+        isDoomsdayClock,
       },
+      // Rolled into the rotation: enable the anti-stall clock at the default
+      // pace. Speed is fixed here (not from the pool) to keep the badge simple.
+      doomsdayClock: isDoomsdayClock
+        ? { enabled: true, speed: "normal" }
+        : undefined,
       startingGold,
       goldMultiplier,
       disableAlliances: isAlliancesDisabled ? true : undefined,
@@ -561,6 +572,7 @@ export class MapPlaylist {
       isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
       isPeaceTime: selected.has("isPeaceTime") || undefined,
       isWaterNukes: selected.has("isWaterNukes") || undefined,
+      isDoomsdayClock: selected.has("isDoomsdayClock") || undefined,
     };
   }
 
