@@ -74,16 +74,21 @@ try {
       const el = document.querySelector("matchmaking-modal");
       ${body}
     })()`);
-  const resetAndConnect = () =>
+  const resetAndConnect = (mode = "1v1") =>
     modal(`el.gameID = null;
       el.intentionalClose = false;
       el.reconnectAttempts = 0;
+      el.mode = ${JSON.stringify(mode)};
       el.connect();`);
 
   // 1. Joining the queue: connect -> join arrives (after the modal's 2s delay)
   await resetAndConnect();
   await joinCountReaches(1, 8000);
   c.check("join sent after connect", true);
+  c.check(
+    "1v1 join omits the mode param (backward compatible)",
+    (await joins())[0].mode === null,
+  );
 
   // 2. Deploy/restart: server drops the socket abruptly -> reconnect + rejoin
   await control("kill");
@@ -132,6 +137,12 @@ try {
     "intentional close -> no message",
     (await page.evaluate(() => window.__mmMessages.length)) === msgsBefore,
   );
+
+  // 7. 2v2 queue: join carries mode=2v2
+  await resetAndConnect("2v2");
+  await joinCountReaches(7, 8000);
+  c.check("2v2 join sends mode=2v2", (await joins())[6].mode === "2v2");
+  await modal(`el.onClose();`);
 } finally {
   await browser.close();
   await fake.close();

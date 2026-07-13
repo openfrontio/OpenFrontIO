@@ -110,11 +110,16 @@ export class RankedModal extends BaseModal {
               (this.isRankedEligible()
                 ? translateText("matchmaking_modal.elo", { elo: this.elo })
                 : translateText("mode_selector.ranked_title")),
-            () => this.handleRanked(),
+            () => this.handleRanked("1v1"),
           )}
-          ${this.renderDisabledCard(
+          ${this.renderCard(
             translateText("mode_selector.ranked_2v2_title"),
-            translateText("mode_selector.coming_soon"),
+            // No 2v2 leaderboard data until 2v2 ingestion ships in the API.
+            this.errorMessage ??
+              (this.isRankedEligible()
+                ? translateText("matchmaking_modal.no_elo")
+                : translateText("mode_selector.ranked_title")),
+            () => this.handleRanked("2v2"),
           )}
           ${this.renderDisabledCard(
             translateText("mode_selector.coming_soon"),
@@ -172,13 +177,15 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  private async handleRanked() {
+  private async handleRanked(mode: "1v1" | "2v2") {
     if ((await userAuth()) === false) {
       this.close();
       window.showPage?.("page-account");
       return;
     }
 
-    document.dispatchEvent(new CustomEvent("open-matchmaking"));
+    document.dispatchEvent(
+      new CustomEvent("open-matchmaking", { detail: { mode } }),
+    );
   }
 }

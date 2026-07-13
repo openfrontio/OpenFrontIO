@@ -414,6 +414,40 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
+  public get2v2Config(): GameConfig {
+    const maps = [
+      GameMapType.Australia, // 40%
+      GameMapType.Australia,
+      GameMapType.Iceland, // 20%
+      GameMapType.Asia, // 20%
+      GameMapType.EuropeClassic, // 20%
+    ];
+    const isCompact = Math.random() < 0.2;
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: 4,
+      gameType: GameType.Public,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      // No rankedType: game ingestion still only accepts "1v1", so 2v2
+      // games are reported like ordinary team games until 2v2 ingestion
+      // ships in the API.
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: isCompact ? 10 : 15,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+      bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: 30 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
   private getNextMap(type: ScheduledPublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {

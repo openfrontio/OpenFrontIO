@@ -700,6 +700,21 @@ export async function startWorker() {
 }
 
 async function startMatchmakingPolling(gm: GameManager) {
+  // One checkin serves exactly one queue, so a host serving both modes
+  // runs one long-poll loop per mode.
+  startMatchmakingLoop(gm, "1v1");
+  startMatchmakingLoop(gm, "2v2");
+}
+
+const MatchmakingAssignmentSchema = z.object({
+  // Flat list of matched players' publicIds.
+  players: z.array(z.string()),
+  // The matcher's team split ([[a],[b]] for 1v1). Optional for tolerance,
+  // but the current API always sends it.
+  teams: z.array(z.array(z.string())).optional(),
+});
+
+function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
   startPolling(
     async () => {
       try {
@@ -723,6 +738,8 @@ async function startMatchmakingPolling(gm: GameManager) {
             gameId: gameId,
             ccu: gm.activeClients(),
             instanceId: process.env.INSTANCE_ID,
+            // Omitted for 1v1 so an API without mode support keeps working.
+            ...(mode === "2v2" ? { mode } : {}),
           }),
           signal: controller.signal,
         });
@@ -731,20 +748,34 @@ async function startMatchmakingPolling(gm: GameManager) {
 
         if (!response.ok) {
           log.warn(
-            `Failed to poll lobby: ${response.status} ${response.statusText}`,
+            `Failed to poll ${mode} lobby: ${response.status} ${response.statusText}`,
           );
           return;
         }
 
         const data = await response.json();
-        log.info(`Lobby poll successful:`, data);
+        log.info(`Lobby ${mode} poll successful:`, data);
 
         if (data.assignment) {
+          const parsed = MatchmakingAssignmentSchema.safeParse(data.assignment);
+          if (!parsed.success) {
+            // Don't strand the matched players: create the game without
+            // the allowlist/team pins rather than dropping the match.
+            log.warn(
+              `Unexpected ${mode} assignment shape: ${z.prettifyError(parsed.error)}`,
+            );
+          }
+          const baseConfig =
+            mode === "2v2" ? playlist.get2v2Config() : playlist.get1v1Config();
           const game = gm.createGame(
             gameId,
-            playlist.get1v1Config(),
+            parsed.success
+              ? { ...baseConfig, allowedPublicIds: parsed.data.players }
+              : baseConfig,
             undefined,
             Date.now() + 7000,
+            undefined,
+            parsed.success ? parsed.data.teams : undefined,
           );
           if (game === null) {
             log.warn(`Failed to create matchmaking game ${gameId}`);
@@ -755,7 +786,7 @@ async function startMatchmakingPolling(gm: GameManager) {
           // Abort is expected if no game is scheduled on this worker.
           return;
         }
-        log.error(`Error polling lobby:`, error);
+        log.error(`Error polling ${mode} lobby:`, error);
       }
     },
     5000 + Math.random() * 1000,
