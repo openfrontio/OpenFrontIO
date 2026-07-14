@@ -117,6 +117,9 @@ export const UserMeResponseSchema = z.object({
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
+    // True when the player's active subscription tier exempts them from the
+    // free-ranked-play limits.
+    unlimitedRanked: z.boolean(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
