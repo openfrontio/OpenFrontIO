@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { generateCryptoRandomUUID, translateText } from "../client/Utils";
+import { ANON_ANIMALS } from "../core/AnonAnimals";
 import { sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
@@ -318,10 +319,18 @@ export class UsernameInput extends LitElement {
   }
 }
 
+// A memorable anonymous username: "Anon" + a random animal + one digit, e.g.
+// "AnonWolf0", "AnonFalcon7". The random value is spread across the whole
+// animal × digit space (animals fill first, then the digit counts up), giving
+// ANON_ANIMALS.length × 10 distinct handles — far more recognisable than the
+// old "Anon" + 3-digit form. This is a client-side, best-effort-unique fallback
+// for players who never set a name; guaranteeing no duplicates within a single
+// lobby would need server-side (roster-aware) assignment.
 export function genAnonUsername(): string {
   const uuid = generateCryptoRandomUUID();
-  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-  const decimal = BigInt(`0x${cleanUuid}`);
-  const threeDigits = decimal % 1000n;
-  return "Anon" + threeDigits.toString().padStart(3, "0");
+  const value =
+    BigInt(`0x${uuid.replace(/-/g, "")}`) % BigInt(ANON_ANIMALS.length * 10);
+  const animal = ANON_ANIMALS[Number(value % BigInt(ANON_ANIMALS.length))];
+  const digit = Number(value / BigInt(ANON_ANIMALS.length));
+  return `Anon${animal}${digit}`;
 }
