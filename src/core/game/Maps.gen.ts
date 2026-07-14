@@ -568,7 +568,7 @@ export const maps: readonly MapInfo[] = [
     id: "Korea",
     type: GameMapType.Korea,
     translationKey: "map.korea",
-    categories: ["asia"],
+    categories: ["asia", "countries"],
     multiplayerFrequency: 5,
   },
   {
