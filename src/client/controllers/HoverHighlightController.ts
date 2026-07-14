@@ -47,18 +47,22 @@ export class HoverHighlightController implements Controller {
     if (this.game.isLand(ref)) {
       ownerID = this.game.tileState(ref) & OWNER_MASK;
     } else if (this.userSettings.navalHoverHighlight()) {
-      const units = this.game
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
-        // Avoid square root for performance; 50px radius = 2500px²
-        .filter((u) => this.game.euclideanDistSquared(ref, u.tile()) < 2500)
-        .sort((a: UnitView, b: UnitView) => {
-          const distA = this.game.euclideanDistSquared(ref, a.tile());
-          const distB = this.game.euclideanDistSquared(ref, b.tile());
-          return distA - distB;
-        });
-      
-      if (units.length > 0) {
-        ownerID = units[0].owner().smallID();
+      // Avoid square root for performance; 50px radius = 2500px²
+      let closestUnit: UnitView | null = null;
+      let closestDistSquared = 2500;
+      for (const u of this.game.units(
+        UnitType.Warship,
+        UnitType.TradeShip,
+        UnitType.TransportShip,
+      )) {
+        const distSquared = this.game.euclideanDistSquared(ref, u.tile());
+        if (distSquared < closestDistSquared) {
+          closestDistSquared = distSquared;
+          closestUnit = u;
+        }
+      }
+      if (closestUnit !== null) {
+        ownerID = closestUnit.owner().smallID();
       }
     }
     
