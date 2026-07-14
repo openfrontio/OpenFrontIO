@@ -197,7 +197,7 @@ export class UsernameInput extends LitElement {
       tag: this.clanTag,
     });
     const className =
-      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap";
+      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg lg:whitespace-nowrap";
 
     if (this.clanTagOwnershipError !== "username.tag_not_member") {
       return html`<div id="clan-tag-validation-error" class=${className}>
