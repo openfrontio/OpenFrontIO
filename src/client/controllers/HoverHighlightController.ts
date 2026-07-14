@@ -16,10 +16,11 @@ import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 import { GameView, UnitView } from "../view";
 import { UnitType } from "../../core/game/Game";
-
+import { UserSettings } from "../../core/game/UserSettings";
 
 export class HoverHighlightController implements Controller {
   private lastOwnerID = 0;
+  private userSettings: UserSettings = new UserSettings();
 
   constructor(
     private game: GameView,
@@ -45,7 +46,7 @@ export class HoverHighlightController implements Controller {
     const ref = this.game.ref(cell.x, cell.y);
     if (this.game.isLand(ref)) {
       ownerID = this.game.tileState(ref) & OWNER_MASK;
-    } else {
+    } else if (this.userSettings.navalHoverHighlight()) {
       const units = this.game
         .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
         // Avoid square root for performance; 50px radius = 2500px²

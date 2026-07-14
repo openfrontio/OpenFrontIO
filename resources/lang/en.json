@@ -1542,6 +1542,8 @@
     "move_right_desc": "Move the camera to the right",
     "move_up": "Move Camera Up",
     "move_up_desc": "Move the camera upward",
+    "naval_hover_highlight_label": "Naval Hover Highlight",
+    "naval_hover_highlight_desc": "Highlight the owner of naval units when hovering over them.",
     "off": "Off",
     "on": "On",
     "pause_game": "Pause",

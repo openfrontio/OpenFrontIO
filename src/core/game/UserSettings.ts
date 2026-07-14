@@ -174,6 +174,10 @@ export class UserSettings {
     return this.getBool("settings.goToPlayer", true);
   }
 
+  navalHoverHighlight() {
+    return this.getBool("settings.navalHoverHighlight", false);
+  }
+
   attackingTroopsOverlay() {
     return this.getBool("settings.attackingTroopsOverlay", true);
   }
@@ -241,6 +245,10 @@ export class UserSettings {
 
   toggleGoToPlayer() {
     this.setBool("settings.goToPlayer", !this.goToPlayer());
+  }
+
+  toggleNavalHoverHiglight() {
+    this.setBool("settings.navalHoverHighlight", !this.navalHoverHighlight());
   }
 
   // For development only. Used for testing patterns, set in the console manually.
