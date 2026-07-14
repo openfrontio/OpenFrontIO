@@ -47,7 +47,7 @@ export class HoverHighlightController implements Controller {
     if (this.game.isLand(ref)) {
       ownerID = this.game.tileState(ref) & OWNER_MASK;
     } else if (this.userSettings.navalHoverHighlight()) {
-      // Avoid square root for performance; 50px radius = 2500px²
+      // Avoid square root for performance; 50 tile radius = 2500 tiles²
       let closestUnit: UnitView | null = null;
       let closestDistSquared = 2500;
       for (const u of this.game.units(
