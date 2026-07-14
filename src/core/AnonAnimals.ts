@@ -87,16 +87,18 @@ export const ANON_ANIMALS: readonly string[] = [
   "Ladybug",
 ];
 
-// Map any integer to a memorable anonymous handle: "Anon" + animal + 3 digits
-// (e.g. "AnonWolf042"). 80 animals × 1000 = 80,000 distinct handles. Same hash
-// derivation as the old tribe-name scheme (animal from the low part, number from
-// the high part), so it's deterministic in `hash` and stays wire-valid
-// (UsernameSchema, under MAX_USERNAME_LENGTH). Shared by the server-side
-// anonymisation overlay (anonymousUsername) and the client fallback
-// (genAnonUsername) so both read identically.
-export function anonAnimalName(hash: number): string {
-  const h = Math.abs(Math.trunc(hash));
-  const animal = ANON_ANIMALS[h % ANON_ANIMALS.length];
-  const number = Math.floor(h / ANON_ANIMALS.length) % 1000;
-  return `Anon${animal}${number.toString().padStart(3, "0")}`;
+// "Anon" + animal + optional round number, from a slot index and a per-viewer
+// offset (e.g. "AnonWolf", "AnonFox", … then "AnonWolf1" once all 80 are used).
+// Consecutive slots map to DISTINCT handles: the 80 animals fill first (round 0
+// → a bare name), then the round counts up. So for a fixed offset, two different
+// slots can never collide — that is what lets the anonymisation overlay
+// guarantee unique names by feeding it join-order slots. The offset rotates
+// which animal each slot lands on, so different viewers see a different name for
+// the same player. Output is always wire-valid (letters + optional digits).
+export function anonAnimalName(slot: number, offset = 0): string {
+  const s = Math.abs(Math.trunc(slot));
+  const o = Math.abs(Math.trunc(offset));
+  const animal = ANON_ANIMALS[(s + o) % ANON_ANIMALS.length];
+  const round = Math.floor(s / ANON_ANIMALS.length);
+  return round === 0 ? `Anon${animal}` : `Anon${animal}${round}`;
 }

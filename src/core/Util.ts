@@ -1,6 +1,5 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import { anonAnimalName } from "./AnonAnimals";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import { TileSet } from "./game/TileSet";
@@ -376,13 +375,6 @@ export function createRandomName(
     randomName = `👤 ${TRIBE_NAME_PREFIXES[prefixIndex]} ${TRIBE_NAME_SUFFIXES[suffixIndex]}`;
   }
   return randomName;
-}
-
-// Deterministic anonymized username: a memorable "Anon" + animal + number handle
-// (e.g. "AnonWolf042") derived from the seed's hash. Output is always
-// wire-valid (letters + digits), so no stripping is needed.
-export function anonymousUsername(seed: string): string {
-  return anonAnimalName(simpleHash(seed));
 }
 
 export const emojiTable = [

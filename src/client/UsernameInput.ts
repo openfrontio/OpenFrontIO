@@ -319,13 +319,14 @@ export class UsernameInput extends LitElement {
   }
 }
 
-// A memorable anonymous username: "Anon" + animal + number (e.g. "AnonWolf042"),
-// the same handle format the server-side anonymisation overlay uses
-// (anonAnimalName). Client-side, best-effort-unique fallback for players who
-// never set a name — 80,000 handles, so duplicates are rare.
+// A memorable anonymous username: "Anon" + animal (+ digit), the same handle
+// format the server-side anonymisation overlay uses (anonAnimalName). Client-side
+// fallback for players who never set a name — no roster here, so it draws a
+// random slot (best-effort-unique); the overlay is what guarantees uniqueness
+// in-game.
 export function genAnonUsername(): string {
   const uuid = generateCryptoRandomUUID().replace(/-/g, "");
   return anonAnimalName(
-    Number(BigInt(`0x${uuid}`) % BigInt(ANON_ANIMALS.length * 1000)),
+    Number(BigInt(`0x${uuid}`) % BigInt(ANON_ANIMALS.length * 10)),
   );
 }
