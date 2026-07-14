@@ -1209,11 +1209,13 @@ export class GameServer {
               clanTag: hideClanTags ? null : (c.clanTag ?? null),
               clientID: c.clientID,
               friends: friendsFor(c),
+              publicId: c.showPublicProfile ? c.publicId : undefined,
             }
           : {
               username: this.anonName(viewer, c.clientID),
               clanTag: null,
               clientID: c.clientID,
+              publicId: c.showPublicProfile ? c.publicId : undefined,
             },
       ),
       lobbyCreatorClientID: this.lobbyCreatorID,

@@ -158,6 +158,14 @@ export class UserSettings {
     return this.getBool("settings.anonymousNames", false);
   }
 
+  showPublicProfile() {
+    return this.getBool("settings.showPublicProfile", false);
+  }
+
+  toggleShowPublicProfile() {
+    this.setBool("settings.showPublicProfile", !this.showPublicProfile());
+  }
+
   lobbyIdVisibility() {
     return this.getBool("settings.lobbyIdVisibility", true);
   }

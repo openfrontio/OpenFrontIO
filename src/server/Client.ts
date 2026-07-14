@@ -23,5 +23,7 @@ export class Client {
     public readonly cosmetics: PlayerCosmetics | undefined,
     public readonly publicId: string | undefined,
     public readonly friends: string[],
+    // Opt-in: player consented to exposing their publicId to others in-game.
+    public readonly showPublicProfile: boolean = false,
   ) {}
 }

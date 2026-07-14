@@ -266,6 +266,14 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleShowPublicProfile() {
+    this.userSettings.toggleShowPublicProfile();
+    console.log(
+      "🪪 Public Profile:",
+      this.userSettings.showPublicProfile() ? "ON" : "OFF",
+    );
+  }
+
   private toggleLobbyIdVisibility() {
     this.userSettings.toggleLobbyIdVisibility();
     console.log(
@@ -824,6 +832,15 @@ export class UserSettingModal extends BaseModal {
         id="anonymous-names-toggle"
         .checked=${this.userSettings.anonymousNames()}
         @change=${this.toggleAnonymousNames}
+      ></setting-toggle>
+
+      <!-- 🪪 Public Profile -->
+      <setting-toggle
+        label="${translateText("user_setting.public_profile_label")}"
+        description="${translateText("user_setting.public_profile_desc")}"
+        id="public-profile-toggle"
+        .checked=${this.userSettings.showPublicProfile()}
+        @change=${this.toggleShowPublicProfile}
       ></setting-toggle>
 
       <!-- 👁️ Hidden Lobby IDs -->

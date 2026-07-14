@@ -27,6 +27,7 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
+import { UserSettings } from "../core/game/UserSettings";
 import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
@@ -427,6 +428,7 @@ export class Transport {
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
+      showPublicProfile: new UserSettings().showPublicProfile(),
     } satisfies ClientJoinMessage);
   }
 

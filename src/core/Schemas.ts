@@ -199,6 +199,9 @@ const ClientInfoSchema = z.object({
   username: UsernameSchema,
   clanTag: ClanTagSchema,
   friends: z.array(z.string()).optional(),
+  // Opt-in only: the player's stable account publicId, included when they
+  // enabled "public profile". Lets other clients look up their public stats.
+  publicId: z.string().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -852,6 +855,9 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  // Opt-in: when true the player consents to exposing their account publicId to
+  // other clients in this game (see UserSettings.showPublicProfile).
+  showPublicProfile: z.boolean().optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
