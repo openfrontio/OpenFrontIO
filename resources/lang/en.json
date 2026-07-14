@@ -1451,8 +1451,6 @@
     "warship": "Warship"
   },
   "user_setting": {
-    "public_profile_label": "Public profile",
-    "public_profile_desc": "Let other players in your games see your public OpenFront ID, so stat-tracking tools can look you up. Off by default.",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "alert_frame_label": "Alert Frame",
     "ally_keybinds": "Ally Keybinds",
@@ -1557,6 +1555,8 @@
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "performance_overlay_label": "Performance Overlay",
     "press_a_key": "Press a key",
+    "public_profile_desc": "Let other players in your games see your public OpenFront ID, so stat-tracking tools can look you up. Off by default.",
+    "public_profile_label": "Public profile",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Toggle the renderer tuning panel",
     "request_alliance": "Request Alliance",

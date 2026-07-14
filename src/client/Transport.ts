@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -27,7 +28,6 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
 import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
