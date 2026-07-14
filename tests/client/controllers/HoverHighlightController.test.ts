@@ -71,7 +71,7 @@ describe("HoverHighlightController", () => {
     expect(view.setHighlightOwner).toHaveBeenCalledWith(9);
   });
 
-  it("does not highlight if there are no naval units nearby", () => {
+  it("clears hover highlight when naval hover finds no nearby units", () => {
     game.isLand = () => false;
     game.units = (..._args: any[]) => [];
     game.ref = () => 20;
@@ -85,6 +85,7 @@ describe("HoverHighlightController", () => {
     );
     // enable naval hover behavior
     ui["userSettings"] = { navalHoverHighlight: () => true } as any;
+    ui["lastOwnerID"] = 9;
 
     ui.init();
     const handler = (eventBus.on as any).mock.calls[0][1];

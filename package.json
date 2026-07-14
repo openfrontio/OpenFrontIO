@@ -108,6 +108,7 @@
     "intl-messageformat": "^11.2.3",
     "ip-anonymize": "^0.1.0",
     "jose": "^6.2.3",
+    "jq": "^1.7.2",
     "js-yaml": "^4.2.0",
     "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
