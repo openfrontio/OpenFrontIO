@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { generateCryptoRandomUUID, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import { ANON_ANIMALS, anonAnimalName } from "../core/AnonAnimals";
 import { sanitizeClanTag } from "../core/Util";
 import {
@@ -322,11 +322,9 @@ export class UsernameInput extends LitElement {
 // A memorable anonymous username: "Anon" + animal (+ digit), the same handle
 // format the server-side anonymisation overlay uses (anonAnimalName). Client-side
 // fallback for players who never set a name — no roster here, so it draws a
-// random slot (best-effort-unique); the overlay is what guarantees uniqueness
-// in-game.
+// random slot from a CSPRNG (best-effort-unique); the overlay is what guarantees
+// uniqueness in-game.
 export function genAnonUsername(): string {
-  const uuid = generateCryptoRandomUUID().replace(/-/g, "");
-  return anonAnimalName(
-    Number(BigInt(`0x${uuid}`) % BigInt(ANON_ANIMALS.length * 10)),
-  );
+  const [rand = 0] = crypto.getRandomValues(new Uint32Array(1));
+  return anonAnimalName(rand % (ANON_ANIMALS.length * 10));
 }
