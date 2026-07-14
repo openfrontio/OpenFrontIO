@@ -11,12 +11,27 @@ export function assignTeams(
   const result = new Map<PlayerInfo, Team | "kicked">();
   const teamPlayerCount = new Map<Team, number>();
 
+  // Matchmade games arrive with a server-pinned team slot (teamIndex). The
+  // matchmaker already balanced those teams, so pins are honored
+  // unconditionally — before and regardless of clan/friend grouping and
+  // maxTeamSize — and seed the counts the balancing below sees.
+  const unpinned: PlayerInfo[] = [];
+  for (const p of players) {
+    const pinnedTeam = p.teamIndex === null ? undefined : teams[p.teamIndex];
+    if (pinnedTeam === undefined) {
+      unpinned.push(p);
+      continue;
+    }
+    result.set(p, pinnedTeam);
+    teamPlayerCount.set(pinnedTeam, (teamPlayerCount.get(pinnedTeam) ?? 0) + 1);
+  }
+
   // Clans are strict: a clan goes to one team together, and any overflow
   // members get kicked. (You opted into the clan, so we honor "all or
   // nothing" for placement.)
   const clanGroups = new Map<string, PlayerInfo[]>();
   const nonClanPlayers: PlayerInfo[] = [];
-  for (const p of players) {
+  for (const p of unpinned) {
     if (p.clanTag) {
       if (!clanGroups.has(p.clanTag)) clanGroups.set(p.clanTag, []);
       clanGroups.get(p.clanTag)!.push(p);

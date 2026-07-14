@@ -128,6 +128,11 @@
     "name": "Anarchist Flag"
   },
   {
+    "code": "Ambazonia",
+    "continent": "Africa",
+    "name": "Ambazonia"
+  },
+  {
     "code": "ad",
     "continent": "Europe",
     "name": "Andorra"
@@ -136,6 +141,11 @@
     "code": "ao",
     "continent": "Africa",
     "name": "Angola"
+  },
+  {
+    "code": "gq-an",
+    "continent": "Africa",
+    "name": "Annobon"
   },
   {
     "code": "aq",
@@ -370,6 +380,11 @@
     "code": "bt",
     "continent": "Asia",
     "name": "Bhutan"
+  },
+  {
+    "code": "Biafra",
+    "continent": "Africa",
+    "name": "Biafra"
   },
   {
     "code": "bo",
@@ -1427,9 +1442,19 @@
     "name": "Kingdom of Araucania and Patagonia"
   },
   {
+    "code": "Kingdom of Benin",
+    "continent": "Africa",
+    "name": "Kingdom of Benin"
+  },
+  {
     "code": "Kingdom Of Cyprus",
     "continent": "Europe",
     "name": "Kingdom of Cyprus"
+  },
+  {
+    "code": "Kingdom of Dahomey",
+    "continent": "Africa",
+    "name": "Kingdom of Dahomey"
   },
   {
     "code": "Kingdom of Egypt",
@@ -1465,6 +1490,10 @@
     "code": "kingdom_of_portugal",
     "continent": "Europe",
     "name": "Kingdom of Portugal"
+  },
+    "code": "Kingdom of Kongo",
+    "continent": "Africa",
+    "name": "Kingdom of Kongo"
   },
   {
     "code": "Kingdom of Syria",
@@ -1766,6 +1795,11 @@
     "code": "ml",
     "continent": "Africa",
     "name": "Mali"
+  },
+  {
+    "code": "Mali Empire",
+    "continent": "Africa",
+    "name": "Mali Empire"
   },
   {
     "code": "mt",

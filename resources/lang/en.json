@@ -399,6 +399,7 @@
     "rare": "Rare",
     "soft": "Caps",
     "uncommon": "Uncommon",
+    "unlimited_ranked": "Unlimited ranked",
     "usd_value": "Value: {usd}"
   },
   "difficulty": {
@@ -958,6 +959,7 @@
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
     "greatlakes": "Great Lakes",
+    "gulfofguinea": "Gulf Of Guinea",
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "halkidiki": "Halkidiki",
     "hawaii": "Hawaii",
@@ -1072,9 +1074,14 @@
   "matchmaking_modal": {
     "connecting": "Connecting to matchmaking server...",
     "elo": "Your ELO: {elo}",
+    "limit_reached": "You're out of free ranked matches.",
+    "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
+    "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
+    "title_2v2": "2v2 Ranked Matchmaking (ALPHA)",
     "waiting_for_game": "Waiting for game to start..."
   },
   "mode_selector": {
@@ -1206,6 +1213,7 @@
     "public": "Public",
     "ranked": "Ranked",
     "ranked_1v1": "1v1",
+    "ranked_2v2": "2v2",
     "solo": "Solo",
     "stats_games_played": "Games Played",
     "stats_losses": "Losses",
@@ -1244,6 +1252,8 @@
     "crowded": "Crowded",
     "disable_alliances": "Alliances Disabled",
     "disable_alliances_label": "Alliances",
+    "doomsday_clock": "Doomsday Clock",
+    "doomsday_clock_label": "Doomsday Clock",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "hard_nations": "Hard Nations",
     "nukes_disabled": "Nukes Disabled",
@@ -1520,8 +1530,8 @@
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
+    "highlight_glow_strength_label": "Highlight strength",
     "highlight_small_players_desc": "Add a glow to small players so they're easy to find.",
-    "highlight_small_players_label": "Highlight small players",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
