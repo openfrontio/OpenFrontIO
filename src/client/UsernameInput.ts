@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { generateCryptoRandomUUID, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
+import { ANON_ANIMALS, anonAnimalName } from "../core/AnonAnimals";
 import { sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
@@ -318,10 +319,24 @@ export class UsernameInput extends LitElement {
   }
 }
 
+// A memorable anonymous username: "Anon" + animal (+ digit), the same handle
+// format the server-side anonymisation overlay uses (anonAnimalName). Client-side
+// fallback for players who never set a name — no roster here, so it draws a
+// random slot (best-effort-unique); the overlay is what guarantees uniqueness
+// in-game.
+//
+// Rejection-sample a uniform slot in [0, bound) from the CSPRNG: drawing a raw
+// uint32 and taking `% bound` would be very slightly biased (the top partial
+// bucket), so we discard the unrepresentable tail first. The bias is cosmetically
+// irrelevant here, but this keeps the draw provably uniform.
 export function genAnonUsername(): string {
-  const uuid = generateCryptoRandomUUID();
-  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-  const decimal = BigInt(`0x${cleanUuid}`);
-  const threeDigits = decimal % 1000n;
-  return "Anon" + threeDigits.toString().padStart(3, "0");
+  const bound = ANON_ANIMALS.length * 10;
+  const limit = Math.floor(0x1_0000_0000 / bound) * bound;
+  const buf = new Uint32Array(1);
+  let rand: number;
+  do {
+    crypto.getRandomValues(buf);
+    rand = buf[0] ?? 0;
+  } while (rand >= limit);
+  return anonAnimalName(rand % bound);
 }
