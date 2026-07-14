@@ -25,6 +25,10 @@ export class CosmeticInfo extends LitElement {
   @property({ type: Boolean })
   showAdFree: boolean = false;
 
+  /** Equivalent USD value; only set for plutonium-only items. */
+  @property({ type: Number })
+  usdValue?: number;
+
   createRenderRoot() {
     return this;
   }
@@ -59,6 +63,13 @@ export class CosmeticInfo extends LitElement {
           ${this.showAdFree
             ? html`<div class="text-green-400 font-bold">
                 ${translateText("cosmetics.adfree")}
+              </div>`
+            : nothing}
+          ${this.usdValue !== undefined
+            ? html`<div>
+                ${translateText("cosmetics.usd_value", {
+                  usd: `$${this.usdValue.toFixed(2)}`,
+                })}
               </div>`
             : nothing}
           ${this.colorPalette

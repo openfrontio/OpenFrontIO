@@ -306,6 +306,10 @@ export class CosmeticButton extends LitElement {
     const isSkin = type === "skin";
     const isOwnedSubscription =
       type === "subscription" && active.relationship === "owned";
+    // Equivalent USD value at 20 plutonium = $1.00, shown only for items that
+    // can't be bought directly with money but can be bought with plutonium.
+    const usdValue =
+      !c?.product && priceHard !== undefined ? priceHard / 20 : undefined;
     // Switching tiers shows "Switch"; a first-time subscribe shows price only.
     const dollarLabelKey =
       type === "subscription" && this.userHasSubscription
@@ -357,6 +361,7 @@ export class CosmeticButton extends LitElement {
                 .rarity=${c!.rarity}
                 .colorPalette=${active.colorPalette?.name}
                 .showAdFree=${isPurchasable}
+                .usdValue=${usdValue}
               ></cosmetic-info>`
             : nothing}
 

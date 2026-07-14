@@ -143,4 +143,30 @@ describe("PlayerImpl", () => {
     }
     expect(other.canSendAllianceRequest(player)).toBe(false);
   });
+
+  describe("tiles()", () => {
+    test("returns a live view that reflects later ownership changes", () => {
+      const tiles = player.tiles();
+      const sizeBefore = tiles.size;
+      const tile = game.ref(5, 5);
+      player.conquer(tile);
+      expect(tiles.has(tile)).toBe(true);
+      expect(tiles.size).toBe(sizeBefore + 1);
+    });
+
+    test("every tile is visited when relinquishing during iteration", () => {
+      player.conquer(game.ref(1, 0));
+      player.conquer(game.ref(2, 0));
+      const owned = player.numTilesOwned();
+      expect(owned).toBeGreaterThan(1);
+      // SpawnExecution relinquishes all tiles while iterating tiles().
+      let visited = 0;
+      player.tiles().forEach((t) => {
+        visited++;
+        player.relinquish(t);
+      });
+      expect(visited).toBe(owned);
+      expect(player.numTilesOwned()).toBe(0);
+    });
+  });
 });

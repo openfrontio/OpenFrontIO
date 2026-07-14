@@ -220,6 +220,12 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
+  if (modifiers.isDoomsdayClock) {
+    result.push({
+      labelKey: "public_game_modifier.doomsday_clock_label",
+      badgeKey: "public_game_modifier.doomsday_clock",
+    });
+  }
   return result;
 }
 

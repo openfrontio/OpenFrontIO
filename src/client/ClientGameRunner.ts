@@ -54,6 +54,7 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
+  NewLobbyEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -571,6 +572,17 @@ async function createClientGame(
       { signal: graphicsListenerAbort.signal },
     );
 
+    // Push the small-player glow Strength to the pass (which is a pure consumer)
+    // on the settings-changed event, so moving the slider updates the glow live
+    // even while the settings modal has the sim paused.
+    view.setSmallPlayerGlowStrength(userSettings.highlightGlowStrength());
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.highlightGlowStrength`,
+      () =>
+        view.setSmallPlayerGlowStrength(userSettings.highlightGlowStrength()),
+      { signal: graphicsListenerAbort.signal },
+    );
+
     // Re-resolve names drawn on the map when the anonymous-names setting toggles
     // so they switch live, like the leaderboard.
     globalThis.addEventListener(
@@ -929,6 +941,12 @@ export class ClientGameRunner {
           false,
           "error_modal.connection_error",
         );
+      }
+      if (message.type === "new_lobby") {
+        // The host reused this private lobby: surface the successor id so the
+        // group can hop over. NewLobbyPrompt navigates the host and prompts
+        // everyone else.
+        this.eventBus.emit(new NewLobbyEvent(message.gameID));
       }
       if (message.type === "turn") {
         if (

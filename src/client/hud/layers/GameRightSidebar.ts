@@ -3,10 +3,12 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
+import { createNextLobby } from "../../Api";
+import { ClientEnv } from "../../ClientEnv";
 import "../../components/DoomsdayClockPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { showInGameConfirm } from "../../InGameModal";
+import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
@@ -19,6 +21,7 @@ const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const FastForwardIconSolid = assetUrl("images/FastForwardIconSolidWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
 const playIcon = assetUrl("images/PlayIconWhite.svg");
+const newLobbyIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
@@ -50,6 +53,10 @@ export class GameRightSidebar extends LitElement implements Controller {
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
   private hasWinner = false;
   private isLobbyCreator = false;
+  private isPrivateLobby = false;
+  // Guards the in-game "New lobby" button so a double click doesn't fire twice
+  // before we navigate to the successor lobby.
+  private newLobbyRequested = false;
   private spawnBarVisible = false;
   private immunityBarVisible = false;
 
@@ -67,6 +74,8 @@ export class GameRightSidebar extends LitElement implements Controller {
     this._isSinglePlayer =
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
+    this.isPrivateLobby =
+      this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
@@ -194,6 +203,34 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
+  private async onNewLobbyButtonClick() {
+    if (this.newLobbyRequested) return;
+    // Confirm so a stray click next to pause/exit doesn't yank everyone into a
+    // new lobby mid-game.
+    const isConfirmed = await showInGameConfirm(
+      translateText("new_lobby_prompt.confirm"),
+      { variant: "warning" },
+    );
+    if (!isConfirmed) return;
+    if (this.newLobbyRequested) return; // clicked again while confirming
+    this.newLobbyRequested = true;
+    this.requestUpdate();
+    try {
+      // The worker mints the successor lobby and has the current game
+      // broadcast its id, so everyone else gets the NewLobbyPrompt. We (the
+      // host) navigate straight to the new host view from the response.
+      const lobby = await createNextLobby(this.game.gameID());
+      const id = lobby.gameID;
+      // ?host routes the creator back into the host view on load.
+      window.location.href = `${window.location.origin}/${ClientEnv.workerPath(id)}/game/${id}?host`;
+    } catch (error) {
+      console.error("Failed to create successor lobby", error);
+      this.newLobbyRequested = false;
+      this.requestUpdate();
+      void showInGameAlert(translateText("new_lobby_prompt.failed"));
+    }
+  }
+
   private async onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
@@ -285,6 +322,9 @@ export class GameRightSidebar extends LitElement implements Controller {
     const isReplayOrSingleplayer =
       this._isSinglePlayer || this.game?.config()?.isReplay();
     const showPauseButton = isReplayOrSingleplayer || this.isLobbyCreator;
+    // The host of a private lobby can start a fresh lobby at any time, without
+    // waiting to die or for the game to end.
+    const showNewLobbyButton = this.isLobbyCreator && this.isPrivateLobby;
 
     return html`
       ${isReplayOrSingleplayer
@@ -305,6 +345,24 @@ export class GameRightSidebar extends LitElement implements Controller {
               <img
                 src=${this.isPaused ? playIcon : pauseIcon}
                 alt="play/pause"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+      ${showNewLobbyButton
+        ? html`
+            <div
+              class="cursor-pointer ${this.newLobbyRequested
+                ? "opacity-50 pointer-events-none"
+                : ""}"
+              @click=${this.onNewLobbyButtonClick}
+              title=${translateText("win_modal.new_lobby")}
+            >
+              <img
+                src=${newLobbyIcon}
+                alt=${translateText("win_modal.new_lobby")}
                 width="20"
                 height="20"
               />

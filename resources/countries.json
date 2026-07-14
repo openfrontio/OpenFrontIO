@@ -123,6 +123,11 @@
     "name": "Anarchist Flag"
   },
   {
+    "code": "Ambazonia",
+    "continent": "Africa",
+    "name": "Ambazonia"
+  },
+  {
     "code": "ad",
     "continent": "Europe",
     "name": "Andorra"
@@ -131,6 +136,11 @@
     "code": "ao",
     "continent": "Africa",
     "name": "Angola"
+  },
+  {
+    "code": "gq-an",
+    "continent": "Africa",
+    "name": "Annobon"
   },
   {
     "code": "aq",
@@ -357,6 +367,11 @@
     "name": "Bhutan"
   },
   {
+    "code": "Biafra",
+    "continent": "Africa",
+    "name": "Biafra"
+  },
+  {
     "code": "bo",
     "continent": "South America",
     "name": "Bolivia"
@@ -555,6 +570,11 @@
     "name": "Cherokee"
   },
   {
+    "code": "GB-CHE",
+    "continent": "Europe",
+    "name": "Cheshire"
+  },
+  {
     "code": "Chickasaw",
     "continent": "North America",
     "name": "Chickasaw"
@@ -721,6 +741,11 @@
     "code": "cu",
     "continent": "North America",
     "name": "Cuba"
+  },
+  {
+    "code": "GB-CMA",
+    "continent": "Europe",
+    "name": "Cumbria"
   },
   {
     "code": "cw",
@@ -1272,6 +1297,11 @@
     "name": "Ireland"
   },
   {
+    "code": "Ireland Green Harp",
+    "continent": "Europe",
+    "name": "Green Harp"
+  },
+  {
     "code": "Haudenosaunee",
     "continent": "North America",
     "name": "Iroquois Confederacy"
@@ -1412,9 +1442,19 @@
     "name": "Kingdom of Araucania and Patagonia"
   },
   {
+    "code": "Kingdom of Benin",
+    "continent": "Africa",
+    "name": "Kingdom of Benin"
+  },
+  {
     "code": "Kingdom Of Cyprus",
     "continent": "Europe",
     "name": "Kingdom of Cyprus"
+  },
+  {
+    "code": "Kingdom of Dahomey",
+    "continent": "Africa",
+    "name": "Kingdom of Dahomey"
   },
   {
     "code": "Kingdom of Egypt",
@@ -1425,6 +1465,11 @@
     "code": "Kingdom of Iraq",
     "continent": "Asia",
     "name": "Kingdom of Iraq"
+  },
+  {
+    "code": "Kingdom of Ireland",
+    "continent": "Europe",
+    "name": "Kingdom of Ireland"
   },
   {
     "code": "italy",
@@ -1440,6 +1485,11 @@
     "code": "Kingdom of Judah",
     "continent": "Asia",
     "name": "Kingdom of Judah"
+  },
+  {
+    "code": "Kingdom of Kongo",
+    "continent": "Africa",
+    "name": "Kingdom of Kongo"
   },
   {
     "code": "Kingdom of Syria",
@@ -1529,6 +1579,11 @@
     "code": "Lakotah",
     "continent": "North America",
     "name": "Lakotah"
+  },
+  {
+    "code": "GB-LAN",
+    "continent": "Europe",
+    "name": "Lancashire"
   },
   {
     "code": "la",
@@ -1728,6 +1783,11 @@
     "name": "Mali"
   },
   {
+    "code": "Mali Empire",
+    "continent": "Africa",
+    "name": "Mali Empire"
+  },
+  {
     "code": "mt",
     "continent": "Europe",
     "name": "Malta"
@@ -1796,6 +1856,11 @@
     "code": "1_Mercia",
     "continent": "Europe",
     "name": "Mercia"
+  },
+  {
+    "code": "GB-Merseyside",
+    "continent": "Europe",
+    "name": "Merseyside"
   },
   {
     "code": "mx",

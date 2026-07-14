@@ -12,6 +12,7 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameID,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
@@ -24,6 +25,7 @@ import {
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerLobbyInfoMessage,
+  ServerNewLobbyMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -158,6 +160,11 @@ export class GameServer {
 
   private visibleAt?: number;
 
+  // The successor lobby this game has already spawned, if any. Kept so a
+  // repeated create_game?previous= call (e.g. a double click) reuses the same
+  // id instead of minting another lobby.
+  private successorLobbyId: GameID | null = null;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -166,6 +173,9 @@ export class GameServer {
     private creatorPersistentID?: string,
     private startsAt?: number,
     private publicGameType?: PublicGameType,
+    // Matchmade team split from the matchmaking assignment: publicIds per
+    // team. At start each client is stamped with its team's index.
+    private matchmakingTeams?: string[][],
   ) {
     this.log = log_.child({ gameID: id });
     if (startsAt !== undefined) {
@@ -530,7 +540,10 @@ export class GameServer {
       clientIP: ipAnonymize(client.ip),
     });
 
+    // Skipped in dev: local testing (multi-tab, the matchmaking e2e) is
+    // inherently same-IP.
     if (
+      ServerEnv.env() !== GameEnv.Dev &&
       this.gameConfig.gameType === GameType.Public &&
       this.activeClients.filter(
         (c) => c.ip === client.ip && c.clientID !== client.clientID,
@@ -881,6 +894,35 @@ export class GameServer {
     });
   }
 
+  // The worker created a successor lobby for this game (the host asked to
+  // reuse the private lobby via create_game?previous=). Remember it so repeat
+  // requests reuse the same lobby, and tell everyone still connected its id so
+  // they can hop over without re-sharing a link.
+  public setSuccessorLobby(gameID: GameID) {
+    this.successorLobbyId = gameID;
+    this.log.info("successor lobby created", {
+      gameID: this.id,
+      successorID: gameID,
+    });
+    this.broadcastNewLobby(gameID);
+  }
+
+  public successorLobby(): GameID | null {
+    return this.successorLobbyId;
+  }
+
+  private broadcastNewLobby(gameID: GameID) {
+    const msg = JSON.stringify({
+      type: "new_lobby",
+      gameID,
+    } satisfies ServerNewLobbyMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
+    });
+  }
+
   public start() {
     if (this._hasStarted || this._hasEnded) {
       return;
@@ -905,6 +947,7 @@ export class GameServer {
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
         friends: friendsFor(c),
+        teamIndex: this.matchmakingTeamIndex(c),
       })),
     });
     if (!result.success) {
@@ -934,6 +977,20 @@ export class GameServer {
       });
       this.sendStartGameMsg(c.ws, 0);
     });
+  }
+
+  // Resolves a client to its matchmade team slot (index into
+  // matchmakingTeams), or undefined when the game isn't matchmade / the
+  // client isn't in the assignment.
+  private matchmakingTeamIndex(c: Client): number | undefined {
+    const publicId = c.publicId;
+    if (this.matchmakingTeams === undefined || publicId === undefined) {
+      return undefined;
+    }
+    const idx = this.matchmakingTeams.findIndex((team) =>
+      team.includes(publicId),
+    );
+    return idx === -1 ? undefined : idx;
   }
 
   private addIntent(intent: StampedIntent) {

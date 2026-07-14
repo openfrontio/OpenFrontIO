@@ -138,15 +138,18 @@ export class DoomsdayClockPanel extends LitElement {
     let statusClass = "";
     let detail = zoneDetail;
     if (live && draining && me) {
-      // Drain is a % of max-troop capacity, capped at current troops; show the
-      // actual per-second loss (renderTroops handles the /10 display unit).
+      // Drain is a % of max-troop capacity that stops at the floor
+      // (drainFloorPercent of max); show the actual per-second loss, i.e. only
+      // what sits above the floor (renderTroops handles the /10 display unit).
+      const maxTroops = this.game.config().maxTroops(me);
+      const floor = Math.floor((maxTroops * sd.drainFloorPercent) / 100);
       const chunk = doomsdayClockDrain(
-        this.game.config().maxTroops(me),
+        maxTroops,
         secondsUnder - sd.warnSeconds,
         sd,
       );
       status = translateText("doomsday_clock.collapsing", {
-        rate: renderTroops(Math.min(me.troops(), chunk)),
+        rate: renderTroops(Math.max(0, Math.min(me.troops() - floor, chunk))),
       });
       statusClass = "text-red-400 font-bold";
     } else if (live && flagged) {

@@ -15,10 +15,11 @@ import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./EffectsInput";
 import "./EffectsModal";
@@ -47,6 +48,7 @@ import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
+import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { StoreModal } from "./Store";
 import "./TerritoryPatternsModal";
@@ -66,6 +68,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
@@ -230,7 +233,7 @@ declare global {
     "kick-player": CustomEvent;
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
-    "open-matchmaking": CustomEvent<undefined>;
+    "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
@@ -264,6 +267,7 @@ class Client {
   private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private rewardsModal: RewardsModal;
   private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
@@ -503,8 +507,17 @@ class Client {
       console.warn("Matchmaking modal element not found");
     }
 
+    this.rewardsModal = document.querySelector("rewards-modal") as RewardsModal;
+    if (!this.rewardsModal || !(this.rewardsModal instanceof RewardsModal)) {
+      console.warn("Rewards modal element not found");
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      updateAccountNavButton(userMeResponse);
+      if (crazyGamesSDK.isOnCrazyGames()) {
+        void updateCrazyGamesNavButton();
+      } else {
+        updateAccountNavButton(userMeResponse);
+      }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
@@ -522,6 +535,17 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
+
+        // Unclaimed-rewards popup — only on a clean homepage load, never over
+        // a deep link (join URL, #modal=..., #purchase-completed, ...).
+        const rewards = userMeResponse.player.rewards ?? [];
+        if (
+          rewards.length > 0 &&
+          window.location.pathname === "/" &&
+          window.location.hash === ""
+        ) {
+          this.rewardsModal?.openWithRewards(rewards);
+        }
       }
     };
 
@@ -533,6 +557,15 @@ class Client {
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
+
+    // Re-run auth when the player signs into CrazyGames mid-session. Logout
+    // reloads the page, so only login needs handling here.
+    crazyGamesSDK.addAuthListener(() => {
+      invalidateUserMe();
+      reauthAfterCrazyGamesChange().then((result) =>
+        result === false ? onUserMe(false) : getUserMe().then(onUserMe),
+      );
+    });
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -787,6 +820,21 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // ?host means the lobby creator is returning to a successor lobby they
+      // reused from the win screen: reopen the host view bound to the existing
+      // lobby instead of the join flow. Non-creators who hit this URL still get
+      // treated as normal joiners by the server.
+      const returningAsHost = new URLSearchParams(window.location.search).has(
+        "host",
+      );
+      if (returningAsHost) {
+        // open() reveals the inline page itself (it calls showPage internally).
+        // Calling showPage first would open the modal once with no args and
+        // spuriously create a lobby before this attach call runs.
+        this.hostModal.open({ existingLobbyId: lobbyId });
+        console.log(`reopening host lobby ${lobbyId}`);
+        return;
+      }
       window.showPage?.("page-join-lobby");
       this.joinModal.open({ lobbyId });
       console.log(`joining lobby ${lobbyId}`);
@@ -806,16 +854,24 @@ class Client {
       window.location.href = "/";
     }
 
-    if (this.consumeRequeueUrl()) {
-      document.dispatchEvent(new CustomEvent("open-matchmaking"));
+    const requeueMode = this.consumeRequeueUrl();
+    if (requeueMode !== null) {
+      document.dispatchEvent(
+        new CustomEvent("open-matchmaking", {
+          detail: { mode: requeueMode },
+        }),
+      );
     }
   }
 
-  private consumeRequeueUrl(): boolean {
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // null when the URL has no requeue param.
+  private consumeRequeueUrl(): "1v1" | "2v2" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
-      return false;
+      return null;
     }
+    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -823,7 +879,7 @@ class Client {
       (searchParams.toString() ? `?${searchParams.toString()}` : "") +
       window.location.hash;
     history.replaceState(null, "", newUrl);
-    return true;
+    return mode;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -1018,8 +1074,14 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
-  private handleOpenMatchmaking(_event: CustomEvent<undefined>) {
-    this.matchmakingModal?.open();
+  private handleOpenMatchmaking(
+    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+  ) {
+    if (!this.matchmakingModal) return;
+    // Always set the mode: dispatchers without a detail (homepage button,
+    // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
+    this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+    this.matchmakingModal.open();
   }
 
   private handleKickPlayer(event: CustomEvent) {
@@ -1107,6 +1169,10 @@ const bootstrap = () => {
   // Also hide elements after a short delay to catch late-rendered components
   setTimeout(hideCrazyGamesElements, 100);
   setTimeout(hideCrazyGamesElements, 500);
+
+  // Populate the CrazyGames account buttons once the nav/top-bar have rendered
+  // (onUserMe also refreshes them after auth and on mid-session sign-in).
+  setTimeout(() => void updateCrazyGamesNavButton(), 500);
 };
 
 if (document.readyState === "loading") {
