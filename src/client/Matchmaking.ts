@@ -15,6 +15,12 @@ import { translateText } from "./Utils";
 export class MatchmakingModal extends BaseModal {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
   private connectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private intentionalClose = false;
+  // Which queue to join; set by Main from the open-matchmaking event
+  // before the modal opens.
+  public mode: "1v1" | "2v2" = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
@@ -31,7 +37,11 @@ export class MatchmakingModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return modalHeader({
-      title: translateText("matchmaking_modal.title"),
+      title: translateText(
+        this.mode === "2v2"
+          ? "matchmaking_modal.title_2v2"
+          : "matchmaking_modal.title",
+      ),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
     });
@@ -71,8 +81,13 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private async connect() {
+    // A pending join timer from a previous socket must not fire on this one.
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -99,6 +114,7 @@ export class MatchmakingModal extends BaseModal {
       console.log(event.data);
       const data = JSON.parse(event.data);
       if (data.type === "match-assignment") {
+        this.intentionalClose = true;
         this.socket?.close();
         console.log(`matchmaking: got game ID: ${data.gameId}`);
         this.gameID = data.gameId;
@@ -108,8 +124,35 @@ export class MatchmakingModal extends BaseModal {
     this.socket.onerror = (event: Event) => {
       console.error("WebSocket error occurred:", event);
     };
-    this.socket.onclose = () => {
-      console.log("Matchmaking server closed connection");
+    this.socket.onclose = (event: CloseEvent) => {
+      console.log(
+        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
+      );
+      if (this.intentionalClose || this.gameID !== null) {
+        return;
+      }
+      if (event.code === 1000) {
+        // A newer connection for this account (e.g. a second tab) took the
+        // queue slot; this socket was replaced. Do not retry.
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("matchmaking_modal.replaced"),
+              color: "red",
+              duration: 5000,
+            },
+          }),
+        );
+        this.close();
+        return;
+      }
+      // 1008: the jwt was rejected — getPlayToken() refreshes expired tokens,
+      // so rejoining sends a fresh one. Anything else is a server
+      // restart/deploy; the queue is in-memory only, so rejoin. Back off in
+      // case the failure repeats.
+      this.connected = false;
+      const delay = Math.min(1000 * 2 ** this.reconnectAttempts++, 15000);
+      this.reconnectTimeout = setTimeout(() => this.connect(), delay);
     };
   }
 
@@ -148,21 +191,30 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo =
-      userMe.player.leaderboard?.oneVone?.elo ??
-      translateText("matchmaking_modal.no_elo");
+    const row =
+      this.mode === "2v2"
+        ? userMe.player.leaderboard?.twoVtwo
+        : userMe.player.leaderboard?.oneVone;
+    this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;
+    this.intentionalClose = false;
+    this.reconnectAttempts = 0;
     this.connect();
   }
 
   protected onClose(): void {
     this.connected = false;
+    this.intentionalClose = true;
     this.socket?.close();
     if (this.connectTimeout) {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);

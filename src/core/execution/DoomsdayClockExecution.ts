@@ -22,8 +22,11 @@ import {
  *
  * A side below the bar is marked (inDoomsdayClock -> blinking skull on the client)
  * and, after the warn window, every member bleeds an escalating percentage of
- * their troops until the side recovers or hits zero. Climbing back above the bar
- * clears the mark and stops the drain.
+ * their troops (and warship health) until the side recovers or reaches the floor
+ * (drainFloorPercent of each max). The drain cripples, it does not wipe: a doomed
+ * side settles at 5% of max, not zero, so a brief dip below the bar is
+ * recoverable. Climbing back above the bar clears the mark and stops the drain;
+ * the rising bar still forces a finish by squeezing territory.
  *
  * Deterministic: integer-only. The threshold is one floored integer ratio (see
  * DoomsdayClock.ts) and the drain a floored percentage, no floating-point. Off
@@ -76,9 +79,9 @@ export class DoomsdayClockExecution implements Execution {
     // The leading side (the crown holder in FFA, the top team otherwise) is
     // never doomed. Doomsday Clock culls the challengers toward the leader, so the
     // leader always keeps its army: the game can never freeze with every
-    // remaining side bled to zero, and the final wave squeezes out everyone but
-    // the leader -> a single winner. First side with the most tiles wins ties
-    // (deterministic: sides are built in a fixed order).
+    // remaining side crippled at the floor, and the final wave squeezes out
+    // everyone but the leader -> a single winner. First side with the most tiles
+    // wins ties (deterministic: sides are built in a fixed order).
     const sideTiles = sides.map((members) =>
       members.reduce((sum, m) => sum + m.numTilesOwned(), 0),
     );
@@ -105,28 +108,38 @@ export class DoomsdayClockExecution implements Execution {
           const secondsUnder = Math.floor(m.doomsdayClockTicks() / 10);
           if (secondsUnder >= cfg.warnSeconds) {
             const secondsPastWarn = secondsUnder - cfg.warnSeconds;
-            const chunk = doomsdayClockDrain(
-              mg.config().maxTroops(m),
-              secondsPastWarn,
-              cfg,
+            // The drain floors at drainFloorPercent of each max: a doomed side is
+            // crippled to 5%, not wiped to zero, so recovery is possible if it
+            // climbs back above the bar. Clamp the removal to what sits above the
+            // floor (integer-only, so the lockstep sim stays deterministic).
+            const maxTroops = mg.config().maxTroops(m);
+            const troopFloor = Math.floor(
+              (maxTroops * cfg.drainFloorPercent) / 100,
             );
-            m.removeTroops(chunk); // caps at current troops
+            const chunk = doomsdayClockDrain(maxTroops, secondsPastWarn, cfg);
+            m.removeTroops(
+              Math.min(chunk, Math.max(0, m.troops() - troopFloor)),
+            );
             // The navy bleeds on the same ramp but toward warshipDrainCfg's far
-            // higher ceiling (see above), so a doomed side's fleet is scuttled
-            // fast at full attrition. A percentage of each warship's (veterancy-
-            // adjusted) max health; passing no attacker makes each destruction
-            // environmental, never a credited kill (see UnitImpl.delete). Healing
-            // is suppressed for flagged owners in WarshipExecution.healWarship so
-            // the decay actually lands.
+            // higher ceiling (see above), so a doomed side's fleet is battered
+            // fast at full attrition, down to the SAME floor (drainFloorPercent of
+            // each warship's veterancy-adjusted max health) rather than sunk. No
+            // attacker is passed, so any loss is environmental, never a credited
+            // kill (see UnitImpl.delete). Healing is suppressed for flagged owners
+            // in WarshipExecution.healWarship so the decay actually lands.
             for (const ws of m.units(UnitType.Warship)) {
-              ws.modifyHealth(
-                -doomsdayClockDrain(
-                  ws.maxHealth(),
-                  secondsPastWarn,
-                  warshipDrainCfg,
-                  cfg.warshipDrainCurveExponent,
-                ),
+              const shipFloor = Math.floor(
+                (ws.maxHealth() * cfg.drainFloorPercent) / 100,
               );
+              const removable = Math.max(0, ws.health() - shipFloor);
+              if (removable <= 0) continue;
+              const dmg = doomsdayClockDrain(
+                ws.maxHealth(),
+                secondsPastWarn,
+                warshipDrainCfg,
+                cfg.warshipDrainCurveExponent,
+              );
+              ws.modifyHealth(-Math.min(dmg, removable));
             }
           }
         }
