@@ -322,9 +322,21 @@ export class UsernameInput extends LitElement {
 // A memorable anonymous username: "Anon" + animal (+ digit), the same handle
 // format the server-side anonymisation overlay uses (anonAnimalName). Client-side
 // fallback for players who never set a name — no roster here, so it draws a
-// random slot from a CSPRNG (best-effort-unique); the overlay is what guarantees
-// uniqueness in-game.
+// random slot (best-effort-unique); the overlay is what guarantees uniqueness
+// in-game.
+//
+// Rejection-sample a uniform slot in [0, bound) from the CSPRNG: drawing a raw
+// uint32 and taking `% bound` would be very slightly biased (the top partial
+// bucket), so we discard the unrepresentable tail first. The bias is cosmetically
+// irrelevant here, but this keeps the draw provably uniform.
 export function genAnonUsername(): string {
-  const [rand = 0] = crypto.getRandomValues(new Uint32Array(1));
-  return anonAnimalName(rand % (ANON_ANIMALS.length * 10));
+  const bound = ANON_ANIMALS.length * 10;
+  const limit = Math.floor(0x1_0000_0000 / bound) * bound;
+  const buf = new Uint32Array(1);
+  let rand: number;
+  do {
+    crypto.getRandomValues(buf);
+    rand = buf[0] ?? 0;
+  } while (rand >= limit);
+  return anonAnimalName(rand % bound);
 }
