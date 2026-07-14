@@ -78,7 +78,7 @@
     "continent": "Africa",
     "name": "Algeria"
   },
-    {
+  {
     "code": "Alkebulan",
     "continent": "Africa",
     "name": "Alkebulan"
@@ -232,7 +232,7 @@
     "continent": "Europe",
     "name": "Austria-Hungary"
   },
-    {
+  {
     "code": "Habsburg Austria",
     "continent": "Europe",
     "name": "Austrian Empire"
@@ -882,7 +882,7 @@
     "name": "Emirate of Asir"
   },
   {
-    "code": "Emirate of Granada",
+    "code": "granada",
     "continent": "Europe",
     "name": "Emirate of Granada"
   },
@@ -1461,7 +1461,7 @@
     "continent": "Asia",
     "name": "Kingdom of Judah"
   },
- {
+  {
     "code": "kingdom_of_portugal",
     "continent": "Europe",
     "name": "Kingdom of Portugal"
@@ -1625,7 +1625,7 @@
   },
   {
     "code": "Lihyan",
-    "continent": "Europe",
+    "continent": "Asia",
     "name": "Lihyan"
   },
   {
@@ -1729,7 +1729,7 @@
   },
   {
     "code": "majorca",
-    "continent": "Asia",
+    "continent": "Europe",
     "name": "Majorca"
   },
   {
@@ -2137,7 +2137,7 @@
   },
   {
     "code": "North yemen",
-    "continent": "Europe",
+    "continent": "Asia",
     "name": "North Yemen"
   },
   {
@@ -2305,7 +2305,7 @@
     "continent": "Asia",
     "name": "Penang"
   },
-    {
+  {
     "code": "an_pe",
     "continent": "Antarctica",
     "name": "Penguins"
@@ -2418,7 +2418,7 @@
     "continent": "North America",
     "name": "Quebec"
   },
-    {
+  {
     "code": "aus_quelan",
     "continent": "Oceania",
     "name": "Queensland"
@@ -3364,7 +3364,7 @@
     "continent": "Africa",
     "name": "Tanzania"
   },
-    {
+  {
     "code": "aus_tas",
     "continent": "Oceania",
     "name": "Tasmania"
@@ -3583,7 +3583,7 @@
     "continent": "Oceania",
     "name": "Vanuatu"
   },
-    {
+  {
     "code": "va",
     "continent": "Europe",
     "name": "Vatican City"
@@ -3671,7 +3671,7 @@
   {
     "code": "aus_wesaus",
     "continent": "Oceania",
-    "name": "West Asutralia"
+    "name": "West Australia"
   },
   {
     "code": "west_germany",
