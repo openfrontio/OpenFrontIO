@@ -86,3 +86,17 @@ export const ANON_ANIMALS: readonly string[] = [
   "Snail",
   "Ladybug",
 ];
+
+// Map any integer to a memorable anonymous handle: "Anon" + animal + 3 digits
+// (e.g. "AnonWolf042"). 80 animals × 1000 = 80,000 distinct handles. Same hash
+// derivation as the old tribe-name scheme (animal from the low part, number from
+// the high part), so it's deterministic in `hash` and stays wire-valid
+// (UsernameSchema, under MAX_USERNAME_LENGTH). Shared by the server-side
+// anonymisation overlay (anonymousUsername) and the client fallback
+// (genAnonUsername) so both read identically.
+export function anonAnimalName(hash: number): string {
+  const h = Math.abs(Math.trunc(hash));
+  const animal = ANON_ANIMALS[h % ANON_ANIMALS.length];
+  const number = Math.floor(h / ANON_ANIMALS.length) % 1000;
+  return `Anon${animal}${number.toString().padStart(3, "0")}`;
+}

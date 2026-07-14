@@ -1,4 +1,4 @@
-import { ANON_ANIMALS } from "../src/core/AnonAnimals";
+import { ANON_ANIMALS, anonAnimalName } from "../src/core/AnonAnimals";
 import { UsernameSchema } from "../src/core/Schemas";
 import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
 
@@ -20,5 +20,26 @@ describe("ANON_ANIMALS", () => {
         expect(UsernameSchema.safeParse(name).success).toBe(true);
       }
     }
+  });
+});
+
+describe("anonAnimalName", () => {
+  it("is deterministic in the hash", () => {
+    expect(anonAnimalName(12345)).toBe(anonAnimalName(12345));
+  });
+
+  it("always produces an Anon+animal+3-digit, wire-valid handle", () => {
+    for (let h = 0; h < 5000; h++) {
+      const name = anonAnimalName(h);
+      expect(name).toMatch(/^Anon[A-Z][a-z]+\d{3}$/);
+      expect(UsernameSchema.safeParse(name).success).toBe(true);
+    }
+  });
+
+  it("covers the full 80 × 1000 space across distinct hashes", () => {
+    const seen = new Set<string>();
+    for (let h = 0; h < ANON_ANIMALS.length * 1000; h++)
+      seen.add(anonAnimalName(h));
+    expect(seen.size).toBe(ANON_ANIMALS.length * 1000);
   });
 });
