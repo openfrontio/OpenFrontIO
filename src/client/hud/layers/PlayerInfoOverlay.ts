@@ -353,12 +353,6 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                 />`
               : html``}
             <span>${player.displayName()}</span>
-            ${player.cosmetics.crown
-              ? html`<img
-                  class="h-6 object-contain"
-                  src=${assetUrl(player.cosmetics.crown.url)}
-                />`
-              : html``}
             ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">

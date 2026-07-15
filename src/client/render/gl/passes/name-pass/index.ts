@@ -152,7 +152,8 @@ export class NamePass {
     });
 
     // Crown cosmetics share the flag-atlas mechanism but use their own array
-    // (square cells so crown quads carry no letterbox margins).
+    // (square cells so crown quads carry no letterbox margins). The crown
+    // image skins the first-place status crown (StatusIconProgram slot 0).
     this.crownAtlas = new FlagAtlasArray(
       gl,
       (url, layer) => {
@@ -212,13 +213,13 @@ export class NamePass {
       atlas,
       this.playerDataTex,
       this.flagAtlas,
-      this.crownAtlas,
       this.maxPlayers,
     );
     this.statusIconProgram = new StatusIconProgram(
       gl,
       atlas,
       this.playerDataTex,
+      this.crownAtlas,
       this.maxPlayers,
       config.allianceExtensionPromptOffset(),
     );
@@ -708,10 +709,8 @@ export class NamePass {
       const halfW =
         slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
       let left = wx - halfW;
-      let right = wx + halfW;
+      const right = wx + halfW;
       if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
-      // Crown cosmetic sits to the right of the name (square, flag-height).
-      if (slot.crownLayerIdx >= 0) right += lineH * 1.2;
 
       // Name line (flag is slightly taller); emoji/status rows sit above it.
       let top = wy - lineH * 0.6;

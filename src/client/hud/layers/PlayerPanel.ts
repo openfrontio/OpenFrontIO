@@ -531,23 +531,13 @@ export class PlayerPanel extends LitElement implements Controller {
             />`
           : ""}
 
-        <div class="flex-1 min-w-0 flex items-center gap-2">
+        <div class="flex-1 min-w-0">
           <h2
             class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
             title=${other.displayName()}
           >
             ${other.displayName()}
           </h2>
-          ${other.cosmetics.crown
-            ? html`<img
-                src=${assetUrl(other.cosmetics.crown.url)}
-                alt=""
-                class="h-6 w-6 shrink-0 object-contain"
-                @error=${(e: Event) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />`
-            : ""}
         </div>
         ${chip
           ? html`<span

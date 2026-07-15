@@ -35,21 +35,20 @@ uniform float uFadeOwnerID;    // smallID of player whose name plate the cursor 
 uniform float uHoverFadeAlpha; // alpha multiplier applied to that player's name plate
 
 out vec2 vUV;
-flat out int vIconType;  // 0 = flag, 1 = emoji, 2 = crown, -1 = discard
-flat out int vFlagLayer; // atlas layer, valid when vIconType == 0 or 2
+flat out int vIconType;  // 0 = flag, 1 = emoji, -1 = discard
+flat out int vFlagLayer; // valid when vIconType == 0
 out float vHoverAlpha;
 
 void main() {
-  // Decode instance ID → playerIdx + iconType (0=flag, 1=emoji, 2=crown)
-  int playerIdx = gl_InstanceID / 3;
-  int iconType  = gl_InstanceID - playerIdx * 3;
+  // Decode instance ID → playerIdx + iconType (0=flag, 1=emoji)
+  int playerIdx = gl_InstanceID / 2;
+  int iconType  = gl_InstanceID - playerIdx * 2;
 
   // Read player data
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, isHuman, nameHalfWidth
   vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayer, emojiIdx, smallID, doomsday
-  vec4 pd8 = texelFetch(uPlayerData, ivec2(8, playerIdx), 0); // crownLayer, [free]
 
   // Early out: dead player
   if (pd1.w <= 0.0) {
@@ -62,14 +61,7 @@ void main() {
   }
 
   // Get atlas/layer index for this icon type
-  float atlasIdx;
-  if (iconType == 0) {
-    atlasIdx = pd4.x;
-  } else if (iconType == 1) {
-    atlasIdx = pd4.y;
-  } else {
-    atlasIdx = pd8.x;
-  }
+  float atlasIdx = (iconType == 0) ? pd4.x : pd4.y;
   if (atlasIdx < 0.0) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
@@ -122,20 +114,6 @@ void main() {
     );
     iconW = flagWorldW;
     iconH = flagWorldH;
-
-    vUV = aPos;
-    vFlagLayer = int(atlasIdx);
-  } else if (iconType == 2) {
-    // CROWN — to the right of the name, mirroring the flag. Square cell,
-    // sampled from its own sampler2DArray with plain [0,1] UVs.
-    float crownWorldH = uFontBase * nameWorldScale * 1.2;
-
-    iconOrigin = vec2(
-      wx + nameHalfWidth * nameWorldScale,
-      wy - crownWorldH * 0.5
-    );
-    iconW = crownWorldH;
-    iconH = crownWorldH;
 
     vUV = aPos;
     vFlagLayer = int(atlasIdx);

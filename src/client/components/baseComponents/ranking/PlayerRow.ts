@@ -233,12 +233,6 @@ export class PlayerRow extends LitElement {
         >
           ${this.player.username}
         </div>
-        ${this.player.crown
-          ? html`<img
-              src=${assetUrl(this.player.crown)}
-              class="size-4 sm:size-5 shrink-0 object-contain"
-            />`
-          : ""}
       </div>
     `;
   }
