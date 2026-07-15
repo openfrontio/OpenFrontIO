@@ -10,8 +10,13 @@ import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
 
-@customElement("pattern-input")
-export class PatternInput extends LitElement {
+/**
+ * Lobby button that opens the cosmetics modal (skins, crowns, effects).
+ * Previews the selected skin/pattern; shows a "Cosmetics" label when the
+ * player is on defaults.
+ */
+@customElement("cosmetics-input")
+export class CosmeticsInput extends LitElement {
   @state() public pattern: PlayerPattern | null = null;
   @state() public skin: PlayerSkin | null = null;
   @state() public selectedColor: string | null = null;
@@ -36,7 +41,7 @@ export class PatternInput extends LitElement {
     e.preventDefault();
     e.stopPropagation();
     this.dispatchEvent(
-      new CustomEvent("pattern-input-click", {
+      new CustomEvent("cosmetics-input-click", {
         bubbles: true,
         composed: true,
       }),
@@ -109,13 +114,13 @@ export class PatternInput extends LitElement {
     }
 
     const showSelect = this.shouldShowSelectLabel();
-    const buttonTitle = translateText("territory_patterns.title");
+    const buttonTitle = translateText("cosmetics.button_title");
 
     // Show loading state
     if (this.isLoading) {
       return html`
         <button
-          id="pattern-input"
+          id="cosmetics-input"
           class="pattern-btn m-0 p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-surface rounded-lg overflow-hidden"
           disabled
         >
@@ -144,7 +149,7 @@ export class PatternInput extends LitElement {
 
     return html`
       <button
-        id="pattern-input"
+        id="cosmetics-input"
         class="pattern-btn m-0 p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:shadow-[var(--shadow-action-card-hover)] rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
@@ -162,7 +167,7 @@ export class PatternInput extends LitElement {
                 ? "text-[7px] leading-tight px-0.5"
                 : "text-[10px] leading-none break-words px-1"} font-black text-white uppercase w-full text-center"
             >
-              ${translateText("territory_patterns.select_skin")}
+              ${translateText("cosmetics.title")}
             </span>`
           : null}
       </button>

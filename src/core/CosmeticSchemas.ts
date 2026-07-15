@@ -6,6 +6,7 @@ import { PlayerPattern } from "./Schemas";
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
 export type Pattern = z.infer<typeof PatternSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
+export type Crown = z.infer<typeof CrownSchema>;
 export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
@@ -93,6 +94,10 @@ export const PatternSchema = CosmeticSchema.extend({
 });
 
 export const FlagSchema = CosmeticSchema.extend({
+  url: z.string(),
+});
+
+export const CrownSchema = CosmeticSchema.extend({
   url: z.string(),
 });
 
@@ -363,6 +368,7 @@ export const CosmeticsSchema = z.object({
   colorPalettes: z.record(z.string(), ColorPaletteSchema).optional(),
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
+  crowns: z.record(z.string(), CrownSchema).optional(),
   skins: z.record(z.string(), SkinSchema).optional(),
   // Grouped by effectType. Each effect also carries its own effectType (matching
   // this outer key) so an Effect stands alone and EffectSchema can discriminate

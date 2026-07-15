@@ -192,7 +192,7 @@ export async function setMarketingConsent(
 }
 
 export async function purchaseWithCurrency(
-  cosmeticType: "pattern" | "skin" | "flag" | "effect",
+  cosmeticType: "pattern" | "skin" | "flag" | "crown" | "effect",
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,

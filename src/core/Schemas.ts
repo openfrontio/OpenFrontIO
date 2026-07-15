@@ -145,6 +145,7 @@ export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
+export type PlayerCrown = z.infer<typeof PlayerCrownSchema>;
 export type PlayerEffect = z.infer<typeof PlayerEffectSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
@@ -653,12 +654,18 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
+  crownName: CosmeticNameSchema.optional(),
   // One selected effect per slot: key = slot (effectType for trails, nukeType for
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
 });
 
 export const PlayerSkinSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
+});
+
+export const PlayerCrownSchema = z.object({
   name: CosmeticNameSchema,
   url: z.string(),
 });
@@ -678,6 +685,7 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
+  crown: PlayerCrownSchema.optional(),
   // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
   // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
