@@ -14,7 +14,6 @@ import {
 } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
 import { getCachedCosmetics } from "./Cosmetics";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
@@ -197,7 +196,6 @@ export class WebGLFrameBuilder {
   }
 
   private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
-  private readonly userSettings = new UserSettings();
   private glowRescanTick = 0;
 
   update(gameView: GameView): void {
@@ -350,8 +348,9 @@ export class WebGLFrameBuilder {
    * Client-only view — toggle it live in the settings.
    */
   private syncSmallPlayerGlow(gameView: GameView): void {
+    // Strength (incl. off at 0) is read live in the glow pass; here we only
+    // decide who qualifies. Skip spawn + the first minute.
     if (
-      !this.userSettings.highlightSmallPlayers() ||
       gameView.inSpawnPhase() ||
       gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
     ) {

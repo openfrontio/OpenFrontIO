@@ -353,6 +353,9 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   priceMonthly: z.number(),
   dailySoftCurrency: z.number(),
   dailyHardCurrency: z.number(),
+  // Whether this tier exempts subscribers from the free-ranked-play limits
+  // (advertised on the store tile).
+  unlimitedRanked: z.boolean(),
 });
 
 // Schema for resources/cosmetics/cosmetics.json

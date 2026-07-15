@@ -256,6 +256,7 @@ describe("UserMeResponseSchema rewards", () => {
   const basePlayer = {
     publicId: "p1",
     adfree: false,
+    unlimitedRanked: false,
     achievements: { singleplayerMap: [] },
     friends: [],
     subscription: null,
@@ -287,6 +288,33 @@ describe("UserMeResponseSchema rewards", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
     ).toBe(true);
+  });
+});
+
+describe("UserMeResponseSchema unlimitedRanked", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player exempt from ranked play limits", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: { ...basePlayer, unlimitedRanked: true },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.unlimitedRanked).toBe(true);
+    }
+  });
+
+  it("rejects a response without unlimitedRanked", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(false);
   });
 });
 
@@ -346,6 +374,7 @@ describe("hasActiveSubscription", () => {
       player: {
         publicId: "p1",
         adfree: false,
+        unlimitedRanked: false,
         achievements: { singleplayerMap: [] },
         friends: [],
         subscription,

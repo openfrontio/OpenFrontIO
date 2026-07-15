@@ -291,6 +291,115 @@ describe("assignTeams", () => {
     expect(result.get(players[3])).not.toEqual(result.get(players[0]));
   });
 
+  // Matchmade games: the server pins each player to a team slot via
+  // PlayerInfo.teamIndex and the matcher's split must be honored verbatim.
+  const createPinnedPlayer = (
+    id: string,
+    teamIndex: number | null,
+    clan?: string,
+    friends: string[] = [],
+  ): PlayerInfo => {
+    return new PlayerInfo(
+      `Player ${id}`,
+      PlayerType.Human,
+      id, // clientID
+      id,
+      false,
+      clan,
+      friends,
+      teamIndex,
+    );
+  };
+
+  it("should honor pinned teamIndex exactly (matchmade 2v2)", () => {
+    const players = [
+      createPinnedPlayer("1", 0),
+      createPinnedPlayer("2", 1),
+      createPinnedPlayer("3", 1),
+      createPinnedPlayer("4", 0),
+    ];
+
+    const result = assignTeams(players, teams);
+
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[3])).toEqual(ColoredTeams.Red);
+  });
+
+  it("should let pins override clan grouping", () => {
+    // Two clanmates matched onto opposite teams stay split: the matcher's
+    // balancing is authoritative over the clan all-on-one-team rule.
+    const players = [
+      createPinnedPlayer("1", 0, "CLANA"),
+      createPinnedPlayer("2", 1, "CLANA"),
+      createPinnedPlayer("3", 1),
+      createPinnedPlayer("4", 0),
+    ];
+
+    const result = assignTeams(players, teams);
+
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Blue);
+  });
+
+  it("should balance unpinned players around pinned ones", () => {
+    // Red already holds two pinned players (at capacity for 4 players /
+    // 2 teams), so the unpinned player must land on Blue.
+    const players = [
+      createPinnedPlayer("1", 0),
+      createPinnedPlayer("2", 0),
+      createPinnedPlayer("3", 1),
+      createPinnedPlayer("4", null),
+    ];
+
+    const result = assignTeams(players, teams);
+
+    expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
+  });
+
+  it("should treat an out-of-range teamIndex as unpinned", () => {
+    const players = [
+      createPinnedPlayer("1", 7),
+      createPinnedPlayer("2", null),
+      createPinnedPlayer("3", null),
+      createPinnedPlayer("4", null),
+    ];
+
+    const result = assignTeams(players, teams);
+
+    for (const p of players) {
+      expect([ColoredTeams.Red, ColoredTeams.Blue]).toContain(result.get(p));
+    }
+  });
+
+  it("should pull an unpinned friend toward a pinned player's team", () => {
+    const players = [
+      createPinnedPlayer("1", 0),
+      createPinnedPlayer("2", null, undefined, ["1"]),
+      createPinnedPlayer("3", null),
+      createPinnedPlayer("4", null),
+    ];
+
+    const result = assignTeams(players, teams);
+
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
+  });
+
+  it("should honor pins even past maxTeamSize (trust the matcher)", () => {
+    const players = [
+      createPinnedPlayer("1", 0),
+      createPinnedPlayer("2", 0),
+      createPinnedPlayer("3", 0),
+    ];
+
+    const result = assignTeams(players, teams, 1);
+
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Red);
+  });
+
   it("should still kick when every team is at capacity", () => {
     // 5 friends in a clique, 2 teams, maxTeamSize = ceil(5/2) = 3.
     // Total capacity is 6, so we have slack — nobody should get kicked.

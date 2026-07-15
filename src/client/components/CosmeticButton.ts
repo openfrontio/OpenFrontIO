@@ -272,6 +272,12 @@ export class CosmeticButton extends LitElement {
               >${translateText("cosmetics.per_day")}</span
             >
           </div>
+          ${sub.unlimitedRanked
+            ? html`<span
+                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                >${translateText("cosmetics.unlimited_ranked")}</span
+              >`
+            : nothing}
         </div>
       </div>`;
     }
