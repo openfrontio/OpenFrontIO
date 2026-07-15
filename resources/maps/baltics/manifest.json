@@ -58,7 +58,7 @@
     {
       "coordinates": [1328, 950],
       "flag": "RU-PSK",
-      "name": "Pustoshka "
+      "name": "Pustoshka"
     },
     {
       "coordinates": [524, 633],
@@ -269,7 +269,7 @@
     {
       "coordinates": [369, 914],
       "flag": "lv",
-      "name": "Liepaga"
+      "name": "Liepaja"
     },
     {
       "coordinates": [658, 880],
@@ -290,11 +290,6 @@
       "coordinates": [389, 1048],
       "flag": "lt",
       "name": "Klaipeda"
-    },
-    {
-      "coordinates": [601, 1069],
-      "flag": "lt",
-      "name": "Siauliai"
     },
     {
       "coordinates": [793, 1074],
@@ -323,7 +318,7 @@
     },
     {
       "coordinates": [1027, 614],
-      "flag": "Võrumaa",
+      "flag": "Vorumaa",
       "name": "Vorumaa"
     },
     {

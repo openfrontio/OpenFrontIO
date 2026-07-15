@@ -122,7 +122,7 @@
     },
     {
       "coordinates": [369, 914],
-      "name": "Liepaga",
+      "name": "Liepaja",
       "flag": "lv"
     },
     {
@@ -143,11 +143,6 @@
     {
       "coordinates": [389, 1048],
       "name": "Klaipeda",
-      "flag": "lt"
-    },
-    {
-      "coordinates": [601, 1069],
-      "name": "Siauliai",
       "flag": "lt"
     },
     {
@@ -244,7 +239,7 @@
     },
     {
       "coordinates": [1328, 950],
-      "name": "Pustoshka ",
+      "name": "Pustoshka",
       "flag": "RU-PSK"
     },
     {
