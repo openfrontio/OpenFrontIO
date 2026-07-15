@@ -54,6 +54,7 @@ export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
  */
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
+export const CROWN_KEY = "crown";
 export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
@@ -299,6 +300,19 @@ export class UserSettings {
     if (data === null) return null;
     const skinPrefix = "skin:";
     return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
+  }
+
+  /** Returns the selected crown name, or null if none is selected. */
+  getSelectedCrownName(): string | null {
+    return this.getCached(CROWN_KEY);
+  }
+
+  setSelectedCrownName(name: string | undefined): void {
+    if (name === undefined) {
+      this.removeCached(CROWN_KEY);
+    } else {
+      this.setCached(CROWN_KEY, name);
+    }
   }
 
   getFlag(): string | null {

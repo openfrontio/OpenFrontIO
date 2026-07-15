@@ -91,6 +91,9 @@ export class CosmeticButton extends LitElement {
     if (this.activeResolved.type === "effect") {
       return translateCosmetic("effects", c.name);
     }
+    if (this.activeResolved.type === "crown") {
+      return translateCosmetic("crowns", c.name);
+    }
     return translateCosmetic("flags", c.name);
   }
 
