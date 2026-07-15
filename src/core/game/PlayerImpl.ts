@@ -140,16 +140,6 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
-  // OFM live standings: the eliminator's clientID (null while alive, or when the
-  // kill has no client owner e.g. a bot/nation), and the finishing position at
-  // elimination (count of non-bot players still alive then; null while alive).
-  // Stamped in the sim so the admin bot can score kills + placement live, off the
-  // live snapshot instead of the post-game record.
-  private _killedBy: ClientID | null = null;
-  // Separate flag, not `_killedBy === null`, because null is a VALID recorded
-  // killer (a bot/nation elimination): once stamped it must not be overwritten.
-  private _killedByStamped = false;
-  private _deathPosition: number | null = null;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -317,6 +307,11 @@ export class PlayerImpl implements Player {
       }
     }
 
+    // OFM live standings: elimination info is stored on the player's stats
+    // (set live in the sim via mg.stats()), surfaced here so it rides the live
+    // PlayerUpdate every tick rather than only appearing in the game-end record.
+    const deathStats = this.mg.stats().getPlayerStats(this);
+
     return {
       type: GameUpdateType.Player,
       clientID: this.clientID(),
@@ -328,8 +323,8 @@ export class PlayerImpl implements Player {
       playerType: this.type(),
       isAlive: this.isAlive(),
       isDisconnected: this.isDisconnected(),
-      killedBy: this.killedBy(),
-      deathPosition: this.deathPosition(),
+      killedBy: deathStats?.killedBy ?? null,
+      deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
@@ -608,27 +603,6 @@ export class PlayerImpl implements Player {
 
   isAlive(): boolean {
     return this._tiles.size > 0;
-  }
-
-  killedBy(): ClientID | null {
-    return this._killedBy;
-  }
-
-  deathPosition(): number | null {
-    return this._deathPosition;
-  }
-
-  // Stamped once at elimination (idempotent, first write wins). killedBy is set
-  // from recordKill (the conqueror's clientID, null for a bot/nation killer);
-  // deathPosition from PlayerExecution when the player hits zero tiles.
-  markKilledBy(clientID: ClientID | null): void {
-    if (this._killedByStamped) return;
-    this._killedByStamped = true;
-    this._killedBy = clientID;
-  }
-
-  setDeathPosition(position: number): void {
-    this._deathPosition ??= position;
   }
 
   hasSpawned(): boolean {

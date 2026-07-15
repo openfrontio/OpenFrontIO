@@ -1310,9 +1310,10 @@ export class GameImpl implements Game {
     // if the game ends this tick (winner declared) the conquered player's
     // execution may never run again. Exclude the conquered player from the alive
     // count. PlayerExecution keeps the same stamp as a fallback for non-conquest
-    // deaths; setDeathPosition is first-write-wins, so this value sticks.
-    conquered.markKilledBy(conqueror.clientID());
-    conquered.setDeathPosition(
+    // deaths; recordDeathPosition is first-write-wins, so this value sticks.
+    this.stats().recordKilledBy(conquered, conqueror.clientID());
+    this.stats().recordDeathPosition(
+      conquered,
       this.players().filter(
         (p) => p !== conquered && p.type() !== PlayerType.Bot,
       ).length + 1,
