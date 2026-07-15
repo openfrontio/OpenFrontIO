@@ -1,0 +1,321 @@
+{
+  "id": "Balkans",
+  "name": "Balkans",
+  "translation_key": "map.balkans",
+  "categories": ["europe"],
+  "multiplayer_frequency": 6,
+  "nations": [
+    {
+      "coordinates": [122, 281],
+      "name": "Slovenia",
+      "flag": "si"
+    },
+    {
+      "coordinates": [106, 41],
+      "name": "Austria",
+      "flag": "at"
+    },
+    {
+      "coordinates": [606, 124],
+      "name": "Hungary",
+      "flag": "hu"
+    },
+    {
+      "coordinates": [307, 431],
+      "name": "Croatia",
+      "flag": "hr"
+    },
+    {
+      "coordinates": [115, 1895],
+      "name": "Malta",
+      "flag": "mt"
+    },
+    {
+      "coordinates": [578, 552],
+      "name": "Bosnia and Herzegovina",
+      "flag": "ba"
+    },
+    {
+      "coordinates": [831, 372],
+      "name": "Vojvodina",
+      "flag": "Vojvodina"
+    },
+    {
+      "coordinates": [956, 667],
+      "name": "Serbia",
+      "flag": "rs"
+    },
+    {
+      "coordinates": [783, 1101],
+      "name": "Albania",
+      "flag": "al"
+    },
+    {
+      "coordinates": [736, 860],
+      "name": "Montenegro",
+      "flag": "me"
+    },
+    {
+      "coordinates": [33, 896],
+      "name": "Italy",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1001, 1390],
+      "name": "Greece",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [994, 969],
+      "name": "North Macedonia",
+      "flag": "mk"
+    },
+    {
+      "coordinates": [1546, 839],
+      "name": "Bulgaria",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [1953, 1443],
+      "name": "Türkiye",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [1786, 36],
+      "name": "Moldova",
+      "flag": "md"
+    },
+    {
+      "coordinates": [1538, 264],
+      "name": "Romania",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [2004, 283],
+      "name": "Ukraine",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [926, 853],
+      "name": "Kosovo",
+      "flag": "xk"
+    },
+    {
+      "coordinates": [1356, 157],
+      "name": "Transylvania",
+      "flag": "Transylvania"
+    },
+    {
+      "coordinates": [730, 666],
+      "name": "Republika Srpska",
+      "flag": "Republika Srpska"
+    },
+    {
+      "coordinates": [1948, 80],
+      "name": "Transnistria",
+      "flag": "Moldavian SSR"
+    },
+    {
+      "coordinates": [79, 1635],
+      "name": "Sicily",
+      "flag": "Sicily"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [288, 985],
+      "name": "Abruzzo",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1686, 1547],
+      "name": "Aegean Region",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [561, 1236],
+      "name": "Apulia",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1203, 1538],
+      "name": "Attica",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1043, 388],
+      "name": "Banat",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [326, 1201],
+      "name": "Basilicata",
+      "flag": "it"
+    },
+    {
+      "coordinates": [881, 519],
+      "name": "Belgrade",
+      "flag": "rs"
+    },
+    {
+      "coordinates": [319, 1489],
+      "name": "Calabria",
+      "flag": "it"
+    },
+    {
+      "coordinates": [124, 1109],
+      "name": "Campania",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1236, 1116],
+      "name": "Central Macedonia",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1375, 2005],
+      "name": "Crete",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1062, 52],
+      "name": "Crisana",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [323, 652],
+      "name": "Dalmatia",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [1818, 432],
+      "name": "Dobrogea",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [823, 1305],
+      "name": "Epirus",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1417, 963],
+      "name": "Haskovo",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [554, 746],
+      "name": "Herzegovina",
+      "flag": "ba"
+    },
+    {
+      "coordinates": [851, 1541],
+      "name": "Ionian Islands",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [47, 409],
+      "name": "Istria",
+      "flag": "hr"
+    },
+    {
+      "coordinates": [1255, 713],
+      "name": "Lovech",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [1837, 1236],
+      "name": "Marmara",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [1936, 1732],
+      "name": "Mediterranean Region",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [1578, 87],
+      "name": "Moldavia",
+      "flag": "Principality of Moldavia"
+    },
+    {
+      "coordinates": [1065, 605],
+      "name": "Montana",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [1587, 482],
+      "name": "Muntenia",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [1493, 1387],
+      "name": "North Aegean",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1263, 494],
+      "name": "Oltenia",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [1042, 1644],
+      "name": "Peloponnese",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1257, 936],
+      "name": "Plovdiv",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [1509, 692],
+      "name": "Razgrad",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [590, 386],
+      "name": "Slavonia",
+      "flag": "Slavonia"
+    },
+    {
+      "coordinates": [1134, 882],
+      "name": "Sofia",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [1432, 1718],
+      "name": "South Aegean",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1015, 1259],
+      "name": "Thessaly",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1659, 1042],
+      "name": "Thrace",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [402, 173],
+      "name": "Transdanubia",
+      "flag": "hu"
+    },
+    {
+      "coordinates": [1729, 622],
+      "name": "Varna",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [946, 1556],
+      "name": "Western Greece",
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1003, 1130],
+      "name": "Western Macedonia",
+      "flag": "gr"
+    }
+  ]
+}

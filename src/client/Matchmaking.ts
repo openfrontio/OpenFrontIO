@@ -1,23 +1,30 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
-  private static instanceIdPromise: Promise<string> | null = null;
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
   private connectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private intentionalClose = false;
+  // Which queue to join; set by Main from the open-matchmaking event
+  // before the modal opens.
+  public mode: "1v1" | "2v2" = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
+  @state() private limitReached = false;
   private elo: number | string = "...";
 
   constructor() {
@@ -29,43 +36,50 @@ export class MatchmakingModal extends BaseModal {
     return this;
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText(
+        this.mode === "2v2"
+          ? "matchmaking_modal.title_2v2"
+          : "matchmaking_modal.title",
+      ),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
         ${translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
-
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("matchmaking_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-          ${eloDisplay} ${this.renderInner()}
-        </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
     return html`
-      <o-modal
-        id="matchmaking-modal"
-        title="${translateText("matchmaking_modal.title")}"
-        hideCloseButton
-        hideHeader
-      >
-        ${content}
-      </o-modal>
+      <div class="flex flex-col items-center justify-center gap-6 p-6">
+        ${eloDisplay} ${this.renderInner()}
+      </div>
     `;
   }
 
   private renderInner() {
+    if (this.limitReached) {
+      return html`
+        <div class="flex flex-col items-center gap-4 text-center">
+          <p class="text-white font-bold">
+            ${translateText("matchmaking_modal.limit_reached")}
+          </p>
+          <p class="text-sm text-white/60">
+            ${translateText("matchmaking_modal.limit_reached_info")}
+          </p>
+          <button
+            @click=${this.openSubscriptions}
+            class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-wider rounded-xl transition-colors"
+          >
+            ${translateText("matchmaking_modal.limit_upsell")}
+          </button>
+        </div>
+      `;
+    }
     if (!this.connected) {
       return this.renderLoadingSpinner(
         translateText("matchmaking_modal.connecting"),
@@ -85,12 +99,21 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
-  private async connect() {
-    const config = await getRuntimeClientServerConfig();
-    const instanceId = await MatchmakingModal.getInstanceId();
+  private openSubscriptions = () => {
+    // The matchmaking modal isn't registered with the modal router, so it
+    // won't be closed by the store opening from the hash change.
+    this.close();
+    window.location.hash = "modal=store&tab=subscriptions";
+  };
 
+  private async connect() {
+    // A pending join timer from a previous socket must not fire on this one.
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
     this.socket = new WebSocket(
-      `${config.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(instanceId)}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -117,6 +140,7 @@ export class MatchmakingModal extends BaseModal {
       console.log(event.data);
       const data = JSON.parse(event.data);
       if (data.type === "match-assignment") {
+        this.intentionalClose = true;
         this.socket?.close();
         console.log(`matchmaking: got game ID: ${data.gameId}`);
         this.gameID = data.gameId;
@@ -126,35 +150,44 @@ export class MatchmakingModal extends BaseModal {
     this.socket.onerror = (event: Event) => {
       console.error("WebSocket error occurred:", event);
     };
-    this.socket.onclose = () => {
-      console.log("Matchmaking server closed connection");
+    this.socket.onclose = (event: CloseEvent) => {
+      console.log(
+        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
+      );
+      if (this.intentionalClose || this.gameID !== null) {
+        return;
+      }
+      // 1008 is also used for auth failures ("Invalid session"), so match on
+      // the reason. Out of free ranked plays — the server will keep refusing
+      // until the next UTC day (or a subscription), so don't reconnect.
+      if (event.code === 1008 && event.reason === "ranked_limit_reached") {
+        this.connected = false;
+        this.limitReached = true;
+        return;
+      }
+      if (event.code === 1000) {
+        // A newer connection for this account (e.g. a second tab) took the
+        // queue slot; this socket was replaced. Do not retry.
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("matchmaking_modal.replaced"),
+              color: "red",
+              duration: 5000,
+            },
+          }),
+        );
+        this.close();
+        return;
+      }
+      // 1008: the jwt was rejected — getPlayToken() refreshes expired tokens,
+      // so rejoining sends a fresh one. Anything else is a server
+      // restart/deploy; the queue is in-memory only, so rejoin. Back off in
+      // case the failure repeats.
+      this.connected = false;
+      const delay = Math.min(1000 * 2 ** this.reconnectAttempts++, 15000);
+      this.reconnectTimeout = setTimeout(() => this.connect(), delay);
     };
-  }
-
-  private static async getInstanceId(): Promise<string> {
-    MatchmakingModal.instanceIdPromise ??= fetch("/api/instance", {
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load instance id: ${response.status} ${response.statusText}`,
-          );
-        }
-
-        const data = (await response.json()) as { instanceId?: string };
-        if (!data.instanceId) {
-          throw new Error("Missing instance id");
-        }
-
-        return data.instanceId;
-      })
-      .catch((error: unknown) => {
-        MatchmakingModal.instanceIdPromise = null;
-        throw error;
-      });
-
-    return MatchmakingModal.instanceIdPromise;
   }
 
   protected async onOpen(): Promise<void> {
@@ -164,11 +197,20 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    const isLoggedIn =
-      userMe &&
-      userMe.user &&
-      (userMe.user.discord !== undefined || userMe.user.email !== undefined);
-    if (!isLoggedIn) {
+    // CrazyGames players authenticate through the SDK rather than a linked
+    // Discord/Google/email account, so a signed-in CrazyGames user counts as
+    // logged in for ranked.
+    const crazyGamesSignedIn =
+      crazyGamesSDK.isOnCrazyGames() &&
+      (await crazyGamesSDK.getUserProfile()) !== null;
+    if (!this.isModalOpen) {
+      return;
+    }
+
+    if (
+      userMe === false ||
+      (!hasLinkedAccount(userMe) && !crazyGamesSignedIn)
+    ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
@@ -183,21 +225,31 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo =
-      userMe.player.leaderboard?.oneVone?.elo ??
-      translateText("matchmaking_modal.no_elo");
+    const row =
+      this.mode === "2v2"
+        ? userMe.player.leaderboard?.twoVtwo
+        : userMe.player.leaderboard?.oneVone;
+    this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;
+    this.intentionalClose = false;
+    this.limitReached = false;
+    this.reconnectAttempts = 0;
     this.connect();
   }
 
   protected onClose(): void {
     this.connected = false;
+    this.intentionalClose = true;
     this.socket?.close();
     if (this.connectTimeout) {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
@@ -209,8 +261,7 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
-    const config = await getRuntimeClientServerConfig();
-    const url = `/${config.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
+    const url = `/${ClientEnv.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
       method: "GET",

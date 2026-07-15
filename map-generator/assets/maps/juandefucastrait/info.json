@@ -1,0 +1,334 @@
+{
+  "id": "JuanDeFucaStrait",
+  "name": "Juan De Fuca Strait",
+  "translation_key": "map.juandefucastrait",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 4,
+  "special_team_count": 3,
+  "nations": [
+    {
+      "coordinates": [1812, 445],
+      "name": "Victoria",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1519, 512],
+      "name": "Sooke",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1016, 319],
+      "name": "Port Renfrew",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [366, 11],
+      "name": "Bamfield",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1742, 165],
+      "name": "Sidney",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [2065, 346],
+      "name": "Friday Harbor",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2532, 77],
+      "name": "Bellingham",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1762, 867],
+      "name": "Port Angeles",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [749, 556],
+      "name": "Neah Bay",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1003, 1014],
+      "name": "Forks",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2747, 992],
+      "name": "Everett",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2402, 389],
+      "name": "Anacortes",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2654, 479],
+      "name": "Mount Vermon",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2407, 615],
+      "name": "Oak Harbor",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2280, 850],
+      "name": "Port Townsend",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2764, 714],
+      "name": "Arlington",
+      "flag": "Washington"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [2654, 216],
+      "name": "Alger",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2741, 530],
+      "name": "Big Lake",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2093, 1000],
+      "name": "Blyn",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2580, 301],
+      "name": "Bow",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2648, 377],
+      "name": "Burlington",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1903, 924],
+      "name": "Carlsborg",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1117, 9],
+      "name": "Caycuse",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1020, 714],
+      "name": "Clallam Bay",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1666, 525],
+      "name": "Colwood",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1773, 338],
+      "name": "Cordova Bay",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [2399, 748],
+      "name": "Coupeville",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1578, 154],
+      "name": "Cowichan Bay",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2175, 1060],
+      "name": "Discovery Bay",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1533, 41],
+      "name": "Duncan",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1977, 833],
+      "name": "Dungeness",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2184, 137],
+      "name": "Eastsound",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1646, 910],
+      "name": "Elwha",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2450, 944],
+      "name": "Freeland",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1725, 43],
+      "name": "Fulford Harbour",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [2908, 338],
+      "name": "Hamilton",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1241, 58],
+      "name": "Honeymoon Bay",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1258, 462],
+      "name": "Jordan River",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1380, 813],
+      "name": "Joyce",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1360, 43],
+      "name": "Lake Cowichan",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [2886, 977],
+      "name": "Lake Stevens",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1632, 420],
+      "name": "Langford",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [2577, 975],
+      "name": "Langley",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2184, 366],
+      "name": "Lopez",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1581, 844],
+      "name": "Lower Elwha",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2455, 1],
+      "name": "Marietta-Alderwood",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2739, 887],
+      "name": "Marysville",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1635, 222],
+      "name": "Mill Bay",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [893, 760],
+      "name": "Old Royal",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1496, 1082],
+      "name": "Olympic National Park",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [737, 816],
+      "name": "Ozette",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2320, 1037],
+      "name": "Port Hadlock-Irondale",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1182, 777],
+      "name": "Pysht",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [842, 983],
+      "name": "Quillayute",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1997, 256],
+      "name": "Roche Harbor",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [1060, 836],
+      "name": "Sappho",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2750, 358],
+      "name": "Sedro-Woolley",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2025, 972],
+      "name": "Sequim",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [967, 915],
+      "name": "Shuwah",
+      "flag": "Washington"
+    },
+    {
+      "coordinates": [2605, 123],
+      "name": "Sudden Valley",
+      "flag": "Washington"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "3": [
+      {
+        "height": 550,
+        "width": 2360,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 550,
+        "width": 2360,
+        "x": 0,
+        "y": 550
+      },
+      {
+        "height": 1100,
+        "width": 640,
+        "x": 2360,
+        "y": 0
+      }
+    ]
+  }
+}

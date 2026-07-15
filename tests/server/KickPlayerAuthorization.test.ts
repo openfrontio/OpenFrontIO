@@ -1,17 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/configuration/ConfigLoader", () => ({
-  getServerConfigFromServer: () => ({
-    otelEnabled: () => false,
-    otelAuthHeader: () => "",
-    otelEndpoint: () => "",
-    env: () => 0, // GameEnv.Dev
-  }),
-  getServerConfig: () => ({
-    otelEnabled: () => false,
-  }),
-}));
-
 vi.mock("../../src/core/Schemas", async () => {
   const actual = (await vi.importActual("../../src/core/Schemas")) as any;
   return {
@@ -63,13 +51,14 @@ function makeClient(
     null,
     ws as any,
     undefined,
+    undefined,
+    [],
   );
   return { client, ws };
 }
 
 describe("GameServer - kick_player authorization", () => {
   let mockLogger: any;
-  let mockConfig: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -78,11 +67,6 @@ describe("GameServer - kick_player authorization", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-    };
-    mockConfig = {
-      turnIntervalMs: () => 100,
-      gameCreationRate: () => 1000,
-      env: () => 0,
     };
   });
 
@@ -96,7 +80,6 @@ describe("GameServer - kick_player authorization", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      mockConfig,
       { gameType: GameType.Private } as any,
       creatorPersistentID,
     );
@@ -110,7 +93,7 @@ describe("GameServer - kick_player authorization", () => {
       "message",
       JSON.stringify({
         type: "intent",
-        intent: { type: "kick_player", target },
+        intent: { type: "kick_player", targetClientID: target },
       }),
     );
   }

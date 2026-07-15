@@ -1,17 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/configuration/ConfigLoader", () => ({
-  getServerConfigFromServer: () => ({
-    otelEnabled: () => false,
-    otelAuthHeader: () => "",
-    otelEndpoint: () => "",
-    env: () => 0, // GameEnv.Dev
-  }),
-  getServerConfig: () => ({
-    otelEnabled: () => false,
-  }),
-}));
-
 vi.mock("../../src/core/Schemas", async () => {
   const actual = (await vi.importActual("../../src/core/Schemas")) as any;
   return {
@@ -25,13 +13,11 @@ vi.mock("../../src/core/Schemas", async () => {
   };
 });
 
-import { GameEnv } from "../../src/core/configuration/Config";
 import { GameType } from "../../src/core/game/Game";
 import { GameServer } from "../../src/server/GameServer";
 
 describe("GameLifecycle", () => {
   let mockLogger: any;
-  let mockConfig: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -41,11 +27,6 @@ describe("GameLifecycle", () => {
       warn: vi.fn(),
       error: vi.fn(),
     };
-    mockConfig = {
-      turnIntervalMs: () => 100,
-      gameCreationRate: () => 1000,
-      env: () => GameEnv.Dev,
-    };
   });
 
   afterEach(() => {
@@ -54,13 +35,9 @@ describe("GameLifecycle", () => {
   });
 
   it("should not start turn interval if game has ended", async () => {
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      mockConfig,
-      { gameType: GameType.Private } as any,
-    );
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
 
     // Call end() first - this should set _hasEnded
     await game.end();
@@ -77,17 +54,11 @@ describe("GameLifecycle", () => {
 
   it("should clear turn interval and set _hasEnded on end()", async () => {
     // We need to initialize the game such that start() can succeed
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      mockConfig,
-      {
-        gameType: GameType.Private,
-        gameMap: "plains",
-        gameMapSize: 100,
-      } as any,
-    );
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+      gameMap: "plains",
+      gameMapSize: 100,
+    } as any);
 
     // Manually trigger prestart to fulfill some internal checks if necessary
     game.prestart();
@@ -103,13 +74,9 @@ describe("GameLifecycle", () => {
   });
 
   it("should be resilient to multiple end() calls", async () => {
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      mockConfig,
-      { gameType: GameType.Private } as any,
-    );
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
 
     await game.end();
     expect((game as any)._hasEnded).toBe(true);

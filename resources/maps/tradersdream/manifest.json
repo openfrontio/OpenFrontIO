@@ -1,4 +1,6 @@
 {
+  "categories": ["fictional"],
+  "id": "TradersDream",
   "map": {
     "height": 1920,
     "num_land_tiles": 972041,
@@ -14,6 +16,7 @@
     "num_land_tiles": 240669,
     "width": 1100
   },
+  "multiplayer_frequency": 4,
   "name": "Traders Dream",
   "nations": [
     {
@@ -81,5 +84,23 @@
       "flag": "",
       "name": "Harborwick"
     }
-  ]
+  ],
+  "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 960,
+        "width": 2200,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 960,
+        "width": 2200,
+        "x": 0,
+        "y": 960
+      }
+    ]
+  },
+  "translation_key": "map.tradersdream"
 }

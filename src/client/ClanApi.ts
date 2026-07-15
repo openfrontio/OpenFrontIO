@@ -3,6 +3,10 @@ import {
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  type ClanDiscord,
+  type ClanGameFilter,
+  type ClanGamesResponse,
+  ClanGamesResponseSchema,
   type ClanInfo,
   ClanInfoSchema,
   type ClanLeaderboardResponse,
@@ -11,16 +15,23 @@ import {
   ClanMembersResponseSchema,
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
-  type ClanStats,
-  ClanStatsSchema,
+  DiscordInviteResponseSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
-import { getApiBase } from "./Api";
+import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
+
+const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
 export type {
   ClanBan,
   ClanBansResponse,
   ClanBrowseResponse,
+  ClanDiscord,
+  ClanGame,
+  ClanGameFilter,
+  ClanGamePlayer,
+  ClanGameResult,
+  ClanGamesResponse,
   ClanInfo,
   ClanJoinRequest,
   ClanMember,
@@ -28,7 +39,6 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
-  ClanStats,
 } from "../core/ClanApiSchemas";
 
 async function clanFetch(
@@ -80,26 +90,6 @@ export async function fetchClanLeaderboard(): Promise<
   }
 }
 
-export async function fetchClanStats(tag: string): Promise<ClanStats | false> {
-  try {
-    const res = await fetch(
-      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}`,
-      { headers: { Accept: "application/json" } },
-    );
-    if (!res.ok) return false;
-    const json = await res.json();
-    const parsed = ClanStatsSchema.safeParse(json?.clan);
-    if (!parsed.success) {
-      console.warn("fetchClanStats: Zod validation failed", parsed.error);
-      return false;
-    }
-    return parsed.data;
-  } catch (err) {
-    console.warn("fetchClanStats: request failed", err);
-    return false;
-  }
-}
-
 export async function fetchClans(
   search?: string,
   page = 1,
@@ -138,6 +128,48 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   } catch {
     return false;
   }
+}
+
+// Public existence probe (no auth). null = inconclusive (timeout / error /
+// unexpected status); the caller decides how to handle it. The tag is
+// uppercased to the canonical form so it matches the server's route.
+export async function fetchClanExists(tag: string): Promise<boolean | null> {
+  try {
+    const path = `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
+    const res = await fetch(`${getApiBase()}${path}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
+    });
+    if (res.status === 200) return true;
+    if (res.status === 404) return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Client-side mirror of the server's clan-tag ownership rule (resolveClanTag in
+ * Privilege.ts), for instant inline feedback. Returns the tag to submit (null
+ * if dropped) and an i18n error key. The server re-checks authoritatively.
+ */
+export async function checkClanTagOwnership(
+  tag: string,
+): Promise<{ tag: string | null; error: string | null }> {
+  const me = await getUserMe();
+  const myTags = me
+    ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
+    : [];
+  if (myTags.includes(tag.toUpperCase())) {
+    return { tag, error: null };
+  }
+
+  const exists = await fetchClanExists(tag);
+  if (exists === true) return { tag: null, error: "username.tag_not_member" };
+  // Tag doesn't exist (fictional) or the check was inconclusive (API
+  // unavailable, e.g. during development) — fail open and keep the tag;
+  // the server re-checks authoritatively.
+  return { tag, error: null };
 }
 
 export type ClanMemberSort =
@@ -206,6 +238,9 @@ export async function joinClan(
     if (res.status === 429) {
       return { error: "clan_modal.error_rate_limited_generic" };
     }
+    if (res.status === 401) {
+      return { error: "clan_modal.sign_in_for_clans" };
+    }
     if (res.status === 403) {
       const body = await res.json().catch(() => ({}));
       const b = body as { code?: string; reason?: string | null };
@@ -258,7 +293,12 @@ export async function leaveClan(
 
 export async function updateClan(
   tag: string,
-  patch: { name?: string; description?: string; isOpen?: boolean },
+  patch: {
+    name?: string;
+    description?: string;
+    discordUrl?: string;
+    isOpen?: boolean;
+  },
 ): Promise<ClanInfo | { error: string }> {
   try {
     const res = await clanFetch(`/clans/${encodeURIComponent(tag)}`, {
@@ -266,6 +306,23 @@ export async function updateClan(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    if (res.status === 400) {
+      // Surface Discord-invite validation errors specifically so the leader
+      // knows to fix the link rather than seeing a generic failure.
+      const body = await res.json().catch(() => ({}));
+      const code = (body as { code?: string }).code;
+      if (code === "DISCORD_INVALID")
+        return { error: "clan_modal.discord_invalid" };
+      if (code === "DISCORD_EXPIRES")
+        return { error: "clan_modal.discord_expires" };
+      return { error: "clan_modal.error_failed" };
+    }
+    // The only rate limit on this endpoint is the one Discord-link
+    // verification per player per minute, so a 429 always means "wait
+    // before changing the link again".
+    if (res.status === 429) {
+      return { error: "clan_modal.discord_rate_limited" };
+    }
     if (!res.ok) {
       return {
         error: "clan_modal.error_failed",
@@ -280,6 +337,61 @@ export async function updateClan(
     return parsed.data;
   } catch {
     return { error: "clan_modal.error_network" };
+  }
+}
+
+// Animated icons/banners use an `a_` hash prefix and are served as .gif.
+function discordCdnAsset(
+  kind: "icons" | "banners",
+  guildId: string,
+  hash: string,
+  query = "",
+): string {
+  const ext = hash.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/${kind}/${guildId}/${hash}.${ext}${query}`;
+}
+
+// Fetched from the browser rather than via our server: per-player IPs sidestep
+// the rate limit Discord applies to its public invite API on shared server IPs.
+export async function fetchDiscordInvite(url: string): Promise<ClanDiscord> {
+  // The server stores the normalised short form https://discord.gg/{code}.
+  let code: string | undefined;
+  try {
+    code = new URL(url).pathname.split("/").filter(Boolean)[0];
+  } catch {
+    // Unparseable stored URL — fall through to the plain link.
+  }
+  if (!code) return { url, valid: true };
+
+  try {
+    const res = await fetch(
+      `https://discord.com/api/v10/invites/${encodeURIComponent(code)}?with_counts=true`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    // 404 => Discord no longer recognises the invite (revoked since saved).
+    if (res.status === 404) return { url, valid: false };
+    if (!res.ok) return { url, valid: true };
+    const parsed = DiscordInviteResponseSchema.safeParse(await res.json());
+    if (!parsed.success) return { url, valid: true };
+    const { guild, approximate_member_count, approximate_presence_count } =
+      parsed.data;
+    if (!guild) return { url, valid: true };
+    return {
+      url,
+      valid: true,
+      serverName: guild.name,
+      iconUrl: guild.icon
+        ? discordCdnAsset("icons", guild.id, guild.icon)
+        : null,
+      bannerUrl: guild.banner
+        ? discordCdnAsset("banners", guild.id, guild.banner, "?size=1024")
+        : null,
+      description: guild.description ?? null,
+      onlineCount: approximate_presence_count ?? null,
+      memberCount: approximate_member_count ?? null,
+    };
+  } catch {
+    return { url, valid: true };
   }
 }
 
@@ -465,6 +577,36 @@ export async function unbanClanMember(
     return true;
   } catch {
     return { error: "clan_modal.error_network" };
+  }
+}
+
+export type ClanGamesFetchError = "forbidden" | "failed";
+
+export async function fetchClanGames(
+  tag: string,
+  opts: { filter?: ClanGameFilter; cursor?: string } = {},
+): Promise<ClanGamesResponse | { error: ClanGamesFetchError }> {
+  try {
+    const params = new URLSearchParams();
+    if (opts.filter) params.set("filter", opts.filter);
+    // `cursor` is an opaque continuation token issued by the previous
+    // response's `nextCursor`. Round-trip verbatim; never construct.
+    if (opts.cursor) params.set("cursor", opts.cursor);
+    const qs = params.toString();
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/games${qs ? `?${qs}` : ""}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const json = await res.json();
+    const parsed = ClanGamesResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanGames: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
   }
 }
 

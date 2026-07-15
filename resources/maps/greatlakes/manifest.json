@@ -1,20 +1,23 @@
 {
+  "categories": ["north_america"],
+  "id": "GreatLakes",
   "map": {
     "height": 1300,
-    "num_land_tiles": 1938066,
+    "num_land_tiles": 1938051,
     "width": 2000
   },
   "map16x": {
     "height": 325,
-    "num_land_tiles": 115500,
+    "num_land_tiles": 115497,
     "width": 500
   },
   "map4x": {
     "height": 650,
-    "num_land_tiles": 476275,
+    "num_land_tiles": 476259,
     "width": 1000
   },
-  "name": "greatlakes",
+  "multiplayer_frequency": 6,
+  "name": "Great Lakes",
   "nations": [
     {
       "coordinates": [38, 326],
@@ -186,5 +189,6 @@
       "flag": "ca",
       "name": "Rouyn-Noranda"
     }
-  ]
+  ],
+  "translation_key": "map.greatlakes"
 }

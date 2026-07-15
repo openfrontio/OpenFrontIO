@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getRuntimeClientServerConfig } from "src/core/configuration/ConfigLoader";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   Duos,
   GameMapType,
@@ -11,7 +11,6 @@ import {
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -34,6 +33,7 @@ const CARD_BG = "bg-surface";
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   @state() private mapAspectRatios: Map<GameMapType, number> = new Map();
+  @state() private inputValid: boolean = true;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -45,29 +45,43 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
-  /**
-   * Validates username input and shows error message if invalid.
-   * Returns true if valid, false otherwise.
-   */
+  // Silent backstop; the buttons are already disabled while input is invalid.
   private validateUsername(): boolean {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput | null;
-    return usernameInput ? usernameInput.validateOrShowError() : true;
+    return usernameInput ? usernameInput.canPlay() : true;
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    getRuntimeClientServerConfig().then((config) => {
-      this.defaultLobbyTime = config.gameCreationRate() / 1000;
-    });
+    this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
+    window.addEventListener(
+      "username-validity-change",
+      this.handleValidityChange,
+    );
+    // Pick up the current value in case username-input validated before us.
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput | null;
+    if (usernameInput) {
+      this.inputValid = usernameInput.canPlay();
+    }
   }
 
   disconnectedCallback() {
     this.stop();
+    window.removeEventListener(
+      "username-validity-change",
+      this.handleValidityChange,
+    );
     super.disconnectedCallback();
   }
+
+  private handleValidityChange = (e: Event) => {
+    this.inputValid = (e as CustomEvent).detail?.isValid ?? true;
+  };
 
   public stop() {
     this.lobbySocket.stop();
@@ -120,7 +134,7 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80",
+            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
           )}
         </div>
         <!-- Create/ranked/join: mobile only, below solo -->
@@ -128,71 +142,80 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
-          ${!crazyGamesSDK.isOnCrazyGames()
-            ? this.renderSmallActionCard(
-                translateText("mode_selector.ranked_title"),
-                this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
-              )
-            : html`<div class="invisible"></div>`}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+          )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            this.hostedLobbyCount(),
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
-        <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
+        <ios-add-to-home-screen-banner
+          class="no-crazygames"
+        ></ios-add-to-home-screen-banner>
 
         <!-- Game cards grid -->
-        <div
-          class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
-        >
-          <!-- Left col: main card (desktop only) -->
-          ${ffa
-            ? html`<div class="hidden sm:block">
-                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-              </div>`
-            : nothing}
+        ${this.lobbies === null
+          ? html`<div
+              class="flex items-center justify-center h-44 sm:h-[min(24rem,40vh)]"
+            >
+              <span
+                class="w-24 h-24 border-[6px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+              ></span>
+            </div>`
+          : html`<div
+              class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
+            >
+              <!-- Left col: main card (desktop only) -->
+              ${ffa
+                ? html`<div class="hidden sm:block">
+                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                  </div>`
+                : nothing}
 
-          <!-- Right col: special + teams (desktop only) -->
-          <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderSpecialLobbyCard(special)}
-                </div>`
-              : nothing}
-            ${teams
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                </div>`
-              : nothing}
-          </div>
+              <!-- Right col: special + teams (desktop only) -->
+              <div class="hidden sm:flex sm:flex-col sm:gap-4">
+                ${special
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderSpecialLobbyCard(special)}
+                    </div>`
+                  : nothing}
+                ${teams
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                    </div>`
+                  : nothing}
+              </div>
 
-          <!-- Mobile: special, ffa, teams inline -->
-          <div class="sm:hidden">
-            ${special ? this.renderSpecialLobbyCard(special) : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${ffa
-              ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-              : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${teams
-              ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-              : nothing}
-          </div>
-        </div>
+              <!-- Mobile: special, ffa, teams inline -->
+              <div class="sm:hidden">
+                ${special ? this.renderSpecialLobbyCard(special) : nothing}
+              </div>
+              <div class="sm:hidden">
+                ${ffa
+                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                  : nothing}
+              </div>
+              <div class="sm:hidden">
+                ${teams
+                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+                  : nothing}
+              </div>
+            </div>`}
 
         <!-- Solo: full width, desktop only -->
         <div class="hidden sm:block h-14">
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80",
+            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
           )}
         </div>
         <!-- Bottom row: create + ranked + join (desktop only) -->
@@ -200,19 +223,18 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
-          ${!crazyGamesSDK.isOnCrazyGames()
-            ? this.renderSmallActionCard(
-                translateText("mode_selector.ranked_title"),
-                this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
-              )
-            : html`<div class="invisible"></div>`}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+          )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            this.hostedLobbyCount(),
           )}
         </div>
       </div>
@@ -245,17 +267,34 @@ export class GameModeSelector extends LitElement {
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
 
+  // Number of open hosted lobbies waiting in the browser; shown as a chip
+  // on the Join button.
+  private hostedLobbyCount(): number {
+    return this.lobbies?.games?.hosted?.length ?? 0;
+  }
+
   private renderSmallActionCard(
     title: string,
     onClick: () => void,
     bgClass: string = CARD_BG,
+    badge?: number,
   ) {
     return html`
       <button
         @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
+        ?disabled=${!this.inputValid}
+        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
+          .inputValid
+          ? "opacity-50 cursor-not-allowed pointer-events-none"
+          : ""}"
       >
         ${title}
+        ${badge
+          ? html`<span
+              class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal"
+              >${badge}</span
+            >`
+          : nothing}
       </button>
     `;
   }
@@ -299,7 +338,11 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)]"
+        ?disabled=${!this.inputValid}
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${!this
+          .inputValid
+          ? "opacity-50 cursor-not-allowed pointer-events-none"
+          : ""}"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div

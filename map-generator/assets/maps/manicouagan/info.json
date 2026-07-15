@@ -1,5 +1,9 @@
 {
+  "id": "Manicouagan",
   "name": "Manicouagan",
+  "translation_key": "map.manicouagan",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [784, 1034],

@@ -1,0 +1,326 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [1052, 1023],
+      "flag": "Nunavut",
+      "name": "Arctic Bay"
+    },
+    {
+      "coordinates": [2400, 400],
+      "flag": "is",
+      "name": "Austurland"
+    },
+    {
+      "coordinates": [601, 1361],
+      "flag": "Nunavut",
+      "name": "Bathurst Inlet"
+    },
+    {
+      "coordinates": [1365, 1065],
+      "flag": "Nunavut",
+      "name": "Clyde River"
+    },
+    {
+      "coordinates": [1880, 319],
+      "flag": "gl",
+      "name": "Daneborg"
+    },
+    {
+      "coordinates": [120, 1566],
+      "flag": "northwestterritories",
+      "name": "Fort Simpson"
+    },
+    {
+      "coordinates": [826, 1277],
+      "flag": "Nunavut",
+      "name": "Gjoa Haven"
+    },
+    {
+      "coordinates": [2069, 1221],
+      "flag": "gl",
+      "name": "Ivittuut"
+    },
+    {
+      "coordinates": [1862, 1014],
+      "flag": "gl",
+      "name": "Kangerlussuaq"
+    },
+    {
+      "coordinates": [1461, 1446],
+      "flag": "Nunavut",
+      "name": "Kimmirut"
+    },
+    {
+      "coordinates": [1328, 1440],
+      "flag": "Nunavut",
+      "name": "Kinggait"
+    },
+    {
+      "coordinates": [980, 1316],
+      "flag": "Nunavut",
+      "name": "Kugaaruk"
+    },
+    {
+      "coordinates": [387, 1260],
+      "flag": "Nunavut",
+      "name": "Kugluktuk"
+    },
+    {
+      "coordinates": [2115, 808],
+      "flag": "gl",
+      "name": "Kulusuk"
+    },
+    {
+      "coordinates": [1852, 1113],
+      "flag": "gl",
+      "name": "Maniitsoq"
+    },
+    {
+      "coordinates": [1935, 414],
+      "flag": "gl",
+      "name": "Mestersvig"
+    },
+    {
+      "coordinates": [1595, 337],
+      "flag": "gl",
+      "name": "NE National Park"
+    },
+    {
+      "coordinates": [2234, 1199],
+      "flag": "gl",
+      "name": "Nanortalik"
+    },
+    {
+      "coordinates": [2154, 1223],
+      "flag": "gl",
+      "name": "Narsaq"
+    },
+    {
+      "coordinates": [1072, 1395],
+      "flag": "Nunavut",
+      "name": "Naujaat"
+    },
+    {
+      "coordinates": [88, 1258],
+      "flag": "northwestterritories",
+      "name": "Norman Wells"
+    },
+    {
+      "coordinates": [1218, 413],
+      "flag": "gl",
+      "name": "Nyboe Land"
+    },
+    {
+      "coordinates": [2025, 1211],
+      "flag": "gl",
+      "name": "Paamiut"
+    },
+    {
+      "coordinates": [1531, 1247],
+      "flag": "Nunavut",
+      "name": "Pangnirtung"
+    },
+    {
+      "coordinates": [255, 1125],
+      "flag": "northwestterritories",
+      "name": "Paulatuk"
+    },
+    {
+      "coordinates": [1321, 218],
+      "flag": "gl",
+      "name": "Peary Land"
+    },
+    {
+      "coordinates": [1787, 962],
+      "flag": "gl",
+      "name": "Qasigiannguit"
+    },
+    {
+      "coordinates": [1692, 960],
+      "flag": "gl",
+      "name": "Qeqertarsuaq"
+    },
+    {
+      "coordinates": [1965, 1176],
+      "flag": "gl",
+      "name": "Qeqertarsuatsiaat"
+    },
+    {
+      "coordinates": [329, 952],
+      "flag": "northwestterritories",
+      "name": "Sachs harbour"
+    },
+    {
+      "coordinates": [1179, 1508],
+      "flag": "Nunavut",
+      "name": "Salliq"
+    },
+    {
+      "coordinates": [1801, 1055],
+      "flag": "gl",
+      "name": "Sisimiut"
+    },
+    {
+      "coordinates": [892, 1198],
+      "flag": "Nunavut",
+      "name": "Taloyoak"
+    },
+    {
+      "coordinates": [1266, 655],
+      "flag": "us",
+      "name": "Thule AFB"
+    },
+    {
+      "coordinates": [86, 1341],
+      "flag": "northwestterritories",
+      "name": "Tulita"
+    },
+    {
+      "coordinates": [1495, 737],
+      "flag": "gl",
+      "name": "Upernavik"
+    },
+    {
+      "coordinates": [1670, 818],
+      "flag": "gl",
+      "name": "Uummannaq"
+    },
+    {
+      "coordinates": [359, 1450],
+      "flag": "northwestterritories",
+      "name": "Wekweeti"
+    },
+    {
+      "coordinates": [1819, 325],
+      "flag": "gl",
+      "name": "Zackenberg"
+    }
+  ],
+  "categories": ["north_america"],
+  "id": "NorthwestPassage",
+  "map": {
+    "height": 1664,
+    "num_land_tiles": 1569905,
+    "width": 2500
+  },
+  "map16x": {
+    "height": 416,
+    "num_land_tiles": 89831,
+    "width": 625
+  },
+  "map4x": {
+    "height": 832,
+    "num_land_tiles": 379907,
+    "width": 1250
+  },
+  "multiplayer_frequency": 5,
+  "name": "Northwest Passage",
+  "nations": [
+    {
+      "coordinates": [1203, 592],
+      "flag": "gl",
+      "name": "Qaanaaq"
+    },
+    {
+      "coordinates": [2104, 125],
+      "flag": "sj",
+      "name": "Jan Mayen"
+    },
+    {
+      "coordinates": [2391, 513],
+      "flag": "is",
+      "name": "Reykjavik"
+    },
+    {
+      "coordinates": [1906, 1159],
+      "flag": "gl",
+      "name": "Nuuk"
+    },
+    {
+      "coordinates": [2200, 1194],
+      "flag": "gl",
+      "name": "Qaqortoq"
+    },
+    {
+      "coordinates": [2100, 823],
+      "flag": "gl",
+      "name": "Tasiilaq"
+    },
+    {
+      "coordinates": [2010, 410],
+      "flag": "gl",
+      "name": "Ittoqqortoormiit"
+    },
+    {
+      "coordinates": [1439, 41],
+      "flag": "gl",
+      "name": "Nord"
+    },
+    {
+      "coordinates": [1758, 897],
+      "flag": "gl",
+      "name": "Ilulissat"
+    },
+    {
+      "coordinates": [1052, 362],
+      "flag": "Nunavut",
+      "name": "Alert"
+    },
+    {
+      "coordinates": [862, 792],
+      "flag": "Nunavut",
+      "name": "Resolute"
+    },
+    {
+      "coordinates": [1208, 1009],
+      "flag": "Nunavut",
+      "name": "Pond Inlet"
+    },
+    {
+      "coordinates": [1479, 1317],
+      "flag": "Nunavut",
+      "name": "Iqaluit"
+    },
+    {
+      "coordinates": [903, 1643],
+      "flag": "Nunavut",
+      "name": "Rankin Inlet"
+    },
+    {
+      "coordinates": [578, 1216],
+      "flag": "Nunavut",
+      "name": "Cambridge Bay"
+    },
+    {
+      "coordinates": [1022, 759],
+      "flag": "Nunavut",
+      "name": "Grise Fiord"
+    },
+    {
+      "coordinates": [361, 1592],
+      "flag": "northwestterritories",
+      "name": "Yellowknife"
+    },
+    {
+      "coordinates": [629, 1612],
+      "flag": "Nunavut",
+      "name": "Baker Lake"
+    },
+    {
+      "coordinates": [1118, 1235],
+      "flag": "Nunavut",
+      "name": "Igloolik"
+    },
+    {
+      "coordinates": [418, 1139],
+      "flag": "northwestterritories",
+      "name": "Ulukhaktok"
+    },
+    {
+      "coordinates": [51, 1024],
+      "flag": "northwestterritories",
+      "name": "Inuvik"
+    }
+  ],
+  "translation_key": "map.northwestpassage"
+}

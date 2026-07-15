@@ -1,5 +1,10 @@
 {
+  "id": "GulfOfStLawrence",
   "name": "Gulf of St. Lawrence",
+  "translation_key": "map.gulfofstlawrence",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 4,
+  "special_team_count": 3,
   "nations": [
     {
       "coordinates": [88, 364],
@@ -131,5 +136,27 @@
       "name": "Yarmouth",
       "flag": "ca_ns"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "3": [
+      {
+        "height": 500,
+        "width": 900,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1348,
+        "width": 720,
+        "x": 900,
+        "y": 0
+      },
+      {
+        "height": 848,
+        "width": 900,
+        "x": 0,
+        "y": 500
+      }
+    ]
+  }
 }

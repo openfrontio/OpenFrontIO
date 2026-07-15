@@ -25,7 +25,7 @@ GET https://api.openfront.io/public/games
 - `end` (required): ISO 8601 timestamp
 - `type` (optional): Game type, must be one of `[Private, Public, Singleplayer]`
 - `mode` (optional): Game mode, must be one of `[Free For All, Team]`
-- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1]`
+- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1, 2v2]`
 - `playerTeams` (optional): Player team configuration (e.g. `Duos`)
 - `limit` (optional): Number of results (max 1000, default 50)
 - `offset` (optional): Pagination offset
@@ -118,6 +118,58 @@ GET https://api.openfront.io/public/player/:playerId/sessions
 
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR/sessions"
+```
+
+### Get Player Games
+
+Retrieve a player's personal game history, newest first. Uses keyset (cursor)
+pagination rather than the `page`/`limit` scheme used elsewhere.
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/player/:playerId/games
+```
+
+**Query Parameters:**
+
+- `filter` (optional): Mode bucket, one of `[ffa, team, hvn, ranked]`. Omit for all modes.
+- `type` (optional): Game type, one of `[public, private, singleplayer]`. Omit for all types. `filter` and `type` are orthogonal and may be combined.
+- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it.
+
+**Response:**
+
+```json
+{
+  "results": [
+    {
+      "gameId": "abc123",
+      "start": "2026-05-17T21:04:00.000Z",
+      "durationSeconds": 1234,
+      "map": "World",
+      "mode": "Team",
+      "type": "Public",
+      "playerTeams": "Duos",
+      "rankedType": "unranked",
+      "result": "victory",
+      "totalPlayers": 8,
+      "username": "alice",
+      "clanTag": "ABC"
+    }
+  ],
+  "nextCursor": "opaque-token"
+}
+```
+
+- `result` is one of `[victory, defeat, incomplete]` (`incomplete` = no recorded winner).
+- `playerTeams`, `totalPlayers`, and `clanTag` may be `null`.
+- `nextCursor` is `null` when there are no more games.
+- `username`/`clanTag` reflect the identity the player used in that specific game.
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/player/HabCsQYR/games?filter=team&type=public"
 ```
 
 ## Clans

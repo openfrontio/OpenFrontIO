@@ -1,4 +1,6 @@
 {
+  "categories": ["asia"],
+  "id": "Yenisei",
   "map": {
     "height": 1500,
     "num_land_tiles": 1207315,
@@ -14,6 +16,7 @@
     "num_land_tiles": 294828,
     "width": 600
   },
+  "multiplayer_frequency": 6,
   "name": "Yenisei",
   "nations": [
     {
@@ -46,5 +49,6 @@
       "flag": "ru",
       "name": "Northern Island"
     }
-  ]
+  ],
+  "translation_key": "map.yenisei"
 }

@@ -1,5 +1,9 @@
 {
+  "id": "NewYorkCity",
   "name": "New York City",
+  "translation_key": "map.newyorkcity",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [127, 1323],

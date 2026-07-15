@@ -28,6 +28,16 @@ describe("ClientMsgRateLimiter", () => {
       }
       expect(limiter.check(CLIENT_B, "intent", SMALL)).toBe("ok");
     });
+
+    it("allows intents up to MAX_INTENT_SIZE", () => {
+      const limiter = new ClientMsgRateLimiter();
+      expect(limiter.check(CLIENT_A, "intent", 2000)).toBe("ok");
+    });
+
+    it("kicks intents exceeding MAX_INTENT_SIZE", () => {
+      const limiter = new ClientMsgRateLimiter();
+      expect(limiter.check(CLIENT_A, "intent", 2001)).toBe("kick");
+    });
   });
 
   describe("non-intent messages", () => {
@@ -47,20 +57,20 @@ describe("ClientMsgRateLimiter", () => {
   });
 
   describe("total bytes limit", () => {
-    it("kicks when cumulative bytes reach 2MB", () => {
+    it("kicks when cumulative bytes reach 5MB", () => {
       const limiter = new ClientMsgRateLimiter();
-      const chunkSize = 512 * 1024; // 512KB
-      // Send 3 chunks = 1.5MB, should be ok
-      for (let i = 0; i < 3; i++) {
+      const chunkSize = 1024 * 1024; // 1MB
+      // Send 4 chunks = 4MB, should be ok
+      for (let i = 0; i < 4; i++) {
         expect(limiter.check(CLIENT_A, "other", chunkSize)).toBe("ok");
       }
-      // 4th chunk pushes to 2MB, should kick
+      // 5th chunk pushes to 5MB, should kick
       expect(limiter.check(CLIENT_A, "other", chunkSize)).toBe("kick");
     });
 
     it("byte tracking is per client", () => {
       const limiter = new ClientMsgRateLimiter();
-      const almostFull = 2 * 1024 * 1024 - 1;
+      const almostFull = 5 * 1024 * 1024 - 1;
       expect(limiter.check(CLIENT_A, "other", almostFull)).toBe("ok");
       // CLIENT_B should still be fine
       expect(limiter.check(CLIENT_B, "other", 100)).toBe("ok");

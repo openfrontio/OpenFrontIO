@@ -23,10 +23,6 @@ describe("Stats", () => {
       new PlayerInfo("boat dude", PlayerType.Human, "client2", "player_2_id"),
     ]);
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player1 = game.player("player_1_id");
     player2 = game.player("player_2_id");
   });
@@ -243,10 +239,41 @@ describe("Stats", () => {
     });
   });
 
+  test("recordKill", () => {
+    stats.recordKill(player1, player2, 30);
+    stats.recordKill(player1, player2, 35);
+    expect(stats.getPlayerStats(player1)?.kills).toStrictEqual([
+      { victim: "client2", tick: 30n },
+      { victim: "client2", tick: 35n },
+    ]);
+    expect(stats.getPlayerStats(player2)?.kills).toBeUndefined();
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(
       '{"client1":{"units":{"port":["0","0","0","1"]}}}',
+    );
+  });
+
+  test("recordFinalTiles", () => {
+    stats.recordFinalTiles(player1, 42);
+    expect(stats.getPlayerStats(player1)?.finalTiles).toBe(42n);
+  });
+
+  test("setWinner snapshots finalTiles for each player", () => {
+    let count = 0;
+    game.map().forEachTile((tile) => {
+      if (count >= 5) return;
+      if (!game.map().isLand(tile)) return;
+      player1.conquer(tile);
+      count++;
+    });
+    game.setWinner(player1, game.stats().stats());
+    const tiles = player1.numTilesOwned();
+    expect(tiles).toBeGreaterThan(0);
+    expect(game.stats().getPlayerStats(player1)?.finalTiles).toBe(
+      BigInt(tiles),
     );
   });
 });

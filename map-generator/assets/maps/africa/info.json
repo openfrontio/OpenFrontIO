@@ -1,5 +1,10 @@
 {
+  "id": "Africa",
   "name": "Africa",
+  "translation_key": "map.africa",
+  "categories": ["featured", "continental", "africa"],
+  "multiplayer_frequency": 7,
+  "featured_rank": 6,
   "nations": [
     {
       "coordinates": [1144, 1894],
@@ -180,6 +185,46 @@
       "coordinates": [876, 1049],
       "name": "Gabon",
       "flag": "ga"
+    },
+    {
+      "coordinates": [355, 1500],
+      "name": "Saint Helena",
+      "flag": "sh"
+    },
+    {
+      "coordinates": [127, 279],
+      "name": "Canary Islands",
+      "flag": "ic"
+    },
+    {
+      "coordinates": [1428, 90],
+      "name": "Cyprus",
+      "flag": "cy"
+    },
+    {
+      "coordinates": [1707, 1381],
+      "name": "Comoros",
+      "flag": "km"
+    },
+    {
+      "coordinates": [1758, 1411],
+      "name": "Mayotte",
+      "flag": "yt"
+    },
+    {
+      "coordinates": [117, 1278],
+      "name": "Ascension Island",
+      "flag": "sh-ac"
+    },
+    {
+      "coordinates": [756, 964],
+      "name": "Equatorial Guinea",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [697, 1053],
+      "name": "Sao Tome and Principe",
+      "flag": "st"
     }
   ]
 }

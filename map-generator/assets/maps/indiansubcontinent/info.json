@@ -1,0 +1,269 @@
+{
+  "id": "IndianSubcontinent",
+  "name": "Indian Subcontinent",
+  "translation_key": "map.indiansubcontinent",
+  "categories": ["asia"],
+  "multiplayer_frequency": 8,
+  "nations": [
+    {
+      "coordinates": [1601, 840],
+      "name": "Bangladesh",
+      "flag": "bd"
+    },
+    {
+      "coordinates": [1907, 924],
+      "name": "Myanmar",
+      "flag": "mm"
+    },
+    {
+      "coordinates": [1764, 529],
+      "name": "Bhutan",
+      "flag": "bt"
+    },
+    {
+      "coordinates": [1338, 491],
+      "name": "Nepal",
+      "flag": "np"
+    },
+    {
+      "coordinates": [288, 244],
+      "name": "Afghanistan",
+      "flag": "af"
+    },
+    {
+      "coordinates": [1550, 167],
+      "name": "Tibet",
+      "flag": "tibet"
+    },
+    {
+      "coordinates": [1952, 26],
+      "name": "China",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1086, 1735],
+      "name": "Sri Lanka",
+      "flag": "lk"
+    },
+    {
+      "coordinates": [1975, 1910],
+      "name": "Aceh",
+      "flag": "Aceh"
+    },
+    {
+      "coordinates": [1799, 1466],
+      "name": "Andaman & Nicobar Islands",
+      "flag": "in"
+    },
+    {
+      "coordinates": [632, 1566],
+      "name": "Lakshadweep",
+      "flag": "in"
+    },
+    {
+      "coordinates": [685, 1807],
+      "name": "Maldives",
+      "flag": "mv"
+    },
+    {
+      "coordinates": [883, 1595],
+      "name": "Kerala",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1051, 1586],
+      "name": "Tamil Nadu",
+      "flag": "in"
+    },
+    {
+      "coordinates": [783, 1322],
+      "name": "Karnataka",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1057, 1256],
+      "name": "Andhra Pradesh",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1007, 1065],
+      "name": "Telangana",
+      "flag": "in"
+    },
+    {
+      "coordinates": [787, 998],
+      "name": "Maharashtra",
+      "flag": "in"
+    },
+    {
+      "coordinates": [706, 1141],
+      "name": "Goa",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1391, 906],
+      "name": "Odisha",
+      "flag": "in"
+    },
+    {
+      "coordinates": [565, 892],
+      "name": "Gujarat",
+      "flag": "in"
+    },
+    {
+      "coordinates": [961, 717],
+      "name": "Madhya Pradesh",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1120, 895],
+      "name": "Chhattisgarh",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1508, 825],
+      "name": "West Bengal",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1317, 717],
+      "name": "Jharkhand",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1379, 608],
+      "name": "Bihar",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1519, 506],
+      "name": "Sikkim",
+      "flag": "Sikkim"
+    },
+    {
+      "coordinates": [1738, 668],
+      "name": "Assam",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1194, 535],
+      "name": "Uttar Pradesh",
+      "flag": "in"
+    },
+    {
+      "coordinates": [735, 611],
+      "name": "Rajasthan",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1624, 507],
+      "name": "Meghalaya",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1658, 759],
+      "name": "Tripura",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1790, 834],
+      "name": "Mizoram",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1878, 762],
+      "name": "Manipur",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1952, 637],
+      "name": "Nagaland",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1957, 480],
+      "name": "Arunachal Pradesh",
+      "flag": "in"
+    },
+    {
+      "coordinates": [884, 439],
+      "name": "Haryana",
+      "flag": "in"
+    },
+    {
+      "coordinates": [840, 305],
+      "name": "Punjab",
+      "flag": "in"
+    },
+    {
+      "coordinates": [1082, 384],
+      "name": "Uttarakhand",
+      "flag": "in"
+    },
+    {
+      "coordinates": [948, 236],
+      "name": "Himachal Pradesh",
+      "flag": "in"
+    },
+    {
+      "coordinates": [823, 11],
+      "name": "Jammu and Kashmir",
+      "flag": "Jammu and Kashmir"
+    },
+    {
+      "coordinates": [51, 580],
+      "name": "Iran",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [81, 24],
+      "name": "Tajikistan",
+      "flag": "tj"
+    },
+    {
+      "coordinates": [978, 550],
+      "name": "New Delhi",
+      "flag": "in"
+    },
+    {
+      "coordinates": [468, 692],
+      "name": "Sindh",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [309, 529],
+      "name": "Balochistan",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [637, 464],
+      "name": "Punjab",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [514, 366],
+      "name": "Fata",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [616, 224],
+      "name": "Khyber Pakhtunkhwa",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [740, 161],
+      "name": "Azad Kashmir",
+      "flag": "Azad Kashmir"
+    },
+    {
+      "coordinates": [628, 12],
+      "name": "Gilgit-Baltistan",
+      "flag": "pk"
+    },
+    {
+      "coordinates": [1065, 1454],
+      "name": "Puducherry",
+      "flag": "in"
+    }
+  ]
+}

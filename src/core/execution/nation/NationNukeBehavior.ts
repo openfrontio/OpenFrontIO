@@ -99,7 +99,7 @@ export class NationNukeBehavior {
     }
     const range = this.game.config().nukeMagnitudes(nukeType).outer;
 
-    const structures = nukeTarget.units(...Structures.types);
+    const structures = nukeTarget.units(Structures.types);
     const structureTiles = structures.map((u) => u.tile());
     const difficulty = this.game.config().gameConfig().difficulty;
     // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
@@ -144,6 +144,12 @@ export class NationNukeBehavior {
           difficulty === Difficulty.Impossible) &&
         this.isTrajectoryInterceptableBySam(spawnTile, tile)
       ) {
+        continue;
+      }
+
+      // On all difficulties, avoid trajectories that cross impassable terrain
+      // (the simulation aborts such launches — see NukeExecution).
+      if (this.isTrajectoryBlockedByImpassable(spawnTile, tile)) {
         continue;
       }
 
@@ -278,7 +284,7 @@ export class NationNukeBehavior {
       if (this.player.isFriendly(other)) continue;
       const tilesOwned = other.numTilesOwned();
       if (tilesOwned === 0) continue;
-      const structures = other.units(...Structures.types);
+      const structures = other.units(Structures.types);
       let levelSum = 0;
       for (const s of structures) levelSum += s.level();
       // Skip players with too few structures regardless of density
@@ -627,6 +633,29 @@ export class NationNukeBehavior {
     return false;
   }
 
+  /**
+   * Check if the parabolic nuke trajectory from spawnTile to targetTile
+   * crosses any impassable terrain. Mirrors the check in NukeExecution that
+   * aborts such launches
+   */
+  private isTrajectoryBlockedByImpassable(
+    spawnTile: TileRef,
+    targetTile: TileRef,
+  ): boolean {
+    const pathFinder = UniversalPathFinding.Parabola(this.game, {
+      increment: this.game.config().defaultNukeSpeed(),
+      distanceBasedHeight: true,
+      directionUp: true,
+    });
+    const path = pathFinder.findPath(spawnTile, targetTile) ?? [];
+    for (const tile of path) {
+      if (this.game.isImpassable(tile)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private isValidNukeTile(t: TileRef, nukeTarget: Player | null): boolean {
     const difficulty = this.game.config().gameConfig().difficulty;
 
@@ -855,6 +884,10 @@ export class NationNukeBehavior {
         });
         const trajectory = pathFinder.findPath(silo.tile(), targetTile) ?? [];
         if (trajectory.length === 0) continue;
+        // Skip silos whose trajectory crosses impassable terrain — the
+        // simulation would abort these launches (see NukeExecution).
+        if (this.isTrajectoryBlockedByImpassable(silo.tile(), targetTile))
+          continue;
         allAvailableSilos.push({
           silo,
           slots: availableSlots,
@@ -1044,6 +1077,8 @@ export class NationNukeBehavior {
 
     // First pass: find silos with an unblocked trajectory to the failed
     // target. Only these contribute slots to the overwhelm plan.
+    // "Unblocked" means not interceptable by non-covering enemy SAMs AND
+    // not crossing impassable terrain (the sim aborts those launches).
     const unblockedSilos: Unit[] = [];
     for (const silo of silos) {
       if (
@@ -1051,6 +1086,10 @@ export class NationNukeBehavior {
           silo.tile(),
           failedTarget.targetTile,
           failedTarget.coveringSamIds,
+        ) &&
+        !this.isTrajectoryBlockedByImpassable(
+          silo.tile(),
+          failedTarget.targetTile,
         )
       ) {
         unblockedSilos.push(silo);

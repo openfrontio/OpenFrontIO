@@ -1,7 +1,10 @@
 {
+  "categories": ["featured", "continental", "africa"],
+  "featured_rank": 6,
+  "id": "Africa",
   "map": {
     "height": 2032,
-    "num_land_tiles": 2183186,
+    "num_land_tiles": 2183279,
     "width": 1948
   },
   "map16x": {
@@ -14,6 +17,7 @@
     "num_land_tiles": 537561,
     "width": 974
   },
+  "multiplayer_frequency": 7,
   "name": "Africa",
   "nations": [
     {
@@ -195,6 +199,47 @@
       "coordinates": [876, 1049],
       "flag": "ga",
       "name": "Gabon"
+    },
+    {
+      "coordinates": [355, 1500],
+      "flag": "sh",
+      "name": "Saint Helena"
+    },
+    {
+      "coordinates": [127, 279],
+      "flag": "ic",
+      "name": "Canary Islands"
+    },
+    {
+      "coordinates": [1428, 90],
+      "flag": "cy",
+      "name": "Cyprus"
+    },
+    {
+      "coordinates": [1707, 1381],
+      "flag": "km",
+      "name": "Comoros"
+    },
+    {
+      "coordinates": [1758, 1411],
+      "flag": "yt",
+      "name": "Mayotte"
+    },
+    {
+      "coordinates": [117, 1278],
+      "flag": "sh-ac",
+      "name": "Ascension Island"
+    },
+    {
+      "coordinates": [756, 964],
+      "flag": "gq",
+      "name": "Equatorial Guinea"
+    },
+    {
+      "coordinates": [697, 1053],
+      "flag": "st",
+      "name": "Sao Tome and Principe"
     }
-  ]
+  ],
+  "translation_key": "map.africa"
 }

@@ -15,6 +15,7 @@ export interface GameMap {
   isValidCoord(x: number, y: number): boolean;
   // Terrain getters
   isLand(ref: TileRef): boolean;
+  isImpassable(ref: TileRef): boolean;
   isOceanShore(ref: TileRef): boolean;
   isOcean(ref: TileRef): boolean;
   isShoreline(ref: TileRef): boolean;
@@ -36,8 +37,21 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors(). All cardinal-neighbor helpers share this order so
+  // they are interchangeable even in order-sensitive simulation code.
+  forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void;
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. out must have length >= 4; reuse it
+  // across calls to avoid allocation in hot loops.
+  neighbors4(ref: TileRef, out: TileRef[]): number;
+  // Zero-allocation neighbor iteration including diagonals, in dx-major
+  // order: (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1).
+  forEachNeighborWithDiag(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void;
   isWater(ref: TileRef): boolean;
-  isLake(ref: TileRef): boolean;
   isShore(ref: TileRef): boolean;
   cost(ref: TileRef): number;
   terrainType(ref: TileRef): TerrainType;
@@ -72,6 +86,20 @@ export interface GameMap {
    */
   updateTile(tile: TileRef, state: number): boolean;
 
+  /**
+   * Direct access to the per-tile state buffer for zero-copy consumers
+   * (e.g. WebGL renderer uploading to a R16UI texture).
+   *
+   * The returned array is a live reference — it is mutated by `updateTile()`
+   * each tick. Callers must not write to it.
+   *
+   * The bit layout of each `uint16` matches the renderer's tile state:
+   *   bits  0-11: ownerID
+   *   bit   13:  fallout
+   *   bit   14:  defense bonus
+   */
+  tileStateBuffer(): Uint16Array;
+
   numTilesWithFallout(): number;
 }
 
@@ -83,16 +111,23 @@ export class GameMapImpl implements GameMap {
   private readonly width_: number;
   private readonly height_: number;
 
-  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
-  private readonly refToX: number[];
-  private readonly refToY: number[];
-  private readonly yToRef: number[];
+  // Row-start ref per y, so ref(x, y) avoids a multiply. x/y are derived from
+  // a ref arithmetically (ref % width, ref / width) rather than via per-tile
+  // lookup tables — two Uint16 tables cost 4 bytes per tile (~32 MB on the
+  // largest maps) and their random-access reads miss cache more often than
+  // the division costs.
+  private readonly yToRef: Int32Array;
 
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
   private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
+  // Land tiles with magnitude == IMPASSABLE_MAGNITUDE are impassable terrain:
+  // solid ground that cannot be owned, attacked, or nuked, and that nuke
+  // trajectories cannot cross. Rendered as the map background colour so the
+  // map appears non-rectangular.
+  private static readonly IMPASSABLE_MAGNITUDE = 31;
 
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_MASK = 0xfff;
@@ -115,18 +150,9 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
-    // Precompute the LUTs
-    let ref = 0;
-    this.refToX = new Array(width * height);
-    this.refToY = new Array(width * height);
-    this.yToRef = new Array(height);
+    this.yToRef = new Int32Array(height);
     for (let y = 0; y < height; y++) {
-      this.yToRef[y] = ref;
-      for (let x = 0; x < width; x++) {
-        this.refToX[ref] = x;
-        this.refToY[ref] = y;
-        ref++;
-      }
+      this.yToRef[y] = y * width;
     }
   }
   numTilesWithFallout(): number {
@@ -141,15 +167,15 @@ export class GameMapImpl implements GameMap {
   }
 
   isValidRef(ref: TileRef): boolean {
-    return ref >= 0 && ref < this.refToX.length;
+    return ref >= 0 && ref < this.width_ * this.height_;
   }
 
   x(ref: TileRef): number {
-    return this.refToX[ref];
+    return ref % this.width_;
   }
 
   y(ref: TileRef): number {
-    return this.refToY[ref];
+    return (ref / this.width_) | 0;
   }
 
   cell(ref: TileRef): Cell {
@@ -182,10 +208,25 @@ export class GameMapImpl implements GameMap {
     return Boolean(this.terrain[ref] & (1 << GameMapImpl.IS_LAND_BIT));
   }
 
-  isOceanShore(ref: TileRef): boolean {
+  isImpassable(ref: TileRef): boolean {
     return (
-      this.isLand(ref) && this.neighbors(ref).some((tr) => this.isOcean(tr))
+      this.isLand(ref) &&
+      (this.terrain[ref] & GameMapImpl.MAGNITUDE_MASK) ===
+        GameMapImpl.IMPASSABLE_MAGNITUDE
     );
+  }
+
+  isOceanShore(ref: TileRef): boolean {
+    if (!this.isLand(ref)) {
+      return false;
+    }
+    const w = this.width_;
+    const x = ref % w;
+    if (x !== 0 && this.isOcean(ref - 1)) return true;
+    if (x !== w - 1 && this.isOcean(ref + 1)) return true;
+    if (ref >= w && this.isOcean(ref - w)) return true;
+    if (ref < (this.height_ - 1) * w && this.isOcean(ref + w)) return true;
+    return false;
   }
 
   isOcean(ref: TileRef): boolean {
@@ -205,7 +246,7 @@ export class GameMapImpl implements GameMap {
   }
 
   setWater(ref: TileRef): void {
-    if (!this.isLand(ref)) return;
+    if (!this.isLand(ref) || this.isImpassable(ref)) return;
     this.terrain[ref] = 0; // Lake water: no land, no ocean, no shoreline, magnitude 0
     this.numLandTiles_--;
   }
@@ -275,9 +316,16 @@ export class GameMapImpl implements GameMap {
   }
 
   isBorder(ref: TileRef): boolean {
-    return this.neighbors(ref).some(
-      (tr) => this.ownerID(tr) !== this.ownerID(ref),
-    );
+    const w = this.width_;
+    const x = ref % w;
+    const owner = this.ownerID(ref);
+    if (x !== 0 && this.ownerID(ref - 1) !== owner) return true;
+    if (x !== w - 1 && this.ownerID(ref + 1) !== owner) return true;
+    if (ref >= w && this.ownerID(ref - w) !== owner) return true;
+    if (ref < (this.height_ - 1) * w && this.ownerID(ref + w) !== owner) {
+      return true;
+    }
+    return false;
   }
 
   hasDefenseBonus(ref: TileRef): boolean {
@@ -297,10 +345,6 @@ export class GameMapImpl implements GameMap {
     return !this.isLand(ref);
   }
 
-  isLake(ref: TileRef): boolean {
-    return !this.isLand(ref) && !this.isOcean(ref);
-  }
-
   isShore(ref: TileRef): boolean {
     return this.isLand(ref) && this.isShoreline(ref);
   }
@@ -314,17 +358,19 @@ export class GameMapImpl implements GameMap {
   terrainType(ref: TileRef): TerrainType {
     if (this.isLand(ref)) {
       const magnitude = this.magnitude(ref);
+      if (magnitude >= GameMapImpl.IMPASSABLE_MAGNITUDE)
+        return TerrainType.Impassable;
       if (magnitude < 10) return TerrainType.Plains;
       if (magnitude < 20) return TerrainType.Highland;
       return TerrainType.Mountain;
     }
-    return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
+    return TerrainType.Ocean;
   }
 
   neighbors(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
-    const x = this.refToX[ref];
+    const x = ref % w;
 
     if (ref >= w) neighbors.push(ref - w);
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
@@ -332,6 +378,51 @@ export class GameMapImpl implements GameMap {
     if (x !== w - 1) neighbors.push(ref + 1);
 
     return neighbors;
+  }
+
+  forEachNeighbor(ref: TileRef, callback: (neighbor: TileRef) => void): void {
+    const w = this.width_;
+    const x = ref % w;
+
+    if (ref >= w) callback(ref - w);
+    if (ref < (this.height_ - 1) * w) callback(ref + w);
+    if (x !== 0) callback(ref - 1);
+    if (x !== w - 1) callback(ref + 1);
+  }
+
+  neighbors4(ref: TileRef, out: TileRef[]): number {
+    const w = this.width_;
+    const x = ref % w;
+    let n = 0;
+
+    if (ref >= w) out[n++] = ref - w;
+    if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
+    if (x !== 0) out[n++] = ref - 1;
+    if (x !== w - 1) out[n++] = ref + 1;
+    return n;
+  }
+
+  forEachNeighborWithDiag(
+    ref: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    const w = this.width_;
+    const x = ref % w;
+    const hasN = ref >= w;
+    const hasS = ref < (this.height_ - 1) * w;
+
+    if (x !== 0) {
+      if (hasN) callback(ref - 1 - w);
+      callback(ref - 1);
+      if (hasS) callback(ref - 1 + w);
+    }
+    if (hasN) callback(ref - w);
+    if (hasS) callback(ref + w);
+    if (x !== w - 1) {
+      if (hasN) callback(ref + 1 - w);
+      callback(ref + 1);
+      if (hasS) callback(ref + 1 + w);
+    }
   }
 
   forEachTile(fn: (tile: TileRef) => void): void {
@@ -384,21 +475,34 @@ export class GameMapImpl implements GameMap {
       q.push(tile);
     }
 
+    // Neighbors are enumerated inline in the same order as neighbors() to
+    // avoid allocating an array per visited tile.
+    const w = this.width_;
+    const southLimit = (this.height_ - 1) * w;
+    const visit = (n: TileRef) => {
+      if (!seen.has(n) && filter(this, n)) {
+        seen.add(n);
+        q.push(n);
+      }
+    };
     while (q.length > 0) {
       const curr = q.pop();
       if (curr === undefined) continue;
-      for (const n of this.neighbors(curr)) {
-        if (!seen.has(n) && filter(this, n)) {
-          seen.add(n);
-          q.push(n);
-        }
-      }
+      const x = curr % w;
+      if (curr >= w) visit(curr - w);
+      if (curr < southLimit) visit(curr + w);
+      if (x !== 0) visit(curr - 1);
+      if (x !== w - 1) visit(curr + 1);
     }
     return seen;
   }
 
   tileState(tile: TileRef): number {
     return this.state[tile];
+  }
+
+  tileStateBuffer(): Uint16Array {
+    return this.state;
   }
 
   /**

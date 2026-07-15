@@ -11,7 +11,7 @@ import {
   TerrainType,
   TerraNullius,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
@@ -26,8 +26,17 @@ export class AttackExecution implements Execution {
   private target: Player | TerraNullius;
 
   private mg: Game;
+  // Direct GameMap reference to skip the Game delegation hop in hot loops.
+  private map: GameMap;
 
   private attack: Attack | null = null;
+
+  // Cached smallIDs for integer owner comparisons in hot loops.
+  private ownerSmallID: number;
+  private targetSmallID: number;
+  // Reusable neighbor buffers to avoid closures/allocation in hot loops.
+  private nbuf: TileRef[] = [0, 0, 0, 0];
+  private nbuf2: TileRef[] = [0, 0, 0, 0];
 
   constructor(
     private startTroops: number | null = null,
@@ -50,6 +59,7 @@ export class AttackExecution implements Execution {
       return;
     }
     this.mg = mg;
+    this.map = mg.map();
 
     if (this._targetID !== null && !mg.hasPlayer(this._targetID)) {
       console.warn(`target ${this._targetID} not found`);
@@ -61,6 +71,8 @@ export class AttackExecution implements Execution {
       this._targetID === this.mg.terraNullius().id()
         ? mg.terraNullius()
         : mg.player(this._targetID);
+    this.ownerSmallID = this._owner.smallID();
+    this.targetSmallID = this.target.smallID();
 
     if (this._owner === this.target) {
       console.error(`Player ${this._owner} cannot attack itself`);
@@ -270,19 +282,24 @@ export class AttackExecution implements Execution {
         return;
       }
 
-      const [tileToConquer] = this.toConquer.dequeue();
+      const tileToConquer = this.toConquer.dequeue();
       this.attack.removeBorderTile(tileToConquer);
 
       let onBorder = false;
-      this.mg.forEachNeighbor(tileToConquer, (n) => {
-        if (!onBorder && this.mg.owner(n) === this._owner) {
+      const numNeighbors = this.map.neighbors4(tileToConquer, this.nbuf);
+      for (let i = 0; i < numNeighbors; i++) {
+        if (this.map.ownerID(this.nbuf[i]) === this.ownerSmallID) {
           onBorder = true;
+          break;
         }
-      });
-      if (this.mg.owner(tileToConquer) !== this.target || !onBorder) {
+      }
+      if (this.map.ownerID(tileToConquer) !== this.targetSmallID || !onBorder) {
         continue;
       }
-      if (!this.mg.isLand(tileToConquer)) {
+      if (
+        !this.map.isLand(tileToConquer) ||
+        this.map.isImpassable(tileToConquer)
+      ) {
         continue;
       }
       this.addNeighbors(tileToConquer);
@@ -322,23 +339,27 @@ export class AttackExecution implements Execution {
 
     const tickNow = this.mg.ticks(); // cache tick
 
-    this.mg.forEachNeighbor(tile, (neighbor) => {
+    const numNeighbors = this.map.neighbors4(tile, this.nbuf);
+    for (let i = 0; i < numNeighbors; i++) {
+      const neighbor = this.nbuf[i];
       if (
-        this.mg.isWater(neighbor) ||
-        this.mg.owner(neighbor) !== this.target
+        this.map.isWater(neighbor) ||
+        this.map.isImpassable(neighbor) ||
+        this.map.ownerID(neighbor) !== this.targetSmallID
       ) {
-        return;
+        continue;
       }
-      this.attack!.addBorderTile(neighbor);
+      this.attack.addBorderTile(neighbor);
       let numOwnedByMe = 0;
-      this.mg.forEachNeighbor(neighbor, (n) => {
-        if (this.mg.owner(n) === this._owner) {
+      const numInner = this.map.neighbors4(neighbor, this.nbuf2);
+      for (let j = 0; j < numInner; j++) {
+        if (this.map.ownerID(this.nbuf2[j]) === this.ownerSmallID) {
           numOwnedByMe++;
         }
-      });
+      }
 
       let mag: number;
-      switch (this.mg.terrainType(neighbor)) {
+      switch (this.map.terrainType(neighbor)) {
         case TerrainType.Plains:
           mag = 1;
           break;
@@ -358,7 +379,7 @@ export class AttackExecution implements Execution {
         tickNow;
 
       this.toConquer.enqueue(neighbor, priority);
-    });
+    }
   }
 
   private handleDeadDefender() {

@@ -143,6 +143,11 @@ export class AbstractGraph {
     return this._waterComponents?.getComponentId(tile) ?? 0;
   }
 
+  /** Returns the number of water tiles in the given component, or 0 if unknown. */
+  getComponentSize(componentId: number): number {
+    return this._waterComponents?.getComponentSize(componentId) ?? 0;
+  }
+
   getClusterKey(clusterX: number, clusterY: number): number {
     return clusterY * this.clustersX + clusterX;
   }

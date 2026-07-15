@@ -31,22 +31,6 @@ export function clanApiMockFactory() {
       limit: 10,
       pendingRequests: 0,
     })),
-    fetchClanStats: vi.fn(async () => ({
-      clanTag: "TST",
-      games: 10,
-      wins: 7,
-      losses: 3,
-      stats: {
-        total: { wins: 7, losses: 3 },
-        ffa: { wins: 3, losses: 2 },
-        team: { wins: 2, losses: 1 },
-        hvn: { wins: 1, losses: 0 },
-        ranked: { wins: 1, losses: 0 },
-        "1v1": { wins: 1, losses: 0 },
-      },
-      teamTypeWL: {},
-      teamCountWL: {},
-    })),
     fetchClans: vi.fn(async () => ({
       results: [],
       total: 0,
@@ -79,6 +63,13 @@ export function clanApiMockFactory() {
       page: 1,
       limit: 20,
     })),
+    fetchClanGames: vi.fn(async () => ({
+      results: [],
+      nextCursor: null,
+    })),
+    // ClanDetailView calls this when a clan has a discordUrl; mock the degraded
+    // plain-link result so view tests never reach the real Discord network.
+    fetchDiscordInvite: vi.fn(async (url: string) => ({ url, valid: true })),
   };
 }
 
@@ -116,12 +107,6 @@ export function authMockFactory() {
   return {
     getAuthHeader: vi.fn(async () => "Bearer test-token"),
     userAuth: vi.fn(async () => ({ jwt: "test-token", claims: {} })),
-  };
-}
-
-export function configLoaderMockFactory() {
-  return {
-    getRuntimeClientServerConfig: vi.fn(() => ({})),
   };
 }
 

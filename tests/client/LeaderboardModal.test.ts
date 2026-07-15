@@ -101,6 +101,7 @@ beforeEach(() => {
   );
 });
 
+import "../../src/client/components/baseComponents/Modal";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
 
 describe("LeaderboardModal", () => {
@@ -302,7 +303,7 @@ describe("LeaderboardModal", () => {
       expect(modal.tagName.toLowerCase()).toBe("leaderboard-modal");
     });
 
-    it("should close on Escape when open", () => {
+    it("should close on Escape when open", async () => {
       const mockModalEl = { open: vi.fn(), close: vi.fn() };
       Object.defineProperty(modal, "modalEl", {
         get: () => mockModalEl,
@@ -316,6 +317,9 @@ describe("LeaderboardModal", () => {
       );
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      // handleKeyDown awaits confirmBeforeClose() before closing, so the close
+      // is deferred to a later microtask — flush it before asserting.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect((modal as unknown as { isModalOpen: boolean }).isModalOpen).toBe(
         false,
       );
@@ -334,7 +338,14 @@ describe("LeaderboardModal", () => {
         }),
       });
 
-      const tab = modal.querySelector("#clan-leaderboard-tab");
+      modal.inline = true;
+      await modal.updateComplete;
+      const oModal = modal.querySelector("o-modal");
+      await (oModal as unknown as { updateComplete: Promise<unknown> })
+        .updateComplete;
+      const tab = oModal!.shadowRoot!.querySelector(
+        'button[role="tab"][data-key="clans"]',
+      );
       expect(tab).toBeTruthy();
 
       tab!.dispatchEvent(new MouseEvent("click", { bubbles: true }));

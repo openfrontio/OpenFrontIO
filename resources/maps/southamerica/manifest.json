@@ -1,4 +1,7 @@
 {
+  "categories": ["featured", "continental", "south_america"],
+  "featured_rank": 4,
+  "id": "SouthAmerica",
   "map": {
     "height": 2376,
     "num_land_tiles": 1411064,
@@ -14,7 +17,8 @@
     "num_land_tiles": 342275,
     "width": 872
   },
-  "name": "Americas",
+  "multiplayer_frequency": 5,
+  "name": "South America",
   "nations": [
     {
       "coordinates": [438, 58],
@@ -141,5 +145,6 @@
       "flag": "Sao Paulo",
       "name": "São Paulo"
     }
-  ]
+  ],
+  "translation_key": "map.southamerica"
 }

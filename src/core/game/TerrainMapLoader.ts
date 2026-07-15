@@ -4,6 +4,7 @@ import { GameMapLoader } from "./GameMapLoader";
 
 export type TerrainMapData = {
   nations: Nation[];
+  additionalNations: AdditionalNation[];
   gameMap: GameMap;
   miniGameMap: GameMap;
   teamGameSpawnAreas?: TeamGameSpawnAreas;
@@ -23,12 +24,22 @@ export interface MapManifest {
   map4x: MapMetadata;
   map16x: MapMetadata;
   nations: Nation[];
+  // Optional pool of fallback nation names used when a game requests more
+  // nations than the manifest defines. Picked at random; if still not enough,
+  // the remainder is generated procedurally.
+  additionalNations?: AdditionalNation[];
   teamGameSpawnAreas?: TeamGameSpawnAreas;
 }
 
 export interface Nation {
-  coordinates: [number, number];
-  flag: string;
+  coordinates?: [number, number];
+  flag?: string;
+  name: string;
+}
+
+export interface AdditionalNation {
+  coordinates?: [number, number];
+  flag?: string;
   name: string;
 }
 
@@ -58,10 +69,20 @@ export async function loadTerrainMap(
 
   if (mapSize === GameMapSize.Compact) {
     manifest.nations.forEach((nation) => {
-      nation.coordinates = [
-        Math.floor(nation.coordinates[0] / 2),
-        Math.floor(nation.coordinates[1] / 2),
-      ];
+      if (nation.coordinates !== undefined) {
+        nation.coordinates = [
+          Math.floor(nation.coordinates[0] / 2),
+          Math.floor(nation.coordinates[1] / 2),
+        ];
+      }
+    });
+    manifest.additionalNations?.forEach((nation) => {
+      if (nation.coordinates !== undefined) {
+        nation.coordinates = [
+          Math.floor(nation.coordinates[0] / 2),
+          Math.floor(nation.coordinates[1] / 2),
+        ];
+      }
     });
   }
 
@@ -82,6 +103,7 @@ export async function loadTerrainMap(
 
   const result = {
     nations: manifest.nations,
+    additionalNations: manifest.additionalNations ?? [],
     gameMap: gameMap,
     miniGameMap: miniMap,
     teamGameSpawnAreas,

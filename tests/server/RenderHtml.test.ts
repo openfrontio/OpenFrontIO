@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   clearAppShellContentCache,
   getAppShellContent,
@@ -12,7 +12,14 @@ describe("RenderHtml", () => {
   const originalGitCommit = process.env.GIT_COMMIT;
   let tempDir: string | null = null;
 
+  beforeEach(() => {
+    vi.stubEnv("NUM_WORKERS", "1");
+    vi.stubEnv("TURNSTILE_SITE_KEY", "test-key");
+    vi.stubEnv("DOMAIN", "localhost");
+  });
+
   afterEach(async () => {
+    vi.unstubAllEnvs();
     process.env.GIT_COMMIT = originalGitCommit;
     clearAppShellContentCache();
 
@@ -53,7 +60,7 @@ describe("RenderHtml", () => {
     setAppShellCacheHeaders(response);
 
     expect(headers.get("Cache-Control")).toBe(
-      "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+      "public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400",
     );
     expect(headers.get("Content-Type")).toBe("text/html");
   });

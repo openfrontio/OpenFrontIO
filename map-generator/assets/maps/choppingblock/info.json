@@ -1,0 +1,355 @@
+{
+  "id": "ChoppingBlock",
+  "name": "Chopping Block",
+  "translation_key": "map.choppingblock",
+  "categories": ["arcade"],
+  "multiplayer_frequency": 5,
+  "special_team_count": 4,
+  "nations": [
+    {
+      "coordinates": [230, 230],
+      "name": "Boxey",
+      "flag": ""
+    },
+    {
+      "coordinates": [230, 570],
+      "name": "Gridsly",
+      "flag": ""
+    },
+    {
+      "coordinates": [580, 230],
+      "name": "Blocko",
+      "flag": ""
+    },
+    {
+      "coordinates": [570, 570],
+      "name": "Squarm",
+      "flag": ""
+    },
+    {
+      "coordinates": [1030, 230],
+      "name": "Boximilian",
+      "flag": ""
+    },
+    {
+      "coordinates": [1030, 570],
+      "name": "Rectanglo",
+      "flag": ""
+    },
+    {
+      "coordinates": [1370, 230],
+      "name": "Cornerlius",
+      "flag": ""
+    },
+    {
+      "coordinates": [1380, 570],
+      "name": "Repeater",
+      "flag": ""
+    },
+    {
+      "coordinates": [230, 1030],
+      "name": "Derorrim",
+      "flag": ""
+    },
+    {
+      "coordinates": [230, 1380],
+      "name": "Boxedin",
+      "flag": ""
+    },
+    {
+      "coordinates": [580, 1040],
+      "name": "Mazely",
+      "flag": ""
+    },
+    {
+      "coordinates": [580, 1380],
+      "name": "Diagonalf",
+      "flag": ""
+    },
+    {
+      "coordinates": [1040, 1040],
+      "name": "Blockedhof",
+      "flag": ""
+    },
+    {
+      "coordinates": [1040, 1390],
+      "name": "Blockhead",
+      "flag": ""
+    },
+    {
+      "coordinates": [1380, 1035],
+      "name": "Chopin",
+      "flag": ""
+    },
+    {
+      "coordinates": [1380, 1390],
+      "name": "Hacker",
+      "flag": ""
+    },
+    {
+      "coordinates": [400, 160],
+      "name": "Slasher",
+      "flag": ""
+    },
+    {
+      "coordinates": [160, 410],
+      "name": "Brixs",
+      "flag": ""
+    },
+    {
+      "coordinates": [410, 650],
+      "name": "Plaido",
+      "flag": ""
+    },
+    {
+      "coordinates": [650, 415],
+      "name": "Harlequin",
+      "flag": ""
+    },
+    {
+      "coordinates": [410, 970],
+      "name": "Checkheir",
+      "flag": ""
+    },
+    {
+      "coordinates": [160, 1210],
+      "name": "Zigzag",
+      "flag": ""
+    },
+    {
+      "coordinates": [410, 1460],
+      "name": "Scaler",
+      "flag": ""
+    },
+    {
+      "coordinates": [650, 1220],
+      "name": "Crossed",
+      "flag": ""
+    },
+    {
+      "coordinates": [1210, 970],
+      "name": "Beeline",
+      "flag": ""
+    },
+    {
+      "coordinates": [960, 1220],
+      "name": "Bowtie",
+      "flag": ""
+    },
+    {
+      "coordinates": [1210, 1460],
+      "name": "Buckly",
+      "flag": ""
+    },
+    {
+      "coordinates": [1450, 1210],
+      "name": "Dexted",
+      "flag": ""
+    },
+    {
+      "coordinates": [1210, 170],
+      "name": "Flukes",
+      "flag": ""
+    },
+    {
+      "coordinates": [970, 410],
+      "name": "Jonqal",
+      "flag": ""
+    },
+    {
+      "coordinates": [1210, 650],
+      "name": "Huggins",
+      "flag": ""
+    },
+    {
+      "coordinates": [1460, 410],
+      "name": "Keeko",
+      "flag": ""
+    }
+  ],
+  "additionalNations": [
+    {
+      "name": "Repeaterer"
+    },
+    {
+      "name": "Checkered"
+    },
+    {
+      "name": "Plaid"
+    },
+    {
+      "name": "Gingham"
+    },
+    {
+      "name": "Tartan"
+    },
+    {
+      "name": "Madras"
+    },
+    {
+      "name": "Pinstripe"
+    },
+    {
+      "name": "Awning"
+    },
+    {
+      "name": "Argyle"
+    },
+    {
+      "name": "Houndstooth"
+    },
+    {
+      "name": "Herringbone"
+    },
+    {
+      "name": "Chevron"
+    },
+    {
+      "name": "Lattice"
+    },
+    {
+      "name": "Graph Check"
+    },
+    {
+      "name": "Windowpane"
+    },
+    {
+      "name": "Polka Dots"
+    },
+    {
+      "name": "Confetti"
+    },
+    {
+      "name": "Speckled"
+    },
+    {
+      "name": "Cheetah"
+    },
+    {
+      "name": "Zebra"
+    },
+    {
+      "name": "Tiger"
+    },
+    {
+      "name": "Giraffe"
+    },
+    {
+      "name": "Snakeskin"
+    },
+    {
+      "name": "Cowhide"
+    },
+    {
+      "name": "Camouflage"
+    },
+    {
+      "name": "Peacock"
+    },
+    {
+      "name": "Botanical"
+    },
+    {
+      "name": "Chintz"
+    },
+    {
+      "name": "Damask"
+    },
+    {
+      "name": "Toile"
+    },
+    {
+      "name": "Brocade"
+    },
+    {
+      "name": "Ikat"
+    },
+    {
+      "name": "Batik"
+    },
+    {
+      "name": "Moroccan"
+    },
+    {
+      "name": "Suzani"
+    },
+    {
+      "name": "Kashmiri"
+    },
+    {
+      "name": "Greek Key"
+    },
+    {
+      "name": "Geometrical"
+    },
+    {
+      "name": "Kaleidoscope"
+    },
+    {
+      "name": "Gradient"
+    },
+    {
+      "name": "Splatter"
+    },
+    {
+      "name": "Marbled"
+    },
+    {
+      "name": "Quilted"
+    },
+    {
+      "name": "Eyelet"
+    },
+    {
+      "name": "Scallop"
+    },
+    {
+      "name": "Bubble"
+    },
+    {
+      "name": "Honeycomb"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 800,
+        "height": 1610
+      },
+      {
+        "x": 809,
+        "y": 0,
+        "width": 800,
+        "height": 1610
+      }
+    ],
+    "4": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 800,
+        "height": 800
+      },
+      {
+        "x": 809,
+        "y": 0,
+        "width": 800,
+        "height": 800
+      },
+      {
+        "x": 0,
+        "y": 809,
+        "width": 800,
+        "height": 800
+      },
+      {
+        "x": 809,
+        "y": 809,
+        "width": 800,
+        "height": 800
+      }
+    ]
+  }
+}

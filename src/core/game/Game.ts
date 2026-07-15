@@ -13,6 +13,7 @@ import {
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
 
 function isEnumValue<T extends Record<string, string | number>>(
@@ -32,6 +33,10 @@ export type WarshipState = {
   retreatPort?: TileRef;
   isInCombat?: boolean;
   lastCombatTick: number;
+  // Veterancy level (0–max) plus a shared integer progress meter fed by
+  // transport kills and trade captures (see UnitImpl.addVeterancyProgress).
+  veterancy: number;
+  veterancyProgress: number;
 };
 
 export type TransportShipState = {
@@ -93,175 +98,17 @@ export const ColoredTeams: Record<string, Team> = {
   Nations: "Nations",
 } as const;
 
-export enum GameMapType {
-  World = "World",
-  GiantWorldMap = "Giant World Map",
-  Europe = "Europe",
-  EuropeClassic = "Europe Classic",
-  Mena = "Mena",
-  NorthAmerica = "North America",
-  SouthAmerica = "South America",
-  Oceania = "Oceania",
-  BlackSea = "Black Sea",
-  Africa = "Africa",
-  Pangaea = "Pangaea",
-  Asia = "Asia",
-  Mars = "Mars",
-  BritanniaClassic = "Britannia Classic",
-  Britannia = "Britannia",
-  GatewayToTheAtlantic = "Gateway to the Atlantic",
-  Australia = "Australia",
-  Iceland = "Iceland",
-  EastAsia = "East Asia",
-  BetweenTwoSeas = "Between Two Seas",
-  FaroeIslands = "Faroe Islands",
-  DeglaciatedAntarctica = "Deglaciated Antarctica",
-  FalklandIslands = "Falkland Islands",
-  Baikal = "Baikal",
-  Halkidiki = "Halkidiki",
-  StraitOfGibraltar = "Strait of Gibraltar",
-  Italia = "Italia",
-  Japan = "Japan",
-  Pluto = "Pluto",
-  Montreal = "Montreal",
-  NewYorkCity = "New York City",
-  Achiran = "Achiran",
-  BaikalNukeWars = "Baikal Nuke Wars",
-  FourIslands = "Four Islands",
-  Svalmel = "Svalmel",
-  GulfOfStLawrence = "Gulf of St. Lawrence",
-  Lisbon = "Lisbon",
-  Manicouagan = "Manicouagan",
-  Lemnos = "Lemnos",
-  Tourney1 = "Tourney 2 Teams",
-  Tourney2 = "Tourney 3 Teams",
-  Tourney3 = "Tourney 4 Teams",
-  Tourney4 = "Tourney 8 Teams",
-  Passage = "Passage",
-  Sierpinski = "Sierpinski",
-  TheBox = "The Box",
-  TwoLakes = "Two Lakes",
-  StraitOfHormuz = "Strait of Hormuz",
-  Surrounded = "Surrounded",
-  Didier = "Didier",
-  DidierFrance = "Didier France",
-  AmazonRiver = "Amazon River",
-  BosphorusStraits = "Bosphorus Straits",
-  BeringStrait = "Bering Strait",
-  Yenisei = "Yenisei",
-  TradersDream = "Traders Dream",
-  Hawaii = "Hawaii",
-  Alps = "Alps",
-  NileDelta = "Nile Delta",
-  Arctic = "Arctic",
-  SanFrancisco = "San Francisco",
-  Aegean = "Aegean",
-  MilkyWay = "MilkyWay",
-  MareNostrum = "Mare Nostrum",
-  Dyslexdria = "Dyslexdria",
-  GreatLakes = "Great Lakes",
-  StraitOfMalacca = "Strait Of Malacca",
-  Luna = "Luna",
-  Conakry = "Conakry",
-  Caucasus = "Caucasus",
-  LosAngeles = "Los Angeles",
-  BeringSea = "Bering Sea",
-  Antarctica = "Antarctica",
-  ArchipelagoSea = "ArchipelagoSea",
-  BajaCalifornia = "Baja California",
-  MiddleEast = "Middle East",
-}
-
-export type GameMapName = keyof typeof GameMapType;
-
-export const mapCategories: Record<string, GameMapType[]> = {
-  continental: [
-    GameMapType.World,
-    GameMapType.GiantWorldMap,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.EuropeClassic,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
-    GameMapType.Antarctica,
-  ],
-  regional: [
-    GameMapType.BritanniaClassic,
-    GameMapType.Britannia,
-    GameMapType.BlackSea,
-    GameMapType.GatewayToTheAtlantic,
-    GameMapType.BetweenTwoSeas,
-    GameMapType.Iceland,
-    GameMapType.EastAsia,
-    GameMapType.Mena,
-    GameMapType.Australia,
-    GameMapType.FaroeIslands,
-    GameMapType.FalklandIslands,
-    GameMapType.Baikal,
-    GameMapType.Halkidiki,
-    GameMapType.StraitOfGibraltar,
-    GameMapType.Italia,
-    GameMapType.Japan,
-    GameMapType.Montreal,
-    GameMapType.GulfOfStLawrence,
-    GameMapType.Lisbon,
-    GameMapType.NewYorkCity,
-    GameMapType.Manicouagan,
-    GameMapType.Lemnos,
-    GameMapType.TwoLakes,
-    GameMapType.StraitOfHormuz,
-    GameMapType.AmazonRiver,
-    GameMapType.BosphorusStraits,
-    GameMapType.BeringStrait,
-    GameMapType.Yenisei,
-    GameMapType.Hawaii,
-    GameMapType.Alps,
-    GameMapType.NileDelta,
-    GameMapType.Arctic,
-    GameMapType.SanFrancisco,
-    GameMapType.Aegean,
-    GameMapType.MareNostrum,
-    GameMapType.GreatLakes,
-    GameMapType.StraitOfMalacca,
-    GameMapType.Conakry,
-    GameMapType.Caucasus,
-    GameMapType.LosAngeles,
-    GameMapType.BeringSea,
-    GameMapType.ArchipelagoSea,
-    GameMapType.BajaCalifornia,
-    GameMapType.MiddleEast,
-  ],
-  fantasy: [
-    GameMapType.Pangaea,
-    GameMapType.Pluto,
-    GameMapType.Mars,
-    GameMapType.DeglaciatedAntarctica,
-    GameMapType.Achiran,
-    GameMapType.BaikalNukeWars,
-    GameMapType.FourIslands,
-    GameMapType.Svalmel,
-    GameMapType.Surrounded,
-    GameMapType.TradersDream,
-    GameMapType.Passage,
-    GameMapType.MilkyWay,
-    GameMapType.Dyslexdria,
-    GameMapType.Luna,
-  ],
-  arcade: [
-    GameMapType.TheBox,
-    GameMapType.Didier,
-    GameMapType.DidierFrance,
-    GameMapType.Sierpinski,
-  ],
-  tournament: [
-    GameMapType.Tourney1,
-    GameMapType.Tourney2,
-    GameMapType.Tourney3,
-    GameMapType.Tourney4,
-  ],
-};
+// GameMapType and the maps list are generated from
+// map-generator/assets/maps/<map>/info.json by the map-generator
+// (`npm run gen-maps`).
+export {
+  GameMapType,
+  mapCategoryOrder,
+  maps,
+  type GameMapName,
+  type MapCategory,
+  type MapInfo,
+} from "./Maps.gen";
 
 export enum GameType {
   Singleplayer = "Singleplayer",
@@ -278,6 +125,7 @@ export enum GameMode {
 
 export enum RankedType {
   OneVOne = "1v1",
+  TwoVTwo = "2v2",
 }
 
 export const isGameMode = (value: unknown): value is GameMode =>
@@ -301,6 +149,7 @@ export interface PublicGameModifiers {
   isSAMsDisabled?: boolean;
   isPeaceTime?: boolean;
   isWaterNukes?: boolean;
+  isDoomsdayClock?: boolean;
 }
 
 export interface UnitInfo {
@@ -491,8 +340,8 @@ export enum TerrainType {
   Plains,
   Highland,
   Mountain,
-  Lake,
   Ocean,
+  Impassable,
 }
 
 export enum PlayerType {
@@ -570,6 +419,10 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
     public readonly clanTag: string | null = null,
+    public readonly friends: ClientID[] = [],
+    // Server-pinned team slot (index into the game's team list) for
+    // matchmade team games; null = assign normally.
+    public readonly teamIndex: number | null = null,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
@@ -637,7 +490,17 @@ export interface Unit {
   transportShipState(): TransportShipState;
   updateTransportShipState(update: Partial<TransportShipState>): void;
   health(): number;
+  /** Effective max health, including any warship veterancy bonus. */
+  maxHealth(): number;
   modifyHealth(delta: number, attacker?: Player): void;
+
+  // Warship veterancy
+  /** Current veterancy level from warshipState (0 for non-warships). */
+  veterancy(): number;
+  /** Record this warship destroying an enemy unit (drives veterancy gain). */
+  recordKill(targetType: UnitType): void;
+  /** Record this warship capturing a trade ship (drives veterancy gain). */
+  recordTradeCapture(): void;
 
   // Troops
   setTroops(troops: number): void;
@@ -695,6 +558,11 @@ export interface Player {
   isAlive(): boolean;
   isTraitor(): boolean;
   markTraitor(): void;
+  // Doomsday Clock (anti-stall): marked when below the rising territory bar.
+  inDoomsdayClock(): boolean;
+  doomsdayClockTicks(): number;
+  enterDoomsdayClock(): void;
+  clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
@@ -706,8 +574,8 @@ export interface Player {
   spawnTile(): TileRef | undefined;
 
   // Territory
-  tiles(): ReadonlySet<TileRef>;
-  borderTiles(): ReadonlySet<TileRef>;
+  tiles(): ReadonlyTileSet;
+  borderTiles(): ReadonlyTileSet;
   numTilesOwned(): number;
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
@@ -722,7 +590,13 @@ export interface Player {
   removeTroops(troops: number): number;
 
   // Units
-  units(...types: UnitType[]): Unit[];
+  // Fixed-arity + array overloads instead of a rest parameter: the rest array
+  // would be allocated on every call, and this is one of the hottest calls in
+  // the simulation. With no arguments the player's live unit array is
+  // returned — do not mutate it; typed queries return a fresh snapshot array.
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
@@ -785,6 +659,8 @@ export interface Player {
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean;
   outgoingEmojis(): EmojiMessage[];
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
+  canSendQuickChat(recipient: Player): boolean;
+  recordQuickChat(recipient: Player): void;
 
   // Donation
   canDonateGold(recipient: Player): boolean;
@@ -822,7 +698,10 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  toUpdate(): PlayerUpdate;
+  toUpdate(
+    statsOut?: number[],
+    attackTroopsOut?: number[],
+  ): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
@@ -836,8 +715,13 @@ export interface Game extends GameMap {
   map(): GameMap;
   miniMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;
-  // Zero-allocation neighbor iteration (cardinal only) to avoid creating arrays
+  // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
+  // order as neighbors().
   forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void;
+  // Writes the cardinal neighbors of ref into out (same N, S, W, E order as
+  // neighbors()) and returns the count. Reuse out across calls to avoid
+  // allocation.
+  neighbors4(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration for performance-critical cluster calculation
   // Alternative to neighborsWithDiag() that returns arrays
   // Avoids creating intermediate arrays and uses a callback for better performance
@@ -861,20 +745,23 @@ export interface Game extends GameMap {
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
-  alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
   isNationSpawnImmunityActive(): boolean;
+  elapsedGameSeconds(): number;
 
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
+  endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;
   drainPackedMotionPlans(): Uint32Array | null;
+  drainPackedPlayerUpdates(): Float64Array | null;
+  drainPackedAttackUpdates(): Float64Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
@@ -883,7 +770,10 @@ export interface Game extends GameMap {
 
   // Units
   unit(id: number): Unit | undefined;
-  units(...types: UnitType[]): Unit[];
+  // See Player.units() for why this is not a rest parameter.
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
   hasUnitNearby(
@@ -916,6 +806,8 @@ export interface Game extends GameMap {
     playerID: PlayerID | null,
     goldAmount?: bigint,
     params?: Record<string, string | number>,
+    unitID?: number,
+    focusPlayerID?: PlayerID,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -947,6 +839,12 @@ export interface Game extends GameMap {
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
   /**
+   * Returns the approximate number of water tiles in the component
+   * containing `tile`, or null if the tile has no water component. Useful for
+   * filtering tiny water bodies (e.g. preventing AI port placement on ponds).
+   */
+  getWaterComponentSize(tile: TileRef): number | null;
+  /**
    * Returns the set of water components that `player` shares with at least one
    * valid trade partner (cached). Used by nation AI for port-placement
    * heuristics. `null` means no usable water body for ports.
@@ -973,7 +871,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
-  overlappingRailroads: number[];
+  overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }
 
@@ -1020,23 +918,20 @@ export enum MessageType {
   CONQUERED_PLAYER,
   MIRV_INBOUND,
   NUKE_INBOUND,
+  NUKE_DETONATED,
   HYDROGEN_BOMB_INBOUND,
   NAVAL_INVASION_INBOUND,
   SAM_MISS,
   SAM_HIT,
   CAPTURED_ENEMY_UNIT,
-  UNIT_CAPTURED_BY_ENEMY,
   UNIT_DESTROYED,
   ALLIANCE_ACCEPTED,
   ALLIANCE_REJECTED,
   ALLIANCE_REQUEST,
   ALLIANCE_BROKEN,
   ALLIANCE_EXPIRED,
-  SENT_GOLD_TO_PLAYER,
-  RECEIVED_GOLD_FROM_PLAYER,
-  RECEIVED_GOLD_FROM_TRADE,
-  SENT_TROOPS_TO_PLAYER,
-  RECEIVED_TROOPS_FROM_PLAYER,
+  DONATION_SENT,
+  DONATION_RECEIVED,
   CHAT,
   RENEW_ALLIANCE,
 }
@@ -1058,12 +953,12 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
   [MessageType.MIRV_INBOUND]: MessageCategory.NUKE,
   [MessageType.NUKE_INBOUND]: MessageCategory.NUKE,
+  [MessageType.NUKE_DETONATED]: MessageCategory.NUKE,
   [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.NUKE,
   [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
   [MessageType.SAM_HIT]: MessageCategory.ATTACK,
   [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
-  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
   [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
   [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
@@ -1071,11 +966,8 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
   [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
-  [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
-  [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.DONATION_SENT]: MessageCategory.TRADE,
+  [MessageType.DONATION_RECEIVED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
 } as const;
 

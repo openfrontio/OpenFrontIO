@@ -1,3 +1,7 @@
+import {
+  GraphicsOverrides,
+  GraphicsOverridesSchema,
+} from "../../client/render/gl/GraphicsOverrides";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -30,24 +34,32 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     moveLeft: "KeyA",
     moveDown: "KeyS",
     moveRight: "KeyD",
-    modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-    altKey: "AltLeft",
+    buildMenuModifier: isMac ? "MetaLeft" : "ControlLeft",
+    emojiMenuModifier: "AltLeft",
     shiftKey: "ShiftLeft",
     resetGfx: "KeyR",
     selectAllWarships: "KeyF",
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
+    altKey: "AltLeft",
   };
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+/**
+ * Storage key for the player's selected territory cosmetic. Stores either
+ * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
+ * mutually exclusive, so they share one slot.
+ */
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
+export const CROWN_KEY = "crown";
 export const COLOR_KEY = "settings.territoryColor";
-export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
+export const GRAPHICS_KEY = "settings.graphics";
+export const EFFECTS_KEY = "settings.effects";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -128,6 +140,13 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
+  highlightGlowStrength() {
+    // 0 = off, 1 = default; capped at 5 (the 500% slider max) so a value
+    // persisted from an older, larger range can't display/apply above it.
+    const v = this.getFloat("settings.highlightGlowStrength", 1);
+    return Math.min(5, Math.max(0, v));
+  }
+
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
@@ -144,24 +163,16 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
-  fxLayer() {
-    return this.getBool("settings.specialEffects", true);
-  }
-
-  structureSprites() {
-    return this.getBool("settings.structureSprites", true);
-  }
-
-  darkMode() {
-    return this.getBool(DARK_MODE_KEY, false);
-  }
-
   leftClickOpensMenu() {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
   territoryPatterns() {
     return this.getBool("settings.territoryPatterns", true);
+  }
+
+  goToPlayer() {
+    return this.getBool("settings.goToPlayer", true);
   }
 
   attackingTroopsOverlay() {
@@ -188,6 +199,10 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
+  setHighlightGlowStrength(value: number) {
+    this.setFloat("settings.highlightGlowStrength", value);
+  }
+
   // Performance overlay specifically needs a direct setter for Shift-D
   setPerformanceOverlay(value: boolean) {
     this.setBool(PERFORMANCE_OVERLAY_KEY, value);
@@ -201,20 +216,20 @@ export class UserSettings {
     this.setBool("settings.alertFrame", !this.alertFrame());
   }
 
+  helpMessages() {
+    return this.getBool("settings.helpMessages", true);
+  }
+
+  toggleHelpMessages() {
+    this.setBool("settings.helpMessages", !this.helpMessages());
+  }
+
   toggleRandomName() {
     this.setBool("settings.anonymousNames", !this.anonymousNames());
   }
 
   toggleLobbyIdVisibility() {
     this.setBool("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
-  }
-
-  toggleFxLayer() {
-    this.setBool("settings.specialEffects", !this.fxLayer());
-  }
-
-  toggleStructureSprites() {
-    this.setBool("settings.structureSprites", !this.structureSprites());
   }
 
   toggleCursorCostLabel() {
@@ -225,8 +240,8 @@ export class UserSettings {
     this.setBool("settings.territoryPatterns", !this.territoryPatterns());
   }
 
-  toggleDarkMode() {
-    this.setBool(DARK_MODE_KEY, !this.darkMode());
+  toggleGoToPlayer() {
+    this.setBool("settings.goToPlayer", !this.goToPlayer());
   }
 
   // For development only. Used for testing patterns, set in the console manually.
@@ -248,7 +263,11 @@ export class UserSettings {
     if (cosmetics === null) return null;
     let data = this.getCached(PATTERN_KEY);
     if (data === null) return null;
+    // Skin selections share this key — defer to getSelectedSkinName.
+    if (data.startsWith("skin:")) return null;
     const patternPrefix = "pattern:";
+    // Accept both `pattern:<name>[:<palette>]` (current) and bare `<name>[:<palette>]`
+    // (older builds wrote unprefixed) so existing localStorage values still resolve.
     if (data.startsWith(patternPrefix)) {
       data = data.slice(patternPrefix.length);
     }
@@ -262,11 +281,43 @@ export class UserSettings {
     } satisfies PlayerPattern;
   }
 
-  setSelectedPatternName(patternName: string | undefined): void {
-    if (patternName === undefined) {
+  /**
+   * Accepts a fully-prefixed cosmetic value: `"pattern:<name>[:<palette>]"`
+   * or `"skin:<name>"`. Patterns and skins share storage because they're
+   * mutually exclusive — writing one automatically clears the other.
+   */
+  setSelectedPatternName(value: string | undefined): void {
+    if (value === undefined) {
       this.removeCached(PATTERN_KEY);
     } else {
-      this.setCached(PATTERN_KEY, patternName);
+      this.setCached(PATTERN_KEY, value);
+    }
+  }
+
+  /** Returns the bare skin name (no `skin:` prefix), or null if a pattern (or nothing) is selected. */
+  getSelectedSkinName(): string | null {
+    const data = this.getCached(PATTERN_KEY);
+    if (data === null) return null;
+    const skinPrefix = "skin:";
+    return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
+  }
+
+  // For development only. Crown image URL for testing, set in the console
+  // manually (localStorage "dev-crown"), like getDevOnlyPattern.
+  getDevOnlyCrown(): string | undefined {
+    return localStorage.getItem("dev-crown") ?? undefined;
+  }
+
+  /** Returns the selected crown name, or null if none is selected. */
+  getSelectedCrownName(): string | null {
+    return this.getCached(CROWN_KEY);
+  }
+
+  setSelectedCrownName(name: string | undefined): void {
+    if (name === undefined) {
+      this.removeCached(CROWN_KEY);
+    } else {
+      this.setCached(CROWN_KEY, name);
     }
   }
 
@@ -292,6 +343,36 @@ export class UserSettings {
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
+  }
+
+  /**
+   * Selected effect cosmetics, keyed by selection slot (at most one per slot).
+   * A slot is the effectType for trails and the nukeType for nuke explosions —
+   * see effectTypeForSlot. Persisted as a single JSON blob under EFFECTS_KEY.
+   */
+  getSelectedEffects(): Record<string, string> {
+    const raw = this.getString(EFFECTS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  getSelectedEffectName(slot: string): string | null {
+    return this.getSelectedEffects()[slot] ?? null;
+  }
+
+  setSelectedEffectName(slot: string, name: string | undefined): void {
+    const map = this.getSelectedEffects();
+    if (name === undefined) delete map[slot];
+    else map[slot] = name;
+    if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
+    else this.setString(EFFECTS_KEY, JSON.stringify(map));
   }
 
   backgroundMusicVolume(): number {
@@ -322,6 +403,23 @@ export class UserSettings {
 
   setAttackRatio(value: number): void {
     this.setFloat("settings.attackRatio", value);
+  }
+
+  // Returns {} if missing, unparseable, or fails schema validation.
+  graphicsOverrides(): GraphicsOverrides {
+    const raw = this.getString(GRAPHICS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = GraphicsOverridesSchema.safeParse(JSON.parse(raw));
+      if (parsed.success) return parsed.data;
+    } catch {
+      // fall through
+    }
+    return {};
+  }
+
+  setGraphicsOverrides(value: GraphicsOverrides): void {
+    this.setString(GRAPHICS_KEY, JSON.stringify(value));
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object

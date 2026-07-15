@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { PastelTheme } from "../../core/configuration/PastelTheme";
 import {
   ColoredTeams,
   Duos,
@@ -17,6 +16,7 @@ import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
+import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -34,10 +34,15 @@ export class LobbyTeamView extends LitElement {
   @property({ type: String }) currentClientID: string = "";
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
+  @property({ type: Function }) onToggleNameReveal?: (clientID: string) => void;
+  @property({ type: Array }) nameReveals: string[] = [];
+  @property({ type: Boolean }) anonymizeNames: boolean = false;
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
 
-  private theme: PastelTheme = new PastelTheme();
+  private get theme(): Theme {
+    return themeProvider.current();
+  }
   @state() private showTeamColors: boolean = false;
   private userSettings: UserSettings = new UserSettings();
 
@@ -165,6 +170,21 @@ export class LobbyTeamView extends LitElement {
     </div>`;
   }
 
+  // Host-only per-player toggle for who may see real names under anonymizeNames.
+  private renderRevealToggle(clientID: string) {
+    if (!this.onToggleNameReveal || !this.anonymizeNames) return html``;
+    const on = this.nameReveals.includes(clientID);
+    return html`<button
+      @click=${() => this.onToggleNameReveal?.(clientID)}
+      title=${translateText("host_modal.toggle_name_reveal")}
+      style="background:none;border:none;cursor:pointer;font-size:13px;line-height:1;margin-left:4px;opacity:${on
+        ? "1"
+        : "0.35"};"
+    >
+      👁
+    </button>`;
+  }
+
   private renderFreeForAll() {
     return html`${repeat(
       this.clients,
@@ -177,6 +197,7 @@ export class LobbyTeamView extends LitElement {
             : ""}"
         >
           <span class="text-white">${displayName}</span>
+          ${this.renderRevealToggle(client.clientID)}
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
@@ -246,6 +267,7 @@ export class LobbyTeamView extends LitElement {
                       : "bg-gray-700/70 border-transparent"}"
                   >
                     <span class="truncate text-white">${displayName}</span>
+                    ${this.renderRevealToggle(p.clientID)}
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
@@ -340,6 +362,7 @@ export class LobbyTeamView extends LitElement {
           c.clientID,
           false,
           c.clanTag,
+          c.friends ?? [],
         ),
     );
     const assignment = assignTeamsLobbyPreview(

@@ -1,4 +1,6 @@
 {
+  "categories": ["fictional"],
+  "id": "Passage",
   "map": {
     "height": 400,
     "num_land_tiles": 803994,
@@ -14,6 +16,7 @@
     "num_land_tiles": 195716,
     "width": 3000
   },
+  "multiplayer_frequency": 4,
   "name": "Passage",
   "nations": [
     {
@@ -80,5 +83,6 @@
       "coordinates": [5906, 364],
       "name": "Eastos"
     }
-  ]
+  ],
+  "translation_key": "map.passage"
 }

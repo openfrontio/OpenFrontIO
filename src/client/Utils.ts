@@ -3,6 +3,7 @@ import {
   Duos,
   GameMode,
   HumansVsNations,
+  maps,
   MessageType,
   PublicGameModifiers,
   Quads,
@@ -21,7 +22,10 @@ export function normaliseMapKey(mapName: string): string {
 
 export function getMapName(mapName: string | undefined): string | null {
   if (!mapName) return null;
-  return translateText(`map.${normaliseMapKey(mapName)}`);
+  const translationKey =
+    maps.find((m) => m.type === mapName)?.translationKey ??
+    `map.${normaliseMapKey(mapName)}`;
+  return translateText(translationKey);
 }
 
 /**
@@ -216,6 +220,12 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
+  if (modifiers.isDoomsdayClock) {
+    result.push({
+      labelKey: "public_game_modifier.doomsday_clock_label",
+      badgeKey: "public_game_modifier.doomsday_clock",
+    });
+  }
   return result;
 }
 
@@ -231,13 +241,24 @@ export function getModifierLabels(
 }
 
 export function renderDuration(totalSeconds: number): string {
-  if (totalSeconds <= 0) return "0s";
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  let time = "";
-  if (minutes > 0) time += `${minutes}min `;
-  time += `${seconds}s`;
-  return time.trim();
+  // Floor once so fractional inputs don't leak through to the seconds
+  // component (e.g. `0.5` → `"0.5s"`).
+  const whole = Math.floor(totalSeconds);
+  if (whole <= 0) return `0${translateText("common.duration_second_short")}`;
+  const hours = Math.floor(whole / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const seconds = whole % 60;
+  // Build largest-first, dropping trailing-zero components so 3600s reads
+  // as "1h" rather than "1h 0min 0s", and 60s as "1min" rather than
+  // "1min 0s". Sub-minute durations still surface seconds.
+  const parts: string[] = [];
+  if (hours > 0)
+    parts.push(`${hours}${translateText("common.duration_hour_short")}`);
+  if (minutes > 0)
+    parts.push(`${minutes}${translateText("common.duration_minute_short")}`);
+  if (seconds > 0 || parts.length === 0)
+    parts.push(`${seconds}${translateText("common.duration_second_short")}`);
+  return parts.join(" ");
 }
 
 export function renderTroops(troops: number): string {
@@ -270,7 +291,13 @@ export function renderNumber(
   num = Number(num);
   num = Math.max(num, 0);
 
-  if (num >= 10_000_000) {
+  if (num >= 10_000_000_000) {
+    const value = Math.floor(num / 100000000) / 10;
+    return value.toFixed(fixedPoints ?? 1) + "B";
+  } else if (num >= 1_000_000_000) {
+    const value = Math.floor(num / 10000000) / 100;
+    return value.toFixed(fixedPoints ?? 2) + "B";
+  } else if (num >= 10_000_000) {
     const value = Math.floor(num / 100000) / 10;
     return value.toFixed(fixedPoints ?? 1) + "M";
   } else if (num >= 1_000_000) {
@@ -417,7 +444,6 @@ export const translateText = (
 
   const langSelector = getCachedLangSelector();
   if (!langSelector) {
-    console.warn("LangSelector not found in DOM");
     return key;
   }
 
@@ -499,22 +525,19 @@ export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
     case MessageType.SAM_HIT:
     case MessageType.CAPTURED_ENEMY_UNIT:
-    case MessageType.RECEIVED_GOLD_FROM_TRADE:
     case MessageType.CONQUERED_PLAYER:
+    case MessageType.ALLIANCE_ACCEPTED:
       return severityColors["success"];
     case MessageType.ATTACK_FAILED:
     case MessageType.ALLIANCE_REJECTED:
     case MessageType.ALLIANCE_BROKEN:
-    case MessageType.UNIT_CAPTURED_BY_ENEMY:
     case MessageType.UNIT_DESTROYED:
+    case MessageType.NUKE_DETONATED:
       return severityColors["fail"];
     case MessageType.ATTACK_CANCELLED:
     case MessageType.ATTACK_REQUEST:
-    case MessageType.ALLIANCE_ACCEPTED:
-    case MessageType.SENT_GOLD_TO_PLAYER:
-    case MessageType.SENT_TROOPS_TO_PLAYER:
-    case MessageType.RECEIVED_GOLD_FROM_PLAYER:
-    case MessageType.RECEIVED_TROOPS_FROM_PLAYER:
+    case MessageType.DONATION_SENT:
+    case MessageType.DONATION_RECEIVED:
       return severityColors["blue"];
     case MessageType.MIRV_INBOUND:
     case MessageType.NUKE_INBOUND:

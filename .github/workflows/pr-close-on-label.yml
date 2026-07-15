@@ -1,0 +1,59 @@
+name: 🏷️ PR Close on Label
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  close:
+    name: Close on triage label
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Close PR if label matches
+        uses: actions/github-script@v9
+        with:
+          script: |
+            // Maintainer-applied labels that trigger an auto-close + comment.
+            // Add entries here as new triage categories come up.
+            const COMMENTS = {
+              "appears-ai-generated": (author) => `Hi @${author}, thanks for the contribution.
+
+            This PR was closed because it appears to be AI-generated. We require contributions to be hand-written and understood by their author — if a regression shows up later, we need someone who can debug their own code.
+
+            If this was misclassified, please reach out on our [Discord](https://discord.gg/K9zernJB5z) or comment below.
+
+            See [CONTRIBUTING.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md) for the full contribution process.`,
+            };
+
+            const labelName = context.payload.label?.name;
+            if (!labelName || !(labelName in COMMENTS)) {
+              core.info(`Label "${labelName}" is not a close-on-label trigger, skipping`);
+              return;
+            }
+
+            const pr = context.payload.pull_request;
+            if (pr.state !== "open") {
+              core.info(`PR #${pr.number} is already ${pr.state}, skipping`);
+              return;
+            }
+
+            const body = COMMENTS[labelName](pr.user.login);
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              state: "closed",
+            });
+            core.info(`Closed PR #${pr.number} after "${labelName}" label was applied`);

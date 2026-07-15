@@ -1,0 +1,136 @@
+{
+  "categories": ["cosmic"],
+  "id": "Titan",
+  "map": {
+    "height": 2160,
+    "num_land_tiles": 1627144,
+    "width": 1232
+  },
+  "map16x": {
+    "height": 540,
+    "num_land_tiles": 96655,
+    "width": 308
+  },
+  "map4x": {
+    "height": 1080,
+    "num_land_tiles": 398688,
+    "width": 616
+  },
+  "multiplayer_frequency": 3,
+  "name": "Titan",
+  "nations": [
+    {
+      "flag": "Purple Flag",
+      "name": "Stone-Keeping Purple Aliens"
+    },
+    {
+      "flag": "eu",
+      "name": "European Space Agency"
+    },
+    {
+      "flag": "gb",
+      "name": "UKSA"
+    },
+    {
+      "flag": "cn",
+      "name": "CNSA"
+    },
+    {
+      "flag": "us",
+      "name": "NASA"
+    },
+    {
+      "flag": "ru",
+      "name": "Roscosmos"
+    },
+    {
+      "flag": "jp",
+      "name": "JAXA"
+    },
+    {
+      "flag": "ae",
+      "name": "UAESA"
+    },
+    {
+      "flag": "kp",
+      "name": "NATA"
+    },
+    {
+      "flag": "ar",
+      "name": "CONAE"
+    },
+    {
+      "flag": "au",
+      "name": "ASA"
+    },
+    {
+      "flag": "br",
+      "name": "UEB"
+    },
+    {
+      "flag": "ca",
+      "name": "CSA"
+    },
+    {
+      "flag": "fr",
+      "name": "CNES"
+    },
+    {
+      "flag": "in",
+      "name": "ISRO"
+    },
+    {
+      "flag": "ir",
+      "name": "Iranian Space Agency"
+    },
+    {
+      "flag": "il",
+      "name": "Israel Space Agency"
+    },
+    {
+      "flag": "it",
+      "name": "ASI"
+    },
+    {
+      "flag": "kr",
+      "name": "KARI"
+    },
+    {
+      "flag": "mx",
+      "name": "MSA"
+    },
+    {
+      "flag": "nz",
+      "name": "NZSA"
+    },
+    {
+      "flag": "pk",
+      "name": "SUPARCO"
+    },
+    {
+      "flag": "pl",
+      "name": "POLSA"
+    },
+    {
+      "flag": "se",
+      "name": "SNSA"
+    },
+    {
+      "flag": "ua",
+      "name": "SSAU"
+    },
+    {
+      "flag": "lu",
+      "name": "LuxSpace"
+    },
+    {
+      "flag": "tr",
+      "name": "TUA"
+    },
+    {
+      "flag": "un",
+      "name": "UNOOSA"
+    }
+  ],
+  "translation_key": "map.titan"
+}

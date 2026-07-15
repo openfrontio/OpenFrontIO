@@ -78,10 +78,6 @@ describe("SAM", () => {
       ),
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     attacker = game.player("attacker_id");
     defender = game.player("defender_id");
     middle_defender = game.player("middle_defender_id");

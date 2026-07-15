@@ -1,0 +1,542 @@
+{
+  "id": "Labyrinth",
+  "name": "Labyrinth",
+  "translation_key": "map.labyrinth",
+  "categories": ["arcade"],
+  "multiplayer_frequency": 6,
+  "nations": [
+    {
+      "coordinates": [50, 50],
+      "name": "Alpha",
+      "flag": ""
+    },
+    {
+      "coordinates": [500, 50],
+      "name": "Bravo",
+      "flag": ""
+    },
+    {
+      "coordinates": [950, 50],
+      "name": "Charlie",
+      "flag": ""
+    },
+    {
+      "coordinates": [1300, 175],
+      "name": "Delta",
+      "flag": ""
+    },
+    {
+      "coordinates": [1300, 625],
+      "name": "Echo",
+      "flag": ""
+    },
+    {
+      "coordinates": [1300, 1074],
+      "name": "Foxtrot",
+      "flag": ""
+    },
+    {
+      "coordinates": [1050, 1300],
+      "name": "Golf",
+      "flag": ""
+    },
+    {
+      "coordinates": [625, 1300],
+      "name": "Hotel",
+      "flag": ""
+    },
+    {
+      "coordinates": [150, 1300],
+      "name": "India",
+      "flag": ""
+    },
+    {
+      "coordinates": [50, 950],
+      "name": "Juliett",
+      "flag": ""
+    },
+    {
+      "coordinates": [50, 500],
+      "name": "Kilo",
+      "flag": ""
+    },
+    {
+      "coordinates": [275, 275],
+      "name": "Lima",
+      "flag": ""
+    },
+    {
+      "coordinates": [740, 290],
+      "name": "Mike",
+      "flag": ""
+    },
+    {
+      "coordinates": [1080, 380],
+      "name": "November",
+      "flag": ""
+    },
+    {
+      "coordinates": [1080, 850],
+      "name": "Oscar",
+      "flag": ""
+    },
+    {
+      "coordinates": [850, 1080],
+      "name": "Papa",
+      "flag": ""
+    },
+    {
+      "coordinates": [400, 1080],
+      "name": "Quebec",
+      "flag": ""
+    },
+    {
+      "coordinates": [280, 740],
+      "name": "Romeo",
+      "flag": ""
+    },
+    {
+      "coordinates": [510, 510],
+      "name": "Sierra",
+      "flag": ""
+    },
+    {
+      "coordinates": [850, 630],
+      "name": "Tango",
+      "flag": ""
+    },
+    {
+      "coordinates": [625, 850],
+      "name": "Uniform",
+      "flag": ""
+    },
+    {
+      "coordinates": [745, 520],
+      "name": "Victor",
+      "flag": ""
+    },
+    {
+      "coordinates": [850, 850],
+      "name": "Whiskey",
+      "flag": ""
+    },
+    {
+      "coordinates": [510, 740],
+      "name": "X-ray",
+      "flag": ""
+    },
+    {
+      "coordinates": [735, 735],
+      "name": "Yankee",
+      "flag": ""
+    },
+    {
+      "coordinates": [630, 630],
+      "name": "Zulu",
+      "flag": ""
+    }
+  ],
+  "additionalNations": [
+    {
+      "name": "Astro"
+    },
+    {
+      "name": "Based"
+    },
+    {
+      "name": "Cosmos"
+    },
+    {
+      "name": "Divide"
+    },
+    {
+      "name": "Equals"
+    },
+    {
+      "name": "Falcon"
+    },
+    {
+      "name": "George"
+    },
+    {
+      "name": "Hydro"
+    },
+    {
+      "name": "Idaho"
+    },
+    {
+      "name": "Jupiter"
+    },
+    {
+      "name": "Kitten"
+    },
+    {
+      "name": "Lucky"
+    },
+    {
+      "name": "March"
+    },
+    {
+      "name": "Nacho"
+    },
+    {
+      "name": "Orbit"
+    },
+    {
+      "name": "Pasta"
+    },
+    {
+      "name": "Quickly"
+    },
+    {
+      "name": "Riches"
+    },
+    {
+      "name": "Safety"
+    },
+    {
+      "name": "Today"
+    },
+    {
+      "name": "Universe"
+    },
+    {
+      "name": "Vector"
+    },
+    {
+      "name": "Xrays"
+    },
+    {
+      "name": "Yield"
+    },
+    {
+      "name": "Zebra"
+    },
+    {
+      "name": "Apple"
+    },
+    {
+      "name": "Baby"
+    },
+    {
+      "name": "Color"
+    },
+    {
+      "name": "Doggy"
+    },
+    {
+      "name": "Extra"
+    },
+    {
+      "name": "Father"
+    },
+    {
+      "name": "Green"
+    },
+    {
+      "name": "Hello"
+    },
+    {
+      "name": "Island"
+    },
+    {
+      "name": "Jazzy"
+    },
+    {
+      "name": "Killer"
+    },
+    {
+      "name": "Labor"
+    },
+    {
+      "name": "Meeting"
+    },
+    {
+      "name": "North"
+    },
+    {
+      "name": "Otis"
+    },
+    {
+      "name": "Practice"
+    },
+    {
+      "name": "Quiet"
+    },
+    {
+      "name": "Razzle"
+    },
+    {
+      "name": "Sorry"
+    },
+    {
+      "name": "Train"
+    },
+    {
+      "name": "Underwear"
+    },
+    {
+      "name": "Vastly"
+    },
+    {
+      "name": "XYZ"
+    },
+    {
+      "name": "Yesterday"
+    },
+    {
+      "name": "Zero"
+    },
+    {
+      "name": "Ahmedabad"
+    },
+    {
+      "name": "Bangkok"
+    },
+    {
+      "name": "Cairo"
+    },
+    {
+      "name": "Dallas"
+    },
+    {
+      "name": "Edmonton"
+    },
+    {
+      "name": "Faisalabad"
+    },
+    {
+      "name": "Giza"
+    },
+    {
+      "name": "Hanoi"
+    },
+    {
+      "name": "Istanbul"
+    },
+    {
+      "name": "Jakarta"
+    },
+    {
+      "name": "Kinshasa"
+    },
+    {
+      "name": "Lagos"
+    },
+    {
+      "name": "Moscow"
+    },
+    {
+      "name": "New York"
+    },
+    {
+      "name": "Ouagadougou"
+    },
+    {
+      "name": "Pyongyang"
+    },
+    {
+      "name": "Quito"
+    },
+    {
+      "name": "Riyadh"
+    },
+    {
+      "name": "Shanghai"
+    },
+    {
+      "name": "Tokyo"
+    },
+    {
+      "name": "Ulaanbaatar"
+    },
+    {
+      "name": "Vienna"
+    },
+    {
+      "name": "Xanthi"
+    },
+    {
+      "name": "Yangon"
+    },
+    {
+      "name": "Zapopan"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 680,
+        "height": 1355
+      },
+      {
+        "x": 680,
+        "y": 0,
+        "width": 680,
+        "height": 1355
+      }
+    ],
+    "3": [
+      {
+        "x": 1020,
+        "y": 680,
+        "width": 340,
+        "height": 680
+      },
+      {
+        "x": 0,
+        "y": 680,
+        "width": 340,
+        "height": 680
+      },
+      {
+        "x": 340,
+        "y": 0,
+        "width": 680,
+        "height": 680
+      }
+    ],
+    "4": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 676,
+        "height": 676
+      },
+      {
+        "x": 680,
+        "y": 0,
+        "width": 676,
+        "height": 676
+      },
+      {
+        "x": 0,
+        "y": 680,
+        "width": 676,
+        "height": 676
+      },
+      {
+        "x": 680,
+        "y": 680,
+        "width": 676,
+        "height": 676
+      }
+    ],
+    "5": [
+      {
+        "x": 1088,
+        "y": 453,
+        "width": 272,
+        "height": 453
+      },
+      {
+        "x": 0,
+        "y": 816,
+        "width": 453,
+        "height": 272
+      },
+      {
+        "x": 580,
+        "y": 0,
+        "width": 453,
+        "height": 272
+      },
+      {
+        "x": 580,
+        "y": 1088,
+        "width": 453,
+        "height": 272
+      },
+      {
+        "x": 0,
+        "y": 272,
+        "width": 453,
+        "height": 272
+      }
+    ],
+    "6": [
+      {
+        "x": 226,
+        "y": 0,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 679,
+        "y": 680,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 226,
+        "y": 680,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 679,
+        "y": 0,
+        "width": 453,
+        "height": 680
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "width": 226,
+        "height": 1360
+      },
+      {
+        "x": 1132,
+        "y": 0,
+        "width": 226,
+        "height": 1360
+      }
+    ],
+    "7": [
+      {
+        "x": 510,
+        "y": 1088,
+        "width": 340,
+        "height": 272
+      },
+      {
+        "x": 272,
+        "y": 0,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 816,
+        "y": 0,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 0,
+        "y": 340,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 50,
+        "y": 920,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 1088,
+        "y": 340,
+        "width": 272,
+        "height": 340
+      },
+      {
+        "x": 1038,
+        "y": 920,
+        "width": 272,
+        "height": 340
+      }
+    ]
+  }
+}

@@ -1,5 +1,10 @@
 {
+  "id": "Surrounded",
   "name": "Surrounded",
+  "translation_key": "map.surrounded",
+  "categories": ["fictional"],
+  "multiplayer_frequency": 4,
+  "special_team_count": 4,
   "nations": [
     {
       "coordinates": [1043, 910],
@@ -41,5 +46,47 @@
       "flag": "",
       "name": "Rugged Islander"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1976,
+        "width": 988,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1976,
+        "width": 988,
+        "x": 988,
+        "y": 0
+      }
+    ],
+    "4": [
+      {
+        "height": 988,
+        "width": 988,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 988,
+        "width": 988,
+        "x": 988,
+        "y": 0
+      },
+      {
+        "height": 988,
+        "width": 988,
+        "x": 0,
+        "y": 988
+      },
+      {
+        "height": 988,
+        "width": 988,
+        "x": 988,
+        "y": 988
+      }
+    ]
+  }
 }

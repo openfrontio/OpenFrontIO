@@ -1,20 +1,23 @@
 {
+  "categories": ["asia"],
+  "id": "StraitOfMalacca",
   "map": {
     "height": 1644,
-    "num_land_tiles": 867389,
+    "num_land_tiles": 865820,
     "width": 1832
   },
   "map16x": {
     "height": 411,
-    "num_land_tiles": 51057,
+    "num_land_tiles": 50740,
     "width": 458
   },
   "map4x": {
     "height": 822,
-    "num_land_tiles": 212196,
+    "num_land_tiles": 211494,
     "width": 916
   },
-  "name": "straitofmalacca",
+  "multiplayer_frequency": 4,
+  "name": "Strait Of Malacca",
   "nations": [
     {
       "coordinates": [1268, 730],
@@ -27,39 +30,60 @@
       "name": "Thailand"
     },
     {
-      "coordinates": [1328, 1284],
-      "flag": "id",
-      "name": "Sumatra"
-    },
-    {
-      "coordinates": [1141, 1090],
-      "flag": "mm",
-      "name": "Burmese Pythons"
-    },
-    {
       "coordinates": [210, 243],
-      "flag": "id",
+      "flag": "Aceh",
       "name": "Aceh"
-    },
-    {
-      "coordinates": [1011, 736],
-      "flag": "id",
-      "name": "Riau"
-    },
-    {
-      "coordinates": [600, 565],
-      "flag": "id",
-      "name": "Samosir"
-    },
-    {
-      "coordinates": [827, 999],
-      "flag": "id",
-      "name": "Barisan"
     },
     {
       "coordinates": [1053, 333],
       "flag": "my",
       "name": "Malaysia"
+    },
+    {
+      "coordinates": [596, 573],
+      "flag": "id",
+      "name": "North Sumatra"
+    },
+    {
+      "coordinates": [797, 1002],
+      "flag": "id",
+      "name": "West Sumatra"
+    },
+    {
+      "coordinates": [956, 743],
+      "flag": "id",
+      "name": "Riau"
+    },
+    {
+      "coordinates": [1644, 1265],
+      "flag": "id",
+      "name": "Bangka Belitung"
+    },
+    {
+      "coordinates": [1419, 1636],
+      "flag": "id",
+      "name": "Lampung"
+    },
+    {
+      "coordinates": [1084, 1414],
+      "flag": "id",
+      "name": "Bengkulu"
+    },
+    {
+      "coordinates": [1366, 1303],
+      "flag": "id",
+      "name": "South Sumatra"
+    },
+    {
+      "coordinates": [1167, 1071],
+      "flag": "id",
+      "name": "Jambi"
+    },
+    {
+      "coordinates": [1383, 938],
+      "flag": "id",
+      "name": "Riau Islands"
     }
-  ]
+  ],
+  "translation_key": "map.straitofmalacca"
 }

@@ -124,7 +124,7 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.leaderboard"
         ></button>
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="no-crazygames nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
@@ -148,21 +148,26 @@ export class DesktopNavBar extends LitElement {
         </div>
         <button
           id="nav-account-button"
-          class="no-crazygames nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
+          class="nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
           data-page="page-account"
           data-i18n-aria-label="main.account"
           data-i18n-title="main.account"
         >
           <img
             id="nav-account-avatar"
-            class="no-crazygames hidden w-8 h-8 rounded-full object-cover"
+            class="hidden w-8 h-8 rounded-full object-cover"
             alt=""
             data-i18n-alt="main.discord_avatar_alt"
             referrerpolicy="no-referrer"
           />
+          <span
+            id="nav-account-loading-spinner"
+            class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+            aria-hidden="true"
+          ></span>
           <svg
             id="nav-account-person-icon"
-            class="w-5 h-5"
+            class="hidden w-5 h-5"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="none"
@@ -197,7 +202,7 @@ export class DesktopNavBar extends LitElement {
           </span>
           <span
             id="nav-account-signin-text"
-            class="text-xs font-bold tracking-widest"
+            class="hidden text-xs font-bold tracking-widest"
             data-i18n="main.sign_in"
           >
           </span>

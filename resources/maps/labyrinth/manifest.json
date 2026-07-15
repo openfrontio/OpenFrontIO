@@ -1,0 +1,557 @@
+{
+  "additionalNations": [
+    {
+      "name": "Astro"
+    },
+    {
+      "name": "Based"
+    },
+    {
+      "name": "Cosmos"
+    },
+    {
+      "name": "Divide"
+    },
+    {
+      "name": "Equals"
+    },
+    {
+      "name": "Falcon"
+    },
+    {
+      "name": "George"
+    },
+    {
+      "name": "Hydro"
+    },
+    {
+      "name": "Idaho"
+    },
+    {
+      "name": "Jupiter"
+    },
+    {
+      "name": "Kitten"
+    },
+    {
+      "name": "Lucky"
+    },
+    {
+      "name": "March"
+    },
+    {
+      "name": "Nacho"
+    },
+    {
+      "name": "Orbit"
+    },
+    {
+      "name": "Pasta"
+    },
+    {
+      "name": "Quickly"
+    },
+    {
+      "name": "Riches"
+    },
+    {
+      "name": "Safety"
+    },
+    {
+      "name": "Today"
+    },
+    {
+      "name": "Universe"
+    },
+    {
+      "name": "Vector"
+    },
+    {
+      "name": "Xrays"
+    },
+    {
+      "name": "Yield"
+    },
+    {
+      "name": "Zebra"
+    },
+    {
+      "name": "Apple"
+    },
+    {
+      "name": "Baby"
+    },
+    {
+      "name": "Color"
+    },
+    {
+      "name": "Doggy"
+    },
+    {
+      "name": "Extra"
+    },
+    {
+      "name": "Father"
+    },
+    {
+      "name": "Green"
+    },
+    {
+      "name": "Hello"
+    },
+    {
+      "name": "Island"
+    },
+    {
+      "name": "Jazzy"
+    },
+    {
+      "name": "Killer"
+    },
+    {
+      "name": "Labor"
+    },
+    {
+      "name": "Meeting"
+    },
+    {
+      "name": "North"
+    },
+    {
+      "name": "Otis"
+    },
+    {
+      "name": "Practice"
+    },
+    {
+      "name": "Quiet"
+    },
+    {
+      "name": "Razzle"
+    },
+    {
+      "name": "Sorry"
+    },
+    {
+      "name": "Train"
+    },
+    {
+      "name": "Underwear"
+    },
+    {
+      "name": "Vastly"
+    },
+    {
+      "name": "XYZ"
+    },
+    {
+      "name": "Yesterday"
+    },
+    {
+      "name": "Zero"
+    },
+    {
+      "name": "Ahmedabad"
+    },
+    {
+      "name": "Bangkok"
+    },
+    {
+      "name": "Cairo"
+    },
+    {
+      "name": "Dallas"
+    },
+    {
+      "name": "Edmonton"
+    },
+    {
+      "name": "Faisalabad"
+    },
+    {
+      "name": "Giza"
+    },
+    {
+      "name": "Hanoi"
+    },
+    {
+      "name": "Istanbul"
+    },
+    {
+      "name": "Jakarta"
+    },
+    {
+      "name": "Kinshasa"
+    },
+    {
+      "name": "Lagos"
+    },
+    {
+      "name": "Moscow"
+    },
+    {
+      "name": "New York"
+    },
+    {
+      "name": "Ouagadougou"
+    },
+    {
+      "name": "Pyongyang"
+    },
+    {
+      "name": "Quito"
+    },
+    {
+      "name": "Riyadh"
+    },
+    {
+      "name": "Shanghai"
+    },
+    {
+      "name": "Tokyo"
+    },
+    {
+      "name": "Ulaanbaatar"
+    },
+    {
+      "name": "Vienna"
+    },
+    {
+      "name": "Xanthi"
+    },
+    {
+      "name": "Yangon"
+    },
+    {
+      "name": "Zapopan"
+    }
+  ],
+  "categories": ["arcade"],
+  "id": "Labyrinth",
+  "map": {
+    "height": 1360,
+    "num_land_tiles": 1524448,
+    "width": 1360
+  },
+  "map16x": {
+    "height": 340,
+    "num_land_tiles": 88437,
+    "width": 340
+  },
+  "map4x": {
+    "height": 680,
+    "num_land_tiles": 372162,
+    "width": 680
+  },
+  "multiplayer_frequency": 6,
+  "name": "Labyrinth",
+  "nations": [
+    {
+      "coordinates": [50, 50],
+      "flag": "",
+      "name": "Alpha"
+    },
+    {
+      "coordinates": [500, 50],
+      "flag": "",
+      "name": "Bravo"
+    },
+    {
+      "coordinates": [950, 50],
+      "flag": "",
+      "name": "Charlie"
+    },
+    {
+      "coordinates": [1300, 175],
+      "flag": "",
+      "name": "Delta"
+    },
+    {
+      "coordinates": [1300, 625],
+      "flag": "",
+      "name": "Echo"
+    },
+    {
+      "coordinates": [1300, 1074],
+      "flag": "",
+      "name": "Foxtrot"
+    },
+    {
+      "coordinates": [1050, 1300],
+      "flag": "",
+      "name": "Golf"
+    },
+    {
+      "coordinates": [625, 1300],
+      "flag": "",
+      "name": "Hotel"
+    },
+    {
+      "coordinates": [150, 1300],
+      "flag": "",
+      "name": "India"
+    },
+    {
+      "coordinates": [50, 950],
+      "flag": "",
+      "name": "Juliett"
+    },
+    {
+      "coordinates": [50, 500],
+      "flag": "",
+      "name": "Kilo"
+    },
+    {
+      "coordinates": [275, 275],
+      "flag": "",
+      "name": "Lima"
+    },
+    {
+      "coordinates": [740, 290],
+      "flag": "",
+      "name": "Mike"
+    },
+    {
+      "coordinates": [1080, 380],
+      "flag": "",
+      "name": "November"
+    },
+    {
+      "coordinates": [1080, 850],
+      "flag": "",
+      "name": "Oscar"
+    },
+    {
+      "coordinates": [850, 1080],
+      "flag": "",
+      "name": "Papa"
+    },
+    {
+      "coordinates": [400, 1080],
+      "flag": "",
+      "name": "Quebec"
+    },
+    {
+      "coordinates": [280, 740],
+      "flag": "",
+      "name": "Romeo"
+    },
+    {
+      "coordinates": [510, 510],
+      "flag": "",
+      "name": "Sierra"
+    },
+    {
+      "coordinates": [850, 630],
+      "flag": "",
+      "name": "Tango"
+    },
+    {
+      "coordinates": [625, 850],
+      "flag": "",
+      "name": "Uniform"
+    },
+    {
+      "coordinates": [745, 520],
+      "flag": "",
+      "name": "Victor"
+    },
+    {
+      "coordinates": [850, 850],
+      "flag": "",
+      "name": "Whiskey"
+    },
+    {
+      "coordinates": [510, 740],
+      "flag": "",
+      "name": "X-ray"
+    },
+    {
+      "coordinates": [735, 735],
+      "flag": "",
+      "name": "Yankee"
+    },
+    {
+      "coordinates": [630, 630],
+      "flag": "",
+      "name": "Zulu"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1355,
+        "width": 680,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1355,
+        "width": 680,
+        "x": 680,
+        "y": 0
+      }
+    ],
+    "3": [
+      {
+        "height": 680,
+        "width": 340,
+        "x": 1020,
+        "y": 680
+      },
+      {
+        "height": 680,
+        "width": 340,
+        "x": 0,
+        "y": 680
+      },
+      {
+        "height": 680,
+        "width": 680,
+        "x": 340,
+        "y": 0
+      }
+    ],
+    "4": [
+      {
+        "height": 676,
+        "width": 676,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 676,
+        "width": 676,
+        "x": 680,
+        "y": 0
+      },
+      {
+        "height": 676,
+        "width": 676,
+        "x": 0,
+        "y": 680
+      },
+      {
+        "height": 676,
+        "width": 676,
+        "x": 680,
+        "y": 680
+      }
+    ],
+    "5": [
+      {
+        "height": 453,
+        "width": 272,
+        "x": 1088,
+        "y": 453
+      },
+      {
+        "height": 272,
+        "width": 453,
+        "x": 0,
+        "y": 816
+      },
+      {
+        "height": 272,
+        "width": 453,
+        "x": 580,
+        "y": 0
+      },
+      {
+        "height": 272,
+        "width": 453,
+        "x": 580,
+        "y": 1088
+      },
+      {
+        "height": 272,
+        "width": 453,
+        "x": 0,
+        "y": 272
+      }
+    ],
+    "6": [
+      {
+        "height": 680,
+        "width": 453,
+        "x": 226,
+        "y": 0
+      },
+      {
+        "height": 680,
+        "width": 453,
+        "x": 679,
+        "y": 680
+      },
+      {
+        "height": 680,
+        "width": 453,
+        "x": 226,
+        "y": 680
+      },
+      {
+        "height": 680,
+        "width": 453,
+        "x": 679,
+        "y": 0
+      },
+      {
+        "height": 1360,
+        "width": 226,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1360,
+        "width": 226,
+        "x": 1132,
+        "y": 0
+      }
+    ],
+    "7": [
+      {
+        "height": 272,
+        "width": 340,
+        "x": 510,
+        "y": 1088
+      },
+      {
+        "height": 340,
+        "width": 272,
+        "x": 272,
+        "y": 0
+      },
+      {
+        "height": 340,
+        "width": 272,
+        "x": 816,
+        "y": 0
+      },
+      {
+        "height": 340,
+        "width": 272,
+        "x": 0,
+        "y": 340
+      },
+      {
+        "height": 340,
+        "width": 272,
+        "x": 50,
+        "y": 920
+      },
+      {
+        "height": 340,
+        "width": 272,
+        "x": 1088,
+        "y": 340
+      },
+      {
+        "height": 340,
+        "width": 272,
+        "x": 1038,
+        "y": 920
+      }
+    ]
+  },
+  "translation_key": "map.labyrinth"
+}

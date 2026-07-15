@@ -1,11 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import medalIconRaw from "../../../../resources/images/MedalIconWhite.svg?raw";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
-
-const medalMaskUrl = `url('data:image/svg+xml;utf8,${encodeURIComponent(medalIconRaw)}') no-repeat center / contain`;
+import { starIcon } from "./MapFavorites";
+import { MEDAL_ORDER, medalIcon } from "./Medals";
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -13,7 +12,9 @@ export class MapDisplay extends LitElement {
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
   @property({ type: Boolean }) showMedals = false;
+  @property({ type: Boolean }) favorite = false;
   @property({ attribute: false }) wins: Set<Difficulty> = new Set();
+  @property({ attribute: false }) onToggleFavorite?: () => void;
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
@@ -44,6 +45,20 @@ export class MapDisplay extends LitElement {
     this.observer?.disconnect();
     this.observer = null;
     super.disconnectedCallback();
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    // If this element is reused for a different map, reload its data —
+    // otherwise it keeps showing the previous map's thumbnail.
+    const previousMapKey = changedProperties.get("mapKey");
+    if (
+      changedProperties.has("mapKey") &&
+      previousMapKey !== undefined &&
+      previousMapKey !== this.mapKey &&
+      this.dataLoaded
+    ) {
+      this.loadMapData();
+    }
   }
 
   private async loadMapData() {
@@ -78,6 +93,34 @@ export class MapDisplay extends LitElement {
     event.preventDefault();
   }
 
+  private handleToggleFavorite(event: Event) {
+    event.stopPropagation();
+    event.preventDefault();
+    this.onToggleFavorite?.();
+  }
+
+  private renderFavoriteButton() {
+    if (!this.onToggleFavorite) return null;
+    return html`<button
+      type="button"
+      @click=${this.handleToggleFavorite}
+      @keydown=${(e: KeyboardEvent) => e.stopPropagation()}
+      aria-pressed=${this.favorite}
+      aria-label=${translateText(
+        this.favorite ? "map_component.unfavorite" : "map_component.favorite",
+      )}
+      title=${translateText(
+        this.favorite ? "map_component.unfavorite" : "map_component.favorite",
+      )}
+      class="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 active:scale-90 ${this
+        .favorite
+        ? "opacity-100 text-cyber-yellow"
+        : "opacity-0 group-hover:opacity-100 text-white hover:text-cyber-yellow"}"
+    >
+      ${starIcon(this.favorite, "w-4 h-4")}
+    </button>`;
+  }
+
   render() {
     return html`
       <div
@@ -110,6 +153,7 @@ export class MapDisplay extends LitElement {
                     ? "opacity-100"
                     : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
                 />
+                ${this.renderFavoriteButton()}
               </div>`
             : html`<div
                 class="w-full aspect-[2/1] text-red-400 transition-transform duration-200 rounded-lg bg-red-500/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center"
@@ -131,30 +175,10 @@ export class MapDisplay extends LitElement {
   }
 
   private renderMedals() {
-    const medalOrder: Difficulty[] = [
-      Difficulty.Easy,
-      Difficulty.Medium,
-      Difficulty.Hard,
-      Difficulty.Impossible,
-    ];
-    const colors: Record<Difficulty, string> = {
-      [Difficulty.Easy]: "var(--medal-easy)",
-      [Difficulty.Medium]: "var(--medal-medium)",
-      [Difficulty.Hard]: "var(--medal-hard)",
-      [Difficulty.Impossible]: "var(--medal-impossible)",
-    };
     const wins = this.readWins();
-    return medalOrder.map((medal) => {
-      const earned = wins.has(medal);
-      const mask = medalMaskUrl;
-      return html`<div
-        class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
-        style="background-color:${colors[
-          medal
-        ]}; mask: ${mask}; -webkit-mask: ${mask};"
-        title=${translateText(`difficulty.${medal.toLowerCase()}`)}
-      ></div>`;
-    });
+    return MEDAL_ORDER.map((medal) =>
+      medalIcon(medal, "w-5 h-5", wins.has(medal)),
+    );
   }
 
   private readWins(): Set<Difficulty> {

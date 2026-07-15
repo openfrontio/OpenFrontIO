@@ -1,5 +1,9 @@
 {
-  "name": "straitofmalacca",
+  "id": "StraitOfMalacca",
+  "name": "Strait Of Malacca",
+  "translation_key": "map.straitofmalacca",
+  "categories": ["asia"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1268, 730],
@@ -12,39 +16,59 @@
       "flag": "th"
     },
     {
-      "coordinates": [1328, 1284],
-      "name": "Sumatra",
-      "flag": "id"
-    },
-    {
-      "coordinates": [1141, 1090],
-      "name": "Burmese Pythons",
-      "flag": "mm"
-    },
-    {
       "coordinates": [210, 243],
       "name": "Aceh",
-      "flag": "id"
-    },
-    {
-      "coordinates": [1011, 736],
-      "name": "Riau",
-      "flag": "id"
-    },
-    {
-      "coordinates": [600, 565],
-      "name": "Samosir",
-      "flag": "id"
-    },
-    {
-      "coordinates": [827, 999],
-      "name": "Barisan",
-      "flag": "id"
+      "flag": "Aceh"
     },
     {
       "coordinates": [1053, 333],
       "name": "Malaysia",
       "flag": "my"
+    },
+    {
+      "coordinates": [596, 573],
+      "name": "North Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [797, 1002],
+      "name": "West Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [956, 743],
+      "name": "Riau",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1644, 1265],
+      "name": "Bangka Belitung",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1419, 1636],
+      "name": "Lampung",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1084, 1414],
+      "name": "Bengkulu",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1366, 1303],
+      "name": "South Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1167, 1071],
+      "name": "Jambi",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1383, 938],
+      "name": "Riau Islands",
+      "flag": "id"
     }
   ]
 }

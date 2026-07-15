@@ -1,4 +1,8 @@
-import { resolveCosmetics } from "../src/client/Cosmetics";
+import {
+  groupCosmeticVariants,
+  resolveCosmetics,
+  ResolvedCosmetic,
+} from "../src/client/Cosmetics";
 import { UserMeResponse } from "../src/core/ApiSchemas";
 import { Cosmetics } from "../src/core/CosmeticSchemas";
 
@@ -19,8 +23,11 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
     player: {
       publicId: "test",
       adfree: false,
+      unlimitedRanked: false,
       flares,
       achievements: { singleplayerMap: [] },
+      friends: [],
+      subscription: null,
     },
   } as UserMeResponse;
 }
@@ -284,6 +291,138 @@ describe("resolveCosmetics", () => {
       const result = resolveCosmetics(cosmetics, makeUserMe(), null);
       const flagItem = result.find((r) => r.key === "flag:cool_flag");
       expect(flagItem?.relationship).toBe("blocked");
+    });
+  });
+
+  describe("crowns", () => {
+    const crown = {
+      name: "gold_crown",
+      url: "http://localhost:8787/public/cosmetics/crown/gold",
+      affiliateCode: null,
+      product,
+      priceSoft: undefined,
+      priceHard: 5,
+      artist: "sadfas",
+      rarity: "common",
+    };
+
+    test("includes crowns with correct key", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(cosmetics, false, null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem).toBeDefined();
+      expect(crownItem?.cosmetic).toEqual(crown);
+      expect(crownItem?.colorPalette).toBeNull();
+    });
+
+    test("purchasable when user has no flares and priceHard exists", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(cosmetics, makeUserMe(), null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("purchasable");
+    });
+
+    test("owned with wildcard flare", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(cosmetics, makeUserMe(["crown:*"]), null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("owned");
+    });
+
+    test("owned with specific flare", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(
+        cosmetics,
+        makeUserMe(["crown:gold_crown"]),
+        null,
+      );
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("owned");
+    });
+
+    test("blocked with no product and no price", () => {
+      const freeCrown = {
+        ...crown,
+        product: null,
+        priceHard: undefined,
+      };
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: freeCrown as any },
+      });
+      const result = resolveCosmetics(cosmetics, makeUserMe(), null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("blocked");
+    });
+  });
+
+  describe("groupCosmeticVariants", () => {
+    const patternVariant = (
+      patternName: string,
+      paletteName: string | null,
+    ): ResolvedCosmetic => ({
+      type: "pattern",
+      cosmetic: { name: patternName } as any,
+      colorPalette: paletteName
+        ? { name: paletteName, primaryColor: "#fff", secondaryColor: "#000" }
+        : null,
+      relationship: "purchasable",
+      key: paletteName
+        ? `pattern:${patternName}:${paletteName}`
+        : `pattern:${patternName}`,
+    });
+
+    const skinVariant = (name: string): ResolvedCosmetic => ({
+      type: "skin",
+      cosmetic: { name } as any,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: `skin:${name}`,
+    });
+
+    test("collapses colour variants of the same pattern into one group", () => {
+      const groups = groupCosmeticVariants([
+        patternVariant("stripes", "red"),
+        patternVariant("stripes", "blue"),
+        patternVariant("stripes", "green"),
+      ]);
+      expect(groups).toHaveLength(1);
+      expect(groups[0].map((r) => r.key)).toEqual([
+        "pattern:stripes:red",
+        "pattern:stripes:blue",
+        "pattern:stripes:green",
+      ]);
+    });
+
+    test("keeps distinct patterns in separate groups, first-seen order", () => {
+      const groups = groupCosmeticVariants([
+        patternVariant("stripes", "red"),
+        patternVariant("dots", "red"),
+        patternVariant("stripes", "blue"),
+      ]);
+      expect(groups).toHaveLength(2);
+      expect(groups[0].map((r) => r.key)).toEqual([
+        "pattern:stripes:red",
+        "pattern:stripes:blue",
+      ]);
+      expect(groups[1].map((r) => r.key)).toEqual(["pattern:dots:red"]);
+    });
+
+    test("skins are never grouped — one group each", () => {
+      const groups = groupCosmeticVariants([
+        skinVariant("mountain"),
+        skinVariant("ocean"),
+        patternVariant("stripes", "red"),
+      ]);
+      expect(groups).toHaveLength(3);
+      expect(groups.map((g) => g.length)).toEqual([1, 1, 1]);
     });
   });
 

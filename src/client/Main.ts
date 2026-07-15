@@ -1,4 +1,5 @@
 import version from "resources/version.txt?raw";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
@@ -10,19 +11,18 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import {
-  DARK_MODE_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
+import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
-import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { getUserMe, invalidateUserMe } from "./Api";
+import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import "./CosmeticsInput";
+import "./CosmeticsModal";
+import { CosmeticsModal } from "./CosmeticsModal";
+import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
@@ -36,6 +36,7 @@ import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { showInGameConfirm } from "./InGameModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
@@ -43,17 +44,16 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
-import "./PatternInput";
+import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { StoreModal } from "./Store";
-import "./TerritoryPatternsModal";
-import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
-  SendStartGameEvent,
+  SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
@@ -65,6 +65,8 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./components/MarketingConsentToast";
+import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -97,6 +99,11 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const signInTextEl = document.getElementById(
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
+
+  // Auth state is resolved, so the button no longer shows the loading spinner.
+  document
+    .getElementById("nav-account-loading-spinner")
+    ?.classList.add("hidden");
 
   // Unique token for this update call
   const navToken = Symbol();
@@ -164,14 +171,22 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     return;
   }
 
+  // Google logins have no avatar; show the same person/email badge as magic-link.
+  const google =
+    userMeResponse !== false ? userMeResponse.user.google : undefined;
+  if (google) {
+    showEmailLoggedIn();
+    return;
+  }
+
   showSignIn();
 }
 
 declare global {
   interface Window {
-    GIT_COMMIT: string;
     turnstile: any;
     adsEnabled: boolean;
+    gtag?: (...args: any[]) => void;
     PageOS: {
       session: {
         newPageView: () => void;
@@ -218,17 +233,12 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
-    "start-game": CustomEvent;
+    toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
-    "open-matchmaking": CustomEvent<undefined>;
+    "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
-  }
-
-  // Fixes the globalThis.addEventListener errors
-  interface WindowEventMap {
-    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 
@@ -259,6 +269,7 @@ class Client {
   private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private rewardsModal: RewardsModal;
   private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
@@ -268,6 +279,48 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+
+    // Register modals with the URL router. Lobby modals (join/host) and
+    // matchmaking are intentionally omitted — they own their own URL state
+    // (path-based) or none at all.
+    modalRouter.register("store", {
+      tag: "store-modal",
+      pageId: "page-item-store",
+    });
+    modalRouter.register("settings", {
+      tag: "user-setting",
+      pageId: "page-settings",
+    });
+    modalRouter.register("leaderboard", {
+      tag: "leaderboard-modal",
+      pageId: "page-leaderboard",
+    });
+    modalRouter.register("clan", { tag: "clan-modal", pageId: "page-clan" });
+    modalRouter.register("account", {
+      tag: "account-modal",
+      pageId: "page-account",
+    });
+    modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
+    modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
+    modalRouter.register("language", {
+      tag: "language-modal",
+      pageId: "page-language",
+    });
+    modalRouter.register("single-player", {
+      tag: "single-player-modal",
+      pageId: "page-single-player",
+    });
+    modalRouter.register("ranked", {
+      tag: "ranked-modal",
+      pageId: "page-ranked",
+    });
+    modalRouter.register("troubleshooting", {
+      tag: "troubleshooting-modal",
+      pageId: "page-troubleshooting",
+    });
+    modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
+    modalRouter.register("flag-input", { tag: "flag-input-modal" });
+
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -331,7 +384,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
-    document.addEventListener("start-game", this.handleStartGame.bind(this));
+    document.addEventListener(
+      "toggle_game_start_timer",
+      this.handleToggleGameStartTimer.bind(this),
+    );
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -379,32 +435,24 @@ class Client {
       console.warn("Store modal element not found");
     }
 
-    const patternsModal = document.getElementById(
-      "territory-patterns-modal",
-    ) as TerritoryPatternsModal;
-    if (!patternsModal || !(patternsModal instanceof TerritoryPatternsModal)) {
-      console.warn("Patterns modal element not found");
+    const cosmeticsModal = document.getElementById(
+      "cosmetics-modal",
+    ) as CosmeticsModal;
+    if (!cosmeticsModal || !(cosmeticsModal instanceof CosmeticsModal)) {
+      console.warn("Cosmetics modal element not found");
     }
 
-    // Attach listener to any pattern-input component
-    document.querySelectorAll("pattern-input").forEach((patternInput) => {
-      patternInput.addEventListener("pattern-input-click", () => {
-        patternsModal.open();
+    // Attach listener to any cosmetics-input component
+    document.querySelectorAll("cosmetics-input").forEach((cosmeticsInput) => {
+      cosmeticsInput.addEventListener("cosmetics-input-click", () => {
+        cosmeticsModal.open();
       });
     });
 
     if (isInIframe()) {
-      const mobilePat = document.getElementById("pattern-input-mobile");
-      if (mobilePat) mobilePat.style.display = "none";
+      const mobileCosmetics = document.getElementById("cosmetics-input-mobile");
+      if (mobileCosmetics) mobileCosmetics.style.display = "none";
     }
-
-    if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
-      console.warn("Store modal element not found");
-    }
-
-    // We no longer need to manually manage the preview button as PatternInput handles it component-side.
-    // However, we still want to ensure the modal can be opened.
-    // The setupPatternInput above handles the click event for the new buttons.
 
     this.storeModal.refresh();
 
@@ -436,8 +484,17 @@ class Client {
       console.warn("Matchmaking modal element not found");
     }
 
+    this.rewardsModal = document.querySelector("rewards-modal") as RewardsModal;
+    if (!this.rewardsModal || !(this.rewardsModal instanceof RewardsModal)) {
+      console.warn("Rewards modal element not found");
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      updateAccountNavButton(userMeResponse);
+      if (crazyGamesSDK.isOnCrazyGames()) {
+        void updateCrazyGamesNavButton();
+      } else {
+        updateAccountNavButton(userMeResponse);
+      }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
@@ -455,6 +512,17 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
+
+        // Unclaimed-rewards popup — only on a clean homepage load, never over
+        // a deep link (join URL, #modal=..., #purchase-completed, ...).
+        const rewards = userMeResponse.player.rewards ?? [];
+        if (
+          rewards.length > 0 &&
+          window.location.pathname === "/" &&
+          window.location.hash === ""
+        ) {
+          this.rewardsModal?.openWithRewards(rewards);
+        }
       }
     };
 
@@ -466,6 +534,15 @@ class Client {
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
+
+    // Re-run auth when the player signs into CrazyGames mid-session. Logout
+    // reloads the page, so only login needs handling here.
+    crazyGamesSDK.addAuthListener(() => {
+      invalidateUserMe();
+      reauthAfterCrazyGamesChange().then((result) =>
+        result === false ? onUserMe(false) : getUserMe().then(onUserMe),
+      );
+    });
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -499,24 +576,6 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    const applyDarkMode = (isDark: boolean) => {
-      if (isDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-
-    applyDarkMode(this.userSettings.darkMode());
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e: CustomEvent<string>) => {
-        const isDark = e.detail === "true";
-        applyDarkMode(isDark);
-      },
-    );
-
     // Attempt to join lobby
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());
@@ -525,10 +584,24 @@ class Client {
     }
 
     const onHashUpdate = () => {
+      // Router-managed hash changes (#modal=...) are handled by the router
+      // syncing in/out; we don't need to tear down the lobby state for them.
+      if (modalRouter.isHashRouted()) {
+        modalRouter.routeFromHash();
+        return;
+      }
+
       // Reset the UI to its initial state
       this.joinModal?.close();
 
       onJoinChanged();
+    };
+
+    const leaveGame = () => {
+      crazyGamesSDK.gameplayStop().then(() => {
+        // redirect to the home page
+        window.location.href = "/";
+      });
     };
 
     const onPopState = () => {
@@ -538,23 +611,20 @@ class Client {
         if (!this.lobbyHandle.stop()) {
           console.info("Player is active, ask before leaving game");
 
-          const isConfirmed = confirm(
-            translateText("help_modal.exit_confirmation"),
+          // We can't block navigation on an async confirmation, so restore the
+          // history entry immediately and only leave once the player confirms.
+          history.pushState(null, "", this.currentUrl);
+          showInGameConfirm(translateText("help_modal.exit_confirmation")).then(
+            (isConfirmed) => {
+              if (isConfirmed) leaveGame();
+            },
           );
-
-          if (!isConfirmed) {
-            // Rollback navigator history
-            history.pushState(null, "", this.currentUrl);
-            return;
-          }
+          return;
         }
 
         console.info("Player is not active, leave the game immediately");
 
-        crazyGamesSDK.gameplayStop().then(() => {
-          // redirect to the home page
-          window.location.href = "/";
-        });
+        leaveGame();
       } else {
         console.info("Game not active, handle hash update");
 
@@ -611,7 +681,7 @@ class Client {
         // On low end-chromebooks the join modal was not registered in time.
         await new Promise((resolve) => setTimeout(resolve, 2000));
         window.showPage?.("page-join-lobby");
-        this.joinModal?.open(lobbyId);
+        this.joinModal?.open({ lobbyId });
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
@@ -656,6 +726,21 @@ class Client {
       const type = params.get("type");
       if (type === "currency_pack") {
         alertAndStrip(translateText("store.currency_pack_purchase_success"));
+        return;
+      }
+
+      if (type === "custom_currency") {
+        // Plutonium is credited asynchronously by the Stripe webhook; the
+        // balance refreshes from /users/@me on the next load.
+        alertAndStrip(translateText("store.custom_currency_purchase_success"));
+        return;
+      }
+
+      if (type === "subscription_tier") {
+        alert(translateText("store.subscription_purchase_success"));
+        strip();
+        invalidateUserMe();
+        window.location.reload();
         return;
       }
 
@@ -712,52 +797,72 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      // ?host means the lobby creator is returning to a successor lobby they
+      // reused from the win screen: reopen the host view bound to the existing
+      // lobby instead of the join flow. Non-creators who hit this URL still get
+      // treated as normal joiners by the server.
+      const returningAsHost = new URLSearchParams(window.location.search).has(
+        "host",
+      );
+      if (returningAsHost) {
+        // open() reveals the inline page itself (it calls showPage internally).
+        // Calling showPage first would open the modal once with no args and
+        // spuriously create a lobby before this attach call runs.
+        this.hostModal.open({ existingLobbyId: lobbyId });
+        console.log(`reopening host lobby ${lobbyId}`);
+        return;
+      }
       window.showPage?.("page-join-lobby");
-      this.joinModal.open(lobbyId);
+      this.joinModal.open({ lobbyId });
       console.log(`joining lobby ${lobbyId}`);
+      return;
+    }
+    if (modalRouter.routeFromHash()) {
       return;
     }
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.storeModal?.open(affiliateCode);
+        this.storeModal?.open({ affiliateCode });
       }
     }
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
     }
 
-    // Handle requeue parameter for ranked matchmaking
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.has("requeue")) {
-      // Remove only the requeue parameter, preserving other params and hash
-      searchParams.delete("requeue");
-      const newUrl =
-        window.location.pathname +
-        (searchParams.toString() ? "?" + searchParams.toString() : "") +
-        window.location.hash;
-      history.replaceState(null, "", newUrl);
-      // Wait for matchmaking button to be defined, then trigger its click handler.
-      customElements.whenDefined("matchmaking-button").then(() => {
-        const matchmakingButton = document.querySelector(
-          "matchmaking-button button",
-        ) as HTMLButtonElement | null;
-        if (matchmakingButton) {
-          matchmakingButton.click();
-        } else {
-          console.warn(
-            "Requeue requested, but matchmaking button not found in DOM.",
-          );
-        }
-      });
+    const requeueMode = this.consumeRequeueUrl();
+    if (requeueMode !== null) {
+      document.dispatchEvent(
+        new CustomEvent("open-matchmaking", {
+          detail: { mode: requeueMode },
+        }),
+      );
     }
+  }
+
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // null when the URL has no requeue param.
+  private consumeRequeueUrl(): "1v1" | "2v2" | null {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (!searchParams.has("requeue")) {
+      return null;
+    }
+    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
+
+    searchParams.delete("requeue");
+    const newUrl =
+      window.location.pathname +
+      (searchParams.toString() ? `?${searchParams.toString()}` : "") +
+      window.location.hash;
+    history.replaceState(null, "", newUrl);
+    return mode;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
-    if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
+    if (this.usernameInput && !this.usernameInput.canPlay()) {
       return;
     }
 
@@ -768,22 +873,24 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
-      this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
+      this.joinModal?.open({
+        lobbyId: lobby.gameID,
+        lobbyInfo: lobby.publicLobbyInfo,
+      });
     }
-    const config = await getRuntimeClientServerConfig();
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
-      this.updateJoinUrlForShare(lobby.gameID, config);
+      this.updateJoinUrlForShare(lobby.gameID);
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
@@ -807,16 +914,23 @@ class Client {
       document
         .getElementById("username-validation-error")
         ?.classList.add("hidden");
+      // Disarm BOTH lobby modals before closing either: closing any
+      // page-modal navigates via showPage, which force-closes the currently
+      // visible page — the other lobby modal. If that one is still armed,
+      // its onClose leaves the lobby and disconnects the player mid
+      // game-start (host or joiner, depending on close order).
+      this.hostModal?.disarmLeaveOnClose();
+      this.joinModal?.disarmLeaveOnClose();
+      this.hostModal?.closeWithoutLeaving();
       this.joinModal?.closeWithoutLeaving();
       [
         "single-player-modal",
-        "host-lobby-modal",
         "game-starting-modal",
         "game-top-bar",
         "help-modal",
         "user-setting",
         "troubleshooting-modal",
-        "territory-patterns-modal",
+        "cosmetics-modal",
         "store-modal",
         "language-modal",
         "news-modal",
@@ -881,7 +995,7 @@ class Client {
         "",
         lobbyIdHidden
           ? "/streamer-mode"
-          : `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
       );
 
       // Store current URL for popstate confirmation
@@ -889,14 +1003,11 @@ class Client {
     });
   }
 
-  private updateJoinUrlForShare(
-    lobbyId: string,
-    config: Awaited<ReturnType<typeof getRuntimeClientServerConfig>>,
-  ) {
+  private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     const targetUrl = lobbyIdHidden
       ? "/streamer-mode"
-      : `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
+      : `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
     const currentUrl = window.location.pathname;
 
     if (currentUrl !== targetUrl) {
@@ -939,8 +1050,14 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
-  private handleOpenMatchmaking(_event: CustomEvent<undefined>) {
-    this.matchmakingModal?.open();
+  private handleOpenMatchmaking(
+    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+  ) {
+    if (!this.matchmakingModal) return;
+    // Always set the mode: dispatchers without a detail (homepage button,
+    // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
+    this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+    this.matchmakingModal.open();
   }
 
   private handleKickPlayer(event: CustomEvent) {
@@ -952,9 +1069,9 @@ class Client {
     }
   }
 
-  private handleStartGame() {
+  private handleToggleGameStartTimer() {
     if (this.eventBus) {
-      this.eventBus.emit(new SendStartGameEvent());
+      this.eventBus.emit(new SendToggleGameStartTimer());
     }
   }
 
@@ -970,9 +1087,8 @@ class Client {
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
   ): Promise<string | null> {
-    const config = await getRuntimeClientServerConfig();
     if (
-      config.env() === GameEnv.Dev ||
+      ClientEnv.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;
@@ -1015,6 +1131,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
+  // on iOS and can softlock the HUD. See issue #2330.
+  installSafariPinchZoomBlocker();
+
   initLayout();
   new Client().initialize();
   initNavigation();
@@ -1025,6 +1145,10 @@ const bootstrap = () => {
   // Also hide elements after a short delay to catch late-rendered components
   setTimeout(hideCrazyGamesElements, 100);
   setTimeout(hideCrazyGamesElements, 500);
+
+  // Populate the CrazyGames account buttons once the nav/top-bar have rendered
+  // (onUserMe also refreshes them after auth and on mid-session sign-in).
+  setTimeout(() => void updateCrazyGamesNavButton(), 500);
 };
 
 if (document.readyState === "loading") {
@@ -1048,9 +1172,8 @@ async function getTurnstileToken(): Promise<{
     throw new Error("Failed to load Turnstile script");
   }
 
-  const config = await getRuntimeClientServerConfig();
   const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
+    sitekey: ClientEnv.turnstileSiteKey(),
     size: "normal",
     appearance: "interaction-only",
     theme: "light",

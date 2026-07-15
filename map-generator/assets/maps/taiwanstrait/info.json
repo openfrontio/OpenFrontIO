@@ -1,0 +1,150 @@
+{
+  "id": "TaiwanStrait",
+  "name": "Taiwan Strait",
+  "translation_key": "map.taiwanstrait",
+  "categories": ["asia"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [694, 26],
+      "name": "Fuzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [720, 222],
+      "name": "Putian",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [538, 432],
+      "name": "Quanzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [303, 593],
+      "name": "Xiamen",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [259, 678],
+      "name": "Zhangzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [26, 345],
+      "name": "Longyan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [386, 606],
+      "name": "Kinmen Island",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [773, 912],
+      "name": "Penghu",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1057, 1252],
+      "name": "Kaohsiung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [981, 1131],
+      "name": "Tainan",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1230, 1193],
+      "name": "Taitung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1416, 789],
+      "name": "Hualien",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1018, 936],
+      "name": "Chiayi",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1007, 710],
+      "name": "Taichung City",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1489, 235],
+      "name": "Keelung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1424, 254],
+      "name": "Taipei",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1341, 284],
+      "name": "Taoyuan",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1247, 415],
+      "name": "Hsinchu",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [73, 859],
+      "name": "Dongshan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [397, 335],
+      "name": "Anxi",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [22, 11],
+      "name": "Sanming",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [267, 134],
+      "name": "Dehua",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [522, 220],
+      "name": "Xianyou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1097, 592],
+      "name": "Miaoli",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1426, 1431],
+      "name": "Lanyu",
+      "flag": "tw"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1600,
+        "width": 800,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1600,
+        "width": 800,
+        "x": 800,
+        "y": 0
+      }
+    ]
+  }
+}

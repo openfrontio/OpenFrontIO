@@ -1,19 +1,23 @@
 {
+  "categories": ["featured", "world"],
+  "featured_rank": 1,
+  "id": "World",
   "map": {
     "height": 1000,
-    "num_land_tiles": 651609,
+    "num_land_tiles": 651569,
     "width": 2000
   },
   "map16x": {
     "height": 250,
-    "num_land_tiles": 37580,
+    "num_land_tiles": 37575,
     "width": 500
   },
   "map4x": {
     "height": 500,
-    "num_land_tiles": 158086,
+    "num_land_tiles": 158068,
     "width": 1000
   },
+  "multiplayer_frequency": 20,
   "name": "World",
   "nations": [
     {
@@ -376,5 +380,6 @@
       "flag": "lk",
       "name": "Sri Lanka"
     }
-  ]
+  ],
+  "translation_key": "map.world"
 }

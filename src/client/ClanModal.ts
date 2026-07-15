@@ -1,13 +1,15 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { type ClanInfo, type ClanMember, type ClanStats } from "./ClanApi";
+import { type ClanInfo, type ClanMember } from "./ClanApi";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
 import "./components/clan/ClanBrowseView";
 import type { BrowseState } from "./components/clan/ClanBrowseView";
 import "./components/clan/ClanCard";
 import "./components/clan/ClanDetailView";
+import "./components/clan/ClanGameHistoryView";
+import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
@@ -16,9 +18,9 @@ import "./components/clan/ClanTransferView";
 import "./components/ConfirmDialog";
 import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { modalRouter } from "./ModalRouter";
 import { translateText } from "./Utils";
 
-type Tab = "my-clans" | "browse";
 type View =
   | "list"
   | "detail"
@@ -28,9 +30,19 @@ type View =
   | "bans"
   | "my-requests";
 
+// List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
+// "members" / "game-history"); which set is live depends on `view`.
+const LIST_TABS = ["my-clans", "browse"] as const;
+type ListTab = (typeof LIST_TABS)[number];
+
+function isListTab(key: string): key is ListTab {
+  return (LIST_TABS as readonly string[]).includes(key);
+}
+
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
-  @state() private activeTab: Tab = "my-clans";
+  protected routerName = "clan";
+
   @state() private view: View = "list";
   @state() private loading = false;
 
@@ -56,45 +68,181 @@ export class ClanModal extends BaseModal {
     members: ClanMember[];
     membersTotal: number;
     pendingRequestCount: number;
-    stats: ClanStats | null;
   } | null = null;
 
-  render() {
-    const content = this.renderInner();
-    if (this.inline) return content;
-    return html`
-      <o-modal
-        id="clan-modal"
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
-    `;
+  // Single-clan cache: switching clans within one modal session drops
+  // it (see `openDetail`), so a user who clan-hops loses their filter
+  // selection and accumulated scroll on the previous clan. Keyed-by-tag
+  // would persist across hops if that becomes desired.
+  private gameHistoryCache: ClanGameHistoryCache | null = null;
+  private previousListTab: ListTab = "my-clans";
+
+  private get onListView(): boolean {
+    return this.view === "list" && !this.selectedClanTag;
   }
 
-  protected onOpen(): void {
-    this.loadMyClans();
+  private get onDetailView(): boolean {
+    return this.view === "detail" && !!this.selectedClanTag;
+  }
+
+  protected modalConfig() {
+    return {
+      tabs: this.onListView
+        ? [
+            { key: "my-clans", label: translateText("clan_modal.my_clans") },
+            { key: "browse", label: translateText("clan_modal.browse") },
+          ]
+        : this.onDetailView
+          ? [
+              {
+                key: "overview",
+                label: translateText("clan_modal.tab_overview"),
+              },
+              {
+                key: "members",
+                label: translateText("clan_modal.tab_members"),
+              },
+              {
+                key: "game-history",
+                label: translateText("clan_modal.tab_game_history"),
+              },
+            ]
+          : [],
+    };
+  }
+
+  protected renderHeaderSlot() {
+    return this.onListView
+      ? modalHeader({
+          title: translateText("clan_modal.title"),
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+        })
+      : this.renderSubViewHeader();
+  }
+
+  protected renderBody() {
+    return html`<div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>`;
+  }
+
+  protected onTabEnter(tab: string): void {
+    if (isListTab(tab)) {
+      this.view = "list";
+      this.selectedClan = null;
+      this.selectedClanTag = "";
+      this.detailCache = null;
+      this.gameHistoryCache = null;
+      if (tab === "my-clans") {
+        this.loadMyClans();
+      }
+      return;
+    }
+    // Detail tabs: BaseModal already updated activeTab; renderInner reads it.
+    // No additional side effects required here.
+  }
+
+  private tagPill(tag: string) {
+    return html`<span
+      class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
+      >[${tag}]</span
+    >`;
+  }
+
+  private renderSubViewHeader() {
+    const clan = this.selectedClan;
+    const ariaLabel = translateText("common.back");
+    if (this.view === "my-requests") {
+      return modalHeader({
+        title: translateText("clan_modal.pending_applications"),
+        onBack: () => (this.view = "list"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "manage") {
+      return modalHeader({
+        title: translateText("clan_modal.manage_clan"),
+        onBack: () => (this.view = "detail"),
+        ariaLabel,
+        rightContent: clan ? this.tagPill(clan.tag) : undefined,
+      });
+    }
+    if (this.view === "transfer") {
+      return modalHeader({
+        title: translateText("clan_modal.transfer_leadership"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "requests") {
+      return modalHeader({
+        title: translateText("clan_modal.join_requests"),
+        onBack: () => (this.view = "detail"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "bans") {
+      return modalHeader({
+        title: translateText("clan_modal.banned_players"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+      });
+    }
+    // Default: detail
+    return modalHeader({
+      title: clan?.name ?? translateText("clan_modal.title"),
+      onBack: () => {
+        this.view = "list";
+        this.selectedClan = null;
+        this.selectedClanTag = "";
+        this.myRole = null;
+        this.detailCache = null;
+        modalRouter.syncArgs("clan", { clan: null, tag: null });
+        this.gameHistoryCache = null;
+        this.setActiveTab(this.previousListTab);
+      },
+      ariaLabel,
+      rightContent: clan ? this.tagPill(clan.tag) : undefined,
+    });
+  }
+
+  protected onOpen(args?: Record<string, unknown>): void {
+    const targetTag =
+      typeof args?.clan === "string"
+        ? args.clan.trim()
+        : typeof args?.tag === "string"
+          ? args.tag.trim()
+          : "";
+    if (targetTag) {
+      this.openDetail(targetTag.toUpperCase());
+    }
+    this.loadMyClans({ allowGuest: Boolean(targetTag) });
   }
 
   protected onClose(): void {
     this.activeTab = "my-clans";
+    this.previousListTab = "my-clans";
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
     this.myRole = null;
     this.browseCache = null;
     this.detailCache = null;
+    this.gameHistoryCache = null;
   }
 
-  private async loadMyClans() {
+  private async loadMyClans(opts: { allowGuest?: boolean } = {}) {
     this.loading = true;
     try {
       const me = await getUserMe();
       if (!this.isModalOpen) return;
       if (!me || Object.keys(me.user).length === 0) {
+        if (opts.allowGuest) {
+          this.myPublicId = null;
+          this.myPendingRequests = [];
+          this.myClanRoles = new Map();
+          this.myClans = [];
+          return;
+        }
         window.dispatchEvent(
           new CustomEvent("show-message", {
             detail: {
@@ -131,16 +279,7 @@ export class ClanModal extends BaseModal {
 
   private renderInner() {
     if (this.loading) {
-      return html`
-        <div class="${this.modalContainerClass}">
-          ${modalHeader({
-            title: translateText("clan_modal.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-          })}
-          ${this.renderLoadingSpinner()}
-        </div>
-      `;
+      return this.renderLoadingSpinner();
     }
 
     if (this.view === "my-requests") {
@@ -181,8 +320,9 @@ export class ClanModal extends BaseModal {
             this.selectedClan = null;
             this.selectedClanTag = "";
             this.myRole = null;
+            this.detailCache = null;
             this.view = "list";
-            this.loadMyClans();
+            this.setActiveTab(this.previousListTab);
           }}
         ></clan-manage-view>`;
       }
@@ -220,13 +360,26 @@ export class ClanModal extends BaseModal {
           @navigate-back=${() => (this.view = "manage")}
         ></clan-bans-view>`;
       }
-      // Default: detail view
+      // Default: detail view — dispatched by the active detail tab
+      if (this.activeTab === "game-history") {
+        return html`<clan-game-history-view
+          .clanTag=${this.selectedClanTag}
+          .cachedState=${this.gameHistoryCache?.tag === this.selectedClanTag
+            ? this.gameHistoryCache
+            : null}
+          @history-updated=${(e: CustomEvent<ClanGameHistoryCache>) => {
+            this.gameHistoryCache = e.detail;
+          }}
+          @close-clan-modal=${() => this.close()}
+        ></clan-game-history-view>`;
+      }
       return html`<clan-detail-view
         .clanTag=${this.selectedClanTag}
         .cachedClan=${this.selectedClan}
         .myPublicId=${this.myPublicId}
         .myClanRoles=${this.myClanRoles}
         .myPendingRequests=${this.myPendingRequests}
+        .detailTab=${this.activeTab === "members" ? "members" : "overview"}
         .cachedDetail=${this.detailCache?.tag === this.selectedClanTag
           ? this.detailCache
           : null}
@@ -236,6 +389,8 @@ export class ClanModal extends BaseModal {
           this.selectedClanTag = "";
           this.myRole = null;
           this.detailCache = null;
+          this.gameHistoryCache = null;
+          this.setActiveTab(this.previousListTab);
         }}
         @detail-loaded=${(
           e: CustomEvent<{
@@ -244,7 +399,6 @@ export class ClanModal extends BaseModal {
             members: ClanMember[];
             membersTotal: number;
             pendingRequestCount: number;
-            stats: ClanStats | null;
           }>,
         ) => {
           this.selectedClan = e.detail.clan;
@@ -254,7 +408,25 @@ export class ClanModal extends BaseModal {
             members: e.detail.members,
             membersTotal: e.detail.membersTotal,
             pendingRequestCount: e.detail.pendingRequestCount,
-            stats: e.detail.stats,
+          };
+        }}
+        @members-loaded=${(
+          e: CustomEvent<{
+            members: ClanMember[];
+            membersTotal: number;
+            pendingRequestCount: number;
+          }>,
+        ) => {
+          if (
+            !this.detailCache ||
+            this.detailCache.tag !== this.selectedClanTag
+          )
+            return;
+          this.detailCache = {
+            ...this.detailCache,
+            members: e.detail.members,
+            membersTotal: e.detail.membersTotal,
+            pendingRequestCount: e.detail.pendingRequestCount,
           };
         }}
         @navigate-manage=${() => (this.view = "manage")}
@@ -264,6 +436,7 @@ export class ClanModal extends BaseModal {
             ...this.myClanRoles,
             [e.detail.tag, "member" as ClanRole],
           ]);
+          this.detailCache = null;
           this.openDetail(e.detail.tag);
         }}
         @clan-left=${(e: CustomEvent<{ tag: string }>) => {
@@ -273,8 +446,9 @@ export class ClanModal extends BaseModal {
           this.selectedClan = null;
           this.selectedClanTag = "";
           this.myRole = null;
+          this.detailCache = null;
           this.view = "list";
-          this.loadMyClans();
+          this.setActiveTab(this.previousListTab);
         }}
         @request-sent=${(e: CustomEvent<{ tag: string; name: string }>) => {
           this.myPendingRequests = [
@@ -289,74 +463,43 @@ export class ClanModal extends BaseModal {
       ></clan-detail-view>`;
     }
 
-    // List view (tabs + my clans / browse)
+    // List view (my clans / browse) — header + tabs are rendered by o-modal
     return html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        ${this.renderTabs()}
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${this.activeTab === "my-clans"
-            ? this.renderMyClans()
-            : html`<clan-browse-view
-                .myClanRoles=${this.myClanRoles}
-                .myPendingRequests=${this.myPendingRequests}
-                .cachedState=${this.browseCache}
-                @browse-updated=${(e: CustomEvent<BrowseState>) => {
-                  this.browseCache = e.detail;
-                }}
-                @clan-select=${(e: CustomEvent<{ tag: string }>) =>
-                  this.openDetail(e.detail.tag)}
-              ></clan-browse-view>`}
-        </div>
-      </div>
+      ${this.activeTab === "my-clans"
+        ? this.renderMyClans()
+        : html`<clan-browse-view
+            .myClanRoles=${this.myClanRoles}
+            .myPendingRequests=${this.myPendingRequests}
+            .cachedState=${this.browseCache}
+            @browse-updated=${(e: CustomEvent<BrowseState>) => {
+              this.browseCache = e.detail;
+            }}
+            @clan-select=${(e: CustomEvent<{ tag: string }>) =>
+              this.openDetail(e.detail.tag)}
+          ></clan-browse-view>`}
     `;
   }
 
   private openDetail(tag: string) {
+    if (this.selectedClanTag !== tag) {
+      // History cache is per-clan (see `gameHistoryCache` declaration),
+      // so it must be cleared on tag change. `detailCache` is left
+      // alone — its `tag` field is checked at render time and the
+      // detail view falls back to a fresh fetch when it doesn't match,
+      // so an explicit null here would be redundant.
+      this.gameHistoryCache = null;
+    }
+    // Remember which list tab the user was on so the back button can
+    // return them to it (browse vs my-clans).
+    if (isListTab(this.activeTab)) {
+      this.previousListTab = this.activeTab;
+    }
     this.selectedClanTag = tag;
     this.view = "detail";
-  }
-
-  private renderTabs() {
-    const tabs: { key: Tab; label: string }[] = [
-      { key: "my-clans", label: translateText("clan_modal.my_clans") },
-      { key: "browse", label: translateText("clan_modal.browse") },
-    ];
-
-    return html`
-      <div class="flex border-b border-white/10 px-4 lg:px-6 gap-1">
-        ${tabs.map(
-          (tab) => html`
-            <button
-              @click=${() => {
-                this.activeTab = tab.key;
-                this.view = "list";
-                this.selectedClan = null;
-                this.selectedClanTag = "";
-                if (tab.key === "my-clans") {
-                  this.loadMyClans();
-                }
-              }}
-              class="px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all relative
-                ${this.activeTab === tab.key
-                ? "text-aquarius"
-                : "text-white/40 hover:text-white/70"}"
-            >
-              ${tab.label}
-              ${this.activeTab === tab.key
-                ? html`<div
-                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
-                  ></div>`
-                : ""}
-            </button>
-          `,
-        )}
-      </div>
-    `;
+    modalRouter.syncArgs("clan", { clan: tag, tag: null });
+    // modalConfig() returns detail tabs; setActiveTab anchors activeTab to
+    // "overview" and syncs the URL router (routerName = "clan").
+    this.setActiveTab("overview");
   }
 
   private renderMyClans() {
@@ -370,7 +513,7 @@ export class ClanModal extends BaseModal {
             ${translateText("clan_modal.no_clans")}
           </p>
           <button
-            @click=${() => (this.activeTab = "browse")}
+            @click=${() => this.setActiveTab("browse")}
             class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
           >
             ${translateText("clan_modal.browse")}
@@ -380,7 +523,7 @@ export class ClanModal extends BaseModal {
     }
 
     return html`
-      <div class="p-4 lg:p-6 space-y-3">
+      <div class="space-y-3">
         ${hasRequests ? this.renderPendingRequestsButton() : ""}
         ${this.myClans.map(
           (clan) => html`

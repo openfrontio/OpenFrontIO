@@ -1,0 +1,84 @@
+{
+  "id": "Venice",
+  "name": "Venice",
+  "translation_key": "map.venice",
+  "categories": ["europe"],
+  "multiplayer_frequency": 6,
+  "nations": [
+    {
+      "coordinates": [760, 593],
+      "name": "Cannaregio",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [776, 772],
+      "name": "San Polo",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [897, 934],
+      "name": "San Marco",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [527, 822],
+      "name": "Santa Croce",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [639, 975],
+      "name": "Dorsoduro",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [673, 1205],
+      "name": "Giudecca",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1868, 1297],
+      "name": "Lido",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1200, 523],
+      "name": "San Michele",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1255, 209],
+      "name": "Murano",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1839, 877],
+      "name": "Certosa",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1199, 836],
+      "name": "Castello",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [437, 750],
+      "name": "Porto di Venezia",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1120, 1121],
+      "name": "San Giorgio Maggiore",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1897, 669],
+      "name": "Le Vignole",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1586, 1167],
+      "name": "Sant'Elena",
+      "flag": "venice"
+    }
+  ]
+}

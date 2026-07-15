@@ -1,7 +1,7 @@
 import { assetUrl } from "../AssetUrls";
-import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { createGameRunner, GameRunner } from "../GameRunner";
 import {
   AttackClusteredPositionsResultMessage,
   InitializedMessage,
@@ -112,6 +112,12 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
     transfers.push(gu.packedTileUpdates.buffer);
     if (gu.packedMotionPlans) {
       transfers.push(gu.packedMotionPlans.buffer);
+    }
+    if (gu.packedPlayerUpdates) {
+      transfers.push(gu.packedPlayerUpdates.buffer);
+    }
+    if (gu.packedAttackUpdates) {
+      transfers.push(gu.packedAttackUpdates.buffer);
     }
   }
 

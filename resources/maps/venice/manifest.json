@@ -1,0 +1,99 @@
+{
+  "categories": ["europe"],
+  "id": "Venice",
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 823860,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 46052,
+    "width": 500
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 198423,
+    "width": 1000
+  },
+  "multiplayer_frequency": 6,
+  "name": "Venice",
+  "nations": [
+    {
+      "coordinates": [760, 593],
+      "flag": "venice",
+      "name": "Cannaregio"
+    },
+    {
+      "coordinates": [776, 772],
+      "flag": "venice",
+      "name": "San Polo"
+    },
+    {
+      "coordinates": [897, 934],
+      "flag": "venice",
+      "name": "San Marco"
+    },
+    {
+      "coordinates": [527, 822],
+      "flag": "venice",
+      "name": "Santa Croce"
+    },
+    {
+      "coordinates": [639, 975],
+      "flag": "venice",
+      "name": "Dorsoduro"
+    },
+    {
+      "coordinates": [673, 1205],
+      "flag": "venice",
+      "name": "Giudecca"
+    },
+    {
+      "coordinates": [1868, 1297],
+      "flag": "venice",
+      "name": "Lido"
+    },
+    {
+      "coordinates": [1200, 523],
+      "flag": "venice",
+      "name": "San Michele"
+    },
+    {
+      "coordinates": [1255, 209],
+      "flag": "venice",
+      "name": "Murano"
+    },
+    {
+      "coordinates": [1839, 877],
+      "flag": "venice",
+      "name": "Certosa"
+    },
+    {
+      "coordinates": [1199, 836],
+      "flag": "venice",
+      "name": "Castello"
+    },
+    {
+      "coordinates": [437, 750],
+      "flag": "venice",
+      "name": "Porto di Venezia"
+    },
+    {
+      "coordinates": [1120, 1121],
+      "flag": "venice",
+      "name": "San Giorgio Maggiore"
+    },
+    {
+      "coordinates": [1897, 669],
+      "flag": "venice",
+      "name": "Le Vignole"
+    },
+    {
+      "coordinates": [1586, 1167],
+      "flag": "venice",
+      "name": "Sant'Elena"
+    }
+  ],
+  "translation_key": "map.venice"
+}

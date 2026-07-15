@@ -16,6 +16,7 @@ import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
+import { maxHealthWithVeterancy } from "./Veterancy";
 
 export class UnitImpl implements Unit {
   private _active = true;
@@ -71,6 +72,8 @@ export class UnitImpl implements Unit {
         state: "patrolling",
         patrolTile: params.patrolTile,
         lastCombatTick: -100,
+        veterancy: 0,
+        veterancyProgress: 0,
       };
     }
     this._targetUnit =
@@ -172,7 +175,12 @@ export class UnitImpl implements Unit {
   }
 
   setTroops(troops: number): void {
-    this._troops = Math.max(0, troops);
+    const nextTroops = Math.max(0, troops);
+    if (this._troops === nextTroops) {
+      return;
+    }
+    this._troops = nextTroops;
+    this.mg.addUpdate(this.toUpdate());
   }
   troops(): number {
     return this._troops;
@@ -213,19 +221,15 @@ export class UnitImpl implements Unit {
     this._owner = newOwner;
     this._owner._units.push(this);
     this.mg.addUpdate(this.toUpdate());
-    this.mg.displayMessage(
-      "events_display.unit_captured_by_enemy",
-      MessageType.UNIT_CAPTURED_BY_ENEMY,
-      this._lastOwner.id(),
-      undefined,
-      { unit: this.type(), name: newOwner.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.captured_enemy_unit",
-      MessageType.CAPTURED_ENEMY_UNIT,
-      newOwner.id(),
-      undefined,
-      { unit: this.type(), name: this._lastOwner.displayName() },
+  }
+
+  maxHealth(): number {
+    const base = this.info().maxHealth ?? 1;
+    // veterancy() is 0 for non-warships, so this returns base for them.
+    return maxHealthWithVeterancy(
+      base,
+      this.veterancy(),
+      this.mg.config().warshipVeterancyHealthBonus(),
     );
   }
 
@@ -234,7 +238,7 @@ export class UnitImpl implements Unit {
     const nextHealth = withinInt(
       this._health + toInt(delta),
       0n,
-      toInt(this.info().maxHealth ?? 1),
+      toInt(this.maxHealth()),
     );
 
     if (nextHealth === previousHealth) {
@@ -322,11 +326,12 @@ export class UnitImpl implements Unit {
   }
 
   private displayMessageOnDeleted(): void {
-    if (this._type === UnitType.MIRVWarhead) {
-      return;
-    }
-
-    if (this._type === UnitType.Train && this._trainType !== TrainType.Engine) {
+    // Only warships and transport ships are worth notifying about; everything
+    // else is either visible on the map or too low-stakes to surface.
+    if (
+      this._type !== UnitType.Warship &&
+      this._type !== UnitType.TransportShip
+    ) {
       return;
     }
 
@@ -336,6 +341,7 @@ export class UnitImpl implements Unit {
       this.owner().id(),
       undefined,
       { unit: this._type },
+      this.id(),
     );
   }
 
@@ -378,6 +384,8 @@ export class UnitImpl implements Unit {
       patrolTile: merged.patrolTile,
       retreatPort: merged.retreatPort,
       lastCombatTick: this._warshipState.lastCombatTick,
+      veterancy: this._warshipState.veterancy,
+      veterancyProgress: this._warshipState.veterancyProgress,
     };
     this.mg.addUpdate(this.toUpdate());
   }
@@ -525,6 +533,84 @@ export class UnitImpl implements Unit {
 
   level(): number {
     return this._level;
+  }
+
+  veterancy(): number {
+    return this._warshipState?.veterancy ?? 0;
+  }
+
+  /** Raise veterancy by one level (capped), which raises max health. The ship
+   *  is NOT instantly healed — it heals toward the higher cap normally.
+   *  No-op for non-warships or at the cap. */
+  private increaseVeterancy(): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    if (
+      this._warshipState.veterancy >= this.mg.config().warshipMaxVeterancy()
+    ) {
+      return;
+    }
+    this._warshipState.veterancy++;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  recordKill(targetType: UnitType): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    if (targetType === UnitType.Warship) {
+      // Final blow on an enemy warship: instant level, and the partial
+      // transport/capture progress toward the next level is wiped.
+      this._warshipState.veterancyProgress = 0;
+      this.increaseVeterancy();
+    } else if (targetType === UnitType.TransportShip) {
+      this.addVeterancyProgress(UnitType.TransportShip);
+    }
+  }
+
+  recordTradeCapture(): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    this.addVeterancyProgress(UnitType.TradeShip);
+  }
+
+  /**
+   * Add partial progress toward the next veterancy level from a non-kill source.
+   *
+   * Transports and captures share one integer progress meter. One level =
+   * transportThreshold * captureThreshold points; a transport is worth
+   * `captureThreshold` points and a capture is worth `transportThreshold`
+   * points. That makes `transportThreshold` transports OR `captureThreshold`
+   * captures (or any mix) fill exactly one level — all integer math, no floats.
+   * Overflow carries into the next level (only a warship kill resets it).
+   */
+  private addVeterancyProgress(source: UnitType): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    const maxVeterancy = this.mg.config().warshipMaxVeterancy();
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      return;
+    }
+    const transportThreshold = this.mg
+      .config()
+      .warshipVeterancyTransportKills();
+    const captureThreshold = this.mg.config().warshipVeterancyTradeCaptures();
+    const pointsPerLevel = transportThreshold * captureThreshold;
+    this._warshipState.veterancyProgress +=
+      source === UnitType.TransportShip ? captureThreshold : transportThreshold;
+    while (
+      this._warshipState.veterancyProgress >= pointsPerLevel &&
+      this._warshipState.veterancy < maxVeterancy
+    ) {
+      this._warshipState.veterancyProgress -= pointsPerLevel;
+      this.increaseVeterancy();
+    }
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      this._warshipState.veterancyProgress = 0;
+    }
   }
 
   setTrainStation(trainStation: boolean): void {

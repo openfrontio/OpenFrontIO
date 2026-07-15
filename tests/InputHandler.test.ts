@@ -6,10 +6,10 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
-import { UIState } from "../src/client/graphics/UIState";
+import { UIState } from "../src/client/UIState";
+import { GameView, PlayerView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
-import { GameView, PlayerView } from "../src/core/game/GameView";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
@@ -65,8 +65,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       },
       mockCanvas,
       eventBus,
@@ -541,8 +539,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -597,8 +593,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -642,6 +636,62 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Digit keys still set ghost structure when bound to Numpad", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      testSettings.setKeybinds({
+        buildCity: "Numpad1",
+        buildMIRV: "Numpad0",
+      });
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+    test("Digit1 sets ghost structure to City when buildCity is Numpad1", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", key: "1" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+    test("Digit0 sets ghost structrue to MIRV when buildMIRV is Numpad0", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit0", key: "0" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
+    });
+  });
+
+  describe("InputHandler keybind registry", () => {
+    function makeHandler() {
+      return new InputHandler(
+        {} as any, // gameView
+        {} as any, // uiState
+        document.createElement("div"), // canvas
+        {} as any, // eventBus
+      );
+    }
+
+    test("two actions bound to the same key are both kept (no overwrite)", () => {
+      const ih = makeHandler() as any;
+      ih.keybindAndEvent = [];
+      ih.addKeybindAndEvent("KeyX", () => {});
+      ih.addKeybindAndEvent("KeyX", () => {});
+
+      const entries = ih.keybindAndEvent.filter(
+        ([k]: [string, unknown]) => k === "KeyX",
+      );
+      expect(entries.length).toBe(2); // would have been 1 with the old Map
+    });
+  });
   describe("Build keybind two-phase matching (exact code first, then digit/Numpad alias)", () => {
     beforeEach(() => {
       inputHandler.destroy();
@@ -649,8 +699,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -671,8 +719,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -699,8 +745,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -724,8 +768,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -752,8 +794,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
       } as UIState;
     });
 
@@ -892,8 +932,6 @@ describe("Warship box selection (Shift+drag)", () => {
       attackRatio: 20,
       ghostStructure: null,
       rocketDirectionUp: true,
-      overlappingRailroads: [],
-      ghostRailPaths: [],
     } as UIState;
     inputHandler = new InputHandler(
       mockGameView,
@@ -928,13 +966,10 @@ describe("Warship box selection (Shift+drag)", () => {
 
   test("Shift keydown discards active ghostStructure", () => {
     uiState.ghostStructure = UnitType.Warship;
-    const emitSpy = vi.spyOn(eventBus, "emit");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
 
     expect(uiState.ghostStructure).toBeNull();
-    const types = emitSpy.mock.calls.map((c) => c[0].constructor.name);
-    expect(types).toContain("GhostStructureChangedEvent");
   });
 
   test("Shift+drag emits WarshipSelectionBoxUpdateEvent", () => {

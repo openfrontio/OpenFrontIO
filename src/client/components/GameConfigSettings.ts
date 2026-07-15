@@ -6,7 +6,11 @@ import {
   nothing,
   svg,
 } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  DoomsdayClockSpeed,
+} from "../../core/game/DoomsdayClock";
 import {
   Difficulty,
   Duos,
@@ -65,7 +69,13 @@ function renderTextCardButton(
   cardExtraClass: string,
 ): TemplateResult {
   return html`
-    <button class="${cardClass(active, cardExtraClass)}" @click=${onClick}>
+    <button
+      class="${cardClass(
+        active,
+        cardExtraClass,
+      )} flex items-center justify-center"
+      @click=${onClick}
+    >
       <span class="${CARD_LABEL_CLASS} ${stateTextClass(active)}">
         ${label}
       </span>
@@ -80,10 +90,18 @@ function renderSection(
   titleKey: string,
   content: TemplateResult | TemplateResult[],
   sectionClass = "space-y-6",
+  headerAction?: TemplateResult,
 ): TemplateResult {
   return html`
     <section class=${sectionClass}>
-      ${renderSectionHeader(iconSvg, colorClass, bgClass, titleKey)} ${content}
+      ${renderSectionHeader(
+        iconSvg,
+        colorClass,
+        bgClass,
+        titleKey,
+        headerAction,
+      )}
+      ${content}
     </section>
   `;
 }
@@ -139,6 +157,7 @@ function renderSectionHeader(
   colorClass: string,
   bgClass: string,
   titleKey: string,
+  headerAction?: TemplateResult,
 ): TemplateResult {
   return html`
     <div class="flex items-center gap-4 pb-2 border-b border-white/10">
@@ -157,6 +176,7 @@ function renderSectionHeader(
       <h3 class="text-lg font-bold text-white uppercase tracking-wider">
         ${translateText(titleKey)}
       </h3>
+      ${headerAction ? html`<div class="ml-auto">${headerAction}</div>` : null}
     </div>
   `;
 }
@@ -165,6 +185,8 @@ export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
+  // When set, this toggle's card expands to a pace dropdown while it is checked.
+  doomsdayClockSpeed?: DoomsdayClockSpeed;
 }
 
 export interface GameConfigSettingsData {
@@ -218,6 +240,7 @@ export interface GameConfigSettingsData {
 export class GameConfigSettings extends LitElement {
   @property({ attribute: false }) settings?: GameConfigSettingsData;
   @property({ attribute: false }) sectionGapClass = "space-y-6";
+  @state() private mapSearchQuery = "";
 
   createRenderRoot() {
     return this;
@@ -233,6 +256,15 @@ export class GameConfigSettings extends LitElement {
     );
   }
 
+  private handleMapSearchInput = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    this.mapSearchQuery = input.value;
+  };
+
+  private clearMapSearch = () => {
+    this.mapSearchQuery = "";
+  };
+
   private handleSelectMap = (map: GameMapType) => {
     this.emit("map-selected", { map });
   };
@@ -243,6 +275,11 @@ export class GameConfigSettings extends LitElement {
 
   private handleDifficultySelect = (difficulty: Difficulty) => {
     this.emit("difficulty-selected", { difficulty });
+  };
+
+  private handleDoomsdayClockSpeedChange = (e: Event) => {
+    const speed = (e.target as HTMLSelectElement).value as DoomsdayClockSpeed;
+    this.emit("doomsday-clock-speed-selected", { speed });
   };
 
   private handleGameModeSelect = (mode: GameMode) => {
@@ -284,12 +321,57 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
+    if (toggle.doomsdayClockSpeed !== undefined) {
+      return this.renderDoomsdayClockToggle(toggle);
+    }
+
     return renderTextCardButton(
       translateText(toggle.labelKey),
       toggle.checked,
       () => this.handleOptionToggle(toggle),
       "p-4 text-center",
     );
+  }
+
+  // Same toggle card as the others, but when on it grows to hold the pace
+  // dropdown. The card toggles on click; the dropdown stops propagation so
+  // changing the pace doesn't flip the toggle.
+  private renderDoomsdayClockToggle(
+    toggle: ToggleOptionConfig,
+  ): TemplateResult {
+    const selected = toggle.doomsdayClockSpeed;
+    return html`
+      <div
+        class="${cardClass(
+          toggle.checked,
+          // Centered label; when checked the dropdown is added below it so the
+          // label shifts up and the dropdown is reachable.
+          "p-4 flex flex-col items-center justify-center gap-2 text-center",
+        )}"
+        @click=${() => this.handleOptionToggle(toggle)}
+      >
+        <span class="${CARD_LABEL_CLASS} ${stateTextClass(toggle.checked)}">
+          ${translateText(toggle.labelKey)}
+        </span>
+        ${toggle.checked
+          ? html`
+              <select
+                class="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs"
+                @click=${(e: Event) => e.stopPropagation()}
+                @change=${this.handleDoomsdayClockSpeedChange}
+              >
+                ${DOOMSDAY_CLOCK_SPEEDS.map(
+                  (speed) => html`
+                    <option value=${speed} ?selected=${selected === speed}>
+                      ${translateText(`doomsday_clock_speed.${speed}`)}
+                    </option>
+                  `,
+                )}
+              </select>
+            `
+          : nothing}
+      </div>
+    `;
   }
 
   private renderUnitTypeOptions(disabledUnits: UnitType[]): TemplateResult[] {
@@ -307,6 +389,42 @@ export class GameConfigSettings extends LitElement {
         </button>
       `;
     });
+  }
+
+  private renderMapSearchInput(): TemplateResult {
+    return html`<div class="relative">
+      <input
+        type="text"
+        placeholder="${translateText("map_component.search_maps")}"
+        .value=${this.mapSearchQuery}
+        @input=${this.handleMapSearchInput}
+        class="w-48 px-3 py-1.5 pl-8 pr-7 rounded-lg text-sm bg-transparent border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-malibu-blue/50 transition-all"
+      />
+      <svg
+        class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      ${this.mapSearchQuery
+        ? html`<button
+            type="button"
+            @click=${this.clearMapSearch}
+            class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
+          >
+            <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+              />
+            </svg>
+          </button>`
+        : null}
+    </div>`;
   }
 
   render() {
@@ -328,7 +446,10 @@ export class GameConfigSettings extends LitElement {
             .mapWins=${settings.map.mapWins ?? new Map()}
             .onSelectMap=${this.handleSelectMap}
             .onSelectRandom=${this.handleSelectRandom}
+            .searchQuery=${this.mapSearchQuery}
           ></map-picker>`,
+          undefined,
+          this.renderMapSearchInput(),
         )}
         ${renderSection(
           DIFFICULTY_ICON,

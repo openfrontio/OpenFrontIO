@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: false
       - name: Setup node
@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: false
       - name: Setup node
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
@@ -64,10 +64,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
       - run: npm ci
       - run: npx prettier --check .
+
+  gen-maps:
+    name: 🗺️ Generated maps up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: map-generator/go.mod
+          cache-dependency-path: map-generator/go.sum
+      - run: npm ci
+      - run: npm run gen-maps
+      - name: Check for diff
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Generated maps are out of date — run 'npm run gen-maps' and commit the result."
+            git status --short
+            git --no-pager diff
+            exit 1
+          fi

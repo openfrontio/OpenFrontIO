@@ -3,6 +3,12 @@ import { ClanTagSchema } from "./Schemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
+// Response for the game-server endpoint listing every registered clan tag.
+export const ReservedClanTagsResponseSchema = z.array(z.string());
+export type ReservedClanTagsResponse = z.infer<
+  typeof ReservedClanTagsResponseSchema
+>;
+
 export const ClanLeaderboardEntrySchema = z.object({
   clanTag: RequiredClanTagSchema,
   games: z.number(),
@@ -30,11 +36,44 @@ export const ClanInfoSchema = z.object({
   name: z.string().max(35),
   tag: RequiredClanTagSchema,
   description: z.string().max(200),
+  // Discord invite URL set by the clan leader; null when unset. Optional
+  // because not every ClanInfo source includes it (e.g. browse results).
+  discordUrl: z.string().max(255).nullable().optional(),
   isOpen: z.boolean(),
   createdAt: z.iso.datetime().optional(),
   memberCount: z.number().optional(),
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
+
+// Client-assembled view model for the clan Discord card. `valid` is false only
+// on a definitive Discord 404 (invite revoked); other failures degrade to the
+// plain link with valid: true.
+export type ClanDiscord = {
+  url: string;
+  valid: boolean;
+  serverName?: string;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  description?: string | null;
+  onlineCount?: number | null;
+  memberCount?: number | null;
+};
+
+// Subset of Discord's public GET /invites/{code}?with_counts=true response,
+// parsed client-side into ClanDiscord. snake_case mirrors Discord's wire format.
+export const DiscordInviteResponseSchema = z.object({
+  guild: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      icon: z.string().nullable().optional(),
+      banner: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+    })
+    .optional(),
+  approximate_member_count: z.number().optional(),
+  approximate_presence_count: z.number().optional(),
+});
 
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),
@@ -55,10 +94,35 @@ export const ClanMemberStatsSchema = z.object({
   ffa: ClanMemberWLSchema,
   team: ClanMemberWLSchema,
   hvn: ClanMemberWLSchema,
+  duos: ClanMemberWLSchema,
+  trios: ClanMemberWLSchema,
+  quads: ClanMemberWLSchema,
+  "2": ClanMemberWLSchema,
+  "3": ClanMemberWLSchema,
+  "4": ClanMemberWLSchema,
+  "5": ClanMemberWLSchema,
+  "6": ClanMemberWLSchema,
+  "7": ClanMemberWLSchema,
   ranked: ClanMemberWLSchema,
   "1v1": ClanMemberWLSchema,
 });
 export type ClanMemberStats = z.infer<typeof ClanMemberStatsSchema>;
+
+export const TEAM_BREAKDOWN_KEYS = [
+  "duos",
+  "trios",
+  "quads",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+] as const satisfies readonly (keyof ClanMemberStats)[];
+
+export const RANKED_BREAKDOWN_KEYS = [
+  "1v1",
+] as const satisfies readonly (keyof ClanMemberStats)[];
 
 export const ClanMemberSchema = z.object({
   role: z.enum(["leader", "officer", "member"]),
@@ -112,19 +176,48 @@ export const JoinClanResponseSchema = z.object({
 });
 export type JoinClanResponse = z.infer<typeof JoinClanResponseSchema>;
 
-export const ClanStatsSchema = z.object({
-  clanTag: RequiredClanTagSchema,
-  games: z.number(),
-  wins: z.number(),
-  losses: z.number(),
-  stats: ClanMemberStatsSchema,
-  teamTypeWL: z.record(
-    z.string(),
-    z.object({ wl: z.tuple([z.number(), z.number()]) }),
-  ),
-  teamCountWL: z.record(
-    z.string(),
-    z.object({ wl: z.tuple([z.number(), z.number()]) }),
-  ),
+export const ClanGamePlayerSchema = z.object({
+  publicId: z.string(),
+  username: z.string(),
+  won: z.boolean(),
 });
-export type ClanStats = z.infer<typeof ClanStatsSchema>;
+export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;
+
+// "incomplete" covers games with no recorded winner.
+// The server stamps this when winnerType IS NULL,
+// so we have to accept it on the wire even if the UI collapses it back
+// into the defeat-styled badge.
+export const ClanGameResultSchema = z.enum(["victory", "defeat", "incomplete"]);
+export type ClanGameResult = z.infer<typeof ClanGameResultSchema>;
+
+export const ClanGameFilters = ["ffa", "team", "hvn", "ranked"] as const;
+export const ClanGameFilterSchema = z.enum(ClanGameFilters);
+export type ClanGameFilter = z.infer<typeof ClanGameFilterSchema>;
+
+export const ClanGameSchema = z.object({
+  gameId: z.string(),
+  start: z.iso.datetime(),
+  durationSeconds: z.number().int().nonnegative(),
+  map: z.string().optional(),
+  mode: z.string().optional(),
+  // playerTeams is `null` (not absent) for FFA / non-team games — use
+  // `.nullish()` so the wire `null` doesn't fail the parse.
+  playerTeams: z.string().nullish(),
+  rankedType: z.string().optional(),
+  result: ClanGameResultSchema.optional(),
+  // Mirrors games.num_players nullability — historical rows may not
+  // carry a value. Use `.nullish()` so wire `null` parses cleanly.
+  totalPlayers: z.number().int().nonnegative().nullish(),
+  clanPlayers: ClanGamePlayerSchema.array(),
+});
+export type ClanGame = z.infer<typeof ClanGameSchema>;
+
+export const ClanGamesResponseSchema = z.object({
+  results: ClanGameSchema.array(),
+  // Opaque continuation token. Round-trip verbatim as the `cursor` query
+  // parameter to fetch the next page; never construct or parse it.
+  // `null` means the server has no more rows to serve. Page size is
+  // fixed server-side, so the client never sends a limit.
+  nextCursor: z.string().nullable(),
+});
+export type ClanGamesResponse = z.infer<typeof ClanGamesResponseSchema>;

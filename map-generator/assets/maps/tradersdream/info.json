@@ -1,5 +1,10 @@
 {
+  "id": "TradersDream",
   "name": "Traders Dream",
+  "translation_key": "map.tradersdream",
+  "categories": ["fictional"],
+  "multiplayer_frequency": 4,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [1010, 120],
@@ -66,5 +71,21 @@
       "flag": "",
       "name": "Harborwick"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 960,
+        "width": 2200,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 960,
+        "width": 2200,
+        "x": 0,
+        "y": 960
+      }
+    ]
+  }
 }

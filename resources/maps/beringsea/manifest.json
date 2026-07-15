@@ -1,4 +1,6 @@
 {
+  "categories": ["asia", "north_america"],
+  "id": "BeringSea",
   "map": {
     "height": 1600,
     "num_land_tiles": 1615723,
@@ -14,6 +16,7 @@
     "num_land_tiles": 396641,
     "width": 1250
   },
+  "multiplayer_frequency": 5,
   "name": "Bering Sea",
   "nations": [
     {
@@ -24,7 +27,7 @@
     {
       "coordinates": [1725, 158],
       "flag": "Alaska",
-      "name": "Utqiaġvik"
+      "name": "Utqiagvik"
     },
     {
       "coordinates": [2152, 270],
@@ -136,5 +139,23 @@
       "flag": "ru",
       "name": "Magadan"
     }
-  ]
+  ],
+  "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1600,
+        "width": 1375,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1600,
+        "width": 1125,
+        "x": 1375,
+        "y": 0
+      }
+    ]
+  },
+  "translation_key": "map.beringsea"
 }

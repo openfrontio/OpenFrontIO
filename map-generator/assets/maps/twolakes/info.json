@@ -1,25 +1,34 @@
 {
+  "id": "TwoLakes",
   "name": "Two Lakes",
+  "translation_key": "map.twolakes",
+  "categories": ["europe"],
+  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1025, 750],
-      "name": "Galicica"
+      "name": "Galicica",
+      "flag": "mk"
     },
     {
       "coordinates": [1815, 820],
-      "name": "Pelister"
+      "name": "Pelister",
+      "flag": "mk"
     },
     {
       "coordinates": [920, 1250],
-      "name": "Podgorie"
+      "name": "Podgorie",
+      "flag": "al"
     },
     {
       "coordinates": [100, 1410],
-      "name": "Valamara"
+      "name": "Valamara",
+      "flag": "al"
     },
     {
       "coordinates": [1320, 1485],
-      "name": "Prespa"
+      "name": "Prespa",
+      "flag": "gr"
     }
   ]
 }

@@ -6,17 +6,17 @@ import {
   MenuElementParams,
   rootMenuElement,
   Slot,
-} from "../../../src/client/graphics/layers/RadialMenuElements";
+} from "../../../src/client/hud/layers/RadialMenuElements";
+import { GameView, PlayerView } from "../../../src/client/view";
 import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
-import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
 vi.mock("../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderNumber: vi.fn((num: number) => num.toString()),
 }));
 
-vi.mock("../../../src/client/graphics/layers/BuildMenu", async () => {
+vi.mock("../../../src/client/hud/layers/BuildMenu", async () => {
   const { UnitType } = await vi.importActual<
     typeof import("../../../src/core/game/Game")
   >("../../../src/core/game/Game");

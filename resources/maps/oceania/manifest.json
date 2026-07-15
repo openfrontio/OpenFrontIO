@@ -1,19 +1,22 @@
 {
+  "categories": ["oceania", "continental"],
+  "id": "Oceania",
   "map": {
     "height": 1000,
-    "num_land_tiles": 194648,
-    "width": 2000
+    "num_land_tiles": 197878,
+    "width": 1664
   },
   "map16x": {
     "height": 250,
-    "num_land_tiles": 10846,
-    "width": 500
+    "num_land_tiles": 10889,
+    "width": 416
   },
   "map4x": {
     "height": 500,
-    "num_land_tiles": 46259,
-    "width": 1000
+    "num_land_tiles": 46580,
+    "width": 832
   },
+  "multiplayer_frequency": 0,
   "name": "Oceania",
   "nations": [
     {
@@ -126,5 +129,6 @@
       "flag": "Hawaii",
       "name": "Hawaii"
     }
-  ]
+  ],
+  "translation_key": "map.oceania"
 }

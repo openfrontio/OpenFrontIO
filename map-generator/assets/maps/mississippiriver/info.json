@@ -1,0 +1,321 @@
+{
+  "id": "MississippiRiver",
+  "name": "Mississippi River",
+  "translation_key": "map.mississippiriver",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 3,
+  "nations": [
+    {
+      "coordinates": [390, 269],
+      "name": "Memphis",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [89, 50],
+      "name": "Marion",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [174, 1804],
+      "name": "Helena-West Helena",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [329, 3385],
+      "name": "Rosedale",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [113, 4031],
+      "name": "Arkansas City",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [89, 2510],
+      "name": "Elaine",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [330, 2162],
+      "name": "Friars Point",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [365, 1251],
+      "name": "Tunica",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [182, 800],
+      "name": "Horseshoe Lake",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [378, 2490],
+      "name": "Clarksdale",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [185, 308],
+      "name": "West Memphis",
+      "flag": "Arkansas"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [304, 87],
+      "name": "Harbor Town",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [395, 4],
+      "name": "Frayser",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [383, 510],
+      "name": "Westwood",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [90, 473],
+      "name": "Edmondson",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [20, 690],
+      "name": "Anthonyville",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [395, 3552],
+      "name": "Beulah",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [220, 3872],
+      "name": "Eutaw",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [394, 3866],
+      "name": "Bolivar",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [11, 3227],
+      "name": "Benzal",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [23, 3865],
+      "name": "Rohwer",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [17, 3752],
+      "name": "Duce",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [41, 3606],
+      "name": "Kelso",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [339, 3297],
+      "name": "Wright",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [339, 3159],
+      "name": "Waxhaw",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [336, 3098],
+      "name": "Gunnison",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [341, 2994],
+      "name": "Deeson",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [303, 2764],
+      "name": "Hillhouse",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [378, 2790],
+      "name": "Alligator",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [306, 2393],
+      "name": "Farell",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [14, 2738],
+      "name": "Mellwood",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [28, 2894],
+      "name": "Crumrod",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [350, 2679],
+      "name": "Rena Lara",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [247, 2599],
+      "name": "Sherards",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [61, 3050],
+      "name": "Snow Lake",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [252, 2121],
+      "name": "Westover",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [55, 2168],
+      "name": "Lake View",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [45, 2335],
+      "name": "Wabash",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [28, 1757],
+      "name": "West Helena",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [372, 1851],
+      "name": "Lula",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [47, 2008],
+      "name": "Oneida",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [358, 1699],
+      "name": "Dundee",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [355, 1567],
+      "name": "Maud",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [368, 1436],
+      "name": "Clayton",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [271, 1436],
+      "name": "Austin",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [92, 1291],
+      "name": "Whitehall",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [4, 1097],
+      "name": "Council",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [12, 840],
+      "name": "Hughes",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [374, 1094],
+      "name": "Hollywood",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [369, 1002],
+      "name": "Bowdre",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [369, 882],
+      "name": "Penton",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [238, 701],
+      "name": "Norfolk",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [389, 631],
+      "name": "Walls",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [378, 714],
+      "name": "Glover",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [188, 469],
+      "name": "Amanca",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [386, 381],
+      "name": "South Memphis",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [395, 191],
+      "name": "North Memphis",
+      "flag": "Tennessee"
+    },
+    {
+      "coordinates": [57, 565],
+      "name": "Midway Corner",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [7, 4190],
+      "name": "Halley",
+      "flag": "Arkansas"
+    },
+    {
+      "coordinates": [394, 4134],
+      "name": "Lamont",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [389, 3713],
+      "name": "Dahomy",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [296, 2896],
+      "name": "Round Lake",
+      "flag": "Mississippi"
+    }
+  ]
+}

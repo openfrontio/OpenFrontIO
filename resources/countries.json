@@ -14,9 +14,14 @@
     "name": "Achaemenid Empire"
   },
   {
-    "code": "ae",
+    "code": "Aceh",
     "continent": "Asia",
-    "name": "United Arab Emirates"
+    "name": "Aceh"
+  },
+  {
+    "code": "Circassia",
+    "continent": "Europe",
+    "name": "Adygea"
   },
   {
     "code": "af",
@@ -74,6 +79,21 @@
     "name": "Algeria"
   },
   {
+    "code": "Alkebulan",
+    "continent": "Africa",
+    "name": "Alkebulan"
+  },
+  {
+    "code": "Almohad Dynasty",
+    "continent": "Africa",
+    "name": "Almohad Dynasty"
+  },
+  {
+    "code": "Almoravid Dynasty",
+    "continent": "Africa",
+    "name": "Almoravid Dynasty"
+  },
+  {
     "code": "Amazigh flag",
     "continent": "Africa",
     "name": "Amazigh Flag"
@@ -94,6 +114,11 @@
     "name": "Armenia"
   },
   {
+    "code": "Armenian Kingdom Of Cilicia",
+    "continent": "Asia",
+    "name": "Armenian Kingdom of Cilicia"
+  },
+  {
     "code": "Armenian SSR",
     "continent": "Asia",
     "name": "Armenian SSR"
@@ -101,6 +126,11 @@
   {
     "code": "Anarchist flag",
     "name": "Anarchist Flag"
+  },
+  {
+    "code": "Ambazonia",
+    "continent": "Africa",
+    "name": "Ambazonia"
   },
   {
     "code": "ad",
@@ -113,8 +143,19 @@
     "name": "Angola"
   },
   {
+    "code": "gq-an",
+    "continent": "Africa",
+    "name": "Annobon"
+  },
+  {
     "code": "aq",
+    "continent": "Antarctica",
     "name": "Antarctica"
+  },
+  {
+    "code": "Antarctica (True South)",
+    "continent": "Antarctica",
+    "name": "True South"
   },
   {
     "code": "antipope",
@@ -140,6 +181,11 @@
     "code": "Arabia",
     "continent": "Asia",
     "name": "Arabia"
+  },
+  {
+    "code": "Arapaho",
+    "continent": "North America",
+    "name": "Arapaho"
   },
   {
     "code": "Arizona",
@@ -177,6 +223,11 @@
     "name": "Asturias"
   },
   {
+    "code": "Atacama",
+    "continent": "South America",
+    "name": "Atacama"
+  },
+  {
     "code": "Athens",
     "continent": "Europe",
     "name": "Athens"
@@ -192,9 +243,29 @@
     "name": "Austria-Hungary"
   },
   {
+    "code": "Habsburg Austria",
+    "continent": "Europe",
+    "name": "Austrian Empire"
+  },
+  {
     "code": "au",
     "continent": "Oceania",
     "name": "Australia"
+  },
+  {
+    "code": "Australian Aboriginal Flag",
+    "continent": "Oceania",
+    "name": "Australian Aboriginal Flag"
+  },
+  {
+    "code": "Ayyubid Dynasty",
+    "continent": "Asia",
+    "name": "Ayyubid Dynasty"
+  },
+  {
+    "code": "Azad Kashmir",
+    "continent": "Asia",
+    "name": "Azad Kashmir"
   },
   {
     "code": "az",
@@ -207,9 +278,19 @@
     "name": "Azerbaijan SSR"
   },
   {
+    "code": "pt-azores",
+    "continent": "Europe",
+    "name": "Azores"
+  },
+  {
     "code": "Aztec Empire",
     "continent": "North America",
     "name": "Aztec Empire"
+  },
+  {
+    "code": "DE-BW",
+    "continent": "Europe",
+    "name": "Baden-Württemberg"
   },
   {
     "code": "bs",
@@ -241,6 +322,11 @@
     "name": "Barbados"
   },
   {
+    "code": "Barbuda",
+    "continent": "North America",
+    "name": "Barbuda"
+  },
+  {
     "code": "Babylonia",
     "continent": "Asia",
     "name": "Babylonia"
@@ -249,6 +335,16 @@
     "code": "es-pv",
     "continent": "Europe",
     "name": "Basque Country"
+  },
+  {
+    "code": "DE-BY",
+    "continent": "Europe",
+    "name": "Bavaria"
+  },
+  {
+    "code": "DE-BY-L",
+    "continent": "Europe",
+    "name": "Bavaria (Lozenges)"
   },
   {
     "code": "by",
@@ -271,6 +367,11 @@
     "name": "Benin"
   },
   {
+    "code": "DE-BE",
+    "continent": "Europe",
+    "name": "Berlin"
+  },
+  {
     "code": "bm",
     "continent": "North America",
     "name": "Bermuda"
@@ -279,6 +380,11 @@
     "code": "bt",
     "continent": "Asia",
     "name": "Bhutan"
+  },
+  {
+    "code": "Biafra",
+    "continent": "Africa",
+    "name": "Biafra"
   },
   {
     "code": "bo",
@@ -305,14 +411,34 @@
     "name": "Bouvet Island"
   },
   {
+    "code": "DE-BB",
+    "continent": "Europe",
+    "name": "Brandenburg"
+  },
+  {
     "code": "br",
     "continent": "South America",
     "name": "Brazil"
   },
   {
+    "code": "DE-HB",
+    "continent": "Europe",
+    "name": "Bremen"
+  },
+  {
+    "code": "British Antarctic Territory",
+    "continent": "Antarctica",
+    "name": "British Antarctic Territory"
+  },
+  {
     "code": "britishcolumbia",
     "continent": "North America",
     "name": "British Columbia"
+  },
+  {
+    "code": "Flag_of_Hong_Kong_(1959-1997)",
+    "continent": "Asia",
+    "name": "British Hong Kong"
   },
   {
     "code": "io",
@@ -439,6 +565,11 @@
     "name": "Central African Republic"
   },
   {
+    "code": "Chaco",
+    "continent": "South America",
+    "name": "Chaco"
+  },
+  {
     "code": "td",
     "continent": "Africa",
     "name": "Chad"
@@ -449,9 +580,29 @@
     "name": "Chaldea"
   },
   {
+    "code": "Cherokee Nation",
+    "continent": "North America",
+    "name": "Cherokee"
+  },
+  {
+    "code": "GB-CHE",
+    "continent": "Europe",
+    "name": "Cheshire"
+  },
+  {
+    "code": "Chickasaw",
+    "continent": "North America",
+    "name": "Chickasaw"
+  },
+  {
     "code": "cl",
     "continent": "South America",
     "name": "Chile"
+  },
+  {
+    "code": "Chin State",
+    "continent": "Asia",
+    "name": "Chin State"
   },
   {
     "code": "cn",
@@ -469,14 +620,19 @@
     "name": "Christmas Island"
   },
   {
+    "code": "Choctaw",
+    "continent": "North America",
+    "name": "Choctaw"
+  },
+  {
+    "code": "Chubut",
+    "continent": "South America",
+    "name": "Chubut"
+  },
+  {
     "code": "Chuvashia",
     "continent": "Europe",
     "name": "Chuvashia"
-  },
-  {
-    "code": "Circassia",
-    "continent": "Asia",
-    "name": "Circassia"
   },
   {
     "code": "cp",
@@ -523,14 +679,34 @@
     "name": "Connacht"
   },
   {
+    "code": "Connecticut",
+    "continent": "North America",
+    "name": "Connecticut"
+  },
+  {
     "code": "ck",
     "continent": "Oceania",
     "name": "Cook Islands"
   },
   {
+    "code": "Coquimbo",
+    "continent": "South America",
+    "name": "Coquimbo"
+  },
+  {
+    "code": "Cordoba (Argentina)",
+    "continent": "South America",
+    "name": "Cordoba (Argentina)"
+  },
+  {
     "code": "cordoba",
     "continent": "Europe",
     "name": "Cordoba"
+  },
+  {
+    "code": "Corrientes",
+    "continent": "South America",
+    "name": "Corrientes"
   },
   {
     "code": "Corsica",
@@ -543,9 +719,24 @@
     "name": "Costa Rica"
   },
   {
+    "code": "County of Edessa",
+    "continent": "Asia",
+    "name": "County of Edessa"
+  },
+  {
+    "code": "County of Tripoli",
+    "continent": "Asia",
+    "name": "County of Tripoli"
+  },
+  {
     "code": "ci",
     "continent": "Africa",
     "name": "Côte d'Ivoire"
+  },
+  {
+    "code": "crimea",
+    "continent": "Europe",
+    "name": "Crimea"
   },
   {
     "code": "hr",
@@ -560,6 +751,11 @@
     "code": "cu",
     "continent": "North America",
     "name": "Cuba"
+  },
+  {
+    "code": "GB-CMA",
+    "continent": "Europe",
+    "name": "Cumbria"
   },
   {
     "code": "cw",
@@ -577,6 +773,11 @@
     "name": "Czech Republic"
   },
   {
+    "code": "Danu",
+    "continent": "Asia",
+    "name": "Danu"
+  },
+  {
     "code": "Danzig",
     "continent": "Europe",
     "name": "Danzig"
@@ -585,6 +786,11 @@
     "code": "1_Dalriata",
     "continent": "Europe",
     "name": "Dál Riata"
+  },
+  {
+    "code": "Delaware",
+    "continent": "North America",
+    "name": "Delaware"
   },
   {
     "code": "dk",
@@ -597,6 +803,11 @@
     "name": "Democratic Republic of the Congo"
   },
   {
+    "code": "Deseret",
+    "continent": "North America",
+    "name": "Deseret"
+  },
+  {
     "code": "dg",
     "continent": "Asia",
     "name": "Diego Garcia"
@@ -605,6 +816,11 @@
     "code": "Dilmun",
     "continent": "Asia",
     "name": "Dilmun"
+  },
+  {
+    "code": "District_of_Columbia",
+    "continent": "North America",
+    "name": "Washington D.C."
   },
   {
     "code": "dj",
@@ -644,6 +860,11 @@
     "code": "east_germany",
     "continent": "Europe",
     "name": "East Germany"
+  },
+  {
+    "code": "Eastern_Turkistan_Flag",
+    "continent": "Asia",
+    "name": "East Turkestan"
   },
   {
     "code": "ec",
@@ -695,6 +916,11 @@
     "code": "gb-eng",
     "continent": "Europe",
     "name": "England"
+  },
+  {
+    "code": "Entre Rios",
+    "continent": "South America",
+    "name": "Entre Rios"
   },
   {
     "code": "gq",
@@ -763,6 +989,11 @@
     "restricted": true
   },
   {
+    "code": "Fatimid Caliphate",
+    "continent": "Africa",
+    "name": "Fatimid Caliphate"
+  },
+  {
     "code": "fm",
     "continent": "Oceania",
     "name": "Federated States of Micronesia"
@@ -786,6 +1017,11 @@
     "code": "Florida",
     "continent": "North America",
     "name": "Florida"
+  },
+  {
+    "code": "Formosa",
+    "continent": "South America",
+    "name": "Formosa"
   },
   {
     "code": "1_Fortriu",
@@ -864,6 +1100,11 @@
     "code": "Georgian SSR",
     "continent": "Asia",
     "name": "Georgian SSR"
+  },
+  {
+    "code": "German Confederation",
+    "continent": "Europe",
+    "name": "German Confederation"
   },
   {
     "code": "German Empire",
@@ -947,14 +1188,14 @@
     "name": "Guyana"
   },
   {
-    "code": "Habsburg Austria",
-    "continent": "Europe",
-    "name": "Habsburg Austria"
-  },
-  {
     "code": "ht",
     "continent": "North America",
     "name": "Haiti"
+  },
+  {
+    "code": "DE-HH",
+    "continent": "Europe",
+    "name": "Hamburg"
   },
   {
     "code": "Hawaii",
@@ -966,9 +1207,9 @@
     "name": "Heard Island and McDonald Islands"
   },
   {
-    "code": "va",
+    "code": "DE-HE",
     "continent": "Europe",
-    "name": "Holy See"
+    "name": "Hesse"
   },
   {
     "code": "Holy Roman Empire",
@@ -1004,6 +1245,11 @@
     "code": "Idaho",
     "continent": "North America",
     "name": "Idaho"
+  },
+  {
+    "code": "Illinois (Centennial)",
+    "continent": "North America",
+    "name": "Illinois (Centennial)"
   },
   {
     "code": "Illinois",
@@ -1051,6 +1297,16 @@
     "name": "Ireland"
   },
   {
+    "code": "Ireland Green Harp",
+    "continent": "Europe",
+    "name": "Green Harp"
+  },
+  {
+    "code": "Haudenosaunee",
+    "continent": "North America",
+    "name": "Iroquois Confederacy"
+  },
+  {
     "code": "im",
     "continent": "Europe",
     "name": "Isle of Man"
@@ -1071,9 +1327,19 @@
     "name": "Jamaica"
   },
   {
+    "code": "Jammu and Kashmir",
+    "continent": "Asia",
+    "name": "Jammu and Kashmir"
+  },
+  {
     "code": "jp",
     "continent": "Asia",
     "name": "Japan"
+  },
+  {
+    "code": "Jefferson",
+    "continent": "North America",
+    "name": "Jefferson"
   },
   {
     "code": "je",
@@ -1081,9 +1347,29 @@
     "name": "Jersey"
   },
   {
+    "code": "Johor",
+    "continent": "Asia",
+    "name": "Johor"
+  },
+  {
     "code": "jo",
     "continent": "Asia",
     "name": "Jordan"
+  },
+  {
+    "code": "Jujuy",
+    "continent": "South America",
+    "name": "Jujuy"
+  },
+  {
+    "code": "Kachin",
+    "continent": "Asia",
+    "name": "Kachin"
+  },
+  {
+    "code": "Kansas (Banner)",
+    "continent": "North America",
+    "name": "Kansas (Banner)"
   },
   {
     "code": "Kansas",
@@ -1096,6 +1382,16 @@
     "name": "Karelo-Finnish SSR"
   },
   {
+    "code": "Kayah",
+    "continent": "Asia",
+    "name": "Kayah"
+  },
+  {
+    "code": "Kayin",
+    "continent": "Asia",
+    "name": "Kayin"
+  },
+  {
     "code": "Kazakh SSR",
     "continent": "Asia",
     "name": "Kazakh SSR"
@@ -1104,6 +1400,16 @@
     "code": "kz",
     "continent": "Asia",
     "name": "Kazakhstan"
+  },
+  {
+    "code": "Kedah",
+    "continent": "Asia",
+    "name": "Kedah"
+  },
+  {
+    "code": "Kelantan",
+    "continent": "Asia",
+    "name": "Kelantan"
   },
   {
     "code": "Kemet",
@@ -1131,6 +1437,26 @@
     "name": "Khemet"
   },
   {
+    "code": "Kingdom of Araucania and Patagonia",
+    "continent": "South America",
+    "name": "Kingdom of Araucania and Patagonia"
+  },
+  {
+    "code": "Kingdom of Benin",
+    "continent": "Africa",
+    "name": "Kingdom of Benin"
+  },
+  {
+    "code": "Kingdom Of Cyprus",
+    "continent": "Europe",
+    "name": "Kingdom of Cyprus"
+  },
+  {
+    "code": "Kingdom of Dahomey",
+    "continent": "Africa",
+    "name": "Kingdom of Dahomey"
+  },
+  {
     "code": "Kingdom of Egypt",
     "continent": "Africa",
     "name": "Kingdom of Egypt"
@@ -1139,6 +1465,11 @@
     "code": "Kingdom of Iraq",
     "continent": "Asia",
     "name": "Kingdom of Iraq"
+  },
+  {
+    "code": "Kingdom of Ireland",
+    "continent": "Europe",
+    "name": "Kingdom of Ireland"
   },
   {
     "code": "italy",
@@ -1154,6 +1485,16 @@
     "code": "Kingdom of Judah",
     "continent": "Asia",
     "name": "Kingdom of Judah"
+  },
+  {
+    "code": "kingdom_of_portugal",
+    "continent": "Europe",
+    "name": "Kingdom of Portugal"
+  },
+  {
+    "code": "Kingdom of Kongo",
+    "continent": "Africa",
+    "name": "Kingdom of Kongo"
   },
   {
     "code": "Kingdom of Syria",
@@ -1180,9 +1521,19 @@
     "name": "Kiwi"
   },
   {
+    "code": "Kokang",
+    "continent": "Asia",
+    "name": "Kokang"
+  },
+  {
     "code": "xk",
     "continent": "Europe",
     "name": "Kosovo"
+  },
+  {
+    "code": "Kuala Lumpur",
+    "continent": "Asia",
+    "name": "Kuala Lumpur"
   },
   {
     "code": "kurdistan",
@@ -1205,9 +1556,39 @@
     "name": "Kyrgyzstan"
   },
   {
+    "code": "La Araucania",
+    "continent": "South America",
+    "name": "La Araucania"
+  },
+  {
+    "code": "La Pampa",
+    "continent": "South America",
+    "name": "La Pampa"
+  },
+  {
+    "code": "La Rioja",
+    "continent": "South America",
+    "name": "La Rioja"
+  },
+  {
+    "code": "Labuan",
+    "continent": "Asia",
+    "name": "Labuan"
+  },
+  {
     "code": "1_Laigin",
     "continent": "Europe",
     "name": "Laigin"
+  },
+  {
+    "code": "Lakotah",
+    "continent": "North America",
+    "name": "Lakotah"
+  },
+  {
+    "code": "GB-LAN",
+    "continent": "Europe",
+    "name": "Lancashire"
   },
   {
     "code": "la",
@@ -1273,6 +1654,16 @@
     "name": "Liechtenstein"
   },
   {
+    "code": "Lihyan",
+    "continent": "Asia",
+    "name": "Lihyan"
+  },
+  {
+    "code": "Lincoln",
+    "continent": "North America",
+    "name": "Lincoln"
+  },
+  {
     "code": "Listenbourg",
     "name": "Listenbourg"
   },
@@ -1287,9 +1678,24 @@
     "name": "Lithuanian SSR"
   },
   {
+    "code": "Los Lagos",
+    "continent": "South America",
+    "name": "Los Lagos"
+  },
+  {
+    "code": "Los Rios",
+    "continent": "South America",
+    "name": "Los Rios"
+  },
+  {
     "code": "Louisiana",
     "continent": "North America",
     "name": "Louisiana"
+  },
+  {
+    "code": "DE-NI",
+    "continent": "Europe",
+    "name": "Lower Saxony"
   },
   {
     "code": "Lower Silesia",
@@ -1309,7 +1715,12 @@
   {
     "code": "Macedonia",
     "continent": "Europe",
-    "name": "Macedonia"
+    "name": "Macedonian Empire"
+  },
+  {
+    "code": "Magallanes",
+    "continent": "South America",
+    "name": "Magallanes"
   },
   {
     "code": "manitoba",
@@ -1322,9 +1733,19 @@
     "name": "Macau"
   },
   {
+    "code": "Ma_Clique_Flag",
+    "continent": "Asia",
+    "name": "Ma Clique"
+  },
+  {
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "Maine (1901)",
+    "continent": "North America",
+    "name": "Maine (1901)"
   },
   {
     "code": "Maine",
@@ -1332,9 +1753,29 @@
     "name": "Maine"
   },
   {
+    "code": "Majapahit",
+    "continent": "Asia",
+    "name": "Majapahit"
+  },
+  {
+    "code": "majorca",
+    "continent": "Europe",
+    "name": "Majorca"
+  },
+  {
+    "code": "Massachusetts (Naval)",
+    "continent": "North America",
+    "name": "Massachusetts (Naval)"
+  },
+  {
     "code": "Massachusetts",
     "continent": "North America",
     "name": "Massachusetts"
+  },
+  {
+    "code": "Malacca",
+    "continent": "Asia",
+    "name": "Malacca"
   },
   {
     "code": "mw",
@@ -1357,14 +1798,29 @@
     "name": "Mali"
   },
   {
+    "code": "Mali Empire",
+    "continent": "Africa",
+    "name": "Mali Empire"
+  },
+  {
     "code": "mt",
     "continent": "Europe",
     "name": "Malta"
   },
   {
+    "code": "Flag_of_Manchukuo",
+    "continent": "Asia",
+    "name": "Manchukuo"
+  },
+  {
     "code": "Maori flag",
     "continent": "Oceania",
     "name": "Māori Flag"
+  },
+  {
+    "code": "marinid",
+    "continent": "Africa",
+    "name": "Marinid Dynasty"
   },
   {
     "code": "mh",
@@ -1397,9 +1853,19 @@
     "name": "Mayotte"
   },
   {
+    "code": "DE-MV",
+    "continent": "Europe",
+    "name": "Mecklenburg-Vorpommern"
+  },
+  {
     "code": "Median Empire",
     "continent": "Asia",
     "name": "Median Empire"
+  },
+  {
+    "code": "Mendoza",
+    "continent": "South America",
+    "name": "Mendoza"
   },
   {
     "code": "1_Mercia",
@@ -1407,9 +1873,19 @@
     "name": "Mercia"
   },
   {
+    "code": "GB-Merseyside",
+    "continent": "Europe",
+    "name": "Merseyside"
+  },
+  {
     "code": "mx",
     "continent": "North America",
     "name": "Mexico"
+  },
+  {
+    "code": "Miccosukee",
+    "continent": "North America",
+    "name": "Miccosukee"
   },
   {
     "code": "Michigan",
@@ -1425,6 +1901,11 @@
     "code": "Minnesota",
     "continent": "North America",
     "name": "Minnesota"
+  },
+  {
+    "code": "Misiones",
+    "continent": "South America",
+    "name": "Misiones"
   },
   {
     "code": "Mississippi",
@@ -1445,6 +1926,11 @@
     "code": "md",
     "continent": "Europe",
     "name": "Moldova"
+  },
+  {
+    "code": "Mon State",
+    "continent": "Asia",
+    "name": "Mon State"
   },
   {
     "code": "mc",
@@ -1482,6 +1968,16 @@
     "name": "Morocco"
   },
   {
+    "code": "Mosquito Kingdom",
+    "continent": "North America",
+    "name": "Mosquito Kingdom"
+  },
+  {
+    "code": "ha_ma",
+    "continent": "Europe",
+    "name": "Mount Athos"
+  },
+  {
     "code": "mz",
     "continent": "Africa",
     "name": "Mozambique"
@@ -1495,6 +1991,11 @@
     "code": "mm",
     "continent": "Asia",
     "name": "Myanmar"
+  },
+  {
+    "code": "Naga",
+    "continent": "Asia",
+    "name": "Naga"
   },
   {
     "code": "na",
@@ -1511,9 +2012,24 @@
     "name": "Nauru"
   },
   {
+    "code": "Navajo",
+    "continent": "North America",
+    "name": "Navajo"
+  },
+  {
+    "code": "navarre",
+    "continent": "Europe",
+    "name": "Navarre"
+  },
+  {
     "code": "Nebraska",
     "continent": "North America",
     "name": "Nebraska"
+  },
+  {
+    "code": "Negeri Sembilan",
+    "continent": "Asia",
+    "name": "Negeri Sembilan"
   },
   {
     "code": "np",
@@ -1526,6 +2042,11 @@
     "name": "Netherlands"
   },
   {
+    "code": "Neuquen",
+    "continent": "South America",
+    "name": "Neuquen"
+  },
+  {
     "code": "neuragic_empire",
     "name": "Neuragic Empire"
   },
@@ -1533,6 +2054,11 @@
     "code": "Nevada",
     "continent": "North America",
     "name": "Nevada"
+  },
+  {
+    "code": "Nevis",
+    "continent": "North America",
+    "name": "Nevis"
   },
   {
     "code": "newbrunswick",
@@ -1543,6 +2069,11 @@
     "code": "nc",
     "continent": "Oceania",
     "name": "New Caledonia"
+  },
+  {
+    "code": "New England",
+    "continent": "North America",
+    "name": "New England"
   },
   {
     "code": "newfoundlandandlabrador",
@@ -1563,6 +2094,11 @@
     "code": "New_Mexico",
     "continent": "North America",
     "name": "New Mexico"
+  },
+  {
+    "code": "aus_nsw",
+    "continent": "Oceania",
+    "name": "New South Wales"
   },
   {
     "code": "New_York",
@@ -1630,6 +2166,16 @@
     "name": "North Macedonia"
   },
   {
+    "code": "DE-NW",
+    "continent": "Europe",
+    "name": "North Rhine-Westphalia"
+  },
+  {
+    "code": "North yemen",
+    "continent": "Asia",
+    "name": "North Yemen"
+  },
+  {
     "code": "northern_ireland",
     "continent": "Europe",
     "name": "Northern Ireland"
@@ -1638,6 +2184,11 @@
     "code": "mp",
     "continent": "Oceania",
     "name": "Northern Mariana Islands"
+  },
+  {
+    "code": "aus_norter",
+    "continent": "Oceania",
+    "name": "Northern Territory"
   },
   {
     "code": "1_Northern Ui Neill",
@@ -1695,6 +2246,16 @@
     "name": "Ontario"
   },
   {
+    "code": "Order Of Malta",
+    "continent": "Europe",
+    "name": "Sovereign Military Order of Malta"
+  },
+  {
+    "code": "Oregon (Reverse)",
+    "continent": "North America",
+    "name": "Oregon (Reverse)"
+  },
+  {
     "code": "Oregon",
     "continent": "North America",
     "name": "Oregon"
@@ -1703,6 +2264,11 @@
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
+  },
+  {
+    "code": "Pahang",
+    "continent": "Asia",
+    "name": "Pahang"
   },
   {
     "code": "pk",
@@ -1715,6 +2281,11 @@
     "name": "Palau"
   },
   {
+    "code": "Palaung",
+    "continent": "Asia",
+    "name": "Palaung"
+  },
+  {
     "code": "Palekh",
     "continent": "Europe",
     "name": "Palekh"
@@ -1723,6 +2294,11 @@
     "code": "pa",
     "continent": "North America",
     "name": "Panama"
+  },
+  {
+    "code": "Pa-O",
+    "continent": "Asia",
+    "name": "Pa'O"
   },
   {
     "code": "pg",
@@ -1760,14 +2336,39 @@
     "name": "Persia"
   },
   {
+    "code": "Penang",
+    "continent": "Asia",
+    "name": "Penang"
+  },
+  {
+    "code": "an_pe",
+    "continent": "Antarctica",
+    "name": "Penguins"
+  },
+  {
+    "code": "Perak",
+    "continent": "Asia",
+    "name": "Perak"
+  },
+  {
     "code": "ph",
     "continent": "Asia",
     "name": "Philippines"
   },
   {
+    "code": "Philippines (war)",
+    "continent": "Asia",
+    "name": "Philippines (war)"
+  },
+  {
     "code": "Phrygia",
     "continent": "Asia",
     "name": "Phrygia"
+  },
+  {
+    "code": "Pine Tree Flag",
+    "continent": "North America",
+    "name": "Pine Tree Flag"
   },
   {
     "code": "pn",
@@ -1804,6 +2405,16 @@
     "name": "Prince Edward Island"
   },
   {
+    "code": "Principality of Antioch",
+    "continent": "Asia",
+    "name": "Principality of Antioch"
+  },
+  {
+    "code": "Principality of Moldavia",
+    "continent": "Europe",
+    "name": "Principality of Moldavia"
+  },
+  {
     "code": "provence",
     "continent": "Europe",
     "name": "Provence"
@@ -1819,6 +2430,15 @@
     "name": "Puerto Rico"
   },
   {
+    "code": "Purple Flag",
+    "name": "Purple Flag"
+  },
+  {
+    "code": "Putrajaya",
+    "continent": "Asia",
+    "name": "Putrajaya"
+  },
+  {
     "code": "qa",
     "continent": "Asia",
     "name": "Qatar"
@@ -1832,6 +2452,16 @@
     "code": "Quebec",
     "continent": "North America",
     "name": "Quebec"
+  },
+  {
+    "code": "aus_quelan",
+    "continent": "Oceania",
+    "name": "Queensland"
+  },
+  {
+    "code": "Rakhine",
+    "continent": "Asia",
+    "name": "Rakhine"
   },
   {
     "code": "Rashidi Emirate",
@@ -1869,9 +2499,19 @@
     "name": "Republic of Pirates"
   },
   {
+    "code": "Republika Srpska",
+    "continent": "Europe",
+    "name": "Republika Srpska"
+  },
+  {
     "code": "re",
     "continent": "Africa",
     "name": "Réunion"
+  },
+  {
+    "code": "DE-RP",
+    "continent": "Europe",
+    "name": "Rhineland-Palatinate"
   },
   {
     "code": "Rhode_Island",
@@ -1882,6 +2522,11 @@
     "code": "rio_de_janeiro",
     "continent": "South America",
     "name": "Rio de Janeiro"
+  },
+  {
+    "code": "Rio Negro",
+    "continent": "South America",
+    "name": "Rio Negro"
   },
   {
     "code": "SPQR",
@@ -1899,6 +2544,11 @@
     "name": "Romania"
   },
   {
+    "code": "Communist Romania",
+    "continent": "Europe",
+    "name": "Romanian People's Republic"
+  },
+  {
     "code": "Ror Empire",
     "name": "Ror Empire"
   },
@@ -1906,6 +2556,416 @@
     "code": "ru",
     "continent": "Europe",
     "name": "Russia"
+  },
+  {
+    "code": "RU-AL",
+    "continent": "Asia",
+    "name": "Altai Republic"
+  },
+  {
+    "code": "RU-ALT",
+    "continent": "Asia",
+    "name": "Altai Krai"
+  },
+  {
+    "code": "RU-AMU",
+    "continent": "Asia",
+    "name": "Amur Oblast"
+  },
+  {
+    "code": "RU-ARK",
+    "continent": "Europe",
+    "name": "Arkhangelsk Oblast"
+  },
+  {
+    "code": "RU-AST",
+    "continent": "Europe",
+    "name": "Astrakhan Oblast"
+  },
+  {
+    "code": "RU-BA",
+    "continent": "Europe",
+    "name": "Republic of Bashkortostan"
+  },
+  {
+    "code": "RU-BEL",
+    "continent": "Europe",
+    "name": "Belgorod Oblast"
+  },
+  {
+    "code": "RU-BRY",
+    "continent": "Europe",
+    "name": "Bryansk Oblast"
+  },
+  {
+    "code": "RU-BU",
+    "continent": "Asia",
+    "name": "Republic of Buryatia"
+  },
+  {
+    "code": "RU-CE",
+    "continent": "Europe",
+    "name": "Chechen Republic"
+  },
+  {
+    "code": "RU-CHE",
+    "continent": "Asia",
+    "name": "Chelyabinsk Oblast"
+  },
+  {
+    "code": "RU-CHU",
+    "continent": "Asia",
+    "name": "Chukotka Autonomous Okrug"
+  },
+  {
+    "code": "RU-DA",
+    "continent": "Europe",
+    "name": "Republic of Dagestan"
+  },
+  {
+    "code": "RU-IN",
+    "continent": "Europe",
+    "name": "Republic of Ingushetia"
+  },
+  {
+    "code": "RU-IRK",
+    "continent": "Asia",
+    "name": "Irkutsk Oblast"
+  },
+  {
+    "code": "RU-IVA",
+    "continent": "Europe",
+    "name": "Ivanovo Oblast"
+  },
+  {
+    "code": "RU-SA",
+    "continent": "Asia",
+    "name": "Sakha Republic"
+  },
+  {
+    "code": "RU-KAM",
+    "continent": "Asia",
+    "name": "Kamchatka Krai"
+  },
+  {
+    "code": "RU-KB",
+    "continent": "Europe",
+    "name": "Kabardino-Balkar Republic"
+  },
+  {
+    "code": "RU-KC",
+    "continent": "Europe",
+    "name": "Karachay-Cherkess Republic"
+  },
+  {
+    "code": "RU-KDA",
+    "continent": "Europe",
+    "name": "Krasnodar Krai"
+  },
+  {
+    "code": "RU-KEM",
+    "continent": "Asia",
+    "name": "Kemerovo Oblast"
+  },
+  {
+    "code": "RU-KGD",
+    "continent": "Europe",
+    "name": "Kaliningrad Oblast"
+  },
+  {
+    "code": "RU-KHA",
+    "continent": "Asia",
+    "name": "Khabarovsk Krai"
+  },
+  {
+    "code": "RU-KHM",
+    "continent": "Asia",
+    "name": "Khanty-Mansi Autonomous Okrug"
+  },
+  {
+    "code": "RU-KIR",
+    "continent": "Europe",
+    "name": "Kirov Oblast"
+  },
+  {
+    "code": "RU-KK",
+    "continent": "Asia",
+    "name": "Republic of Khakassia"
+  },
+  {
+    "code": "RU-KL",
+    "continent": "Europe",
+    "name": "Republic of Kalmykia"
+  },
+  {
+    "code": "RU-KLU",
+    "continent": "Europe",
+    "name": "Kaluga Oblast"
+  },
+  {
+    "code": "RU-KO",
+    "continent": "Europe",
+    "name": "Komi Republic"
+  },
+  {
+    "code": "RU-KOS",
+    "continent": "Europe",
+    "name": "Kostroma Oblast"
+  },
+  {
+    "code": "RU-KR",
+    "continent": "Europe",
+    "name": "Republic of Karelia"
+  },
+  {
+    "code": "RU-KRS",
+    "continent": "Europe",
+    "name": "Kursk Oblast"
+  },
+  {
+    "code": "RU-KYA",
+    "continent": "Asia",
+    "name": "Krasnoyarsk Krai"
+  },
+  {
+    "code": "RU-KGN",
+    "continent": "Asia",
+    "name": "Kurgan Oblast"
+  },
+  {
+    "code": "RU-LEN",
+    "continent": "Europe",
+    "name": "Leningrad Oblast"
+  },
+  {
+    "code": "RU-LIP",
+    "continent": "Europe",
+    "name": "Lipetsk Oblast"
+  },
+  {
+    "code": "RU-MAG",
+    "continent": "Asia",
+    "name": "Magadan Oblast"
+  },
+  {
+    "code": "RU-ME",
+    "continent": "Europe",
+    "name": "Mari El Republic"
+  },
+  {
+    "code": "RU-ME (2006–2011)",
+    "continent": "Europe",
+    "name": "Mari El (2006-2011)"
+  },
+  {
+    "code": "RU-MO",
+    "continent": "Europe",
+    "name": "Republic of Mordovia"
+  },
+  {
+    "code": "RU-MOS",
+    "continent": "Europe",
+    "name": "Moscow Oblast"
+  },
+  {
+    "code": "RU-MOW",
+    "continent": "Europe",
+    "name": "Moscow"
+  },
+  {
+    "code": "RU-MUR",
+    "continent": "Europe",
+    "name": "Murmansk Oblast"
+  },
+  {
+    "code": "RU-NEN",
+    "continent": "Europe",
+    "name": "Nenets Autonomous Okrug"
+  },
+  {
+    "code": "RU-NGR",
+    "continent": "Europe",
+    "name": "Novgorod Oblast"
+  },
+  {
+    "code": "RU-NIZ",
+    "continent": "Europe",
+    "name": "Nizhny Novgorod Oblast"
+  },
+  {
+    "code": "RU-NVS",
+    "continent": "Asia",
+    "name": "Novosibirsk Oblast"
+  },
+  {
+    "code": "RU-OMS",
+    "continent": "Asia",
+    "name": "Omsk Oblast"
+  },
+  {
+    "code": "RU-ORE",
+    "continent": "Europe",
+    "name": "Orenburg Oblast"
+  },
+  {
+    "code": "RU-ORL",
+    "continent": "Europe",
+    "name": "Oryol Oblast"
+  },
+  {
+    "code": "RU-PNZ",
+    "continent": "Europe",
+    "name": "Penza Oblast"
+  },
+  {
+    "code": "RU-PER",
+    "continent": "Europe",
+    "name": "Perm Krai"
+  },
+  {
+    "code": "RU-PRI",
+    "continent": "Asia",
+    "name": "Primorsky Krai"
+  },
+  {
+    "code": "RU-PSK",
+    "continent": "Europe",
+    "name": "Pskov Oblast"
+  },
+  {
+    "code": "RU-ROS",
+    "continent": "Europe",
+    "name": "Rostov Oblast"
+  },
+  {
+    "code": "RU-RYA",
+    "continent": "Europe",
+    "name": "Ryazan Oblast"
+  },
+  {
+    "code": "RU-SAM",
+    "continent": "Europe",
+    "name": "Samara Oblast"
+  },
+  {
+    "code": "RU-SAR",
+    "continent": "Europe",
+    "name": "Saratov Oblast"
+  },
+  {
+    "code": "RU-SAK",
+    "continent": "Asia",
+    "name": "Sakhalin Oblast"
+  },
+  {
+    "code": "RU-SE",
+    "continent": "Europe",
+    "name": "North Ossetia-Alania"
+  },
+  {
+    "code": "RU-SPE",
+    "continent": "Europe",
+    "name": "Saint Petersburg"
+  },
+  {
+    "code": "RU-SMO",
+    "continent": "Europe",
+    "name": "Smolensk Oblast"
+  },
+  {
+    "code": "RU-STA",
+    "continent": "Europe",
+    "name": "Stavropol Krai"
+  },
+  {
+    "code": "RU-SVE",
+    "continent": "Asia",
+    "name": "Sverdlovsk Oblast"
+  },
+  {
+    "code": "RU-TAM",
+    "continent": "Europe",
+    "name": "Tambov Oblast"
+  },
+  {
+    "code": "RU-TA",
+    "continent": "Europe",
+    "name": "Republic of Tatarstan"
+  },
+  {
+    "code": "RU-TOM",
+    "continent": "Asia",
+    "name": "Tomsk Oblast"
+  },
+  {
+    "code": "RU-TUL",
+    "continent": "Europe",
+    "name": "Tula Oblast"
+  },
+  {
+    "code": "RU-TY",
+    "continent": "Asia",
+    "name": "Tuva Republic"
+  },
+  {
+    "code": "RU-TVE",
+    "continent": "Europe",
+    "name": "Tver Oblast"
+  },
+  {
+    "code": "RU-TYU",
+    "continent": "Asia",
+    "name": "Tyumen Oblast"
+  },
+  {
+    "code": "RU-UD",
+    "continent": "Europe",
+    "name": "Udmurt Republic"
+  },
+  {
+    "code": "RU-ULY",
+    "continent": "Europe",
+    "name": "Ulyanovsk Oblast"
+  },
+  {
+    "code": "RU-VGG",
+    "continent": "Europe",
+    "name": "Volgograd Oblast"
+  },
+  {
+    "code": "RU-VLA",
+    "continent": "Europe",
+    "name": "Vladimir Oblast"
+  },
+  {
+    "code": "RU-VOR",
+    "continent": "Europe",
+    "name": "Voronezh Oblast"
+  },
+  {
+    "code": "RU-VLG",
+    "continent": "Europe",
+    "name": "Vologda Oblast"
+  },
+  {
+    "code": "RU-YAN",
+    "continent": "Asia",
+    "name": "Yamalo-Nenets Autonomous Okrug"
+  },
+  {
+    "code": "RU-YAR",
+    "continent": "Europe",
+    "name": "Yaroslavl Oblast"
+  },
+  {
+    "code": "RU-YEV",
+    "continent": "Asia",
+    "name": "Jewish Autonomous Oblast"
+  },
+  {
+    "code": "RU-ZAB",
+    "continent": "Asia",
+    "name": "Zabaykalsky Krai"
   },
   {
     "code": "Russian SSR",
@@ -1918,9 +2978,19 @@
     "name": "Rwanda"
   },
   {
+    "code": "DE-SL",
+    "continent": "Europe",
+    "name": "Saarland"
+  },
+  {
     "code": "Saba kingdom",
     "continent": "Asia",
     "name": "Saba Kingdom"
+  },
+  {
+    "code": "Sabah",
+    "continent": "Asia",
+    "name": "Sabah"
   },
   {
     "code": "bl",
@@ -1958,6 +3028,11 @@
     "name": "Saint Vincent and the Grenadines"
   },
   {
+    "code": "Salta",
+    "continent": "South America",
+    "name": "Salta"
+  },
+  {
     "code": "Sami flag",
     "continent": "Europe",
     "name": "Sami Flag"
@@ -1966,6 +3041,16 @@
     "code": "ws",
     "continent": "Oceania",
     "name": "Samoa"
+  },
+  {
+    "code": "San Juan",
+    "continent": "South America",
+    "name": "San Juan"
+  },
+  {
+    "code": "San Luis",
+    "continent": "South America",
+    "name": "San Luis"
   },
   {
     "code": "sm",
@@ -1978,8 +3063,18 @@
     "name": "Santa Cruz"
   },
   {
+    "code": "Santa Fe",
+    "continent": "South America",
+    "name": "Santa Fe"
+  },
+  {
     "code": "santa_claus",
     "name": "Santa Claus"
+  },
+  {
+    "code": "Santiago del Estero",
+    "continent": "South America",
+    "name": "Santiago del Estero"
   },
   {
     "code": "st",
@@ -1990,6 +3085,11 @@
     "code": "Sao Paulo",
     "continent": "South America",
     "name": "São Paulo"
+  },
+  {
+    "code": "Sarawak",
+    "continent": "Asia",
+    "name": "Sarawak"
   },
   {
     "code": "sardines",
@@ -2011,6 +3111,21 @@
     "name": "Saudi Arabia"
   },
   {
+    "code": "DE-SN",
+    "continent": "Europe",
+    "name": "Saxony"
+  },
+  {
+    "code": "DE-ST",
+    "continent": "Europe",
+    "name": "Saxony-Anhalt"
+  },
+  {
+    "code": "DE-SH",
+    "continent": "Europe",
+    "name": "Schleswig-Holstein"
+  },
+  {
     "code": "gb-sct",
     "continent": "Europe",
     "name": "Scotland"
@@ -2026,6 +3141,16 @@
     "name": "Second Spanish Republic"
   },
   {
+    "code": "Selangor",
+    "continent": "Asia",
+    "name": "Selangor"
+  },
+  {
+    "code": "Seljuk Empire",
+    "continent": "Asia",
+    "name": "Seljuk Empire"
+  },
+  {
     "code": "sn",
     "continent": "Africa",
     "name": "Senegal"
@@ -2034,6 +3159,11 @@
     "code": "rs",
     "continent": "Europe",
     "name": "Serbia"
+  },
+  {
+    "code": "sevastopol",
+    "continent": "Europe",
+    "name": "Sevastopol"
   },
   {
     "code": "seville",
@@ -2066,6 +3196,11 @@
     "name": "Sierra Leone"
   },
   {
+    "code": "Sikkim",
+    "continent": "Asia",
+    "name": "Sikkim"
+  },
+  {
     "code": "sg",
     "continent": "Asia",
     "name": "Singapore"
@@ -2074,6 +3209,11 @@
     "code": "sx",
     "continent": "North America",
     "name": "Sint Maarten"
+  },
+  {
+    "code": "Slavonia",
+    "continent": "Europe",
+    "name": "Slavonia"
   },
   {
     "code": "sk",
@@ -2105,6 +3245,11 @@
     "name": "South Africa"
   },
   {
+    "code": "aus_souaus",
+    "continent": "Oceania",
+    "name": "South Australia"
+  },
+  {
     "code": "South_Carolina",
     "continent": "North America",
     "name": "South Carolina"
@@ -2128,6 +3273,11 @@
     "code": "ss",
     "continent": "Africa",
     "name": "South Sudan"
+  },
+  {
+    "code": "south yemen",
+    "continent": "Asia",
+    "name": "South Yemen"
   },
   {
     "code": "1_Southern Ui Neill",
@@ -2175,6 +3325,11 @@
     "name": "Sultanate of Nejd"
   },
   {
+    "code": "Sultanate Of Rum",
+    "continent": "Asia",
+    "name": "Sultanate of Rum"
+  },
+  {
     "code": "sr",
     "continent": "South America",
     "name": "Suriname"
@@ -2210,6 +3365,11 @@
     "name": "Syria"
   },
   {
+    "code": "Flag_of_Taiping_Heavenly_Kingdom",
+    "continent": "Asia",
+    "name": "Taiping Heavenly Kingdom"
+  },
+  {
     "code": "tw",
     "continent": "Asia",
     "name": "Taiwan"
@@ -2225,6 +3385,11 @@
     "name": "Tajikistan"
   },
   {
+    "code": "Tanintharyi",
+    "continent": "Asia",
+    "name": "Tanintharyi"
+  },
+  {
     "code": "tannutuva",
     "continent": "Asia",
     "name": "Tannu Tuva"
@@ -2235,9 +3400,19 @@
     "name": "Tanzania"
   },
   {
+    "code": "aus_tas",
+    "continent": "Oceania",
+    "name": "Tasmania"
+  },
+  {
     "code": "Tennessee",
     "continent": "North America",
     "name": "Tennessee"
+  },
+  {
+    "code": "Terengganu",
+    "continent": "Asia",
+    "name": "Terengganu"
   },
   {
     "code": "Texas",
@@ -2250,9 +3425,19 @@
     "name": "Thailand"
   },
   {
+    "code": "DE-TH",
+    "continent": "Europe",
+    "name": "Thuringia"
+  },
+  {
     "code": "tibet",
     "continent": "Asia",
     "name": "Tibet"
+  },
+  {
+    "code": "Tierra del Fuego",
+    "continent": "South America",
+    "name": "Tierra del Fuego"
   },
   {
     "code": "tl",
@@ -2275,6 +3460,11 @@
     "name": "Tonga"
   },
   {
+    "code": "Transylvania",
+    "continent": "Europe",
+    "name": "Transylvania"
+  },
+  {
     "code": "tt",
     "continent": "South America",
     "name": "Trinidad and Tobago"
@@ -2288,6 +3478,11 @@
     "code": "Trucial States",
     "continent": "Asia",
     "name": "Trucial States"
+  },
+  {
+    "code": "Tucuman",
+    "continent": "South America",
+    "name": "Tucuman"
   },
   {
     "code": "tn",
@@ -2355,6 +3550,16 @@
     "name": "Umayyad Caliphate"
   },
   {
+    "code": "Burma2",
+    "continent": "Asia",
+    "name": "Union of Burma"
+  },
+  {
+    "code": "ae",
+    "continent": "Asia",
+    "name": "United Arab Emirates"
+  },
+  {
     "code": "United Arab Republic",
     "continent": "Asia",
     "name": "United Arab Republic"
@@ -2414,6 +3619,11 @@
     "name": "Vanuatu"
   },
   {
+    "code": "va",
+    "continent": "Europe",
+    "name": "Vatican City"
+  },
+  {
     "code": "ve",
     "continent": "South America",
     "name": "Venezuela"
@@ -2427,6 +3637,16 @@
     "code": "Vermont",
     "continent": "North America",
     "name": "Vermont"
+  },
+  {
+    "code": "Vermont Republic",
+    "continent": "North America",
+    "name": "Vermont Republic"
+  },
+  {
+    "code": "aus_vic",
+    "continent": "Oceania",
+    "name": "Victoria"
   },
   {
     "code": "vn",
@@ -2447,6 +3667,16 @@
     "code": "Virginia",
     "continent": "North America",
     "name": "Virginia"
+  },
+  {
+    "code": "Vojvodina",
+    "continent": "Europe",
+    "name": "Vojvodina"
+  },
+  {
+    "code": "Wa State",
+    "continent": "Asia",
+    "name": "Wa State"
   },
   {
     "code": "gb-wls",
@@ -2474,9 +3704,19 @@
     "name": "Wessex"
   },
   {
+    "code": "aus_wesaus",
+    "continent": "Oceania",
+    "name": "West Australia"
+  },
+  {
     "code": "west_germany",
     "continent": "Europe",
     "name": "West Germany"
+  },
+  {
+    "code": "West Papua",
+    "continent": "Asia",
+    "name": "West Papua"
   },
   {
     "code": "West Roman Empire",
@@ -2515,6 +3755,11 @@
     "code": "ye",
     "continent": "Asia",
     "name": "Yemen"
+  },
+  {
+    "code": "Yucatan",
+    "continent": "North America",
+    "name": "Yucatan"
   },
   {
     "code": "yugoslavia",
