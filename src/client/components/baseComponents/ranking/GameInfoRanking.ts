@@ -32,6 +32,8 @@ export interface PlayerInfo {
   gold: bigint[];
   conquests: bigint[];
   flag?: string;
+  /** Crown-cosmetic image URL. */
+  crown?: string;
   winner: boolean;
   atoms: number;
   hydros: number;
@@ -84,6 +86,7 @@ export class Ranking {
         clanTag: player.clanTag,
         conquests,
         flag: player.cosmetics?.flag ?? undefined,
+        crown: player.cosmetics?.crown?.url ?? undefined,
         killedAt: stats.killedAt !== null ? Number(stats.killedAt) : undefined,
         gold,
         atoms: Number(stats.bombs?.abomb?.[0]) || 0,
