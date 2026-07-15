@@ -2,8 +2,9 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics, Skin } from "../core/CosmeticSchemas";
+import { Cosmetics, Crown, Skin } from "../core/CosmeticSchemas";
 import {
+  CROWN_KEY,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -24,9 +25,9 @@ import {
 import { translateText } from "./Utils";
 
 /**
- * One modal for every non-flag cosmetic: a Skins tab (patterns + image skins)
- * and an Effects tab (all effect types via the tabbed effects-grid). Opened
- * from the lobby's "Cosmetics" button.
+ * One modal for every non-flag cosmetic: a Skins tab (patterns + image skins),
+ * a Crowns tab, and an Effects tab (all effect types via the tabbed
+ * effects-grid). Opened from the lobby's "Cosmetics" button.
  */
 @customElement("cosmetics-modal")
 export class CosmeticsModal extends BaseModal {
@@ -45,6 +46,7 @@ export class CosmeticsModal extends BaseModal {
     return {
       tabs: [
         { key: "skins", label: translateText("store.patterns") },
+        { key: "crowns", label: translateText("store.crowns") },
         { key: "effects", label: translateText("store.effects") },
       ],
     };
@@ -67,12 +69,20 @@ export class CosmeticsModal extends BaseModal {
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onCosmeticSelected,
     );
+    window.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${CROWN_KEY}`,
+      this._onCosmeticSelected,
+    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
+      this._onCosmeticSelected,
+    );
+    window.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${CROWN_KEY}`,
       this._onCosmeticSelected,
     );
   }
@@ -146,6 +156,52 @@ export class CosmeticsModal extends BaseModal {
     `;
   }
 
+  /** Owned crowns + a Default (none) tile; selecting persists to UserSettings. */
+  private renderCrownGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      null,
+    ).filter(
+      (r) =>
+        r.type === "crown" &&
+        r.relationship === "owned" &&
+        r.cosmetic !== null &&
+        this.includedInSearch(r.cosmetic.name),
+    );
+
+    // The Default tile has no name to match — hide it while searching.
+    const noneTile: ResolvedCosmetic = {
+      type: "crown",
+      cosmetic: null,
+      colorPalette: null,
+      relationship: "owned",
+      key: "crown:none",
+    };
+    const tiles = this.search ? items : [noneTile, ...items];
+
+    const selectedCrown = this.userSettings.getSelectedCrownName();
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${tiles.map((r) => {
+          const name = (r.cosmetic as Crown | null)?.name ?? null;
+          const isSelected =
+            (name === null && selectedCrown === null) ||
+            (name !== null && selectedCrown === name);
+          return html`
+            <cosmetic-button
+              .resolved=${r}
+              .selected=${isSelected}
+              .onSelect=${() => this.selectCrown(name)}
+            ></cosmetic-button>
+          `;
+        })}
+      </div>
+    `;
+  }
+
   protected renderHeaderSlot() {
     return html`
       <div
@@ -176,7 +232,9 @@ export class CosmeticsModal extends BaseModal {
 
   protected renderBody(tab: string) {
     let grid: TemplateResult;
-    if (tab === "effects") {
+    if (tab === "crowns") {
+      grid = this.renderCrownGrid();
+    } else if (tab === "effects") {
       grid = html`<effects-grid
         mode="select"
         tabbed
@@ -226,6 +284,12 @@ export class CosmeticsModal extends BaseModal {
     );
     this.selectedSkinName = skinName;
     this.selectedPattern = null;
+    // Stay open — the tile highlight moves to the new selection.
+    this.refresh();
+  }
+
+  private selectCrown(crownName: string | null) {
+    this.userSettings.setSelectedCrownName(crownName ?? undefined);
     // Stay open — the tile highlight moves to the new selection.
     this.refresh();
   }
