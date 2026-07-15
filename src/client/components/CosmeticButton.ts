@@ -301,6 +301,12 @@ export class CosmeticButton extends LitElement {
                 >${translateText("cosmetics.unlimited_ranked")}</span
               >`
             : nothing}
+          ${sub.canCreatePublicLobbies
+            ? html`<span
+                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                >${translateText("cosmetics.public_lobbies")}</span
+              >`
+            : nothing}
         </div>
       </div>`;
     }

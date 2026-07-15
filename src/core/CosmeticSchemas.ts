@@ -361,6 +361,9 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   // Whether this tier exempts subscribers from the free-ranked-play limits
   // (advertised on the store tile).
   unlimitedRanked: z.boolean(),
+  // Whether this tier lets subscribers list custom lobbies publicly
+  // (advertised on the store tile).
+  canCreatePublicLobbies: z.boolean(),
 });
 
 // Schema for resources/cosmetics/cosmetics.json
