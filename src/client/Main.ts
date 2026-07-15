@@ -103,6 +103,11 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
 
+  // Auth state is resolved, so the button no longer shows the loading spinner.
+  document
+    .getElementById("nav-account-loading-spinner")
+    ?.classList.add("hidden");
+
   // Unique token for this update call
   const navToken = Symbol();
   if (avatarEl) avatarEl._navToken = navToken;

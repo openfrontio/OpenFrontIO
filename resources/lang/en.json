@@ -399,6 +399,7 @@
     "rare": "Rare",
     "soft": "Caps",
     "uncommon": "Uncommon",
+    "unlimited_ranked": "Unlimited ranked",
     "usd_value": "Value: {usd}"
   },
   "difficulty": {
@@ -1074,6 +1075,9 @@
   "matchmaking_modal": {
     "connecting": "Connecting to matchmaking server...",
     "elo": "Your ELO: {elo}",
+    "limit_reached": "You're out of free ranked matches.",
+    "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
+    "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",

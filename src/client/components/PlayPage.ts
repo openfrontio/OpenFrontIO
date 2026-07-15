@@ -115,7 +115,7 @@ export class PlayPage extends LitElement {
 
           <!-- Username: left col -->
           <div
-            class="px-2 py-2 bg-surface border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
+            class="px-2 py-2 bg-surface border-y border-white/10 overflow-visible relative z-20 lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:border-y-0 lg:rounded-xl"
           >
             <div class="flex items-center gap-2 min-w-0 w-full">
               <username-input

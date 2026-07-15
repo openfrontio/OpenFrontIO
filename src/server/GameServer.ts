@@ -3,6 +3,7 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { anonAnimalName } from "../core/AnonAnimals";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
@@ -32,7 +33,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { anonymousUsername, createPartialGameRecord } from "../core/Util";
+import { createPartialGameRecord, simpleHash } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
@@ -205,8 +206,23 @@ export class GameServer {
   }
 
   // Same (viewer, target) -> same name in the lobby and in-game.
+  //
+  // The target's slot is its join-order position in allClients (an
+  // insertion-ordered Map): stable for the whole game, and late-joiners simply
+  // append, so existing players' names never shift. Distinct targets have
+  // distinct slots, and anonAnimalName maps distinct slots (at a fixed offset) to
+  // distinct handles — so within any one viewer's view no two players ever share
+  // a name. The per-viewer offset rotates the animal assignment, so different
+  // viewers still see different names for the same player (the anti-team point).
+  // Display-only: this feeds per-viewer wire payloads (startInfoFor / gameInfo),
+  // never the simulation or the archived record, so it cannot desync (see #4426).
   private anonName(viewer: ClientID | undefined, target: ClientID): string {
-    return anonymousUsername(target + (viewer ?? ""));
+    let slot = 0;
+    for (const id of this.allClients.keys()) {
+      if (id === target) break;
+      slot++;
+    }
+    return anonAnimalName(slot, viewer ? simpleHash(viewer) : 0);
   }
 
   // Whether `viewer` should see `target`'s real identity: when names aren't
