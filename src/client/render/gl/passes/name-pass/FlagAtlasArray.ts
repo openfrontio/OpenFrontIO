@@ -1,10 +1,12 @@
 /**
- * FlagAtlasArray — runtime TEXTURE_2D_ARRAY of player flag images.
+ * FlagAtlasArray — runtime TEXTURE_2D_ARRAY of player icon images.
  *
- * Replaces the build-time flag atlas. Layers are assigned on demand as players
- * arrive, keyed by URL so identical flags share a layer (every "Mercia" bot
- * costs one slot, not one per player). Images are fetched async and drawn into
- * a fixed-size cell so all layers have the same dimensions.
+ * Replaces the build-time flag atlas. One instance holds flags (3:2 cells);
+ * a second instance holds crown cosmetics (square cells). Layers are assigned
+ * on demand as players arrive, keyed by URL so identical images share a layer
+ * (every "Mercia" bot costs one slot, not one per player). Images are fetched
+ * async and drawn into a fixed-size cell so all layers have the same
+ * dimensions.
  *
  * When a layer becomes ready, `onLayerReady(url, layer)` fires so the owning
  * pass can flip slots from -1 to the assigned layer.
@@ -13,8 +15,8 @@
  * render no icon.
  */
 
-const FLAG_CELL_W = 128;
-const FLAG_CELL_H = 85;
+export const FLAG_CELL_W = 128;
+export const FLAG_CELL_H = 85;
 
 /** Hard cap on unique flags per game. Real working set is ~50–200. */
 export const MAX_FLAG_LAYERS = 512;
@@ -39,6 +41,8 @@ export class FlagAtlasArray {
   constructor(
     gl: WebGL2RenderingContext,
     onLayerReady: (url: string, layer: number) => void,
+    private cellW: number = FLAG_CELL_W,
+    private cellH: number = FLAG_CELL_H,
   ) {
     this.gl = gl;
     this.onLayerReady = onLayerReady;
@@ -50,10 +54,10 @@ export class FlagAtlasArray {
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex);
     gl.texStorage3D(
       gl.TEXTURE_2D_ARRAY,
-      mipLevels(FLAG_CELL_W, FLAG_CELL_H),
+      mipLevels(this.cellW, this.cellH),
       gl.RGBA8,
-      FLAG_CELL_W,
-      FLAG_CELL_H,
+      this.cellW,
+      this.cellH,
       this.layerCount,
     );
     gl.texParameteri(
@@ -66,8 +70,8 @@ export class FlagAtlasArray {
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     this.canvas = document.createElement("canvas");
-    this.canvas.width = FLAG_CELL_W;
-    this.canvas.height = FLAG_CELL_H;
+    this.canvas.width = this.cellW;
+    this.canvas.height = this.cellH;
     this.ctx = this.canvas.getContext("2d", { willReadFrequently: false })!;
   }
 
@@ -97,20 +101,20 @@ export class FlagAtlasArray {
     img.crossOrigin = "anonymous";
     img.onload = () => {
       // Draw into a fixed-size cell to normalize the image to layer dimensions.
-      // Center via aspect-fit so non-3:2 flags don't stretch.
-      this.ctx.clearRect(0, 0, FLAG_CELL_W, FLAG_CELL_H);
+      // Center via aspect-fit so mismatched images don't stretch.
+      this.ctx.clearRect(0, 0, this.cellW, this.cellH);
       const srcAspect = img.width / img.height;
-      const dstAspect = FLAG_CELL_W / FLAG_CELL_H;
+      const dstAspect = this.cellW / this.cellH;
       let dw: number, dh: number;
       if (srcAspect > dstAspect) {
-        dw = FLAG_CELL_W;
-        dh = FLAG_CELL_W / srcAspect;
+        dw = this.cellW;
+        dh = this.cellW / srcAspect;
       } else {
-        dh = FLAG_CELL_H;
-        dw = FLAG_CELL_H * srcAspect;
+        dh = this.cellH;
+        dw = this.cellH * srcAspect;
       }
-      const dx = (FLAG_CELL_W - dw) * 0.5;
-      const dy = (FLAG_CELL_H - dh) * 0.5;
+      const dx = (this.cellW - dw) * 0.5;
+      const dy = (this.cellH - dh) * 0.5;
       this.ctx.drawImage(img, dx, dy, dw, dh);
 
       const gl = this.gl;
@@ -121,8 +125,8 @@ export class FlagAtlasArray {
         0,
         0,
         layer,
-        FLAG_CELL_W,
-        FLAG_CELL_H,
+        this.cellW,
+        this.cellH,
         1,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
@@ -135,7 +139,7 @@ export class FlagAtlasArray {
     };
     img.onerror = () => {
       // Leave entry as not-ready forever; layer is consumed but harmless.
-      console.warn("Flag image failed to load:", url);
+      console.warn("Icon image failed to load:", url);
     };
     img.src = url;
   }

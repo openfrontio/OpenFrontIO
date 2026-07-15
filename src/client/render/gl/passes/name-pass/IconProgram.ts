@@ -1,9 +1,10 @@
 /**
- * IconProgram — instanced flag + emoji icons beside player names.
+ * IconProgram — instanced flag + emoji + crown icons beside player names.
  *
- * Owns the shader program and the emoji atlas texture. The flag texture is a
- * sampler2DArray populated at runtime by FlagAtlasArray (passed in, not owned).
- * The shared playerDataTex is also passed in but not owned/deleted.
+ * Owns the shader program and the emoji atlas texture. The flag and crown
+ * textures are sampler2DArrays populated at runtime by FlagAtlasArray
+ * instances (passed in, not owned). The shared playerDataTex is also passed
+ * in but not owned/deleted.
  */
 
 import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
@@ -13,20 +14,20 @@ import iconFragSrc from "../../shaders/name/icon.frag.glsl?raw";
 import iconVertSrc from "../../shaders/name/icon.vert.glsl?raw";
 import { createProgram } from "../../utils/GlUtils";
 import type { FlagAtlasArray } from "./FlagAtlasArray";
+import { FLAG_CELL_H, FLAG_CELL_W } from "./FlagAtlasArray";
 import type { ParsedAtlas } from "./Types";
 
 const emojiAtlasUrl = assetUrl("atlases/emoji-atlas.png");
 
-// Must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts. Used only for
-// world-space aspect ratio of the flag quad.
-const FLAG_CELL_W = 128;
-const FLAG_CELL_H = 85;
+/** Icon instances per player: flag, emoji, crown (must match icon.vert.glsl). */
+const ICONS_PER_PLAYER = 3;
 
 export class IconProgram {
   private gl: WebGL2RenderingContext;
   private program: WebGLProgram;
   private playerDataTex: WebGLTexture;
   private flagAtlas: FlagAtlasArray;
+  private crownAtlas: FlagAtlasArray;
   private maxPlayers: number;
 
   private emojiAtlasTex: WebGLTexture | null = null;
@@ -48,11 +49,13 @@ export class IconProgram {
     atlas: ParsedAtlas,
     playerDataTex: WebGLTexture,
     flagAtlas: FlagAtlasArray,
+    crownAtlas: FlagAtlasArray,
     maxPlayers: number,
   ) {
     this.gl = gl;
     this.playerDataTex = playerDataTex;
     this.flagAtlas = flagAtlas;
+    this.crownAtlas = crownAtlas;
     this.maxPlayers = maxPlayers;
 
     this.program = createProgram(gl, iconVertSrc, iconFragSrc);
@@ -62,6 +65,7 @@ export class IconProgram {
     gl.uniform1i(gl.getUniformLocation(this.program, "uPlayerData"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uFlagAtlas"), 1);
     gl.uniform1i(gl.getUniformLocation(this.program, "uEmojiAtlas"), 2);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uCrownAtlas"), 3);
 
     // Static uniforms from atlas metadata
     const em = emojiAtlasMeta as any;
@@ -173,9 +177,16 @@ export class IconProgram {
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.flagAtlas.texture);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.emojiAtlasTex!);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.crownAtlas.texture);
 
     gl.bindVertexArray(vao);
-    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.maxPlayers * 2);
+    gl.drawArraysInstanced(
+      gl.TRIANGLES,
+      0,
+      6,
+      this.maxPlayers * ICONS_PER_PLAYER,
+    );
   }
 
   dispose(): void {

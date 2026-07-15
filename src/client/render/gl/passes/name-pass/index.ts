@@ -41,6 +41,7 @@ import {
   buildGlyphMetricsTex,
   buildPlayerDataTex,
   buildStringTex,
+  PLAYER_DATA_COLS,
 } from "./DataTextures";
 import { DebugProgram } from "./DebugProgram";
 import { FlagAtlasArray } from "./FlagAtlasArray";
@@ -53,6 +54,9 @@ import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 
 // Flag quad aspect ratio — must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts.
 const FLAG_ASPECT = 128 / 85;
+
+// Crown cosmetics use square cells (must match the crownAtlas cell size below).
+export const CROWN_CELL = 128;
 
 export class NamePass {
   private gl: WebGL2RenderingContext;
@@ -85,9 +89,12 @@ export class NamePass {
   private maxPlayers: number;
   private playerColors: Map<string, [number, number, number]> = new Map();
   private flagAtlas: FlagAtlasArray;
+  private crownAtlas: FlagAtlasArray;
   private emojiCharToIndex: Map<string, number>;
   /** Slots waiting on a flag URL → set of slots that want that URL's layer. */
   private slotsWaitingForFlag = new Map<string, Set<PlayerSlot>>();
+  /** Slots waiting on a crown URL → set of slots that want that URL's layer. */
+  private slotsWaitingForCrown = new Map<string, Set<PlayerSlot>>();
 
   // CPU-side mirrors — batched upload in draw()
   private cpuPlayerData: Float32Array;
@@ -144,6 +151,24 @@ export class NamePass {
       }
     });
 
+    // Crown cosmetics share the flag-atlas mechanism but use their own array
+    // (square cells so crown quads carry no letterbox margins).
+    this.crownAtlas = new FlagAtlasArray(
+      gl,
+      (url, layer) => {
+        const waiting = this.slotsWaitingForCrown.get(url);
+        if (!waiting) return;
+        this.slotsWaitingForCrown.delete(url);
+        for (const slot of waiting) {
+          if (slot.crownUrl !== url) continue;
+          slot.crownLayerIdx = layer;
+          this.writePlayerDataRow(slot);
+        }
+      },
+      CROWN_CELL,
+      CROWN_CELL,
+    );
+
     // Build player lookups and extract territory colors from palette
     this.playerByID = new Map();
     for (const p of header.players) {
@@ -158,7 +183,9 @@ export class NamePass {
 
     // CPU-side texture mirrors + reusable layout buffers
     const textRows = this.maxPlayers * LINES_PER_PLAYER;
-    this.cpuPlayerData = new Float32Array(8 * this.maxPlayers * 4);
+    this.cpuPlayerData = new Float32Array(
+      PLAYER_DATA_COLS * this.maxPlayers * 4,
+    );
     this.cpuStringData = new Uint8Array(MAX_CHARS * textRows);
     this.cpuCursorData = new Float32Array(MAX_CHARS * textRows);
     this.stringRow = new Uint8Array(MAX_CHARS);
@@ -185,6 +212,7 @@ export class NamePass {
       atlas,
       this.playerDataTex,
       this.flagAtlas,
+      this.crownAtlas,
       this.maxPlayers,
     );
     this.statusIconProgram = new StatusIconProgram(
@@ -277,6 +305,24 @@ export class NamePass {
     waiting.add(slot);
   }
 
+  /** Same as resolveSlotFlag, for the slot's crown cosmetic. */
+  private resolveSlotCrown(slot: PlayerSlot): void {
+    const url = slot.crownUrl;
+    if (!url) return;
+    this.crownAtlas.request(url);
+    const layer = this.crownAtlas.getLayer(url);
+    if (layer >= 0) {
+      slot.crownLayerIdx = layer;
+      return;
+    }
+    let waiting = this.slotsWaitingForCrown.get(url);
+    if (!waiting) {
+      waiting = new Set();
+      this.slotsWaitingForCrown.set(url, waiting);
+    }
+    waiting.add(slot);
+  }
+
   // -------------------------------------------------------------------------
   // Name updates — called by GPURenderer
   // -------------------------------------------------------------------------
@@ -314,6 +360,8 @@ export class NamePass {
             lastTroopBucket: -1,
             flagUrl: p.flag,
             flagLayerIdx: -1,
+            crownUrl: p.crown,
+            crownLayerIdx: -1,
             emojiAtlasIdx: -1,
             nameHalfWidth: 0,
             crown: false,
@@ -334,6 +382,7 @@ export class NamePass {
           };
           this.slots.set(p.id, slot);
           this.resolveSlotFlag(slot);
+          this.resolveSlotCrown(slot);
         } else {
           nextSlotIndex = Math.max(
             nextSlotIndex,
@@ -544,7 +593,7 @@ export class NamePass {
   /** Pack player data into the CPU buffer (flushed to GPU in draw). */
   private writePlayerDataRow(slot: PlayerSlot): void {
     const d = this.cpuPlayerData;
-    const off = slot.index * 32; // 8 columns × 4 floats per RGBA texel
+    const off = slot.index * (PLAYER_DATA_COLS * 4); // 4 floats per RGBA texel
 
     // Column 0: srcX, srcY, srcScale, startTime
     d[off + 0] = slot.srcX;
@@ -611,6 +660,12 @@ export class NamePass {
     d[off + 30] = slot.allianceFraction;
     d[off + 31] = slot.allianceRemainingTicks;
 
+    // Column 8: crownLayerIdx (crown cosmetic), rest free
+    d[off + 32] = slot.crownLayerIdx;
+    d[off + 33] = 0.0;
+    d[off + 34] = 0.0;
+    d[off + 35] = 0.0;
+
     this.playerDataDirty = true;
   }
 
@@ -653,8 +708,10 @@ export class NamePass {
       const halfW =
         slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
       let left = wx - halfW;
-      const right = wx + halfW;
+      let right = wx + halfW;
       if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
+      // Crown cosmetic sits to the right of the name (square, flag-height).
+      if (slot.crownLayerIdx >= 0) right += lineH * 1.2;
 
       // Name line (flag is slightly taller); emoji/status rows sit above it.
       let top = wy - lineH * 0.6;
@@ -724,7 +781,7 @@ export class NamePass {
         0,
         0,
         0,
-        8,
+        PLAYER_DATA_COLS,
         this.maxPlayers,
         gl.RGBA,
         gl.FLOAT,
@@ -766,6 +823,7 @@ export class NamePass {
     this.textProgram.dispose();
     this.iconProgram.dispose();
     this.flagAtlas.dispose();
+    this.crownAtlas.dispose();
     this.statusIconProgram.dispose();
     this.debugProgram.dispose();
     gl.deleteTexture(this.glyphMetricsTex);

@@ -26,6 +26,8 @@ export interface PlayerStatic {
   isLobbyCreator: boolean;
   /** Resolved flag image URL, or undefined for no flag. */
   flag?: string;
+  /** Resolved crown-cosmetic image URL, or undefined for no crown. */
+  crown?: string;
   /** Hex color (e.g. "#ff0000"). Populated from territoryColor (live) or palette (replay). */
   color?: string;
 }

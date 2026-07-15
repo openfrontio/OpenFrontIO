@@ -4,10 +4,11 @@ precision highp sampler2DArray;
 
 uniform sampler2DArray uFlagAtlas;
 uniform sampler2D      uEmojiAtlas;
+uniform sampler2DArray uCrownAtlas;
 
 in vec2 vUV;
-flat in int vIconType;  // 0 = flag, 1 = emoji, -1 = discard
-flat in int vFlagLayer;
+flat in int vIconType;  // 0 = flag, 1 = emoji, 2 = crown, -1 = discard
+flat in int vFlagLayer; // atlas layer for flag/crown
 in float vHoverAlpha;
 
 out vec4 fragColor;
@@ -18,6 +19,8 @@ void main() {
   vec4 texel;
   if (vIconType == 0) {
     texel = texture(uFlagAtlas, vec3(vUV, float(vFlagLayer)));
+  } else if (vIconType == 2) {
+    texel = texture(uCrownAtlas, vec3(vUV, float(vFlagLayer)));
   } else {
     texel = texture(uEmojiAtlas, vUV);
   }
