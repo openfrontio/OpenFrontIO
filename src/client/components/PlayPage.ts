@@ -121,40 +121,32 @@ export class PlayPage extends LitElement {
               <username-input
                 class="flex-1 min-w-0 h-10 lg:h-[50px]"
               ></username-input>
-              <pattern-input
-                id="pattern-input-mobile"
-                show-select-label
-                adaptive-size
-                class="shrink-0 lg:hidden"
-              ></pattern-input>
               <flag-input
                 id="flag-input-mobile"
                 show-select-label
                 class="shrink-0 lg:hidden h-10 w-10"
               ></flag-input>
-              <effects-input
-                id="effects-input-mobile"
-                class="shrink-0 lg:hidden h-10 w-10"
-              ></effects-input>
+              <cosmetics-input
+                id="cosmetics-input-mobile"
+                show-select-label
+                adaptive-size
+                class="no-crazygames shrink-0 lg:hidden"
+              ></cosmetics-input>
             </div>
           </div>
 
-          <!-- Skin + flag: right col -->
+          <!-- Flag + cosmetics: right col -->
           <div class="hidden lg:flex h-[60px] gap-2">
-            <pattern-input
-              id="pattern-input-desktop"
-              show-select-label
-              class="flex-1 h-full"
-            ></pattern-input>
             <flag-input
               id="flag-input-desktop"
               show-select-label
               class="flex-1 h-full"
             ></flag-input>
-            <effects-input
-              id="effects-input-desktop"
-              class="flex-1 h-full"
-            ></effects-input>
+            <cosmetics-input
+              id="cosmetics-input-desktop"
+              show-select-label
+              class="no-crazygames flex-1 h-full"
+            ></cosmetics-input>
           </div>
         </div>
 
