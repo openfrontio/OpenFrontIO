@@ -33,6 +33,10 @@ export async function updateCrazyGamesNavButton() {
   const personIconEl = document.getElementById("nav-account-person-icon");
   // CrazyGames accounts have no email, so the email badge is always hidden.
   document.getElementById("nav-account-email-badge")?.classList.add("hidden");
+  // Auth state is resolved, so the button no longer shows the loading spinner.
+  document
+    .getElementById("nav-account-loading-spinner")
+    ?.classList.add("hidden");
   const signInTextEl = document.getElementById("nav-account-signin-text");
   if (profile) {
     if (avatarEl) {

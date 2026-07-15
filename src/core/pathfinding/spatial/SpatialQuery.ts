@@ -98,6 +98,43 @@ export class SpatialQuery {
   }
 
   /**
+   * Find the closest shore tile owned by `targetOwner` near `tile` that sits on
+   * a water component reachable from `attacker`'s own shoreline.
+   *
+   * Unlike {@link closestShore}, this skips shores that only border a
+   * disconnected water body (e.g. an inland lake) that the attacker's boats
+   * could never traverse. Returns null when no reachable target shore exists
+   * within `maxDist`.
+   */
+  closestReachableShore(
+    targetOwner: Owner,
+    attacker: Player,
+    tile: TileRef,
+    maxDist: number = 50,
+  ): TileRef | null {
+    const gm = this.game;
+    const targetId = targetOwner.smallID();
+
+    // Water components adjacent to the attacker's own shoreline.
+    const reachable = new Set<number>();
+    for (const t of attacker.borderTiles()) {
+      if (!gm.isShore(t) || !gm.isLand(t)) continue;
+      const component = gm.getWaterComponent(t);
+      if (component !== null) reachable.add(component);
+    }
+    if (reachable.size === 0) return null;
+
+    const isValidTile = (t: TileRef) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return false;
+      if (gm.ownerID(t) !== targetId) return false;
+      const component = gm.getWaterComponent(t);
+      return component !== null && reachable.has(component);
+    };
+
+    return this.bfsNearest(tile, maxDist, isValidTile);
+  }
+
+  /**
    * Find closest shore tile by water pathfinding.
    * Returns null for terra nullius (no borderTiles).
    */

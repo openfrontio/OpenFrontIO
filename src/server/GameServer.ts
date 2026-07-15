@@ -3,6 +3,7 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { anonAnimalName } from "../core/AnonAnimals";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
@@ -32,7 +33,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { anonymousUsername, createPartialGameRecord } from "../core/Util";
+import { createPartialGameRecord, simpleHash } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
@@ -173,6 +174,9 @@ export class GameServer {
     private creatorPersistentID?: string,
     private startsAt?: number,
     private publicGameType?: PublicGameType,
+    // Matchmade team split from the matchmaking assignment: publicIds per
+    // team. At start each client is stamped with its team's index.
+    private matchmakingTeams?: string[][],
   ) {
     this.log = log_.child({ gameID: id });
     if (startsAt !== undefined) {
@@ -202,8 +206,23 @@ export class GameServer {
   }
 
   // Same (viewer, target) -> same name in the lobby and in-game.
+  //
+  // The target's slot is its join-order position in allClients (an
+  // insertion-ordered Map): stable for the whole game, and late-joiners simply
+  // append, so existing players' names never shift. Distinct targets have
+  // distinct slots, and anonAnimalName maps distinct slots (at a fixed offset) to
+  // distinct handles — so within any one viewer's view no two players ever share
+  // a name. The per-viewer offset rotates the animal assignment, so different
+  // viewers still see different names for the same player (the anti-team point).
+  // Display-only: this feeds per-viewer wire payloads (startInfoFor / gameInfo),
+  // never the simulation or the archived record, so it cannot desync (see #4426).
   private anonName(viewer: ClientID | undefined, target: ClientID): string {
-    return anonymousUsername(target + (viewer ?? ""));
+    let slot = 0;
+    for (const id of this.allClients.keys()) {
+      if (id === target) break;
+      slot++;
+    }
+    return anonAnimalName(slot, viewer ? simpleHash(viewer) : 0);
   }
 
   // Whether `viewer` should see `target`'s real identity: when names aren't
@@ -537,7 +556,10 @@ export class GameServer {
       clientIP: ipAnonymize(client.ip),
     });
 
+    // Skipped in dev: local testing (multi-tab, the matchmaking e2e) is
+    // inherently same-IP.
     if (
+      ServerEnv.env() !== GameEnv.Dev &&
       this.gameConfig.gameType === GameType.Public &&
       this.activeClients.filter(
         (c) => c.ip === client.ip && c.clientID !== client.clientID,
@@ -941,6 +963,7 @@ export class GameServer {
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
         friends: friendsFor(c),
+        teamIndex: this.matchmakingTeamIndex(c),
       })),
     });
     if (!result.success) {
@@ -970,6 +993,20 @@ export class GameServer {
       });
       this.sendStartGameMsg(c.ws, 0);
     });
+  }
+
+  // Resolves a client to its matchmade team slot (index into
+  // matchmakingTeams), or undefined when the game isn't matchmade / the
+  // client isn't in the assignment.
+  private matchmakingTeamIndex(c: Client): number | undefined {
+    const publicId = c.publicId;
+    if (this.matchmakingTeams === undefined || publicId === undefined) {
+      return undefined;
+    }
+    const idx = this.matchmakingTeams.findIndex((team) =>
+      team.includes(publicId),
+    );
+    return idx === -1 ? undefined : idx;
   }
 
   private addIntent(intent: StampedIntent) {

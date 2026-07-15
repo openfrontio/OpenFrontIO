@@ -103,6 +103,11 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
 
+  // Auth state is resolved, so the button no longer shows the loading spinner.
+  document
+    .getElementById("nav-account-loading-spinner")
+    ?.classList.add("hidden");
+
   // Unique token for this update call
   const navToken = Symbol();
   if (avatarEl) avatarEl._navToken = navToken;
@@ -233,7 +238,7 @@ declare global {
     "kick-player": CustomEvent;
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
-    "open-matchmaking": CustomEvent<undefined>;
+    "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
@@ -854,16 +859,24 @@ class Client {
       window.location.href = "/";
     }
 
-    if (this.consumeRequeueUrl()) {
-      document.dispatchEvent(new CustomEvent("open-matchmaking"));
+    const requeueMode = this.consumeRequeueUrl();
+    if (requeueMode !== null) {
+      document.dispatchEvent(
+        new CustomEvent("open-matchmaking", {
+          detail: { mode: requeueMode },
+        }),
+      );
     }
   }
 
-  private consumeRequeueUrl(): boolean {
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // null when the URL has no requeue param.
+  private consumeRequeueUrl(): "1v1" | "2v2" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
-      return false;
+      return null;
     }
+    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -871,7 +884,7 @@ class Client {
       (searchParams.toString() ? `?${searchParams.toString()}` : "") +
       window.location.hash;
     history.replaceState(null, "", newUrl);
-    return true;
+    return mode;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -1066,8 +1079,14 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
-  private handleOpenMatchmaking(_event: CustomEvent<undefined>) {
-    this.matchmakingModal?.open();
+  private handleOpenMatchmaking(
+    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+  ) {
+    if (!this.matchmakingModal) return;
+    // Always set the mode: dispatchers without a detail (homepage button,
+    // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
+    this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+    this.matchmakingModal.open();
   }
 
   private handleKickPlayer(event: CustomEvent) {

@@ -10,6 +10,7 @@ import {
   isNukeExplosionEffect,
   isTrailEffect,
   NukeExplosionAttributesSchema,
+  SubscriptionSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
 import { PlayerEffectSchema } from "../src/core/Schemas";
@@ -782,5 +783,38 @@ describe("effect selection slots", () => {
     expect(findEffectForSlot(catalog, "bogus", "atom_boom")).toBeUndefined();
     // No catalog (failed load) resolves nothing.
     expect(findEffectForSlot(null, "atom", "atom_boom")).toBeUndefined();
+  });
+});
+
+describe("SubscriptionSchema unlimitedRanked", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+  };
+
+  it("rejects a tier without unlimitedRanked", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with unlimitedRanked", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      unlimitedRanked: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.unlimitedRanked).toBe(true);
+    }
+  });
+
+  it("rejects a non-boolean unlimitedRanked", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, unlimitedRanked: "yes" }).success,
+    ).toBe(false);
   });
 });

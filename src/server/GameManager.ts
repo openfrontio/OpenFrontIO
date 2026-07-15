@@ -67,6 +67,7 @@ export class GameManager {
     creatorPersistentID?: string,
     startsAt?: number,
     publicGameType?: PublicGameType,
+    matchmakingTeams?: string[][],
   ): GameServer | null {
     if (this.games.has(id)) {
       this.log.warn("cannot create game, id already exists", { gameID: id });
@@ -98,6 +99,7 @@ export class GameManager {
       creatorPersistentID,
       startsAt,
       publicGameType,
+      matchmakingTeams,
     );
     this.games.set(id, game);
     return game;

@@ -160,9 +160,14 @@ export class DesktopNavBar extends LitElement {
             data-i18n-alt="main.discord_avatar_alt"
             referrerpolicy="no-referrer"
           />
+          <span
+            id="nav-account-loading-spinner"
+            class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+            aria-hidden="true"
+          ></span>
           <svg
             id="nav-account-person-icon"
-            class="w-5 h-5"
+            class="hidden w-5 h-5"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="none"
@@ -197,7 +202,7 @@ export class DesktopNavBar extends LitElement {
           </span>
           <span
             id="nav-account-signin-text"
-            class="text-xs font-bold tracking-widest"
+            class="hidden text-xs font-bold tracking-widest"
             data-i18n="main.sign_in"
           >
           </span>

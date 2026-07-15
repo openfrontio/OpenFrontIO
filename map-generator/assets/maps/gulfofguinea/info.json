@@ -1,0 +1,321 @@
+{
+  "id": "GulfOfGuinea",
+  "name": "Gulf Of Guinea",
+  "translation_key": "map.gulfofguinea",
+  "categories": ["africa", "new"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [1807, 739],
+      "name": "Malabo",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [1463, 1251],
+      "name": "Principe",
+      "flag": "st"
+    },
+    {
+      "coordinates": [1299, 1567],
+      "name": "Sao Tome",
+      "flag": "st"
+    },
+    {
+      "coordinates": [1035, 1992],
+      "name": "Annobon",
+      "flag": "gq-an"
+    },
+    {
+      "coordinates": [1987, 1535],
+      "name": "Libreville",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [2468, 700],
+      "name": "Yaounde",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2058, 611],
+      "name": "Douala",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [1695, 401],
+      "name": "Calabar",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1371, 464],
+      "name": "Port Harcourt",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [2096, 1167],
+      "name": "Bata",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [2334, 1238],
+      "name": "Ciudad de la Paz",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [1796, 1793],
+      "name": "Port-Gentil",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [1096, 281],
+      "name": "Warri",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1055, 69],
+      "name": "Benin City",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1516, 55],
+      "name": "Enugu",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [2180, 225],
+      "name": "Bafoussam",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2099, 75],
+      "name": "Bamenda",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [475, 37],
+      "name": "Lagos",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [265, 48],
+      "name": "Porto-Novo",
+      "flag": "bj"
+    },
+    {
+      "coordinates": [19, 109],
+      "name": "Lome",
+      "flag": "tg"
+    },
+    {
+      "coordinates": [2197, 1809],
+      "name": "Lambarene",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [1926, 2023],
+      "name": "Omboue",
+      "flag": "ga"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [148, 66],
+      "name": "Cotonou",
+      "flag": "bj"
+    },
+    {
+      "coordinates": [398, 7],
+      "name": "Ikeja",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1056, 198],
+      "name": "Sapele",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1262, 88],
+      "name": "Asaba",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1335, 88],
+      "name": "Awka",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [815, 31],
+      "name": "Ondo",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [628, 20],
+      "name": "Epe",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1335, 320],
+      "name": "Owerri",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1491, 254],
+      "name": "Umuahia",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1479, 388],
+      "name": "Aba",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1576, 430],
+      "name": "Uyo",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1058, 491],
+      "name": "Forcados",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1175, 476],
+      "name": "Yenagoa",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1244, 352],
+      "name": "Omoko",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1748, 23],
+      "name": "Ogoja",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1674, 193],
+      "name": "Ikom",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1314, 210],
+      "name": "Onitsha",
+      "flag": "ng"
+    },
+    {
+      "coordinates": [1863, 563],
+      "name": "Buea",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2126, 706],
+      "name": "Edea",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2105, 839],
+      "name": "Kribi",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2300, 725],
+      "name": "Eseka",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2017, 389],
+      "name": "Nkongsamba",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [1877, 204],
+      "name": "Mamfe",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2181, 7],
+      "name": "Kumbo",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2486, 522],
+      "name": "Ntui",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2333, 404],
+      "name": "Bafia",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2236, 904],
+      "name": "Ebolowa",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2250, 1066],
+      "name": "Ambam",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [2469, 985],
+      "name": "Sangmelima",
+      "flag": "cm"
+    },
+    {
+      "coordinates": [1751, 812],
+      "name": "Luba",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [2011, 1344],
+      "name": "Acalayong",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [2009, 1287],
+      "name": "Mbini",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [2454, 1241],
+      "name": "Mongomo",
+      "flag": "gq"
+    },
+    {
+      "coordinates": [2037, 2180],
+      "name": "Sette Cama",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [2305, 1967],
+      "name": "Mouila",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [2474, 2150],
+      "name": "Ndende",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [2298, 1622],
+      "name": "Ndojole",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [2145, 1595],
+      "name": "Kango",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [2465, 1442],
+      "name": "Lara",
+      "flag": "ga"
+    },
+    {
+      "coordinates": [1990, 1652],
+      "name": "Foulenzem",
+      "flag": "ga"
+    }
+  ]
+}

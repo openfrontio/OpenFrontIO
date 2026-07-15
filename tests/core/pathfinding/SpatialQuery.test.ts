@@ -12,8 +12,8 @@ import { createGame, L, W } from "./_fixtures";
 
 // Spawns player and **expands territory** via getSpawnTiles (euclidean dist 4)
 // Ref: src/core/execution/Util.ts
-function addPlayer(game: Game, tile: TileRef): Player {
-  const info = new PlayerInfo("test", PlayerType.Human, null, "test_id");
+function addPlayer(game: Game, tile: TileRef, id: string = "test"): Player {
+  const info = new PlayerInfo(id, PlayerType.Human, null, `${id}_id`);
   game.addPlayer(info);
   game.addExecution(new SpawnExecution("game_id", info, tile));
   game.executeNextTick();
@@ -226,6 +226,90 @@ describe("SpatialQuery", () => {
       expect(result).not.toBeNull();
       expect(game.isShore(result!)).toBe(true);
       expect(game.ownerID(result!)).toBe(player.smallID());
+    });
+  });
+
+  describe("closestReachableShore", () => {
+    // Target island (cols 10-24, rows 1-16) with an interior lake
+    // (cols 15-20, rows 6-11) enclosed by a thick land moat, so the lake is a
+    // separate water component from the ocean. Attacker island on the left.
+    function buildLakeMap(): Game {
+      const width = 26;
+      const height = 18;
+      const grid: string[] = new Array(width * height).fill(W);
+      const set = (x: number, y: number, v: string) =>
+        (grid[y * width + x] = v);
+      const inBox = (
+        x: number,
+        y: number,
+        x0: number,
+        x1: number,
+        y0: number,
+        y1: number,
+      ) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (inBox(x, y, 1, 5, 6, 11)) set(x, y, L); // attacker island
+          if (inBox(x, y, 10, 24, 1, 16)) set(x, y, L); // target island
+          if (inBox(x, y, 15, 20, 6, 11)) set(x, y, W); // carve lake
+        }
+      }
+      return createGame({ width, height, grid });
+    }
+
+    it("skips a lake-facing shore for one the attacker can reach by water", () => {
+      const game = buildLakeMap();
+      const attacker = addPlayer(game, game.ref(3, 8), "attacker");
+      const target = addPlayer(game, game.ref(12, 3), "target");
+      const spatial = new SpatialQuery(game);
+
+      // Clicking target land next to the lake: the nearest owned shore is
+      // lake-facing (unreachable), so the reachability-blind closestShore picks
+      // a shore the attacker's ocean boats can never reach.
+      const clickNearLake = game.ref(14, 8);
+      const oldPick = spatial.closestShore(
+        game.owner(clickNearLake),
+        clickNearLake,
+      );
+      expect(oldPick).not.toBeNull();
+      expect(spatial.closestShoreByWater(attacker, oldPick!)).toBeNull();
+
+      // The reachability-aware pick must return a shore the attacker can reach.
+      const result = spatial.closestReachableShore(
+        target,
+        attacker,
+        clickNearLake,
+      );
+      expect(result).not.toBeNull();
+      expect(game.isShore(result!)).toBe(true);
+      expect(game.ownerID(result!)).toBe(target.smallID());
+      expect(spatial.closestShoreByWater(attacker, result!)).not.toBeNull();
+    });
+
+    it("returns null when every target shore is in an unreachable water body", () => {
+      // Land wall (cols 2-11) fully separates left water (cols 0-1) from right
+      // water (cols 12-13): two disconnected seas.
+      // prettier-ignore
+      const game = createGame({
+        width: 14, height: 6, grid: [
+          W, W, L, L, L, L, L, L, L, L, L, L, W, W,
+          W, W, L, L, L, L, L, L, L, L, L, L, W, W,
+          W, W, L, L, L, L, L, L, L, L, L, L, W, W,
+          W, W, L, L, L, L, L, L, L, L, L, L, W, W,
+          W, W, L, L, L, L, L, L, L, L, L, L, W, W,
+          W, W, L, L, L, L, L, L, L, L, L, L, W, W,
+        ],
+      });
+      const attacker = addPlayer(game, game.ref(3, 2), "attacker"); // left sea
+      const target = addPlayer(game, game.ref(10, 3), "target"); // right sea
+      const spatial = new SpatialQuery(game);
+
+      const result = spatial.closestReachableShore(
+        target,
+        attacker,
+        game.ref(10, 3),
+      );
+      expect(result).toBeNull();
     });
   });
 });
