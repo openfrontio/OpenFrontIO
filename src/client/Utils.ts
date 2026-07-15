@@ -220,6 +220,12 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
+  if (modifiers.isDoomsdayClock) {
+    result.push({
+      labelKey: "public_game_modifier.doomsday_clock_label",
+      badgeKey: "public_game_modifier.doomsday_clock",
+    });
+  }
   return result;
 }
 
@@ -285,7 +291,13 @@ export function renderNumber(
   num = Number(num);
   num = Math.max(num, 0);
 
-  if (num >= 10_000_000) {
+  if (num >= 10_000_000_000) {
+    const value = Math.floor(num / 100000000) / 10;
+    return value.toFixed(fixedPoints ?? 1) + "B";
+  } else if (num >= 1_000_000_000) {
+    const value = Math.floor(num / 10000000) / 100;
+    return value.toFixed(fixedPoints ?? 2) + "B";
+  } else if (num >= 10_000_000) {
     const value = Math.floor(num / 100000) / 10;
     return value.toFixed(fixedPoints ?? 1) + "M";
   } else if (num >= 1_000_000) {

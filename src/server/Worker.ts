@@ -7,10 +7,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { hasActiveSubscription } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
+  ID,
+  MAX_HOSTED_LOBBIES,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
@@ -21,6 +24,7 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
+import type { GameServer } from "./GameServer";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
@@ -171,6 +175,50 @@ export async function startWorker() {
         .json({ error: "Cannot create public games via this endpoint" });
     }
 
+    // Reuse-lobby flow: ?previous=<gameID> marks this creation as the successor
+    // of a finished private game, so its remaining players get told the new id
+    // and can hop over without re-sharing a link. The previous game lives on
+    // this same worker (callers hit /wX/api/create_game for it), which is also
+    // where the successor is minted. Going through this endpoint (instead of a
+    // websocket message) keeps game creation behind its rate limits.
+    let previousGame: GameServer | null = null;
+    if (req.query.previous !== undefined) {
+      const prevId = ID.safeParse(req.query.previous);
+      if (!prevId.success) {
+        return res.status(400).json({ error: "Invalid previous game id" });
+      }
+      previousGame = gm.game(prevId.data);
+      if (previousGame === null) {
+        return res.status(404).json({ error: "Previous game not found" });
+      }
+      if (!previousGame.isCreator(creatorPersistentID)) {
+        return res.status(403).json({
+          error: "Only the lobby creator can create a successor lobby",
+        });
+      }
+      // Reusing a lobby is a private-lobby feature: a public game's players
+      // never opted into following a host to another game.
+      if (previousGame.isPublic()) {
+        return res
+          .status(403)
+          .json({ error: "Public games cannot spawn a successor lobby" });
+      }
+      // Idempotent: a repeat request (e.g. a double click) reuses the already
+      // minted successor instead of creating another one.
+      const existingId = previousGame.successorLobby();
+      const existing = existingId !== null ? gm.game(existingId) : null;
+      if (existingId !== null && existing !== null) {
+        previousGame.setSuccessorLobby(existingId); // re-broadcast for late joiners
+        return res.json({
+          ...existing.gameInfo(),
+          workerIndex: workerId,
+          workerPath: ServerEnv.workerPath(existingId),
+        });
+      }
+      // A recorded successor that no longer exists (already cleaned up) falls
+      // through and gets replaced by a fresh lobby.
+    }
+
     const id = ServerEnv.generateGameIdForWorker(workerId);
     if (id === null) {
       log.warn(`Failed to mint game id on worker ${workerId}`);
@@ -183,6 +231,11 @@ export async function startWorker() {
       return res.status(409).json({ error: "Game ID already exists" });
     }
 
+    // Tell the previous game about its successor: it remembers the id (for
+    // idempotency) and broadcasts it to everyone still connected. Done after
+    // creation so a failed creation never broadcasts a dead id.
+    previousGame?.setSuccessorLobby(id);
+
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
     log.info(
@@ -193,6 +246,94 @@ export async function startWorker() {
       workerIndex: workerId,
       workerPath: ServerEnv.workerPath(id),
     });
+  });
+
+  // Toggle whether a private lobby is visible in the public lobby browser.
+  // Creator-only; listing requires an active subscription (checked fresh
+  // against the API) and is limited to one listed lobby per creator.
+  app.post("/api/game/:id/listing", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    }
+    const { listed } = parsed.data;
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    if (!game.isCreator(auth.persistentId)) {
+      return res
+        .status(403)
+        .json({ error: "Only the lobby creator can change its listing" });
+    }
+    if (game.isPublic() || game.hasStarted()) {
+      return res.status(409).json({ error: "Game cannot be listed" });
+    }
+
+    if (listed) {
+      // A whitelisted lobby would be advertised to everyone yet reject every
+      // joiner; the whitelist itself is stripped from the broadcast, so
+      // browsers could not even tell why.
+      if (game.hasJoinWhitelist()) {
+        return res.status(409).json({ error: "listing_whitelist_enabled" });
+      }
+
+      // Host cheats give the host an asymmetric advantage over players
+      // recruited from the lobby browser. Enabling them while listed is
+      // likewise rejected (GameServer's update_game_config handling).
+      if (game.hasHostCheats()) {
+        return res.status(409).json({ error: "listing_host_cheats_enabled" });
+      }
+
+      // Dev has no subscription backend; skip the check so the feature is
+      // testable locally (same precedent as Turnstile).
+      if (ServerEnv.env() !== GameEnv.Dev) {
+        const userMe = await getUserMe(token);
+        if (userMe.type === "error") {
+          log.warn(
+            `listing rejected, user me fetch failed: ${userMe.message}`,
+            {
+              gameID: req.params.id,
+            },
+          );
+          return res.status(403).json({ error: "subscription_required" });
+        }
+        if (!hasActiveSubscription(userMe.response)) {
+          return res.status(403).json({ error: "subscription_required" });
+        }
+      }
+
+      const creatorID = game.hashedCreatorID();
+      if (
+        creatorID !== undefined &&
+        lobbyService.creatorHasListedLobby(creatorID, game.id)
+      ) {
+        return res.status(409).json({ error: "listing_limit_reached" });
+      }
+
+      // Cluster-wide cap to prevent listing spam. Approximate here (the
+      // broadcast lags by ~1s); the master's cap is the backstop.
+      if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
+        return res.status(409).json({ error: "listing_full" });
+      }
+    }
+
+    game.setListed(listed);
+    log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
+      gameID: game.id,
+    });
+    res.json({ listed });
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {
@@ -559,6 +700,21 @@ export async function startWorker() {
 }
 
 async function startMatchmakingPolling(gm: GameManager) {
+  // One checkin serves exactly one queue, so a host serving both modes
+  // runs one long-poll loop per mode.
+  startMatchmakingLoop(gm, "1v1");
+  startMatchmakingLoop(gm, "2v2");
+}
+
+const MatchmakingAssignmentSchema = z.object({
+  // Flat list of matched players' publicIds.
+  players: z.array(z.string()),
+  // The matcher's team split ([[a],[b]] for 1v1). Optional for tolerance,
+  // but the current API always sends it.
+  teams: z.array(z.array(z.string())).optional(),
+});
+
+function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
   startPolling(
     async () => {
       try {
@@ -582,6 +738,7 @@ async function startMatchmakingPolling(gm: GameManager) {
             gameId: gameId,
             ccu: gm.activeClients(),
             instanceId: process.env.INSTANCE_ID,
+            mode,
           }),
           signal: controller.signal,
         });
@@ -590,20 +747,34 @@ async function startMatchmakingPolling(gm: GameManager) {
 
         if (!response.ok) {
           log.warn(
-            `Failed to poll lobby: ${response.status} ${response.statusText}`,
+            `Failed to poll ${mode} lobby: ${response.status} ${response.statusText}`,
           );
           return;
         }
 
         const data = await response.json();
-        log.info(`Lobby poll successful:`, data);
+        log.info(`Lobby ${mode} poll successful:`, data);
 
         if (data.assignment) {
+          const parsed = MatchmakingAssignmentSchema.safeParse(data.assignment);
+          if (!parsed.success) {
+            // Don't strand the matched players: create the game without
+            // the allowlist/team pins rather than dropping the match.
+            log.warn(
+              `Unexpected ${mode} assignment shape: ${z.prettifyError(parsed.error)}`,
+            );
+          }
+          const baseConfig =
+            mode === "2v2" ? playlist.get2v2Config() : playlist.get1v1Config();
           const game = gm.createGame(
             gameId,
-            playlist.get1v1Config(),
+            parsed.success
+              ? { ...baseConfig, allowedPublicIds: parsed.data.players }
+              : baseConfig,
             undefined,
             Date.now() + 7000,
+            undefined,
+            parsed.success ? parsed.data.teams : undefined,
           );
           if (game === null) {
             log.warn(`Failed to create matchmaking game ${gameId}`);
@@ -614,7 +785,7 @@ async function startMatchmakingPolling(gm: GameManager) {
           // Abort is expected if no game is scheduled on this worker.
           return;
         }
-        log.error(`Error polling lobby:`, error);
+        log.error(`Error polling ${mode} lobby:`, error);
       }
     },
     5000 + Math.random() * 1000,

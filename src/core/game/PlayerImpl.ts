@@ -53,6 +53,7 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import { ReadonlyTileSet, TileSet } from "./TileSet";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -84,6 +85,14 @@ const EMPTY_ATTACK_UPDATES: AttackUpdate[] = [];
 const EMPTY_ALLIANCE_VIEWS: AllianceView[] = [];
 const EMPTY_EMOJIS: EmojiMessage[] = [];
 const EMPTY_EMBARGOES = new Set<string>();
+// Reusable buffers for hot loops. The simulation is single-threaded and these
+// are fully consumed before any re-entrant call, so sharing is safe.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+const UNITS_SCRATCH: Unit[] = [];
+const TYPE_SET_SCRATCH = new Set<UnitType>();
+// N, S, W, E — the sampling directions used by shoreReachableNeighbors().
+const SHORE_DIRECTIONS_DX = [0, 0, -1, 1];
+const SHORE_DIRECTIONS_DY = [-1, 1, 0, 0];
 Object.freeze(EMPTY_NUMBER_ARRAY);
 Object.freeze(EMPTY_STRING_ARRAY);
 Object.freeze(EMPTY_ATTACK_UPDATES);
@@ -98,14 +107,15 @@ export class PlayerImpl implements Player {
   private _troops: bigint;
 
   markedTraitorTick = -1;
+  markedDoomsdayClockTick = -1;
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
 
-  public _borderTiles: Set<TileRef> = new Set();
+  public _borderTiles = new TileSet();
 
   public _units: Unit[] = [];
-  public _tiles: Set<TileRef> = new Set();
+  public _tiles = new TileSet();
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
@@ -315,6 +325,8 @@ export class PlayerImpl implements Player {
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
+      inDoomsdayClock: this.inDoomsdayClock(),
+      markedDoomsdayClockTick: this.markedDoomsdayClockTick,
       targets: targets,
       outgoingEmojis: outgoingEmojis,
       outgoingAttacks: outgoingAttacks,
@@ -352,59 +364,54 @@ export class PlayerImpl implements Player {
     return this.playerInfo.playerType;
   }
 
-  units(...types: UnitType[]): Unit[] {
-    const len = types.length;
-    if (len === 0) {
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
+  units(
+    first?: UnitType | readonly UnitType[],
+    second?: UnitType,
+    third?: UnitType,
+  ): Unit[] {
+    if (first === undefined) {
       return this._units;
     }
 
-    // Fast paths for common small arity calls to avoid Set allocation.
-    if (len === 1) {
-      const t0 = types[0]!;
-      const out: Unit[] = [];
-      for (const u of this._units) {
-        if (u.type() === t0) out.push(u);
-      }
-      return out;
-    }
+    // Hot path. Matches are gathered into a reusable scratch buffer and
+    // copied out with an exact-size slice, so each call allocates exactly
+    // one right-sized result array. Fixed-arity parameters (rather than a
+    // rest parameter) avoid allocating an argument array per call.
+    const scratch = UNITS_SCRATCH;
+    let n = 0;
 
-    if (len === 2) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      if (t0 === t1) {
-        const out: Unit[] = [];
-        for (const u of this._units) {
-          if (u.type() === t0) out.push(u);
-        }
-        return out;
+    if (Array.isArray(first)) {
+      const types = first as readonly UnitType[];
+      if (types.length === 0) {
+        return this._units;
       }
-      const out: Unit[] = [];
+      const ts = TYPE_SET_SCRATCH;
+      ts.clear();
+      for (const t of types) {
+        ts.add(t);
+      }
       for (const u of this._units) {
-        const t = u.type();
-        if (t === t0 || t === t1) out.push(u);
+        if (ts.has(u.type())) scratch[n++] = u;
       }
-      return out;
-    }
-
-    if (len === 3) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      const t2 = types[2]!;
-      // Keep semantics identical for duplicates in types by using direct comparisons.
-      const out: Unit[] = [];
+    } else if (second === undefined) {
+      for (const u of this._units) {
+        if (u.type() === first) scratch[n++] = u;
+      }
+    } else if (third === undefined) {
       for (const u of this._units) {
         const t = u.type();
-        if (t === t0 || t === t1 || t === t2) out.push(u);
+        if (t === first || t === second) scratch[n++] = u;
       }
-      return out;
+    } else {
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === first || t === second || t === third) scratch[n++] = u;
+      }
     }
-
-    const ts = new Set(types);
-    const out: Unit[] = [];
-    for (const u of this._units) {
-      if (ts.has(u.type())) out.push(u);
-    }
-    return out;
+    return scratch.slice(0, n);
   }
 
   private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
@@ -451,9 +458,13 @@ export class PlayerImpl implements Player {
   }
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
+    const map = this.mg.map();
+    const otherID = other.smallID();
+    const nbuf = NEIGHBOR_SCRATCH;
     for (const border of this._borderTiles) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().ownerID(neighbor) === other.smallID()) {
+      const n = map.neighbors4(border, nbuf);
+      for (let i = 0; i < n; i++) {
+        if (map.ownerID(nbuf[i]) === otherID) {
           return true;
         }
       }
@@ -465,36 +476,33 @@ export class PlayerImpl implements Player {
     return this._tiles.size;
   }
 
-  tiles(): ReadonlySet<TileRef> {
-    return new Set(this._tiles.values()) as Set<TileRef>;
+  tiles(): ReadonlyTileSet {
+    return this._tiles;
   }
 
-  borderTiles(): ReadonlySet<TileRef> {
+  borderTiles(): ReadonlyTileSet {
     return this._borderTiles;
   }
 
   nearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
-    for (const border of this.borderTiles()) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (
-          this.mg.map().isLand(neighbor) &&
-          !this.mg.map().isImpassable(neighbor)
-        ) {
-          if (
-            !this.mg.map().hasOwner(neighbor) &&
-            this.mg.map().hasFallout(neighbor)
-          ) {
-            continue;
-          }
-          const owner = this.mg.map().ownerID(neighbor);
-          if (owner !== this.smallID()) {
-            ns.add(
-              this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
-            );
-          }
+    const map = this.mg.map();
+    const smallID = this.smallID();
+    const visit = (neighbor: TileRef) => {
+      if (map.isLand(neighbor) && !map.isImpassable(neighbor)) {
+        if (!map.hasOwner(neighbor) && map.hasFallout(neighbor)) {
+          return;
+        }
+        const owner = map.ownerID(neighbor);
+        if (owner !== smallID) {
+          ns.add(
+            this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+          );
         }
       }
+    };
+    for (const border of this.borderTiles()) {
+      map.forEachNeighbor(border, visit);
     }
     for (const n of this.shoreReachableNeighbors()) {
       ns.add(n);
@@ -508,21 +516,19 @@ export class PlayerImpl implements Player {
   private shoreReachableNeighbors(): Set<Player | TerraNullius> {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
-    const shores = Array.from(this.borderTiles()).filter((t) => map.isShore(t));
-    const directions: [number, number][] = [
-      [0, -1],
-      [0, 1],
-      [-1, 0],
-      [1, 0],
-    ];
 
-    for (let i = 0; i < shores.length; i += 10) {
-      const border = shores[i];
+    let shoreIdx = 0;
+    for (const border of this.borderTiles()) {
+      if (!map.isShore(border)) continue;
+      // Visit every 10th shore tile.
+      if (shoreIdx++ % 10 !== 0) continue;
 
       const bx = map.x(border);
       const by = map.y(border);
 
-      for (const [dx, dy] of directions) {
+      for (let d = 0; d < 4; d++) {
+        const dx = SHORE_DIRECTIONS_DX[d];
+        const dy = SHORE_DIRECTIONS_DY[d];
         // Only follow directions that immediately enter water; land-adjacent
         // directions are already covered by the direct neighbors() loop.
         const x1 = bx + dx;
@@ -739,6 +745,30 @@ export class PlayerImpl implements Player {
 
     // Record stats (only for real Humans)
     this.mg.stats().betray(this);
+  }
+
+  // A dead player is never "in doomsday clock": nothing clears the mark on death
+  // (the execution only processes alive contenders), so gate on isAlive() to
+  // avoid a stuck skull/panel and per-tick update churn for eliminated players.
+  inDoomsdayClock(): boolean {
+    return this.isAlive() && this.markedDoomsdayClockTick >= 0;
+  }
+
+  // Ticks spent continuously below the doomsday-clock bar (0 when not marked or dead).
+  doomsdayClockTicks(): number {
+    return this.inDoomsdayClock()
+      ? this.mg.ticks() - this.markedDoomsdayClockTick
+      : 0;
+  }
+
+  enterDoomsdayClock(): void {
+    if (this.markedDoomsdayClockTick < 0) {
+      this.markedDoomsdayClockTick = this.mg.ticks();
+    }
+  }
+
+  clearDoomsdayClock(): void {
+    this.markedDoomsdayClockTick = -1;
   }
 
   betrayals(): number {

@@ -71,6 +71,16 @@ export class WarshipExecution implements Execution {
     this.healWarship();
     this.handleManualPatrolOverride();
 
+    // A doomed side cannot repair its navy (see healWarship), so retreating to
+    // a port only pulls a warship out of the fight to idle there forever. Undock
+    // or abort any retreat and keep patrolling until the side recovers.
+    if (
+      this.warship.owner().inDoomsdayClock() &&
+      this.warship.warshipState().state !== "patrolling"
+    ) {
+      this.cancelRepairRetreat();
+    }
+
     if (this.warship.warshipState().state === "docked") {
       if (this.currentRetreatPort() === undefined) {
         this.cancelRepairRetreat();
@@ -122,6 +132,10 @@ export class WarshipExecution implements Execution {
 
   private healWarship(): void {
     const owner = this.warship.owner();
+    // A doomed side (below the Doomsday Clock bar) cannot repair its navy, so the
+    // decay in DoomsdayClockExecution actually sinks warships instead of being
+    // out-healed at a port. Inert when the mode is off: the mark is never set.
+    if (owner.inDoomsdayClock()) return;
     const passiveHealing = this.mg.config().warshipPassiveHealing();
     const passiveHealingRange = this.mg.config().warshipPassiveHealingRange();
     const passiveHealingRangeSquared =
@@ -150,17 +164,21 @@ export class WarshipExecution implements Execution {
   }
 
   private isFullyHealed(): boolean {
-    const maxHealth = this.mg.config().unitInfo(UnitType.Warship).maxHealth;
-    if (typeof maxHealth !== "number") {
+    if (!this.warship.hasHealth()) {
       return true;
     }
-    return this.warship.health() >= maxHealth;
+    return this.warship.health() >= this.warship.maxHealth();
   }
 
   private shouldStartRepairRetreat(
     healthBeforeHealing = this.warship.health(),
   ): boolean {
     if (this.warship.warshipState().state !== "patrolling") {
+      return false;
+    }
+    // A doomed side cannot repair (see healWarship), so there is nothing to
+    // retreat for; stay on patrol instead of idling at a port.
+    if (this.warship.owner().inDoomsdayClock()) {
       return false;
     }
     const manualMoveRetreatDisabledDuration = 50;
@@ -170,9 +188,14 @@ export class WarshipExecution implements Execution {
     ) {
       return false;
     }
-    if (
-      healthBeforeHealing >= this.mg.config().warshipRetreatHealthThreshold()
-    ) {
+    // Percentage of (veterancy-adjusted) max health, so a tougher veteran ship
+    // retreats at the same relative health as a fresh one. Integer math.
+    const retreatThreshold = Math.floor(
+      (this.warship.maxHealth() *
+        this.mg.config().warshipRetreatHealthPercent()) /
+        100,
+    );
+    if (healthBeforeHealing >= retreatThreshold) {
       return false;
     }
     const ports = this.warship.owner().units(UnitType.Port);
@@ -240,7 +263,7 @@ export class WarshipExecution implements Execution {
     );
 
     // Trade-ship-specific state, lazily computed.
-    let hasPort: boolean | undefined;
+    let hasReachablePort: boolean | undefined;
     let patrolTile: number | undefined;
     let patrolRangeSquared: number | undefined;
     let warshipComponent: number | null | undefined = undefined;
@@ -264,26 +287,28 @@ export class WarshipExecution implements Execution {
       const type = unit.type();
 
       if (includeTradeShips && type === UnitType.TradeShip) {
-        if (hasPort === undefined) {
-          hasPort = owner.unitCount(UnitType.Port) > 0;
+        if (warshipComponent === undefined) {
+          warshipComponent = mg.getWaterComponent(this.warship.tile());
+          hasReachablePort =
+            warshipComponent !== null &&
+            owner
+              .units(UnitType.Port)
+              .some(
+                (port) =>
+                  port.isActive() &&
+                  !port.isMarkedForDeletion() &&
+                  !port.isUnderConstruction() &&
+                  mg.hasWaterComponent(port.tile(), warshipComponent!),
+              );
           patrolTile = this.warship.warshipState().patrolTile;
           patrolRangeSquared = config.warshipPatrolRange() ** 2;
         }
         if (
-          !hasPort ||
+          !hasReachablePort ||
           patrolTile === undefined ||
           unit.isSafeFromPirates() ||
           unit.targetUnit()?.owner() === owner ||
           unit.targetUnit()?.owner().isFriendly(owner)
-        ) {
-          continue;
-        }
-        if (warshipComponent === undefined) {
-          warshipComponent = mg.getWaterComponent(this.warship.tile());
-        }
-        if (
-          warshipComponent !== null &&
-          !mg.hasWaterComponent(unit.tile(), warshipComponent)
         ) {
           continue;
         }
@@ -640,6 +665,7 @@ export class WarshipExecution implements Execution {
 
       if (dist <= 5) {
         this.warship.owner().captureUnit(target);
+        this.warship.recordTradeCapture();
         this.warship.setTargetUnit(undefined);
         this.warship.touch();
         return;
@@ -659,6 +685,7 @@ export class WarshipExecution implements Execution {
       switch (result.status) {
         case PathStatus.COMPLETE:
           this.warship.owner().captureUnit(target);
+          this.warship.recordTradeCapture();
           this.warship.setTargetUnit(undefined);
           this.warship.touch();
           return;

@@ -1,18 +1,18 @@
-export function initNavigation() {
-  const closeMobileSidebar = () => {
-    const sidebar = document.getElementById("sidebar-menu");
-    const backdrop = document.getElementById("mobile-menu-backdrop");
-    if (sidebar?.classList.contains("open")) {
-      sidebar.classList.remove("open");
-      backdrop?.classList.remove("open");
-      document.documentElement.classList.remove("overflow-hidden");
-      sidebar.setAttribute("aria-hidden", "true");
-      backdrop?.setAttribute("aria-hidden", "true");
-      const hb = document.getElementById("hamburger-btn");
-      if (hb) hb.setAttribute("aria-expanded", "false");
-    }
-  };
+export function closeMobileSidebar() {
+  const sidebar = document.getElementById("sidebar-menu");
+  const backdrop = document.getElementById("mobile-menu-backdrop");
+  if (sidebar?.classList.contains("open")) {
+    sidebar.classList.remove("open");
+    backdrop?.classList.remove("open");
+    document.documentElement.classList.remove("overflow-hidden");
+    sidebar.setAttribute("aria-hidden", "true");
+    backdrop?.setAttribute("aria-hidden", "true");
+    const hb = document.getElementById("hamburger-btn");
+    if (hb) hb.setAttribute("aria-expanded", "false");
+  }
+}
 
+export function initNavigation() {
   const showPage = (pageId: string) => {
     window.currentPageId = pageId;
 
@@ -79,13 +79,30 @@ export function initNavigation() {
   window.showPage = showPage;
 
   // Use event delegation for navigation items (they may be inside Lit components)
-  document.addEventListener("click", (e) => {
+  document.addEventListener("click", async (e) => {
     const target = (e.target as HTMLElement).closest(
       ".nav-menu-item[data-page]",
     );
     if (target) {
       const pageId = (target as HTMLElement).dataset.page;
-      if (pageId) showPage(pageId);
+      if (!pageId) return;
+
+      // showPage() closes the currently visible modal, so respect its
+      // close-confirmation guard first (e.g. the leave-lobby prompt).
+      const visibleModal = document.querySelector(
+        ".page-content:not(.hidden)",
+      ) as any;
+      if (
+        visibleModal &&
+        typeof visibleModal.isOpen === "function" &&
+        visibleModal.isOpen() &&
+        typeof visibleModal.confirmBeforeClose === "function" &&
+        !(await visibleModal.confirmBeforeClose())
+      ) {
+        return;
+      }
+
+      showPage(pageId);
     }
   });
 
@@ -95,7 +112,7 @@ export function initNavigation() {
     const mainEl = document.querySelector("main");
 
     if (mainEl) {
-      mainEl.addEventListener("click", (e: Event) => {
+      mainEl.addEventListener("click", async (e: Event) => {
         const target = e.target as HTMLElement;
         const isPlayPageHidden = document
           .getElementById("page-play")
@@ -118,7 +135,7 @@ export function initNavigation() {
               // Check confirmation guard before closing
               if (
                 typeof openModal.confirmBeforeClose === "function" &&
-                !openModal.confirmBeforeClose()
+                !(await openModal.confirmBeforeClose())
               ) {
                 return;
               }

@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { generateCryptoRandomUUID, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
+import { ANON_ANIMALS, anonAnimalName } from "../core/AnonAnimals";
 import { sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
@@ -93,6 +94,11 @@ export class UsernameInput extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadStoredUsername();
+    // On CrazyGames the account username is applied here but never persisted
+    // (see loadStoredUsername / validateAndStore), so logging out — which
+    // reloads the whole page — falls back to a fresh guest username instead of
+    // keeping the account name. addAuthListener only fires on login; CrazyGames
+    // refreshes the page on logout, so there is no logout event to handle.
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
         this.baseUsername = username;
@@ -125,11 +131,14 @@ export class UsernameInput extends LitElement {
   }
 
   private loadStoredUsername() {
-    const storedUsername = localStorage.getItem(usernameKey);
+    // On CrazyGames the username is never persisted, so ignore any stored value
+    // and start from a fresh guest name; the account name (if signed in) is
+    // applied afterwards in connectedCallback.
+    const storedUsername = this.onCrazyGames
+      ? null
+      : localStorage.getItem(usernameKey);
     if (storedUsername) {
-      if (!this.onCrazyGames) {
-        this.clanTag = localStorage.getItem(clanTagKey) ?? "";
-      }
+      this.clanTag = localStorage.getItem(clanTagKey) ?? "";
       this.baseUsername = storedUsername;
       this.validateAndStore();
       this.startClanCheck();
@@ -189,7 +198,7 @@ export class UsernameInput extends LitElement {
       tag: this.clanTag,
     });
     const className =
-      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap";
+      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg lg:whitespace-nowrap";
 
     if (this.clanTagOwnershipError !== "username.tag_not_member") {
       return html`<div id="clan-tag-validation-error" class=${className}>
@@ -280,8 +289,10 @@ export class UsernameInput extends LitElement {
     const result = validateUsername(trimmedBase);
     this._isValid = result.isValid;
     if (result.isValid) {
-      localStorage.setItem(usernameKey, trimmedBase);
+      // Never persist on CrazyGames: keeping localStorage empty means a logout
+      // (page reload) restores a guest username instead of the account name.
       if (!this.onCrazyGames) {
+        localStorage.setItem(usernameKey, trimmedBase);
         localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
       }
       this.validationError = "";
@@ -308,10 +319,24 @@ export class UsernameInput extends LitElement {
   }
 }
 
+// A memorable anonymous username: "Anon" + animal (+ digit), the same handle
+// format the server-side anonymisation overlay uses (anonAnimalName). Client-side
+// fallback for players who never set a name — no roster here, so it draws a
+// random slot (best-effort-unique); the overlay is what guarantees uniqueness
+// in-game.
+//
+// Rejection-sample a uniform slot in [0, bound) from the CSPRNG: drawing a raw
+// uint32 and taking `% bound` would be very slightly biased (the top partial
+// bucket), so we discard the unrepresentable tail first. The bias is cosmetically
+// irrelevant here, but this keeps the draw provably uniform.
 export function genAnonUsername(): string {
-  const uuid = generateCryptoRandomUUID();
-  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-  const decimal = BigInt(`0x${cleanUuid}`);
-  const threeDigits = decimal % 1000n;
-  return "Anon" + threeDigits.toString().padStart(3, "0");
+  const bound = ANON_ANIMALS.length * 10;
+  const limit = Math.floor(0x1_0000_0000 / bound) * bound;
+  const buf = new Uint32Array(1);
+  let rand: number;
+  do {
+    crypto.getRandomValues(buf);
+    rand = buf[0] ?? 0;
+  } while (rand >= limit);
+  return anonAnimalName(rand % bound);
 }

@@ -1,11 +1,12 @@
 import { html, LitElement, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
+import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
+import "./ConfirmDialog";
+import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
-
-export const DEFAULT_DOLLAR_LABEL_KEY = "territory_patterns.purchase";
 
 const PURCHASE_STYLE_ID = "purchase-button-styles";
 if (!document.getElementById(PURCHASE_STYLE_ID)) {
@@ -183,6 +184,10 @@ export class PurchaseButton extends LitElement {
   @property({ type: Object })
   product: Product | null = null;
 
+  /** Price shown for a direct dollar checkout without a catalog product. */
+  @property({ type: String })
+  dollarPrice: string = "";
+
   @property({ type: Number })
   priceHard: number | null = null;
 
@@ -192,30 +197,54 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   rarity: string = "common";
 
-  /** Override the dollar-button label key. */
+  /** Optional action-label key shown before the price (e.g. "Switch"). Empty
+   * shows the price on its own. */
   @property({ type: String })
-  dollarLabelKey: string = DEFAULT_DOLLAR_LABEL_KEY;
+  dollarLabelKey: string = "";
 
   /** Optional suffix appended to the displayed price, e.g. "/mo". Not translated here. */
   @property({ type: String })
   priceSuffix: string = "";
 
-  @property({ type: Function })
-  onPurchaseDollar?: () => void;
+  /** Display name of the item, used in the currency confirmation dialog. */
+  @property({ type: String })
+  itemName: string = "";
 
   @property({ type: Function })
-  onPurchaseHard?: () => void;
+  onPurchaseDollar?: () => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseSoft?: () => void;
+  onPurchaseHard?: () => Promise<PurchaseResult>;
+
+  @property({ type: Function })
+  onPurchaseSoft?: () => Promise<PurchaseResult>;
+
+  /** Set when a purchase fails for lack of funds; drives the dialog. */
+  @state() private insufficient: InsufficientCurrency | null = null;
+  /** Which currency purchase is awaiting confirmation, if any. */
+  @state() private confirmingCurrency: "hard" | "soft" | null = null;
+  private busy = false;
 
   createRenderRoot() {
     return this;
   }
 
-  private handleClick(e: Event, handler?: () => void) {
+  private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
-    if (!handler) return;
+    this.executePurchase(handler);
+  }
+
+  /** Opens the currency confirmation dialog; the purchase runs on confirm. */
+  requestCurrencyPurchase(method: "hard" | "soft") {
+    const handler =
+      method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
+    if (!handler || this.busy) return;
+    this.confirmingCurrency = method;
+  }
+
+  private executePurchase(handler?: () => Promise<PurchaseResult>) {
+    if (!handler || this.busy) return;
+    this.busy = true;
     const container = this.closest("cosmetic-container") as HTMLElement | null;
     if (container && !container.querySelector(".cosmetic-loading-overlay")) {
       const overlay = document.createElement("div");
@@ -223,23 +252,34 @@ export class PurchaseButton extends LitElement {
       overlay.innerHTML = `<div class="cosmetic-loading-spinner"></div>`;
       container.appendChild(overlay);
     }
-    Promise.resolve(handler()).finally(() => {
-      container?.querySelector(".cosmetic-loading-overlay")?.remove();
-    });
+    Promise.resolve(handler())
+      .then((result) => {
+        if (result) this.insufficient = result;
+      })
+      .finally(() => {
+        this.busy = false;
+        container?.querySelector(".cosmetic-loading-overlay")?.remove();
+      });
+  }
+
+  showInsufficient(result: InsufficientCurrency) {
+    this.insufficient = result;
   }
 
   private renderDollarButton() {
+    const price = this.dollarPrice || this.product?.price;
+    if (!price) return nothing;
+
     return html`
       <button
-        class="purchase-sparkle-btn relative overflow-hidden w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
+        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
          hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
         <span class="purchase-sparkle-streak"></span>
-        ${translateText(this.dollarLabelKey)}
-        <span class="ml-1 text-white/50"
-          >(${this.product!.price}${this.priceSuffix})</span
-        >
+        ${this.dollarLabelKey
+          ? html`${translateText(this.dollarLabelKey)} `
+          : nothing}${price}${this.priceSuffix}
       </button>
     `;
   }
@@ -249,7 +289,10 @@ export class PurchaseButton extends LitElement {
       <button
         class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
-        @click=${(e: Event) => this.handleClick(e, this.onPurchaseHard)}
+        @click=${(e: Event) => {
+          e.stopPropagation();
+          this.requestCurrencyPurchase("hard");
+        }}
       >
         <plutonium-icon .size=${20} style="margin-top:3px"></plutonium-icon>
         ${this.priceHard!.toLocaleString()}
@@ -262,7 +305,10 @@ export class PurchaseButton extends LitElement {
       <button
         class="purchase-sparkle-btn-soft relative overflow-hidden w-full px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-amber-700 hover:border-amber-600 hover:text-white hover:shadow-[0_0_20px_rgba(217,119,6,0.6)]"
-        @click=${(e: Event) => this.handleClick(e, this.onPurchaseSoft)}
+        @click=${(e: Event) => {
+          e.stopPropagation();
+          this.requestCurrencyPurchase("soft");
+        }}
       >
         <cap-icon .size=${22} style="margin-top:3px"></cap-icon>
         ${this.priceSoft!.toLocaleString()}
@@ -271,7 +317,8 @@ export class PurchaseButton extends LitElement {
   }
 
   render() {
-    const hasDollar = this.product && this.onPurchaseDollar;
+    const hasDollar =
+      (this.product ?? this.dollarPrice) && this.onPurchaseDollar;
     const hasHard = this.priceHard !== null && this.onPurchaseHard;
     const hasSoft = this.priceSoft !== null && this.onPurchaseSoft;
 
@@ -298,6 +345,37 @@ export class PurchaseButton extends LitElement {
           ${hasSoft ? this.renderSoftButton() : null}
         </div>
       </div>
+      ${this.confirmingCurrency
+        ? html`<confirm-dialog
+            .heading=${translateText("store.confirm_purchase_title")}
+            .message=${translateText("store.confirm_purchase_body", {
+              item: this.itemName,
+              amount:
+                (this.confirmingCurrency === "hard"
+                  ? this.priceHard
+                  : this.priceSoft) ?? 0,
+              currency: translateText(
+                this.confirmingCurrency === "hard"
+                  ? "cosmetics.hard"
+                  : "cosmetics.soft",
+              ),
+            })}
+            variant="warning"
+            @confirm=${() => {
+              const handler =
+                this.confirmingCurrency === "hard"
+                  ? this.onPurchaseHard
+                  : this.onPurchaseSoft;
+              this.confirmingCurrency = null;
+              this.executePurchase(handler);
+            }}
+            @cancel=${() => (this.confirmingCurrency = null)}
+          ></confirm-dialog>`
+        : nothing}
+      <insufficient-currency-dialog
+        .info=${this.insufficient}
+        @close=${() => (this.insufficient = null)}
+      ></insufficient-currency-dialog>
     `;
   }
 }

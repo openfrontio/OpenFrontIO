@@ -23,10 +23,10 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import { Camera } from "./Camera";
+import { GLUnavailableError, initGL } from "./initGL";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
@@ -48,6 +48,7 @@ import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
 import { SelectionBoxPass } from "./passes/SelectionBoxPass";
 import { SkinAtlasArray } from "./passes/SkinAtlasArray";
+import { SmallPlayerGlowPass } from "./passes/SmallPlayerGlowPass";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import { SpawnOverlayPass } from "./passes/SpawnOverlayPass";
 import { StructureLevelPass } from "./passes/StructureLevelPass";
@@ -59,7 +60,12 @@ import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
 import type { RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
-import { getPaletteSize, hexToRgb } from "./utils/ColorUtils";
+import {
+  EFFECT_PALETTE_BLOCKS,
+  getPaletteSize,
+  hexToRgb,
+  MAX_TRAIL_COLORS,
+} from "./utils/ColorUtils";
 import { renderDpr } from "./utils/Dpr";
 import {
   createTexture2D,
@@ -97,6 +103,13 @@ export class GPURenderer {
   private camera: Camera;
   private res: GPUResources;
 
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  readonly glLimited: { renderer: string; maxTextureSize: number } | null;
+
   // Passes
   private terrainPass: TerrainPass;
   private territoryPass: TerritoryPass;
@@ -128,10 +141,17 @@ export class GPURenderer {
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
   private spawnOverlayPass: SpawnOverlayPass;
+  private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
+  // Per-player trail-effect palette, keyed by smallID (RGBA32F,
+  // 4096×(MAX_TRAIL_COLORS·TRAIL_EFFECT_BLOCKS)): one MAX_TRAIL_COLORS-row block
+  // per trail effectType (block 0 = transportShipTrail, block 1 = nukeTrail).
+  // Sampled by TrailPass; the shader picks the block from the trail tile's nuke
+  // bit.
+  private effectTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
   private skinAtlas: SkinAtlasArray;
@@ -178,7 +198,7 @@ export class GPURenderer {
   constructor(
     canvas: HTMLCanvasElement,
     header: RendererConfig,
-    terrainBytes: Uint8Array,
+    terrainSource: () => Uint8Array,
     paletteData: Float32Array,
     config: Config,
     settings: RenderSettings,
@@ -193,12 +213,25 @@ export class GPURenderer {
     this.raf = raf;
     this.caf = caf;
 
-    const gl = canvas.getContext("webgl2", {
+    // Demand a GPU-accelerated context. A software (SwiftShader) or missing
+    // WebGL2 context throws GLUnavailableError, which the game-start path
+    // turns into an actionable gate instead of letting the game crawl at
+    // ~1fps. A fingerprint-capped context ("limited" — MAX_TEXTURE_SIZE below
+    // the palette width, #4357) proceeds anyway; glLimited lets the owner
+    // warn the player that the map may render with black areas.
+    const res = initGL(canvas, {
       alpha: false,
       antialias: false,
       powerPreference: "high-performance",
     });
-    if (!gl) throw new Error("WebGL2 not supported");
+    if (res.gl === null) {
+      throw new GLUnavailableError(res.status, res.renderer);
+    }
+    this.glLimited =
+      res.status === "limited"
+        ? { renderer: res.renderer, maxTextureSize: res.maxTextureSize }
+        : null;
+    const gl = res.gl;
     this.gl = gl;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
@@ -214,13 +247,25 @@ export class GPURenderer {
     this.camera = new Camera(mapW, mapH);
 
     // --- Terrain (static) ---
-    this.terrainPass = new TerrainPass(gl, terrainBytes, mapW, mapH, {
-      oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
-      sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
-      plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
-      highlandColor: hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
-      mountainColor: hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
-    });
+    // Bake once and let the array go — nothing below retains map-sized
+    // terrain bytes; re-bakes call terrainSource again.
+    const terrainBytes = terrainSource();
+    this.terrainPass = new TerrainPass(
+      gl,
+      terrainSource,
+      terrainBytes,
+      mapW,
+      mapH,
+      {
+        oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
+        sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
+        plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
+        highlandColor:
+          hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
+        mountainColor:
+          hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
+      },
+    );
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
@@ -232,6 +277,21 @@ export class GPURenderer {
       format: gl.RGBA,
       type: gl.FLOAT,
       data: paletteData,
+      filter: gl.NEAREST,
+    });
+
+    // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
+    // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
+    // block 2 = structures). Starts zeroed (color count 0 everywhere = no
+    // effect → territory/player color).
+    const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
+    this.effectTex = createTexture2D(gl, {
+      width: palW,
+      height: effectRows,
+      internalFormat: gl.RGBA32F,
+      format: gl.RGBA,
+      type: gl.FLOAT,
+      data: new Float32Array(palW * effectRows * 4),
       filter: gl.NEAREST,
     });
 
@@ -371,13 +431,22 @@ export class GPURenderer {
       this.settings.spawnOverlay,
     );
 
-    // --- Trail (needs trailTex, paletteTex) ---
+    this.smallPlayerGlowPass = new SmallPlayerGlowPass(
+      gl,
+      mapW,
+      mapH,
+      this.res.tileTex,
+      this.settings.smallPlayerGlow,
+    );
+
+    // --- Trail (needs trailTex, paletteTex, effectTex) ---
     this.trailPass = new TrailPass(
       gl,
       mapW,
       mapH,
       this.res.trailTex,
       this.paletteTex,
+      this.effectTex,
       this.settings,
     );
 
@@ -464,6 +533,7 @@ export class GPURenderer {
       gl,
       header,
       this.paletteTex,
+      this.effectTex,
       this.settings,
     );
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
@@ -586,18 +656,21 @@ export class GPURenderer {
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint8Array,
+    trailState: Uint16Array,
   ): void {
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
   }
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -627,6 +700,24 @@ export class GPURenderer {
     this.samRadiusPass.setPaletteData(this.paletteData);
     // Name pass caches per-player colors and bakes them into slot rows
     this.namePass.refreshPlayerColors(this.paletteData);
+  }
+
+  /** Re-upload the per-player effect texture (style + colors by smallID). */
+  updateEffectPalette(effectData: Float32Array): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      getPaletteSize(),
+      MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS,
+      gl.RGBA,
+      gl.FLOAT,
+      effectData,
+    );
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
@@ -907,6 +998,14 @@ export class GPURenderer {
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
 
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.smallPlayerGlowPass.update(set);
+  }
+
+  setSmallPlayerGlowStrength(strength: number): void {
+    this.smallPlayerGlowPass.setGlowStrength(strength);
+  }
+
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
@@ -915,6 +1014,7 @@ export class GPURenderer {
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
+    this.structurePass.setHighlightOwner(ownerID);
   }
   setMouseWorldPos(x: number, y: number): void {
     this.namePass.setMouseWorldPos(x, y);
@@ -1163,6 +1263,8 @@ export class GPURenderer {
     this.crosshairPass.draw(cam);
     if (pe.structure) this.structurePass.draw(cam, zoom);
     if (pe.structure) this.structureLevelPass.draw(cam, zoom);
+    // Small-player glow draws after structures so buildings can't hide it.
+    this.smallPlayerGlowPass.draw(cam);
     if (pe.bar) this.barPass.draw(cam);
     this.updateSelectionBox();
     this.selectionBoxPass.draw(cam, this.frameTick);
@@ -1211,6 +1313,7 @@ export class GPURenderer {
     this.affiliationPalette.dispose();
     this.coordinateGridPass.dispose();
     this.spawnOverlayPass.dispose();
+    this.smallPlayerGlowPass.dispose();
     this.railroadPass.dispose();
     this.rangeCirclePass.dispose();
     this.samRadiusPass.dispose();
@@ -1228,6 +1331,7 @@ export class GPURenderer {
     this.barPass.dispose();
     disposeGPUResources(this.gl, this.res);
     this.gl.deleteTexture(this.paletteTex);
+    this.gl.deleteTexture(this.effectTex);
     this.gl.deleteTexture(this.patternMetaTex);
     this.gl.deleteTexture(this.patternDataTex);
     this.gl.deleteTexture(this.skinLayerTex);

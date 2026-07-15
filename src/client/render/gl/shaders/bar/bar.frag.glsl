@@ -8,6 +8,8 @@ uniform vec3 uColorRed;
 uniform vec3 uColorOrange;
 uniform vec3 uColorYellow;
 uniform vec3 uColorGreen;
+uniform float uSolid;       // 1.0 = veterancy pip: fill solid with uSolidColor
+uniform vec3 uSolidColor;
 
 in vec2 vLocalPos;
 flat in float vProgress;
@@ -15,6 +17,12 @@ flat in float vProgress;
 out vec4 fragColor;
 
 void main() {
+  // Veterancy pips are simple solid-filled rectangles (no border/threshold).
+  if (uSolid > 0.5) {
+    fragColor = vec4(uSolidColor, 1.0);
+    return;
+  }
+
   float x = vLocalPos.x;
   float y = vLocalPos.y;
   float w = uBarSize.x;

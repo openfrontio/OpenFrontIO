@@ -8,7 +8,6 @@ import type {
   NukeTelegraphData,
   PlayerState,
   PlayerStatusData,
-  TilePair,
   UnitState,
 } from "../types";
 
@@ -17,10 +16,16 @@ import type {
  * Satisfied by GameView through TypeScript structural typing.
  */
 export interface FrameUploadTarget {
-  uploadTileAndTrailState(tileState: Uint16Array, trailState: Uint8Array): void;
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void;
+  uploadTileAndTrailState(
+    tileState: Uint16Array,
+    trailState: Uint16Array,
+  ): void;
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void;
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void;

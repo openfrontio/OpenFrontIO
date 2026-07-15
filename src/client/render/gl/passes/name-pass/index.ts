@@ -81,7 +81,6 @@ export class NamePass {
 
   // Player management
   private playerByID: Map<string, PlayerStatic>;
-  private smallIDToPlayerID: Map<number, string>;
   private slots: Map<string, PlayerSlot> = new Map();
   private maxPlayers: number;
   private playerColors: Map<string, [number, number, number]> = new Map();
@@ -102,16 +101,15 @@ export class NamePass {
   private stringRow: Uint8Array;
   private cursorRow: Float32Array;
 
-  // Reusable per-tick lookup maps (avoid allocation + GC)
-  private alivePlayerIDs = new Set<string>();
-  private troopsByPlayerID = new Map<string, number>();
+  /** Slots refreshed per updateNames call: index % UPDATE_SLICES === phase. */
+  private static readonly UPDATE_SLICES = 4;
+  private slicePhase = 0;
 
   // Hovered player's small ID (0 = no highlight, matches TerritoryPass).
   private highlightOwnerID = 0;
   // Cursor in world coords — fades names under it (far off-map = no fade).
   private mouseWorldX = -1e9;
   private mouseWorldY = -1e9;
-  private playerStateByID = new Map<string, PlayerState>();
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -148,10 +146,8 @@ export class NamePass {
 
     // Build player lookups and extract territory colors from palette
     this.playerByID = new Map();
-    this.smallIDToPlayerID = new Map();
     for (const p of header.players) {
       this.playerByID.set(p.id, p);
-      this.smallIDToPlayerID.set(p.smallID, p.id);
       const off = p.smallID * 4;
       this.playerColors.set(p.id, [
         paletteData[off],
@@ -215,7 +211,6 @@ export class NamePass {
     for (const p of players) {
       if (this.playerByID.has(p.id)) continue;
       this.playerByID.set(p.id, p);
-      this.smallIDToPlayerID.set(p.smallID, p.id);
       const off = p.smallID * 4;
       this.playerColors.set(p.id, [
         paletteData[off],
@@ -294,73 +289,84 @@ export class NamePass {
   ): void {
     const now = performance.now() / 1000;
 
-    // Build alive set and emoji lookup from smallID → playerID
-    const alivePlayerIDs = this.alivePlayerIDs;
-    alivePlayerIDs.clear();
-    const troopsByPlayerID = this.troopsByPlayerID;
-    troopsByPlayerID.clear();
-    const playerStateByID = this.playerStateByID;
-    playerStateByID.clear();
-    for (const [, ps] of players) {
-      const pid = this.smallIDToPlayerID.get(ps.smallID);
-      if (!pid) continue;
-      if (ps.isAlive) alivePlayerIDs.add(pid);
-      troopsByPlayerID.set(pid, ps.troops ?? 0);
-      playerStateByID.set(pid, ps);
-    }
-
-    // Assign slot indices to players (stable ordering by header index)
-    let nextSlotIndex = 0;
-    for (const p of this.playerByID.values()) {
-      if (!this.slots.has(p.id)) {
-        const slot: PlayerSlot = {
-          index: nextSlotIndex++,
-          playerID: p.id,
-          static: p,
-          srcX: 0,
-          srcY: 0,
-          srcScale: 0,
-          tgtX: 0,
-          tgtY: 0,
-          tgtScale: 0,
-          startTime: now,
-          alive: false,
-          nameLen: 0,
-          troopLen: 0,
-          lastTroopStr: "",
-          lastTroopBucket: -1,
-          flagUrl: p.flag,
-          flagLayerIdx: -1,
-          emojiAtlasIdx: -1,
-          nameHalfWidth: 0,
-          crown: false,
-          traitor: false,
-          disconnected: false,
-          alliance: false,
-          allianceReq: false,
-          target: false,
-          embargo: false,
-          nukeActive: false,
-          nukeTargetsMe: false,
-          traitorRemainingTicks: 0,
-          allianceFraction: 0,
-          allianceRemainingTicks: 0,
-        };
-        this.slots.set(p.id, slot);
-        this.resolveSlotFlag(slot);
-      } else {
-        nextSlotIndex = Math.max(
-          nextSlotIndex,
-          this.slots.get(p.id)!.index + 1,
-        );
+    // Assign slot indices to players (stable ordering by header index).
+    // Both maps only ever grow, and every assignment pass leaves them the
+    // same size — equal sizes means every player already has a slot.
+    if (this.slots.size !== this.playerByID.size) {
+      let nextSlotIndex = 0;
+      for (const p of this.playerByID.values()) {
+        if (!this.slots.has(p.id)) {
+          const slot: PlayerSlot = {
+            index: nextSlotIndex++,
+            playerID: p.id,
+            static: p,
+            srcX: 0,
+            srcY: 0,
+            srcScale: 0,
+            tgtX: 0,
+            tgtY: 0,
+            tgtScale: 0,
+            startTime: now,
+            alive: false,
+            nameLen: 0,
+            troopLen: 0,
+            lastTroopStr: "",
+            lastTroopBucket: -1,
+            flagUrl: p.flag,
+            flagLayerIdx: -1,
+            emojiAtlasIdx: -1,
+            nameHalfWidth: 0,
+            crown: false,
+            traitor: false,
+            disconnected: false,
+            alliance: false,
+            allianceReq: false,
+            target: false,
+            embargo: false,
+            nukeActive: false,
+            nukeTargetsMe: false,
+            inDoomsdayClock: false,
+            doomsdayClockDraining: false,
+            doomsdayClockWarnProgress: 0,
+            traitorRemainingTicks: 0,
+            allianceFraction: 0,
+            allianceRemainingTicks: 0,
+          };
+          this.slots.set(p.id, slot);
+          this.resolveSlotFlag(slot);
+        } else {
+          nextSlotIndex = Math.max(
+            nextSlotIndex,
+            this.slots.get(p.id)!.index + 1,
+          );
+        }
       }
     }
+
+    // Round-robin time slicing: each call refreshes 1/UPDATE_SLICES of the
+    // slots, spreading the per-player diff work across game ticks (full
+    // refresh every UPDATE_SLICES ticks ≈ 400 ms — under the 500 ms troop
+    // text cadence, and name positions lerp continuously anyway). Slots
+    // without a written name (new player, refreshNames reset) and snap
+    // passes (seek) are always processed so nothing pops in late.
+    const phase = this.slicePhase;
+    this.slicePhase = (phase + 1) % NamePass.UPDATE_SLICES;
 
     for (const [playerID, entry] of names) {
       const slot = this.slots.get(playerID);
       if (!slot) continue;
 
-      const alive = alivePlayerIDs.has(playerID);
+      if (
+        !snap &&
+        slot.nameLen !== 0 &&
+        slot.index % NamePass.UPDATE_SLICES !== phase
+      ) {
+        continue;
+      }
+
+      // Per-player state straight from the caller's map — smallID is the key.
+      const ps = players.get(slot.static.smallID);
+      const alive = ps?.isAlive ?? false;
 
       // Skip dead players already marked dead — no work needed
       if (!alive && !slot.alive) continue;
@@ -392,7 +398,7 @@ export class NamePass {
       const troopBucket = Math.floor((now + (slot.index % 5) * 0.1) / 0.5);
       if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
         slot.lastTroopBucket = troopBucket;
-        const troops = troopsByPlayerID.get(playerID) ?? 0;
+        const troops = ps?.troops ?? 0;
         const troopStr = renderTroops(troops);
         if (troopStr !== slot.lastTroopStr) {
           slot.troopLen = Math.min(troopStr.length, MAX_CHARS);
@@ -431,7 +437,6 @@ export class NamePass {
 
       // Resolve active broadcast emoji for this player
       let newEmoji = -1;
-      const ps = playerStateByID.get(playerID);
       if (ps?.outgoingEmojis && ps.outgoingEmojis.length > 0) {
         for (const e of ps.outgoingEmojis) {
           if (e.recipientID === "AllPlayers") {
@@ -453,6 +458,9 @@ export class NamePass {
       const crown = sd?.crown ?? false;
       const traitor = sd?.traitor ?? false;
       const disconnected = sd?.disconnected ?? false;
+      const inDoomsdayClock = sd?.inDoomsdayClock ?? false;
+      const doomsdayClockDraining = sd?.doomsdayClockDraining ?? false;
+      const doomsdayClockWarnProgress = sd?.doomsdayClockWarnProgress ?? 0;
       const alliance = sd?.alliance ?? false;
       const allianceReq = sd?.allianceReq ?? false;
       const target = sd?.target ?? false;
@@ -467,6 +475,9 @@ export class NamePass {
         crown !== slot.crown ||
         traitor !== slot.traitor ||
         disconnected !== slot.disconnected ||
+        inDoomsdayClock !== slot.inDoomsdayClock ||
+        doomsdayClockDraining !== slot.doomsdayClockDraining ||
+        doomsdayClockWarnProgress !== slot.doomsdayClockWarnProgress ||
         alliance !== slot.alliance ||
         allianceReq !== slot.allianceReq ||
         target !== slot.target ||
@@ -480,6 +491,9 @@ export class NamePass {
         slot.crown = crown;
         slot.traitor = traitor;
         slot.disconnected = disconnected;
+        slot.inDoomsdayClock = inDoomsdayClock;
+        slot.doomsdayClockDraining = doomsdayClockDraining;
+        slot.doomsdayClockWarnProgress = doomsdayClockWarnProgress;
         slot.alliance = alliance;
         slot.allianceReq = allianceReq;
         slot.target = target;
@@ -565,11 +579,19 @@ export class NamePass {
     d[off + 14] = nameShade;
     d[off + 15] = slot.nameHalfWidth;
 
-    // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]
+    // Column 4: flagLayerIdx, emojiAtlasIdx, smallID, doomsdayClock state
+    // (0 none, 1.0-1.49 danger -> blinking skull, 2 draining -> steady skull).
+    // The warn-countdown progress (0->1) is packed into the danger value's
+    // fraction so the shader can blink faster as drain nears; it stays < 1.5 so
+    // the draining threshold is untouched.
     d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
     d[off + 18] = slot.static.smallID;
-    d[off + 19] = 0;
+    d[off + 19] = slot.doomsdayClockDraining
+      ? 2.0
+      : slot.inDoomsdayClock
+        ? 1.0 + slot.doomsdayClockWarnProgress * 0.49
+        : 0.0;
 
     // Column 5: crown, traitor, disconnected, alliance
     d[off + 20] = slot.crown ? 1.0 : 0.0;
@@ -644,7 +666,8 @@ export class NamePass {
         slot.allianceReq ||
         slot.target ||
         slot.embargo ||
-        slot.nukeActive;
+        slot.nukeActive ||
+        slot.inDoomsdayClock;
       if (slot.emojiAtlasIdx >= 0) {
         top = wy - lineH * ns.emojiRowOffset;
       } else if (hasStatus) {

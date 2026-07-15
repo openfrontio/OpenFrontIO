@@ -45,11 +45,12 @@ out float vHoverAlpha;
 
 // Status flag float array — indexed by icon slot.
 // Slot mapping: 0=crown, 1=traitor, 2=disconnected, 3=alliance,
-//               4=allianceReq, 5=target, 6=embargo, 7=nukeActive
-float statusFlag[8];
+//               4=allianceReq, 5=target, 6=embargo, 7=nukeActive, 8=doomsdayClock
+float statusFlag[9];
 
-// Read status flags from pd5/pd6 into the statusFlag array.
+// Read status flags from pd4.w/pd5/pd6 into the statusFlag array.
 void readStatusFlags(int playerIdx) {
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0);
   vec4 pd5 = texelFetch(uPlayerData, ivec2(5, playerIdx), 0);
   vec4 pd6 = texelFetch(uPlayerData, ivec2(6, playerIdx), 0);
   statusFlag[0] = pd5.x; // crown
@@ -60,6 +61,7 @@ void readStatusFlags(int playerIdx) {
   statusFlag[5] = pd6.y; // target
   statusFlag[6] = pd6.z; // embargo
   statusFlag[7] = pd6.w; // nukeActive
+  statusFlag[8] = pd4.w; // doomsdayClock
 }
 
 // Count active icons with index < pos.
@@ -85,9 +87,9 @@ vec4 cellUV(int idx) {
 }
 
 void main() {
-  // Decode instance ID → playerIdx + iconSlot (0..7)
-  int playerIdx = gl_InstanceID / 8;
-  int iconSlot  = gl_InstanceID - playerIdx * 8;
+  // Decode instance ID → playerIdx + iconSlot (0..8)
+  int playerIdx = gl_InstanceID / 9;
+  int iconSlot  = gl_InstanceID - playerIdx * 9;
 
   // Read player data
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
@@ -163,7 +165,7 @@ void main() {
 
   // Count active icons and position of this one (left-to-right)
   int totalActive = 0;
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 9; i++) {
     if (statusFlag[i] > 0.5) totalActive++;
   }
   int myIndex = countBelow(iconSlot);
@@ -183,6 +185,9 @@ void main() {
   int atlasIdx = iconSlot;
   if (iconSlot == 7) {
     atlasIdx = (pd7.x > 0.5) ? 7 : 8;
+  }
+  if (iconSlot == 8) {
+    atlasIdx = 10; // doomsday-clock skull
   }
 
   // Only the alliance icon (slot 3) gets the dark outline.
@@ -260,6 +265,21 @@ void main() {
       float elapsed = window - remainingSec;
       float phase = uTime * 2.0 + elapsed * elapsed * (1.5 / window);
       vFlashAlpha = 0.3 + 0.7 * (0.5 + 0.5 * cos(phase * 6.2832));
+    }
+  }
+
+  // Doomsday Clock skull: slot 8. While in danger (flag 1.0-1.49) the skull
+  // blinks and speeds up as the warn countdown runs out — the progress 0->1 is
+  // packed into the flag's fraction. Base ~2 Hz plus a p^2 phase term so it
+  // accelerates toward the drain (same trick as the alliance-renewal flash
+  // above, which keeps the phase continuous). Holds steady once draining (>=1.5).
+  if (iconSlot == 8) {
+    if (statusFlag[8] < 1.5) {
+      float p = clamp((statusFlag[8] - 1.0) / 0.49, 0.0, 1.0);
+      float phase = uTime * 2.0 + p * p * 40.0;
+      vFlashAlpha = 0.35 + 0.65 * (0.5 + 0.5 * cos(phase * 6.2832));
+    } else {
+      vFlashAlpha = 1.0;
     }
   }
 

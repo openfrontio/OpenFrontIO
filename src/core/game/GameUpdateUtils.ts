@@ -31,6 +31,43 @@ export function diffPlayerUpdate(
   prev: PlayerUpdate,
   next: PlayerUpdate,
 ): PlayerUpdate | null {
+  // Fast path: this runs for every player every tick and usually finds no
+  // changes (tilesOwned/gold/troops travel separately) — return without
+  // allocating anything. The comparisons repeat below only for the rare
+  // changed player.
+  if (
+    prev.clientID === next.clientID &&
+    prev.name === next.name &&
+    prev.displayName === next.displayName &&
+    prev.team === next.team &&
+    prev.smallID === next.smallID &&
+    prev.playerType === next.playerType &&
+    prev.isAlive === next.isAlive &&
+    prev.isDisconnected === next.isDisconnected &&
+    prev.isTraitor === next.isTraitor &&
+    prev.traitorRemainingTicks === next.traitorRemainingTicks &&
+    prev.inDoomsdayClock === next.inDoomsdayClock &&
+    prev.markedDoomsdayClockTick === next.markedDoomsdayClockTick &&
+    prev.hasSpawned === next.hasSpawned &&
+    prev.spawnTile === next.spawnTile &&
+    prev.betrayals === next.betrayals &&
+    prev.lastDeleteUnitTick === next.lastDeleteUnitTick &&
+    prev.isLobbyCreator === next.isLobbyCreator &&
+    numberArrayEqual(prev.allies, next.allies) &&
+    numberArrayEqual(prev.targets, next.targets) &&
+    stringArrayEqual(
+      prev.outgoingAllianceRequests,
+      next.outgoingAllianceRequests,
+    ) &&
+    stringSetEqual(prev.embargoes, next.embargoes) &&
+    emojiArrayEqual(prev.outgoingEmojis, next.outgoingEmojis) &&
+    attackArrayMembershipEqual(prev.outgoingAttacks, next.outgoingAttacks) &&
+    attackArrayMembershipEqual(prev.incomingAttacks, next.incomingAttacks) &&
+    allianceArrayEqual(prev.alliances, next.alliances)
+  ) {
+    return null;
+  }
+
   const diff: PlayerUpdate = { type: GameUpdateType.Player, id: next.id };
   let changed = false;
 
@@ -57,6 +94,14 @@ export function diffPlayerUpdate(
   setIfDifferent(
     "traitorRemainingTicks",
     prev.traitorRemainingTicks === next.traitorRemainingTicks,
+  );
+  setIfDifferent(
+    "inDoomsdayClock",
+    prev.inDoomsdayClock === next.inDoomsdayClock,
+  );
+  setIfDifferent(
+    "markedDoomsdayClockTick",
+    prev.markedDoomsdayClockTick === next.markedDoomsdayClockTick,
   );
   setIfDifferent("hasSpawned", prev.hasSpawned === next.hasSpawned);
   setIfDifferent("spawnTile", prev.spawnTile === next.spawnTile);
@@ -118,6 +163,11 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {
     target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks);
+  }
+  if (pu.inDoomsdayClock !== undefined)
+    target.inDoomsdayClock = pu.inDoomsdayClock;
+  if (pu.markedDoomsdayClockTick !== undefined) {
+    target.markedDoomsdayClockTick = pu.markedDoomsdayClockTick;
   }
   if (pu.betrayals !== undefined) target.betrayals = pu.betrayals;
   if (pu.hasSpawned !== undefined) target.hasSpawned = pu.hasSpawned;

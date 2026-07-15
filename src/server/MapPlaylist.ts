@@ -15,7 +15,11 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
+import {
+  GameConfig,
+  ScheduledPublicGameType,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
@@ -71,11 +75,11 @@ type ModifierKey =
   | "startingGold25M"
   | "goldMultiplier"
   | "isAlliancesDisabled"
-  | "isPortsDisabled"
   | "isNukesDisabled"
   | "isSAMsDisabled"
   | "isPeaceTime"
-  | "isWaterNukes";
+  | "isWaterNukes"
+  | "isDoomsdayClock";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 // Weights are roughly informed by the community "favorite modifier" poll.
@@ -89,12 +93,22 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(3).fill("startingGold25M"),
   ...Array<ModifierKey>(6).fill("goldMultiplier"),
   ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
-  ...Array<ModifierKey>(1).fill("isPortsDisabled"),
   ...Array<ModifierKey>(1).fill("isNukesDisabled"),
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
   ...Array<ModifierKey>(4).fill("isWaterNukes"),
+  ...Array<ModifierKey>(4).fill("isDoomsdayClock"),
 ];
+
+// Speeds the Doomsday Clock can roll at when it lands in the rotation. Picked
+// per game (see getSpecialConfig) so the pacing varies instead of always being
+// the same preset.
+const DOOMSDAY_ROTATION_SPEEDS = [
+  "slow",
+  "normal",
+  "fast",
+  "veryfast",
+] as const;
 
 // Maps where water nukes have a higher chance on top of the normal pool
 // Water nukes are especially fun here
@@ -108,7 +122,6 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
 
 // Maps that are entirely land.
 // - Water nukes forced on 75% of the time (overrides WATER_NUKES_BOOSTED_MAPS)
-// - The "ports disabled" modifier is only allowed when water nukes is on
 const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.TheBox,
   GameMapType.Alps,
@@ -125,13 +138,13 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
 ];
 
 export class MapPlaylist {
-  private playlists: Record<PublicGameType, GameMapType[]> = {
+  private playlists: Record<ScheduledPublicGameType, GameMapType[]> = {
     ffa: [],
     special: [],
     team: [],
   };
 
-  public async gameConfig(type: PublicGameType): Promise<GameConfig> {
+  public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     if (type === "special") {
       return this.getSpecialConfig();
     }
@@ -240,11 +253,6 @@ export class MapPlaylist {
       excludedModifiers.push("isWaterNukes", "isNukesDisabled");
     }
 
-    // On full-land maps, ports-disabled is only allowed alongside water nukes
-    if (FULL_LAND_MAPS.has(map) && !boostWaterNukes) {
-      excludedModifiers.push("isPortsDisabled");
-    }
-
     const poolResult = this.getRandomSpecialGameModifiers(
       excludedModifiers,
       undefined,
@@ -258,11 +266,11 @@ export class MapPlaylist {
       goldMultiplier,
       isAlliancesDisabled,
       isHardNations,
-      isPortsDisabled,
       isNukesDisabled,
       isSAMsDisabled,
       isPeaceTime,
       isWaterNukes,
+      isDoomsdayClock,
     } = poolResult;
     if (boostWaterNukes) {
       isWaterNukes = true;
@@ -286,11 +294,11 @@ export class MapPlaylist {
           startingGold === undefined &&
           goldMultiplier === undefined &&
           !isAlliancesDisabled &&
-          !isPortsDisabled &&
           !isNukesDisabled &&
           !isSAMsDisabled &&
           !isPeaceTime &&
-          !isWaterNukes
+          !isWaterNukes &&
+          !isDoomsdayClock
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
@@ -303,11 +311,11 @@ export class MapPlaylist {
             startingGold,
             goldMultiplier,
             isAlliancesDisabled,
-            isPortsDisabled,
             isNukesDisabled,
             isSAMsDisabled,
             isPeaceTime,
             isWaterNukes,
+            isDoomsdayClock,
           } = fallback);
           ({ isHardNations } = fallback);
         }
@@ -329,9 +337,6 @@ export class MapPlaylist {
 
     // Build disabledUnits from modifiers
     const disabledUnits: UnitType[] = [];
-    if (isPortsDisabled) {
-      disabledUnits.push(UnitType.Port);
-    }
     if (isNukesDisabled) {
       disabledUnits.push(
         UnitType.MissileSilo,
@@ -363,12 +368,23 @@ export class MapPlaylist {
         startingGold,
         goldMultiplier,
         isAlliancesDisabled,
-        isPortsDisabled,
         isNukesDisabled,
         isSAMsDisabled,
         isPeaceTime,
         isWaterNukes,
+        isDoomsdayClock,
       },
+      // Rolled into the rotation: enable the anti-stall clock at a speed picked
+      // per game so the pacing varies across the presets.
+      doomsdayClock: isDoomsdayClock
+        ? {
+            enabled: true,
+            speed:
+              DOOMSDAY_ROTATION_SPEEDS[
+                Math.floor(Math.random() * DOOMSDAY_ROTATION_SPEEDS.length)
+              ],
+          }
+        : undefined,
       startingGold,
       goldMultiplier,
       disableAlliances: isAlliancesDisabled ? true : undefined,
@@ -425,7 +441,38 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: PublicGameType): GameMapType {
+  public get2v2Config(): GameConfig {
+    const maps = [
+      GameMapType.Australia, // 40%
+      GameMapType.Australia,
+      GameMapType.Iceland, // 20%
+      GameMapType.Asia, // 20%
+      GameMapType.EuropeClassic, // 20%
+    ];
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: 4,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Compact,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.TwoVTwo,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: 10,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+      bots: 100,
+      spawnImmunityDuration: 30 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
+  private getNextMap(type: ScheduledPublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {
       playlist.push(...this.generateNewPlaylist(type));
@@ -433,7 +480,7 @@ export class MapPlaylist {
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(type: PublicGameType): GameMapType[] {
+  private generateNewPlaylist(type: ScheduledPublicGameType): GameMapType[] {
     const maps = this.buildMapsList(type);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
@@ -482,7 +529,7 @@ export class MapPlaylist {
     return false;
   }
 
-  private buildMapsList(type: PublicGameType): GameMapType[] {
+  private buildMapsList(type: ScheduledPublicGameType): GameMapType[] {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
@@ -568,11 +615,11 @@ export class MapPlaylist {
             : undefined,
       goldMultiplier: selected.has("goldMultiplier") ? 2 : undefined,
       isAlliancesDisabled: selected.has("isAlliancesDisabled") || undefined,
-      isPortsDisabled: selected.has("isPortsDisabled") || undefined,
       isNukesDisabled: selected.has("isNukesDisabled") || undefined,
       isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
       isPeaceTime: selected.has("isPeaceTime") || undefined,
       isWaterNukes: selected.has("isWaterNukes") || undefined,
+      isDoomsdayClock: selected.has("isDoomsdayClock") || undefined,
     };
   }
 

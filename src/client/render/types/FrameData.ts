@@ -5,7 +5,6 @@ import type {
   NukeTelegraphData,
   PlayerState,
   PlayerStatusData,
-  TilePair,
   UnitState,
 } from "./Renderer";
 
@@ -23,7 +22,7 @@ export interface FrameData {
   /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
   readonly tileState: Uint16Array;
-  readonly trailState: Uint8Array;
+  readonly trailState: Uint16Array;
   readonly railroadState: Uint8Array;
   readonly units: ReadonlyMap<number, UnitState>;
   readonly players: ReadonlyMap<number, PlayerState>;
@@ -37,11 +36,11 @@ export interface FrameData {
   // ── Upload hints ──────────────────────────────────────────────────────
 
   /**
-   * Changed tiles this frame for delta uploads.
+   * Changed tile refs this frame for delta uploads.
    * - `null` → no delta info; full upload needed (first tick)
    * - array → only these tiles changed (empty = skip upload)
    */
-  readonly changedTiles: TilePair[] | null;
+  readonly changedTiles: readonly number[] | null;
   readonly railroadDirty: boolean;
   readonly revealedRailTiles: number[];
 

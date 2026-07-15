@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import "./NewsBox";
 
 @customElement("play-page")
@@ -16,6 +17,7 @@ export class PlayPage extends LitElement {
         class="flex flex-col gap-2 w-full px-0 lg:px-4 min-h-0"
       >
         <token-login class="absolute"></token-login>
+        <rewards-modal class="absolute"></rewards-modal>
 
         <!-- Mobile: Fixed top bar -->
         <div
@@ -59,10 +61,44 @@ export class PlayPage extends LitElement {
               />
             </div>
 
-            <div
-              aria-hidden="true"
-              class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
-            ></div>
+            ${crazyGamesSDK.isOnCrazyGames()
+              ? html`
+                  <button
+                    id="crazygames-account-btn"
+                    data-page="page-account"
+                    class="nav-menu-item col-start-3 justify-self-end h-10 shrink-0 flex items-center justify-center rounded-full overflow-hidden text-white/90 cursor-pointer"
+                    data-i18n-aria-label="main.account"
+                    data-i18n-title="main.account"
+                  >
+                    <img
+                      id="crazygames-account-avatar"
+                      class="hidden w-8 h-8 rounded-full object-cover"
+                      alt=""
+                      referrerpolicy="no-referrer"
+                    />
+                    <svg
+                      id="crazygames-account-icon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      class="w-7 h-7"
+                    >
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                      <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+                    </svg>
+                  </button>
+                `
+              : html`
+                  <div
+                    aria-hidden="true"
+                    class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
+                  ></div>
+                `}
           </div>
         </div>
 
@@ -79,7 +115,7 @@ export class PlayPage extends LitElement {
 
           <!-- Username: left col -->
           <div
-            class="px-2 py-2 bg-surface border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
+            class="px-2 py-2 bg-surface border-y border-white/10 overflow-visible relative z-20 lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:border-y-0 lg:rounded-xl"
           >
             <div class="flex items-center gap-2 min-w-0 w-full">
               <username-input
@@ -96,6 +132,10 @@ export class PlayPage extends LitElement {
                 show-select-label
                 class="shrink-0 lg:hidden h-10 w-10"
               ></flag-input>
+              <effects-input
+                id="effects-input-mobile"
+                class="shrink-0 lg:hidden h-10 w-10"
+              ></effects-input>
             </div>
           </div>
 
@@ -111,6 +151,10 @@ export class PlayPage extends LitElement {
               show-select-label
               class="flex-1 h-full"
             ></flag-input>
+            <effects-input
+              id="effects-input-desktop"
+              class="flex-1 h-full"
+            ></effects-input>
           </div>
         </div>
 

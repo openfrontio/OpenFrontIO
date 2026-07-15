@@ -28,6 +28,14 @@ export class GameManager {
     );
   }
 
+  // Private lobbies a subscriber has listed in the public lobby browser.
+  // Leaving the Lobby phase (start/fill/expiry) delists them automatically.
+  public listedLobbies(): GameServer[] {
+    return Array.from(this.games.values()).filter(
+      (g) => g.phase() === GamePhase.Lobby && !g.isPublic() && g.isListed(),
+    );
+  }
+
   joinClient(
     client: Client,
     gameID: GameID,
@@ -59,6 +67,7 @@ export class GameManager {
     creatorPersistentID?: string,
     startsAt?: number,
     publicGameType?: PublicGameType,
+    matchmakingTeams?: string[][],
   ): GameServer | null {
     if (this.games.has(id)) {
       this.log.warn("cannot create game, id already exists", { gameID: id });
@@ -90,6 +99,7 @@ export class GameManager {
       creatorPersistentID,
       startsAt,
       publicGameType,
+      matchmakingTeams,
     );
     this.games.set(id, game);
     return game;
@@ -118,6 +128,9 @@ export class GameManager {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {
       const phase = game.phase();
+      if (phase === GamePhase.Lobby) {
+        game.maybeAutoStartListed();
+      }
       if (phase === GamePhase.Active) {
         if (!game.hasStarted()) {
           // Prestart tells clients to start loading the game.

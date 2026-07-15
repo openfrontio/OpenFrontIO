@@ -42,6 +42,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
+    altKey: "AltLeft",
   };
 }
 
@@ -57,6 +58,7 @@ export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const EFFECTS_KEY = "settings.effects";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -137,6 +139,13 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
+  highlightGlowStrength() {
+    // 0 = off, 1 = default; capped at 5 (the 500% slider max) so a value
+    // persisted from an older, larger range can't display/apply above it.
+    const v = this.getFloat("settings.highlightGlowStrength", 1);
+    return Math.min(5, Math.max(0, v));
+  }
+
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
@@ -187,6 +196,10 @@ export class UserSettings {
 
   toggleEmojis() {
     this.setBool("settings.emojis", !this.emojis());
+  }
+
+  setHighlightGlowStrength(value: number) {
+    this.setFloat("settings.highlightGlowStrength", value);
   }
 
   // Performance overlay specifically needs a direct setter for Shift-D
@@ -310,6 +323,36 @@ export class UserSettings {
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
+  }
+
+  /**
+   * Selected effect cosmetics, keyed by selection slot (at most one per slot).
+   * A slot is the effectType for trails and the nukeType for nuke explosions —
+   * see effectTypeForSlot. Persisted as a single JSON blob under EFFECTS_KEY.
+   */
+  getSelectedEffects(): Record<string, string> {
+    const raw = this.getString(EFFECTS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  getSelectedEffectName(slot: string): string | null {
+    return this.getSelectedEffects()[slot] ?? null;
+  }
+
+  setSelectedEffectName(slot: string, name: string | undefined): void {
+    const map = this.getSelectedEffects();
+    if (name === undefined) delete map[slot];
+    else map[slot] = name;
+    if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
+    else this.setString(EFFECTS_KEY, JSON.stringify(map));
   }
 
   backgroundMusicVolume(): number {

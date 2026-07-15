@@ -293,8 +293,46 @@ export class GameImpl implements Game {
     return this._unitMap.get(id);
   }
 
-  units(...types: UnitType[]): Unit[] {
-    return Array.from(this._players.values()).flatMap((p) => p.units(...types));
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
+  units(
+    first?: UnitType | readonly UnitType[],
+    second?: UnitType,
+    third?: UnitType,
+  ): Unit[] {
+    // Built as a single flat array per call; per-player intermediate arrays
+    // would churn the heap (player.units() with no args is allocation-free).
+    const out: Unit[] = [];
+    if (Array.isArray(first) && (first as readonly UnitType[]).length > 0) {
+      const ts = new Set(first as readonly UnitType[]);
+      for (const p of this._players.values()) {
+        for (const u of p.units()) {
+          if (ts.has(u.type())) out.push(u);
+        }
+      }
+      return out;
+    }
+    if (first === undefined || Array.isArray(first)) {
+      for (const p of this._players.values()) {
+        for (const u of p.units()) {
+          out.push(u);
+        }
+      }
+      return out;
+    }
+    for (const p of this._players.values()) {
+      for (const u of p.units()) {
+        const t = u.type();
+        if (
+          t === first ||
+          (second !== undefined && (t === second || t === third))
+        ) {
+          out.push(u);
+        }
+      }
+    }
+    return out;
   }
 
   unitCount(type: UnitType): number {
@@ -1203,6 +1241,9 @@ export class GameImpl implements Game {
   }
   hasWaterComponent(tile: TileRef, component: number): boolean {
     return this._waterManager.hasWaterComponent(tile, component);
+  }
+  getWaterComponentSize(tile: TileRef): number | null {
+    return this._waterManager.getWaterComponentSize(tile);
   }
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);

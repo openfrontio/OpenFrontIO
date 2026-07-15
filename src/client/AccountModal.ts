@@ -1,23 +1,26 @@
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import {
-  PlayerGame,
-  PlayerStatsTree,
-  UserMeResponse,
-} from "../core/ApiSchemas";
+import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { fetchPlayerById, getUserMe } from "./Api";
+import {
+  fetchPlayerById,
+  getUserMe,
+  invalidateUserMe,
+  setMarketingConsent,
+} from "./Api";
 import {
   discordLogin,
   googleLogin,
   linkGoogle,
   logOut,
+  reauthAfterCrazyGamesChange,
   sendMagicLink,
 } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
-import "./components/baseComponents/stats/GameList";
+import "./components/baseComponents/stats/PlayerGameHistoryView";
+import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
@@ -25,9 +28,12 @@ import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
+import "./components/RewardsPanel";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { fetchCosmetics, SUBSCRIPTIONS_ENABLED } from "./Cosmetics";
+import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -36,28 +42,51 @@ export class AccountModal extends BaseModal {
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
+  // from the SDK, not our backend user object.
+  @state() private crazyGamesUser: CrazyGamesUser | null = null;
+  @state() private consentBusy: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
-  private cosmetics: Cosmetics | null = null;
   private statsTree: PlayerStatsTree | null = null;
-  private recentGames: PlayerGame[] = [];
+  // Preserves the Games tab's accumulated list + cursor across tab switches.
+  private gameHistoryCache: PlayerGameHistoryCache | null = null;
+  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
 
     document.addEventListener("userMeResponse", (event: Event) => {
+      // A CrazyGames sign-in fires userMeResponse (via Main's auth listener);
+      // re-fetch the SDK profile so the modal leaves the sign-in screen.
+      this.refreshCrazyGamesUser();
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
+        const previousPublicId = this.userMeResponse?.player?.publicId;
         this.userMeResponse = customEvent.detail as UserMeResponse;
-        if (this.userMeResponse?.player?.publicId === undefined) {
+        // Reset whenever the player identity changes (login, or switching to a
+        // different account) so stats/history from the previous player don't
+        // linger.
+        if (this.userMeResponse?.player?.publicId !== previousPublicId) {
           this.statsTree = null;
-          this.recentGames = [];
+          this.gameHistoryCache = null;
+          this.requestUpdate();
         }
       } else {
         this.statsTree = null;
-        this.recentGames = [];
+        this.gameHistoryCache = null;
         this.requestUpdate();
       }
+    });
+  }
+
+  // Refresh the signed-in CrazyGames identity from the SDK. No-op off
+  // CrazyGames; drives isLinkedAccount() so the modal shows the profile.
+  private refreshCrazyGamesUser() {
+    if (!crazyGamesSDK.isOnCrazyGames()) return;
+    void crazyGamesSDK.getUserProfile().then((user) => {
+      this.crazyGamesUser = user;
+      this.requestUpdate();
     });
   }
 
@@ -102,7 +131,13 @@ export class AccountModal extends BaseModal {
 
   private isLinkedAccount(): boolean {
     const me = this.userMeResponse?.user;
-    return !!(me?.discord ?? me?.google ?? me?.email);
+    // The CrazyGames identity only counts once the backend token exchange
+    // produced a session — otherwise a failed exchange would show a dead
+    // "connected as" view with no way to retry.
+    return (
+      !!(me?.discord ?? me?.google ?? me?.email) ||
+      (!!this.crazyGamesUser && this.userMeResponse !== null)
+    );
   }
 
   protected modalConfig() {
@@ -115,6 +150,7 @@ export class AccountModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "friends", label: translateText("account_modal.tab_friends") },
+        { key: "settings", label: translateText("account_modal.tab_settings") },
       ],
     };
   }
@@ -127,7 +163,9 @@ export class AccountModal extends BaseModal {
     }
     if (!this.isLinkedAccount()) {
       return html`<div class="custom-scrollbar mr-1">
-        ${this.renderLoginOptions()}
+        ${crazyGamesSDK.isOnCrazyGames()
+          ? this.renderCrazyGamesSignIn()
+          : this.renderLoginOptions()}
       </div>`;
     }
     return html`
@@ -145,9 +183,123 @@ export class AccountModal extends BaseModal {
         return this.renderGamesTab();
       case "friends":
         return this.renderFriendsTab();
+      case "settings":
+        return this.renderSettingsTab();
       default:
         return this.renderAccountTab();
     }
+  }
+
+  // Persistent marketing-consent control (client-driven consent). Mirrors the
+  // post-login toast: a player can turn email updates on/off any time here, or
+  // — when there's no verified email on the account — is told to link one.
+  private renderSettingsTab(): TemplateResult {
+    const consent = this.userMeResponse?.player?.marketingConsent;
+    // The API didn't return consent state (older backend). The tab is always
+    // shown, but with nothing to configure it stays empty rather than showing
+    // a misleading "link an email" prompt.
+    if (!consent) return html``;
+    const hasEmail = consent.hasEmail;
+    const on = consent.consented === "approved";
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="text-white font-medium">
+              ${translateText("account_modal.marketing_title")}
+            </div>
+            <div class="text-white/50 text-sm mt-1">
+              ${hasEmail
+                ? translateText("account_modal.marketing_desc")
+                : translateText("account_modal.marketing_no_email")}
+            </div>
+          </div>
+          ${hasEmail
+            ? html`<button
+                role="switch"
+                aria-checked=${on ? "true" : "false"}
+                aria-label=${translateText("account_modal.marketing_title")}
+                ?disabled=${this.consentBusy}
+                @click=${() => this.setConsent(!on)}
+                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${on
+                  ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+                  : "bg-white/15"}"
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${on
+                    ? "translate-x-6"
+                    : "translate-x-1"}"
+                ></span>
+              </button>`
+            : nothing}
+        </div>
+        ${hasEmail ? nothing : this.renderEmailBinding()}
+      </div>
+    `;
+  }
+
+  // No verified email on the account yet. Offer both ways to attach one:
+  // a magic link to a plain email (the backend associates a not-yet-registered
+  // email with the current session — the "new-association" path), or linking a
+  // Google account. Reuses the login form's email field/handlers.
+  private renderEmailBinding(): TemplateResult {
+    return html`
+      <div class="mt-4 space-y-3">
+        ${this.renderEmailField()}
+        <div class="flex items-center gap-4 py-1">
+          <div class="h-px bg-white/10 flex-1"></div>
+          <span
+            class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
+          >
+            ${translateText("account_modal.or")}
+          </span>
+          <div class="h-px bg-white/10 flex-1"></div>
+        </div>
+        ${this.renderLinkGoogleButton()}
+      </div>
+    `;
+  }
+
+  // Shared email input + "get magic link" button, used by both the sign-in form
+  // and the Account Settings bind-an-email state so their styling and handlers
+  // stay in sync.
+  private renderEmailField(): TemplateResult {
+    return html`
+      <input
+        type="email"
+        .value=${this.email}
+        @input=${this.handleEmailInput}
+        placeholder=${translateText("account_modal.email_placeholder")}
+        class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
+      />
+      <o-button
+        variant="primary"
+        width="block"
+        size="md"
+        translationKey="account_modal.get_magic_link"
+        @click=${this.handleSubmit}
+      ></o-button>
+    `;
+  }
+
+  private async setConsent(consented: boolean): Promise<void> {
+    const consent = this.userMeResponse?.player?.marketingConsent;
+    if (!consent || this.consentBusy) return;
+    const previous = consent.consented;
+    const next = consented ? "approved" : "denied";
+    if (previous === next) return;
+
+    // Optimistic: reflect the new state immediately, revert if the request fails.
+    this.consentBusy = true;
+    consent.consented = next;
+    this.requestUpdate();
+
+    const ok = await setMarketingConsent(consented);
+    if (!ok) {
+      consent.consented = previous;
+    }
+    this.consentBusy = false;
+    this.requestUpdate();
   }
 
   private renderFriendsTab(): TemplateResult {
@@ -156,6 +308,9 @@ export class AccountModal extends BaseModal {
   }
 
   private renderAccountTab(): TemplateResult {
+    if (this.crazyGamesUser) {
+      return this.renderCrazyGamesAccount(this.crazyGamesUser);
+    }
     return html`
       <div class="flex flex-col gap-6">
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
@@ -173,7 +328,60 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+      </div>
+    `;
+  }
+
+  // CrazyGames "connected as" view: avatar + username from the SDK, plus
+  // currency/subscription. No Discord/Google/email link or logout (CrazyGames
+  // owns the account and its logout).
+  private renderCrazyGamesAccount(user: CrazyGamesUser): TemplateResult {
+    return html`
+      <div class="flex flex-col gap-6">
+        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+          <div class="flex flex-col items-center gap-4">
+            <div
+              class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
+            >
+              ${translateText("account_modal.connected_as")}
+            </div>
+            <div class="flex flex-col items-center gap-3">
+              <img
+                src=${user.profilePictureUrl}
+                alt=${user.username}
+                class="w-16 h-16 rounded-full object-cover"
+                referrerpolicy="no-referrer"
+              />
+              <div class="text-white text-lg font-medium">${user.username}</div>
+              ${this.renderCurrency()}
+            </div>
+          </div>
+        </div>
+        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+      </div>
+    `;
+  }
+
+  // Shown when a CrazyGames guest opens the modal: hand off to CrazyGames' own
+  // sign-in prompt (no Discord/Google/email on CrazyGames).
+  private renderCrazyGamesSignIn(): TemplateResult {
+    return html`
+      <div class="flex items-center justify-center p-6 min-h-full">
+        <div
+          class="w-full max-w-md bg-white/5 rounded-2xl border border-white/10 p-8 text-center"
+        >
+          <p class="text-white/50 text-sm font-medium mb-6">
+            ${translateText("account_modal.sign_in_desc")}
+          </p>
+          <o-button
+            variant="primary"
+            width="block"
+            size="md"
+            translationKey="main.sign_in"
+            @click=${this.handleCrazyGamesSignIn}
+          ></o-button>
+        </div>
       </div>
     `;
   }
@@ -199,23 +407,25 @@ export class AccountModal extends BaseModal {
   }
 
   private renderGamesTab(): TemplateResult {
-    if (this.recentGames.length === 0) {
+    const publicId = this.userMeResponse?.player?.publicId ?? "";
+    if (!publicId) {
       return this.renderEmptyState(
         "🎮",
         translateText("account_modal.no_games"),
       );
     }
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span class="text-blue-400">🎮</span>
-          ${translateText("game_list.recent_games")}
-        </h3>
-        <game-list
-          .games=${this.recentGames}
-          .onViewGame=${(id: string) => void this.viewGame(id)}
-        ></game-list>
-      </div>
+      <player-game-history-view
+        .publicId=${publicId}
+        .cachedState=${this.gameHistoryCache?.publicId === publicId
+          ? this.gameHistoryCache
+          : null}
+        @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
+          this.gameHistoryCache = e.detail;
+        }}
+        @view-game=${(e: CustomEvent<{ gameId: string }>) =>
+          void this.viewGame(e.detail.gameId)}
+      ></player-game-history-view>
     `;
   }
 
@@ -230,8 +440,29 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  private renderRewardsPanel(): TemplateResult | "" {
+    const rewards = this.userMeResponse?.player?.rewards ?? [];
+    if (rewards.length === 0) return "";
+    return html`<rewards-panel
+      .rewards=${rewards}
+      @rewards-changed=${this.handleRewardsChanged}
+    ></rewards-panel>`;
+  }
+
+  // A claim moved unclaimed rewards into the balances; both were returned by
+  // the claim endpoint, so update in place instead of re-fetching /users/@me.
+  private handleRewardsChanged = (
+    event: CustomEvent<RewardsChangedDetail>,
+  ): void => {
+    if (!this.userMeResponse) return;
+    this.userMeResponse.player.rewards = event.detail.rewards;
+    if (event.detail.currency) {
+      this.userMeResponse.player.currency = event.detail.currency;
+    }
+    this.requestUpdate();
+  };
+
   private renderSubscriptionPanel(): TemplateResult | "" {
-    if (!SUBSCRIPTIONS_ENABLED) return "";
     const sub = this.userMeResponse?.player?.subscription;
     if (!sub) return "";
     const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
@@ -432,29 +663,7 @@ export class AccountModal extends BaseModal {
             </div>
 
             <!-- Email Recovery -->
-            <div class="space-y-3">
-              <div class="relative group">
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  .value="${this.email}"
-                  @input="${this.handleEmailInput}"
-                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
-                  placeholder="${translateText(
-                    "account_modal.email_placeholder",
-                  )}"
-                  required
-                />
-              </div>
-              <o-button
-                variant="primary"
-                width="block"
-                size="md"
-                translationKey="account_modal.get_magic_link"
-                @click=${this.handleSubmit}
-              ></o-button>
-            </div>
+            <div class="space-y-3">${this.renderEmailField()}</div>
           </div>
 
           <div class="mt-8 text-center border-t border-white/10 pt-6">
@@ -491,6 +700,20 @@ export class AccountModal extends BaseModal {
     } else {
       alert(translateText("account_modal.failed_to_send_recovery_email"));
     }
+  }
+
+  // CrazyGames sign-in: after their prompt completes, exchange the new token
+  // for a session and refresh the modal so it shows the signed-in profile.
+  private async handleCrazyGamesSignIn() {
+    await crazyGamesSDK.showAuthPrompt();
+    const profile = await crazyGamesSDK.getUserProfile();
+    if (!profile) return; // prompt cancelled / still not signed in
+    invalidateUserMe();
+    await reauthAfterCrazyGamesChange();
+    const userMe = await getUserMe();
+    if (userMe) this.userMeResponse = userMe;
+    this.crazyGamesUser = profile;
+    this.requestUpdate();
   }
 
   private handleDiscordLogin() {
@@ -552,12 +775,12 @@ export class AccountModal extends BaseModal {
     this.isLoadingUser = true;
     this.handleLinkResult(args);
 
-    if (SUBSCRIPTIONS_ENABLED) {
-      void fetchCosmetics().then((cosmetics) => {
-        this.cosmetics = cosmetics;
-        this.requestUpdate();
-      });
-    }
+    this.refreshCrazyGamesUser();
+
+    void fetchCosmetics().then((cosmetics) => {
+      this.cosmetics = cosmetics;
+      this.requestUpdate();
+    });
 
     void getUserMe()
       .then((userMe) => {
@@ -599,7 +822,6 @@ export class AccountModal extends BaseModal {
         return;
       }
 
-      this.recentGames = data.games;
       this.statsTree = data.stats;
 
       this.requestUpdate();

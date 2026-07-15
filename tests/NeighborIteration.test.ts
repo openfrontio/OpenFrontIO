@@ -25,48 +25,57 @@ describe("Neighbor iteration", () => {
     game = await setup("ocean_and_land"); // 16x16
   });
 
-  test("forEachNeighbor visits W, E, N, S in that exact order for interior tiles", () => {
+  test("forEachNeighbor visits N, S, W, E in that exact order for interior tiles", () => {
     const tile = game.ref(5, 7);
     expect(collectNeighbors(tile)).toEqual([
-      game.ref(4, 7),
-      game.ref(6, 7),
       game.ref(5, 6),
       game.ref(5, 8),
+      game.ref(4, 7),
+      game.ref(6, 7),
     ]);
   });
 
   test("forEachNeighbor clips at corners and edges", () => {
     const w = game.width();
     const h = game.height();
-    // top-left corner: E, S only
+    // top-left corner: S, E only
     expect(collectNeighbors(game.ref(0, 0))).toEqual([
-      game.ref(1, 0),
       game.ref(0, 1),
+      game.ref(1, 0),
     ]);
-    // bottom-right corner: W, N only
+    // bottom-right corner: N, W only
     expect(collectNeighbors(game.ref(w - 1, h - 1))).toEqual([
-      game.ref(w - 2, h - 1),
       game.ref(w - 1, h - 2),
+      game.ref(w - 2, h - 1),
     ]);
-    // left edge: E, N, S
+    // left edge: N, S, E
     expect(collectNeighbors(game.ref(0, 5))).toEqual([
-      game.ref(1, 5),
       game.ref(0, 4),
       game.ref(0, 6),
+      game.ref(1, 5),
     ]);
-    // bottom edge: W, E, N
+    // bottom edge: N, W, E
     expect(collectNeighbors(game.ref(5, h - 1))).toEqual([
+      game.ref(5, h - 2),
       game.ref(4, h - 1),
       game.ref(6, h - 1),
-      game.ref(5, h - 2),
     ]);
   });
 
-  test("forEachNeighbor matches map.neighbors() as a set for every tile", () => {
+  // All cardinal-neighbor helpers share neighbors()'s exact N, S, W, E order,
+  // including at edges and corners, so they are interchangeable even in
+  // order-sensitive simulation code.
+  test("forEachNeighbor matches map.neighbors() exactly (contents and order) for every tile", () => {
     game.forEachTile((tile) => {
-      const a = [...collectNeighbors(tile)].sort((x, y) => x - y);
-      const b = [...game.map().neighbors(tile)].sort((x, y) => x - y);
-      expect(a).toEqual(b);
+      expect(collectNeighbors(tile)).toEqual(game.map().neighbors(tile));
+    });
+  });
+
+  test("neighbors4 matches map.neighbors() exactly (contents and order) for every tile", () => {
+    const nbuf: TileRef[] = [0, 0, 0, 0];
+    game.forEachTile((tile) => {
+      const n = game.map().neighbors4(tile, nbuf);
+      expect(nbuf.slice(0, n)).toEqual(game.map().neighbors(tile));
     });
   });
 

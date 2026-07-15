@@ -1,7 +1,9 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import {
+  Effect,
   Flag,
+  isNukeExplosionEffect,
   Pack,
   Pattern,
   Skin,
@@ -10,6 +12,7 @@ import {
 import { PlayerPattern } from "../../core/Schemas";
 import {
   PaymentMethod,
+  PurchaseResult,
   ResolvedCosmetic,
   translateCosmetic,
 } from "../Cosmetics";
@@ -17,9 +20,9 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import "./CosmeticContainer";
 import "./CosmeticInfo";
+import "./EffectPreview"; // registers <trail-swatch>, <shockwave-swatch>, <sparkles-swatch>
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
-import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 
 @customElement("cosmetic-button")
 export class CosmeticButton extends LitElement {
@@ -33,53 +36,130 @@ export class CosmeticButton extends LitElement {
   onSelect?: (resolved: ResolvedCosmetic) => void;
 
   @property({ type: Function })
-  onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
+  onPurchase?: (
+    resolved: ResolvedCosmetic,
+    method: PaymentMethod,
+  ) => Promise<PurchaseResult>;
 
   /** True if the user already has a subscription (any tier). */
   @property({ type: Boolean })
   userHasSubscription: boolean = false;
+
+  /** Colour variants of one pattern; 2+ become clickable swatches. */
+  @property({ attribute: false })
+  variants?: ResolvedCosmetic[];
+
+  /** Key of the swatch the user has picked; null until they pick one. */
+  @state() private activeVariantKey: string | null = null;
+
+  /** The variant currently previewed/purchased: picked swatch, else fallback. */
+  private get activeResolved(): ResolvedCosmetic {
+    const variants = this.variants;
+    if (variants && variants.length > 0) {
+      return (
+        variants.find((v) => v.key === this.activeVariantKey) ?? variants[0]
+      );
+    }
+    return this.resolved;
+  }
 
   createRenderRoot() {
     return this;
   }
 
   private handleClick() {
-    this.onSelect?.(this.resolved);
+    this.onSelect?.(this.activeResolved);
   }
 
   private get displayName(): string {
-    const c = this.resolved.cosmetic;
+    const c = this.activeResolved.cosmetic;
     if (c === null) {
       return translateText("territory_patterns.pattern.default");
     }
-    if (this.resolved.type === "pattern" || this.resolved.type === "skin") {
+    if (
+      this.activeResolved.type === "pattern" ||
+      this.activeResolved.type === "skin"
+    ) {
       return translateCosmetic("territory_patterns.pattern", c.name);
     }
-    if (this.resolved.type === "pack") {
+    if (this.activeResolved.type === "pack") {
       return (c as Pack).displayName;
     }
-    if (this.resolved.type === "subscription") {
+    if (this.activeResolved.type === "subscription") {
       return translateCosmetic("subscriptions", c.name);
+    }
+    if (this.activeResolved.type === "effect") {
+      return translateCosmetic("effects", c.name);
     }
     return translateCosmetic("flags", c.name);
   }
 
+  /** True when the variants carry colour palettes to show as swatches. */
+  private get hasColorRow(): boolean {
+    return (
+      this.variants !== undefined &&
+      this.variants.some((v) => v.colorPalette !== null)
+    );
+  }
+
+  /** Row of clickable split-circle colour swatches, one per palette. */
+  private renderColorSwatches(): TemplateResult | typeof nothing {
+    if (!this.hasColorRow) {
+      return nothing;
+    }
+    const activeKey = this.activeResolved.key;
+    return html`
+      <div
+        class="flex flex-wrap items-center justify-center gap-1.5 w-full px-1"
+      >
+        ${this.variants!.map((v) => {
+          const primary = v.colorPalette?.primaryColor ?? "#ffffff";
+          const secondary = v.colorPalette?.secondaryColor ?? "#000000";
+          const isActive = v.key === activeKey;
+          const label = v.colorPalette
+            ? translateCosmetic(
+                "territory_patterns.color_palette",
+                v.colorPalette.name,
+              )
+            : "";
+          const outline = isActive
+            ? "0 0 0 2px rgba(255,255,255,0.95)"
+            : "inset 0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(0,0,0,0.45)";
+          return html`<button
+            type="button"
+            title=${label}
+            aria-label=${label}
+            aria-pressed=${isActive}
+            class="w-5 h-5 shrink-0 rounded-full p-0 m-0 appearance-none cursor-pointer outline-none transition-transform duration-150 hover:scale-110 ${isActive
+              ? "scale-110"
+              : ""}"
+            style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%); box-shadow: ${outline};"
+            @click=${(e: Event) => {
+              e.stopPropagation();
+              this.activeVariantKey = v.key;
+            }}
+          ></button>`;
+        })}
+      </div>
+    `;
+  }
+
   private renderPreview(): TemplateResult {
-    if (this.resolved.type === "pattern") {
-      const c = this.resolved.cosmetic;
+    if (this.activeResolved.type === "pattern") {
+      const c = this.activeResolved.cosmetic;
       const playerPattern: PlayerPattern | null =
         c === null
           ? null
           : {
               name: c.name,
               patternData: (c as Pattern).pattern,
-              colorPalette: this.resolved.colorPalette ?? undefined,
+              colorPalette: this.activeResolved.colorPalette ?? undefined,
             };
       return renderPatternPreview(playerPattern, 150, 150);
     }
 
-    if (this.resolved.type === "skin") {
-      const c = this.resolved.cosmetic as Skin | null;
+    if (this.activeResolved.type === "skin") {
+      const c = this.activeResolved.cosmetic as Skin | null;
       if (c === null) {
         // "Default" tile — visually consistent with pattern's default tile.
         return html`<div
@@ -97,8 +177,40 @@ export class CosmeticButton extends LitElement {
       />`;
     }
 
-    if (this.resolved.type === "pack") {
-      const pack = this.resolved.cosmetic as Pack;
+    if (this.activeResolved.type === "effect") {
+      const c = this.activeResolved.cosmetic as Effect | null;
+      if (c === null) {
+        // "Default" tile — selecting it clears the effect for that type.
+        return html`<div
+          class="w-full h-full flex items-center justify-center text-white/40 text-xs uppercase"
+        >
+          ${translateText("territory_patterns.pattern.default")}
+        </div>`;
+      }
+      // Nuke explosions preview per visual type (expanding ring or sparkle
+      // burst); every trail effectType (transportShipTrail, nukeTrail) and the
+      // structures effect share the same attribute shapes and preview as a
+      // color swatch.
+      if (isNukeExplosionEffect(c)) {
+        if (c.attributes.type === "sparkles") {
+          return html`<sparkles-swatch
+            class="block w-full h-full"
+            .explosion=${c.attributes}
+          ></sparkles-swatch>`;
+        }
+        return html`<shockwave-swatch
+          class="block w-full h-full"
+          .explosion=${c.attributes}
+        ></shockwave-swatch>`;
+      }
+      return html`<trail-swatch
+        class="block w-full h-full"
+        .trail=${c.attributes}
+      ></trail-swatch>`;
+    }
+
+    if (this.activeResolved.type === "pack") {
+      const pack = this.activeResolved.cosmetic as Pack;
       const isHard = pack.currency === "hard";
       const icon = isHard
         ? html`<plutonium-icon
@@ -133,8 +245,8 @@ export class CosmeticButton extends LitElement {
       </div>`;
     }
 
-    if (this.resolved.type === "subscription") {
-      const sub = this.resolved.cosmetic as Subscription;
+    if (this.activeResolved.type === "subscription") {
+      const sub = this.activeResolved.cosmetic as Subscription;
       return html`<div
         class="flex flex-col items-center justify-between h-full w-full text-center gap-2 p-1"
       >
@@ -160,11 +272,17 @@ export class CosmeticButton extends LitElement {
               >${translateText("cosmetics.per_day")}</span
             >
           </div>
+          ${sub.unlimitedRanked
+            ? html`<span
+                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                >${translateText("cosmetics.unlimited_ranked")}</span
+              >`
+            : nothing}
         </div>
       </div>`;
     }
 
-    const c = this.resolved.cosmetic as Flag;
+    const c = this.activeResolved.cosmetic as Flag;
     return html`<img
       src=${c.url}
       alt=${c.name}
@@ -182,31 +300,40 @@ export class CosmeticButton extends LitElement {
   }
 
   render() {
-    const c = this.resolved.cosmetic;
-    const priced = c as Pattern | Skin | Flag | Pack | null;
+    const active = this.activeResolved;
+    const c = active.cosmetic;
+    const priced = c as Pattern | Skin | Flag | Effect | Pack | null;
     const priceHard = priced?.priceHard;
     const priceSoft = priced?.priceSoft;
     const artist = priced?.artist;
-    const isPurchasable = this.resolved.relationship === "purchasable";
-    const type = this.resolved.type;
+    const isPurchasable = active.relationship === "purchasable";
+    const type = active.type;
     const isPattern = type === "pattern";
     const isSkin = type === "skin";
     const isOwnedSubscription =
-      type === "subscription" && this.resolved.relationship === "owned";
+      type === "subscription" && active.relationship === "owned";
+    // Equivalent USD value at 20 plutonium = $1.00, shown only for items that
+    // can't be bought directly with money but can be bought with plutonium.
+    const usdValue =
+      !c?.product && priceHard !== undefined ? priceHard / 20 : undefined;
+    // Switching tiers shows "Switch"; a first-time subscribe shows price only.
     const dollarLabelKey =
-      type === "subscription"
-        ? this.userHasSubscription
-          ? "store.switch_button"
-          : "store.subscribe_button"
-        : DEFAULT_DOLLAR_LABEL_KEY;
+      type === "subscription" && this.userHasSubscription
+        ? "store.switch_button"
+        : "";
     const priceSuffix =
       type === "subscription" ? translateText("store.price_per_month") : "";
     const sizeClass = type === "flag" ? "gap-1 p-1.5 w-36" : "gap-2 p-3 w-48";
     const crazygamesClass = isPattern || isSkin ? "no-crazygames " : "";
+    // Colour-row tiles top-align so the skin box, swatches and price buttons
+    // line up across the grid; other tiles fill height with justify-between.
+    const hasColorRow = this.hasColorRow;
 
     return html`
       <cosmetic-container
-        class="${crazygamesClass}flex flex-col items-center justify-between ${sizeClass} h-full"
+        class="${crazygamesClass}flex flex-col items-center ${hasColorRow
+          ? "justify-start"
+          : "justify-between"} ${sizeClass} h-full"
         .rarity=${c?.rarity ?? "common"}
         .selected=${this.selected}
         .product=${isPurchasable && c?.product ? c.product : null}
@@ -215,13 +342,13 @@ export class CosmeticButton extends LitElement {
         .dollarLabelKey=${dollarLabelKey}
         .priceSuffix=${priceSuffix}
         .onPurchaseDollar=${isPurchasable && c?.product
-          ? () => this.onPurchase?.(this.resolved, "dollar")
+          ? async () => this.onPurchase?.(this.activeResolved, "dollar")
           : undefined}
         .onPurchaseHard=${isPurchasable && priceHard !== undefined
-          ? () => this.onPurchase?.(this.resolved, "hard")
+          ? async () => this.onPurchase?.(this.activeResolved, "hard")
           : undefined}
         .onPurchaseSoft=${isPurchasable && priceSoft !== undefined
-          ? () => this.onPurchase?.(this.resolved, "soft")
+          ? async () => this.onPurchase?.(this.activeResolved, "soft")
           : undefined}
         .name=${this.displayName}
       >
@@ -229,15 +356,18 @@ export class CosmeticButton extends LitElement {
           class="group relative flex flex-col items-center w-full ${isPattern ||
           isSkin
             ? "gap-2"
-            : "gap-1"} rounded-lg cursor-pointer transition-all duration-200 flex-1"
+            : "gap-1"} rounded-lg cursor-pointer transition-all duration-200 ${hasColorRow
+            ? ""
+            : "flex-1"}"
           @click=${() => this.handleClick()}
         >
           ${(c?.product ?? priceHard ?? priceSoft)
             ? html`<cosmetic-info
                 .artist=${artist}
                 .rarity=${c!.rarity}
-                .colorPalette=${this.resolved.colorPalette?.name}
+                .colorPalette=${active.colorPalette?.name}
                 .showAdFree=${isPurchasable}
+                .usdValue=${usdValue}
               ></cosmetic-info>`
             : nothing}
 
@@ -247,11 +377,12 @@ export class CosmeticButton extends LitElement {
             ${this.renderPreview()}
           </div>
         </button>
+        ${this.renderColorSwatches()}
         ${isOwnedSubscription
           ? html`<div
-              class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"
+              class="w-full mt-2 px-2 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-base font-bold text-center"
             >
-              ${translateText("store.current_plan")}
+              ${translateText("store.subscribed")}
             </div>`
           : nothing}
       </cosmetic-container>

@@ -18,9 +18,9 @@
   },
   "terrain": {
     "oceanColor": "#4785b5",
-    "sandColor": "#CC9E9E",
-    "plainsColor": "#BECD8A",
-    "highlandColor": "#C8B78A",
+    "sandColor": "#CCCB9E",
+    "plainsColor": "#BEDC8A",
+    "highlandColor": "#DCCB9E",
     "mountainColor": "#e6e6e6"
   },
   "falloutBloom": {
@@ -134,7 +134,7 @@
         "iconFill": 0.85
       },
       "Factory": {
-        "scale": 1,
+        "scale": 1.08,
         "iconFill": 0.85
       },
       "Defense Post": {
@@ -188,7 +188,15 @@
     "colorYellowB": 0.059,
     "colorGreenR": 0.173,
     "colorGreenG": 0.937,
-    "colorGreenB": 0.071
+    "colorGreenB": 0.071,
+    "veterancyPipW": 4,
+    "veterancyPipH": 1,
+    "veterancyPipGap": 1,
+    "veterancyPipOffsetX": 1.5,
+    "veterancyPipOffsetY": 3.5,
+    "veterancyR": 1.0,
+    "veterancyG": 0.84,
+    "veterancyB": 0.0
   },
   "unit": {
     "unitSize": 13,
@@ -322,6 +330,11 @@
     "animSpeed": 0.008,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1
+  },
+  "smallPlayerGlow": {
+    "color": [1.0, 0.12, 0.1],
+    "alpha": 0.9,
+    "pulseSpeed": 0.003
   },
   "altView": {
     "gridFontSize": 24,

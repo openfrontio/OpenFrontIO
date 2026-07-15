@@ -25,7 +25,6 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
-  TilePair,
   UnitState,
 } from "../types";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
@@ -36,6 +35,10 @@ import type { RenderSettings } from "./RenderSettings";
 export class MapRenderer {
   private renderer: GPURenderer | null = null;
   private resizeObs: ResizeObserver | null = null;
+  // Persisted so a WebGL context restore (which recreates GPURenderer via
+  // initRenderer) reapplies the user's chosen glow strength instead of
+  // resetting it to the pass default until the next settings change.
+  private smallPlayerGlowStrength = 1;
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -47,7 +50,10 @@ export class MapRenderer {
   constructor(
     private canvas: HTMLCanvasElement,
     private header: RendererConfig,
-    private terrainBytes: Uint8Array,
+    // Called (not stored) whenever terrain bytes are needed — initial bake
+    // and every context restore. Regenerating on demand avoids retaining a
+    // map-sized buffer for the rare restore path.
+    private terrainSource: () => Uint8Array,
     private paletteData: Float32Array,
     private config: Config,
     // Resolved render settings (defaults + overrides). Held so the same object
@@ -79,7 +85,7 @@ export class MapRenderer {
     this.renderer = new GPURenderer(
       this.canvas,
       this.header,
-      this.terrainBytes,
+      this.terrainSource,
       this.paletteData,
       this.config,
       this.settings,
@@ -89,6 +95,8 @@ export class MapRenderer {
 
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
+    // Reapply state that lives outside RenderSettings so it survives a restore.
+    this.renderer.setSmallPlayerGlowStrength(this.smallPlayerGlowStrength);
   };
 
   private handleContextLost = (e: Event) => {
@@ -104,6 +112,15 @@ export class MapRenderer {
     this.onContextRestored?.();
   };
 
+  /**
+   * Set when the context is hardware-accelerated but its MAX_TEXTURE_SIZE is
+   * below what the game needs (fingerprinting protection, #4357). The game
+   * runs, but the map may render with black areas — the owner should warn.
+   */
+  get glLimited(): { renderer: string; maxTextureSize: number } | null {
+    return this.renderer?.glLimited ?? null;
+  }
+
   // ---- Camera ----
 
   setCameraState(x: number, y: number, z: number): void {
@@ -112,11 +129,14 @@ export class MapRenderer {
 
   // ---- Data upload ----
 
-  uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+  uploadLiveDelta(
+    tileState: Uint16Array,
+    changedTiles: readonly number[],
+  ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(
-    trailState: Uint8Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -125,12 +145,15 @@ export class MapRenderer {
   /** Upload full tile + trail state without resetting bloom (for live play). */
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint8Array,
+    trailState: Uint16Array,
   ): void {
     this.renderer?.uploadTileAndTrailState(tileState, trailState);
   }
   updatePalette(paletteData: Float32Array): void {
     this.renderer?.updatePalette(paletteData);
+  }
+  updateEffectPalette(effectData: Float32Array): void {
+    this.renderer?.updateEffectPalette(effectData);
   }
   addPlayers(
     players: PlayerStatic[],
@@ -220,6 +243,17 @@ export class MapRenderer {
   /** Update spawn phase overlay (tile highlights + breathing rings). */
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
     this.renderer?.updateSpawnOverlay(inSpawnPhase, centers);
+  }
+
+  /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
+  updateSmallPlayerGlow(set: Uint8Array | null): void {
+    this.renderer?.updateSmallPlayerGlow(set);
+  }
+
+  /** Set the small-player glow Strength (0 = off, 1 = default, capped at 5). */
+  setSmallPlayerGlowStrength(strength: number): void {
+    this.smallPlayerGlowStrength = strength;
+    this.renderer?.setSmallPlayerGlowStrength(strength);
   }
 
   // ---- Selection box ----
