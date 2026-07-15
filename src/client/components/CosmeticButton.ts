@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  Crown,
   Effect,
   Flag,
   isNukeExplosionEffect,
@@ -210,6 +211,25 @@ export class CosmeticButton extends LitElement {
         class="block w-full h-full"
         .trail=${c.attributes}
       ></trail-swatch>`;
+    }
+
+    if (this.activeResolved.type === "crown") {
+      const c = this.activeResolved.cosmetic as Crown | null;
+      if (c === null) {
+        // "Default" (none) tile — selecting it clears the crown.
+        return html`<div
+          class="w-full h-full flex items-center justify-center text-white/40 text-xs uppercase"
+        >
+          ${translateText("territory_patterns.pattern.default")}
+        </div>`;
+      }
+      return html`<img
+        src=${c.url}
+        alt=${c.name}
+        class="w-full h-full object-contain pointer-events-none"
+        draggable="false"
+        loading="lazy"
+      />`;
     }
 
     if (this.activeResolved.type === "pack") {
