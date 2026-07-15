@@ -729,6 +729,11 @@
     "name": "County of Tripoli"
   },
   {
+    "code": "Courland Governorate",
+    "continent": "Europe",
+    "name": "Courland Governorate"
+  },
+  {
     "code": "ci",
     "continent": "Africa",
     "name": "Côte d'Ivoire"
@@ -838,6 +843,11 @@
     "name": "Dominican Republic"
   },
   {
+    "code": "Duchy of Courland and Semigallia",
+    "continent": "Europe",
+    "name": "Duchy of Courland and Semigallia"
+  },
+  {
     "code": "1_Dumnonia",
     "continent": "Europe",
     "name": "Dumnonia"
@@ -941,6 +951,11 @@
     "code": "ee",
     "continent": "Europe",
     "name": "Estonia"
+  },
+  {
+    "code": "Estonia (nordic)",
+    "continent": "Europe",
+    "name": "Estonia (Nordic)"
   },
   {
     "code": "Estonian SSR",
@@ -1128,6 +1143,16 @@
     "name": "Gibraltar"
   },
   {
+    "code": "Grand Duchy of Finland",
+    "continent": "Europe",
+    "name": "Grand Duchy of Finland"
+  },
+  {
+    "code": "Grand Duchy of Lithuania",
+    "continent": "Europe",
+    "name": "Grand Duchy of Lithuania"
+  },
+  {
     "code": "gr",
     "continent": "Europe",
     "name": "Greece"
@@ -1297,11 +1322,6 @@
     "name": "Ireland"
   },
   {
-    "code": "Ireland Green Harp",
-    "continent": "Europe",
-    "name": "Green Harp"
-  },
-  {
     "code": "Haudenosaunee",
     "continent": "North America",
     "name": "Iroquois Confederacy"
@@ -1365,6 +1385,11 @@
     "code": "Kachin",
     "continent": "Asia",
     "name": "Kachin"
+  },
+  {
+    "code": "Kalmar Union",
+    "continent": "Europe",
+    "name": "Kalmar Union"
   },
   {
     "code": "Kansas (Banner)",
@@ -1983,6 +2008,11 @@
     "name": "Mozambique"
   },
   {
+    "code": "Mulgimaa",
+    "continent": "Europe",
+    "name": "Mulgimaa"
+  },
+  {
     "code": "1_Munster",
     "continent": "Europe",
     "name": "Munster"
@@ -2129,6 +2159,11 @@
     "code": "nu",
     "continent": "Oceania",
     "name": "Niue"
+  },
+  {
+    "code": "Noarootsi",
+    "continent": "Europe",
+    "name": "Noarootsi"
   },
   {
     "code": "nf",
@@ -3161,6 +3196,11 @@
     "name": "Serbia"
   },
   {
+    "code": "Setomaa",
+    "continent": "Europe",
+    "name": "Setomaa"
+  },
+  {
     "code": "sevastopol",
     "continent": "Europe",
     "name": "Sevastopol"
@@ -3355,6 +3395,11 @@
     "name": "Sweden Norway Union"
   },
   {
+    "code": "Swedish Empire",
+    "continent": "Europe",
+    "name": "Swedish Empire"
+  },
+  {
     "code": "ch",
     "continent": "Europe",
     "name": "Switzerland"
@@ -3418,6 +3463,11 @@
     "code": "Texas",
     "continent": "North America",
     "name": "Texas"
+  },
+  {
+    "code": "Teutonic Order",
+    "continent": "Europe",
+    "name": "Teutonic Order"
   },
   {
     "code": "th",
@@ -3672,6 +3722,16 @@
     "code": "Vojvodina",
     "continent": "Europe",
     "name": "Vojvodina"
+  },
+  {
+    "code": "Vorumaa",
+    "continent": "Europe",
+    "name": "Võrumaa"
+  },
+  {
+    "code": "Votians",
+    "continent": "Europe",
+    "name": "Votians"
   },
   {
     "code": "Wa State",

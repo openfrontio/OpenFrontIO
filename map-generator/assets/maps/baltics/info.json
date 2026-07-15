@@ -1,0 +1,321 @@
+{
+  "id": "Baltics",
+  "name": "Baltics",
+  "translation_key": "map.baltics",
+  "categories": ["europe", "new"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [10, 220],
+      "name": "Stockholm",
+      "flag": "se"
+    },
+    {
+      "coordinates": [214, 67],
+      "name": "Aland",
+      "flag": "ax"
+    },
+    {
+      "coordinates": [778, 60],
+      "name": "Helsinki",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1362, 55],
+      "name": "Saint Petersburg",
+      "flag": "RU-SPE"
+    },
+    {
+      "coordinates": [1229, 602],
+      "name": "Pskov",
+      "flag": "RU-PSK"
+    },
+    {
+      "coordinates": [788, 259],
+      "name": "Tallinn",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [761, 812],
+      "name": "Riga",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [867, 1251],
+      "name": "Vilnius",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [286, 1266],
+      "name": "Kaliningrad",
+      "flag": "RU-KGD"
+    },
+    {
+      "coordinates": [44, 1294],
+      "name": "Gdansk",
+      "flag": "Danzig"
+    },
+    {
+      "coordinates": [781, 843],
+      "name": "Ogre",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1058, 1315],
+      "name": "Maladzyechna",
+      "flag": "by"
+    },
+    {
+      "coordinates": [529, 468],
+      "name": "Saaremaa",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [44, 672],
+      "name": "Gotland",
+      "flag": "se"
+    },
+    {
+      "coordinates": [532, 355],
+      "name": "Hiiumaa",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [1202, 233],
+      "name": "Votians",
+      "flag": "Votians"
+    },
+    {
+      "coordinates": [1188, 321],
+      "name": "Slantsy",
+      "flag": "RU-LEN"
+    },
+    {
+      "coordinates": [655, 356],
+      "name": "Noarootsi",
+      "flag": "Noarootsi"
+    },
+    {
+      "coordinates": [761, 470],
+      "name": "Parnu",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [867, 479],
+      "name": "Viljandi",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [1028, 250],
+      "name": "Kohtla-Järve",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [1022, 462],
+      "name": "Tartu",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [398, 728],
+      "name": "Ventspils",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [369, 914],
+      "name": "Liepaga",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [658, 880],
+      "name": "Jelgava",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1088, 888],
+      "name": "Rezekne",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [993, 1008],
+      "name": "Daugavpils",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [389, 1048],
+      "name": "Klaipeda",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [601, 1069],
+      "name": "Siauliai",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [793, 1074],
+      "name": "Panevezys",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [675, 1214],
+      "name": "Kaunas",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [438, 1214],
+      "name": "Sovetsk",
+      "flag": "RU-KGD"
+    },
+    {
+      "coordinates": [1262, 1080],
+      "name": "Novopolotsk",
+      "flag": "by"
+    },
+    {
+      "coordinates": [1150, 600],
+      "name": "Setomaa",
+      "flag": "Setomaa"
+    },
+    {
+      "coordinates": [1027, 614],
+      "name": "Vorumaa",
+      "flag": "Vorumaa"
+    },
+    {
+      "coordinates": [896, 656],
+      "name": "Mulgimaa",
+      "flag": "Mulgimaa"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [599, 137],
+      "name": "Hanko",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [22, 100],
+      "name": "Uppsala",
+      "flag": "se"
+    },
+    {
+      "coordinates": [709, 254],
+      "name": "Paldiski",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [882, 283],
+      "name": "Tapa",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [941, 267],
+      "name": "Rakvere",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [1155, 414],
+      "name": "Gdov",
+      "flag": "RU-PSK"
+    },
+    {
+      "coordinates": [1344, 198],
+      "name": "Gatchina",
+      "flag": "RU-LEN"
+    },
+    {
+      "coordinates": [1351, 354],
+      "name": "Luga",
+      "flag": "RU-LEN"
+    },
+    {
+      "coordinates": [930, 582],
+      "name": "Valga",
+      "flag": "ee"
+    },
+    {
+      "coordinates": [865, 711],
+      "name": "Cesis",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1169, 749],
+      "name": "Pytalovo",
+      "flag": "RU-PSK"
+    },
+    {
+      "coordinates": [1328, 950],
+      "name": "Pustoshka ",
+      "flag": "RU-PSK"
+    },
+    {
+      "coordinates": [524, 633],
+      "name": "Kolka",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [594, 710],
+      "name": "Mersrags",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [921, 906],
+      "name": "Jekabpils",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [653, 804],
+      "name": "Jurmala",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [506, 770],
+      "name": "Stende",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [494, 881],
+      "name": "Saldus",
+      "flag": "lv"
+    },
+    {
+      "coordinates": [1110, 1151],
+      "name": "Pastavy",
+      "flag": "by"
+    },
+    {
+      "coordinates": [482, 1145],
+      "name": "Taurage",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [496, 1046],
+      "name": "Rietavas",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [631, 988],
+      "name": "Siauliai",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [907, 1091],
+      "name": "Utena",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [817, 1140],
+      "name": "Ukmerge",
+      "flag": "lt"
+    },
+    {
+      "coordinates": [421, 1304],
+      "name": "Chernyakhovsk",
+      "flag": "RU-KGD"
+    },
+    {
+      "coordinates": [1278, 1231],
+      "name": "Hlybokaye",
+      "flag": "by"
+    }
+  ]
+}
