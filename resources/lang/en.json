@@ -389,6 +389,7 @@
   "cosmetics": {
     "adfree": "ad-free for life!",
     "artist_label": "Artist:",
+    "button_title": "Pick your cosmetics!",
     "color_label": "Color:",
     "common": "Common",
     "epic": "Epic",
@@ -397,7 +398,9 @@
     "legendary": "Legendary",
     "per_day": "/day",
     "rare": "Rare",
+    "search": "Search...",
     "soft": "Caps",
+    "title": "Cosmetics",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
     "usd_value": "Value: {usd}"
@@ -432,14 +435,11 @@
     "veryfast": "Very Fast"
   },
   "effects": {
-    "button_title": "Pick an effect!",
     "nukeType": {
       "atom": "Atom",
       "hydro": "Hydrogen",
       "mirvWarhead": "MIRV"
     },
-    "search": "Search...",
-    "title": "Effects",
     "type": {
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
@@ -1399,10 +1399,8 @@
     "pattern": {
       "default": "Default"
     },
-    "search": "Search...",
     "select_skin": "Skin",
-    "selected": "selected",
-    "title": "Skins"
+    "selected": "selected"
   },
   "token_login_modal": {
     "logging_in": "Logging in...",
