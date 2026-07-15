@@ -58,6 +58,11 @@ const FLAG_ASPECT = 128 / 85;
 // Crown cosmetics use square cells (must match the crownAtlas cell size below).
 export const CROWN_CELL = 128;
 
+// Initial unique-crown capacity. Crowns are a rare cosmetic, so start small
+// (32 × 128×128 RGBA8 + mips ≈ 2.8 MB vs ~43 MB at the 512 flag default);
+// the atlas doubles itself if a game exceeds it.
+const CROWN_INITIAL_LAYERS = 32;
+
 export class NamePass {
   private gl: WebGL2RenderingContext;
   private settings: RenderSettings;
@@ -168,6 +173,7 @@ export class NamePass {
       },
       CROWN_CELL,
       CROWN_CELL,
+      CROWN_INITIAL_LAYERS,
     );
 
     // Build player lookups and extract territory colors from palette
