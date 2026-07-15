@@ -790,7 +790,11 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     }
   }
 
-  if (refs.crownName && cosmetics) {
+  const devCrown = new UserSettings().getDevOnlyCrown();
+
+  if (devCrown) {
+    result.crown = { name: "dev_crown", url: devCrown };
+  } else if (refs.crownName && cosmetics) {
     const crown = cosmetics.crowns?.[refs.crownName];
     if (crown) {
       result.crown = { name: refs.crownName, url: crown.url };

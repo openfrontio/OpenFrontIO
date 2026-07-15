@@ -407,6 +407,10 @@ export class WebGLFrameBuilder {
       const flagRef = p.cosmetics.flag;
       const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
 
+      // Crown cosmetic: already server-resolved to the catalog image URL.
+      const crownRef = p.cosmetics.crown?.url;
+      const crownUrl = crownRef ? assetUrl(crownRef) : undefined;
+
       const skin = p.cosmetics.skin;
       if (skin?.url) {
         this.view.setPlayerSkin(smallID, assetUrl(skin.url));
@@ -437,6 +441,7 @@ export class WebGLFrameBuilder {
         // is always the real name.
         displayName: p.displayName(),
         flag: flagUrl,
+        crown: crownUrl,
         color: p.territoryColor().toHex(),
       });
     }
