@@ -18,12 +18,19 @@
         transition: opacity 0.5s ease-out;
       }
 
-      /* iOS safe area support */
+      /* iOS safe area support, plus reserved space for Playwire's "flex"
+         ad unit (a top banner injected as body's first child). Its
+         height is mirrored into --flex-ad-height by the script near
+         the end of <body>, so the nav bar is pushed below it instead
+         of being covered. */
       body {
-        padding-top: env(safe-area-inset-top);
+        padding-top: calc(
+          env(safe-area-inset-top) + var(--flex-ad-height, 0px)
+        );
         padding-right: env(safe-area-inset-right);
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
+        transition: padding-top 0.3s ease;
       }
 
       /* Prevent Playwire bottom rail from affecting flex layout,
@@ -31,6 +38,20 @@
       [id^="pw-oop-bottom_rail"] {
         position: fixed !important;
         z-index: 150 !important;
+      }
+
+      /* Prevent Playwire's "flex" ad unit (top banner) from being
+         treated as a flex item in body's flex-row layout. It's
+         injected as body's first child; the ad creative itself is
+         already position:fixed, but the wrapping container Playwire
+         adds is not, so — like bottom_rail above — it must be taken
+         out of flow or it shifts/clips the rest of the page under
+         body's overflow-hidden. */
+      [id^="pw-oop-flex"] {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100%;
       }
 
       /* Google Funding Choices CCPA link override */
@@ -453,6 +474,44 @@
           }
         }
       });
+    </script>
+
+    <script>
+      // Keep --flex-ad-height in sync with Playwire's "flex" ad unit
+      // (a top banner injected as body's first child, id
+      // "pw-oop-flex_container"), so the CSS in <head> can reserve
+      // matching space above the nav bar. The ad is added/removed/
+      // resized asynchronously by Playwire's own script, so this
+      // watches for it rather than assuming a fixed height.
+      (function () {
+        if (typeof ResizeObserver === "undefined") return;
+
+        var root = document.documentElement;
+        var observedEl = null;
+        var resizeObserver = new ResizeObserver(function (entries) {
+          root.style.setProperty(
+            "--flex-ad-height",
+            Math.round(entries[0].contentRect.height) + "px",
+          );
+        });
+
+        function sync() {
+          var el = document.getElementById("pw-oop-flex_container");
+          if (el === observedEl) return;
+          if (observedEl) resizeObserver.unobserve(observedEl);
+          observedEl = el;
+          if (el) {
+            resizeObserver.observe(el);
+          } else {
+            root.style.setProperty("--flex-ad-height", "0px");
+          }
+        }
+
+        sync();
+        new MutationObserver(sync).observe(document.body, {
+          childList: true,
+        });
+      })();
     </script>
 
     <!-- Analytics -->
