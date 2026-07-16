@@ -1465,6 +1465,10 @@ export class GameServer {
   // current connection status. null until the first consensus.
   public liveStats(): {
     turn: number;
+    // The winner's clientID once the game is decided (player win), else null.
+    // Server-side (from the winner vote), so the live board can seat the winner
+    // without waiting for the post-game record.
+    winner: string | null;
     players: (PlayerLiveStats & {
       username: string | null;
       publicID: string | null;
@@ -1474,8 +1478,10 @@ export class GameServer {
     if (this.latestLiveStats === null) {
       return null;
     }
+    const w = this.winner?.winner;
     return {
       turn: this.latestLiveStats.turn,
+      winner: w?.[0] === "player" ? w[1] : null,
       players: this.latestLiveStats.players.map((p) => {
         const client = this.allClients.get(p.clientID);
         return {

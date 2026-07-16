@@ -57,6 +57,8 @@ export interface PlayerState {
   smallID: number;
   isAlive: boolean;
   isDisconnected: boolean;
+  killedBy: string | null;
+  deathPosition: number | null;
   tilesOwned: number;
   gold: number;
   troops: number;

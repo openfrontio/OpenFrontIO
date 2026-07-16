@@ -108,6 +108,11 @@ export const PlayerStatsSchema = z
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
     killedAt: BigIntStringSchema.optional(),
+    // OFM live standings: the eliminator's clientID (null = eliminated by a
+    // non-client, e.g. a bot/nation) and finishing place at elimination. Both
+    // first-write-wins. Surfaced live on the PlayerUpdate (not just at game end).
+    killedBy: z.string().nullable().optional(),
+    deathPosition: z.number().optional(),
     // Tiles owned at game end, for OFM standings (set on setWinner).
     finalTiles: BigIntStringSchema.optional(),
     // Humans this player eliminated (victim clientID + tick), for OFM kill scoring.

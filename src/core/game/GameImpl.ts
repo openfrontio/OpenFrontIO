@@ -1257,6 +1257,20 @@ export class GameImpl implements Game {
 
     // OFM: per-kill log for standings (humans-only filtered in recordKill).
     this.stats().recordKill(conqueror, conquered, this.ticks());
+    // OFM live standings: attribute the elimination so the live snapshot can
+    // credit the kill (null when the conqueror has no client, e.g. a bot/nation),
+    // and stamp the finishing place NOW rather than deferring to PlayerExecution:
+    // if the game ends this tick (winner declared) the conquered player's
+    // execution may never run again. Exclude the conquered player from the alive
+    // count. PlayerExecution keeps the same stamp as a fallback for non-conquest
+    // deaths; recordDeathPosition is first-write-wins, so this value sticks.
+    this.stats().recordKilledBy(conquered, conqueror.clientID());
+    this.stats().recordDeathPosition(
+      conquered,
+      this.players().filter(
+        (p) => p !== conquered && p.type() !== PlayerType.Bot,
+      ).length + 1,
+    );
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,

@@ -76,6 +76,8 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     smallID: pu.smallID!,
     isAlive: pu.isAlive!,
     isDisconnected: pu.isDisconnected!,
+    killedBy: pu.killedBy ?? null,
+    deathPosition: pu.deathPosition ?? null,
     tilesOwned: pu.tilesOwned!,
     gold: Number(pu.gold!),
     troops: pu.troops!,
@@ -451,6 +453,12 @@ export class PlayerView {
   }
   isAlive(): boolean {
     return this.state.isAlive;
+  }
+  killedBy(): string | null {
+    return this.state.killedBy;
+  }
+  deathPosition(): number | null {
+    return this.state.deathPosition;
   }
   isPlayer(): this is PlayerView {
     return true;

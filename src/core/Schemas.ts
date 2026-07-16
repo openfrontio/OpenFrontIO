@@ -730,6 +730,11 @@ export const PlayerLiveStatsSchema = z.object({
   gold: z.string(),
   isAlive: z.boolean(),
   team: z.string().nullable(),
+  // OFM live standings: the eliminator's clientID and the finishing place at
+  // elimination, both null while the player is still alive. Deterministic sim
+  // values, so clients agree on them for the majority vote.
+  killedBy: ID.nullable(),
+  deathPosition: z.number().int().positive().nullable(),
 });
 
 // A full live snapshot of a running game at a given turn. Reported by clients

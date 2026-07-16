@@ -52,6 +52,8 @@ export function diffPlayerUpdate(
   setIfDifferent("playerType", prev.playerType === next.playerType);
   setIfDifferent("isAlive", prev.isAlive === next.isAlive);
   setIfDifferent("isDisconnected", prev.isDisconnected === next.isDisconnected);
+  setIfDifferent("killedBy", prev.killedBy === next.killedBy);
+  setIfDifferent("deathPosition", prev.deathPosition === next.deathPosition);
   // tilesOwned / gold / troops intentionally absent — see EXCEPTION above.
   setIfDifferent("isTraitor", prev.isTraitor === next.isTraitor);
   setIfDifferent(
@@ -120,6 +122,8 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.isAlive !== undefined) target.isAlive = pu.isAlive;
   if (pu.isDisconnected !== undefined)
     target.isDisconnected = pu.isDisconnected;
+  if (pu.killedBy !== undefined) target.killedBy = pu.killedBy;
+  if (pu.deathPosition !== undefined) target.deathPosition = pu.deathPosition;
   if (pu.tilesOwned !== undefined) target.tilesOwned = pu.tilesOwned;
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
   if (pu.troops !== undefined) target.troops = pu.troops;
