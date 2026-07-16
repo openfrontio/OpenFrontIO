@@ -29,6 +29,7 @@ const userWithClans = (tags: string[]): UserMeResponse =>
       publicId: "p1",
       adfree: false,
       unlimitedRanked: false,
+      canCreatePublicLobbies: false,
       flares: [],
       achievements: { singleplayerMap: [] },
       friends: [],

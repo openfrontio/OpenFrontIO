@@ -841,6 +841,7 @@ describe("SubscriptionSchema unlimitedRanked", () => {
     priceMonthly: 5,
     dailySoftCurrency: 100,
     dailyHardCurrency: 10,
+    canCreatePublicLobbies: false,
   };
 
   it("rejects a tier without unlimitedRanked", () => {
@@ -861,6 +862,41 @@ describe("SubscriptionSchema unlimitedRanked", () => {
   it("rejects a non-boolean unlimitedRanked", () => {
     expect(
       SubscriptionSchema.safeParse({ ...base, unlimitedRanked: "yes" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("SubscriptionSchema canCreatePublicLobbies", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+    unlimitedRanked: false,
+  };
+
+  it("rejects a tier without canCreatePublicLobbies", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with canCreatePublicLobbies", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      canCreatePublicLobbies: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.canCreatePublicLobbies).toBe(true);
+    }
+  });
+
+  it("rejects a non-boolean canCreatePublicLobbies", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
+        .success,
     ).toBe(false);
   });
 });

@@ -302,6 +302,12 @@ export class UserSettings {
     return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
   }
 
+  // For development only. Crown image URL for testing, set in the console
+  // manually (localStorage "dev-crown"), like getDevOnlyPattern.
+  getDevOnlyCrown(): string | undefined {
+    return localStorage.getItem("dev-crown") ?? undefined;
+  }
+
   /** Returns the selected crown name, or null if none is selected. */
   getSelectedCrownName(): string | null {
     return this.getCached(CROWN_KEY);

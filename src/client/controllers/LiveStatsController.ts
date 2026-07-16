@@ -52,6 +52,8 @@ export class LiveStatsController implements Controller {
             gold: p.gold().toString(),
             isAlive: p.isAlive(),
             team: p.team(),
+            killedBy: p.killedBy(),
+            deathPosition: p.deathPosition(),
           },
         ];
       })

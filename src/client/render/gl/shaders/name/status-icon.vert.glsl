@@ -35,6 +35,7 @@ uniform float uAllianceFlashWindowSec; // seconds before expiry the alliance ico
 
 out vec2 vUV;
 out vec2 vLocalUV;               // 0..1 within the icon cell
+flat out int vCrownLayer;        // crown-cosmetic atlas layer for slot 0, or -1
 flat out int vDiscard;
 flat out float vAllianceFraction; // 0 = no drain effect, >0 = active drain
 flat out vec2 vFadedUV0;         // top-left UV of faded alliance cell
@@ -96,6 +97,10 @@ void main() {
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, smallID, [free]
   vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, allianceRemainingTicks
+  vec4 pd8 = texelFetch(uPlayerData, ivec2(8, playerIdx), 0); // crownLayer, [free]
+
+  // A crown cosmetic skins the first-place crown (slot 0).
+  vCrownLayer = (iconSlot == 0 && pd8.x >= 0.0) ? int(pd8.x) : -1;
 
   // Early out: dead player OR emoji is active
   if (pd1.w <= 0.0 || pd4.y >= 0.0) {
