@@ -106,7 +106,7 @@ export class TransportShipExecution implements Execution {
       .boatAttackAmount(this.attacker, this.target);
     this.troops = Math.min(this.troops, this.attacker.troops());
 
-    this.dst = targetTransportTile(this.mg, this.ref);
+    this.dst = targetTransportTile(this.mg, this.attacker, this.ref);
 
     if (this.dst === null) {
       console.warn(

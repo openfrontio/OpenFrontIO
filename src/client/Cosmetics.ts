@@ -4,6 +4,7 @@ import {
   ColorPalette,
   Cosmetics,
   CosmeticsSchema,
+  Crown,
   Effect,
   findEffectForSlot,
   Flag,
@@ -165,10 +166,14 @@ export async function purchaseCosmetic(
     const currencyName = translateText(
       method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
     );
-    const itemName =
-      resolved.type === "flag"
-        ? translateCosmetic("flags", c.name)
-        : translateCosmetic("territory_patterns.pattern", c.name);
+    let itemName: string;
+    if (resolved.type === "flag") {
+      itemName = translateCosmetic("flags", c.name);
+    } else if (resolved.type === "crown") {
+      itemName = translateCosmetic("crowns", c.name);
+    } else {
+      itemName = translateCosmetic("territory_patterns.pattern", c.name);
+    }
     return {
       currency: currencyName,
       shortfall: price - balance,
@@ -178,7 +183,12 @@ export async function purchaseCosmetic(
     };
   }
 
-  const cosmeticType = resolved.type as "pattern" | "skin" | "flag" | "effect";
+  const cosmeticType = resolved.type as
+    | "pattern"
+    | "skin"
+    | "flag"
+    | "crown"
+    | "effect";
   const success = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -360,6 +370,25 @@ export function flagRelationship(
   );
 }
 
+export function crownRelationship(
+  crown: Crown,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "crown:*",
+      requiredFlare: `crown:${crown.name}`,
+      product: crown.product,
+      priceSoft: crown.priceSoft,
+      priceHard: crown.priceHard,
+      affiliateCode,
+      itemAffiliateCode: crown.affiliateCode ?? null,
+    },
+    userMeResponse,
+  );
+}
+
 export function skinRelationship(
   skin: Skin,
   userMeResponse: UserMeResponse | false,
@@ -399,8 +428,15 @@ export function effectRelationship(
 }
 
 export type ResolvedCosmetic = {
-  type: "pattern" | "skin" | "flag" | "effect" | "pack" | "subscription";
-  cosmetic: Pattern | Skin | Flag | Effect | Pack | Subscription | null;
+  type:
+    | "pattern"
+    | "skin"
+    | "flag"
+    | "crown"
+    | "effect"
+    | "pack"
+    | "subscription";
+  cosmetic: Pattern | Skin | Flag | Crown | Effect | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
@@ -465,6 +501,18 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `flag:${flagKey}`,
+    });
+  }
+
+  // Crowns
+  for (const [crownKey, crown] of Object.entries(cosmetics.crowns ?? {})) {
+    const rel = crownRelationship(crown, userMeResponse, affiliateCode);
+    result.push({
+      type: "crown",
+      cosmetic: crown,
+      colorPalette: null,
+      relationship: rel,
+      key: `crown:${crownKey}`,
     });
   }
 
@@ -645,6 +693,27 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     }
   }
 
+  let crownName = userSettings.getSelectedCrownName() ?? undefined;
+  if (crownName) {
+    const crown = cosmetics?.crowns?.[crownName];
+    if (cosmetics && !crown) {
+      // Cosmetics loaded but the saved crown no longer exists.
+      crownName = undefined;
+    } else if (crown) {
+      const userMe = await getUserMe();
+      if (userMe) {
+        const flares = userMe.player.flares ?? [];
+        const hasWildcard = flares.includes("crown:*");
+        if (!hasWildcard && !flares.includes(`crown:${crown.name}`)) {
+          crownName = undefined;
+        }
+      }
+    }
+    if (crownName === undefined) {
+      userSettings.setSelectedCrownName(undefined);
+    }
+  }
+
   // Effects: a per-slot map (slot -> effect name). A slot is the effectType for
   // trails and the nukeType for nuke explosions (see effectTypeForSlot). Drop any
   // entry whose effect no longer exists, doesn't fit the slot, or the user can't
@@ -677,6 +746,7 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
     skinName,
+    crownName,
     effects: Object.keys(effects).length > 0 ? effects : undefined,
   };
 }
@@ -717,6 +787,17 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     const skin = cosmetics.skins?.[refs.skinName];
     if (skin) {
       result.skin = { name: refs.skinName, url: skin.url };
+    }
+  }
+
+  const devCrown = new UserSettings().getDevOnlyCrown();
+
+  if (devCrown) {
+    result.crown = { name: "dev_crown", url: devCrown };
+  } else if (refs.crownName && cosmetics) {
+    const crown = cosmetics.crowns?.[refs.crownName];
+    if (crown) {
+      result.crown = { name: refs.crownName, url: crown.url };
     }
   }
 

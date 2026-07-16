@@ -17,6 +17,7 @@ import {
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
+  PlayerCrown,
   PlayerEffect,
   PlayerPattern,
   PlayerSkin,
@@ -258,6 +259,14 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         return { type: "forbidden", reason: "invalid skin: " + message };
       }
     }
+    if (refs.crownName) {
+      try {
+        cosmetics.crown = this.isCrownAllowed(flares, refs.crownName);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid crown: " + message };
+      }
+    }
     if (refs.effects) {
       for (const [slot, name] of Object.entries(refs.effects)) {
         try {
@@ -298,6 +307,15 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       return { name: found.name, url: found.url };
     }
     throw new Error(`No flares for skin ${name}`);
+  }
+
+  isCrownAllowed(flares: string[], name: string): PlayerCrown {
+    const found = this.cosmetics.crowns?.[name];
+    if (!found) throw new Error(`Crown ${name} not found`);
+    if (flares.includes("crown:*") || flares.includes(`crown:${found.name}`)) {
+      return { name: found.name, url: found.url };
+    }
+    throw new Error(`No flares for crown ${name}`);
   }
 
   isPatternAllowed(

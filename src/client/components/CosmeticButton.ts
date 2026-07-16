@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  Crown,
   Effect,
   Flag,
   isNukeExplosionEffect,
@@ -90,6 +91,9 @@ export class CosmeticButton extends LitElement {
     }
     if (this.activeResolved.type === "effect") {
       return translateCosmetic("effects", c.name);
+    }
+    if (this.activeResolved.type === "crown") {
+      return translateCosmetic("crowns", c.name);
     }
     return translateCosmetic("flags", c.name);
   }
@@ -209,6 +213,25 @@ export class CosmeticButton extends LitElement {
       ></trail-swatch>`;
     }
 
+    if (this.activeResolved.type === "crown") {
+      const c = this.activeResolved.cosmetic as Crown | null;
+      if (c === null) {
+        // "Default" (none) tile — selecting it clears the crown.
+        return html`<div
+          class="w-full h-full flex items-center justify-center text-white/40 text-xs uppercase"
+        >
+          ${translateText("territory_patterns.pattern.default")}
+        </div>`;
+      }
+      return html`<img
+        src=${c.url}
+        alt=${c.name}
+        class="w-full h-full object-contain pointer-events-none"
+        draggable="false"
+        loading="lazy"
+      />`;
+    }
+
     if (this.activeResolved.type === "pack") {
       const pack = this.activeResolved.cosmetic as Pack;
       const isHard = pack.currency === "hard";
@@ -272,6 +295,18 @@ export class CosmeticButton extends LitElement {
               >${translateText("cosmetics.per_day")}</span
             >
           </div>
+          ${sub.unlimitedRanked
+            ? html`<span
+                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                >${translateText("cosmetics.unlimited_ranked")}</span
+              >`
+            : nothing}
+          ${sub.canCreatePublicLobbies
+            ? html`<span
+                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                >${translateText("cosmetics.public_lobbies")}</span
+              >`
+            : nothing}
         </div>
       </div>`;
     }

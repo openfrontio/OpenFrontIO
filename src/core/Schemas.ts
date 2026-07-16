@@ -145,6 +145,7 @@ export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
+export type PlayerCrown = z.infer<typeof PlayerCrownSchema>;
 export type PlayerEffect = z.infer<typeof PlayerEffectSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
@@ -653,12 +654,18 @@ export const PlayerCosmeticRefsSchema = z.object({
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
   skinName: CosmeticNameSchema.optional(),
+  crownName: CosmeticNameSchema.optional(),
   // One selected effect per slot: key = slot (effectType for trails, nukeType for
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
 });
 
 export const PlayerSkinSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
+});
+
+export const PlayerCrownSchema = z.object({
   name: CosmeticNameSchema,
   url: z.string(),
 });
@@ -678,6 +685,7 @@ export const PlayerCosmeticsSchema = z.object({
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
   skin: PlayerSkinSchema.optional(),
+  crown: PlayerCrownSchema.optional(),
   // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
   // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
@@ -690,6 +698,10 @@ export const PlayerSchema = z.object({
   cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
   friends: z.array(ID).optional(),
+  // Server-stamped team slot for matchmade team games (index into the
+  // game's team list). Feeds deterministic team assignment, so it must be
+  // identical for every client (like clanTag/friends).
+  teamIndex: z.number().int().nonnegative().optional(),
 });
 
 export const GameStartInfoSchema = z.object({
@@ -801,6 +813,11 @@ export const PlayerLiveStatsSchema = z.object({
   gold: z.string(),
   isAlive: z.boolean(),
   team: z.string().nullable(),
+  // OFM live standings: the eliminator's clientID and the finishing place at
+  // elimination, both null while the player is still alive. Deterministic sim
+  // values, so clients agree on them for the majority vote.
+  killedBy: ID.nullable(),
+  deathPosition: z.number().int().positive().nullable(),
 });
 
 // A full live snapshot of a running game at a given turn. Reported by clients

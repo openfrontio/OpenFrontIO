@@ -55,6 +55,7 @@ export async function createGameRunner(
       p.isLobbyCreator ?? false,
       p.clanTag,
       p.friends ?? [],
+      p.teamIndex ?? null,
     );
   });
 

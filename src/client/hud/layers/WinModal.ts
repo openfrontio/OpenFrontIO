@@ -228,7 +228,7 @@ export class WinModal extends LitElement implements Controller {
     await this.loadPatternContent();
     // Check if this is a ranked game
     this.isRankedGame =
-      this.game.config().gameConfig().rankedType === RankedType.OneVOne;
+      this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
     this.requestUpdate();
     setTimeout(() => {
@@ -250,8 +250,12 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleRequeue() {
     this.hide();
-    // Navigate to homepage and open matchmaking modal
-    window.location.href = "/?requeue";
+    // Navigate to homepage and open matchmaking modal for the same mode
+    const requeue =
+      this.game.config().gameConfig().rankedType === RankedType.TwoVTwo
+        ? "/?requeue=2v2"
+        : "/?requeue";
+    window.location.href = requeue;
   }
 
   init() {}

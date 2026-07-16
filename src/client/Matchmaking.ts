@@ -18,9 +18,13 @@ export class MatchmakingModal extends BaseModal {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private intentionalClose = false;
+  // Which queue to join; set by Main from the open-matchmaking event
+  // before the modal opens.
+  public mode: "1v1" | "2v2" = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
+  @state() private limitReached = false;
   private elo: number | string = "...";
 
   constructor() {
@@ -34,7 +38,11 @@ export class MatchmakingModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return modalHeader({
-      title: translateText("matchmaking_modal.title"),
+      title: translateText(
+        this.mode === "2v2"
+          ? "matchmaking_modal.title_2v2"
+          : "matchmaking_modal.title",
+      ),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
     });
@@ -54,6 +62,24 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private renderInner() {
+    if (this.limitReached) {
+      return html`
+        <div class="flex flex-col items-center gap-4 text-center">
+          <p class="text-white font-bold">
+            ${translateText("matchmaking_modal.limit_reached")}
+          </p>
+          <p class="text-sm text-white/60">
+            ${translateText("matchmaking_modal.limit_reached_info")}
+          </p>
+          <button
+            @click=${this.openSubscriptions}
+            class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-wider rounded-xl transition-colors"
+          >
+            ${translateText("matchmaking_modal.limit_upsell")}
+          </button>
+        </div>
+      `;
+    }
     if (!this.connected) {
       return this.renderLoadingSpinner(
         translateText("matchmaking_modal.connecting"),
@@ -73,6 +99,13 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
+  private openSubscriptions = () => {
+    // The matchmaking modal isn't registered with the modal router, so it
+    // won't be closed by the store opening from the hash change.
+    this.close();
+    window.location.hash = "modal=store&tab=subscriptions";
+  };
+
   private async connect() {
     // A pending join timer from a previous socket must not fire on this one.
     if (this.connectTimeout) {
@@ -80,7 +113,7 @@ export class MatchmakingModal extends BaseModal {
       this.connectTimeout = null;
     }
     this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -122,6 +155,14 @@ export class MatchmakingModal extends BaseModal {
         `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
       );
       if (this.intentionalClose || this.gameID !== null) {
+        return;
+      }
+      // 1008 is also used for auth failures ("Invalid session"), so match on
+      // the reason. Out of free ranked plays — the server will keep refusing
+      // until the next UTC day (or a subscription), so don't reconnect.
+      if (event.code === 1008 && event.reason === "ranked_limit_reached") {
+        this.connected = false;
+        this.limitReached = true;
         return;
       }
       if (event.code === 1000) {
@@ -184,13 +225,16 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo =
-      userMe.player.leaderboard?.oneVone?.elo ??
-      translateText("matchmaking_modal.no_elo");
+    const row =
+      this.mode === "2v2"
+        ? userMe.player.leaderboard?.twoVtwo
+        : userMe.player.leaderboard?.oneVone;
+    this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;
     this.intentionalClose = false;
+    this.limitReached = false;
     this.reconnectAttempts = 0;
     this.connect();
   }
