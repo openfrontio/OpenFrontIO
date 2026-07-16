@@ -20,7 +20,7 @@ import {
 } from "../core/ApiSchemas";
 import {
   AnalyticsRecord,
-  AnalyticsRecordSchema,
+  ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
 import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
@@ -613,7 +613,9 @@ export async function fetchGameById(
     }
 
     const json = await res.json();
-    const parsed = AnalyticsRecordSchema.safeParse(json);
+    // Lenient schema: archives written by older builds predate several
+    // schema changes (see ArchivedAnalyticsRecordSchema).
+    const parsed = ArchivedAnalyticsRecordSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchGameById: Zod validation failed", parsed.error);
       return false;

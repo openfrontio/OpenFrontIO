@@ -127,3 +127,21 @@ export const PlayerStatsSchema = z
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
+
+// Reading archived records: `conquests` was a single value
+// (BigIntStringSchema) before it was split into per-player-type buckets, so
+// wrap old scalars into a one-element array (index 0 = human) on read.
+export const ArchivedPlayerStatsSchema = z.preprocess((val) => {
+  if (
+    val !== null &&
+    typeof val === "object" &&
+    !Array.isArray(val) &&
+    "conquests" in val
+  ) {
+    const { conquests } = val as { conquests: unknown };
+    if (conquests !== undefined && !Array.isArray(conquests)) {
+      return { ...(val as Record<string, unknown>), conquests: [conquests] };
+    }
+  }
+  return val;
+}, PlayerStatsSchema);
