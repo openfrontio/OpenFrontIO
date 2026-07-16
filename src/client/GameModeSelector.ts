@@ -329,6 +329,7 @@ export class GameModeSelector extends LitElement {
 
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
+      lobby.gameConfig?.doomsdayClock?.speed,
     );
     // Sort by length for visual consistency (shorter labels first)
     if (modifierLabels.length > 1) {
