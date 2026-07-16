@@ -410,7 +410,7 @@ export async function cancelSubscription(): Promise<boolean> {
 
 export async function changeSubscriptionTier(
   tierName: string,
-): Promise<boolean> {
+): Promise<boolean | "rate_limited"> {
   try {
     const response = await fetch(
       `${getApiBase()}/subscriptions/@me/change-tier`,
@@ -426,6 +426,10 @@ export async function changeSubscriptionTier(
     if (response.status === 401) {
       await logOut();
       return false;
+    }
+    // The API allows one tier change per minute per player.
+    if (response.status === 429) {
+      return "rate_limited";
     }
     if (!response.ok) {
       console.error(
