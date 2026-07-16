@@ -9,14 +9,14 @@
  */
 
 import { EventBus } from "../../core/EventBus";
+import { UnitType } from "../../core/game/Game";
+import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 import { GameView, UnitView } from "../view";
-import { UnitType } from "../../core/game/Game";
-import { UserSettings } from "../../core/game/UserSettings";
 
 export class HoverHighlightController implements Controller {
   private lastOwnerID = 0;
@@ -38,10 +38,9 @@ export class HoverHighlightController implements Controller {
     this.view.setMouseWorldPos(world.x, world.y);
 
     const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-    if (!this.game.isValidCoord(cell.x, cell.y)) return
+    if (!this.game.isValidCoord(cell.x, cell.y)) return;
 
     let ownerID = 0;
-    
 
     const ref = this.game.ref(cell.x, cell.y);
     if (this.game.isLand(ref)) {
@@ -65,7 +64,7 @@ export class HoverHighlightController implements Controller {
         ownerID = closestUnit.owner().smallID();
       }
     }
-    
+
     if (ownerID === this.lastOwnerID) return;
     this.lastOwnerID = ownerID;
     this.view.setHighlightOwner(ownerID);

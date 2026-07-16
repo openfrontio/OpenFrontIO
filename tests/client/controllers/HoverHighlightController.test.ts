@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HoverHighlightController } from "../../../src/client/controllers/HoverHighlightController";
 import { MouseMoveEvent } from "../../../src/client/InputHandler";
 
@@ -17,7 +17,9 @@ describe("HoverHighlightController", () => {
     };
     eventBus = { on: vi.fn() };
     transformHandler = {
-      screenToWorldCoordinatesFloat: vi.fn().mockReturnValue({ x: 100.5, y: 200.5 }),
+      screenToWorldCoordinatesFloat: vi
+        .fn()
+        .mockReturnValue({ x: 100.5, y: 200.5 }),
       screenToWorldCoordinates: vi.fn().mockReturnValue({ x: 2, y: 3 }),
     };
     view = {
@@ -27,6 +29,8 @@ describe("HoverHighlightController", () => {
   });
 
   it("sets highlight owner for land tiles and updates mouse world pos", () => {
+    game.isLand = () => true;
+    game.tileState = () => 3;
     const ui = new HoverHighlightController(
       game,
       eventBus,
@@ -35,12 +39,18 @@ describe("HoverHighlightController", () => {
     );
     ui.init();
 
-    expect(eventBus.on).toHaveBeenCalledWith(MouseMoveEvent, expect.any(Function));
+    expect(eventBus.on).toHaveBeenCalledWith(
+      MouseMoveEvent,
+      expect.any(Function),
+    );
     const handler = (eventBus.on as any).mock.calls[0][1];
 
     handler(new MouseMoveEvent(10, 20));
 
-    expect(transformHandler.screenToWorldCoordinatesFloat).toHaveBeenCalledWith(10, 20);
+    expect(transformHandler.screenToWorldCoordinatesFloat).toHaveBeenCalledWith(
+      10,
+      20,
+    );
     expect(view.setMouseWorldPos).toHaveBeenCalledWith(100.5, 200.5);
     expect(view.setHighlightOwner).toHaveBeenCalledWith(3);
   });
@@ -93,6 +103,4 @@ describe("HoverHighlightController", () => {
 
     expect(view.setHighlightOwner).toHaveBeenCalledWith(0);
   });
-
-
 });
