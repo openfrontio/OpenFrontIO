@@ -1,6 +1,8 @@
+import { PlayerInfo, PlayerType, UnitType } from "src/core/game/Game";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HoverHighlightController } from "../../../src/client/controllers/HoverHighlightController";
 import { MouseMoveEvent } from "../../../src/client/InputHandler";
+import { setup } from "../../util/Setup";
 
 describe("HoverHighlightController", () => {
   let game: any;
@@ -8,19 +10,21 @@ describe("HoverHighlightController", () => {
   let transformHandler: any;
   let view: any;
 
-  beforeEach(() => {
-    game = {
-      isValidCoord: () => true,
-      ref: () => 42,
-      isLand: () => true,
-      tileState: () => 3,
-    };
+  beforeEach(async () => {
+    game = await setup(
+      "giantworldmap",
+      { infiniteGold: true, instantBuild: true },
+      [new PlayerInfo("player1", PlayerType.Human, null, "player1_id")],
+    );
+
     eventBus = { on: vi.fn() };
     transformHandler = {
       screenToWorldCoordinatesFloat: vi
         .fn()
         .mockReturnValue({ x: 100.5, y: 200.5 }),
-      screenToWorldCoordinates: vi.fn().mockReturnValue({ x: 2, y: 3 }),
+      screenToWorldCoordinates: vi
+        .fn()
+        .mockImplementation((x, y) => ({ x, y })),
     };
     view = {
       setMouseWorldPos: vi.fn(),
@@ -29,8 +33,10 @@ describe("HoverHighlightController", () => {
   });
 
   it("sets highlight owner for land tiles and updates mouse world pos", () => {
-    game.isLand = () => true;
-    game.tileState = () => 3;
+    const player1 = game.player("player1_id");
+    const tile = game.ref(200, 200);
+    expect(game.isLand(tile)).toBe(true); // Make sure we are testing on land
+    player1.conquer(tile);
     const ui = new HoverHighlightController(
       game,
       eventBus,
@@ -45,25 +51,23 @@ describe("HoverHighlightController", () => {
     );
     const handler = (eventBus.on as any).mock.calls[0][1];
 
-    handler(new MouseMoveEvent(10, 20));
+    handler(new MouseMoveEvent(200, 200));
 
     expect(transformHandler.screenToWorldCoordinatesFloat).toHaveBeenCalledWith(
-      10,
-      20,
+      200,
+      200,
     );
     expect(view.setMouseWorldPos).toHaveBeenCalledWith(100.5, 200.5);
-    expect(view.setHighlightOwner).toHaveBeenCalledWith(3);
+    expect(view.setHighlightOwner).toHaveBeenCalledWith(player1.smallID());
   });
 
   it("uses naval hover highlighting when tile is not land", () => {
-    game.isLand = () => false;
-    game.ref = () => 5;
-    game.euclideanDistSquared = () => 1000; // less than 2500
-    const unit = {
-      tile: () => 7,
-      owner: () => ({ smallID: () => 9 }),
-    };
-    game.units = (..._args: any[]) => [unit];
+    const waterTile = game.ref(50, 100);
+    expect(game.isWater(waterTile)).toBe(true); // Make sure we are testing on water
+
+    const unit = game
+      .player("player1_id")
+      .buildUnit(UnitType.Warship, waterTile, { patrolTile: waterTile });
 
     const ui = new HoverHighlightController(
       game,
@@ -76,16 +80,17 @@ describe("HoverHighlightController", () => {
 
     ui.init();
     const handler = (eventBus.on as any).mock.calls[0][1];
-    handler(new MouseMoveEvent(1, 2));
+    handler(new MouseMoveEvent(50, 101));
 
-    expect(view.setHighlightOwner).toHaveBeenCalledWith(9);
+    expect(view.setHighlightOwner).toHaveBeenCalledWith(unit.owner().smallID());
   });
 
   it("clears hover highlight when naval hover finds no nearby units", () => {
-    game.isLand = () => false;
-    game.units = (..._args: any[]) => [];
-    game.ref = () => 20;
-    game.euclideanDistSquared = () => 3000; // greater than 2500
+    const waterTile = game.ref(50, 100);
+    expect(game.isWater(waterTile)).toBe(true); // Make sure we are testing on water
+    const unit = game
+      .player("player1_id")
+      .buildUnit(UnitType.Warship, waterTile, { patrolTile: waterTile });
 
     const ui = new HoverHighlightController(
       game,
@@ -95,12 +100,11 @@ describe("HoverHighlightController", () => {
     );
     // enable naval hover behavior
     ui["userSettings"] = { navalHoverHighlight: () => true } as any;
-    ui["lastOwnerID"] = 9;
+    ui["lastOwnerID"] = unit.owner().smallID() + 1; // set to a different owner ID to ensure it updates
 
     ui.init();
     const handler = (eventBus.on as any).mock.calls[0][1];
-    handler(new MouseMoveEvent(1, 2));
-
+    handler(new MouseMoveEvent(200, 100)); // >50 tiles from unit
     expect(view.setHighlightOwner).toHaveBeenCalledWith(0);
   });
 });
