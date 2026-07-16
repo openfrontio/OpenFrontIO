@@ -1354,6 +1354,7 @@
   "store": {
     "already_subscribed": "Already subscribed.",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
+    "change_tier_rate_limited": "You just changed tiers. Please wait a minute before changing again.",
     "change_tier_success": "Switched to {tier}.",
     "checkout_failed": "Failed to create checkout session.",
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
