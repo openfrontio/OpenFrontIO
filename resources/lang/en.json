@@ -1149,6 +1149,7 @@
     "disable_alliances_label": "Alliances",
     "doomsday_clock": "Doomsday Clock",
     "doomsday_clock_label": "Doomsday Clock",
+    "doomsday_clock_with_speed": "Doomsday Clock: {speed}",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "hard_nations": "Hard Nations",
     "nukes_disabled": "Nukes Disabled",
