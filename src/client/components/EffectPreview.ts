@@ -1,4 +1,4 @@
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, svg, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   NukeExplosionAttributes,
@@ -9,14 +9,44 @@ import {
 // Neutral fallback when a trail has no usable colors.
 const EMPTY_BG = "#444";
 
+// Spiral swatch geometry: sine strands across a 100×48 viewBox, two full
+// waves wide, sampled every 4 units. Like in game, the strands converge into
+// the nuke: amplitude tapers to 0 at the right edge (the missile's side) over
+// the last SPIRAL_TAPER_W units.
+const SPIRAL_VIEW_W = 100;
+const SPIRAL_VIEW_H = 48;
+const SPIRAL_AMPLITUDE = 16;
+const SPIRAL_WAVELENGTH = 50;
+const SPIRAL_TAPER_W = 40;
+
+/** Polyline path of one sine strand at the given phase offset (radians). */
+function spiralStrandPath(phase: number): string {
+  const pts: string[] = [];
+  for (let x = 0; x <= SPIRAL_VIEW_W; x += 4) {
+    const taper = Math.min((SPIRAL_VIEW_W - x) / SPIRAL_TAPER_W, 1);
+    const y =
+      SPIRAL_VIEW_H / 2 +
+      SPIRAL_AMPLITUDE *
+        Math.sin((Math.PI / 2) * taper) *
+        Math.sin((x / SPIRAL_WAVELENGTH) * 2 * Math.PI + phase);
+    pts.push(`${x} ${y.toFixed(1)}`);
+  }
+  return `M ${pts.join(" L ")}`;
+}
+
 /**
  * Swatch preview of a trail-styled effect (trails and the structures effect
- * share the same gradient/transition attribute shapes), filling its container.
+ * share the same gradient/transition/spiral attribute shapes), filling its
+ * container.
  *
  * - gradient / single color: a static swatch (flat color or left-to-right
  *   gradient — a multi-color list reads as a rainbow).
  * - transition: cross-fades through the colors over time, mirroring the trail
  *   (each color step lasts 1/frequency seconds, matching the shader).
+ * - spiral: sine strands on a dark backdrop (the helix seen side-on) tapering
+ *   into the nuke's side, colored around the vortex circumference; strands
+ *   fade toward the backdrop and back in phase order, once per revolution
+ *   (2π/rotationSpeed s) — the swatch's take on the in-game depth-shaded spin.
  */
 @customElement("trail-swatch")
 export class TrailSwatch extends LitElement {
@@ -24,7 +54,7 @@ export class TrailSwatch extends LitElement {
   @property({ attribute: false })
   trail: TrailEffectAttributes | StructuresEffectAttributes | null = null;
 
-  private animation: Animation | null = null;
+  private animations: Animation[] = [];
 
   // Light DOM so the shared Tailwind classes apply.
   createRenderRoot(): HTMLElement {
@@ -33,6 +63,44 @@ export class TrailSwatch extends LitElement {
 
   render(): TemplateResult {
     const colors = this.trail?.colors ?? [];
+    if (this.trail?.type === "spiral" && colors.length > 0) {
+      // Strand count mirrors the in-game clamp (max 8).
+      const strands = Math.min(Math.max(Math.round(this.trail.strands), 1), 8);
+      return html`<div
+        class="w-full h-full rounded-md overflow-hidden"
+        style="background:${EMPTY_BG};"
+      >
+        <svg
+          class="w-full h-full"
+          viewBox="0 0 ${SPIRAL_VIEW_W} ${SPIRAL_VIEW_H}"
+          preserveAspectRatio="none"
+        >
+          ${Array.from({ length: strands }, (_, s) => {
+            const d = spiralStrandPath((s * 2 * Math.PI) / strands);
+            const color = colors[s % colors.length];
+            // Blurred wide stroke under the core = the in-game glow skirt.
+            return svg`<g data-strand>
+              <path
+                d="${d}"
+                fill="none"
+                stroke="${color}"
+                stroke-width="9"
+                stroke-linecap="round"
+                opacity="0.35"
+                style="filter:blur(2.5px)"
+              />
+              <path
+                d="${d}"
+                fill="none"
+                stroke="${color}"
+                stroke-width="4"
+                stroke-linecap="round"
+              />
+            </g>`;
+          })}
+        </svg>
+      </div>`;
+    }
     let background: string;
     if (colors.length === 0) {
       background = EMPTY_BG;
@@ -52,33 +120,58 @@ export class TrailSwatch extends LitElement {
 
   updated(changed: Map<string, unknown>): void {
     if (!changed.has("trail")) return;
-    this.animation?.cancel();
-    this.animation = null;
+    for (const a of this.animations) a.cancel();
+    this.animations = [];
 
     const attrs = this.trail;
-    if (attrs?.type !== "transition") return;
-    const colors = attrs.colors;
-    if (colors.length < 2 || attrs.frequency <= 0) return;
+    if (attrs?.type === "transition") {
+      const colors = attrs.colors;
+      if (colors.length < 2 || attrs.frequency <= 0) return;
 
-    const fill = this.querySelector<HTMLElement>("div");
-    if (!fill) return;
+      const fill = this.querySelector<HTMLElement>("div");
+      if (!fill) return;
 
-    // Cross-fade color0 → color1 → … → color0; each step lasts 1/frequency s,
-    // matching the shader's i = floor(uTime * frequency) mod count.
-    const keyframes = [...colors, colors[0]].map((c) => ({
-      backgroundColor: c,
-    }));
-    this.animation = fill.animate(keyframes, {
-      duration: (colors.length / attrs.frequency) * 1000,
-      iterations: Infinity,
-      easing: "linear",
-    });
+      // Cross-fade color0 → color1 → … → color0; each step lasts 1/frequency s,
+      // matching the shader's i = floor(uTime * frequency) mod count.
+      const keyframes = [...colors, colors[0]].map((c) => ({
+        backgroundColor: c,
+      }));
+      this.animations.push(
+        fill.animate(keyframes, {
+          duration: (colors.length / attrs.frequency) * 1000,
+          iterations: Infinity,
+          easing: "linear",
+        }),
+      );
+      return;
+    }
+
+    if (attrs?.type === "spiral") {
+      if (attrs.rotationSpeed <= 0) return;
+
+      // The vortex spin: each strand group (glow + core) fades toward the
+      // backdrop and back once per revolution (2π/rotationSpeed s),
+      // phase-offset by its position around the axis — receding segments
+      // dim, facing ones bright, like the in-game depth shading.
+      const strandGroups = this.querySelectorAll<SVGGElement>("[data-strand]");
+      const periodMs = ((2 * Math.PI) / attrs.rotationSpeed) * 1000;
+      strandGroups.forEach((group, s) => {
+        this.animations.push(
+          group.animate([{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }], {
+            duration: periodMs,
+            delay: (-s * periodMs) / strandGroups.length,
+            iterations: Infinity,
+            easing: "ease-in-out",
+          }),
+        );
+      });
+    }
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.animation?.cancel();
-    this.animation = null;
+    for (const a of this.animations) a.cancel();
+    this.animations = [];
   }
 }
 

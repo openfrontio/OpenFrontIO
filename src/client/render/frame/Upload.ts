@@ -18,17 +18,18 @@ import type {
 export interface FrameUploadTarget {
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint16Array,
+    trailState: Uint32Array,
   ): void;
   uploadLiveDelta(
     tileState: Uint16Array,
     changedTiles: readonly number[],
   ): void;
   uploadLiveTrailDelta(
-    trailState: Uint16Array,
+    trailState: Uint32Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void;
+  setSpiralTrailBounds(bounds: Int32Array): void;
   uploadRailroadState(data: Uint8Array): void;
   applyRailroadDust(tileRefs: number[]): void;
   updateUnits(units: ReadonlyMap<number, UnitState>, gameTick: number): void;
@@ -76,6 +77,9 @@ export function uploadFrameData(
   } else {
     view.uploadTileAndTrailState(frame.tileState, frame.trailState);
   }
+  // Cheap (4 ints → one uniform); pushed every tick so the shader's spiral
+  // gather region tracks the stamped tiles.
+  view.setSpiralTrailBounds(frame.spiralBounds);
 
   // --- Railroads ---
   if (frame.railroadDirty) {

@@ -9,7 +9,8 @@ import { createTexture2D } from "./GlUtils";
 
 export interface GPUResources {
   tileTex: WebGLTexture; // R16UI  — tile ownership + flags
-  trailTex: WebGLTexture; // R16UI  — trail owner (bits 0-11) + nuke bit (12)
+  trailTex: WebGLTexture; // R32UI  — trail owner (bits 0-11) + nuke bit (12)
+  //                                  + spiral phase (bits 13-20)
   paletteTex: WebGLTexture; // RGBA32F — player colors
   borderTex: WebGLTexture; // RGBA8  — border type + defense + relation (G unused)
   heatTexA: WebGLTexture; // R8     — fallout heat ping-pong A
@@ -33,12 +34,14 @@ export function createGPUResources(
     filter: gl.NEAREST,
   });
 
+  // 32-bit (vs the tile texture's 16) so spiral trails fit a smooth 8-bit
+  // helix phase alongside owner + nuke bit.
   const trailTex = createTexture2D(gl, {
     width: mapW,
     height: mapH,
-    internalFormat: gl.R16UI,
+    internalFormat: gl.R32UI,
     format: gl.RED_INTEGER,
-    type: gl.UNSIGNED_SHORT,
+    type: gl.UNSIGNED_INT,
     data: null,
     filter: gl.NEAREST,
   });

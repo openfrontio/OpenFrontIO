@@ -656,7 +656,7 @@ export class GPURenderer {
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint16Array,
+    trailState: Uint32Array,
   ): void {
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
@@ -670,7 +670,7 @@ export class GPURenderer {
   }
 
   uploadLiveTrailDelta(
-    trailState: Uint16Array,
+    trailState: Uint32Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -702,8 +702,23 @@ export class GPURenderer {
     this.namePass.refreshPlayerColors(this.paletteData);
   }
 
+  /** Bounds of stamped spiral trail tiles — restricts the trail shader's gather. */
+  setSpiralTrailBounds(bounds: Int32Array): void {
+    this.trailPass.setSpiralBounds(bounds);
+  }
+
   /** Re-upload the per-player effect texture (style + colors by smallID). */
   updateEffectPalette(effectData: Float32Array): void {
+    // Spiral nuke trails need the trail shader's (comparatively expensive)
+    // neighborhood-gather reconstruction; keep it off unless some player's
+    // nukeTrail style is spiral (styleId 2 in the nuke block's row 1 alpha).
+    const styleRow = (MAX_TRAIL_COLORS + 1) * getPaletteSize() * 4;
+    for (let o = 0; o < getPaletteSize(); o++) {
+      if (Math.round(effectData[styleRow + o * 4 + 3]) === 2) {
+        this.trailPass.setSpiralActive(true);
+        break;
+      }
+    }
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.effectTex);

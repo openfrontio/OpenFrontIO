@@ -33,7 +33,7 @@ import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
 import { computePlayerStatus } from "../render/frame/derive/PlayerStatus";
 import { buildRelationMatrix } from "../render/frame/derive/RelationMatrix";
 import { RailroadCache } from "../render/frame/RailroadCache";
-import { TrailManager } from "../render/frame/TrailManager";
+import { SpiralParams, TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { PlayerView } from "./PlayerView";
@@ -183,6 +183,7 @@ export class GameView implements GameMap {
       inSpawnPhase: true,
       tileState: this._map.tileStateBuffer(),
       trailState: this.trailManager.getTrailState(),
+      spiralBounds: this.trailManager.getSpiralBounds(),
       railroadState: this.railroadCache.railroadState,
       units: this._unitStates,
       players: this._playerStates,
@@ -672,6 +673,15 @@ export class GameView implements GameMap {
   /** Public accessor: the renderer reads this and uploads to the GPU. */
   frameData(): FrameData {
     return this._frame;
+  }
+
+  /**
+   * Set a player's spiral nuke-trail geometry (from their nukeTrail cosmetic).
+   * Pushed by WebGLFrameBuilder once the player's effect resolves; the trail
+   * manager stamps helix strands instead of the plain centerline.
+   */
+  setNukeTrailSpiral(smallID: number, params: SpiralParams): void {
+    this.trailManager.setSpiralParams(smallID, params);
   }
 
   private advanceMotionPlannedUnits(currentTick: Tick): void {

@@ -94,6 +94,50 @@ describe("Effect cosmetic schemas", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("parses a spiral with colors, radius, strands, and rotationSpeed", () => {
+      const parsed = TrailEffectAttributesSchema.parse({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+      expect(parsed).toEqual({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+    });
+
+    it("requires spiral radius/strands/rotationSpeed, radius > 0, integer strands", () => {
+      const valid = {
+        type: "spiral",
+        colors: ["#f00", "#00f"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      };
+      for (const key of ["radius", "strands", "rotationSpeed"] as const) {
+        const missing: Record<string, unknown> = { ...valid };
+        delete missing[key];
+        expect(TrailEffectAttributesSchema.safeParse(missing).success).toBe(
+          false,
+        );
+      }
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, radius: 0 }).success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 2.5 })
+          .success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 0 }).success,
+      ).toBe(false);
+    });
   });
 
   describe("EffectSchema", () => {
@@ -123,6 +167,26 @@ describe("Effect cosmetic schemas", () => {
             colorSize: 0.5,
             movementSpeed: 2,
           },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("parses a spiral nukeTrail effect (the catalog spiral_tail shape)", () => {
+      expect(
+        EffectSchema.safeParse({
+          name: "spiral_tail",
+          effectType: "nukeTrail",
+          attributes: {
+            type: "spiral",
+            colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+            radius: 15,
+            strands: 4,
+            rotationSpeed: 5,
+          },
+          affiliateCode: null,
+          product: null,
+          priceHard: 123,
+          rarity: "common",
         }).success,
       ).toBe(true);
     });

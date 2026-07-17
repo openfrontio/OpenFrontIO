@@ -488,6 +488,15 @@ export class WebGLFrameBuilder {
         if (!isTrailEffect(effect) && effect.effectType !== "structures") {
           return;
         }
+        // Spiral geometry is stamped CPU-side into the trail texture — hand
+        // the nuke-trail manager its radius/strand count (the shader only
+        // colors the stamped strands).
+        if (effectType === "nukeTrail" && effect.attributes.type === "spiral") {
+          gameView.setNukeTrailSpiral(smallID, {
+            radius: effect.attributes.radius,
+            strands: effect.attributes.strands,
+          });
+        }
         const rowBase = block * MAX_TRAIL_COLORS;
         if (this.writeEffectEntry(smallID, effect.attributes, rowBase)) {
           dirty = true;
@@ -503,9 +512,10 @@ export class WebGLFrameBuilder {
    * _EFFECT_BLOCK_ORDER). Within the block, row r holds color r's rgb, and the spare alpha
    * channels (rows rowBase+0..3 always exist) carry the scalar params —
    *   row 0.a = color count (0 → the shader falls back to the territory color),
-   *   row 1.a = styleId (0 = gradient, 1 = transition),
-   *   row 2.a = scalar0 (gradient: colorSize; transition: frequency),
-   *   row 3.a = scalar1 (gradient: movementSpeed; transition: unused).
+   *   row 1.a = styleId (0 = gradient, 1 = transition, 2 = spiral),
+   *   row 2.a = scalar0 (gradient: colorSize; transition: frequency;
+   *     spiral: rotationSpeed),
+   *   row 3.a = scalar1 (gradient: movementSpeed; others: unused).
    * colord doesn't throw on a bad color string (it returns black), so unparseable
    * colors are dropped — leaving an empty list, which falls back to the territory
    * color rather than rendering black. Returns whether any color was written.
@@ -528,10 +538,22 @@ export class WebGLFrameBuilder {
       this.effectPalette[off + 2] = c.b / 255;
       this.effectPalette[off + 3] = 0;
     }
-    const [styleId, scalar0, scalar1] =
-      attrs.type === "transition"
-        ? [1, attrs.frequency, 0]
-        : [0, attrs.colorSize, attrs.movementSpeed];
+    let styleId: number;
+    let scalar0: number;
+    let scalar1: number;
+    if (attrs.type === "transition") {
+      styleId = 1;
+      scalar0 = attrs.frequency;
+      scalar1 = 0;
+    } else if (attrs.type === "spiral") {
+      styleId = 2;
+      scalar0 = attrs.rotationSpeed;
+      scalar1 = 0;
+    } else {
+      styleId = 0;
+      scalar0 = attrs.colorSize;
+      scalar1 = attrs.movementSpeed;
+    }
     const alpha = (row: number) =>
       ((rowBase + row) * PALETTE_SIZE + smallID) * 4 + 3;
     this.effectPalette[alpha(0)] = colors.length;

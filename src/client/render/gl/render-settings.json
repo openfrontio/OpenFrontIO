@@ -73,6 +73,7 @@
   },
   "mapOverlay": {
     "trailAlpha": 0.588,
+    "spiralResolutionScale": 0.25,
     "defenseCheckerDarken": 0.7,
     "territoryDefenseDarken": 0.85,
     "territorySaturation": 0.85,

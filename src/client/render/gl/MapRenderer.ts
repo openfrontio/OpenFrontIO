@@ -136,7 +136,7 @@ export class MapRenderer {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(
-    trailState: Uint16Array,
+    trailState: Uint32Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
@@ -145,9 +145,12 @@ export class MapRenderer {
   /** Upload full tile + trail state without resetting bloom (for live play). */
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint16Array,
+    trailState: Uint32Array,
   ): void {
     this.renderer?.uploadTileAndTrailState(tileState, trailState);
+  }
+  setSpiralTrailBounds(bounds: Int32Array): void {
+    this.renderer?.setSpiralTrailBounds(bounds);
   }
   updatePalette(paletteData: Float32Array): void {
     this.renderer?.updatePalette(paletteData);

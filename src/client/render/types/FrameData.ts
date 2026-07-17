@@ -22,7 +22,7 @@ export interface FrameData {
   /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
   readonly tileState: Uint16Array;
-  readonly trailState: Uint16Array;
+  readonly trailState: Uint32Array;
   readonly railroadState: Uint8Array;
   readonly units: ReadonlyMap<number, UnitState>;
   readonly players: ReadonlyMap<number, PlayerState>;
@@ -51,6 +51,14 @@ export interface FrameData {
    */
   readonly trailDirtyRowMin: number;
   readonly trailDirtyRowMax: number;
+
+  /**
+   * Live ref to TrailManager's spiral-tile bounds — [minX, minY, maxX, maxY]
+   * tile coords, empty when minX > maxX. The trail shader restricts its
+   * spiral gather to this box, so it costs nothing while no spiral nuke
+   * trail is stamped.
+   */
+  readonly spiralBounds: Int32Array;
 
   // ── Derived (computed once by producer) ────────────────────────────────
 
