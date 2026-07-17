@@ -30,7 +30,6 @@ import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
 import { FlagInputModal } from "./FlagInputModal";
-import { GameInfoModal } from "./GameInfoModal";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
@@ -402,10 +401,6 @@ class Client {
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
       console.warn("Help modal element not found");
-    }
-    const giModal = document.querySelector("game-info-modal") as GameInfoModal;
-    if (!giModal || !(giModal instanceof GameInfoModal)) {
-      console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
