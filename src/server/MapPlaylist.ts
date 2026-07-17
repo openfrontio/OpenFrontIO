@@ -110,6 +110,12 @@ const DOOMSDAY_ROTATION_SPEEDS = [
   "veryfast",
 ] as const;
 
+// Team lobbies draw from a faster subset: the flat per-side bar means a
+// near-even team game only breaks at the top waves, so `slow` (55% at 45:00)
+// would let public team games run very long, while `veryfast` (55% at 15:00)
+// squeezes teams right after the grace on bot-heavy maps.
+const TEAM_DOOMSDAY_ROTATION_SPEEDS = ["normal", "fast"] as const;
+
 // Maps where water nukes have a higher chance on top of the normal pool
 // Water nukes are especially fun here
 const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
@@ -353,6 +359,12 @@ export class MapPlaylist {
     // 4min peace = 240s = 2400 ticks
     const peaceTimeDuration = isPeaceTime ? 240 * 10 : undefined;
 
+    // Team lobbies pick from the faster subset (see TEAM_DOOMSDAY_ROTATION_SPEEDS).
+    const doomsdaySpeeds =
+      mode === GameMode.Team
+        ? TEAM_DOOMSDAY_ROTATION_SPEEDS
+        : DOOMSDAY_ROTATION_SPEEDS;
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
@@ -380,9 +392,7 @@ export class MapPlaylist {
         ? {
             enabled: true,
             speed:
-              DOOMSDAY_ROTATION_SPEEDS[
-                Math.floor(Math.random() * DOOMSDAY_ROTATION_SPEEDS.length)
-              ],
+              doomsdaySpeeds[Math.floor(Math.random() * doomsdaySpeeds.length)],
           }
         : undefined,
       startingGold,
