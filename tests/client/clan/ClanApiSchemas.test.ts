@@ -291,6 +291,17 @@ describe("ClanGameSchema", () => {
     expect(ClanGameSchema.safeParse(validGame).success).toBe(true);
   });
 
+  it("normalizes accidental whitespace around archived map names", () => {
+    const result = ClanGameSchema.safeParse({
+      ...validGame,
+      map: "Deglaciated Antarctica ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.map).toBe("Deglaciated Antarctica");
+  });
+
   it("accepts playerTeams: null (FFA / non-team games)", () => {
     const result = ClanGameSchema.safeParse({
       ...validGame,

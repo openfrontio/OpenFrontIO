@@ -246,7 +246,7 @@ export const PublicPlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
   durationSeconds: z.number().int().nonnegative(),
-  map: z.string(),
+  map: z.string().trim(),
   mode: z.string(),
   type: z.string(),
   playerTeams: z.string().nullable(),
