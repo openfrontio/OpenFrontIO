@@ -10,7 +10,7 @@ export class GameStatsModal extends BaseModal {
   protected routerName = "stats";
 
   @state() private gameId: string | null = null;
-  private openedFromAccount = false;
+  private openedFrom: "account" | "clan" | null = null;
 
   protected renderHeaderSlot() {
     return modalHeader({
@@ -39,21 +39,32 @@ export class GameStatsModal extends BaseModal {
 
   protected onClose(): void {
     this.gameId = null;
-    this.openedFromAccount = false;
+    this.openedFrom = null;
   }
 
   public openFromAccount(gameId: string): void {
-    this.openedFromAccount = true;
+    this.openedFrom = "account";
+    this.open({ gameID: gameId });
+  }
+
+  public openFromClan(gameId: string): void {
+    this.openedFrom = "clan";
     this.open({ gameID: gameId });
   }
 
   private back(): void {
-    const returnToAccount = this.openedFromAccount;
+    const openedFrom = this.openedFrom;
     this.close();
-    if (!returnToAccount) return;
-
-    document
-      .querySelector<HTMLElement & { returnToGames(): void }>("account-modal")
-      ?.returnToGames();
+    if (openedFrom === "account") {
+      document
+        .querySelector<HTMLElement & { returnToGames(): void }>("account-modal")
+        ?.returnToGames();
+    } else if (openedFrom === "clan") {
+      document
+        .querySelector<
+          HTMLElement & { returnToGameHistory(): void }
+        >("clan-modal")
+        ?.returnToGameHistory();
+    }
   }
 }
