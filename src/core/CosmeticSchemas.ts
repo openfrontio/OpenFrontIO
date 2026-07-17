@@ -144,8 +144,9 @@ export type TrailEffectType = (typeof TRAIL_EFFECT_TYPES)[number];
 //    radians per second; the palette wraps once around the vortex
 //    circumference. radius must be positive (the geometry degenerates
 //    otherwise), so a non-positive value drops the entry like the enums. The
-//    helix geometry is only stamped for nuke trails; a spiral ship trail
-//    renders as color cycling on the plain trail line.
+//    vortex geometry is only rendered for nuke trails (as ribbons above the
+//    stamped trail); a spiral ship trail renders as a flat line in the first
+//    color.
 // solid = a single-color list; rainbow = the spectrum as a gradient. Colors are
 // unvalidated strings here; the renderer drops any it can't parse (and an empty
 // list falls back to the player's territory color).

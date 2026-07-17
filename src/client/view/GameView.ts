@@ -33,7 +33,9 @@ import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
 import { computePlayerStatus } from "../render/frame/derive/PlayerStatus";
 import { buildRelationMatrix } from "../render/frame/derive/RelationMatrix";
 import { RailroadCache } from "../render/frame/RailroadCache";
-import { SpiralParams, TrailManager } from "../render/frame/TrailManager";
+import type { SpiralParams } from "../render/frame/SpiralTrails";
+import { SpiralTrails } from "../render/frame/SpiralTrails";
+import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { PlayerView } from "./PlayerView";
@@ -92,6 +94,7 @@ export class GameView implements GameMap {
 
   // ── FrameData accumulators (renderer-bound state) ─────────────────────
   private trailManager!: TrailManager;
+  private spiralTrails!: SpiralTrails;
   private railroadCache!: RailroadCache;
   /** Long-lived NameEntry map for the renderer's NamePass. */
   private _names = new Map<string, NameEntry>();
@@ -171,6 +174,7 @@ export class GameView implements GameMap {
     const mapW = this._map.width();
     const mapH = this._map.height();
     this.trailManager = new TrailManager(mapW, mapH);
+    this.spiralTrails = new SpiralTrails(mapW);
     this.railroadCache = new RailroadCache(mapW, mapH);
 
     // Long-lived FrameData. Most fields are mutable references to long-lived
@@ -183,7 +187,7 @@ export class GameView implements GameMap {
       inSpawnPhase: true,
       tileState: this._map.tileStateBuffer(),
       trailState: this.trailManager.getTrailState(),
-      spiralBounds: this.trailManager.getSpiralBounds(),
+      spiralRibbons: this.spiralTrails.getRibbons(),
       railroadState: this.railroadCache.railroadState,
       units: this._unitStates,
       players: this._playerStates,
@@ -528,6 +532,12 @@ export class GameView implements GameMap {
       this._unitStates as Map<number, import("../render/types").UnitState>,
       this._trailIdsScratch,
     );
+    // Spiral nukeTrail ribbons follow the same tracked units; extends the
+    // path of each live spiral-cosmetic nuke and drops dead ones.
+    this.spiralTrails.update(
+      this._unitStates as Map<number, import("../render/types").UnitState>,
+      this._trailIdsScratch,
+    );
 
     // Names map — rebuilt only when a placement record arrived or a player
     // was added (nameData values cannot change between those ticks). Entry
@@ -676,12 +686,13 @@ export class GameView implements GameMap {
   }
 
   /**
-   * Set a player's spiral nuke-trail geometry (from their nukeTrail cosmetic).
-   * Pushed by WebGLFrameBuilder once the player's effect resolves; the trail
-   * manager stamps helix strands instead of the plain centerline.
+   * Set a player's spiral nuke-trail geometry (from their nukeTrail
+   * cosmetic). Pushed by WebGLFrameBuilder once the player's effect
+   * resolves; their nukes then grow helix ribbons (SpiralTrails →
+   * SpiralRibbonPass) on top of the plain stamped trail.
    */
   setNukeTrailSpiral(smallID: number, params: SpiralParams): void {
-    this.trailManager.setSpiralParams(smallID, params);
+    this.spiralTrails.setParams(smallID, params);
   }
 
   private advanceMotionPlannedUnits(currentTick: Tick): void {

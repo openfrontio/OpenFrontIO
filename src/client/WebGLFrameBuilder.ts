@@ -488,14 +488,27 @@ export class WebGLFrameBuilder {
         if (!isTrailEffect(effect) && effect.effectType !== "structures") {
           return;
         }
-        // Spiral geometry is stamped CPU-side into the trail texture — hand
-        // the nuke-trail manager its radius/strand count (the shader only
-        // colors the stamped strands).
+        // Spiral vortexes render as ribbon geometry (SpiralRibbonPass) —
+        // hand the geometry + palette to the view's SpiralTrails. Colors are
+        // parsed here so a fully unparseable list degrades to the plain
+        // stamped trail instead of an uncolored vortex.
         if (effectType === "nukeTrail" && effect.attributes.type === "spiral") {
-          gameView.setNukeTrailSpiral(smallID, {
-            radius: effect.attributes.radius,
-            strands: effect.attributes.strands,
-          });
+          const colors = effect.attributes.colors
+            .map((s) => colord(s))
+            .filter((c) => c.isValid())
+            .slice(0, MAX_TRAIL_COLORS)
+            .map((c) => {
+              const { r, g, b } = c.toRgb();
+              return [r / 255, g / 255, b / 255] as [number, number, number];
+            });
+          if (colors.length > 0) {
+            gameView.setNukeTrailSpiral(smallID, {
+              radius: effect.attributes.radius,
+              strands: effect.attributes.strands,
+              rotationSpeed: effect.attributes.rotationSpeed,
+              colors,
+            });
+          }
         }
         const rowBase = block * MAX_TRAIL_COLORS;
         if (this.writeEffectEntry(smallID, effect.attributes, rowBase)) {

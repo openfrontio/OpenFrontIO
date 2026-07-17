@@ -10,6 +10,7 @@ import type {
   PlayerStatusData,
   UnitState,
 } from "../types";
+import type { SpiralRibbon } from "./SpiralTrails";
 
 /**
  * Structural interface for the GPU view target.
@@ -18,18 +19,18 @@ import type {
 export interface FrameUploadTarget {
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint32Array,
+    trailState: Uint16Array,
   ): void;
   uploadLiveDelta(
     tileState: Uint16Array,
     changedTiles: readonly number[],
   ): void;
   uploadLiveTrailDelta(
-    trailState: Uint32Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void;
-  setSpiralTrailBounds(bounds: Int32Array): void;
+  updateSpiralRibbons(ribbons: readonly SpiralRibbon[]): void;
   uploadRailroadState(data: Uint8Array): void;
   applyRailroadDust(tileRefs: number[]): void;
   updateUnits(units: ReadonlyMap<number, UnitState>, gameTick: number): void;
@@ -77,9 +78,9 @@ export function uploadFrameData(
   } else {
     view.uploadTileAndTrailState(frame.tileState, frame.trailState);
   }
-  // Cheap (4 ints → one uniform); pushed every tick so the shader's spiral
-  // gather region tracks the stamped tiles.
-  view.setSpiralTrailBounds(frame.spiralBounds);
+  // Live refs into SpiralTrails; streams only newly appended samples, and a
+  // no-op while no spiral nuke is in flight.
+  view.updateSpiralRibbons(frame.spiralRibbons);
 
   // --- Railroads ---
   if (frame.railroadDirty) {

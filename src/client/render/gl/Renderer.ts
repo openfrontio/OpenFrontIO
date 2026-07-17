@@ -10,6 +10,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -51,6 +52,7 @@ import { SkinAtlasArray } from "./passes/SkinAtlasArray";
 import { SmallPlayerGlowPass } from "./passes/SmallPlayerGlowPass";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import { SpawnOverlayPass } from "./passes/SpawnOverlayPass";
+import { SpiralRibbonPass } from "./passes/SpiralRibbonPass";
 import { StructureLevelPass } from "./passes/StructureLevelPass";
 import { StructurePass } from "./passes/StructurePass";
 import { TerrainPass } from "./passes/TerrainPass";
@@ -114,6 +116,7 @@ export class GPURenderer {
   private terrainPass: TerrainPass;
   private territoryPass: TerritoryPass;
   private trailPass: TrailPass;
+  private spiralRibbonPass: SpiralRibbonPass;
   private borderStampPass: BorderStampPass;
   private borderPass: BorderComputePass;
   private defenseCoveragePass: DefenseCoveragePass;
@@ -450,6 +453,9 @@ export class GPURenderer {
       this.settings,
     );
 
+    // --- Spiral nukeTrail ribbons (drawn above trails, below missiles) ---
+    this.spiralRibbonPass = new SpiralRibbonPass(gl, this.settings);
+
     // --- Border stamp (needs tileTex, paletteTex, borderTex) ---
     this.borderStampPass = new BorderStampPass(
       gl,
@@ -656,7 +662,7 @@ export class GPURenderer {
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
-    trailState: Uint32Array,
+    trailState: Uint16Array,
   ): void {
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
@@ -670,11 +676,16 @@ export class GPURenderer {
   }
 
   uploadLiveTrailDelta(
-    trailState: Uint32Array,
+    trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
     this.trailPass.applyLiveDelta(trailState, dirtyRowMin, dirtyRowMax);
+  }
+
+  /** Adopt this tick's spiral nukeTrail ribbons (live refs from SpiralTrails). */
+  updateSpiralRibbons(ribbons: readonly SpiralRibbon[]): void {
+    this.spiralRibbonPass.updateRibbons(ribbons);
   }
 
   /** Re-upload palette data to the GPU texture (e.g. when players appear after initial startup). */
@@ -702,23 +713,8 @@ export class GPURenderer {
     this.namePass.refreshPlayerColors(this.paletteData);
   }
 
-  /** Bounds of stamped spiral trail tiles — restricts the trail shader's gather. */
-  setSpiralTrailBounds(bounds: Int32Array): void {
-    this.trailPass.setSpiralBounds(bounds);
-  }
-
   /** Re-upload the per-player effect texture (style + colors by smallID). */
   updateEffectPalette(effectData: Float32Array): void {
-    // Spiral nuke trails need the trail shader's (comparatively expensive)
-    // neighborhood-gather reconstruction; keep it off unless some player's
-    // nukeTrail style is spiral (styleId 2 in the nuke block's row 1 alpha).
-    const styleRow = (MAX_TRAIL_COLORS + 1) * getPaletteSize() * 4;
-    for (let o = 0; o < getPaletteSize(); o++) {
-      if (Math.round(effectData[styleRow + o * 4 + 3]) === 2) {
-        this.trailPass.setSpiralActive(true);
-        break;
-      }
-    }
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
@@ -1286,6 +1282,9 @@ export class GPURenderer {
     this.moveIndicatorPass.draw(cam, zoom);
     this.nukeTelegraphPass.draw(cam);
     if (pe.trail) this.trailPass.draw(cam);
+    // Spiral vortexes sit above the plain trails, below the missiles that
+    // trail them. Skipped in alt view — the strategic overlay stays effects-free.
+    if (!this.altView) this.spiralRibbonPass.draw(cam);
     if (pe.unit) this.unitPass.drawMissiles(cam);
 
     if (pe.fx) {
@@ -1316,6 +1315,7 @@ export class GPURenderer {
     this.terrainPass.dispose();
     this.territoryPass.dispose();
     this.trailPass.dispose();
+    this.spiralRibbonPass.dispose();
     this.borderStampPass.dispose();
     this.borderPass.dispose();
     this.defenseCoveragePass.dispose();

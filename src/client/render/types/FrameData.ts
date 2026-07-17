@@ -1,3 +1,4 @@
+import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type { FrameEvents } from "./FrameEvents";
 import type {
   AttackRingInput,
@@ -22,7 +23,7 @@ export interface FrameData {
   /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
   readonly tileState: Uint16Array;
-  readonly trailState: Uint32Array;
+  readonly trailState: Uint16Array;
   readonly railroadState: Uint8Array;
   readonly units: ReadonlyMap<number, UnitState>;
   readonly players: ReadonlyMap<number, PlayerState>;
@@ -53,12 +54,11 @@ export interface FrameData {
   readonly trailDirtyRowMax: number;
 
   /**
-   * Live ref to TrailManager's spiral-tile bounds — [minX, minY, maxX, maxY]
-   * tile coords, empty when minX > maxX. The trail shader restricts its
-   * spiral gather to this box, so it costs nothing while no spiral nuke
-   * trail is stamped.
+   * Live spiral nukeTrail ribbons (helix polylines from SpiralTrails) —
+   * empty while no spiral-cosmetic nuke is in flight. Live ref, mutated in
+   * place each tick like the state buffers above.
    */
-  readonly spiralBounds: Int32Array;
+  readonly spiralRibbons: readonly SpiralRibbon[];
 
   // ── Derived (computed once by producer) ────────────────────────────────
 
