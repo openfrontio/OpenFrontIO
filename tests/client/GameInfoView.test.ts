@@ -30,6 +30,7 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
 });
 
 import { fetchGameById } from "../../src/client/Api";
+import { formatAbsoluteTime } from "../../src/client/components/baseComponents/stats/GameHistoryDates";
 import { GameInfoView } from "../../src/client/components/baseComponents/stats/GameInfoView";
 import { LangSelector } from "../../src/client/LangSelector";
 
@@ -137,8 +138,61 @@ describe("GameInfoView", () => {
     await waitForRender(view, () => {
       expect(view!.textContent).toContain(GameMapType.Montreal);
       expect(view!.querySelector("ranking-controls")).not.toBeNull();
-      expect(view!.querySelector("ranking-header")).not.toBeNull();
+      expect(view!.querySelector("section")?.getAttribute("aria-label")).toBe(
+        "game_info_modal.survival_time",
+      );
       expect(view!.querySelectorAll("player-row")).toHaveLength(1);
+    });
+  });
+
+  it("shows the game start using the history-card date format", async () => {
+    const session = makeSession("game-1", GameMapType.Montreal);
+    session.info.start = Date.UTC(2026, 3, 20, 16, 38, 22);
+    fetchMock.mockResolvedValue(session);
+    view = mountView("game-1");
+
+    const startDate = new Date(session.info.start).toISOString();
+    await waitForRender(view, () => {
+      const date = view!.querySelector<HTMLTimeElement>(
+        "[data-game-date] time",
+      );
+      expect(date?.dateTime).toBe(startDate);
+      expect(date?.textContent).toBe(formatAbsoluteTime(startDate));
+    });
+  });
+
+  it("uses a translated fallback for an unknown game type", async () => {
+    const session = makeSession("game-1", GameMapType.Montreal);
+    session.info.config.gameType = "future-game-type" as GameType;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("game-1");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain("game_info_modal.unknown_game_type");
+      expect(view!.textContent).not.toContain("future-game-type");
+    });
+  });
+
+  it("replaces a failed map image with the map fallback", async () => {
+    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
+    view = mountView("game-1");
+
+    await waitForRender(view, () => {
+      const image = view!.querySelector<HTMLImageElement>("[data-map-image]");
+      expect(image?.getAttribute("src")).toBe(
+        `/maps/${GameMapType.Montreal}.webp`,
+      );
+      expect(image?.alt).toBe(GameMapType.Montreal);
+      expect(view!.querySelector("[data-map-fallback]")).toBeNull();
+    });
+
+    view
+      .querySelector<HTMLImageElement>("[data-map-image]")!
+      .dispatchEvent(new Event("error"));
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-map-image]")).toBeNull();
+      expect(view!.querySelector("[data-map-fallback]")).not.toBeNull();
     });
   });
 
@@ -150,6 +204,7 @@ describe("GameInfoView", () => {
 
     await waitForRender(view, () => {
       expect(view!.textContent).toContain("game_info_modal.no_winner");
+      expect(view!.querySelector("[data-game-summary]")).not.toBeNull();
       expect(view!.querySelector("player-row")).toBeNull();
     });
   });
@@ -234,24 +289,19 @@ describe("GameInfoView", () => {
     expect(view.textContent?.trim()).toBe("");
   });
 
-  it("refreshes the stats view and translated ranking children", async () => {
+  it("refreshes the stats view and translated ranking controls", async () => {
     fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
     view = mountView("game-1");
 
     await waitForRender(view, () => {
       expect(view!.querySelector("ranking-controls")).not.toBeNull();
-      expect(view!.querySelector("ranking-header")).not.toBeNull();
     });
 
     const controls = view.querySelector<
       HTMLElement & { requestUpdate(): void }
     >("ranking-controls")!;
-    const header = view.querySelector<HTMLElement & { requestUpdate(): void }>(
-      "ranking-header",
-    )!;
     const viewUpdate = vi.spyOn(view, "requestUpdate");
     const controlsUpdate = vi.spyOn(controls, "requestUpdate");
-    const headerUpdate = vi.spyOn(header, "requestUpdate");
     const selector = new LangSelector();
     selector.translations = { "main.title": "OpenFront" };
     selector.defaultTranslations = selector.translations;
@@ -264,7 +314,6 @@ describe("GameInfoView", () => {
 
     expect(viewUpdate).toHaveBeenCalled();
     expect(controlsUpdate).toHaveBeenCalled();
-    expect(headerUpdate).toHaveBeenCalled();
   });
 
   it("ignores a stale response when a newer game resolves first", async () => {
