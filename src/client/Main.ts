@@ -33,6 +33,7 @@ import { FlagInputModal } from "./FlagInputModal";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
+import "./GameStatsModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
@@ -300,6 +301,10 @@ class Client {
     modalRouter.register("account", {
       tag: "account-modal",
       pageId: "page-account",
+    });
+    modalRouter.register("stats", {
+      tag: "game-stats-modal",
+      pageId: "page-stats",
     });
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
     modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });

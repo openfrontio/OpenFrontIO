@@ -1,4 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 vi.mock("../../src/client/Api", () => ({
   fetchPlayerById: vi.fn(async () => ({ stats: {} })),
@@ -114,7 +123,9 @@ vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 
 import { AccountModal } from "../../src/client/AccountModal";
 import { fetchPublicPlayerGames } from "../../src/client/Api";
+import { GameStatsModal } from "../../src/client/GameStatsModal";
 import { modalRouter } from "../../src/client/ModalRouter";
+import { initNavigation } from "../../src/client/Navigation";
 
 type ModalShell = HTMLElement & {
   getScrollTop(): number;
@@ -138,20 +149,66 @@ async function waitForModal(
   });
 }
 
+async function waitForStatsModal(
+  modal: GameStatsModal,
+  assertion: () => void,
+): Promise<void> {
+  await vi.waitFor(async () => {
+    await modal.updateComplete;
+    const shell = modal.querySelector("o-modal") as ModalShell | null;
+    await shell?.updateComplete;
+    assertion();
+  });
+}
+
 describe("Account Games stats navigation", () => {
   let modal: AccountModal;
+  let statsModal: GameStatsModal;
+  let playPage: HTMLElement;
+
+  beforeAll(() => {
+    playPage = document.createElement("div");
+    playPage.id = "page-play";
+    document.body.appendChild(playPage);
+    initNavigation();
+  });
+
+  afterAll(() => {
+    playPage.remove();
+  });
 
   beforeEach(async () => {
     vi.clearAllMocks();
     history.replaceState(null, "", "/");
-    modalRouter.register("account", { tag: "account-modal" });
+    modalRouter.register("account", {
+      tag: "account-modal",
+      pageId: "page-account",
+    });
+    modalRouter.register("stats", {
+      tag: "game-stats-modal",
+      pageId: "page-stats",
+    });
     if (!customElements.get("account-modal")) {
       customElements.define("account-modal", AccountModal);
     }
+    if (!customElements.get("game-stats-modal")) {
+      customElements.define("game-stats-modal", GameStatsModal);
+    }
     modal = document.createElement("account-modal") as AccountModal;
+    modal.id = "page-account";
+    modal.setAttribute("inline", "");
+    modal.className = "hidden page-content";
     document.body.appendChild(modal);
+
+    statsModal = document.createElement("game-stats-modal") as GameStatsModal;
+    statsModal.id = "page-stats";
+    statsModal.setAttribute("inline", "");
+    statsModal.className = "hidden page-content";
+    document.body.appendChild(statsModal);
+
     await modal.updateComplete;
-    modal.open();
+    await statsModal.updateComplete;
+    window.showPage?.("page-account");
     await waitForModal(modal, () => {
       const shell = modal.querySelector("o-modal") as ModalShell;
       expect(shell.shadowRoot?.textContent).toContain(
@@ -165,8 +222,9 @@ describe("Account Games stats navigation", () => {
   });
 
   afterEach(() => {
-    modal.close();
+    window.showPage?.("page-play");
     modal.remove();
+    statsModal.remove();
     history.replaceState(null, "", "/");
   });
 
@@ -179,20 +237,22 @@ describe("Account Games stats navigation", () => {
     );
     expect(statsButton).toBeTruthy();
     statsButton!.click();
-    await waitForModal(modal, () => {
-      expect(modal.querySelector("game-info-view")).not.toBeNull();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+      expect(statsModal.querySelector("game-info-view")).not.toBeNull();
     });
 
-    expect(modal.textContent).toContain("game_list.stats");
-    const statsView = modal.querySelector("game-info-view") as HTMLElement & {
-      gameId: string;
-    };
+    expect(modal.isOpen()).toBe(false);
+    expect(statsModal.textContent).toContain("game_list.stats");
+    const statsView = statsModal.querySelector(
+      "game-info-view",
+    ) as HTMLElement & { gameId: string };
     expect(statsView.gameId).toBe("game-1");
-    expect(shell.shadowRoot?.querySelector('[role="tablist"]')).toBeNull();
-    expect(shell.getScrollTop()).toBe(0);
-    expect(window.location.hash).toBe("#modal=account&gameID=game-1");
+    const statsShell = statsModal.querySelector("o-modal") as ModalShell;
+    expect(statsShell.shadowRoot?.querySelector('[role="tablist"]')).toBeNull();
+    expect(window.location.hash).toBe("#modal=stats&gameID=game-1");
 
-    const backButton = modal.querySelector(
+    const backButton = statsModal.querySelector(
       '[slot="header"] button',
     ) as HTMLButtonElement;
     backButton.click();
@@ -203,29 +263,5 @@ describe("Account Games stats navigation", () => {
     expect(window.location.hash).toBe("#modal=account&tab=games");
 
     expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
-  });
-
-  it("opens a gameID route directly and returns to Games", async () => {
-    modal.setActiveTab("account");
-    modal.close();
-    modal.open({ gameID: "game-1" });
-
-    await waitForModal(modal, () => {
-      const statsView = modal.querySelector("game-info-view") as
-        | (HTMLElement & { gameId: string })
-        | null;
-      expect(statsView?.gameId).toBe("game-1");
-    });
-    expect(window.location.hash).toBe("#modal=account&gameID=game-1");
-
-    const backButton = modal.querySelector(
-      '[slot="header"] button',
-    ) as HTMLButtonElement;
-    backButton.click();
-
-    await waitForModal(modal, () => {
-      expect(modal.querySelector("player-game-history-view")).not.toBeNull();
-    });
-    expect(window.location.hash).toBe("#modal=account&tab=games");
   });
 });

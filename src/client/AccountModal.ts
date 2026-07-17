@@ -19,7 +19,6 @@ import {
   sendMagicLink,
 } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
-import "./components/baseComponents/stats/GameInfoView";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
@@ -35,7 +34,6 @@ import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
-import { modalRouter } from "./ModalRouter";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -53,8 +51,8 @@ export class AccountModal extends BaseModal {
   private statsTree: PlayerStatsTree | null = null;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
-  @state() private selectedGameId: string | null = null;
   private gamesScrollTop = 0;
+  private restoreGamesScrollAfterOpen = false;
   private cosmetics: Cosmetics | null = null;
 
   constructor() {
@@ -105,14 +103,6 @@ export class AccountModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
-    if (this.selectedGameId) {
-      return modalHeader({
-        title: translateText("game_list.stats"),
-        onBack: () => this.backToGames(),
-        ariaLabel: translateText("common.back"),
-      });
-    }
-
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
@@ -154,9 +144,6 @@ export class AccountModal extends BaseModal {
     if (this.isLoadingUser || !this.isLinkedAccount()) {
       return {};
     }
-    if (this.selectedGameId) {
-      return {};
-    }
     return {
       tabs: [
         { key: "account", label: translateText("account_modal.tab_account") },
@@ -180,15 +167,6 @@ export class AccountModal extends BaseModal {
           ? this.renderCrazyGamesSignIn()
           : this.renderLoginOptions()}
       </div>`;
-    }
-    if (this.selectedGameId) {
-      return html`
-        <div class="custom-scrollbar mr-1">
-          <div class="p-6">
-            <game-info-view .gameId=${this.selectedGameId}></game-info-view>
-          </div>
-        </div>
-      `;
     }
     return html`
       <div class="custom-scrollbar mr-1">
@@ -602,15 +580,15 @@ export class AccountModal extends BaseModal {
 
   private openGameStats(gameId: string): void {
     this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
-    this.modalEl?.setScrollTop(0);
-    this.selectedGameId = gameId;
-    modalRouter.syncArgs(this.routerName, { tab: null, gameID: gameId });
+    const statsModal = document.querySelector<
+      HTMLElement & { openFromAccount(gameId: string): void }
+    >("game-stats-modal");
+    statsModal?.openFromAccount(gameId);
   }
 
-  private backToGames(): void {
-    this.selectedGameId = null;
-    modalRouter.syncArgs(this.routerName, { gameID: null, tab: "games" });
-    void this.restoreGamesScroll();
+  public returnToGames(): void {
+    this.restoreGamesScrollAfterOpen = true;
+    this.open({ tab: "games" });
   }
 
   private async restoreGamesScroll(): Promise<void> {
@@ -623,15 +601,20 @@ export class AccountModal extends BaseModal {
     this.modalEl?.setScrollTop(this.gamesScrollTop);
   }
 
-  private resetGameStatsNavigation(): void {
-    this.selectedGameId = null;
-    this.gamesScrollTop = 0;
+  private finishLoadingUser(): void {
+    this.isLoadingUser = false;
+    this.requestUpdate();
+    if (this.restoreGamesScrollAfterOpen) {
+      this.restoreGamesScrollAfterOpen = false;
+      void this.restoreGamesScroll();
+    }
   }
 
   private resetPlayerData(): void {
     this.statsTree = null;
     this.gameHistoryCache = null;
-    this.resetGameStatsNavigation();
+    this.gamesScrollTop = 0;
+    this.restoreGamesScrollAfterOpen = false;
   }
 
   private renderLogoutButton(): TemplateResult {
@@ -830,19 +813,6 @@ export class AccountModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    if (args !== undefined) {
-      const gameId =
-        typeof args.gameID === "string" && args.gameID.length > 0
-          ? args.gameID
-          : null;
-      this.resetGameStatsNavigation();
-      if (gameId) {
-        this.activeTab = "games";
-        this.selectedGameId = gameId;
-        this.modalEl?.setScrollTop(0);
-      }
-    }
-
     this.isLoadingUser = true;
     this.handleLinkResult(args);
 
@@ -861,19 +831,16 @@ export class AccountModal extends BaseModal {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
-        this.isLoadingUser = false;
-        this.requestUpdate();
+        this.finishLoadingUser();
       })
       .catch((err) => {
         console.warn("Failed to fetch user info in AccountModal.open():", err);
-        this.isLoadingUser = false;
-        this.requestUpdate();
+        this.finishLoadingUser();
       });
     this.requestUpdate();
   }
 
   protected onClose(): void {
-    this.resetGameStatsNavigation();
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );
