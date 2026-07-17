@@ -154,6 +154,41 @@ describe("GameInfoView", () => {
     });
   });
 
+  it("renders a fetch error and recovers when Retry succeeds", async () => {
+    const retry = deferred<AnalyticsRecord | false>();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      fetchMock
+        .mockRejectedValueOnce(new Error("network failure"))
+        .mockReturnValueOnce(retry.promise);
+      view = mountView("retry-game");
+
+      await waitForRender(view, () => {
+        expect(view!.textContent).toContain("game_info_modal.load_failed");
+        expect(view!.querySelector("button")?.textContent).toContain(
+          "game_info_modal.retry",
+        );
+      });
+
+      const retryButton = view.querySelector("button") as HTMLButtonElement;
+      retryButton.click();
+
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      expect(fetchMock).toHaveBeenNthCalledWith(2, "retry-game");
+
+      retry.resolve(makeSession("retry-game", GameMapType.Montreal));
+      await retry.promise;
+      await waitForRender(view, () => {
+        expect(view!.textContent).toContain(GameMapType.Montreal);
+        expect(view!.textContent).not.toContain("game_info_modal.load_failed");
+        expect(view!.querySelectorAll("player-row")).toHaveLength(1);
+      });
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("clears rendered game state when gameId becomes null", async () => {
     fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
     view = mountView("game-1");
