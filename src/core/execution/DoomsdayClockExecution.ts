@@ -1,6 +1,6 @@
 import {
   doomsdayClockDrain,
-  doomsdayClockSideRequiredTiles,
+  doomsdayClockRequiredTiles,
 } from "../game/DoomsdayClock";
 import {
   Execution,
@@ -16,6 +16,12 @@ import {
  * Doomsday Clock (anti-stall). Once armed, every side must hold a rising
  * share of the whole map: each player in FFA, each whole team in team modes (so
  * a team is judged on its combined territory and every member shares the fate).
+ * The bar is the SAME for every side regardless of headcount — the clock shrinks
+ * the number of viable SIDES, and sides are the unit of elimination/victory, so
+ * a team faces exactly the bar a solo player faces. (It was previously scaled by
+ * member count, which saturated at "hold the whole map" right after the grace in
+ * real team lobbies and dropped whenever a teammate died — deciding games at
+ * ~minute 12 on the slow preset instead of acting as a late-game backstop.)
  * The bar rises in discrete waves (battle-royale zone), stepping up to each
  * wave's level (chosen by the speed preset, see DoomsdayClock.ts) and holding. As
  * it rises the bottom is cut, which forces consolidation and guarantees a finish.
@@ -75,6 +81,8 @@ export class DoomsdayClockExecution implements Execution {
     }
 
     const land = mg.numLandTiles() - mg.numTilesWithFallout();
+    // One bar for every side this tick (solo or team — headcount never scales it).
+    const required = doomsdayClockRequiredTiles(cfg.speed, land, elapsed);
 
     // The leading side (the crown holder in FFA, the top team otherwise) is
     // never doomed. Doomsday Clock culls the challengers toward the leader, so the
@@ -92,14 +100,6 @@ export class DoomsdayClockExecution implements Execution {
 
     for (let i = 0; i < sides.length; i++) {
       const members = sides[i];
-      // Threshold scales with the side's headcount: a team of N must hold N× a
-      // solo player's share (FFA sides are size 1, unscaled).
-      const required = doomsdayClockSideRequiredTiles(
-        cfg.speed,
-        land,
-        elapsed,
-        members.length,
-      );
       // A non-leading side below the bar skulls and drains every member; the
       // leader (and any side above the bar) clears them all.
       if (i !== leaderIdx && sideTiles[i] < required) {
