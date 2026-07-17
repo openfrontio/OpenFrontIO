@@ -8,6 +8,9 @@ import {
 
 // Neutral fallback when a trail has no usable colors.
 const EMPTY_BG = "#444";
+// Spiral swatch backdrop — the app's recessed-surface navy (bg-surface); the
+// glow reads as emitted light only against a dark ground.
+const SPIRAL_BG = "#082f49";
 
 // Spiral swatch geometry: sine strands across a 100×48 viewBox, two full
 // waves wide, sampled every 4 units. Like in game, the strands converge into
@@ -43,10 +46,12 @@ function spiralStrandPath(phase: number): string {
  *   gradient — a multi-color list reads as a rainbow).
  * - transition: cross-fades through the colors over time, mirroring the trail
  *   (each color step lasts 1/frequency seconds, matching the shader).
- * - spiral: sine strands on a dark backdrop (the helix seen side-on) tapering
- *   into the nuke's side, colored around the vortex circumference; strands
- *   fade toward the backdrop and back in phase order, once per revolution
- *   (2π/rotationSpeed s) — the swatch's take on the in-game depth-shaded spin.
+ * - spiral: neon sine strands on a dark backdrop (the helix seen side-on)
+ *   tapering into the nuke's side. Mirrors the in-game glow split: a wide
+ *   screen-blended blur (the additive halo), a crisp colored core, and a
+ *   white-hot center line that only shows while the strand faces the viewer.
+ *   Strands dim toward the backdrop and back in phase order, once per
+ *   revolution (2π/rotationSpeed s) — the depth-shaded spin.
  */
 @customElement("trail-swatch")
 export class TrailSwatch extends LitElement {
@@ -68,7 +73,7 @@ export class TrailSwatch extends LitElement {
       const strands = Math.min(Math.max(Math.round(this.trail.strands), 1), 8);
       return html`<div
         class="w-full h-full rounded-md overflow-hidden"
-        style="background:${EMPTY_BG};"
+        style="background:${SPIRAL_BG};"
       >
         <svg
           class="w-full h-full"
@@ -78,23 +83,34 @@ export class TrailSwatch extends LitElement {
           ${Array.from({ length: strands }, (_, s) => {
             const d = spiralStrandPath((s * 2 * Math.PI) / strands);
             const color = colors[s % colors.length];
-            // Blurred wide stroke under the core = the in-game glow skirt.
+            // Glow halo (screen ≈ additive light) under a crisp core under a
+            // white-hot center — the in-game bloom split.
             return svg`<g data-strand>
               <path
                 d="${d}"
                 fill="none"
                 stroke="${color}"
-                stroke-width="9"
+                stroke-width="10"
                 stroke-linecap="round"
-                opacity="0.35"
-                style="filter:blur(2.5px)"
+                opacity="0.55"
+                style="filter:blur(3px);mix-blend-mode:screen"
               />
               <path
                 d="${d}"
                 fill="none"
                 stroke="${color}"
-                stroke-width="4"
+                stroke-width="3.5"
                 stroke-linecap="round"
+              />
+              <path
+                data-hot
+                d="${d}"
+                fill="none"
+                stroke="#fff"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                opacity="0.9"
+                style="filter:blur(0.3px)"
               />
             </g>`;
           })}
@@ -149,21 +165,34 @@ export class TrailSwatch extends LitElement {
     if (attrs?.type === "spiral") {
       if (attrs.rotationSpeed <= 0) return;
 
-      // The vortex spin: each strand group (glow + core) fades toward the
-      // backdrop and back once per revolution (2π/rotationSpeed s),
-      // phase-offset by its position around the axis — receding segments
-      // dim, facing ones bright, like the in-game depth shading.
+      // The vortex spin: each strand group (halo + core + hot line) dims
+      // toward the backdrop and back once per revolution (2π/rotationSpeed
+      // s), phase-offset by its position around the axis, and the white-hot
+      // center vanishes entirely while the strand recedes — facing strands
+      // read white-hot, receding ones dark, like the in-game depth shading.
       const strandGroups = this.querySelectorAll<SVGGElement>("[data-strand]");
       const periodMs = ((2 * Math.PI) / attrs.rotationSpeed) * 1000;
       strandGroups.forEach((group, s) => {
+        const delay = (-s * periodMs) / strandGroups.length;
         this.animations.push(
           group.animate([{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }], {
             duration: periodMs,
-            delay: (-s * periodMs) / strandGroups.length,
+            delay,
             iterations: Infinity,
             easing: "ease-in-out",
           }),
         );
+        const hot = group.querySelector<SVGPathElement>("[data-hot]");
+        if (hot) {
+          this.animations.push(
+            hot.animate([{ opacity: 0.9 }, { opacity: 0 }, { opacity: 0.9 }], {
+              duration: periodMs,
+              delay,
+              iterations: Infinity,
+              easing: "ease-in-out",
+            }),
+          );
+        }
       });
     }
   }
