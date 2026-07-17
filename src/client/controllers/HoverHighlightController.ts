@@ -14,6 +14,7 @@ import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
+import renderDefaults from "../render/gl/render-settings.json";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 import { GameView, UnitView } from "../view";
@@ -33,6 +34,13 @@ export class HoverHighlightController implements Controller {
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
   }
 
+  private navalHighlightEnabled(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.navalHighlight ??
+      renderDefaults.mapOverlay.navalHighlight
+    );
+  }
+
   private onMouseMove(e: MouseMoveEvent): void {
     const world = this.transformHandler.screenToWorldCoordinatesFloat(e.x, e.y);
     this.view.setMouseWorldPos(world.x, world.y);
@@ -45,7 +53,7 @@ export class HoverHighlightController implements Controller {
     const ref = this.game.ref(cell.x, cell.y);
     if (this.game.isLand(ref)) {
       ownerID = this.game.tileState(ref) & OWNER_MASK;
-    } else if (this.userSettings.navalHoverHighlight()) {
+    } else if (this.navalHighlightEnabled()) {
       // Avoid square root for performance; 50 tile radius = 2500 tiles²
       let closestUnit: UnitView | null = null;
       let closestDistSquared = 2500;

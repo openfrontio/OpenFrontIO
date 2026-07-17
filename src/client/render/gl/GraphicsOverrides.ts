@@ -24,6 +24,7 @@ export const GraphicsOverridesSchema = z
       .partial(),
     mapOverlay: z
       .object({
+        navalHighlight: z.boolean(),
         highlightFillBrighten: z.number(),
         highlightBrighten: z.number(),
         highlightThicken: z.number(),

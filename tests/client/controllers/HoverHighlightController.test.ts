@@ -76,7 +76,7 @@ describe("HoverHighlightController", () => {
       view,
     );
     // enable naval hover behavior
-    ui["userSettings"] = { navalHoverHighlight: () => true } as any;
+    ui["navalHighlightEnabled"] = () => true;
 
     ui.init();
     const handler = (eventBus.on as any).mock.calls[0][1];
@@ -99,7 +99,7 @@ describe("HoverHighlightController", () => {
       view,
     );
     // enable naval hover behavior
-    ui["userSettings"] = { navalHoverHighlight: () => true } as any;
+    ui["navalHighlightEnabled"] = () => true;
     ui["lastOwnerID"] = unit.owner().smallID() + 1; // set to a different owner ID to ensure it updates
 
     ui.init();

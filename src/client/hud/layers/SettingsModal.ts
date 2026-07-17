@@ -27,7 +27,6 @@ const sirenIcon = assetUrl("images/SirenIconWhite.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
 const musicIcon = assetUrl("images/music.svg");
-const boatIcon = assetUrl("images/BoatIconWhite.svg");
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -153,11 +152,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
-    this.requestUpdate();
-  }
-
-  private onToggleNavalHoverHighlight() {
-    this.userSettings.toggleNavalHoverHiglight();
     this.requestUpdate();
   }
 
@@ -536,26 +530,6 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.leftClickOpensMenu()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleNavalHoverHighlight}"
-            >
-              <img src=${boatIcon} alt="boatIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.naval_hover_highlight_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.naval_hover_highlight_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.navalHoverHighlight()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
