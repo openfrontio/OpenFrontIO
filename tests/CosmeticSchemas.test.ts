@@ -786,6 +786,52 @@ describe("effect selection slots", () => {
   });
 });
 
+describe("crowns in the cosmetics catalog", () => {
+  const goldCrown = {
+    name: "gold_crown",
+    url: "http://localhost:8787/public/cosmetics/crown/gold",
+    affiliateCode: null,
+    product: null,
+    priceHard: 5,
+    artist: "sadfas",
+    rarity: "common",
+  };
+
+  it("parses a crowns catalog entry", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      crowns: { gold_crown: goldCrown },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.crowns?.gold_crown?.name).toBe("gold_crown");
+      expect(result.data.crowns?.gold_crown?.url).toBe(
+        "http://localhost:8787/public/cosmetics/crown/gold",
+      );
+    }
+  });
+
+  it("parses a catalog without crowns (older cosmetics.json)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.crowns).toBeUndefined();
+    }
+  });
+
+  it("rejects a crown without a url", () => {
+    const noUrl = { ...goldCrown, url: undefined };
+    expect(
+      CosmeticsSchema.safeParse({
+        patterns: {},
+        flags: {},
+        crowns: { gold_crown: noUrl },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("SubscriptionSchema unlimitedRanked", () => {
   const base = {
     name: "gold",
@@ -795,6 +841,7 @@ describe("SubscriptionSchema unlimitedRanked", () => {
     priceMonthly: 5,
     dailySoftCurrency: 100,
     dailyHardCurrency: 10,
+    canCreatePublicLobbies: false,
   };
 
   it("rejects a tier without unlimitedRanked", () => {
@@ -815,6 +862,41 @@ describe("SubscriptionSchema unlimitedRanked", () => {
   it("rejects a non-boolean unlimitedRanked", () => {
     expect(
       SubscriptionSchema.safeParse({ ...base, unlimitedRanked: "yes" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("SubscriptionSchema canCreatePublicLobbies", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+    unlimitedRanked: false,
+  };
+
+  it("rejects a tier without canCreatePublicLobbies", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with canCreatePublicLobbies", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      canCreatePublicLobbies: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.canCreatePublicLobbies).toBe(true);
+    }
+  });
+
+  it("rejects a non-boolean canCreatePublicLobbies", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
+        .success,
     ).toBe(false);
   });
 });

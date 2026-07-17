@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { hasActiveSubscription } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -309,7 +308,7 @@ export async function startWorker() {
           );
           return res.status(403).json({ error: "subscription_required" });
         }
-        if (!hasActiveSubscription(userMe.response)) {
+        if (!userMe.response.player.canCreatePublicLobbies) {
           return res.status(403).json({ error: "subscription_required" });
         }
       }

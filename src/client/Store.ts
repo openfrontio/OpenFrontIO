@@ -19,7 +19,13 @@ import {
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
-type StoreTab = "patterns" | "flags" | "effects" | "packs" | "subscriptions";
+type StoreTab =
+  | "patterns"
+  | "flags"
+  | "crowns"
+  | "effects"
+  | "packs"
+  | "subscriptions";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -39,6 +45,7 @@ export class StoreModal extends BaseModal {
         { key: "subscriptions", label: translateText("store.subscriptions") },
         { key: "patterns", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
+        { key: "crowns", label: translateText("store.crowns") },
         { key: "effects", label: translateText("store.effects") },
       ],
     };
@@ -158,6 +165,44 @@ export class StoreModal extends BaseModal {
     `;
   }
 
+  private renderCrownGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        r.type === "crown" &&
+        r.relationship !== "blocked" &&
+        r.relationship !== "owned",
+    );
+
+    if (items.length === 0) {
+      return html`<div
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.no_crowns")}
+      </div>`;
+    }
+
+    const selectedCrown = new UserSettings().getSelectedCrownName() ?? "";
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .selected=${`crown:${selectedCrown}` === r.key}
+              .onPurchase=${purchaseCosmetic}
+            ></cosmetic-button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
@@ -249,6 +294,8 @@ export class StoreModal extends BaseModal {
         return this.renderPatternGrid();
       case "flags":
         return this.renderFlagGrid();
+      case "crowns":
+        return this.renderCrownGrid();
       case "effects":
         return this.renderEffectGrid();
       case "subscriptions":
@@ -269,6 +316,7 @@ export class StoreModal extends BaseModal {
         (r.type === "pattern" ||
           r.type === "skin" ||
           r.type === "flag" ||
+          r.type === "crown" ||
           r.type === "effect" ||
           r.type === "pack") &&
         r.relationship === "purchasable",

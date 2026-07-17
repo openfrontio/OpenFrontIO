@@ -8,7 +8,6 @@ import {
   showToast,
   translateText,
 } from "../client/Utils";
-import { hasActiveSubscription } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { EventBus } from "../core/EventBus";
 import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
@@ -108,8 +107,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyStartAt: number | null = null;
   @state() private serverTimeOffset: number = 0;
-  // Whether this user may actually make the lobby public (subscribers, or
-  // anyone in dev). The toggle itself is always shown.
+  // Whether this user may actually make the lobby public (the API's
+  // canCreatePublicLobbies entitlement, or anyone in dev). The toggle itself
+  // is always shown.
   @state() private canListPublicly: boolean = false;
   @state() private publiclyListed: boolean = false;
   @state() private showSubscriptionRequired: boolean = false;
@@ -653,11 +653,11 @@ export class HostLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = true;
     this.startLobbyUpdates();
     void getUserMe().then((userMe) => {
-      // Dev skips the subscription gate (matching the server) so the
+      // Dev skips the entitlement gate (matching the server) so the
       // listing flow is testable locally.
       this.canListPublicly =
         ClientEnv.env() === GameEnv.Dev ||
-        (userMe !== false && hasActiveSubscription(userMe));
+        (userMe !== false && userMe.player.canCreatePublicLobbies);
     });
 
     // Attach mode: the server already minted this successor lobby with us as

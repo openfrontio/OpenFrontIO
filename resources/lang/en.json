@@ -389,6 +389,7 @@
   "cosmetics": {
     "adfree": "ad-free for life!",
     "artist_label": "Artist:",
+    "button_title": "Pick your cosmetics!",
     "color_label": "Color:",
     "common": "Common",
     "epic": "Epic",
@@ -396,8 +397,11 @@
     "hard": "Plutonium",
     "legendary": "Legendary",
     "per_day": "/day",
+    "public_lobbies": "Create public lobbies",
     "rare": "Rare",
+    "search": "Search...",
     "soft": "Caps",
+    "title": "Cosmetics",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
     "usd_value": "Value: {usd}"
@@ -432,14 +436,11 @@
     "veryfast": "Very Fast"
   },
   "effects": {
-    "button_title": "Pick an effect!",
     "nukeType": {
       "atom": "Atom",
       "hydro": "Hydrogen",
       "mirvWarhead": "MIRV"
     },
-    "search": "Search...",
-    "title": "Effects",
     "type": {
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
@@ -1255,6 +1256,7 @@
     "disable_alliances_label": "Alliances",
     "doomsday_clock": "Doomsday Clock",
     "doomsday_clock_label": "Doomsday Clock",
+    "doomsday_clock_with_speed": "Doomsday Clock: {speed}",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "hard_nations": "Hard Nations",
     "nukes_disabled": "Nukes Disabled",
@@ -1353,12 +1355,14 @@
   "store": {
     "already_subscribed": "Already subscribed.",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
+    "change_tier_rate_limited": "You just changed tiers. Please wait a minute before changing again.",
     "change_tier_success": "Switched to {tier}.",
     "checkout_failed": "Failed to create checkout session.",
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
     "confirm_purchase_body": "Buy {item} for {amount, number} {currency}?",
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
+    "crowns": "Crowns",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
     "custom_amount": "Choose Amount",
     "custom_currency_purchase_success": "Plutonium purchase successful!",
@@ -1367,6 +1371,7 @@
     "insufficient_currency_body": "You need {amount, number} more {currency} to buy {item}.",
     "insufficient_currency_title": "Insufficient {currency}",
     "login_required": "You must be logged in to purchase with currency.",
+    "no_crowns": "No crowns available. Check back later for new items.",
     "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
@@ -1400,10 +1405,8 @@
     "pattern": {
       "default": "Default"
     },
-    "search": "Search...",
     "select_skin": "Skin",
-    "selected": "selected",
-    "title": "Skins"
+    "selected": "selected"
   },
   "token_login_modal": {
     "logging_in": "Logging in...",

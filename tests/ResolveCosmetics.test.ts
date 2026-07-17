@@ -24,6 +24,7 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
       publicId: "test",
       adfree: false,
       unlimitedRanked: false,
+      canCreatePublicLobbies: false,
       flares,
       achievements: { singleplayerMap: [] },
       friends: [],
@@ -291,6 +292,75 @@ describe("resolveCosmetics", () => {
       const result = resolveCosmetics(cosmetics, makeUserMe(), null);
       const flagItem = result.find((r) => r.key === "flag:cool_flag");
       expect(flagItem?.relationship).toBe("blocked");
+    });
+  });
+
+  describe("crowns", () => {
+    const crown = {
+      name: "gold_crown",
+      url: "http://localhost:8787/public/cosmetics/crown/gold",
+      affiliateCode: null,
+      product,
+      priceSoft: undefined,
+      priceHard: 5,
+      artist: "sadfas",
+      rarity: "common",
+    };
+
+    test("includes crowns with correct key", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(cosmetics, false, null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem).toBeDefined();
+      expect(crownItem?.cosmetic).toEqual(crown);
+      expect(crownItem?.colorPalette).toBeNull();
+    });
+
+    test("purchasable when user has no flares and priceHard exists", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(cosmetics, makeUserMe(), null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("purchasable");
+    });
+
+    test("owned with wildcard flare", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(cosmetics, makeUserMe(["crown:*"]), null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("owned");
+    });
+
+    test("owned with specific flare", () => {
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: crown as any },
+      });
+      const result = resolveCosmetics(
+        cosmetics,
+        makeUserMe(["crown:gold_crown"]),
+        null,
+      );
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("owned");
+    });
+
+    test("blocked with no product and no price", () => {
+      const freeCrown = {
+        ...crown,
+        product: null,
+        priceHard: undefined,
+      };
+      const cosmetics = makeCosmetics({
+        crowns: { gold_crown: freeCrown as any },
+      });
+      const result = resolveCosmetics(cosmetics, makeUserMe(), null);
+      const crownItem = result.find((r) => r.key === "crown:gold_crown");
+      expect(crownItem?.relationship).toBe("blocked");
     });
   });
 
