@@ -1,9 +1,10 @@
 #version 300 es
 precision highp float;
 
-// Composite the reduced-resolution spiral-trail buffer over the scene. The
-// buffer holds premultiplied alpha (blend with ONE, ONE_MINUS_SRC_ALPHA);
-// bilinear upsampling supplies the soft, glowy edges.
+// Composite the reduced-resolution spiral halo buffer over the scene. The
+// buffer holds premultiplied color; the composite blends ADDITIVELY
+// (ONE, ONE) so the halo reads as emitted light, and bilinear upsampling
+// keeps it soft. The sharp core ribbons draw above this at full resolution.
 
 uniform sampler2D uTex;
 

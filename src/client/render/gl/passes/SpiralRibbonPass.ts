@@ -10,11 +10,13 @@
  * One draw per strand (≤ MAX_TRAIL_STRANDS) reuses the same strip with a
  * different uPhase0.
  *
- * Ribbons render into a reduced-resolution offscreen buffer
- * (spiralResolutionScale) that is bilinearly composited (premultiplied) over
- * the scene — this cuts fragment cost by the scale factor squared and gives
- * the strands their soft, glowy look. Everything is skipped CPU-side while
- * no spiral nuke is in flight.
+ * The glow look is a two-pass split: the soft halo renders into a
+ * reduced-resolution offscreen buffer (spiralResolutionScale — cuts its
+ * fragment cost by the scale factor squared, and the bilinear upsample keeps
+ * it soft) composited ADDITIVELY over the scene like emitted light; the
+ * sharp core ribbons then draw on top at full resolution, so the strands
+ * stay crisp instead of inheriting the upsample blur. Everything is skipped
+ * CPU-side while no spiral nuke is in flight.
  */
 
 import type { SpiralRibbon } from "../../frame/SpiralTrails";
@@ -29,9 +31,11 @@ import fullscreenVertSrc from "../shaders/shared/fullscreen.vert.glsl?raw";
 
 // Strip vertex: cx, cy, px, py, d, side.
 const VERT_FLOATS = 6;
-// Strip half-width in tiles — must cover the fragment shader's glow skirt
-// (GLOW_OUT 2.4) with a little slack so the falloff reaches zero inside it.
-const HALF_WIDTH = 2.6;
+// Strip half-widths in tiles per pass — each must cover its profile in the
+// fragment shader (core: RIB_OUT 1.0; halo: GLOW_OUT 3.0) with slack so the
+// falloff reaches zero inside the strip.
+const CORE_HALF_WIDTH = 1.2;
+const GLOW_HALF_WIDTH = 3.2;
 const TAU = 2 * Math.PI;
 
 interface RibbonBuffers {
@@ -58,6 +62,7 @@ export class SpiralRibbonPass {
   private uTrailAlpha: WebGLUniformLocation;
   private uColorCount: WebGLUniformLocation;
   private uColors: WebGLUniformLocation;
+  private uCorePass: WebGLUniformLocation;
 
   private compositeProgram: WebGLProgram;
   private fsQuadVao: WebGLVertexArrayObject;
@@ -94,6 +99,7 @@ export class SpiralRibbonPass {
     this.uTrailAlpha = u("uTrailAlpha");
     this.uColorCount = u("uColorCount");
     this.uColors = u("uColors");
+    this.uCorePass = u("uCorePass");
 
     // Composite: fullscreen quad sampling the ribbon buffer (unit 0).
     this.compositeProgram = createProgram(
@@ -206,8 +212,9 @@ export class SpiralRibbonPass {
   }
 
   /**
-   * Render the ribbons into the reduced-resolution buffer and composite it
-   * over the scene. No-op while no spiral nuke is in flight.
+   * Draw the vortexes: the soft halo (reduced-resolution buffer, composited
+   * additively so it reads as emitted light), then the sharp full-resolution
+   * core ribbons on top. No-op while no spiral nuke is in flight.
    */
   draw(cameraMatrix: Float32Array): void {
     let anyStrip = false;
@@ -220,6 +227,7 @@ export class SpiralRibbonPass {
     if (!anyStrip) return;
     this.renderBuffer(cameraMatrix);
     this.composite();
+    this.drawCores(cameraMatrix);
   }
 
   /** (Re)create the render target at the current scaled canvas size. */
@@ -278,12 +286,32 @@ export class SpiralRibbonPass {
     gl.viewport(0, 0, w, h);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    // Strand crossings accumulate premultiplied-over within the buffer.
+    // Halo crossings accumulate premultiplied-over within the buffer (bounded
+    // — the additive step to the scene happens once, at composite).
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    this.drawStrips(cameraMatrix, 0, GLOW_HALF_WIDTH);
 
+    gl.bindFramebuffer(gl.FRAMEBUFFER, prevFbo);
+    gl.viewport(
+      prevViewport[0],
+      prevViewport[1],
+      prevViewport[2],
+      prevViewport[3],
+    );
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // restore overlay default
+  }
+
+  /** Draw every ribbon's strands once with the given pass mode + strip width. */
+  private drawStrips(
+    cameraMatrix: Float32Array,
+    corePass: number,
+    halfWidth: number,
+  ): void {
+    const gl = this.gl;
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
-    gl.uniform1f(this.uHalfWidth, HALF_WIDTH);
+    gl.uniform1i(this.uCorePass, corePass);
+    gl.uniform1f(this.uHalfWidth, halfWidth);
     gl.uniform1f(this.uTime, (performance.now() - this.startTime) / 1000);
     gl.uniform1f(this.uTrailAlpha, this.settings.mapOverlay.trailAlpha);
 
@@ -311,26 +339,27 @@ export class SpiralRibbonPass {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, verts);
       }
     }
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, prevFbo);
-    gl.viewport(
-      prevViewport[0],
-      prevViewport[1],
-      prevViewport[2],
-      prevViewport[3],
-    );
   }
 
-  /** Bilinearly composite the ribbon buffer over the scene (premultiplied). */
+  /**
+   * Additively composite the halo buffer over the scene — light adds, so the
+   * vortex brightens what's beneath instead of veiling it, and the bilinear
+   * upsample keeps it soft.
+   */
   private composite(): void {
     const gl = this.gl;
     gl.useProgram(this.compositeProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fboTex);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.blendFunc(gl.ONE, gl.ONE);
     gl.bindVertexArray(this.fsQuadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // restore overlay default
+  }
+
+  /** The sharp cores, full resolution, straight-alpha over the halo. */
+  private drawCores(cameraMatrix: Float32Array): void {
+    this.drawStrips(cameraMatrix, 1, CORE_HALF_WIDTH);
   }
 
   dispose(): void {
