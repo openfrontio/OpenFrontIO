@@ -546,10 +546,8 @@
   "game_info_modal": {
     "all_gold": "All gold",
     "atoms": "Atoms",
-    "bombs": "Bombs",
     "conquered": "Conquered",
     "conquest_gold": "Conquered player gold",
-    "conquests": "Conquests",
     "duration": "Duration",
     "economy": "Economy",
     "hydros": "Hydros",
@@ -560,14 +558,15 @@
     "no_winner": "This game ended with no winner (or a Nation won)",
     "num_of_conquests_bots": "Tribe kills",
     "num_of_conquests_humans": "Player kills",
+    "num_of_conquests_nations": "Nation kills",
     "pirate": "Pirate",
     "players": "Players",
     "retry": "Retry",
     "stolen_gold": "Stolen with warships",
     "survival_time": "Survival time",
     "total_gold": "Total",
-    "trade": "Trade",
     "train_trade": "Train",
+    "unknown_game_type": "Unknown game type",
     "war": "War"
   },
   "game_list": {
