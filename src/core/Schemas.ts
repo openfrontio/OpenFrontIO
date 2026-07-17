@@ -947,6 +947,10 @@ const ArchivedPlayerRecordSchema = PlayerRecordSchema.extend({
 export const ArchivedAnalyticsRecordSchema = AnalyticsRecordSchema.extend({
   info: GameEndInfoSchema.extend({
     config: GameConfigSchema.extend({
+      gameMap: z.preprocess(
+        (value) => (typeof value === "string" ? value.trim() : value),
+        GameConfigSchema.shape.gameMap,
+      ),
       // predates configurable nation count
       nations: GameConfigSchema.shape.nations
         .catch("default")

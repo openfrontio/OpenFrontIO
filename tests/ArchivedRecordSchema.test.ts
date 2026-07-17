@@ -95,4 +95,15 @@ describe("ArchivedAnalyticsRecordSchema", () => {
     expect(result.data.info.players[0].clanTag).toBe("ABC");
     expect(result.data.info.players[0].stats?.conquests).toEqual([1n, 2n, 0n]);
   });
+
+  test("normalizes accidental whitespace around an archived map name", () => {
+    const record = oldRecord();
+    record.info.config.gameMap = "Deglaciated Antarctica ";
+
+    const result = ArchivedAnalyticsRecordSchema.safeParse(record);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.info.config.gameMap).toBe("Deglaciated Antarctica");
+  });
 });
