@@ -66,6 +66,44 @@ export async function fetchPlayerById(
   }
 }
 
+// GET /public/player/:publicId — public player profile (stats tree). No auth,
+// so logged-out visitors can view shared profiles.
+export async function fetchPublicPlayerProfile(
+  publicId: string,
+): Promise<PlayerProfile | false> {
+  try {
+    const url = `${getApiBase()}/public/player/${encodeURIComponent(publicId)}`;
+
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (res.status !== 200) {
+      console.warn(
+        "fetchPublicPlayerProfile: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = PlayerProfileSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn(
+        "fetchPublicPlayerProfile: Zod validation failed",
+        parsed.error,
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchPublicPlayerProfile: request failed", err);
+    return false;
+  }
+}
+
 // GET /public/player/:publicId/games — keyset-paginated personal game history.
 // Public (no auth). `filter` (mode bucket) and `type` (game-type split) are
 // orthogonal; `cursor` is the opaque token from the previous response's

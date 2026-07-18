@@ -378,6 +378,7 @@ export function renderMemberStats(
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
+  onViewProfile?: (publicId: string) => void,
 ): TemplateResult {
   const isMe = member.publicId === myPublicId;
   return html`
@@ -407,12 +408,24 @@ export function renderMemberRow(
                 .showCopyIcon=${false}
               ></copy-button>
             </div>
-            <span
-              class="text-white/30 text-[10px] shrink-0 text-right whitespace-nowrap"
-              >${translateText("clan_modal.joined_date", {
-                date: formatClanDate(member.joinedAt),
-              })}</span
-            >
+            <div class="flex items-center gap-2 shrink-0">
+              <span
+                class="text-white/30 text-[10px] text-right whitespace-nowrap"
+                >${translateText("clan_modal.joined_date", {
+                  date: formatClanDate(member.joinedAt),
+                })}</span
+              >
+              ${onViewProfile
+                ? html`<button
+                    class="shrink-0 px-1.5 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                    title=${translateText("player_profile.view")}
+                    aria-label=${translateText("player_profile.view")}
+                    @click=${() => onViewProfile(member.publicId)}
+                  >
+                    📊
+                  </button>`
+                : ""}
+            </div>
           </div>
         </div>
       </div>

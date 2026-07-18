@@ -444,6 +444,8 @@ export class ClanModal extends BaseModal {
             pendingRequestCount: e.detail.pendingRequestCount,
           };
         }}
+        @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+          this.openPlayerProfile(e.detail.publicId)}
         @navigate-manage=${() => (this.view = "manage")}
         @navigate-requests=${() => (this.view = "requests")}
         @clan-joined=${(e: CustomEvent<{ tag: string }>) => {
@@ -530,6 +532,30 @@ export class ClanModal extends BaseModal {
     } finally {
       this.preserveStateForGameStats = false;
     }
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromClan(publicId: string): void }
+    >("player-profile-modal");
+    if (!profileModal) return;
+
+    // Same handoff as openGameStats: keep clan state so the profile modal's
+    // back button can land on the members tab without a refetch.
+    this.preserveStateForGameStats = true;
+    try {
+      profileModal.openFromClan(publicId);
+    } finally {
+      this.preserveStateForGameStats = false;
+    }
+  }
+
+  public returnToMembers(): void {
+    const tag = this.selectedClanTag;
+    if (!tag) return;
+
+    this.returningFromGameStats = true;
+    this.open({ clan: tag, tab: "members" });
   }
 
   public returnToGameHistory(): void {
