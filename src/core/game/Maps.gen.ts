@@ -72,6 +72,7 @@ export enum GameMapType {
   MilkyWay = "MilkyWay", // map-generator/assets/maps/milkyway/info.json
   MississippiRiver = "Mississippi River", // map-generator/assets/maps/mississippiriver/info.json
   Montreal = "Montreal", // map-generator/assets/maps/montreal/info.json
+  MoreThanLuck = "More Than Luck", // map-generator/assets/maps/morethanluck/info.json
   NewYorkCity = "New York City", // map-generator/assets/maps/newyorkcity/info.json
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
@@ -669,6 +670,14 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.montreal",
     categories: ["north_america"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "MoreThanLuck",
+    type: GameMapType.MoreThanLuck,
+    translationKey: "map.morethanluck",
+    categories: ["arcade", "fictional", "new"],
+    multiplayerFrequency: 7,
+    specialTeamCount: 5,
   },
   {
     id: "NewYorkCity",
