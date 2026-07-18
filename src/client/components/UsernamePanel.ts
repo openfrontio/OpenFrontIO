@@ -87,8 +87,8 @@ export class UsernamePanel extends LitElement {
 
     const base = this.player.usernameBase;
     const warnings = [translateText("account_modal.username_confirm_body")];
-    // A case-only (or identical) resubmission still counts as a full rename:
-    // the tag re-rolls and the cooldown restarts.
+    // A case-only (or identical) resubmission still counts as a full rename
+    // and restarts the cooldown.
     if (base !== null && base !== undefined) {
       if (name.toLowerCase() === base.toLowerCase()) {
         warnings.push(
