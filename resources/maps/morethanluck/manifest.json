@@ -1102,11 +1102,7 @@
       "name": "0-0-6-9"
     }
   ],
-  "categories": [
-    "arcade",
-    "fictional",
-    "new"
-  ],
+  "categories": ["arcade", "fictional", "new"],
   "id": "MoreThanLuck",
   "map": {
     "height": 1344,
