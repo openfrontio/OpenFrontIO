@@ -522,6 +522,27 @@ describe("MasterLobbyService hosted lobbies", () => {
     ]);
   });
 
+  it("keeps the valid lobbies when a report contains a malformed entry", () => {
+    const { service, workers } = createService();
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [
+        // Missing publicGameType, like a matchmaking game reported by
+        // mistake. It must be dropped without discarding the whole report.
+        { gameID: "bad", numClients: 0 },
+        hostedLobby("ok", "creator-a"),
+      ],
+    });
+
+    (service as any).broadcastLobbies();
+
+    const broadcast = sentMessages(workers[0]).find(
+      (m) => m.type === "lobbiesBroadcast",
+    );
+    const hosted = broadcast.publicGames.games.hosted;
+    expect(hosted.map((l: InternalGameInfo) => l.gameID)).toEqual(["ok"]);
+  });
+
   it("delists a dedup loser only after two consecutive losing broadcasts", () => {
     const { service, workers } = createService();
     workers[0].emit("message", {
@@ -693,6 +714,35 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
     expect(reported.gameConfig.hostCheats).toBeUndefined();
+  });
+
+  it("excludes matchmaking games (Public but no publicGameType) from the report", () => {
+    const ranked = new GameServer(
+      "ranked-g1",
+      mockLogger,
+      Date.now(),
+      { gameType: GameType.Public, allowedPublicIds: ["p1", "p2"] } as any,
+      undefined,
+      Date.now() + 7000,
+      undefined, // matchmaking games are created without a publicGameType
+    );
+    const ffa = new GameServer(
+      "ffa-g1",
+      mockLogger,
+      Date.now(),
+      { gameType: GameType.Public } as any,
+      undefined,
+      undefined,
+      "ffa",
+    );
+    gm.publicLobbies.mockReturnValue([ranked, ffa]);
+
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+
+    const lobbyList = sendToMaster.mock.calls
+      .map((c: any[]) => c[0])
+      .find((m: any) => m.type === "lobbyList");
+    expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
   });
 
   it("strips creatorID from broadcasts and primed snapshots sent to clients", () => {
