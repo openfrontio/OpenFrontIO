@@ -57,8 +57,6 @@ export class SmallPlayerGlowPass {
   private dirty = false; // aura needs rebuilding (set changed)
   private animTime = 0;
   private lastTime = 0;
-  private lastPasses = 1; // last width the aura was blurred at (to detect change)
-  private glowStrength = 1; // pushed via setGlowStrength; 0 = off, 1 = default, capped at 5
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -123,16 +121,6 @@ export class SmallPlayerGlowPass {
     this.quadVao = createFullscreenQuad(gl);
   }
 
-  /**
-   * Push the glow Strength (0 = off, 1 = default, capped at 5). The client reads
-   * it from UserSettings and pushes it here so the pass stays a pure consumer
-   * (passes never read game/DOM state directly); pushing on the settings-changed
-   * event keeps it live even while the settings modal has the sim paused.
-   */
-  setGlowStrength(strength: number): void {
-    this.glowStrength = strength;
-  }
-
   /** Push the highlight set (1 byte per owner smallID), or null to disable. */
   update(set: Uint8Array | null): void {
     if (set === null) {
@@ -156,13 +144,6 @@ export class SmallPlayerGlowPass {
     this.dirty = true;
   }
 
-  // Strength (0 = off, 1 = default width) -> blur iterations; each iteration
-  // widens the Gaussian aura. Non-linear so the slider ramps gently low and
-  // grows fast toward the top: 500% ≈ 82 passes (very wide). Clamped for perf.
-  private passesFor(strength: number): number {
-    return Math.min(96, Math.max(1, Math.round(strength ** 2.74)));
-  }
-
   // One separable-blur axis: sample `src`, write the blurred result into `dst`.
   private blurAxis(
     src: RenderTarget,
@@ -180,9 +161,11 @@ export class SmallPlayerGlowPass {
   }
 
   draw(cameraMatrix: Float32Array): void {
-    // Strength is pushed by the client (not tick-gated), so a slider change is
-    // live even while the sim is paused (e.g. the settings modal is open).
-    const strength = this.glowStrength;
+    // Strength is a graphics override read from the live settings slice each
+    // frame (not tick-gated), so a slider change is live even while the sim is
+    // paused (e.g. the graphics settings modal is open). Clamped to 1 so a
+    // value persisted from the old 500% range can't over-brighten.
+    const strength = Math.min(1, this.settings.strength);
     if (!this.active || strength <= 0) return;
 
     const gl = this.gl;
@@ -199,11 +182,6 @@ export class SmallPlayerGlowPass {
     }
     this.lastTime = now;
     const pulse = 0.5 + 0.5 * Math.sin(this.animTime);
-    const passes = this.passesFor(strength);
-    if (passes !== this.lastPasses) {
-      this.dirty = true; // width changed -> rebuild the aura this frame
-      this.lastPasses = passes;
-    }
 
     // Rebuild the blurred aura only when the set changed (~1/s); its inputs
     // don't move faster than that. The composite below still runs every frame.
@@ -222,14 +200,11 @@ export class SmallPlayerGlowPass {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       });
 
-      // Separable blur, iterated `passes` times to widen the aura (more
-      // iterations = wider Gaussian). Each pass: horizontal A->B, vertical B->A.
+      // Separable blur: horizontal A->B, then vertical B->A.
       gl.useProgram(this.blurProg);
       gl.activeTexture(gl.TEXTURE0);
-      for (let k = 0; k < passes; k++) {
-        this.blurAxis(a, b, 1 / a.w, 0); // horizontal A->B
-        this.blurAxis(b, a, 0, 1 / b.h); // vertical B->A
-      }
+      this.blurAxis(a, b, 1 / a.w, 0); // horizontal A->B
+      this.blurAxis(b, a, 0, 1 / b.h); // vertical B->A
       this.dirty = false;
     }
 
@@ -243,9 +218,9 @@ export class SmallPlayerGlowPass {
       gl.uniformMatrix3fv(this.uCompositeCam, false, cameraMatrix);
       gl.uniform2f(this.uCompositeMapSize, this.mapW, this.mapH);
       gl.uniform3fv(this.uGlowColor, s.color);
-      // Widening spreads the mask thinner, so scale intensity up to keep the
-      // glow about as bright (wider, not darker), capped by the shader's alpha.
-      gl.uniform1f(this.uIntensity, s.alpha * pulse * Math.sqrt(passes));
+      // Strength fades the glow linearly: 1 = the aura's full alpha, 0.1 =
+      // barely visible.
+      gl.uniform1f(this.uIntensity, s.alpha * pulse * strength);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, a.tex);
       gl.bindVertexArray(this.mapVao);

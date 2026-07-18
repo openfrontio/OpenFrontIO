@@ -85,6 +85,9 @@ export function applyGraphicsOverrides(
   if (overrides.railroad?.railThickness !== undefined) {
     settings.railroad.railThickness = overrides.railroad.railThickness;
   }
+  if (overrides.smallPlayerGlow?.strength !== undefined) {
+    settings.smallPlayerGlow.strength = overrides.smallPlayerGlow.strength;
+  }
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
   }
