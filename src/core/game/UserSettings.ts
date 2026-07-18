@@ -54,6 +54,7 @@ export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
  */
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
+export const CROWN_KEY = "crown";
 export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
@@ -139,13 +140,6 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
-  highlightGlowStrength() {
-    // 0 = off, 1 = default; capped at 5 (the 500% slider max) so a value
-    // persisted from an older, larger range can't display/apply above it.
-    const v = this.getFloat("settings.highlightGlowStrength", 1);
-    return Math.min(5, Math.max(0, v));
-  }
-
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
@@ -196,10 +190,6 @@ export class UserSettings {
 
   toggleEmojis() {
     this.setBool("settings.emojis", !this.emojis());
-  }
-
-  setHighlightGlowStrength(value: number) {
-    this.setFloat("settings.highlightGlowStrength", value);
   }
 
   // Performance overlay specifically needs a direct setter for Shift-D
@@ -299,6 +289,25 @@ export class UserSettings {
     if (data === null) return null;
     const skinPrefix = "skin:";
     return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
+  }
+
+  // For development only. Crown image URL for testing, set in the console
+  // manually (localStorage "dev-crown"), like getDevOnlyPattern.
+  getDevOnlyCrown(): string | undefined {
+    return localStorage.getItem("dev-crown") ?? undefined;
+  }
+
+  /** Returns the selected crown name, or null if none is selected. */
+  getSelectedCrownName(): string | null {
+    return this.getCached(CROWN_KEY);
+  }
+
+  setSelectedCrownName(name: string | undefined): void {
+    if (name === undefined) {
+      this.removeCached(CROWN_KEY);
+    } else {
+      this.setCached(CROWN_KEY, name);
+    }
   }
 
   getFlag(): string | null {

@@ -198,7 +198,7 @@ export const ClanGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
   durationSeconds: z.number().int().nonnegative(),
-  map: z.string().optional(),
+  map: z.string().trim().optional(),
   mode: z.string().optional(),
   // playerTeams is `null` (not absent) for FFA / non-team games — use
   // `.nullish()` so the wire `null` doesn't fail the parse.

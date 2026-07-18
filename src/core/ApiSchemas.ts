@@ -120,6 +120,9 @@ export const UserMeResponseSchema = z.object({
     // True when the player's active subscription tier exempts them from the
     // free-ranked-play limits.
     unlimitedRanked: z.boolean(),
+    // True when the player may list a custom lobby publicly. The API decides
+    // which subscriptions/grants confer this.
+    canCreatePublicLobbies: z.boolean(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
@@ -187,13 +190,6 @@ export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
 
-// Whether the player currently has subscriber entitlements (e.g. may list a
-// private lobby publicly). Trialing counts; past_due/canceled do not.
-export function hasActiveSubscription(userMe: UserMeResponse): boolean {
-  const status = userMe.player.subscription?.status;
-  return status === "active" || status === "trialing";
-}
-
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,
@@ -250,7 +246,7 @@ export const PublicPlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
   durationSeconds: z.number().int().nonnegative(),
-  map: z.string(),
+  map: z.string().trim(),
   mode: z.string(),
   type: z.string(),
   playerTeams: z.string().nullable(),

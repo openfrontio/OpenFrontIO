@@ -12,6 +12,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -35,10 +36,6 @@ import type { RenderSettings } from "./RenderSettings";
 export class MapRenderer {
   private renderer: GPURenderer | null = null;
   private resizeObs: ResizeObserver | null = null;
-  // Persisted so a WebGL context restore (which recreates GPURenderer via
-  // initRenderer) reapplies the user's chosen glow strength instead of
-  // resetting it to the pass default until the next settings change.
-  private smallPlayerGlowStrength = 1;
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -95,8 +92,6 @@ export class MapRenderer {
 
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
-    // Reapply state that lives outside RenderSettings so it survives a restore.
-    this.renderer.setSmallPlayerGlowStrength(this.smallPlayerGlowStrength);
   };
 
   private handleContextLost = (e: Event) => {
@@ -148,6 +143,9 @@ export class MapRenderer {
     trailState: Uint16Array,
   ): void {
     this.renderer?.uploadTileAndTrailState(tileState, trailState);
+  }
+  updateSpiralRibbons(ribbons: readonly SpiralRibbon[]): void {
+    this.renderer?.updateSpiralRibbons(ribbons);
   }
   updatePalette(paletteData: Float32Array): void {
     this.renderer?.updatePalette(paletteData);
@@ -248,12 +246,6 @@ export class MapRenderer {
   /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
   updateSmallPlayerGlow(set: Uint8Array | null): void {
     this.renderer?.updateSmallPlayerGlow(set);
-  }
-
-  /** Set the small-player glow Strength (0 = off, 1 = default, capped at 5). */
-  setSmallPlayerGlowStrength(strength: number): void {
-    this.smallPlayerGlowStrength = strength;
-    this.renderer?.setSmallPlayerGlowStrength(strength);
   }
 
   // ---- Selection box ----

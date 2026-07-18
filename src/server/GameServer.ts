@@ -6,7 +6,7 @@ import { z } from "zod";
 import { anonAnimalName } from "../core/AnonAnimals";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -1020,16 +1020,28 @@ export class GameServer {
   // clients desync. Only the username of players this viewer can't see is
   // anonymized, and their cosmetics hidden, neither of which the simulation
   // reads.
-  private startInfoFor(viewer: ClientID): GameStartInfo {
-    if (!this.gameConfig.anonymizeNames) return this.wireGameStartInfo;
+  //
+  // Exception: admins in FFA get the real clan tags (the display pipeline then
+  // shows them everywhere) so they can spot teaming live. Safe ONLY in FFA —
+  // that mode never runs assignTeams, so clanTag never reaches the simulation,
+  // and the desync hash (Player.hash) excludes names. Gated on FFA, NOT
+  // disableClanTags: a Team game with tags disabled DOES assign teams by
+  // clanTag, so a per-viewer reveal there would desync.
+  private startInfoFor(viewer: ClientID, isAdmin: boolean): GameStartInfo {
+    const revealClanTags = isAdmin && this.gameConfig.gameMode === GameMode.FFA;
+    if (!this.gameConfig.anonymizeNames) {
+      return revealClanTags ? this.gameStartInfo : this.wireGameStartInfo;
+    }
     return {
       ...this.wireGameStartInfo,
-      players: this.wireGameStartInfo.players.map((p) => {
+      players: this.wireGameStartInfo.players.map((p, i) => {
         const real = this.seesReal(viewer, p.clientID);
         return {
           ...p,
           username: real ? p.username : this.anonName(viewer, p.clientID),
-          clanTag: null,
+          clanTag: revealClanTags
+            ? this.gameStartInfo.players[i].clanTag
+            : null,
           friends: undefined,
           cosmetics: real ? p.cosmetics : undefined,
         };
@@ -1063,7 +1075,10 @@ export class GameServer {
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.startInfoFor(client.clientID),
+          gameStartInfo: this.startInfoFor(
+            client.clientID,
+            isAdminRole(client.role),
+          ),
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
@@ -1661,6 +1676,10 @@ export class GameServer {
   // current connection status. null until the first consensus.
   public liveStats(): {
     turn: number;
+    // The winner's clientID once the game is decided (player win), else null.
+    // Server-side (from the winner vote), so the live board can seat the winner
+    // without waiting for the post-game record.
+    winner: string | null;
     players: (PlayerLiveStats & {
       username: string | null;
       publicID: string | null;
@@ -1670,8 +1689,10 @@ export class GameServer {
     if (this.latestLiveStats === null) {
       return null;
     }
+    const w = this.winner?.winner;
     return {
       turn: this.latestLiveStats.turn,
+      winner: w?.[0] === "player" ? w[1] : null,
       players: this.latestLiveStats.players.map((p) => {
         const client = this.allClients.get(p.clientID);
         return {
