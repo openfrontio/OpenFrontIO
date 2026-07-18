@@ -110,7 +110,7 @@ class SAMTargetingSystem {
     const rangeSquared = range * range;
 
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().maxSamRange() * 4;
+    const detectionRange = this.mg.config().maxSamRange() * 2;
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
@@ -206,7 +206,6 @@ export class SAMLauncherExecution implements Execution {
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
-  private MIRVWarheadProtectionRadius = 50;
   private targetingSystem: SAMTargetingSystem;
 
   private pseudoRandom: PseudoRandom | undefined;
