@@ -314,6 +314,7 @@ export async function claimAllRewards(): Promise<
 export async function createCheckoutSession(
   priceId: string,
   colorPaletteName?: string,
+  giftRecipientPublicId?: string,
 ): Promise<string | false> {
   try {
     const response = await fetch(
@@ -328,6 +329,7 @@ export async function createCheckoutSession(
           priceId: priceId,
           hostname: window.location.origin,
           colorPaletteName: colorPaletteName,
+          giftRecipientPublicId: giftRecipientPublicId,
         }),
       },
     );

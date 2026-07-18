@@ -55,6 +55,8 @@ export class EffectsGrid extends LitElement {
     false;
   @property({ type: String }) mode: "select" | "purchase" = "select";
   @property({ attribute: false }) affiliateCode: string | null = null;
+  @property({ type: Function })
+  onGift?: (resolved: ResolvedCosmetic) => void;
   @property({ type: String }) search = "";
   // When set, render only this effectType and drop the sub-header.
   @property({ type: String }) effectType: EffectType | null = null;
@@ -138,6 +140,7 @@ export class EffectsGrid extends LitElement {
       return html`<cosmetic-button
         .resolved=${r}
         .onPurchase=${purchaseCosmetic}
+        .onGift=${this.onGift}
       ></cosmetic-button>`;
     }
     const name = (r.cosmetic as Effect | null)?.name ?? null;

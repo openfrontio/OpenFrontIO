@@ -9,13 +9,17 @@ import "./components/CosmeticButton";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
+import "./components/GiftFriendPicker";
+import { GiftFriendPicker } from "./components/GiftFriendPicker";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   groupCosmeticVariants,
   purchaseCosmetic,
+  purchaseGiftCosmetic,
   resolveCosmetics,
+  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -33,6 +37,25 @@ export class StoreModal extends BaseModal {
   private cosmetics: Cosmetics | null = null;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
+
+  // Lazy body-level singleton: Store's tab bodies re-render on switch, so
+  // the picker lives outside them.
+  private get giftPicker(): GiftFriendPicker {
+    let el = document.querySelector<GiftFriendPicker>("gift-friend-picker");
+    if (!el) {
+      el = document.createElement("gift-friend-picker") as GiftFriendPicker;
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  private openGiftPicker = (resolved: ResolvedCosmetic) => {
+    const picker = this.giftPicker;
+    picker.onSelect = (publicId: string) => {
+      void purchaseGiftCosmetic(resolved, publicId);
+    };
+    void picker.open();
+  };
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -120,6 +143,7 @@ export class StoreModal extends BaseModal {
               .resolved=${group[0]}
               .variants=${group}
               .onPurchase=${purchaseCosmetic}
+              .onGift=${this.openGiftPicker}
             ></cosmetic-button>
           `,
         )}
@@ -158,6 +182,7 @@ export class StoreModal extends BaseModal {
               .resolved=${r}
               .selected=${selectedFlag === r.key}
               .onPurchase=${purchaseCosmetic}
+              .onGift=${this.openGiftPicker}
             ></cosmetic-button>
           `,
         )}
@@ -196,6 +221,7 @@ export class StoreModal extends BaseModal {
               .resolved=${r}
               .selected=${`crown:${selectedCrown}` === r.key}
               .onPurchase=${purchaseCosmetic}
+              .onGift=${this.openGiftPicker}
             ></cosmetic-button>
           `,
         )}
@@ -212,6 +238,7 @@ export class StoreModal extends BaseModal {
       .cosmetics=${this.cosmetics}
       .userMeResponse=${this.userMeResponse}
       .affiliateCode=${this.affiliateCode}
+      .onGift=${this.openGiftPicker}
     ></effects-grid>`;
   }
 
@@ -340,6 +367,7 @@ export class StoreModal extends BaseModal {
               .resolved=${group[0]}
               .variants=${group}
               .onPurchase=${purchaseCosmetic}
+              .onGift=${this.openGiftPicker}
             ></cosmetic-button>
           `,
         )}

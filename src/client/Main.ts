@@ -737,7 +737,7 @@ class Client {
       const status = params.get("status");
 
       if (status !== "true") {
-        alertAndStrip("purchase failed");
+        alertAndStrip(translateText("store.purchase_failed"));
         return;
       }
 
@@ -759,6 +759,11 @@ class Client {
         strip();
         invalidateUserMe();
         window.location.reload();
+        return;
+      }
+
+      if (type === "cosmetic_gift") {
+        alertAndStrip(translateText("store.cosmetic_gift_success"));
         return;
       }
 

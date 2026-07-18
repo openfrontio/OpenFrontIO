@@ -215,6 +215,29 @@ export async function purchaseCosmetic(
   window.location.reload();
 }
 
+/** Stripe checkout for a cosmetic sent to a friend. The item never enters
+ * the buyer's locker — the webhook grants it to the recipient. */
+export async function purchaseGiftCosmetic(
+  resolved: ResolvedCosmetic,
+  recipientPublicId: string,
+): Promise<void> {
+  const c = resolved.cosmetic;
+  if (!c?.product) {
+    await showInGameAlert(translateText("store.checkout_failed"));
+    return;
+  }
+  const url = await createCheckoutSession(
+    c.product.priceId,
+    resolved.colorPalette?.name,
+    recipientPublicId,
+  );
+  if (url === false) {
+    await showInGameAlert(translateText("store.checkout_failed"));
+    return;
+  }
+  window.location.href = url;
+}
+
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

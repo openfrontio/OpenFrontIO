@@ -42,6 +42,9 @@ export class CosmeticButton extends LitElement {
     method: PaymentMethod,
   ) => Promise<PurchaseResult>;
 
+  @property({ type: Function })
+  onGift?: (resolved: ResolvedCosmetic) => void;
+
   /** True if the user already has a subscription (any tier). */
   @property({ type: Boolean })
   userHasSubscription: boolean = false;
@@ -337,6 +340,12 @@ export class CosmeticButton extends LitElement {
     const artist = priced?.artist;
     const isPurchasable = active.relationship === "purchasable";
     const type = active.type;
+    const giftable =
+      this.onGift !== undefined &&
+      isPurchasable &&
+      !!c?.product &&
+      type !== "pack" &&
+      type !== "subscription";
     const isPattern = type === "pattern";
     const isSkin = type === "skin";
     const isOwnedSubscription =
@@ -407,6 +416,18 @@ export class CosmeticButton extends LitElement {
           </div>
         </button>
         ${this.renderColorSwatches()}
+        ${giftable
+          ? html`<button
+              type="button"
+              class="w-full mt-1 text-xs text-white/60 hover:text-white underline"
+              @click=${(event: Event) => {
+                event.stopPropagation();
+                this.onGift?.(this.activeResolved);
+              }}
+            >
+              🎁 ${translateText("store.gift")}
+            </button>`
+          : nothing}
         ${isOwnedSubscription
           ? html`<div
               class="w-full mt-2 px-2 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-base font-bold text-center"

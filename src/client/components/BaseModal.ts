@@ -12,6 +12,7 @@ import "./ConfirmDialog";
  */
 export interface ModalConfig {
   title?: string;
+  accessibleLabel?: string;
   tabs?: OModalTab[];
   hideHeader?: boolean;
   hideCloseButton?: boolean;
@@ -36,6 +37,8 @@ export interface ModalConfig {
  *   to onTabEnter(key) for per-tab lifecycle (e.g. lazy load).
  */
 export abstract class BaseModal extends LitElement {
+  private static openStack: BaseModal[] = [];
+
   @state() protected isModalOpen = false;
   @state() protected activeTab = "";
   @property({ type: Boolean }) inline = false;
@@ -142,6 +145,7 @@ export abstract class BaseModal extends LitElement {
     return html`
       <o-modal
         title=${cfg.title ?? ""}
+        .accessibleLabel=${cfg.accessibleLabel ?? ""}
         ?inline=${this.inline}
         ?hideHeader=${cfg.hideHeader ?? true}
         ?hideCloseButton=${cfg.hideCloseButton ?? true}
@@ -290,11 +294,19 @@ export abstract class BaseModal extends LitElement {
   }
 
   private handleKeyDown = async (e: KeyboardEvent) => {
-    if (e.key === "Escape" && this.isModalOpen) {
+    if (
+      e.key === "Escape" &&
+      this.isModalOpen &&
+      BaseModal.openStack[BaseModal.openStack.length - 1] === this
+    ) {
       e.preventDefault();
       const confirmed = await this.confirmBeforeClose();
       // Bail if a parallel close() already closed us while we awaited.
-      if (!confirmed || !this.isModalOpen) {
+      if (
+        !confirmed ||
+        !this.isModalOpen ||
+        BaseModal.openStack[BaseModal.openStack.length - 1] !== this
+      ) {
         return;
       }
       this.close();
@@ -303,11 +315,14 @@ export abstract class BaseModal extends LitElement {
 
   protected registerEscapeHandler() {
     this.isModalOpen = true;
+    BaseModal.openStack = BaseModal.openStack.filter((modal) => modal !== this);
+    BaseModal.openStack.push(this);
     window.addEventListener("keydown", this.handleKeyDown);
   }
 
   protected unregisterEscapeHandler() {
     this.isModalOpen = false;
+    BaseModal.openStack = BaseModal.openStack.filter((modal) => modal !== this);
     window.removeEventListener("keydown", this.handleKeyDown);
   }
 
