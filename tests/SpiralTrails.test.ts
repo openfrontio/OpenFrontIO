@@ -6,6 +6,7 @@ import {
 import type { UnitState } from "../src/client/render/types";
 import {
   UT_ATOM_BOMB,
+  UT_MIRV_WARHEAD,
   UT_TRANSPORT,
 } from "../src/client/render/types/UnitType";
 
@@ -101,6 +102,25 @@ describe("SpiralTrails", () => {
     });
     const units = new Map<number, UnitState>();
     const u = makeUnit(1, 5, UT_TRANSPORT, ref(5, 10), ref(5, 10));
+    units.set(1, u);
+    st.update(units, [1]);
+    u.lastPos = u.pos;
+    u.pos = ref(12, 10);
+    st.update(units, [1]);
+
+    expect(st.getRibbons().length).toBe(0);
+  });
+
+  it("never grows ribbons for MIRV warheads (350 per MIRV)", () => {
+    const st = new SpiralTrails(W);
+    st.setParams(5, {
+      radius: 4,
+      strands: 2,
+      rotationSpeed: 5,
+      colors: COLORS,
+    });
+    const units = new Map<number, UnitState>();
+    const u = makeUnit(1, 5, UT_MIRV_WARHEAD, ref(5, 10), ref(5, 10));
     units.set(1, u);
     st.update(units, [1]);
     u.lastPos = u.pos;

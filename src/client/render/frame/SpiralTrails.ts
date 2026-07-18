@@ -18,7 +18,7 @@
  */
 
 import type { UnitState } from "../types";
-import { SMOOTHED_NUKE_TYPES } from "../types";
+import { SMOOTHED_NUKE_TYPES, UT_MIRV_WARHEAD } from "../types";
 
 export const MAX_TRAIL_STRANDS = 8;
 
@@ -126,6 +126,9 @@ export class SpiralTrails {
     for (const id of trackedIds) {
       const unit = units.get(id);
       if (!unit || !SMOOTHED_NUKE_TYPES.has(unit.unitType)) continue;
+      // MIRV warheads never grow ribbons — one MIRV splits into 350 of them,
+      // which would fan out into 350 VBOs and per-strand draw calls at once.
+      if (unit.unitType === UT_MIRV_WARHEAD) continue;
       let ribbon = this.ribbonsById.get(id);
       if (!ribbon) {
         const params = this.params.get(unit.ownerID);
