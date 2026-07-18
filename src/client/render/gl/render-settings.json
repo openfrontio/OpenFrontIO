@@ -323,7 +323,7 @@
     "color": [1.0, 0.12, 0.1],
     "alpha": 0.9,
     "pulseSpeed": 0.003,
-    "strength": 0.25
+    "strength": 0.35
   },
   "altView": {
     "gridFontSize": 24,
