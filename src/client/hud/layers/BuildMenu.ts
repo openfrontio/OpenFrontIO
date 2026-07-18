@@ -403,7 +403,10 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   public confirmUpgrade(amount: number): void {
-    if (!this._selectedUpgradeUnit || this._selectedUpgradeUnit.canUpgrade === false) {
+    if (
+      !this._selectedUpgradeUnit ||
+      this._selectedUpgradeUnit.canUpgrade === false
+    ) {
       this.hideMenu();
       return;
     }
@@ -411,7 +414,7 @@ export class BuildMenu extends LitElement implements Controller {
       new SendUpgradeStructureIntentEvent(
         this._selectedUpgradeUnit.canUpgrade,
         this._selectedUpgradeUnit.type,
-        amount
+        amount,
       ),
     );
     this.hideMenu();
@@ -423,9 +426,15 @@ export class BuildMenu extends LitElement implements Controller {
     const playerGold = this.game?.myPlayer()?.gold() ?? 0n;
 
     return html`
-      <div style="display: flex; flex-direction: column; align-items: center; color: white; padding: 10px;">
-        <h3 style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">Select Upgrade Amount</h3>
-        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+      <div
+        style="display: flex; flex-direction: column; align-items: center; color: white; padding: 10px;"
+      >
+        <h3 style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">
+          ${translateText("build_menu.select_upgrade_amount")}
+        </h3>
+        <div
+          style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;"
+        >
           ${[1, 5, 10, 25, 50].map((amount) => {
             const cost = baseCost * BigInt(amount);
             const canAfford = playerGold >= cost;
@@ -435,10 +444,18 @@ export class BuildMenu extends LitElement implements Controller {
                 style="height: 100px; width: 80px;"
                 @click=${() => canAfford && this.confirmUpgrade(amount)}
                 ?disabled=${!canAfford}
-                title=${!canAfford ? translateText("build_menu.not_enough_money") : ""}
+                title=${!canAfford
+                  ? translateText("build_menu.not_enough_money")
+                  : ""}
               >
-                <span style="font-size: 20px; font-weight: bold;">x${amount}</span>
-                <span class="build-cost" translate="no" style="margin-top: 10px;">
+                <span style="font-size: 20px; font-weight: bold;"
+                  >x${amount}</span
+                >
+                <span
+                  class="build-cost"
+                  translate="no"
+                  style="margin-top: 10px;"
+                >
                   ${renderNumber(cost)}
                   <img
                     src=${goldCoinIcon}
@@ -465,64 +482,71 @@ export class BuildMenu extends LitElement implements Controller {
         ${this._selectedUpgradeUnit
           ? this.renderAmountPanel()
           : this.filteredBuildTable.map(
-          (row) => html`
-            <div class="build-row">
-              ${row.map((item) => {
-                const buildableUnit = this.playerBuildables?.find(
-                  (bu) => bu.type === item.unitType,
-                );
-                if (buildableUnit === undefined) {
-                  return html``;
-                }
-                const enabled =
-                  buildableUnit.canBuild !== false ||
-                  buildableUnit.canUpgrade !== false;
-                return html`
-                  <button
-                    class="build-button"
-                    @click=${() =>
-                      this.handleBuildClick(buildableUnit, this.clickedTile)}
-                    ?disabled=${!enabled}
-                    title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
-                      : ""}
-                  >
-                    <img
-                      src=${item.icon}
-                      alt="${item.unitType}"
-                      width="40"
-                      height="40"
-                    />
-                    <span class="build-name"
-                      >${item.key && translateText(item.key)}</span
-                    >
-                    <span class="build-description"
-                      >${item.description &&
-                      translateText(item.description)}</span
-                    >
-                    <span class="build-cost" translate="no">
-                      ${renderNumber(
-                        this.game && this.game.myPlayer() ? this.cost(item) : 0,
-                      )}
-                      <img
-                        src=${goldCoinIcon}
-                        alt="gold"
-                        width="12"
-                        height="12"
-                        class="align-middle"
-                      />
-                    </span>
-                    ${item.countable
-                      ? html`<div class="build-count-chip">
-                          <span class="build-count">${this.count(item)}</span>
-                        </div>`
-                      : ""}
-                  </button>
-                `;
-              })}
-            </div>
-          `,
-        )}
+              (row) => html`
+                <div class="build-row">
+                  ${row.map((item) => {
+                    const buildableUnit = this.playerBuildables?.find(
+                      (bu) => bu.type === item.unitType,
+                    );
+                    if (buildableUnit === undefined) {
+                      return html``;
+                    }
+                    const enabled =
+                      buildableUnit.canBuild !== false ||
+                      buildableUnit.canUpgrade !== false;
+                    return html`
+                      <button
+                        class="build-button"
+                        @click=${() =>
+                          this.handleBuildClick(
+                            buildableUnit,
+                            this.clickedTile,
+                          )}
+                        ?disabled=${!enabled}
+                        title=${!enabled
+                          ? translateText("build_menu.not_enough_money")
+                          : ""}
+                      >
+                        <img
+                          src=${item.icon}
+                          alt="${item.unitType}"
+                          width="40"
+                          height="40"
+                        />
+                        <span class="build-name"
+                          >${item.key && translateText(item.key)}</span
+                        >
+                        <span class="build-description"
+                          >${item.description &&
+                          translateText(item.description)}</span
+                        >
+                        <span class="build-cost" translate="no">
+                          ${renderNumber(
+                            this.game && this.game.myPlayer()
+                              ? this.cost(item)
+                              : 0,
+                          )}
+                          <img
+                            src=${goldCoinIcon}
+                            alt="gold"
+                            width="12"
+                            height="12"
+                            class="align-middle"
+                          />
+                        </span>
+                        ${item.countable
+                          ? html`<div class="build-count-chip">
+                              <span class="build-count"
+                                >${this.count(item)}</span
+                              >
+                            </div>`
+                          : ""}
+                      </button>
+                    `;
+                  })}
+                </div>
+              `,
+            )}
       </div>
     `;
   }

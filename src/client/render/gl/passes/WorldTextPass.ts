@@ -351,8 +351,11 @@ export class WorldTextPass {
       g = 0.6;
       b = 0.6;
     }
-    
-    const topTextStr = label.multiplier && label.multiplier > 1 ? `x${label.multiplier}` : undefined;
+
+    const topTextStr =
+      label.multiplier && label.multiplier > 1
+        ? `x${label.multiplier}`
+        : undefined;
 
     // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
     // pass raw tile coords here — same convention as the other popup entries.

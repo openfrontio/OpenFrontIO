@@ -457,7 +457,8 @@ export class BuildPreviewController implements Controller {
       radiusTileY = this.game.y(upgradeTargetTile);
     }
 
-    const multiplier = u.canUpgrade !== false ? (this.uiState.upgradeMultiplier || 1) : 1;
+    const multiplier =
+      u.canUpgrade !== false ? this.uiState.upgradeMultiplier || 1 : 1;
     const cost = u.cost * BigInt(multiplier);
     return {
       ghostType: u.type,

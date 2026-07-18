@@ -455,7 +455,11 @@ function createMenuElements(
           const buildableUnit = params.playerActions.buildableUnits.find(
             (bu) => bu.type === item.unitType,
           );
-          if (!buildableUnit || buildableUnit.canUpgrade === false || !params.buildMenu.canBuildOrUpgrade(item)) {
+          if (
+            !buildableUnit ||
+            buildableUnit.canUpgrade === false ||
+            !params.buildMenu.canBuildOrUpgrade(item)
+          ) {
             return [];
           }
           return [1, 5, 10, 25, 50].map((amount) => {
@@ -465,26 +469,35 @@ function createMenuElements(
               name: `x${amount}`,
               text: `x${amount}`,
               fontSize: "20px",
-              color: (p: MenuElementParams) => (p.game.myPlayer()?.gold() ?? 0n) >= cost ? COLORS.building : COLORS.disabled,
+              color: (p: MenuElementParams) =>
+                (p.game.myPlayer()?.gold() ?? 0n) >= cost
+                  ? COLORS.building
+                  : COLORS.disabled,
               icon: "",
               tooltipItems: [
-                { text: `Upgrade x${amount}`, className: "title" },
+                {
+                  text: translateText("radial_menu.upgrade_x", {
+                    amount: amount.toString(),
+                  }),
+                  className: "title",
+                },
                 {
                   text: `${renderNumber(cost)} ${translateText("player_panel.gold")}`,
                   className: "cost",
                 },
               ],
-              disabled: (p: MenuElementParams) => (p.game.myPlayer()?.gold() ?? 0n) < cost,
+              disabled: (p: MenuElementParams) =>
+                (p.game.myPlayer()?.gold() ?? 0n) < cost,
               action: (p: MenuElementParams) => {
                 p.eventBus.emit(
                   new SendUpgradeStructureIntentEvent(
                     buildableUnit.canUpgrade as number,
                     buildableUnit.type,
-                    amount
-                  )
+                    amount,
+                  ),
                 );
                 p.closeMenu();
-              }
+              },
             };
           });
         },

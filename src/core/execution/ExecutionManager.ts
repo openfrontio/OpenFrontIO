@@ -107,7 +107,11 @@ export class Executor {
       }
 
       case "upgrade_structure":
-        return new UpgradeStructureExecution(player, intent.unitId, intent.amount);
+        return new UpgradeStructureExecution(
+          player,
+          intent.unitId,
+          intent.amount,
+        );
       case "delete_unit":
         return new DeleteUnitExecution(player, intent.unitId);
       case "quick_chat":

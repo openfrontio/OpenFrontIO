@@ -115,6 +115,7 @@ describe("RadialMenuElements", () => {
       cost: vi.fn(() => 100),
       count: vi.fn(() => 5),
       sendBuildOrUpgrade: vi.fn(),
+      handleBuildClick: vi.fn(),
     };
 
     mockPlayerActions = {
@@ -470,7 +471,7 @@ describe("RadialMenuElements", () => {
 
       if (cityElement!.action) {
         cityElement!.action(mockParams);
-        expect(mockBuildMenu.sendBuildOrUpgrade).toHaveBeenCalled();
+        expect(mockBuildMenu.handleBuildClick).toHaveBeenCalled();
         expect(mockParams.closeMenu).toHaveBeenCalled();
       }
     });
@@ -493,7 +494,7 @@ describe("RadialMenuElements", () => {
 
       if (atomBombElement!.action) {
         atomBombElement!.action(mockParams);
-        expect(mockBuildMenu.sendBuildOrUpgrade).toHaveBeenCalled();
+        expect(mockBuildMenu.handleBuildClick).toHaveBeenCalled();
         expect(mockParams.closeMenu).toHaveBeenCalled();
       }
     });
