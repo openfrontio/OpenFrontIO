@@ -34,6 +34,7 @@ import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { playerProfileUrl } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -393,12 +394,26 @@ export class AccountModal extends BaseModal {
         translateText("account_modal.no_stats"),
       );
     }
+    const publicId = this.userMeResponse?.player?.publicId ?? "";
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span class="text-blue-400">📊</span>
-          ${translateText("account_modal.stats_overview")}
-        </h3>
+        <div class="flex items-center justify-between gap-2 mb-4">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="text-blue-400">📊</span>
+            ${translateText("account_modal.stats_overview")}
+          </h3>
+          ${publicId
+            ? html`
+                <copy-button
+                  compact
+                  class="shrink-0"
+                  .copyText=${playerProfileUrl(publicId)}
+                  .displayText=${translateText("player_profile.share")}
+                  .showVisibilityToggle=${false}
+                ></copy-button>
+              `
+            : ""}
+        </div>
         <player-stats-tree-view
           .statsTree=${this.statsTree}
         ></player-stats-tree-view>

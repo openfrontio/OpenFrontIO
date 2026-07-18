@@ -1164,6 +1164,13 @@
     "traitor": "Traitor",
     "troops": "Troops"
   },
+  "player_profile": {
+    "loading": "Loading profile...",
+    "not_found": "Player profile not found",
+    "share": "Share Profile",
+    "title": "Player Profile",
+    "view": "View Profile"
+  },
   "player_stats_table": {
     "arrived": "Arrived",
     "attack": "Attack",
