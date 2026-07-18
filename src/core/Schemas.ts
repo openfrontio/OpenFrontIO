@@ -21,7 +21,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
-import { PlayerStatsSchema } from "./StatsSchemas";
+import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
 export type GameID = string;
@@ -927,6 +927,38 @@ export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
+
+// Lenient variant for *reading* archived records. Older builds wrote records
+// under earlier schemas (username rules tightened since, clanTag and nations
+// added later, conquests became an array) while the `version` literal never
+// changed, so strict parsing rejects them wholesale. Records are trusted
+// server output, not untrusted input — tolerate the historical shapes.
+// Inferred types are identical to the strict schemas', so parsed results are
+// still AnalyticsRecord. Not for replays: those require an exact gitCommit
+// match anyway (see JoinLobbyModal.checkArchivedGame).
+const ArchivedPlayerRecordSchema = PlayerRecordSchema.extend({
+  // Validated at join time under the rules of its era; the loosest era was
+  // SafeString (max 1000, emoji allowed, no min), so only cap length.
+  username: z.string().max(1000),
+  clanTag: ClanTagSchema.catch(null).default(null), // predates clan tags
+  stats: ArchivedPlayerStatsSchema, // scalar conquests
+});
+
+export const ArchivedAnalyticsRecordSchema = AnalyticsRecordSchema.extend({
+  info: GameEndInfoSchema.extend({
+    config: GameConfigSchema.extend({
+      gameMap: z.preprocess(
+        (value) => (typeof value === "string" ? value.trim() : value),
+        GameConfigSchema.shape.gameMap,
+      ),
+      // predates configurable nation count
+      nations: GameConfigSchema.shape.nations
+        .catch("default")
+        .default("default"),
+    }),
+    players: ArchivedPlayerRecordSchema.array(),
+  }),
+});
 
 export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: TurnSchema.array(),

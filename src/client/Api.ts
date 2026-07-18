@@ -20,7 +20,7 @@ import {
 } from "../core/ApiSchemas";
 import {
   AnalyticsRecord,
-  AnalyticsRecordSchema,
+  ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
 import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
@@ -410,7 +410,7 @@ export async function cancelSubscription(): Promise<boolean> {
 
 export async function changeSubscriptionTier(
   tierName: string,
-): Promise<boolean> {
+): Promise<boolean | "rate_limited"> {
   try {
     const response = await fetch(
       `${getApiBase()}/subscriptions/@me/change-tier`,
@@ -426,6 +426,10 @@ export async function changeSubscriptionTier(
     if (response.status === 401) {
       await logOut();
       return false;
+    }
+    // The API allows one tier change per minute per player.
+    if (response.status === 429) {
+      return "rate_limited";
     }
     if (!response.ok) {
       console.error(
@@ -609,7 +613,9 @@ export async function fetchGameById(
     }
 
     const json = await res.json();
-    const parsed = AnalyticsRecordSchema.safeParse(json);
+    // Lenient schema: archives written by older builds predate several
+    // schema changes (see ArchivedAnalyticsRecordSchema).
+    const parsed = ArchivedAnalyticsRecordSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchGameById: Zod validation failed", parsed.error);
       return false;

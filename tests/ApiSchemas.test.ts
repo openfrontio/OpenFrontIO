@@ -119,6 +119,17 @@ describe("PublicPlayerGameSchema", () => {
     expect(PublicPlayerGameSchema.safeParse(validGame).success).toBe(true);
   });
 
+  it("normalizes accidental whitespace around archived map names", () => {
+    const result = PublicPlayerGameSchema.safeParse({
+      ...validGame,
+      map: "Deglaciated Antarctica ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.map).toBe("Deglaciated Antarctica");
+  });
+
   it("accepts clanTag: null (not repping a clan)", () => {
     expect(
       PublicPlayerGameSchema.safeParse({ ...validGame, clanTag: null }).success,

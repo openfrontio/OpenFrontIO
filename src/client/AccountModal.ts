@@ -51,6 +51,8 @@ export class AccountModal extends BaseModal {
   private statsTree: PlayerStatsTree | null = null;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
+  private gamesScrollTop = 0;
+  private restoreGamesScrollAfterOpen = false;
   private cosmetics: Cosmetics | null = null;
 
   constructor() {
@@ -68,13 +70,11 @@ export class AccountModal extends BaseModal {
         // different account) so stats/history from the previous player don't
         // linger.
         if (this.userMeResponse?.player?.publicId !== previousPublicId) {
-          this.statsTree = null;
-          this.gameHistoryCache = null;
+          this.resetPlayerData();
           this.requestUpdate();
         }
       } else {
-        this.statsTree = null;
-        this.gameHistoryCache = null;
+        this.resetPlayerData();
         this.requestUpdate();
       }
     });
@@ -423,6 +423,8 @@ export class AccountModal extends BaseModal {
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
         }}
+        @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
+          this.openGameStats(e.detail.gameId)}
         @view-game=${(e: CustomEvent<{ gameId: string }>) =>
           void this.viewGame(e.detail.gameId)}
       ></player-game-history-view>
@@ -574,6 +576,45 @@ export class AccountModal extends BaseModal {
     window.dispatchEvent(
       new CustomEvent("join-changed", { detail: { gameId: encodedGameId } }),
     );
+  }
+
+  private openGameStats(gameId: string): void {
+    this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    const statsModal = document.querySelector<
+      HTMLElement & { openFromAccount(gameId: string): void }
+    >("game-stats-modal");
+    statsModal?.openFromAccount(gameId);
+  }
+
+  public returnToGames(): void {
+    this.restoreGamesScrollAfterOpen = true;
+    this.open({ tab: "games" });
+  }
+
+  private async restoreGamesScroll(): Promise<void> {
+    await this.updateComplete;
+    await this.modalEl?.updateComplete;
+    const historyView = this.querySelector<
+      HTMLElement & { updateComplete?: Promise<boolean> }
+    >("player-game-history-view");
+    await historyView?.updateComplete;
+    this.modalEl?.setScrollTop(this.gamesScrollTop);
+  }
+
+  private finishLoadingUser(): void {
+    this.isLoadingUser = false;
+    this.requestUpdate();
+    if (this.restoreGamesScrollAfterOpen) {
+      this.restoreGamesScrollAfterOpen = false;
+      void this.restoreGamesScroll();
+    }
+  }
+
+  private resetPlayerData(): void {
+    this.statsTree = null;
+    this.gameHistoryCache = null;
+    this.gamesScrollTop = 0;
+    this.restoreGamesScrollAfterOpen = false;
   }
 
   private renderLogoutButton(): TemplateResult {
@@ -790,13 +831,11 @@ export class AccountModal extends BaseModal {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
-        this.isLoadingUser = false;
-        this.requestUpdate();
+        this.finishLoadingUser();
       })
       .catch((err) => {
         console.warn("Failed to fetch user info in AccountModal.open():", err);
-        this.isLoadingUser = false;
-        this.requestUpdate();
+        this.finishLoadingUser();
       });
     this.requestUpdate();
   }

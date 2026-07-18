@@ -536,6 +536,37 @@ describe("ClanGameHistoryView", () => {
     });
   });
 
+  describe("viewStats", () => {
+    it("emits a bubbling, composed view-stats event with the game id", async () => {
+      mockFetch(() =>
+        Promise.resolve(okPage([makeGame({ gameId: "stats-game" })])),
+      );
+      const el = await mountView();
+      await flushAsync(el);
+
+      const statsButton = Array.from(el.querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "game_list.stats",
+      );
+      expect(statsButton).toBeTruthy();
+
+      const events: CustomEvent<{ gameId: string }>[] = [];
+      const handleViewStats = (event: Event) => {
+        events.push(event as CustomEvent<{ gameId: string }>);
+      };
+      document.body.addEventListener("view-stats", handleViewStats);
+      try {
+        statsButton!.click();
+      } finally {
+        document.body.removeEventListener("view-stats", handleViewStats);
+      }
+
+      expect(events).toHaveLength(1);
+      expect(events[0].detail).toEqual({ gameId: "stats-game" });
+      expect(events[0].bubbles).toBe(true);
+      expect(events[0].composed).toBe(true);
+    });
+  });
+
   describe("watchReplay", () => {
     it("pushes a /game/:id URL and emits close-clan-modal + join-changed", async () => {
       mockFetch(() =>

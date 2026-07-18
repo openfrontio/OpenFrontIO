@@ -1,13 +1,15 @@
-import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
 import {
-  GOLD_INDEX_TRADE,
-  GOLD_INDEX_TRAIN_OTHER,
-  GOLD_INDEX_TRAIN_SELF,
-} from "src/core/StatsSchemas";
+  LitElement,
+  html,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../../../../core/AssetUrls";
-import { renderNumber } from "../../../Utils";
-import { PlayerInfo, RankType } from "./GameInfoRanking";
+import { renderNumber, translateText } from "../../../Utils";
+import { PlayerInfo, RANK_TYPE_LABEL_KEYS, RankType } from "./GameInfoRanking";
+
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 
 @customElement("player-row")
 export class PlayerRow extends LitElement {
@@ -18,6 +20,8 @@ export class PlayerRow extends LitElement {
   @property({ type: Number }) score = 0;
   @property({ type: Boolean }) currentPlayer = false;
 
+  private failedFlag: string | null = null;
+
   createRenderRoot() {
     return this;
   }
@@ -25,39 +29,125 @@ export class PlayerRow extends LitElement {
   render() {
     if (!this.player) return html``;
     const { player } = this;
-    const visibleBorder = player.winner || this.currentPlayer;
     return html`
       <li
-        class="${player.winner ? "bg-black/20" : "bg-black/20"} border-b-1
-          ${player.winner
-          ? "border-yellow-500 border-1 box-content"
-          : visibleBorder
-            ? "border-white/5"
-            : "border-transparent"}
-           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 flex justify-between items-center hover:bg-white/[0.07] transition-colors duration-150 ease-in-out"
+        data-player-row
+        class="group relative grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-white/[0.055] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(13rem,0.9fr)] sm:px-5 sm:py-2.5 ${player.winner
+          ? "bg-gradient-to-r from-yellow-400/[0.08] via-yellow-400/[0.025] to-transparent"
+          : this.currentPlayer
+            ? "bg-malibu-blue/10"
+            : "bg-transparent"}"
       >
-        <div
-          class="font-bold text-right w-7.5 text-lg text-white absolute -left-10"
-        >
-          ${this.rank}
+        ${player.winner
+          ? html`<div
+              class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
+            ></div>`
+          : ""}
+        ${this.renderRank()} ${this.renderIdentity()}
+        <div class="col-start-2 min-w-0 sm:col-start-auto">
+          ${this.renderPlayerInfo()}
         </div>
-        ${this.renderPlayerInfo()}
       </li>
+    `;
+  }
+
+  protected willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has("player")) {
+      const previous = changed.get("player") as PlayerInfo | undefined;
+      if (previous?.flag !== this.player?.flag) this.failedFlag = null;
+    }
+  }
+
+  private renderRank(): TemplateResult {
+    const rankClass =
+      {
+        1: "border-yellow-400/20 bg-yellow-400/10 text-yellow-300",
+        2: "border-slate-300/15 bg-slate-300/10 text-slate-300",
+        3: "border-amber-600/20 bg-amber-600/10 text-amber-500",
+      }[this.rank] ?? "border-white/[0.06] bg-white/[0.035] text-white/35";
+    return html`
+      <div
+        class="flex size-8 items-center justify-center rounded-lg border font-mono text-xs font-bold tabular-nums sm:size-9 sm:text-sm ${rankClass}"
+        aria-label=${String(this.rank)}
+      >
+        ${this.rank}
+      </div>
     `;
   }
 
   private renderPlayerIcon() {
     return html`
-      ${this.renderIcon()} ${this.player.winner ? this.renderCrownIcon() : ""}
+      <div class="relative shrink-0">
+        ${this.renderIcon()}
+        ${this.player.winner
+          ? this.renderCrownIcon()
+          : this.player.killedAt !== undefined
+            ? this.renderEliminatedIcon()
+            : ""}
+      </div>
     `;
   }
 
   private renderCrownIcon() {
     return html`
-      <img
-        src=${assetUrl("images/CrownIcon.svg")}
-        class="absolute -top-0.75 left-4 size-3.75 sm:-top-1.75 sm:left-7.5 sm:size-5"
-      />
+      <span
+        data-player-status="winner"
+        class="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-yellow-300/40 bg-yellow-400 text-yellow-950 shadow-lg"
+        role="img"
+        aria-label=${translateText("clan_modal.history_result_victory")}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          class="size-3"
+          aria-hidden="true"
+        >
+          <path
+            d="m4 7 4.2 3L12 5l3.8 5L20 7l-1.5 10h-13L4 7Zm2 12h12v2H6v-2Z"
+          />
+        </svg>
+      </span>
+    `;
+  }
+
+  private renderEliminatedIcon(): TemplateResult {
+    return html`
+      <span
+        data-player-status="eliminated"
+        class="absolute -bottom-1 -right-1 leading-none drop-shadow-md"
+        role="img"
+        aria-label=${translateText("clan_modal.history_result_defeat")}
+      >
+        <span class="text-sm leading-none" aria-hidden="true">💀</span>
+      </span>
+    `;
+  }
+
+  private renderIdentity(): TemplateResult {
+    return html`
+      <div class="flex min-w-0 items-center gap-3">
+        ${this.renderPlayerIcon()}
+        <div
+          data-player-identity
+          class="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          ${this.player.clanTag
+            ? html`<div
+                data-player-clan-tag
+                class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-malibu-blue/20 bg-malibu-blue/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aquarius/85"
+              >
+                <span class="truncate">${this.player.clanTag}</span>
+              </div>`
+            : ""}
+          <div
+            data-player-name
+            class="min-w-0 flex-1 truncate text-sm font-semibold tracking-wide text-white/85 sm:text-[15px]"
+            title=${this.player.username}
+          >
+            ${this.player.username}
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -65,6 +155,7 @@ export class PlayerRow extends LitElement {
     switch (this.rankType) {
       case RankType.Lifetime:
       case RankType.ConquestHumans:
+      case RankType.ConquestNations:
       case RankType.ConquestBots:
         return this.renderScoreAsBar();
       case RankType.Atoms:
@@ -84,32 +175,42 @@ export class PlayerRow extends LitElement {
   }
 
   private renderScoreAsBar() {
+    const isLifetime = this.rankType === RankType.Lifetime;
+    const formattedScore = `${Number(this.score).toFixed(0)}${
+      isLifetime ? "%" : ""
+    }`;
     return html`
-      <div class="flex gap-3 items-center w-full">
-        ${this.renderPlayerIcon()}
-        <div class="flex flex-col sm:flex-row gap-1 text-left w-full">
-          ${this.renderPlayerName()} ${this.renderScoreBar()}
-        </div>
-      </div>
-      <div>
+      <div class="flex w-full items-center gap-3">
+        ${this.renderScoreBar(formattedScore)}
         <div
-          class="font-bold rounded-[50%] size-7.5 leading-[1.6rem] border border-white/10 text-center bg-white/5 text-white/80"
+          data-player-score
+          aria-hidden="true"
+          class="flex min-h-10 shrink-0 items-center justify-end gap-2 px-3 py-2 font-mono text-sm font-bold tabular-nums text-white/75"
         >
-          ${Number(this.score).toFixed(0)}
+          ${formattedScore}
         </div>
       </div>
     `;
   }
 
-  private renderScoreBar() {
+  private renderScoreBar(formattedScore: string) {
     const bestScore = Math.max(this.bestScore, 1);
+    const currentScore = Math.max(this.score, 0);
+    const accessibleMax = Math.max(bestScore, currentScore);
     const width = Math.min(Math.max((this.score / bestScore) * 100, 0), 100);
     return html`
-      <div class="w-full pr-2.5 m-auto">
-        <div class="h-1.75 bg-white/10 w-full">
-          <!-- bar background -->
+      <div class="w-full">
+        <div
+          role="progressbar"
+          aria-label=${this.scoreLabel()}
+          aria-valuemin="0"
+          aria-valuemax=${accessibleMax}
+          aria-valuenow=${currentScore}
+          aria-valuetext=${formattedScore}
+          class="h-2 w-full overflow-hidden rounded-full bg-white/[0.07]"
+        >
           <div
-            class="h-1.75 bg-blue-500/50 w-(--width)"
+            class="h-full rounded-full bg-gradient-to-r from-malibu-blue/65 to-aquarius shadow-[0_0_10px_rgba(63,169,245,0.2)] w-(--width)"
             style="--width: ${width}%;"
           ></div>
         </div>
@@ -117,159 +218,90 @@ export class PlayerRow extends LitElement {
     `;
   }
 
-  private renderMultiScoreType(value: number, highlight: boolean) {
-    return html`
-      <div
-        class="${highlight
-          ? "font-bold text-[18px] text-white/80"
-          : "leading-[24px] text-white/40"} min-w-7.5 sm:min-w-15 inline-block text-center"
-      >
-        ${renderNumber(value)}
-      </div>
-    `;
-  }
-
-  private renderAllBombs() {
-    return html`
-      <div class="flex justify-between text-sm sm:pr-20">
-        ${this.renderMultiScoreType(
-          this.player.atoms,
-          this.rankType === RankType.Atoms,
-        )}
-        /
-        ${this.renderMultiScoreType(
-          this.player.hydros,
-          this.rankType === RankType.Hydros,
-        )}
-        /
-        ${this.renderMultiScoreType(
-          this.player.mirv,
-          this.rankType === RankType.MIRV,
-        )}
-      </div>
-    `;
-  }
-
-  private renderAllTrades() {
-    const navalTrade = this.player.gold[GOLD_INDEX_TRADE] ?? 0n;
-    const ownTrainTrade = this.player.gold[GOLD_INDEX_TRAIN_SELF] ?? 0n;
-    const otherTrainTrade = this.player.gold[GOLD_INDEX_TRAIN_OTHER] ?? 0n;
-    return html`
-      <div class="flex justify-between text-sm align-baseline">
-        ${this.renderMultiScoreType(
-          Number(ownTrainTrade + otherTrainTrade),
-          this.rankType === RankType.TrainTrade,
-        )}
-        /
-        ${this.renderMultiScoreType(
-          Number(navalTrade),
-          this.rankType === RankType.NavalTrade,
-        )}
-      </div>
-    `;
-  }
-
   private renderBombScore() {
-    return html`
-      <div class="flex gap-3 items-center align-baseline w-full">
-        ${this.renderPlayerIcon()}
-        <div class="flex flex-col sm:flex-row gap-1 text-left w-full">
-          ${this.renderPlayerName()} ${this.renderAllBombs()}
-        </div>
-      </div>
-    `;
+    return this.renderValueScore(false);
   }
 
   private renderGoldScore() {
-    return html`
-      <div class="flex gap-3 items-center">
-        ${this.renderPlayerIcon()}
-        <div class="text-left w-31.25 sm:w-50">${this.renderPlayerName()}</div>
-      </div>
-
-      <div class="flex gap-2">
-        <div
-          class="font-bold rounded-md w-15 text-white/80 text-sm sm:w-25 leading-[1.9rem] text-center"
-        >
-          ${renderNumber(this.score)}
-        </div>
-        <img
-          src=${assetUrl("images/GoldCoinIcon.svg")}
-          class="size-3.5 sm:size-5 m-auto"
-        />
-      </div>
-    `;
+    return this.renderValueScore(true);
   }
 
   private renderTradeScore() {
-    return html`
-      <div class="flex flex-col sm:flex-row gap-1 text-left w-full">
-        <div class="flex gap-3 items-center">
-          ${this.renderPlayerIcon()}
-          <div class="text-left w-31.25 sm:w-50">
-            ${this.renderPlayerName()}
-          </div>
-        </div>
-
-        <div class="flex gap-2 justify-between items-center w-full">
-          <div class="rounded-md text-sm leading-[1.9rem] text-center w-full">
-            ${this.renderAllTrades()}
-          </div>
-          <img
-            src=${assetUrl("images/GoldCoinIcon.svg")}
-            class="w-5 size-3.5 sm:size-5"
-          />
-        </div>
-      </div>
-    `;
+    return this.renderValueScore(true);
   }
 
-  private renderPlayerName() {
-    return html`
-      <div class="flex gap-1 items-center w-50 shrink-0">
-        ${this.player.clanTag ? this.renderTag(this.player.clanTag) : ""}
-        <div
-          class="text-xs sm:text-sm font-bold tracking-wide text-white/80 text-ellipsis w-37.5 shrink-0 overflow-hidden whitespace-nowrap"
-        >
-          ${this.player.username}
-        </div>
-      </div>
-    `;
-  }
-
-  private renderTag(tag: string) {
+  private renderValueScore(showCoin: boolean) {
+    const formattedScore = renderNumber(this.score);
     return html`
       <div
-        class="px-2.5 py-1 rounded bg-malibu-blue/10 border border-malibu-blue/20 text-aquarius font-bold text-xs tracking-wide group-hover:bg-malibu-blue/20 transition-colors"
+        data-player-score
+        aria-label=${`${this.scoreLabel()}, ${formattedScore}`}
+        class="flex min-h-10 items-center justify-end gap-2 px-3 py-2 font-mono text-sm font-bold tabular-nums text-white/75"
       >
-        ${tag}
+        ${showCoin ? this.renderCoinIcon() : ""}
+        <div>${formattedScore}</div>
       </div>
     `;
+  }
+
+  private scoreLabel(): string {
+    return `${this.player.username}: ${translateText(
+      RANK_TYPE_LABEL_KEYS[this.rankType],
+    )}`;
   }
 
   private renderIcon() {
-    if (this.player.killedAt) {
-      return html` <div
-        class="size-7.5 leading-1.25 shrink-0 text-lg sm:size-10 pt-3 sm:leading-3.75 sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
-      >
-        💀
-      </div>`;
-    } else if (this.player.flag) {
+    const flagUrl = this.getFlagUrl();
+    if (flagUrl) {
       return html`<img
-        src=${assetUrl(`${this.player.flag}`)}
-        class="min-w-7.5 h-7.5 sm:min-w-10 sm:h-10 shrink-0"
+        data-player-avatar="flag"
+        src=${flagUrl}
+        alt=""
+        draggable="false"
+        decoding="async"
+        @error=${() => this.handleFlagError()}
+        class="size-10 rounded-xl border border-white/10 bg-white/[0.055] object-contain p-1"
       />`;
     }
 
     return html`
       <div
-        class="size-7.5 leading-1.25 shrink-0 rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-3.5 border border-gray-200 text-center bg-slate-500"
+        data-player-avatar="fallback"
+        class="flex size-10 items-center justify-center rounded-xl border border-malibu-blue/15 bg-gradient-to-br from-malibu-blue/20 to-white/[0.04] text-xs font-bold uppercase tracking-wide text-aquarius/80"
+        aria-hidden="true"
       >
-        <img
-          src=${assetUrl("images/ProfileIcon.svg")}
-          class="size-5 mt-0.5 sm:size-6.25 sm:-mt-1.25 m-auto"
-        />
+        ${this.initials()}
       </div>
     `;
+  }
+
+  private getFlagUrl(): string | null {
+    if (!this.player.flag || this.failedFlag === this.player.flag) return null;
+    try {
+      return assetUrl(this.player.flag);
+    } catch {
+      return null;
+    }
+  }
+
+  private handleFlagError(): void {
+    this.failedFlag = this.player.flag ?? null;
+    this.requestUpdate();
+  }
+
+  private initials(): string {
+    const normalized = this.player.username.trim();
+    return normalized.length > 0 ? normalized.slice(0, 2).toUpperCase() : "?";
+  }
+
+  private renderCoinIcon(): TemplateResult {
+    return html`<img
+      src=${goldCoinIcon}
+      width="18"
+      height="18"
+      class="size-[18px] shrink-0"
+      alt=""
+      aria-hidden="true"
+    />`;
   }
 }
