@@ -110,11 +110,11 @@ class SAMTargetingSystem {
     const rangeSquared = range * range;
 
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().maxSamRange() * 2;
+    const detectionRange = 1200;
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
-      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRVWarhead],
       ({ unit }) => {
         if (!isUnit(unit) || unit.targetedBySAM()) return false;
         if (unit.owner() === this.sam.owner()) return false;
@@ -271,35 +271,39 @@ export class SAMLauncherExecution implements Execution {
 
     this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
-    const mirvWarheadTargets = this.mg.nearbyUnits(
-      this.sam.tile(),
-      this.MIRVWarheadSearchRadius,
-      UnitType.MIRVWarhead,
-      ({ unit }) => {
-        if (!isUnit(unit)) return false;
-        if (unit.owner() === this.player) return false;
+    let mirvWarheadTargets = this.mg
+      .nearbyUnits(
+        this.sam.tile(),
+        this.MIRVWarheadSearchRadius,
+        UnitType.MIRVWarhead,
+        ({ unit }) => {
+          if (!isUnit(unit)) return false;
+          if (unit.owner() === this.player) return false;
 
-        // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
-        const nukeOwner = unit.owner();
-        if (this.player.isFriendly(nukeOwner)) {
-          if (
-            this.mg.getWinner() === null ||
-            !this.player.isOnSameTeam(nukeOwner)
-          ) {
-            return false;
+          // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
+          const nukeOwner = unit.owner();
+          if (this.player.isFriendly(nukeOwner)) {
+            if (
+              this.mg.getWinner() === null ||
+              !this.player.isOnSameTeam(nukeOwner)
+            ) {
+              return false;
+            }
           }
-        }
 
-        const dst = unit.targetTile();
-        return (
-          this.sam !== null &&
-          dst !== undefined &&
-          this.mg.manhattanDist(dst, this.sam.tile()) <
-            this.MIRVWarheadProtectionRadius
-        );
-      },
-    );
-
+          const dst = unit.targetTile();
+          return (
+            this.sam !== null &&
+            dst !== undefined &&
+            this.mg.manhattanDist(dst, this.sam.tile()) <
+              this.mg.config().samRange(this.sam.level())
+          );
+        },
+      )
+      .filter((v, i) => {
+        return i <= (this.sam?.level() ?? Infinity);
+      });
+    console.log(mirvWarheadTargets.length);
     let target: Target | null = null;
     if (mirvWarheadTargets.length === 0) {
       target = this.targetingSystem.getSingleTarget(ticks);
@@ -325,7 +329,14 @@ export class SAMLauncherExecution implements Execution {
           { count: mirvWarheadTargets.length },
         );
 
-        mirvWarheadTargets.forEach(({ unit: u }) => {
+        mirvWarheadTargets.forEach(({ unit: u }, i) => {
+          if (this.sam !== null && i > 0) {
+            if (this.sam.isInCooldown()) {
+              return;
+            }
+            this.sam.launch();
+          }
+
           // Delete warheads
           u.delete();
         });
