@@ -399,9 +399,9 @@ describe("applyGraphicsOverrides", () => {
     ).toBe(0);
   });
 
-  test("smallPlayerGlow strength absent → keeps default of 0.25", () => {
-    expect(gen({}).smallPlayerGlow.strength).toBe(0.25);
-    expect(gen({ smallPlayerGlow: {} }).smallPlayerGlow.strength).toBe(0.25);
+  test("smallPlayerGlow strength absent → keeps default of 0.35", () => {
+    expect(gen({}).smallPlayerGlow.strength).toBe(0.35);
+    expect(gen({ smallPlayerGlow: {} }).smallPlayerGlow.strength).toBe(0.35);
   });
 
   test("smallPlayerGlow override leaves other glow fields at defaults", () => {

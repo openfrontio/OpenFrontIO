@@ -389,7 +389,7 @@ export interface RenderSettings {
     color: number[]; // RGB, each 0–1
     alpha: number; // peak opacity (0–1)
     pulseSpeed: number; // breath animation speed
-    strength: number; // opacity fade: 0 = off, 1 = full brightness (default 0.25)
+    strength: number; // opacity fade: 0 = off, 1 = full brightness (default 0.35)
   };
   altView: {
     gridFontSize: number;
