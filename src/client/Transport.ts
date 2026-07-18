@@ -57,6 +57,7 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   constructor(
     public readonly unitId: number,
     public readonly unitType: UnitType,
+    public readonly amount: number = 1,
   ) {}
 }
 
@@ -518,6 +519,7 @@ export class Transport {
       type: "upgrade_structure",
       unit: event.unitType,
       unitId: event.unitId,
+      amount: event.amount,
     });
   }
 

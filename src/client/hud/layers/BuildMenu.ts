@@ -356,6 +356,9 @@ export class BuildMenu extends LitElement implements Controller {
   @state()
   private _hidden = true;
 
+  @state()
+  private _selectedUpgradeUnit: BuildableUnit | null = null;
+
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
@@ -382,14 +385,10 @@ export class BuildMenu extends LitElement implements Controller {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
+  public handleBuildClick(buildableUnit: BuildableUnit, tile: TileRef): void {
     if (buildableUnit.canUpgrade !== false) {
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          buildableUnit.canUpgrade,
-          buildableUnit.type,
-        ),
-      );
+      this._selectedUpgradeUnit = buildableUnit;
+      this.requestUpdate();
     } else if (buildableUnit.canBuild) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
@@ -399,8 +398,68 @@ export class BuildMenu extends LitElement implements Controller {
       this.eventBus.emit(
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );
+      this.hideMenu();
     }
+  }
+
+  public confirmUpgrade(amount: number): void {
+    if (!this._selectedUpgradeUnit || this._selectedUpgradeUnit.canUpgrade === false) {
+      this.hideMenu();
+      return;
+    }
+    this.eventBus.emit(
+      new SendUpgradeStructureIntentEvent(
+        this._selectedUpgradeUnit.canUpgrade,
+        this._selectedUpgradeUnit.type,
+        amount
+      ),
+    );
     this.hideMenu();
+  }
+
+  renderAmountPanel() {
+    if (!this._selectedUpgradeUnit) return html``;
+    const unitType = this._selectedUpgradeUnit.type;
+    const playerGold = this.game?.myPlayer()?.gold() ?? 0n;
+
+    return html`
+      <div style="display: flex; flex-direction: column; align-items: center; color: white; padding: 10px;">
+        <h3 style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">Select Upgrade Amount</h3>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          ${[1, 5, 10, 25, 50].map((amount) => {
+            const cost = amount === 1 
+              ? this._selectedUpgradeUnit!.cost 
+              : this.game!.config()!.unitInfo(unitType).cost(
+                  this.game as any,
+                  this.game!.myPlayer() as any,
+                  amount
+                );
+            const canAfford = playerGold >= cost;
+            return html`
+              <button
+                class="build-button"
+                style="height: 100px; width: 80px;"
+                @click=${() => canAfford && this.confirmUpgrade(amount)}
+                ?disabled=${!canAfford}
+                title=${!canAfford ? translateText("build_menu.not_enough_money") : ""}
+              >
+                <span style="font-size: 20px; font-weight: bold;">x${amount}</span>
+                <span class="build-cost" translate="no" style="margin-top: 10px;">
+                  ${renderNumber(cost)}
+                  <img
+                    src=${goldCoinIcon}
+                    alt="gold"
+                    width="12"
+                    height="12"
+                    class="align-middle"
+                  />
+                </span>
+              </button>
+            `;
+          })}
+        </div>
+      </div>
+    `;
   }
 
   render() {
@@ -409,7 +468,9 @@ export class BuildMenu extends LitElement implements Controller {
         class="build-menu ${this._hidden ? "hidden" : ""}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        ${this.filteredBuildTable.map(
+        ${this._selectedUpgradeUnit
+          ? this.renderAmountPanel()
+          : this.filteredBuildTable.map(
           (row) => html`
             <div class="build-row">
               ${row.map((item) => {
@@ -426,7 +487,7 @@ export class BuildMenu extends LitElement implements Controller {
                   <button
                     class="build-button"
                     @click=${() =>
-                      this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
+                      this.handleBuildClick(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
                       ? translateText("build_menu.not_enough_money")
@@ -474,6 +535,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   hideMenu() {
     this._hidden = true;
+    this._selectedUpgradeUnit = null;
     this.requestUpdate();
   }
 

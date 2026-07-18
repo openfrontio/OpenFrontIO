@@ -522,21 +522,26 @@ export class Config {
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
-  ): (g: Game, p: Player) => bigint {
-    return (game: Game, player: Player) => {
+  ): (g: Game, p: Player, amount?: number) => bigint {
+    return (game: Game, player: Player, amount: number = 1) => {
       if (
         player.type() === PlayerType.Human &&
         this.hasInfiniteGoldFor(player)
       ) {
         return 0n;
       }
-      const numUnits = types.reduce(
+      const baseNumUnits = types.reduce(
         (acc, type) =>
           acc +
           Math.min(player.unitsOwned(type), player.unitsConstructed(type)),
         0,
       );
-      return BigInt(costFn(numUnits));
+      
+      let totalCost = 0n;
+      for (let i = 0; i < amount; i++) {
+        totalCost += BigInt(costFn(baseNumUnits + i));
+      }
+      return totalCost;
     };
   }
 

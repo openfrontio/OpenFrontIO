@@ -21,6 +21,7 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
+import { SendUpgradeStructureIntentEvent } from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
@@ -450,6 +451,49 @@ function createMenuElements(
         ].filter(
           (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
         ),
+        subMenu: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (!buildableUnit || buildableUnit.canUpgrade === false || !params.buildMenu.canBuildOrUpgrade(item)) {
+            return [];
+          }
+          return [1, 5, 10, 25, 50].map((amount) => {
+            const cost = amount === 1 
+              ? buildableUnit.cost 
+              : params.game.config().unitInfo(item.unitType).cost(
+                  params.game as any,
+                  params.myPlayer as any,
+                  amount
+                );
+            return {
+              id: `upgrade_${item.unitType}_${amount}`,
+              name: `x${amount}`,
+              text: `x${amount}`,
+              fontSize: "20px",
+              color: (p: MenuElementParams) => (p.game.myPlayer()?.gold() ?? 0n) >= cost ? COLORS.building : COLORS.disabled,
+              icon: "",
+              tooltipItems: [
+                { text: `Upgrade x${amount}`, className: "title" },
+                {
+                  text: `${renderNumber(cost)} ${translateText("player_panel.gold")}`,
+                  className: "cost",
+                },
+              ],
+              disabled: (p: MenuElementParams) => (p.game.myPlayer()?.gold() ?? 0n) < cost,
+              action: (p: MenuElementParams) => {
+                p.eventBus.emit(
+                  new SendUpgradeStructureIntentEvent(
+                    buildableUnit.canUpgrade as number,
+                    buildableUnit.type,
+                    amount
+                  )
+                );
+                p.closeMenu();
+              }
+            };
+          });
+        },
         action: (params: MenuElementParams) => {
           const buildableUnit = params.playerActions.buildableUnits.find(
             (bu) => bu.type === item.unitType,
@@ -458,9 +502,11 @@ function createMenuElements(
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+            params.buildMenu.handleBuildClick(buildableUnit, params.tile);
+            params.closeMenu();
+          } else {
+            params.closeMenu();
           }
-          params.closeMenu();
         },
       };
     });
