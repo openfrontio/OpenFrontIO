@@ -11,7 +11,7 @@ uniform sampler2D  uEffect;       // RGBA32F — trail effect, keyed by ownerID.
                                   //   block 1 = nukeTrail. Within a block (rowBase = block start):
                                   //   row r = color r's rgb; spare alphas hold scalars:
                                   //   row 0.a = color count (0 = no effect → territory color),
-                                  //   row 1.a = styleId (0 = gradient, 1 = transition),
+                                  //   row 1.a = styleId (0 = gradient, 1 = transition, 2 = spiral),
                                   //   row 2.a = scalar0 (gradient colorSize / transition freq),
                                   //   row 3.a = scalar1 (gradient movementSpeed)
 uniform vec2 uMapSize;
@@ -49,6 +49,11 @@ void main() {
       color = texture(uPalette, vec2(u, 0.25)).rgb;
     } else if (count == 1) {
       // Single color — flat trail.
+      color = texelFetch(uEffect, ivec2(o, rowBase), 0).rgb;
+    } else if (int(texelFetch(uEffect, ivec2(o, rowBase + 1), 0).a + 0.5) == 2) {
+      // spiral — the vortex itself renders as ribbon geometry above this
+      // pass (SpiralRibbonPass); the stamped centerline underneath draws
+      // flat in the first color, as the missile's spine.
       color = texelFetch(uEffect, ivec2(o, rowBase), 0).rgb;
     } else if (int(texelFetch(uEffect, ivec2(o, rowBase + 1), 0).a + 0.5) == 1) {
       // transition — the whole trail is one color at a time, cross-fading
