@@ -84,6 +84,7 @@
     },
     "not_enough_money": "Not enough money",
     "select_upgrade_amount": "Select Upgrade Amount",
+    "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
   },
   "chat": {

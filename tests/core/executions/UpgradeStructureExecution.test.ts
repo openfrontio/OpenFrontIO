@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
-import { GameType, PlayerInfo, PlayerType, UnitType, TileRef } from "../../../src/core/game/Game";
+import { GameType, PlayerInfo, PlayerType, UnitType } from "../../../src/core/game/Game";
+import type { TileRef } from "../../../src/core/game/GameMap";
 import { setup } from "../../util/Setup";
 
 describe("UpgradeStructureExecution", () => {

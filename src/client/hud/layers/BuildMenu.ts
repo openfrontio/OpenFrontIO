@@ -357,7 +357,7 @@ export class BuildMenu extends LitElement implements Controller {
   private _hidden = true;
 
   @state()
-  private _selectedUpgradeUnit: BuildableUnit | null = null;
+  private _selectedUpgradeUnitType: UnitType | null = null;
 
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
@@ -387,7 +387,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   public handleBuildClick(buildableUnit: BuildableUnit, tile: TileRef): void {
     if (buildableUnit.canUpgrade !== false) {
-      this._selectedUpgradeUnit = buildableUnit;
+      this._selectedUpgradeUnitType = buildableUnit.type;
       this.requestUpdate();
     } else if (buildableUnit.canBuild) {
       const rocketDirectionUp =
@@ -403,17 +403,19 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   public confirmUpgrade(amount: number): void {
-    if (
-      !this._selectedUpgradeUnit ||
-      this._selectedUpgradeUnit.canUpgrade === false
-    ) {
+    if (!this._selectedUpgradeUnitType) {
+      this.hideMenu();
+      return;
+    }
+    const bu = this.playerBuildables?.find((u) => u.type === this._selectedUpgradeUnitType);
+    if (!bu || bu.canUpgrade === false) {
       this.hideMenu();
       return;
     }
     this.eventBus.emit(
       new SendUpgradeStructureIntentEvent(
-        this._selectedUpgradeUnit.canUpgrade,
-        this._selectedUpgradeUnit.type,
+        bu.canUpgrade,
+        bu.type,
         amount,
       ),
     );
@@ -421,8 +423,10 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   renderAmountPanel() {
-    if (!this._selectedUpgradeUnit) return html``;
-    const baseCost = this._selectedUpgradeUnit.cost;
+    if (!this._selectedUpgradeUnitType) return html``;
+    const bu = this.playerBuildables?.find((u) => u.type === this._selectedUpgradeUnitType);
+    if (!bu) return html``;
+    const baseCost = bu.cost;
     const playerGold = this.game?.myPlayer()?.gold() ?? 0n;
 
     return html`
@@ -449,7 +453,7 @@ export class BuildMenu extends LitElement implements Controller {
                   : ""}
               >
                 <span style="font-size: 20px; font-weight: bold;"
-                  >x${amount}</span
+                  >${translateText("build_menu.upgrade_amount", { amount: amount.toString() })}</span
                 >
                 <span
                   class="build-cost"
@@ -479,7 +483,7 @@ export class BuildMenu extends LitElement implements Controller {
         class="build-menu ${this._hidden ? "hidden" : ""}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        ${this._selectedUpgradeUnit
+        ${this._selectedUpgradeUnitType
           ? this.renderAmountPanel()
           : this.filteredBuildTable.map(
               (row) => html`
@@ -553,7 +557,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   hideMenu() {
     this._hidden = true;
-    this._selectedUpgradeUnit = null;
+    this._selectedUpgradeUnitType = null;
     this.requestUpdate();
   }
 

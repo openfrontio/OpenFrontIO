@@ -332,7 +332,7 @@ export class WorldTextPass {
       cost: number;
       canAfford: boolean;
       canPlace: boolean;
-      multiplier?: number;
+      topText?: string;
     } | null,
   ): void {
     if (label === null) {
@@ -352,11 +352,6 @@ export class WorldTextPass {
       b = 0.6;
     }
 
-    const topTextStr =
-      label.multiplier && label.multiplier > 1
-        ? `x${label.multiplier}`
-        : undefined;
-
     // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
     // pass raw tile coords here — same convention as the other popup entries.
     // Y offset is applied in rebuildInstances (zoom-relative).
@@ -364,7 +359,7 @@ export class WorldTextPass {
       x: label.tileX,
       y: label.tileY,
       text: renderNumber(label.cost),
-      topText: topTextStr,
+      topText: label.topText,
       colorR: r,
       colorG: g,
       colorB: b,
