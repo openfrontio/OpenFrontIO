@@ -110,11 +110,11 @@ class SAMTargetingSystem {
     const rangeSquared = range * range;
 
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = 1200;
+    const detectionRange = this.mg.config().maxSamRange() * 4;
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
-      [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRVWarhead],
+      [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) => {
         if (!isUnit(unit) || unit.targetedBySAM()) return false;
         if (unit.owner() === this.sam.owner()) return false;
