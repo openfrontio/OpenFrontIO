@@ -459,13 +459,7 @@ function createMenuElements(
             return [];
           }
           return [1, 5, 10, 25, 50].map((amount) => {
-            const cost = amount === 1 
-              ? buildableUnit.cost 
-              : params.game.config().unitInfo(item.unitType).cost(
-                  params.game as any,
-                  params.myPlayer as any,
-                  amount
-                );
+            const cost = buildableUnit.cost * BigInt(amount);
             return {
               id: `upgrade_${item.unitType}_${amount}`,
               name: `x${amount}`,

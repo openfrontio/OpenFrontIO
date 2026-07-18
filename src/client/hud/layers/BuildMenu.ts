@@ -419,7 +419,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   renderAmountPanel() {
     if (!this._selectedUpgradeUnit) return html``;
-    const unitType = this._selectedUpgradeUnit.type;
+    const baseCost = this._selectedUpgradeUnit.cost;
     const playerGold = this.game?.myPlayer()?.gold() ?? 0n;
 
     return html`
@@ -427,13 +427,7 @@ export class BuildMenu extends LitElement implements Controller {
         <h3 style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">Select Upgrade Amount</h3>
         <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
           ${[1, 5, 10, 25, 50].map((amount) => {
-            const cost = amount === 1 
-              ? this._selectedUpgradeUnit!.cost 
-              : this.game!.config()!.unitInfo(unitType).cost(
-                  this.game as any,
-                  this.game!.myPlayer() as any,
-                  amount
-                );
+            const cost = baseCost * BigInt(amount);
             const canAfford = playerGold >= cost;
             return html`
               <button

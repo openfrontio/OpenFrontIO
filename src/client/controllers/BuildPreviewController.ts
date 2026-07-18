@@ -458,13 +458,7 @@ export class BuildPreviewController implements Controller {
     }
 
     const multiplier = u.canUpgrade !== false ? (this.uiState.upgradeMultiplier || 1) : 1;
-    const cost = multiplier === 1 
-      ? u.cost 
-      : this.game.config().unitInfo(u.type).cost(
-          this.game as any,
-          myPlayer as any,
-          multiplier
-        );
+    const cost = u.cost * BigInt(multiplier);
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),

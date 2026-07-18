@@ -153,7 +153,7 @@ export interface PublicGameModifiers {
 }
 
 export interface UnitInfo {
-  cost: (game: Game, player: Player, amount?: number) => Gold;
+  cost: (game: Game, player: Player) => Gold;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
