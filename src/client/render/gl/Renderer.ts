@@ -986,6 +986,7 @@ export class GPURenderer {
             cost: data.cost,
             canAfford: data.canAfford,
             canPlace: data.canBuild || data.canUpgrade,
+            multiplier: data.multiplier,
           }
         : null,
     );
