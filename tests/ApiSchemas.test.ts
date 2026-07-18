@@ -3,12 +3,14 @@ import {
   ClaimRewardResponseSchema,
   GoogleUser,
   GoogleUserSchema,
+  isTemporaryUsername,
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
   PlayerProfileSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
+  PutUsernameResponseSchema,
   RewardSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
@@ -401,5 +403,167 @@ describe("UserMeResponseSchema canCreatePublicLobbies", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
     ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema account username", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a lapsed claim holder (suffix showing, grace deadline set)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: "Bob.4821",
+        usernameBase: "Bob",
+        usernameDiscriminator: "4821",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: "2026-08-17T19:42:00.000Z",
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.username).toBe("Bob.4821");
+      expect(result.data.player.usernameStatus).toBe("claimed");
+    }
+  });
+
+  it("accepts a response without any username fields (older API)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: basePlayer,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.usernameStatus).toBeUndefined();
+    }
+  });
+
+  it("accepts a player who never set a name (all null, unclaimed)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: null,
+        usernameBase: null,
+        usernameDiscriminator: null,
+        usernameStatus: "unclaimed",
+        usernameClaimExpiresAt: null,
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("keeps a leading-zero discriminator as a string", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: "Ann.0042",
+        usernameBase: "Ann",
+        usernameDiscriminator: "0042",
+        usernameStatus: "unclaimed",
+        usernameClaimExpiresAt: null,
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.usernameDiscriminator).toBe("0042");
+    }
+  });
+
+  it("rejects an unknown usernameStatus", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: { ...basePlayer, usernameStatus: "expired" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a non-ISO usernameClaimExpiresAt", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: {
+          ...basePlayer,
+          usernameStatus: "claimed",
+          usernameClaimExpiresAt: "next month",
+        },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("PutUsernameResponseSchema", () => {
+  const base = {
+    username: "NewName.7302",
+    base: "NewName",
+    discriminator: "7302",
+    usernameStatus: "unclaimed",
+    nextUsernameChangeAt: "2026-08-17T19:42:00.000Z",
+  };
+
+  it("accepts a rename result", () => {
+    const result = PutUsernameResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBe("NewName.7302");
+      expect(result.data.discriminator).toBe("7302");
+    }
+  });
+
+  it("accepts a null cooldown", () => {
+    expect(
+      PutUsernameResponseSchema.safeParse({
+        ...base,
+        nextUsernameChangeAt: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a numeric discriminator (leading zeros would be lost)", () => {
+    expect(
+      PutUsernameResponseSchema.safeParse({ ...base, discriminator: 7302 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a missing base", () => {
+    const rest: Record<string, unknown> = { ...base };
+    delete rest.base;
+    expect(PutUsernameResponseSchema.safeParse(rest).success).toBe(false);
+  });
+});
+
+describe("isTemporaryUsername", () => {
+  it.each(["TEMPORARY0042", "TEMPORARY9999"])("detects %s", (name) => {
+    expect(isTemporaryUsername(name)).toBe(true);
+  });
+
+  it.each([
+    "temporary1234",
+    "TEMPORARY123",
+    "TEMPORARY12345",
+    "TEMPORARYabcd",
+    "Bob",
+  ])("rejects %s", (name) => {
+    expect(isTemporaryUsername(name)).toBe(false);
+  });
+
+  it("handles null and undefined bases", () => {
+    expect(isTemporaryUsername(null)).toBe(false);
+    expect(isTemporaryUsername(undefined)).toBe(false);
   });
 });

@@ -32,6 +32,7 @@ import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { playerProfileUrl } from "./PlayerProfileModal";
@@ -329,7 +330,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -359,7 +361,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -455,6 +458,17 @@ export class AccountModal extends BaseModal {
         <p class="text-white/60 text-sm">${message}</p>
       </div>
     `;
+  }
+
+  // Account-username management (custom-usernames). Hidden when the API
+  // doesn't return the username fields yet (older backend).
+  private renderUsernamePanel(): TemplateResult | "" {
+    const player = this.userMeResponse?.player;
+    if (!player || player.usernameStatus === undefined) return "";
+    return html`<username-panel
+      .player=${player}
+      @username-changed=${() => this.requestUpdate()}
+    ></username-panel>`;
   }
 
   private renderRewardsPanel(): TemplateResult | "" {
