@@ -407,24 +407,24 @@ export class BuildMenu extends LitElement implements Controller {
       this.hideMenu();
       return;
     }
-    const bu = this.playerBuildables?.find((u) => u.type === this._selectedUpgradeUnitType);
+    const bu = this.playerBuildables?.find(
+      (u) => u.type === this._selectedUpgradeUnitType,
+    );
     if (!bu || bu.canUpgrade === false) {
       this.hideMenu();
       return;
     }
     this.eventBus.emit(
-      new SendUpgradeStructureIntentEvent(
-        bu.canUpgrade,
-        bu.type,
-        amount,
-      ),
+      new SendUpgradeStructureIntentEvent(bu.canUpgrade, bu.type, amount),
     );
     this.hideMenu();
   }
 
   renderAmountPanel() {
     if (!this._selectedUpgradeUnitType) return html``;
-    const bu = this.playerBuildables?.find((u) => u.type === this._selectedUpgradeUnitType);
+    const bu = this.playerBuildables?.find(
+      (u) => u.type === this._selectedUpgradeUnitType,
+    );
     if (!bu) return html``;
     const baseCost = bu.cost;
     const playerGold = this.game?.myPlayer()?.gold() ?? 0n;
@@ -453,7 +453,9 @@ export class BuildMenu extends LitElement implements Controller {
                   : ""}
               >
                 <span style="font-size: 20px; font-weight: bold;"
-                  >${translateText("build_menu.upgrade_amount", { amount: amount.toString() })}</span
+                  >${translateText("build_menu.upgrade_amount", {
+                    amount: amount.toString(),
+                  })}</span
                 >
                 <span
                   class="build-cost"

@@ -467,8 +467,12 @@ function createMenuElements(
             const cost = buildableUnit.cost * BigInt(amount);
             return {
               id: `upgrade_${item.unitType}_${amount}`,
-              name: translateText("build_menu.upgrade_amount", { amount: amount.toString() }),
-              text: translateText("build_menu.upgrade_amount", { amount: amount.toString() }),
+              name: translateText("build_menu.upgrade_amount", {
+                amount: amount.toString(),
+              }),
+              text: translateText("build_menu.upgrade_amount", {
+                amount: amount.toString(),
+              }),
               fontSize: "20px",
               color: (p: MenuElementParams) =>
                 (p.game.myPlayer()?.gold() ?? 0n) >= cost

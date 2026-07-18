@@ -10,6 +10,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -28,7 +29,6 @@ import type {
 } from "../types";
 import { Camera } from "./Camera";
 import { GLUnavailableError, initGL } from "./initGL";
-import { translateText } from "../../Utils";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
@@ -987,9 +987,12 @@ export class GPURenderer {
             cost: data.cost,
             canAfford: data.canAfford,
             canPlace: data.canBuild || data.canUpgrade,
-            topText: data.multiplier && data.multiplier > 1
-              ? translateText("build_menu.upgrade_amount", { amount: data.multiplier.toString() })
-              : undefined,
+            topText:
+              data.multiplier && data.multiplier > 1
+                ? translateText("build_menu.upgrade_amount", {
+                    amount: data.multiplier.toString(),
+                  })
+                : undefined,
           }
         : null,
     );
