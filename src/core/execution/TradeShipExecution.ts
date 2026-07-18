@@ -138,10 +138,7 @@ export class TradeShipExecution implements Execution {
         if (dst !== this.motionPlanDst) {
           this.motionPlanId++;
           const from = result.node;
-          const path = this.pathFinder.findPath(from, dst) ?? [from];
-          if (path.length === 0 || path[0] !== from) {
-            path.unshift(from);
-          }
+          const path = this.pathFinder.pathForTraversal(from, dst);
 
           this.mg.recordMotionPlan({
             kind: "grid",
