@@ -271,39 +271,34 @@ export class SAMLauncherExecution implements Execution {
 
     this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
-    let mirvWarheadTargets = this.mg
-      .nearbyUnits(
-        this.sam.tile(),
-        this.MIRVWarheadSearchRadius,
-        UnitType.MIRVWarhead,
-        ({ unit }) => {
-          if (!isUnit(unit)) return false;
-          if (unit.owner() === this.player) return false;
+    const mirvWarheadTargets = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.MIRVWarheadSearchRadius,
+      UnitType.MIRVWarhead,
+      ({ unit }) => {
+        if (!isUnit(unit)) return false;
+        if (unit.owner() === this.player) return false;
 
-          // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
-          const nukeOwner = unit.owner();
-          if (this.player.isFriendly(nukeOwner)) {
-            if (
-              this.mg.getWinner() === null ||
-              !this.player.isOnSameTeam(nukeOwner)
-            ) {
-              return false;
-            }
+        // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
+        const nukeOwner = unit.owner();
+        if (this.player.isFriendly(nukeOwner)) {
+          if (
+            this.mg.getWinner() === null ||
+            !this.player.isOnSameTeam(nukeOwner)
+          ) {
+            return false;
           }
+        }
 
-          const dst = unit.targetTile();
-          return (
-            this.sam !== null &&
-            dst !== undefined &&
-            this.mg.manhattanDist(dst, this.sam.tile()) <
-              this.mg.config().samRange(this.sam.level())
-          );
-        },
-      )
-      .filter((v, i) => {
-        return i <= (this.sam?.level() ?? Infinity);
-      });
-    console.log(mirvWarheadTargets.length);
+        const dst = unit.targetTile();
+        return (
+          this.sam !== null &&
+          dst !== undefined &&
+          this.mg.manhattanDist(dst, this.sam.tile()) <
+            this.mg.config().samRange(this.sam.level())
+        );
+      },
+    );
     let target: Target | null = null;
     if (mirvWarheadTargets.length === 0) {
       target = this.targetingSystem.getSingleTarget(ticks);
