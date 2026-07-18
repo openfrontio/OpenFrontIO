@@ -233,7 +233,7 @@ const NukeExplosionEffectSchema = CosmeticSchema.extend({
 // separate schema, and the spatial semantics differ:
 //  - "gradient": the palette spans each structure icon's diagonal once (a
 //    visible gradient across the shape), sliding one full cycle every
-//    colorSize · 4 · count / movementSpeed seconds (the trail-equivalent pace).
+//    colorSize · count / movementSpeed seconds (the trail-equivalent pace).
 //  - "transition": the whole icon is one color at a time, cross-fading through
 //    the list. `frequency` = color changes per second.
 // Colors are unvalidated strings; the renderer drops any it can't parse (and
