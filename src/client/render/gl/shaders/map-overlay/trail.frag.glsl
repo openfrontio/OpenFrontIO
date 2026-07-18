@@ -68,12 +68,10 @@ void main() {
     } else {
       // gradient — cyclic gradient banded across the map (world-space diagonal),
       // scrolling over time so a moving trail shifts hue along it. colorSize
-      // scales the band width (colorSize = 1 ≈ 4 tiles per band); movementSpeed
-      // = tiles/sec the bands travel.
+      // = band width in tiles; movementSpeed = tiles/sec the bands travel.
       float colorSize = max(texelFetch(uEffect, ivec2(o, rowBase + 2), 0).a, 0.001);
       float movementSpeed = texelFetch(uEffect, ivec2(o, rowBase + 3), 0).a;
-      // 4.0 = tiles per band at colorSize 1; tune for default band thickness.
-      float cycle = colorSize * 4.0 * float(count);
+      float cycle = colorSize * float(count);
       float phase =
         fract((vWorldPos.x + vWorldPos.y - uTime * movementSpeed) / cycle);
       float f = phase * float(count);
