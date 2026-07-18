@@ -41,6 +41,12 @@ export const GraphicsOverridesSchema = z
         railThickness: z.number(),
       })
       .partial(),
+    smallPlayerGlow: z
+      .object({
+        // Aura around small players' territory: 0 = off, 1 = full brightness.
+        strength: z.number(),
+      })
+      .partial(),
     passEnabled: z
       .object({
         fx: z.boolean(),
