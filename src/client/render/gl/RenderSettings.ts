@@ -119,6 +119,11 @@ export interface RenderSettings {
   };
   mapOverlay: {
     trailAlpha: number;
+    /**
+     * Resolution of the offscreen spiral-trail buffer relative to the canvas
+     * (0..1). Lower = cheaper + softer/glowier (bilinear upsample).
+     */
+    spiralResolutionScale: number;
     defenseCheckerDarken: number;
     territoryDefenseDarken: number;
     /** Saturation of the territory fill. 1 = full color, 0 = grayscale. */
