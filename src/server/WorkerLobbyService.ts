@@ -98,9 +98,13 @@ export class WorkerLobbyService {
   }
 
   private sendMyLobbiesToMaster() {
+    // Matchmaking games have a Public gameType (so they appear in
+    // publicLobbies()) but no publicGameType: they are invite-only and must
+    // never be advertised, and the master rejects entries without one.
     const lobbies = this.gm
       .publicLobbies()
       .map((g) => g.gameInfo())
+      .filter((gi) => gi.publicGameType !== undefined)
       .map((gi) => {
         return {
           gameID: gi.gameID,

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   GameConfigSchema,
-  PublicGameInfoSchema,
   PublicGamesSchema,
   PublicGameTypeSchema,
 } from "../core/Schemas";
@@ -19,10 +18,14 @@ export type MasterMessage = z.infer<typeof MasterMessageSchema>;
 
 // --- Worker Messages ---
 
-// Worker tells the master about its lobbies.
+// Worker tells the master about its lobbies. Entries are deliberately not
+// validated here: the master checks each against PublicGameInfoSchema and
+// drops bad ones (MasterLobbyService.validLobbies), so a single malformed
+// lobby can't invalidate the whole report and freeze the master's view of
+// this worker's lobbies.
 const WorkerLobbyListSchema = z.object({
   type: z.literal("lobbyList"),
-  lobbies: z.array(PublicGameInfoSchema),
+  lobbies: z.array(z.unknown()),
 });
 
 const WorkerReadySchema = z.object({
