@@ -48,6 +48,12 @@ type mapInfo struct {
 	// Preferred team count in team/special games (see MapPlaylist).
 	// 0 (or omitted) means no preference.
 	SpecialTeamCount int `json:"special_team_count"`
+	// Theme name(s) for bot tribe names (references tribeNameThemes.json).
+	// Empty or omitted uses the "default" theme.
+	Themes []string `json:"themes"`
+	// Custom tribe names that take priority over theme-generated names.
+	// Each entry is used as-is (no prefix/suffix composition).
+	CustomTribes []string `json:"custom_tribes"`
 }
 
 // hasCategory reports whether the map lists the given category.
@@ -112,6 +118,11 @@ func loadMapInfos() ([]mapInfo, error) {
 		}
 		if len(info.Categories) == 0 {
 			return nil, fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
+		}
+		for _, ct := range info.CustomTribes {
+			if ct == "" {
+				return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains an empty string", m.Name)
+			}
 		}
 		seen := make(map[string]bool)
 		for _, category := range info.Categories {
@@ -190,6 +201,10 @@ func generateMapsTS(infos []mapInfo) error {
 	b.WriteString("  featuredRank?: number;\n")
 	b.WriteString("  /** Preferred team count in team/special games (see MapPlaylist). */\n")
 	b.WriteString("  specialTeamCount?: number;\n")
+	b.WriteString("  /** Tribe name theme(s) (keys in tribeNameThemes.json). */\n")
+	b.WriteString("  themes?: string[];\n")
+	b.WriteString("  /** Custom tribe names with priority over theme-generated names. */\n")
+	b.WriteString("  customTribes?: string[];\n")
 	b.WriteString("}\n\n")
 
 	b.WriteString("export const maps: readonly MapInfo[] = [\n")
@@ -212,6 +227,26 @@ func generateMapsTS(infos []mapInfo) error {
 		}
 		if info.SpecialTeamCount > 0 {
 			b.WriteString(fmt.Sprintf("    specialTeamCount: %d,\n", info.SpecialTeamCount))
+		}
+		if len(info.Themes) > 0 {
+			b.WriteString("    themes: [")
+			for i, th := range info.Themes {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(fmt.Sprintf("%q", th))
+			}
+			b.WriteString("],\n")
+		}
+		if len(info.CustomTribes) > 0 {
+			b.WriteString("    customTribes: [")
+			for i, ct := range info.CustomTribes {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(fmt.Sprintf("%q", ct))
+			}
+			b.WriteString("],\n")
 		}
 		b.WriteString("  },\n")
 	}

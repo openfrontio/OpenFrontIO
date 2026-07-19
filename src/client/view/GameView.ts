@@ -3,6 +3,7 @@ import {
   Cell,
   GameUpdates,
   PlayerID,
+  PlayerType,
   TerrainType,
   TerraNullius,
   Tick,
@@ -371,8 +372,12 @@ export class GameView implements GameMap {
           pu,
           gu.playerNameViewData?.[pu.id],
           // First check human by clientID, then check nation by name.
+          // Only match by name for actual Nations — not Bots (tribes) whose
+          // random names may coincidentally match a nation name.
           this._cosmetics.get(pu.clientID ?? "") ??
-            this._cosmetics.get(pu.name!) ??
+            (pu.playerType === PlayerType.Nation
+              ? this._cosmetics.get(pu.name!)
+              : undefined) ??
             {},
         );
         this._players.set(pu.id, player);
