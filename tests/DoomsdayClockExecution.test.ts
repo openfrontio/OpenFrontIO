@@ -3,7 +3,6 @@ import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
-  doomsdayClockSideRequiredTiles,
   doomsdayClockWaveState,
 } from "../src/core/game/DoomsdayClock";
 import {
@@ -42,6 +41,7 @@ function sdConfig(over: Partial<SDConfig> = {}): SDConfig {
     drainStartPercent: 10,
     drainMaxPercent: 80,
     drainRampSeconds: 3,
+    drainFloorPercent: 5, // drain stops at 5% of max (matches production default)
     warshipDrainStartPercent: 10, // fixture: same start as troops (linear curve below)
     warshipDrainMaxPercent: 100, // ships ramp to a higher ceiling than troops
     warshipDrainCurveExponent: 1, // fixture uses a linear ramp for exact numbers
@@ -234,13 +234,18 @@ describe("DoomsdayClockExecution (logic)", () => {
     expect(b.troops()).toBe(570);
   });
 
-  it("drains an unrecovered player all the way to zero", () => {
+  it("drains an unrecovered player down to the 5% floor, never zero", () => {
+    // b (maxTroops 1000) is caught and never recovers. The drain cripples it to
+    // drainFloorPercent of max (5% of 1000 = 50) and stops there, not at zero.
     const { game, b } = twoPlayerGame(400, 50);
     const exec = makeExec(game);
     for (let t = WAVE_TICK; t <= WAVE_TICK + 1000; t += 10)
       runAt(exec, game, t);
-    expect(b.troops()).toBe(0);
+    expect(b.troops()).toBe(50); // 5% floor, not wiped
     expect(b.inDoomsdayClock()).toBe(true);
+    // Holds at the floor on further ticks (no drift below it).
+    runAt(exec, game, WAVE_TICK + 1010);
+    expect(b.troops()).toBe(50);
   });
 
   it("clears the mark and stops draining when a player climbs back above the bar", () => {
@@ -319,8 +324,8 @@ describe("DoomsdayClockExecution (logic)", () => {
 // ---------------------------------------------------------------------------
 // Warship decay: a flagged (sub-threshold, non-leader) side's warships bleed HP
 // on the troop start + ramp but toward a much higher ceiling, so at full
-// attrition they sink in ~2s. Destroyed with no attacker (never a credited
-// kill); the leader's fleet is spared.
+// attrition they drop to the 5% floor in ~2s (never sunk). Damage carries no
+// attacker (environmental, never a credited kill); the leader's fleet is spared.
 // ---------------------------------------------------------------------------
 
 describe("DoomsdayClockExecution (warship decay)", () => {
@@ -348,28 +353,40 @@ describe("DoomsdayClockExecution (warship decay)", () => {
     expect(ship.health()).toBe(900); // warship: identical at the start (same 10%)
   });
 
-  it("scuttles a warship in one tick at full attrition (its own high ceiling)", () => {
-    // Once the side is fully ramped, a fresh full-HP warship is destroyed in a
-    // single tick at warshipDrainMaxPercent (100% here). The troop max (80%)
-    // would leave it at 200 HP, so destruction proves the ship uses its own
-    // higher ceiling, not the troop rate.
+  it("batters a warship down to the 5% floor at full attrition, never sunk", () => {
+    // Once the side is fully ramped, a fresh full-HP warship would take its whole
+    // ceiling (100% here) in one tick, but the floor (5% of maxHealth 1000 = 50)
+    // clamps it: the ship drops to 50 HP and survives instead of being destroyed.
     const { game, b } = warshipGame([]);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK); // flag b (starts the side's attrition clock)
     const fresh = new FakeWarship(1000, 1000);
     b.warships = [fresh]; // appears once the side is fully ramped
     runAt(exec, game, WAVE_TICK + 70); // secondsPastWarn 6 >= ramp 3 -> max
-    expect(fresh.destroyed).toBe(true);
+    expect(fresh.health()).toBe(50); // 5% floor
+    expect(fresh.destroyed).toBe(false); // crippled, not sunk
   });
 
-  it("destroys warships with no attacker, so decay never scores a kill", () => {
-    const ship = new FakeWarship(50, 1000); // less HP than one tick of drain
+  it("decays HP with no attacker (environmental) and stops at the floor", () => {
+    const ship = new FakeWarship(1000, 1000);
     const { game } = warshipGame([ship]);
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    runAt(exec, game, WAVE_TICK + 10); // 10% of 1000 = 100 dmg > 50 hp
-    expect(ship.destroyed).toBe(true);
+    runAt(exec, game, WAVE_TICK + 10); // 10% of 1000 = 100 dmg
+    expect(ship.health()).toBe(900); // took damage
     expect(ship.attackerWasPassed).toBe(false); // environmental, no kill credit
+    expect(ship.destroyed).toBe(false);
+  });
+
+  it("leaves a warship already at the floor untouched", () => {
+    const ship = new FakeWarship(50, 1000); // exactly the 5% floor
+    const { game } = warshipGame([ship]);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    runAt(exec, game, WAVE_TICK + 70); // full attrition
+    expect(ship.health()).toBe(50); // nothing left above the floor to remove
+    expect(ship.destroyed).toBe(false);
+    expect(ship.attackerWasPassed).toBe(false);
   });
 
   it("spares the leader's warships", () => {
@@ -392,13 +409,15 @@ describe("DoomsdayClockExecution (warship decay)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Team modes: the bar applies to a whole team's combined territory, and every
-// member shares the fate (skull + drain together).
+// Team modes: the bar applies to a whole team's combined territory — the SAME
+// bar a solo side faces, regardless of headcount — and every member shares the
+// fate (skull + drain together).
 // ---------------------------------------------------------------------------
 
 describe("DoomsdayClockExecution (teams)", () => {
   function teamGame(teams: { team: string; tiles: number[] }[]) {
-    // base bar 200 @ land 1000; a team's threshold = 200 x its member count.
+    // WAVE_TICK sits in the veryfast 26% hold @ land 1000 -> every side's bar
+    // is 260, team or solo.
     const game = new FakeGame(1000, sdConfig(), []);
     game.gameMode = GameMode.Team;
     const players: FakePlayer[] = [];
@@ -414,8 +433,8 @@ describe("DoomsdayClockExecution (teams)", () => {
   }
 
   it("judges a team on combined territory and skulls every member when below", () => {
-    // Both teams size 2 -> threshold 200x2=400. Red 250+250=500 safe;
-    // Blue 50+50=100 below -> both Blue skulled.
+    // Bar 260. Red 250+250=500 above (and the leader); Blue 50+50=100 below
+    // -> both Blue members skulled together.
     const { game, players } = teamGame([
       { team: "Red", tiles: [250, 250] },
       { team: "Blue", tiles: [50, 50] },
@@ -434,8 +453,8 @@ describe("DoomsdayClockExecution (teams)", () => {
   });
 
   it("spares a tiny member whose team is collectively above the bar", () => {
-    // Size 2 -> threshold 400. Red 400+40=440 -> safe, so the 40-tile member
-    // is NOT skulled.
+    // Bar 260. Red 400+40=440 above -> safe, so the 40-tile member is NOT
+    // skulled even though 40 is far below the bar on its own.
     const { game, players } = teamGame([
       { team: "Red", tiles: [400, 40] },
       { team: "Blue", tiles: [50, 50] },
@@ -447,20 +466,44 @@ describe("DoomsdayClockExecution (teams)", () => {
     expect(blue1.inDoomsdayClock()).toBe(true);
   });
 
-  it("scales the threshold by team size (a bigger team must hold more)", () => {
-    // base bar 200. Red is 3 members -> threshold 600; Blue is 1 -> threshold 200.
-    // Blue leads on tiles (crown-exempt), so Red is squeezed purely by its size.
+  it("does NOT scale the bar by headcount (a team faces the same bar as a solo)", () => {
+    // Bar 260 for every side. Red (2 members, 300 combined) is safe — the old
+    // headcount-scaled rule would have demanded 260x2=520 and skulled them.
+    // Green (3 members, 240 combined) is below the SOLO bar -> skulled: being
+    // three players earns no leniency either.
     const { game, players } = teamGame([
-      { team: "Red", tiles: [200, 200, 100] }, // 500 combined, < 600, not leader
-      { team: "Blue", tiles: [700] }, // leader, and 700 >= 200 -> safe
+      { team: "Blue", tiles: [700] }, // leader
+      { team: "Red", tiles: [150, 150] }, // 300 >= 260 -> safe
+      { team: "Green", tiles: [100, 80, 60] }, // 240 < 260 -> skulled
     ]);
-    const [red1, red2, red3, blue1] = players;
+    const [blue1, red1, red2, green1, green2, green3] = players;
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(red1.inDoomsdayClock()).toBe(true); // 500 < 200x3
-    expect(red2.inDoomsdayClock()).toBe(true);
-    expect(red3.inDoomsdayClock()).toBe(true);
     expect(blue1.inDoomsdayClock()).toBe(false); // leader
+    expect(red1.inDoomsdayClock()).toBe(false);
+    expect(red2.inDoomsdayClock()).toBe(false);
+    expect(green1.inDoomsdayClock()).toBe(true);
+    expect(green2.inDoomsdayClock()).toBe(true);
+    expect(green3.inDoomsdayClock()).toBe(true);
+  });
+
+  it("keeps the bar unchanged when a teammate dies", () => {
+    // Bar 260. Red holds 300+5: safe before AND after losing the 5-tile member
+    // (still 300 >= 260). The old rule moved the bar with the alive headcount:
+    // 520 while both lived (skulled), 260 after the death (saved by dying) —
+    // deaths must never move the bar.
+    const { game, players } = teamGame([
+      { team: "Blue", tiles: [700] }, // leader
+      { team: "Red", tiles: [300, 5] },
+    ]);
+    const [, red1, red2] = players;
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(red1.inDoomsdayClock()).toBe(false); // 305 >= 260 (old rule: < 520)
+    expect(red2.inDoomsdayClock()).toBe(false);
+    red2.kill();
+    runAt(exec, game, WAVE_TICK + 10);
+    expect(red1.inDoomsdayClock()).toBe(false); // 300 >= 260, bar unmoved
   });
 
   it("idles when only one team remains", () => {
@@ -508,21 +551,6 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
       prev = r;
     }
     expect(doomsdayClockRequiredTiles("normal", 0, 1800)).toBe(0);
-  });
-});
-
-describe("doomsdayClockSideRequiredTiles (headcount scaling)", () => {
-  const land = 10000;
-
-  it("scales the base share by side size and caps at the whole map", () => {
-    // veryfast at 800s sits in the 26% hold -> base 2600 tiles.
-    expect(doomsdayClockRequiredTiles("veryfast", land, 800)).toBe(2600);
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 1)).toBe(2600); // solo
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 2)).toBe(5200); // 2x
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 4)).toBe(
-      10000,
-    ); // 10400 capped at the map
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 0)).toBe(2600); // min size 1
   });
 });
 
@@ -700,16 +728,16 @@ describe("DoomsdayClockExecution (integration)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Default-config wipe time. Uses the resolved DOOMSDAY_CLOCK_DEFAULTS (no drain
-// overrides) with real troop income (PlayerExecution) flowing every tick, so it
-// pins the advertised "~1 minute from caught to wiped". A pure-drain analysis
-// (ignoring income) under-counts this to ~45s; income offsets the early bleed.
+// Default-config floor behavior. Uses the resolved DOOMSDAY_CLOCK_DEFAULTS (no
+// drain overrides) with real troop income (PlayerExecution) flowing every tick.
+// The drain cripples a caught side to drainFloorPercent (5%) of its max and
+// stops there: it never reaches zero, and income keeps it hovering at the floor.
 // ---------------------------------------------------------------------------
 
 describe("DoomsdayClockExecution (default drain, with income)", () => {
-  it("wipes a full-troop side in ~2 minutes (warn + linear drain)", async () => {
-    // Only enabled + speed set -> drain uses the defaults (warn 30s, 2%->5% /90s).
-    // veryfast is chosen purely so the bar rises fast enough to catch the sliver.
+  it("cripples a full-troop side down to ~5% of max, never wiped", async () => {
+    // Only enabled + speed set -> drain uses the defaults (warn 30s, 2%->5% /90s,
+    // floor 5%). veryfast is chosen so the bar rises fast enough to catch the sliver.
     const game = await setup(
       "plains",
       {
@@ -730,7 +758,7 @@ describe("DoomsdayClockExecution (default drain, with income)", () => {
     game.addExecution(new DoomsdayClockExecution());
 
     // Run until the rising bar catches the sliver, then fill it to a full stack
-    // so we measure the worst-case (longest) wipe from that moment.
+    // so the drain works from the worst case (a full army down to the floor).
     let caughtTick = -1;
     for (let i = 0; i < 8000; i++) {
       // grace is 600s now -> the bar only rises after ~6000 ticks
@@ -741,20 +769,17 @@ describe("DoomsdayClockExecution (default drain, with income)", () => {
       }
     }
     expect(caughtTick).toBeGreaterThan(0);
-    small.setTroops(game.config().maxTroops(small));
+    const maxTroops = game.config().maxTroops(small);
+    const floor = Math.floor((maxTroops * 5) / 100);
+    small.setTroops(maxTroops);
 
-    let zeroTick = -1;
-    for (let i = 0; i < 2500; i++) {
-      game.executeNextTick();
-      if (small.troops() <= 0) {
-        zeroTick = game.ticks();
-        break;
-      }
-    }
-    expect(zeroTick).toBeGreaterThan(0);
-    const seconds = (zeroTick - caughtTick) / 10;
-    // ~30s warn + the slower drain, income included: about two minutes.
-    expect(seconds).toBeGreaterThan(90);
-    expect(seconds).toBeLessThan(150);
+    // Run well past the warn + ramp (30s + 90s) so the drain reaches steady state.
+    for (let i = 0; i < 2500; i++) game.executeNextTick();
+
+    expect(small.inDoomsdayClock()).toBe(true);
+    expect(small.troops()).toBeGreaterThan(0); // never wiped to zero
+    expect(small.troops()).toBeGreaterThanOrEqual(floor - 1); // never below the 5% floor
+    // Settles at the floor (income keeps it a little above, within one drain step).
+    expect(small.troops()).toBeLessThan(floor + Math.floor(maxTroops * 0.05));
   });
 });

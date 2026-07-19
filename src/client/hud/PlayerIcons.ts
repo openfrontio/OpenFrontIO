@@ -112,9 +112,14 @@ export function getPlayerIcons(
 
   const icons: PlayerIconDescriptor[] = [];
 
-  // Crown icon for first place
+  // Crown icon for first place — a crown cosmetic skins the default icon.
   if (player === firstPlace) {
-    icons.push({ id: CROWN_ICON_ID, kind: IMAGE_ICON_KIND, src: crownIcon });
+    const crownUrl = player.cosmetics.crown?.url;
+    icons.push({
+      id: CROWN_ICON_ID,
+      kind: IMAGE_ICON_KIND,
+      src: crownUrl ? assetUrl(crownUrl) : crownIcon,
+    });
   }
 
   // Traitor icon

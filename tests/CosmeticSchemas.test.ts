@@ -10,6 +10,7 @@ import {
   isNukeExplosionEffect,
   isTrailEffect,
   NukeExplosionAttributesSchema,
+  SubscriptionSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
 import { PlayerEffectSchema } from "../src/core/Schemas";
@@ -93,6 +94,50 @@ describe("Effect cosmetic schemas", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("parses a spiral with colors, radius, strands, and rotationSpeed", () => {
+      const parsed = TrailEffectAttributesSchema.parse({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+      expect(parsed).toEqual({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+    });
+
+    it("requires spiral radius/strands/rotationSpeed, radius > 0, integer strands", () => {
+      const valid = {
+        type: "spiral",
+        colors: ["#f00", "#00f"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      };
+      for (const key of ["radius", "strands", "rotationSpeed"] as const) {
+        const missing: Record<string, unknown> = { ...valid };
+        delete missing[key];
+        expect(TrailEffectAttributesSchema.safeParse(missing).success).toBe(
+          false,
+        );
+      }
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, radius: 0 }).success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 2.5 })
+          .success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 0 }).success,
+      ).toBe(false);
+    });
   });
 
   describe("EffectSchema", () => {
@@ -122,6 +167,26 @@ describe("Effect cosmetic schemas", () => {
             colorSize: 0.5,
             movementSpeed: 2,
           },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("parses a spiral nukeTrail effect (the catalog spiral_tail shape)", () => {
+      expect(
+        EffectSchema.safeParse({
+          name: "spiral_tail",
+          effectType: "nukeTrail",
+          attributes: {
+            type: "spiral",
+            colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+            radius: 15,
+            strands: 4,
+            rotationSpeed: 5,
+          },
+          affiliateCode: null,
+          product: null,
+          priceHard: 123,
+          rarity: "common",
         }).success,
       ).toBe(true);
     });
@@ -782,5 +847,120 @@ describe("effect selection slots", () => {
     expect(findEffectForSlot(catalog, "bogus", "atom_boom")).toBeUndefined();
     // No catalog (failed load) resolves nothing.
     expect(findEffectForSlot(null, "atom", "atom_boom")).toBeUndefined();
+  });
+});
+
+describe("crowns in the cosmetics catalog", () => {
+  const goldCrown = {
+    name: "gold_crown",
+    url: "http://localhost:8787/public/cosmetics/crown/gold",
+    affiliateCode: null,
+    product: null,
+    priceHard: 5,
+    artist: "sadfas",
+    rarity: "common",
+  };
+
+  it("parses a crowns catalog entry", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      crowns: { gold_crown: goldCrown },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.crowns?.gold_crown?.name).toBe("gold_crown");
+      expect(result.data.crowns?.gold_crown?.url).toBe(
+        "http://localhost:8787/public/cosmetics/crown/gold",
+      );
+    }
+  });
+
+  it("parses a catalog without crowns (older cosmetics.json)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.crowns).toBeUndefined();
+    }
+  });
+
+  it("rejects a crown without a url", () => {
+    const noUrl = { ...goldCrown, url: undefined };
+    expect(
+      CosmeticsSchema.safeParse({
+        patterns: {},
+        flags: {},
+        crowns: { gold_crown: noUrl },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("SubscriptionSchema unlimitedRanked", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+    canCreatePublicLobbies: false,
+  };
+
+  it("rejects a tier without unlimitedRanked", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with unlimitedRanked", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      unlimitedRanked: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.unlimitedRanked).toBe(true);
+    }
+  });
+
+  it("rejects a non-boolean unlimitedRanked", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, unlimitedRanked: "yes" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("SubscriptionSchema canCreatePublicLobbies", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+    unlimitedRanked: false,
+  };
+
+  it("rejects a tier without canCreatePublicLobbies", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with canCreatePublicLobbies", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      canCreatePublicLobbies: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.canCreatePublicLobbies).toBe(true);
+    }
+  });
+
+  it("rejects a non-boolean canCreatePublicLobbies", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
+        .success,
+    ).toBe(false);
   });
 });

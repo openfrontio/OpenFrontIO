@@ -14,24 +14,26 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { adGatekeeper } from "./AdGatekeeper";
+import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import "./CosmeticsInput";
+import "./CosmeticsModal";
+import { CosmeticsModal } from "./CosmeticsModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import "./EffectsInput";
-import "./EffectsModal";
-import { EffectsModal } from "./EffectsModal";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
 import { FlagInputModal } from "./FlagInputModal";
-import { GameInfoModal } from "./GameInfoModal";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
+import "./GameStatsModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
@@ -47,12 +49,10 @@ import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
-import "./PatternInput";
+import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { StoreModal } from "./Store";
-import "./TerritoryPatternsModal";
-import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
@@ -102,6 +102,11 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const signInTextEl = document.getElementById(
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
+
+  // Auth state is resolved, so the button no longer shows the loading spinner.
+  document
+    .getElementById("nav-account-loading-spinner")
+    ?.classList.add("hidden");
 
   // Unique token for this update call
   const navToken = Symbol();
@@ -233,7 +238,7 @@ declare global {
     "kick-player": CustomEvent;
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
-    "open-matchmaking": CustomEvent<undefined>;
+    "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
@@ -298,6 +303,14 @@ class Client {
       tag: "account-modal",
       pageId: "page-account",
     });
+    modalRouter.register("stats", {
+      tag: "game-stats-modal",
+      pageId: "page-stats",
+    });
+    modalRouter.register("profile", {
+      tag: "player-profile-modal",
+      pageId: "page-profile",
+    });
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
     modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
     modalRouter.register("language", {
@@ -316,11 +329,8 @@ class Client {
       tag: "troubleshooting-modal",
       pageId: "page-troubleshooting",
     });
-    modalRouter.register("territory-patterns", {
-      tag: "territory-patterns-modal",
-    });
+    modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
-    modalRouter.register("effects", { tag: "effects-modal" });
 
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
@@ -402,10 +412,6 @@ class Client {
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
       console.warn("Help modal element not found");
     }
-    const giModal = document.querySelector("game-info-modal") as GameInfoModal;
-    if (!giModal || !(giModal instanceof GameInfoModal)) {
-      console.warn("Game info modal element not found");
-    }
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
       helpButton.addEventListener("click", () => {
@@ -431,51 +437,29 @@ class Client {
       });
     });
 
-    const effectsModal = document.querySelector(
-      "effects-modal",
-    ) as EffectsModal;
-    if (!effectsModal || !(effectsModal instanceof EffectsModal)) {
-      console.warn("Effects modal element not found");
-    }
-    document.querySelectorAll("effects-input").forEach((effectsInput) => {
-      effectsInput.addEventListener("effects-input-click", () => {
-        if (effectsModal && effectsModal instanceof EffectsModal) {
-          effectsModal.open();
-        }
-      });
-    });
-
     this.storeModal = document.getElementById("page-item-store") as StoreModal;
     if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
       console.warn("Store modal element not found");
     }
 
-    const patternsModal = document.getElementById(
-      "territory-patterns-modal",
-    ) as TerritoryPatternsModal;
-    if (!patternsModal || !(patternsModal instanceof TerritoryPatternsModal)) {
-      console.warn("Patterns modal element not found");
+    const cosmeticsModal = document.getElementById(
+      "cosmetics-modal",
+    ) as CosmeticsModal;
+    if (!cosmeticsModal || !(cosmeticsModal instanceof CosmeticsModal)) {
+      console.warn("Cosmetics modal element not found");
     }
 
-    // Attach listener to any pattern-input component
-    document.querySelectorAll("pattern-input").forEach((patternInput) => {
-      patternInput.addEventListener("pattern-input-click", () => {
-        patternsModal.open();
+    // Attach listener to any cosmetics-input component
+    document.querySelectorAll("cosmetics-input").forEach((cosmeticsInput) => {
+      cosmeticsInput.addEventListener("cosmetics-input-click", () => {
+        cosmeticsModal.open();
       });
     });
 
     if (isInIframe()) {
-      const mobilePat = document.getElementById("pattern-input-mobile");
-      if (mobilePat) mobilePat.style.display = "none";
+      const mobileCosmetics = document.getElementById("cosmetics-input-mobile");
+      if (mobileCosmetics) mobileCosmetics.style.display = "none";
     }
-
-    if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
-      console.warn("Store modal element not found");
-    }
-
-    // We no longer need to manually manage the preview button as PatternInput handles it component-side.
-    // However, we still want to ensure the modal can be opened.
-    // The setupPatternInput above handles the click event for the new buttons.
 
     this.storeModal.refresh();
 
@@ -521,6 +505,22 @@ class Client {
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
+      // Ad-eligible users only: paid/adfree users must never load Admiral (its
+      // adblock popup fires autonomously once the payload runs). Start watching
+      // adblock state; once a blocker is ever detected the in-game ad is
+      // suppressed forever (persisted) — those users are highly ad-sensitive.
+      if (window.adsEnabled) {
+        loadAdmiral();
+        // Admiral's read is more reliable than our DOM bait, so use it as a
+        // fast initial signal. A blocker that whitelists this site still shows
+        // ads, so "blocked" means adblocking AND not whitelisted.
+        onAdmiralMeasured((res) => {
+          adGatekeeper.seed(
+            res.adblocking === true && res.whitelisted !== true,
+          );
+        });
+        adGatekeeper.start();
+      }
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -854,16 +854,24 @@ class Client {
       window.location.href = "/";
     }
 
-    if (this.consumeRequeueUrl()) {
-      document.dispatchEvent(new CustomEvent("open-matchmaking"));
+    const requeueMode = this.consumeRequeueUrl();
+    if (requeueMode !== null) {
+      document.dispatchEvent(
+        new CustomEvent("open-matchmaking", {
+          detail: { mode: requeueMode },
+        }),
+      );
     }
   }
 
-  private consumeRequeueUrl(): boolean {
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // null when the URL has no requeue param.
+  private consumeRequeueUrl(): "1v1" | "2v2" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
-      return false;
+      return null;
     }
+    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -871,7 +879,7 @@ class Client {
       (searchParams.toString() ? `?${searchParams.toString()}` : "") +
       window.location.hash;
     history.replaceState(null, "", newUrl);
-    return true;
+    return mode;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -945,12 +953,11 @@ class Client {
         "help-modal",
         "user-setting",
         "troubleshooting-modal",
-        "territory-patterns-modal",
+        "cosmetics-modal",
         "store-modal",
         "language-modal",
         "news-modal",
         "flag-input-modal",
-        "effects-modal",
         "account-button",
         "leaderboard-button",
         "token-login",
@@ -1066,8 +1073,14 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
-  private handleOpenMatchmaking(_event: CustomEvent<undefined>) {
-    this.matchmakingModal?.open();
+  private handleOpenMatchmaking(
+    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+  ) {
+    if (!this.matchmakingModal) return;
+    // Always set the mode: dispatchers without a detail (homepage button,
+    // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
+    this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+    this.matchmakingModal.open();
   }
 
   private handleKickPlayer(event: CustomEvent) {

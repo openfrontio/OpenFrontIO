@@ -640,6 +640,22 @@ export class JoinLobbyModal extends BaseModal {
           .value=${translateText("common.enabled")}
         ></lobby-config-item>`,
       );
+    if (c.doomsdayClock?.enabled)
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText("public_game_modifier.doomsday_clock_label")}
+          .value=${translateText(
+            `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
+          )}
+        ></lobby-config-item>`,
+      );
+    if (c.anonymizeNames)
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText("host_modal.anonymous_players")}
+          .value=${translateText("common.enabled")}
+        ></lobby-config-item>`,
+      );
     if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
       cards.push(
         html`<lobby-config-item

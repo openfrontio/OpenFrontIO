@@ -2,16 +2,16 @@
   "id": "Korea",
   "name": "Korea",
   "translation_key": "map.korea",
-  "categories": ["asia"],
+  "categories": ["asia", "countries"],
   "multiplayer_frequency": 5,
   "nations": [
     {
-      "coordinates": [849, 1523],
+      "coordinates": [845, 1587],
       "name": "Ulsan",
       "flag": "kr"
     },
     {
-      "coordinates": [815, 1645],
+      "coordinates": [823, 1708],
       "name": "Busan",
       "flag": "kr"
     },
@@ -21,12 +21,12 @@
       "flag": "kr"
     },
     {
-      "coordinates": [963, 2093],
+      "coordinates": [927, 2146],
       "name": "Nagasaki",
       "flag": "Empire of Japan"
     },
     {
-      "coordinates": [1039, 1970],
+      "coordinates": [1072, 2033],
       "name": "Fukuoka",
       "flag": "jp"
     },
@@ -46,32 +46,32 @@
       "flag": "kr"
     },
     {
-      "coordinates": [408, 1770],
+      "coordinates": [450, 1817],
       "name": "South Jeolla",
       "flag": "kr"
     },
     {
-      "coordinates": [435, 1605],
+      "coordinates": [462, 1654],
       "name": "North Jeolla",
       "flag": "kr"
     },
     {
-      "coordinates": [456, 1158],
+      "coordinates": [473, 1251],
       "name": "Seoul",
       "flag": "kr"
     },
     {
-      "coordinates": [529, 1500],
+      "coordinates": [535, 1542],
       "name": "Daejeon",
       "flag": "kr"
     },
     {
-      "coordinates": [507, 1456],
+      "coordinates": [513, 1505],
       "name": "Sejong",
       "flag": "kr"
     },
     {
-      "coordinates": [572, 1396],
+      "coordinates": [590, 1450],
       "name": "North Chungcheong",
       "flag": "kr"
     },
@@ -81,7 +81,7 @@
       "flag": "kr"
     },
     {
-      "coordinates": [384, 1163],
+      "coordinates": [414, 1269],
       "name": "Incheon",
       "flag": "kr"
     },
@@ -91,12 +91,12 @@
       "flag": "kr"
     },
     {
-      "coordinates": [471, 1254],
+      "coordinates": [507, 1334],
       "name": "Gyeonggi",
       "flag": "kr"
     },
     {
-      "coordinates": [301, 1093],
+      "coordinates": [364, 1136],
       "name": "Kaesong",
       "flag": "kp"
     },
@@ -111,7 +111,7 @@
       "flag": "kp"
     },
     {
-      "coordinates": [166, 1093],
+      "coordinates": [184, 1116],
       "name": "South Hwanghae",
       "flag": "kp"
     },
@@ -126,7 +126,7 @@
       "flag": "kp"
     },
     {
-      "coordinates": [564, 642],
+      "coordinates": [565, 726],
       "name": "South Hamgyong",
       "flag": "kp"
     },
@@ -136,7 +136,7 @@
       "flag": "kp"
     },
     {
-      "coordinates": [540, 448],
+      "coordinates": [595, 530],
       "name": "Ryanggang",
       "flag": "kp"
     },
@@ -146,39 +146,40 @@
       "flag": "kp"
     },
     {
-      "coordinates": [151, 639],
+      "coordinates": [158, 720],
       "name": "North Pyongan",
       "flag": "kp"
     },
     {
-      "coordinates": [336, 571],
+      "coordinates": [383, 609],
       "name": "Chagang",
       "flag": "kp"
     },
     {
-      "coordinates": [402, 198],
-      "name": "Jilin",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [34, 533],
-      "name": "Liaoning",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [1045, 43],
-      "name": "Primorsky",
-      "flag": "ru"
-    },
-    {
-      "coordinates": [820, 50],
-      "name": "Heilongjiang",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [1057, 2090],
+      "coordinates": [1046, 2178],
       "name": "Saga",
       "flag": "jp"
+    },
+    {
+      "coordinates": [455, 1742],
+      "name": "Gwangju",
+      "flag": "kr"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1210,
+        "width": 1088,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 978,
+        "width": 1088,
+        "x": 0,
+        "y": 1210
+      }
+    ]
+  }
 }

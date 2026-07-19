@@ -12,6 +12,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -142,6 +143,9 @@ export class MapRenderer {
     trailState: Uint16Array,
   ): void {
     this.renderer?.uploadTileAndTrailState(tileState, trailState);
+  }
+  updateSpiralRibbons(ribbons: readonly SpiralRibbon[]): void {
+    this.renderer?.updateSpiralRibbons(ribbons);
   }
   updatePalette(paletteData: Float32Array): void {
     this.renderer?.updatePalette(paletteData);

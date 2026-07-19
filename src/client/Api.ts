@@ -20,7 +20,7 @@ import {
 } from "../core/ApiSchemas";
 import {
   AnalyticsRecord,
-  AnalyticsRecordSchema,
+  ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
 import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
@@ -62,6 +62,44 @@ export async function fetchPlayerById(
     return parsed.data;
   } catch (err) {
     console.warn("fetchPlayerById: request failed", err);
+    return false;
+  }
+}
+
+// GET /public/player/:publicId — public player profile (stats tree). No auth,
+// so logged-out visitors can view shared profiles.
+export async function fetchPublicPlayerProfile(
+  publicId: string,
+): Promise<PlayerProfile | false> {
+  try {
+    const url = `${getApiBase()}/public/player/${encodeURIComponent(publicId)}`;
+
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (res.status !== 200) {
+      console.warn(
+        "fetchPublicPlayerProfile: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = PlayerProfileSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn(
+        "fetchPublicPlayerProfile: Zod validation failed",
+        parsed.error,
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchPublicPlayerProfile: request failed", err);
     return false;
   }
 }
@@ -192,7 +230,7 @@ export async function setMarketingConsent(
 }
 
 export async function purchaseWithCurrency(
-  cosmeticType: "pattern" | "skin" | "flag" | "effect",
+  cosmeticType: "pattern" | "skin" | "flag" | "crown" | "effect",
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,
@@ -410,7 +448,7 @@ export async function cancelSubscription(): Promise<boolean> {
 
 export async function changeSubscriptionTier(
   tierName: string,
-): Promise<boolean> {
+): Promise<boolean | "rate_limited"> {
   try {
     const response = await fetch(
       `${getApiBase()}/subscriptions/@me/change-tier`,
@@ -426,6 +464,10 @@ export async function changeSubscriptionTier(
     if (response.status === 401) {
       await logOut();
       return false;
+    }
+    // The API allows one tier change per minute per player.
+    if (response.status === 429) {
+      return "rate_limited";
     }
     if (!response.ok) {
       console.error(
@@ -609,7 +651,9 @@ export async function fetchGameById(
     }
 
     const json = await res.json();
-    const parsed = AnalyticsRecordSchema.safeParse(json);
+    // Lenient schema: archives written by older builds predate several
+    // schema changes (see ArchivedAnalyticsRecordSchema).
+    const parsed = ArchivedAnalyticsRecordSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchGameById: Zod validation failed", parsed.error);
       return false;

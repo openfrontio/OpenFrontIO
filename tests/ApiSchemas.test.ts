@@ -3,7 +3,6 @@ import {
   ClaimRewardResponseSchema,
   GoogleUser,
   GoogleUserSchema,
-  hasActiveSubscription,
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
@@ -11,7 +10,6 @@ import {
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
   RewardSchema,
-  UserMeResponse,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
@@ -119,6 +117,17 @@ describe("PublicPlayerGameSchema", () => {
 
   it("accepts a fully-populated game", () => {
     expect(PublicPlayerGameSchema.safeParse(validGame).success).toBe(true);
+  });
+
+  it("normalizes accidental whitespace around archived map names", () => {
+    const result = PublicPlayerGameSchema.safeParse({
+      ...validGame,
+      map: "Deglaciated Antarctica ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.map).toBe("Deglaciated Antarctica");
   });
 
   it("accepts clanTag: null (not repping a clan)", () => {
@@ -256,6 +265,8 @@ describe("UserMeResponseSchema rewards", () => {
   const basePlayer = {
     publicId: "p1",
     adfree: false,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
     achievements: { singleplayerMap: [] },
     friends: [],
     subscription: null,
@@ -287,6 +298,34 @@ describe("UserMeResponseSchema rewards", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
     ).toBe(true);
+  });
+});
+
+describe("UserMeResponseSchema unlimitedRanked", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player exempt from ranked play limits", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: { ...basePlayer, unlimitedRanked: true },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.unlimitedRanked).toBe(true);
+    }
+  });
+
+  it("rejects a response without unlimitedRanked", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(false);
   });
 });
 
@@ -337,64 +376,30 @@ describe("claim response schemas", () => {
   });
 });
 
-describe("hasActiveSubscription", () => {
-  function userMeWith(
-    subscription: UserMeResponse["player"]["subscription"],
-  ): UserMeResponse {
-    return {
+describe("UserMeResponseSchema canCreatePublicLobbies", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player allowed to list lobbies publicly", () => {
+    const result = UserMeResponseSchema.safeParse({
       user: {},
-      player: {
-        publicId: "p1",
-        adfree: false,
-        achievements: { singleplayerMap: [] },
-        friends: [],
-        subscription,
-      },
-    };
-  }
-
-  it("is true for an active subscription", () => {
-    expect(
-      hasActiveSubscription(
-        userMeWith({
-          tier: "supporter",
-          status: "active",
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        }),
-      ),
-    ).toBe(true);
-  });
-
-  it("is true while trialing", () => {
-    expect(
-      hasActiveSubscription(
-        userMeWith({
-          tier: "supporter",
-          status: "trialing",
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        }),
-      ),
-    ).toBe(true);
-  });
-
-  it("is false for canceled or past_due subscriptions", () => {
-    for (const status of ["canceled", "past_due", "incomplete"]) {
-      expect(
-        hasActiveSubscription(
-          userMeWith({
-            tier: "supporter",
-            status,
-            currentPeriodEnd: null,
-            cancelAtPeriodEnd: false,
-          }),
-        ),
-      ).toBe(false);
+      player: { ...basePlayer, canCreatePublicLobbies: true },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.canCreatePublicLobbies).toBe(true);
     }
   });
 
-  it("is false without a subscription", () => {
-    expect(hasActiveSubscription(userMeWith(null))).toBe(false);
+  it("rejects a response without canCreatePublicLobbies", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(false);
   });
 });

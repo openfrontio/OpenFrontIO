@@ -88,6 +88,37 @@ const skinChecker = new PrivilegeCheckerImpl(
   bannedWords,
 );
 
+const crownCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  crowns: {
+    gold_crown: {
+      name: "gold_crown",
+      url: "https://example.com/gold.png",
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: 5,
+      rarity: "common",
+    },
+    silver_crown: {
+      name: "silver_crown",
+      url: "https://example.com/silver.png",
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "rare",
+    },
+  },
+};
+const crownChecker = new PrivilegeCheckerImpl(
+  crownCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
 const effectCosmetics = {
   patterns: {},
   colorPalettes: {},
@@ -585,6 +616,133 @@ describe("Skin validation", () => {
       const result = skinChecker.isAllowed(["color:red"], {
         color: "red",
         skinName: "mountain",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+  });
+});
+
+describe("Crown validation", () => {
+  describe("isCrownAllowed (direct)", () => {
+    test("returns crown when user has wildcard flare", () => {
+      const result = crownChecker.isCrownAllowed(["crown:*"], "gold_crown");
+      expect(result).toEqual({
+        name: "gold_crown",
+        url: "https://example.com/gold.png",
+      });
+    });
+
+    test("returns crown when user has exact-match flare", () => {
+      const result = crownChecker.isCrownAllowed(
+        ["crown:gold_crown"],
+        "gold_crown",
+      );
+      expect(result).toEqual({
+        name: "gold_crown",
+        url: "https://example.com/gold.png",
+      });
+    });
+
+    test("ignores unrelated flares", () => {
+      expect(() =>
+        crownChecker.isCrownAllowed(
+          ["crown:silver_crown", "skin:*", "flag:*"],
+          "gold_crown",
+        ),
+      ).toThrow(/No flares for crown gold_crown/);
+    });
+
+    test("throws when user has no crown flares", () => {
+      expect(() => crownChecker.isCrownAllowed([], "gold_crown")).toThrow(
+        /No flares for crown gold_crown/,
+      );
+    });
+
+    test("throws when crown does not exist in cosmetics", () => {
+      expect(() =>
+        crownChecker.isCrownAllowed(["crown:*"], "nonexistent"),
+      ).toThrow(/Crown nonexistent not found/);
+    });
+
+    test("throws when crown does not exist even with exact-match flare", () => {
+      // Forged refs.crownName must not bypass the existence check.
+      expect(() =>
+        crownChecker.isCrownAllowed(["crown:nonexistent"], "nonexistent"),
+      ).toThrow(/Crown nonexistent not found/);
+    });
+
+    test("throws when checker has no crowns map at all", () => {
+      // checker is constructed with mockCosmetics (no crowns key).
+      expect(() => checker.isCrownAllowed(["crown:*"], "anything")).toThrow(
+        /Crown anything not found/,
+      );
+    });
+  });
+
+  describe("isAllowed integration", () => {
+    test("allows valid crown with wildcard flare", () => {
+      const result = crownChecker.isAllowed(["crown:*"], {
+        crownName: "gold_crown",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.crown).toEqual({
+          name: "gold_crown",
+          url: "https://example.com/gold.png",
+        });
+      }
+    });
+
+    test("allows valid crown with exact-match flare", () => {
+      const result = crownChecker.isAllowed(["crown:silver_crown"], {
+        crownName: "silver_crown",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.crown).toEqual({
+          name: "silver_crown",
+          url: "https://example.com/silver.png",
+        });
+      }
+    });
+
+    test("rejects crown when user lacks flare", () => {
+      const result = crownChecker.isAllowed([], { crownName: "gold_crown" });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/invalid crown/);
+      }
+    });
+
+    test("rejects crown when flare is for a different crown", () => {
+      const result = crownChecker.isAllowed(["crown:silver_crown"], {
+        crownName: "gold_crown",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+
+    test("rejects nonexistent crown", () => {
+      const result = crownChecker.isAllowed(["crown:*"], {
+        crownName: "ghost",
+      });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/Crown ghost not found/);
+      }
+    });
+
+    test("no crown in refs leaves cosmetics.crown undefined", () => {
+      const result = crownChecker.isAllowed(["crown:*"], {});
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.crown).toBeUndefined();
+      }
+    });
+
+    test("invalid crown short-circuits and does not return other cosmetics", () => {
+      const result = crownChecker.isAllowed(["color:red"], {
+        color: "red",
+        crownName: "gold_crown",
       });
       expect(result.type).toBe("forbidden");
     });

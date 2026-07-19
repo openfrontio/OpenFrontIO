@@ -389,6 +389,7 @@
   "cosmetics": {
     "adfree": "ad-free for life!",
     "artist_label": "Artist:",
+    "button_title": "Pick your cosmetics!",
     "color_label": "Color:",
     "common": "Common",
     "epic": "Epic",
@@ -396,9 +397,13 @@
     "hard": "Plutonium",
     "legendary": "Legendary",
     "per_day": "/day",
+    "public_lobbies": "Create public lobbies",
     "rare": "Rare",
+    "search": "Search...",
     "soft": "Caps",
+    "title": "Cosmetics",
     "uncommon": "Uncommon",
+    "unlimited_ranked": "Unlimited ranked",
     "usd_value": "Value: {usd}"
   },
   "difficulty": {
@@ -431,14 +436,11 @@
     "veryfast": "Very Fast"
   },
   "effects": {
-    "button_title": "Pick an effect!",
     "nukeType": {
       "atom": "Atom",
       "hydro": "Hydrogen",
       "mirvWarhead": "MIRV"
     },
-    "search": "Search...",
-    "title": "Effects",
     "type": {
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
@@ -544,27 +546,27 @@
   "game_info_modal": {
     "all_gold": "All gold",
     "atoms": "Atoms",
-    "bombs": "Bombs",
     "conquered": "Conquered",
     "conquest_gold": "Conquered player gold",
-    "conquests": "Conquests",
     "duration": "Duration",
     "economy": "Economy",
     "hydros": "Hydros",
+    "load_failed": "Couldn't load game stats.",
     "loading_game_info": "Loading game stats",
     "mirv": "MIRV",
     "naval_trade": "Tradeship",
     "no_winner": "This game ended with no winner (or a Nation won)",
     "num_of_conquests_bots": "Tribe kills",
     "num_of_conquests_humans": "Player kills",
+    "num_of_conquests_nations": "Nation kills",
     "pirate": "Pirate",
     "players": "Players",
+    "retry": "Retry",
     "stolen_gold": "Stolen with warships",
     "survival_time": "Survival time",
-    "title": "Game info",
     "total_gold": "Total",
-    "trade": "Trade",
     "train_trade": "Train",
+    "unknown_game_type": "Unknown game type",
     "war": "War"
   },
   "game_list": {
@@ -889,7 +891,6 @@
     "copyright": "© OpenFront™ and Contributors",
     "create": "Create Lobby",
     "discord_avatar_alt": "Discord profile avatar",
-    "game_info": "Game info",
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
     "help": "Help",
@@ -958,6 +959,7 @@
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
     "greatlakes": "Great Lakes",
+    "gulfofguinea": "Gulf Of Guinea",
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "halkidiki": "Halkidiki",
     "hawaii": "Hawaii",
@@ -984,6 +986,7 @@
     "milkyway": "Milky Way",
     "mississippiriver": "Mississippi River",
     "montreal": "Montreal",
+    "morethanluck": "More Than Luck",
     "newyorkcity": "New York City",
     "niledelta": "Nile Delta",
     "northamerica": "North America",
@@ -1073,9 +1076,14 @@
   "matchmaking_modal": {
     "connecting": "Connecting to matchmaking server...",
     "elo": "Your ELO: {elo}",
+    "limit_reached": "You're out of free ranked matches.",
+    "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
+    "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
+    "title_2v2": "2v2 Ranked Matchmaking (ALPHA)",
     "waiting_for_game": "Waiting for game to start..."
   },
   "mode_selector": {
@@ -1158,6 +1166,13 @@
     "traitor": "Traitor",
     "troops": "Troops"
   },
+  "player_profile": {
+    "loading": "Loading profile...",
+    "not_found": "Player profile not found",
+    "share": "Share Profile",
+    "title": "Player Profile",
+    "view": "View Profile"
+  },
   "player_stats_table": {
     "arrived": "Arrived",
     "attack": "Attack",
@@ -1207,6 +1222,7 @@
     "public": "Public",
     "ranked": "Ranked",
     "ranked_1v1": "1v1",
+    "ranked_2v2": "2v2",
     "solo": "Solo",
     "stats_games_played": "Games Played",
     "stats_losses": "Losses",
@@ -1245,6 +1261,9 @@
     "crowded": "Crowded",
     "disable_alliances": "Alliances Disabled",
     "disable_alliances_label": "Alliances",
+    "doomsday_clock": "Doomsday Clock",
+    "doomsday_clock_label": "Doomsday Clock",
+    "doomsday_clock_with_speed": "Doomsday Clock: {speed}",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "hard_nations": "Hard Nations",
     "nukes_disabled": "Nukes Disabled",
@@ -1343,12 +1362,14 @@
   "store": {
     "already_subscribed": "Already subscribed.",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
+    "change_tier_rate_limited": "You just changed tiers. Please wait a minute before changing again.",
     "change_tier_success": "Switched to {tier}.",
     "checkout_failed": "Failed to create checkout session.",
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
     "confirm_purchase_body": "Buy {item} for {amount, number} {currency}?",
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
+    "crowns": "Crowns",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
     "custom_amount": "Choose Amount",
     "custom_currency_purchase_success": "Plutonium purchase successful!",
@@ -1357,6 +1378,7 @@
     "insufficient_currency_body": "You need {amount, number} more {currency} to buy {item}.",
     "insufficient_currency_title": "Insufficient {currency}",
     "login_required": "You must be logged in to purchase with currency.",
+    "no_crowns": "No crowns available. Check back later for new items.",
     "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
@@ -1390,10 +1412,8 @@
     "pattern": {
       "default": "Default"
     },
-    "search": "Search...",
     "select_skin": "Skin",
-    "selected": "selected",
-    "title": "Skins"
+    "selected": "selected"
   },
   "token_login_modal": {
     "logging_in": "Logging in...",
@@ -1521,8 +1541,8 @@
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
+    "highlight_glow_strength_label": "Highlight strength",
     "highlight_small_players_desc": "Add a glow to small players so they're easy to find.",
-    "highlight_small_players_label": "Highlight small players",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",

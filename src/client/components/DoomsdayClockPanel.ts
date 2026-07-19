@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
 import {
   doomsdayClockDrain,
-  doomsdayClockSideRequiredTiles,
+  doomsdayClockRequiredTiles,
   doomsdayClockWaveState,
 } from "../../core/game/DoomsdayClock";
 import { GameMode, PlayerType, Team } from "../../core/game/Game";
@@ -42,26 +42,20 @@ export class DoomsdayClockPanel extends LitElement {
   }
 
   // The player's "side" (matching the sim): themselves in FFA, their whole team
-  // otherwise. Returns the combined tiles and the headcount (the sim scales the
-  // threshold by headcount, so the HUD needs it too).
-  private sideStats(me: ReturnType<GameView["myPlayer"]>): {
-    tiles: number;
-    size: number;
-  } {
-    if (!me) return { tiles: 0, size: 1 };
+  // otherwise. The sim judges a side on its combined territory against the same
+  // bar as a solo player, so the HUD only needs the tile sum.
+  private sideTiles(me: ReturnType<GameView["myPlayer"]>): number {
+    if (!me) return 0;
     const ffa = this.game.config().gameConfig().gameMode === GameMode.FFA;
     const myTeam = me.team();
-    if (ffa || myTeam === null) return { tiles: me.numTilesOwned(), size: 1 };
-    const mates = this.game
+    if (ffa || myTeam === null) return me.numTilesOwned();
+    return this.game
       .playerViews()
       .filter(
         (p) =>
           p.team() === myTeam && p.isAlive() && p.type() !== PlayerType.Bot,
-      );
-    return {
-      tiles: mates.reduce((sum, p) => sum + p.numTilesOwned(), 0),
-      size: mates.length,
-    };
+      )
+      .reduce((sum, p) => sum + p.numTilesOwned(), 0);
   }
 
   // Localized team name (e.g. "Red"), matching TeamStats; falls back to the raw
@@ -91,17 +85,11 @@ export class DoomsdayClockPanel extends LitElement {
     const elapsed = Math.floor(this.game.elapsedGameSeconds());
     const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
     const myTeam = me?.team() ?? null;
-    const { tiles: yourTiles, size: mySize } = this.sideStats(me);
-    // Threshold is scaled by the side's headcount (same as the sim).
-    const requiredTiles = doomsdayClockSideRequiredTiles(
-      sd.speed,
-      land,
-      elapsed,
-      mySize,
-    );
+    const yourTiles = this.sideTiles(me);
+    // Same bar for every side, solo or team (same as the sim) — so the zone
+    // readout is one universal, monotonic number for every player.
+    const requiredTiles = doomsdayClockRequiredTiles(sd.speed, land, elapsed);
     const wave = doomsdayClockWaveState(sd.speed, elapsed);
-    // Wave readout percentages scale by headcount too (capped at the whole map).
-    const scalePct = (p: number) => Math.min(100, p * mySize);
     // Match the sim: no land -> no bar, no percentages (avoid div-by-zero / >100%).
     const requiredPct = land > 0 ? (requiredTiles / land) * 100 : 0;
     const yourPct = land > 0 ? (yourTiles / land) * 100 : 0;
@@ -119,15 +107,15 @@ export class DoomsdayClockPanel extends LitElement {
     // AND while collapsing, so you can still see the bar rising as you bleed.
     const zoneDetail = wave.done
       ? translateText("doomsday_clock.final", {
-          pct: scalePct(wave.currentPercent),
+          pct: wave.currentPercent,
         })
       : wave.growing
         ? translateText("doomsday_clock.growing", {
-            pct: scalePct(wave.targetPercent),
+            pct: wave.targetPercent,
             time: this.secondsToHms(wave.secondsToTarget),
           })
         : translateText("doomsday_clock.next_wave", {
-            pct: scalePct(wave.targetPercent),
+            pct: wave.targetPercent,
             time: this.secondsToHms(wave.secondsToNextGrowth),
           });
 
@@ -138,15 +126,18 @@ export class DoomsdayClockPanel extends LitElement {
     let statusClass = "";
     let detail = zoneDetail;
     if (live && draining && me) {
-      // Drain is a % of max-troop capacity, capped at current troops; show the
-      // actual per-second loss (renderTroops handles the /10 display unit).
+      // Drain is a % of max-troop capacity that stops at the floor
+      // (drainFloorPercent of max); show the actual per-second loss, i.e. only
+      // what sits above the floor (renderTroops handles the /10 display unit).
+      const maxTroops = this.game.config().maxTroops(me);
+      const floor = Math.floor((maxTroops * sd.drainFloorPercent) / 100);
       const chunk = doomsdayClockDrain(
-        this.game.config().maxTroops(me),
+        maxTroops,
         secondsUnder - sd.warnSeconds,
         sd,
       );
       status = translateText("doomsday_clock.collapsing", {
-        rate: renderTroops(Math.min(me.troops(), chunk)),
+        rate: renderTroops(Math.max(0, Math.min(me.troops() - floor, chunk))),
       });
       statusClass = "text-red-400 font-bold";
     } else if (live && flagged) {

@@ -46,6 +46,7 @@ export enum GameMapType {
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
+  GulfOfGuinea = "Gulf Of Guinea", // map-generator/assets/maps/gulfofguinea/info.json
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
   Halkidiki = "Halkidiki", // map-generator/assets/maps/halkidiki/info.json
   Hawaii = "Hawaii", // map-generator/assets/maps/hawaii/info.json
@@ -71,6 +72,7 @@ export enum GameMapType {
   MilkyWay = "MilkyWay", // map-generator/assets/maps/milkyway/info.json
   MississippiRiver = "Mississippi River", // map-generator/assets/maps/mississippiriver/info.json
   Montreal = "Montreal", // map-generator/assets/maps/montreal/info.json
+  MoreThanLuck = "More Than Luck", // map-generator/assets/maps/morethanluck/info.json
   NewYorkCity = "New York City", // map-generator/assets/maps/newyorkcity/info.json
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
@@ -484,6 +486,13 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 6,
   },
   {
+    id: "GulfOfGuinea",
+    type: GameMapType.GulfOfGuinea,
+    translationKey: "map.gulfofguinea",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 5,
+  },
+  {
     id: "GulfOfStLawrence",
     type: GameMapType.GulfOfStLawrence,
     translationKey: "map.gulfofstlawrence",
@@ -561,7 +570,7 @@ export const maps: readonly MapInfo[] = [
     id: "Korea",
     type: GameMapType.Korea,
     translationKey: "map.korea",
-    categories: ["asia"],
+    categories: ["asia", "countries"],
     multiplayerFrequency: 5,
   },
   {
@@ -662,6 +671,14 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.montreal",
     categories: ["north_america"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "MoreThanLuck",
+    type: GameMapType.MoreThanLuck,
+    translationKey: "map.morethanluck",
+    categories: ["arcade", "fictional", "new"],
+    multiplayerFrequency: 7,
+    specialTeamCount: 5,
   },
   {
     id: "NewYorkCity",

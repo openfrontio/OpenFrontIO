@@ -11,7 +11,7 @@ uniform sampler2D  uEffect;       // RGBA32F — trail effect, keyed by ownerID.
                                   //   block 1 = nukeTrail. Within a block (rowBase = block start):
                                   //   row r = color r's rgb; spare alphas hold scalars:
                                   //   row 0.a = color count (0 = no effect → territory color),
-                                  //   row 1.a = styleId (0 = gradient, 1 = transition),
+                                  //   row 1.a = styleId (0 = gradient, 1 = transition, 2 = spiral),
                                   //   row 2.a = scalar0 (gradient colorSize / transition freq),
                                   //   row 3.a = scalar1 (gradient movementSpeed)
 uniform vec2 uMapSize;
@@ -50,6 +50,11 @@ void main() {
     } else if (count == 1) {
       // Single color — flat trail.
       color = texelFetch(uEffect, ivec2(o, rowBase), 0).rgb;
+    } else if (int(texelFetch(uEffect, ivec2(o, rowBase + 1), 0).a + 0.5) == 2) {
+      // spiral — the vortex itself renders as ribbon geometry above this
+      // pass (SpiralRibbonPass); the stamped centerline underneath draws
+      // flat in the first color, as the missile's spine.
+      color = texelFetch(uEffect, ivec2(o, rowBase), 0).rgb;
     } else if (int(texelFetch(uEffect, ivec2(o, rowBase + 1), 0).a + 0.5) == 1) {
       // transition — the whole trail is one color at a time, cross-fading
       // through the list over time. frequency = color changes per second.
@@ -63,12 +68,10 @@ void main() {
     } else {
       // gradient — cyclic gradient banded across the map (world-space diagonal),
       // scrolling over time so a moving trail shifts hue along it. colorSize
-      // scales the band width (colorSize = 1 ≈ 4 tiles per band); movementSpeed
-      // = tiles/sec the bands travel.
+      // = band width in tiles; movementSpeed = tiles/sec the bands travel.
       float colorSize = max(texelFetch(uEffect, ivec2(o, rowBase + 2), 0).a, 0.001);
       float movementSpeed = texelFetch(uEffect, ivec2(o, rowBase + 3), 0).a;
-      // 4.0 = tiles per band at colorSize 1; tune for default band thickness.
-      float cycle = colorSize * 4.0 * float(count);
+      float cycle = colorSize * float(count);
       float phase =
         fract((vWorldPos.x + vWorldPos.y - uTime * movementSpeed) / cycle);
       float f = phase * float(count);

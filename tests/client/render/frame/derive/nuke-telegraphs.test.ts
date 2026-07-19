@@ -31,6 +31,8 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     smallID: 1,
     isAlive: true,
     isDisconnected: false,
+    killedBy: null,
+    deathPosition: null,
     tilesOwned: 0,
     gold: 0,
     troops: 0,

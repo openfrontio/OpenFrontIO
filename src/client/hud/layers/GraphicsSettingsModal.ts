@@ -70,6 +70,12 @@ const RAIL_THICKNESS_MIN = 0.5;
 const RAIL_THICKNESS_MAX = 3;
 const RAIL_THICKNESS_STEP = 0.1;
 
+// Small-player glow strength is shown as a percentage: 0% = off, 100% = the
+// glow's full brightness.
+const GLOW_STRENGTH_MIN = 0;
+const GLOW_STRENGTH_MAX = 100;
+const GLOW_STRENGTH_STEP = 5;
+
 // "Ambient light" level shown to the player: 0 = no darkening (lighting off),
 // 10 = darkest with the strongest glow. Mapped linearly onto the renderer's
 // ambient value (1 = identity, AMBIENT_MIN = darkest).
@@ -597,6 +603,29 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchPassEnabled({ fallout: !this.currentFallout() });
   }
 
+  private patchSmallPlayerGlow(
+    patch: Partial<GraphicsOverrides["smallPlayerGlow"]>,
+  ) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      smallPlayerGlow: { ...current.smallPlayerGlow, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentGlowStrength(): number {
+    return (
+      this.userSettings.graphicsOverrides().smallPlayerGlow?.strength ??
+      renderDefaults.smallPlayerGlow.strength
+    );
+  }
+
+  private onGlowStrengthChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value) / 100;
+    this.patchSmallPlayerGlow({ strength: value });
+  }
+
   /** Whether colorblind mode is currently enabled. */
   private currentColorblind(): boolean {
     return (
@@ -679,6 +708,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const nukeColor = this.currentNukeColor();
     const ambientLevel = this.currentAmbientLevel();
     const unitGlow = this.currentUnitGlow();
+    const glowStrength = this.currentGlowStrength();
     const colorblind = this.currentColorblind();
 
     return html`
@@ -1425,6 +1455,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                   : translateText("user_setting.off")}
               </div>
             </button>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.highlight_glow_strength_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.highlight_small_players_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${GLOW_STRENGTH_MIN}
+                  max=${GLOW_STRENGTH_MAX}
+                  step=${GLOW_STRENGTH_STEP}
+                  .value=${String(glowStrength * 100)}
+                  @input=${this.onGlowStrengthChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${Math.round(glowStrength * 100)}%
+              </div>
+            </div>
 
             <div
               class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
