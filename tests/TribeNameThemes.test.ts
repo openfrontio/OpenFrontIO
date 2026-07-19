@@ -77,7 +77,7 @@ describe("TribeNameData consistency", () => {
 
 describe("tribeNameThemes.json", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const themes = require("../src/core/execution/utils/tribeNameThemes.json");
+  const themes = require("../resources/tribeNameThemes.json");
 
   test("default theme exists", () => {
     expect(themes.default).toBeDefined();

@@ -1,5 +1,5 @@
+import tribeNameThemesData from "resources/tribeNameThemes.json";
 import { GameMapType, type MapInfo, maps } from "../../game/Maps.gen";
-import tribeNameThemesData from "./tribeNameThemes.json";
 
 export interface TribeNameData {
   prefixes: string[];
