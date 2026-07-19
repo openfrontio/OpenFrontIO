@@ -4,6 +4,12 @@ import {
 } from "../../client/render/gl/GraphicsOverrides";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
+import {
+  COLUMN_IDS,
+  ColumnId,
+  DEFAULT_STATS_COLUMNS,
+  StatsTableKind,
+} from "./StatsConstants";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
@@ -60,6 +66,13 @@ export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
 export const EFFECTS_KEY = "settings.effects";
+// Keep the existing storage key so the rename does not reset saved columns.
+export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
+export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
+const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
+  player: PLAYER_STATS_COLUMNS_KEY,
+  team: TEAM_STATS_COLUMNS_KEY,
+};
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -362,6 +375,33 @@ export class UserSettings {
     else map[slot] = name;
     if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
     else this.setString(EFFECTS_KEY, JSON.stringify(map));
+  }
+
+  // Invalid/corrupt storage, unknown ids, or an empty result fall back to
+  // defaults, matching the getSelectedEffects defensive pattern. Returned
+  // order is registry (display) order regardless of stored order.
+  private getColumnIds(key: string, defaults: readonly ColumnId[]): ColumnId[] {
+    const raw = this.getString(key, "");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const filtered = COLUMN_IDS.filter((id) => parsed.includes(id));
+          if (filtered.length > 0) return filtered;
+        }
+      } catch {
+        // fall through to defaults
+      }
+    }
+    return [...defaults];
+  }
+
+  statsColumns(kind: StatsTableKind): ColumnId[] {
+    return this.getColumnIds(STATS_COLUMNS_KEYS[kind], DEFAULT_STATS_COLUMNS);
+  }
+
+  setStatsColumns(kind: StatsTableKind, ids: ColumnId[]): void {
+    this.setString(STATS_COLUMNS_KEYS[kind], JSON.stringify(ids));
   }
 
   backgroundMusicVolume(): number {

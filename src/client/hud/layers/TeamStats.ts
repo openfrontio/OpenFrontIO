@@ -1,250 +1,64 @@
-import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameMode, Team, UnitType } from "../../../core/game/Game";
-import { Controller } from "../../Controller";
-import {
-  formatPercentage,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
-import { GameView, PlayerView } from "../../view";
+import { customElement } from "lit/decorators.js";
+import type { Team } from "../../../core/game/Game";
+import type { ColumnId } from "../../../core/game/StatsConstants";
+import { translateText } from "../../Utils";
+import type { GameView, PlayerView } from "../../view";
+import type { ColumnDef } from "./StatsColumns";
+import { type StatsRow, StatsTable } from "./StatsTable";
 
-interface TeamEntry {
-  teamName: string;
-  isMyTeam: boolean;
-  totalScoreStr: string;
-  totalGold: string;
-  totalMaxTroops: string;
-  totalSAMs: string;
-  totalLaunchers: string;
-  totalWarShips: string;
-  totalCities: string;
-  totalScoreSort: number;
-  players: PlayerView[];
+export function aggregateTeamValues(
+  players: readonly PlayerView[],
+  columns: readonly ColumnDef[],
+  game: GameView,
+): ReadonlyMap<ColumnId, number> {
+  const values = new Map<ColumnId, number>(
+    columns.map((column) => [column.id, 0]),
+  );
+
+  for (const player of players) {
+    if (!player.isAlive()) continue;
+    for (const column of columns) {
+      values.set(
+        column.id,
+        (values.get(column.id) ?? 0) + column.value(player, game),
+      );
+    }
+  }
+
+  return values;
 }
 
 @customElement("team-stats")
-export class TeamStats extends LitElement implements Controller {
-  public game: GameView;
-  public eventBus: EventBus;
+export class TeamStats extends StatsTable {
+  protected readonly tableKind = "team";
+  protected readonly nameLabelKey = "leaderboard.team";
 
-  @property({ type: Boolean }) visible = false;
-  teams: TeamEntry[] = [];
-  private _shownOnInit = false;
-  private showUnits = false;
-  private _myTeam: Team | null = null;
+  protected buildRows(
+    game: GameView,
+    columns: readonly ColumnDef[],
+  ): StatsRow[] {
+    const teams = new Map<Team, PlayerView[]>();
+    const myTeam = game.myPlayer()?.team() ?? null;
 
-  createRenderRoot() {
-    return this; // use light DOM for Tailwind
-  }
-
-  init() {}
-
-  getTickIntervalMs() {
-    return 1000;
-  }
-
-  tick() {
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
-
-    if (!this._shownOnInit && !this.game.inSpawnPhase()) {
-      this._shownOnInit = true;
-      this.updateTeamStats();
+    for (const player of game.playerViews()) {
+      const team = player.team();
+      if (team === null) continue;
+      const players = teams.get(team) ?? [];
+      players.push(player);
+      teams.set(team, players);
     }
 
-    if (!this.visible) return;
+    return [...teams.entries()].map(([team, players]) => {
+      const labelKey = `team_colors.${team.toLowerCase()}`;
+      const translatedName = translateText(labelKey);
 
-    this.updateTeamStats();
-  }
-
-  private updateTeamStats() {
-    const players = this.game.playerViews();
-    const grouped: Record<Team, PlayerView[]> = {};
-
-    if (this._myTeam === null) {
-      const myPlayer = this.game.myPlayer();
-      this._myTeam = myPlayer?.team() ?? null;
-    }
-
-    for (const player of players) {
-      const rawTeam = player.team();
-      if (rawTeam === null) continue;
-      grouped[rawTeam] ??= [];
-      grouped[rawTeam].push(player);
-    }
-
-    this.teams = Object.entries(grouped)
-      .map(([rawTeam, teamPlayers]) => {
-        const key = `team_colors.${rawTeam.toLowerCase()}`;
-        const translated = translateText(key);
-        const teamName = translated !== key ? translated : rawTeam;
-
-        let totalGold = 0n;
-        let totalMaxTroops = 0;
-        let totalScoreSort = 0;
-        let totalSAMs = 0;
-        let totalLaunchers = 0;
-        let totalWarShips = 0;
-        let totalCities = 0;
-
-        for (const p of teamPlayers) {
-          if (p.isAlive()) {
-            totalMaxTroops += this.game.config().maxTroops(p);
-            totalGold += p.gold();
-            totalScoreSort += p.numTilesOwned();
-            totalLaunchers += p.totalUnitLevels(UnitType.MissileSilo);
-            totalSAMs += p.totalUnitLevels(UnitType.SAMLauncher);
-            totalWarShips += p.totalUnitLevels(UnitType.Warship);
-            totalCities += p.totalUnitLevels(UnitType.City);
-          }
-        }
-
-        const numTilesWithoutFallout =
-          this.game.numLandTiles() - this.game.numTilesWithFallout();
-        const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
-
-        return {
-          teamName,
-          isMyTeam: rawTeam === this._myTeam,
-          totalScoreStr: formatPercentage(totalScorePercent),
-          totalScoreSort,
-          totalGold: renderNumber(totalGold),
-          totalMaxTroops: renderTroops(totalMaxTroops),
-          players: teamPlayers,
-
-          totalLaunchers: renderNumber(totalLaunchers),
-          totalSAMs: renderNumber(totalSAMs),
-          totalWarShips: renderNumber(totalWarShips),
-          totalCities: renderNumber(totalCities),
-        };
-      })
-      .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
-
-    this.requestUpdate();
-  }
-
-  render() {
-    if (!this.visible) return html``;
-
-    return html`
-      <div
-        class="max-h-[30vh] overflow-x-hidden overflow-y-auto grid bg-slate-800/85 w-full text-white text-xs md:text-sm mt-2 rounded-lg"
-        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
-      >
-        <div
-          class="grid w-full grid-cols-[repeat(var(--cols),1fr)]"
-          style="--cols:${this.showUnits ? 5 : 4};"
-        >
-          <!-- Header -->
-          <div class="contents font-bold bg-slate-700/60">
-            <div class="p-1.5 md:p-2.5 text-center border-b border-slate-500">
-              ${translateText("leaderboard.team")}
-            </div>
-            ${this.showUnits
-              ? html`
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.launchers")}
-                  </div>
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.sams")}
-                  </div>
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.warships")}
-                  </div>
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.cities")}
-                  </div>
-                `
-              : html`
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.owned")}
-                  </div>
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.gold")}
-                  </div>
-                  <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  >
-                    ${translateText("leaderboard.maxtroops")}
-                  </div>
-                `}
-          </div>
-
-          <!-- Data rows -->
-          ${this.teams.map((team) =>
-            this.showUnits
-              ? html`
-                  <div
-                    class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
-                      ? "font-bold"
-                      : ""}"
-                  >
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.teamName}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalLaunchers}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalSAMs}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalWarShips}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalCities}
-                    </div>
-                  </div>
-                `
-              : html`
-                  <div
-                    class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
-                      ? "font-bold"
-                      : ""}"
-                  >
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.teamName}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalScoreStr}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalGold}
-                    </div>
-                    <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalMaxTroops}
-                    </div>
-                  </div>
-                `,
-          )}
-        </div>
-        <button
-          class="team-stats-button"
-          aria-pressed=${String(this.showUnits)}
-          @click=${() => {
-            this.showUnits = !this.showUnits;
-            this.requestUpdate();
-          }}
-        >
-          ${this.showUnits
-            ? translateText("leaderboard.show_control")
-            : translateText("leaderboard.show_units")}
-        </button>
-      </div>
-    `;
+      return {
+        key: team,
+        name: translatedName === labelKey ? team : translatedName,
+        values: aggregateTeamValues(players, columns, game),
+        emphasized: team === myTeam,
+        pinned: team === myTeam,
+      };
+    });
   }
 }

@@ -849,16 +849,20 @@
     "svg": "uk_us_flag"
   },
   "leaderboard": {
+    "allies": "Allies",
+    "betrayals": "Betrayals",
     "cities": "Cities",
+    "configure_columns": "Configure columns",
+    "factories": "Factories",
     "gold": "Gold",
     "launchers": "Launchers",
     "maxtroops": "Max troops",
     "owned": "Owned",
     "player": "Player",
+    "ports": "Ports",
     "sams": "SAMs",
-    "show_control": "Show Control",
-    "show_units": "Show Units",
     "team": "Team",
+    "troops": "Troops",
     "warships": "Warships"
   },
   "leaderboard_modal": {
