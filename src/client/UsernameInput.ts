@@ -129,7 +129,7 @@ export class UsernameInput extends LitElement {
       },
     );
     if (goStore) {
-      window.location.hash = "modal=store";
+      window.location.hash = "modal=store&tab=subscriptions";
     }
   }
 
