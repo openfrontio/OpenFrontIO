@@ -1623,7 +1623,11 @@
     "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "too_long": "Username must not exceed {max} characters.",
-    "too_short": "Username must be at least {min} characters long."
+    "too_short": "Username must be at least {min} characters long.",
+    "verified_heading": "Verified name",
+    "verified_sub_required": "You need an active subscription to play under your verified name.",
+    "verified_sub_required_confirm": "View store",
+    "verified_toggle": "Verified"
   },
   "win_modal": {
     "died": "You died",
