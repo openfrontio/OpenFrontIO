@@ -10,11 +10,9 @@
 
 import { EventBus } from "../../core/EventBus";
 import { UnitType } from "../../core/game/Game";
-import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
-import renderDefaults from "../render/gl/render-settings.json";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 import { GameView, UnitView } from "../view";
