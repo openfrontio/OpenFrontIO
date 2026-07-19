@@ -322,16 +322,15 @@ export class SAMLauncherExecution implements Execution {
           undefined,
           { count: mirvWarheadTargets.length },
         );
-        let amountOfWarheads = 0
+        let amountOfWarheads = 0;
         mirvWarheadTargets.forEach(({ unit: u }, i) => {
           if (this.sam !== null && i > 0) {
             if (this.sam.isInCooldown()) {
               return;
             }
-            amountOfWarheads++
             this.sam.launch();
           }
-
+          amountOfWarheads++;
           // Delete warheads
           u.delete();
         });
@@ -339,11 +338,7 @@ export class SAMLauncherExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .bombIntercept(
-            samOwner,
-            UnitType.MIRVWarhead,
-            amountOfWarheads,
-          );
+          .bombIntercept(samOwner, UnitType.MIRVWarhead, amountOfWarheads);
       } else if (target !== null) {
         target.unit.setTargetedBySAM(true);
         this.mg.addExecution(
