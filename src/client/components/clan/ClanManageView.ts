@@ -385,9 +385,7 @@ export class ClanManageView extends LitElement {
                       (this.manageDiscordUrl = (
                         e.target as HTMLInputElement
                       ).value)}
-                    placeholder=${translateText(
-                      "clan_modal.discord_url_placeholder",
-                    )}
+                    placeholder="https://discord.gg/..."
                     maxlength="255"
                     class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
                   />
