@@ -21,7 +21,6 @@ import { GameView, UnitView } from "../view";
 
 export class HoverHighlightController implements Controller {
   private lastOwnerID = 0;
-  private userSettings: UserSettings = new UserSettings();
 
   constructor(
     private game: GameView,
@@ -35,10 +34,7 @@ export class HoverHighlightController implements Controller {
   }
 
   private navalHighlightEnabled(): boolean {
-    return (
-      this.userSettings.graphicsOverrides().mapOverlay?.navalHighlight ??
-      renderDefaults.mapOverlay.navalHighlight
-    );
+    return this.view.getSettings().mapOverlay.navalHighlight;
   }
 
   private onMouseMove(e: MouseMoveEvent): void {
