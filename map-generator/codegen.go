@@ -54,6 +54,10 @@ type mapInfo struct {
 	// Custom tribe names that take priority over theme-generated names.
 	// Each entry is used as-is (no prefix/suffix composition).
 	CustomTribes []string `json:"custom_tribes"`
+	// Nations defined on this map (used for validation only).
+	Nations []struct {
+		Name string `json:"name"`
+	} `json:"nations"`
 }
 
 // hasCategory reports whether the map lists the given category.
@@ -122,6 +126,26 @@ func loadMapInfos() ([]mapInfo, error) {
 		for _, ct := range info.CustomTribes {
 			if ct == "" {
 				return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains an empty string", m.Name)
+			}
+		}
+		{
+			ctSeen := make(map[string]bool)
+			for _, ct := range info.CustomTribes {
+				if ctSeen[ct] {
+					return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains duplicate %q", m.Name, ct)
+				}
+				ctSeen[ct] = true
+			}
+		}
+		{
+			nationNames := make(map[string]bool)
+			for _, n := range info.Nations {
+				nationNames[n.Name] = true
+			}
+			for _, ct := range info.CustomTribes {
+				if nationNames[ct] {
+					return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains %q which is already a nation name", m.Name, ct)
+				}
 			}
 		}
 		seen := make(map[string]bool)
