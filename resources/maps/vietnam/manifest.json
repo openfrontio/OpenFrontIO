@@ -93,7 +93,7 @@
     {
       "coordinates": [898, 3175],
       "flag": "South Vietnam",
-      "name": "An GIang"
+      "name": "An Giang"
     },
     {
       "coordinates": [1180, 2921],
@@ -102,7 +102,7 @@
     }
   ],
   "categories": ["new", "countries", "asia"],
-  "id": "vietnam",
+  "id": "Vietnam",
   "map": {
     "height": 3560,
     "num_land_tiles": 1504070,
@@ -119,7 +119,7 @@
     "width": 988
   },
   "multiplayer_frequency": 4,
-  "name": "vietnam",
+  "name": "Vietnam",
   "nations": [
     {
       "coordinates": [1227, 3020],

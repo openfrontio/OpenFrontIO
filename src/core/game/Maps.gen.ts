@@ -103,7 +103,7 @@ export enum GameMapType {
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
-  vietnam = "vietnam", // map-generator/assets/maps/vietnam/info.json
+  Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
@@ -895,8 +895,8 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 6,
   },
   {
-    id: "vietnam",
-    type: GameMapType.vietnam,
+    id: "Vietnam",
+    type: GameMapType.Vietnam,
     translationKey: "map.vietnam",
     categories: ["new", "countries", "asia"],
     multiplayerFrequency: 4,

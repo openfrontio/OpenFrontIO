@@ -93,7 +93,7 @@
     {
       "coordinates": [898, 3175],
       "flag": "South Vietnam",
-      "name": "An GIang"
+      "name": "An Giang"
     },
     {
       "coordinates": [1180, 2921],
@@ -101,8 +101,8 @@
       "name": "Tay Ninh"
     }
   ],
-  "id": "vietnam",
-  "name": "vietnam",
+  "id": "Vietnam",
+  "name": "Vietnam",
   "translation_key": "map.vietnam",
   "categories": ["new", "countries", "asia"],
   "multiplayer_frequency": 4,
