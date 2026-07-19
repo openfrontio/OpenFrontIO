@@ -206,7 +206,6 @@
     "discord_section_title": "Discord",
     "discord_url_hint": "Use an invite set to never expire.",
     "discord_url_label": "Discord Invite URL",
-    "discord_url_placeholder": "https://discord.gg/...",
     "error_already_member": "Already a member",
     "error_banned": "You are banned from this clan.",
     "error_banned_reason": "You are banned from this clan. Reason: {reason}",
