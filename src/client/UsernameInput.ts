@@ -67,12 +67,6 @@ export class UsernameInput extends LitElement {
       this.userMe = (event as CustomEvent).detail as UserMeResponse | false;
       this.applyVerifiedPreference();
     });
-    // A rename in the account modal mutates the shared player object in place;
-    // recompute so an active verified name reflects the new name (or drops if
-    // the rename made the player ineligible).
-    window.addEventListener("username-changed", () => {
-      this.applyVerifiedPreference();
-    });
   }
 
   // The server-resolved bare name this player may play verified under, or null

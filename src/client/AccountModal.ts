@@ -465,10 +465,7 @@ export class AccountModal extends BaseModal {
   private renderUsernamePanel(): TemplateResult | "" {
     const player = this.userMeResponse?.player;
     if (!player || player.usernameStatus === undefined) return "";
-    return html`<username-panel
-      .player=${player}
-      @username-changed=${() => this.requestUpdate()}
-    ></username-panel>`;
+    return html`<username-panel .player=${player}></username-panel>`;
   }
 
   private renderRewardsPanel(): TemplateResult | "" {

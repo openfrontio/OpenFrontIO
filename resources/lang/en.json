@@ -67,7 +67,6 @@
     "tab_stats": "Stats",
     "title": "Account",
     "unclaimed_rewards": "Unclaimed Rewards",
-    "username_changed": "Username changed to {name}.",
     "username_confirm_abandon": "You will permanently give up your reserved name \"{name}\".",
     "username_confirm_body": "Your new name will be locked for 30 days.",
     "username_confirm_button": "Change name",
