@@ -102,16 +102,16 @@ export class UsernameInput extends LitElement {
     this.validateAndStore();
   }
 
-  private async handleVerifiedToggle(e: Event) {
-    const checkbox = e.target as HTMLInputElement;
-    if (this.verifiedName() !== null) {
-      this.verifiedActive = checkbox.checked;
+  private async handleVerifiedToggle() {
+    // verifiedActive implies eligible (applyVerifiedPreference), so this
+    // covers both turning off and an eligible turn-on.
+    if (this.verifiedActive || this.verifiedName() !== null) {
+      this.verifiedActive = !this.verifiedActive;
       localStorage.setItem(useVerifiedNameKey, String(this.verifiedActive));
       this.validateAndStore();
       return;
     }
-    // Ineligible — the box can't turn on.
-    checkbox.checked = false;
+    // Ineligible — the toggle can't turn on.
     const player = this.userMe === false ? undefined : this.userMe?.player;
     const status = player?.usernameStatus;
     if (status === "premium" || status === "indefinite") {
@@ -268,21 +268,18 @@ export class UsernameInput extends LitElement {
           ?disabled=${this.verifiedActive}
           class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
-        <label
-          class="no-crazygames flex items-center gap-1.5 shrink-0 cursor-pointer select-none"
+        <button
+          type="button"
+          class="no-crazygames group flex items-center gap-1.5 shrink-0 cursor-pointer select-none"
           title=${translateText("username.verified_heading")}
+          aria-pressed=${this.verifiedActive ? "true" : "false"}
+          @click=${this.handleVerifiedToggle}
         >
-          <input
-            type="checkbox"
-            .checked=${this.verifiedActive}
-            @change=${this.handleVerifiedToggle}
-            class="w-4 h-4 accent-blue-500 cursor-pointer"
-          />
           <svg
             viewBox="0 0 24 24"
-            class="w-5 h-5 ${this.verifiedActive
+            class="w-5 h-5 transition-colors ${this.verifiedActive
               ? "text-blue-400"
-              : "text-white/30"}"
+              : "text-white/30 group-hover:text-white/50"}"
             aria-hidden="true"
           >
             <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
@@ -295,10 +292,14 @@ export class UsernameInput extends LitElement {
               stroke-linejoin="round"
             ></path>
           </svg>
-          <span class="hidden sm:inline text-sm font-medium text-white/70"
+          <span
+            class="hidden sm:inline text-sm font-medium transition-colors ${this
+              .verifiedActive
+              ? "text-blue-400"
+              : "text-white/70 group-hover:text-white"}"
             >${translateText("username.verified_toggle")}</span
           >
-        </label>
+        </button>
       </div>
       ${this.validationError
         ? html`<div
