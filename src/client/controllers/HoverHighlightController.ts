@@ -40,8 +40,13 @@ export class HoverHighlightController implements Controller {
     this.view.setMouseWorldPos(world.x, world.y);
 
     const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-    if (!this.game.isValidCoord(cell.x, cell.y)) return;
-
+    if (!this.game.isValidCoord(cell.x, cell.y)) {
+      if (this.lastOwnerID !== 0) {
+        this.lastOwnerID = 0;
+        this.view.setHighlightOwner(0);
+      }
+      return;
+    }
     let ownerID = 0;
 
     const ref = this.game.ref(cell.x, cell.y);
