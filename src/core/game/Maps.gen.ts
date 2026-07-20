@@ -17,6 +17,7 @@ export enum GameMapType {
   BaikalNukeWars = "Baikal Nuke Wars", // map-generator/assets/maps/baikalnukewars/info.json
   BajaCalifornia = "Baja California", // map-generator/assets/maps/bajacalifornia/info.json
   Balkans = "Balkans", // map-generator/assets/maps/balkans/info.json
+  Baltics = "Baltics", // map-generator/assets/maps/baltics/info.json
   BeringSea = "Bering Sea", // map-generator/assets/maps/beringsea/info.json
   BeringStrait = "Bering Strait", // map-generator/assets/maps/beringstrait/info.json
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
@@ -275,6 +276,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.balkans",
     categories: ["europe"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "Baltics",
+    type: GameMapType.Baltics,
+    translationKey: "map.baltics",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 5,
   },
   {
     id: "BeringSea",
