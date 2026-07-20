@@ -1,9 +1,9 @@
 import { customElement } from "lit/decorators.js";
 import type { EventBus } from "../../../core/EventBus";
+import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import type { GameView } from "../../view";
-import { type ColumnDef, columnValues } from "./StatsColumns";
-import { type StatsRow, StatsTable } from "./StatsTable";
+import { type ColumnDef, columnValues } from "./lib/StatsColumns";
 
 @customElement("player-stats")
 export class PlayerStats extends StatsTable {

@@ -1,4 +1,4 @@
-import type { ColumnDef } from "../src/client/hud/layers/StatsColumns";
+import type { ColumnDef } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,

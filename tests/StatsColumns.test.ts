@@ -1,8 +1,11 @@
-import { COLUMN_DEFS, columnById } from "../src/client/hud/layers/StatsColumns";
+import {
+  COLUMN_DEFS,
+  columnById,
+} from "../src/client/hud/layers/lib/StatsColumns";
 import {
   COLUMN_IDS,
   DEFAULT_STATS_COLUMNS,
-} from "../src/core/game/StatsConstants";
+} from "../src/client/StatsConstants";
 import { makeGameView, makePlayerView, stubConfig } from "./util/viewStubs";
 
 describe("Stats column registry", () => {

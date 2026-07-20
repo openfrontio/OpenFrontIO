@@ -1,7 +1,7 @@
-import { UnitType } from "../../../core/game/Game";
-import type { ColumnId } from "../../../core/game/StatsConstants";
-import { formatPercentage, renderNumber, renderTroops } from "../../Utils";
-import type { GameView, PlayerView } from "../../view";
+import { UnitType } from "../../../../core/game/Game";
+import type { ColumnId } from "../../../StatsConstants";
+import { formatPercentage, renderNumber, renderTroops } from "../../../Utils";
+import type { GameView, PlayerView } from "../../../view";
 import {
   cityIcon,
   factoryIcon,
@@ -11,13 +11,13 @@ import {
   samLauncherIcon,
   soldierIcon,
   warshipIcon,
-} from "../HotbarIcons";
+} from "../../HotbarIcons";
 
 export {
   COLUMN_IDS,
   DEFAULT_STATS_COLUMNS,
   type ColumnId,
-} from "../../../core/game/StatsConstants";
+} from "../../../StatsConstants";
 
 type ValueGetter = (player: PlayerView, game: GameView) => number;
 type ValueRenderer = (value: number, game: GameView) => string;

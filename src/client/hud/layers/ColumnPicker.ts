@@ -1,8 +1,8 @@
 import { html, LitElement, render as litRender } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { ColumnId } from "../../../core/game/StatsConstants";
+import type { ColumnId } from "../../StatsConstants";
 import { translateText } from "../../Utils";
-import type { ColumnDef } from "./StatsColumns";
+import type { ColumnDef } from "./lib/StatsColumns";
 
 /**
  * ⚙️ button + checkbox popover for choosing which stat columns a panel

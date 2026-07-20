@@ -1,16 +1,20 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { UserSettings } from "../../core/game/UserSettings";
+import "../hud/layers/ColumnPicker";
+import {
+  COLUMN_DEFS,
+  type ColumnDef,
+  columnById,
+} from "../hud/layers/lib/StatsColumns";
 import {
   type ColumnId,
   DEFAULT_STATS_COLUMNS,
   type StatsTableKind,
-} from "../../../core/game/StatsConstants";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { translateText } from "../../Utils";
-import type { GameView } from "../../view";
-import "./ColumnPicker";
-import { COLUMN_DEFS, type ColumnDef, columnById } from "./StatsColumns";
+} from "../StatsConstants";
+import { translateText } from "../Utils";
+import type { GameView } from "../view";
 
 export interface StatsRow {
   key: string;

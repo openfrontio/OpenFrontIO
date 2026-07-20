@@ -2,14 +2,14 @@ import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
 } from "../../client/render/gl/GraphicsOverrides";
-import { Cosmetics } from "../CosmeticSchemas";
-import { PlayerPattern } from "../Schemas";
 import {
   COLUMN_IDS,
   ColumnId,
   DEFAULT_STATS_COLUMNS,
   StatsTableKind,
-} from "./StatsConstants";
+} from "../../client/StatsConstants";
+import { Cosmetics } from "../CosmeticSchemas";
+import { PlayerPattern } from "../Schemas";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {

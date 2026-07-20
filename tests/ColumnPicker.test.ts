@@ -1,6 +1,6 @@
 import { ColumnPicker } from "../src/client/hud/layers/ColumnPicker";
-import { COLUMN_DEFS } from "../src/client/hud/layers/StatsColumns";
-import type { ColumnId } from "../src/core/game/StatsConstants";
+import { COLUMN_DEFS } from "../src/client/hud/layers/lib/StatsColumns";
+import type { ColumnId } from "../src/client/StatsConstants";
 
 describe("ColumnPicker", () => {
   it("renders its popup outside the sidebar overflow container", async () => {

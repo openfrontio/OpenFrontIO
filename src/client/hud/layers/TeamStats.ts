@@ -1,10 +1,10 @@
 import { customElement } from "lit/decorators.js";
 import type { Team } from "../../../core/game/Game";
-import type { ColumnId } from "../../../core/game/StatsConstants";
+import { type StatsRow, StatsTable } from "../../components/StatsTable";
+import type { ColumnId } from "../../StatsConstants";
 import { translateText } from "../../Utils";
 import type { GameView, PlayerView } from "../../view";
-import type { ColumnDef } from "./StatsColumns";
-import { type StatsRow, StatsTable } from "./StatsTable";
+import type { ColumnDef } from "./lib/StatsColumns";
 
 export function aggregateTeamValues(
   players: readonly PlayerView[],
