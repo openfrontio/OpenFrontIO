@@ -1,4 +1,5 @@
 import IntlMessageFormat from "intl-messageformat";
+import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
@@ -131,6 +132,7 @@ export interface ModifierInfo {
  */
 export function getActiveModifiers(
   modifiers: PublicGameModifiers | undefined,
+  doomsdayClockSpeed?: DoomsdayClockSpeed,
 ): ModifierInfo[] {
   if (!modifiers) return [];
   const result: ModifierInfo[] = [];
@@ -220,6 +222,21 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
+  if (modifiers.isDoomsdayClock) {
+    const info: ModifierInfo = {
+      labelKey: "public_game_modifier.doomsday_clock_label",
+      badgeKey: "public_game_modifier.doomsday_clock",
+    };
+    // Name the preset when we know it; older payloads / non-rotation lobbies
+    // may not carry a speed, so keep the plain badge as a fallback.
+    if (doomsdayClockSpeed !== undefined) {
+      info.badgeKey = "public_game_modifier.doomsday_clock_with_speed";
+      info.badgeParams = {
+        speed: translateText(`doomsday_clock_speed.${doomsdayClockSpeed}`),
+      };
+    }
+    result.push(info);
+  }
   return result;
 }
 
@@ -228,8 +245,9 @@ export function getActiveModifiers(
  */
 export function getModifierLabels(
   modifiers: PublicGameModifiers | undefined,
+  doomsdayClockSpeed?: DoomsdayClockSpeed,
 ): string[] {
-  return getActiveModifiers(modifiers).map((m) =>
+  return getActiveModifiers(modifiers, doomsdayClockSpeed).map((m) =>
     translateText(m.badgeKey, m.badgeParams),
   );
 }

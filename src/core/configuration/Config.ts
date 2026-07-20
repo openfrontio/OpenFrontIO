@@ -84,21 +84,27 @@ export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 // Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
 // Times in seconds. The required map share rises in waves (levels + times in
 // DoomsdayClock.ts, chosen by `speed`). A side caught below the bar gets a
-// warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed to zero: the
-// warn (30s) + the linear drain (~90s from full troops, sooner with fewer troops
-// or a shrinking territory) make ~2 minutes from caught to wiped out.
+// warnSeconds cooldown ("Danger, decay in Xs"), then troops bleed DOWN TO A
+// FLOOR (drainFloorPercent of max), not to zero: the warn (30s) + the linear
+// drain (~90s from full troops, sooner with fewer troops or a shrinking
+// territory) make ~2 minutes from caught to the floor. A doomed side is crippled
+// to 5% of max, not eliminated, so a brief dip below the bar is recoverable (the
+// drain stops the moment it climbs back); the rising bar still guarantees a
+// finish by squeezing territory and leaving the doomed side easy to conquer.
 const DOOMSDAY_CLOCK_DEFAULTS = {
   enabled: false,
   speed: "normal" as DoomsdayClockSpeed,
   warnSeconds: 30, // cooldown (the flashing danger cue) before decay begins
   drainStartPercent: 2, // starts bleeding at once (already beats troop income)
   drainMaxPercent: 5,
-  drainRampSeconds: 90, // ramps LINEARLY to the max over this long (~1:30 to zero)
+  drainRampSeconds: 90, // ramps LINEARLY to the max over this long
+  drainFloorPercent: 5, // drain stops here: crippled to 5% of max, never wiped
   // Warships bleed on their OWN gentler start + a STEEP (convex) ramp to a much
   // higher ceiling. A ship caught when its side is first doomed lasts about as
   // long as troops (the low start + no income ≈ the troop net rate), but the rate
   // curves up sharply (warshipDrainCurveExponent), so once a side has been under
-  // the clock the full ramp, ships sink in ~2s (50%/s). Ships only.
+  // the clock the full ramp, ships drop to the same floor in ~2s (50%/s), not
+  // sunk. Ships only.
   warshipDrainStartPercent: 1,
   warshipDrainMaxPercent: 50,
   warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
@@ -138,6 +144,7 @@ export class Config {
       drainStartPercent: d.drainStartPercent,
       drainMaxPercent: d.drainMaxPercent,
       drainRampSeconds: d.drainRampSeconds,
+      drainFloorPercent: d.drainFloorPercent,
       warshipDrainStartPercent: d.warshipDrainStartPercent,
       warshipDrainMaxPercent: d.warshipDrainMaxPercent,
       warshipDrainCurveExponent: d.warshipDrainCurveExponent,

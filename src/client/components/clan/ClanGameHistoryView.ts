@@ -197,6 +197,16 @@ export class ClanGameHistoryView extends LitElement {
     }
   }
 
+  private showStats(gameId: string) {
+    this.dispatchEvent(
+      new CustomEvent<{ gameId: string }>("view-stats", {
+        detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   render() {
     if (this.loadState === "forbidden") {
       return html`
@@ -423,13 +433,22 @@ export class ClanGameHistoryView extends LitElement {
               .showVisibilityToggle=${false}
             ></copy-button>
           </div>
-          <button
-            type="button"
-            @click=${() => this.watchReplay(game.gameId)}
-            class="shrink-0 px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
-          >
-            ${translateText("clan_modal.history_watch_replay")}
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              @click=${() => this.showStats(game.gameId)}
+              class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+            >
+              ${translateText("game_list.stats")}
+            </button>
+            <button
+              type="button"
+              @click=${() => this.watchReplay(game.gameId)}
+              class="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              ${translateText("clan_modal.history_watch_replay")}
+            </button>
+          </div>
         </div>
         <div
           class="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 justify-items-center text-center"

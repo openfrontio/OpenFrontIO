@@ -31,9 +31,21 @@ function showDialog(props: Partial<ConfirmDialog>): Promise<boolean> {
   });
 }
 
-/** In-game replacement for `confirm()`. Resolves true when confirmed. */
-export function showInGameConfirm(message: string): Promise<boolean> {
-  return showDialog({ message, variant: "danger", buttons: "confirmCancel" });
+/**
+ * In-game replacement for `confirm()`. Resolves true when confirmed.
+ * `options` overrides the dialog's presentation (variant, texts, heading)
+ * for confirmations that aren't destructive-red by nature.
+ */
+export function showInGameConfirm(
+  message: string,
+  options?: Partial<ConfirmDialog>,
+): Promise<boolean> {
+  return showDialog({
+    message,
+    variant: "danger",
+    buttons: "confirmCancel",
+    ...options,
+  });
 }
 
 /** In-game replacement for `alert()`. Resolves once dismissed. */

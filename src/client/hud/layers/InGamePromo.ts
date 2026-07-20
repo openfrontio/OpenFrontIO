@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { adGatekeeper } from "../../AdGatekeeper";
 import { Controller } from "../../Controller";
-import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { GameView } from "../../view";
 
 const AD_TYPES = [
@@ -19,6 +19,7 @@ export class InGamePromo extends LitElement implements Controller {
   private bottomRailDestroyed: boolean = false;
   private cornerAdShown: boolean = false;
   private adCheckInterval: ReturnType<typeof setTimeout> | null = null;
+  private adGateOff: (() => void) | null = null;
 
   createRenderRoot() {
     return this;
@@ -52,44 +53,22 @@ export class InGamePromo extends LitElement implements Controller {
   }
 
   private showAd(): void {
-    console.log(
-      `[InGamePromo] showAd called, isOnCrazyGames=${crazyGamesSDK.isOnCrazyGames()}`,
-    );
     if (window.innerWidth < 1100) return;
     if (window.innerHeight < 750) return;
 
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      this.showCrazyGamesAd();
-      return;
-    }
-
     if (!window.adsEnabled) return;
 
-    this.shouldShow = true;
-    this.requestUpdate();
+    // Show the intrusive in-game ad only to users who have been blocker-free.
+    // Once a blocker is ever detected the gate latches suppressed forever
+    // (persisted across sessions), so whenClear never fires for those users.
+    this.adGateOff = adGatekeeper.whenClear(() => {
+      this.shouldShow = true;
+      this.requestUpdate();
 
-    this.updateComplete.then(() => {
-      this.loadAd();
-      this.checkForAds();
-    });
-  }
-
-  private showCrazyGamesAd(): void {
-    console.log(
-      `[InGamePromo] showCrazyGamesAd called, isReady=${crazyGamesSDK.isReady()}, width=${window.innerWidth}, height=${window.innerHeight}`,
-    );
-    if (!crazyGamesSDK.isReady()) {
-      console.log(
-        "[InGamePromo] CrazyGames SDK not ready, skipping in-game ad",
-      );
-      return;
-    }
-
-    this.requestUpdate();
-
-    this.updateComplete.then(() => {
-      console.log("[InGamePromo] DOM updated, calling createBottomLeftAd");
-      crazyGamesSDK.createBottomLeftAd();
+      this.updateComplete.then(() => {
+        this.loadAd();
+        this.checkForAds();
+      });
     });
   }
 
@@ -139,19 +118,16 @@ export class InGamePromo extends LitElement implements Controller {
   }
 
   public hideAd(): void {
+    if (this.adGateOff) {
+      this.adGateOff();
+      this.adGateOff = null;
+    }
     if (this.adCheckInterval) {
       clearInterval(this.adCheckInterval);
       this.adCheckInterval = null;
     }
     this.adsVisible = false;
     this.destroyBottomRail();
-
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      crazyGamesSDK.clearBottomLeftAd();
-      this.shouldShow = false;
-      this.requestUpdate();
-      return;
-    }
 
     if (!window.ramp) {
       console.warn("Playwire RAMP not available for in-game ad");

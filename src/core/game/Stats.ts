@@ -1,4 +1,4 @@
-import { AllPlayersStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
@@ -101,6 +101,11 @@ export interface Stats {
 
   // player was killed (0 tiles)
   playerKilled(player: Player, tick: number): void;
+
+  // OFM live standings: who eliminated the player (null = non-client killer) and
+  // their finishing place. Both first-write-wins.
+  recordKilledBy(victim: Player, killerClientID: ClientID | null): void;
+  recordDeathPosition(victim: Player, position: number): void;
 
   // Record tiles owned at game end (final standings).
   recordFinalTiles(player: Player, tiles: number | bigint): void;

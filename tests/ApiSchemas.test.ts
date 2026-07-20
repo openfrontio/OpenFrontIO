@@ -1,14 +1,18 @@
 import {
+  ClaimAllRewardsResponseSchema,
+  ClaimRewardResponseSchema,
   GoogleUser,
   GoogleUserSchema,
-  hasActiveSubscription,
+  isTemporaryUsername,
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
   PlayerProfileSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
-  UserMeResponse,
+  PutUsernameResponseSchema,
+  RewardSchema,
+  UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
 describe("GoogleUserSchema", () => {
@@ -117,6 +121,17 @@ describe("PublicPlayerGameSchema", () => {
     expect(PublicPlayerGameSchema.safeParse(validGame).success).toBe(true);
   });
 
+  it("normalizes accidental whitespace around archived map names", () => {
+    const result = PublicPlayerGameSchema.safeParse({
+      ...validGame,
+      map: "Deglaciated Antarctica ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.map).toBe("Deglaciated Antarctica");
+  });
+
   it("accepts clanTag: null (not repping a clan)", () => {
     expect(
       PublicPlayerGameSchema.safeParse({ ...validGame, clanTag: null }).success,
@@ -203,64 +218,352 @@ describe("PublicPlayerGamesResponseSchema", () => {
   });
 });
 
-describe("hasActiveSubscription", () => {
-  function userMeWith(
-    subscription: UserMeResponse["player"]["subscription"],
-  ): UserMeResponse {
-    return {
-      user: {},
-      player: {
-        publicId: "p1",
-        adfree: false,
-        achievements: { singleplayerMap: [] },
-        friends: [],
-        subscription,
-      },
-    };
-  }
+describe("RewardSchema", () => {
+  const validReward = {
+    id: "42",
+    currencyType: "hard",
+    amount: "500",
+    reason: "subscription_signup_bonus",
+    note: "Subscription signup bonus (Gold)",
+  };
 
-  it("is true for an active subscription", () => {
-    expect(
-      hasActiveSubscription(
-        userMeWith({
-          tier: "supporter",
-          status: "active",
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        }),
-      ),
-    ).toBe(true);
+  it("accepts a fully-populated reward", () => {
+    expect(RewardSchema.safeParse(validReward).success).toBe(true);
   });
 
-  it("is true while trialing", () => {
-    expect(
-      hasActiveSubscription(
-        userMeWith({
-          tier: "supporter",
-          status: "trialing",
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        }),
-      ),
-    ).toBe(true);
-  });
-
-  it("is false for canceled or past_due subscriptions", () => {
-    for (const status of ["canceled", "past_due", "incomplete"]) {
-      expect(
-        hasActiveSubscription(
-          userMeWith({
-            tier: "supporter",
-            status,
-            currentPeriodEnd: null,
-            cancelAtPeriodEnd: false,
-          }),
-        ),
-      ).toBe(false);
+  it("keeps id and amount as strings (bigints can exceed MAX_SAFE_INTEGER)", () => {
+    const result = RewardSchema.safeParse({
+      ...validReward,
+      amount: "9007199254740993",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe("42");
+      expect(result.data.amount).toBe("9007199254740993");
     }
   });
 
-  it("is false without a subscription", () => {
-    expect(hasActiveSubscription(userMeWith(null))).toBe(false);
+  it("accepts note: null", () => {
+    expect(RewardSchema.safeParse({ ...validReward, note: null }).success).toBe(
+      true,
+    );
+  });
+
+  it("accepts an unknown reason (open-ended by design)", () => {
+    expect(
+      RewardSchema.safeParse({ ...validReward, reason: "future_source" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown currencyType", () => {
+    expect(
+      RewardSchema.safeParse({ ...validReward, currencyType: "gems" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema rewards", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player with unclaimed rewards", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        rewards: [
+          {
+            id: "42",
+            currencyType: "soft",
+            amount: "150",
+            reason: "subscription_daily",
+            note: "Daily Gold subscription reward (5 days)",
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.rewards).toHaveLength(1);
+    }
+  });
+
+  it("accepts a response without rewards (older API versions)", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(true);
+  });
+});
+
+describe("UserMeResponseSchema unlimitedRanked", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player exempt from ranked play limits", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: { ...basePlayer, unlimitedRanked: true },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.unlimitedRanked).toBe(true);
+    }
+  });
+
+  it("rejects a response without unlimitedRanked", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(false);
+  });
+});
+
+describe("claim response schemas", () => {
+  it("coerces claim balances from bigint strings to numbers", () => {
+    const result = ClaimRewardResponseSchema.safeParse({
+      id: "42",
+      currencyType: "hard",
+      amount: "500",
+      claimedAt: "2026-07-09T18:03:11.000Z",
+      currency: { soft: "1200", hard: "850" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.currency).toEqual({ soft: 1200, hard: 850 });
+    }
+  });
+
+  it("accepts a claim-all with nothing pending", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.claimed).toEqual([]);
+    }
+  });
+
+  it("accepts a claim-all with claimed rewards", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [
+        {
+          id: "42",
+          currencyType: "hard",
+          amount: "500",
+          reason: "subscription_signup_bonus",
+          note: null,
+          claimedAt: "2026-07-09T18:03:11.000Z",
+        },
+      ],
+      currency: { soft: "1200", hard: "850" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.claimed).toEqual([{ id: "42" }]);
+    }
+  });
+});
+
+describe("UserMeResponseSchema canCreatePublicLobbies", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a player allowed to list lobbies publicly", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: { ...basePlayer, canCreatePublicLobbies: true },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.canCreatePublicLobbies).toBe(true);
+    }
+  });
+
+  it("rejects a response without canCreatePublicLobbies", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
+    ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema account username", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a lapsed claim holder (suffix showing, grace deadline set)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: "Bob.4821",
+        usernameBase: "Bob",
+        usernameDiscriminator: "4821",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: "2026-08-17T19:42:00.000Z",
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.username).toBe("Bob.4821");
+      expect(result.data.player.usernameStatus).toBe("claimed");
+    }
+  });
+
+  it("accepts a response without any username fields (older API)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: basePlayer,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.usernameStatus).toBeUndefined();
+    }
+  });
+
+  it("accepts a player who never set a name (all null, unclaimed)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: null,
+        usernameBase: null,
+        usernameDiscriminator: null,
+        usernameStatus: "unclaimed",
+        usernameClaimExpiresAt: null,
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("keeps a leading-zero discriminator as a string", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: "Ann.0042",
+        usernameBase: "Ann",
+        usernameDiscriminator: "0042",
+        usernameStatus: "unclaimed",
+        usernameClaimExpiresAt: null,
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.usernameDiscriminator).toBe("0042");
+    }
+  });
+
+  it("rejects an unknown usernameStatus", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: { ...basePlayer, usernameStatus: "expired" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a non-ISO usernameClaimExpiresAt", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: {
+          ...basePlayer,
+          usernameStatus: "claimed",
+          usernameClaimExpiresAt: "next month",
+        },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("PutUsernameResponseSchema", () => {
+  const base = {
+    username: "NewName.7302",
+    base: "NewName",
+    discriminator: "7302",
+    usernameStatus: "unclaimed",
+    nextUsernameChangeAt: "2026-08-17T19:42:00.000Z",
+  };
+
+  it("accepts a rename result", () => {
+    const result = PutUsernameResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBe("NewName.7302");
+      expect(result.data.discriminator).toBe("7302");
+    }
+  });
+
+  it("accepts a null cooldown", () => {
+    expect(
+      PutUsernameResponseSchema.safeParse({
+        ...base,
+        nextUsernameChangeAt: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a numeric discriminator (leading zeros would be lost)", () => {
+    expect(
+      PutUsernameResponseSchema.safeParse({ ...base, discriminator: 7302 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a missing base", () => {
+    const rest: Record<string, unknown> = { ...base };
+    delete rest.base;
+    expect(PutUsernameResponseSchema.safeParse(rest).success).toBe(false);
+  });
+});
+
+describe("isTemporaryUsername", () => {
+  it.each(["TEMPORARY0042", "TEMPORARY9999"])("detects %s", (name) => {
+    expect(isTemporaryUsername(name)).toBe(true);
+  });
+
+  it.each([
+    "temporary1234",
+    "TEMPORARY123",
+    "TEMPORARY12345",
+    "TEMPORARYabcd",
+    "Bob",
+  ])("rejects %s", (name) => {
+    expect(isTemporaryUsername(name)).toBe(false);
+  });
+
+  it("handles null and undefined bases", () => {
+    expect(isTemporaryUsername(null)).toBe(false);
+    expect(isTemporaryUsername(undefined)).toBe(false);
   });
 });

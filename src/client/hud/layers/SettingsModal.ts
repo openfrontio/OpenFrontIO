@@ -19,7 +19,6 @@ import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
-const highlightIcon = assetUrl("images/HighlightIconWhite.svg");
 const mouseIcon = assetUrl("images/MouseIconWhite.svg");
 const ninjaIcon = assetUrl("images/NinjaIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -132,11 +131,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onToggleEmojisButtonClick() {
     this.userSettings.toggleEmojis();
-    this.requestUpdate();
-  }
-
-  private onToggleHighlightSmallPlayersButtonClick() {
-    this.userSettings.toggleHighlightSmallPlayers();
     this.requestUpdate();
   }
 
@@ -351,31 +345,6 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.emojis()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleHighlightSmallPlayersButtonClick}"
-            >
-              <img
-                src=${highlightIcon}
-                alt="highlightSmallPlayers"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.highlight_small_players_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.highlight_small_players_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.highlightSmallPlayers()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

@@ -11,7 +11,6 @@ import {
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -145,13 +144,11 @@ export class GameModeSelector extends LitElement {
             this.openHostLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
-          ${!crazyGamesSDK.isOnCrazyGames()
-            ? this.renderSmallActionCard(
-                translateText("mode_selector.ranked_title"),
-                this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-              )
-            : html`<div class="invisible"></div>`}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+          )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
@@ -160,7 +157,9 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
-        <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
+        <ios-add-to-home-screen-banner
+          class="no-crazygames"
+        ></ios-add-to-home-screen-banner>
 
         <!-- Game cards grid -->
         ${this.lobbies === null
@@ -226,13 +225,11 @@ export class GameModeSelector extends LitElement {
             this.openHostLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
-          ${!crazyGamesSDK.isOnCrazyGames()
-            ? this.renderSmallActionCard(
-                translateText("mode_selector.ranked_title"),
-                this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-              )
-            : html`<div class="invisible"></div>`}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+          )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
@@ -332,6 +329,7 @@ export class GameModeSelector extends LitElement {
 
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
+      lobby.gameConfig?.doomsdayClock?.speed,
     );
     // Sort by length for visual consistency (shorter labels first)
     if (modifierLabels.length > 1) {

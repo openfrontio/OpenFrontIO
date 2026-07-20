@@ -144,8 +144,29 @@ export class SmallPlayerGlowPass {
     this.dirty = true;
   }
 
+  // One separable-blur axis: sample `src`, write the blurred result into `dst`.
+  private blurAxis(
+    src: RenderTarget,
+    dst: RenderTarget,
+    dx: number,
+    dy: number,
+  ): void {
+    const gl = this.gl;
+    toTarget(gl, dst, () => {
+      gl.uniform2f(this.uBlurDir, dx, dy);
+      gl.bindTexture(gl.TEXTURE_2D, src.tex);
+      gl.bindVertexArray(this.quadVao);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
+  }
+
   draw(cameraMatrix: Float32Array): void {
-    if (!this.active) return;
+    // Strength is a graphics override read from the live settings slice each
+    // frame (not tick-gated), so a slider change is live even while the sim is
+    // paused (e.g. the graphics settings modal is open). Clamped to 1 so a
+    // value persisted from the old 500% range can't over-brighten.
+    const strength = Math.min(1, this.settings.strength);
+    if (!this.active || strength <= 0) return;
 
     const gl = this.gl;
     const s = this.settings;
@@ -179,21 +200,11 @@ export class SmallPlayerGlowPass {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       });
 
-      // Separable blur: horizontal into B, vertical back into A.
+      // Separable blur: horizontal A->B, then vertical B->A.
       gl.useProgram(this.blurProg);
       gl.activeTexture(gl.TEXTURE0);
-      toTarget(gl, b, () => {
-        gl.uniform2f(this.uBlurDir, 1 / a.w, 0);
-        gl.bindTexture(gl.TEXTURE_2D, a.tex);
-        gl.bindVertexArray(this.quadVao);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-      });
-      toTarget(gl, a, () => {
-        gl.uniform2f(this.uBlurDir, 0, 1 / b.h);
-        gl.bindTexture(gl.TEXTURE_2D, b.tex);
-        gl.bindVertexArray(this.quadVao);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-      });
+      this.blurAxis(a, b, 1 / a.w, 0); // horizontal A->B
+      this.blurAxis(b, a, 0, 1 / b.h); // vertical B->A
       this.dirty = false;
     }
 
@@ -207,7 +218,9 @@ export class SmallPlayerGlowPass {
       gl.uniformMatrix3fv(this.uCompositeCam, false, cameraMatrix);
       gl.uniform2f(this.uCompositeMapSize, this.mapW, this.mapH);
       gl.uniform3fv(this.uGlowColor, s.color);
-      gl.uniform1f(this.uIntensity, s.alpha * pulse);
+      // Strength fades the glow linearly: 1 = the aura's full alpha, 0.1 =
+      // barely visible.
+      gl.uniform1f(this.uIntensity, s.alpha * pulse * strength);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, a.tex);
       gl.bindVertexArray(this.mapVao);

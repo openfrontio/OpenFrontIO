@@ -73,6 +73,7 @@
   },
   "mapOverlay": {
     "trailAlpha": 0.588,
+    "spiralResolutionScale": 0.25,
     "defenseCheckerDarken": 0.7,
     "territoryDefenseDarken": 0.85,
     "territorySaturation": 0.85,
@@ -334,7 +335,8 @@
   "smallPlayerGlow": {
     "color": [1.0, 0.12, 0.1],
     "alpha": 0.9,
-    "pulseSpeed": 0.003
+    "pulseSpeed": 0.003,
+    "strength": 0.35
   },
   "altView": {
     "gridFontSize": 24,

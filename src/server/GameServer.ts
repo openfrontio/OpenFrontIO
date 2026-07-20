@@ -3,15 +3,17 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { anonAnimalName } from "../core/AnonAnimals";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameID,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
@@ -24,13 +26,14 @@ import {
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerLobbyInfoMessage,
+  ServerNewLobbyMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { anonymousUsername, createPartialGameRecord } from "../core/Util";
+import { createPartialGameRecord, simpleHash } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
@@ -158,6 +161,11 @@ export class GameServer {
 
   private visibleAt?: number;
 
+  // The successor lobby this game has already spawned, if any. Kept so a
+  // repeated create_game?previous= call (e.g. a double click) reuses the same
+  // id instead of minting another lobby.
+  private successorLobbyId: GameID | null = null;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -166,6 +174,9 @@ export class GameServer {
     private creatorPersistentID?: string,
     private startsAt?: number,
     private publicGameType?: PublicGameType,
+    // Matchmade team split from the matchmaking assignment: publicIds per
+    // team. At start each client is stamped with its team's index.
+    private matchmakingTeams?: string[][],
   ) {
     this.log = log_.child({ gameID: id });
     if (startsAt !== undefined) {
@@ -195,8 +206,23 @@ export class GameServer {
   }
 
   // Same (viewer, target) -> same name in the lobby and in-game.
+  //
+  // The target's slot is its join-order position in allClients (an
+  // insertion-ordered Map): stable for the whole game, and late-joiners simply
+  // append, so existing players' names never shift. Distinct targets have
+  // distinct slots, and anonAnimalName maps distinct slots (at a fixed offset) to
+  // distinct handles — so within any one viewer's view no two players ever share
+  // a name. The per-viewer offset rotates the animal assignment, so different
+  // viewers still see different names for the same player (the anti-team point).
+  // Display-only: this feeds per-viewer wire payloads (startInfoFor / gameInfo),
+  // never the simulation or the archived record, so it cannot desync (see #4426).
   private anonName(viewer: ClientID | undefined, target: ClientID): string {
-    return anonymousUsername(target + (viewer ?? ""));
+    let slot = 0;
+    for (const id of this.allClients.keys()) {
+      if (id === target) break;
+      slot++;
+    }
+    return anonAnimalName(slot, viewer ? simpleHash(viewer) : 0);
   }
 
   // Whether `viewer` should see `target`'s real identity: when names aren't
@@ -530,7 +556,10 @@ export class GameServer {
       clientIP: ipAnonymize(client.ip),
     });
 
+    // Skipped in dev: local testing (multi-tab, the matchmaking e2e) is
+    // inherently same-IP.
     if (
+      ServerEnv.env() !== GameEnv.Dev &&
       this.gameConfig.gameType === GameType.Public &&
       this.activeClients.filter(
         (c) => c.ip === client.ip && c.clientID !== client.clientID,
@@ -881,6 +910,35 @@ export class GameServer {
     });
   }
 
+  // The worker created a successor lobby for this game (the host asked to
+  // reuse the private lobby via create_game?previous=). Remember it so repeat
+  // requests reuse the same lobby, and tell everyone still connected its id so
+  // they can hop over without re-sharing a link.
+  public setSuccessorLobby(gameID: GameID) {
+    this.successorLobbyId = gameID;
+    this.log.info("successor lobby created", {
+      gameID: this.id,
+      successorID: gameID,
+    });
+    this.broadcastNewLobby(gameID);
+  }
+
+  public successorLobby(): GameID | null {
+    return this.successorLobbyId;
+  }
+
+  private broadcastNewLobby(gameID: GameID) {
+    const msg = JSON.stringify({
+      type: "new_lobby",
+      gameID,
+    } satisfies ServerNewLobbyMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
+    });
+  }
+
   public start() {
     if (this._hasStarted || this._hasEnded) {
       return;
@@ -905,6 +963,7 @@ export class GameServer {
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
         friends: friendsFor(c),
+        teamIndex: this.matchmakingTeamIndex(c),
       })),
     });
     if (!result.success) {
@@ -936,6 +995,20 @@ export class GameServer {
     });
   }
 
+  // Resolves a client to its matchmade team slot (index into
+  // matchmakingTeams), or undefined when the game isn't matchmade / the
+  // client isn't in the assignment.
+  private matchmakingTeamIndex(c: Client): number | undefined {
+    const publicId = c.publicId;
+    if (this.matchmakingTeams === undefined || publicId === undefined) {
+      return undefined;
+    }
+    const idx = this.matchmakingTeams.findIndex((team) =>
+      team.includes(publicId),
+    );
+    return idx === -1 ? undefined : idx;
+  }
+
   private addIntent(intent: StampedIntent) {
     this.intents.push(intent);
   }
@@ -947,16 +1020,28 @@ export class GameServer {
   // clients desync. Only the username of players this viewer can't see is
   // anonymized, and their cosmetics hidden, neither of which the simulation
   // reads.
-  private startInfoFor(viewer: ClientID): GameStartInfo {
-    if (!this.gameConfig.anonymizeNames) return this.wireGameStartInfo;
+  //
+  // Exception: admins in FFA get the real clan tags (the display pipeline then
+  // shows them everywhere) so they can spot teaming live. Safe ONLY in FFA —
+  // that mode never runs assignTeams, so clanTag never reaches the simulation,
+  // and the desync hash (Player.hash) excludes names. Gated on FFA, NOT
+  // disableClanTags: a Team game with tags disabled DOES assign teams by
+  // clanTag, so a per-viewer reveal there would desync.
+  private startInfoFor(viewer: ClientID, isAdmin: boolean): GameStartInfo {
+    const revealClanTags = isAdmin && this.gameConfig.gameMode === GameMode.FFA;
+    if (!this.gameConfig.anonymizeNames) {
+      return revealClanTags ? this.gameStartInfo : this.wireGameStartInfo;
+    }
     return {
       ...this.wireGameStartInfo,
-      players: this.wireGameStartInfo.players.map((p) => {
+      players: this.wireGameStartInfo.players.map((p, i) => {
         const real = this.seesReal(viewer, p.clientID);
         return {
           ...p,
           username: real ? p.username : this.anonName(viewer, p.clientID),
-          clanTag: null,
+          clanTag: revealClanTags
+            ? this.gameStartInfo.players[i].clanTag
+            : null,
           friends: undefined,
           cosmetics: real ? p.cosmetics : undefined,
         };
@@ -990,7 +1075,10 @@ export class GameServer {
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.startInfoFor(client.clientID),
+          gameStartInfo: this.startInfoFor(
+            client.clientID,
+            isAdminRole(client.role),
+          ),
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
@@ -1588,6 +1676,10 @@ export class GameServer {
   // current connection status. null until the first consensus.
   public liveStats(): {
     turn: number;
+    // The winner's clientID once the game is decided (player win), else null.
+    // Server-side (from the winner vote), so the live board can seat the winner
+    // without waiting for the post-game record.
+    winner: string | null;
     players: (PlayerLiveStats & {
       username: string | null;
       publicID: string | null;
@@ -1597,8 +1689,10 @@ export class GameServer {
     if (this.latestLiveStats === null) {
       return null;
     }
+    const w = this.winner?.winner;
     return {
       turn: this.latestLiveStats.turn,
+      winner: w?.[0] === "player" ? w[1] : null,
       players: this.latestLiveStats.players.map((p) => {
         const client = this.allClients.get(p.clientID);
         return {

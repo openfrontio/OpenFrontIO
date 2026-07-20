@@ -5,6 +5,9 @@
     "cancel_subscription_failed": "Failed to cancel subscription. Please try again or use Manage.",
     "cancel_subscription_success": "Subscription canceled. Access continues until the end of the billing period.",
     "change_tier": "Change Tier",
+    "claim": "Claim",
+    "claim_all": "Claim All",
+    "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
     "email_placeholder": "Enter your email address",
@@ -30,6 +33,9 @@
     "linked_to_google_email": "Linked to Google ({email})",
     "log_out": "Log Out",
     "manage_subscription": "Manage",
+    "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
+    "marketing_no_email": "Link an email to your account to subscribe to updates.",
+    "marketing_title": "Email updates",
     "no_games": "No games played yet.",
     "no_stats": "No stats available yet. Play some games to start tracking.",
     "not_found": "Not Found",
@@ -37,6 +43,8 @@
     "public_player_id": "Public Player ID:",
     "reactivate_subscription": "Reactivate",
     "recovery_email_sent": "Recovery email sent to {email}",
+    "reward_daily": "Daily subscription reward",
+    "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
     "stats_overview": "Stats Overview",
     "sub_price_monthly": "{price}/mo",
@@ -55,8 +63,29 @@
     "tab_account": "Account",
     "tab_friends": "Friends",
     "tab_games": "Games",
+    "tab_settings": "Settings",
     "tab_stats": "Stats",
     "title": "Account",
+    "unclaimed_rewards": "Unclaimed Rewards",
+    "username_changed": "Username changed to {name}.",
+    "username_confirm_abandon": "You will permanently give up your reserved name \"{name}\".",
+    "username_confirm_body": "Your new name will be locked for 30 days.",
+    "username_confirm_button": "Change name",
+    "username_confirm_case_only": "The new name only differs from your current one in capitalization — it will still restart the 30-day lock.",
+    "username_confirm_heading": "Change username?",
+    "username_cooldown_until": "You can change your username again on {date}.",
+    "username_error_cooldown": "You can change your username again in {days} day(s).",
+    "username_error_failed": "Couldn't change your username. Please try again later.",
+    "username_error_profane": "That username isn't allowed.",
+    "username_error_taken": "That username is already taken — try another.",
+    "username_grace_warning": "You'll lose the exclusive right to \"{name}\" on {date}. Resubscribe to keep it.",
+    "username_not_set": "Claim your username — it identifies you across all your games.",
+    "username_placeholder": "Enter a username",
+    "username_save": "Save",
+    "username_temporary_notice": "Your name was taken by another player. Pick a new one — this rename is free.",
+    "username_temporary_prompt": "Your username was taken by another player. Choose a new one now? The rename is free.",
+    "username_temporary_prompt_confirm": "Choose a name",
+    "username_title": "Username",
     "your_subscription": "Your Subscription"
   },
   "build_menu": {
@@ -196,7 +225,6 @@
     "discord_section_title": "Discord",
     "discord_url_hint": "Use an invite set to never expire.",
     "discord_url_label": "Discord Invite URL",
-    "discord_url_placeholder": "https://discord.gg/...",
     "error_already_member": "Already a member",
     "error_banned": "You are banned from this clan.",
     "error_banned_reason": "You are banned from this clan. Reason: {reason}",
@@ -379,6 +407,7 @@
   "cosmetics": {
     "adfree": "ad-free for life!",
     "artist_label": "Artist:",
+    "button_title": "Pick your cosmetics!",
     "color_label": "Color:",
     "common": "Common",
     "epic": "Epic",
@@ -386,9 +415,14 @@
     "hard": "Plutonium",
     "legendary": "Legendary",
     "per_day": "/day",
+    "public_lobbies": "Create public lobbies",
     "rare": "Rare",
+    "search": "Search...",
     "soft": "Caps",
-    "uncommon": "Uncommon"
+    "title": "Cosmetics",
+    "uncommon": "Uncommon",
+    "unlimited_ranked": "Unlimited ranked",
+    "usd_value": "Value: {usd}"
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
@@ -420,14 +454,11 @@
     "veryfast": "Very Fast"
   },
   "effects": {
-    "button_title": "Pick an effect!",
     "nukeType": {
       "atom": "Atom",
       "hydro": "Hydrogen",
       "mirvWarhead": "MIRV"
     },
-    "search": "Search...",
-    "title": "Effects",
     "type": {
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
@@ -533,31 +564,31 @@
   "game_info_modal": {
     "all_gold": "All gold",
     "atoms": "Atoms",
-    "bombs": "Bombs",
     "conquered": "Conquered",
     "conquest_gold": "Conquered player gold",
-    "conquests": "Conquests",
     "duration": "Duration",
     "economy": "Economy",
     "hydros": "Hydros",
+    "load_failed": "Couldn't load game stats.",
     "loading_game_info": "Loading game stats",
     "mirv": "MIRV",
     "naval_trade": "Tradeship",
     "no_winner": "This game ended with no winner (or a Nation won)",
     "num_of_conquests_bots": "Tribe kills",
     "num_of_conquests_humans": "Player kills",
+    "num_of_conquests_nations": "Nation kills",
     "pirate": "Pirate",
     "players": "Players",
+    "retry": "Retry",
     "stolen_gold": "Stolen with warships",
     "survival_time": "Survival time",
-    "title": "Game info",
     "total_gold": "Total",
-    "trade": "Trade",
     "train_trade": "Train",
+    "unknown_game_type": "Unknown game type",
     "war": "War"
   },
   "game_list": {
-    "ranking": "Ranking"
+    "stats": "Stats"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -878,7 +909,6 @@
     "copyright": "© OpenFront™ and Contributors",
     "create": "Create Lobby",
     "discord_avatar_alt": "Discord profile avatar",
-    "game_info": "Game info",
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
     "help": "Help",
@@ -948,12 +978,14 @@
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
     "greatlakes": "Great Lakes",
+    "gulfofguinea": "Gulf Of Guinea",
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "halkidiki": "Halkidiki",
     "hawaii": "Hawaii",
     "hongkong": "Hong Kong",
     "iceland": "Iceland",
     "indiansubcontinent": "Indian Subcontinent",
+    "irishsea": "Irish Sea",
     "italia": "Italia",
     "japan": "Japan",
     "juandefucastrait": "Juan De Fuca Strait",
@@ -973,6 +1005,7 @@
     "milkyway": "Milky Way",
     "mississippiriver": "Mississippi River",
     "montreal": "Montreal",
+    "morethanluck": "More Than Luck",
     "newyorkcity": "New York City",
     "niledelta": "Nile Delta",
     "northamerica": "North America",
@@ -985,6 +1018,7 @@
     "random": "Random",
     "russia": "Russia",
     "sanfrancisco": "San Francisco",
+    "scandinavia": "Scandinavia",
     "sierpinski": "Sierpinski",
     "southamerica": "South America",
     "southeastasia": "Southeast Asia",
@@ -1043,6 +1077,14 @@
     "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
   },
+  "marketing_consent": {
+    "body": "News and updates by email. Change it anytime in your account.",
+    "dismiss": "Dismiss",
+    "error": "Couldn't save that. Please try again.",
+    "no": "No thanks",
+    "title": "Keep up with OpenFront?",
+    "yes": "Yes please"
+  },
   "matchmaking_button": {
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
@@ -1052,9 +1094,14 @@
   "matchmaking_modal": {
     "connecting": "Connecting to matchmaking server...",
     "elo": "Your ELO: {elo}",
+    "limit_reached": "You're out of free ranked matches.",
+    "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
+    "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
+    "title_2v2": "2v2 Ranked Matchmaking (ALPHA)",
     "waiting_for_game": "Waiting for game to start..."
   },
   "mode_selector": {
@@ -1065,6 +1112,13 @@
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",
     "teams_title": "Teams"
+  },
+  "new_lobby_prompt": {
+    "confirm": "Start a new lobby? All players will be invited to join.",
+    "dismiss": "Dismiss",
+    "failed": "Could not create a new lobby. Please try again.",
+    "join": "Join",
+    "message": "Host started a new lobby"
   },
   "news": {
     "title": "Release Notes"
@@ -1130,6 +1184,13 @@
     "traitor": "Traitor",
     "troops": "Troops"
   },
+  "player_profile": {
+    "loading": "Loading profile...",
+    "not_found": "Player profile not found",
+    "share": "Share Profile",
+    "title": "Player Profile",
+    "view": "View Profile"
+  },
   "player_stats_table": {
     "arrived": "Arrived",
     "attack": "Attack",
@@ -1179,6 +1240,7 @@
     "public": "Public",
     "ranked": "Ranked",
     "ranked_1v1": "1v1",
+    "ranked_2v2": "2v2",
     "solo": "Solo",
     "stats_games_played": "Games Played",
     "stats_losses": "Losses",
@@ -1217,6 +1279,9 @@
     "crowded": "Crowded",
     "disable_alliances": "Alliances Disabled",
     "disable_alliances_label": "Alliances",
+    "doomsday_clock": "Doomsday Clock",
+    "doomsday_clock_label": "Doomsday Clock",
+    "doomsday_clock_with_speed": "Doomsday Clock: {speed}",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "hard_nations": "Hard Nations",
     "nukes_disabled": "Nukes Disabled",
@@ -1262,6 +1327,9 @@
     "fastest_game_speed": "Max",
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
+  },
+  "rewards_modal": {
+    "title": "Rewards"
   },
   "select_lang": {
     "title": "Select Language"
@@ -1311,28 +1379,31 @@
   },
   "store": {
     "already_subscribed": "Already subscribed.",
-    "buy_for": "Buy for {price}",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
+    "change_tier_rate_limited": "You just changed tiers. Please wait a minute before changing again.",
     "change_tier_success": "Switched to {tier}.",
     "checkout_failed": "Failed to create checkout session.",
     "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
     "confirm_purchase_body": "Buy {item} for {amount, number} {currency}?",
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
+    "crowns": "Crowns",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
-    "custom_amount": "Custom Amount",
+    "custom_amount": "Choose Amount",
     "custom_currency_purchase_success": "Plutonium purchase successful!",
     "effects": "Effects",
     "flags": "Flags",
     "insufficient_currency_body": "You need {amount, number} more {currency} to buy {item}.",
     "insufficient_currency_title": "Insufficient {currency}",
     "login_required": "You must be logged in to purchase with currency.",
+    "no_crowns": "No crowns available. Check back later for new items.",
     "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
     "packs": "Packs",
     "patterns": "Skins",
+    "plutonium_amount": "Plutonium amount",
     "price_per_month": "/mo",
     "purchase_currency": "Purchase {currency}",
     "purchase_failed": "Purchase failed. Please try again.",
@@ -1359,10 +1430,8 @@
     "pattern": {
       "default": "Default"
     },
-    "search": "Search...",
     "select_skin": "Skin",
-    "selected": "selected",
-    "title": "Skins"
+    "selected": "selected"
   },
   "token_login_modal": {
     "logging_in": "Logging in...",
@@ -1490,8 +1559,8 @@
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
+    "highlight_glow_strength_label": "Highlight strength",
     "highlight_small_players_desc": "Add a glow to small players so they're easy to find.",
-    "highlight_small_players_label": "Highlight small players",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
@@ -1545,6 +1614,7 @@
     "zoom_out_desc": "Zoom out the map"
   },
   "username": {
+    "account_invalid_chars": "Username can only contain letters, numbers, underscores, and hyphens.",
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "not_string": "Username must be a string.",
@@ -1564,6 +1634,7 @@
     "join_server": "Join Server",
     "keep": "Keep Playing",
     "nation_won": "Nation {nation} has won!",
+    "new_lobby": "New Lobby",
     "other_team": "{team} team has won!",
     "other_won": "{player} has won!",
     "requeue": "Play Again",

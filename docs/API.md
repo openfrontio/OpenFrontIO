@@ -25,7 +25,7 @@ GET https://api.openfront.io/public/games
 - `end` (required): ISO 8601 timestamp
 - `type` (optional): Game type, must be one of `[Private, Public, Singleplayer]`
 - `mode` (optional): Game mode, must be one of `[Free For All, Team]`
-- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1]`
+- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1, 2v2]`
 - `playerTeams` (optional): Player team configuration (e.g. `Duos`)
 - `limit` (optional): Number of results (max 1000, default 50)
 - `offset` (optional): Pagination offset

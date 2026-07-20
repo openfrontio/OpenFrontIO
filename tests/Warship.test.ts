@@ -5,6 +5,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Unit,
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
@@ -34,7 +35,9 @@ describe("Warship", () => {
     // Advance past the manualMoveRetreatDisabledDuration window.
     executeTicks(game, 50);
   });
-
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   test("Warship heals only if player has port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
     if (typeof maxHealth !== "number") {
@@ -105,6 +108,53 @@ describe("Warship", () => {
     expect(warship.health()).toBe(maxHealth - 8);
   });
 
+  // A crippled warship normally retreats to a port to heal (threshold 75%).
+  function crippledWarshipWithPort(): Unit {
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      throw new Error("warship has no maxHealth");
+    }
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      { patrolTile: game.ref(coastX + 1, 10) },
+    );
+    game.addExecution(new WarshipExecution(warship));
+    player1.conquer(game.ref(coastX, 10)); // owns a tile -> isAlive() for the clock
+    game.executeNextTick();
+    // Drop to ~5%, well below the 75% retreat threshold.
+    const low = Math.max(1, Math.floor(maxHealth * 0.05));
+    warship.modifyHealth(low - warship.health());
+    expect(warship.warshipState().state).toBe("patrolling");
+    return warship;
+  }
+
+  test("Crippled warship retreats to a port when not doomed", async () => {
+    const warship = crippledWarshipWithPort();
+    executeTicks(game, 10);
+    // Baseline: it leaves patrol to retreat/dock at the port.
+    expect(warship.warshipState().state).not.toBe("patrolling");
+  });
+
+  test("Doomed warship stays on patrol instead of retreating", async () => {
+    const warship = crippledWarshipWithPort();
+    player1.enterDoomsdayClock();
+    executeTicks(game, 10);
+    // A doomed side cannot heal, so the warship must not peel off to a port.
+    expect(warship.warshipState().state).toBe("patrolling");
+  });
+
+  test("Doomed warship undocks and returns to patrol", async () => {
+    const warship = crippledWarshipWithPort();
+    executeTicks(game, 10);
+    expect(warship.warshipState().state).not.toBe("patrolling");
+    // Falling under the bar mid-repair sends it back to patrol, not idling.
+    player1.enterDoomsdayClock();
+    game.executeNextTick();
+    expect(warship.warshipState().state).toBe("patrolling");
+  });
+
   test("Warship captures trade if player has port", async () => {
     const portTile = game.ref(coastX, 10);
     player1.buildUnit(UnitType.Port, portTile, {});
@@ -148,6 +198,41 @@ describe("Warship", () => {
         targetUnit: player1.buildUnit(UnitType.Port, game.ref(coastX, 11), {}),
       },
     );
+
+    expect(tradeShip.owner().id()).toBe(player2.id());
+    // Let plenty of time for warship to potentially capture trade ship
+    for (let i = 0; i < 10; i++) {
+      game.executeNextTick();
+    }
+
+    expect(tradeShip.owner().id()).toBe(player2.id());
+  });
+
+  test("Warship doesn't capture trade if there is no port on it's water component", async () => {
+    const portTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    const tradeShip = player2.buildUnit(
+      UnitType.TradeShip,
+      game.ref(coastX + 1, 11),
+      {
+        targetUnit: player1.buildUnit(UnitType.Port, game.ref(coastX, 11), {}),
+      },
+    );
+
+    const warshipTile = warship.tile();
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile) =>
+      tile === warshipTile ? 1 : 2,
+    );
+    vi.spyOn(game, "hasWaterComponent").mockReturnValue(false);
 
     expect(tradeShip.owner().id()).toBe(player2.id());
     // Let plenty of time for warship to potentially capture trade ship

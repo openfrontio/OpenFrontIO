@@ -7,7 +7,6 @@ import {
 } from "../../../../core/ApiSchemas";
 import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
-import { GameInfoModal } from "../../../GameInfoModal";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
@@ -212,19 +211,14 @@ export class PlayerGameHistoryView extends LitElement {
     );
   }
 
-  // Opens the game-info ranking overlay on top of the account modal. The modal
-  // is a global singleton in the document (queried the same way as Main.ts),
-  // so we don't close the account modal — the overlay layers above it.
-  private showRanking(gameId: string) {
-    const gameInfoModal = document.querySelector(
-      "game-info-modal",
-    ) as GameInfoModal | null;
-    if (!gameInfoModal) {
-      console.warn("Game info modal element not found");
-      return;
-    }
-    void gameInfoModal.loadGame(gameId);
-    gameInfoModal.open();
+  private showStats(gameId: string) {
+    this.dispatchEvent(
+      new CustomEvent<{ gameId: string }>("view-stats", {
+        detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   render() {
@@ -452,10 +446,10 @@ export class PlayerGameHistoryView extends LitElement {
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              @click=${() => this.showRanking(game.gameId)}
+              @click=${() => this.showStats(game.gameId)}
               class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
             >
-              ${translateText("game_list.ranking")}
+              ${translateText("game_list.stats")}
             </button>
             <button
               type="button"

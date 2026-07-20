@@ -8,7 +8,6 @@ import {
   showToast,
   translateText,
 } from "../client/Utils";
-import { hasActiveSubscription } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { EventBus } from "../core/EventBus";
 import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
@@ -108,8 +107,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyStartAt: number | null = null;
   @state() private serverTimeOffset: number = 0;
-  // Whether this user may actually make the lobby public (subscribers, or
-  // anyone in dev). The toggle itself is always shown.
+  // Whether this user may actually make the lobby public (the API's
+  // canCreatePublicLobbies entitlement, or anyone in dev). The toggle itself
+  // is always shown.
   @state() private canListPublicly: boolean = false;
   @state() private publiclyListed: boolean = false;
   @state() private showSubscriptionRequired: boolean = false;
@@ -645,7 +645,7 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
-  protected onOpen(): void {
+  protected onOpen(args?: Record<string, unknown>): void {
     // Re-armed here (not in onClose's reset) so that once
     // closeWithoutLeaving() disarms it, no close cascade — e.g. another
     // modal's close() navigating via showPage, which force-closes this one —
@@ -653,12 +653,28 @@ export class HostLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = true;
     this.startLobbyUpdates();
     void getUserMe().then((userMe) => {
-      // Dev skips the subscription gate (matching the server) so the
+      // Dev skips the entitlement gate (matching the server) so the
       // listing flow is testable locally.
       this.canListPublicly =
         ClientEnv.env() === GameEnv.Dev ||
-        (userMe !== false && hasActiveSubscription(userMe));
+        (userMe !== false && userMe.player.canCreatePublicLobbies);
     });
+
+    // Attach mode: the server already minted this successor lobby with us as
+    // creator (win-screen "New lobby" flow), so bind to the existing id instead
+    // of creating another game.
+    const existingLobbyId =
+      typeof args?.existingLobbyId === "string" ? args.existingLobbyId : null;
+    if (existingLobbyId !== null) {
+      this.attachToExistingLobby(existingLobbyId).catch(() => {
+        // Clear clipboard so the host doesn't accidentally share a dead link,
+        // matching the createLobby() failure path below.
+        void navigator.clipboard.writeText("").catch(() => {});
+      });
+      this.loadNationCount();
+      return;
+    }
+
     // The server mints the game id, so we don't know it until createLobby
     // resolves. clientID is assigned by the server when we join the lobby.
 
@@ -698,6 +714,32 @@ export class HostLobbyModal extends BaseModal {
     // (backdrop / close button) runs confirmBeforeClose(). Don't override it
     // here — doing so would bypass the leave-lobby confirmation.
     this.loadNationCount();
+  }
+
+  // Bind the host view to a lobby the server already created (the successor of a
+  // finished game). Mirrors the createLobby() success path, minus the creation.
+  private async attachToExistingLobby(lobbyId: string): Promise<void> {
+    if (!isValidGameID(lobbyId)) {
+      throw new Error(`Invalid lobby ID format: ${lobbyId}`);
+    }
+    this.lobbyId = lobbyId;
+    crazyGamesSDK.showInviteButton(this.lobbyId);
+
+    const url = await this.constructUrl();
+    this.updateLobbyHistory(url);
+    await this.updateComplete;
+    void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: this.lobbyId,
+          source: "host",
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private leaveLobby() {

@@ -13,10 +13,7 @@ import {
   Winner,
 } from "./Schemas";
 
-import {
-  TRIBE_NAME_PREFIXES,
-  TRIBE_NAME_SUFFIXES,
-} from "./execution/utils/TribeNames";
+import { resolveTribeNameData } from "./execution/utils/TribeNames";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -366,27 +363,14 @@ export function createRandomName(
 ): string | null {
   let randomName: string | null = null;
   if (playerType === PlayerType.Human) {
+    const { prefixes, suffixes } = resolveTribeNameData();
     const hash = simpleHash(name);
-    const prefixIndex = hash % TRIBE_NAME_PREFIXES.length;
-    const suffixIndex =
-      Math.floor(hash / TRIBE_NAME_PREFIXES.length) %
-      TRIBE_NAME_SUFFIXES.length;
+    const prefixIndex = hash % prefixes.length;
+    const suffixIndex = Math.floor(hash / prefixes.length) % suffixes.length;
 
-    randomName = `👤 ${TRIBE_NAME_PREFIXES[prefixIndex]} ${TRIBE_NAME_SUFFIXES[suffixIndex]}`;
+    randomName = `👤 ${prefixes[prefixIndex]} ${suffixes[suffixIndex]}`;
   }
   return randomName;
-}
-
-// Deterministic anonymized username. Reuses createRandomName, then strips the
-// emoji and any illegal chars so it passes UsernameSchema and survives the wire
-// (createRandomName's output is a display string, not a valid username).
-export function anonymousUsername(seed: string): string {
-  const base = createRandomName(seed, PlayerType.Human) ?? "";
-  const name = base
-    .replace(/[^a-zA-Z0-9_ üÜ.]/g, "")
-    .trim()
-    .slice(0, 27);
-  return name.length >= 3 ? name : "Player";
 }
 
 export const emojiTable = [
