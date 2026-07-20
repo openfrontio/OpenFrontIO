@@ -544,7 +544,7 @@
     "no_friends": "You haven't added any friends yet.",
     "outgoing": "Outgoing",
     "pending_requests": "Pending Requests",
-    "public_id_placeholder": "Enter their public player ID",
+    "public_id_placeholder": "Enter their username or player ID",
     "remove": "Remove",
     "request_accepted": "Friend request accepted",
     "request_auto_accepted": "Friend request accepted — you are now friends",

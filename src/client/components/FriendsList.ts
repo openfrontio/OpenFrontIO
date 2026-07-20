@@ -116,10 +116,19 @@ export class FriendsList extends LitElement {
         await this.loadAll();
       } else {
         showToast(translateText("friends.request_sent"), "green");
-        this.outgoing = [
-          ...this.outgoing,
-          { publicId: target, createdAt: new Date().toISOString() },
-        ];
+        // Refetch rather than inserting the raw input: the target may have
+        // been typed as a username, and the server-returned entry carries
+        // the real publicId + account username (so the verified check shows).
+        const requests = await fetchFriendRequests();
+        if (requests) {
+          this.incoming = requests.incoming;
+          this.outgoing = requests.outgoing;
+        } else {
+          this.outgoing = [
+            ...this.outgoing,
+            { publicId: target, createdAt: new Date().toISOString() },
+          ];
+        }
       }
     } finally {
       this.actionPending = false;
@@ -261,7 +270,7 @@ export class FriendsList extends LitElement {
             }}
             class="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-mono text-sm"
             placeholder=${translateText("friends.public_id_placeholder")}
-            maxlength="22"
+            maxlength="25"
             ?disabled=${this.actionPending}
           />
           <button
