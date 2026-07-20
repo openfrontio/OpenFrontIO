@@ -9,9 +9,9 @@ export function verifiedBadge(): TemplateResult {
     viewBox="0 0 24 24"
     class="w-4 h-4 text-blue-400 shrink-0"
     role="img"
-    aria-label=${translateText("username.verified_toggle")}
+    aria-label=${translateText("username.verified_player")}
   >
-    <title>${translateText("username.verified_toggle")}</title>
+    <title>${translateText("username.verified_player")}</title>
     <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
     <path
       d="M7.5 12.5l3 3 6-6.5"

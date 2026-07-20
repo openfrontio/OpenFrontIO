@@ -1626,7 +1626,8 @@
     "verified_heading": "Verified name",
     "verified_sub_required": "You need an active subscription to play under your verified name.",
     "verified_sub_required_confirm": "View store",
-    "verified_toggle": "Verified"
+    "verified_toggle": "Verified",
+    "verified_player": "Verified player"
   },
   "win_modal": {
     "died": "You died",
