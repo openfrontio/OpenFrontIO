@@ -47,6 +47,9 @@ export function applyGraphicsOverrides(
     // triggers — structures stay as full icons at every zoom level.
     settings.structure.dotsZoomThreshold = 0;
   }
+  if (overrides.mapOverlay?.navalHighlight !== undefined) {
+    settings.mapOverlay.navalHighlight = overrides.mapOverlay.navalHighlight;
+  }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
       overrides.mapOverlay.highlightFillBrighten;

@@ -297,6 +297,17 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private currentNavalHighlight(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.navalHighlight ??
+      renderDefaults.mapOverlay.navalHighlight
+    );
+  }
+
+  private onToggleNavalHighlight() {
+    this.patchMapOverlay({ navalHighlight: !this.currentNavalHighlight() });
+  }
+
   private currentHighlightFill(): number {
     return (
       this.userSettings.graphicsOverrides().mapOverlay?.highlightFillBrighten ??
@@ -692,6 +703,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const classicIcons = this.currentClassicIcons();
     const classicNumbers = this.currentClassicNumbers();
     const showDots = this.currentShowDots();
+    const navalHighlight = this.currentNavalHighlight();
     const highlightFill = this.currentHighlightFill();
     const highlightBrighten = this.currentHighlightBrighten();
     const highlightThicken = this.currentHighlightThicken();
@@ -1039,6 +1051,29 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
             >
               ${translateText("graphics_setting.section_map")}
             </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleNavalHighlight}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText(
+                    "graphics_setting.naval_hover_highlight_label",
+                  )}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText(
+                    "graphics_setting.naval_hover_highlight_desc",
+                  )}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${navalHighlight
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
 
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"

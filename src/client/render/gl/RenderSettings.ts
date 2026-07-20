@@ -137,6 +137,7 @@ export interface RenderSettings {
     staleNukeR: number;
     staleNukeG: number;
     staleNukeB: number;
+    navalHighlight: boolean;
     highlightBrighten: number;
     highlightFillBrighten: number;
     highlightThicken: number;
