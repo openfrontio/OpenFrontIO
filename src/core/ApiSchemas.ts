@@ -128,6 +128,23 @@ export function isTemporaryUsername(base: string | null | undefined): boolean {
   return typeof base === "string" && /^TEMPORARY\d{4}$/.test(base);
 }
 
+// Whether a pre-rendered account username belongs to a verified player
+// (premium/indefinite bare-name claim holder). The server renders everyone
+// else as "base.suffix" and bases can never contain dots
+// (AccountUsernameSchema), so a dotless name IS the bare display — no
+// dedicated flag needed on list endpoints. TEMPORARY#### server renames are
+// bare too but aren't a chosen name, so they don't get the badge (matches
+// the verified-name play toggle's eligibility rule).
+export function isVerifiedUsername(
+  username: string | null | undefined,
+): boolean {
+  return (
+    typeof username === "string" &&
+    !username.includes(".") &&
+    !isTemporaryUsername(username)
+  );
+}
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -263,6 +280,11 @@ export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
+  // Account username, pre-rendered by the server (bare base or "base.suffix").
+  // null = the player never set one. Render `username ?? publicId`; never
+  // parse it — compare players by publicId only. Optional so responses from
+  // an API without the field still parse.
+  username: z.string().nullable().optional(),
   stats: PlayerStatsTreeSchema,
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
@@ -321,7 +343,9 @@ export type PublicPlayerGamesResponse = z.infer<
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
-  username: LeaderboardUsernameSchema,
+  // Account username (null = never set). The leaderboard displays this or
+  // the playerId — the per-session name is deliberately ignored.
+  accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
@@ -351,6 +375,10 @@ export const RankedLeaderboardEntrySchema = z.object({
   public_id: z.string(),
   user: DiscordUserSchema.nullable().optional(),
   username: LeaderboardUsernameSchema,
+  // Account username (null = never set), unlike `username` which is the name
+  // from the player's most recent ranked session. The client displays
+  // `accountUsername ?? public_id` and ignores the session name.
+  accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
@@ -366,6 +394,9 @@ export type RankedLeaderboardResponse = z.infer<
 
 export const FriendEntrySchema = z.object({
   publicId: z.string(),
+  // Account username (null = never set), always the other party's. Render
+  // `username ?? publicId`; identify players by publicId only.
+  username: z.string().nullable().optional(),
   createdAt: z.iso.datetime(),
 });
 export type FriendEntry = z.infer<typeof FriendEntrySchema>;

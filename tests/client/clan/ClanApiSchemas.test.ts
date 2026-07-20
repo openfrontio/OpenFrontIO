@@ -153,6 +153,26 @@ describe("ClanMemberSchema", () => {
     }
   });
 
+  it("accepts an account username, null, or absence (older API)", () => {
+    const base = {
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+    };
+    const named = ClanMemberSchema.safeParse({
+      ...base,
+      username: "bob.4821",
+    });
+    expect(named.success).toBe(true);
+    if (named.success) {
+      expect(named.data.username).toBe("bob.4821");
+    }
+    expect(
+      ClanMemberSchema.safeParse({ ...base, username: null }).success,
+    ).toBe(true);
+    expect(ClanMemberSchema.safeParse(base).success).toBe(true);
+  });
+
   it("rejects stats missing a bucket", () => {
     const result = ClanMemberSchema.safeParse({
       role: "member",
@@ -182,6 +202,21 @@ describe("ClanJoinRequestSchema", () => {
       createdAt: "2024-06-10",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts the requester's account username, null, or absence", () => {
+    const base = {
+      publicId: "player-xyz",
+      createdAt: "2024-06-10T08:00:00.000Z",
+    };
+    expect(
+      ClanJoinRequestSchema.safeParse({ ...base, username: "bob.4821" })
+        .success,
+    ).toBe(true);
+    expect(
+      ClanJoinRequestSchema.safeParse({ ...base, username: null }).success,
+    ).toBe(true);
+    expect(ClanJoinRequestSchema.safeParse(base).success).toBe(true);
   });
 });
 
@@ -226,6 +261,23 @@ describe("ClanBanSchema", () => {
   it("rejects null bannedBy", () => {
     const result = ClanBanSchema.safeParse({ ...validBan, bannedBy: null });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts account usernames for both the banned player and the officer", () => {
+    const result = ClanBanSchema.safeParse({
+      ...validBan,
+      username: null,
+      bannedByUsername: "bigboss",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBeNull();
+      expect(result.data.bannedByUsername).toBe("bigboss");
+    }
+  });
+
+  it("accepts a ban without the username fields (older API)", () => {
+    expect(ClanBanSchema.safeParse(validBan).success).toBe(true);
   });
 });
 

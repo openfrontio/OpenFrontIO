@@ -10,7 +10,7 @@ import {
   sendFriendRequest,
 } from "../FriendsApi";
 import { showToast, translateText } from "../Utils";
-import "./CopyButton";
+import "./PlayerName";
 
 const PAGE_LIMIT = 20;
 
@@ -116,10 +116,16 @@ export class FriendsList extends LitElement {
         await this.loadAll();
       } else {
         showToast(translateText("friends.request_sent"), "green");
-        this.outgoing = [
-          ...this.outgoing,
-          { publicId: target, createdAt: new Date().toISOString() },
-        ];
+        // Refetch rather than inserting the raw input: the target may have
+        // been typed as a username, and the server-returned entry carries
+        // the real publicId + account username (so the verified check shows).
+        // If the refetch fails the list is just stale until the next load —
+        // never insert `target`, which may not be a publicId.
+        const requests = await fetchFriendRequests();
+        if (requests) {
+          this.incoming = requests.incoming;
+          this.outgoing = requests.outgoing;
+        }
       }
     } finally {
       this.actionPending = false;
@@ -261,7 +267,7 @@ export class FriendsList extends LitElement {
             }}
             class="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-mono text-sm"
             placeholder=${translateText("friends.public_id_placeholder")}
-            maxlength="22"
+            maxlength="25"
             ?disabled=${this.actionPending}
           />
           <button
@@ -325,13 +331,10 @@ export class FriendsList extends LitElement {
         class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
       >
         <div class="flex-1 min-w-0">
-          <copy-button
-            compact
-            .copyText=${entry.publicId}
-            .displayText=${entry.publicId}
-            .showVisibilityToggle=${false}
-            .showCopyIcon=${false}
-          ></copy-button>
+          <player-name
+            .username=${entry.username}
+            .publicId=${entry.publicId}
+          ></player-name>
           <div class="text-white/30 text-[10px] mt-0.5">
             ${this.formatDate(entry.createdAt)}
           </div>
@@ -400,13 +403,10 @@ export class FriendsList extends LitElement {
                 class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
               >
                 <div class="flex-1 min-w-0">
-                  <copy-button
-                    compact
-                    .copyText=${f.publicId}
-                    .displayText=${f.publicId}
-                    .showVisibilityToggle=${false}
-                    .showCopyIcon=${false}
-                  ></copy-button>
+                  <player-name
+                    .username=${f.username}
+                    .publicId=${f.publicId}
+                  ></player-name>
                   <div class="text-white/30 text-[10px] mt-0.5">
                     ${translateText("friends.friends_since", {
                       date: this.formatDate(f.createdAt),

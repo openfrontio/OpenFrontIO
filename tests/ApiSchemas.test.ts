@@ -1,9 +1,11 @@
 import {
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponseSchema,
+  FriendEntrySchema,
   GoogleUser,
   GoogleUserSchema,
   isTemporaryUsername,
+  isVerifiedUsername,
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
@@ -11,6 +13,7 @@ import {
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
   PutUsernameResponseSchema,
+  RankedLeaderboardEntrySchema,
   RewardSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
@@ -68,6 +71,91 @@ describe("PlayerProfileSchema", () => {
       PlayerProfileSchema.safeParse({ ...base, createdAt: "yesterday" })
         .success,
     ).toBe(false);
+  });
+
+  it("accepts a pre-rendered account username", () => {
+    const result = PlayerProfileSchema.safeParse({
+      ...base,
+      username: "bob.4821",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBe("bob.4821");
+    }
+  });
+
+  it("accepts username: null (player never set one)", () => {
+    const result = PlayerProfileSchema.safeParse({ ...base, username: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a profile without username (older API)", () => {
+    const result = PlayerProfileSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBeUndefined();
+    }
+  });
+});
+
+describe("FriendEntrySchema", () => {
+  const base = {
+    publicId: "abc123",
+    createdAt: "2024-01-15T12:00:00.000Z",
+  };
+
+  it("accepts an entry with an account username", () => {
+    const result = FriendEntrySchema.safeParse({
+      ...base,
+      username: "bob.4821",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts username: null (friend never set one)", () => {
+    const result = FriendEntrySchema.safeParse({ ...base, username: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an entry without username (older API)", () => {
+    expect(FriendEntrySchema.safeParse(base).success).toBe(true);
+  });
+});
+
+describe("RankedLeaderboardEntrySchema accountUsername", () => {
+  const base = {
+    rank: 1,
+    elo: 1500,
+    peakElo: 1600,
+    wins: 10,
+    losses: 5,
+    total: 15,
+    public_id: "abc123",
+    username: "xX_Sniper_Xx",
+  };
+
+  it("keeps accountUsername verbatim alongside the session username", () => {
+    const result = RankedLeaderboardEntrySchema.safeParse({
+      ...base,
+      accountUsername: "bob.4821",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.accountUsername).toBe("bob.4821");
+      expect(result.data.username).toBe("xX_Sniper_Xx");
+    }
+  });
+
+  it("accepts accountUsername: null (player never set one)", () => {
+    const result = RankedLeaderboardEntrySchema.safeParse({
+      ...base,
+      accountUsername: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an entry without accountUsername (older API)", () => {
+    expect(RankedLeaderboardEntrySchema.safeParse(base).success).toBe(true);
   });
 });
 
@@ -565,5 +653,30 @@ describe("isTemporaryUsername", () => {
   it("handles null and undefined bases", () => {
     expect(isTemporaryUsername(null)).toBe(false);
     expect(isTemporaryUsername(undefined)).toBe(false);
+  });
+});
+
+describe("isVerifiedUsername", () => {
+  it.each(["bob", "big_boss", "a-b_c9"])(
+    "treats bare (dotless) display %s as verified",
+    (name) => {
+      expect(isVerifiedUsername(name)).toBe(true);
+    },
+  );
+
+  it.each(["bob.4821", "big_boss.0042"])(
+    "treats suffixed display %s as not verified",
+    (name) => {
+      expect(isVerifiedUsername(name)).toBe(false);
+    },
+  );
+
+  it("never verifies an unset username", () => {
+    expect(isVerifiedUsername(null)).toBe(false);
+    expect(isVerifiedUsername(undefined)).toBe(false);
+  });
+
+  it("never verifies a TEMPORARY#### server rename, even though it is bare", () => {
+    expect(isVerifiedUsername("TEMPORARY1234")).toBe(false);
   });
 });
