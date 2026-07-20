@@ -416,7 +416,13 @@ const defaultMatcher = createMatcher(baselineBannedWords);
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
-    return { type: "allowed", cosmetics: {} };
+    // Catalog cosmetics can't be resolved without the cosmetics data, but the
+    // verified claim isn't a catalog item — pass it through; the Worker's
+    // enforceVerifiedBadge still validates it against the account at join.
+    return {
+      type: "allowed",
+      cosmetics: refs.verified === true ? { verified: true } : {},
+    };
   }
 
   censor(

@@ -134,7 +134,7 @@ export class LobbyTeamView extends LitElement {
                 ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
             >
-              ${displayName}
+              ${displayName} ${this.renderVerifiedBadge(client)}
             </div>`;
           },
         )}
@@ -196,7 +196,9 @@ export class LobbyTeamView extends LitElement {
             ? "current-player"
             : ""}"
         >
-          <span class="text-white">${displayName}</span>
+          <span class="text-white"
+            >${displayName} ${this.renderVerifiedBadge(client)}</span
+          >
           ${this.renderRevealToggle(client.clientID)}
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
@@ -266,7 +268,9 @@ export class LobbyTeamView extends LitElement {
                       ? "bg-malibu-blue/20 border-sky-500/40"
                       : "bg-gray-700/70 border-transparent"}"
                   >
-                    <span class="truncate text-white">${displayName}</span>
+                    <span class="truncate text-white"
+                      >${displayName} ${this.renderVerifiedBadge(p)}</span
+                    >
                     ${this.renderRevealToggle(p.clientID)}
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
@@ -423,5 +427,29 @@ export class LobbyTeamView extends LitElement {
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
     return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
+  }
+
+  // Blue check for players on their server-validated account name. Withheld
+  // when this row's name is locally anonymized — the badge vouches for the
+  // exact displayed name.
+  private renderVerifiedBadge(client: ClientInfo) {
+    const anonymized =
+      this.userSettings.anonymousNames() && !this.isCurrentPlayer(client);
+    if (client.verified !== true || anonymized) return html``;
+    return html`<svg
+      viewBox="0 0 24 24"
+      class="inline-block w-3.5 h-3.5 align-[-2px] text-blue-400 shrink-0"
+      aria-label=${translateText("username.verified_heading")}
+    >
+      <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
+      <path
+        d="M7.5 12.5l3 3 6-6.5"
+        stroke="white"
+        stroke-width="2.2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></path>
+    </svg>`;
   }
 }

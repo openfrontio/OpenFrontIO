@@ -1249,6 +1249,7 @@ export class GameServer {
               clanTag: hideClanTags ? null : (c.clanTag ?? null),
               clientID: c.clientID,
               friends: friendsFor(c),
+              verified: c.cosmetics?.verified,
             }
           : {
               username: this.anonName(viewer, c.clientID),

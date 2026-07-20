@@ -200,6 +200,10 @@ const ClientInfoSchema = z.object({
   username: UsernameSchema,
   clanTag: ClanTagSchema,
   friends: z.array(z.string()).optional(),
+  // Plays under their server-validated account name (blue check in the
+  // lobby list). Never set on anonymized entries — the badge vouches for
+  // the exact display name.
+  verified: z.boolean().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -273,6 +277,9 @@ export interface ClientInfo {
   username: string;
   clanTag: string | null;
   friends?: ClientID[];
+  // Plays under their server-validated account name (blue check). Never set
+  // on anonymized entries.
+  verified?: boolean;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
