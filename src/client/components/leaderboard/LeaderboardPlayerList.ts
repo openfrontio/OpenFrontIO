@@ -262,6 +262,7 @@ export class LeaderboardPlayerList extends LitElement {
             <player-name
               .username=${player.accountUsername}
               .publicId=${player.playerId}
+              .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
               .onNameClick=${() => this.openProfile(player.playerId)}
             ></player-name>
           </div>
@@ -456,6 +457,7 @@ export class LeaderboardPlayerList extends LitElement {
                         <player-name
                           .username=${this.currentUserEntry.accountUsername}
                           .publicId=${this.currentUserEntry.playerId}
+                          .nameClass=${"font-bold text-white text-base hover:underline"}
                           .onNameClick=${() =>
                             this.openProfile(this.currentUserEntry!.playerId)}
                         ></player-name>

@@ -119,15 +119,12 @@ export class FriendsList extends LitElement {
         // Refetch rather than inserting the raw input: the target may have
         // been typed as a username, and the server-returned entry carries
         // the real publicId + account username (so the verified check shows).
+        // If the refetch fails the list is just stale until the next load —
+        // never insert `target`, which may not be a publicId.
         const requests = await fetchFriendRequests();
         if (requests) {
           this.incoming = requests.incoming;
           this.outgoing = requests.outgoing;
-        } else {
-          this.outgoing = [
-            ...this.outgoing,
-            { publicId: target, createdAt: new Date().toISOString() },
-          ];
         }
       }
     } finally {

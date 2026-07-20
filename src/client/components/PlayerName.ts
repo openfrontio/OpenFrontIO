@@ -12,7 +12,8 @@ import { verifiedBadge } from "./ui/VerifiedBadge";
  * back to the publicId. Clicking copies the account username when set, the
  * publicId otherwise. `copyText` overrides the copy payload entirely (e.g. a
  * share URL); `onNameClick` replaces copying with an action (e.g. opening
- * the player's profile) while keeping the same chip look.
+ * the player's profile), styled as the same chip unless `nameClass`
+ * overrides it.
  */
 @customElement("player-name")
 export class PlayerName extends LitElement {
@@ -22,12 +23,16 @@ export class PlayerName extends LitElement {
   @property({ type: String }) copyText = "";
   // When set, clicking the name runs this instead of copying.
   @property({ attribute: false }) onNameClick: (() => void) | null = null;
+  // Styling override for the clickable name (e.g. leaderboard rows keep
+  // their original bold look instead of the publicId-chip look).
+  @property({ type: String }) nameClass = "";
 
   createRenderRoot() {
     return this;
   }
 
   render() {
+    const displayName = this.username ?? this.publicId;
     const copyText =
       this.copyText !== "" ? this.copyText : (this.username ?? this.publicId);
     // inline-flex so the element sits on one line with inline siblings
@@ -37,17 +42,19 @@ export class PlayerName extends LitElement {
         ${this.onNameClick
           ? html`<button
               type="button"
-              class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors"
+              class=${this.nameClass !== ""
+                ? this.nameClass
+                : "text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors"}
               title=${translateText("player_profile.view")}
               aria-label=${translateText("player_profile.view")}
               @click=${() => this.onNameClick?.()}
             >
-              ${this.username ?? this.publicId}
+              ${displayName}
             </button>`
           : html`<copy-button
               compact
               .copyText=${copyText}
-              .displayText=${this.username ?? this.publicId}
+              .displayText=${displayName}
               .showVisibilityToggle=${false}
               .showCopyIcon=${false}
             ></copy-button>`}
