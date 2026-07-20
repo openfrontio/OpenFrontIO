@@ -265,7 +265,10 @@ export class UsernameInput extends LitElement {
           minlength="${MIN_USERNAME_LENGTH}"
           maxlength="${MAX_USERNAME_LENGTH}"
           ?disabled=${this.verifiedActive}
-          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
+          title=${this.verifiedActive
+            ? translateText("username.verified_heading")
+            : ""}
+          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent disabled:text-blue-400 disabled:cursor-not-allowed"
         />
         <button
           type="button"
