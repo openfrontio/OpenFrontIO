@@ -4,10 +4,10 @@ import { translateText } from "../../Utils";
 // The same blue check-circle as the UsernameInput verified toggle, sized for
 // inline placement next to a player name in lists. Callers gate on
 // isVerifiedUsername(accountUsername) — never on session/free-form names.
-export function verifiedBadge(): TemplateResult {
+export function verifiedBadge(sizeClass = "w-4 h-4"): TemplateResult {
   return html`<svg
     viewBox="0 0 24 24"
-    class="w-4 h-4 text-blue-400 shrink-0"
+    class="${sizeClass} text-blue-400 shrink-0"
     role="img"
     aria-label=${translateText("username.verified_player")}
   >

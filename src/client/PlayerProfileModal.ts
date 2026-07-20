@@ -1,11 +1,12 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { PlayerStatsTree } from "../core/ApiSchemas";
+import { isVerifiedUsername, type PlayerStatsTree } from "../core/ApiSchemas";
 import { fetchPublicPlayerProfile } from "./Api";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/PlayerName";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { translateText } from "./Utils";
 
 /** Build a shareable profile URL for a publicId. */
@@ -30,13 +31,25 @@ export class PlayerProfileModal extends BaseModal {
   protected renderHeaderSlot() {
     return modalHeader({
       title: translateText("player_profile.title"),
+      // The account username takes over the title when set — not uppercased
+      // like the default title, since name casing is meaningful — and the
+      // right chip then always shows the publicId.
+      titleContent: this.username
+        ? html`<span
+            class="text-white text-xl lg:text-2xl font-bold tracking-wide break-words hyphens-auto min-w-0 inline-flex items-center gap-2"
+          >
+            ${this.username}
+            ${isVerifiedUsername(this.username)
+              ? verifiedBadge("w-5 h-5")
+              : nothing}
+          </span>`
+        : undefined,
       onBack: () => this.back(),
       ariaLabel: translateText("common.back"),
       rightContent: this.publicId
         ? html`
             <player-name
               class="shrink-0"
-              .username=${this.username}
               .publicId=${this.publicId}
               .copyText=${playerProfileUrl(this.publicId)}
             ></player-name>
