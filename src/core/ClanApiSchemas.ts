@@ -128,6 +128,10 @@ export const ClanMemberSchema = z.object({
   role: z.enum(["leader", "officer", "member"]),
   joinedAt: z.iso.datetime(),
   publicId: z.string(),
+  // Account username, pre-rendered by the server (null = never set). Render
+  // `username ?? publicId`; identify players by publicId only. Optional so
+  // responses from an API without the field still parse.
+  username: z.string().nullable().optional(),
   stats: ClanMemberStatsSchema.optional(),
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
@@ -143,6 +147,8 @@ export type ClanMembersResponse = z.infer<typeof ClanMembersResponseSchema>;
 
 export const ClanJoinRequestSchema = z.object({
   publicId: z.string(),
+  // Requester's account username (null = never set).
+  username: z.string().nullable().optional(),
   createdAt: z.iso.datetime(),
 });
 export type ClanJoinRequest = z.infer<typeof ClanJoinRequestSchema>;
@@ -157,7 +163,11 @@ export type ClanRequestsResponse = z.infer<typeof ClanRequestsResponseSchema>;
 
 export const ClanBanSchema = z.object({
   publicId: z.string(),
+  // Banned player's account username (null = never set).
+  username: z.string().nullable().optional(),
   bannedBy: z.string(),
+  // Account username of the officer who issued the ban.
+  bannedByUsername: z.string().nullable().optional(),
   reason: z.string().max(200).nullable(),
   createdAt: z.iso.datetime(),
 });

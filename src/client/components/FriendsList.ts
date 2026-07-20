@@ -10,7 +10,7 @@ import {
   sendFriendRequest,
 } from "../FriendsApi";
 import { showToast, translateText } from "../Utils";
-import "./CopyButton";
+import "./PlayerName";
 
 const PAGE_LIMIT = 20;
 
@@ -325,13 +325,10 @@ export class FriendsList extends LitElement {
         class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
       >
         <div class="flex-1 min-w-0">
-          <copy-button
-            compact
-            .copyText=${entry.publicId}
-            .displayText=${entry.publicId}
-            .showVisibilityToggle=${false}
-            .showCopyIcon=${false}
-          ></copy-button>
+          <player-name
+            .username=${entry.username}
+            .publicId=${entry.publicId}
+          ></player-name>
           <div class="text-white/30 text-[10px] mt-0.5">
             ${this.formatDate(entry.createdAt)}
           </div>
@@ -400,13 +397,10 @@ export class FriendsList extends LitElement {
                 class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
               >
                 <div class="flex-1 min-w-0">
-                  <copy-button
-                    compact
-                    .copyText=${f.publicId}
-                    .displayText=${f.publicId}
-                    .showVisibilityToggle=${false}
-                    .showCopyIcon=${false}
-                  ></copy-button>
+                  <player-name
+                    .username=${f.username}
+                    .publicId=${f.publicId}
+                  ></player-name>
                   <div class="text-white/30 text-[10px] mt-0.5">
                     ${translateText("friends.friends_since", {
                       date: this.formatDate(f.createdAt),

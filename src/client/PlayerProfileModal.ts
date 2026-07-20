@@ -4,7 +4,7 @@ import type { PlayerStatsTree } from "../core/ApiSchemas";
 import { fetchPublicPlayerProfile } from "./Api";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
+import "./components/PlayerName";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
@@ -18,6 +18,7 @@ export class PlayerProfileModal extends BaseModal {
   protected routerName = "profile";
 
   @state() private publicId: string | null = null;
+  @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private loading = false;
   private openedFrom: "clan" | null = null;
@@ -33,13 +34,12 @@ export class PlayerProfileModal extends BaseModal {
       ariaLabel: translateText("common.back"),
       rightContent: this.publicId
         ? html`
-            <copy-button
-              compact
+            <player-name
               class="shrink-0"
+              .username=${this.username}
+              .publicId=${this.publicId}
               .copyText=${playerProfileUrl(this.publicId)}
-              .displayText=${this.publicId}
-              .showVisibilityToggle=${false}
-            ></copy-button>
+            ></player-name>
           `
         : undefined,
     });
@@ -82,6 +82,7 @@ export class PlayerProfileModal extends BaseModal {
         ? args.publicID
         : null;
     this.publicId = publicId;
+    this.username = null;
     this.statsTree = null;
     this.loading = publicId !== null;
     if (publicId !== null) {
@@ -95,10 +96,12 @@ export class PlayerProfileModal extends BaseModal {
     if (this.publicId !== publicId) return;
     this.loading = false;
     this.statsTree = profile === false ? null : profile.stats;
+    this.username = profile === false ? null : (profile.username ?? null);
   }
 
   protected onClose(): void {
     this.publicId = null;
+    this.username = null;
     this.statsTree = null;
     this.loading = false;
     this.openedFrom = null;
