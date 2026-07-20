@@ -309,6 +309,12 @@ export class Config {
     return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
+  planeTradeGold(dist: number, player: Player | PlayerView): Gold {
+    // Keep planes in a much tighter band than ships: useful, but not a money printer.
+    const baseGold = Math.min(20_000, 12_000 + dist * 20);
+    return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
+  }
+
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
@@ -347,6 +353,11 @@ export class Config {
           maxHealth: 1000,
         };
         break;
+      case UnitType.Plane:
+        info = {
+          cost: () => 0n,
+        };
+        break;
       case UnitType.Shell:
         info = {
           cost: () => 0n,
@@ -364,6 +375,18 @@ export class Config {
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Port,
+            UnitType.Factory,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.Airport:
+        info = {
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.Airport,
             UnitType.Factory,
           ),
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,

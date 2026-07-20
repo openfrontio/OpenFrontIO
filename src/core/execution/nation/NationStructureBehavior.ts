@@ -517,9 +517,14 @@ export class NationStructureBehavior {
         continue;
       }
 
-      if (
-        this.shouldBuildStructure(structureType, cityCount, hasCoastalTiles)
-      ) {
+      if (structureType === UnitType.Factory) {
+        if (this.maybeSpawnFactoryOrAirport(cityCount, hasCoastalTiles)) {
+          return true;
+        }
+        continue;
+      }
+
+      if (this.shouldBuildStructure(structureType, cityCount, hasCoastalTiles)) {
         if (this.maybeSpawnStructure(structureType)) {
           return true;
         }
@@ -531,6 +536,43 @@ export class NationStructureBehavior {
     }
 
     return false;
+  }
+
+  // When the nation reaches the "build a factory" slot in its structure order,
+  // ensure the nation eventually gets an Airport, then prefer upgrading that
+  // Airport instead of scattering many separate ones nearby.
+  private maybeSpawnFactoryOrAirport(
+    cityCount: number,
+    hasCoastalTiles: boolean,
+  ): boolean {
+    if (!this.shouldBuildStructure(UnitType.Factory, cityCount, hasCoastalTiles)) {
+      return false;
+    }
+
+    const config = this.game.config();
+    const airportEnabled = !config.isUnitDisabled(UnitType.Airport);
+    if (!airportEnabled) {
+      return this.maybeSpawnStructure(UnitType.Factory);
+    }
+
+    const airports = this.player.units(UnitType.Airport);
+
+    // Guarantee the first airport appears eventually before we fall back to factories.
+    if (airports.length === 0) {
+      if (this.maybeSpawnStructure(UnitType.Airport)) {
+        return true;
+      }
+      return this.maybeSpawnStructure(UnitType.Factory);
+    }
+
+    // Once an airport exists, 50/50 between a normal factory build and stacking
+    // that airport up instead of placing a new one beside it.
+    if (this.random.chance(2)) {
+      if (this.maybeUpgradeStructure(airports, true)) {
+        return true;
+      }
+    }
+    return this.maybeSpawnStructure(UnitType.Factory);
   }
 
   private hasHighStartingGold(): boolean {
@@ -708,8 +750,11 @@ export class NationStructureBehavior {
    * @param structures The pool of structures to consider for upgrading
    * @returns true if an upgrade was initiated, false otherwise
    */
-  private maybeUpgradeStructure(structures: Unit[]): boolean {
-    if (this.getTotalStructureDensity() <= UPGRADE_DENSITY_THRESHOLD) {
+  private maybeUpgradeStructure(
+    structures: Unit[],
+    ignoreDensityThreshold = false,
+  ): boolean {
+    if (!ignoreDensityThreshold && this.getTotalStructureDensity() <= UPGRADE_DENSITY_THRESHOLD) {
       return false;
     }
     if (structures.length === 0) {
@@ -897,6 +942,8 @@ export class NationStructureBehavior {
       case UnitType.MissileSilo:
         return this.missileSiloValue();
       case UnitType.Factory:
+        return this.factoryValue();
+      case UnitType.Airport:
         return this.factoryValue();
       case UnitType.Port:
         return this.portValue();

@@ -16,6 +16,7 @@
 
 import type { GhostPreviewData, RendererConfig, UnitState } from "../../types";
 import {
+  UT_AIRPORT,
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
@@ -54,6 +55,10 @@ const STRUCTURE_ORDER = [
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
 ] as const;
+
+// Marker used only by the shader: keeps Airport on the Port shape bucket
+// while allowing a distinct procedural glyph on top.
+const AIRPORT_ATLAS_MARKER = STRUCTURE_ORDER.indexOf(UT_PORT) + 0.25;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
 
@@ -149,6 +154,7 @@ export class StructurePass {
         this.typeToAtlasCol.set(header.unitTypes[i], col);
       }
     }
+    this.typeToAtlasCol.set(UT_AIRPORT, AIRPORT_ATLAS_MARKER);
 
     // Compile shaders
     this.program = createProgram(

@@ -172,9 +172,11 @@ function unitTypeGroup<T extends readonly UnitType[]>(types: T) {
 export enum UnitType {
   TransportShip = "Transport",
   Warship = "Warship",
+  Plane = "Plane",
   Shell = "Shell",
   SAMMissile = "SAMMissile",
   Port = "Port",
+  Airport = "Airport",
   AtomBomb = "Atom Bomb",
   HydrogenBomb = "Hydrogen Bomb",
   TradeShip = "Trade Ship",
@@ -214,6 +216,7 @@ export const Structures = unitTypeGroup([
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
+  UnitType.Airport,
   UnitType.Factory,
 ] as const);
 
@@ -247,11 +250,17 @@ export interface UnitParamsMap {
     patrolTile: TileRef;
   };
 
+  [UnitType.Plane]: {
+    targetUnit: Unit;
+  };
+
   [UnitType.Shell]: Record<string, never>;
 
   [UnitType.SAMMissile]: Record<string, never>;
 
   [UnitType.Port]: Record<string, never>;
+
+  [UnitType.Airport]: Record<string, never>;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;

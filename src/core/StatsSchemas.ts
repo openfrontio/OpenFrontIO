@@ -31,6 +31,7 @@ export const otherUnits = [
   "city",
   "defp",
   "port",
+  "airp",
   "wshp",
   "silo",
   "saml",
@@ -43,6 +44,7 @@ export type OtherUnitType =
   | UnitType.DefensePost
   | UnitType.MissileSilo
   | UnitType.Port
+  | UnitType.Airport
   | UnitType.SAMLauncher
   | UnitType.Warship
   | UnitType.Factory;
@@ -52,6 +54,7 @@ export const unitTypeToOtherUnit = {
   [UnitType.DefensePost]: "defp",
   [UnitType.MissileSilo]: "silo",
   [UnitType.Port]: "port",
+  [UnitType.Airport]: "airp",
   [UnitType.SAMLauncher]: "saml",
   [UnitType.Warship]: "wshp",
   [UnitType.Factory]: "fact",

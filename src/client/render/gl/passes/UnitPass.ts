@@ -3,7 +3,8 @@
  *
  * Renders all mobile (non-structure) units: boats, nukes, shells, SAM
  * missiles, and MIRV warheads. All unit types are rotationally symmetric
- * — no rotation needed. Sprites are tiny grayscale PNGs colorized on the
+ * — except Plane, whose sprite quad is rotated by heading. Sprites are
+ * tiny grayscale PNGs colorized on the
  * GPU using the standard 3-band gray replacement (180/130/70). MIRV
  * Warhead uses a programmatic 3×3 white square (colorized to border
  * color); Shell is a single white pixel.
@@ -26,6 +27,7 @@
  *   Col 9: Train Engine (5×5)
  *   Col 10: Train Carriage (5×5)
  *   Col 11: Train Carriage Loaded (5×5)
+ *   Col 12: Plane (6×4) — appended at runtime from resources/sprites/plane.png
  *
  * Data flow:
  *   FrameSnapshot.units → filter by typeToAtlasIdx → instance VBO → GPU
@@ -42,6 +44,7 @@ import {
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
+  UT_PLANE,
   UT_SAM_MISSILE,
   UT_SHELL,
   UT_TRADE_SHIP,
@@ -57,6 +60,7 @@ import { getPaletteSize } from "../utils/ColorUtils";
 import { createProgram, shaderSrc } from "../utils/GlUtils";
 
 const unitAtlasUrl = assetUrl("atlases/unit-atlas.png");
+const planeSpriteUrl = assetUrl("sprites/plane.png");
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -80,9 +84,16 @@ const UNIT_ORDER = [
   "TrainEngine",
   "TrainCarriage",
   "TrainCarriageLoaded",
+  UT_PLANE,
 ] as const;
 
 const ATLAS_COLS = UNIT_ORDER.length;
+const PLANE_ATLAS_COL = UNIT_ORDER.indexOf(UT_PLANE);
+
+// Plane heading smoothing (visual only): reduce per-tick zig-zagging.
+const PLANE_TURN_COOLDOWN_TICKS = 2;
+const PLANE_TURN_MIN_DELTA_RAD = (12 * Math.PI) / 180;
+const PLANE_MAX_TURN_PER_UPDATE_RAD = (28 * Math.PI) / 180;
 
 /** Atlas column of the hydrogen bomb — drives the GPU glow halo. */
 const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
@@ -94,9 +105,9 @@ const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
 /**
  * Per-instance data (16 bytes):
  *   float x, y, ownerID   — 12 bytes (3 floats)
- *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
+ *   uint8 atlasIdx         —  1 byte  (atlas column 0–12)
  *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating, 5 = flicker-untargetable)
- *   uint8 flickerHash      —  1 byte  (per-instance flicker phase offset)
+ *   uint8 auxByte          —  1 byte  (flicker phase offset, or heading for Plane)
  *   1 byte padding         — aligns to 4-byte boundary
  */
 const FLOATS_PER_INSTANCE = 4;
@@ -173,7 +184,7 @@ function createUnitVao(
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, BYTES_PER_INSTANCE, 0);
   gl.vertexAttribDivisor(1, 1);
 
-  // Attribute 2: per-instance (atlasIdx, flags, flickerHash) — 3 uint8s at offset 12, converted to float
+  // Attribute 2: per-instance (atlasIdx, flags, auxByte) — 3 uint8s at offset 12, converted to float
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 3, gl.UNSIGNED_BYTE, false, BYTES_PER_INSTANCE, 12);
   gl.vertexAttribDivisor(2, 1);
@@ -240,6 +251,9 @@ export class UnitPass {
   private friendlyOwners = new Set<number>();
   private structures: Map<number, UnitState> = new Map();
 
+  // Per-plane visual heading state to avoid rapid left-right wagging.
+  private planeHeadingState = new Map<number, { headingRad: number; lastTurnTick: number }>();
+
   constructor(
     gl: WebGL2RenderingContext,
     header: RendererConfig,
@@ -262,11 +276,13 @@ export class UnitPass {
         this.typeToAtlasCol.set(header.unitTypes[i], col);
       }
     }
+    // Plane uses a dedicated atlas column appended at runtime.
+    this.typeToAtlasCol.set(UT_PLANE, PLANE_ATLAS_COL);
 
     // Compile shaders
     this.program = createProgram(
       gl,
-      shaderSrc(unitVertSrc, { ATLAS_COLS, HYDROGEN_BOMB_COL }),
+      shaderSrc(unitVertSrc, { ATLAS_COLS, HYDROGEN_BOMB_COL, PLANE_ATLAS_COL }),
       shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize(), ATLAS_COLS }),
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
@@ -357,13 +373,33 @@ export class UnitPass {
   }
 
   private async loadAtlas(): Promise<void> {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = unitAtlasUrl;
-    await img.decode();
+    const atlasImg = new Image();
+    atlasImg.crossOrigin = "anonymous";
+    atlasImg.src = unitAtlasUrl;
+
+    const planeImg = new Image();
+    planeImg.crossOrigin = "anonymous";
+    planeImg.src = planeSpriteUrl;
+
+    await Promise.all([atlasImg.decode(), planeImg.decode()]);
+
+    const cellSize = atlasImg.height;
+    const canvas = document.createElement("canvas");
+    canvas.width = cellSize * ATLAS_COLS;
+    canvas.height = cellSize;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(atlasImg, 0, 0);
+
+    const px = PLANE_ATLAS_COL * cellSize + Math.floor((cellSize - planeImg.width) * 0.5);
+    const py = Math.floor((cellSize - planeImg.height) * 0.5);
+    ctx.drawImage(planeImg, px, py);
+
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
@@ -374,6 +410,7 @@ export class UnitPass {
     ownerID: number,
     atlasIdx: number,
     flags: number,
+    auxByte = flickerHashByte(x, y),
   ): void {
     this.groundBuf.ensureCapacity(this.groundCount + 1);
     const off = this.groundCount * FLOATS_PER_INSTANCE;
@@ -383,7 +420,7 @@ export class UnitPass {
     const byteOff = this.groundCount * BYTES_PER_INSTANCE;
     this.groundBuf.uint8[byteOff + 12] = atlasIdx;
     this.groundBuf.uint8[byteOff + 13] = flags;
-    this.groundBuf.uint8[byteOff + 14] = flickerHashByte(x, y);
+    this.groundBuf.uint8[byteOff + 14] = auxByte;
     this.groundCount++;
   }
 
@@ -412,6 +449,7 @@ export class UnitPass {
     this.missileCount = 0;
     this.smoothSegs.length = 0;
     this.lastUnitsUpdateMs = performance.now();
+    const activePlaneIds = new Set<number>();
 
     for (const unit of units.values()) {
       if (!unit.isActive) continue;
@@ -476,26 +514,73 @@ export class UnitPass {
 
       const x = unit.pos % this.mapW;
       const y = (unit.pos - x) / this.mapW;
+      const lx = unit.lastPos % this.mapW;
+      const ly = (unit.lastPos - lx) / this.mapW;
 
       if (isMissile) {
         if (
           SMOOTHED_NUKE_TYPES.has(unit.unitType) &&
           unit.lastPos !== unit.pos
         ) {
-          const lx = unit.lastPos % this.mapW;
-          const ly = (unit.lastPos - lx) / this.mapW;
           this.smoothSegs.push(this.missileCount, lx, ly, x, y);
         }
         this.emitMissile(x, y, unit.ownerID, atlasIdx, flags);
 
         // Shells emit a second instance at lastPos (2-pixel trail effect)
         if (unit.unitType === UT_SHELL && unit.lastPos !== unit.pos) {
-          const lx = unit.lastPos % this.mapW;
-          const ly = (unit.lastPos - lx) / this.mapW;
           this.emitMissile(lx, ly, unit.ownerID, atlasIdx, flags);
         }
       } else {
-        this.emitGround(x, y, unit.ownerID, atlasIdx, flags);
+        if (unit.unitType === UT_PLANE) {
+          activePlaneIds.add(unit.id);
+
+          // Encode heading angle in aux byte (0..255 => 0..2π).
+          const dx = x - lx;
+          const dy = y - ly;
+          const desired = dx === 0 && dy === 0 ? null : Math.atan2(dy, dx);
+          const state = this.planeHeadingState.get(unit.id);
+
+          let angle = state?.headingRad ?? 0;
+          if (desired !== null) {
+            if (!state) {
+              angle = desired;
+              this.planeHeadingState.set(unit.id, {
+                headingRad: angle,
+                lastTurnTick: tick,
+              });
+            } else {
+              const delta = this.normalizeAngleRad(desired - state.headingRad);
+              const canTurn =
+                tick - state.lastTurnTick >= PLANE_TURN_COOLDOWN_TICKS;
+
+              if (Math.abs(delta) >= PLANE_TURN_MIN_DELTA_RAD && canTurn) {
+                const turn = Math.max(
+                  -PLANE_MAX_TURN_PER_UPDATE_RAD,
+                  Math.min(PLANE_MAX_TURN_PER_UPDATE_RAD, delta),
+                );
+                angle = this.normalizeAngleRad(state.headingRad + turn);
+                state.headingRad = angle;
+                state.lastTurnTick = tick;
+              } else {
+                angle = state.headingRad;
+              }
+            }
+          }
+
+          const headingByte =
+            (((angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * 255) |
+            0;
+          this.emitGround(x, y, unit.ownerID, atlasIdx, flags, headingByte);
+        } else {
+          this.emitGround(x, y, unit.ownerID, atlasIdx, flags);
+        }
+      }
+    }
+
+    // Prune stale heading state for deleted/inactive planes.
+    for (const id of this.planeHeadingState.keys()) {
+      if (!activePlaneIds.has(id)) {
+        this.planeHeadingState.delete(id);
       }
     }
 
@@ -616,6 +701,15 @@ export class UnitPass {
       0,
       this.missileCount * FLOATS_PER_INSTANCE,
     );
+  }
+
+  private normalizeAngleRad(rad: number): number {
+    const full = Math.PI * 2;
+    let a = ((rad + Math.PI) % full + full) % full - Math.PI;
+    if (a <= -Math.PI) {
+      a += full;
+    }
+    return a;
   }
 
   dispose(): void {

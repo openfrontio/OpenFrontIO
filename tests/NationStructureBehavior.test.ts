@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import { Difficulty, PlayerType } from "../src/core/game/Game";
+import { Difficulty, PlayerType, UnitType } from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 
@@ -516,6 +516,58 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
 
     expect((behavior as any).tryBuildDefensePost()).toBe(false);
     expect(addExecution).not.toHaveBeenCalled();
+  });
+});
+
+// ── maybeSpawnFactoryOrAirport ─────────────────────────────────────────────
+
+describe("NationStructureBehavior.maybeSpawnFactoryOrAirport", () => {
+  function makeAirportBehavior(playerUnits: any[] = []) {
+    const game = {
+      config: () => ({
+        isUnitDisabled: () => false,
+      }),
+    };
+    const player = {
+      units: vi.fn((type: any) =>
+        type === "Airport" ? playerUnits : [],
+      ),
+    };
+    const random = new PseudoRandom(0);
+    const behavior = makeBehavior(game, player, random);
+    return { behavior, player, random };
+  }
+
+  it("builds the first airport before falling back to a factory", () => {
+    const { behavior } = makeAirportBehavior([]);
+    const spawnSpy = vi
+      .spyOn(behavior as any, "maybeSpawnStructure")
+      .mockImplementation((type: any) => type === UnitType.Airport);
+    vi.spyOn(behavior as any, "shouldBuildStructure").mockReturnValue(true);
+
+    expect(
+      (behavior as any).maybeSpawnFactoryOrAirport(10, true),
+    ).toBe(true);
+    expect(spawnSpy).toHaveBeenCalledWith("Airport");
+  });
+
+  it("upgrades an existing airport instead of placing a second nearby one", () => {
+    const { behavior } = makeAirportBehavior([makeUnit(123)]);
+    vi.spyOn(behavior as any, "shouldBuildStructure").mockReturnValue(true);
+    const chanceSpy = vi
+      .spyOn((behavior as any).random, "chance")
+      .mockReturnValue(true);
+    const spawnSpy = vi.spyOn(behavior as any, "maybeSpawnStructure");
+    const upgradeSpy = vi
+      .spyOn(behavior as any, "maybeUpgradeStructure")
+      .mockReturnValue(true);
+
+    expect(
+      (behavior as any).maybeSpawnFactoryOrAirport(10, true),
+    ).toBe(true);
+    expect(chanceSpy).toHaveBeenCalledWith(2);
+    expect(upgradeSpy).toHaveBeenCalledWith(expect.any(Array), true);
+    expect(spawnSpy).not.toHaveBeenCalledWith(UnitType.Airport);
   });
 });
 

@@ -15,6 +15,7 @@
 import type { RendererConfig, UnitState } from "../../types";
 import {
   STRUCTURE_TYPES,
+  UT_AIRPORT,
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
@@ -169,6 +170,8 @@ export class StructureLevelPass {
       );
       if (col >= 0) this.typeToAtlasCol.set(header.unitTypes[i], col);
     }
+    // MVP: airports reuse port icon/level anchor in the existing structure atlas.
+    this.typeToAtlasCol.set(UT_AIRPORT, STRUCTURE_ORDER.indexOf(UT_PORT));
 
     this.kernTable = new Int8Array(CHAR_RANGE * CHAR_RANGE); // digits don't kern
 

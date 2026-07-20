@@ -5,7 +5,7 @@ layout(location = 0) in vec2 aPos;
 
 // Per-instance attributes
 layout(location = 1) in vec3 aInstPos;   // x, y, ownerID
-layout(location = 2) in vec3 aInstFlags; // atlasIdx, flags, flickerHash (uint8→float)
+layout(location = 2) in vec3 aInstFlags; // atlasIdx, flags, aux (flicker hash or plane heading)
 
 uniform mat3  uCamera;
 
@@ -17,7 +17,7 @@ out vec2  vCellUV;      // sprite cell coords; the central 1/scale region is the
 flat out float vAtlasCol;
 flat out float vOwnerID;
 flat out float vFlags;  // 0.0 = normal, 1.0 = flicker, 2.0 = angry
-flat out float vHash;   // per-instance hash for flicker phase offset
+flat out float vHash;   // aux byte normalized to 0..1 (flicker phase or plane heading)
 flat out float vGlow;   // 1.0 if this instance is a hydrogen bomb (draw glow), else 0.0
 
 void main() {
@@ -29,9 +29,8 @@ void main() {
   vFlags = aInstFlags.y;
   vAtlasCol = atlasCol;
 
-  // Per-instance hash so each unit flickers independently. Computed CPU-side
-  // from the tick position — hashing worldX/Y here would re-roll the phase
-  // every frame for nukes whose position is smoothed per frame.
+  // Aux byte normalized to 0..1.
+  // Nukes use it as per-instance flicker phase; Plane uses it as heading angle.
   vHash = aInstFlags.z * (1.0 / 255.0);
 
   // Hydrogen bombs render an enlarged quad so there's room for a glow halo
@@ -45,7 +44,15 @@ void main() {
   float halfSize = uUnitSize * 0.5 * scale;
 
   vec2 center = vec2(worldX + 0.5, worldY + 0.5);
-  vec2 worldPos = center + (aPos - 0.5) * halfSize * 2.0;
+  vec2 local = aPos - 0.5;
+  if (abs(atlasCol - float(PLANE_ATLAS_COL)) < 0.5) {
+    // Plane heading is encoded in aux byte (0..255 => 0..2π).
+    float ang = vHash * 6.28318530718;
+    float c = cos(ang);
+    float s = sin(ang);
+    local = vec2(c * local.x - s * local.y, s * local.x + c * local.y);
+  }
+  vec2 worldPos = center + local * halfSize * 2.0;
 
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);

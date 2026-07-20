@@ -35,6 +35,7 @@ const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
+const airportIcon = assetUrl("images/AirportIcon.svg");
 const samlauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 
@@ -81,6 +82,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: portIcon,
       description: "build_menu.desc.port",
       key: "unit_type.port",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Airport,
+      icon: airportIcon,
+      description: "build_menu.desc.airport",
+      key: "unit_type.airport",
       countable: true,
     },
     {
@@ -403,6 +411,20 @@ export class BuildMenu extends LitElement implements Controller {
     this.hideMenu();
   }
 
+  private buildButtonTitle(item: BuildItemDisplay, enabled: boolean): string {
+    const parts: string[] = [];
+    if (item.key) {
+      parts.push(translateText(item.key));
+    }
+    if (item.description) {
+      parts.push(translateText(item.description));
+    }
+    if (!enabled) {
+      parts.push(translateText("build_menu.not_enough_money"));
+    }
+    return parts.join("\n");
+  }
+
   render() {
     return html`
       <div
@@ -428,9 +450,7 @@ export class BuildMenu extends LitElement implements Controller {
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
-                    title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
-                      : ""}
+                    title=${this.buildButtonTitle(item, enabled)}
                   >
                     <img
                       src=${item.icon}

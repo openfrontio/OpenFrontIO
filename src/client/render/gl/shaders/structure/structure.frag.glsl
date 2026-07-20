@@ -113,9 +113,19 @@ float sdPolygon(vec2 p, float R, float n, float rot) {
   return length(p) * cos(a) - R * cos(an);
 }
 
+// Airport top shape: top half of a flat-top hexagon, producing an
+// ATC-tower-cap silhouette (flat top, angled sides, flat cut bottom).
+float sdAirportTop(vec2 p, float R) {
+  float hex = sdPolygon(p, R, 6.0, PI / 6.0);
+  float cutBottom = -(p.y + 0.08);
+  return max(hex, cutBottom);
+}
+
 // Per-structure-type shape SDF.
 // Atlas indices: 0=City, 1=Port, 2=Factory, 3=DefensePost, 4=SAM, 5=Silo
 float shapeSDF(vec2 p, float R) {
+  if (abs(vAtlasIdx - 1.25) < 0.02)
+    return sdAirportTop(p, R);                 // Airport → half-hex (flat top)
   if (vAtlasIdx < 0.5)
     return length(p) - R;                     // City → circle
   if (vAtlasIdx < 1.5)
@@ -130,6 +140,8 @@ float shapeSDF(vec2 p, float R) {
 }
 
 void main() {
+  bool isAirport = abs(vAtlasIdx - 1.25) < 0.02;
+
   float dist = length(vLocalPos);
   float radius = 0.45;
   float borderWidth = 0.06 / vShapeScale;
@@ -193,17 +205,25 @@ void main() {
   // Only show icon detail when zoomed in enough
   float iconAlpha = 0.0;
   if (vZoom > uDotsThreshold) {
-    // Clamp UV to this atlas column to prevent bleeding into neighbours
-    // when uIconFill shrinks the icon (expanding UV range beyond column).
-    float colStart = vAtlasIdx / float(ATLAS_COLS);
-    float colEnd = (vAtlasIdx + 1.0) / float(ATLAS_COLS);
-    vec2 safeUV = vec2(clamp(vAtlasUV.x, colStart, colEnd), clamp(vAtlasUV.y, 0.0, 1.0));
-    vec4 iconSample = texture(uAtlas, safeUV);
-    // Zero out icon outside the valid UV region (clamped pixels would repeat the edge)
-    float inBounds = step(colStart, vAtlasUV.x) * step(vAtlasUV.x, colEnd)
-                   * step(0.0, vAtlasUV.y) * step(vAtlasUV.y, 1.0);
-    // Clip to fill area so icon doesn't bleed into the border ring.
-    iconAlpha = iconSample.a * borderMask * inBounds;
+    if (isAirport) {
+      // Airport uses a procedural cross glyph for a clear visual distinction.
+      float lineW = 0.06 / vShapeScale;
+      float vert = 1.0 - smoothstep(lineW - fw, lineW + fw, abs(vLocalPos.x));
+      float horiz = 1.0 - smoothstep(lineW - fw, lineW + fw, abs(vLocalPos.y));
+      iconAlpha = max(vert, horiz) * borderMask;
+    } else {
+      // Clamp UV to this atlas column to prevent bleeding into neighbours
+      // when uIconFill shrinks the icon (expanding UV range beyond column).
+      float colStart = vAtlasIdx / float(ATLAS_COLS);
+      float colEnd = (vAtlasIdx + 1.0) / float(ATLAS_COLS);
+      vec2 safeUV = vec2(clamp(vAtlasUV.x, colStart, colEnd), clamp(vAtlasUV.y, 0.0, 1.0));
+      vec4 iconSample = texture(uAtlas, safeUV);
+      // Zero out icon outside the valid UV region (clamped pixels would repeat the edge)
+      float inBounds = step(colStart, vAtlasUV.x) * step(vAtlasUV.x, colEnd)
+                     * step(0.0, vAtlasUV.y) * step(vAtlasUV.y, 1.0);
+      // Clip to fill area so icon doesn't bleed into the border ring.
+      iconAlpha = iconSample.a * borderMask * inBounds;
+    }
   }
 
   // Composite: tinted icon over player-colored shape.
