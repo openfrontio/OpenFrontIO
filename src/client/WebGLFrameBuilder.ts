@@ -442,6 +442,7 @@ export class WebGLFrameBuilder {
         displayName: p.displayName(),
         flag: flagUrl,
         crown: crownUrl,
+        verified: p.cosmetics.verified === true,
         color: p.territoryColor().toHex(),
       });
     }

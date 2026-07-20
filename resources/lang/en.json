@@ -67,6 +67,24 @@
     "tab_stats": "Stats",
     "title": "Account",
     "unclaimed_rewards": "Unclaimed Rewards",
+    "username_confirm_abandon": "You will permanently give up your reserved name \"{name}\".",
+    "username_confirm_body": "Your new name will be locked for 30 days.",
+    "username_confirm_button": "Change name",
+    "username_confirm_case_only": "The new name only differs from your current one in capitalization — it will still restart the 30-day lock.",
+    "username_confirm_heading": "Change username?",
+    "username_cooldown_until": "You can change your username again on {date}.",
+    "username_error_cooldown": "You can change your username again in {days} day(s).",
+    "username_error_failed": "Couldn't change your username. Please try again later.",
+    "username_error_profane": "That username isn't allowed.",
+    "username_error_taken": "That username is already taken — try another.",
+    "username_grace_warning": "You'll lose the exclusive right to \"{name}\" on {date}. Resubscribe to keep it.",
+    "username_not_set": "Claim your username — it identifies you across all your games.",
+    "username_placeholder": "Enter a username",
+    "username_save": "Save",
+    "username_temporary_notice": "Your name was taken by another player. Pick a new one — this rename is free.",
+    "username_temporary_prompt": "Your username was taken by another player. Choose a new one now? The rename is free.",
+    "username_temporary_prompt_confirm": "Choose a name",
+    "username_title": "Username",
     "your_subscription": "Your Subscription"
   },
   "build_menu": {
@@ -1598,6 +1616,7 @@
     "zoom_out_desc": "Zoom out the map"
   },
   "username": {
+    "account_invalid_chars": "Username can only contain letters, numbers, underscores, and hyphens.",
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "not_string": "Username must be a string.",
@@ -1607,7 +1626,11 @@
     "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "too_long": "Username must not exceed {max} characters.",
-    "too_short": "Username must be at least {min} characters long."
+    "too_short": "Username must be at least {min} characters long.",
+    "verified_heading": "Verified name",
+    "verified_sub_required": "You need an active subscription to play under your verified name.",
+    "verified_sub_required_confirm": "View store",
+    "verified_toggle": "Verified"
   },
   "win_modal": {
     "died": "You died",

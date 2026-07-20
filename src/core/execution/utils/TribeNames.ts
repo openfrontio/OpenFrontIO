@@ -1,248 +1,88 @@
-export const TRIBE_NAME_PREFIXES = [
-  "Akkadian",
-  "Babylonian",
-  "Sumerian",
-  "Hittite",
-  "Phoenician",
-  "Canaanite",
-  "Minoan",
-  "Mycenaean",
-  "Etruscan",
-  "Scythian",
-  "Thracian",
-  "Dacian",
-  "Illyrian",
-  "Median",
-  "Chaldean",
-  "Roman",
-  "Greek",
-  "Byzantine",
-  "Persian",
-  "Parthian",
-  "Seleucid",
-  "Ptolemaic",
-  "Palmyrene",
-  "Macedonian",
-  "Carthaginian",
-  "Ming",
-  "Tang",
-  "Song",
-  "Yuan",
-  "Mauryan",
-  "Kushan",
-  "Rajput",
-  "Mughal",
-  "Satavahana",
-  "Vijayanagara",
-  "Egyptian",
-  "Nubian",
-  "Kushite",
-  "Aksumite",
-  "Ethiopian",
-  "Songhai",
-  "Malian",
-  "Ghanaian",
-  "Benin",
-  "Ashanti",
-  "Zulu",
-  "Tuareg",
-  "Berber",
-  "Kanem-Bornu",
-  "Buganda",
-  "Mossi",
-  "Swahili",
-  "Somali",
-  "Wolof",
-  "Umayyad",
-  "Abbasid",
-  "Ayyubid",
-  "Fatimid",
-  "Mamluk",
-  "Seljuk",
-  "Safavid",
-  "Ottoman",
-  "Almoravid",
-  "Almohad",
-  "Rashidun",
-  "Ziyarid",
-  "Frankish",
-  "Visigothic",
-  "Ostrogothic",
-  "Viking",
-  "Norman",
-  "Saxon",
-  "Anglo-Saxon",
-  "Celtic",
-  "Gaulish",
-  "Carolingian",
-  "Merovingian",
-  "Capetian",
-  "Plantagenet",
-  "Tudor",
-  "Stuart",
-  "Habsburg",
-  "Romanov",
-  "Lancaster",
-  "York",
-  "Bourbon",
-  "Napoleonic",
-  "British",
-  "French",
-  "Spanish",
-  "Portuguese",
-  "Dutch",
-  "Russian",
-  "German",
-  "Italian",
-  "Swedish",
-  "Norwegian",
-  "Danish",
-  "Polish",
-  "Hungarian",
-  "Austrian",
-  "Swiss",
-  "Czech",
-  "Slovak",
-  "Serbian",
-  "Croatian",
-  "Bosnian",
-  "Montenegrin",
-  "Bulgarian",
-  "Romanian",
-  "Apache",
-  "Sioux",
-  "Cherokee",
-  "Navajo",
-  "Iroquois",
-  "Inuit",
-  "Arawak",
-  "Carib",
-  "Taino",
-  "Aztec",
-  "Mayan",
-  "Incan",
-  "Mapuche",
-  "Guarani",
-  "Tupi",
-  "Yanomami",
-  "Zuni",
-  "Hopi",
-  "Kiowa",
-  "Comanche",
-  "Shoshone",
-  "Japanese",
-  "Ryukyu",
-  "Ainu",
-  "Cham",
-  "Khmer",
-  "Thai",
-  "Vietnamese",
-  "Burmese",
-  "Balinese",
-  "Malay",
-  "Filipino",
-  "Mongolian",
-  "Korean",
-  "Tibetan",
-  "Manchu",
-  "Uyghur",
-  "Hmong",
-  "Karen",
-  "Pyu",
-  "Hawaiian",
-  "Fijian",
-  "Tongan",
-  "Samoan",
-  "Maori",
-  "Micronesian",
-  "Hebrew",
-  "Armenian",
-  "Circassian",
-  "Georgian",
-  "Kurdish",
-  "Turkic",
-  "Kazakh",
-  "Uzbek",
-  "Kyrgyz",
-  "Tajik",
-  "Uighur",
-  "Pashtun",
-  "Baloch",
-  "Afghan",
-  "Kenyan",
-  "Ugandan",
-  "Bhutanese",
-  "Latin",
-  "Moldovan",
-  "Militant",
-  "Spartan",
-];
-export const TRIBE_NAME_SUFFIXES = [
-  "Empire",
-  "Dynasty",
-  "Kingdom",
-  "Queendom",
-  "Sultanate",
-  "Confederation",
-  "Union",
-  "Republic",
-  "Caliphate",
-  "Dominion",
-  "Realm",
-  "State",
-  "Federation",
-  "Territory",
-  "Commonwealth",
-  "League",
-  "Duchy",
-  "Province",
-  "Protectorate",
-  "Colony",
-  "Mandate",
-  "Free State",
-  "Canton",
-  "Region",
-  "Nation",
-  "Assembly",
-  "Hierarchy",
-  "Archduchy",
-  "Grand Duchy",
-  "Metropolis",
-  "Cluster",
-  "Alliance",
-  "Tribunal",
-  "Council",
-  "Confederacy",
-  "Order",
-  "Regime",
-  "Syndicate",
-  "Guild",
-  "Corporation",
-  "Patriarchy",
-  "Matriarchy",
-  "Legion",
-  "Horde",
-  "Clan",
-  "Brotherhood",
-  "Sisterhood",
-  "Ascendancy",
-  "Supremacy",
-  "Tribe",
-  "Republics",
-  "Army",
-  "Dictatorship",
-  "Country",
-  "Oligarchy",
-  "Monkdom",
-  "Throng",
-  "Host",
-  "Area",
-  "District",
-  "Fief",
-  "Wilderness",
-  "Settlement",
-  "Parliament",
-  "Anarchy",
-  "Democracy",
-  "Autocracy",
-];
+import tribeNameThemesData from "resources/tribeNameThemes.json";
+import { GameMapType, type MapInfo, maps } from "../../game/Maps.gen";
+
+export interface TribeNameData {
+  prefixes: string[];
+  suffixes: string[];
+  customTribes?: string[];
+}
+
+interface TribeNameTheme {
+  prefixes: string[];
+  suffixes: string[];
+}
+
+const tribeNameThemes: Record<string, TribeNameTheme> = tribeNameThemesData;
+
+/** Look up MapInfo by GameMapType. */
+function getMapInfo(mapType: GameMapType): MapInfo | undefined {
+  return maps.find((m) => m.type === mapType);
+}
+
+/**
+ * Resolve tribe name data for a given map type.
+ *
+ * Priority:
+ * 1. Custom tribes from the map's info.json (used as-is, no prefix/suffix)
+ * 2. Theme-based names (prefix + suffix) from the referenced theme
+ * 3. Default theme if no theme is specified or the referenced theme is missing
+ */
+export function resolveTribeNameData(mapType?: GameMapType): TribeNameData {
+  if (mapType !== undefined) {
+    const mapInfo = getMapInfo(mapType);
+    if (mapInfo !== undefined) {
+      const themeNames =
+        mapInfo.themes !== undefined && mapInfo.themes.length > 0
+          ? mapInfo.themes
+          : ["default"];
+
+      const mergedPrefixes: string[] = [];
+      const mergedSuffixes: string[] = [];
+
+      for (const themeName of themeNames) {
+        const theme = tribeNameThemes[themeName];
+        if (theme === undefined) {
+          console.warn(
+            `[TribeNames] Map "${mapType}" references unknown tribe name theme "${themeName}". Skipping.`,
+          );
+          continue;
+        }
+        mergedPrefixes.push(...theme.prefixes);
+        mergedSuffixes.push(...theme.suffixes);
+      }
+
+      // If all themes were unknown, fall back to default.
+      if (mergedPrefixes.length === 0 || mergedSuffixes.length === 0) {
+        const defaultTheme = tribeNameThemes["default"];
+        if (defaultTheme === undefined) {
+          throw new Error(
+            "[TribeNames] Default theme is missing from tribeNameThemes.json",
+          );
+        }
+        mergedPrefixes.push(...defaultTheme.prefixes);
+        mergedSuffixes.push(...defaultTheme.suffixes);
+      }
+
+      return {
+        prefixes: mergedPrefixes,
+        suffixes: mergedSuffixes,
+        customTribes:
+          mapInfo.customTribes !== undefined && mapInfo.customTribes.length > 0
+            ? mapInfo.customTribes
+            : undefined,
+      };
+    }
+  }
+
+  // No map type or map not found — use default theme.
+  const defaultTheme = tribeNameThemes["default"];
+  if (defaultTheme === undefined) {
+    throw new Error(
+      "[TribeNames] Default theme is missing from tribeNameThemes.json",
+    );
+  }
+  return {
+    prefixes: defaultTheme.prefixes,
+    suffixes: defaultTheme.suffixes,
+  };
+}

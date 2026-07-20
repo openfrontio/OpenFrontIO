@@ -13,6 +13,8 @@ import {
   PlayerProfileSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
+  PutUsernameResponse,
+  PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
   UserMeResponse,
@@ -226,6 +228,79 @@ export async function setMarketingConsent(
   } catch (e) {
     console.error("setMarketingConsent: request failed", e);
     return false;
+  }
+}
+
+export type UpdateUsernameResult =
+  | { ok: true; data: PutUsernameResponse }
+  | { ok: false; code: "invalid"; message?: string }
+  | { ok: false; code: "profane" }
+  | { ok: false; code: "taken" }
+  | { ok: false; code: "cooldown"; retryAfterSeconds: number | null }
+  | { ok: false; code: "failed" };
+
+// PUT /users/@me/username — renames the account username. Every failure is
+// atomic (no name change, no cooldown consumed). Both 409 bodies ("name
+// exclusively held" and "suffix space exhausted") map to "taken": the user
+// remedy is the same — pick another name. Invalidates the cached /users/@me
+// on success so the next read reflects the new name.
+export async function updateUsername(
+  username: string,
+): Promise<UpdateUsernameResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/username`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ username }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      if (body?.code === "USERNAME_PROFANE") {
+        return { ok: false, code: "profane" };
+      }
+      return {
+        ok: false,
+        code: "invalid",
+        message: typeof body?.reason === "string" ? body.reason : undefined,
+      };
+    }
+    if (response.status === 409) {
+      return { ok: false, code: "taken" };
+    }
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After");
+      const seconds = retryAfter === null ? NaN : Number(retryAfter);
+      return {
+        ok: false,
+        code: "cooldown",
+        retryAfterSeconds: Number.isFinite(seconds) ? seconds : null,
+      };
+    }
+    if (!response.ok) {
+      console.error(
+        "updateUsername: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PutUsernameResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("updateUsername: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("updateUsername: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 

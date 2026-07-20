@@ -108,6 +108,26 @@ export type ClaimAllRewardsResponse = z.infer<
   typeof ClaimAllRewardsResponseSchema
 >;
 
+// Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
+// `claimed`: reservation held but subscription lapsed — the suffix shows again
+// and a grace deadline runs. `premium`: subscribed, bare display. `indefinite`:
+// admin-locked bare display. Statuses change server-side without client action
+// (Stripe webhooks, admin edits) — re-fetch /users/@me rather than caching.
+export const UsernameStatusSchema = z.enum([
+  "unclaimed",
+  "claimed",
+  "premium",
+  "indefinite",
+]);
+export type UsernameStatus = z.infer<typeof UsernameStatusSchema>;
+
+// When a player subscribes while someone else exclusively holds their bare
+// name, the server renames them to TEMPORARY#### and clears their cooldown so
+// the rename is free. Detect it to prompt for a real name.
+export function isTemporaryUsername(base: string | null | undefined): boolean {
+  return typeof base === "string" && /^TEMPORARY\d{4}$/.test(base);
+}
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -123,6 +143,23 @@ export const UserMeResponseSchema = z.object({
     // True when the player may list a custom lobby publicly. The API decides
     // which subscriptions/grants confer this.
     canCreatePublicLobbies: z.boolean(),
+    // Account username (custom-usernames). All optional so responses from an
+    // API without the feature still parse; absent means the same as never set.
+    // `username` is the server-resolved DISPLAY form — the bare base for an
+    // entitled claim holder, otherwise "base.suffix". Render it as-is; never
+    // assemble base + discriminator client-side. The discriminator is exactly
+    // 4 digits and may have leading zeros — keep it a string.
+    username: z.string().nullable().optional(),
+    usernameBase: z.string().nullable().optional(),
+    usernameDiscriminator: z.string().nullable().optional(),
+    usernameStatus: UsernameStatusSchema.optional(),
+    // Only non-null in `claimed`: when the exclusive right to the bare name
+    // becomes takeable by another subscriber. A past date means "at risk",
+    // not "lost" — it stays set until the name is actually taken.
+    usernameClaimExpiresAt: z.iso.datetime().nullable().optional(),
+    // When the player may next self-rename. May be in the past — past or
+    // null both mean a rename is allowed.
+    nextUsernameChangeAt: z.iso.datetime().nullable().optional(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
@@ -189,6 +226,18 @@ export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
+
+// PUT /users/@me/username success payload. `username` is the resolved display
+// form (safe for optimistic UI). The suffix is re-rolled on every rename and
+// the response carries the fresh 30-day cooldown.
+export const PutUsernameResponseSchema = z.object({
+  username: z.string(),
+  base: z.string(),
+  discriminator: z.string(),
+  usernameStatus: UsernameStatusSchema,
+  nextUsernameChangeAt: z.iso.datetime().nullable(),
+});
+export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
