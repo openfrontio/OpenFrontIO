@@ -41,7 +41,7 @@ export enum GameMapType {
   EuropeClassic = "Europe Classic", // map-generator/assets/maps/europeclassic/info.json
   FalklandIslands = "Falkland Islands", // map-generator/assets/maps/falklandislands/info.json
   FaroeIslands = "Faroe Islands", // map-generator/assets/maps/faroeislands/info.json
-  fingerlakes = "fingerlakes", // map-generator/assets/maps/fingerlakes/info.json
+  FingerLakes = "Finger Lakes", // map-generator/assets/maps/fingerlakes/info.json
   FourIslands = "Four Islands", // map-generator/assets/maps/fourislands/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
@@ -446,10 +446,10 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 4,
   },
   {
-    id: "fingerlakes",
-    type: GameMapType.fingerlakes,
+    id: "FingerLakes",
+    type: GameMapType.FingerLakes,
     translationKey: "map.fingerlakes",
-    categories: ["fictional"],
+    categories: ["new", "north_america"],
     multiplayerFrequency: 4,
   },
   {

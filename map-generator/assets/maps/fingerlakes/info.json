@@ -1,10 +1,59 @@
 {
-  "id": "fingerlakes",
-  "name": "fingerlakes",
+  "id": "FingerLakes",
+  "name": "Finger Lakes",
   "translation_key": "map.fingerlakes",
-  "categories": [
-    "fictional"
-  ],
+  "categories": ["new", "north_america"],
   "multiplayer_frequency": 4,
-  "nations": []
+  "nations": [
+    {
+      "coordinates": [1156, 1222],
+      "name": "Ithaca",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [460, 820],
+      "name": "Penn Yan",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [736, 1342],
+      "name": "Watkins Glen",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [566, 467],
+      "name": "Geneva",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [815, 364],
+      "name": "Seneca Falls",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [550, 41],
+      "name": "Lyons",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [177, 441],
+      "name": "Canandaigua",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [1076, 350],
+      "name": "Auburn",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [1241, 336],
+      "name": "Skaneateles",
+      "flag": "New_York"
+    },
+    {
+      "coordinates": [242, 1248],
+      "name": "Hammondsport",
+      "flag": "New_York"
+    }
+  ]
 }
