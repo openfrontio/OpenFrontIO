@@ -1,11 +1,7 @@
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import {
-  isVerifiedUsername,
-  PlayerStatsTree,
-  UserMeResponse,
-} from "../core/ApiSchemas";
+import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import {
@@ -36,12 +32,11 @@ import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { playerProfileUrl } from "./PlayerProfileModal";
-import { copyToClipboard, showToast, translateText } from "./Utils";
+import { translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
@@ -113,41 +108,14 @@ export class AccountModal extends BaseModal {
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
-    const username = this.userMeResponse?.player?.username ?? null;
-    // The header row is the modalHeader flex wrapper; rightContent's
-    // top-level nodes become its flex children. `grow-0 basis-auto` stops the
-    // title section from absorbing the free space so the username's auto
-    // margins center it between the title and the ID chip (which carries
-    // ml-auto to stay right-aligned when there is no username).
     return modalHeader({
       title: translateText("account_modal.title"),
-      leftClassName: "grow-0 basis-auto",
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
       rightContent:
         isLoggedIn && !this.isLoadingUser
           ? html`
-              ${username
-                ? html`<button
-                    type="button"
-                    class="mx-auto inline-flex items-center gap-1.5 text-white text-lg font-bold min-w-0 cursor-pointer"
-                    title=${translateText("common.click_to_copy")}
-                    @click=${() =>
-                      void copyToClipboard(username, () =>
-                        showToast(translateText("common.copied"), "green"),
-                      )}
-                  >
-                    ${username}
-                    ${isVerifiedUsername(username)
-                      ? verifiedBadge("w-5 h-5")
-                      : nothing}
-                  </button>`
-                : nothing}
-              <div
-                class="flex items-center gap-2 flex-wrap justify-end ${username
-                  ? ""
-                  : "ml-auto"}"
-              >
+              <div class="flex items-center gap-2">
                 <span
                   class="text-xs text-blue-400 font-bold uppercase tracking-wider"
                   >${translateText("account_modal.public_player_id")}</span
