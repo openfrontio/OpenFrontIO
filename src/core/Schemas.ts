@@ -658,6 +658,11 @@ export const PlayerCosmeticRefsSchema = z.object({
   // One selected effect per slot: key = slot (effectType for trails, nukeType for
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
+  // The player claims to be playing under their verified account username
+  // (renders the blue check next to the name). Client-asserted for now; the
+  // server will validate it against the account username once that reaches
+  // the token claims.
+  verified: z.boolean().optional(),
 });
 
 export const PlayerSkinSchema = z.object({
@@ -689,6 +694,8 @@ export const PlayerCosmeticsSchema = z.object({
   // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
   // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
+  // Plays under the verified account username — renders the blue check.
+  verified: z.boolean().optional(),
 });
 
 export const PlayerSchema = z.object({

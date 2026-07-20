@@ -278,6 +278,12 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         }
       }
     }
+    // TODO(custom-usernames): once the account username reaches the token
+    // claims, only allow this when the join username matches it. Until then
+    // the claim is relayed as-is (same trust level as the name itself).
+    if (refs.verified === true) {
+      cosmetics.verified = true;
+    }
 
     return { type: "allowed", cosmetics };
   }

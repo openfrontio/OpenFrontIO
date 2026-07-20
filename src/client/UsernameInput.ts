@@ -135,6 +135,11 @@ export class UsernameInput extends LitElement {
     return this.baseUsername.trim();
   }
 
+  /** True when the player is playing under their verified account name. */
+  public isVerified(): boolean {
+    return this.verifiedActive && this.verifiedName() !== null;
+  }
+
   public getClanTag(): string | null {
     return this.clanTag.length >= MIN_CLAN_TAG_LENGTH &&
       this.clanTag.length <= MAX_CLAN_TAG_LENGTH &&
@@ -445,6 +450,13 @@ export class UsernameInput extends LitElement {
       this._isValid && this.clanTagOwnershipError !== "username.tag_not_member"
     );
   }
+}
+
+// Whether the player is currently playing under their verified account name.
+// For join paths that can't reach the component instance (Cosmetics refs).
+export function isPlayingVerified(): boolean {
+  const el = document.querySelector<UsernameInput>("username-input");
+  return el?.isVerified() ?? false;
 }
 
 // A memorable anonymous username: "Anon" + animal (+ digit), the same handle

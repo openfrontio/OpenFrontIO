@@ -496,6 +496,26 @@ describe("Flag validation in isAllowed", () => {
   });
 });
 
+describe("Verified badge in isAllowed", () => {
+  test("passes through a verified claim", () => {
+    const result = flagChecker.isAllowed([], { verified: true });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.verified).toBe(true);
+    }
+  });
+
+  test("stays unset when absent or false", () => {
+    for (const refs of [{}, { verified: false }]) {
+      const result = flagChecker.isAllowed([], refs);
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.verified).toBeUndefined();
+      }
+    }
+  });
+});
+
 describe("Skin validation", () => {
   describe("isSkinAllowed (direct)", () => {
     test("returns skin when user has wildcard flare", () => {

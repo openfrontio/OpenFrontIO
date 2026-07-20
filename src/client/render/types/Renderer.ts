@@ -28,6 +28,8 @@ export interface PlayerStatic {
   flag?: string;
   /** Resolved crown-cosmetic image URL, or undefined for no crown. */
   crown?: string;
+  /** Plays under the verified account username — blue check next to the name. */
+  verified?: boolean;
   /** Hex color (e.g. "#ff0000"). Populated from territoryColor (live) or palette (replay). */
   color?: string;
 }
