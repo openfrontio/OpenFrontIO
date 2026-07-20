@@ -404,6 +404,7 @@ export function renderMemberRow(
               <player-name
                 .username=${member.username}
                 .publicId=${member.publicId}
+                .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
                 .onNameClick=${onViewProfile
                   ? () => onViewProfile(member.publicId)
                   : null}
