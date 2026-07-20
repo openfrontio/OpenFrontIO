@@ -74,7 +74,6 @@ export class LeaderboardPlayerList extends LitElement {
       ].map((entry) => ({
         rank: entry.rank,
         playerId: entry.public_id,
-        username: entry.username,
         accountUsername: entry.accountUsername ?? null,
         clanTag: entry.clanTag ?? undefined,
         elo: entry.elo,
@@ -253,7 +252,6 @@ export class LeaderboardPlayerList extends LitElement {
             <player-name
               .username=${player.accountUsername}
               .publicId=${player.playerId}
-              .fallbackName=${player.username}
             ></player-name>
           </div>
         </td>
@@ -447,7 +445,6 @@ export class LeaderboardPlayerList extends LitElement {
                         <player-name
                           .username=${this.currentUserEntry.accountUsername}
                           .publicId=${this.currentUserEntry.playerId}
-                          .fallbackName=${this.currentUserEntry.username}
                         ></player-name>
                       </div>
                     </div>

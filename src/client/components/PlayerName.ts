@@ -8,19 +8,14 @@ import { verifiedBadge } from "./ui/VerifiedBadge";
  * Standard rendering of a player identity on account surfaces (friends, clan
  * lists, leaderboards, profiles): the account username when set — with the
  * verified check when it's a bare-name claim (isVerifiedUsername) — falling
- * back to `fallbackName` (e.g. a session name) and then the publicId.
- * Clicking copies the account username when set, the publicId otherwise —
- * never the fallback name, which isn't an account identity. `copyText`
- * overrides the copy payload entirely (e.g. a share URL).
+ * back to the publicId. Clicking copies the account username when set, the
+ * publicId otherwise. `copyText` overrides the copy payload entirely (e.g. a
+ * share URL).
  */
 @customElement("player-name")
 export class PlayerName extends LitElement {
   @property({ attribute: false }) username: string | null | undefined = null;
   @property({ type: String }) publicId = "";
-  // Display-only fallback shown before the publicId when no account username
-  // is set. Never badged and never copied.
-  @property({ attribute: false }) fallbackName: string | null | undefined =
-    null;
   // Copy payload override (e.g. a share URL).
   @property({ type: String }) copyText = "";
 
@@ -38,7 +33,7 @@ export class PlayerName extends LitElement {
         <copy-button
           compact
           .copyText=${copyText}
-          .displayText=${this.username ?? this.fallbackName ?? this.publicId}
+          .displayText=${this.username ?? this.publicId}
           .showVisibilityToggle=${false}
           .showCopyIcon=${false}
         ></copy-button>

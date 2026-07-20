@@ -343,10 +343,8 @@ export type PublicPlayerGamesResponse = z.infer<
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
-  username: LeaderboardUsernameSchema,
-  // Account username (null = never set), kept separate from the session
-  // `username` so the verified badge derives from it alone — session names
-  // are free-form and would false-positive isVerifiedUsername.
+  // Account username (null = never set). The leaderboard displays this or
+  // the playerId — the per-session name is deliberately ignored.
   accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
@@ -378,8 +376,8 @@ export const RankedLeaderboardEntrySchema = z.object({
   user: DiscordUserSchema.nullable().optional(),
   username: LeaderboardUsernameSchema,
   // Account username (null = never set), unlike `username` which is the name
-  // from the player's most recent ranked session. Prefer
-  // `accountUsername ?? username` for display.
+  // from the player's most recent ranked session. The client displays
+  // `accountUsername ?? public_id` and ignores the session name.
   accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
 });
