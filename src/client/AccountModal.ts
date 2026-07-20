@@ -1,7 +1,11 @@
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
+import {
+  isVerifiedUsername,
+  PlayerStatsTree,
+  UserMeResponse,
+} from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import {
@@ -32,6 +36,7 @@ import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
@@ -108,6 +113,7 @@ export class AccountModal extends BaseModal {
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
+    const username = this.userMeResponse?.player?.username ?? null;
     return modalHeader({
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
@@ -115,7 +121,17 @@ export class AccountModal extends BaseModal {
       rightContent:
         isLoggedIn && !this.isLoadingUser
           ? html`
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap justify-end">
+                ${username
+                  ? html`<span
+                      class="inline-flex items-center gap-1.5 text-white font-bold"
+                    >
+                      ${username}
+                      ${isVerifiedUsername(username)
+                        ? verifiedBadge()
+                        : nothing}
+                    </span>`
+                  : nothing}
                 <span
                   class="text-xs text-blue-400 font-bold uppercase tracking-wider"
                   >${translateText("account_modal.public_player_id")}</span
