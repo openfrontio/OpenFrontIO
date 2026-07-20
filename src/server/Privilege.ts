@@ -278,9 +278,10 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         }
       }
     }
-    // TODO(custom-usernames): once the account username reaches the token
-    // claims, only allow this when the join username matches it. Until then
-    // the claim is relayed as-is (same trust level as the name itself).
+    // Entitlement-blind pass-through: isAllowed has no user identity. The
+    // authoritative check — join name must exactly match the account's
+    // resolved display name — runs at join in Worker.ts using the /users/@me
+    // response (verifiedBadgeAllowed below).
     if (refs.verified === true) {
       cosmetics.verified = true;
     }
@@ -434,4 +435,24 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   ): ClanTagResolution {
     return { tag: censoredTag, dropped: false };
   }
+}
+
+/**
+ * Whether a client's verified-badge claim is vouched for by their account:
+ * the bare-name claim must be entitled (premium/indefinite) and the name they
+ * joined with must EXACTLY match the account's server-resolved display name
+ * (the client locks the input to that form, so any drift — a rename race, a
+ * censor rewrite, a hand-crafted join message — drops the badge). Called at
+ * join with the /users/@me player the Worker already fetches for flares.
+ */
+export function verifiedBadgeAllowed(
+  joinUsername: string,
+  player: { username?: string | null; usernameStatus?: string },
+): boolean {
+  return (
+    (player.usernameStatus === "premium" ||
+      player.usernameStatus === "indefinite") &&
+    typeof player.username === "string" &&
+    player.username === joinUsername
+  );
 }

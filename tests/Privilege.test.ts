@@ -3,6 +3,7 @@ import {
   FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
   shadowNames,
+  verifiedBadgeAllowed,
 } from "../src/server/Privilege";
 
 const bannedWords = [
@@ -513,6 +514,57 @@ describe("Verified badge in isAllowed", () => {
         expect(result.cosmetics.verified).toBeUndefined();
       }
     }
+  });
+});
+
+describe("verifiedBadgeAllowed", () => {
+  test("allows an entitled player joining under their exact bare name", () => {
+    for (const usernameStatus of ["premium", "indefinite"]) {
+      expect(
+        verifiedBadgeAllowed("Bob", { username: "Bob", usernameStatus }),
+      ).toBe(true);
+    }
+  });
+
+  test("rejects a case-different join name (exact match only)", () => {
+    expect(
+      verifiedBadgeAllowed("bob", {
+        username: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe(false);
+  });
+
+  test("rejects a different name entirely", () => {
+    expect(
+      verifiedBadgeAllowed("Alice", {
+        username: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe(false);
+  });
+
+  test("rejects unentitled statuses even on an exact match", () => {
+    for (const usernameStatus of ["unclaimed", "claimed", undefined]) {
+      expect(
+        verifiedBadgeAllowed("Bob.4821", {
+          username: "Bob.4821",
+          usernameStatus,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  test("rejects an account with no username set", () => {
+    expect(
+      verifiedBadgeAllowed("Bob", {
+        username: null,
+        usernameStatus: "premium",
+      }),
+    ).toBe(false);
+    expect(verifiedBadgeAllowed("Bob", { usernameStatus: "premium" })).toBe(
+      false,
+    );
   });
 });
 

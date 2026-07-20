@@ -659,9 +659,9 @@ export const PlayerCosmeticRefsSchema = z.object({
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
   // The player claims to be playing under their verified account username
-  // (renders the blue check next to the name). Client-asserted for now; the
-  // server will validate it against the account username once that reaches
-  // the token claims.
+  // (renders the blue check next to the name). The game server keeps the
+  // claim only when the join name exactly matches the account's resolved
+  // display name from /users/@me (Worker join → verifiedBadgeAllowed).
   verified: z.boolean().optional(),
 });
 

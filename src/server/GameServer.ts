@@ -644,6 +644,15 @@ export class GameServer {
     );
     this.activeClients.push(client);
     if (identityUpdate && !this.hasStarted()) {
+      // The verified badge vouches for the exact join name — a pre-start
+      // identity change under it must drop the badge (the rejoin path skips
+      // the Worker's join-time validation).
+      if (
+        identityUpdate.username !== client.username &&
+        client.cosmetics?.verified
+      ) {
+        delete client.cosmetics.verified;
+      }
       client.username = identityUpdate.username;
       client.clanTag = identityUpdate.clanTag;
     }
