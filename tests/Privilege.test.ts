@@ -1,9 +1,9 @@
 import {
   createMatcher,
+  enforceVerifiedBadge,
   FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
   shadowNames,
-  verifiedBadgeAllowed,
 } from "../src/server/Privilege";
 
 const bannedWords = [
@@ -517,54 +517,81 @@ describe("Verified badge in isAllowed", () => {
   });
 });
 
-describe("verifiedBadgeAllowed", () => {
-  test("allows an entitled player joining under their exact bare name", () => {
+describe("enforceVerifiedBadge", () => {
+  test("keeps the badge for an entitled player joining under their exact bare name", () => {
     for (const usernameStatus of ["premium", "indefinite"]) {
+      const cosmetics = { verified: true };
       expect(
-        verifiedBadgeAllowed("Bob", { username: "Bob", usernameStatus }),
-      ).toBe(true);
-    }
-  });
-
-  test("rejects a case-different join name (exact match only)", () => {
-    expect(
-      verifiedBadgeAllowed("bob", {
-        username: "Bob",
-        usernameStatus: "premium",
-      }),
-    ).toBe(false);
-  });
-
-  test("rejects a different name entirely", () => {
-    expect(
-      verifiedBadgeAllowed("Alice", {
-        username: "Bob",
-        usernameStatus: "premium",
-      }),
-    ).toBe(false);
-  });
-
-  test("rejects unentitled statuses even on an exact match", () => {
-    for (const usernameStatus of ["unclaimed", "claimed", undefined]) {
-      expect(
-        verifiedBadgeAllowed("Bob.4821", {
-          username: "Bob.4821",
+        enforceVerifiedBadge(cosmetics, "Bob", {
+          username: "Bob",
           usernameStatus,
         }),
       ).toBe(false);
+      expect(cosmetics.verified).toBe(true);
     }
   });
 
-  test("rejects an account with no username set", () => {
+  test("strips on a case-different join name (exact match only)", () => {
+    const cosmetics = { verified: true };
     expect(
-      verifiedBadgeAllowed("Bob", {
-        username: null,
+      enforceVerifiedBadge(cosmetics, "bob", {
+        username: "Bob",
         usernameStatus: "premium",
       }),
-    ).toBe(false);
-    expect(verifiedBadgeAllowed("Bob", { usernameStatus: "premium" })).toBe(
-      false,
-    );
+    ).toBe(true);
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("strips on a different name entirely", () => {
+    const cosmetics = { verified: true };
+    expect(
+      enforceVerifiedBadge(cosmetics, "Alice", {
+        username: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe(true);
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("strips unentitled statuses even on an exact match", () => {
+    for (const usernameStatus of ["unclaimed", "claimed", undefined]) {
+      const cosmetics = { verified: true };
+      expect(
+        enforceVerifiedBadge(cosmetics, "Bob.4821", {
+          username: "Bob.4821",
+          usernameStatus,
+        }),
+      ).toBe(true);
+      expect(cosmetics.verified).toBeUndefined();
+    }
+  });
+
+  test("strips when the account has no username set", () => {
+    for (const account of [
+      { username: null, usernameStatus: "premium" },
+      { usernameStatus: "premium" },
+    ]) {
+      const cosmetics = { verified: true };
+      expect(enforceVerifiedBadge(cosmetics, "Bob", account)).toBe(true);
+      expect(cosmetics.verified).toBeUndefined();
+    }
+  });
+
+  test("keeps the badge on an anonymous join (null account, Dev-only)", () => {
+    const cosmetics = { verified: true };
+    expect(enforceVerifiedBadge(cosmetics, "Whatever", null)).toBe(false);
+    expect(cosmetics.verified).toBe(true);
+  });
+
+  test("no-op without a claim", () => {
+    for (const cosmetics of [{}, { verified: false }]) {
+      expect(
+        enforceVerifiedBadge(cosmetics, "Bob", {
+          username: "Other",
+          usernameStatus: "unclaimed",
+        }),
+      ).toBe(false);
+    }
   });
 });
 

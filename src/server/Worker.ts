@@ -26,7 +26,7 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
-import { verifiedBadgeAllowed } from "./Privilege";
+import { enforceVerifiedBadge } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
@@ -580,24 +580,19 @@ export async function startWorker() {
           return;
         }
 
-        // The verified badge is client-claimed; keep it only when the account
-        // vouches for it — entitled bare-name status AND the join name exactly
-        // matches the account's resolved display name (already fetched above).
-        // Strip rather than reject: a mismatch (rename race, censor rewrite)
-        // just loses the check. Anonymous persistent-ID joins only exist in
-        // Dev — keep the claim there so the badge stays locally testable.
-        if (cosmeticResult.cosmetics.verified === true) {
-          const vouched =
-            claims === null ||
-            (accountUsername !== undefined &&
-              verifiedBadgeAllowed(censoredUsername, accountUsername));
-          if (!vouched) {
-            delete cosmeticResult.cosmetics.verified;
-            log.info("Stripped unvouched verified-badge claim", {
-              persistentID: persistentId,
-              gameID: clientMsg.gameID,
-            });
-          }
+        // An undefined account means an anonymous persistent-ID join (no
+        // /users/@me fetch) — enforceVerifiedBadge treats that as Dev-only.
+        if (
+          enforceVerifiedBadge(
+            cosmeticResult.cosmetics,
+            censoredUsername,
+            accountUsername ?? null,
+          )
+        ) {
+          log.info("Stripped unvouched verified-badge claim", {
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
+          });
         }
 
         // Turnstile gates the FIRST join only. An already-admitted player who

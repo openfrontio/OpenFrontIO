@@ -281,7 +281,7 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     // Entitlement-blind pass-through: isAllowed has no user identity. The
     // authoritative check — join name must exactly match the account's
     // resolved display name — runs at join in Worker.ts using the /users/@me
-    // response (verifiedBadgeAllowed below).
+    // response (enforceVerifiedBadge below).
     if (refs.verified === true) {
       cosmetics.verified = true;
     }
@@ -438,21 +438,32 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
 }
 
 /**
- * Whether a client's verified-badge claim is vouched for by their account:
- * the bare-name claim must be entitled (premium/indefinite) and the name they
- * joined with must EXACTLY match the account's server-resolved display name
- * (the client locks the input to that form, so any drift — a rename race, a
- * censor rewrite, a hand-crafted join message — drops the badge). Called at
- * join with the /users/@me player the Worker already fetches for flares.
+ * Enforce the client-claimed verified badge on resolved cosmetics. The claim
+ * is kept only when the account vouches for it: an entitled bare-name status
+ * (premium/indefinite) AND a join name EXACTLY matching the account's
+ * server-resolved display name — the client locks the input to that form, so
+ * any drift (a rename race, a censor rewrite, a hand-crafted join message)
+ * drops the badge. Strips, never rejects.
+ *
+ * `account` is the /users/@me player the Worker already fetches for flares;
+ * null means an anonymous persistent-ID join — those only exist in Dev, where
+ * the claim is kept so the badge stays locally testable.
+ *
+ * Returns true when an unvouched claim was stripped (for logging).
  */
-export function verifiedBadgeAllowed(
+export function enforceVerifiedBadge(
+  cosmetics: PlayerCosmetics,
   joinUsername: string,
-  player: { username?: string | null; usernameStatus?: string },
+  account: { username?: string | null; usernameStatus?: string } | null,
 ): boolean {
-  return (
-    (player.usernameStatus === "premium" ||
-      player.usernameStatus === "indefinite") &&
-    typeof player.username === "string" &&
-    player.username === joinUsername
-  );
+  if (cosmetics.verified !== true) return false;
+  const vouched =
+    account === null ||
+    ((account.usernameStatus === "premium" ||
+      account.usernameStatus === "indefinite") &&
+      typeof account.username === "string" &&
+      account.username === joinUsername);
+  if (vouched) return false;
+  delete cosmetics.verified;
+  return true;
 }
