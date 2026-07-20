@@ -141,6 +141,16 @@ export class LeaderboardPlayerList extends LitElement {
     this.schedulePlayerFillCheck();
   }
 
+  // Same handoff as the clan views: the profile modal's back button reopens
+  // the leaderboard (its loaded pages survive the close).
+  private openProfile(publicId: string) {
+    document
+      .querySelector<
+        HTMLElement & { openFromLeaderboard(publicId: string): void }
+      >("player-profile-modal")
+      ?.openFromLeaderboard(publicId);
+  }
+
   // TODO: consider IntersectionObserver for better visibility detection?
   private isVisible() {
     return this.isConnected && this.getClientRects().length > 0;
@@ -252,6 +262,7 @@ export class LeaderboardPlayerList extends LitElement {
             <player-name
               .username=${player.accountUsername}
               .publicId=${player.playerId}
+              .onNameClick=${() => this.openProfile(player.playerId)}
             ></player-name>
           </div>
         </td>
@@ -445,6 +456,8 @@ export class LeaderboardPlayerList extends LitElement {
                         <player-name
                           .username=${this.currentUserEntry.accountUsername}
                           .publicId=${this.currentUserEntry.playerId}
+                          .onNameClick=${() =>
+                            this.openProfile(this.currentUserEntry!.playerId)}
                         ></player-name>
                       </div>
                     </div>

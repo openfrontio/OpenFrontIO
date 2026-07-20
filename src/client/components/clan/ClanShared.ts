@@ -404,6 +404,9 @@ export function renderMemberRow(
               <player-name
                 .username=${member.username}
                 .publicId=${member.publicId}
+                .onNameClick=${onViewProfile
+                  ? () => onViewProfile(member.publicId)
+                  : null}
               ></player-name>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -413,16 +416,6 @@ export function renderMemberRow(
                   date: formatClanDate(member.joinedAt),
                 })}</span
               >
-              ${onViewProfile
-                ? html`<button
-                    class="shrink-0 px-1.5 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-                    title=${translateText("player_profile.view")}
-                    aria-label=${translateText("player_profile.view")}
-                    @click=${() => onViewProfile(member.publicId)}
-                  >
-                    📊
-                  </button>`
-                : ""}
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { isVerifiedUsername } from "../../core/ApiSchemas";
+import { translateText } from "../Utils";
 import "./CopyButton";
 import { verifiedBadge } from "./ui/VerifiedBadge";
 
@@ -10,7 +11,8 @@ import { verifiedBadge } from "./ui/VerifiedBadge";
  * verified check when it's a bare-name claim (isVerifiedUsername) — falling
  * back to the publicId. Clicking copies the account username when set, the
  * publicId otherwise. `copyText` overrides the copy payload entirely (e.g. a
- * share URL).
+ * share URL); `onNameClick` replaces copying with an action (e.g. opening
+ * the player's profile) while keeping the same chip look.
  */
 @customElement("player-name")
 export class PlayerName extends LitElement {
@@ -18,6 +20,8 @@ export class PlayerName extends LitElement {
   @property({ type: String }) publicId = "";
   // Copy payload override (e.g. a share URL).
   @property({ type: String }) copyText = "";
+  // When set, clicking the name runs this instead of copying.
+  @property({ attribute: false }) onNameClick: (() => void) | null = null;
 
   createRenderRoot() {
     return this;
@@ -30,13 +34,23 @@ export class PlayerName extends LitElement {
     // (dates, role chips) while keeping the badge glued to the name.
     return html`
       <span class="inline-flex items-center gap-1.5 min-w-0 max-w-full">
-        <copy-button
-          compact
-          .copyText=${copyText}
-          .displayText=${this.username ?? this.publicId}
-          .showVisibilityToggle=${false}
-          .showCopyIcon=${false}
-        ></copy-button>
+        ${this.onNameClick
+          ? html`<button
+              type="button"
+              class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors"
+              title=${translateText("player_profile.view")}
+              aria-label=${translateText("player_profile.view")}
+              @click=${() => this.onNameClick?.()}
+            >
+              ${this.username ?? this.publicId}
+            </button>`
+          : html`<copy-button
+              compact
+              .copyText=${copyText}
+              .displayText=${this.username ?? this.publicId}
+              .showVisibilityToggle=${false}
+              .showCopyIcon=${false}
+            ></copy-button>`}
         ${isVerifiedUsername(this.username) ? verifiedBadge() : nothing}
       </span>
     `;
