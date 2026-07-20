@@ -176,11 +176,11 @@ void main() {
   float iconX;
   float iconY;
   if (isVerifiedSlot) {
-    // Verified badge: anchored just right of the name text, vertically
-    // centered on the name line (name glyphs center on wy).
+    // Verified badge: anchored just right of the name text, sitting slightly
+    // below the name line's vertical center (name glyphs center on wy).
     iconWorldSize = uFontBase * nameWorldScale * 0.9;
-    iconX = wx + pd3.w * nameWorldScale + iconWorldSize * 0.25;
-    iconY = wy - iconWorldSize * 0.5;
+    iconX = wx + pd3.w * nameWorldScale + iconWorldSize * 0.12;
+    iconY = wy - iconWorldSize * 0.4;
   } else {
     // Count active icons and position of this one (left-to-right)
     int totalActive = 0;
