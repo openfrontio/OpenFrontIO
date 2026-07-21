@@ -140,8 +140,10 @@ export class PlayerProfileModal extends BaseModal {
     this.close();
     if (openedFrom === "clan") {
       document
-        .querySelector<HTMLElement & { returnToMembers(): void }>("clan-modal")
-        ?.returnToMembers();
+        .querySelector<
+          HTMLElement & { returnFromPlayerProfile(): void }
+        >("clan-modal")
+        ?.returnFromPlayerProfile();
     } else if (openedFrom === "leaderboard") {
       document
         .querySelector<HTMLElement & { open(): void }>("leaderboard-modal")

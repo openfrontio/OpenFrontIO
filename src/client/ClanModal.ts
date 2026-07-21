@@ -81,6 +81,9 @@ export class ClanModal extends BaseModal {
   // clan detail that the stats Back button returns to.
   private preserveStateForGameStats = false;
   private returningFromGameStats = false;
+  // Which detail tab opened the player-profile modal, so its Back button lands
+  // on that tab (Members vs Game History) rather than always Members.
+  private profileOpenedFromGameHistory = false;
   private previousListTab: ListTab = "my-clans";
 
   private get onListView(): boolean {
@@ -542,13 +545,30 @@ export class ClanModal extends BaseModal {
     >("player-profile-modal");
     if (!profileModal) return;
 
+    // Route the profile modal's Back button to whichever tab opened it. Only
+    // the game-history tab needs its scroll position preserved on return.
+    this.profileOpenedFromGameHistory = this.activeTab === "game-history";
+    if (this.profileOpenedFromGameHistory) {
+      this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    }
+
     // Same handoff as openGameStats: keep clan state so the profile modal's
-    // back button can land on the members tab without a refetch.
+    // back button can land on the originating tab without a refetch.
     this.preserveStateForGameStats = true;
     try {
       profileModal.openFromClan(publicId);
     } finally {
       this.preserveStateForGameStats = false;
+    }
+  }
+
+  // Entry point for the profile modal's Back button (opened via openFromClan
+  // from either the Members or Game History tab).
+  public returnFromPlayerProfile(): void {
+    if (this.profileOpenedFromGameHistory) {
+      this.returnToGameHistory();
+    } else {
+      this.returnToMembers();
     }
   }
 
