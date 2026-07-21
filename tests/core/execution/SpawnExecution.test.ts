@@ -1,6 +1,22 @@
+import path from "path";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { PlayerInfo, PlayerType } from "../../../src/core/game/Game";
+import { GameConfig } from "../../../src/core/Schemas";
 import { setup } from "../../util/Setup";
+import { TestConfig } from "../../util/TestConfig";
+
+// tests/util, so Setup resolves its map paths relative to it (../testdata/maps).
+const UTIL_DIR = path.join(__dirname, "..", "..", "util");
+
+// Keep the game in the spawn phase (setup() ends it by default), for asserting
+// that a client-requested spawn is accepted while the phase is open.
+function setupSpawnPhase(
+  mapName: string,
+  gameConfig: Partial<GameConfig>,
+  players: PlayerInfo[],
+) {
+  return setup(mapName, gameConfig, players, UTIL_DIR, TestConfig, false);
+}
 
 describe("Spawn execution", () => {
   // Manually calculated based on number of tiles in manifest of each map
@@ -94,7 +110,30 @@ describe("Spawn execution", () => {
 
     const game = await setup("half_land_half_ocean", {}, [playerInfo]);
 
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 10));
     game.addExecution(new SpawnExecution("game_id", playerInfo, 20));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(game.playerByClientID("client_id")?.spawnTile()).toBe(20);
+    // Previous territory from first spawn should be relinquished
+    expect(game.owner(10).isPlayer()).toBe(false);
+  });
+
+  test("Client spawn intent is accepted during the spawn phase", async () => {
+    const playerInfo = new PlayerInfo(
+      `player`,
+      PlayerType.Human,
+      `client_id`,
+      `player_id`,
+    );
+
+    const game = await setupSpawnPhase("half_land_half_ocean", {}, [
+      playerInfo,
+    ]);
+
+    // fromIntent = true simulates a client "spawn" intent.
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 20, true));
     game.executeNextTick();
     game.executeNextTick();
 
@@ -103,7 +142,7 @@ describe("Spawn execution", () => {
     expect(player.numTilesOwned()).toBeGreaterThan(0);
   });
 
-  test("Spawn intent after the spawn phase cannot relocate territory (anti-teleport)", async () => {
+  test("Client spawn intent after the spawn phase is ignored (anti-teleport)", async () => {
     const playerInfo = new PlayerInfo(
       `player`,
       PlayerType.Human,
@@ -114,7 +153,7 @@ describe("Spawn execution", () => {
     // setup() ends the spawn phase by default, so the game is already underway.
     const game = await setup("half_land_half_ocean", {}, [playerInfo]);
 
-    // Establish the player's territory with a legitimate first spawn.
+    // Establish the player's territory (an internal/trusted spawn).
     game.addExecution(new SpawnExecution("game_id", playerInfo, 20));
     game.executeNextTick();
     game.executeNextTick();
@@ -124,15 +163,58 @@ describe("Spawn execution", () => {
     const tilesBefore = player.numTilesOwned();
     expect(tilesBefore).toBeGreaterThan(0);
 
-    // Malicious "teleport": a spawn intent to a new tile after the game has
-    // started must be a deterministic no-op — the player keeps their original
+    // Malicious "teleport": a client spawn intent to a new tile after the phase
+    // ended must be a deterministic no-op — the player keeps their original
     // spawn location and territory rather than relinquishing and re-conquering.
-    game.addExecution(new SpawnExecution("game_id", playerInfo, 10));
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 10, true));
     game.executeNextTick();
     game.executeNextTick();
 
     expect(player.spawnTile()).toBe(20);
     expect(player.numTilesOwned()).toBe(tilesBefore);
+  });
+
+  test("Client spawn intent after the spawn phase cannot spawn a never-spawned player", async () => {
+    const playerInfo = new PlayerInfo(
+      `player`,
+      PlayerType.Human,
+      `client_id`,
+      `player_id`,
+    );
+
+    const game = await setup("half_land_half_ocean", {}, [playerInfo]);
+
+    // A client "spawn" intent once the phase has ended is ignored entirely.
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 20, true));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    const player = game.playerByClientID("client_id");
+    expect(player?.hasSpawned() ?? false).toBe(false);
+    expect(game.owner(20).isPlayer()).toBe(false);
+  });
+
+  test("Internal spawns are not gated by the spawn phase", async () => {
+    // Nations, bots and random-spawn placement queue a SpawnExecution during
+    // the spawn phase, but it may land a tick after the phase ends (e.g. a
+    // singleplayer human's spawn ends the phase early). These trusted spawns
+    // (fromIntent = false) must still succeed.
+    const playerInfo = new PlayerInfo(
+      `player`,
+      PlayerType.Human,
+      `client_id`,
+      `player_id`,
+    );
+
+    const game = await setup("half_land_half_ocean", {}, [playerInfo]);
+
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 20));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    const player = game.playerByClientID("client_id")!;
+    expect(player.spawnTile()).toBe(20);
+    expect(player.numTilesOwned()).toBeGreaterThan(0);
   });
 
   test("Random spawn ignores client-specified tile", async () => {
@@ -143,13 +225,17 @@ describe("Spawn execution", () => {
       `player_id`,
     );
 
-    const game = await setup("half_land_half_ocean", { randomSpawn: true }, [
-      playerInfo,
-    ]);
+    const game = await setupSpawnPhase(
+      "half_land_half_ocean",
+      { randomSpawn: true },
+      [playerInfo],
+    );
 
     // Simulate a malicious client sending a spawn intent with a specific tile
     const maliciousTile = 10;
-    game.addExecution(new SpawnExecution("game_id", playerInfo, maliciousTile));
+    game.addExecution(
+      new SpawnExecution("game_id", playerInfo, maliciousTile, true),
+    );
     game.executeNextTick();
     game.executeNextTick();
 

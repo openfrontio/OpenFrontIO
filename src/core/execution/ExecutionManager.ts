@@ -70,7 +70,12 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitIds, intent.tile);
       case "spawn":
-        return new SpawnExecution(this.gameID, player.info(), intent.tile);
+        return new SpawnExecution(
+          this.gameID,
+          player.info(),
+          intent.tile,
+          true,
+        );
       case "boat":
         return new TransportShipExecution(player, intent.dst, intent.troops);
       case "allianceRequest":
