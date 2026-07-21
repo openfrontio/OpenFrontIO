@@ -1591,8 +1591,9 @@ export class GameServer {
     }
     client.reportedWinner = clientMsg.winner;
 
-    // Add client vote
-    const winnerKey = JSON.stringify(clientMsg.winner);
+    // Add client vote. A cancelled match ends with winner omitted;
+    // JSON.stringify(undefined) is not a string, so key those votes as "null".
+    const winnerKey = JSON.stringify(clientMsg.winner ?? null);
     const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip)).size;
     const votes = this.winnerVotes.add(winnerKey, clientMsg, client.ip);
 

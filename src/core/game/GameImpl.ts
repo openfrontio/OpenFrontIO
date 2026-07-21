@@ -890,7 +890,10 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+  setWinner(
+    winner: Player | Team | null,
+    allPlayersStats: AllPlayersStats,
+  ): void {
     this._winner = winner;
     // OFM: snapshot final tiles for standings (bots skipped in recordFinalTiles).
     for (const player of this.players()) {
@@ -898,7 +901,7 @@ export class GameImpl implements Game {
     }
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner: this.makeWinner(winner),
+      winner: winner === null ? undefined : this.makeWinner(winner),
       allPlayersStats,
     });
   }

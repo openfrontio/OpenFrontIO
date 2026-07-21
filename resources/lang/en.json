@@ -1639,6 +1639,7 @@
     "join_discord": "Join Our Discord Community!",
     "join_server": "Join Server",
     "keep": "Keep Playing",
+    "match_cancelled": "Match cancelled — not all players spawned",
     "nation_won": "Nation {nation} has won!",
     "new_lobby": "New Lobby",
     "other_team": "{team} team has won!",
