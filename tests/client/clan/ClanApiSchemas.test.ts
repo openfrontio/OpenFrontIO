@@ -312,19 +312,24 @@ describe("ClanGamePlayerSchema", () => {
     expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
   });
 
-  it("accepts an account username, null, or absence (older API)", () => {
-    const named = ClanGamePlayerSchema.safeParse({
+  it("accepts the verified flag or its absence (older API)", () => {
+    const verified = ClanGamePlayerSchema.safeParse({
       ...validPlayer,
-      accountUsername: "alice.4821",
+      verified: true,
     });
-    expect(named.success).toBe(true);
-    if (named.success) expect(named.data.accountUsername).toBe("alice.4821");
+    expect(verified.success).toBe(true);
+    if (verified.success) expect(verified.data.verified).toBe(true);
+    // validPlayer omits verified entirely — still valid (→ undefined).
+    const bare = ClanGamePlayerSchema.safeParse(validPlayer);
+    expect(bare.success).toBe(true);
+    if (bare.success) expect(bare.data.verified).toBeUndefined();
+  });
+
+  it("rejects a non-boolean verified", () => {
     expect(
-      ClanGamePlayerSchema.safeParse({ ...validPlayer, accountUsername: null })
+      ClanGamePlayerSchema.safeParse({ ...validPlayer, verified: "yes" })
         .success,
-    ).toBe(true);
-    // validPlayer omits accountUsername entirely.
-    expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
+    ).toBe(false);
   });
 
   it("rejects when won is not a boolean", () => {

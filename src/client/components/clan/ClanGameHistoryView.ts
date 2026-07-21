@@ -1,6 +1,5 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { isVerifiedUsername } from "../../../core/ApiSchemas";
 import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
@@ -587,18 +586,12 @@ export class ClanGameHistoryView extends LitElement {
 
   // Game history shows the name each player actually used *in that game* (their
   // in-game/session name), not their current account name — the record should
-  // reflect who they were at match time. When that in-game name was their
-  // verified account name (the verified-name toggle: a premium claim-holder
-  // playing under their bare name), surface the blue check. Gated on
-  // isVerifiedUsername(accountUsername) AND an exact match to the session name,
-  // never on the free-form name alone.
+  // reflect who they were at match time. `verified` is recorded per session at
+  // ingest (server-validated at join), so the blue check reflects whether they
+  // actually played under their verified account name in that specific game.
   private renderClanPlayerName(
     p: ClanGame["clanPlayers"][number],
   ): TemplateResult {
-    // The `=== accountUsername` check is false when accountUsername is
-    // null/undefined, so no separate nullish guard is needed.
-    const playedVerified =
-      p.username === p.accountUsername && isVerifiedUsername(p.accountUsername);
     return html`
       <span class="inline-flex items-center gap-1 min-w-0 max-w-full">
         <button
@@ -609,7 +602,7 @@ export class ClanGameHistoryView extends LitElement {
         >
           ${p.username}
         </button>
-        ${playedVerified ? verifiedBadge() : nothing}
+        ${p.verified === true ? verifiedBadge() : nothing}
       </span>
     `;
   }
