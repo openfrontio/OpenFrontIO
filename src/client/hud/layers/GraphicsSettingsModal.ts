@@ -144,9 +144,8 @@ const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
 
 // Built-in presets listed at the top of the modal, defined in
 // graphics-presets.json (the assignment type-checks each entry's overrides
-// against the schema). Overrides are applied wholesale; the accessibility
-// slice is handled separately in applyPreset. Night's ambient 0.36 is the
-// slider's level 8 (see ambientSliderToValue).
+// against the schema). Overrides are applied wholesale. Night's ambient 0.36
+// is the slider's level 8 (see ambientSliderToValue).
 const BUILTIN_PRESETS: ReadonlyArray<{
   nameKey: string;
   descKey: string;
@@ -165,15 +164,6 @@ function stableStringify(value: unknown): string {
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
   return `{${entries.join(",")}}`;
-}
-
-// Colorblind mode is a personal accessibility need, not part of a visual
-// "look" — presets never store it and applying one never clears it.
-function stripAccessibility(overrides: GraphicsOverrides): GraphicsOverrides {
-  if (overrides.accessibility === undefined) return overrides;
-  const rest = { ...overrides };
-  delete rest.accessibility;
-  return rest;
 }
 
 export class ShowGraphicsSettingsModalEvent {
@@ -235,7 +225,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   // presets key (even as {}) marks the migration as done.
   private migrateLegacyOverrides() {
     if (this.userSettings.hasGraphicsPresets()) return;
-    const current = stripAccessibility(this.userSettings.graphicsOverrides());
+    const current = this.userSettings.graphicsOverrides();
     const isCustom =
       Object.keys(current).length > 0 &&
       !BUILTIN_PRESETS.some((preset) => this.isActivePreset(preset.overrides));
@@ -654,18 +644,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  /** Merge a patch into the accessibility graphics overrides and persist it. */
-  private patchAccessibility(
-    patch: Partial<GraphicsOverrides["accessibility"]>,
-  ) {
-    const current = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
-      ...current,
-      accessibility: { ...current.accessibility, ...patch },
-    });
-    this.requestUpdate();
-  }
-
   private currentSpecialEffects(): boolean {
     return (
       this.userSettings.graphicsOverrides().passEnabled?.fx ??
@@ -711,18 +689,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchSmallPlayerGlow({ strength: value });
   }
 
-  /** Whether colorblind mode is currently enabled. */
-  private currentColorblind(): boolean {
-    return (
-      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
-    );
-  }
-
-  /** Toggle colorblind-friendly colors. */
-  private onToggleColorblind() {
-    this.patchAccessibility({ colorblind: !this.currentColorblind() });
-  }
-
   private onNameScaleChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ nameScaleFactor: value });
@@ -765,24 +731,14 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   }
 
   private applyPreset(overrides: GraphicsOverrides) {
-    // Keep the player's accessibility settings (colorblind mode) unless the
-    // preset explicitly sets its own.
-    const accessibility =
-      overrides.accessibility ??
-      this.userSettings.graphicsOverrides().accessibility;
-    const next = { ...stripAccessibility(overrides) };
-    if (accessibility !== undefined) {
-      next.accessibility = accessibility;
-    }
-    this.userSettings.setGraphicsOverrides(next);
+    this.userSettings.setGraphicsOverrides(overrides);
     this.requestUpdate();
   }
 
   private isActivePreset(overrides: GraphicsOverrides): boolean {
     return (
-      stableStringify(
-        stripAccessibility(this.userSettings.graphicsOverrides()),
-      ) === stableStringify(stripAccessibility(overrides))
+      stableStringify(this.userSettings.graphicsOverrides()) ===
+      stableStringify(overrides)
     );
   }
 
@@ -795,7 +751,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     if (!name) return;
     this.userSettings.setGraphicsPresets({
       ...this.userSettings.graphicsPresets(),
-      [name]: stripAccessibility(this.userSettings.graphicsOverrides()),
+      [name]: this.userSettings.graphicsOverrides(),
     });
     this.presetName = "";
   }
@@ -812,11 +768,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   }
 
   private async onCopyJson() {
-    const json = JSON.stringify(
-      stripAccessibility(this.userSettings.graphicsOverrides()),
-      null,
-      2,
-    );
+    const json = JSON.stringify(this.userSettings.graphicsOverrides(), null, 2);
     try {
       await navigator.clipboard.writeText(json);
     } catch {
@@ -1078,7 +1030,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const ambientLevel = this.currentAmbientLevel();
     const unitGlow = this.currentUnitGlow();
     const glowStrength = this.currentGlowStrength();
-    const colorblind = this.currentColorblind();
 
     return html`
       <div
@@ -1831,31 +1782,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           ${Math.round(glowStrength * 100)}%
         </div>
       </div>
-
-      <div
-        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-      >
-        ${translateText("graphics_setting.section_accessibility")}
-      </div>
-
-      <button
-        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-        @click=${this.onToggleColorblind}
-      >
-        <div class="flex-1">
-          <div class="font-medium">
-            ${translateText("user_setting.colorblind_label")}
-          </div>
-          <div class="text-sm text-slate-400">
-            ${translateText("user_setting.colorblind_desc")}
-          </div>
-        </div>
-        <div class="text-sm text-slate-400">
-          ${colorblind
-            ? translateText("user_setting.on")
-            : translateText("user_setting.off")}
-        </div>
-      </button>
 
       ${this.renderPresetTools()}
 

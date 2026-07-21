@@ -8,5 +8,10 @@
     "nameKey": "graphics_setting.preset_night",
     "descKey": "graphics_setting.preset_night_desc",
     "overrides": { "lighting": { "ambient": 0.36 } }
+  },
+  {
+    "nameKey": "graphics_setting.preset_colorblind",
+    "descKey": "graphics_setting.preset_colorblind_desc",
+    "overrides": { "accessibility": { "colorblind": true } }
   }
 ]
