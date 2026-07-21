@@ -311,12 +311,17 @@ describe("Profile Games stats navigation", () => {
     expect(modalRouter.routeFromHash()).toBe(true);
 
     await waitForProfile(modal, () => {
-      const call = vi
+      const player2Calls = vi
         .mocked(fetchPublicPlayerGames)
-        .mock.calls.find((c) => c[0] === "player-2");
-      expect(call).toBeTruthy();
-      expect(call?.[1]?.type).toBeUndefined();
-      expect(call?.[1]?.filter).toBeUndefined();
+        .mock.calls.filter((c) => c[0] === "player-2");
+      // Every player-2 request (there should only be the one reset reload) must
+      // drop player-1's filters — asserting across all of them catches a stale
+      // first request even if a later one happens to be clean.
+      expect(player2Calls.length).toBeGreaterThan(0);
+      for (const [, opts] of player2Calls) {
+        expect(opts?.type).toBeUndefined();
+        expect(opts?.filter).toBeUndefined();
+      }
     });
   });
 });
