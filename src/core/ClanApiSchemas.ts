@@ -188,7 +188,13 @@ export type JoinClanResponse = z.infer<typeof JoinClanResponseSchema>;
 
 export const ClanGamePlayerSchema = z.object({
   publicId: z.string(),
+  // The name the player actually used in that game (the in-lobby name). This
+  // is what the history displays.
   username: z.string(),
+  // Whether the player joined that game under their verified account name
+  // (recorded per session at ingest, server-validated at join). Drives the
+  // verified check. Optional so older API responses still parse (→ no badge).
+  verified: z.boolean().optional(),
   won: z.boolean(),
 });
 export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;
