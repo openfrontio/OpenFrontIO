@@ -32,6 +32,8 @@ export class PlayerProfileModal extends BaseModal {
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
   private restoreGamesScrollAfterOpen = false;
+  // Bumped on every profile load so a superseded in-flight response is dropped.
+  private loadGeneration = 0;
 
   protected modalConfig() {
     return {
@@ -75,8 +77,10 @@ export class PlayerProfileModal extends BaseModal {
 
   protected renderBody(tab: string) {
     return html`
-      <div class="px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
-        ${tab === "games" ? this.renderGames() : this.renderProfile()}
+      <div class="custom-scrollbar mr-1">
+        <div class="p-6">
+          ${tab === "games" ? this.renderGames() : this.renderProfile()}
+        </div>
       </div>
     `;
   }
@@ -105,7 +109,7 @@ export class PlayerProfileModal extends BaseModal {
         @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
           this.openGameStats(e.detail.gameId)}
         @view-game=${(e: CustomEvent<{ gameId: string }>) =>
-          void this.viewGame(e.detail.gameId)}
+          this.viewGame(e.detail.gameId)}
       ></player-game-history-view>
     `;
   }
@@ -125,11 +129,9 @@ export class PlayerProfileModal extends BaseModal {
       `;
     }
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <player-stats-tree-view
-          .statsTree=${this.statsTree}
-        ></player-stats-tree-view>
-      </div>
+      <player-stats-tree-view
+        .statsTree=${this.statsTree}
+      ></player-stats-tree-view>
     `;
   }
 
@@ -141,13 +143,14 @@ export class PlayerProfileModal extends BaseModal {
 
     // Returning from the game-stats modal. The page router closed this modal
     // underneath when the stats page showed, but onClose deliberately preserves
-    // state (like the account modal) — so restore the scroll and keep the loaded
-    // profile + game-history cache instead of refetching.
+    // state (like the account modal) — so restore the scroll and keep the
+    // game-history cache instead of refetching. Preserve even when the profile
+    // stats never loaded (still pending / failed): the Games tab loads
+    // independently, so its list should survive the detour regardless.
     if (
       this.restoreGamesScrollAfterOpen &&
       publicId !== null &&
-      publicId === this.publicId &&
-      this.statsTree !== null
+      publicId === this.publicId
     ) {
       this.restoreGamesScrollAfterOpen = false;
       void this.restoreGamesScroll();
@@ -171,9 +174,12 @@ export class PlayerProfileModal extends BaseModal {
   }
 
   private async loadProfile(publicId: string): Promise<void> {
+    const gen = ++this.loadGeneration;
     const profile = await fetchPublicPlayerProfile(publicId);
-    // A late response must not clobber state after close or re-open.
-    if (this.publicId !== publicId) return;
+    // Drop a superseded response: a newer load started, or the modal moved to a
+    // different player. onClose no longer clears publicId, so the id check alone
+    // can't reject a stale same-player load started before an earlier close.
+    if (gen !== this.loadGeneration || this.publicId !== publicId) return;
     this.loading = false;
     this.statsTree = profile === false ? null : profile.stats;
     this.username = profile === false ? null : (profile.username ?? null);
@@ -195,7 +201,7 @@ export class PlayerProfileModal extends BaseModal {
     statsModal?.openFromProfile(gameId);
   }
 
-  private async viewGame(gameId: string): Promise<void> {
+  private viewGame(gameId: string): void {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
     const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;

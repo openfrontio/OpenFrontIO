@@ -1,4 +1,9 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import {
+  html,
+  LitElement,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
   type PlayerGameModeFilter,
@@ -81,19 +86,42 @@ export class PlayerGameHistoryView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.syncToPublicId();
+  }
+
+  // Hydrate from the cache when it matches the current player, otherwise load
+  // that player's history fresh.
+  private syncToPublicId() {
     if (this.cachedState && this.cachedState.publicId === this.publicId) {
       this.games = this.cachedState.games;
       this.nextCursor = this.cachedState.nextCursor;
       this.typeFilter = this.cachedState.typeFilter;
       this.modeFilter = this.cachedState.modeFilter;
+      this.appendFailed = false;
+      this.loadState = "ok";
     } else if (this.publicId) {
-      this.reload();
+      void this.reload();
     }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this.teardownObserver();
+  }
+
+  willUpdate(changed: PropertyValues) {
+    // Reload when the host swaps in a different player after mount (e.g. a
+    // manual hash edit routes the profile modal to a new publicId). Lit reuses
+    // this element, so connectedCallback won't fire again. The undefined check
+    // skips the initial render, which connectedCallback already handled.
+    const previous = changed.get("publicId");
+    if (
+      changed.has("publicId") &&
+      previous !== undefined &&
+      previous !== this.publicId
+    ) {
+      this.syncToPublicId();
+    }
   }
 
   updated() {

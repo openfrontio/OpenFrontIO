@@ -18,25 +18,7 @@ vi.mock("../../src/client/Api", () => ({
     createdAt: "2026-01-01T00:00:00.000Z",
     stats: { Public: { "Free For All": {} } },
   })),
-  fetchPublicPlayerGames: vi.fn(async () => ({
-    results: [
-      {
-        gameId: "game-1",
-        start: "2026-07-01T12:00:00.000Z",
-        durationSeconds: 600,
-        map: "World",
-        mode: "FFA",
-        type: "public",
-        playerTeams: null,
-        rankedType: "",
-        result: "victory",
-        totalPlayers: 8,
-        username: "Player",
-        clanTag: null,
-      },
-    ],
-    nextCursor: null,
-  })),
+  fetchPublicPlayerGames: vi.fn(),
 }));
 
 vi.mock("src/client/ClientEnv", () => ({
@@ -94,6 +76,14 @@ import { GameStatsModal } from "../../src/client/GameStatsModal";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
+import {
+  GameMapType,
+  GameMode,
+  GameType,
+  PlayerInfo,
+  PlayerType,
+} from "../../src/core/game/Game";
+import { setup } from "../util/Setup";
 
 type ModalShell = HTMLElement & {
   getScrollTop(): number;
@@ -147,6 +137,37 @@ describe("Profile Games stats navigation", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    const game = await setup(
+      "world",
+      {
+        gameMap: GameMapType.World,
+        gameMode: GameMode.FFA,
+        gameType: GameType.Public,
+      },
+      [new PlayerInfo("Player", PlayerType.Human, null, "player-1")],
+    );
+    const player = game.player("player-1");
+    game.setWinner(player, game.stats().stats());
+    const gameConfig = game.config().gameConfig();
+    vi.mocked(fetchPublicPlayerGames).mockResolvedValue({
+      results: [
+        {
+          gameId: "game-1",
+          start: "2026-07-01T12:00:00.000Z",
+          durationSeconds: game.elapsedGameSeconds(),
+          map: gameConfig.gameMap,
+          mode: gameConfig.gameMode,
+          type: gameConfig.gameType.toLowerCase(),
+          playerTeams: gameConfig.playerTeams?.toString() ?? null,
+          rankedType: gameConfig.rankedType ?? "",
+          result: game.getWinner() === player ? "victory" : "defeat",
+          totalPlayers: game.players().length,
+          username: player.name(),
+          clanTag: player.info().clanTag,
+        },
+      ],
+      nextCursor: null,
+    });
     vi.stubGlobal("localStorage", { getItem: vi.fn(() => null) });
     history.replaceState(null, "", "/");
     modalRouter.register("profile", {
@@ -236,5 +257,30 @@ describe("Profile Games stats navigation", () => {
 
     // History wasn't refetched on return — the cached list was reused.
     expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
+  });
+
+  it("reloads the games history when the route changes to a different player", async () => {
+    // beforeEach opened player-1's history.
+    expect(fetchPublicPlayerGames).toHaveBeenCalledWith(
+      "player-1",
+      expect.anything(),
+    );
+
+    // Editing the hash to a different player re-routes the already-open modal.
+    // Lit reuses the mounted history view, so it must load the new player's
+    // games rather than keep showing player-1's.
+    history.replaceState(
+      null,
+      "",
+      "/#modal=profile&publicID=player-2&tab=games",
+    );
+    expect(modalRouter.routeFromHash()).toBe(true);
+
+    await waitForProfile(modal, () => {
+      expect(fetchPublicPlayerGames).toHaveBeenCalledWith(
+        "player-2",
+        expect.anything(),
+      );
+    });
   });
 });
