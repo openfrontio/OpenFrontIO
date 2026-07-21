@@ -13,6 +13,7 @@ import {
   type GraphicsOverrides,
 } from "../../render/gl";
 import renderDefaults from "../../render/gl/render-settings.json";
+import builtinPresets from "./graphics-presets.json";
 
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
@@ -141,24 +142,16 @@ const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
   renderDefaults.mapOverlay.staleNukeB,
 );
 
-// Built-in presets listed at the top of the modal. Overrides are applied
-// wholesale; the accessibility slice is handled separately in applyPreset.
+// Built-in presets listed at the top of the modal, defined in
+// graphics-presets.json (the assignment type-checks each entry's overrides
+// against the schema). Overrides are applied wholesale; the accessibility
+// slice is handled separately in applyPreset. Night's ambient 0.36 is the
+// slider's level 8 (see ambientSliderToValue).
 const BUILTIN_PRESETS: ReadonlyArray<{
   nameKey: string;
   descKey: string;
   overrides: GraphicsOverrides;
-}> = [
-  {
-    nameKey: "graphics_setting.preset_default",
-    descKey: "graphics_setting.preset_default_desc",
-    overrides: {},
-  },
-  {
-    nameKey: "graphics_setting.preset_night",
-    descKey: "graphics_setting.preset_night_desc",
-    overrides: { lighting: { ambient: ambientSliderToValue(8) } },
-  },
-];
+}> = builtinPresets;
 
 // Serialize with recursively sorted keys so preset equality doesn't depend on
 // the order the settings were touched in.

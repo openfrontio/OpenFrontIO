@@ -1,0 +1,12 @@
+[
+  {
+    "nameKey": "graphics_setting.preset_default",
+    "descKey": "graphics_setting.preset_default_desc",
+    "overrides": {}
+  },
+  {
+    "nameKey": "graphics_setting.preset_night",
+    "descKey": "graphics_setting.preset_night_desc",
+    "overrides": { "lighting": { "ambient": 0.36 } }
+  }
+]
