@@ -974,6 +974,8 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const glowStrength = this.currentGlowStrength();
 
     return html`
+      ${this.renderPresetTools()}
+
       <div
         class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
       >
@@ -1724,8 +1726,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           ${Math.round(glowStrength * 100)}%
         </div>
       </div>
-
-      ${this.renderPresetTools()}
 
       <div class="border-t border-slate-600 pt-3 mt-4">
         <button
