@@ -34,6 +34,22 @@ export const GraphicsOverridesSchema = z
         // "#rrggbb" hex string; overrides the lingering fallout ground tint
         // left on territory after a nuke.
         staleNukeColor: z.string(),
+        // "#rrggbb" hex strings; normal-view relationship border tints for
+        // friendly (allied) and embargoed/enemy territory.
+        friendlyTintColor: z.string(),
+        embargoTintColor: z.string(),
+        // How strongly those tints override the territory border color (0-1).
+        friendlyTintRatio: z.number(),
+        embargoTintRatio: z.number(),
+      })
+      .partial(),
+    affiliation: z
+      .object({
+        // "#rrggbb" hex strings; alt-view border colors for your own, allied,
+        // and enemy territory.
+        selfColor: z.string(),
+        allyColor: z.string(),
+        enemyColor: z.string(),
       })
       .partial(),
     railroad: z

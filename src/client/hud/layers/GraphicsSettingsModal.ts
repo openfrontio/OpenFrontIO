@@ -225,6 +225,21 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   // presets key (even as {}) marks the migration as done.
   private migrateLegacyOverrides() {
     if (this.userSettings.hasGraphicsPresets()) return;
+    // The old colorblind toggle stored only the accessibility flag; the
+    // Okabe-Ito friend-foe border colors are now override data carried by the
+    // Colorblind preset. Upgrade flag-only users to the full preset so they
+    // keep those borders.
+    if (
+      stableStringify(this.userSettings.graphicsOverrides()) ===
+      stableStringify({ accessibility: { colorblind: true } })
+    ) {
+      const colorblind = BUILTIN_PRESETS.find(
+        (preset) => preset.nameKey === "graphics_setting.preset_colorblind",
+      );
+      if (colorblind !== undefined) {
+        this.userSettings.setGraphicsOverrides(colorblind.overrides);
+      }
+    }
     const current = this.userSettings.graphicsOverrides();
     const isCustom =
       Object.keys(current).length > 0 &&

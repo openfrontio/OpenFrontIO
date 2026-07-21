@@ -12,6 +12,19 @@
   {
     "nameKey": "graphics_setting.preset_colorblind",
     "descKey": "graphics_setting.preset_colorblind_desc",
-    "overrides": { "accessibility": { "colorblind": true } }
+    "overrides": {
+      "accessibility": { "colorblind": true },
+      "affiliation": {
+        "selfColor": "#0072b2",
+        "allyColor": "#56b4e9",
+        "enemyColor": "#d55e00"
+      },
+      "mapOverlay": {
+        "friendlyTintColor": "#0072b2",
+        "embargoTintColor": "#d55e00",
+        "friendlyTintRatio": 0.85,
+        "embargoTintRatio": 0.85
+      }
+    }
   }
 ]
