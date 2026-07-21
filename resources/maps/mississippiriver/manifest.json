@@ -256,21 +256,21 @@
       "name": "Round Lake"
     }
   ],
-  "categories": ["new", "north_america"],
+  "categories": ["north_america"],
   "id": "MississippiRiver",
   "map": {
     "height": 4200,
-    "num_land_tiles": 1499924,
+    "num_land_tiles": 1500944,
     "width": 400
   },
   "map16x": {
     "height": 1050,
-    "num_land_tiles": 90268,
+    "num_land_tiles": 90334,
     "width": 100
   },
   "map4x": {
     "height": 2100,
-    "num_land_tiles": 369917,
+    "num_land_tiles": 370175,
     "width": 200
   },
   "multiplayer_frequency": 3,

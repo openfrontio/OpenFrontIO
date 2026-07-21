@@ -1,5 +1,9 @@
 import { Game, Player, TerraNullius } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "../../game/TileTraversalScratch";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinding } from "../PathFinder";
 import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
@@ -32,25 +36,44 @@ export class SpatialQuery {
     predicate: (t: TileRef) => boolean,
   ): TileRef | null {
     const map = this.game.map();
-    const candidates: TileRef[] = [];
+    const scratch = tileTraversalScratch(this.game);
+    const gen = bumpTraversalGeneration(scratch);
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
 
-    for (const tile of map.bfs(
-      from,
-      (_, t) => map.manhattanDist(from, t) <= maxDist,
-    )) {
-      if (predicate(tile)) {
-        candidates.push(tile);
+    // Strict < keeps the first candidate at the minimum distance, so the
+    // winner depends only on the deterministic traversal order (LIFO with
+    // neighbors visited in the shared N, S, W, E order).
+    let best: TileRef | null = null;
+    let bestDist = Infinity;
+
+    const mark = (t: TileRef) => {
+      visited[t] = gen;
+      stack.push(t);
+      if (predicate(t)) {
+        const dist = map.manhattanDist(from, t);
+        if (dist < bestDist) {
+          best = t;
+          bestDist = dist;
+        }
       }
+    };
+
+    if (maxDist >= 0) {
+      mark(from);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && map.manhattanDist(from, n) <= maxDist) {
+        mark(n);
+      }
+    };
+    while (stack.length > 0) {
+      const curr = stack.pop()!;
+      map.forEachNeighbor(curr, visit);
     }
 
-    if (candidates.length === 0) return null;
-
-    // Sort by Manhattan distance to find actual nearest
-    candidates.sort(
-      (a, b) => map.manhattanDist(from, a) - map.manhattanDist(from, b),
-    );
-
-    return candidates[0];
+    return best;
   }
 
   /**
@@ -69,6 +92,43 @@ export class SpatialQuery {
       if (!gm.isShore(t) || !gm.isLand(t)) return false;
       const tOwner = gm.ownerID(t);
       return tOwner === ownerId;
+    };
+
+    return this.bfsNearest(tile, maxDist, isValidTile);
+  }
+
+  /**
+   * Find the closest shore tile owned by `targetOwner` near `tile` that sits on
+   * a water component reachable from `attacker`'s own shoreline.
+   *
+   * Unlike {@link closestShore}, this skips shores that only border a
+   * disconnected water body (e.g. an inland lake) that the attacker's boats
+   * could never traverse. Returns null when no reachable target shore exists
+   * within `maxDist`.
+   */
+  closestReachableShore(
+    targetOwner: Owner,
+    attacker: Player,
+    tile: TileRef,
+    maxDist: number = 50,
+  ): TileRef | null {
+    const gm = this.game;
+    const targetId = targetOwner.smallID();
+
+    // Water components adjacent to the attacker's own shoreline.
+    const reachable = new Set<number>();
+    for (const t of attacker.borderTiles()) {
+      if (!gm.isShore(t) || !gm.isLand(t)) continue;
+      const component = gm.getWaterComponent(t);
+      if (component !== null) reachable.add(component);
+    }
+    if (reachable.size === 0) return null;
+
+    const isValidTile = (t: TileRef) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return false;
+      if (gm.ownerID(t) !== targetId) return false;
+      const component = gm.getWaterComponent(t);
+      return component !== null && reachable.has(component);
     };
 
     return this.bfsNearest(tile, maxDist, isValidTile);

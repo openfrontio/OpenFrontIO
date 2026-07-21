@@ -11,7 +11,6 @@ import {
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -145,21 +144,22 @@ export class GameModeSelector extends LitElement {
             this.openHostLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
-          ${!crazyGamesSDK.isOnCrazyGames()
-            ? this.renderSmallActionCard(
-                translateText("mode_selector.ranked_title"),
-                this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-              )
-            : html`<div class="invisible"></div>`}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+          )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            this.hostedLobbyCount(),
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
-        <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
+        <ios-add-to-home-screen-banner
+          class="no-crazygames"
+        ></ios-add-to-home-screen-banner>
 
         <!-- Game cards grid -->
         ${this.lobbies === null
@@ -225,17 +225,16 @@ export class GameModeSelector extends LitElement {
             this.openHostLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
-          ${!crazyGamesSDK.isOnCrazyGames()
-            ? this.renderSmallActionCard(
-                translateText("mode_selector.ranked_title"),
-                this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-              )
-            : html`<div class="invisible"></div>`}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+          )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            this.hostedLobbyCount(),
           )}
         </div>
       </div>
@@ -268,21 +267,34 @@ export class GameModeSelector extends LitElement {
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
 
+  // Number of open hosted lobbies waiting in the browser; shown as a chip
+  // on the Join button.
+  private hostedLobbyCount(): number {
+    return this.lobbies?.games?.hosted?.length ?? 0;
+  }
+
   private renderSmallActionCard(
     title: string,
     onClick: () => void,
     bgClass: string = CARD_BG,
+    badge?: number,
   ) {
     return html`
       <button
         @click=${onClick}
         ?disabled=${!this.inputValid}
-        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
+        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
           .inputValid
           ? "opacity-50 cursor-not-allowed pointer-events-none"
           : ""}"
       >
         ${title}
+        ${badge
+          ? html`<span
+              class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal"
+              >${badge}</span
+            >`
+          : nothing}
       </button>
     `;
   }
@@ -317,6 +329,7 @@ export class GameModeSelector extends LitElement {
 
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
+      lobby.gameConfig?.doomsdayClock?.speed,
     );
     // Sort by length for visual consistency (shorter labels first)
     if (modifierLabels.length > 1) {

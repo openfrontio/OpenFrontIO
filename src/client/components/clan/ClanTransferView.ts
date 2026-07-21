@@ -9,7 +9,7 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
-import "../CopyButton";
+import "../PlayerName";
 import {
   filterMembersBySearch,
   renderLoadingSpinner,
@@ -169,13 +169,10 @@ export class ClanTransferView extends LitElement {
                   ${renderRoleIcon(m.role)}
                 </div>
                 <div class="flex-1 min-w-0">
-                  <copy-button
-                    compact
-                    .copyText=${m.publicId}
-                    .displayText=${m.publicId}
-                    .showVisibilityToggle=${false}
-                    .showCopyIcon=${false}
-                  ></copy-button>
+                  <player-name
+                    .username=${m.username}
+                    .publicId=${m.publicId}
+                  ></player-name>
                 </div>
                 <span
                   class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0

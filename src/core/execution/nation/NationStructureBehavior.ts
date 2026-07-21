@@ -78,6 +78,13 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
+/**
+ * Minimum number of full-map water tiles a water body must have for the AI to
+ * consider placing a port on it.  Prevents the AI from wasting ports on tiny
+ * decorative ponds scattered across the map.
+ */
+const MIN_PORT_WATER_COMPONENT_SIZE = 3000;
+
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
@@ -121,6 +128,9 @@ const UNDER_ATTACK_THREAT_RATIO = 0.35;
  * 40–80%, 3 at 80–120%, …).
  */
 const DEFENSE_POST_RATIO_PER_POST = 0.4;
+
+// Reusable neighbor buffer for hot loops; the simulation is single-threaded.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
 
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
@@ -249,16 +259,21 @@ export class NationStructureBehavior {
     const attackerSet = new Set(landAttacks.map((a) => a.attacker()));
     if (attackerSet.size === 0) return [];
 
+    // Set.forEach + a reused neighbor buffer: border sets are huge, and
+    // for..of over a Set allocates an iterator-result object per element.
+    // "Any neighbor is an attacker" is order-insensitive.
     const frontTiles: TileRef[] = [];
-    outer: for (const borderTile of player.borderTiles()) {
-      for (const neighbor of game.neighbors(borderTile)) {
-        const owner = game.owner(neighbor);
+    const nbuf = NEIGHBOR_SCRATCH;
+    player.borderTiles().forEach((borderTile) => {
+      const n = game.neighbors4(borderTile, nbuf);
+      for (let i = 0; i < n; i++) {
+        const owner = game.owner(nbuf[i]);
         if (attackerSet.has(owner as Player)) {
           frontTiles.push(borderTile);
-          continue outer;
+          return;
         }
       }
-    }
+    });
     return frontTiles;
   }
 
@@ -717,7 +732,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(...Structures.types).length / tilesOwned
+      ? this.player.units(Structures.types).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 
@@ -844,7 +859,14 @@ export class NationStructureBehavior {
         // tile a valid port site — skip the component lookup.
         if (this.game.isOcean(neighbor)) return true;
         const comp = this.game.getWaterComponent(neighbor);
-        if (comp !== null && shared.has(comp)) return true;
+        if (comp === null || !shared.has(comp)) continue;
+        // Skip tiny lakes that are too small for meaningful port use (not on Easy).
+        const { difficulty } = this.game.config().gameConfig();
+        if (difficulty !== Difficulty.Easy) {
+          const size = this.game.getWaterComponentSize(neighbor);
+          if (size !== null && size < MIN_PORT_WATER_COMPONENT_SIZE) continue;
+        }
+        return true;
       }
       return false;
     });

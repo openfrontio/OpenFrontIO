@@ -142,4 +142,74 @@ describe("ConnectedComponents", () => {
       }
     });
   });
+
+  describe("getComponentSize", () => {
+    it("returns 0 before initialization", () => {
+      const map = createGameMap(createIslandMap());
+      const wc = new ConnectedComponents(map);
+      expect(wc.getComponentSize(1)).toBe(0);
+    });
+
+    it("returns correct size for a single water ring (island map)", () => {
+      // 5x5 island: outer ring is water = 25 - 9 = 16 tiles
+      const map = createGameMap(createIslandMap());
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+
+      const waterTile = map.ref(0, 0);
+      const id = wc.getComponentId(waterTile);
+      expect(id).toBeGreaterThan(0);
+      expect(wc.getComponentSize(id)).toBe(16);
+    });
+
+    it("returns correct sizes for two disconnected water areas", () => {
+      // Two 2-wide columns of water (10 tiles each), separated by 3 land columns
+      const map = createGameMap(twoComponentsMapData);
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+
+      const leftId = wc.getComponentId(map.ref(0, 0));
+      const rightId = wc.getComponentId(map.ref(5, 0));
+      expect(leftId).not.toBe(rightId);
+
+      expect(wc.getComponentSize(leftId)).toBe(10);
+      expect(wc.getComponentSize(rightId)).toBe(10);
+    });
+
+    it("returns 0 for a land component ID", () => {
+      const map = createGameMap(twoComponentsMapData);
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+
+      // LAND_MARKER (0xFF) is not a valid water component
+      expect(wc.getComponentSize(0xff)).toBe(0);
+    });
+
+    it("returns 0 for non-existent component ID", () => {
+      const map = createGameMap(createIslandMap());
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+
+      expect(wc.getComponentSize(999)).toBe(0);
+    });
+
+    it("never assigns 0xFFFF (LAND_MARKER_WIDE) as a component ID", () => {
+      const map = createGameMap(createIslandMap());
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+
+      // 0xFFFF is reserved after Uint16Array promotion
+      expect(wc.getComponentSize(0xffff)).toBe(0);
+
+      // No tile should have component ID 0xFFFF
+      for (let y = 0; y < map.height(); y++) {
+        for (let x = 0; x < map.width(); x++) {
+          const tile = map.ref(x, y);
+          if (map.isWater(tile)) {
+            expect(wc.getComponentId(tile)).not.toBe(0xffff);
+          }
+        }
+      }
+    });
+  });
 });

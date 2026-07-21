@@ -78,6 +78,8 @@ export class PlayerStatsTreeView extends LitElement {
     switch (r) {
       case RankedType.OneVOne:
         return translateText("player_stats_tree.ranked_1v1");
+      case RankedType.TwoVTwo:
+        return translateText("player_stats_tree.ranked_2v2");
     }
   }
 

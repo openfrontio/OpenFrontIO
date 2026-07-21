@@ -228,7 +228,7 @@ export class WinModal extends LitElement implements Controller {
     await this.loadPatternContent();
     // Check if this is a ranked game
     this.isRankedGame =
-      this.game.config().gameConfig().rankedType === RankedType.OneVOne;
+      this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
     this.requestUpdate();
     setTimeout(() => {
@@ -250,8 +250,12 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleRequeue() {
     this.hide();
-    // Navigate to homepage and open matchmaking modal
-    window.location.href = "/?requeue";
+    // Navigate to homepage and open matchmaking modal for the same mode
+    const requeue =
+      this.game.config().gameConfig().rankedType === RankedType.TwoVTwo
+        ? "/?requeue=2v2"
+        : "/?requeue";
+    window.location.href = requeue;
   }
 
   init() {}
@@ -273,7 +277,14 @@ export class WinModal extends LitElement implements Controller {
     const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
-        // ...
+        // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully
+        // spawn): the game ends with no winner. Still vote the result to the
+        // server so the record is archived winnerless (never ranked).
+        this.eventBus.emit(new SendWinnerEvent(undefined, wu.allPlayersStats));
+        this._title = translateText("win_modal.match_cancelled");
+        this.isWin = false;
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
+        this.show();
       } else if (wu.winner[0] === "team") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         if (wu.winner[1] === this.game.myPlayer()?.team()) {

@@ -64,6 +64,10 @@ export interface RenderSettings {
      * per-depth brightness gradient is preserved relative to this color.
      */
     oceanColor: string;
+    sandColor: string;
+    plainsColor: string;
+    highlandColor: string;
+    mountainColor: string;
   };
   falloutBloom: {
     broilSpeedCold: number;
@@ -115,6 +119,11 @@ export interface RenderSettings {
   };
   mapOverlay: {
     trailAlpha: number;
+    /**
+     * Resolution of the offscreen spiral-trail buffer relative to the canvas
+     * (0..1). Lower = cheaper + softer/glowier (bilinear upsample).
+     */
+    spiralResolutionScale: number;
     defenseCheckerDarken: number;
     territoryDefenseDarken: number;
     /** Saturation of the territory fill. 1 = full color, 0 = grayscale. */
@@ -128,6 +137,7 @@ export interface RenderSettings {
     staleNukeR: number;
     staleNukeG: number;
     staleNukeB: number;
+    navalHighlight: boolean;
     highlightBrighten: number;
     highlightFillBrighten: number;
     highlightThicken: number;
@@ -227,6 +237,15 @@ export interface RenderSettings {
     colorGreenR: number;
     colorGreenG: number;
     colorGreenB: number;
+    // Warship veterancy rank pips (gold lines at the sprite's bottom-right)
+    veterancyPipW: number;
+    veterancyPipH: number;
+    veterancyPipGap: number;
+    veterancyPipOffsetX: number;
+    veterancyPipOffsetY: number;
+    veterancyR: number;
+    veterancyG: number;
+    veterancyB: number;
   };
   unit: {
     unitSize: number;
@@ -260,6 +279,8 @@ export interface RenderSettings {
     nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
+    /** Dark outline radius (atlas texels) drawn behind the alliance icon; 0 = off. */
+    statusOutlineWidth: number;
     /** Alpha multiplier applied to a name while the cursor is over it. */
     hoverFadeAlpha: number;
     /** White glow behind the hovered player's name: px past the outline. */
@@ -364,6 +385,12 @@ export interface RenderSettings {
     animSpeed: number; // breathing animation speed
     gradientInnerEdge: number; // static gradient inner ramp end (0–1)
     gradientSolidEnd: number; // static gradient solid band end (0–1)
+  };
+  smallPlayerGlow: {
+    color: number[]; // RGB, each 0–1
+    alpha: number; // peak opacity (0–1)
+    pulseSpeed: number; // breath animation speed
+    strength: number; // opacity fade: 0 = off, 1 = full brightness (default 0.35)
   };
   altView: {
     gridFontSize: number;

@@ -42,6 +42,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
+    altKey: "AltLeft",
   };
 }
 
@@ -53,10 +54,12 @@ export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
  */
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
+export const CROWN_KEY = "crown";
 export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const EFFECTS_KEY = "settings.effects";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -288,6 +291,25 @@ export class UserSettings {
     return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
   }
 
+  // For development only. Crown image URL for testing, set in the console
+  // manually (localStorage "dev-crown"), like getDevOnlyPattern.
+  getDevOnlyCrown(): string | undefined {
+    return localStorage.getItem("dev-crown") ?? undefined;
+  }
+
+  /** Returns the selected crown name, or null if none is selected. */
+  getSelectedCrownName(): string | null {
+    return this.getCached(CROWN_KEY);
+  }
+
+  setSelectedCrownName(name: string | undefined): void {
+    if (name === undefined) {
+      this.removeCached(CROWN_KEY);
+    } else {
+      this.setCached(CROWN_KEY, name);
+    }
+  }
+
   getFlag(): string | null {
     let flag = this.getCached(FLAG_KEY);
     if (!flag) return null;
@@ -310,6 +332,36 @@ export class UserSettings {
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
+  }
+
+  /**
+   * Selected effect cosmetics, keyed by selection slot (at most one per slot).
+   * A slot is the effectType for trails and the nukeType for nuke explosions —
+   * see effectTypeForSlot. Persisted as a single JSON blob under EFFECTS_KEY.
+   */
+  getSelectedEffects(): Record<string, string> {
+    const raw = this.getString(EFFECTS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  getSelectedEffectName(slot: string): string | null {
+    return this.getSelectedEffects()[slot] ?? null;
+  }
+
+  setSelectedEffectName(slot: string, name: string | undefined): void {
+    const map = this.getSelectedEffects();
+    if (name === undefined) delete map[slot];
+    else map[slot] = name;
+    if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
+    else this.setString(EFFECTS_KEY, JSON.stringify(map));
   }
 
   backgroundMusicVolume(): number {

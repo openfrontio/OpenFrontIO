@@ -1,6 +1,6 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType, GameMode } from "../../../core/game/Game";
+import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
   type ClanGameFilter,
@@ -10,6 +10,13 @@ import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../Utils";
 import "../CopyButton";
+import {
+  formatAbsoluteTime,
+  formatDayHeader,
+  groupByDay,
+} from "../baseComponents/stats/GameHistoryDates";
+import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
+import { verifiedBadge } from "../ui/VerifiedBadge";
 import { renderLoadingSpinner, showToast } from "./ClanShared";
 
 type FilterKey = ClanGameFilter | "all";
@@ -60,7 +67,7 @@ export class ClanGameHistoryView extends LitElement {
   // triggered by unrelated state (e.g. `loadingMore` flipping) don't
   // re-walk the accumulated list each time.
   private groupedFor: ClanGame[] | null = null;
-  private grouped: DayGroup[] = [];
+  private grouped: ReturnType<typeof groupByDay<ClanGame>> = [];
 
   connectedCallback() {
     super.connectedCallback();
@@ -191,6 +198,26 @@ export class ClanGameHistoryView extends LitElement {
     }
   }
 
+  private showStats(gameId: string) {
+    this.dispatchEvent(
+      new CustomEvent<{ gameId: string }>("view-stats", {
+        detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private viewProfile(publicId: string) {
+    this.dispatchEvent(
+      new CustomEvent<{ publicId: string }>("view-profile", {
+        detail: { publicId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   render() {
     if (this.loadState === "forbidden") {
       return html`
@@ -279,7 +306,7 @@ export class ClanGameHistoryView extends LitElement {
     // standalone date pills. Cached against the `games` reference; `load()`
     // always assigns a fresh array, so identity comparison is safe.
     if (this.groupedFor !== this.games) {
-      this.grouped = groupGamesByDay(this.games);
+      this.grouped = groupByDay(this.games);
       this.groupedFor = this.games;
     }
     const groups = this.grouped;
@@ -300,7 +327,7 @@ export class ClanGameHistoryView extends LitElement {
                 <span class="h-px flex-1 bg-white/10"></span>
               </div>
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                ${group.games.map((game) => this.renderGameRow(game))}
+                ${group.items.map((game) => this.renderGameRow(game))}
               </div>
             </div>
           `,
@@ -417,20 +444,29 @@ export class ClanGameHistoryView extends LitElement {
               .showVisibilityToggle=${false}
             ></copy-button>
           </div>
-          <button
-            type="button"
-            @click=${() => this.watchReplay(game.gameId)}
-            class="shrink-0 px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
-          >
-            ${translateText("clan_modal.history_watch_replay")}
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              @click=${() => this.showStats(game.gameId)}
+              class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+            >
+              ${translateText("game_list.stats")}
+            </button>
+            <button
+              type="button"
+              @click=${() => this.watchReplay(game.gameId)}
+              class="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              ${translateText("clan_modal.history_watch_replay")}
+            </button>
+          </div>
         </div>
         <div
           class="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 justify-items-center text-center"
         >
           ${this.renderField(
             translateText("clan_modal.history_game_type"),
-            this.formatGameType(game),
+            formatGameType(game),
           )}
           ${mapWebpPath
             ? ""
@@ -543,18 +579,31 @@ export class ClanGameHistoryView extends LitElement {
           class="text-[10px] font-bold uppercase tracking-wider mr-1 ${labelClass}"
           >${label}:</span
         >
-        ${players.map(
-          (p) => html`
-            <copy-button
-              compact
-              .copyText=${p.publicId}
-              .displayText=${p.username ?? p.publicId}
-              .showVisibilityToggle=${false}
-              .showCopyIcon=${false}
-            ></copy-button>
-          `,
-        )}
+        ${players.map((p) => this.renderClanPlayerName(p))}
       </div>
+    `;
+  }
+
+  // Game history shows the name each player actually used *in that game* (their
+  // in-game/session name), not their current account name — the record should
+  // reflect who they were at match time. `verified` is recorded per session at
+  // ingest (server-validated at join), so the blue check reflects whether they
+  // actually played under their verified account name in that specific game.
+  private renderClanPlayerName(
+    p: ClanGame["clanPlayers"][number],
+  ): TemplateResult {
+    return html`
+      <span class="inline-flex items-center gap-1 min-w-0 max-w-full">
+        <button
+          type="button"
+          class="font-bold text-blue-300 truncate hover:underline"
+          title=${translateText("player_profile.view")}
+          @click=${() => this.viewProfile(p.publicId)}
+        >
+          ${p.username}
+        </button>
+        ${p.verified === true ? verifiedBadge() : nothing}
+      </span>
     `;
   }
 
@@ -585,132 +634,4 @@ export class ClanGameHistoryView extends LitElement {
           }),
     );
   }
-
-  // FFA / Duos / 7 Teams / Humans vs Nations / Ranked 1v1 — derived from
-  // the same fields the bucket filter uses, so the label always agrees
-  // with the active tab.
-  private formatGameType(game: ClanGame): string {
-    if (game.rankedType && game.rankedType !== "unranked") {
-      return translateText("clan_modal.history_type_ranked", {
-        ranked: game.rankedType,
-      });
-    }
-    if (isFfa(game)) {
-      return translateText("clan_modal.history_type_ffa");
-    }
-    const pt = game.playerTeams;
-    if (pt === "Humans Vs Nations") {
-      return translateText("clan_modal.history_type_hvn");
-    }
-    if (pt === "Duos" || pt === "Trios" || pt === "Quads") {
-      return translateText(`clan_modal.history_type_${pt.toLowerCase()}`);
-    }
-    if (pt && /^\d+$/.test(pt)) {
-      return translateText("clan_modal.history_type_n_teams", {
-        count: Number(pt),
-      });
-    }
-    return translateText("clan_modal.history_type_team");
-  }
-}
-
-// FFA is "no team grouping". Match the server's `GameMode.FFA` enum
-// literal first, but fall back to absent `playerTeams` so a row that
-// arrives without the mode field (older row, server bug) still labels
-// as FFA instead of silently degrading to "Team" — which would
-// disagree with the FFA filter bucket that already routed it here.
-function isFfa(game: ClanGame): boolean {
-  if (game.mode === GameMode.FFA) return true;
-  if (
-    game.mode === undefined &&
-    (game.playerTeams === null || game.playerTeams === undefined)
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function formatAbsoluteTime(iso: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return iso;
-  const now = new Date();
-  const time = date.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-  if (sameDay) {
-    return translateText("clan_modal.history_today_at", { time });
-  }
-  return `${date.toLocaleDateString()} ${time}`;
-}
-
-type DayGroup = { day: string; games: ClanGame[] };
-
-// Groups games by local-day key while preserving server order. Server
-// ordering is already newest-first, so within a group we just keep the
-// arrival order.
-function groupGamesByDay(games: ClanGame[]): DayGroup[] {
-  const groups: DayGroup[] = [];
-  for (const g of games) {
-    const day = dayKey(g.start);
-    const last = groups[groups.length - 1];
-    if (last && last.day === day) {
-      last.games.push(g);
-    } else {
-      groups.push({ day, games: [g] });
-    }
-  }
-  return groups;
-}
-
-function dayKey(iso: string): string {
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return iso;
-  // Use local-time YYYY-MM-DD so headers line up with the user's clock,
-  // not UTC midnight (which would split late-night games into a "next
-  // day" group for most timezones).
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-// Indexed by Date.getMonth() (0–11). Kept as a const list rather than
-// a switch so the translation pipeline picks up every key from a single
-// place.
-const MONTH_KEYS = [
-  "common.month_jan",
-  "common.month_feb",
-  "common.month_mar",
-  "common.month_apr",
-  "common.month_may",
-  "common.month_jun",
-  "common.month_jul",
-  "common.month_aug",
-  "common.month_sep",
-  "common.month_oct",
-  "common.month_nov",
-  "common.month_dec",
-] as const;
-
-function formatDayHeader(day: string): string {
-  const d = new Date(`${day}T00:00:00`);
-  if (!Number.isFinite(d.getTime())) return day;
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diffDays = Math.round(
-    (today.getTime() - dayStart.getTime()) / (24 * 60 * 60 * 1000),
-  );
-  if (diffDays === 0) return translateText("clan_modal.history_today");
-  if (diffDays === 1) return translateText("clan_modal.history_yesterday");
-  // "17 May 2026" — weekday dropped (no translation coverage) and the
-  // month rendered through our own translation keys instead of
-  // toLocaleDateString so other locales can swap it cleanly.
-  const month = translateText(MONTH_KEYS[d.getMonth()]);
-  return `${d.getDate()} ${month} ${d.getFullYear()}`;
 }

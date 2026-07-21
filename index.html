@@ -26,9 +26,23 @@
         padding-left: env(safe-area-inset-left);
       }
 
-      /* Prevent Playwire bottom rail from affecting flex layout */
+      /* Prevent Playwire bottom rail from affecting flex layout,
+         and keep it below the bottom HUD (z-[200]) so it can't cover the control panel */
       [id^="pw-oop-bottom_rail"] {
         position: fixed !important;
+        z-index: 150 !important;
+      }
+
+      /* Google Funding Choices CCPA link override */
+      .fc-dns-link,
+      .fc-ccpa-root,
+      .fc-consent-root {
+        position: fixed !important;
+        z-index: 999999 !important;
+      }
+      .fc-dns-link {
+        bottom: 15px !important;
+        left: 15px !important;
       }
 
       /* Ensure full viewport height on iOS */
@@ -147,10 +161,10 @@
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
         style="
           background-image: var(--background-image-url);
-          background-position: center calc(50% + 2cm);
+          background-position: center top;
         "
       ></div>
       <div
@@ -192,6 +206,7 @@
       ></div>
 
       <homepage-promos></homepage-promos>
+      <marketing-consent-toast></marketing-consent-toast>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -252,6 +267,16 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></account-modal>
+        <game-stats-modal
+          id="page-stats"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></game-stats-modal>
+        <player-profile-modal
+          id="page-profile"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></player-profile-modal>
         <help-modal
           id="page-help"
           inline
@@ -267,11 +292,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></flag-input-modal>
-        <territory-patterns-modal
-          id="territory-patterns-modal"
+        <cosmetics-modal
+          id="cosmetics-modal"
           inline
           class="hidden w-full h-full page-content relative z-50"
-        ></territory-patterns-modal>
+        ></cosmetics-modal>
         <ranked-modal
           id="page-ranked"
           inline
@@ -333,6 +358,7 @@
     <emoji-table></emoji-table>
     <build-menu></build-menu>
     <win-modal></win-modal>
+    <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
@@ -346,7 +372,6 @@
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
     <in-game-promo></in-game-promo>
-    <game-info-modal></game-info-modal>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <multi-tab-modal></multi-tab-modal>

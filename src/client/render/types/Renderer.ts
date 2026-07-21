@@ -26,6 +26,10 @@ export interface PlayerStatic {
   isLobbyCreator: boolean;
   /** Resolved flag image URL, or undefined for no flag. */
   flag?: string;
+  /** Resolved crown-cosmetic image URL, or undefined for no crown. */
+  crown?: string;
+  /** Plays under the verified account username — blue check next to the name. */
+  verified?: boolean;
   /** Hex color (e.g. "#ff0000"). Populated from territoryColor (live) or palette (replay). */
   color?: string;
 }
@@ -57,11 +61,15 @@ export interface PlayerState {
   smallID: number;
   isAlive: boolean;
   isDisconnected: boolean;
+  killedBy: string | null;
+  deathPosition: number | null;
   tilesOwned: number;
   gold: number;
   troops: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;
+  inDoomsdayClock: boolean;
+  markedDoomsdayClockTick: number;
   betrayals: number;
   hasSpawned: boolean;
   /** TileRef the player picked as their spawn (undefined if not yet spawned). */
@@ -96,6 +104,7 @@ export interface UnitState {
   troops: number;
   missileTimerQueue: number[];
   level: number;
+  veterancy: number;
   hasTrainStation: boolean;
   trainType: number | null; // 0=Engine, 1=TailEngine, 2=Carriage
   loaded: boolean | null;
@@ -107,9 +116,59 @@ export interface DeadUnitFx {
   unitType: string;
   pos: number;
   reachedTarget: boolean;
+  /** Firing player's smallID — resolves their nuke-explosion cosmetic. */
+  ownerSmallID: number;
+  /**
+   * Resolved nuke-explosion render params (the firing player's cosmetic).
+   * Attached by WebGLFrameBuilder before the FX pass consumes the event;
+   * undefined when the owner has no nuke-explosion cosmetic (default FX).
+   */
+  explosion?: NukeExplosionRenderParams;
   /** Ticks since the event occurred (0 = this frame, >0 = seeked past it). */
   tickAge?: number;
 }
+
+/**
+ * Max palette colors a shockwave instance can carry (vertex-attribute budget);
+ * a longer cosmetic palette is truncated.
+ */
+export const MAX_NUKE_EXPLOSION_COLORS = 4;
+
+/**
+ * A firing player's nuke-explosion cosmetic, resolved from catalog attributes
+ * into renderer-ready values. `type` picks the visual — an expanding
+ * "shockwave" ring, or a firework burst of twinkling "sparkles" that ride
+ * outward from the center with the expanding front.
+ * `colors` is the palette the effect cycles through
+ * (1..MAX_NUKE_EXPLOSION_COLORS rgb in 0..1, never empty);
+ * maxRadius is the effect's final radius in world tiles when it fades out
+ * (absolute — it does NOT scale with the bomb's blast radius); speed is the
+ * rate the effect's width grows in world tiles/s (the effect lasts
+ * 2·maxRadius / speed seconds); thickness is the ring band's thickness — or
+ * the average sparkle size, glints hash-vary ±50% around it — in world tiles
+ * (constant while the effect expands);
+ * transitionSpeed is the palette step rate in colors/s (0 = static, negative
+ * = reverse cycle) — same semantics as the trail shader's transition
+ * frequency (sparkles hash a per-sparkle palette offset on top).
+ * Sparkles additionally carry density — roughly the total number of glints
+ * in the burst (the renderer derives its grid pitch from it, clamped sane).
+ */
+interface NukeExplosionRenderParamsBase {
+  colors: readonly (readonly [number, number, number])[];
+  maxRadius: number;
+  speed: number;
+  thickness: number;
+  transitionSpeed: number;
+}
+
+export type NukeExplosionRenderParams =
+  | (NukeExplosionRenderParamsBase & { type: "shockwave" })
+  | (NukeExplosionRenderParamsBase & { type: "sparkles"; density: number });
+
+/** Default nuke-explosion color (purple) when a cosmetic has no usable color. */
+export const DEFAULT_NUKE_EXPLOSION_COLOR: readonly [number, number, number] = [
+  0.6, 0.1, 1,
+];
 
 /** Conquest event data for the gold popup + sword sprite FX. */
 export interface ConquestFx {
@@ -118,11 +177,6 @@ export interface ConquestFx {
   gold: number; // gold amount awarded
   /** Ticks since the event occurred (0 = this frame, >0 = seeked past it). */
   tickAge?: number;
-}
-
-export interface TilePair {
-  ref: number;
-  state: number;
 }
 
 export interface NameEntry {
@@ -143,6 +197,9 @@ export interface PlayerStatusData {
   embargo: boolean;
   nukeActive: boolean;
   nukeTargetsMe: boolean;
+  inDoomsdayClock: boolean;
+  doomsdayClockDraining: boolean;
+  doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;
   allianceRemainingTicks: number;

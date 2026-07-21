@@ -1,3 +1,4 @@
+import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type { FrameEvents } from "./FrameEvents";
 import type {
   AttackRingInput,
@@ -5,7 +6,6 @@ import type {
   NukeTelegraphData,
   PlayerState,
   PlayerStatusData,
-  TilePair,
   UnitState,
 } from "./Renderer";
 
@@ -23,7 +23,7 @@ export interface FrameData {
   /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
   readonly tileState: Uint16Array;
-  readonly trailState: Uint8Array;
+  readonly trailState: Uint16Array;
   readonly railroadState: Uint8Array;
   readonly units: ReadonlyMap<number, UnitState>;
   readonly players: ReadonlyMap<number, PlayerState>;
@@ -37,11 +37,11 @@ export interface FrameData {
   // ── Upload hints ──────────────────────────────────────────────────────
 
   /**
-   * Changed tiles this frame for delta uploads.
+   * Changed tile refs this frame for delta uploads.
    * - `null` → no delta info; full upload needed (first tick)
    * - array → only these tiles changed (empty = skip upload)
    */
-  readonly changedTiles: TilePair[] | null;
+  readonly changedTiles: readonly number[] | null;
   readonly railroadDirty: boolean;
   readonly revealedRailTiles: number[];
 
@@ -52,6 +52,13 @@ export interface FrameData {
    */
   readonly trailDirtyRowMin: number;
   readonly trailDirtyRowMax: number;
+
+  /**
+   * Live spiral nukeTrail ribbons (helix polylines from SpiralTrails) —
+   * empty while no spiral-cosmetic nuke is in flight. Live ref, mutated in
+   * place each tick like the state buffers above.
+   */
+  readonly spiralRibbons: readonly SpiralRibbon[];
 
   // ── Derived (computed once by producer) ────────────────────────────────
 

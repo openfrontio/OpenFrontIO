@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { generateCryptoRandomUUID } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
@@ -17,6 +18,41 @@ let __expiresAt: number = 0;
 export function discordLogin() {
   const redirectUri = encodeURIComponent(window.location.href);
   window.location.href = `${getApiBase()}/auth/login/discord?redirect_uri=${redirectUri}`;
+}
+
+export function googleLogin() {
+  const redirectUri = encodeURIComponent(window.location.href);
+  window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
+}
+
+// Link a Google account to the currently logged-in player. Unlike login this is
+// an authenticated request, so we fetch the Google authorize URL with the
+// Bearer token (a top-level navigation can't carry it) and then navigate to it.
+// Returns false if the user isn't logged in or the request fails.
+export async function linkGoogle(): Promise<boolean> {
+  const authHeader = await getAuthHeader();
+  if (authHeader === "") return false;
+  const redirectUri = encodeURIComponent(window.location.href);
+  try {
+    const response = await fetch(
+      `${getApiBase()}/auth/link/google?redirect_uri=${redirectUri}`,
+      {
+        headers: { Authorization: authHeader },
+        credentials: "include",
+      },
+    );
+    if (!response.ok) {
+      console.error("Failed to start Google link", response);
+      return false;
+    }
+    const { url } = await response.json();
+    if (typeof url !== "string") return false;
+    window.location.href = url;
+    return true;
+  } catch (e) {
+    console.error("Failed to start Google link", e);
+    return false;
+  }
 }
 
 export async function tempTokenLogin(token: string): Promise<string | null> {
@@ -154,6 +190,15 @@ async function refreshJwt(): Promise<void> {
 }
 
 async function doRefreshJwt(): Promise<void> {
+  if (crazyGamesSDK.isOnCrazyGames()) {
+    const token = await crazyGamesSDK.getUserToken();
+    if (token) {
+      // Signed-in CrazyGames account: exchange their token for our session.
+      // No CrazyGames account / not signed in falls through to the guest flow
+      // below.
+      return doCrazyGamesLogin(token);
+    }
+  }
   try {
     console.log("Refreshing jwt");
     const response = await fetch(getApiBase() + "/auth/refresh", {
@@ -176,6 +221,56 @@ async function doRefreshJwt(): Promise<void> {
     __jwt = null;
     return;
   }
+}
+
+// Exchange a CrazyGames user token for our session. On CrazyGames the refresh
+// cookie isn't usable (SameSite=Lax, cross-site iframe), so we re-exchange on
+// expiry instead of hitting /auth/refresh.
+async function doCrazyGamesLogin(token: string): Promise<void> {
+  try {
+    console.log("Logging in with CrazyGames");
+    const response = await fetch(getApiBase() + "/auth/crazygames", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    if (response.status !== 200) {
+      console.error("CrazyGames login failed", response);
+      __jwt = null;
+      return;
+    }
+    const json = await response.json();
+    const { jwt, expiresIn } = json;
+    __expiresAt = Date.now() + expiresIn * 1000;
+    console.log("CrazyGames login succeeded");
+    __jwt = jwt;
+  } catch (e) {
+    console.error("CrazyGames login failed", e);
+    __jwt = null;
+  }
+}
+
+// Called when the CrazyGames auth state changes mid-session (e.g. the player
+// signs in): drop the cached session so userAuth() re-exchanges the new token.
+// Single-flight: Main's auth listener and the account modal's sign-in handler
+// can both react to the same sign-in; sharing one exchange keeps them from
+// racing on __jwt. Any refresh already in flight is allowed to settle first so
+// its stale result can't satisfy the reauth.
+let __reauthPromise: Promise<UserAuth> | null = null;
+export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
+  __reauthPromise ??= (async () => {
+    try {
+      if (__refreshPromise) {
+        await __refreshPromise.catch(() => {});
+      }
+      __jwt = null;
+      __expiresAt = 0;
+      return await userAuth();
+    } finally {
+      __reauthPromise = null;
+    }
+  })();
+  return __reauthPromise;
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {

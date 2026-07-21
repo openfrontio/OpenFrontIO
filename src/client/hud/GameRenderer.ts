@@ -4,6 +4,7 @@ import { Controller } from "../Controller";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { LiveStatsController } from "../controllers/LiveStatsController";
 import { SoundEffectController } from "../controllers/SoundEffectController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
@@ -32,6 +33,7 @@ import { InGamePromo } from "./layers/InGamePromo";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
+import { NewLobbyPrompt } from "./layers/NewLobbyPrompt";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -168,6 +170,15 @@ export function createRenderer(
   winModal.eventBus = eventBus;
   winModal.game = game;
 
+  const newLobbyPrompt = document.querySelector(
+    "new-lobby-prompt",
+  ) as NewLobbyPrompt;
+  if (!(newLobbyPrompt instanceof NewLobbyPrompt)) {
+    console.error("new lobby prompt not found");
+  }
+  newLobbyPrompt.eventBus = eventBus;
+  newLobbyPrompt.game = game;
+
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
     console.error("replay panel not found");
@@ -293,6 +304,7 @@ export function createRenderer(
       userSettings,
     ),
     new HoverHighlightController(game, eventBus, transformHandler, view),
+    new LiveStatsController(game, eventBus),
     new StructureHighlightController(eventBus, view),
     new ViewModeController(eventBus, view),
     new AttackingTroopsController(game, eventBus, userSettings, view),
@@ -320,6 +332,7 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     winModal,
+    newLobbyPrompt,
     replayPanel,
     settingsModal,
     graphicsSettingsModal,

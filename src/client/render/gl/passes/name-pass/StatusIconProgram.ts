@@ -1,9 +1,10 @@
 /**
  * StatusIconProgram — instanced status icons above player names.
  *
- * Renders up to 8 status icons per player (crown, traitor, disconnected,
- * alliance, alliance request, target, embargo, nuke). Each instance reads
- * individual float flags from pd5/pd6 to decide whether to draw.
+ * Renders up to 10 icons per player: 9 status-row icons above the name
+ * (crown, traitor, disconnected, alliance, alliance request, target, embargo,
+ * nuke, doomsday-clock skull) plus the verified badge to the right of the
+ * name. Each instance reads individual float flags to decide whether to draw.
  *
  * Owns: shader program, uniform locations, status atlas texture.
  * The shared playerDataTex is passed in but not owned/deleted.
@@ -15,11 +16,12 @@ import type { RenderSettings } from "../../RenderSettings";
 import statusFragSrc from "../../shaders/name/status-icon.frag.glsl?raw";
 import statusVertSrc from "../../shaders/name/status-icon.vert.glsl?raw";
 import { createProgram } from "../../utils/GlUtils";
+import type { FlagAtlasArray } from "./FlagAtlasArray";
 import type { ParsedAtlas } from "./Types";
 
 const statusAtlasUrl = assetUrl("atlases/status-atlas.png");
 
-const MAX_STATUS_ICONS = 8;
+const MAX_STATUS_ICONS = 10;
 
 export class StatusIconProgram {
   private gl: WebGL2RenderingContext;
@@ -40,11 +42,14 @@ export class StatusIconProgram {
   private uStatusRowOffset: WebGLUniformLocation;
   private uFadeOwnerID: WebGLUniformLocation;
   private uHoverFadeAlpha: WebGLUniformLocation;
+  private uStatusOutlinePx: WebGLUniformLocation;
 
   constructor(
     gl: WebGL2RenderingContext,
     atlas: ParsedAtlas,
     playerDataTex: WebGLTexture,
+    // Crown-cosmetic images; skins the first-place crown (slot 0).
+    private crownAtlas: FlagAtlasArray,
     maxPlayers: number,
     allianceFlashWindowTicks: number,
   ) {
@@ -58,6 +63,7 @@ export class StatusIconProgram {
     // Texture unit bindings
     gl.uniform1i(gl.getUniformLocation(this.program, "uPlayerData"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uStatusAtlas"), 1);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uCrownAtlas"), 2);
 
     // Static uniforms from atlas metadata
     const sm = statusAtlasMeta as any;
@@ -82,6 +88,12 @@ export class StatusIconProgram {
     gl.uniform1f(
       gl.getUniformLocation(this.program, "uStatusPad")!,
       sm.pad ?? 0,
+    );
+    // Texel size for the outline dilation sampling (static).
+    gl.uniform2f(
+      gl.getUniformLocation(this.program, "uStatusTexel")!,
+      1 / sm.width,
+      1 / sm.height,
     );
     // Flash window matches the alliance renewal prompt (10 ticks/sec)
     gl.uniform1f(
@@ -110,6 +122,10 @@ export class StatusIconProgram {
     this.uHoverFadeAlpha = gl.getUniformLocation(
       this.program,
       "uHoverFadeAlpha",
+    )!;
+    this.uStatusOutlinePx = gl.getUniformLocation(
+      this.program,
+      "uStatusOutlinePx",
     )!;
 
     this.loadAtlas();
@@ -159,11 +175,14 @@ export class StatusIconProgram {
     gl.uniform1f(this.uStatusRowOffset, ns.statusRowOffset);
     gl.uniform1f(this.uFadeOwnerID, fadeOwnerID);
     gl.uniform1f(this.uHoverFadeAlpha, ns.hoverFadeAlpha);
+    gl.uniform1f(this.uStatusOutlinePx, ns.statusOutlineWidth);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.playerDataTex);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.statusAtlasTex!);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.crownAtlas.texture);
 
     gl.bindVertexArray(vao);
     gl.drawArraysInstanced(

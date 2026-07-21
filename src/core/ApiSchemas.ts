@@ -2,7 +2,7 @@ import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMode, GameType, RankedType } from "./game/Game";
+import { Difficulty, GameMode, RankedType } from "./game/Game";
 
 function stripClanTagFromUsername(username: string): string {
   return username.replace(/^\s*\[[a-zA-Z0-9]{2,5}\]\s*/u, "").trim();
@@ -65,19 +65,118 @@ export const DiscordUserSchema = z.object({
 });
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
+export const GoogleUserSchema = z.object({
+  email: z.string(),
+});
+export type GoogleUser = z.infer<typeof GoogleUserSchema>;
+
 const SingleplayerMapAchievementSchema = z.object({
   mapName: z.string(),
   difficulty: z.enum(Difficulty),
 });
 
+// An unclaimed subscription reward from GET /users/@me. `id` and `amount` are
+// stringified bigints — keep them as strings (amount can in principle exceed
+// Number.MAX_SAFE_INTEGER). `reason` is open-ended server-side; fall back to
+// `note` for unknown values rather than exhausting on an enum.
+export const RewardSchema = z.object({
+  id: z.string(),
+  currencyType: z.enum(["soft", "hard"]),
+  amount: z.string(),
+  reason: z.string(),
+  note: z.string().nullable(),
+});
+export type Reward = z.infer<typeof RewardSchema>;
+
+const CurrencyBalancesSchema = z.object({
+  soft: z.coerce.number(),
+  hard: z.coerce.number(),
+});
+
+// POST /rewards/:rewardId/claim and /rewards/claim-all both return the
+// post-claim balances so the UI can update without re-fetching /users/@me.
+export const ClaimRewardResponseSchema = z.object({
+  currency: CurrencyBalancesSchema,
+});
+export type ClaimRewardResponse = z.infer<typeof ClaimRewardResponseSchema>;
+
+export const ClaimAllRewardsResponseSchema = z.object({
+  claimed: z.array(z.object({ id: z.string() })),
+  currency: CurrencyBalancesSchema,
+});
+export type ClaimAllRewardsResponse = z.infer<
+  typeof ClaimAllRewardsResponseSchema
+>;
+
+// Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
+// `claimed`: reservation held but subscription lapsed — the suffix shows again
+// and a grace deadline runs. `premium`: subscribed, bare display. `indefinite`:
+// admin-locked bare display. Statuses change server-side without client action
+// (Stripe webhooks, admin edits) — re-fetch /users/@me rather than caching.
+export const UsernameStatusSchema = z.enum([
+  "unclaimed",
+  "claimed",
+  "premium",
+  "indefinite",
+]);
+export type UsernameStatus = z.infer<typeof UsernameStatusSchema>;
+
+// When a player subscribes while someone else exclusively holds their bare
+// name, the server renames them to TEMPORARY#### and clears their cooldown so
+// the rename is free. Detect it to prompt for a real name.
+export function isTemporaryUsername(base: string | null | undefined): boolean {
+  return typeof base === "string" && /^TEMPORARY\d{4}$/.test(base);
+}
+
+// Whether a pre-rendered account username belongs to a verified player
+// (premium/indefinite bare-name claim holder). The server renders everyone
+// else as "base.suffix" and bases can never contain dots
+// (AccountUsernameSchema), so a dotless name IS the bare display — no
+// dedicated flag needed on list endpoints. TEMPORARY#### server renames are
+// bare too but aren't a chosen name, so they don't get the badge (matches
+// the verified-name play toggle's eligibility rule).
+export function isVerifiedUsername(
+  username: string | null | undefined,
+): boolean {
+  return (
+    typeof username === "string" &&
+    !username.includes(".") &&
+    !isTemporaryUsername(username)
+  );
+}
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
+    google: GoogleUserSchema.optional(),
     email: z.string().optional(),
   }),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
+    // True when the player's active subscription tier exempts them from the
+    // free-ranked-play limits.
+    unlimitedRanked: z.boolean(),
+    // True when the player may list a custom lobby publicly. The API decides
+    // which subscriptions/grants confer this.
+    canCreatePublicLobbies: z.boolean(),
+    // Account username (custom-usernames). All optional so responses from an
+    // API without the feature still parse; absent means the same as never set.
+    // `username` is the server-resolved DISPLAY form — the bare base for an
+    // entitled claim holder, otherwise "base.suffix". Render it as-is; never
+    // assemble base + discriminator client-side. The discriminator is exactly
+    // 4 digits and may have leading zeros — keep it a string.
+    username: z.string().nullable().optional(),
+    usernameBase: z.string().nullable().optional(),
+    usernameDiscriminator: z.string().nullable().optional(),
+    usernameStatus: UsernameStatusSchema.optional(),
+    // Only non-null in `claimed`: when the exclusive right to the bare name
+    // becomes takeable by another subscriber. A past date means "at risk",
+    // not "lost" — it stays set until the name is actually taken.
+    usernameClaimExpiresAt: z.iso.datetime().nullable().optional(),
+    // When the player may next self-rename. May be in the past — past or
+    // null both mean a rename is allowed.
+    nextUsernameChangeAt: z.iso.datetime().nullable().optional(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
@@ -89,14 +188,16 @@ export const UserMeResponseSchema = z.object({
             elo: z.number().optional(),
           })
           .optional(),
+        twoVtwo: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
       })
       .optional(),
-    currency: z
-      .object({
-        soft: z.coerce.number(),
-        hard: z.coerce.number(),
-      })
-      .optional(),
+    currency: CurrencyBalancesSchema.optional(),
+    // Unclaimed rewards — NOT included in `currency` balances until claimed.
+    rewards: RewardSchema.array().optional(),
     clans: z
       .array(
         z.object({
@@ -126,12 +227,34 @@ export const UserMeResponseSchema = z.object({
         cancelAtPeriodEnd: z.boolean(),
       })
       .nullable(),
+    // Marketing-email consent state (client-driven consent). `consented` is the
+    // player's current decision; `hasEmail` is whether a verified contact email
+    // exists to subscribe. Optional so an older API without the field is treated
+    // as "no consent UI".
+    marketingConsent: z
+      .object({
+        consented: z.enum(["approved", "denied", "no_response"]),
+        hasEmail: z.boolean(),
+      })
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
+
+// PUT /users/@me/username success payload. `username` is the resolved display
+// form (safe for optimistic UI). The suffix is re-rolled on every rename and
+// the response carries the fresh 30-day cooldown.
+export const PutUsernameResponseSchema = z.object({
+  username: z.string(),
+  base: z.string(),
+  discriminator: z.string(),
+  usernameStatus: UsernameStatusSchema,
+  nextUsernameChangeAt: z.iso.datetime().nullable(),
+});
+export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
@@ -154,29 +277,75 @@ export const PlayerStatsTreeSchema = z.object({
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
-export const PlayerGameSchema = z.object({
-  gameId: z.string(),
-  start: z.iso.datetime(),
-  mode: z.enum(GameMode),
-  type: z.enum(GameType),
-  map: z.string(),
-  difficulty: z.enum(Difficulty),
-  clientId: z.string().optional(),
-});
-export type PlayerGame = z.infer<typeof PlayerGameSchema>;
-
 export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
-  games: PlayerGameSchema.array(),
+  // Account username, pre-rendered by the server (bare base or "base.suffix").
+  // null = the player never set one. Render `username ?? publicId`; never
+  // parse it — compare players by publicId only. Optional so responses from
+  // an API without the field still parse.
+  username: z.string().nullable().optional(),
   stats: PlayerStatsTreeSchema,
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
+// Mode buckets for GET /public/player/:publicId/games — mirrors the clan
+// game-history filter (see ClanGameFilter). Resolved server-side off the
+// games join (mode / ranked_type / player_teams).
+export const PlayerGameModeFilters = ["ffa", "team", "hvn", "ranked"] as const;
+export const PlayerGameModeFilterSchema = z.enum(PlayerGameModeFilters);
+export type PlayerGameModeFilter = z.infer<typeof PlayerGameModeFilterSchema>;
+
+// Game-type split — orthogonal to the mode filter. Matches games.type.
+export const PlayerGameTypeFilters = [
+  "public",
+  "private",
+  "singleplayer",
+] as const;
+export const PlayerGameTypeFilterSchema = z.enum(PlayerGameTypeFilters);
+export type PlayerGameTypeFilter = z.infer<typeof PlayerGameTypeFilterSchema>;
+
+// "incomplete" covers games with no recorded winner (winnerType IS NULL).
+export const PlayerGameResultSchema = z.enum([
+  "victory",
+  "defeat",
+  "incomplete",
+]);
+export type PlayerGameResult = z.infer<typeof PlayerGameResultSchema>;
+
+export const PublicPlayerGameSchema = z.object({
+  gameId: z.string(),
+  start: z.iso.datetime(),
+  durationSeconds: z.number().int().nonnegative(),
+  map: z.string().trim(),
+  mode: z.string(),
+  type: z.string(),
+  playerTeams: z.string().nullable(),
+  rankedType: z.string(),
+  result: PlayerGameResultSchema,
+  totalPlayers: z.number().int().nonnegative().nullable(),
+  username: z.string(),
+  clanTag: z.string().nullable(),
+});
+export type PublicPlayerGame = z.infer<typeof PublicPlayerGameSchema>;
+
+export const PublicPlayerGamesResponseSchema = z.object({
+  results: PublicPlayerGameSchema.array(),
+  // Opaque continuation token. Round-trip verbatim as the `cursor` query
+  // parameter to fetch the next page; never construct or parse it. `null`
+  // means the server has no more rows to serve.
+  nextCursor: z.string().nullable(),
+});
+export type PublicPlayerGamesResponse = z.infer<
+  typeof PublicPlayerGamesResponseSchema
+>;
+
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
-  username: LeaderboardUsernameSchema,
+  // Account username (null = never set). The leaderboard displays this or
+  // the playerId — the per-session name is deliberately ignored.
+  accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
@@ -206,6 +375,10 @@ export const RankedLeaderboardEntrySchema = z.object({
   public_id: z.string(),
   user: DiscordUserSchema.nullable().optional(),
   username: LeaderboardUsernameSchema,
+  // Account username (null = never set), unlike `username` which is the name
+  // from the player's most recent ranked session. The client displays
+  // `accountUsername ?? public_id` and ignores the session name.
+  accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
@@ -221,6 +394,9 @@ export type RankedLeaderboardResponse = z.infer<
 
 export const FriendEntrySchema = z.object({
   publicId: z.string(),
+  // Account username (null = never set), always the other party's. Render
+  // `username ?? publicId`; identify players by publicId only.
+  username: z.string().nullable().optional(),
   createdAt: z.iso.datetime(),
 });
 export type FriendEntry = z.infer<typeof FriendEntrySchema>;

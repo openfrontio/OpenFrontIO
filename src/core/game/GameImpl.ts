@@ -293,8 +293,46 @@ export class GameImpl implements Game {
     return this._unitMap.get(id);
   }
 
-  units(...types: UnitType[]): Unit[] {
-    return Array.from(this._players.values()).flatMap((p) => p.units(...types));
+  units(): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
+  units(
+    first?: UnitType | readonly UnitType[],
+    second?: UnitType,
+    third?: UnitType,
+  ): Unit[] {
+    // Built as a single flat array per call; per-player intermediate arrays
+    // would churn the heap (player.units() with no args is allocation-free).
+    const out: Unit[] = [];
+    if (Array.isArray(first) && (first as readonly UnitType[]).length > 0) {
+      const ts = new Set(first as readonly UnitType[]);
+      for (const p of this._players.values()) {
+        for (const u of p.units()) {
+          if (ts.has(u.type())) out.push(u);
+        }
+      }
+      return out;
+    }
+    if (first === undefined || Array.isArray(first)) {
+      for (const p of this._players.values()) {
+        for (const u of p.units()) {
+          out.push(u);
+        }
+      }
+      return out;
+    }
+    for (const p of this._players.values()) {
+      for (const u of p.units()) {
+        const t = u.type();
+        if (
+          t === first ||
+          (second !== undefined && (t === second || t === third))
+        ) {
+          out.push(u);
+        }
+      }
+    }
+    return out;
   }
 
   unitCount(type: UnitType): number {
@@ -694,6 +732,9 @@ export class GameImpl implements Game {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
     }
+    if (this.isImpassable(tile)) {
+      throw Error(`cannot conquer impassable terrain`);
+    }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
       previousOwner._lastTileChange = this._ticks;
@@ -849,11 +890,18 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+  setWinner(
+    winner: Player | Team | null,
+    allPlayersStats: AllPlayersStats,
+  ): void {
     this._winner = winner;
+    // OFM: snapshot final tiles for standings (bots skipped in recordFinalTiles).
+    for (const player of this.players()) {
+      this.stats().recordFinalTiles(player, player.numTilesOwned());
+    }
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner: this.makeWinner(winner),
+      winner: winner === null ? undefined : this.makeWinner(winner),
       allPlayersStats,
     });
   }
@@ -1075,6 +1123,9 @@ export class GameImpl implements Game {
   isLand(ref: TileRef): boolean {
     return this._map.isLand(ref);
   }
+  isImpassable(ref: TileRef): boolean {
+    return this._map.isImpassable(ref);
+  }
   isOceanShore(ref: TileRef): boolean {
     return this._map.isOceanShore(ref);
   }
@@ -1194,6 +1245,9 @@ export class GameImpl implements Game {
   hasWaterComponent(tile: TileRef, component: number): boolean {
     return this._waterManager.hasWaterComponent(tile, component);
   }
+  getWaterComponentSize(tile: TileRef): number | null {
+    return this._waterManager.getWaterComponentSize(tile);
+  }
   sharedWaterComponents(player: Player): Set<number> | null {
     return this._sharedWaterCache.get(player);
   }
@@ -1250,6 +1304,23 @@ export class GameImpl implements Game {
       // Record stats
       this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
+
+    // OFM: per-kill log for standings (humans-only filtered in recordKill).
+    this.stats().recordKill(conqueror, conquered, this.ticks());
+    // OFM live standings: attribute the elimination so the live snapshot can
+    // credit the kill (null when the conqueror has no client, e.g. a bot/nation),
+    // and stamp the finishing place NOW rather than deferring to PlayerExecution:
+    // if the game ends this tick (winner declared) the conquered player's
+    // execution may never run again. Exclude the conquered player from the alive
+    // count. PlayerExecution keeps the same stamp as a fallback for non-conquest
+    // deaths; recordDeathPosition is first-write-wins, so this value sticks.
+    this.stats().recordKilledBy(conquered, conqueror.clientID());
+    this.stats().recordDeathPosition(
+      conquered,
+      this.players().filter(
+        (p) => p !== conquered && p.type() !== PlayerType.Bot,
+      ).length + 1,
+    );
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,

@@ -2,6 +2,7 @@ import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
+import { TileSet } from "./game/TileSet";
 import {
   GameConfig,
   GameID,
@@ -12,10 +13,7 @@ import {
   Winner,
 } from "./Schemas";
 
-import {
-  TRIBE_NAME_PREFIXES,
-  TRIBE_NAME_SUFFIXES,
-} from "./execution/utils/TribeNames";
+import { resolveTribeNameData } from "./execution/utils/TribeNames";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -127,20 +125,33 @@ export function simpleHash(str: string): number {
 
 export function calculateBoundingBox(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): { min: Cell; max: Cell } {
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
     maxY = -Infinity;
 
-  for (const tile of borderTiles) {
+  const visit = (tile: TileRef) => {
     const x = gm.x(tile);
     const y = gm.y(tile);
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x);
     maxY = Math.max(maxY, y);
+  };
+  // Indexed/forEach paths: for..of over a large Set (player border sets)
+  // allocates an iterator-result object per element.
+  if (Array.isArray(borderTiles)) {
+    for (let i = 0; i < borderTiles.length; i++) {
+      visit(borderTiles[i]);
+    }
+  } else if (borderTiles instanceof Set || borderTiles instanceof TileSet) {
+    borderTiles.forEach(visit);
+  } else {
+    for (const tile of borderTiles) {
+      visit(tile);
+    }
   }
 
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
@@ -200,7 +211,7 @@ export function getMode<T>(counts: Map<T, number>): T | null {
 
 export function calculateBoundingBoxCenter(
   gm: GameMap,
-  borderTiles: ReadonlySet<TileRef>,
+  borderTiles: Iterable<TileRef>,
 ): Cell {
   const { min, max } = calculateBoundingBox(gm, borderTiles);
   return boundingBoxCenter({ min, max });
@@ -352,13 +363,12 @@ export function createRandomName(
 ): string | null {
   let randomName: string | null = null;
   if (playerType === PlayerType.Human) {
+    const { prefixes, suffixes } = resolveTribeNameData();
     const hash = simpleHash(name);
-    const prefixIndex = hash % TRIBE_NAME_PREFIXES.length;
-    const suffixIndex =
-      Math.floor(hash / TRIBE_NAME_PREFIXES.length) %
-      TRIBE_NAME_SUFFIXES.length;
+    const prefixIndex = hash % prefixes.length;
+    const suffixIndex = Math.floor(hash / prefixes.length) % suffixes.length;
 
-    randomName = `👤 ${TRIBE_NAME_PREFIXES[prefixIndex]} ${TRIBE_NAME_SUFFIXES[suffixIndex]}`;
+    randomName = `👤 ${prefixes[prefixIndex]} ${suffixes[suffixIndex]}`;
   }
   return randomName;
 }

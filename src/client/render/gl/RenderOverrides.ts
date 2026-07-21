@@ -1,5 +1,6 @@
 import type { GraphicsOverrides } from "./GraphicsOverrides";
 import { createThemeSettings, type RenderSettings } from "./RenderSettings";
+import { hexToRgb } from "./utils/ColorUtils";
 
 /**
  * Apply the user's graphics overrides onto a RenderSettings in place: name
@@ -41,6 +42,14 @@ export function applyGraphicsOverrides(
   if (overrides.structure?.classicNumbers !== undefined) {
     settings.structureLevel.classicFont = overrides.structure.classicNumbers;
   }
+  if (overrides.structure?.showDots === false) {
+    // Zoom is always > 0, so a threshold of 0 means the dots LOD never
+    // triggers — structures stay as full icons at every zoom level.
+    settings.structure.dotsZoomThreshold = 0;
+  }
+  if (overrides.mapOverlay?.navalHighlight !== undefined) {
+    settings.mapOverlay.navalHighlight = overrides.mapOverlay.navalHighlight;
+  }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
       overrides.mapOverlay.highlightFillBrighten;
@@ -64,11 +73,23 @@ export function applyGraphicsOverrides(
     settings.mapOverlay.coordinateGridOpacity =
       overrides.mapOverlay.coordinateGridOpacity;
   }
+  if (overrides.mapOverlay?.staleNukeColor !== undefined) {
+    // hexToRgb yields 0-255 channels; the stale-nuke uniforms are 0-1 floats.
+    const rgb = hexToRgb(overrides.mapOverlay.staleNukeColor);
+    if (rgb !== null) {
+      settings.mapOverlay.staleNukeR = rgb[0] / 255;
+      settings.mapOverlay.staleNukeG = rgb[1] / 255;
+      settings.mapOverlay.staleNukeB = rgb[2] / 255;
+    }
+  }
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
   }
   if (overrides.railroad?.railThickness !== undefined) {
     settings.railroad.railThickness = overrides.railroad.railThickness;
+  }
+  if (overrides.smallPlayerGlow?.strength !== undefined) {
+    settings.smallPlayerGlow.strength = overrides.smallPlayerGlow.strength;
   }
   if (overrides.passEnabled?.fx !== undefined) {
     settings.passEnabled.fx = overrides.passEnabled.fx;
@@ -81,6 +102,18 @@ export function applyGraphicsOverrides(
   }
   if (overrides.terrain?.oceanColor !== undefined) {
     settings.terrain.oceanColor = overrides.terrain.oceanColor;
+  }
+  if (overrides.terrain?.sandColor !== undefined) {
+    settings.terrain.sandColor = overrides.terrain.sandColor;
+  }
+  if (overrides.terrain?.plainsColor !== undefined) {
+    settings.terrain.plainsColor = overrides.terrain.plainsColor;
+  }
+  if (overrides.terrain?.highlandColor !== undefined) {
+    settings.terrain.highlandColor = overrides.terrain.highlandColor;
+  }
+  if (overrides.terrain?.mountainColor !== undefined) {
+    settings.terrain.mountainColor = overrides.terrain.mountainColor;
   }
   if (overrides.lighting?.ambient !== undefined) {
     settings.lighting.ambient = overrides.lighting.ambient;

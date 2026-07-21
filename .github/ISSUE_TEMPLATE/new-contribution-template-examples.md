@@ -73,4 +73,10 @@ Examples of what info would be expected:
 
 ---
 
+## Assignment
+
+- [ ] I'd like to be assigned to this issue and work on it myself
+
+---
+
 [Discord Name if Different]

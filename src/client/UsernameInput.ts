@@ -1,6 +1,8 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { generateCryptoRandomUUID, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
+import { ANON_ANIMALS, anonAnimalName } from "../core/AnonAnimals";
+import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
 import { sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
@@ -12,6 +14,7 @@ import {
 } from "../core/validations/username";
 import { checkClanTagOwnership } from "./ClanApi";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { showInGameConfirm } from "./InGameModal";
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -21,11 +24,19 @@ interface LangSelectorLike {
 
 const usernameKey: string = "username";
 const clanTagKey: string = "clanTag";
+const useVerifiedNameKey: string = "useVerifiedName";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
   @state() private baseUsername: string = "";
   @state() private clanTag: string = "";
+  // Playing under the account's verified bare name (sub-only). The free-form
+  // name stays in baseUsername/localStorage so unchecking restores it.
+  @state() private verifiedActive: boolean = false;
+  private userMe: UserMeResponse | false | null = null;
+
+  // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
+  private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
 
   @property({ type: String }) validationError: string = "";
   // Ownership-check feedback (i18n key) shown inline beneath the tag input. Only
@@ -47,8 +58,86 @@ export class UsernameInput extends LitElement {
     return this;
   }
 
+  constructor() {
+    super();
+    // Account state for the verified-name toggle. Same document-level pattern
+    // as AccountModal; Main dispatches this after auth resolves and on
+    // CrazyGames sign-in.
+    document.addEventListener("userMeResponse", (event: Event) => {
+      this.userMe = (event as CustomEvent).detail as UserMeResponse | false;
+      this.applyVerifiedPreference();
+    });
+  }
+
+  // The server-resolved bare name this player may play verified under, or null
+  // when ineligible. Sub-only by design: `claimed` (lapsed) holders and
+  // TEMPORARY####-renamed players don't qualify.
+  private verifiedName(): string | null {
+    if (this.userMe === null || this.userMe === false) return null;
+    const player = this.userMe.player;
+    const status = player.usernameStatus;
+    if (status !== "premium" && status !== "indefinite") return null;
+    if (!player.username || isTemporaryUsername(player.usernameBase)) {
+      return null;
+    }
+    return player.username;
+  }
+
+  // Turn the toggle on iff the player opted in previously AND is still
+  // eligible; silently off otherwise (logout, lapsed sub, TEMPORARY rename).
+  // Never auto-enables without a stored opt-in — players who want to stay
+  // anonymous must be able to play under an unrelated name.
+  private applyVerifiedPreference() {
+    this.verifiedActive =
+      !this.onCrazyGames &&
+      localStorage.getItem(useVerifiedNameKey) === "true" &&
+      this.verifiedName() !== null;
+    this.requestUpdate();
+    this.validateAndStore();
+  }
+
+  private async handleVerifiedToggle() {
+    // verifiedActive implies eligible (applyVerifiedPreference), so this
+    // covers both turning off and an eligible turn-on.
+    if (this.verifiedActive || this.verifiedName() !== null) {
+      this.verifiedActive = !this.verifiedActive;
+      localStorage.setItem(useVerifiedNameKey, String(this.verifiedActive));
+      this.validateAndStore();
+      return;
+    }
+    // Ineligible — the toggle can't turn on.
+    const player = this.userMe === false ? undefined : this.userMe?.player;
+    const status = player?.usernameStatus;
+    if (status === "premium" || status === "indefinite") {
+      // Subscribed but no usable name yet (never set, or TEMPORARY####):
+      // send them to the account modal to pick one.
+      window.location.hash = "modal=account";
+      return;
+    }
+    const goStore = await showInGameConfirm(
+      translateText("username.verified_sub_required"),
+      {
+        heading: translateText("username.verified_heading"),
+        variant: "warning",
+        confirmText: translateText("username.verified_sub_required_confirm"),
+      },
+    );
+    if (goStore) {
+      window.location.hash = "modal=store&tab=subscriptions";
+    }
+  }
+
   public getUsername(): string {
+    if (this.verifiedActive) {
+      const verified = this.verifiedName();
+      if (verified !== null) return verified;
+    }
     return this.baseUsername.trim();
+  }
+
+  /** True when the player is playing under their verified account name. */
+  public isVerified(): boolean {
+    return this.verifiedActive && this.verifiedName() !== null;
   }
 
   public getClanTag(): string | null {
@@ -90,6 +179,11 @@ export class UsernameInput extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadStoredUsername();
+    // On CrazyGames the account username is applied here but never persisted
+    // (see loadStoredUsername / validateAndStore), so logging out — which
+    // reloads the whole page — falls back to a fresh guest username instead of
+    // keeping the account name. addAuthListener only fires on login; CrazyGames
+    // refreshes the page on logout, so there is no logout event to handle.
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
         this.baseUsername = username;
@@ -122,7 +216,12 @@ export class UsernameInput extends LitElement {
   }
 
   private loadStoredUsername() {
-    const storedUsername = localStorage.getItem(usernameKey);
+    // On CrazyGames the username is never persisted, so ignore any stored value
+    // and start from a fresh guest name; the account name (if signed in) is
+    // applied afterwards in connectedCallback.
+    const storedUsername = this.onCrazyGames
+      ? null
+      : localStorage.getItem(usernameKey);
     if (storedUsername) {
       this.clanTag = localStorage.getItem(clanTagKey) ?? "";
       this.baseUsername = storedUsername;
@@ -137,7 +236,7 @@ export class UsernameInput extends LitElement {
   render() {
     return html`
       <div class="flex items-center w-full h-full gap-2">
-        <div class="relative flex items-center shrink-0">
+        <div class="no-crazygames relative flex items-center shrink-0">
           <input
             type="text"
             .value=${this.clanTag}
@@ -158,13 +257,51 @@ export class UsernameInput extends LitElement {
         </div>
         <input
           type="text"
-          .value=${this.baseUsername}
+          .value=${this.verifiedActive
+            ? (this.verifiedName() ?? "")
+            : this.baseUsername}
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
           minlength="${MIN_USERNAME_LENGTH}"
           maxlength="${MAX_USERNAME_LENGTH}"
-          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
+          ?disabled=${this.verifiedActive}
+          title=${this.verifiedActive
+            ? translateText("username.verified_heading")
+            : ""}
+          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent disabled:text-blue-400 disabled:cursor-not-allowed"
         />
+        <button
+          type="button"
+          class="no-crazygames group flex items-center gap-1.5 shrink-0 cursor-pointer select-none"
+          title=${translateText("username.verified_heading")}
+          aria-pressed=${this.verifiedActive ? "true" : "false"}
+          @click=${this.handleVerifiedToggle}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="w-5 h-5 transition-colors ${this.verifiedActive
+              ? "text-blue-400"
+              : "text-white/30 group-hover:text-white/50"}"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
+            <path
+              d="M7.5 12.5l3 3 6-6.5"
+              stroke="white"
+              stroke-width="2.2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          <span
+            class="hidden sm:inline text-sm font-medium transition-colors ${this
+              .verifiedActive
+              ? "text-blue-400"
+              : "text-white/70 group-hover:text-white"}"
+            >${translateText("username.verified_toggle")}</span
+          >
+        </button>
       </div>
       ${this.validationError
         ? html`<div
@@ -184,7 +321,7 @@ export class UsernameInput extends LitElement {
       tag: this.clanTag,
     });
     const className =
-      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap";
+      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg lg:whitespace-nowrap";
 
     if (this.clanTagOwnershipError !== "username.tag_not_member") {
       return html`<div id="clan-tag-validation-error" class=${className}>
@@ -272,11 +409,28 @@ export class UsernameInput extends LitElement {
       return;
     }
 
+    // Playing under the verified account name: it's server-issued, so skip
+    // free-form validation and leave the stored free-form name untouched for
+    // when the toggle turns off.
+    if (this.verifiedActive) {
+      this._isValid = true;
+      this.validationError = "";
+      if (!this.onCrazyGames) {
+        localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
+      }
+      this.emitValidity();
+      return;
+    }
+
     const result = validateUsername(trimmedBase);
     this._isValid = result.isValid;
     if (result.isValid) {
-      localStorage.setItem(usernameKey, trimmedBase);
-      localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
+      // Never persist on CrazyGames: keeping localStorage empty means a logout
+      // (page reload) restores a guest username instead of the account name.
+      if (!this.onCrazyGames) {
+        localStorage.setItem(usernameKey, trimmedBase);
+        localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
+      }
       this.validationError = "";
     } else {
       this.validationError = result.error ?? "";
@@ -301,10 +455,31 @@ export class UsernameInput extends LitElement {
   }
 }
 
+// Whether the player is currently playing under their verified account name.
+// For join paths that can't reach the component instance (Cosmetics refs).
+export function isPlayingVerified(): boolean {
+  const el = document.querySelector<UsernameInput>("username-input");
+  return el?.isVerified() ?? false;
+}
+
+// A memorable anonymous username: "Anon" + animal (+ digit), the same handle
+// format the server-side anonymisation overlay uses (anonAnimalName). Client-side
+// fallback for players who never set a name — no roster here, so it draws a
+// random slot (best-effort-unique); the overlay is what guarantees uniqueness
+// in-game.
+//
+// Rejection-sample a uniform slot in [0, bound) from the CSPRNG: drawing a raw
+// uint32 and taking `% bound` would be very slightly biased (the top partial
+// bucket), so we discard the unrepresentable tail first. The bias is cosmetically
+// irrelevant here, but this keeps the draw provably uniform.
 export function genAnonUsername(): string {
-  const uuid = generateCryptoRandomUUID();
-  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-  const decimal = BigInt(`0x${cleanUuid}`);
-  const threeDigits = decimal % 1000n;
-  return "Anon" + threeDigits.toString().padStart(3, "0");
+  const bound = ANON_ANIMALS.length * 10;
+  const limit = Math.floor(0x1_0000_0000 / bound) * bound;
+  const buf = new Uint32Array(1);
+  let rand: number;
+  do {
+    crypto.getRandomValues(buf);
+    rand = buf[0] ?? 0;
+  } while (rand >= limit);
+  return anonAnimalName(rand % bound);
 }

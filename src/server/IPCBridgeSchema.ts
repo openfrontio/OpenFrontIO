@@ -2,10 +2,11 @@ import { z } from "zod";
 import {
   GameConfigSchema,
   PublicGameInfoSchema,
-  PublicGamesSchema,
   PublicGameTypeSchema,
 } from "../core/Schemas";
 
+export type InternalGameInfo = z.infer<typeof InternalGameInfoSchema>;
+export type InternalPublicGames = z.infer<typeof InternalPublicGamesSchema>;
 export type WorkerLobbyList = z.infer<typeof WorkerLobbyListSchema>;
 export type WorkerReady = z.infer<typeof WorkerReadySchema>;
 export type MasterLobbiesBroadcast = z.infer<
@@ -17,12 +18,29 @@ export type MasterCreateGame = z.infer<typeof MasterCreateGameSchema>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
 export type MasterMessage = z.infer<typeof MasterMessageSchema>;
 
+// Master/worker-internal lobby info: PublicGameInfo plus the hashed creator
+// ID (hosted lobbies only) used for the one-listed-lobby-per-creator check.
+// Never sent to browsers — WorkerLobbyService.sanitizeGames converts to plain
+// PublicGameInfo before anything reaches a client.
+export const InternalGameInfoSchema = PublicGameInfoSchema.extend({
+  creatorID: z.string().optional(),
+});
+
+export const InternalPublicGamesSchema = z.object({
+  serverTime: z.number(),
+  games: z.partialRecord(PublicGameTypeSchema, z.array(InternalGameInfoSchema)),
+});
+
 // --- Worker Messages ---
 
-// Worker tells the master about its lobbies.
+// Worker tells the master about its lobbies. Entries are deliberately not
+// validated here: the master checks each against InternalGameInfoSchema and
+// drops bad ones (MasterLobbyService.validLobbies), so a single malformed
+// lobby can't invalidate the whole report and freeze the master's view of
+// this worker's lobbies.
 const WorkerLobbyListSchema = z.object({
   type: z.literal("lobbyList"),
-  lobbies: z.array(PublicGameInfoSchema),
+  lobbies: z.array(z.unknown()),
 });
 
 const WorkerReadySchema = z.object({
@@ -48,7 +66,12 @@ const MasterUpdateGameSchema = z.object({
 // it can send it to the client.
 const MasterLobbiesBroadcastSchema = z.object({
   type: z.literal("lobbiesBroadcast"),
-  publicGames: PublicGamesSchema,
+  publicGames: InternalPublicGamesSchema,
+  // Hosted lobbies the master wants delisted: a creator got two lobbies
+  // listed concurrently on different workers, and only the dedup winner may
+  // stay advertised. The owning worker clears the loser's listed flag so
+  // worker state, host UI, and the broadcast agree.
+  delistGameIDs: z.array(z.string()).optional(),
 });
 
 // Master sends a message to worker to schedule a new public game/lobby.

@@ -1,4 +1,4 @@
-import { AllPlayersStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
@@ -284,6 +284,36 @@ export class StatsImpl implements Stats {
 
   playerKilled(player: Player, tick: number): void {
     this._addPlayerKilled(player, tick);
+  }
+
+  recordFinalTiles(player: Player, tiles: BigIntLike): void {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.finalTiles = _bigint(tiles);
+  }
+
+  recordKilledBy(victim: Player, killerClientID: ClientID | null): void {
+    const p = this._makePlayerStats(victim);
+    if (p === undefined) return;
+    // First write wins; `undefined` means unstamped, and `null` is a valid
+    // recorded value (eliminated by a non-client killer).
+    if (p.killedBy === undefined) p.killedBy = killerClientID;
+  }
+
+  recordDeathPosition(victim: Player, position: number): void {
+    const p = this._makePlayerStats(victim);
+    if (p === undefined) return;
+    p.deathPosition ??= position; // first write wins
+  }
+
+  recordKill(player: Player, victim: Player, tick: BigIntLike): void {
+    if (victim.type() !== PlayerType.Human) return;
+    const victimId = victim.clientID();
+    if (victimId === null) return;
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.kills ??= [];
+    p.kills.push({ victim: victimId, tick: _bigint(tick) });
   }
 
   trainSelfTrade(player: Player, gold: BigIntLike): void {

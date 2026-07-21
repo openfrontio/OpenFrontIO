@@ -73,17 +73,20 @@ export function buildStringTex(
   });
 }
 
-/** Player data: 8 x maxPlayers, RGBA32F. Dynamic. */
+/** Columns in the per-player data texture (see NamePass.writePlayerDataRow). */
+export const PLAYER_DATA_COLS = 9;
+
+/** Player data: PLAYER_DATA_COLS x maxPlayers, RGBA32F. Dynamic. */
 export function buildPlayerDataTex(
   gl: WebGL2RenderingContext,
   maxPlayers: number,
 ): WebGLTexture {
   return createTexture2D(gl, {
-    width: 8,
+    width: PLAYER_DATA_COLS,
     height: maxPlayers,
     internalFormat: gl.RGBA32F,
     format: gl.RGBA,
     type: gl.FLOAT,
-    data: new Float32Array(8 * maxPlayers * 4),
+    data: new Float32Array(PLAYER_DATA_COLS * maxPlayers * 4),
   });
 }

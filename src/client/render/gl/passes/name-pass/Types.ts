@@ -60,8 +60,12 @@ export interface PlayerSlot {
   lastTroopBucket: number;
   /** URL identifying which flag this player wants (dedup key). undefined = none. */
   flagUrl: string | undefined;
-  /** Layer index in FlagAtlasArray, or -1 if not loaded yet / no flag. */
+  /** Layer index in the flag atlas array, or -1 if not loaded yet / no flag. */
   flagLayerIdx: number;
+  /** URL of this player's crown cosmetic (dedup key). undefined = none. */
+  crownUrl: string | undefined;
+  /** Layer index in the crown atlas array, or -1 if not loaded yet / no crown. */
+  crownLayerIdx: number;
   emojiAtlasIdx: number;
   nameHalfWidth: number;
 
@@ -75,6 +79,9 @@ export interface PlayerSlot {
   embargo: boolean;
   nukeActive: boolean;
   nukeTargetsMe: boolean;
+  inDoomsdayClock: boolean;
+  doomsdayClockDraining: boolean;
+  doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;
   allianceRemainingTicks: number;

@@ -1,23 +1,41 @@
 #version 300 es
 precision highp float;
+precision highp sampler2DArray;
 
 uniform sampler2D uStatusAtlas;
+uniform sampler2DArray uCrownAtlas; // crown-cosmetic images (skins slot 0)
+uniform vec2 uStatusTexel;     // 1/atlasW, 1/atlasH
+uniform float uStatusOutlinePx; // outline radius in atlas texels (0 = off)
 
 in vec2 vUV;
 in vec2 vLocalUV;
+flat in int vCrownLayer;
 flat in int vDiscard;
 flat in float vAllianceFraction;
 flat in vec2 vFadedUV0;
 flat in vec2 vFadedUV1;
 flat in float vFlashAlpha;
+flat in float vOutline;          // 1.0 = draw a dark outline behind this icon
 in float vHoverAlpha;
 
 out vec4 fragColor;
 
+// 8 unit directions for the outline dilation sample ring.
+const vec2 kRing[8] = vec2[8](
+  vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0),
+  vec2(0.707, 0.707), vec2(-0.707, 0.707),
+  vec2(0.707, -0.707), vec2(-0.707, -0.707)
+);
+
 void main() {
   if (vDiscard != 0) discard;
 
-  vec4 texel = texture(uStatusAtlas, vUV);
+  // A crown cosmetic replaces the default first-place crown icon. Only slot 0
+  // ever carries a layer, and its quad has no outline margin, so vLocalUV is
+  // plain [0,1] over the icon.
+  vec4 texel = (vCrownLayer >= 0)
+    ? texture(uCrownAtlas, vec3(vLocalUV, float(vCrownLayer)))
+    : texture(uStatusAtlas, vUV);
 
   // Alliance drain: composite faded icon behind colored icon, clipped by fraction.
   // Matches the game's CSS clip-path: inset(topCut% -2px 0 -2px) behavior.
@@ -33,8 +51,23 @@ void main() {
     texel = vLocalUV.y < topCut ? fadedTexel : texel;
   }
 
-  // Traitor flash: modulate alpha for urgency pulse
-  texel.a *= vFlashAlpha * vHoverAlpha;
+  // Traitor flash + hover fade: modulate alpha
+  float fade = vFlashAlpha * vHoverAlpha;
+  texel.a *= fade;
+
+  // Dark outline: dilate the icon's alpha so it stays legible over terrain of a
+  // similar color (the green alliance icon vs. irradiated land). Sampling the
+  // padded atlas cell never reaches a neighbouring icon.
+  if (vOutline > 0.5 && uStatusOutlinePx > 0.0) {
+    float ring = 0.0;
+    vec2 sampleStep = uStatusTexel * uStatusOutlinePx;
+    for (int i = 0; i < 8; i++) {
+      ring = max(ring, texture(uStatusAtlas, vUV + kRing[i] * sampleStep).a);
+    }
+    ring *= fade;
+    float outlineA = ring * (1.0 - texel.a);
+    texel = vec4(mix(vec3(0.0), texel.rgb, texel.a), max(texel.a, outlineA));
+  }
 
   if (texel.a < 0.01) discard;
   fragColor = texel;

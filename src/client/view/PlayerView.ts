@@ -76,11 +76,15 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     smallID: pu.smallID!,
     isAlive: pu.isAlive!,
     isDisconnected: pu.isDisconnected!,
+    killedBy: pu.killedBy ?? null,
+    deathPosition: pu.deathPosition ?? null,
     tilesOwned: pu.tilesOwned!,
     gold: Number(pu.gold!),
     troops: pu.troops!,
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
+    inDoomsdayClock: pu.inDoomsdayClock ?? false,
+    markedDoomsdayClockTick: pu.markedDoomsdayClockTick ?? -1,
     betrayals: pu.betrayals!,
     hasSpawned: pu.hasSpawned!,
     spawnTile: pu.spawnTile,
@@ -401,9 +405,11 @@ export class PlayerView {
   }
 
   units(...types: UnitType[]): UnitView[] {
-    return this.game
-      .units(...types)
-      .filter((u) => u.owner().smallID() === this.smallID());
+    const owned = this.game.unitsOwnedBy(this.smallID());
+    if (types.length === 0) {
+      return [...owned];
+    }
+    return owned.filter((u) => types.includes(u.type()));
   }
 
   nameLocation(): NameViewData | undefined {
@@ -449,6 +455,12 @@ export class PlayerView {
   }
   isAlive(): boolean {
     return this.state.isAlive;
+  }
+  killedBy(): string | null {
+    return this.state.killedBy;
+  }
+  deathPosition(): number | null {
+    return this.state.deathPosition;
   }
   isPlayer(): this is PlayerView {
     return true;
@@ -589,6 +601,14 @@ export class PlayerView {
   }
   getTraitorRemainingTicks(): number {
     return this.state.traitorRemainingTicks;
+  }
+  inDoomsdayClock(): boolean {
+    return this.state.inDoomsdayClock;
+  }
+  doomsdayClockTicks(): number {
+    return this.inDoomsdayClock()
+      ? this.game.ticks() - this.state.markedDoomsdayClockTick
+      : 0;
   }
   betrayals(): number {
     return this.state.betrayals;

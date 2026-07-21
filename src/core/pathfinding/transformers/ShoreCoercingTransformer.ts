@@ -6,6 +6,11 @@ import { PathFinder } from "../types";
  * Coerces shore tiles to nearby water tiles before pathfinding,
  * then fixes the path extremes to include the original shore tiles.
  */
+// Reusable neighbor buffers; the simulation is single-threaded and both are
+// fully consumed before any re-entrant call.
+const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+const NEIGHBOR_SCRATCH_INNER: TileRef[] = [0, 0, 0, 0];
+
 export class ShoreCoercingTransformer implements PathFinder<number> {
   constructor(
     private inner: PathFinder<number>,
@@ -14,14 +19,22 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     const fromArray = Array.isArray(from) ? from : [from];
-    const waterToOriginal = new Map<TileRef, TileRef | null>();
+    const waterToOriginal = new Map<TileRef, TileRef>();
     const waterFrom: TileRef[] = [];
 
     for (const f of fromArray) {
-      const coerced = this.coerceToWater(f);
-      if (coerced.water !== null) {
-        waterFrom.push(coerced.water);
-        waterToOriginal.set(coerced.water, coerced.original);
+      if (this.map.isWater(f)) {
+        waterFrom.push(f);
+        // A raw water source needs no shore restoration — and overrides any
+        // earlier shore tile that coerced to this same water tile (last
+        // write wins, matching processing order).
+        waterToOriginal.delete(f);
+      } else {
+        const water = this.bestWaterNeighbor(f);
+        if (water !== -1) {
+          waterFrom.push(water);
+          waterToOriginal.set(water, f);
+        }
       }
     }
 
@@ -29,51 +42,50 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
       return null;
     }
 
-    const coercedTo = this.coerceToWater(to);
-    if (coercedTo.water === null) {
-      return null;
+    // Coerce the destination: shore tiles path to their best water neighbor,
+    // with the original appended back afterwards.
+    let waterTo = to;
+    let originalTo: TileRef = -1;
+    if (!this.map.isWater(to)) {
+      waterTo = this.bestWaterNeighbor(to);
+      if (waterTo === -1) {
+        return null;
+      }
+      originalTo = to;
     }
 
     const fromTiles = waterFrom.length === 1 ? waterFrom[0] : waterFrom;
-    const path = this.inner.findPath(fromTiles, coercedTo.water);
+    const path = this.inner.findPath(fromTiles, waterTo);
     if (!path || path.length === 0) {
       return null;
     }
 
     // Restore original start shore tile
     const originalShore = waterToOriginal.get(path[0]);
-    if (originalShore !== undefined && originalShore !== null) {
+    if (originalShore !== undefined) {
       path.unshift(originalShore);
     }
 
     // Append original to if different
-    if (
-      coercedTo.original !== null &&
-      path[path.length - 1] !== coercedTo.original
-    ) {
-      path.push(coercedTo.original);
+    if (originalTo !== -1 && path[path.length - 1] !== originalTo) {
+      path.push(originalTo);
     }
 
     return path;
   }
 
   /**
-   * Coerce a tile to water for pathfinding.
-   * If tile is already water, returns it unchanged.
-   * If tile is shore, finds the best adjacent water neighbor.
+   * Best adjacent water neighbor of a shore tile (highest water-neighbor
+   * connectivity, first wins on ties), or -1 if it has none.
    */
-  private coerceToWater(tile: TileRef): {
-    water: TileRef | null;
-    original: TileRef | null;
-  } {
-    if (this.map.isWater(tile)) {
-      return { water: tile, original: null };
-    }
-
-    let best: TileRef | null = null;
+  private bestWaterNeighbor(tile: TileRef): TileRef {
+    let best: TileRef = -1;
     let maxScore = -1;
 
-    for (const n of this.map.neighbors(tile)) {
+    const nbuf = NEIGHBOR_SCRATCH;
+    const numNeighbors = this.map.neighbors4(tile, nbuf);
+    for (let i = 0; i < numNeighbors; i++) {
+      const n = nbuf[i];
       if (!this.map.isWater(n)) continue;
 
       // Score by water neighbor count (connectivity)
@@ -86,16 +98,15 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
       }
     }
 
-    if (best !== null) {
-      return { water: best, original: tile };
-    }
-    return { water: null, original: tile };
+    return best;
   }
 
   private countWaterNeighbors(tile: TileRef): number {
     let count = 0;
-    for (const n of this.map.neighbors(tile)) {
-      if (this.map.isWater(n)) count++;
+    const nbuf = NEIGHBOR_SCRATCH_INNER;
+    const numNeighbors = this.map.neighbors4(tile, nbuf);
+    for (let i = 0; i < numNeighbors; i++) {
+      if (this.map.isWater(nbuf[i])) count++;
     }
     return count;
   }

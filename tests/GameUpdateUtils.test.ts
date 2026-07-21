@@ -18,11 +18,15 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     smallID: 1,
     isAlive: true,
     isDisconnected: false,
+    killedBy: null,
+    deathPosition: null,
     tilesOwned: 0,
     gold: 0,
     troops: 100,
     isTraitor: false,
     traitorRemainingTicks: 0,
+    inDoomsdayClock: false,
+    markedDoomsdayClockTick: -1,
     betrayals: 0,
     hasSpawned: true,
     lastDeleteUnitTick: 0,
@@ -64,6 +68,14 @@ describe("diffPlayerUpdate", () => {
     expect(diff.betrayals).toBe(1);
     expect(diff.isTraitor).toBe(true);
     expect(diff.hasSpawned).toBeUndefined();
+  });
+
+  it("emits killedBy + deathPosition when a player is eliminated", () => {
+    const prev = makePlayerUpdate({ killedBy: null, deathPosition: null });
+    const next = makePlayerUpdate({ killedBy: "client-b", deathPosition: 3 });
+    const diff = diffPlayerUpdate(prev, next)!;
+    expect(diff.killedBy).toBe("client-b");
+    expect(diff.deathPosition).toBe(3);
   });
 
   it("ignores tilesOwned/gold/troops — they travel via packedPlayerUpdates", () => {
@@ -239,6 +251,16 @@ describe("packAttackTroopDeltas", () => {
 });
 
 describe("applyStateUpdate", () => {
+  it("applies killedBy + deathPosition on elimination", () => {
+    const target = makePlayerState();
+    applyStateUpdate(
+      target,
+      makePlayerUpdate({ killedBy: "client-b", deathPosition: 3 }),
+    );
+    expect(target.killedBy).toBe("client-b");
+    expect(target.deathPosition).toBe(3);
+  });
+
   it("applies every field from a full update", () => {
     const target = makePlayerState();
     const pu = makePlayerUpdate({

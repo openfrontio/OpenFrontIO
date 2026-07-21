@@ -1,5 +1,5 @@
 {
-  "categories": ["new", "europe"],
+  "categories": ["europe"],
   "id": "DanishStraits",
   "map": {
     "height": 1224,
@@ -91,7 +91,7 @@
     },
     {
       "coordinates": [585, 1182],
-      "flag": "German Empire",
+      "flag": "German Confederation",
       "name": "Mecklenburg-Schwerin"
     },
     {
@@ -101,12 +101,12 @@
     },
     {
       "coordinates": [59, 1201],
-      "flag": "German Empire",
+      "flag": "German Confederation",
       "name": "Oldenburg"
     },
     {
       "coordinates": [302, 1143],
-      "flag": "German Empire",
+      "flag": "German Confederation",
       "name": "Hamburg"
     },
     {

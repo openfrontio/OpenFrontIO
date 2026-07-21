@@ -14,6 +14,8 @@
     "embargo": 6,
     "nukeRed": 7,
     "nukeWhite": 8,
-    "allianceFaded": 9
+    "allianceFaded": 9,
+    "doomsdayClock": 10,
+    "verified": 11
   }
 }

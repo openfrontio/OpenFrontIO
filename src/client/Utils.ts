@@ -1,4 +1,5 @@
 import IntlMessageFormat from "intl-messageformat";
+import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
@@ -131,6 +132,7 @@ export interface ModifierInfo {
  */
 export function getActiveModifiers(
   modifiers: PublicGameModifiers | undefined,
+  doomsdayClockSpeed?: DoomsdayClockSpeed,
 ): ModifierInfo[] {
   if (!modifiers) return [];
   const result: ModifierInfo[] = [];
@@ -220,6 +222,21 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
+  if (modifiers.isDoomsdayClock) {
+    const info: ModifierInfo = {
+      labelKey: "public_game_modifier.doomsday_clock_label",
+      badgeKey: "public_game_modifier.doomsday_clock",
+    };
+    // Name the preset when we know it; older payloads / non-rotation lobbies
+    // may not carry a speed, so keep the plain badge as a fallback.
+    if (doomsdayClockSpeed !== undefined) {
+      info.badgeKey = "public_game_modifier.doomsday_clock_with_speed";
+      info.badgeParams = {
+        speed: translateText(`doomsday_clock_speed.${doomsdayClockSpeed}`),
+      };
+    }
+    result.push(info);
+  }
   return result;
 }
 
@@ -228,8 +245,9 @@ export function getActiveModifiers(
  */
 export function getModifierLabels(
   modifiers: PublicGameModifiers | undefined,
+  doomsdayClockSpeed?: DoomsdayClockSpeed,
 ): string[] {
-  return getActiveModifiers(modifiers).map((m) =>
+  return getActiveModifiers(modifiers, doomsdayClockSpeed).map((m) =>
     translateText(m.badgeKey, m.badgeParams),
   );
 }
@@ -285,7 +303,13 @@ export function renderNumber(
   num = Number(num);
   num = Math.max(num, 0);
 
-  if (num >= 10_000_000) {
+  if (num >= 10_000_000_000) {
+    const value = Math.floor(num / 100000000) / 10;
+    return value.toFixed(fixedPoints ?? 1) + "B";
+  } else if (num >= 1_000_000_000) {
+    const value = Math.floor(num / 10000000) / 100;
+    return value.toFixed(fixedPoints ?? 2) + "B";
+  } else if (num >= 10_000_000) {
     const value = Math.floor(num / 100000) / 10;
     return value.toFixed(fixedPoints ?? 1) + "M";
   } else if (num >= 1_000_000) {
@@ -514,7 +538,6 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.SAM_HIT:
     case MessageType.CAPTURED_ENEMY_UNIT:
     case MessageType.CONQUERED_PLAYER:
-    case MessageType.DONATION_RECEIVED:
     case MessageType.ALLIANCE_ACCEPTED:
       return severityColors["success"];
     case MessageType.ATTACK_FAILED:
@@ -526,6 +549,7 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.ATTACK_CANCELLED:
     case MessageType.ATTACK_REQUEST:
     case MessageType.DONATION_SENT:
+    case MessageType.DONATION_RECEIVED:
       return severityColors["blue"];
     case MessageType.MIRV_INBOUND:
     case MessageType.NUKE_INBOUND:

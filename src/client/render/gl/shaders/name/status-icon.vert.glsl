@@ -24,6 +24,7 @@ uniform float uStatusCols;   // columns in atlas
 uniform float uStatusAtlasW; // atlas texture width
 uniform float uStatusAtlasH; // atlas texture height
 uniform float uStatusPad;    // transparent padding in texels per side
+uniform float uStatusOutlinePx; // dark-outline radius in atlas texels (0 = off)
 
 // Configurable layout
 uniform float uStatusRowOffset;  // row Y offset (multiples of uFontBase * nameWorldScale)
@@ -34,20 +35,23 @@ uniform float uAllianceFlashWindowSec; // seconds before expiry the alliance ico
 
 out vec2 vUV;
 out vec2 vLocalUV;               // 0..1 within the icon cell
+flat out int vCrownLayer;        // crown-cosmetic atlas layer for slot 0, or -1
 flat out int vDiscard;
 flat out float vAllianceFraction; // 0 = no drain effect, >0 = active drain
 flat out vec2 vFadedUV0;         // top-left UV of faded alliance cell
 flat out vec2 vFadedUV1;         // bottom-right UV of faded alliance cell
 flat out float vFlashAlpha;      // traitor flash opacity (1.0 = fully visible)
+flat out float vOutline;         // 1.0 = alliance icon, draw a dark outline
 out float vHoverAlpha;
 
 // Status flag float array — indexed by icon slot.
 // Slot mapping: 0=crown, 1=traitor, 2=disconnected, 3=alliance,
-//               4=allianceReq, 5=target, 6=embargo, 7=nukeActive
-float statusFlag[8];
+//               4=allianceReq, 5=target, 6=embargo, 7=nukeActive, 8=doomsdayClock
+float statusFlag[9];
 
-// Read status flags from pd5/pd6 into the statusFlag array.
+// Read status flags from pd4.w/pd5/pd6 into the statusFlag array.
 void readStatusFlags(int playerIdx) {
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0);
   vec4 pd5 = texelFetch(uPlayerData, ivec2(5, playerIdx), 0);
   vec4 pd6 = texelFetch(uPlayerData, ivec2(6, playerIdx), 0);
   statusFlag[0] = pd5.x; // crown
@@ -58,6 +62,7 @@ void readStatusFlags(int playerIdx) {
   statusFlag[5] = pd6.y; // target
   statusFlag[6] = pd6.z; // embargo
   statusFlag[7] = pd6.w; // nukeActive
+  statusFlag[8] = pd4.w; // doomsdayClock
 }
 
 // Count active icons with index < pos.
@@ -83,15 +88,22 @@ vec4 cellUV(int idx) {
 }
 
 void main() {
-  // Decode instance ID → playerIdx + iconSlot (0..7)
-  int playerIdx = gl_InstanceID / 8;
-  int iconSlot  = gl_InstanceID - playerIdx * 8;
+  // Decode instance ID → playerIdx + iconSlot (0..8 status row, 9 = verified
+  // badge to the right of the name)
+  int playerIdx = gl_InstanceID / 10;
+  int iconSlot  = gl_InstanceID - playerIdx * 10;
+  bool isVerifiedSlot = (iconSlot == 9);
 
   // Read player data
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
+  vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, nameShade, nameHalfWidth
   vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, smallID, [free]
   vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, allianceRemainingTicks
+  vec4 pd8 = texelFetch(uPlayerData, ivec2(8, playerIdx), 0); // crownLayer, verified, [free]
+
+  // A crown cosmetic skins the first-place crown (slot 0).
+  vCrownLayer = (iconSlot == 0 && pd8.x >= 0.0) ? int(pd8.x) : -1;
 
   // Early out: dead player OR emoji is active
   if (pd1.w <= 0.0 || pd4.y >= 0.0) {
@@ -103,6 +115,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vOutline = 0.0;
     vHoverAlpha = 1.0;
     return;
   }
@@ -110,8 +123,10 @@ void main() {
   // Read status flags into array
   readStatusFlags(playerIdx);
 
-  // Early out: this icon slot is inactive
-  if (statusFlag[iconSlot] < 0.5) {
+  // Early out: this icon slot is inactive. The verified badge (slot 9) is
+  // driven by pd8.y, not the status-row flag array.
+  bool slotActive = isVerifiedSlot ? (pd8.y > 0.5) : (statusFlag[iconSlot] > 0.5);
+  if (!slotActive) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vLocalUV = vec2(0.0);
@@ -120,6 +135,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vOutline = 0.0;
     vHoverAlpha = 1.0;
     return;
   }
@@ -149,6 +165,7 @@ void main() {
     vFadedUV0 = vec2(0.0);
     vFadedUV1 = vec2(0.0);
     vFlashAlpha = 1.0;
+    vOutline = 0.0;
     vHoverAlpha = 1.0;
     return;
   }
@@ -156,21 +173,31 @@ void main() {
   // Icon world size: matches name text height
   float iconWorldSize = uFontBase * nameWorldScale * 1.1;
 
-  // Count active icons and position of this one (left-to-right)
-  int totalActive = 0;
-  for (int i = 0; i < 8; i++) {
-    if (statusFlag[i] > 0.5) totalActive++;
+  float iconX;
+  float iconY;
+  if (isVerifiedSlot) {
+    // Verified badge: anchored just right of the name text, sitting slightly
+    // below the name line's vertical center (name glyphs center on wy).
+    iconWorldSize = uFontBase * nameWorldScale * 0.9;
+    iconX = wx + pd3.w * nameWorldScale + iconWorldSize * 0.12;
+    iconY = wy - iconWorldSize * 0.4;
+  } else {
+    // Count active icons and position of this one (left-to-right)
+    int totalActive = 0;
+    for (int i = 0; i < 9; i++) {
+      if (statusFlag[i] > 0.5) totalActive++;
+    }
+    int myIndex = countBelow(iconSlot);
+
+    // Horizontal centering: spread icons evenly above the name
+    float gap = iconWorldSize * 0.15;
+    float totalWidth = float(totalActive) * iconWorldSize + float(totalActive - 1) * gap;
+    float startX = wx - totalWidth * 0.5;
+    iconX = startX + float(myIndex) * (iconWorldSize + gap);
+
+    // Position: row above the emoji row
+    iconY = wy - uFontBase * nameWorldScale * uStatusRowOffset;
   }
-  int myIndex = countBelow(iconSlot);
-
-  // Horizontal centering: spread icons evenly above the name
-  float gap = iconWorldSize * 0.15;
-  float totalWidth = float(totalActive) * iconWorldSize + float(totalActive - 1) * gap;
-  float startX = wx - totalWidth * 0.5;
-  float iconX = startX + float(myIndex) * (iconWorldSize + gap);
-
-  // Position: row above the emoji row
-  float iconY = wy - uFontBase * nameWorldScale * uStatusRowOffset;
 
   // Determine atlas index
   // Slots 0-6 map directly to atlas indices 0-6
@@ -179,24 +206,48 @@ void main() {
   if (iconSlot == 7) {
     atlasIdx = (pd7.x > 0.5) ? 7 : 8;
   }
+  if (iconSlot == 8) {
+    atlasIdx = 10; // doomsday-clock skull
+  }
+  if (isVerifiedSlot) {
+    atlasIdx = 11; // blue verified check
+  }
+
+  // Only the alliance icon (slot 3) gets the dark outline.
+  vOutline = (iconSlot == 3) ? 1.0 : 0.0;
 
   // Fade the status row along with the rest of the name plate when the cursor
   // is over any part of it. Hit test runs on the CPU (NamePass).
   vHoverAlpha = (uFadeOwnerID > 0.0 && pd4.z == uFadeOwnerID)
     ? uHoverFadeAlpha : 1.0;
 
-  // Quad world position
-  vec2 iconOrigin = vec2(iconX, iconY);
-  vec2 worldPos = iconOrigin + aPos * vec2(iconWorldSize, iconWorldSize);
+  // Dark-outline margin: grow the alliance icon's quad outward into the cell's
+  // transparent padding so the outline halo isn't clipped at the quad edge.
+  // The icon content keeps its size; only the quad's bounding box grows. Other
+  // icons keep marginWorld = 0 and render pixel-identically.
+  float iconTexels = uStatusCell - 2.0 * uStatusPad;
+  float marginTex = (vOutline > 0.5 && uStatusOutlinePx > 0.0)
+    ? min(uStatusPad - 2.0, uStatusOutlinePx + 2.0)
+    : 0.0;
+  float marginWorld = marginTex * (iconWorldSize / iconTexels);
+
+  // Quad world position (expanded by the outline margin, centred on the icon)
+  vec2 iconOrigin = vec2(iconX, iconY) - vec2(marginWorld);
+  float quadSize = iconWorldSize + 2.0 * marginWorld;
+  vec2 worldPos = iconOrigin + aPos * vec2(quadSize, quadSize);
 
   // Camera transform
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 
+  // vLocalUV in icon-content space: 0..1 over the icon, <0/>1 in the outline
+  // margin. This keeps the drain math below unchanged and samples the
+  // transparent padding (never a neighbour) when the quad is expanded.
+  vLocalUV = (aPos * quadSize - marginWorld) / iconWorldSize;
+
   // UV from atlas grid (padded to avoid mipmap bleed)
   vec4 uv = cellUV(atlasIdx);
-  vUV = vec2(mix(uv.x, uv.z, aPos.x), mix(uv.y, uv.w, aPos.y));
-  vLocalUV = aPos;
+  vUV = vec2(mix(uv.x, uv.z, vLocalUV.x), mix(uv.y, uv.w, vLocalUV.y));
 
   // Alliance drain: slot 3 = alliance icon
   float allianceFrac = pd7.z;
@@ -237,6 +288,21 @@ void main() {
       float elapsed = window - remainingSec;
       float phase = uTime * 2.0 + elapsed * elapsed * (1.5 / window);
       vFlashAlpha = 0.3 + 0.7 * (0.5 + 0.5 * cos(phase * 6.2832));
+    }
+  }
+
+  // Doomsday Clock skull: slot 8. While in danger (flag 1.0-1.49) the skull
+  // blinks and speeds up as the warn countdown runs out — the progress 0->1 is
+  // packed into the flag's fraction. Base ~2 Hz plus a p^2 phase term so it
+  // accelerates toward the drain (same trick as the alliance-renewal flash
+  // above, which keeps the phase continuous). Holds steady once draining (>=1.5).
+  if (iconSlot == 8) {
+    if (statusFlag[8] < 1.5) {
+      float p = clamp((statusFlag[8] - 1.0) / 0.49, 0.0, 1.0);
+      float phase = uTime * 2.0 + p * p * 40.0;
+      vFlashAlpha = 0.35 + 0.65 * (0.5 + 0.5 * cos(phase * 6.2832));
+    } else {
+      vFlashAlpha = 1.0;
     }
   }
 

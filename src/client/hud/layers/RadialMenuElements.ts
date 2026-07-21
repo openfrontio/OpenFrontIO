@@ -528,6 +528,7 @@ export const deleteUnitElement: MenuElement = {
         (unit) =>
           !unit.isUnderConstruction() &&
           unit.markedForDeletion() === false &&
+          Structures.has(unit.type()) &&
           params.game.manhattanDist(unit.tile(), params.tile) <=
             DELETE_SELECTION_RADIUS,
       );
@@ -552,8 +553,11 @@ export const deleteUnitElement: MenuElement = {
       .units()
       .filter(
         (unit) =>
+          !unit.isUnderConstruction() &&
+          unit.markedForDeletion() === false &&
+          Structures.has(unit.type()) &&
           params.game.manhattanDist(unit.tile(), params.tile) <=
-          DELETE_SELECTION_RADIUS,
+            DELETE_SELECTION_RADIUS,
       );
 
     const closestUnit = findClosestBy(myUnits, (unit) =>
@@ -663,6 +667,16 @@ export const rootMenuElement: MenuElement = {
     const inExtensionWindow =
       params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
 
+    // After game-over, nukes can target teammates (nukeSpawn allows it).
+    // Show the attack submenu so mobile users can access nukes in the aftergame.
+    const hasBuildableAttacks =
+      params.playerActions.buildableUnits?.some(
+        (bu) => BuildableAttacks.has(bu.type) && bu.canBuild !== false,
+      ) ?? false;
+
+    const showDonateInsteadOfAttack =
+      isFriendlyTarget(params) && !isDisconnected && !hasBuildableAttacks;
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
@@ -670,7 +684,7 @@ export const rootMenuElement: MenuElement = {
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
             inExtensionWindow ? allyExtendElement : allyRequestElement,
-            isFriendlyTarget(params) && !isDisconnected
+            showDonateInsteadOfAttack
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),

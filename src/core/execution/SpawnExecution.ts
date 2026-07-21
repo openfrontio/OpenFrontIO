@@ -47,13 +47,24 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
+    // Security: a spawn intent may only place or relocate a player's starting
+    // territory during the spawn phase. Once the game is underway, an
+    // already-spawned player who sends a spawn intent is attempting to
+    // teleport — relinquishing their territory and re-conquering it elsewhere.
+    // Ignore it so the intent is a deterministic no-op on every client.
+    if (!this.mg.inSpawnPhase() && player.hasSpawned()) {
+      return;
+    }
+
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
     if (this.mg.config().isRandomSpawn() && player.hasSpawned()) {
       return;
     }
 
     player.tiles().forEach((t) => player.relinquish(t));
-    const spawn = this.getSpawn(this.tile);
+    const spawn = this.getSpawn(
+      this.mg.config().isRandomSpawn() ? undefined : this.tile,
+    );
 
     if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);

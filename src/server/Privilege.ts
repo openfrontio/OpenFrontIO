@@ -11,12 +11,14 @@ import {
 } from "obscenity";
 import countries from "resources/countries.json";
 
-import { Cosmetics } from "../core/CosmeticSchemas";
+import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
+  PlayerCrown,
+  PlayerEffect,
   PlayerPattern,
   PlayerSkin,
 } from "../core/Schemas";
@@ -257,8 +259,52 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         return { type: "forbidden", reason: "invalid skin: " + message };
       }
     }
+    if (refs.crownName) {
+      try {
+        cosmetics.crown = this.isCrownAllowed(flares, refs.crownName);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid crown: " + message };
+      }
+    }
+    if (refs.effects) {
+      for (const [slot, name] of Object.entries(refs.effects)) {
+        try {
+          cosmetics.effects ??= {};
+          cosmetics.effects[slot] = this.isEffectAllowed(flares, slot, name);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          return { type: "forbidden", reason: "invalid effect: " + message };
+        }
+      }
+    }
+    // Entitlement-blind pass-through: isAllowed has no user identity. The
+    // authoritative check — join name must exactly match the account's
+    // resolved display name — runs at join in Worker.ts using the /users/@me
+    // response (enforceVerifiedBadge below).
+    if (refs.verified === true) {
+      cosmetics.verified = true;
+    }
 
     return { type: "allowed", cosmetics };
+  }
+
+  // slot = effectType (trails) or nukeType (nuke explosions); see effectTypeForSlot.
+  isEffectAllowed(flares: string[], slot: string, name: string): PlayerEffect {
+    const found = findEffectForSlot(this.cosmetics, slot, name);
+    if (!found) {
+      throw new Error(`Effect ${name} not found for slot ${slot}`);
+    }
+    if (
+      flares.includes("effect:*") ||
+      flares.includes(`effect:${found.name}`)
+    ) {
+      return {
+        name: found.name,
+        effectType: found.effectType,
+      };
+    }
+    throw new Error(`No flares for effect ${name}`);
   }
 
   isSkinAllowed(flares: string[], name: string): PlayerSkin {
@@ -268,6 +314,15 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       return { name: found.name, url: found.url };
     }
     throw new Error(`No flares for skin ${name}`);
+  }
+
+  isCrownAllowed(flares: string[], name: string): PlayerCrown {
+    const found = this.cosmetics.crowns?.[name];
+    if (!found) throw new Error(`Crown ${name} not found`);
+    if (flares.includes("crown:*") || flares.includes(`crown:${found.name}`)) {
+      return { name: found.name, url: found.url };
+    }
+    throw new Error(`No flares for crown ${name}`);
   }
 
   isPatternAllowed(
@@ -361,7 +416,13 @@ const defaultMatcher = createMatcher(baselineBannedWords);
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
-    return { type: "allowed", cosmetics: {} };
+    // Catalog cosmetics can't be resolved without the cosmetics data, but the
+    // verified claim isn't a catalog item — pass it through; the Worker's
+    // enforceVerifiedBadge still validates it against the account at join.
+    return {
+      type: "allowed",
+      cosmetics: refs.verified === true ? { verified: true } : {},
+    };
   }
 
   censor(
@@ -380,4 +441,35 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   ): ClanTagResolution {
     return { tag: censoredTag, dropped: false };
   }
+}
+
+/**
+ * Enforce the client-claimed verified badge on resolved cosmetics. The claim
+ * is kept only when the account vouches for it: an entitled bare-name status
+ * (premium/indefinite) AND a join name EXACTLY matching the account's
+ * server-resolved display name — the client locks the input to that form, so
+ * any drift (a rename race, a censor rewrite, a hand-crafted join message)
+ * drops the badge. Strips, never rejects.
+ *
+ * `account` is the /users/@me player the Worker already fetches for flares;
+ * null means an anonymous persistent-ID join — those only exist in Dev, where
+ * the claim is kept so the badge stays locally testable.
+ *
+ * Returns true when an unvouched claim was stripped (for logging).
+ */
+export function enforceVerifiedBadge(
+  cosmetics: PlayerCosmetics,
+  joinUsername: string,
+  account: { username?: string | null; usernameStatus?: string } | null,
+): boolean {
+  if (cosmetics.verified !== true) return false;
+  const vouched =
+    account === null ||
+    ((account.usernameStatus === "premium" ||
+      account.usernameStatus === "indefinite") &&
+      typeof account.username === "string" &&
+      account.username === joinUsername);
+  if (vouched) return false;
+  delete cosmetics.verified;
+  return true;
 }

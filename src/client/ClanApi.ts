@@ -3,6 +3,7 @@ import {
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  type ClanDiscord,
   type ClanGameFilter,
   type ClanGamesResponse,
   ClanGamesResponseSchema,
@@ -14,6 +15,7 @@ import {
   ClanMembersResponseSchema,
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
+  DiscordInviteResponseSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
@@ -24,6 +26,7 @@ export type {
   ClanBan,
   ClanBansResponse,
   ClanBrowseResponse,
+  ClanDiscord,
   ClanGame,
   ClanGameFilter,
   ClanGamePlayer,
@@ -290,7 +293,12 @@ export async function leaveClan(
 
 export async function updateClan(
   tag: string,
-  patch: { name?: string; description?: string; isOpen?: boolean },
+  patch: {
+    name?: string;
+    description?: string;
+    discordUrl?: string;
+    isOpen?: boolean;
+  },
 ): Promise<ClanInfo | { error: string }> {
   try {
     const res = await clanFetch(`/clans/${encodeURIComponent(tag)}`, {
@@ -298,6 +306,23 @@ export async function updateClan(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    if (res.status === 400) {
+      // Surface Discord-invite validation errors specifically so the leader
+      // knows to fix the link rather than seeing a generic failure.
+      const body = await res.json().catch(() => ({}));
+      const code = (body as { code?: string }).code;
+      if (code === "DISCORD_INVALID")
+        return { error: "clan_modal.discord_invalid" };
+      if (code === "DISCORD_EXPIRES")
+        return { error: "clan_modal.discord_expires" };
+      return { error: "clan_modal.error_failed" };
+    }
+    // The only rate limit on this endpoint is the one Discord-link
+    // verification per player per minute, so a 429 always means "wait
+    // before changing the link again".
+    if (res.status === 429) {
+      return { error: "clan_modal.discord_rate_limited" };
+    }
     if (!res.ok) {
       return {
         error: "clan_modal.error_failed",
@@ -312,6 +337,61 @@ export async function updateClan(
     return parsed.data;
   } catch {
     return { error: "clan_modal.error_network" };
+  }
+}
+
+// Animated icons/banners use an `a_` hash prefix and are served as .gif.
+function discordCdnAsset(
+  kind: "icons" | "banners",
+  guildId: string,
+  hash: string,
+  query = "",
+): string {
+  const ext = hash.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/${kind}/${guildId}/${hash}.${ext}${query}`;
+}
+
+// Fetched from the browser rather than via our server: per-player IPs sidestep
+// the rate limit Discord applies to its public invite API on shared server IPs.
+export async function fetchDiscordInvite(url: string): Promise<ClanDiscord> {
+  // The server stores the normalised short form https://discord.gg/{code}.
+  let code: string | undefined;
+  try {
+    code = new URL(url).pathname.split("/").filter(Boolean)[0];
+  } catch {
+    // Unparseable stored URL — fall through to the plain link.
+  }
+  if (!code) return { url, valid: true };
+
+  try {
+    const res = await fetch(
+      `https://discord.com/api/v10/invites/${encodeURIComponent(code)}?with_counts=true`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    // 404 => Discord no longer recognises the invite (revoked since saved).
+    if (res.status === 404) return { url, valid: false };
+    if (!res.ok) return { url, valid: true };
+    const parsed = DiscordInviteResponseSchema.safeParse(await res.json());
+    if (!parsed.success) return { url, valid: true };
+    const { guild, approximate_member_count, approximate_presence_count } =
+      parsed.data;
+    if (!guild) return { url, valid: true };
+    return {
+      url,
+      valid: true,
+      serverName: guild.name,
+      iconUrl: guild.icon
+        ? discordCdnAsset("icons", guild.id, guild.icon)
+        : null,
+      bannerUrl: guild.banner
+        ? discordCdnAsset("banners", guild.id, guild.banner, "?size=1024")
+        : null,
+      description: guild.description ?? null,
+      onlineCount: approximate_presence_count ?? null,
+      memberCount: approximate_member_count ?? null,
+    };
+  } catch {
+    return { url, valid: true };
   }
 }
 

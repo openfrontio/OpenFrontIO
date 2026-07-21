@@ -1,5 +1,6 @@
 import {
   createMatcher,
+  enforceVerifiedBadge,
   FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
   shadowNames,
@@ -84,6 +85,107 @@ const skinCosmetics = {
 };
 const skinChecker = new PrivilegeCheckerImpl(
   skinCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
+const crownCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  crowns: {
+    gold_crown: {
+      name: "gold_crown",
+      url: "https://example.com/gold.png",
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: 5,
+      rarity: "common",
+    },
+    silver_crown: {
+      name: "silver_crown",
+      url: "https://example.com/silver.png",
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "rare",
+    },
+  },
+};
+const crownChecker = new PrivilegeCheckerImpl(
+  crownCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
+const effectCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  effects: {
+    // Each effect carries its effectType field (matching the outer key), as the
+    // schema requires.
+    transportShipTrail: {
+      spectrum: {
+        name: "spectrum",
+        effectType: "transportShipTrail" as const,
+        attributes: {
+          type: "gradient" as const,
+          colors: ["#ff0000", "#00ff00", "#0000ff"],
+          colorSize: 16,
+          movementSpeed: 0.15,
+        },
+        url: "",
+        affiliateCode: null,
+        product: null,
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "legendary",
+      },
+      crimson: {
+        name: "crimson",
+        effectType: "transportShipTrail" as const,
+        attributes: {
+          type: "gradient" as const,
+          colors: ["#e01b24"],
+          colorSize: 16,
+          movementSpeed: 0.15,
+        },
+        url: "",
+        affiliateCode: null,
+        product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "common",
+      },
+    },
+    nukeExplosion: {
+      atom_boom: {
+        name: "atom_boom",
+        effectType: "nukeExplosion" as const,
+        attributes: {
+          type: "shockwave" as const,
+          nukeType: "atom" as const,
+          colors: ["#ff0000", "#7300ff"],
+          size: 50,
+          speed: 50,
+          thickness: 4,
+          transitionSpeed: 5,
+        },
+        url: "",
+        affiliateCode: null,
+        product: null,
+        priceSoft: undefined,
+        priceHard: undefined,
+        rarity: "common",
+      },
+    },
+  },
+};
+const effectChecker = new PrivilegeCheckerImpl(
+  effectCosmetics,
   mockDecoder,
   bannedWords,
 );
@@ -395,6 +497,104 @@ describe("Flag validation in isAllowed", () => {
   });
 });
 
+describe("Verified badge in isAllowed", () => {
+  test("passes through a verified claim", () => {
+    const result = flagChecker.isAllowed([], { verified: true });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.verified).toBe(true);
+    }
+  });
+
+  test("stays unset when absent or false", () => {
+    for (const refs of [{}, { verified: false }]) {
+      const result = flagChecker.isAllowed([], refs);
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.verified).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe("enforceVerifiedBadge", () => {
+  test("keeps the badge for an entitled player joining under their exact bare name", () => {
+    for (const usernameStatus of ["premium", "indefinite"]) {
+      const cosmetics = { verified: true };
+      expect(
+        enforceVerifiedBadge(cosmetics, "Bob", {
+          username: "Bob",
+          usernameStatus,
+        }),
+      ).toBe(false);
+      expect(cosmetics.verified).toBe(true);
+    }
+  });
+
+  test("strips on a case-different join name (exact match only)", () => {
+    const cosmetics = { verified: true };
+    expect(
+      enforceVerifiedBadge(cosmetics, "bob", {
+        username: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe(true);
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("strips on a different name entirely", () => {
+    const cosmetics = { verified: true };
+    expect(
+      enforceVerifiedBadge(cosmetics, "Alice", {
+        username: "Bob",
+        usernameStatus: "premium",
+      }),
+    ).toBe(true);
+    expect(cosmetics.verified).toBeUndefined();
+  });
+
+  test("strips unentitled statuses even on an exact match", () => {
+    for (const usernameStatus of ["unclaimed", "claimed", undefined]) {
+      const cosmetics = { verified: true };
+      expect(
+        enforceVerifiedBadge(cosmetics, "Bob.4821", {
+          username: "Bob.4821",
+          usernameStatus,
+        }),
+      ).toBe(true);
+      expect(cosmetics.verified).toBeUndefined();
+    }
+  });
+
+  test("strips when the account has no username set", () => {
+    for (const account of [
+      { username: null, usernameStatus: "premium" },
+      { usernameStatus: "premium" },
+    ]) {
+      const cosmetics = { verified: true };
+      expect(enforceVerifiedBadge(cosmetics, "Bob", account)).toBe(true);
+      expect(cosmetics.verified).toBeUndefined();
+    }
+  });
+
+  test("keeps the badge on an anonymous join (null account, Dev-only)", () => {
+    const cosmetics = { verified: true };
+    expect(enforceVerifiedBadge(cosmetics, "Whatever", null)).toBe(false);
+    expect(cosmetics.verified).toBe(true);
+  });
+
+  test("no-op without a claim", () => {
+    for (const cosmetics of [{}, { verified: false }]) {
+      expect(
+        enforceVerifiedBadge(cosmetics, "Bob", {
+          username: "Other",
+          usernameStatus: "unclaimed",
+        }),
+      ).toBe(false);
+    }
+  });
+});
+
 describe("Skin validation", () => {
   describe("isSkinAllowed (direct)", () => {
     test("returns skin when user has wildcard flare", () => {
@@ -518,6 +718,264 @@ describe("Skin validation", () => {
       });
       expect(result.type).toBe("forbidden");
     });
+  });
+});
+
+describe("Crown validation", () => {
+  describe("isCrownAllowed (direct)", () => {
+    test("returns crown when user has wildcard flare", () => {
+      const result = crownChecker.isCrownAllowed(["crown:*"], "gold_crown");
+      expect(result).toEqual({
+        name: "gold_crown",
+        url: "https://example.com/gold.png",
+      });
+    });
+
+    test("returns crown when user has exact-match flare", () => {
+      const result = crownChecker.isCrownAllowed(
+        ["crown:gold_crown"],
+        "gold_crown",
+      );
+      expect(result).toEqual({
+        name: "gold_crown",
+        url: "https://example.com/gold.png",
+      });
+    });
+
+    test("ignores unrelated flares", () => {
+      expect(() =>
+        crownChecker.isCrownAllowed(
+          ["crown:silver_crown", "skin:*", "flag:*"],
+          "gold_crown",
+        ),
+      ).toThrow(/No flares for crown gold_crown/);
+    });
+
+    test("throws when user has no crown flares", () => {
+      expect(() => crownChecker.isCrownAllowed([], "gold_crown")).toThrow(
+        /No flares for crown gold_crown/,
+      );
+    });
+
+    test("throws when crown does not exist in cosmetics", () => {
+      expect(() =>
+        crownChecker.isCrownAllowed(["crown:*"], "nonexistent"),
+      ).toThrow(/Crown nonexistent not found/);
+    });
+
+    test("throws when crown does not exist even with exact-match flare", () => {
+      // Forged refs.crownName must not bypass the existence check.
+      expect(() =>
+        crownChecker.isCrownAllowed(["crown:nonexistent"], "nonexistent"),
+      ).toThrow(/Crown nonexistent not found/);
+    });
+
+    test("throws when checker has no crowns map at all", () => {
+      // checker is constructed with mockCosmetics (no crowns key).
+      expect(() => checker.isCrownAllowed(["crown:*"], "anything")).toThrow(
+        /Crown anything not found/,
+      );
+    });
+  });
+
+  describe("isAllowed integration", () => {
+    test("allows valid crown with wildcard flare", () => {
+      const result = crownChecker.isAllowed(["crown:*"], {
+        crownName: "gold_crown",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.crown).toEqual({
+          name: "gold_crown",
+          url: "https://example.com/gold.png",
+        });
+      }
+    });
+
+    test("allows valid crown with exact-match flare", () => {
+      const result = crownChecker.isAllowed(["crown:silver_crown"], {
+        crownName: "silver_crown",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.crown).toEqual({
+          name: "silver_crown",
+          url: "https://example.com/silver.png",
+        });
+      }
+    });
+
+    test("rejects crown when user lacks flare", () => {
+      const result = crownChecker.isAllowed([], { crownName: "gold_crown" });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/invalid crown/);
+      }
+    });
+
+    test("rejects crown when flare is for a different crown", () => {
+      const result = crownChecker.isAllowed(["crown:silver_crown"], {
+        crownName: "gold_crown",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+
+    test("rejects nonexistent crown", () => {
+      const result = crownChecker.isAllowed(["crown:*"], {
+        crownName: "ghost",
+      });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/Crown ghost not found/);
+      }
+    });
+
+    test("no crown in refs leaves cosmetics.crown undefined", () => {
+      const result = crownChecker.isAllowed(["crown:*"], {});
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.crown).toBeUndefined();
+      }
+    });
+
+    test("invalid crown short-circuits and does not return other cosmetics", () => {
+      const result = crownChecker.isAllowed(["color:red"], {
+        color: "red",
+        crownName: "gold_crown",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+  });
+});
+
+describe("Effect validation in isAllowed", () => {
+  test("allows valid effect with wildcard flare", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+      });
+    }
+  });
+
+  test("allows valid effect with exact-match flare", () => {
+    const result = effectChecker.isAllowed(["effect:crimson"], {
+      effects: { transportShipTrail: "crimson" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "crimson",
+        effectType: "transportShipTrail",
+      });
+    }
+  });
+
+  test("rejects effect when user lacks flare", () => {
+    const result = effectChecker.isAllowed([], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/invalid effect/);
+    }
+  });
+
+  test("allows a nuke-explosion effect in its matching nukeType slot", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { atom: "atom_boom" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.atom).toEqual({
+        name: "atom_boom",
+        effectType: "nukeExplosion",
+      });
+    }
+  });
+
+  test("rejects a nuke-explosion effect in a mismatched nukeType slot", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { hydro: "atom_boom" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/not found for slot hydro/);
+    }
+  });
+
+  test("rejects effect under an unknown effectType key", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { wrongType: "spectrum" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/Effect spectrum not found/);
+    }
+  });
+
+  test("rejects nonexistent effect", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {
+      effects: { transportShipTrail: "ghost" },
+    });
+    expect(result.type).toBe("forbidden");
+    if (result.type === "forbidden") {
+      expect(result.reason).toMatch(/Effect ghost not found/);
+    }
+  });
+
+  test("no effects in refs leaves cosmetics.effects undefined", () => {
+    const result = effectChecker.isAllowed(["effect:*"], {});
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects).toBeUndefined();
+    }
+  });
+
+  test("resolves an effect whose catalog key differs from its name", () => {
+    // Catalog key "trail_01" but name "spectrum"; selection/flares are
+    // name-based, so the name must still resolve and validate.
+    const checker = new PrivilegeCheckerImpl(
+      {
+        patterns: {},
+        colorPalettes: {},
+        flags: {},
+        effects: {
+          transportShipTrail: {
+            trail_01: {
+              name: "spectrum",
+              effectType: "transportShipTrail" as const,
+              attributes: {
+                type: "gradient" as const,
+                colors: ["#ff0000", "#00ff00", "#0000ff"],
+                colorSize: 16,
+                movementSpeed: 0.15,
+              },
+              url: "",
+              affiliateCode: null,
+              product: null,
+              rarity: "legendary",
+            },
+          },
+        },
+      },
+      mockDecoder,
+      bannedWords,
+    );
+    const result = checker.isAllowed(["effect:spectrum"], {
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.effects?.transportShipTrail).toEqual({
+        name: "spectrum",
+        effectType: "transportShipTrail",
+      });
+    }
   });
 });
 

@@ -18,9 +18,11 @@ import {
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
+  ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
   Intent,
+  LiveStats,
   ServerMessage,
   ServerMessageSchema,
   Winner,
@@ -28,7 +30,9 @@ import {
 import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { showInGameAlert } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
+import { translateText } from "./Utils";
 import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
@@ -152,11 +156,20 @@ export class SendWinnerEvent implements GameEvent {
     public readonly allPlayersStats: AllPlayersStats,
   ) {}
 }
+export class SendLiveStatsEvent implements GameEvent {
+  constructor(public readonly stats: LiveStats) {}
+}
 export class SendHashEvent implements GameEvent {
   constructor(
     public readonly tick: Tick,
     public readonly hash: number,
   ) {}
+}
+
+// Emitted when the server tells us the host started a successor lobby, carrying
+// the new game id to move the group to.
+export class NewLobbyEvent implements GameEvent {
+  constructor(public readonly gameID: string) {}
 }
 
 export class MoveWarshipIntentEvent implements GameEvent {
@@ -244,6 +257,7 @@ export class Transport {
 
     this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
+    this.eventBus.on(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
@@ -381,8 +395,11 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (event.code === 1002) {
-        // TODO: make this a modal
-        alert(`connection refused: ${event.reason}`);
+        showInGameAlert(
+          translateText("error_modal.connection_refused", {
+            reason: event.reason,
+          }),
+        );
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
@@ -592,6 +609,15 @@ export class Transport {
     }
   }
 
+  private onSendLiveStatsEvent(event: SendLiveStatsEvent) {
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+      this.sendMsg({
+        type: "live_stats",
+        stats: event.stats,
+      } satisfies ClientSendLiveStatsMessage);
+    }
+  }
+
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg({
@@ -640,7 +666,7 @@ export class Transport {
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
     this.sendIntent({
       type: "kick_player",
-      target: event.target,
+      targetClientID: event.target,
     });
   }
 
