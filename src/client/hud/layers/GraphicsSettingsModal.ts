@@ -6,8 +6,12 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
+import { showInGameConfirm } from "../../InGameModal";
 import { translateText } from "../../Utils";
-import type { GraphicsOverrides } from "../../render/gl";
+import {
+  GraphicsOverridesSchema,
+  type GraphicsOverrides,
+} from "../../render/gl";
 import renderDefaults from "../../render/gl/render-settings.json";
 
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -137,6 +141,56 @@ const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
   renderDefaults.mapOverlay.staleNukeB,
 );
 
+// Built-in presets listed at the top of the modal. Overrides are applied
+// wholesale; the accessibility slice is handled separately in applyPreset.
+const BUILTIN_PRESETS: ReadonlyArray<{
+  nameKey: string;
+  descKey: string;
+  overrides: GraphicsOverrides;
+}> = [
+  {
+    nameKey: "graphics_setting.preset_default",
+    descKey: "graphics_setting.preset_default_desc",
+    overrides: {},
+  },
+  {
+    nameKey: "graphics_setting.preset_performance",
+    descKey: "graphics_setting.preset_performance_desc",
+    overrides: {
+      passEnabled: { fx: false, fallout: false },
+      smallPlayerGlow: { strength: 0 },
+    },
+  },
+  {
+    nameKey: "graphics_setting.preset_night",
+    descKey: "graphics_setting.preset_night_desc",
+    overrides: { lighting: { ambient: ambientSliderToValue(8) } },
+  },
+];
+
+// Serialize with recursively sorted keys so preset equality doesn't depend on
+// the order the settings were touched in.
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
+  return `{${entries.join(",")}}`;
+}
+
+// Colorblind mode is a personal accessibility need, not part of a visual
+// "look" — presets never store it and applying one never clears it.
+function stripAccessibility(overrides: GraphicsOverrides): GraphicsOverrides {
+  if (overrides.accessibility === undefined) return overrides;
+  const rest = { ...overrides };
+  delete rest.accessibility;
+  return rest;
+}
+
 export class ShowGraphicsSettingsModalEvent {
   constructor(
     public readonly isVisible: boolean = true,
@@ -162,6 +216,23 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   @property({ type: Boolean })
   wasPausedWhenOpened = false;
 
+  @state()
+  private advancedOpen = false;
+
+  @state()
+  private presetName = "";
+
+  @state()
+  private importText = "";
+
+  @state()
+  private importError = false;
+
+  @state()
+  private copiedJson = false;
+
+  private copyResetTimer: ReturnType<typeof setTimeout> | undefined;
+
   init() {
     this.eventBus.on(ShowGraphicsSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
@@ -170,6 +241,24 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
       this.pauseGame(true);
       this.requestUpdate();
     });
+    this.migrateLegacyOverrides();
+  }
+
+  // One-time migration for players who tuned their graphics before presets
+  // existed: snapshot their current custom settings as a saved preset so
+  // clicking around the new preset list can never lose them. Writing the
+  // presets key (even as {}) marks the migration as done.
+  private migrateLegacyOverrides() {
+    if (this.userSettings.hasGraphicsPresets()) return;
+    const current = stripAccessibility(this.userSettings.graphicsOverrides());
+    const isCustom =
+      Object.keys(current).length > 0 &&
+      !BUILTIN_PRESETS.some((preset) => this.isActivePreset(preset.overrides));
+    this.userSettings.setGraphicsPresets(
+      isCustom
+        ? { [translateText("graphics_setting.preset_migrated_name")]: current }
+        : {},
+    );
   }
 
   private pauseGame(pause: boolean) {
@@ -690,38 +779,232 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private applyPreset(overrides: GraphicsOverrides) {
+    // Keep the player's accessibility settings (colorblind mode) unless the
+    // preset explicitly sets its own.
+    const accessibility =
+      overrides.accessibility ??
+      this.userSettings.graphicsOverrides().accessibility;
+    const next = { ...stripAccessibility(overrides) };
+    if (accessibility !== undefined) {
+      next.accessibility = accessibility;
+    }
+    this.userSettings.setGraphicsOverrides(next);
+    this.requestUpdate();
+  }
+
+  private isActivePreset(overrides: GraphicsOverrides): boolean {
+    return (
+      stableStringify(
+        stripAccessibility(this.userSettings.graphicsOverrides()),
+      ) === stableStringify(stripAccessibility(overrides))
+    );
+  }
+
+  private onPresetNameInput(event: Event) {
+    this.presetName = (event.target as HTMLInputElement).value;
+  }
+
+  private onSavePreset() {
+    const name = this.presetName.trim();
+    if (!name) return;
+    this.userSettings.setGraphicsPresets({
+      ...this.userSettings.graphicsPresets(),
+      [name]: stripAccessibility(this.userSettings.graphicsOverrides()),
+    });
+    this.presetName = "";
+  }
+
+  private async onDeletePreset(name: string) {
+    const confirmed = await showInGameConfirm(
+      translateText("graphics_setting.preset_delete_confirm", { name }),
+    );
+    if (!confirmed) return;
+    const presets = { ...this.userSettings.graphicsPresets() };
+    delete presets[name];
+    this.userSettings.setGraphicsPresets(presets);
+    this.requestUpdate();
+  }
+
+  private async onCopyJson() {
+    const json = JSON.stringify(
+      stripAccessibility(this.userSettings.graphicsOverrides()),
+      null,
+      2,
+    );
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch {
+      return; // clipboard unavailable (permissions / insecure context)
+    }
+    this.copiedJson = true;
+    clearTimeout(this.copyResetTimer);
+    this.copyResetTimer = setTimeout(() => (this.copiedJson = false), 1500);
+  }
+
+  private onImportTextInput(event: Event) {
+    this.importText = (event.target as HTMLTextAreaElement).value;
+    this.importError = false;
+  }
+
+  private onImportApply() {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(this.importText);
+    } catch {
+      this.importError = true;
+      return;
+    }
+    const parsed = GraphicsOverridesSchema.safeParse(raw);
+    if (!parsed.success) {
+      this.importError = true;
+      return;
+    }
+    this.applyPreset(parsed.data);
+    this.importText = "";
+  }
+
+  private onToggleAdvanced() {
+    this.advancedOpen = !this.advancedOpen;
+  }
+
+  private renderPresets() {
+    const userPresets = Object.entries(this.userSettings.graphicsPresets());
+    return html`
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+      >
+        ${translateText("graphics_setting.section_presets")}
+      </div>
+
+      ${BUILTIN_PRESETS.map(
+        (preset) => html`
+          <button
+            class="flex gap-3 items-center w-full text-left p-3 rounded-sm text-white transition-colors border ${this.isActivePreset(
+              preset.overrides,
+            )
+              ? "border-blue-500 bg-slate-700"
+              : "border-transparent hover:bg-slate-700"}"
+            @click=${() => this.applyPreset(preset.overrides)}
+          >
+            <div class="flex-1">
+              <div class="font-medium">${translateText(preset.nameKey)}</div>
+              <div class="text-sm text-slate-400">
+                ${translateText(preset.descKey)}
+              </div>
+            </div>
+          </button>
+        `,
+      )}
+      ${userPresets.map(
+        ([name, overrides]) => html`
+          <div
+            class="flex items-center rounded-sm text-white transition-colors border ${this.isActivePreset(
+              overrides,
+            )
+              ? "border-blue-500 bg-slate-700"
+              : "border-transparent hover:bg-slate-700"}"
+          >
+            <button
+              class="flex-1 text-left p-3 font-medium truncate"
+              @click=${() => this.applyPreset(overrides)}
+            >
+              ${name}
+            </button>
+            <button
+              class="p-3 text-slate-400 hover:text-white"
+              @click=${() => this.onDeletePreset(name)}
+            >
+              ✕
+            </button>
+          </div>
+        `,
+      )}
+    `;
+  }
+
+  private renderPresetTools() {
+    return html`
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_custom_presets")}
+      </div>
+
+      <div class="flex gap-3 items-center w-full p-3 text-white">
+        <input
+          type="text"
+          .value=${this.presetName}
+          placeholder=${translateText(
+            "graphics_setting.preset_name_placeholder",
+          )}
+          spellcheck="false"
+          maxlength="40"
+          @input=${this.onPresetNameInput}
+          class="flex-1 min-w-0 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white"
+        />
+        <button
+          class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded-sm text-sm disabled:opacity-50"
+          ?disabled=${this.presetName.trim() === ""}
+          @click=${this.onSavePreset}
+        >
+          ${translateText("graphics_setting.save_preset_label")}
+        </button>
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onCopyJson}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.copy_json_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.copy_json_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.copiedJson
+            ? translateText("graphics_setting.copy_json_copied")
+            : ""}
+        </div>
+      </button>
+
+      <div class="w-full p-3 text-white">
+        <div class="font-medium">
+          ${translateText("graphics_setting.import_json_label")}
+        </div>
+        <div class="text-sm text-slate-400">
+          ${translateText("graphics_setting.import_json_desc")}
+        </div>
+        <textarea
+          rows="3"
+          .value=${this.importText}
+          spellcheck="false"
+          @input=${this.onImportTextInput}
+          class="w-full mt-2 px-2 py-1 bg-slate-900 border ${this.importError
+            ? "border-red-500"
+            : "border-slate-500"} rounded-sm text-sm text-white font-mono"
+        ></textarea>
+        ${this.importError
+          ? html`<div class="text-sm text-red-400">
+              ${translateText("graphics_setting.import_json_invalid")}
+            </div>`
+          : null}
+        <button
+          class="mt-1 px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded-sm text-sm disabled:opacity-50"
+          ?disabled=${this.importText.trim() === ""}
+          @click=${this.onImportApply}
+        >
+          ${translateText("graphics_setting.import_json_apply")}
+        </button>
+      </div>
+    `;
+  }
+
   render() {
     if (!this.isVisible) return null;
-
-    const nameScale = this.currentNameScale();
-    const nameCull = this.currentNameCull();
-    const hoverFade = this.currentHoverFade();
-    const hoverGlowWidth = this.currentHoverGlowWidth();
-    const hoverGlowAlpha = this.currentHoverGlowAlpha();
-    const namesColored = !this.currentDarkNames();
-    const iconSize = this.currentIconSize();
-    const classicIcons = this.currentClassicIcons();
-    const classicNumbers = this.currentClassicNumbers();
-    const showDots = this.currentShowDots();
-    const navalHighlight = this.currentNavalHighlight();
-    const highlightFill = this.currentHighlightFill();
-    const highlightBrighten = this.currentHighlightBrighten();
-    const highlightThicken = this.currentHighlightThicken();
-    const territorySat = this.currentTerritorySat();
-    const territoryAlpha = this.currentTerritoryAlpha();
-    const coordinateGridOpacity = this.currentCoordinateGridOpacity();
-    const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
-    const railThickness = this.currentRailThickness();
-    const oceanColor = this.currentOceanColor();
-    const sandColor = this.currentSandColor();
-    const plainsColor = this.currentPlainsColor();
-    const highlandColor = this.currentHighlandColor();
-    const mountainColor = this.currentMountainColor();
-    const nukeColor = this.currentNukeColor();
-    const ambientLevel = this.currentAmbientLevel();
-    const unitGlow = this.currentUnitGlow();
-    const glowStrength = this.currentGlowStrength();
-    const colorblind = this.currentColorblind();
 
     return html`
       <div
@@ -755,809 +1038,856 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           </div>
 
           <div class="p-4 flex flex-col gap-3">
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
-            >
-              ${translateText("graphics_setting.section_lighting")}
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.lighting_ambient_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.lighting_ambient_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${AMBIENT_LEVEL_MIN}
-                  max=${AMBIENT_LEVEL_MAX}
-                  step=${AMBIENT_LEVEL_STEP}
-                  .value=${String(ambientLevel)}
-                  @input=${this.onAmbientLevelChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${ambientLevel}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.lighting_unit_glow_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.lighting_unit_glow_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${UNIT_GLOW_MIN}
-                  max=${UNIT_GLOW_MAX}
-                  step=${UNIT_GLOW_STEP}
-                  .value=${String(unitGlow)}
-                  @input=${this.onUnitGlowChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${unitGlow}
-              </div>
-            </div>
-
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_name_labels")}
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.name_scale_label")}
-                </div>
-                <input
-                  type="range"
-                  min=${NAME_SCALE_MIN}
-                  max=${NAME_SCALE_MAX}
-                  step=${NAME_SCALE_STEP}
-                  .value=${String(nameScale)}
-                  @input=${this.onNameScaleChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${nameScale.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.name_cull_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.name_cull_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${NAME_CULL_MIN}
-                  max=${NAME_CULL_MAX}
-                  step=${NAME_CULL_STEP}
-                  .value=${String(nameCull)}
-                  @input=${this.onNameCullChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${nameCull.toFixed(3)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.hover_fade_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.hover_fade_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${HOVER_FADE_MIN}
-                  max=${HOVER_FADE_MAX}
-                  step=${HOVER_FADE_STEP}
-                  .value=${String(hoverFade)}
-                  @input=${this.onHoverFadeChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${hoverFade.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.hover_glow_width_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.hover_glow_width_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${HOVER_GLOW_WIDTH_MIN}
-                  max=${HOVER_GLOW_WIDTH_MAX}
-                  step=${HOVER_GLOW_WIDTH_STEP}
-                  .value=${String(hoverGlowWidth)}
-                  @input=${this.onHoverGlowWidthChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${hoverGlowWidth.toFixed(1)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.hover_glow_alpha_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.hover_glow_alpha_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${HOVER_GLOW_ALPHA_MIN}
-                  max=${HOVER_GLOW_ALPHA_MAX}
-                  step=${HOVER_GLOW_ALPHA_STEP}
-                  .value=${String(hoverGlowAlpha)}
-                  @input=${this.onHoverGlowAlphaChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${hoverGlowAlpha.toFixed(2)}
-              </div>
-            </div>
+            ${this.renderPresets()}
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleNamesColored}
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors mt-2"
+              @click=${this.onToggleAdvanced}
             >
               <div class="flex-1">
                 <div class="font-medium">
-                  ${translateText("graphics_setting.colored_names_label")}
+                  ${translateText("graphics_setting.advanced_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.colored_names_desc")}
+                  ${translateText("graphics_setting.advanced_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${namesColored
-                  ? translateText("graphics_setting.colored")
-                  : translateText("graphics_setting.black")}
+                ${this.advancedOpen ? "▾" : "▸"}
               </div>
             </button>
 
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_structure_icons")}
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.icon_size_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.icon_size_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${ICON_SIZE_MIN}
-                  max=${ICON_SIZE_MAX}
-                  step=${ICON_SIZE_STEP}
-                  .value=${String(iconSize)}
-                  @input=${this.onIconSizeChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${iconSize.toFixed(0)}
-              </div>
-            </div>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleClassicIcons}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.classic_icons_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.classic_icons_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${classicIcons
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleClassicNumbers}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.classic_numbers_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.classic_numbers_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${classicNumbers
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleShowDots}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.structure_dots_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.structure_dots_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${showDots
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_map")}
-            </div>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleNavalHighlight}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText(
-                    "graphics_setting.naval_hover_highlight_label",
-                  )}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText(
-                    "graphics_setting.naval_hover_highlight_desc",
-                  )}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${navalHighlight
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.highlight_fill_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.highlight_fill_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${HIGHLIGHT_FILL_MIN}
-                  max=${HIGHLIGHT_FILL_MAX}
-                  step=${HIGHLIGHT_FILL_STEP}
-                  .value=${String(highlightFill)}
-                  @input=${this.onHighlightFillChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${highlightFill.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.highlight_brighten_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.highlight_brighten_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${HIGHLIGHT_BRIGHTEN_MIN}
-                  max=${HIGHLIGHT_BRIGHTEN_MAX}
-                  step=${HIGHLIGHT_BRIGHTEN_STEP}
-                  .value=${String(highlightBrighten)}
-                  @input=${this.onHighlightBrightenChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${highlightBrighten.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.highlight_thicken_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.highlight_thicken_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${HIGHLIGHT_THICKEN_MIN}
-                  max=${HIGHLIGHT_THICKEN_MAX}
-                  step=${HIGHLIGHT_THICKEN_STEP}
-                  .value=${String(highlightThicken)}
-                  @input=${this.onHighlightThickenChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${highlightThicken.toFixed(0)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.territory_sat_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.territory_sat_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${TERRITORY_SAT_MIN}
-                  max=${TERRITORY_SAT_MAX}
-                  step=${TERRITORY_SAT_STEP}
-                  .value=${String(territorySat)}
-                  @input=${this.onTerritorySatChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${territorySat.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.territory_alpha_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.territory_alpha_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${TERRITORY_ALPHA_MIN}
-                  max=${TERRITORY_ALPHA_MAX}
-                  step=${TERRITORY_ALPHA_STEP}
-                  .value=${String(territoryAlpha)}
-                  @input=${this.onTerritoryAlphaChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${territoryAlpha.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText(
-                    "graphics_setting.coordinate_grid_opacity_label",
-                  )}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText(
-                    "graphics_setting.coordinate_grid_opacity_desc",
-                  )}
-                </div>
-                <input
-                  type="range"
-                  min=${COORDINATE_GRID_OPACITY_MIN}
-                  max=${COORDINATE_GRID_OPACITY_MAX}
-                  step=${COORDINATE_GRID_OPACITY_STEP}
-                  .value=${String(coordinateGridOpacity)}
-                  @input=${this.onCoordinateGridOpacityChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${coordinateGridOpacity.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.rail_distance_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.rail_distance_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${RAIL_ZOOM_MIN}
-                  max=${RAIL_ZOOM_MAX}
-                  step=${RAIL_ZOOM_STEP}
-                  .value=${String(railDrawDistance)}
-                  @input=${this.onRailDrawDistanceChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${railDrawDistance.toFixed(1)}
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.rail_thickness_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.rail_thickness_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${RAIL_THICKNESS_MIN}
-                  max=${RAIL_THICKNESS_MAX}
-                  step=${RAIL_THICKNESS_STEP}
-                  .value=${String(railThickness)}
-                  @input=${this.onRailThicknessChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${railThickness.toFixed(1)}
-              </div>
-            </div>
-
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_terrain")}
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.ocean_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.ocean_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${oceanColor}
-                placeholder=${renderDefaults.terrain.oceanColor}
-                spellcheck="false"
-                @change=${this.onOceanColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${oceanColor}
-                @input=${this.onOceanColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.sand_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.sand_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${sandColor}
-                placeholder=${renderDefaults.terrain.sandColor}
-                spellcheck="false"
-                @change=${this.onSandColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${sandColor}
-                @input=${this.onSandColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.plains_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.plains_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${plainsColor}
-                placeholder=${renderDefaults.terrain.plainsColor}
-                spellcheck="false"
-                @change=${this.onPlainsColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${plainsColor}
-                @input=${this.onPlainsColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.highland_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.highland_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${highlandColor}
-                placeholder=${renderDefaults.terrain.highlandColor}
-                spellcheck="false"
-                @change=${this.onHighlandColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${highlandColor}
-                @input=${this.onHighlandColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.mountain_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.mountain_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${mountainColor}
-                placeholder=${renderDefaults.terrain.mountainColor}
-                spellcheck="false"
-                @change=${this.onMountainColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${mountainColor}
-                @input=${this.onMountainColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.nuke_color_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.nuke_color_desc")}
-                </div>
-              </div>
-              <input
-                type="text"
-                .value=${nukeColor}
-                placeholder=${NUKE_COLOR_DEFAULT}
-                spellcheck="false"
-                @change=${this.onNukeColorChange}
-                class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
-              />
-              <input
-                type="color"
-                .value=${nukeColor}
-                @input=${this.onNukeColorChange}
-                class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
-              />
-            </div>
-
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_effects")}
-            </div>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleSpecialEffects}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.special_effects_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.special_effects_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.currentSpecialEffects()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleFallout}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("graphics_setting.fallout_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("graphics_setting.fallout_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.currentFallout()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.highlight_glow_strength_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.highlight_small_players_desc")}
-                </div>
-                <input
-                  type="range"
-                  min=${GLOW_STRENGTH_MIN}
-                  max=${GLOW_STRENGTH_MAX}
-                  step=${GLOW_STRENGTH_STEP}
-                  .value=${String(glowStrength * 100)}
-                  @input=${this.onGlowStrengthChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400 w-12 text-right">
-                ${Math.round(glowStrength * 100)}%
-              </div>
-            </div>
-
-            <div
-              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
-            >
-              ${translateText("graphics_setting.section_accessibility")}
-            </div>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click=${this.onToggleColorblind}
-            >
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.colorblind_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.colorblind_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${colorblind
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <div class="border-t border-slate-600 pt-3 mt-4">
-              <button
-                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-                @click=${this.onResetClick}
-              >
-                <div class="flex-1">
-                  <div class="font-medium">
-                    ${translateText("graphics_setting.reset_label")}
-                  </div>
-                  <div class="text-sm text-slate-400">
-                    ${translateText("graphics_setting.reset_desc")}
-                  </div>
-                </div>
-              </button>
-            </div>
+            ${this.advancedOpen ? this.renderAdvanced() : null}
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  private renderAdvanced() {
+    const nameScale = this.currentNameScale();
+    const nameCull = this.currentNameCull();
+    const hoverFade = this.currentHoverFade();
+    const hoverGlowWidth = this.currentHoverGlowWidth();
+    const hoverGlowAlpha = this.currentHoverGlowAlpha();
+    const namesColored = !this.currentDarkNames();
+    const iconSize = this.currentIconSize();
+    const classicIcons = this.currentClassicIcons();
+    const classicNumbers = this.currentClassicNumbers();
+    const showDots = this.currentShowDots();
+    const navalHighlight = this.currentNavalHighlight();
+    const highlightFill = this.currentHighlightFill();
+    const highlightBrighten = this.currentHighlightBrighten();
+    const highlightThicken = this.currentHighlightThicken();
+    const territorySat = this.currentTerritorySat();
+    const territoryAlpha = this.currentTerritoryAlpha();
+    const coordinateGridOpacity = this.currentCoordinateGridOpacity();
+    const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
+    const railThickness = this.currentRailThickness();
+    const oceanColor = this.currentOceanColor();
+    const sandColor = this.currentSandColor();
+    const plainsColor = this.currentPlainsColor();
+    const highlandColor = this.currentHighlandColor();
+    const mountainColor = this.currentMountainColor();
+    const nukeColor = this.currentNukeColor();
+    const ambientLevel = this.currentAmbientLevel();
+    const unitGlow = this.currentUnitGlow();
+    const glowStrength = this.currentGlowStrength();
+    const colorblind = this.currentColorblind();
+
+    return html`
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+      >
+        ${translateText("graphics_setting.section_lighting")}
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.lighting_ambient_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.lighting_ambient_desc")}
+          </div>
+          <input
+            type="range"
+            min=${AMBIENT_LEVEL_MIN}
+            max=${AMBIENT_LEVEL_MAX}
+            step=${AMBIENT_LEVEL_STEP}
+            .value=${String(ambientLevel)}
+            @input=${this.onAmbientLevelChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${ambientLevel}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.lighting_unit_glow_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.lighting_unit_glow_desc")}
+          </div>
+          <input
+            type="range"
+            min=${UNIT_GLOW_MIN}
+            max=${UNIT_GLOW_MAX}
+            step=${UNIT_GLOW_STEP}
+            .value=${String(unitGlow)}
+            @input=${this.onUnitGlowChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">${unitGlow}</div>
+      </div>
+
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_name_labels")}
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.name_scale_label")}
+          </div>
+          <input
+            type="range"
+            min=${NAME_SCALE_MIN}
+            max=${NAME_SCALE_MAX}
+            step=${NAME_SCALE_STEP}
+            .value=${String(nameScale)}
+            @input=${this.onNameScaleChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${nameScale.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.name_cull_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.name_cull_desc")}
+          </div>
+          <input
+            type="range"
+            min=${NAME_CULL_MIN}
+            max=${NAME_CULL_MAX}
+            step=${NAME_CULL_STEP}
+            .value=${String(nameCull)}
+            @input=${this.onNameCullChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${nameCull.toFixed(3)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.hover_fade_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.hover_fade_desc")}
+          </div>
+          <input
+            type="range"
+            min=${HOVER_FADE_MIN}
+            max=${HOVER_FADE_MAX}
+            step=${HOVER_FADE_STEP}
+            .value=${String(hoverFade)}
+            @input=${this.onHoverFadeChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${hoverFade.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.hover_glow_width_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.hover_glow_width_desc")}
+          </div>
+          <input
+            type="range"
+            min=${HOVER_GLOW_WIDTH_MIN}
+            max=${HOVER_GLOW_WIDTH_MAX}
+            step=${HOVER_GLOW_WIDTH_STEP}
+            .value=${String(hoverGlowWidth)}
+            @input=${this.onHoverGlowWidthChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${hoverGlowWidth.toFixed(1)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.hover_glow_alpha_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.hover_glow_alpha_desc")}
+          </div>
+          <input
+            type="range"
+            min=${HOVER_GLOW_ALPHA_MIN}
+            max=${HOVER_GLOW_ALPHA_MAX}
+            step=${HOVER_GLOW_ALPHA_STEP}
+            .value=${String(hoverGlowAlpha)}
+            @input=${this.onHoverGlowAlphaChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${hoverGlowAlpha.toFixed(2)}
+        </div>
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleNamesColored}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.colored_names_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.colored_names_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${namesColored
+            ? translateText("graphics_setting.colored")
+            : translateText("graphics_setting.black")}
+        </div>
+      </button>
+
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_structure_icons")}
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.icon_size_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.icon_size_desc")}
+          </div>
+          <input
+            type="range"
+            min=${ICON_SIZE_MIN}
+            max=${ICON_SIZE_MAX}
+            step=${ICON_SIZE_STEP}
+            .value=${String(iconSize)}
+            @input=${this.onIconSizeChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${iconSize.toFixed(0)}
+        </div>
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleClassicIcons}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.classic_icons_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.classic_icons_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${classicIcons
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleClassicNumbers}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.classic_numbers_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.classic_numbers_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${classicNumbers
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleShowDots}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.structure_dots_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.structure_dots_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${showDots
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_map")}
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleNavalHighlight}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.naval_hover_highlight_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.naval_hover_highlight_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${navalHighlight
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.highlight_fill_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.highlight_fill_desc")}
+          </div>
+          <input
+            type="range"
+            min=${HIGHLIGHT_FILL_MIN}
+            max=${HIGHLIGHT_FILL_MAX}
+            step=${HIGHLIGHT_FILL_STEP}
+            .value=${String(highlightFill)}
+            @input=${this.onHighlightFillChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${highlightFill.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.highlight_brighten_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.highlight_brighten_desc")}
+          </div>
+          <input
+            type="range"
+            min=${HIGHLIGHT_BRIGHTEN_MIN}
+            max=${HIGHLIGHT_BRIGHTEN_MAX}
+            step=${HIGHLIGHT_BRIGHTEN_STEP}
+            .value=${String(highlightBrighten)}
+            @input=${this.onHighlightBrightenChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${highlightBrighten.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.highlight_thicken_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.highlight_thicken_desc")}
+          </div>
+          <input
+            type="range"
+            min=${HIGHLIGHT_THICKEN_MIN}
+            max=${HIGHLIGHT_THICKEN_MAX}
+            step=${HIGHLIGHT_THICKEN_STEP}
+            .value=${String(highlightThicken)}
+            @input=${this.onHighlightThickenChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${highlightThicken.toFixed(0)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.territory_sat_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.territory_sat_desc")}
+          </div>
+          <input
+            type="range"
+            min=${TERRITORY_SAT_MIN}
+            max=${TERRITORY_SAT_MAX}
+            step=${TERRITORY_SAT_STEP}
+            .value=${String(territorySat)}
+            @input=${this.onTerritorySatChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${territorySat.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.territory_alpha_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.territory_alpha_desc")}
+          </div>
+          <input
+            type="range"
+            min=${TERRITORY_ALPHA_MIN}
+            max=${TERRITORY_ALPHA_MAX}
+            step=${TERRITORY_ALPHA_STEP}
+            .value=${String(territoryAlpha)}
+            @input=${this.onTerritoryAlphaChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${territoryAlpha.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.coordinate_grid_opacity_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.coordinate_grid_opacity_desc")}
+          </div>
+          <input
+            type="range"
+            min=${COORDINATE_GRID_OPACITY_MIN}
+            max=${COORDINATE_GRID_OPACITY_MAX}
+            step=${COORDINATE_GRID_OPACITY_STEP}
+            .value=${String(coordinateGridOpacity)}
+            @input=${this.onCoordinateGridOpacityChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${coordinateGridOpacity.toFixed(2)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.rail_distance_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.rail_distance_desc")}
+          </div>
+          <input
+            type="range"
+            min=${RAIL_ZOOM_MIN}
+            max=${RAIL_ZOOM_MAX}
+            step=${RAIL_ZOOM_STEP}
+            .value=${String(railDrawDistance)}
+            @input=${this.onRailDrawDistanceChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${railDrawDistance.toFixed(1)}
+        </div>
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.rail_thickness_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.rail_thickness_desc")}
+          </div>
+          <input
+            type="range"
+            min=${RAIL_THICKNESS_MIN}
+            max=${RAIL_THICKNESS_MAX}
+            step=${RAIL_THICKNESS_STEP}
+            .value=${String(railThickness)}
+            @input=${this.onRailThicknessChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${railThickness.toFixed(1)}
+        </div>
+      </div>
+
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_terrain")}
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.ocean_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.ocean_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${oceanColor}
+          placeholder=${renderDefaults.terrain.oceanColor}
+          spellcheck="false"
+          @change=${this.onOceanColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${oceanColor}
+          @input=${this.onOceanColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.sand_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.sand_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${sandColor}
+          placeholder=${renderDefaults.terrain.sandColor}
+          spellcheck="false"
+          @change=${this.onSandColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${sandColor}
+          @input=${this.onSandColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.plains_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.plains_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${plainsColor}
+          placeholder=${renderDefaults.terrain.plainsColor}
+          spellcheck="false"
+          @change=${this.onPlainsColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${plainsColor}
+          @input=${this.onPlainsColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.highland_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.highland_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${highlandColor}
+          placeholder=${renderDefaults.terrain.highlandColor}
+          spellcheck="false"
+          @change=${this.onHighlandColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${highlandColor}
+          @input=${this.onHighlandColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.mountain_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.mountain_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${mountainColor}
+          placeholder=${renderDefaults.terrain.mountainColor}
+          spellcheck="false"
+          @change=${this.onMountainColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${mountainColor}
+          @input=${this.onMountainColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.nuke_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.nuke_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${nukeColor}
+          placeholder=${NUKE_COLOR_DEFAULT}
+          spellcheck="false"
+          @change=${this.onNukeColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${nukeColor}
+          @input=${this.onNukeColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
+      </div>
+
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_effects")}
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleSpecialEffects}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.special_effects_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.special_effects_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.currentSpecialEffects()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleFallout}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.fallout_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.fallout_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.currentFallout()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.highlight_glow_strength_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.highlight_small_players_desc")}
+          </div>
+          <input
+            type="range"
+            min=${GLOW_STRENGTH_MIN}
+            max=${GLOW_STRENGTH_MAX}
+            step=${GLOW_STRENGTH_STEP}
+            .value=${String(glowStrength * 100)}
+            @input=${this.onGlowStrengthChange}
+            class="w-full border border-slate-500 rounded-lg"
+          />
+        </div>
+        <div class="text-sm text-slate-400 w-12 text-right">
+          ${Math.round(glowStrength * 100)}%
+        </div>
+      </div>
+
+      <div
+        class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+      >
+        ${translateText("graphics_setting.section_accessibility")}
+      </div>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+        @click=${this.onToggleColorblind}
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.colorblind_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.colorblind_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${colorblind
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      ${this.renderPresetTools()}
+
+      <div class="border-t border-slate-600 pt-3 mt-4">
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+          @click=${this.onResetClick}
+        >
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("graphics_setting.reset_label")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("graphics_setting.reset_desc")}
+            </div>
+          </div>
+        </button>
       </div>
     `;
   }

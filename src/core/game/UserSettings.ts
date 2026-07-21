@@ -1,6 +1,8 @@
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
+  GraphicsPresets,
+  GraphicsPresetsSchema,
 } from "../../client/render/gl/GraphicsOverrides";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
@@ -59,6 +61,7 @@ export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
 export const EFFECTS_KEY = "settings.effects";
 
 export class UserSettings {
@@ -409,6 +412,31 @@ export class UserSettings {
 
   setGraphicsOverrides(value: GraphicsOverrides): void {
     this.setString(GRAPHICS_KEY, JSON.stringify(value));
+  }
+
+  // Named user-saved graphics presets. Returns {} if missing, unparseable, or
+  // fails schema validation.
+  graphicsPresets(): GraphicsPresets {
+    const raw = this.getString(GRAPHICS_PRESETS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = GraphicsPresetsSchema.safeParse(JSON.parse(raw));
+      if (parsed.success) return parsed.data;
+    } catch {
+      // fall through
+    }
+    return {};
+  }
+
+  setGraphicsPresets(value: GraphicsPresets): void {
+    this.setString(GRAPHICS_PRESETS_KEY, JSON.stringify(value));
+  }
+
+  // Whether the presets key has ever been written. Distinguishes a player who
+  // deleted all their presets (stored "{}") from one who has never seen the
+  // preset UI — used to run the legacy-overrides migration exactly once.
+  hasGraphicsPresets(): boolean {
+    return this.getString(GRAPHICS_PRESETS_KEY, "") !== "";
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object

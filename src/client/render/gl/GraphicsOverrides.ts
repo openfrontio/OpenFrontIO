@@ -84,3 +84,11 @@ export const GraphicsOverridesSchema = z
   .partial();
 
 export type GraphicsOverrides = z.infer<typeof GraphicsOverridesSchema>;
+
+/** User-saved graphics presets: preset name → the overrides it applies. */
+export const GraphicsPresetsSchema = z.record(
+  z.string(),
+  GraphicsOverridesSchema,
+);
+
+export type GraphicsPresets = z.infer<typeof GraphicsPresetsSchema>;
