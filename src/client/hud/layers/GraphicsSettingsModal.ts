@@ -154,14 +154,6 @@ const BUILTIN_PRESETS: ReadonlyArray<{
     overrides: {},
   },
   {
-    nameKey: "graphics_setting.preset_performance",
-    descKey: "graphics_setting.preset_performance_desc",
-    overrides: {
-      passEnabled: { fx: false, fallout: false },
-      smallPlayerGlow: { strength: 0 },
-    },
-  },
-  {
     nameKey: "graphics_setting.preset_night",
     descKey: "graphics_setting.preset_night_desc",
     overrides: { lighting: { ambient: ambientSliderToValue(8) } },

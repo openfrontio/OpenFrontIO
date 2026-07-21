@@ -660,8 +660,6 @@
     "preset_name_placeholder": "Preset name",
     "preset_night": "Night",
     "preset_night_desc": "Darkened map with glowing structures and units",
-    "preset_performance": "Performance",
-    "preset_performance_desc": "Disables special effects for smoother gameplay on slower devices",
     "rail_distance_desc": "How far zoomed out train tracks remain visible",
     "rail_distance_label": "Train track draw distance",
     "rail_thickness_desc": "How wide train tracks are drawn",
