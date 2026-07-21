@@ -44,16 +44,6 @@ export type Corner = "tl" | "tr" | "bl" | "br";
 const CORNER_KEY = "featured-stream-corner";
 const MIN_KEY = "featured-stream-minimized";
 const RECHECK_MS = 60_000; // re-probe interval when every channel is offline
-const TITLE_TIMEOUT_MS = 5_000; // give up on the title fetch and keep the channel name
-
-// Where the broadcast title comes from. DecAPI is a long-running, no-auth community proxy
-// (the kind Nightbot/StreamElements use) that holds its own Twitch credentials and returns
-// the title as plaintext, CORS-open. Getting the title straight from Twitch needs a
-// Client-ID + app token (a server secret), which a browser can't hold, so a browser-only
-// path goes through a proxy like this. OF can later point this at a Helix-backed route on
-// their own API that returns the same plaintext; the channel-name fallback stays either way.
-const titleEndpoint = (channel: string) =>
-  `https://decapi.me/twitch/title/${encodeURIComponent(channel)}`;
 
 const CORNER_CLASS: Record<Corner, string> = {
   tl: "top-4 left-4",
@@ -96,7 +86,6 @@ export class FeaturedStream extends LitElement {
   @state() private live = false;
   @state() private inGame = false;
   @state() private minimized = false;
-  @state() private streamTitle = ""; // live broadcast title (HTMLElement.title is reserved)
   @state() private corner: Corner = "br"; // which screen corner the panel snaps to
   @state() private dragPos: { x: number; y: number } | null = null; // free pos while dragging
 
@@ -212,7 +201,6 @@ export class FeaturedStream extends LitElement {
   private setLive(i: number) {
     this.idx = i;
     this.live = true;
-    void this.fetchTitle(this.channels[i]);
     this.kickPlay();
   }
 
@@ -238,27 +226,6 @@ export class FeaturedStream extends LitElement {
       this.idx = 0;
       this.mountPlayer(Twitch, 0);
     }, RECHECK_MS);
-  }
-
-  // The Twitch embed exposes only the channel name, not the broadcast title, so fetch the
-  // title from titleEndpoint() (see its note). The channel name is shown immediately and is
-  // only replaced on a clean response, so anything that goes wrong (proxy down, rate-limited,
-  // slow, channel not found) just leaves the channel name in place.
-  private async fetchTitle(channel: string) {
-    this.streamTitle = channel; // fallback shown right away
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), TITLE_TIMEOUT_MS);
-    try {
-      const r = await fetch(titleEndpoint(channel), { signal: ctrl.signal });
-      const t = (await r.text()).trim();
-      // Ignore a failed/empty response, or a late one for a channel we've since moved past.
-      if (r.ok && t && channel === this.channels[this.idx])
-        this.streamTitle = t;
-    } catch {
-      /* keep channel-name fallback (timeout, network error, etc.) */
-    } finally {
-      clearTimeout(timer);
-    }
   }
 
   // Autoplay can be blocked while the panel is hidden; once it's visible, nudge playback.
@@ -393,9 +360,7 @@ export class FeaturedStream extends LitElement {
             <span class="shrink-0"
               >${translateText("featured_stream.live")}</span
             >
-            <span class="truncate font-bold"
-              >${this.streamTitle || channel}</span
-            >
+            <span class="truncate font-bold">${channel}</span>
           </button>
           <button
             class="shrink-0 px-1 text-lg leading-none text-white/70 hover:text-white"
