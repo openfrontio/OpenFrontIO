@@ -5,15 +5,17 @@ import { PauseGameIntentEvent } from "src/client/Transport";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
+import {
+  BUILTIN_PRESETS,
+  stableStringify,
+} from "../../components/GraphicsPresetSelector";
 import { Controller } from "../../Controller";
-import { showInGameConfirm } from "../../InGameModal";
-import { translateText } from "../../Utils";
 import {
   GraphicsOverridesSchema,
   type GraphicsOverrides,
 } from "../../render/gl";
-import builtinPresets from "../../render/gl/graphics-presets.json";
 import renderDefaults from "../../render/gl/render-settings.json";
+import { translateText } from "../../Utils";
 
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
@@ -141,35 +143,6 @@ const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
   renderDefaults.mapOverlay.staleNukeG,
   renderDefaults.mapOverlay.staleNukeB,
 );
-
-// Built-in presets listed at the top of the modal, defined in
-// graphics-presets.json — each entry's overrides are schema-parsed at load
-// (JSON imports can't carry the palette enum's literal types). Overrides are
-// applied wholesale. Night's ambient 0.36 is the slider's level 8 (see
-// ambientSliderToValue).
-const BUILTIN_PRESETS: ReadonlyArray<{
-  nameKey: string;
-  descKey: string;
-  overrides: GraphicsOverrides;
-}> = builtinPresets.map((preset) => ({
-  nameKey: preset.nameKey,
-  descKey: preset.descKey,
-  overrides: GraphicsOverridesSchema.parse(preset.overrides),
-}));
-
-// Serialize with recursively sorted keys so preset equality doesn't depend on
-// the order the settings were touched in.
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
-  return `{${entries.join(",")}}`;
-}
 
 export class ShowGraphicsSettingsModalEvent {
   constructor(
@@ -777,17 +750,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.presetName = "";
   }
 
-  private async onDeletePreset(name: string) {
-    const confirmed = await showInGameConfirm(
-      translateText("graphics_setting.preset_delete_confirm", { name }),
-    );
-    if (!confirmed) return;
-    const presets = { ...this.userSettings.graphicsPresets() };
-    delete presets[name];
-    this.userSettings.setGraphicsPresets(presets);
-    this.requestUpdate();
-  }
-
   private async onCopyJson() {
     const json = JSON.stringify(this.userSettings.graphicsOverrides(), null, 2);
     try {
@@ -827,7 +789,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   }
 
   private renderPresets() {
-    const userPresets = Object.entries(this.userSettings.graphicsPresets());
     return html`
       <div
         class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
@@ -835,49 +796,9 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
         ${translateText("graphics_setting.section_presets")}
       </div>
 
-      ${BUILTIN_PRESETS.map(
-        (preset) => html`
-          <button
-            class="flex gap-3 items-center w-full text-left p-3 rounded-sm text-white transition-colors border ${this.isActivePreset(
-              preset.overrides,
-            )
-              ? "border-blue-500 bg-slate-700"
-              : "border-transparent hover:bg-slate-700"}"
-            @click=${() => this.applyPreset(preset.overrides)}
-          >
-            <div class="flex-1">
-              <div class="font-medium">${translateText(preset.nameKey)}</div>
-              <div class="text-sm text-slate-400">
-                ${translateText(preset.descKey)}
-              </div>
-            </div>
-          </button>
-        `,
-      )}
-      ${userPresets.map(
-        ([name, overrides]) => html`
-          <div
-            class="flex items-center rounded-sm text-white transition-colors border ${this.isActivePreset(
-              overrides,
-            )
-              ? "border-blue-500 bg-slate-700"
-              : "border-transparent hover:bg-slate-700"}"
-          >
-            <button
-              class="flex-1 text-left p-3 font-medium truncate"
-              @click=${() => this.applyPreset(overrides)}
-            >
-              ${name}
-            </button>
-            <button
-              class="p-3 text-slate-400 hover:text-white"
-              @click=${() => this.onDeletePreset(name)}
-            >
-              ✕
-            </button>
-          </div>
-        `,
-      )}
+      <div class="px-3">
+        <graphics-preset-selector></graphics-preset-selector>
+      </div>
     `;
   }
 

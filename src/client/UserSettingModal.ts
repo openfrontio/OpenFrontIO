@@ -9,6 +9,7 @@ import "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
+import "./components/GraphicsPresetSelector";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
 
@@ -212,22 +213,6 @@ export class UserSettingModal extends BaseModal {
     setTimeout(() => {
       popup.remove();
     }, 5000);
-  }
-
-  /** Whether the colorblind palette is currently selected. */
-  private colorblindMode(): boolean {
-    return this.userSettings.graphicsOverrides().palette === "colorblind";
-  }
-
-  /** Flip the palette between colorblind and default and persist it. */
-  private toggleColorblindMode() {
-    const overrides = { ...this.userSettings.graphicsOverrides() };
-    if (this.colorblindMode()) {
-      delete overrides.palette;
-    } else {
-      overrides.palette = "colorblind";
-    }
-    this.userSettings.setGraphicsOverrides(overrides);
   }
 
   private toggleEmojis() {
@@ -769,14 +754,20 @@ export class UserSettingModal extends BaseModal {
 
   private renderBasicSettings() {
     return html`
-      <!-- 🎨 Colorblind Mode -->
-      <setting-toggle
-        label="${translateText("user_setting.colorblind_label")}"
-        description="${translateText("user_setting.colorblind_desc")}"
-        id="colorblind-toggle"
-        .checked=${this.colorblindMode()}
-        @change=${this.toggleColorblindMode}
-      ></setting-toggle>
+      <!-- 🎨 Graphics preset -->
+      <div
+        class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
+      >
+        <div class="flex flex-col min-w-0">
+          <div class="text-white font-bold text-base block mb-1">
+            ${translateText("user_setting.graphics_preset_label")}
+          </div>
+          <div class="text-white/50 text-sm leading-snug">
+            ${translateText("user_setting.graphics_preset_desc")}
+          </div>
+        </div>
+        <graphics-preset-selector></graphics-preset-selector>
+      </div>
 
       <!-- 😊 Emojis -->
       <setting-toggle
