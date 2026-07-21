@@ -435,16 +435,22 @@ export const NewsItemSchema = z.object({
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
 // Config for the homepage featured-stream panel, served like news.json (a JSON the API
-// hosts, with a bundled fallback). `enabled` is the manual on/off toggle; `channels` is
-// the Twitch channel logins to show (first one that is live wins). Channels are validated
-// to the Twitch login format so a typo'd/garbage value fails the whole config closed (the
-// fetch falls back to the bundled OFF config) instead of flowing into the embed/link.
-const TwitchChannelSchema = z
-  .string()
-  .trim()
-  .regex(/^[a-zA-Z0-9_]{3,25}$/, "invalid Twitch channel login");
+// hosts, with a bundled fallback). `enabled` is the on/off signal; `channels` is the
+// Twitch channel logins to show (first one that is live wins). Invalid/garbage logins are
+// dropped individually (trimmed, matched to the Twitch login format) rather than failing
+// the whole config closed — one bad entry must not silently disable the feature for every
+// client; the valid channels still flow through.
+const TWITCH_LOGIN = /^[a-zA-Z0-9_]{3,25}$/;
 export const FeaturedStreamSchema = z.object({
   enabled: z.boolean().default(false),
-  channels: z.array(TwitchChannelSchema).default([]),
+  channels: z
+    .array(z.unknown())
+    .default([])
+    .transform((cs) =>
+      cs
+        .filter((c): c is string => typeof c === "string")
+        .map((c) => c.trim())
+        .filter((c) => TWITCH_LOGIN.test(c)),
+    ),
 });
 export type FeaturedStreamConfig = z.infer<typeof FeaturedStreamSchema>;

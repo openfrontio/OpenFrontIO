@@ -135,7 +135,13 @@ export class FeaturedStream extends LitElement {
 
   private onJoin = () => {
     this.inGame = true; // hide while in a lobby/game
-    // Don't keep streaming an obscured embed (Twitch ToS); pause until back on the homepage.
+    // Stop probing while in a game: a pending recheck (or a stream coming online) must not
+    // mount a fresh autoplaying player behind the hidden panel — an obscured embed (Twitch
+    // ToS). Cancel the recheck and pause the current player; we re-probe on leave.
+    if (this.recheckTimer) {
+      clearTimeout(this.recheckTimer);
+      this.recheckTimer = null;
+    }
     try {
       this.player?.pause();
     } catch {
@@ -144,7 +150,14 @@ export class FeaturedStream extends LitElement {
   };
   private onLeave = () => {
     this.inGame = false;
-    this.kickPlay();
+    // Back on the homepage: re-probe from the top so liveness is fresh and the panel only
+    // reappears (and starts streaming) if a channel is actually live right now.
+    if (this.recheckTimer) {
+      clearTimeout(this.recheckTimer);
+      this.recheckTimer = null;
+    }
+    this.idx = 0;
+    void this.start();
   };
 
   private start = async () => {
@@ -159,6 +172,7 @@ export class FeaturedStream extends LitElement {
   };
 
   private mountPlayer(Twitch: TwitchGlobal, i: number) {
+    if (this.inGame) return; // never mount an autoplaying embed behind the hidden panel
     const host = this.querySelector(
       "#featured-stream-mount",
     ) as HTMLElement | null;

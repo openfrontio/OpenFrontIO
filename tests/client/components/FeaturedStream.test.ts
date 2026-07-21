@@ -33,19 +33,22 @@ describe("FeaturedStream", () => {
       expect(cfg.channels).toEqual(["openfrontmasters", "openfront"]);
     });
 
-    it("rejects a non-string channel", () => {
-      expect(FeaturedStreamSchema.safeParse({ channels: [1] }).success).toBe(
-        false,
-      );
-    });
-
-    it("rejects a malformed channel login (so a typo fails the config closed)", () => {
-      // too short, illegal chars, and a full URL must all be rejected
-      for (const bad of ["ab", "has space", "bad!", "https://twitch.tv/x"]) {
-        expect(
-          FeaturedStreamSchema.safeParse({ channels: [bad] }).success,
-        ).toBe(false);
-      }
+    it("drops bad channel entries instead of failing the whole config", () => {
+      // Non-strings, too-short, illegal chars, and full URLs are all dropped
+      // individually so one garbage entry can't silently disable the feature for
+      // every client; the valid login still comes through.
+      const cfg = FeaturedStreamSchema.parse({
+        enabled: true,
+        channels: [
+          1,
+          "ab",
+          "has space",
+          "bad!",
+          "https://twitch.tv/x",
+          "openfrontmasters",
+        ],
+      });
+      expect(cfg.channels).toEqual(["openfrontmasters"]);
     });
 
     it("accepts a valid channel login", () => {
@@ -87,14 +90,22 @@ describe("FeaturedStream", () => {
       expect(await getFeaturedStream()).toEqual(off);
     });
 
-    it("falls back when the served JSON fails validation (bad channel)", async () => {
+    it("drops invalid channels instead of failing the whole config", async () => {
       stubFetch(() =>
         Promise.resolve({
           status: 200,
-          json: async () => ({ enabled: true, channels: ["bad name!"] }),
+          json: async () => ({
+            enabled: true,
+            channels: ["valid_chan", "bad name!", "x"],
+          }),
         }),
       );
-      expect(await getFeaturedStream()).toEqual(off);
+      // "bad name!" (space/!) and "x" (too short) are dropped; the valid one stays,
+      // so one garbage entry can't silently disable the feature for everyone.
+      expect(await getFeaturedStream()).toEqual({
+        enabled: true,
+        channels: ["valid_chan"],
+      });
     });
 
     it("falls back when the request rejects (network error)", async () => {
