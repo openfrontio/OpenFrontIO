@@ -13,7 +13,7 @@
     "nameKey": "graphics_setting.preset_colorblind",
     "descKey": "graphics_setting.preset_colorblind_desc",
     "overrides": {
-      "accessibility": { "colorblind": true },
+      "palette": "colorblind",
       "affiliation": {
         "selfColor": "#0072b2",
         "allyColor": "#56b4e9",

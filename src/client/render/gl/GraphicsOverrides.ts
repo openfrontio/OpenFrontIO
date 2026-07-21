@@ -1,7 +1,16 @@
 import { z } from "zod";
 
+/**
+ * Selectable theme palettes. Each name maps to a `<name>-theme.json` in
+ * gl/ (registered in RenderSettings' THEMES) — extend both when adding a
+ * new palette.
+ */
+export const PALETTE_NAMES = ["default", "colorblind"] as const;
+
 export const GraphicsOverridesSchema = z
   .object({
+    // Which theme palette to render with (player colors, terrain tints, …).
+    palette: z.enum(PALETTE_NAMES),
     name: z
       .object({
         nameScaleFactor: z.number(),
@@ -70,11 +79,6 @@ export const GraphicsOverridesSchema = z
         // Nuclear fallout effects: the broiling green territory bloom and its
         // light emission in day/night mode. Disable to improve performance.
         fallout: z.boolean(),
-      })
-      .partial(),
-    accessibility: z
-      .object({
-        colorblind: z.boolean(),
       })
       .partial(),
     terrain: z

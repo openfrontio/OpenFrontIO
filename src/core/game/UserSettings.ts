@@ -402,8 +402,21 @@ export class UserSettings {
     const raw = this.getString(GRAPHICS_KEY, "");
     if (!raw) return {};
     try {
-      const parsed = GraphicsOverridesSchema.safeParse(JSON.parse(raw));
-      if (parsed.success) return parsed.data;
+      const json: unknown = JSON.parse(raw);
+      const parsed = GraphicsOverridesSchema.safeParse(json);
+      if (parsed.success) {
+        const overrides = parsed.data;
+        // Legacy: colorblind was an accessibility.colorblind boolean before
+        // the palette enum existed; the schema strips the unknown section, so
+        // translate it here. Rewritten to the new shape on the next save.
+        const legacyColorblind = (
+          json as { accessibility?: { colorblind?: unknown } }
+        ).accessibility?.colorblind;
+        if (overrides.palette === undefined && legacyColorblind === true) {
+          overrides.palette = "colorblind";
+        }
+        return overrides;
+      }
     } catch {
       // fall through
     }

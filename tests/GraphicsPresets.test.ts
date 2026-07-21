@@ -22,7 +22,10 @@ describe("built-in graphics presets", () => {
     expect(colorblind).toBeDefined();
 
     const settings = createRenderSettings();
-    applyGraphicsOverrides(settings, colorblind!.overrides);
+    applyGraphicsOverrides(
+      settings,
+      GraphicsOverridesSchema.parse(colorblind!.overrides),
+    );
 
     // Alt-view affiliation borders: self/ally blue family, enemy orange.
     expect(settings.affiliation.selfR).toBeCloseTo(0, 2);
@@ -46,7 +49,24 @@ describe("built-in graphics presets", () => {
     expect(settings.mapOverlay.friendlyTintRatio).toBe(0.85);
     expect(settings.mapOverlay.embargoTintRatio).toBe(0.85);
 
-    // The palette swap still rides on the accessibility flag.
+    // The palette swap rides on the palette enum.
     expect(settings.theme).toEqual(createThemeSettings("colorblind"));
+  });
+});
+
+describe("legacy colorblind flag", () => {
+  it("accessibility.colorblind stored by old clients surfaces as the colorblind palette", async () => {
+    const { UserSettings } = await import("../src/core/game/UserSettings");
+    const userSettings = new UserSettings();
+    // Old clients stored {accessibility:{colorblind:true}}; write it through
+    // the settings cache in the pre-palette shape.
+    userSettings.setGraphicsOverrides({
+      accessibility: { colorblind: true },
+    } as never);
+    expect(userSettings.graphicsOverrides().palette).toBe("colorblind");
+
+    // A save in the new shape sticks and stops the translation.
+    userSettings.setGraphicsOverrides({});
+    expect(userSettings.graphicsOverrides().palette).toBeUndefined();
   });
 });

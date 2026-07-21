@@ -143,14 +143,19 @@ const NUKE_COLOR_DEFAULT = rgbFloatsToHex(
 );
 
 // Built-in presets listed at the top of the modal, defined in
-// graphics-presets.json (the assignment type-checks each entry's overrides
-// against the schema). Overrides are applied wholesale. Night's ambient 0.36
-// is the slider's level 8 (see ambientSliderToValue).
+// graphics-presets.json — each entry's overrides are schema-parsed at load
+// (JSON imports can't carry the palette enum's literal types). Overrides are
+// applied wholesale. Night's ambient 0.36 is the slider's level 8 (see
+// ambientSliderToValue).
 const BUILTIN_PRESETS: ReadonlyArray<{
   nameKey: string;
   descKey: string;
   overrides: GraphicsOverrides;
-}> = builtinPresets;
+}> = builtinPresets.map((preset) => ({
+  nameKey: preset.nameKey,
+  descKey: preset.descKey,
+  overrides: GraphicsOverridesSchema.parse(preset.overrides),
+}));
 
 // Serialize with recursively sorted keys so preset equality doesn't depend on
 // the order the settings were touched in.
@@ -225,13 +230,14 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   // presets key (even as {}) marks the migration as done.
   private migrateLegacyOverrides() {
     if (this.userSettings.hasGraphicsPresets()) return;
-    // The old colorblind toggle stored only the accessibility flag; the
-    // Okabe-Ito friend-foe border colors are now override data carried by the
-    // Colorblind preset. Upgrade flag-only users to the full preset so they
-    // keep those borders.
+    // The old colorblind toggle stored only a boolean (surfaced as
+    // palette: "colorblind" by graphicsOverrides()); the Okabe-Ito friend-foe
+    // border colors are now override data carried by the Colorblind preset.
+    // Upgrade palette-only users to the full preset so they keep those
+    // borders.
     if (
       stableStringify(this.userSettings.graphicsOverrides()) ===
-      stableStringify({ accessibility: { colorblind: true } })
+      stableStringify({ palette: "colorblind" })
     ) {
       const colorblind = BUILTIN_PRESETS.find(
         (preset) => preset.nameKey === "graphics_setting.preset_colorblind",

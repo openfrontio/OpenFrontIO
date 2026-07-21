@@ -181,13 +181,12 @@ export function applyGraphicsOverrides(
     settings.name.outlineG = channel;
     settings.name.outlineB = channel;
   }
-  if (overrides.accessibility?.colorblind === true) {
-    // Swap the active theme slice for the colorblind palette (replaced
-    // wholesale — palette arrays differ in length between themes). The rest
-    // of the colorblind look — the Okabe-Ito blue/orange friend-foe border
-    // colors replacing the red/green encoding — is plain override data
-    // carried by the Colorblind preset in graphics-presets.json.
-    settings.theme = createThemeSettings("colorblind");
+  if (overrides.palette !== undefined) {
+    // Swap the active theme slice for the named palette (replaced wholesale —
+    // palette arrays differ in length between themes). The rest of a look —
+    // e.g. the Colorblind preset's Okabe-Ito friend-foe border colors — is
+    // plain override data carried by graphics-presets.json.
+    settings.theme = createThemeSettings(overrides.palette);
   }
 }
 

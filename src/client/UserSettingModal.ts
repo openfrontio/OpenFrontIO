@@ -214,23 +214,20 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
-  /** Whether colorblind mode is currently enabled in the graphics overrides. */
+  /** Whether the colorblind palette is currently selected. */
   private colorblindMode(): boolean {
-    return (
-      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
-    );
+    return this.userSettings.graphicsOverrides().palette === "colorblind";
   }
 
-  /** Flip the colorblind-mode graphics override and persist it. */
+  /** Flip the palette between colorblind and default and persist it. */
   private toggleColorblindMode() {
-    const overrides = this.userSettings.graphicsOverrides();
-    this.userSettings.setGraphicsOverrides({
-      ...overrides,
-      accessibility: {
-        ...overrides.accessibility,
-        colorblind: !this.colorblindMode(),
-      },
-    });
+    const overrides = { ...this.userSettings.graphicsOverrides() };
+    if (this.colorblindMode()) {
+      delete overrides.palette;
+    } else {
+      overrides.palette = "colorblind";
+    }
+    this.userSettings.setGraphicsOverrides(overrides);
   }
 
   private toggleEmojis() {
