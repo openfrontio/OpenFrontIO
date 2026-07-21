@@ -100,6 +100,10 @@ export class PlayerGameHistoryView extends LitElement {
       this.appendFailed = false;
       this.loadState = "ok";
     } else if (this.publicId) {
+      // Fresh player → show the default (All) view rather than inheriting the
+      // previous player's filters. No-op on first mount (already defaults).
+      this.typeFilter = "all";
+      this.modeFilter = "all";
       void this.reload();
     }
   }

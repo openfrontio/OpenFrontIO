@@ -283,4 +283,40 @@ describe("Profile Games stats navigation", () => {
       );
     });
   });
+
+  it("resets filters to the default view when the route changes players", async () => {
+    // Pick a non-default type filter on player-1 (translateText is mocked to
+    // echo the key, so the Private tab's text is its label key).
+    const privateTab = Array.from(modal.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === "account_modal.games_type_private",
+    );
+    expect(privateTab).toBeTruthy();
+    privateTab!.click();
+    await waitForProfile(modal, () => {
+      const call = vi
+        .mocked(fetchPublicPlayerGames)
+        .mock.calls.find(
+          (c) => c[0] === "player-1" && c[1]?.type === "private",
+        );
+      expect(call).toBeTruthy();
+    });
+
+    // Routing to a different player must fall back to the default (All) view
+    // rather than inheriting player-1's Private filter.
+    history.replaceState(
+      null,
+      "",
+      "/#modal=profile&publicID=player-2&tab=games",
+    );
+    expect(modalRouter.routeFromHash()).toBe(true);
+
+    await waitForProfile(modal, () => {
+      const call = vi
+        .mocked(fetchPublicPlayerGames)
+        .mock.calls.find((c) => c[0] === "player-2");
+      expect(call).toBeTruthy();
+      expect(call?.[1]?.type).toBeUndefined();
+      expect(call?.[1]?.filter).toBeUndefined();
+    });
+  });
 });
