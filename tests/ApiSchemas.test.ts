@@ -18,6 +18,39 @@ import {
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
+describe("UserMeResponseSchema ban", () => {
+  const ban = UserMeResponseSchema.shape.ban;
+
+  it("accepts an active temporary ban", () => {
+    const r = ban.safeParse({
+      category: "cheating",
+      reason: "aimbot in ranked",
+      expiresAt: "2026-08-01T00:00:00.000Z",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("accepts a permanent ban (null reason and expiry)", () => {
+    const r = ban.safeParse({
+      category: "other",
+      reason: null,
+      expiresAt: null,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("treats null and a missing field as 'no ban'", () => {
+    expect(ban.safeParse(null).success).toBe(true);
+    expect(ban.safeParse(undefined).success).toBe(true);
+  });
+
+  it("rejects a ban with no category", () => {
+    expect(ban.safeParse({ reason: null, expiresAt: null }).success).toBe(
+      false,
+    );
+  });
+});
+
 describe("GoogleUserSchema", () => {
   it("accepts a valid email", () => {
     const result = GoogleUserSchema.safeParse({ email: "user@example.com" });

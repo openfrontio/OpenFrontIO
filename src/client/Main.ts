@@ -68,6 +68,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./components/BannedModal";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 

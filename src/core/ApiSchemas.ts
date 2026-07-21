@@ -151,6 +151,18 @@ export const UserMeResponseSchema = z.object({
     google: GoogleUserSchema.optional(),
     email: z.string().optional(),
   }),
+  // The caller's active account ban, shown to them (localized client-side), or
+  // null. `category` is a server enum but kept as a string here so an
+  // unrecognised value degrades gracefully. Optional so an older API that
+  // predates the field is treated as "no ban".
+  ban: z
+    .object({
+      category: z.string(),
+      reason: z.string().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+    })
+    .nullable()
+    .optional(),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
