@@ -5,15 +5,13 @@ import { PauseGameIntentEvent } from "src/client/Transport";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
-import {
-  BUILTIN_PRESETS,
-  stableStringify,
-} from "../../components/GraphicsPresetSelector";
+import "../../components/GraphicsPresetSelector";
 import { Controller } from "../../Controller";
 import {
-  GraphicsOverridesSchema,
-  type GraphicsOverrides,
-} from "../../render/gl";
+  migrateLegacyGraphicsSettings,
+  parseGraphicsOverridesJson,
+} from "../../GraphicsPresets";
+import { type GraphicsOverrides } from "../../render/gl";
 import renderDefaults from "../../render/gl/render-settings.json";
 import { translateText } from "../../Utils";
 
@@ -194,40 +192,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
       this.pauseGame(true);
       this.requestUpdate();
     });
-    this.migrateLegacyOverrides();
-  }
-
-  // One-time migration for players who tuned their graphics before presets
-  // existed: snapshot their current custom settings as a saved preset so
-  // clicking around the new preset list can never lose them. Writing the
-  // presets key (even as {}) marks the migration as done.
-  private migrateLegacyOverrides() {
-    if (this.userSettings.hasGraphicsPresets()) return;
-    // The old colorblind toggle stored only a boolean (surfaced as
-    // palette: "colorblind" by graphicsOverrides()); the Okabe-Ito friend-foe
-    // border colors are now override data carried by the Colorblind preset.
-    // Upgrade palette-only users to the full preset so they keep those
-    // borders.
-    if (
-      stableStringify(this.userSettings.graphicsOverrides()) ===
-      stableStringify({ palette: "colorblind" })
-    ) {
-      const colorblind = BUILTIN_PRESETS.find(
-        (preset) => preset.nameKey === "graphics_setting.preset_colorblind",
-      );
-      if (colorblind !== undefined) {
-        this.userSettings.setGraphicsOverrides(colorblind.overrides);
-      }
-    }
-    const current = this.userSettings.graphicsOverrides();
-    const isCustom =
-      Object.keys(current).length > 0 &&
-      !BUILTIN_PRESETS.some((preset) => this.isActivePreset(preset.overrides));
-    this.userSettings.setGraphicsPresets(
-      isCustom
-        ? { [translateText("graphics_setting.preset_migrated_name")]: current }
-        : {},
-    );
+    migrateLegacyGraphicsSettings(this.userSettings);
   }
 
   private pauseGame(pause: boolean) {
@@ -729,13 +694,6 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  private isActivePreset(overrides: GraphicsOverrides): boolean {
-    return (
-      stableStringify(this.userSettings.graphicsOverrides()) ===
-      stableStringify(overrides)
-    );
-  }
-
   private onPresetNameInput(event: Event) {
     this.presetName = (event.target as HTMLInputElement).value;
   }
@@ -768,19 +726,12 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   }
 
   private onImportApply() {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(this.importText);
-    } catch {
+    const parsed = parseGraphicsOverridesJson(this.importText);
+    if (parsed === null) {
       this.importError = true;
       return;
     }
-    const parsed = GraphicsOverridesSchema.safeParse(raw);
-    if (!parsed.success) {
-      this.importError = true;
-      return;
-    }
-    this.applyPreset(parsed.data);
+    this.applyPreset(parsed);
     this.importText = "";
   }
 

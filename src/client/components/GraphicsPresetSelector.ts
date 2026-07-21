@@ -1,43 +1,19 @@
 import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import {
   GRAPHICS_KEY,
   GRAPHICS_PRESETS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../core/game/UserSettings";
+import {
+  BUILTIN_PRESETS,
+  migrateLegacyGraphicsSettings,
+  stableStringify,
+} from "../GraphicsPresets";
 import { showInGameConfirm } from "../InGameModal";
-import { GraphicsOverridesSchema, type GraphicsOverrides } from "../render/gl";
-import builtinPresets from "../render/gl/graphics-presets.json";
+import { type GraphicsOverrides } from "../render/gl";
 import { translateText } from "../Utils";
-
-// Built-in presets, defined in graphics-presets.json — each entry's overrides
-// are schema-parsed at load (JSON imports can't carry the palette enum's
-// literal types). Overrides are applied wholesale. Night's ambient 0.36 is
-// the graphics modal slider's level 8.
-export const BUILTIN_PRESETS: ReadonlyArray<{
-  nameKey: string;
-  descKey: string;
-  overrides: GraphicsOverrides;
-}> = builtinPresets.map((preset) => ({
-  nameKey: preset.nameKey,
-  descKey: preset.descKey,
-  overrides: GraphicsOverridesSchema.parse(preset.overrides),
-}));
-
-// Serialize with recursively sorted keys so preset equality doesn't depend on
-// the order the settings were touched in.
-export function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
-  return `{${entries.join(",")}}`;
-}
 
 const CUSTOM_VALUE = "custom";
 
@@ -51,6 +27,14 @@ const CUSTOM_VALUE = "custom";
 @customElement("graphics-preset-selector")
 export class GraphicsPresetSelector extends LitElement {
   private readonly userSettings = new UserSettings();
+
+  // The option value the player last picked. Selection is otherwise derived
+  // by content matching, which cannot tell apart presets with identical
+  // overrides (e.g. a saved preset that duplicates a built-in) — without
+  // this, such a preset could never show as selected, so its delete button
+  // could never appear.
+  @state()
+  private lastSelected: string | null = null;
 
   createRenderRoot() {
     return this;
@@ -85,7 +69,24 @@ export class GraphicsPresetSelector extends LitElement {
     );
   }
 
+  private overridesForValue(value: string): GraphicsOverrides | undefined {
+    const separator = value.indexOf(":");
+    if (separator === -1) return undefined;
+    const kind = value.slice(0, separator);
+    const key = value.slice(separator + 1);
+    return kind === "builtin"
+      ? BUILTIN_PRESETS.find((p) => p.nameKey === key)?.overrides
+      : this.userSettings.graphicsPresets()[key];
+  }
+
   private selectedValue(): string {
+    const last =
+      this.lastSelected !== null
+        ? this.overridesForValue(this.lastSelected)
+        : undefined;
+    if (last !== undefined && this.isActive(last)) {
+      return this.lastSelected!;
+    }
     const builtin = BUILTIN_PRESETS.find((p) => this.isActive(p.overrides));
     if (builtin !== undefined) return `builtin:${builtin.nameKey}`;
     const user = Object.entries(this.userSettings.graphicsPresets()).find(
@@ -97,15 +98,13 @@ export class GraphicsPresetSelector extends LitElement {
 
   private onSelect(event: Event) {
     const value = (event.target as HTMLSelectElement).value;
-    const separator = value.indexOf(":");
-    if (separator === -1) return; // the disabled "Custom" placeholder
-    const kind = value.slice(0, separator);
-    const key = value.slice(separator + 1);
-    const overrides =
-      kind === "builtin"
-        ? BUILTIN_PRESETS.find((p) => p.nameKey === key)?.overrides
-        : this.userSettings.graphicsPresets()[key];
+    const overrides = this.overridesForValue(value);
     if (overrides !== undefined) {
+      // Snapshot pre-preset custom settings before the first wholesale
+      // overwrite — the in-game migration hasn't run yet if the player has
+      // only used the main-menu selector.
+      migrateLegacyGraphicsSettings(this.userSettings);
+      this.lastSelected = value;
       this.userSettings.setGraphicsOverrides(overrides);
     }
   }

@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  BUILTIN_PRESETS,
+  migrateLegacyGraphicsSettings,
+  parseGraphicsOverridesJson,
+} from "../src/client/GraphicsPresets";
 import builtinPresets from "../src/client/render/gl/graphics-presets.json";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
 import { applyGraphicsOverrides } from "../src/client/render/gl/RenderOverrides";
@@ -6,6 +11,11 @@ import {
   createRenderSettings,
   createThemeSettings,
 } from "../src/client/render/gl/RenderSettings";
+import {
+  GRAPHICS_KEY,
+  GRAPHICS_PRESETS_KEY,
+  UserSettings,
+} from "../src/core/game/UserSettings";
 
 describe("built-in graphics presets", () => {
   it("every preset's overrides validate against the schema", () => {
@@ -68,5 +78,100 @@ describe("legacy colorblind flag", () => {
     // A save in the new shape sticks and stops the translation.
     userSettings.setGraphicsOverrides({});
     expect(userSettings.graphicsOverrides().palette).toBeUndefined();
+  });
+});
+
+describe("migrateLegacyGraphicsSettings", () => {
+  const userSettings = new UserSettings();
+
+  beforeEach(() => {
+    userSettings.removeCached(GRAPHICS_KEY);
+    userSettings.removeCached(GRAPHICS_PRESETS_KEY);
+  });
+
+  it("snapshots pre-existing custom overrides into a preset and leaves them active", () => {
+    userSettings.setGraphicsOverrides({ name: { nameScaleFactor: 2 } });
+    migrateLegacyGraphicsSettings(userSettings);
+    expect(userSettings.graphicsOverrides()).toEqual({
+      name: { nameScaleFactor: 2 },
+    });
+    expect(Object.values(userSettings.graphicsPresets())).toEqual([
+      { name: { nameScaleFactor: 2 } },
+    ]);
+  });
+
+  it("upgrades a palette-only legacy colorblind config to the full Colorblind preset", () => {
+    userSettings.setGraphicsOverrides({
+      accessibility: { colorblind: true },
+    } as never);
+    migrateLegacyGraphicsSettings(userSettings);
+    const colorblind = BUILTIN_PRESETS.find(
+      (p) => p.nameKey === "graphics_setting.preset_colorblind",
+    );
+    expect(userSettings.graphicsOverrides()).toEqual(colorblind!.overrides);
+    // Matches a built-in, so no phantom saved preset.
+    expect(userSettings.graphicsPresets()).toEqual({});
+  });
+
+  it("grafts the Colorblind borders onto legacy colorblind configs with other tweaks", () => {
+    userSettings.setGraphicsOverrides({
+      accessibility: { colorblind: true },
+      name: { nameScaleFactor: 2 },
+    } as never);
+    migrateLegacyGraphicsSettings(userSettings);
+    const overrides = userSettings.graphicsOverrides();
+    expect(overrides.name).toEqual({ nameScaleFactor: 2 });
+    expect(overrides.palette).toBe("colorblind");
+    // The Okabe-Ito borders the old colorblind boolean hardcoded.
+    expect(overrides.affiliation).toEqual({
+      selfColor: "#0072b2",
+      allyColor: "#56b4e9",
+      enemyColor: "#d55e00",
+    });
+    expect(overrides.mapOverlay).toEqual({
+      friendlyTintColor: "#0072b2",
+      embargoTintColor: "#d55e00",
+      friendlyTintRatio: 0.85,
+      embargoTintRatio: 0.85,
+    });
+    expect(Object.values(userSettings.graphicsPresets())).toEqual([overrides]);
+  });
+
+  it("stamps fresh profiles with no phantom preset and never runs twice", () => {
+    migrateLegacyGraphicsSettings(userSettings);
+    expect(userSettings.graphicsPresets()).toEqual({});
+    // Custom tweaks made after the stamp are not re-snapshotted.
+    userSettings.setGraphicsOverrides({ name: { nameScaleFactor: 2 } });
+    migrateLegacyGraphicsSettings(userSettings);
+    expect(userSettings.graphicsPresets()).toEqual({});
+  });
+});
+
+describe("parseGraphicsOverridesJson", () => {
+  it("accepts valid overrides JSON", () => {
+    expect(
+      parseGraphicsOverridesJson(
+        '{"palette":"colorblind","lighting":{"ambient":0.36}}',
+      ),
+    ).toEqual({ palette: "colorblind", lighting: { ambient: 0.36 } });
+  });
+
+  it("rejects invalid JSON and non-objects", () => {
+    expect(parseGraphicsOverridesJson("not json")).toBeNull();
+    expect(parseGraphicsOverridesJson("5")).toBeNull();
+    expect(parseGraphicsOverridesJson("null")).toBeNull();
+    expect(parseGraphicsOverridesJson("[]")).toBeNull();
+  });
+
+  it("rejects unknown keys instead of stripping them to an empty config", () => {
+    // The schema strips unknown keys when reading stored data; a paste that
+    // survives only by stripping must not silently wipe the user's settings.
+    expect(parseGraphicsOverridesJson('{"nmae":{"nameScaleFactor":2}}')).toBe(
+      null,
+    );
+    expect(parseGraphicsOverridesJson('{"name":{"nameScale":2}}')).toBe(null);
+    expect(
+      parseGraphicsOverridesJson('{"accessibility":{"colorblind":true}}'),
+    ).toBe(null);
   });
 });
