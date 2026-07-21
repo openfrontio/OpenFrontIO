@@ -306,7 +306,22 @@ export class AccountModal extends BaseModal {
 
   private renderFriendsTab(): TemplateResult {
     const myPublicId = this.userMeResponse?.player?.publicId ?? "";
-    return html`<friends-list .myPublicId=${myPublicId}></friends-list>`;
+    return html`<friends-list
+      .myPublicId=${myPublicId}
+      @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+        this.openPlayerProfile(e.detail.publicId)}
+    ></friends-list>`;
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromAccount(publicId: string): void }
+    >("player-profile-modal");
+    profileModal?.openFromAccount(publicId);
+  }
+
+  public returnToFriends(): void {
+    this.open({ tab: "friends" });
   }
 
   private renderAccountTab(): TemplateResult {

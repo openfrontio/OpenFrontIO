@@ -312,6 +312,21 @@ describe("ClanGamePlayerSchema", () => {
     expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
   });
 
+  it("accepts an account username, null, or absence (older API)", () => {
+    const named = ClanGamePlayerSchema.safeParse({
+      ...validPlayer,
+      accountUsername: "alice.4821",
+    });
+    expect(named.success).toBe(true);
+    if (named.success) expect(named.data.accountUsername).toBe("alice.4821");
+    expect(
+      ClanGamePlayerSchema.safeParse({ ...validPlayer, accountUsername: null })
+        .success,
+    ).toBe(true);
+    // validPlayer omits accountUsername entirely.
+    expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
+  });
+
   it("rejects when won is not a boolean", () => {
     expect(
       ClanGamePlayerSchema.safeParse({ ...validPlayer, won: "true" }).success,

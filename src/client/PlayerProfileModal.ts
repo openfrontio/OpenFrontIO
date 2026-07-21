@@ -22,7 +22,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private loading = false;
-  private openedFrom: "clan" | "leaderboard" | null = null;
+  private openedFrom: "clan" | "leaderboard" | "account" | null = null;
 
   protected modalConfig() {
     return { maxWidth: "960px" };
@@ -130,6 +130,11 @@ export class PlayerProfileModal extends BaseModal {
     this.open({ publicID: publicId });
   }
 
+  public openFromAccount(publicId: string): void {
+    this.openedFrom = "account";
+    this.open({ publicID: publicId });
+  }
+
   private back(): void {
     const openedFrom = this.openedFrom;
     this.close();
@@ -141,6 +146,12 @@ export class PlayerProfileModal extends BaseModal {
       document
         .querySelector<HTMLElement & { open(): void }>("leaderboard-modal")
         ?.open();
+    } else if (openedFrom === "account") {
+      document
+        .querySelector<
+          HTMLElement & { returnToFriends(): void }
+        >("account-modal")
+        ?.returnToFriends();
     }
   }
 }

@@ -385,6 +385,8 @@ export class ClanModal extends BaseModal {
           }}
           @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
             this.openGameStats(e.detail.gameId)}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
           @close-clan-modal=${() => this.close()}
         ></clan-game-history-view>`;
       }
