@@ -1,7 +1,9 @@
+import lobbyCardOverlaysFallback from "resources/lobby-card-overlays.json";
 import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
-import type { NewsItem } from "../core/ApiSchemas";
+import type { LobbyCardOverlay, NewsItem } from "../core/ApiSchemas";
 import {
+  LobbyCardOverlaySchema,
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponse,
@@ -800,5 +802,27 @@ export async function getNews(): Promise<NewsItem[]> {
   } catch (err) {
     console.warn("getNews: request failed, using fallback", err);
     return newsItemsFallback as NewsItem[];
+  }
+}
+
+export async function getLobbyCardOverlays(): Promise<LobbyCardOverlay[]> {
+  try {
+    const res = await fetch(`${getApiBase()}/lobby-card-overlays.json`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status !== 200) {
+      console.warn("getLobbyCardOverlays: unexpected status", res.status);
+      return lobbyCardOverlaysFallback as LobbyCardOverlay[];
+    }
+    const json = await res.json();
+    const parsed = z.array(LobbyCardOverlaySchema).safeParse(json);
+    if (!parsed.success) {
+      console.warn("getLobbyCardOverlays: Zod validation failed", parsed.error);
+      return lobbyCardOverlaysFallback as LobbyCardOverlay[];
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("getLobbyCardOverlays: request failed, using fallback", err);
+    return lobbyCardOverlaysFallback as LobbyCardOverlay[];
   }
 }

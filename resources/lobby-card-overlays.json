@@ -1,0 +1,40 @@
+[
+  {
+    "slot": 2,
+    "offset": 0,
+    "interval": 1,
+    "ttl": 15000,
+    "video": {
+      "url": "/video/promo/ofm_card_intro.mp4",
+      "videoLength": 6
+    },
+    "image": {
+      "url": "/images/promo/trophy.png"
+    },
+    "displayInfo": {
+      "title": "Join the new OpenFront Masters tournament!",
+      "subtitle": "Sign up now",
+      "count": 40
+    },
+    "linkTo": "https://discord.gg/u5TnUxf43x"
+  },
+  {
+    "slot": 1,
+    "offset": 1,
+    "interval": 2,
+    "ttl": 15000,
+    "video": {
+      "url": "/video/promo/ofm_card_intro.mp4",
+      "videoLength": 6
+    },
+    "image": {
+      "url": "/images/promo/trophy.png"
+    },
+    "displayInfo": {
+      "title": "Join the new OpenFront Masters tournament!",
+      "subtitle": "Sign up now",
+      "count": 40
+    },
+    "linkTo": "https://discord.gg/u5TnUxf43x"
+  }
+]

@@ -433,3 +433,24 @@ export const NewsItemSchema = z.object({
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
+
+export const LobbyCardOverlaySchema = z.object({
+  slot: z.number(),
+  interval: z.number(),
+  offset: z.number().default(0),
+  ttl: z.number(),
+  video: z.object({
+    url: z.string(),
+    videoLength: z.number(),
+  }),
+  image: z.object({
+    url: z.string(),
+  }),
+  displayInfo: z.object({
+    title: z.string(),
+    subtitle: z.string(),
+    count: z.number().optional(),
+  }),
+  linkTo: z.url(),
+});
+export type LobbyCardOverlay = z.infer<typeof LobbyCardOverlaySchema>;
