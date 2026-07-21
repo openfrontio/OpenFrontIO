@@ -18,7 +18,7 @@
     "failed_to_send_recovery_email": "Nem sikerült elküldeni a helyreállítási e-mailt",
     "fetching_account": "Fiókadatok lekérése...",
     "get_magic_link": "Kérj egy mágikus linket",
-    "google_alt": "\nGoogle",
+    "google_alt": "Google",
     "link_discord": "Discord fiók összekapcsolása",
     "link_google": "Google-fiók összekapcsolása",
     "link_google_already_linked": "Ez a Google-fiók már egy másik fiókhoz van kapcsolva.",
