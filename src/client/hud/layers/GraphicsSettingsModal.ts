@@ -12,8 +12,8 @@ import {
   GraphicsOverridesSchema,
   type GraphicsOverrides,
 } from "../../render/gl";
+import builtinPresets from "../../render/gl/graphics-presets.json";
 import renderDefaults from "../../render/gl/render-settings.json";
-import builtinPresets from "./graphics-presets.json";
 
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
