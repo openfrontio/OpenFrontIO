@@ -107,25 +107,19 @@ export class AccountModal extends BaseModal {
   protected renderHeaderSlot() {
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
-    const displayId = publicId || translateText("account_modal.not_found");
     return modalHeader({
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
       rightContent:
-        isLoggedIn && !this.isLoadingUser
+        isLoggedIn && !this.isLoadingUser && publicId
           ? html`
-              <div class="flex items-center gap-2">
-                <span
-                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                  >${translateText("account_modal.public_player_id")}</span
-                >
-                <copy-button
-                  .lobbyId=${publicId}
-                  .copyText=${publicId}
-                  .displayText=${displayId}
-                ></copy-button>
-              </div>
+              <copy-button
+                class="shrink-0"
+                .copyText=${playerProfileUrl(publicId)}
+                .displayText=${translateText("player_profile.share")}
+                .showVisibilityToggle=${false}
+              ></copy-button>
             `
           : undefined,
     });
@@ -412,30 +406,10 @@ export class AccountModal extends BaseModal {
         translateText("account_modal.no_stats"),
       );
     }
-    const publicId = this.userMeResponse?.player?.publicId ?? "";
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <div class="flex items-center justify-between gap-2 mb-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <span class="text-blue-400">📊</span>
-            ${translateText("account_modal.stats_overview")}
-          </h3>
-          ${publicId
-            ? html`
-                <copy-button
-                  compact
-                  class="shrink-0"
-                  .copyText=${playerProfileUrl(publicId)}
-                  .displayText=${translateText("player_profile.share")}
-                  .showVisibilityToggle=${false}
-                ></copy-button>
-              `
-            : ""}
-        </div>
-        <player-stats-tree-view
-          .statsTree=${this.statsTree}
-        ></player-stats-tree-view>
-      </div>
+      <player-stats-tree-view
+        .statsTree=${this.statsTree}
+      ></player-stats-tree-view>
     `;
   }
 
