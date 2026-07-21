@@ -762,7 +762,12 @@ export interface Game extends GameMap {
   drainPackedMotionPlans(): Uint32Array | null;
   drainPackedPlayerUpdates(): Float64Array | null;
   drainPackedAttackUpdates(): Float64Array | null;
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  // null ends the game with no winner (a cancelled match, e.g. a ranked game
+  // that didn't fill): the record is archived winnerless and never ranked.
+  setWinner(
+    winner: Player | Team | null,
+    allPlayersStats: AllPlayersStats,
+  ): void;
   getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;
