@@ -40,6 +40,54 @@ describe("ClientMsgRateLimiter", () => {
     });
   });
 
+  describe("per-intent-type limits", () => {
+    it("limits a spammy social intent below the global limit", () => {
+      const limiter = new ClientMsgRateLimiter();
+      // quick_chat is capped at 4/sec, well under the global 10/sec.
+      for (let i = 0; i < 4; i++) {
+        expect(limiter.check(CLIENT_A, "intent", SMALL, "quick_chat")).toBe(
+          "ok",
+        );
+      }
+      expect(limiter.check(CLIENT_A, "intent", SMALL, "quick_chat")).toBe(
+        "limit",
+      );
+    });
+
+    it("a throttled type does not block other intent types", () => {
+      const limiter = new ClientMsgRateLimiter();
+      // Exhaust the quick_chat per-type bucket.
+      for (let i = 0; i < 4; i++) {
+        limiter.check(CLIENT_A, "intent", SMALL, "quick_chat");
+      }
+      expect(limiter.check(CLIENT_A, "intent", SMALL, "quick_chat")).toBe(
+        "limit",
+      );
+      // A different intent type still has global budget left.
+      expect(limiter.check(CLIENT_A, "intent", SMALL, "attack")).toBe("ok");
+    });
+
+    it("does not apply a per-type cap to unlisted intent types", () => {
+      const limiter = new ClientMsgRateLimiter();
+      // "attack" has no per-type cap, so only the global 10/sec applies.
+      for (let i = 0; i < 10; i++) {
+        expect(limiter.check(CLIENT_A, "intent", SMALL, "attack")).toBe("ok");
+      }
+      expect(limiter.check(CLIENT_A, "intent", SMALL, "attack")).toBe("limit");
+    });
+
+    it("per-type buckets are isolated per client", () => {
+      const limiter = new ClientMsgRateLimiter();
+      for (let i = 0; i < 4; i++) {
+        limiter.check(CLIENT_A, "intent", SMALL, "quick_chat");
+      }
+      expect(limiter.check(CLIENT_A, "intent", SMALL, "quick_chat")).toBe(
+        "limit",
+      );
+      expect(limiter.check(CLIENT_B, "intent", SMALL, "quick_chat")).toBe("ok");
+    });
+  });
+
   describe("non-intent messages", () => {
     it("does not rate-limit non-intent messages", () => {
       const limiter = new ClientMsgRateLimiter();

@@ -699,6 +699,7 @@ export class GameServer {
           client.clientID,
           clientMsg.type,
           bytes,
+          clientMsg.type === "intent" ? clientMsg.intent.type : undefined,
         );
         if (rateResult === "kick") {
           this.log.warn(`Client rate limit exceeded, kicking`, {
