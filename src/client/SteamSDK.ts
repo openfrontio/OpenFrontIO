@@ -3,32 +3,37 @@ interface SteamBridge {
   getUser(): Promise<{ steamId: string; name: string } | null>;
 }
 
-declare global {
-  interface Window {
-    openfrontDesktop?: { steam?: SteamBridge };
-  }
+// window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
+// there on purpose). We know the shape the Electron preload exposes, so narrow
+// it locally rather than re-declaring the global (a second `declare global`
+// with a different type triggers TS2717).
+function steamBridge(): SteamBridge | undefined {
+  const desktop = window.openfrontDesktop as { steam?: SteamBridge } | undefined;
+  return desktop?.steam;
 }
 
 // Thin renderer wrapper over the desktop shell's Steam bridge. Mirrors
 // CrazyGamesSDK; the native work lives in the Electron main process.
 class SteamSDK {
   isOnSteam(): boolean {
-    return typeof window.openfrontDesktop?.steam !== "undefined";
+    return steamBridge() !== undefined;
   }
 
   async getTicket(): Promise<string | null> {
-    if (!this.isOnSteam()) return null;
+    const bridge = steamBridge();
+    if (!bridge) return null;
     try {
-      return await window.openfrontDesktop!.steam!.getAuthTicket();
+      return await bridge.getAuthTicket();
     } catch {
       return null;
     }
   }
 
   async getUser(): Promise<{ steamId: string; name: string } | null> {
-    if (!this.isOnSteam()) return null;
+    const bridge = steamBridge();
+    if (!bridge) return null;
     try {
-      return await window.openfrontDesktop!.steam!.getUser();
+      return await bridge.getUser();
     } catch {
       return null;
     }
