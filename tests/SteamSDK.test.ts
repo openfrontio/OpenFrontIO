@@ -20,4 +20,22 @@ describe("SteamSDK", () => {
     expect(await steamSDK.getTicket()).toBe("deadbeef");
     expect(await steamSDK.getUser()).toEqual({ steamId: "77", name: "Ada" });
   });
+  it("getTicket degrades to null when bridge rejects", async () => {
+    (window as any).openfrontDesktop = {
+      steam: {
+        getAuthTicket: vi.fn().mockRejectedValue(new Error("boom")),
+        getUser: vi.fn(),
+      },
+    };
+    expect(await steamSDK.getTicket()).toBeNull();
+  });
+  it("getUser degrades to null when bridge rejects", async () => {
+    (window as any).openfrontDesktop = {
+      steam: {
+        getAuthTicket: vi.fn(),
+        getUser: vi.fn().mockRejectedValue(new Error("boom")),
+      },
+    };
+    expect(await steamSDK.getUser()).toBeNull();
+  });
 });
