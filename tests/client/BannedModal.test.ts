@@ -90,6 +90,19 @@ describe("banned-modal", () => {
     expect(t).not.toContain("ban_notice.reason");
   });
 
+  it("clears the notice when a later @me arrives with no ban (unbanned in-session)", async () => {
+    fireUserMe({
+      ban: { category: "cheating", reason: null, expiresAt: null },
+      user: {},
+      player: {},
+    });
+    expect(await text()).toContain("ban_notice.category.cheating");
+
+    // The player is unbanned and @me re-dispatches without a ban.
+    fireUserMe({ ban: null, user: {}, player: {} });
+    expect((await text()).trim()).toBe("");
+  });
+
   it("falls back to the generic category for an unknown value", async () => {
     fireUserMe({
       ban: { category: "brand_new_reason", reason: null, expiresAt: null },

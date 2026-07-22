@@ -27,7 +27,13 @@ export class BannedModal extends LitElement {
 
   private onUserMeResponse = (event: Event) => {
     const detail = (event as CustomEvent<UserMeResponse | false>).detail;
-    if (detail === false || !detail.ban) return;
+    // No ban (or @me failed) clears the notice — e.g. an unban that lands in
+    // the same session — and re-arms `opened` so a later re-ban reopens it.
+    if (detail === false || !detail.ban) {
+      this.ban = null;
+      this.opened = false;
+      return;
+    }
     this.ban = detail.ban;
   };
 
