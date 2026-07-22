@@ -54,6 +54,7 @@ import "./NewsModal";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
+import "./SteamLinkSignpost";
 import { StoreModal } from "./Store";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
