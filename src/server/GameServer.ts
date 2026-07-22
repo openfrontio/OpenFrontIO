@@ -37,7 +37,9 @@ import { createPartialGameRecord, simpleHash } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { shadowNames } from "./Privilege";
 import { ServerEnv } from "./ServerEnv";
+import { fetchBannedUsernames } from "./UsernameChecker";
 import { VoteRound } from "./VoteTally";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -111,6 +113,15 @@ export class GameServer {
   private hasReachedMaxPlayerCount: boolean = false;
 
   private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
+
+  // Username moderation: poll the API's batch username_check once per second
+  // while the game runs. Verdicts are applied through server-injected
+  // censor_player intents and can flip both ways (the API contract forbids
+  // latching a ban from one poll).
+  private usernameCheckIntervalID: ReturnType<typeof setInterval> | undefined;
+  private usernameCheckInFlight = false;
+  // Clients currently renamed by an API ban verdict.
+  private censoredClients = new Set<ClientID>();
 
   private lastPingUpdate = 0;
 
@@ -348,6 +359,9 @@ export class GameServer {
     switch (stamped.type) {
       case "mark_disconnected":
         return { status: 400, error: "mark_disconnected is server-internal" };
+
+      case "censor_player":
+        return { status: 400, error: "censor_player is server-internal" };
 
       case "kick_player": {
         if (!actor.isLobbyCreator && !actor.isAdmin) {
@@ -995,6 +1009,10 @@ export class GameServer {
       () => this.endTurn(),
       ServerEnv.turnIntervalMs(),
     );
+    this.usernameCheckIntervalID = setInterval(
+      () => void this.checkUsernames(),
+      1000,
+    );
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
         clientID: c.clientID,
@@ -1127,12 +1145,70 @@ export class GameServer {
     });
   }
 
+  // Poll the API's batch username_check with every name in play (allClients:
+  // disconnected players' names stay visible on the map) and turn verdict
+  // *transitions* into censor_player intents. Always sends the stable
+  // join-time username — never the shadow replacement — so a censored name
+  // can't come back "approved" and flap.
+  private async checkUsernames(): Promise<void> {
+    if (this.usernameCheckInFlight) {
+      return;
+    }
+    const clients = [...this.allClients.values()];
+    if (clients.length === 0) {
+      return;
+    }
+    const usernames = [...new Set(clients.map((c) => c.username))];
+    this.usernameCheckInFlight = true;
+    try {
+      const banned = await fetchBannedUsernames(usernames);
+      if (banned === null) {
+        // Transient failure: keep the verdicts we already have.
+        return;
+      }
+      for (const client of clients) {
+        const isBanned = banned.has(client.username);
+        if (isBanned === this.censoredClients.has(client.clientID)) {
+          continue;
+        }
+        if (isBanned) {
+          this.censoredClients.add(client.clientID);
+          this.addIntent({
+            type: "censor_player",
+            clientID: client.clientID,
+            username:
+              shadowNames[simpleHash(client.username) % shadowNames.length],
+          });
+          this.log.info("censoring banned username", {
+            clientID: client.clientID,
+          });
+        } else {
+          this.censoredClients.delete(client.clientID);
+          this.addIntent({
+            type: "censor_player",
+            clientID: client.clientID,
+            username: client.username,
+          });
+          this.log.info("restoring cleared username", {
+            clientID: client.clientID,
+          });
+        }
+      }
+    } finally {
+      this.usernameCheckInFlight = false;
+    }
+  }
+
   async end() {
     this._hasEnded = true;
     // Close all WebSocket connections
     if (this.endTurnIntervalID) {
       clearInterval(this.endTurnIntervalID);
       this.endTurnIntervalID = undefined;
+    }
+    if (this.usernameCheckIntervalID) {
+      clearInterval(this.usernameCheckIntervalID);
+      this.usernameCheckIntervalID = undefined;
     }
     this.websockets.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {

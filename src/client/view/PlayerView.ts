@@ -266,6 +266,17 @@ export class PlayerView {
    */
   applyUpdate(pu: PlayerUpdate): void {
     applyStateUpdate(this.state, pu);
+    // Moderation rename (censor_player intent). Skipped for the local player
+    // so the user does not know they are being censored, matching GameView's
+    // first-emission name replacement.
+    if (this.static.clientID !== this.game.myClientID()) {
+      if (pu.name !== undefined) {
+        this.static.name = pu.name;
+      }
+      if (pu.displayName !== undefined) {
+        this.static.displayName = pu.displayName;
+      }
+    }
   }
 
   /** Set the renderer-format embargoes (smallIDs). */
