@@ -108,6 +108,43 @@ export type ClaimAllRewardsResponse = z.infer<
   typeof ClaimAllRewardsResponseSchema
 >;
 
+// Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
+// `claimed`: reservation held but subscription lapsed — the suffix shows again
+// and a grace deadline runs. `premium`: subscribed, bare display. `indefinite`:
+// admin-locked bare display. Statuses change server-side without client action
+// (Stripe webhooks, admin edits) — re-fetch /users/@me rather than caching.
+export const UsernameStatusSchema = z.enum([
+  "unclaimed",
+  "claimed",
+  "premium",
+  "indefinite",
+]);
+export type UsernameStatus = z.infer<typeof UsernameStatusSchema>;
+
+// When a player subscribes while someone else exclusively holds their bare
+// name, the server renames them to TEMPORARY#### and clears their cooldown so
+// the rename is free. Detect it to prompt for a real name.
+export function isTemporaryUsername(base: string | null | undefined): boolean {
+  return typeof base === "string" && /^TEMPORARY\d{4}$/.test(base);
+}
+
+// Whether a pre-rendered account username belongs to a verified player
+// (premium/indefinite bare-name claim holder). The server renders everyone
+// else as "base.suffix" and bases can never contain dots
+// (AccountUsernameSchema), so a dotless name IS the bare display — no
+// dedicated flag needed on list endpoints. TEMPORARY#### server renames are
+// bare too but aren't a chosen name, so they don't get the badge (matches
+// the verified-name play toggle's eligibility rule).
+export function isVerifiedUsername(
+  username: string | null | undefined,
+): boolean {
+  return (
+    typeof username === "string" &&
+    !username.includes(".") &&
+    !isTemporaryUsername(username)
+  );
+}
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -123,6 +160,23 @@ export const UserMeResponseSchema = z.object({
     // True when the player may list a custom lobby publicly. The API decides
     // which subscriptions/grants confer this.
     canCreatePublicLobbies: z.boolean(),
+    // Account username (custom-usernames). All optional so responses from an
+    // API without the feature still parse; absent means the same as never set.
+    // `username` is the server-resolved DISPLAY form — the bare base for an
+    // entitled claim holder, otherwise "base.suffix". Render it as-is; never
+    // assemble base + discriminator client-side. The discriminator is exactly
+    // 4 digits and may have leading zeros — keep it a string.
+    username: z.string().nullable().optional(),
+    usernameBase: z.string().nullable().optional(),
+    usernameDiscriminator: z.string().nullable().optional(),
+    usernameStatus: UsernameStatusSchema.optional(),
+    // Only non-null in `claimed`: when the exclusive right to the bare name
+    // becomes takeable by another subscriber. A past date means "at risk",
+    // not "lost" — it stays set until the name is actually taken.
+    usernameClaimExpiresAt: z.iso.datetime().nullable().optional(),
+    // When the player may next self-rename. May be in the past — past or
+    // null both mean a rename is allowed.
+    nextUsernameChangeAt: z.iso.datetime().nullable().optional(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
@@ -190,6 +244,18 @@ export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
 
+// PUT /users/@me/username success payload. `username` is the resolved display
+// form (safe for optimistic UI). The suffix is re-rolled on every rename and
+// the response carries the fresh 30-day cooldown.
+export const PutUsernameResponseSchema = z.object({
+  username: z.string(),
+  base: z.string(),
+  discriminator: z.string(),
+  usernameStatus: UsernameStatusSchema,
+  nextUsernameChangeAt: z.iso.datetime().nullable(),
+});
+export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,
@@ -214,6 +280,11 @@ export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
+  // Account username, pre-rendered by the server (bare base or "base.suffix").
+  // null = the player never set one. Render `username ?? publicId`; never
+  // parse it — compare players by publicId only. Optional so responses from
+  // an API without the field still parse.
+  username: z.string().nullable().optional(),
   stats: PlayerStatsTreeSchema,
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
@@ -246,7 +317,7 @@ export const PublicPlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
   durationSeconds: z.number().int().nonnegative(),
-  map: z.string(),
+  map: z.string().trim(),
   mode: z.string(),
   type: z.string(),
   playerTeams: z.string().nullable(),
@@ -272,7 +343,9 @@ export type PublicPlayerGamesResponse = z.infer<
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
-  username: LeaderboardUsernameSchema,
+  // Account username (null = never set). The leaderboard displays this or
+  // the playerId — the per-session name is deliberately ignored.
+  accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
@@ -302,6 +375,10 @@ export const RankedLeaderboardEntrySchema = z.object({
   public_id: z.string(),
   user: DiscordUserSchema.nullable().optional(),
   username: LeaderboardUsernameSchema,
+  // Account username (null = never set), unlike `username` which is the name
+  // from the player's most recent ranked session. The client displays
+  // `accountUsername ?? public_id` and ignores the session name.
+  accountUsername: z.string().nullable().optional(),
   clanTag: RequiredClanTagSchema.nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
@@ -317,6 +394,9 @@ export type RankedLeaderboardResponse = z.infer<
 
 export const FriendEntrySchema = z.object({
   publicId: z.string(),
+  // Account username (null = never set), always the other party's. Render
+  // `username ?? publicId`; identify players by publicId only.
+  username: z.string().nullable().optional(),
   createdAt: z.iso.datetime(),
 });
 export type FriendEntry = z.infer<typeof FriendEntrySchema>;
@@ -353,3 +433,24 @@ export const NewsItemSchema = z.object({
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
+
+// Config for the homepage featured-stream panel, served like news.json (a JSON the API
+// hosts, with a bundled fallback). `enabled` is the on/off signal; `channels` is the
+// Twitch channel logins to show (first one that is live wins). Invalid/garbage logins are
+// dropped individually (trimmed, matched to the Twitch login format) rather than failing
+// the whole config closed — one bad entry must not silently disable the feature for every
+// client; the valid channels still flow through.
+const TWITCH_LOGIN = /^[a-zA-Z0-9_]{3,25}$/;
+export const FeaturedStreamSchema = z.object({
+  enabled: z.boolean().default(false),
+  channels: z
+    .array(z.unknown())
+    .default([])
+    .transform((cs) =>
+      cs
+        .filter((c): c is string => typeof c === "string")
+        .map((c) => c.trim())
+        .filter((c) => TWITCH_LOGIN.test(c)),
+    ),
+});
+export type FeaturedStreamConfig = z.infer<typeof FeaturedStreamSchema>;

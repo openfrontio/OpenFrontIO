@@ -1,14 +1,19 @@
 import {
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponseSchema,
+  FriendEntrySchema,
   GoogleUser,
   GoogleUserSchema,
+  isTemporaryUsername,
+  isVerifiedUsername,
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
   PlayerProfileSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
+  PutUsernameResponseSchema,
+  RankedLeaderboardEntrySchema,
   RewardSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
@@ -67,6 +72,91 @@ describe("PlayerProfileSchema", () => {
         .success,
     ).toBe(false);
   });
+
+  it("accepts a pre-rendered account username", () => {
+    const result = PlayerProfileSchema.safeParse({
+      ...base,
+      username: "bob.4821",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBe("bob.4821");
+    }
+  });
+
+  it("accepts username: null (player never set one)", () => {
+    const result = PlayerProfileSchema.safeParse({ ...base, username: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a profile without username (older API)", () => {
+    const result = PlayerProfileSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBeUndefined();
+    }
+  });
+});
+
+describe("FriendEntrySchema", () => {
+  const base = {
+    publicId: "abc123",
+    createdAt: "2024-01-15T12:00:00.000Z",
+  };
+
+  it("accepts an entry with an account username", () => {
+    const result = FriendEntrySchema.safeParse({
+      ...base,
+      username: "bob.4821",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts username: null (friend never set one)", () => {
+    const result = FriendEntrySchema.safeParse({ ...base, username: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an entry without username (older API)", () => {
+    expect(FriendEntrySchema.safeParse(base).success).toBe(true);
+  });
+});
+
+describe("RankedLeaderboardEntrySchema accountUsername", () => {
+  const base = {
+    rank: 1,
+    elo: 1500,
+    peakElo: 1600,
+    wins: 10,
+    losses: 5,
+    total: 15,
+    public_id: "abc123",
+    username: "xX_Sniper_Xx",
+  };
+
+  it("keeps accountUsername verbatim alongside the session username", () => {
+    const result = RankedLeaderboardEntrySchema.safeParse({
+      ...base,
+      accountUsername: "bob.4821",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.accountUsername).toBe("bob.4821");
+      expect(result.data.username).toBe("xX_Sniper_Xx");
+    }
+  });
+
+  it("accepts accountUsername: null (player never set one)", () => {
+    const result = RankedLeaderboardEntrySchema.safeParse({
+      ...base,
+      accountUsername: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an entry without accountUsername (older API)", () => {
+    expect(RankedLeaderboardEntrySchema.safeParse(base).success).toBe(true);
+  });
 });
 
 describe("PlayerGameModeFilterSchema", () => {
@@ -117,6 +207,17 @@ describe("PublicPlayerGameSchema", () => {
 
   it("accepts a fully-populated game", () => {
     expect(PublicPlayerGameSchema.safeParse(validGame).success).toBe(true);
+  });
+
+  it("normalizes accidental whitespace around archived map names", () => {
+    const result = PublicPlayerGameSchema.safeParse({
+      ...validGame,
+      map: "Deglaciated Antarctica ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.map).toBe("Deglaciated Antarctica");
   });
 
   it("accepts clanTag: null (not repping a clan)", () => {
@@ -390,5 +491,192 @@ describe("UserMeResponseSchema canCreatePublicLobbies", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
     ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema account username", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("accepts a lapsed claim holder (suffix showing, grace deadline set)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: "Bob.4821",
+        usernameBase: "Bob",
+        usernameDiscriminator: "4821",
+        usernameStatus: "claimed",
+        usernameClaimExpiresAt: "2026-08-17T19:42:00.000Z",
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.username).toBe("Bob.4821");
+      expect(result.data.player.usernameStatus).toBe("claimed");
+    }
+  });
+
+  it("accepts a response without any username fields (older API)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: basePlayer,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.usernameStatus).toBeUndefined();
+    }
+  });
+
+  it("accepts a player who never set a name (all null, unclaimed)", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: null,
+        usernameBase: null,
+        usernameDiscriminator: null,
+        usernameStatus: "unclaimed",
+        usernameClaimExpiresAt: null,
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("keeps a leading-zero discriminator as a string", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        username: "Ann.0042",
+        usernameBase: "Ann",
+        usernameDiscriminator: "0042",
+        usernameStatus: "unclaimed",
+        usernameClaimExpiresAt: null,
+        nextUsernameChangeAt: null,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.usernameDiscriminator).toBe("0042");
+    }
+  });
+
+  it("rejects an unknown usernameStatus", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: { ...basePlayer, usernameStatus: "expired" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a non-ISO usernameClaimExpiresAt", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: {
+          ...basePlayer,
+          usernameStatus: "claimed",
+          usernameClaimExpiresAt: "next month",
+        },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("PutUsernameResponseSchema", () => {
+  const base = {
+    username: "NewName.7302",
+    base: "NewName",
+    discriminator: "7302",
+    usernameStatus: "unclaimed",
+    nextUsernameChangeAt: "2026-08-17T19:42:00.000Z",
+  };
+
+  it("accepts a rename result", () => {
+    const result = PutUsernameResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBe("NewName.7302");
+      expect(result.data.discriminator).toBe("7302");
+    }
+  });
+
+  it("accepts a null cooldown", () => {
+    expect(
+      PutUsernameResponseSchema.safeParse({
+        ...base,
+        nextUsernameChangeAt: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a numeric discriminator (leading zeros would be lost)", () => {
+    expect(
+      PutUsernameResponseSchema.safeParse({ ...base, discriminator: 7302 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a missing base", () => {
+    const rest: Record<string, unknown> = { ...base };
+    delete rest.base;
+    expect(PutUsernameResponseSchema.safeParse(rest).success).toBe(false);
+  });
+});
+
+describe("isTemporaryUsername", () => {
+  it.each(["TEMPORARY0042", "TEMPORARY9999"])("detects %s", (name) => {
+    expect(isTemporaryUsername(name)).toBe(true);
+  });
+
+  it.each([
+    "temporary1234",
+    "TEMPORARY123",
+    "TEMPORARY12345",
+    "TEMPORARYabcd",
+    "Bob",
+  ])("rejects %s", (name) => {
+    expect(isTemporaryUsername(name)).toBe(false);
+  });
+
+  it("handles null and undefined bases", () => {
+    expect(isTemporaryUsername(null)).toBe(false);
+    expect(isTemporaryUsername(undefined)).toBe(false);
+  });
+});
+
+describe("isVerifiedUsername", () => {
+  it.each(["bob", "big_boss", "a-b_c9"])(
+    "treats bare (dotless) display %s as verified",
+    (name) => {
+      expect(isVerifiedUsername(name)).toBe(true);
+    },
+  );
+
+  it.each(["bob.4821", "big_boss.0042"])(
+    "treats suffixed display %s as not verified",
+    (name) => {
+      expect(isVerifiedUsername(name)).toBe(false);
+    },
+  );
+
+  it("never verifies an unset username", () => {
+    expect(isVerifiedUsername(null)).toBe(false);
+    expect(isVerifiedUsername(undefined)).toBe(false);
+  });
+
+  it("never verifies a TEMPORARY#### server rename, even though it is bare", () => {
+    expect(isVerifiedUsername("TEMPORARY1234")).toBe(false);
   });
 });

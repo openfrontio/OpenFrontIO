@@ -200,6 +200,10 @@ const ClientInfoSchema = z.object({
   username: UsernameSchema,
   clanTag: ClanTagSchema,
   friends: z.array(z.string()).optional(),
+  // Plays under their server-validated account name (blue check in the
+  // lobby list). Never set on anonymized entries — the badge vouches for
+  // the exact display name.
+  verified: z.boolean().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -273,6 +277,9 @@ export interface ClientInfo {
   username: string;
   clanTag: string | null;
   friends?: ClientID[];
+  // Plays under their server-validated account name (blue check). Never set
+  // on anonymized entries.
+  verified?: boolean;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -658,6 +665,11 @@ export const PlayerCosmeticRefsSchema = z.object({
   // One selected effect per slot: key = slot (effectType for trails, nukeType for
   // nuke explosions — see effectTypeForSlot), value = effect name.
   effects: z.record(z.string(), CosmeticNameSchema).optional(),
+  // The player claims to be playing under their verified account username
+  // (renders the blue check next to the name). The game server keeps the
+  // claim only when the join name exactly matches the account's resolved
+  // display name from /users/@me (Worker join → verifiedBadgeAllowed).
+  verified: z.boolean().optional(),
 });
 
 export const PlayerSkinSchema = z.object({
@@ -689,6 +701,8 @@ export const PlayerCosmeticsSchema = z.object({
   // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
   // explosions).
   effects: z.record(z.string(), PlayerEffectSchema).optional(),
+  // Plays under the verified account username — renders the blue check.
+  verified: z.boolean().optional(),
 });
 
 export const PlayerSchema = z.object({
@@ -947,6 +961,10 @@ const ArchivedPlayerRecordSchema = PlayerRecordSchema.extend({
 export const ArchivedAnalyticsRecordSchema = AnalyticsRecordSchema.extend({
   info: GameEndInfoSchema.extend({
     config: GameConfigSchema.extend({
+      gameMap: z.preprocess(
+        (value) => (typeof value === "string" ? value.trim() : value),
+        GameConfigSchema.shape.gameMap,
+      ),
       // predates configurable nation count
       nations: GameConfigSchema.shape.nations
         .catch("default")

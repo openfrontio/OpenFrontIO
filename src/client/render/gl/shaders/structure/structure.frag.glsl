@@ -84,13 +84,13 @@ bool structuresEffectColor(int owner, out vec3 color) {
     // gradient is visible across the shape (world-space banding like the
     // trail's would put the entire icon inside one band and read as a flat
     // color). It scrolls along the diagonal at the trail-equivalent pace:
-    // one full slide every colorSize · 4 · count / movementSpeed seconds,
+    // one full slide every colorSize · count / movementSpeed seconds,
     // so both knobs keep their trail timing semantics.
     float colorSize = max(texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a, 0.001);
     float movementSpeed = texelFetch(uEffect, ivec2(owner, rowBase + 3), 0).a;
     float dn = (vLocalPos.x + vLocalPos.y) * 0.5; // icon diagonal, -0.5..0.5
     float phase =
-      fract(dn - uTime * movementSpeed / (colorSize * 4.0 * float(count)));
+      fract(dn - uTime * movementSpeed / (colorSize * float(count)));
     float f = phase * float(count);
     int i = int(f) % count;
     int j = (i + 1) % count;

@@ -13,7 +13,11 @@ import {
   SubscriptionSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
-import { PlayerEffectSchema } from "../src/core/Schemas";
+import {
+  PlayerCosmeticRefsSchema,
+  PlayerCosmeticsSchema,
+  PlayerEffectSchema,
+} from "../src/core/Schemas";
 
 describe("Effect cosmetic schemas", () => {
   const base = {
@@ -94,6 +98,50 @@ describe("Effect cosmetic schemas", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("parses a spiral with colors, radius, strands, and rotationSpeed", () => {
+      const parsed = TrailEffectAttributesSchema.parse({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+      expect(parsed).toEqual({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+    });
+
+    it("requires spiral radius/strands/rotationSpeed, radius > 0, integer strands", () => {
+      const valid = {
+        type: "spiral",
+        colors: ["#f00", "#00f"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      };
+      for (const key of ["radius", "strands", "rotationSpeed"] as const) {
+        const missing: Record<string, unknown> = { ...valid };
+        delete missing[key];
+        expect(TrailEffectAttributesSchema.safeParse(missing).success).toBe(
+          false,
+        );
+      }
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, radius: 0 }).success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 2.5 })
+          .success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 0 }).success,
+      ).toBe(false);
+    });
   });
 
   describe("EffectSchema", () => {
@@ -123,6 +171,26 @@ describe("Effect cosmetic schemas", () => {
             colorSize: 0.5,
             movementSpeed: 2,
           },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("parses a spiral nukeTrail effect (the catalog spiral_tail shape)", () => {
+      expect(
+        EffectSchema.safeParse({
+          name: "spiral_tail",
+          effectType: "nukeTrail",
+          attributes: {
+            type: "spiral",
+            colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+            radius: 15,
+            strands: 4,
+            rotationSpeed: 5,
+          },
+          affiliateCode: null,
+          product: null,
+          priceHard: 123,
+          rarity: "common",
         }).success,
       ).toBe(true);
     });
@@ -898,5 +966,37 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
       SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("verified badge on cosmetics schemas", () => {
+  it("accepts a verified claim on refs and resolved cosmetics", () => {
+    const refs = PlayerCosmeticRefsSchema.safeParse({ verified: true });
+    expect(refs.success).toBe(true);
+    if (refs.success) {
+      expect(refs.data.verified).toBe(true);
+    }
+    const resolved = PlayerCosmeticsSchema.safeParse({ verified: true });
+    expect(resolved.success).toBe(true);
+    if (resolved.success) {
+      expect(resolved.data.verified).toBe(true);
+    }
+  });
+
+  it("stays optional (old clients omit it)", () => {
+    const refs = PlayerCosmeticRefsSchema.safeParse({});
+    expect(refs.success).toBe(true);
+    if (refs.success) {
+      expect(refs.data.verified).toBeUndefined();
+    }
+  });
+
+  it("rejects a non-boolean verified", () => {
+    expect(
+      PlayerCosmeticRefsSchema.safeParse({ verified: "yes" }).success,
+    ).toBe(false);
+    expect(PlayerCosmeticsSchema.safeParse({ verified: 1 }).success).toBe(
+      false,
+    );
   });
 });

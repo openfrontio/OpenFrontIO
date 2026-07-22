@@ -272,6 +272,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></game-stats-modal>
+        <player-profile-modal
+          id="page-profile"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></player-profile-modal>
         <help-modal
           id="page-help"
           inline
@@ -376,6 +381,12 @@
     <leader-board></leader-board>
     <team-stats></team-stats>
     <heads-up-message></heads-up-message>
+
+    <!-- Featured stream: direct <body> child (NOT inside the in-[.in-game]:hidden
+         home container) so the Twitch iframe is never display:none'd during a game,
+         which would unmount the player and break ToS-compliant playback. The
+         component is position:fixed and self-manages visibility (pauses in-game). -->
+    <featured-stream></featured-stream>
 
     <!-- Scripts -->
     <script>

@@ -9,8 +9,13 @@ import {
   vi,
 } from "vitest";
 
+const copyToClipboardMock = vi.hoisted(() =>
+  vi.fn(async (_text: string, onSuccess?: () => void) => onSuccess?.()),
+);
+
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
+  copyToClipboard: copyToClipboardMock,
 }));
 
 vi.mock("../../src/client/components/baseComponents/stats/GameInfoView", () => {
@@ -21,6 +26,7 @@ vi.mock("../../src/client/components/baseComponents/stats/GameInfoView", () => {
   return { GameInfoView: FakeGameInfoView };
 });
 
+import type { CopyButton } from "../../src/client/components/CopyButton";
 import { GameStatsModal } from "../../src/client/GameStatsModal";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
@@ -43,6 +49,8 @@ describe("public game stats route", () => {
   });
 
   beforeEach(async () => {
+    copyToClipboardMock.mockClear();
+    vi.stubGlobal("localStorage", { getItem: vi.fn(() => null) });
     history.replaceState(null, "", "/");
     modalRouter.register("stats", {
       tag: "game-stats-modal",
@@ -64,6 +72,7 @@ describe("public game stats route", () => {
     window.showPage?.("page-play");
     modal.remove();
     history.replaceState(null, "", "/");
+    vi.unstubAllGlobals();
   });
 
   it("opens a shared gameID without mounting the authenticated account", async () => {
@@ -81,6 +90,30 @@ describe("public game stats route", () => {
       expect(modal.isOpen()).toBe(true);
       expect(statsView?.gameId).toBe("public-game");
     });
+
+    const copyButton = modal.querySelector<CopyButton>("copy-button")!;
+    await copyButton.updateComplete;
+    expect(copyButton.copyText).toBe("public-game");
+    expect(copyButton.displayText).toBe("public-game");
+    expect(copyButton.compact).toBe(true);
+    expect(copyButton.showVisibilityToggle).toBe(false);
+
+    const copyActions = copyButton.querySelectorAll("button");
+    expect(copyActions).toHaveLength(1);
+    expect(copyActions[0].textContent).toContain("public-game");
+    expect(copyActions[0].getAttribute("aria-label")).toBe(
+      "common.click_to_copy",
+    );
+    copyActions[0].click();
+    await vi.waitFor(() =>
+      expect(copyToClipboardMock).toHaveBeenCalledWith(
+        "public-game",
+        expect.any(Function),
+        expect.any(Function),
+      ),
+    );
+    await copyButton.updateComplete;
+    expect(copyButton.textContent).toContain("common.copied");
 
     expect(document.querySelector("account-modal")).toBeNull();
     expect(window.location.hash).toBe("#modal=stats&gameID=public-game");

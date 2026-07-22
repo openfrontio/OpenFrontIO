@@ -136,6 +136,17 @@ export type TrailEffectType = (typeof TRAIL_EFFECT_TYPES)[number];
 //    = how fast the bands scroll, in tiles/sec (0 = static).
 //  - "transition": the whole trail is one color at a time, cross-fading through
 //    the color list over time. `frequency` = color changes per second.
+//  - "spiral": a 3D vortex of helix strands around the unit's path, projected
+//    onto the map — strands emerge from the unit, flare to full width, and
+//    spin with depth shading (facing segments bright, receding ones dark).
+//    `radius` = helix amplitude in tiles; `strands` = number of strands (the
+//    renderer clamps to 8); `rotationSpeed` = how fast the vortex spins, in
+//    radians per second; the palette wraps once around the vortex
+//    circumference. radius must be positive (the geometry degenerates
+//    otherwise), so a non-positive value drops the entry like the enums. The
+//    vortex geometry is only rendered for nuke trails (as ribbons above the
+//    stamped trail); a spiral ship trail renders as a flat line in the first
+//    color.
 // solid = a single-color list; rainbow = the spectrum as a gradient. Colors are
 // unvalidated strings here; the renderer drops any it can't parse (and an empty
 // list falls back to the player's territory color).
@@ -150,6 +161,13 @@ export const TrailEffectAttributesSchema = z.discriminatedUnion("type", [
     type: z.literal("transition"),
     colors: z.array(z.string()),
     frequency: z.number(),
+  }),
+  z.object({
+    type: z.literal("spiral"),
+    colors: z.array(z.string()),
+    radius: z.number().positive(),
+    strands: z.number().int().positive(),
+    rotationSpeed: z.number(),
   }),
 ]);
 
@@ -215,7 +233,7 @@ const NukeExplosionEffectSchema = CosmeticSchema.extend({
 // separate schema, and the spatial semantics differ:
 //  - "gradient": the palette spans each structure icon's diagonal once (a
 //    visible gradient across the shape), sliding one full cycle every
-//    colorSize · 4 · count / movementSpeed seconds (the trail-equivalent pace).
+//    colorSize · count / movementSpeed seconds (the trail-equivalent pace).
 //  - "transition": the whole icon is one color at a time, cross-fading through
 //    the list. `frequency` = color changes per second.
 // Colors are unvalidated strings; the renderer drops any it can't parse (and

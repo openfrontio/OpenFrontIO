@@ -548,7 +548,17 @@ export class ClanDetailView extends LitElement {
           ),
         )}
         <div class="space-y-2">
-          ${filtered.map((m) => renderMemberRow(m, this.myPublicId))}
+          ${filtered.map((m) =>
+            renderMemberRow(m, this.myPublicId, (publicId) =>
+              this.dispatchEvent(
+                new CustomEvent("view-profile", {
+                  detail: { publicId },
+                  bubbles: true,
+                  composed: true,
+                }),
+              ),
+            ),
+          )}
         </div>
         ${renderMemberPagination(
           this.memberPage,

@@ -1,6 +1,6 @@
 import version from "resources/version.txt?raw";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
+import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
@@ -27,6 +27,7 @@ import { CosmeticsModal } from "./CosmeticsModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isDesktopShell } from "./DesktopShell";
+import "./FeaturedStream";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
@@ -50,6 +51,7 @@ import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
 import { StoreModal } from "./Store";
@@ -307,6 +309,10 @@ class Client {
       tag: "game-stats-modal",
       pageId: "page-stats",
     });
+    modalRouter.register("profile", {
+      tag: "player-profile-modal",
+      pageId: "page-profile",
+    });
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
     modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
     modalRouter.register("language", {
@@ -533,14 +539,41 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
 
-        // Unclaimed-rewards popup — only on a clean homepage load, never over
-        // a deep link (join URL, #modal=..., #purchase-completed, ...).
-        const rewards = userMeResponse.player.rewards ?? [];
+        // Popups below only on a clean homepage load, never over a deep link
+        // (join URL, #modal=..., #purchase-completed, ...).
+        const cleanHomepage =
+          window.location.pathname === "/" && window.location.hash === "";
+
+        // The server renamed this subscriber to TEMPORARY#### because their
+        // bare name was exclusively taken while they were unentitled; the
+        // rename is free (cooldown cleared). Prompt for a real name; takes
+        // priority over the rewards popup — the account modal shows the
+        // rewards panel anyway.
+        const { usernameStatus, usernameBase } = userMeResponse.player;
         if (
-          rewards.length > 0 &&
-          window.location.pathname === "/" &&
-          window.location.hash === ""
+          cleanHomepage &&
+          (usernameStatus === "premium" || usernameStatus === "indefinite") &&
+          isTemporaryUsername(usernameBase)
         ) {
+          const goRename = await showInGameConfirm(
+            translateText("account_modal.username_temporary_prompt"),
+            {
+              heading: translateText("account_modal.username_title"),
+              variant: "warning",
+              confirmText: translateText(
+                "account_modal.username_temporary_prompt_confirm",
+              ),
+            },
+          );
+          if (goRename) {
+            window.location.hash = "modal=account";
+          }
+          return;
+        }
+
+        // Unclaimed-rewards popup.
+        const rewards = userMeResponse.player.rewards ?? [];
+        if (rewards.length > 0 && cleanHomepage) {
           this.rewardsModal?.openWithRewards(rewards);
         }
       }

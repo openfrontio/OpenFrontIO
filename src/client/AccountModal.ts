@@ -32,8 +32,10 @@ import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { playerProfileUrl } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -105,25 +107,19 @@ export class AccountModal extends BaseModal {
   protected renderHeaderSlot() {
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
-    const displayId = publicId || translateText("account_modal.not_found");
     return modalHeader({
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
       rightContent:
-        isLoggedIn && !this.isLoadingUser
+        isLoggedIn && !this.isLoadingUser && publicId
           ? html`
-              <div class="flex items-center gap-2">
-                <span
-                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                  >${translateText("account_modal.public_player_id")}</span
-                >
-                <copy-button
-                  .lobbyId=${publicId}
-                  .copyText=${publicId}
-                  .displayText=${displayId}
-                ></copy-button>
-              </div>
+              <copy-button
+                class="shrink-0"
+                .copyText=${playerProfileUrl(publicId)}
+                .displayText=${translateText("player_profile.share")}
+                .showVisibilityToggle=${false}
+              ></copy-button>
             `
           : undefined,
     });
@@ -304,7 +300,22 @@ export class AccountModal extends BaseModal {
 
   private renderFriendsTab(): TemplateResult {
     const myPublicId = this.userMeResponse?.player?.publicId ?? "";
-    return html`<friends-list .myPublicId=${myPublicId}></friends-list>`;
+    return html`<friends-list
+      .myPublicId=${myPublicId}
+      @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+        this.openPlayerProfile(e.detail.publicId)}
+    ></friends-list>`;
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromAccount(publicId: string): void }
+    >("player-profile-modal");
+    profileModal?.openFromAccount(publicId);
+  }
+
+  public returnToFriends(): void {
+    this.open({ tab: "friends" });
   }
 
   private renderAccountTab(): TemplateResult {
@@ -328,7 +339,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -358,7 +370,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -394,15 +407,9 @@ export class AccountModal extends BaseModal {
       );
     }
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span class="text-blue-400">📊</span>
-          ${translateText("account_modal.stats_overview")}
-        </h3>
-        <player-stats-tree-view
-          .statsTree=${this.statsTree}
-        ></player-stats-tree-view>
-      </div>
+      <player-stats-tree-view
+        .statsTree=${this.statsTree}
+      ></player-stats-tree-view>
     `;
   }
 
@@ -440,6 +447,14 @@ export class AccountModal extends BaseModal {
         <p class="text-white/60 text-sm">${message}</p>
       </div>
     `;
+  }
+
+  // Account-username management (custom-usernames). Hidden when the API
+  // doesn't return the username fields yet (older backend).
+  private renderUsernamePanel(): TemplateResult | "" {
+    const player = this.userMeResponse?.player;
+    if (!player || player.usernameStatus === undefined) return "";
+    return html`<username-panel .player=${player}></username-panel>`;
   }
 
   private renderRewardsPanel(): TemplateResult | "" {

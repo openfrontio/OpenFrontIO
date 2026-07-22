@@ -153,6 +153,26 @@ describe("ClanMemberSchema", () => {
     }
   });
 
+  it("accepts an account username, null, or absence (older API)", () => {
+    const base = {
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+    };
+    const named = ClanMemberSchema.safeParse({
+      ...base,
+      username: "bob.4821",
+    });
+    expect(named.success).toBe(true);
+    if (named.success) {
+      expect(named.data.username).toBe("bob.4821");
+    }
+    expect(
+      ClanMemberSchema.safeParse({ ...base, username: null }).success,
+    ).toBe(true);
+    expect(ClanMemberSchema.safeParse(base).success).toBe(true);
+  });
+
   it("rejects stats missing a bucket", () => {
     const result = ClanMemberSchema.safeParse({
       role: "member",
@@ -182,6 +202,21 @@ describe("ClanJoinRequestSchema", () => {
       createdAt: "2024-06-10",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts the requester's account username, null, or absence", () => {
+    const base = {
+      publicId: "player-xyz",
+      createdAt: "2024-06-10T08:00:00.000Z",
+    };
+    expect(
+      ClanJoinRequestSchema.safeParse({ ...base, username: "bob.4821" })
+        .success,
+    ).toBe(true);
+    expect(
+      ClanJoinRequestSchema.safeParse({ ...base, username: null }).success,
+    ).toBe(true);
+    expect(ClanJoinRequestSchema.safeParse(base).success).toBe(true);
   });
 });
 
@@ -227,6 +262,23 @@ describe("ClanBanSchema", () => {
     const result = ClanBanSchema.safeParse({ ...validBan, bannedBy: null });
     expect(result.success).toBe(false);
   });
+
+  it("accepts account usernames for both the banned player and the officer", () => {
+    const result = ClanBanSchema.safeParse({
+      ...validBan,
+      username: null,
+      bannedByUsername: "bigboss",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.username).toBeNull();
+      expect(result.data.bannedByUsername).toBe("bigboss");
+    }
+  });
+
+  it("accepts a ban without the username fields (older API)", () => {
+    expect(ClanBanSchema.safeParse(validBan).success).toBe(true);
+  });
 });
 
 describe("ClanGameResultSchema", () => {
@@ -260,6 +312,26 @@ describe("ClanGamePlayerSchema", () => {
     expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
   });
 
+  it("accepts the verified flag or its absence (older API)", () => {
+    const verified = ClanGamePlayerSchema.safeParse({
+      ...validPlayer,
+      verified: true,
+    });
+    expect(verified.success).toBe(true);
+    if (verified.success) expect(verified.data.verified).toBe(true);
+    // validPlayer omits verified entirely — still valid (→ undefined).
+    const bare = ClanGamePlayerSchema.safeParse(validPlayer);
+    expect(bare.success).toBe(true);
+    if (bare.success) expect(bare.data.verified).toBeUndefined();
+  });
+
+  it("rejects a non-boolean verified", () => {
+    expect(
+      ClanGamePlayerSchema.safeParse({ ...validPlayer, verified: "yes" })
+        .success,
+    ).toBe(false);
+  });
+
   it("rejects when won is not a boolean", () => {
     expect(
       ClanGamePlayerSchema.safeParse({ ...validPlayer, won: "true" }).success,
@@ -289,6 +361,17 @@ describe("ClanGameSchema", () => {
 
   it("accepts a fully-populated game", () => {
     expect(ClanGameSchema.safeParse(validGame).success).toBe(true);
+  });
+
+  it("normalizes accidental whitespace around archived map names", () => {
+    const result = ClanGameSchema.safeParse({
+      ...validGame,
+      map: "Deglaciated Antarctica ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.map).toBe("Deglaciated Antarctica");
   });
 
   it("accepts playerTeams: null (FFA / non-team games)", () => {
