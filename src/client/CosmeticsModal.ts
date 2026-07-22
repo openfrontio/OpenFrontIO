@@ -18,6 +18,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   getPlayerCosmetics,
+  groupCosmeticVariants,
   resolveCosmetics,
   ResolvedCosmetic,
   resolvedToPlayerPattern,
@@ -129,24 +130,24 @@ export class CosmeticsModal extends BaseModal {
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${items.map((r) => {
-          const isSelected =
+        ${groupCosmeticVariants(items).map((group) => {
+          const selectedVariant = group.find((r) =>
             r.type === "pattern"
-              ? (r.cosmetic === null && this.selectedPattern === null) ||
-                (r.cosmetic !== null &&
-                  this.selectedPattern?.name === r.cosmetic.name &&
-                  (this.selectedPattern?.colorPalette?.name ?? null) ===
-                    (r.colorPalette?.name ?? null))
-              : (() => {
-                  const skinName = (r.cosmetic as Skin | null)?.name ?? null;
-                  return (
-                    (skinName === null && this.selectedSkinName === null) ||
-                    (skinName !== null && this.selectedSkinName === skinName)
-                  );
-                })();
+              ? r.cosmetic !== null &&
+                this.selectedPattern?.name === r.cosmetic.name &&
+                (this.selectedPattern?.colorPalette?.name ?? null) ===
+                  (r.colorPalette?.name ?? null)
+              : (r.cosmetic as Skin | null)?.name === this.selectedSkinName,
+          );
+          const isSelected =
+            selectedVariant !== undefined ||
+            (group[0].cosmetic === null &&
+              this.selectedPattern === null &&
+              this.selectedSkinName === null);
           return html`
             <cosmetic-button
-              .resolved=${r}
+              .resolved=${selectedVariant ?? group[0]}
+              .variants=${group}
               .selected=${isSelected}
               .onSelect=${(rc: ResolvedCosmetic) => this.selectCosmetic(rc)}
             ></cosmetic-button>
