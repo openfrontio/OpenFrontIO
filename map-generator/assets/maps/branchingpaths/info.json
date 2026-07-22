@@ -4,7 +4,7 @@
   "translation_key": "map.branchingpaths",
   "categories": ["arcade", "fictional"],
   "multiplayer_frequency": 3,
-  "special_team_count": 2,
+  "special_team_count": 3,
   "nations": [
     {
       "coordinates": [1240, 1431],

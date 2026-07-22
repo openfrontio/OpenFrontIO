@@ -3,57 +3,171 @@
   "name": "Antarctica",
   "translation_key": "map.antarctica",
   "categories": ["antarctica", "continental"],
-  "multiplayer_frequency": 1,
+  "multiplayer_frequency": 4,
   "nations": [
     {
-      "coordinates": [1159, 1261],
-      "name": "New Zealand Claim",
+      "coordinates": [1123, 1302],
+      "name": "Ross Dependency",
       "flag": "nz"
     },
     {
-      "coordinates": [1409, 1571],
-      "name": "French Claim",
+      "coordinates": [1694, 1571],
+      "name": "Adelie Land",
       "flag": "tf"
     },
     {
-      "coordinates": [1681, 1093],
-      "name": "Australian Claim",
-      "flag": "hm"
+      "coordinates": [1739, 1170],
+      "name": "Australian Antarctic Territory",
+      "flag": "au"
     },
     {
-      "coordinates": [1260, 510],
-      "name": "Norway Claim",
-      "flag": "bv"
+      "coordinates": [1285, 458],
+      "name": "Queen Maud Land",
+      "flag": "no"
     },
     {
-      "coordinates": [900, 686],
-      "name": "United Kingdom Claim",
-      "flag": "gb"
+      "coordinates": [945, 885],
+      "name": "British Antarctic Territory",
+      "flag": "British Antarctic Territory"
     },
     {
-      "coordinates": [351, 703],
-      "name": "Argentina Claim",
-      "flag": "ar"
+      "coordinates": [637, 1061],
+      "name": "Argentine Antarctic Territory",
+      "flag": "Tierra del Fuego"
     },
     {
-      "coordinates": [506, 939],
-      "name": "Chile Claim",
-      "flag": "cl"
+      "coordinates": [565, 1083],
+      "name": "Chilean Antarctic Territory",
+      "flag": "Magallanes"
     },
     {
-      "coordinates": [705, 1264],
+      "coordinates": [842, 1311],
       "name": "Marie Byrd Land",
       "flag": "aq"
     },
     {
-      "coordinates": [1532, 716],
-      "name": "Penguins",
-      "flag": "aq"
+      "coordinates": [1180, 1097],
+      "name": "Amundsen–Scott",
+      "flag": "us"
     },
     {
-      "coordinates": [1100, 954],
+      "coordinates": [598, 125],
+      "name": "South Sandwich Islands",
+      "flag": "gs"
+    },
+    {
+      "coordinates": [1234, 1527],
+      "name": "McMurdo",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1499, 1242],
+      "name": "Vostok",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1452, 1491],
+      "name": "Concordia",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1302, 841],
+      "name": "Dome Fuji",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [885, 771],
+      "name": "Belgrano II",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [347, 816],
+      "name": "Palmer",
+      "flag": "us"
+    },
+    {
+      "coordinates": [299, 612],
+      "name": "O´Higgins",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [350, 373],
+      "name": "Signy",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [451, 830],
+      "name": "San Martin",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [931, 668],
+      "name": "Halley",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1144, 629],
+      "name": "Kohnen",
+      "flag": "de"
+    },
+    {
+      "coordinates": [1120, 504],
+      "name": "Troll",
+      "flag": "no"
+    },
+    {
+      "coordinates": [1043, 474],
+      "name": "Sanae IV",
+      "flag": "za"
+    },
+    {
+      "coordinates": [1498, 534],
+      "name": "Syowa",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1794, 776],
+      "name": "Mawson",
+      "flag": "au"
+    },
+    {
+      "coordinates": [1871, 1448],
+      "name": "Casey",
+      "flag": "au"
+    },
+    {
+      "coordinates": [1556, 1740],
+      "name": "Dumont D'Urville",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1830, 980],
+      "name": "Druzhanaya IV",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1459, 1033],
+      "name": "Kunlun",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [862, 1044],
+      "name": "Glaciar Union",
+      "flag": "cl"
+    }
+  ],
+  "additionalNations": [
+    {
       "name": "Ancient Aliens",
       "flag": "Cthulhu Republic"
+    },
+    {
+      "name": "Penguins",
+      "flag": "Antarctica (True South)"
+    },
+    {
+      "name": "The Thing",
+      "flag": "Socialist_flag"
     }
   ]
 }
