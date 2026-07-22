@@ -3,6 +3,7 @@ import type { ColumnId } from "../../../StatsConstants";
 import { formatPercentage, renderNumber, renderTroops } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import {
+  allianceIcon,
   cityIcon,
   factoryIcon,
   goldCoinIcon,
@@ -10,6 +11,8 @@ import {
   portIcon,
   samLauncherIcon,
   soldierIcon,
+  traitorIcon,
+  upperLimitIcon,
   warshipIcon,
 } from "../../HotbarIcons";
 
@@ -25,8 +28,9 @@ export type ColumnHeaderVisual =
   | {
       readonly kind: "icon";
       readonly src: string;
-      readonly prefix?: string;
       readonly white?: true;
+      /** Small icon rendered as a superscript exponent on the main icon. */
+      readonly superscript?: { readonly src: string; readonly white?: true };
     }
   | { readonly kind: "emoji"; readonly text: string };
 export type ColumnValueAlignment = "center" | "end";
@@ -121,7 +125,12 @@ export const COLUMN_DEFS = [
     "leaderboard.maxtroops",
     (player, game) => game.config().maxTroops(player),
     renderTroops,
-    { headerVisual: { ...troopHeaderVisual, prefix: "Max" } },
+    {
+      headerVisual: {
+        ...troopHeaderVisual,
+        superscript: { src: upperLimitIcon, white: true },
+      },
+    },
   ),
   unitColumn("cities", "leaderboard.cities", UnitType.City, cityIcon),
   unitColumn("ports", "leaderboard.ports", UnitType.Port, portIcon),
@@ -144,14 +153,20 @@ export const COLUMN_DEFS = [
     "leaderboard.allies",
     (player) => player.allies().length,
     renderNum,
-    { headerVisual: { kind: "emoji", text: "🤝" }, valueAlignment: "center" },
+    {
+      headerVisual: { kind: "icon", src: allianceIcon },
+      valueAlignment: "center",
+    },
   ),
   column(
     "betrayals",
     "leaderboard.betrayals",
     (player) => player.betrayals(),
     renderNum,
-    { headerVisual: { kind: "emoji", text: "💔" }, valueAlignment: "center" },
+    {
+      headerVisual: { kind: "icon", src: traitorIcon },
+      valueAlignment: "center",
+    },
   ),
 ] as const satisfies readonly ColumnDef[];
 

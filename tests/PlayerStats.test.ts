@@ -1,4 +1,8 @@
-import { goldCoinIcon, soldierIcon } from "../src/client/hud/HotbarIcons";
+import {
+  goldCoinIcon,
+  soldierIcon,
+  upperLimitIcon,
+} from "../src/client/hud/HotbarIcons";
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { GameView, PlayerView } from "../src/client/view";
 import { UserSettings } from "../src/core/game/UserSettings";
@@ -140,7 +144,7 @@ describe("PlayerStats", () => {
       '.stats-table-row > [role="cell"]:nth-child(5)',
     );
     const troopIcon = headers[2].querySelector("img");
-    const maxTroopIcon = headers[3].querySelector("img");
+    const maxTroopIcons = headers[3].querySelectorAll("img");
     expect(headers[1].classList).toContain("justify-center");
     expect(headers[2].classList).toContain("justify-center");
     expect(headers[3].classList).toContain("justify-center");
@@ -148,10 +152,14 @@ describe("PlayerStats", () => {
     expect(troopIcon?.getAttribute("src")).toBe(soldierIcon);
     expect(troopIcon?.classList).toContain("brightness-0");
     expect(troopIcon?.classList).toContain("invert");
-    expect(headers[3].textContent).toContain("Max");
-    expect(maxTroopIcon?.getAttribute("src")).toBe(soldierIcon);
-    expect(maxTroopIcon?.classList).toContain("brightness-0");
-    expect(maxTroopIcon?.classList).toContain("invert");
+    // Max troops header reads as a troop icon raised to the upper-limit icon.
+    expect(maxTroopIcons.length).toBe(2);
+    expect(maxTroopIcons[0].getAttribute("src")).toBe(soldierIcon);
+    expect(maxTroopIcons[0].classList).toContain("brightness-0");
+    expect(maxTroopIcons[0].classList).toContain("invert");
+    expect(maxTroopIcons[1].getAttribute("src")).toBe(upperLimitIcon);
+    expect(maxTroopIcons[1].classList).toContain("brightness-0");
+    expect(maxTroopIcons[1].classList).toContain("invert");
     expect(countCell?.classList).toContain("justify-center");
     expect(countCell?.classList).toContain("text-center");
 

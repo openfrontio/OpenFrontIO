@@ -303,23 +303,30 @@ export abstract class StatsTable extends LitElement {
                         @click=${() => this.setSort(column.id)}
                       >
                         ${column.headerVisual?.kind === "icon"
-                          ? html`${column.headerVisual.prefix
-                                ? html`<span
-                                    >${column.headerVisual.prefix}</span
-                                  >`
-                                : nothing}
+                          ? html`<span class="inline-flex items-start">
                               <img
-                                class="size-4 object-contain ${column
+                                class="size-[1.1rem] object-contain ${column
                                   .headerVisual.white === true
                                   ? "brightness-0 invert"
                                   : ""}"
                                 src=${column.headerVisual.src}
                                 alt=""
                                 aria-hidden="true"
-                              />`
+                              />${column.headerVisual.superscript
+                                ? html`<img
+                                    class="size-[0.825rem] object-contain -ml-0.5 ${column
+                                      .headerVisual.superscript.white === true
+                                      ? "brightness-0 invert"
+                                      : ""}"
+                                    src=${column.headerVisual.superscript.src}
+                                    alt=""
+                                    aria-hidden="true"
+                                  />`
+                                : nothing}
+                            </span>`
                           : column.headerVisual?.kind === "emoji"
                             ? html`<span
-                                class="text-base leading-none"
+                                class="text-[1.1rem] leading-none"
                                 aria-hidden="true"
                                 >${column.headerVisual.text}</span
                               >`

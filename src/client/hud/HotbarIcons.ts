@@ -12,3 +12,6 @@ export const portIcon = assetUrl("images/PortIcon.svg");
 export const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 export const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 export const soldierIcon = assetUrl("images/SoldierIcon.svg");
+export const upperLimitIcon = assetUrl("images/UpperLimitIcon.svg");
+export const allianceIcon = assetUrl("images/AllianceIcon.svg");
+export const traitorIcon = assetUrl("images/TraitorIcon.svg");
