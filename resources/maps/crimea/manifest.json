@@ -1,0 +1,237 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [
+        940,
+        1000
+      ],
+      "flag": "crimea",
+      "name": "Alushta"
+    },
+    {
+      "coordinates": [
+        797,
+        1117
+      ],
+      "flag": "crimea",
+      "name": "Yalta"
+    },
+    {
+      "coordinates": [
+        695,
+        1188
+      ],
+      "flag": "crimea",
+      "name": "Alupka"
+    },
+    {
+      "coordinates": [
+        559,
+        110
+      ],
+      "flag": "crimea",
+      "name": "Armiansk"
+    },
+    {
+      "coordinates": [
+        314,
+        114
+      ],
+      "flag": "ua",
+      "name": "Skadovsk"
+    },
+    {
+      "coordinates": [
+        665,
+        992
+      ],
+      "flag": "crimea",
+      "name": "Bakhchysarai"
+    },
+    {
+      "coordinates": [
+        1004,
+        788
+      ],
+      "flag": "crimea",
+      "name": "Bilohirsk"
+    },
+    {
+      "coordinates": [
+        584,
+        729
+      ],
+      "flag": "crimea",
+      "name": "Saky"
+    },
+    {
+      "coordinates": [
+        1514,
+        594
+      ],
+      "flag": "crimea",
+      "name": "Shcholkine"
+    },
+    {
+      "coordinates": [
+        1148,
+        760
+      ],
+      "flag": "crimea",
+      "name": "Staryi Krym"
+    },
+    {
+      "coordinates": [
+        1139,
+        913
+      ],
+      "flag": "crimea",
+      "name": "Sudak"
+    },
+    {
+      "coordinates": [
+        822,
+        617
+      ],
+      "flag": "crimea",
+      "name": "Krasnogvardeyskoye"
+    },
+    {
+      "coordinates": [
+        534,
+        393
+      ],
+      "flag": "crimea",
+      "name": "Rozdolne"
+    },
+    {
+      "coordinates": [
+        1043,
+        539
+      ],
+      "flag": "crimea",
+      "name": "Azovske"
+    },
+    {
+      "coordinates": [
+        1108,
+        279
+      ],
+      "flag": "crimea",
+      "name": "Strilkove"
+    },
+    {
+      "coordinates": [
+        948,
+        194
+      ],
+      "flag": "crimea",
+      "name": "Chonhar"
+    },
+    {
+      "coordinates": [
+        1091,
+        647
+      ],
+      "flag": "crimea",
+      "name": "Sovjets'kyi"
+    }
+  ],
+  "categories": [
+    "new",
+    "europe"
+  ],
+  "id": "Crimea",
+  "map": {
+    "height": 1316,
+    "num_land_tiles": 958125,
+    "width": 2040
+  },
+  "map16x": {
+    "height": 329,
+    "num_land_tiles": 57850,
+    "width": 510
+  },
+  "map4x": {
+    "height": 658,
+    "num_land_tiles": 236482,
+    "width": 1020
+  },
+  "multiplayer_frequency": 4,
+  "name": "Crimea",
+  "nations": [
+    {
+      "coordinates": [
+        539,
+        1112
+      ],
+      "flag": "crimea",
+      "name": "Sevastopol"
+    },
+    {
+      "coordinates": [
+        503,
+        661
+      ],
+      "flag": "crimea",
+      "name": "Yevpatoria"
+    },
+    {
+      "coordinates": [
+        1722,
+        649
+      ],
+      "flag": "crimea",
+      "name": "Kerch"
+    },
+    {
+      "coordinates": [
+        770,
+        837
+      ],
+      "flag": "crimea",
+      "name": "Simferopol"
+    },
+    {
+      "coordinates": [
+        928,
+        420
+      ],
+      "flag": "crimea",
+      "name": "Dzhankoi"
+    },
+    {
+      "coordinates": [
+        1241,
+        826
+      ],
+      "flag": "crimea",
+      "name": "Feodosia"
+    },
+    {
+      "coordinates": [
+        154,
+        101
+      ],
+      "flag": "ua",
+      "name": "Ukraine"
+    },
+    {
+      "coordinates": [
+        611,
+        190
+      ],
+      "flag": "crimea",
+      "name": "Krasnoperekopsk"
+    },
+    {
+      "coordinates": [
+        2011,
+        693
+      ],
+      "flag": "ru",
+      "name": "Russia"
+    }
+  ],
+  "translation_key": "map.crimea"
+}
