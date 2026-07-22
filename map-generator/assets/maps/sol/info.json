@@ -1,0 +1,239 @@
+{
+  "id": "Sol",
+  "name": "Sol",
+  "translation_key": "map.sol",
+  "categories": ["cosmic", "new"],
+  "multiplayer_frequency": 10,
+  "nations": [
+    {
+      "coordinates": [2419, 1241],
+      "name": "Sol",
+      "flag": "sol"
+    },
+    {
+      "coordinates": [2340, 853],
+      "name": "Terra",
+      "flag": "terra"
+    },
+    {
+      "coordinates": [2268, 668],
+      "name": "Luna",
+      "flag": "luna"
+    },
+    {
+      "coordinates": [2605, 1262],
+      "name": "Mercury",
+      "flag": "mercury"
+    },
+    {
+      "coordinates": [1806, 1383],
+      "name": "Venus",
+      "flag": "venus"
+    },
+    {
+      "coordinates": [2196, 1805],
+      "name": "Mars",
+      "flag": "mars"
+    },
+    {
+      "coordinates": [3341, 1786],
+      "name": "Jupiter",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [955, 651],
+      "name": "Saturn",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [3753, 625],
+      "name": "Neptune",
+      "flag": "neptune"
+    },
+    {
+      "coordinates": [856, 2048],
+      "name": "Uranus",
+      "flag": "uranus"
+    },
+    {
+      "coordinates": [3596, 342],
+      "name": "Triton",
+      "flag": "neptune"
+    },
+    {
+      "coordinates": [3445, 1445],
+      "name": "Io",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [3131, 1521],
+      "name": "Europa",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [3187, 2136],
+      "name": "Ganymede",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [2994, 1851],
+      "name": "Callisto",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [414, 197],
+      "name": "Sedna",
+      "flag": "sedna"
+    },
+    {
+      "coordinates": [208, 803],
+      "name": "Salacia",
+      "flag": "salacia"
+    },
+    {
+      "coordinates": [272, 1412],
+      "name": "Pluto",
+      "flag": "pluto"
+    },
+    {
+      "coordinates": [427, 2399],
+      "name": "Quaoar",
+      "flag": "quaoar"
+    },
+    {
+      "coordinates": [3952, 2386],
+      "name": "Haumea",
+      "flag": "haumea"
+    },
+    {
+      "coordinates": [4103, 2090],
+      "name": "Makemake",
+      "flag": "makemake"
+    },
+    {
+      "coordinates": [4292, 1454],
+      "name": "Eris",
+      "flag": "eris"
+    },
+    {
+      "coordinates": [3927, 120],
+      "name": "Orcus",
+      "flag": "orcus"
+    },
+    {
+      "coordinates": [2812, 571],
+      "name": "Juno",
+      "flag": "juno"
+    },
+    {
+      "coordinates": [3082, 1045],
+      "name": "Vesta",
+      "flag": "vesta"
+    },
+    {
+      "coordinates": [1728, 496],
+      "name": "Hygiea",
+      "flag": "hygiea"
+    },
+    {
+      "coordinates": [1549, 1088],
+      "name": "Eros",
+      "flag": "eros"
+    },
+    {
+      "coordinates": [1342, 1639],
+      "name": "Ceres",
+      "flag": "ceres"
+    },
+    {
+      "coordinates": [2473, 2171],
+      "name": "Pallas",
+      "flag": "pallas"
+    },
+    {
+      "coordinates": [655, 914],
+      "name": "Titan",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [600, 705],
+      "name": "Dione",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [1020, 247],
+      "name": "Iapetus",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [1242, 323],
+      "name": "Mimas",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [1343, 630],
+      "name": "Hyperion",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [1326, 802],
+      "name": "Tethys",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [1233, 928],
+      "name": "Rhea",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [1071, 1021],
+      "name": "Enceladus",
+      "flag": "saturn"
+    },
+    {
+      "coordinates": [666, 1886],
+      "name": "Miranda",
+      "flag": "uranus"
+    },
+    {
+      "coordinates": [887, 1786],
+      "name": "Ariel",
+      "flag": "uranus"
+    },
+    {
+      "coordinates": [818, 2325],
+      "name": "Titania",
+      "flag": "uranus"
+    },
+    {
+      "coordinates": [1124, 2063],
+      "name": "Oberon",
+      "flag": "uranus"
+    },
+    {
+      "coordinates": [596, 2134],
+      "name": "Umbriel",
+      "flag": "uranus"
+    },
+    {
+      "coordinates": [2393, 2412],
+      "name": "Jupiter Trojans",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [2331, 90],
+      "name": "Hilda Asteroids",
+      "flag": "jupiter"
+    },
+    {
+      "coordinates": [3476, 143],
+      "name": "Neptune Trojans",
+      "flag": "neptune"
+    },
+    {
+      "coordinates": [1277, 2430],
+      "name": "Uranus Trojans",
+      "flag": "uranus"
+    }
+  ]
+}
