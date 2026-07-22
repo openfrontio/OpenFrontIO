@@ -54,4 +54,16 @@ describe("BaseModal lazy rendering", () => {
     expect(modal.querySelector('[data-testid="header"]')).toBeNull();
     expect(modal.querySelector("o-modal")).toBe(modalShell);
   });
+
+  it("renders inline content without being opened", async () => {
+    modal = document.createElement("lazy-body-test-modal") as LazyBodyTestModal;
+    modal.setAttribute("inline", "");
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+
+    expect(modal.bodyRenderCount).toBe(1);
+    expect(modal.headerRenderCount).toBe(1);
+    expect(modal.querySelector('[data-testid="body"]')).not.toBeNull();
+    expect(modal.querySelector('[data-testid="header"]')).not.toBeNull();
+  });
 });

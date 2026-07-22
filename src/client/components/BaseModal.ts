@@ -117,8 +117,11 @@ export abstract class BaseModal extends LitElement {
     const tabs = cfg.tabs ?? [];
     // Keep the lightweight modal shell mounted so open() can address it, but
     // defer potentially expensive modal contents until they are visible.
-    const body = this.isModalOpen ? this.renderBody(this.activeTab) : nothing;
-    const headerSlot = this.isModalOpen ? this.renderHeaderSlot() : null;
+    const shouldRenderContent = this.inline || this.isModalOpen;
+    const body = shouldRenderContent
+      ? this.renderBody(this.activeTab)
+      : nothing;
+    const headerSlot = shouldRenderContent ? this.renderHeaderSlot() : null;
 
     return html`
       <o-modal
