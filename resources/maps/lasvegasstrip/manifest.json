@@ -1,0 +1,350 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [720, 2987],
+      "flag": "Nevada",
+      "name": "Horseshoe"
+    },
+    {
+      "flag": "Nevada",
+      "name": "Tropicana"
+    },
+    {
+      "coordinates": [504, 4014],
+      "flag": "Nevada",
+      "name": "Four Seasons Hotel"
+    },
+    {
+      "coordinates": [624, 2806],
+      "flag": "Nevada",
+      "name": "The LINQ"
+    },
+    {
+      "coordinates": [427, 2760],
+      "flag": "SPQR",
+      "name": "The Forum Shops"
+    },
+    {
+      "coordinates": [1119, 2407],
+      "flag": "us",
+      "name": "Wynn Golf Club"
+    },
+    {
+      "coordinates": [1086, 2054],
+      "flag": "Nevada",
+      "name": "Convention Center"
+    },
+    {
+      "coordinates": [823, 2260],
+      "flag": "Nevada",
+      "name": "Encore"
+    },
+    {
+      "coordinates": [320, 3209],
+      "flag": "Nevada",
+      "name": "Vdara"
+    },
+    {
+      "coordinates": [348, 3498],
+      "flag": "Nevada",
+      "name": "T-Mobile Arena"
+    },
+    {
+      "coordinates": [1811, 449],
+      "flag": "Nevada",
+      "name": "El Cortez Casino"
+    },
+    {
+      "coordinates": [1669, 367],
+      "flag": "Nevada",
+      "name": "Binion's Casino"
+    },
+    {
+      "coordinates": [1665, 445],
+      "flag": "Nevada",
+      "name": "Four Queens Casino"
+    },
+    {
+      "coordinates": [1491, 356],
+      "flag": "Nevada",
+      "name": "Plaza Casino"
+    },
+    {
+      "coordinates": [1566, 334],
+      "flag": "Nevada",
+      "name": "Circa Casino"
+    },
+    {
+      "coordinates": [1578, 405],
+      "flag": "California",
+      "name": "Golden Nugget Casino"
+    },
+    {
+      "coordinates": [750, 1996],
+      "flag": "us",
+      "name": "Hilton"
+    },
+    {
+      "coordinates": [848, 2050],
+      "flag": "Nevada",
+      "name": "Conrad"
+    },
+    {
+      "coordinates": [730, 1864],
+      "flag": "Nevada",
+      "name": "The Adventuredome"
+    },
+    {
+      "coordinates": [568, 3483],
+      "flag": "Nevada",
+      "name": "M\u0026M's World"
+    },
+    {
+      "coordinates": [531, 3530],
+      "flag": "Nevada",
+      "name": "Hershey's World"
+    },
+    {
+      "coordinates": [738, 3619],
+      "flag": "Nevada",
+      "name": "OYO"
+    },
+    {
+      "flag": "Nevada",
+      "name": "The Dunes"
+    },
+    {
+      "flag": "Nevada",
+      "name": "The Sands"
+    },
+    {
+      "flag": "Nevada",
+      "name": "Desert Inn"
+    },
+    {
+      "flag": "Nevada",
+      "name": "The New Frontier"
+    },
+    {
+      "flag": "Nevada",
+      "name": "El Rancho"
+    },
+    {
+      "flag": "Nevada",
+      "name": "Riviera"
+    },
+    {
+      "flag": "Nevada",
+      "name": "The Landmark"
+    },
+    {
+      "flag": "Nevada",
+      "name": "The Hacienda"
+    },
+    {
+      "flag": "Nevada",
+      "name": "The Castaways"
+    },
+    {
+      "flag": "sa",
+      "name": "Aladdin Hotel"
+    },
+    {
+      "coordinates": [593, 3391],
+      "flag": "Nevada",
+      "name": "Polo Towers"
+    }
+  ],
+  "categories": ["north_america", "new"],
+  "id": "LasVegasStrip",
+  "map": {
+    "height": 4428,
+    "num_land_tiles": 2051559,
+    "width": 2036
+  },
+  "map16x": {
+    "height": 1107,
+    "num_land_tiles": 118863,
+    "width": 509
+  },
+  "map4x": {
+    "height": 2214,
+    "num_land_tiles": 499136,
+    "width": 1018
+  },
+  "multiplayer_frequency": 3,
+  "name": "Las Vegas Strip",
+  "nations": [
+    {
+      "coordinates": [954, 2653],
+      "flag": "Nevada",
+      "name": "Sphere"
+    },
+    {
+      "coordinates": [1105, 691],
+      "flag": "Nevada",
+      "name": "Las Vegas Premium Outlets"
+    },
+    {
+      "coordinates": [1153, 455],
+      "flag": "us",
+      "name": "World Market Center"
+    },
+    {
+      "coordinates": [1635, 414],
+      "flag": "Nevada",
+      "name": "Fremont Street"
+    },
+    {
+      "coordinates": [1777, 357],
+      "flag": "Nevada",
+      "name": "Las Vegas Downtown"
+    },
+    {
+      "coordinates": [1378, 904],
+      "flag": "Nevada",
+      "name": "Arts District"
+    },
+    {
+      "coordinates": [1177, 1429],
+      "flag": "Nevada",
+      "name": "The STRAT"
+    },
+    {
+      "coordinates": [1086, 1247],
+      "flag": "Nevada",
+      "name": "Gateway District"
+    },
+    {
+      "coordinates": [1147, 1672],
+      "flag": "eg",
+      "name": "Sahara"
+    },
+    {
+      "coordinates": [795, 1909],
+      "flag": "us",
+      "name": "Circus Circus"
+    },
+    {
+      "coordinates": [751, 2080],
+      "flag": "my",
+      "name": "Resorts World"
+    },
+    {
+      "coordinates": [1088, 1909],
+      "flag": "Nevada",
+      "name": "Fontainebleau"
+    },
+    {
+      "coordinates": [566, 2268],
+      "flag": "us",
+      "name": "Trump Hotel"
+    },
+    {
+      "coordinates": [613, 2384],
+      "flag": "Nevada",
+      "name": "Fashion Show Mall"
+    },
+    {
+      "coordinates": [841, 2387],
+      "flag": "us",
+      "name": "Wynn"
+    },
+    {
+      "coordinates": [727, 2579],
+      "flag": "venice",
+      "name": "Venetian"
+    },
+    {
+      "coordinates": [574, 2494],
+      "flag": "Republic of Pirates",
+      "name": "Treasure Island"
+    },
+    {
+      "coordinates": [446, 2861],
+      "flag": "SPQR",
+      "name": "Caesars Palace"
+    },
+    {
+      "coordinates": [636, 2731],
+      "flag": "Nevada",
+      "name": "Harrah's"
+    },
+    {
+      "coordinates": [633, 2910],
+      "flag": "Nevada",
+      "name": "Flamingo"
+    },
+    {
+      "coordinates": [437, 3039],
+      "flag": "it",
+      "name": "Bellagio"
+    },
+    {
+      "coordinates": [667, 3044],
+      "flag": "fr",
+      "name": "Paris"
+    },
+    {
+      "coordinates": [655, 3172],
+      "flag": "California",
+      "name": "Planet Hollywood"
+    },
+    {
+      "coordinates": [440, 3168],
+      "flag": "Nevada",
+      "name": "Cosmopolitan"
+    },
+    {
+      "coordinates": [373, 3290],
+      "flag": "Nevada",
+      "name": "ARIA"
+    },
+    {
+      "coordinates": [671, 3497],
+      "flag": "Nevada",
+      "name": "MGM Grand"
+    },
+    {
+      "coordinates": [482, 3531],
+      "flag": "New_York",
+      "name": "New York New York"
+    },
+    {
+      "coordinates": [513, 3395],
+      "flag": "Nevada",
+      "name": "Park MGM"
+    },
+    {
+      "coordinates": [458, 3691],
+      "flag": "1_Essex",
+      "name": "Excalibur"
+    },
+    {
+      "coordinates": [430, 3847],
+      "flag": "Kingdom of Egypt",
+      "name": "Luxor"
+    },
+    {
+      "coordinates": [538, 4397],
+      "flag": "Nevada",
+      "name": "Welcome to Fabulous Las Vegas"
+    },
+    {
+      "coordinates": [393, 4083],
+      "flag": "mm",
+      "name": "Mandalay Bay"
+    },
+    {
+      "coordinates": [147, 4048],
+      "flag": "Nevada",
+      "name": "Allegiant Stadium"
+    },
+    {
+      "coordinates": [447, 2641],
+      "flag": "Nevada",
+      "name": "Hard Rock Casino"
+    }
+  ],
+  "translation_key": "map.lasvegasstrip"
+}
