@@ -133,6 +133,7 @@ describe("LeaderboardModal", () => {
       customElements.define("leaderboard-modal", LeaderboardModal);
     }
     modal = document.createElement("leaderboard-modal") as LeaderboardModal;
+    modal.inline = true;
     document.body.appendChild(modal);
     await modal.updateComplete;
   });
@@ -304,6 +305,7 @@ describe("LeaderboardModal", () => {
     });
 
     it("should close on Escape when open", () => {
+      modal.inline = false;
       const mockModalEl = { open: vi.fn(), close: vi.fn() };
       Object.defineProperty(modal, "modalEl", {
         get: () => mockModalEl,
