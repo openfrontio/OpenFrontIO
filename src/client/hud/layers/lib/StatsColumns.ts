@@ -5,6 +5,7 @@ import type { GameView, PlayerView } from "../../../view";
 import {
   allianceIcon,
   cityIcon,
+  claimIcon,
   factoryIcon,
   goldCoinIcon,
   missileSiloIcon,
@@ -98,6 +99,7 @@ export const COLUMN_DEFS = [
   {
     id: "tiles",
     labelKey: "leaderboard.owned",
+    headerVisual: { kind: "icon", src: claimIcon, white: true },
     valueAlignment: "end",
     value: (player) => player.numTilesOwned(),
     renderValue: (tiles, game) => {
