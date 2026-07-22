@@ -518,6 +518,12 @@
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
     "wants_to_renew_alliance": "{name} wants to renew your alliance"
   },
+  "featured_stream": {
+    "expand": "Expand",
+    "live": "LIVE",
+    "minimize": "Minimize",
+    "open_on_twitch": "Open {channel} on Twitch"
+  },
   "flag_input": {
     "button_title": "Pick a flag!",
     "search_flag": "Search...",

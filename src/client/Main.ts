@@ -26,6 +26,7 @@ import "./CosmeticsModal";
 import { CosmeticsModal } from "./CosmeticsModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import "./FeaturedStream";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
