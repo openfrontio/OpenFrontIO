@@ -1,104 +1,71 @@
 {
-  "categories": [
-    "new",
-    "north_america"
-  ],
+  "categories": ["new", "north_america"],
   "id": "FingerLakes",
   "map": {
     "height": 1376,
-    "num_land_tiles": 1824466,
+    "num_land_tiles": 1824234,
     "width": 1468
   },
   "map16x": {
     "height": 344,
-    "num_land_tiles": 110595,
+    "num_land_tiles": 110568,
     "width": 367
   },
   "map4x": {
     "height": 688,
-    "num_land_tiles": 451472,
+    "num_land_tiles": 451397,
     "width": 734
   },
   "multiplayer_frequency": 4,
   "name": "Finger Lakes",
   "nations": [
     {
-      "coordinates": [
-        1156,
-        1222
-      ],
+      "coordinates": [1156, 1222],
       "flag": "New_York",
       "name": "Ithaca"
     },
     {
-      "coordinates": [
-        460,
-        820
-      ],
+      "coordinates": [460, 820],
       "flag": "New_York",
       "name": "Penn Yan"
     },
     {
-      "coordinates": [
-        736,
-        1342
-      ],
+      "coordinates": [736, 1342],
       "flag": "New_York",
       "name": "Watkins Glen"
     },
     {
-      "coordinates": [
-        566,
-        467
-      ],
+      "coordinates": [566, 467],
       "flag": "New_York",
       "name": "Geneva"
     },
     {
-      "coordinates": [
-        815,
-        364
-      ],
+      "coordinates": [815, 364],
       "flag": "New_York",
       "name": "Seneca Falls"
     },
     {
-      "coordinates": [
-        550,
-        41
-      ],
+      "coordinates": [550, 41],
       "flag": "New_York",
       "name": "Lyons"
     },
     {
-      "coordinates": [
-        177,
-        441
-      ],
+      "coordinates": [177, 441],
       "flag": "New_York",
       "name": "Canandaigua"
     },
     {
-      "coordinates": [
-        1076,
-        350
-      ],
+      "coordinates": [1076, 350],
       "flag": "New_York",
       "name": "Auburn"
     },
     {
-      "coordinates": [
-        1241,
-        336
-      ],
+      "coordinates": [1241, 336],
       "flag": "New_York",
       "name": "Skaneateles"
     },
     {
-      "coordinates": [
-        242,
-        1248
-      ],
+      "coordinates": [242, 1248],
       "flag": "New_York",
       "name": "Hammondsport"
     }
