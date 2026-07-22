@@ -47,6 +47,9 @@ export function applyGraphicsOverrides(
     // triggers — structures stay as full icons at every zoom level.
     settings.structure.dotsZoomThreshold = 0;
   }
+  if (overrides.mapOverlay?.navalHighlight !== undefined) {
+    settings.mapOverlay.navalHighlight = overrides.mapOverlay.navalHighlight;
+  }
   if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
     settings.mapOverlay.highlightFillBrighten =
       overrides.mapOverlay.highlightFillBrighten;
@@ -78,6 +81,49 @@ export function applyGraphicsOverrides(
       settings.mapOverlay.staleNukeG = rgb[1] / 255;
       settings.mapOverlay.staleNukeB = rgb[2] / 255;
     }
+  }
+  if (overrides.mapOverlay?.friendlyTintColor !== undefined) {
+    applyHexColor(overrides.mapOverlay.friendlyTintColor, (r, g, b) => {
+      settings.mapOverlay.friendlyTintR = r;
+      settings.mapOverlay.friendlyTintG = g;
+      settings.mapOverlay.friendlyTintB = b;
+    });
+  }
+  if (overrides.mapOverlay?.embargoTintColor !== undefined) {
+    applyHexColor(overrides.mapOverlay.embargoTintColor, (r, g, b) => {
+      settings.mapOverlay.embargoTintR = r;
+      settings.mapOverlay.embargoTintG = g;
+      settings.mapOverlay.embargoTintB = b;
+    });
+  }
+  if (overrides.mapOverlay?.friendlyTintRatio !== undefined) {
+    settings.mapOverlay.friendlyTintRatio =
+      overrides.mapOverlay.friendlyTintRatio;
+  }
+  if (overrides.mapOverlay?.embargoTintRatio !== undefined) {
+    settings.mapOverlay.embargoTintRatio =
+      overrides.mapOverlay.embargoTintRatio;
+  }
+  if (overrides.affiliation?.selfColor !== undefined) {
+    applyHexColor(overrides.affiliation.selfColor, (r, g, b) => {
+      settings.affiliation.selfR = r;
+      settings.affiliation.selfG = g;
+      settings.affiliation.selfB = b;
+    });
+  }
+  if (overrides.affiliation?.allyColor !== undefined) {
+    applyHexColor(overrides.affiliation.allyColor, (r, g, b) => {
+      settings.affiliation.allyR = r;
+      settings.affiliation.allyG = g;
+      settings.affiliation.allyB = b;
+    });
+  }
+  if (overrides.affiliation?.enemyColor !== undefined) {
+    applyHexColor(overrides.affiliation.enemyColor, (r, g, b) => {
+      settings.affiliation.enemyR = r;
+      settings.affiliation.enemyG = g;
+      settings.affiliation.enemyB = b;
+    });
   }
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
@@ -135,34 +181,22 @@ export function applyGraphicsOverrides(
     settings.name.outlineG = channel;
     settings.name.outlineB = channel;
   }
-  if (overrides.accessibility?.colorblind === true) {
-    // Swap the active theme slice for the colorblind palette (replaced
-    // wholesale — palette arrays differ in length between themes).
-    settings.theme = createThemeSettings("colorblind");
-    // Swap the red/green friend-foe encoding (the most common confusion axis)
-    // for a colorblind-safe blue/orange pairing (Okabe-Ito).
-    // Alt-view affiliation borders: self/ally in the blue family, enemy orange.
-    settings.affiliation.selfR = 0;
-    settings.affiliation.selfG = 0.447;
-    settings.affiliation.selfB = 0.698;
-    settings.affiliation.allyR = 0.337;
-    settings.affiliation.allyG = 0.706;
-    settings.affiliation.allyB = 0.914;
-    settings.affiliation.enemyR = 0.835;
-    settings.affiliation.enemyG = 0.369;
-    settings.affiliation.enemyB = 0;
-    // Normal-view relationship border tints: friendly blue, enemy orange,
-    // applied strongly so the cue doesn't rely on subtle hue.
-    settings.mapOverlay.friendlyTintR = 0;
-    settings.mapOverlay.friendlyTintG = 0.447;
-    settings.mapOverlay.friendlyTintB = 0.698;
-    settings.mapOverlay.embargoTintR = 0.835;
-    settings.mapOverlay.embargoTintG = 0.369;
-    settings.mapOverlay.embargoTintB = 0;
-    // Strong ratio so the friend/foe tint dominates the darkened territory
-    // border — neutral keeps its (darkened) fill hue, ally reads blue, enemy
-    // reads orange.
-    settings.mapOverlay.friendlyTintRatio = 0.85;
-    settings.mapOverlay.embargoTintRatio = 0.85;
+  if (overrides.palette !== undefined) {
+    // Swap the active theme slice for the named palette (replaced wholesale —
+    // palette arrays differ in length between themes). The rest of a look —
+    // e.g. the Colorblind preset's Okabe-Ito friend-foe border colors — is
+    // plain override data carried by graphics-presets.json.
+    settings.theme = createThemeSettings(overrides.palette);
+  }
+}
+
+// hexToRgb yields 0-255 channels; the renderer uniforms are 0-1 floats.
+function applyHexColor(
+  hex: string,
+  assign: (r: number, g: number, b: number) => void,
+): void {
+  const rgb = hexToRgb(hex);
+  if (rgb !== null) {
+    assign(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
   }
 }

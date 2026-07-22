@@ -4,6 +4,7 @@ import { PlayerLeaderboardEntry } from "../../../core/ApiSchemas";
 import { RankedType } from "../../../core/game/Game";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";
+import "../PlayerName";
 
 @customElement("leaderboard-player-list")
 export class LeaderboardPlayerList extends LitElement {
@@ -73,7 +74,7 @@ export class LeaderboardPlayerList extends LitElement {
       ].map((entry) => ({
         rank: entry.rank,
         playerId: entry.public_id,
-        username: entry.username,
+        accountUsername: entry.accountUsername ?? null,
         clanTag: entry.clanTag ?? undefined,
         elo: entry.elo,
         games: entry.total,
@@ -138,6 +139,16 @@ export class LeaderboardPlayerList extends LitElement {
   public handleTabActivated() {
     this.scheduleStickyVisibilityCheck();
     this.schedulePlayerFillCheck();
+  }
+
+  // Same handoff as the clan views: the profile modal's back button reopens
+  // the leaderboard (its loaded pages survive the close).
+  private openProfile(publicId: string) {
+    document
+      .querySelector<
+        HTMLElement & { openFromLeaderboard(publicId: string): void }
+      >("player-profile-modal")
+      ?.openFromLeaderboard(publicId);
   }
 
   // TODO: consider IntersectionObserver for better visibility detection?
@@ -248,9 +259,12 @@ export class LeaderboardPlayerList extends LitElement {
                   ${player.clanTag}
                 </div>`
               : ""}
-            <span class="font-bold text-blue-300 truncate text-base"
-              >${player.username}</span
-            >
+            <player-name
+              .username=${player.accountUsername}
+              .publicId=${player.playerId}
+              .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
+              .onNameClick=${() => this.openProfile(player.playerId)}
+            ></player-name>
           </div>
         </td>
         <td class="py-3 px-4 text-right">
@@ -440,9 +454,13 @@ export class LeaderboardPlayerList extends LitElement {
                               ${this.currentUserEntry.clanTag}
                             </div>`
                           : ""}
-                        <span class="font-bold text-white text-base"
-                          >${this.currentUserEntry.username}</span
-                        >
+                        <player-name
+                          .username=${this.currentUserEntry.accountUsername}
+                          .publicId=${this.currentUserEntry.playerId}
+                          .nameClass=${"font-bold text-white text-base hover:underline"}
+                          .onNameClick=${() =>
+                            this.openProfile(this.currentUserEntry!.playerId)}
+                        ></player-name>
                       </div>
                     </div>
                     <div class="flex flex-col items-end w-20">

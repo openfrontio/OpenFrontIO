@@ -16,7 +16,7 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
-import "../CopyButton";
+import "../PlayerName";
 import {
   type ClanRole,
   defaultOrderForSort,
@@ -554,13 +554,10 @@ export class ClanManageView extends LitElement {
           >
             ${renderRoleIcon(member.role)}
           </div>
-          <copy-button
-            compact
-            .copyText=${member.publicId}
-            .displayText=${member.publicId}
-            .showVisibilityToggle=${false}
-            .showCopyIcon=${false}
-          ></copy-button>
+          <player-name
+            .username=${member.username}
+            .publicId=${member.publicId}
+          ></player-name>
           <span class="text-white/30 text-[10px] whitespace-nowrap">
             ${translateText("clan_modal.joined_date", {
               date: formatClanDate(member.joinedAt),
