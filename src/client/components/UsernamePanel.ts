@@ -115,44 +115,16 @@ export class UsernamePanel extends LitElement {
 
     this.busy = true;
     const result = await updateUsername(name);
-    this.busy = false;
 
     if (result.ok) {
-      // The panel and AccountModal share the same player object, so updating
-      // it here keeps every consumer consistent; the event just triggers the
-      // parent re-render.
-      this.player.username = result.data.username;
-      this.player.usernameBase = result.data.base;
-      this.player.usernameDiscriminator = result.data.discriminator;
-      this.player.usernameStatus = result.data.usernameStatus;
-      this.player.nextUsernameChangeAt = result.data.nextUsernameChangeAt;
-      // A rename either kept the claim (premium/indefinite) or abandoned it
-      // (unclaimed) — either way no grace deadline remains.
-      this.player.usernameClaimExpiresAt = null;
-      this.draft = result.data.base;
-      this.error = "";
-      this.requestUpdate();
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: translateText("account_modal.username_changed", {
-              name: result.data.username,
-            }),
-            color: "green",
-            duration: 4000,
-          },
-        }),
-      );
-      this.dispatchEvent(
-        new CustomEvent("username-changed", {
-          detail: result.data,
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    } else {
-      this.error = this.errorMessage(result);
+      // Reload so every consumer starts from a fresh /users/@me; the account
+      // modal reopens via #modal=account showing the new name. Keep the form
+      // locked (busy) while the reload happens.
+      window.location.reload();
+      return;
     }
+    this.busy = false;
+    this.error = this.errorMessage(result);
   }
 
   private errorMessage(

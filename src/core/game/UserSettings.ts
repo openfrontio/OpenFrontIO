@@ -1,7 +1,15 @@
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
+  GraphicsPresets,
+  GraphicsPresetsSchema,
 } from "../../client/render/gl/GraphicsOverrides";
+import {
+  COLUMN_IDS,
+  ColumnId,
+  DEFAULT_STATS_COLUMNS,
+  StatsTableKind,
+} from "../../client/StatsConstants";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -59,7 +67,15 @@ export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
 export const EFFECTS_KEY = "settings.effects";
+// Keep the existing storage key so the rename does not reset saved columns.
+export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
+export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
+const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
+  player: PLAYER_STATS_COLUMNS_KEY,
+  team: TEAM_STATS_COLUMNS_KEY,
+};
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -364,6 +380,33 @@ export class UserSettings {
     else this.setString(EFFECTS_KEY, JSON.stringify(map));
   }
 
+  // Invalid/corrupt storage, unknown ids, or an empty result fall back to
+  // defaults, matching the getSelectedEffects defensive pattern. Returned
+  // order is registry (display) order regardless of stored order.
+  private getColumnIds(key: string, defaults: readonly ColumnId[]): ColumnId[] {
+    const raw = this.getString(key, "");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const filtered = COLUMN_IDS.filter((id) => parsed.includes(id));
+          if (filtered.length > 0) return filtered;
+        }
+      } catch {
+        // fall through to defaults
+      }
+    }
+    return [...defaults];
+  }
+
+  statsColumns(kind: StatsTableKind): ColumnId[] {
+    return this.getColumnIds(STATS_COLUMNS_KEYS[kind], DEFAULT_STATS_COLUMNS);
+  }
+
+  setStatsColumns(kind: StatsTableKind, ids: ColumnId[]): void {
+    this.setString(STATS_COLUMNS_KEYS[kind], JSON.stringify(ids));
+  }
+
   backgroundMusicVolume(): number {
     return this.getFloat("settings.backgroundMusicVolume", 0);
   }
@@ -399,8 +442,21 @@ export class UserSettings {
     const raw = this.getString(GRAPHICS_KEY, "");
     if (!raw) return {};
     try {
-      const parsed = GraphicsOverridesSchema.safeParse(JSON.parse(raw));
-      if (parsed.success) return parsed.data;
+      const json: unknown = JSON.parse(raw);
+      const parsed = GraphicsOverridesSchema.safeParse(json);
+      if (parsed.success) {
+        const overrides = parsed.data;
+        // Legacy: colorblind was an accessibility.colorblind boolean before
+        // the palette enum existed; the schema strips the unknown section, so
+        // translate it here. Rewritten to the new shape on the next save.
+        const legacyColorblind = (
+          json as { accessibility?: { colorblind?: unknown } }
+        ).accessibility?.colorblind;
+        if (overrides.palette === undefined && legacyColorblind === true) {
+          overrides.palette = "colorblind";
+        }
+        return overrides;
+      }
     } catch {
       // fall through
     }
@@ -409,6 +465,31 @@ export class UserSettings {
 
   setGraphicsOverrides(value: GraphicsOverrides): void {
     this.setString(GRAPHICS_KEY, JSON.stringify(value));
+  }
+
+  // Named user-saved graphics presets. Returns {} if missing, unparseable, or
+  // fails schema validation.
+  graphicsPresets(): GraphicsPresets {
+    const raw = this.getString(GRAPHICS_PRESETS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = GraphicsPresetsSchema.safeParse(JSON.parse(raw));
+      if (parsed.success) return parsed.data;
+    } catch {
+      // fall through
+    }
+    return {};
+  }
+
+  setGraphicsPresets(value: GraphicsPresets): void {
+    this.setString(GRAPHICS_PRESETS_KEY, JSON.stringify(value));
+  }
+
+  // Whether the presets key has ever been written. Distinguishes a player who
+  // deleted all their presets (stored "{}") from one who has never seen the
+  // preset UI — used to run the legacy-overrides migration exactly once.
+  hasGraphicsPresets(): boolean {
+    return this.getString(GRAPHICS_PRESETS_KEY, "") !== "";
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object

@@ -13,7 +13,11 @@ import {
   SubscriptionSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
-import { PlayerEffectSchema } from "../src/core/Schemas";
+import {
+  PlayerCosmeticRefsSchema,
+  PlayerCosmeticsSchema,
+  PlayerEffectSchema,
+} from "../src/core/Schemas";
 
 describe("Effect cosmetic schemas", () => {
   const base = {
@@ -962,5 +966,37 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
       SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("verified badge on cosmetics schemas", () => {
+  it("accepts a verified claim on refs and resolved cosmetics", () => {
+    const refs = PlayerCosmeticRefsSchema.safeParse({ verified: true });
+    expect(refs.success).toBe(true);
+    if (refs.success) {
+      expect(refs.data.verified).toBe(true);
+    }
+    const resolved = PlayerCosmeticsSchema.safeParse({ verified: true });
+    expect(resolved.success).toBe(true);
+    if (resolved.success) {
+      expect(resolved.data.verified).toBe(true);
+    }
+  });
+
+  it("stays optional (old clients omit it)", () => {
+    const refs = PlayerCosmeticRefsSchema.safeParse({});
+    expect(refs.success).toBe(true);
+    if (refs.success) {
+      expect(refs.data.verified).toBeUndefined();
+    }
+  });
+
+  it("rejects a non-boolean verified", () => {
+    expect(
+      PlayerCosmeticRefsSchema.safeParse({ verified: "yes" }).success,
+    ).toBe(false);
+    expect(PlayerCosmeticsSchema.safeParse({ verified: 1 }).success).toBe(
+      false,
+    );
   });
 });

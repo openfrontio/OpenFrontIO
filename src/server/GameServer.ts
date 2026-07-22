@@ -644,6 +644,15 @@ export class GameServer {
     );
     this.activeClients.push(client);
     if (identityUpdate && !this.hasStarted()) {
+      // The verified badge vouches for the exact join name — a pre-start
+      // identity change under it must drop the badge (the rejoin path skips
+      // the Worker's join-time validation).
+      if (
+        identityUpdate.username !== client.username &&
+        client.cosmetics?.verified
+      ) {
+        delete client.cosmetics.verified;
+      }
       client.username = identityUpdate.username;
       client.clanTag = identityUpdate.clanTag;
     }
@@ -1240,6 +1249,7 @@ export class GameServer {
               clanTag: hideClanTags ? null : (c.clanTag ?? null),
               clientID: c.clientID,
               friends: friendsFor(c),
+              verified: c.cosmetics?.verified,
             }
           : {
               username: this.anonName(viewer, c.clientID),
@@ -1581,8 +1591,9 @@ export class GameServer {
     }
     client.reportedWinner = clientMsg.winner;
 
-    // Add client vote
-    const winnerKey = JSON.stringify(clientMsg.winner);
+    // Add client vote. A cancelled match ends with winner omitted;
+    // JSON.stringify(undefined) is not a string, so key those votes as "null".
+    const winnerKey = JSON.stringify(clientMsg.winner ?? null);
     const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip)).size;
     const votes = this.winnerVotes.add(winnerKey, clientMsg, client.ip);
 

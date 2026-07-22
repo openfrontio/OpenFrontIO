@@ -76,11 +76,14 @@ export class ClanModal extends BaseModal {
   // would persist across hops if that becomes desired.
   private gameHistoryCache: ClanGameHistoryCache | null = null;
   private gameHistoryScrollTop = 0;
-  // Moving to the dedicated stats page closes this inline modal. These
-  // one-shot flags keep that close/open pair from clearing or reloading the
-  // clan detail that the stats Back button returns to.
-  private preserveStateForGameStats = false;
-  private returningFromGameStats = false;
+  // Opening a sibling modal (game stats or a player profile) closes this
+  // inline modal. These one-shot flags keep that close/open pair from clearing
+  // or reloading the clan detail that the sibling's Back button returns to.
+  private preserveStateForModalHandoff = false;
+  private returningFromModalHandoff = false;
+  // Which detail tab opened the player-profile modal, so its Back button lands
+  // on that tab (Members vs Game History) rather than always Members.
+  private profileOpenedFromGameHistory = false;
   private previousListTab: ListTab = "my-clans";
 
   private get onListView(): boolean {
@@ -212,8 +215,8 @@ export class ClanModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    if (this.returningFromGameStats) {
-      this.returningFromGameStats = false;
+    if (this.returningFromModalHandoff) {
+      this.returningFromModalHandoff = false;
       return;
     }
     const targetTag =
@@ -229,7 +232,7 @@ export class ClanModal extends BaseModal {
   }
 
   protected onClose(): void {
-    if (this.preserveStateForGameStats) return;
+    if (this.preserveStateForModalHandoff) return;
     this.activeTab = "my-clans";
     this.previousListTab = "my-clans";
     this.view = "list";
@@ -240,7 +243,7 @@ export class ClanModal extends BaseModal {
     this.detailCache = null;
     this.gameHistoryCache = null;
     this.gameHistoryScrollTop = 0;
-    this.returningFromGameStats = false;
+    this.returningFromModalHandoff = false;
   }
 
   private async loadMyClans(opts: { allowGuest?: boolean } = {}) {
@@ -385,6 +388,8 @@ export class ClanModal extends BaseModal {
           }}
           @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
             this.openGameStats(e.detail.gameId)}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
           @close-clan-modal=${() => this.close()}
         ></clan-game-history-view>`;
       }
@@ -526,11 +531,11 @@ export class ClanModal extends BaseModal {
     if (!statsModal) return;
 
     this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
-    this.preserveStateForGameStats = true;
+    this.preserveStateForModalHandoff = true;
     try {
       statsModal.openFromClan(gameId);
     } finally {
-      this.preserveStateForGameStats = false;
+      this.preserveStateForModalHandoff = false;
     }
   }
 
@@ -540,13 +545,30 @@ export class ClanModal extends BaseModal {
     >("player-profile-modal");
     if (!profileModal) return;
 
+    // Route the profile modal's Back button to whichever tab opened it. Only
+    // the game-history tab needs its scroll position preserved on return.
+    this.profileOpenedFromGameHistory = this.activeTab === "game-history";
+    if (this.profileOpenedFromGameHistory) {
+      this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    }
+
     // Same handoff as openGameStats: keep clan state so the profile modal's
-    // back button can land on the members tab without a refetch.
-    this.preserveStateForGameStats = true;
+    // back button can land on the originating tab without a refetch.
+    this.preserveStateForModalHandoff = true;
     try {
       profileModal.openFromClan(publicId);
     } finally {
-      this.preserveStateForGameStats = false;
+      this.preserveStateForModalHandoff = false;
+    }
+  }
+
+  // Entry point for the profile modal's Back button (opened via openFromClan
+  // from either the Members or Game History tab).
+  public returnFromPlayerProfile(): void {
+    if (this.profileOpenedFromGameHistory) {
+      this.returnToGameHistory();
+    } else {
+      this.returnToMembers();
     }
   }
 
@@ -554,7 +576,7 @@ export class ClanModal extends BaseModal {
     const tag = this.selectedClanTag;
     if (!tag) return;
 
-    this.returningFromGameStats = true;
+    this.returningFromModalHandoff = true;
     this.open({ clan: tag, tab: "members" });
   }
 
@@ -562,7 +584,7 @@ export class ClanModal extends BaseModal {
     const tag = this.selectedClanTag;
     if (!tag) return;
 
-    this.returningFromGameStats = true;
+    this.returningFromModalHandoff = true;
     this.open({ clan: tag, tab: "game-history" });
     void this.restoreGameHistoryScroll();
   }
