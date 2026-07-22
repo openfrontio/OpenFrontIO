@@ -18,7 +18,6 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { Platform } from "../../Platform";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
 
@@ -61,16 +60,18 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
           : "hidden"}"
       >
-        <h2 class="m-0 mb-4 text-[26px] text-center text-white">
+        <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
           ${this._title || ""}
         </h2>
-        ${this.innerHtml()}
+        <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
+          ${this.innerHtml()}
+        </div>
         <div
           class="${this.showButtons
-            ? "flex justify-between gap-2.5"
+            ? "mt-4 flex justify-between gap-2.5 shrink-0"
             : "hidden"}"
         >
           <o-button
@@ -152,7 +153,13 @@ export class WinModal extends LitElement implements Controller {
         <p class="text-white mb-3">
           ${translateText("win_modal.territory_pattern")}
         </p>
-        <div class="flex justify-center">${this.patternContent}</div>
+        <div
+          class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
+        >
+          <div class="flex min-w-max items-start justify-start gap-4 px-1 py-1">
+            ${this.patternContent}
+          </div>
+        </div>
       </div>
     `;
   }
@@ -170,13 +177,12 @@ export class WinModal extends LitElement implements Controller {
       return;
     }
 
-    // Shuffle the array and take patterns based on screen size
+    // Shuffle the array and take patterns. Will always be 3 wide to allow scrolling
     const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
-    const maxPatterns = Platform.isMobileWidth ? 1 : 3;
-    const selected = shuffled.slice(0, Math.min(maxPatterns, shuffled.length));
+    const selected = shuffled.slice(0, Math.min(3, shuffled.length));
 
     this.patternContent = html`
-      <div class="flex gap-4 flex-wrap justify-start">
+      <div class="flex gap-4 flex-nowrap justify-start items-start">
         ${selected.map(
           (r) => html`
             <cosmetic-button
