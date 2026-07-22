@@ -128,6 +128,10 @@ export const ClanMemberSchema = z.object({
   role: z.enum(["leader", "officer", "member"]),
   joinedAt: z.iso.datetime(),
   publicId: z.string(),
+  // Account username, pre-rendered by the server (null = never set). Render
+  // `username ?? publicId`; identify players by publicId only. Optional so
+  // responses from an API without the field still parse.
+  username: z.string().nullable().optional(),
   stats: ClanMemberStatsSchema.optional(),
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
@@ -143,6 +147,8 @@ export type ClanMembersResponse = z.infer<typeof ClanMembersResponseSchema>;
 
 export const ClanJoinRequestSchema = z.object({
   publicId: z.string(),
+  // Requester's account username (null = never set).
+  username: z.string().nullable().optional(),
   createdAt: z.iso.datetime(),
 });
 export type ClanJoinRequest = z.infer<typeof ClanJoinRequestSchema>;
@@ -157,7 +163,11 @@ export type ClanRequestsResponse = z.infer<typeof ClanRequestsResponseSchema>;
 
 export const ClanBanSchema = z.object({
   publicId: z.string(),
+  // Banned player's account username (null = never set).
+  username: z.string().nullable().optional(),
   bannedBy: z.string(),
+  // Account username of the officer who issued the ban.
+  bannedByUsername: z.string().nullable().optional(),
   reason: z.string().max(200).nullable(),
   createdAt: z.iso.datetime(),
 });
@@ -178,7 +188,13 @@ export type JoinClanResponse = z.infer<typeof JoinClanResponseSchema>;
 
 export const ClanGamePlayerSchema = z.object({
   publicId: z.string(),
+  // The name the player actually used in that game (the in-lobby name). This
+  // is what the history displays.
   username: z.string(),
+  // Whether the player joined that game under their verified account name
+  // (recorded per session at ingest, server-validated at join). Drives the
+  // verified check. Optional so older API responses still parse (→ no badge).
+  verified: z.boolean().optional(),
   won: z.boolean(),
 });
 export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;

@@ -1,4 +1,4 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../../core/game/Game";
 import {
@@ -16,6 +16,7 @@ import {
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
+import { verifiedBadge } from "../ui/VerifiedBadge";
 import { renderLoadingSpinner, showToast } from "./ClanShared";
 
 type FilterKey = ClanGameFilter | "all";
@@ -201,6 +202,16 @@ export class ClanGameHistoryView extends LitElement {
     this.dispatchEvent(
       new CustomEvent<{ gameId: string }>("view-stats", {
         detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private viewProfile(publicId: string) {
+    this.dispatchEvent(
+      new CustomEvent<{ publicId: string }>("view-profile", {
+        detail: { publicId },
         bubbles: true,
         composed: true,
       }),
@@ -568,18 +579,31 @@ export class ClanGameHistoryView extends LitElement {
           class="text-[10px] font-bold uppercase tracking-wider mr-1 ${labelClass}"
           >${label}:</span
         >
-        ${players.map(
-          (p) => html`
-            <copy-button
-              compact
-              .copyText=${p.publicId}
-              .displayText=${p.username ?? p.publicId}
-              .showVisibilityToggle=${false}
-              .showCopyIcon=${false}
-            ></copy-button>
-          `,
-        )}
+        ${players.map((p) => this.renderClanPlayerName(p))}
       </div>
+    `;
+  }
+
+  // Game history shows the name each player actually used *in that game* (their
+  // in-game/session name), not their current account name — the record should
+  // reflect who they were at match time. `verified` is recorded per session at
+  // ingest (server-validated at join), so the blue check reflects whether they
+  // actually played under their verified account name in that specific game.
+  private renderClanPlayerName(
+    p: ClanGame["clanPlayers"][number],
+  ): TemplateResult {
+    return html`
+      <span class="inline-flex items-center gap-1 min-w-0 max-w-full">
+        <button
+          type="button"
+          class="font-bold text-blue-300 truncate hover:underline"
+          title=${translateText("player_profile.view")}
+          @click=${() => this.viewProfile(p.publicId)}
+        >
+          ${p.username}
+        </button>
+        ${p.verified === true ? verifiedBadge() : nothing}
+      </span>
     `;
   }
 

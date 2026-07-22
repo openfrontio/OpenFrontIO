@@ -7,6 +7,7 @@ import type {
   ClanMemberStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
+import "../PlayerName";
 import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
@@ -378,6 +379,7 @@ export function renderMemberStats(
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
+  onViewProfile?: (publicId: string) => void,
 ): TemplateResult {
   const isMe = member.publicId === myPublicId;
   return html`
@@ -399,20 +401,23 @@ export function renderMemberRow(
         <div class="flex-1 min-w-0 flex flex-col">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <copy-button
-                compact
-                .copyText=${member.publicId}
-                .displayText=${member.publicId}
-                .showVisibilityToggle=${false}
-                .showCopyIcon=${false}
-              ></copy-button>
+              <player-name
+                .username=${member.username}
+                .publicId=${member.publicId}
+                .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
+                .onNameClick=${onViewProfile
+                  ? () => onViewProfile(member.publicId)
+                  : null}
+              ></player-name>
             </div>
-            <span
-              class="text-white/30 text-[10px] shrink-0 text-right whitespace-nowrap"
-              >${translateText("clan_modal.joined_date", {
-                date: formatClanDate(member.joinedAt),
-              })}</span
-            >
+            <div class="flex items-center gap-2 shrink-0">
+              <span
+                class="text-white/30 text-[10px] text-right whitespace-nowrap"
+                >${translateText("clan_modal.joined_date", {
+                  date: formatClanDate(member.joinedAt),
+                })}</span
+              >
+            </div>
           </div>
         </div>
       </div>
@@ -429,7 +434,9 @@ export function filterMembersBySearch(
   const q = search.toLowerCase();
   return members.filter(
     (m) =>
-      m.publicId.toLowerCase().includes(q) || m.role.toLowerCase().includes(q),
+      m.publicId.toLowerCase().includes(q) ||
+      m.role.toLowerCase().includes(q) ||
+      (m.username?.toLowerCase().includes(q) ?? false),
   );
 }
 
@@ -439,5 +446,9 @@ export function filterRequestsBySearch(
 ): ClanJoinRequest[] {
   if (!search) return requests;
   const q = search.toLowerCase();
-  return requests.filter((r) => r.publicId.toLowerCase().includes(q));
+  return requests.filter(
+    (r) =>
+      r.publicId.toLowerCase().includes(q) ||
+      (r.username?.toLowerCase().includes(q) ?? false),
+  );
 }

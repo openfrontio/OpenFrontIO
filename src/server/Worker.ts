@@ -26,6 +26,7 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { enforceVerifiedBadge } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
@@ -509,6 +510,9 @@ export async function startWorker() {
         let publicId: string | undefined;
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
+        let accountUsername:
+          | { username?: string | null; usernameStatus?: string }
+          | undefined;
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
@@ -532,6 +536,7 @@ export async function startWorker() {
           publicId = result.response.player.publicId;
           friends = result.response.player.friends;
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
+          accountUsername = result.response.player;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -573,6 +578,21 @@ export async function startWorker() {
           });
           ws.close(1002, cosmeticResult.reason);
           return;
+        }
+
+        // An undefined account means an anonymous persistent-ID join (no
+        // /users/@me fetch) — enforceVerifiedBadge treats that as Dev-only.
+        if (
+          enforceVerifiedBadge(
+            cosmeticResult.cosmetics,
+            censoredUsername,
+            accountUsername ?? null,
+          )
+        ) {
+          log.info("Stripped unvouched verified-badge claim", {
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
+          });
         }
 
         // Turnstile gates the FIRST join only. An already-admitted player who

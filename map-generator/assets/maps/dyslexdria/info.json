@@ -14,15 +14,11 @@
       "flag": ""
     },
     {
-      "name": "Glabol Wraming",
+      "name": "Globel Warnimg",
       "flag": ""
     },
     {
-      "name": "Glabol Clooing",
-      "flag": ""
-    },
-    {
-      "name": "Maltiplying Rappits",
+      "name": "Globel Coologne",
       "flag": ""
     },
     {
@@ -30,352 +26,379 @@
       "flag": ""
     },
     {
-      "coordinates": [2380, 400],
+      "name": "Chad",
+      "flag": "td"
+    },
+    {
+      "name": "Depublic of Congo",
+      "flag": "cd"
+    },
+    {
+      "name": "Republic of Congo",
+      "flag": "cg"
+    },
+    {
+      "name": "Seagull",
+      "flag": "sn"
+    },
+    {
+      "name": "Ohman",
+      "flag": "om"
+    },
+    {
+      "name": "Yoman",
+      "flag": "ye"
+    },
+    {
+      "name": "Neitherlands",
+      "flag": "nl"
+    },
+    {
+      "name": "Jamerica",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [2525, 444],
       "flag": "de",
       "name": "Jermaine"
     },
     {
-      "coordinates": [2230, 399],
+      "coordinates": [2390, 430],
       "flag": "fr",
       "name": "Pants"
     },
     {
-      "coordinates": [2170, 460],
+      "coordinates": [2328, 481],
       "flag": "es",
       "name": "Splain"
     },
     {
-      "coordinates": [2320, 470],
+      "coordinates": [2461, 500],
       "flag": "it",
       "name": "Idoly"
     },
     {
-      "coordinates": [1100, 375],
+      "coordinates": [1200, 420],
       "flag": "gb",
       "name": "Graet Brian"
     },
     {
-      "coordinates": [2385, 510],
+      "coordinates": [2535, 554],
       "flag": "gr",
       "name": "Grace"
     },
     {
-      "coordinates": [2462, 436],
+      "coordinates": [2585, 463],
       "flag": "ro",
       "name": "Rollandia"
     },
     {
-      "coordinates": [1342, 310],
+      "coordinates": [1444, 344],
       "flag": "ua",
       "name": "Ucryin"
     },
     {
-      "coordinates": [2355, 290],
+      "coordinates": [2514, 326],
       "flag": "se",
       "name": "Veden"
     },
     {
-      "coordinates": [2310, 250],
+      "coordinates": [2466, 283],
       "flag": "no",
       "name": "Morvay"
     },
     {
-      "coordinates": [2450, 280],
+      "coordinates": [2613, 320],
       "flag": "fi",
       "name": "Binland"
     },
     {
-      "coordinates": [40, 590],
+      "coordinates": [130, 640],
       "flag": "Russian SSR",
       "name": "Rusha"
     },
     {
-      "coordinates": [260, 600],
+      "coordinates": [290, 646],
       "flag": "ru",
       "name": "Sequoia"
     },
     {
-      "coordinates": [565, 605],
+      "coordinates": [613, 641],
       "flag": "ru",
       "name": "Chinook"
     },
     {
-      "coordinates": [2675, 475],
+      "coordinates": [2836, 530],
       "flag": "ge",
       "name": "Georgia"
     },
     {
-      "coordinates": [1225, 620],
+      "coordinates": [1313, 666],
       "flag": "Second Republic of Iraq",
       "name": "Irap"
     },
     {
-      "coordinates": [1490, 670],
+      "coordinates": [1608, 726],
       "flag": "ae",
       "name": "United Bara Estimates"
     },
     {
-      "coordinates": [476, 980],
+      "coordinates": [560, 1080],
       "flag": "Pahlavi Iran",
       "name": "Iram"
     },
     {
-      "coordinates": [2750, 740],
+      "coordinates": [2910, 820],
       "flag": "pk",
       "name": "Plackitstan"
     },
     {
-      "coordinates": [2770, 640],
+      "coordinates": [2960, 715],
       "flag": "af",
       "name": "Agraphistan"
     },
     {
-      "coordinates": [1500, 430],
+      "coordinates": [1600, 460],
       "flag": "kz",
       "name": "Azakah"
     },
     {
-      "coordinates": [1500, 300],
+      "coordinates": [1610, 320],
       "flag": "Zheleznogorsk",
       "name": "Zheleznogzorzkz"
     },
     {
-      "coordinates": [170, 450],
+      "coordinates": [225, 480],
       "flag": "ru",
       "name": "Shiberia"
     },
     {
-      "coordinates": [2810, 950],
+      "coordinates": [3000, 1000],
       "flag": "in",
       "name": "Indiana"
     },
     {
-      "coordinates": [415, 1325],
+      "coordinates": [1325, 1395],
       "flag": "is",
       "name": "Ikeland"
     },
     {
-      "coordinates": [2140, 900],
+      "coordinates": [2278, 970],
       "flag": "bd",
       "name": "Bangledash"
     },
     {
-      "coordinates": [1144, 766],
+      "coordinates": [1250, 825],
       "flag": "cn",
       "name": "Jina"
     },
     {
-      "coordinates": [185, 795],
+      "coordinates": [235, 835],
       "flag": "kp",
       "name": "West Cornea"
     },
     {
-      "coordinates": [200, 805],
+      "coordinates": [245, 875],
       "flag": "kr",
       "name": "East Cornea"
     },
     {
-      "coordinates": [3010, 300],
+      "coordinates": [3210, 340],
       "flag": "jp",
       "name": "Chapan"
     },
     {
-      "coordinates": [3020, 650],
+      "coordinates": [3222, 733],
       "flag": "mn",
       "name": "Mongoalina"
     },
     {
-      "coordinates": [2505, 1070],
+      "coordinates": [2656, 1144],
       "flag": "id",
       "name": "Endonisia"
     },
     {
-      "coordinates": [1000, 950],
+      "coordinates": [1075, 1030],
       "flag": "vn",
       "name": "Vitamen"
     },
     {
-      "coordinates": [915, 1042],
+      "coordinates": [999, 1144],
       "name": "Cuda",
       "flag": "cu"
     },
     {
-      "coordinates": [255, 945],
+      "coordinates": [300, 1000],
       "flag": "pg",
       "name": "Papa No Guine"
     },
     {
-      "coordinates": [905, 615],
+      "coordinates": [985, 655],
       "flag": "au",
       "name": "Austria"
     },
     {
-      "coordinates": [455, 400],
+      "coordinates": [485, 428],
       "flag": "nz",
       "name": "New Sealand"
     },
     {
-      "coordinates": [850, 404],
+      "coordinates": [940, 425],
       "flag": "ca",
       "name": "Elfsbeer"
     },
     {
-      "coordinates": [808, 630],
+      "coordinates": [880, 675],
       "flag": "ca",
       "name": "Bafiling"
     },
     {
-      "coordinates": [550, 70],
+      "coordinates": [600, 80],
       "flag": "an_pe",
       "name": "Amtarctica"
     },
     {
-      "coordinates": [220, 70],
+      "coordinates": [265, 70],
       "flag": "sardines",
       "name": "Dophlin Confeteracy"
     },
     {
-      "coordinates": [2600, 50],
+      "coordinates": [2690, 50],
       "flag": "aq",
       "name": "Arctica"
     },
     {
-      "coordinates": [2070, 1305],
+      "coordinates": [2250, 1401],
       "flag": "santa_claus",
       "name": "Nort Pole"
     },
     {
-      "coordinates": [1140, 490],
+      "coordinates": [1235, 560],
       "flag": "ly",
       "name": "Lidya"
     },
     {
-      "coordinates": [500, 855],
+      "coordinates": [560, 900],
       "flag": "dz",
       "name": "Alberia"
     },
     {
-      "coordinates": [1335, 790],
+      "coordinates": [1460, 850],
       "flag": "so",
       "name": "Slomia"
     },
     {
-      "coordinates": [670, 770],
+      "coordinates": [730, 815],
       "flag": "Mauritania",
       "name": "Manchurian"
     },
     {
-      "coordinates": [1855, 860],
+      "coordinates": [1970, 930],
       "flag": "ne",
       "name": "Nigel"
     },
     {
-      "coordinates": [750, 825],
+      "coordinates": [825, 880],
       "flag": "lr",
       "name": "Libraria"
     },
     {
-      "coordinates": [3050, 755],
+      "coordinates": [3250, 830],
       "flag": "cf",
       "name": "Center Africa"
     },
     {
-      "coordinates": [10, 1100],
+      "coordinates": [60, 1165],
       "flag": "za",
       "name": "Southern African State"
     },
     {
-      "coordinates": [1740, 670],
+      "coordinates": [1866, 730],
       "flag": "mg",
       "name": "Madalplascar"
     },
     {
-      "coordinates": [2980, 1050],
+      "coordinates": [3170, 1140],
       "flag": "za",
       "name": "Southern South West Africa"
     },
     {
-      "coordinates": [1520, 500],
+      "coordinates": [1600, 535],
       "flag": "br",
       "name": "Brailzil"
     },
     {
-      "coordinates": [1600, 865],
+      "coordinates": [1730, 920],
       "flag": "Cthulhu Republic",
       "name": "Anazom Warehouse"
     },
     {
-      "coordinates": [1740, 250],
+      "coordinates": [1860, 270],
       "flag": "ar",
       "name": "Aregano"
     },
     {
-      "coordinates": [1870, 600],
+      "coordinates": [2026, 678],
       "flag": "cl",
       "name": "Philly"
     },
     {
-      "coordinates": [1270, 400],
+      "coordinates": [1370, 450],
       "flag": "ve",
       "name": "Venice"
     },
     {
-      "coordinates": [2180, 900],
+      "coordinates": [2345, 940],
       "flag": "ni",
       "name": "Nicargo"
     },
     {
-      "coordinates": [2030, 440],
+      "coordinates": [2170, 467],
       "flag": "mx",
       "name": "Xico"
     },
     {
-      "coordinates": [2290, 600],
+      "coordinates": [2443, 665],
       "flag": "us",
       "name": "Untitled States"
     },
     {
-      "coordinates": [2080, 530],
+      "coordinates": [2200, 600],
       "flag": "Texas",
       "name": "Taxes"
     },
     {
-      "coordinates": [2980, 400],
+      "coordinates": [3170, 460],
       "flag": "California",
       "name": "Calizonia"
     },
     {
-      "coordinates": [2420, 765],
+      "coordinates": [2570, 830],
       "flag": "Newfoundland",
       "name": "Foundland"
     },
     {
-      "coordinates": [2140, 750],
+      "coordinates": [2280, 805],
       "flag": "ca",
       "name": "Cananada"
     },
     {
-      "coordinates": [1560, 1000],
+      "coordinates": [1661, 1060],
       "flag": "Alaska",
       "name": "Eleske"
     },
     {
-      "coordinates": [604, 256],
-      "flag": "Yukon",
-      "name": "Yukant"
-    },
-    {
-      "coordinates": [620, 1200],
+      "coordinates": [720, 1256],
       "flag": "gl",
       "name": "Greedland"
     },
     {
-      "coordinates": [1635, 1313],
+      "coordinates": [1780, 1400],
       "flag": "polar_bears",
       "name": "Bearguin Aliance"
     },
     {
-      "coordinates": [2950, 50],
+      "coordinates": [3155, 55],
       "flag": "Republic of Pirates",
       "name": "Biosphere Conmune"
     }
@@ -411,20 +434,8 @@
       "flag": "cm"
     },
     {
-      "name": "Chad",
-      "flag": "td"
-    },
-    {
       "name": "Cosmoros",
       "flag": "km"
-    },
-    {
-      "name": "Depublic of Congo",
-      "flag": "cd"
-    },
-    {
-      "name": "Republic of Congo",
-      "flag": "cg"
     },
     {
       "name": "Djiboutit",
@@ -509,10 +520,6 @@
     {
       "name": "Say Tom and Prince",
       "flag": "st"
-    },
-    {
-      "name": "Seagull",
-      "flag": "sn"
     },
     {
       "name": "Saycharles",
@@ -619,10 +626,6 @@
       "flag": "np"
     },
     {
-      "name": "Ohman",
-      "flag": "om"
-    },
-    {
       "name": "Pailestine",
       "flag": "ps"
     },
@@ -669,10 +672,6 @@
     {
       "name": "Uzbeckandstan",
       "flag": "uz"
-    },
-    {
-      "name": "Yoman",
-      "flag": "ye"
     },
     {
       "name": "Albandana",
@@ -775,10 +774,6 @@
       "flag": "me"
     },
     {
-      "name": "Neitherlands",
-      "flag": "nl"
-    },
-    {
       "name": "Nort Macadamia",
       "flag": "mk"
     },
@@ -841,10 +836,6 @@
     {
       "name": "Hondooras",
       "flag": "hn"
-    },
-    {
-      "name": "Jamerica",
-      "flag": "jm"
     },
     {
       "name": "Panmea",

@@ -19,6 +19,8 @@ export class WinCheckExecution implements Execution {
 
   private mg: Game | null = null;
 
+  private checkedRankedSpawns = false;
+
   // Hard time limit (in seconds) to force a winner before the server's
   // maxGameDuration hard kill. 170mins (10 mins before 3hrs)
   private static readonly HARD_TIME_LIMIT_SECONDS = 170 * 60;
@@ -35,11 +37,48 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
+    if (this.checkRanked2v2Cancelled()) {
+      return;
+    }
+
     if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
     } else {
       this.checkWinnerTeam();
     }
+  }
+
+  // A ranked 2v2 match is void unless all four matched players actually
+  // spawned — a player who never joined isn't in the game at all, and one who
+  // idled through the spawn phase never placed a spawn. Either way the match
+  // would be lopsided, so end it with no winner (the record is archived
+  // winnerless and never ranked). Runs once, on the first check after the
+  // spawn phase ends (this execution is inactive during the spawn phase).
+  private checkRanked2v2Cancelled(): boolean {
+    if (this.mg === null) throw new Error("Not initialized");
+    if (this.checkedRankedSpawns) {
+      return false;
+    }
+    this.checkedRankedSpawns = true;
+    const gameConfig = this.mg.config().gameConfig();
+    if (gameConfig.rankedType !== RankedType.TwoVTwo) {
+      return false;
+    }
+    // allPlayers: players() hides tile-less players, which is exactly what a
+    // never-spawned player is.
+    const spawned = this.mg
+      .allPlayers()
+      .filter((p) => p.type() === PlayerType.Human && p.hasSpawned()).length;
+    const expected = gameConfig.maxPlayers ?? 0;
+    if (spawned >= expected) {
+      return false;
+    }
+    console.log(
+      `ranked 2v2 cancelled: only ${spawned}/${expected} players spawned`,
+    );
+    this.mg.setWinner(null, this.mg.stats().stats());
+    this.active = false;
+    return true;
   }
 
   checkWinnerFFA(): void {

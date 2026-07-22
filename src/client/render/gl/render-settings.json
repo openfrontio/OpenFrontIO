@@ -72,6 +72,7 @@
     "lightRadiusMultiplier": 1
   },
   "mapOverlay": {
+    "navalHighlight": false,
     "trailAlpha": 0.588,
     "spiralResolutionScale": 0.25,
     "defenseCheckerDarken": 0.7,

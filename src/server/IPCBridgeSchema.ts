@@ -33,10 +33,14 @@ export const InternalPublicGamesSchema = z.object({
 
 // --- Worker Messages ---
 
-// Worker tells the master about its lobbies.
+// Worker tells the master about its lobbies. Entries are deliberately not
+// validated here: the master checks each against InternalGameInfoSchema and
+// drops bad ones (MasterLobbyService.validLobbies), so a single malformed
+// lobby can't invalidate the whole report and freeze the master's view of
+// this worker's lobbies.
 const WorkerLobbyListSchema = z.object({
   type: z.literal("lobbyList"),
-  lobbies: z.array(InternalGameInfoSchema),
+  lobbies: z.array(z.unknown()),
 });
 
 const WorkerReadySchema = z.object({

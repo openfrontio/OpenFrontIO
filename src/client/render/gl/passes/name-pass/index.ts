@@ -667,9 +667,9 @@ export class NamePass {
     d[off + 30] = slot.allianceFraction;
     d[off + 31] = slot.allianceRemainingTicks;
 
-    // Column 8: crownLayerIdx (crown cosmetic), rest free
+    // Column 8: crownLayerIdx (crown cosmetic), verified badge, rest free
     d[off + 32] = slot.crownLayerIdx;
-    d[off + 33] = 0.0;
+    d[off + 33] = slot.static.verified === true ? 1.0 : 0.0;
     d[off + 34] = 0.0;
     d[off + 35] = 0.0;
 
