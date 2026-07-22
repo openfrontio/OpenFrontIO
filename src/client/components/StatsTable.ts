@@ -2,6 +2,7 @@ import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { UserSettings } from "../../core/game/UserSettings";
+import { profileIcon } from "../hud/HotbarIcons";
 import "../hud/layers/ColumnPicker";
 import {
   COLUMN_DEFS,
@@ -274,10 +275,13 @@ export abstract class StatsTable extends LitElement {
               <div
                 class="h-6 md:h-8 lg:h-9 min-w-0 px-1 flex items-center justify-center text-center border-b border-b-slate-500"
                 role="columnheader"
+                title=${translateText(this.nameLabelKey)}
               >
-                <span class="block w-full truncate"
-                  >${translateText(this.nameLabelKey)}</span
-                >
+                <img
+                  class="size-[1.1rem] object-contain"
+                  src=${profileIcon}
+                  alt=${translateText(this.nameLabelKey)}
+                />
               </div>
               ${repeat(
                 selected,
