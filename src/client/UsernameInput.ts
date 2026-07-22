@@ -15,6 +15,7 @@ import {
 import { checkClanTagOwnership } from "./ClanApi";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameConfirm } from "./InGameModal";
+import { steamSDK } from "./SteamSDK";
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -37,6 +38,9 @@ export class UsernameInput extends LitElement {
 
   // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+  // Steam identity is fixed for the session (no login/logout events like
+  // CrazyGames), so it's only used to seed the name once in connectedCallback.
+  private readonly onSteam = steamSDK.isOnSteam();
 
   @property({ type: String }) validationError: string = "";
   // Ownership-check feedback (i18n key) shown inline beneath the tag input. Only
@@ -178,6 +182,11 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // Captured before loadStoredUsername(), which — when nothing is stored —
+    // fills in a fresh anon username AND persists it immediately. Checking
+    // localStorage afterwards would therefore never see it as empty.
+    const noStoredUsername =
+      this.onSteam && !localStorage.getItem(usernameKey);
     this.loadStoredUsername();
     // On CrazyGames the account username is applied here but never persisted
     // (see loadStoredUsername / validateAndStore), so logging out — which
@@ -196,6 +205,18 @@ export class UsernameInput extends LitElement {
         this.validateAndStore();
       }
     });
+    // Seed the in-game name from the Steam persona, once, only when nothing
+    // is stored yet. Unlike CrazyGames, Steam persists normally (see
+    // validateAndStore's onCrazyGames guard), and there's no logout event to
+    // handle since the Steam identity is fixed for the session.
+    if (noStoredUsername) {
+      steamSDK.getUser().then((user) => {
+        if (user?.name) {
+          this.baseUsername = user.name;
+          this.validateAndStore();
+        }
+      });
+    }
   }
 
   protected updated(): void {
