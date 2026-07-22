@@ -13,6 +13,7 @@
     "docs:map-generator": "cd map-generator && go doc -cmd -u -all",
     "tunnel": "npm run build-prod && npm run start:server",
     "test": "vitest run && vitest run tests/server",
+    "test:e2e": "cross-env E2E=1 vitest run tests/e2e",
     "test:matchmaking": "node tests/matchmaking/contained.mjs",
     "test:matchmaking:e2e": "node tests/matchmaking/e2e.mjs",
     "perf": "npx tsx tests/perf/run-all.ts",
