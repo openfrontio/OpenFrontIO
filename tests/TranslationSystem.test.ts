@@ -27,6 +27,9 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
   /^build_menu\.desc\.[^.]+$/,
   /^unit_type\.[^.]+$/,
   /^news_box\.(tournament|tutorial|news|warning|firefox_warning)$/,
+  // Built-in graphics preset names/descriptions are referenced from
+  // src/client/render/gl/graphics-presets.json, not translateText literals.
+  /^graphics_setting\.preset_(default|night|colorblind)(_desc)?$/,
 ];
 
 /**

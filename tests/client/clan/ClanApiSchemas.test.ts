@@ -312,6 +312,26 @@ describe("ClanGamePlayerSchema", () => {
     expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
   });
 
+  it("accepts the verified flag or its absence (older API)", () => {
+    const verified = ClanGamePlayerSchema.safeParse({
+      ...validPlayer,
+      verified: true,
+    });
+    expect(verified.success).toBe(true);
+    if (verified.success) expect(verified.data.verified).toBe(true);
+    // validPlayer omits verified entirely — still valid (→ undefined).
+    const bare = ClanGamePlayerSchema.safeParse(validPlayer);
+    expect(bare.success).toBe(true);
+    if (bare.success) expect(bare.data.verified).toBeUndefined();
+  });
+
+  it("rejects a non-boolean verified", () => {
+    expect(
+      ClanGamePlayerSchema.safeParse({ ...validPlayer, verified: "yes" })
+        .success,
+    ).toBe(false);
+  });
+
   it("rejects when won is not a boolean", () => {
     expect(
       ClanGamePlayerSchema.safeParse({ ...validPlayer, won: "true" }).success,

@@ -108,6 +108,16 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
     this.lastTo = null;
   }
 
+  /**
+   * Returns a copy of the active path beginning at the node most recently
+   * returned by next(). Returns null when there is no active traversal.
+   */
+  pathAfterNext(): T[] | Uint32Array | null {
+    if (this.path === null || this.pathIndex === 0) return null;
+    return this.path.slice(this.pathIndex - 1);
+  }
+
+  /** Computes a one-shot route without changing the cached route. */
   findPath(from: T | T[], to: T): T[] | null {
     if (this.config.preCheck) {
       const fromArray = Array.isArray(from) ? from : [from];
