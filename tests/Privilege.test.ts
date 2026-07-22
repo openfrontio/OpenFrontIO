@@ -1,40 +1,15 @@
 import {
-  createMatcher,
   enforceVerifiedBadge,
   FailOpenPrivilegeChecker,
+  profanityMatcher as matcher,
   PrivilegeCheckerImpl,
   shadowNames,
 } from "../src/server/Privilege";
 
-const bannedWords = [
-  "hitler",
-  "adolf",
-  "nazi",
-  "jew",
-  "auschwitz",
-  "whitepower",
-  "heil",
-  "nigger",
-  "nigga",
-  "chink",
-  "spic",
-  "kike",
-  "faggot",
-  "retard",
-  "chair", // Test word to verify custom banned words work
-];
-
-const matcher = createMatcher(bannedWords);
-
 // Create a minimal PrivilegeCheckerImpl for testing censor
 const mockCosmetics = { patterns: {}, colorPalettes: {}, flags: {} };
 const mockDecoder = () => new Uint8Array();
-const checker = new PrivilegeCheckerImpl(
-  mockCosmetics,
-  mockDecoder,
-  bannedWords,
-);
-const emptyChecker = new PrivilegeCheckerImpl(mockCosmetics, mockDecoder, []);
+const checker = new PrivilegeCheckerImpl(mockCosmetics, mockDecoder);
 
 const flagCosmetics = {
   patterns: {},
@@ -52,11 +27,7 @@ const flagCosmetics = {
     },
   },
 };
-const flagChecker = new PrivilegeCheckerImpl(
-  flagCosmetics,
-  mockDecoder,
-  bannedWords,
-);
+const flagChecker = new PrivilegeCheckerImpl(flagCosmetics, mockDecoder);
 
 const skinCosmetics = {
   patterns: {},
@@ -83,11 +54,7 @@ const skinCosmetics = {
     },
   },
 };
-const skinChecker = new PrivilegeCheckerImpl(
-  skinCosmetics,
-  mockDecoder,
-  bannedWords,
-);
+const skinChecker = new PrivilegeCheckerImpl(skinCosmetics, mockDecoder);
 
 const crownCosmetics = {
   patterns: {},
@@ -114,11 +81,7 @@ const crownCosmetics = {
     },
   },
 };
-const crownChecker = new PrivilegeCheckerImpl(
-  crownCosmetics,
-  mockDecoder,
-  bannedWords,
-);
+const crownChecker = new PrivilegeCheckerImpl(crownCosmetics, mockDecoder);
 
 const effectCosmetics = {
   patterns: {},
@@ -184,11 +147,7 @@ const effectCosmetics = {
     },
   },
 };
-const effectChecker = new PrivilegeCheckerImpl(
-  effectCosmetics,
-  mockDecoder,
-  bannedWords,
-);
+const effectChecker = new PrivilegeCheckerImpl(effectCosmetics, mockDecoder);
 
 describe("UsernameCensor", () => {
   describe("isProfane (via matcher.hasMatch)", () => {
@@ -245,7 +204,6 @@ describe("UsernameCensor", () => {
       expect(matcher.hasMatch("xnazix")).toBe(true);
       expect(matcher.hasMatch("faggotry")).toBe(true);
       expect(matcher.hasMatch("retarded")).toBe(true);
-      expect(matcher.hasMatch("MyChairName")).toBe(true);
     });
 
     test("detects banned words with non-alphabetic characters mixed in", () => {
@@ -334,8 +292,8 @@ describe("UsernameCensor", () => {
       });
 
       test("removes clan tag containing banned word as substring (≤5 chars)", () => {
-        expect(checker.censor("CoolPlayer", "JEWS").clanTag).toBeNull();
-        expect(checker.censor("CoolPlayer", "NAZI").clanTag).toBeNull();
+        expect(checker.censor("CoolPlayer", "NAZIS").clanTag).toBeNull();
+        expect(checker.censor("CoolPlayer", "HEILS").clanTag).toBeNull();
       });
 
       test("removes [SS] clan tag", () => {
@@ -427,11 +385,8 @@ describe("UsernameCensor", () => {
       );
     });
 
-    test("empty banned words list still catches englishDataset profanity", () => {
-      expect(emptyChecker.censor("CoolPlayer", null).username).toBe(
-        "CoolPlayer",
-      );
-      const result = emptyChecker.censor("fuck", null);
+    test("catches englishDataset profanity beyond the static banned words", () => {
+      const result = checker.censor("fuck", null);
       expect(shadowNames).toContain(result.username);
     });
   });
@@ -964,7 +919,6 @@ describe("Effect validation in isAllowed", () => {
         },
       },
       mockDecoder,
-      bannedWords,
     );
     const result = checker.isAllowed(["effect:spectrum"], {
       effects: { transportShipTrail: "spectrum" },
@@ -982,12 +936,7 @@ describe("Effect validation in isAllowed", () => {
 describe("PrivilegeCheckerImpl#resolveClanTag", () => {
   // Reserved tags are stored uppercase, exactly as PrivilegeRefresher loads them.
   const makeChecker = (reservedTags: string[]) =>
-    new PrivilegeCheckerImpl(
-      mockCosmetics,
-      mockDecoder,
-      bannedWords,
-      new Set(reservedTags),
-    );
+    new PrivilegeCheckerImpl(mockCosmetics, mockDecoder, new Set(reservedTags));
 
   it("passes a null tag through unchanged", () => {
     const result = makeChecker(["ABC"]).resolveClanTag(null, []);

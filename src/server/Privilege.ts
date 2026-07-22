@@ -50,24 +50,45 @@ export const shadowNames = [
   "AlmostPottyTrained",
 ];
 
-function buildDataset(bannedWords: string[], dedup: boolean) {
+// Basic obscenity check. Full username moderation happens in the API
+// (username_check); this static list plus the obscenity englishDataset is
+// only a fallback for when the API is unavailable.
+//
+// Every word here is needed even when englishDataset also covers it: the
+// dataset has no hate/extremism terms (hitler, nazi, spic, ...), and its
+// patterns are partly word-anchored and keep double letters, so only the
+// unanchored + deduped patterns built from this list catch substring and
+// repeated-character bypasses ("xXfaggotXx", "niiiigger").
+const bannedWords = [
+  "nigger",
+  "nigga",
+  "chink",
+  "spic",
+  "kike",
+  "faggot",
+  "retard",
+  "hitler",
+  "adolf",
+  "nazi",
+  "auschwitz",
+  "whitepower",
+  "heil",
+];
+
+function buildDataset(dedup: boolean) {
   const dataset = new DataSet<{ originalWord: string }>().addAll(
     englishDataset,
   );
   for (const word of bannedWords) {
-    try {
-      const w = dedup ? word.toLowerCase().replace(/(.)\1+/g, "$1") : word;
-      dataset.addPhrase((phrase) =>
-        phrase.setMetadata({ originalWord: word }).addPattern(pattern`${w}`),
-      );
-    } catch (e) {
-      console.error(`Invalid banned word pattern "${word}": ${e}`);
-    }
+    const w = dedup ? word.replace(/(.)\1+/g, "$1") : word;
+    dataset.addPhrase((phrase) =>
+      phrase.setMetadata({ originalWord: word }).addPattern(pattern`${w}`),
+    );
   }
   return dataset.build();
 }
 
-export function createMatcher(bannedWords: string[]): RegExpMatcher {
+function createMatcher(): RegExpMatcher {
   const baseTransformers = [
     toAsciiLowerCaseTransformer(),
     resolveConfusablesTransformer(),
@@ -78,14 +99,14 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
   // skipNonAlphabeticTransformer is applied last to catch punctuation-separated bypasses
   // like "n.i.g.g.e.r".
   const substringMatcher = new RegExpMatcher({
-    ...buildDataset(bannedWords, false),
+    ...buildDataset(false),
     blacklistMatcherTransformers: [
       ...baseTransformers,
       skipNonAlphabeticTransformer(),
     ],
   });
   const collapseMatcher = new RegExpMatcher({
-    ...buildDataset(bannedWords, true),
+    ...buildDataset(true),
     blacklistMatcherTransformers: [
       ...baseTransformers,
       collapseDuplicatesTransformer(),
@@ -103,6 +124,8 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
     ],
   } as unknown as RegExpMatcher;
 }
+
+export const profanityMatcher = createMatcher();
 
 /**
  * Sanitizes and censors profane usernames and clan tags separately.
@@ -123,16 +146,15 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
 function censorWithMatcher(
   username: string,
   clanTag: string | null,
-  matcher: RegExpMatcher,
 ): { username: string; clanTag: string | null } {
-  const usernameIsProfane = matcher.hasMatch(username);
+  const usernameIsProfane = profanityMatcher.hasMatch(username);
   const clanTagIsProfane = clanTag
-    ? matcher.hasMatch(clanTag) || clanTag.toLowerCase() === "ss"
+    ? profanityMatcher.hasMatch(clanTag) || clanTag.toLowerCase() === "ss"
     : false;
   // Catch slurs split across clan tag and username (e.g. clanTag="HIT", username="LER")
   // by looking for a match that spans the clan/name boundary.
   const combinedSlurAcrossBoundary = clanTag
-    ? matcher.getAllMatches(clanTag + username).some(
+    ? profanityMatcher.getAllMatches(clanTag + username).some(
         (match) =>
           // Match must start in the clan and extend into the name — otherwise
           // it's already handled by the clan-only or name-only checks above.
@@ -201,18 +223,13 @@ export interface PrivilegeChecker {
 }
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
-  private matcher: RegExpMatcher;
-
   constructor(
     private cosmetics: Cosmetics,
     private b64urlDecode: (base64: string) => Uint8Array,
-    bannedWords: string[],
     // Every registered clan tag (uppercase). Polled by PrivilegeRefresher so
     // ownership is resolved in memory — no per-join existence probe.
     private reservedClanTags: Set<string> = new Set(),
-  ) {
-    this.matcher = createMatcher(bannedWords);
-  }
+  ) {}
 
   resolveClanTag(
     censoredTag: string | null,
@@ -404,15 +421,9 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     username: string,
     clanTag: string | null,
   ): { username: string; clanTag: string | null } {
-    return censorWithMatcher(username, clanTag, this.matcher);
+    return censorWithMatcher(username, clanTag);
   }
 }
-
-// Words the englishDataset misses or only catches as standalone tokens.
-// These are always enforced even when the remote banned-words list is unavailable.
-const baselineBannedWords = ["nigger", "nigga", "chink", "spic", "kike"];
-
-const defaultMatcher = createMatcher(baselineBannedWords);
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
@@ -429,7 +440,7 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
     username: string,
     clanTag: string | null,
   ): { username: string; clanTag: string | null } {
-    return censorWithMatcher(username, clanTag, defaultMatcher);
+    return censorWithMatcher(username, clanTag);
   }
 
   // No reserved-tag list while cosmetics infra is unavailable (e.g. during

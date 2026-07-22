@@ -75,7 +75,6 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     ServerEnv.jwtIssuer() + "/cosmetics.json",
-    ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
