@@ -34,6 +34,8 @@ describe("BaseModal lazy rendering", () => {
     document.body.appendChild(modal);
     await modal.updateComplete;
 
+    const modalShell = modal.querySelector("o-modal");
+    expect(modalShell).not.toBeNull();
     expect(modal.bodyRenderCount).toBe(0);
     expect(modal.headerRenderCount).toBe(0);
     expect(modal.querySelector('[data-testid="body"]')).toBeNull();
@@ -50,5 +52,6 @@ describe("BaseModal lazy rendering", () => {
 
     expect(modal.querySelector('[data-testid="body"]')).toBeNull();
     expect(modal.querySelector('[data-testid="header"]')).toBeNull();
+    expect(modal.querySelector("o-modal")).toBe(modalShell);
   });
 });
