@@ -71,7 +71,7 @@ export class WinModal extends LitElement implements Controller {
         </div>
         <div
           class="${this.showButtons
-            ? "mt-4 flex justify-between gap-2.5 flex-shrink-0"
+            ? "mt-4 flex justify-between gap-2.5 shrink-0"
             : "hidden"}"
         >
           <o-button
