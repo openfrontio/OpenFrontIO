@@ -30,6 +30,7 @@ import {
   purchaseWithCurrency,
 } from "./Api";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
+import { isPlayingVerified } from "./UsernameInput";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -759,6 +760,7 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     skinName,
     crownName,
     effects: Object.keys(effects).length > 0 ? effects : undefined,
+    verified: isPlayingVerified() ? true : undefined,
   };
 }
 
@@ -821,6 +823,10 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
       }
     }
     if (Object.keys(effects).length > 0) result.effects = effects;
+  }
+
+  if (refs.verified) {
+    result.verified = true;
   }
 
   return result;

@@ -144,6 +144,8 @@ describe("Map consistency", () => {
           orOmitted(info.special_team_count),
           map.specialTeamCount,
         ],
+        ["themes", orOmitted(info.themes), map.themes],
+        ["custom_tribes", orOmitted(info.custom_tribes), map.customTribes],
       ];
       for (const [field, infoValue, mapValue] of fields) {
         if (JSON.stringify(infoValue) !== JSON.stringify(mapValue)) {

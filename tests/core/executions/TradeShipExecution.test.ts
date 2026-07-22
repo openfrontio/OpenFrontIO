@@ -107,13 +107,17 @@ describe("TradeShipExecution", () => {
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.NEXT, node: 32 })),
       findPath: vi.fn((from: number) => [from]),
+      pathForTraversal: vi.fn(() => [32]),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
   });
 
   it("should initialize and tick without errors", () => {
+    const pathFinder = tradeShipExecution["pathFinder"];
     tradeShipExecution.tick(1);
     expect(tradeShipExecution.isActive()).toBe(true);
+    expect(pathFinder.pathForTraversal).toHaveBeenCalledOnce();
+    expect(pathFinder.findPath).not.toHaveBeenCalled();
   });
 
   it("should deactivate if tradeShip is not active", () => {
@@ -159,6 +163,7 @@ describe("TradeShipExecution", () => {
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
       findPath: vi.fn((from: number) => [from]),
+      pathForTraversal: vi.fn(() => [32]),
     } as any;
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);

@@ -1,5 +1,6 @@
 import colorblindTheme from "./colorblind-theme.json";
 import defaultTheme from "./default-theme.json";
+import { PALETTE_NAMES } from "./GraphicsOverrides";
 import defaults from "./render-settings.json";
 
 /**
@@ -137,6 +138,7 @@ export interface RenderSettings {
     staleNukeR: number;
     staleNukeG: number;
     staleNukeB: number;
+    navalHighlight: boolean;
     highlightBrighten: number;
     highlightFillBrighten: number;
     highlightThicken: number;
@@ -407,7 +409,7 @@ export interface RenderSettings {
   lightConfigs: Record<string, { radius: number; intensity: number }>;
 }
 
-export type ThemeName = "default" | "colorblind";
+export type ThemeName = (typeof PALETTE_NAMES)[number];
 
 // Typed so tsc validates each theme JSON against the ThemeSettings shape.
 const THEMES: Record<ThemeName, ThemeSettings> = {

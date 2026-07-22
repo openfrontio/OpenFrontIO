@@ -1,4 +1,4 @@
-import { LitElement, PropertyValues, html } from "lit";
+import { LitElement, PropertyValues, TemplateResult, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
 import {
@@ -72,6 +72,51 @@ export class PlayerStatsTreeView extends LitElement {
     return m === GameMode.FFA
       ? translateText("game_mode.ffa")
       : translateText("game_mode.teams");
+  }
+
+  private labelForType(t: GameType | "Ranked") {
+    return t === "Ranked"
+      ? translateText("player_stats_tree.ranked")
+      : t === GameType.Public
+        ? translateText("player_stats_tree.public")
+        : t === GameType.Private
+          ? translateText("player_stats_tree.private")
+          : translateText("player_stats_tree.solo");
+  }
+
+  // A full-width filter row styled like the game-history tab: a pill container
+  // wrapping tab-style buttons that grow to fill the row.
+  private renderFilterRow(buttons: TemplateResult[]): TemplateResult {
+    return html`
+      <div
+        role="tablist"
+        class="flex flex-wrap gap-1 p-1 bg-white/5 border border-white/10 rounded-xl"
+      >
+        ${buttons}
+      </div>
+    `;
+  }
+
+  private renderFilterTab(
+    label: string,
+    isActive: boolean,
+    onSelect: () => void,
+    title?: string,
+  ): TemplateResult {
+    return html`
+      <button
+        type="button"
+        role="tab"
+        aria-selected=${isActive}
+        title=${title ?? nothing}
+        @click=${onSelect}
+        class="grow basis-20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${isActive
+          ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+          : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+      >
+        ${label}
+      </button>
+    `;
   }
 
   private labelForRankedType(r: RankedType) {
@@ -275,103 +320,58 @@ export class PlayerStatsTreeView extends LitElement {
 
     return html`
       <div class="flex flex-col gap-4">
-        <!-- Filters -->
-        <div
-          class="flex flex-wrap gap-2 items-center justify-between p-2 bg-black/20 rounded-lg border border-white/5"
-        >
-          <!-- Type selector -->
-          <div class="flex gap-1">
-            ${types.map(
-              (t) => html`
-                <button
-                  class="text-xs px-3 py-1.5 rounded-md border font-bold uppercase tracking-wider transition-all duration-200 ${this
-                    .selectedType === t
-                    ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/40"
-                    : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"}"
-                  @click=${() => this.setGameType(t)}
-                >
-                  ${t === "Ranked"
-                    ? translateText("player_stats_tree.ranked")
-                    : t === GameType.Public
-                      ? translateText("player_stats_tree.public")
-                      : t === GameType.Private
-                        ? translateText("player_stats_tree.private")
-                        : translateText("player_stats_tree.solo")}
-                </button>
-              `,
-            )}
-          </div>
-
-          <div class="flex gap-2">
-            <!-- Ranked type selector -->
-            ${this.selectedType === "Ranked" && rankedTypes.length
-              ? html`<div
-                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
-                >
-                  ${rankedTypes.map(
-                    (r) => html`
-                      <button
-                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
-                          .selectedRankedType === r
-                          ? "bg-white/20 text-white font-bold"
-                          : "text-gray-400 hover:text-white"}"
-                        @click=${() => this.setRankedType(r)}
-                      >
-                        ${this.labelForRankedType(r)}
-                      </button>
-                    `,
-                  )}
-                </div>`
-              : html``}
-
-            <!-- Mode selector -->
-            ${modes.length
-              ? html`<div
-                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
-                >
-                  ${modes.map(
-                    (m) => html`
-                      <button
-                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
-                          .selectedMode === m
-                          ? "bg-white/20 text-white font-bold"
-                          : "text-gray-400 hover:text-white"}"
-                        @click=${() => this.setMode(m)}
-                        title=${translateText("player_stats_tree.mode")}
-                      >
-                        ${this.labelForMode(m)}
-                      </button>
-                    `,
-                  )}
-                </div>`
-              : html``}
-
-            <!-- Difficulty selector -->
-            ${!this.shouldMergeDifficulties && diffs.length
-              ? html`<div
-                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
-                >
-                  ${diffs.map(
-                    (d) =>
-                      html` <button
-                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
-                          .selectedDifficulty === d
-                          ? "bg-white/20 text-white font-bold"
-                          : "text-gray-400 hover:text-white"}"
-                        @click=${() => this.setDifficulty(d)}
-                        title=${translateText("difficulty.difficulty")}
-                      >
-                        ${translateText(`difficulty.${d.toLowerCase()}`)}
-                      </button>`,
-                  )}
-                </div>`
-              : html``}
-          </div>
+        <!-- Filters: a type row, then a context-dependent second row (ranked
+             type / mode / difficulty), styled like the game-history tab. -->
+        <div class="space-y-2">
+          ${this.renderFilterRow(
+            types.map((t) =>
+              this.renderFilterTab(
+                this.labelForType(t),
+                this.selectedType === t,
+                () => this.setGameType(t),
+              ),
+            ),
+          )}
+          ${this.selectedType === "Ranked" && rankedTypes.length
+            ? this.renderFilterRow(
+                rankedTypes.map((r) =>
+                  this.renderFilterTab(
+                    this.labelForRankedType(r) ?? "",
+                    this.selectedRankedType === r,
+                    () => this.setRankedType(r),
+                  ),
+                ),
+              )
+            : nothing}
+          ${modes.length
+            ? this.renderFilterRow(
+                modes.map((m) =>
+                  this.renderFilterTab(
+                    this.labelForMode(m),
+                    this.selectedMode === m,
+                    () => this.setMode(m),
+                    translateText("player_stats_tree.mode"),
+                  ),
+                ),
+              )
+            : nothing}
+          ${!this.shouldMergeDifficulties && diffs.length
+            ? this.renderFilterRow(
+                diffs.map((d) =>
+                  this.renderFilterTab(
+                    translateText(`difficulty.${d.toLowerCase()}`),
+                    this.selectedDifficulty === d,
+                    () => this.setDifficulty(d),
+                    translateText("difficulty.difficulty"),
+                  ),
+                ),
+              )
+            : nothing}
         </div>
 
         ${leaf
           ? html`
-              <div class="space-y-6 mt-2">
+              <div class="space-y-6 border-t border-white/10 pt-3">
                 <player-stats-grid
                   .titles=${[
                     translateText("player_stats_tree.stats_wins"),
