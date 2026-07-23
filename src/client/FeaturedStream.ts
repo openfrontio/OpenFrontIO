@@ -1,6 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getFeaturedStream } from "./Api";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { isDesktopShell } from "./DesktopShell";
 import { translateText } from "./Utils";
 
 // Homepage "featured stream" panel: embeds a Twitch channel and shows ONLY while it is
@@ -43,7 +45,16 @@ declare global {
 export type Corner = "tl" | "tr" | "bl" | "br";
 const CORNER_KEY = "featured-stream-corner";
 const MIN_KEY = "featured-stream-minimized";
+const CLOSED_KEY = "featured-stream-closed"; // ad-free close, remembered for the current day
 const RECHECK_MS = 60_000; // re-probe interval when every channel is offline
+
+// Local calendar day, used to scope the "closed" and "minimized" states to the current stream:
+// each is stored with the day it was set and ignored once the day changes, so the panel resets
+// for the next day's stream instead of persisting forever.
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
 
 const CORNER_CLASS: Record<Corner, string> = {
   tl: "top-4 left-4",
@@ -108,7 +119,7 @@ export class FeaturedStream extends LitElement {
   @state() private minimized = false;
   @state() private corner: Corner = "br"; // which screen corner the panel snaps to
   @state() private dragPos: { x: number; y: number } | null = null; // free pos while dragging
-  @state() private dismissed = false; // mobile flick-off; page-visit only, not persisted
+  @state() private dismissed = false; // closed; ad-free close persists for the day, flick session-only
 
   private channels: string[] = [];
   private idx = 0;
@@ -130,7 +141,11 @@ export class FeaturedStream extends LitElement {
     const saved = localStorage.getItem(CORNER_KEY);
     if (saved === "tl" || saved === "tr" || saved === "bl" || saved === "br")
       this.corner = saved;
-    this.minimized = localStorage.getItem(MIN_KEY) === "true";
+    // Minimized state is scoped to the current day: restore it only if it was set today, and
+    // drop a stale value so the next day's stream starts expanded.
+    const minDay = localStorage.getItem(MIN_KEY);
+    this.minimized = minDay === todayKey();
+    if (minDay && !this.minimized) localStorage.removeItem(MIN_KEY);
     document.addEventListener("join-lobby", this.onJoin);
     document.addEventListener("leave-lobby", this.onLeave);
   }
@@ -145,6 +160,20 @@ export class FeaturedStream extends LitElement {
   }
 
   async firstUpdated() {
+    // Never on CrazyGames or the desktop (Steam) shell: a Twitch embed carries Twitch's own
+    // ads and is third-party content, which breaks CrazyGames' "SDK ads only" policy and
+    // Steam's no-in-game-ads rules (and can't satisfy Twitch's parent-domain check in the
+    // shell). Matches how the rest of the app suppresses promos off the open web.
+    if (crazyGamesSDK.isOnCrazyGames() || isDesktopShell()) return;
+    // An ad-free user who closed the panel stays closed for the rest of that day (only the
+    // ad-free x/flick writes this key, so it never suppresses the panel for ad-supported users).
+    // A value from an earlier day is stale: drop it so the next day's stream shows again.
+    const closedDay = localStorage.getItem(CLOSED_KEY);
+    if (closedDay === todayKey()) {
+      this.dismissed = true;
+      return;
+    }
+    if (closedDay) localStorage.removeItem(CLOSED_KEY);
     // Channels come from the served config (like news.json), with a bundled fallback.
     const cfg = await getFeaturedStream();
     if (!cfg.enabled || cfg.channels.length === 0) return; // off / nothing configured
@@ -183,6 +212,7 @@ export class FeaturedStream extends LitElement {
   };
 
   private start = async () => {
+    if (!this.channels.length) return; // feature off / gated: never load the Twitch SDK
     let Twitch: TwitchGlobal;
     try {
       Twitch = await loadTwitchSdk();
@@ -332,12 +362,13 @@ export class FeaturedStream extends LitElement {
       ) as HTMLElement | null;
       const cx = this.dragPos.x + (card?.offsetWidth ?? 360) / 2;
       const cy = this.dragPos.y + (card?.offsetHeight ?? 200) / 2;
-      // Touch only: flicking the panel off the edge dismisses it for this page visit.
+      // Touch only: flicking the panel off the edge closes it (persisted for ad-free users,
+      // session-only otherwise).
       if (
         isCoarsePointer() &&
         isOffFrame(cx, cy, window.innerWidth, window.innerHeight)
       ) {
-        this.dismiss();
+        this.dismiss(this.adFree);
         return;
       }
       this.corner = cornerFromCenter(
@@ -361,10 +392,12 @@ export class FeaturedStream extends LitElement {
     this.dragPos = null;
   };
 
-  // Hide the panel for the rest of this page visit. Deliberately NOT persisted: a refresh or
-  // the next visit brings it back (a light "not now", not a permanent opt-out). Stop probing
-  // and tear the player down so nothing keeps streaming behind the hidden panel.
-  private dismiss() {
+  // Close the panel. For ad-free users (the x button, or a flick) the close persists for the
+  // current day via CLOSED_KEY, so it stays gone across reloads that day and resets for the next
+  // day's stream; for ad-supported users the mobile flick is session-only. Either way, stop
+  // probing and tear the player down so nothing keeps streaming behind the hidden panel.
+  private dismiss(persist: boolean) {
+    if (persist) localStorage.setItem(CLOSED_KEY, todayKey());
     this.dismissed = true;
     this.dragPos = null;
     this.mountGen++; // stale player callbacks fail fresh() and become no-ops
@@ -377,9 +410,21 @@ export class FeaturedStream extends LitElement {
 
   private toggleMinimize = () => {
     this.minimized = !this.minimized;
-    localStorage.setItem(MIN_KEY, String(this.minimized));
+    // Scope the minimized state to the current day too (matches the close): store the day when
+    // collapsing, clear it when expanding.
+    if (this.minimized) localStorage.setItem(MIN_KEY, todayKey());
+    else localStorage.removeItem(MIN_KEY);
     this.kickPlay(); // resume playback after the resize either way
   };
+
+  // Only ad-free users get a close button (any shop purchase makes a user adfree for life,
+  // which zeroes window.adsEnabled); ad-supported users can only minimize. Checked with
+  // `=== false` so the button doesn't flash before /user/me resolves the entitlement.
+  private get adFree(): boolean {
+    return window.adsEnabled === false;
+  }
+
+  private onClose = () => this.dismiss(this.adFree);
 
   render() {
     if (!this.channels.length || this.dismissed) return html``;
@@ -430,15 +475,26 @@ export class FeaturedStream extends LitElement {
             >
             <span class="truncate font-bold">${channel}</span>
           </button>
-          <button
-            class="shrink-0 px-1 text-lg leading-none text-white/70 hover:text-white"
-            aria-label=${translateText(
-              min ? "featured_stream.expand" : "featured_stream.minimize",
-            )}
-            @click=${this.toggleMinimize}
-          >
-            ${min ? "⤢" : "–"}
-          </button>
+          <div class="flex shrink-0 items-center">
+            <button
+              class="px-1 text-lg leading-none text-white/70 hover:text-white"
+              aria-label=${translateText(
+                min ? "featured_stream.expand" : "featured_stream.minimize",
+              )}
+              @click=${this.toggleMinimize}
+            >
+              ${min ? "⤢" : "–"}
+            </button>
+            ${min && this.adFree
+              ? html`<button
+                  class="px-1 text-lg leading-none text-white/70 hover:text-white"
+                  aria-label=${translateText("common.close")}
+                  @click=${this.onClose}
+                >
+                  ✕
+                </button>`
+              : ""}
+          </div>
         </div>
         <div
           id="featured-stream-mount"
