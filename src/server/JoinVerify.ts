@@ -10,31 +10,26 @@ const JoinVerifyVerdictSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("rejected"),
     reason: z.string(),
-    username: z.string().optional(),
-    clanTag: z.string().nullable().optional(),
   }),
 ]);
 
 export type JoinVerifyResponse =
   | { status: "approved"; username: string; clanTag: string | null }
-  | {
-      status: "rejected";
-      reason: string;
-      username: string | null;
-      clanTag: string | null;
-    }
+  | { status: "rejected"; reason: string }
   | { status: "error"; reason: string };
 
 /**
  * Verify a joining player against the API's join_verify endpoint, which runs
- * the Turnstile check and name censoring concurrently: `status` is purely the
- * Turnstile verdict, and the display-ready (username, clanTag) pair comes
- * back either way — a banned username as its deterministic shadow name, a
- * banned tag as null, a surviving tag uppercased.
+ * the Turnstile check and name censoring concurrently: `status` is the
+ * Turnstile verdict, and on approval the (username, clanTag) pair is the
+ * display-ready identity for the session — a banned username as its
+ * deterministic shadow name, a banned tag as null, a surviving tag
+ * uppercased.
  *
- * The token is nullable: reconnects pass null (their single-use token is
- * spent), get a moot "rejected" verdict without a siteverify call, and still
- * receive the censored identity.
+ * SECURITY: a null token SKIPS siteverify — the API trusts the game server
+ * to omit the token only for already-admitted reconnects (whose single-use
+ * token is spent); those come back approved with just the name check run.
+ * Callers must never forward a first join with a null token.
  *
  * The endpoint fails closed with a 5xx when Cloudflare siteverify is down, so
  * HTTP failures retry once and then return "error"; the caller lets the
@@ -87,12 +82,7 @@ export async function verifyJoin(
           clanTag: parsed.data.clanTag ?? null,
         };
       }
-      return {
-        status: "rejected",
-        reason: parsed.data.reason,
-        username: parsed.data.username ?? null,
-        clanTag: parsed.data.clanTag ?? null,
-      };
+      return parsed.data;
     } catch {
       // Timeout or network error — retry once.
     }

@@ -56,7 +56,7 @@ describe("verifyJoin", () => {
     });
   });
 
-  it("returns the censored identity alongside a rejection", async () => {
+  it("passes a rejection through (extra identity fields are stripped)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -71,16 +71,13 @@ describe("verifyJoin", () => {
     expect(await verifyJoin("ip", "tok", "xXblackxX", null)).toEqual({
       status: "rejected",
       reason: "token invalid",
-      username: "SnugglePuppy",
-      clanTag: null,
     });
   });
 
-  it("sends a null token for reconnects and still returns the identity", async () => {
+  it("sends a null token for reconnects (API skips siteverify, runs the name check alone)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
-        status: "rejected",
-        reason: "No turnstile token provided",
+        status: "approved",
         username: "SnugglePuppy",
         clanTag: null,
       }),
@@ -90,8 +87,7 @@ describe("verifyJoin", () => {
     const verdict = await verifyJoin("ip", null, "xXblackxX", null);
 
     expect(verdict).toEqual({
-      status: "rejected",
-      reason: "No turnstile token provided",
+      status: "approved",
       username: "SnugglePuppy",
       clanTag: null,
     });
