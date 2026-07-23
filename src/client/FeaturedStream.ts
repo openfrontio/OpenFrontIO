@@ -335,7 +335,9 @@ export class FeaturedStream extends LitElement {
     const min = this.minimized;
     // Twitch pauses the player when it's off-screen/clipped (and hiding the embed violates
     // Twitch ToS), so "minimized" stays a small but still-visible corner thumbnail that
-    // keeps streaming. z above the footer (z-50) and content so it overlays everything.
+    // keeps streaming. The player must be >=400x300 in every state (Twitch's documented embed
+    // minimum; below it autoplay is blocked), so width is floored at 400px and the mount at
+    // 300px tall. z above the footer (z-50) and content so it overlays everything.
     return html`
       <div
         id="featured-stream-card"
@@ -346,8 +348,8 @@ export class FeaturedStream extends LitElement {
             CORNER_CLASS[this.corner]} ${this.present()
           ? "opacity-100"
           : "pointer-events-none opacity-0"} ${min
-          ? "w-[360px]"
-          : "w-[clamp(340px,40vw,720px)] max-w-[92vw]"}"
+          ? "w-[400px]"
+          : "w-[clamp(400px,40vw,720px)]"} max-w-[92vw]"
         style=${this.dragPos
           ? `left:${this.dragPos.x}px;top:${this.dragPos.y}px`
           : ""}
@@ -388,7 +390,7 @@ export class FeaturedStream extends LitElement {
         </div>
         <div
           id="featured-stream-mount"
-          class="aspect-video w-full bg-black"
+          class="aspect-video min-h-[300px] w-full bg-black"
         ></div>
       </div>
     `;
