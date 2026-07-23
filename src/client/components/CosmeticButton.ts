@@ -58,7 +58,7 @@ export class CosmeticButton extends LitElement {
     const variants = this.variants;
     if (variants && variants.length > 0) {
       return (
-        variants.find((v) => v.key === this.activeVariantKey) ?? variants[0]
+        variants.find((v) => v.key === this.activeVariantKey) ?? this.resolved
       );
     }
     return this.resolved;

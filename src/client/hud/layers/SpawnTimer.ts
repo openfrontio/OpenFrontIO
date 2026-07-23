@@ -20,7 +20,7 @@ export class SpawnTimer extends LitElement implements Controller {
   private ratios = [0];
   private _barVisible = false;
   private colors = [
-    "rgb(from var(--color-malibu-blue) r g b / 0.7)",
+    "rgb(from var(--color-bright-blue) r g b / 0.85)",
     "rgba(0, 0, 0, 0.5)",
   ];
 
@@ -58,7 +58,7 @@ export class SpawnTimer extends LitElement implements Controller {
       this.ratios = [
         this.game.ticks() / this.game.config().numSpawnPhaseTurns(),
       ];
-      this.colors = ["rgb(from var(--color-malibu-blue) r g b / 0.7)"];
+      this.colors = ["rgb(from var(--color-bright-blue) r g b / 0.85)"];
     } else {
       this.ratios = [];
       this.colors = [];

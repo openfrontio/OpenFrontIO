@@ -30,7 +30,6 @@ import { GraphicsSettingsModal } from "./layers/GraphicsSettingsModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
-import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NewLobbyPrompt } from "./layers/NewLobbyPrompt";
@@ -40,7 +39,6 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
-import { TeamStats } from "./layers/TeamStats";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
 import { loadAllSprites } from "./SpriteLoader";
@@ -85,13 +83,6 @@ export function createRenderer(
   buildMenu.uiState = uiState;
   buildMenu.transformHandler = transformHandler;
 
-  const leaderboard = document.querySelector("leader-board") as Leaderboard;
-  if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
-    console.error("LeaderBoard element not found in the DOM");
-  }
-  leaderboard.eventBus = eventBus;
-  leaderboard.game = game;
-
   const gameLeftSidebar = document.querySelector(
     "game-left-sidebar",
   ) as GameLeftSidebar;
@@ -100,13 +91,6 @@ export function createRenderer(
   }
   gameLeftSidebar.game = game;
   gameLeftSidebar.eventBus = eventBus;
-
-  const teamStats = document.querySelector("team-stats") as TeamStats;
-  if (!teamStats || !(teamStats instanceof TeamStats)) {
-    console.error("TeamStats element not found in the DOM");
-  }
-  teamStats.eventBus = eventBus;
-  teamStats.game = game;
 
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
@@ -325,7 +309,6 @@ export function createRenderer(
     ),
     spawnTimer,
     immunityTimer,
-    leaderboard,
     gameLeftSidebar,
     unitDisplay,
     gameRightSidebar,
@@ -336,7 +319,6 @@ export function createRenderer(
     replayPanel,
     settingsModal,
     graphicsSettingsModal,
-    teamStats,
     playerPanel,
     headsUpMessage,
     multiTabModal,
