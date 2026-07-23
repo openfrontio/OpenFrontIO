@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { verifyJoin } from "../../src/server/JoinVerify";
+import { planJoinVerify, verifyJoin } from "../../src/server/JoinVerify";
 
 // verifyJoin resolves its endpoint from ServerEnv.jwtIssuer(), which throws
 // if DOMAIN is unset.
@@ -105,36 +105,105 @@ describe("verifyJoin", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("retries once after a 5xx (siteverify outage fails closed) and succeeds", async () => {
+  // Turnstile tokens are single-use: a retry could re-submit a token the
+  // first attempt already redeemed, turning an API hiccup into a hard
+  // rejection. Every failure mode must be a single attempt that fails open.
+  it("returns error on a 5xx without retrying", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: "boom" }, 500))
-      .mockResolvedValue(
-        jsonResponse({ status: "approved", username: "Alice", clanTag: null }),
-      );
+      .mockResolvedValue(jsonResponse({ message: "boom" }, 500));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await verifyJoin("ip", "tok", "Alice", null)).toEqual({
-      status: "approved",
-      username: "Alice",
-      clanTag: null,
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns error when both attempts fail (network error / timeout)", async () => {
+  it("returns error on a network error / timeout without retrying", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
     vi.stubGlobal("fetch", fetchMock);
 
     expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns error on a malformed body", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ approved: true })),
-    );
+  it("returns error on a malformed body without retrying", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ approved: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
     expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("planJoinVerify", () => {
+  const firstJoin = {
+    isReadmit: false,
+    gameStarted: false,
+    turnstileToken: "tok" as string | null,
+    identityUnchanged: false,
+  };
+  const readmit = { ...firstJoin, isReadmit: true, turnstileToken: null };
+
+  it("verifies a first join with its token", () => {
+    expect(planJoinVerify(firstJoin)).toEqual({
+      action: "verify",
+      token: "tok",
+    });
+  });
+
+  it("rejects a first join without a token", () => {
+    expect(planJoinVerify({ ...firstJoin, turnstileToken: null })).toEqual({
+      action: "reject",
+    });
+    expect(planJoinVerify({ ...firstJoin, turnstileToken: "" })).toEqual({
+      action: "reject",
+    });
+  });
+
+  // SECURITY: the skip paths must be unreachable for first joins — a skip
+  // here would admit a player who never passed Turnstile.
+  it("never skips a first join, whatever the game/identity state", () => {
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        gameStarted: true,
+        identityUnchanged: true,
+      }),
+    ).toEqual({ action: "verify", token: "tok" });
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        turnstileToken: null,
+        gameStarted: true,
+        identityUnchanged: true,
+      }),
+    ).toEqual({ action: "reject" });
+  });
+
+  it("verifies a pre-start re-admit with a changed identity using a null token", () => {
+    expect(planJoinVerify(readmit)).toEqual({ action: "verify", token: null });
+  });
+
+  // A stale token re-sent by the client must not reach the API: it was
+  // already redeemed, so re-admits always verify with a null token.
+  it("nulls out the token for re-admits even if the client re-sent one", () => {
+    expect(planJoinVerify({ ...readmit, turnstileToken: "stale" })).toEqual({
+      action: "verify",
+      token: null,
+    });
+  });
+
+  it("skips re-admits into a started game (identity updates no longer apply)", () => {
+    expect(planJoinVerify({ ...readmit, gameStarted: true })).toEqual({
+      action: "skip",
+    });
+  });
+
+  it("skips re-admits whose identity is unchanged (already screened at admission)", () => {
+    expect(planJoinVerify({ ...readmit, identityUnchanged: true })).toEqual({
+      action: "skip",
+    });
   });
 });

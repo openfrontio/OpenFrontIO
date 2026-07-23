@@ -506,6 +506,19 @@ export class GameServer {
     return this.admittedPersistentIds.has(persistentID);
   }
 
+  // Screened identity stored for this player's client record, or null if
+  // the record (or its reconnect mapping) is gone. Lets the join path skip
+  // re-screening a reconnect whose submitted identity is unchanged.
+  public storedIdentity(
+    persistentID: string,
+  ): { username: string; clanTag: string | null } | null {
+    const clientID = this.getClientIdForPersistentId(persistentID);
+    if (clientID === null) return null;
+    const client = this.allClients.get(clientID);
+    if (client === undefined) return null;
+    return { username: client.username, clanTag: client.clanTag };
+  }
+
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {

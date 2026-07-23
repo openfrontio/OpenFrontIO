@@ -25,7 +25,7 @@ import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
-import { verifyJoin } from "./JoinVerify";
+import { planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { enforceVerifiedBadge } from "./Privilege";
@@ -504,15 +504,28 @@ export async function startWorker() {
         // not be re-challenged — their original token is single-use and was
         // already redeemed — so the token is omitted for them and the API
         // runs the name check alone (an omitted token is always approved).
-        // Runs before the rejoin attempt so a pre-start identity change on
-        // refresh is screened before it is applied.
+        // Re-admits only call out when the verdict could matter (pre-start,
+        // with a changed identity); otherwise the reconnect proceeds with
+        // zero API calls, keeping mass reconnects at game start off the
+        // API. Runs before the rejoin attempt so a pre-start identity
+        // change on refresh is screened before it is applied.
+        let verifySkipped = false;
         if (ServerEnv.env() !== GameEnv.Dev) {
-          const isReadmit = gm.wasAdmitted(clientMsg.gameID, persistentId);
-          // SECURITY: the API skips siteverify entirely when the token is
-          // omitted, trusting the game server to only do that for
-          // re-admits. A first join must therefore present a token — a
-          // null token here would otherwise be a full Turnstile bypass.
-          if (!isReadmit && !clientMsg.turnstileToken) {
+          const game = gm.game(clientMsg.gameID);
+          const stored = game?.storedIdentity(persistentId) ?? null;
+          // SECURITY: the reject/skip/verify split (first joins must
+          // present a token, only re-admits may omit it) lives in
+          // planJoinVerify — see its doc comment.
+          const plan = planJoinVerify({
+            isReadmit: game?.wasAdmitted(persistentId) ?? false,
+            gameStarted: game?.hasStarted() ?? false,
+            turnstileToken: clientMsg.turnstileToken ?? null,
+            identityUnchanged:
+              stored !== null &&
+              stored.username === clientMsg.username &&
+              stored.clanTag === (clientMsg.clanTag ?? null),
+          });
+          if (plan.action === "reject") {
             log.warn("Unauthorized: missing Turnstile token", {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
@@ -520,46 +533,56 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: Turnstile token rejected");
             return;
           }
-          const verdict = await verifyJoin(
-            ip,
-            isReadmit ? null : clientMsg.turnstileToken,
-            clientMsg.username,
-            clientMsg.clanTag ?? null,
-          );
-          switch (verdict.status) {
-            case "approved":
-              username = verdict.username;
-              clanTag = verdict.clanTag;
-              break;
-            case "rejected":
-              // Only reachable on first joins: re-admits omit the token,
-              // which the API always approves.
-              log.warn("Unauthorized: Turnstile token rejected", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: verdict.reason,
-              });
-              ws.close(1002, "Unauthorized: Turnstile token rejected");
-              return;
-            case "error":
-              // Fail open: the locally screened name stands.
-              log.error("join_verify error", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: verdict.reason,
-              });
+          if (plan.action === "verify") {
+            const verdict = await verifyJoin(
+              ip,
+              plan.token,
+              clientMsg.username,
+              clientMsg.clanTag ?? null,
+            );
+            switch (verdict.status) {
+              case "approved":
+                username = verdict.username;
+                clanTag = verdict.clanTag;
+                break;
+              case "rejected":
+                // Only reachable on first joins: re-admits omit the token,
+                // which the API always approves.
+                log.warn("Unauthorized: Turnstile token rejected", {
+                  persistentID: persistentId,
+                  gameID: clientMsg.gameID,
+                  reason: verdict.reason,
+                });
+                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                return;
+              case "error":
+                // Fail open: the locally screened name stands.
+                log.error("join_verify error", {
+                  persistentID: persistentId,
+                  gameID: clientMsg.gameID,
+                  reason: verdict.reason,
+                });
+            }
+          } else {
+            verifySkipped = true;
           }
         }
 
         // Try to reconnect an existing client (e.g., page refresh) with the
         // screened identity — before the game starts, a refresh under a new
-        // name updates the displayed identity like a fresh join would.
+        // name updates the displayed identity like a fresh join would. When
+        // the verify was skipped, no identity update is passed: the stored
+        // identity was screened at admission and must not be clobbered by
+        // the coarser local fallback.
         // If successful, skip the rest of the join authorization.
         if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username,
-            clanTag,
-          })
+          gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            0,
+            verifySkipped ? undefined : { username, clanTag },
+          )
         ) {
           return;
         }
