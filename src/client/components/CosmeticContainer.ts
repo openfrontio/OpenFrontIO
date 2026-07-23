@@ -219,7 +219,6 @@ export class CosmeticContainer extends LitElement {
     this._hasBorderSweep = !!cfg.borderSweep;
 
     this.style.position = "relative";
-    this.style.overflow = "hidden";
     this.style.background = `linear-gradient(to top, ${cfg.gradient} 0%, rgba(15,15,20,0.85) 100%)`;
     this.style.border = `1px solid ${this.selected ? cfg.glow : cfg.border}`;
     this.style.backdropFilter = "blur(8px)";
@@ -243,8 +242,18 @@ export class CosmeticContainer extends LitElement {
   private _ensureLegendaryElements() {
     if (this._shimmer || this._borderSweep) return;
 
-    // Shimmer sweep — epic and legendary
+    // Shimmer sweep — epic and legendary. Clipped by its own rounded wrapper
+    // (not host overflow) so tooltips can extend outside the card.
     if (this._hasGlint) {
+      const shimmerClip = document.createElement("div");
+      shimmerClip.style.cssText = `
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        z-index: 10;
+      `;
       const shimmer = document.createElement("div");
       shimmer.className = "legendary-shimmer";
       shimmer.style.cssText = `
@@ -256,10 +265,10 @@ export class CosmeticContainer extends LitElement {
         height: 100%;
         background: linear-gradient(90deg, transparent 0%, rgba(${(rarityConfig[this.rarity] ?? fallback).shimmerColor ?? "255,200,80"},0.45) 50%, transparent 100%);
         transform: skewX(-15deg);
-        z-index: 10;
         display: none;
       `;
-      this.appendChild(shimmer);
+      shimmerClip.appendChild(shimmer);
+      this.appendChild(shimmerClip);
       this._shimmer = shimmer;
     }
 
@@ -392,9 +401,10 @@ export class CosmeticContainer extends LitElement {
     if (this._hasGlint || this._hasBorderSweep) {
       this._ensureLegendaryElements();
     }
+    // Above sibling tiles so the "?" tooltip can extend past the card edge.
+    this.style.zIndex = "10";
     if (this._isLegendary) {
       this.style.transform = "scale(1.12)";
-      this.style.zIndex = "10";
       this.classList.add("legendary-hovered");
       this._sparkles.forEach((s) => (s.style.display = "block"));
       CosmeticContainer._ensureBackdrop().style.background = "rgba(0,0,0,0.6)";
@@ -414,9 +424,9 @@ export class CosmeticContainer extends LitElement {
   };
 
   private _onMouseLeave = () => {
+    this.style.zIndex = "0";
     if (this._isLegendary) {
       this.style.transform = "";
-      this.style.zIndex = "0";
       this.classList.remove("legendary-hovered");
       this._sparkles.forEach((s) => (s.style.display = "none"));
       if (CosmeticContainer._backdrop) {
