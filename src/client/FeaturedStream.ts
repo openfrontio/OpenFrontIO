@@ -146,13 +146,14 @@ export class FeaturedStream extends LitElement {
     const minDay = localStorage.getItem(MIN_KEY);
     this.minimized = minDay === todayKey();
     if (minDay && !this.minimized) localStorage.removeItem(MIN_KEY);
-    document.addEventListener("join-lobby", this.onJoin);
+    // Stay up through the lobby/queue wait; hide only once the game actually starts.
+    document.addEventListener("game-starting", this.onGameStart);
     document.addEventListener("leave-lobby", this.onLeave);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener("join-lobby", this.onJoin);
+    document.removeEventListener("game-starting", this.onGameStart);
     document.removeEventListener("leave-lobby", this.onLeave);
     if (this.recheckTimer) clearTimeout(this.recheckTimer);
     this.recheckTimer = null;
@@ -183,11 +184,12 @@ export class FeaturedStream extends LitElement {
     void this.start();
   }
 
-  private onJoin = () => {
-    this.inGame = true; // hide while in a lobby/game
-    // Stop probing while in a game: a pending recheck (or a stream coming online) must not
-    // mount a fresh autoplaying player behind the hidden panel — an obscured embed (Twitch
-    // ToS). Cancel the recheck and pause the current player; we re-probe on leave.
+  // The panel stays up through the lobby/queue wait and hides only once the game actually
+  // starts (Main dispatches game-starting at prestart). Stop probing while in game: a pending
+  // recheck (or a stream coming online) must not mount a fresh autoplaying player behind the
+  // hidden panel — an obscured embed (Twitch ToS). Pause the current player; we re-probe on leave.
+  private onGameStart = () => {
+    this.inGame = true;
     if (this.recheckTimer) {
       clearTimeout(this.recheckTimer);
       this.recheckTimer = null;

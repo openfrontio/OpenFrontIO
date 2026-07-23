@@ -244,6 +244,7 @@ declare global {
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
+    "game-starting": CustomEvent;
     "update-game-config": CustomEvent;
   }
 }
@@ -964,6 +965,9 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
+      // The game is actually starting now (lobby wait is over). Let listeners that stay up
+      // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
+      document.dispatchEvent(new CustomEvent("game-starting"));
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
