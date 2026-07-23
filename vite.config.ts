@@ -242,7 +242,12 @@ export default defineConfig(({ mode }) => {
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
         env.STRIPE_PUBLISHABLE_KEY,
       ),
-      "process.env.API_DOMAIN": JSON.stringify(env.API_DOMAIN ?? ""),
+      // Force empty under vitest (mode "test") so the getApiBase localhost-
+      // fallback test is deterministic regardless of any API_DOMAIN in the
+      // host shell / CI environment.
+      "process.env.API_DOMAIN": JSON.stringify(
+        mode === "test" ? "" : (env.API_DOMAIN ?? ""),
+      ),
       // Add other process.env variables if needed, OR migrate code to import.meta.env
     },
 
