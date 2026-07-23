@@ -690,9 +690,9 @@ export function getApiBase() {
 }
 
 export function getAudience() {
-  const { hostname } = new URL(window.location.href);
-  const domainname = hostname.split(".").slice(-2).join(".");
-  return domainname;
+  // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
+  // window.location, so the desktop app (app://openfront) targets real infra.
+  return ClientEnv.jwtAudience();
 }
 
 // Check if the user's account is linked to a Discord, Google, or email account.

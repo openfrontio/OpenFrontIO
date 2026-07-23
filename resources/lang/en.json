@@ -370,6 +370,7 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Enabled",
+    "got_it": "Got it",
     "map_default": "Map default",
     "month_apr": "April",
     "month_aug": "August",
@@ -1405,6 +1406,9 @@
     "starting_gold_placeholder": "5",
     "toggle_achievements": "Toggle achievements",
     "water_nukes": "Water nukes"
+  },
+  "steam": {
+    "link_signpost": "Have an existing OpenFront account? Account linking is coming in a later update."
   },
   "store": {
     "already_subscribed": "Already subscribed.",

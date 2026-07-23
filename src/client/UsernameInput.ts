@@ -15,6 +15,7 @@ import {
 import { checkClanTagOwnership } from "./ClanApi";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameConfirm } from "./InGameModal";
+import { steamSDK } from "./SteamSDK";
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -37,6 +38,9 @@ export class UsernameInput extends LitElement {
 
   // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+  // Steam identity is fixed for the session (no login/logout events like
+  // CrazyGames), so it's only used to seed the name once in connectedCallback.
+  private readonly onSteam = steamSDK.isOnSteam();
 
   @property({ type: String }) validationError: string = "";
   // Ownership-check feedback (i18n key) shown inline beneath the tag input. Only
@@ -50,6 +54,13 @@ export class UsernameInput extends LitElement {
   // only the most recent keystroke updates the UI / resolves the submit value.
   private clanCheckGen = 0;
   private clanCheck: Promise<string | null> = Promise.resolve(null);
+
+  // Resolves once the one-shot Steam name-seed has settled (or immediately for
+  // non-Steam players). The join flow awaits this before reading getUsername()
+  // so a fast join can't start the game under the generated anon name before
+  // the Steam persona lands. Always resolves — never rejects — so a failed or
+  // slow getUser() falls back to the generated name instead of blocking.
+  private steamSeedReady: Promise<void> = Promise.resolve();
 
   // Remove static styles since we're using Tailwind
 
@@ -155,6 +166,15 @@ export class UsernameInput extends LitElement {
     return this.clanCheck;
   }
 
+  // Resolves once the one-shot Steam name-seed has settled (immediately for
+  // non-Steam players, or once nothing was left to seed). The join flow awaits
+  // this before reading getUsername() so a fast join reads the Steam persona
+  // rather than the interim generated anon name. Never blocks: the underlying
+  // chain always resolves, even when getUser() fails or the persona is invalid.
+  public whenSeeded(): Promise<void> {
+    return this.steamSeedReady;
+  }
+
   private startClanCheck() {
     const gen = ++this.clanCheckGen;
     const tag = this.clanTag;
@@ -178,6 +198,10 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // Captured before loadStoredUsername(), which — when nothing is stored —
+    // fills in a fresh anon username AND persists it immediately. Checking
+    // localStorage afterwards would therefore never see it as empty.
+    const noStoredUsername = this.onSteam && !localStorage.getItem(usernameKey);
     this.loadStoredUsername();
     // On CrazyGames the account username is applied here but never persisted
     // (see loadStoredUsername / validateAndStore), so logging out — which
@@ -196,6 +220,36 @@ export class UsernameInput extends LitElement {
         this.validateAndStore();
       }
     });
+    // Seed the in-game name from the Steam persona, once, only when nothing
+    // is stored yet. Unlike CrazyGames, Steam persists normally (see
+    // validateAndStore's onCrazyGames guard), and there's no logout event to
+    // handle since the Steam identity is fixed for the session.
+    if (noStoredUsername) {
+      // The anon name loadStoredUsername() just generated. Only overwrite it if
+      // the player hasn't typed their own name while getUser() was in flight,
+      // so a late Steam result never clobbers a name they entered.
+      const generated = this.baseUsername;
+      // Store the seeding promise so the join path can await it (see
+      // whenSeeded). The chain never rejects — on any failure we keep the
+      // generated name — so awaiting it can only delay, never block, a join.
+      this.steamSeedReady = steamSDK
+        .getUser()
+        .then((user) => {
+          if (this.baseUsername !== generated) return;
+          // Steam personas can contain characters our usernames disallow (e.g.
+          // brackets) or exceed the length limit; strip brackets, trim, and only
+          // accept the persona if it validates — otherwise keep the generated
+          // name so the player can always start a game.
+          const candidate = user?.name?.replace(/[[\]]/g, "").trim();
+          if (candidate && validateUsername(candidate).isValid) {
+            this.baseUsername = candidate;
+            this.validateAndStore();
+          }
+        })
+        .catch(() => {
+          // Swallow: keep the generated name so the player can always play.
+        });
+    }
   }
 
   protected updated(): void {

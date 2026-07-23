@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import featuredStream from "../../../resources/featured-stream.json";
 import { getFeaturedStream } from "../../../src/client/Api";
+import { ClientEnv } from "../../../src/client/ClientEnv";
 import { cornerFromCenter } from "../../../src/client/FeaturedStream";
 import { FeaturedStreamSchema } from "../../../src/core/ApiSchemas";
 
@@ -65,10 +66,25 @@ describe("FeaturedStream", () => {
     beforeEach(() => {
       vi.unstubAllGlobals();
       vi.spyOn(console, "warn").mockImplementation(() => {});
+      // getApiBase() → getAudience() now reads the JWT audience from
+      // BOOTSTRAP_CONFIG (ClientEnv), so getFeaturedStream needs it present or
+      // it throws before fetch and silently falls back. The value is irrelevant
+      // here since fetch is stubbed; we only need a well-formed config.
+      (window as any).BOOTSTRAP_CONFIG = {
+        gameEnv: "prod",
+        numWorkers: 1,
+        turnstileSiteKey: "x",
+        jwtAudience: "openfront.io",
+        instanceId: "desktop",
+        gitCommit: "test",
+      };
+      ClientEnv.reset();
     });
     afterEach(() => {
       vi.restoreAllMocks();
       vi.unstubAllGlobals();
+      delete (window as any).BOOTSTRAP_CONFIG;
+      ClientEnv.reset();
     });
 
     const stubFetch = (impl: () => unknown) =>
