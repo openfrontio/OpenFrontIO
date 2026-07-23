@@ -679,7 +679,7 @@ export function getApiBase() {
   const domainname = getAudience();
 
   if (domainname === "localhost") {
-    const apiDomain = process?.env?.API_DOMAIN;
+    const apiDomain = process.env.API_DOMAIN;
     if (apiDomain) {
       return `https://${apiDomain}`;
     }
