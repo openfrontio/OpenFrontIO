@@ -217,7 +217,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Antarctica,
     translationKey: "map.antarctica",
     categories: ["antarctica", "continental"],
-    multiplayerFrequency: 1,
+    multiplayerFrequency: 4,
   },
   {
     id: "ArchipelagoSea",
@@ -328,7 +328,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.branchingpaths",
     categories: ["arcade", "fictional"],
     multiplayerFrequency: 3,
-    specialTeamCount: 2,
+    specialTeamCount: 3,
   },
   {
     id: "Britannia",
@@ -357,6 +357,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caspiansea",
     categories: ["asia", "new"],
     multiplayerFrequency: 5,
+    specialTeamCount: 2,
   },
   {
     id: "Caucasus",
@@ -975,9 +976,8 @@ export const maps: readonly MapInfo[] = [
     id: "Japan",
     type: GameMapType.Japan,
     translationKey: "map.japan",
-    categories: ["featured", "asia"],
+    categories: ["countries", "asia"],
     multiplayerFrequency: 6,
-    featuredRank: 7,
   },
   {
     id: "JuanDeFucaStrait",
@@ -993,6 +993,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.korea",
     categories: ["asia", "countries"],
     multiplayerFrequency: 5,
+    specialTeamCount: 2,
   },
   {
     id: "Labyrinth",
@@ -1253,6 +1254,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.taiwanstrait",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    specialTeamCount: 2,
   },
   {
     id: "TheBox",
