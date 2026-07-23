@@ -185,8 +185,7 @@ export class UsernameInput extends LitElement {
     // Captured before loadStoredUsername(), which — when nothing is stored —
     // fills in a fresh anon username AND persists it immediately. Checking
     // localStorage afterwards would therefore never see it as empty.
-    const noStoredUsername =
-      this.onSteam && !localStorage.getItem(usernameKey);
+    const noStoredUsername = this.onSteam && !localStorage.getItem(usernameKey);
     this.loadStoredUsername();
     // On CrazyGames the account username is applied here but never persisted
     // (see loadStoredUsername / validateAndStore), so logging out — which
@@ -210,9 +209,19 @@ export class UsernameInput extends LitElement {
     // validateAndStore's onCrazyGames guard), and there's no logout event to
     // handle since the Steam identity is fixed for the session.
     if (noStoredUsername) {
+      // The anon name loadStoredUsername() just generated. Only overwrite it if
+      // the player hasn't typed their own name while getUser() was in flight,
+      // so a late Steam result never clobbers a name they entered.
+      const generated = this.baseUsername;
       steamSDK.getUser().then((user) => {
-        if (user?.name) {
-          this.baseUsername = user.name;
+        if (this.baseUsername !== generated) return;
+        // Steam personas can contain characters our usernames disallow (e.g.
+        // brackets) or exceed the length limit; strip brackets, trim, and only
+        // accept the persona if it validates — otherwise keep the generated
+        // name so the player can always start a game.
+        const candidate = user?.name?.replace(/[[\]]/g, "").trim();
+        if (candidate && validateUsername(candidate).isValid) {
+          this.baseUsername = candidate;
           this.validateAndStore();
         }
       });

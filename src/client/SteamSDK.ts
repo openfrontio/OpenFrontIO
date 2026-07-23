@@ -8,7 +8,9 @@ interface SteamBridge {
 // it locally rather than re-declaring the global (a second `declare global`
 // with a different type triggers TS2717).
 function steamBridge(): SteamBridge | undefined {
-  const desktop = window.openfrontDesktop as { steam?: SteamBridge } | undefined;
+  const desktop = window.openfrontDesktop as
+    | { steam?: SteamBridge }
+    | undefined;
   return desktop?.steam;
 }
 

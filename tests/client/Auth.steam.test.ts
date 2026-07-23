@@ -1,7 +1,7 @@
 import { UnsecuredJWT } from "jose";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ClientEnv } from "../../src/client/ClientEnv";
 import { getAuthHeader, logOut } from "../../src/client/Auth";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import { steamSDK } from "../../src/client/SteamSDK";
 
 function setBootstrapConfig() {
@@ -36,13 +36,11 @@ describe("Steam login", () => {
       exp: Math.floor(Date.now() / 1000) + 3600,
     }).encode();
 
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
-          status: 200,
-        }),
-      );
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
+        status: 200,
+      }),
+    );
 
     const header = await getAuthHeader();
 
