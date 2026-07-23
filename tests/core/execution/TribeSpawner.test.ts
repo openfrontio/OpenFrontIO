@@ -42,8 +42,8 @@ function findWaterTile(game: Game): number {
 }
 
 describe("TribeSpawner", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   test("positioned tribes spawn before random tribes", async () => {
@@ -117,7 +117,6 @@ describe("TribeSpawner", () => {
     // Should fall back to random (no tile set).
     expect(execs[0].tile).toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 
   test("falls back to random names when positioned spawn fails", async () => {
@@ -143,7 +142,12 @@ describe("TribeSpawner", () => {
     // Both should be random (no tile), since OOB failed.
     expect(execs[0].tile).toBeUndefined();
     expect(execs[1].tile).toBeUndefined();
-    warnSpy.mockRestore();
+    // OOB must not appear — it has coordinates and failed to spawn.
+    const names = execs.map(
+      (e) => (e as { playerInfo: { name: string } }).playerInfo.name,
+    );
+    expect(names).not.toContain("OOB");
+    expect(warnSpy).toHaveBeenCalled();
   });
 
   test("failed positioned tribe is NOT spawned randomly", async () => {
@@ -168,7 +172,7 @@ describe("TribeSpawner", () => {
       (e) => (e as { playerInfo: { name: string } }).playerInfo.name,
     );
     expect(names).not.toContain("FixedFail");
-    warnSpy.mockRestore();
+    expect(warnSpy).toHaveBeenCalled();
   });
 
   test("random tribe selection avoids duplicates", async () => {

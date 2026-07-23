@@ -130,7 +130,7 @@ export class Executor {
     const nationCells = this.mg
       .nations()
       .map((n) => n.spawnCell)
-      .filter((c) => c !== undefined);
+      .filter((c): c is NonNullable<typeof c> => c !== undefined);
     return new TribeSpawner(this.mg, this.gameID, nationCells).spawnTribes(
       numTribes,
     );
