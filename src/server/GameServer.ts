@@ -617,13 +617,14 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // WebSocket is always updated. The client's identity is never — it was
-  // screened by join_verify at the original join, and a rejoin skips that
-  // check, so accepting a new name here would bypass moderation.
+  // WebSocket is always updated. Identity updates — already screened by the
+  // caller (join_verify, or the local fallback censor) — are applied only
+  // before the game has started.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -643,6 +644,19 @@ export class GameServer {
       (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
+    if (identityUpdate && !this.hasStarted()) {
+      // The verified badge vouches for the exact join name — a pre-start
+      // identity change under it must drop the badge (the rejoin path skips
+      // the Worker's join-time badge validation).
+      if (
+        identityUpdate.username !== client.username &&
+        client.cosmetics?.verified
+      ) {
+        delete client.cosmetics.verified;
+      }
+      client.username = identityUpdate.username;
+      client.clanTag = identityUpdate.clanTag;
+    }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
 

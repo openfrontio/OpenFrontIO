@@ -487,20 +487,80 @@ export async function startWorker() {
           return;
         }
 
-        // Basic local screen as the fallback identity for every path
-        // join_verify doesn't cover: Dev, API failure (fail-open joins), and
-        // re-admitted reconnects with no stored identity. An approved
-        // join_verify overwrites it with the API's display-ready pair below.
+        // Basic local screen as the fallback identity for the paths
+        // join_verify doesn't cover: Dev and API failure (fail-open joins).
+        // An approved join_verify overwrites it with the API's display-ready
+        // pair below.
         let { username, clanTag } = censorPlayer(
           clientMsg.username,
           clientMsg.clanTag ?? null,
         );
 
-        // Try to reconnect an existing client (e.g., page refresh).
-        // If successful, skip all authorization — the client keeps the
-        // identity screened at its original join, so a refresh can't smuggle
-        // in an unscreened name.
-        if (gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0)) {
+        // Gate the join and screen the display name in one API call: status
+        // is the Turnstile verdict, and the response carries the
+        // display-ready (username, clanTag) pair, so a banned name is never
+        // visible — not even in the lobby. Turnstile gates the FIRST join
+        // only: an already-admitted player who reconnects or refreshes must
+        // not be re-challenged — their original token is single-use and was
+        // already redeemed — so the token is omitted for them and the API
+        // runs the name check alone (an omitted token is always approved).
+        // Runs before the rejoin attempt so a pre-start identity change on
+        // refresh is screened before it is applied.
+        if (ServerEnv.env() !== GameEnv.Dev) {
+          const isReadmit = gm.wasAdmitted(clientMsg.gameID, persistentId);
+          // SECURITY: the API skips siteverify entirely when the token is
+          // omitted, trusting the game server to only do that for
+          // re-admits. A first join must therefore present a token — a
+          // null token here would otherwise be a full Turnstile bypass.
+          if (!isReadmit && !clientMsg.turnstileToken) {
+            log.warn("Unauthorized: missing Turnstile token", {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+            });
+            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            return;
+          }
+          const verdict = await verifyJoin(
+            ip,
+            isReadmit ? null : clientMsg.turnstileToken,
+            clientMsg.username,
+            clientMsg.clanTag ?? null,
+          );
+          switch (verdict.status) {
+            case "approved":
+              username = verdict.username;
+              clanTag = verdict.clanTag;
+              break;
+            case "rejected":
+              // Only reachable on first joins: re-admits omit the token,
+              // which the API always approves.
+              log.warn("Unauthorized: Turnstile token rejected", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: verdict.reason,
+              });
+              ws.close(1002, "Unauthorized: Turnstile token rejected");
+              return;
+            case "error":
+              // Fail open: the locally screened name stands.
+              log.error("join_verify error", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: verdict.reason,
+              });
+          }
+        }
+
+        // Try to reconnect an existing client (e.g., page refresh) with the
+        // screened identity — before the game starts, a refresh under a new
+        // name updates the displayed identity like a fresh join would.
+        // If successful, skip the rest of the join authorization.
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username,
+            clanTag,
+          })
+        ) {
           return;
         }
 
@@ -547,60 +607,6 @@ export async function startWorker() {
               ws.close(1002, "Forbidden");
               return;
             }
-          }
-        }
-
-        // Gate the join and screen the display name in one API call: status
-        // is the Turnstile verdict, and the response carries the
-        // display-ready (username, clanTag) pair, so a banned name is never
-        // visible — not even in the lobby. Turnstile gates the FIRST join
-        // only: an already-admitted player who reconnects (e.g. a socket
-        // drop during the lobby->start transition) must not be re-challenged
-        // — their original token is single-use and was already redeemed —
-        // so the token is omitted for them and the API runs the name check
-        // alone (an omitted token is always approved).
-        if (ServerEnv.env() !== GameEnv.Dev) {
-          const isReadmit = gm.wasAdmitted(clientMsg.gameID, persistentId);
-          // SECURITY: the API skips siteverify entirely when the token is
-          // omitted, trusting the game server to only do that for
-          // re-admits. A first join must therefore present a token — a
-          // null token here would otherwise be a full Turnstile bypass.
-          if (!isReadmit && !clientMsg.turnstileToken) {
-            log.warn("Unauthorized: missing Turnstile token", {
-              persistentID: persistentId,
-              gameID: clientMsg.gameID,
-            });
-            ws.close(1002, "Unauthorized: Turnstile token rejected");
-            return;
-          }
-          const verdict = await verifyJoin(
-            ip,
-            isReadmit ? null : clientMsg.turnstileToken,
-            clientMsg.username,
-            clientMsg.clanTag ?? null,
-          );
-          switch (verdict.status) {
-            case "approved":
-              username = verdict.username;
-              clanTag = verdict.clanTag;
-              break;
-            case "rejected":
-              // Only reachable on first joins: re-admits omit the token,
-              // which the API always approves.
-              log.warn("Unauthorized: Turnstile token rejected", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: verdict.reason,
-              });
-              ws.close(1002, "Unauthorized: Turnstile token rejected");
-              return;
-            case "error":
-              // Fail open: the locally screened name stands.
-              log.error("join_verify error", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: verdict.reason,
-              });
           }
         }
 
