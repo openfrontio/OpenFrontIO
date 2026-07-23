@@ -17,7 +17,7 @@
     },
     {
       "coordinates": [1739, 1170],
-      "name": "Australian Antarctic Territory",
+      "name": "Australian Territory",
       "flag": "au"
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "coordinates": [637, 1061],
-      "name": "Argentine Antarctic Territory",
+      "name": "Argentine Territory",
       "flag": "Tierra del Fuego"
     },
     {
@@ -47,7 +47,7 @@
     },
     {
       "coordinates": [1180, 1097],
-      "name": "Amundsen–Scott",
+      "name": "Amundsen-Scott",
       "flag": "us"
     },
     {
@@ -163,7 +163,7 @@
     },
     {
       "name": "Penguins",
-      "flag": "Antarctica (True South)"
+      "flag": "an_pe"
     },
     {
       "name": "The Thing",

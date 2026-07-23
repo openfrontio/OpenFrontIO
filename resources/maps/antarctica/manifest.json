@@ -5,7 +5,7 @@
       "name": "Ancient Aliens"
     },
     {
-      "flag": "Antarctica (True South)",
+      "flag": "an_pe",
       "name": "Penguins"
     },
     {
@@ -46,7 +46,7 @@
     {
       "coordinates": [1739, 1170],
       "flag": "au",
-      "name": "Australian Antarctic Territory"
+      "name": "Australian Territory"
     },
     {
       "coordinates": [1285, 458],
@@ -61,7 +61,7 @@
     {
       "coordinates": [637, 1061],
       "flag": "Tierra del Fuego",
-      "name": "Argentine Antarctic Territory"
+      "name": "Argentine Territory"
     },
     {
       "coordinates": [565, 1083],
@@ -76,7 +76,7 @@
     {
       "coordinates": [1180, 1097],
       "flag": "us",
-      "name": "Amundsen–Scott"
+      "name": "Amundsen-Scott"
     },
     {
       "coordinates": [598, 125],
