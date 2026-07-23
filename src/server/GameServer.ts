@@ -506,21 +506,6 @@ export class GameServer {
     return this.admittedPersistentIds.has(persistentID);
   }
 
-  // The identity screened by join_verify at first admission, for reconnects
-  // that skip the check (their single-use Turnstile token is spent). Looked
-  // up by persistentID because the reconnection mapping may already be
-  // cleared by the time the player re-joins.
-  public admittedIdentity(
-    persistentID: string,
-  ): { username: string; clanTag: string | null } | null {
-    for (const client of this.allClients.values()) {
-      if (client.persistentID === persistentID) {
-        return { username: client.username, clanTag: client.clanTag };
-      }
-    }
-    return null;
-  }
-
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {

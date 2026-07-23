@@ -1,6 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
-import { GameServer } from "../../src/server/GameServer";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyJoin } from "../../src/server/JoinVerify";
 
 // verifyJoin resolves its endpoint from ServerEnv.jwtIssuer(), which throws
@@ -58,7 +56,7 @@ describe("verifyJoin", () => {
     });
   });
 
-  it("passes a rejection through (censored identity in the body is ignored)", async () => {
+  it("returns the censored identity alongside a rejection", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -73,17 +71,32 @@ describe("verifyJoin", () => {
     expect(await verifyJoin("ip", "tok", "xXblackxX", null)).toEqual({
       status: "rejected",
       reason: "token invalid",
+      username: "SnugglePuppy",
+      clanTag: null,
     });
   });
 
-  it("rejects a null token without calling the API", async () => {
-    const fetchMock = vi.fn();
+  it("sends a null token for reconnects and still returns the identity", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        status: "rejected",
+        reason: "No turnstile token provided",
+        username: "SnugglePuppy",
+        clanTag: null,
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    const verdict = await verifyJoin("ip", null, "Alice", null);
+    const verdict = await verifyJoin("ip", null, "xXblackxX", null);
 
-    expect(verdict.status).toBe("rejected");
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(verdict).toEqual({
+      status: "rejected",
+      reason: "No turnstile token provided",
+      username: "SnugglePuppy",
+      clanTag: null,
+    });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body).token).toBeNull();
   });
 
   it("returns error on a 4xx without retrying", async () => {
@@ -127,43 +140,5 @@ describe("verifyJoin", () => {
       vi.fn().mockResolvedValue(jsonResponse({ approved: true })),
     );
     expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
-  });
-});
-
-describe("GameServer.admittedIdentity", () => {
-  let mockLogger: any;
-
-  beforeEach(() => {
-    mockLogger = {
-      child: vi.fn().mockReturnThis(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
-  });
-
-  function makeGame() {
-    return new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
-  }
-
-  it("returns the stored (screened) identity for an admitted player", () => {
-    const game = makeGame();
-    (game as any).allClients.set("c1", {
-      clientID: "c1",
-      persistentID: "p1",
-      username: "SnugglePuppy",
-      clanTag: null,
-    });
-
-    expect(game.admittedIdentity("p1")).toEqual({
-      username: "SnugglePuppy",
-      clanTag: null,
-    });
-  });
-
-  it("returns null for an unknown player", () => {
-    expect(makeGame().admittedIdentity("nobody")).toBeNull();
   });
 });

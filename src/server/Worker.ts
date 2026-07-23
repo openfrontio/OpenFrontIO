@@ -552,27 +552,28 @@ export async function startWorker() {
 
         // Gate the join and screen the display name in one API call: status
         // is purely the Turnstile verdict, and the response carries the
-        // display-ready (username, clanTag) pair, so a banned name is never
-        // visible — not even in the lobby. Turnstile gates the FIRST join
-        // only: an already-admitted player who reconnects (e.g. a socket
-        // drop during the lobby->start transition, after which the server
-        // has cleared their reconnection mapping) must not be re-challenged
-        // — their original token is single-use and was already redeemed —
-        // so they keep the identity screened at first admission instead.
+        // display-ready (username, clanTag) pair either way, so a banned
+        // name is never visible — not even in the lobby. Turnstile gates the
+        // FIRST join only: an already-admitted player who reconnects (e.g. a
+        // socket drop during the lobby->start transition) must not be
+        // re-challenged — their original token is single-use and was already
+        // redeemed — so the token is omitted for them; the resulting
+        // "rejected" verdict is moot and only the censored identity is used.
         if (ServerEnv.env() !== GameEnv.Dev) {
-          if (!gm.wasAdmitted(clientMsg.gameID, persistentId)) {
-            const verdict = await verifyJoin(
-              ip,
-              clientMsg.turnstileToken,
-              clientMsg.username,
-              clientMsg.clanTag ?? null,
-            );
-            switch (verdict.status) {
-              case "approved":
-                username = verdict.username;
-                clanTag = verdict.clanTag;
-                break;
-              case "rejected":
+          const isReadmit = gm.wasAdmitted(clientMsg.gameID, persistentId);
+          const verdict = await verifyJoin(
+            ip,
+            isReadmit ? null : clientMsg.turnstileToken,
+            clientMsg.username,
+            clientMsg.clanTag ?? null,
+          );
+          switch (verdict.status) {
+            case "approved":
+              username = verdict.username;
+              clanTag = verdict.clanTag;
+              break;
+            case "rejected":
+              if (!isReadmit) {
                 log.warn("Unauthorized: Turnstile token rejected", {
                   persistentID: persistentId,
                   gameID: clientMsg.gameID,
@@ -580,23 +581,19 @@ export async function startWorker() {
                 });
                 ws.close(1002, "Unauthorized: Turnstile token rejected");
                 return;
-              case "error":
-                // Fail open with the name as-is, allow the client to join.
-                log.error("join_verify error", {
-                  persistentID: persistentId,
-                  gameID: clientMsg.gameID,
-                  reason: verdict.reason,
-                });
-            }
-          } else {
-            const admitted = gm.admittedIdentity(
-              clientMsg.gameID,
-              persistentId,
-            );
-            if (admitted !== null) {
-              username = admitted.username;
-              clanTag = admitted.clanTag;
-            }
+              }
+              if (verdict.username !== null) {
+                username = verdict.username;
+                clanTag = verdict.clanTag;
+              }
+              break;
+            case "error":
+              // Fail open: the locally screened name stands.
+              log.error("join_verify error", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: verdict.reason,
+              });
           }
         }
 

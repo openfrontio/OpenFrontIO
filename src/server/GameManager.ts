@@ -60,13 +60,6 @@ export class GameManager {
     return this.games.get(gameID)?.wasAdmitted(persistentID) ?? false;
   }
 
-  admittedIdentity(
-    gameID: GameID,
-    persistentID: string,
-  ): { username: string; clanTag: string | null } | null {
-    return this.games.get(gameID)?.admittedIdentity(persistentID) ?? null;
-  }
-
   createGame(
     id: GameID,
     gameConfig: Partial<GameConfig> | undefined,
