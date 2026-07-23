@@ -20,6 +20,7 @@ import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { archive, finalizeGameRecord } from "./Archive";
+import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
@@ -486,11 +487,14 @@ export async function startWorker() {
           return;
         }
 
-        // Default identity for paths that skip join_verify (Dev, and
-        // re-admitted reconnects with no stored identity). Screened joins
-        // overwrite it with the API's display-ready pair below.
-        let username = clientMsg.username;
-        let clanTag = clientMsg.clanTag?.toUpperCase() ?? null;
+        // Basic local screen as the fallback identity for every path
+        // join_verify doesn't cover: Dev, API failure (fail-open joins), and
+        // re-admitted reconnects with no stored identity. An approved
+        // join_verify overwrites it with the API's display-ready pair below.
+        let { username, clanTag } = censorPlayer(
+          clientMsg.username,
+          clientMsg.clanTag ?? null,
+        );
 
         // Try to reconnect an existing client (e.g., page refresh).
         // If successful, skip all authorization — the client keeps the

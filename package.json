@@ -113,6 +113,7 @@
     "limiter": "^3.0.0",
     "nanoid": "^5.1.11",
     "node-html-parser": "^7.1.0",
+    "obscenity": "^0.4.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "winston": "^3.19.0",
