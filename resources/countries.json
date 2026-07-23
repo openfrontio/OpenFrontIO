@@ -64,6 +64,11 @@
     "name": "Aland Islands"
   },
   {
+    "code": "Alash Autonomy",
+    "continent": "Asia",
+    "name": "Alash Autonomy"
+  },
+  {
     "code": "Alaska",
     "continent": "North America",
     "name": "Alaska"
@@ -459,6 +464,11 @@
     "code": "buenos_aires",
     "continent": "South America",
     "name": "Buenos Aires"
+  },
+  {
+    "code": "Bukhara",
+    "continent": "Asia",
+    "name": "Bukhara"
   },
   {
     "code": "bg",
@@ -1143,6 +1153,16 @@
     "name": "Gibraltar"
   },
   {
+    "code": "Göktürks Khaganate",
+    "continent": "Asia",
+    "name": "Göktürks Khaganate"
+  },
+  {
+    "code": "Golden Horde",
+    "continent": "Asia",
+    "name": "Golden Horde"
+  },
+  {
     "code": "Grand Duchy of Finland",
     "continent": "Europe",
     "name": "Grand Duchy of Finland"
@@ -1417,6 +1437,11 @@
     "name": "Kayin"
   },
   {
+    "code": "Kazakh Khanate",
+    "continent": "Asia",
+    "name": "Kazakh Khanate"
+  },
+  {
     "code": "Kazakh SSR",
     "continent": "Asia",
     "name": "Kazakh SSR"
@@ -1460,6 +1485,11 @@
     "code": "Khemet",
     "continent": "Africa",
     "name": "Khemet"
+  },
+  {
+    "code": "Khiva",
+    "continent": "Asia",
+    "name": "Khiva"
   },
   {
     "code": "Kingdom of Araucania and Patagonia",
@@ -3500,6 +3530,11 @@
     "name": "Timor-Leste"
   },
   {
+    "code": "Timurid Empire",
+    "continent": "Asia",
+    "name": "Timurid Empire"
+  },
+  {
     "code": "tg",
     "continent": "Africa",
     "name": "Togo"
@@ -3543,6 +3578,16 @@
     "code": "tn",
     "continent": "Africa",
     "name": "Tunisia"
+  },
+  {
+    "code": "Turkestan Autonomy",
+    "continent": "Asia",
+    "name": "Turkestan Autonomy"
+  },
+  {
+    "code": "Turkestan",
+    "continent": "Asia",
+    "name": "Turkestan"
   },
   {
     "code": "tr",
