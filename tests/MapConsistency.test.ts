@@ -1,6 +1,12 @@
 import fs from "fs";
 import path from "path";
-import { GameMapName, GameMapType, MapInfo, maps } from "../src/core/game/Game";
+import {
+  type CustomTribe,
+  GameMapName,
+  GameMapType,
+  MapInfo,
+  maps,
+} from "../src/core/game/Game";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +63,18 @@ function readInfoJson(key: GameMapName): Record<string, unknown> | null {
 function orOmitted(value: unknown): unknown {
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
   return value || undefined;
+}
+
+/**
+ * Normalize info.json custom_tribes (mixed string/object array) to the
+ * Maps.gen.ts format (all CustomTribe objects with name and optional coordinates).
+ */
+function normalizeCustomTribes(raw: unknown): CustomTribe[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  return raw.map((entry) => {
+    if (typeof entry === "string") return { name: entry };
+    return entry as CustomTribe;
+  });
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -145,7 +163,11 @@ describe("Map consistency", () => {
           map.specialTeamCount,
         ],
         ["themes", orOmitted(info.themes), map.themes],
-        ["custom_tribes", orOmitted(info.custom_tribes), map.customTribes],
+        [
+          "custom_tribes",
+          normalizeCustomTribes(info.custom_tribes),
+          map.customTribes,
+        ],
       ];
       for (const [field, infoValue, mapValue] of fields) {
         if (JSON.stringify(infoValue) !== JSON.stringify(mapValue)) {
