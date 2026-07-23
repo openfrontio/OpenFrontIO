@@ -412,14 +412,18 @@
     "hard": "Plutonium",
     "legendary": "Legendary",
     "per_day": "/day",
-    "public_lobbies": "Create public lobbies",
+    "public_lobbies": "Public lobbies",
+    "public_lobbies_info": "Host custom lobbies that are publicly listed for anyone to join.",
     "rare": "Rare",
     "search": "Search...",
     "soft": "Caps",
     "title": "Cosmetics",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
-    "usd_value": "Value: {usd}"
+    "unlimited_ranked_info": "No limit on how many ranked games you can play.",
+    "usd_value": "Value: {usd}",
+    "verified_name": "Verified username",
+    "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
