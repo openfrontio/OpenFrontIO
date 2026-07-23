@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import featuredStream from "../../../resources/featured-stream.json";
 import { getFeaturedStream } from "../../../src/client/Api";
-import { cornerFromCenter } from "../../../src/client/FeaturedStream";
+import {
+  cornerFromCenter,
+  isOffFrame,
+} from "../../../src/client/FeaturedStream";
 import { FeaturedStreamSchema } from "../../../src/core/ApiSchemas";
 
 describe("FeaturedStream", () => {
@@ -120,6 +123,21 @@ describe("FeaturedStream", () => {
       expect(cornerFromCenter(900, 100, 1000, 800)).toBe("tr");
       expect(cornerFromCenter(100, 700, 1000, 800)).toBe("bl");
       expect(cornerFromCenter(900, 700, 1000, 800)).toBe("br");
+    });
+  });
+
+  describe("isOffFrame", () => {
+    it("is false while the center is inside the viewport", () => {
+      expect(isOffFrame(500, 400, 1000, 800)).toBe(false);
+      expect(isOffFrame(0, 0, 1000, 800)).toBe(false);
+      expect(isOffFrame(1000, 800, 1000, 800)).toBe(false);
+    });
+
+    it("is true once the center passes any edge (flick-to-dismiss)", () => {
+      expect(isOffFrame(-1, 400, 1000, 800)).toBe(true); // left
+      expect(isOffFrame(1001, 400, 1000, 800)).toBe(true); // right
+      expect(isOffFrame(500, -1, 1000, 800)).toBe(true); // top
+      expect(isOffFrame(500, 801, 1000, 800)).toBe(true); // bottom
     });
   });
 });
