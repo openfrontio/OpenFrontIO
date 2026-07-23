@@ -50,15 +50,21 @@ export class GameManager {
     persistentID: string,
     gameID: GameID,
     lastTurn: number = 0,
-    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
+    return game.rejoinClient(ws, persistentID, lastTurn);
   }
 
   wasAdmitted(gameID: GameID, persistentID: string): boolean {
     return this.games.get(gameID)?.wasAdmitted(persistentID) ?? false;
+  }
+
+  admittedIdentity(
+    gameID: GameID,
+    persistentID: string,
+  ): { username: string; clanTag: string | null } | null {
+    return this.games.get(gameID)?.admittedIdentity(persistentID) ?? null;
   }
 
   createGame(

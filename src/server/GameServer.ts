@@ -38,7 +38,6 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { ServerEnv } from "./ServerEnv";
-import { fetchCensoredPlayers } from "./UsernameChecker";
 import { VoteRound } from "./VoteTally";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -507,6 +506,21 @@ export class GameServer {
     return this.admittedPersistentIds.has(persistentID);
   }
 
+  // The identity screened by join_verify at first admission, for reconnects
+  // that skip the check (their single-use Turnstile token is spent). Looked
+  // up by persistentID because the reconnection mapping may already be
+  // cleared by the time the player re-joins.
+  public admittedIdentity(
+    persistentID: string,
+  ): { username: string; clanTag: string | null } | null {
+    for (const client of this.allClients.values()) {
+      if (client.persistentID === persistentID) {
+        return { username: client.username, clanTag: client.clanTag };
+      }
+    }
+    return null;
+  }
+
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
@@ -618,13 +632,13 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // WebSocket is always updated. Optional identity updates are applied only
-  // before the game has started.
+  // WebSocket is always updated. The client's identity is never — it was
+  // screened by join_verify at the original join, and a rejoin skips that
+  // check, so accepting a new name here would bypass moderation.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
-    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -644,19 +658,6 @@ export class GameServer {
       (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
-    if (identityUpdate && !this.hasStarted()) {
-      // The verified badge vouches for the exact join name — a pre-start
-      // identity change under it must drop the badge (the rejoin path skips
-      // the Worker's join-time validation).
-      if (
-        identityUpdate.username !== client.username &&
-        client.cosmetics?.verified
-      ) {
-        delete client.cosmetics.verified;
-      }
-      client.username = identityUpdate.username;
-      client.clanTag = identityUpdate.clanTag;
-    }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
 
@@ -958,39 +959,7 @@ export class GameServer {
     // Set last ping to start so we don't immediately stop the game
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
-    void this.censorRosterAndStart();
-  }
 
-  // Screen the roster against the API's username_check before the start info
-  // is built: the response carries the display-ready (username, clanTag) pair
-  // for every player and is fixed for the whole game. On failure the game
-  // starts with names as-is rather than blocking the start.
-  private async censorRosterAndStart(): Promise<void> {
-    const clients = [...this.activeClients];
-    if (clients.length > 0) {
-      const checked = await fetchCensoredPlayers(
-        clients.map((c) => ({ username: c.username, clanTag: c.clanTag })),
-      );
-      if (checked === null) {
-        this.log.error("username check failed, starting with names as-is");
-      } else {
-        clients.forEach((c, i) => {
-          c.username = checked[i].username;
-          c.clanTag = checked[i].clanTag;
-        });
-      }
-    }
-    if (this._hasEnded) {
-      return;
-    }
-    try {
-      this.launch();
-    } catch (error) {
-      this.log.error(`error launching game: ${error}`);
-    }
-  }
-
-  private launch() {
     const friendsFor = this.buildFriendsLookup();
 
     const result = GameStartInfoSchema.safeParse({
