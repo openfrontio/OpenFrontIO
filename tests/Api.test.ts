@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getApiBase, getAudience } from "../src/client/Api";
 import { ClientEnv } from "../src/client/ClientEnv";
 
@@ -32,6 +32,13 @@ describe("getApiBase localhost fallback", () => {
 
 describe("getAudience / getApiBase from BOOTSTRAP_CONFIG", () => {
   beforeEach(() => ClientEnv.reset());
+
+  // setConfig sets window.BOOTSTRAP_CONFIG; clear it (and the cached env) so a
+  // stray openfront.io/openfront.dev value can't leak into later tests.
+  afterEach(() => {
+    delete (window as any).BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+  });
 
   it("returns the configured audience (desktop staging)", () => {
     setConfig("openfront.dev");

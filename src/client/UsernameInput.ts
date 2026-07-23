@@ -55,6 +55,13 @@ export class UsernameInput extends LitElement {
   private clanCheckGen = 0;
   private clanCheck: Promise<string | null> = Promise.resolve(null);
 
+  // Resolves once the one-shot Steam name-seed has settled (or immediately for
+  // non-Steam players). The join flow awaits this before reading getUsername()
+  // so a fast join can't start the game under the generated anon name before
+  // the Steam persona lands. Always resolves — never rejects — so a failed or
+  // slow getUser() falls back to the generated name instead of blocking.
+  private steamSeedReady: Promise<void> = Promise.resolve();
+
   // Remove static styles since we're using Tailwind
 
   createRenderRoot() {
@@ -159,6 +166,15 @@ export class UsernameInput extends LitElement {
     return this.clanCheck;
   }
 
+  // Resolves once the one-shot Steam name-seed has settled (immediately for
+  // non-Steam players, or once nothing was left to seed). The join flow awaits
+  // this before reading getUsername() so a fast join reads the Steam persona
+  // rather than the interim generated anon name. Never blocks: the underlying
+  // chain always resolves, even when getUser() fails or the persona is invalid.
+  public whenSeeded(): Promise<void> {
+    return this.steamSeedReady;
+  }
+
   private startClanCheck() {
     const gen = ++this.clanCheckGen;
     const tag = this.clanTag;
@@ -213,18 +229,26 @@ export class UsernameInput extends LitElement {
       // the player hasn't typed their own name while getUser() was in flight,
       // so a late Steam result never clobbers a name they entered.
       const generated = this.baseUsername;
-      steamSDK.getUser().then((user) => {
-        if (this.baseUsername !== generated) return;
-        // Steam personas can contain characters our usernames disallow (e.g.
-        // brackets) or exceed the length limit; strip brackets, trim, and only
-        // accept the persona if it validates — otherwise keep the generated
-        // name so the player can always start a game.
-        const candidate = user?.name?.replace(/[[\]]/g, "").trim();
-        if (candidate && validateUsername(candidate).isValid) {
-          this.baseUsername = candidate;
-          this.validateAndStore();
-        }
-      });
+      // Store the seeding promise so the join path can await it (see
+      // whenSeeded). The chain never rejects — on any failure we keep the
+      // generated name — so awaiting it can only delay, never block, a join.
+      this.steamSeedReady = steamSDK
+        .getUser()
+        .then((user) => {
+          if (this.baseUsername !== generated) return;
+          // Steam personas can contain characters our usernames disallow (e.g.
+          // brackets) or exceed the length limit; strip brackets, trim, and only
+          // accept the persona if it validates — otherwise keep the generated
+          // name so the player can always start a game.
+          const candidate = user?.name?.replace(/[[\]]/g, "").trim();
+          if (candidate && validateUsername(candidate).isValid) {
+            this.baseUsername = candidate;
+            this.validateAndStore();
+          }
+        })
+        .catch(() => {
+          // Swallow: keep the generated name so the player can always play.
+        });
     }
   }
 

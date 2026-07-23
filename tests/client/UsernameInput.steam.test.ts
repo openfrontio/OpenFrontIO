@@ -54,9 +54,14 @@ describe("UsernameInput Steam seeding", () => {
     });
     const el = new UsernameInput();
     el.connectedCallback();
+    // Captured synchronously, before the async getUser() seed resolves: this is
+    // the generated anon name loadStoredUsername() just produced.
+    const generated = el.getUsername();
     await new Promise((r) => setTimeout(r, 0));
-    const name = el.getUsername();
-    expect(name).not.toBe("x".repeat(100));
-    expect(name.length).toBeGreaterThan(0);
+    // The invalid persona must be rejected and the exact generated name kept —
+    // not merely replaced by some other valid name.
+    expect(el.getUsername()).toBe(generated);
+    expect(generated).not.toBe("x".repeat(100));
+    expect(generated.length).toBeGreaterThan(0);
   });
 });
