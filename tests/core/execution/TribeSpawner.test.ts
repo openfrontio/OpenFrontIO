@@ -144,7 +144,7 @@ describe("TribeSpawner", () => {
     expect(execs[1].tile).toBeUndefined();
     // OOB must not appear — it has coordinates and failed to spawn.
     const names = execs.map(
-      (e) => (e as { playerInfo: { name: string } }).playerInfo.name,
+      (e) => (e as unknown as { playerInfo: { name: string } }).playerInfo.name,
     );
     expect(names).not.toContain("OOB");
     expect(warnSpy).toHaveBeenCalled();
@@ -169,7 +169,7 @@ describe("TribeSpawner", () => {
     expect(execs).toHaveLength(3);
     // "FixedFail" must NOT appear — it has coordinates and failed to spawn.
     const names = execs.map(
-      (e) => (e as { playerInfo: { name: string } }).playerInfo.name,
+      (e) => (e as unknown as { playerInfo: { name: string } }).playerInfo.name,
     );
     expect(names).not.toContain("FixedFail");
     expect(warnSpy).toHaveBeenCalled();
