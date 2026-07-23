@@ -52,8 +52,9 @@ type mapInfo struct {
 	// Empty or omitted uses the "default" theme.
 	Themes []string `json:"themes"`
 	// Custom tribe names that take priority over theme-generated names.
-	// Each entry is used as-is (no prefix/suffix composition).
-	CustomTribes []string `json:"custom_tribes"`
+	// Each entry is either a plain string (random spawn) or an object
+	// with "name" and "coordinates" for a fixed spawn location.
+	CustomTribes []json.RawMessage `json:"custom_tribes"`
 	// Nations defined on this map (used for validation only).
 	Nations []struct {
 		Name string `json:"name"`
@@ -76,6 +77,54 @@ func (m mapInfo) displayName() string {
 		return m.DisplayName
 	}
 	return m.Name
+}
+
+// customTribe represents a single custom tribe entry, which is either a
+// plain string (random spawn) or an object with name and optional coordinates.
+type customTribe struct {
+	Name        string
+	Coordinates *[2]int // nil for random-spawn tribes
+}
+
+// parseCustomTribes decodes the mixed string/object custom_tribes array.
+func parseCustomTribes(raw []json.RawMessage) ([]customTribe, error) {
+	tribes := make([]customTribe, 0, len(raw))
+	for i, r := range raw {
+		// Try as plain string first.
+		var s string
+		if err := json.Unmarshal(r, &s); err == nil {
+			if s == "" {
+				return nil, fmt.Errorf("custom_tribes[%d]: empty string", i)
+			}
+			tribes = append(tribes, customTribe{Name: s})
+			continue
+		}
+		// Try as object with name and optional coordinates.
+		var obj struct {
+			Name        string           `json:"name"`
+			Coordinates *json.RawMessage `json:"coordinates"`
+		}
+		if err := json.Unmarshal(r, &obj); err != nil {
+			return nil, fmt.Errorf("custom_tribes[%d]: invalid entry: %w", i, err)
+		}
+		if obj.Name == "" {
+			return nil, fmt.Errorf("custom_tribes[%d]: name is empty", i)
+		}
+		ct := customTribe{Name: obj.Name}
+		if obj.Coordinates != nil {
+			var coords []int64
+			if err := json.Unmarshal(*obj.Coordinates, &coords); err != nil {
+				return nil, fmt.Errorf("custom_tribes[%d]: coordinates must be [x, y]", i)
+			}
+			if len(coords) != 2 {
+				return nil, fmt.Errorf("custom_tribes[%d]: coordinates must be [x, y]", i)
+			}
+			c := [2]int{int(coords[0]), int(coords[1])}
+			ct.Coordinates = &c
+		}
+		tribes = append(tribes, ct)
+	}
+	return tribes, nil
 }
 
 // loadMapInfos reads and validates every non-test map's info.json, in
@@ -123,18 +172,17 @@ func loadMapInfos() ([]mapInfo, error) {
 		if len(info.Categories) == 0 {
 			return nil, fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
 		}
-		for _, ct := range info.CustomTribes {
-			if ct == "" {
-				return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains an empty string", m.Name)
-			}
+		parsedTribes, err := parseCustomTribes(info.CustomTribes)
+		if err != nil {
+			return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" %w", m.Name, err)
 		}
 		{
 			ctSeen := make(map[string]bool)
-			for _, ct := range info.CustomTribes {
-				if ctSeen[ct] {
-					return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains duplicate %q", m.Name, ct)
+			for _, ct := range parsedTribes {
+				if ctSeen[ct.Name] {
+					return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains duplicate %q", m.Name, ct.Name)
 				}
-				ctSeen[ct] = true
+				ctSeen[ct.Name] = true
 			}
 		}
 		{
@@ -142,9 +190,9 @@ func loadMapInfos() ([]mapInfo, error) {
 			for _, n := range info.Nations {
 				nationNames[n.Name] = true
 			}
-			for _, ct := range info.CustomTribes {
-				if nationNames[ct] {
-					return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains %q which is already a nation name", m.Name, ct)
+			for _, ct := range parsedTribes {
+				if nationNames[ct.Name] {
+					return nil, fmt.Errorf("map %s: info.json \"custom_tribes\" contains %q which is already a nation name", m.Name, ct.Name)
 				}
 			}
 		}
@@ -227,8 +275,12 @@ func generateMapsTS(infos []mapInfo) error {
 	b.WriteString("  specialTeamCount?: number;\n")
 	b.WriteString("  /** Tribe name theme(s) (keys in tribeNameThemes.json). */\n")
 	b.WriteString("  themes?: string[];\n")
-	b.WriteString("  /** Custom tribe names with priority over theme-generated names. */\n")
-	b.WriteString("  customTribes?: string[];\n")
+	b.WriteString("  /** Custom tribe entry: a string (random spawn) or an object with name and coordinates. */\n")
+	b.WriteString("  customTribes?: CustomTribe[];\n")
+	b.WriteString("}\n\n")
+	b.WriteString("export interface CustomTribe {\n")
+	b.WriteString("  name: string;\n")
+	b.WriteString("  coordinates?: [number, number];\n")
 	b.WriteString("}\n\n")
 
 	b.WriteString("export const maps: readonly MapInfo[] = [\n")
@@ -263,12 +315,17 @@ func generateMapsTS(infos []mapInfo) error {
 			b.WriteString("],\n")
 		}
 		if len(info.CustomTribes) > 0 {
+			parsed, _ := parseCustomTribes(info.CustomTribes)
 			b.WriteString("    customTribes: [")
-			for i, ct := range info.CustomTribes {
+			for i, ct := range parsed {
 				if i > 0 {
 					b.WriteString(", ")
 				}
-				b.WriteString(fmt.Sprintf("%q", ct))
+				if ct.Coordinates != nil {
+					b.WriteString(fmt.Sprintf("{name: %q, coordinates: [%d, %d]}", ct.Name, ct.Coordinates[0], ct.Coordinates[1]))
+				} else {
+					b.WriteString(fmt.Sprintf("{name: %q}", ct.Name))
+				}
 			}
 			b.WriteString("],\n")
 		}

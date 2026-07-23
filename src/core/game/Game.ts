@@ -105,6 +105,7 @@ export {
   GameMapType,
   mapCategoryOrder,
   maps,
+  type CustomTribe,
   type GameMapName,
   type MapCategory,
   type MapInfo,
