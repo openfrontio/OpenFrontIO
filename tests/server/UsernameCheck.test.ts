@@ -124,32 +124,6 @@ describe("GameServer username moderation", () => {
     expect(shadowNames).toContain(intent.username);
   });
 
-  it("does not repeat the intent while the verdict is unchanged", async () => {
-    const game = makeGame({ c1: "BadName" });
-    stubVerdict([0]);
-
-    await check(game);
-    await check(game);
-
-    expect(intents(game)).toHaveLength(1);
-  });
-
-  it("restores the original name when a ban clears (verdicts can flip)", async () => {
-    const game = makeGame({ c1: "BlackHawk" });
-    stubVerdict([0]);
-    await check(game);
-
-    stubVerdict([]);
-    await check(game);
-
-    expect(intents(game)).toHaveLength(2);
-    expect(intents(game)[1]).toMatchObject({
-      type: "censor_player",
-      clientID: "c1",
-      username: "BlackHawk",
-    });
-  });
-
   it("censors every client sharing a banned name", async () => {
     const game = makeGame({ c1: "BadName", c2: "BadName" });
     stubVerdict([0]);
@@ -164,20 +138,17 @@ describe("GameServer username moderation", () => {
     ).toEqual(["c1", "c2"]);
   });
 
-  it("keeps existing verdicts on a transient API failure", async () => {
+  it("logs an error and censors nothing when the API check fails", async () => {
     const game = makeGame({ c1: "BadName" });
-    stubVerdict([0]);
-    await check(game);
-    expect(intents(game)).toHaveLength(1);
-
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("boom")));
+
     await check(game);
 
-    // No restore intent: the ban stays applied until a successful poll says otherwise.
-    expect(intents(game)).toHaveLength(1);
+    expect(intents(game)).toHaveLength(0);
+    expect(mockLogger.error).toHaveBeenCalled();
   });
 
-  it("skips the poll entirely with no clients", async () => {
+  it("skips the check entirely with no clients", async () => {
     const game = makeGame({});
     const fetchMock = stubVerdict([]);
 

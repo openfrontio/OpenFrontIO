@@ -559,8 +559,7 @@ export const MarkDisconnectedIntentSchema = z.object({
 });
 
 // Server-injected only (username moderation verdicts from the API); rejected
-// when submitted by a client. `username` is the replacement display name — a
-// shadow name when a name gets banned, the original name when a ban clears.
+// when submitted by a client. `username` is the replacement shadow name.
 export const CensorPlayerIntentSchema = z.object({
   type: z.literal("censor_player"),
   clientID: ID,

@@ -1,8 +1,7 @@
 import { Execution, Game, Player } from "../game/Game";
 
 // Server-injected (username moderation): replaces the player's displayed name
-// with the username carried by the intent — a shadow name when the API bans a
-// name, the original name when a ban clears.
+// with the username carried by the intent (a server-chosen shadow name).
 export class CensorPlayerExecution implements Execution {
   constructor(
     private player: Player,

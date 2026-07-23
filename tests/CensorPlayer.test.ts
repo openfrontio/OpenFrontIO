@@ -45,7 +45,7 @@ describe("CensorPlayerExecution", () => {
     expect(clanPlayer.displayName()).toBe("[CLAN] ShadowName");
   });
 
-  test("a later execution restores the original name (verdicts can flip)", () => {
+  test("a later execution replaces the name again", () => {
     game.addExecution(new CensorPlayerExecution(player, "ShadowName"));
     executeTicks(game, 1);
     game.addExecution(new CensorPlayerExecution(player, "BadName"));
