@@ -146,6 +146,31 @@ describe("TribeSpawner", () => {
     warnSpy.mockRestore();
   });
 
+  test("failed positioned tribe is NOT spawned randomly", async () => {
+    const game = await setup("half_land_half_ocean", {
+      bots: 3,
+      gameMap: GameMapType.Asia,
+    });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Fallback"],
+      suffixes: ["Bot"],
+      customTribes: [{ name: "FixedFail", coordinates: [99999, 99999] }],
+    });
+
+    const spawner = new TribeSpawner(game, GAME_ID);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const execs = spawner.spawnTribes(3);
+
+    expect(execs).toHaveLength(3);
+    // "FixedFail" must NOT appear — it has coordinates and failed to spawn.
+    const names = execs.map(
+      (e) => (e as { playerInfo: { name: string } }).playerInfo.name,
+    );
+    expect(names).not.toContain("FixedFail");
+    warnSpy.mockRestore();
+  });
+
   test("random tribe selection avoids duplicates", async () => {
     const game = await setup("plains", {
       bots: 3,

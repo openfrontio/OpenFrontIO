@@ -98,7 +98,8 @@ export class TribeSpawner {
     // Use custom tribes first (random selection, no duplicates until exhausted).
     if (customTribes !== undefined) {
       const available = customTribes.filter(
-        (ct) => !this.usedCustomTribes.has(ct.name),
+        (ct) =>
+          ct.coordinates === undefined && !this.usedCustomTribes.has(ct.name),
       );
       if (available.length > 0) {
         const index = this.random.nextInt(0, available.length);
