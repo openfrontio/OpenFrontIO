@@ -75,7 +75,6 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     ServerEnv.jwtIssuer() + "/cosmetics.json",
-    ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
@@ -487,20 +486,18 @@ export async function startWorker() {
           return;
         }
 
-        // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
-        const { clanTag: censoredClanTag, username: censoredUsername } =
-          privilegeRefresher
-            .get()
-            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+        // No local profanity matching: display names are screened once at
+        // game start via the API's username_check, which returns the
+        // display-ready (username, clanTag) pair for the whole roster.
+        const username = clientMsg.username;
+        const clanTag = clientMsg.clanTag?.toUpperCase() ?? null;
 
         // Try to reconnect an existing client (e.g., page refresh)
         // If successful, skip all authorization
         if (
           gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-            clanTag: censoredClanTag,
+            username,
+            clanTag,
           })
         ) {
           return;
@@ -557,12 +554,12 @@ export async function startWorker() {
         // dropped to prevent impersonation. Fictional tags pass through.
         const resolution = privilegeRefresher
           .get()
-          .resolveClanTag(censoredClanTag, ownedClanTags);
+          .resolveClanTag(clanTag, ownedClanTags);
         if (resolution.dropped) {
           log.warn("Dropped clan tag: player is not a member", {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
-            clanTag: censoredClanTag,
+            clanTag,
           });
         }
         const resolvedClanTag = resolution.tag;
@@ -585,7 +582,7 @@ export async function startWorker() {
         if (
           enforceVerifiedBadge(
             cosmeticResult.cosmetics,
-            censoredUsername,
+            username,
             accountUsername ?? null,
           )
         ) {
@@ -637,7 +634,7 @@ export async function startWorker() {
           claims?.role ?? null,
           flares,
           ip,
-          censoredUsername,
+          username,
           resolvedClanTag,
           ws,
           cosmeticResult.cosmetics,

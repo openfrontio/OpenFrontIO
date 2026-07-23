@@ -46,7 +46,6 @@ export type Intent =
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
-  | CensorPlayerIntent
   | EmbargoAllIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
@@ -75,7 +74,6 @@ export type UpgradeStructureIntent = z.infer<
 >;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
-export type CensorPlayerIntent = z.infer<typeof CensorPlayerIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
   typeof MarkDisconnectedIntentSchema
 >;
@@ -558,14 +556,6 @@ export const MarkDisconnectedIntentSchema = z.object({
   isDisconnected: z.boolean(),
 });
 
-// Server-injected only (username moderation verdicts from the API); rejected
-// when submitted by a client. `username` is the replacement shadow name.
-export const CensorPlayerIntentSchema = z.object({
-  type: z.literal("censor_player"),
-  clientID: ID,
-  username: UsernameSchema,
-});
-
 export const KickPlayerIntentSchema = z.object({
   type: z.literal("kick_player"),
   // Either a live clientID (lobby / in-game kick) OR an account publicID, for
@@ -594,7 +584,6 @@ export const IntentSchema = z.discriminatedUnion("type", [
   CancelAttackIntentSchema,
   SpawnIntentSchema,
   MarkDisconnectedIntentSchema,
-  CensorPlayerIntentSchema,
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
   AllianceRequestIntentSchema,

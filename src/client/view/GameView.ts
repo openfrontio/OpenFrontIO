@@ -118,8 +118,6 @@ export class GameView implements GameMap {
   // tick (PlayerUpdates are partial — field presence means "changed").
   /** Names: nameData record applied, or a player was added. */
   private _namesDirty = true;
-  /** A moderation rename (censor_player) changed a display name this tick. */
-  private _displayNamesDirty = false;
   /** Relation matrix: allies/embargoes changed, or a player was added. */
   private _relationsDirty = true;
   /** Alliance clusters: allies changed, or a player was added. */
@@ -369,11 +367,6 @@ export class GameView implements GameMap {
 
       if (existing !== undefined) {
         existing.applyUpdate(pu);
-        // A name field on a partial update means a moderation rename landed
-        // this tick; the map name pass must re-resolve its cached strings.
-        if (pu.name !== undefined || pu.displayName !== undefined) {
-          this._displayNamesDirty = true;
-        }
         const nextNameData = gu.playerNameViewData?.[pu.id];
         if (nextNameData !== undefined) {
           existing.nameData = nextNameData;
@@ -999,17 +992,6 @@ export class GameView implements GameMap {
 
   myClientID(): ClientID | undefined {
     return this._myClientID;
-  }
-
-  /**
-   * True once when a moderation rename changed a display name this tick;
-   * cleared on read. Consumed by WebGLFrameBuilder to re-resolve the names
-   * drawn on the map.
-   */
-  consumeDisplayNamesDirty(): boolean {
-    const dirty = this._displayNamesDirty;
-    this._displayNamesDirty = false;
-    return dirty;
   }
 
   myPlayer(): PlayerView | null {

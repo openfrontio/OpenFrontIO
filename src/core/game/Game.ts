@@ -547,8 +547,6 @@ export interface Player {
   info(): PlayerInfo;
   name(): string;
   displayName(): string;
-  // Replace the displayed name (username moderation via censor_player intent).
-  rename(name: string): void;
   clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;

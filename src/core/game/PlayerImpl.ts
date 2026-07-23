@@ -3,7 +3,6 @@ import { ClientID } from "../Schemas";
 import {
   assertNever,
   findClosestBy,
-  formatPlayerDisplayName,
   minInt,
   simpleHash,
   toInt,
@@ -148,10 +147,6 @@ export class PlayerImpl implements Player {
    * first emission (full snapshot sent).
    */
   public lastSentUpdate: PlayerUpdate | undefined;
-
-  // Moderation rename (censor_player intent); null = playerInfo name applies.
-  private _nameOverride: string | null = null;
-  private _displayNameOverride: string | null = null;
 
   constructor(
     private mg: GameImpl,
@@ -358,17 +353,10 @@ export class PlayerImpl implements Player {
   }
 
   name(): string {
-    return this._nameOverride ?? this.playerInfo.name;
+    return this.playerInfo.name;
   }
   displayName(): string {
-    return this._displayNameOverride ?? this.playerInfo.displayName;
-  }
-  rename(name: string): void {
-    this._nameOverride = name;
-    this._displayNameOverride = formatPlayerDisplayName(
-      name,
-      this.playerInfo.clanTag,
-    );
+    return this.playerInfo.displayName;
   }
 
   clientID(): ClientID | null {

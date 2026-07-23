@@ -200,9 +200,6 @@ export class WebGLFrameBuilder {
 
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
-    if (gameView.consumeDisplayNamesDirty()) {
-      this.refreshNames(gameView);
-    }
     this.syncPlayerEffects(gameView);
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);

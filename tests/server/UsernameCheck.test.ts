@@ -1,79 +1,123 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/Game";
 import { GameServer } from "../../src/server/GameServer";
-import { shadowNames } from "../../src/server/Privilege";
-import { fetchBannedUsernames } from "../../src/server/UsernameChecker";
+import { fetchCensoredPlayers } from "../../src/server/UsernameChecker";
 
-// fetchBannedUsernames resolves its endpoint from ServerEnv.jwtIssuer(),
+// fetchCensoredPlayers resolves its endpoint from ServerEnv.jwtIssuer(),
 // which throws if DOMAIN is unset.
 process.env.DOMAIN ??= "localhost";
 
-function jsonResponse(body: unknown, ok = true) {
-  return { ok, status: ok ? 200 : 500, json: async () => body };
+function jsonResponse(body: unknown, status = 200) {
+  return { ok: status < 300, status, json: async () => body };
 }
 
-describe("fetchBannedUsernames", () => {
+describe("fetchCensoredPlayers", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("maps bannedIndices back to usernames", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ bannedIndices: [0, 2] }));
+  it("returns the display-ready pairs and posts the roster", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        players: [
+          { username: "Alice", clanTag: "COOL" },
+          { username: "SnugglePuppy", clanTag: null },
+        ],
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    const banned = await fetchBannedUsernames(["Alice", "Bob", "BadName"]);
-    expect(banned).toEqual(new Set(["Alice", "BadName"]));
+    const result = await fetchCensoredPlayers([
+      { username: "Alice", clanTag: "CoOl" },
+      { username: "xXblackxX", clanTag: null },
+    ]);
 
+    expect(result).toEqual([
+      { username: "Alice", clanTag: "COOL" },
+      { username: "SnugglePuppy", clanTag: null },
+    ]);
     const [, init] = fetchMock.mock.calls[0];
     expect(JSON.parse(init.body)).toEqual({
-      usernames: ["Alice", "Bob", "BadName"],
+      players: [
+        { username: "Alice", clanTag: "CoOl" },
+        { username: "xXblackxX", clanTag: null },
+      ],
     });
   });
 
-  it("returns an empty set when everything passes", async () => {
+  it("normalizes an absent clanTag to null", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ bannedIndices: [] })),
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          players: [{ username: "BlackHawk" }],
+        }),
+      ),
     );
-    expect(await fetchBannedUsernames(["Alice"])).toEqual(new Set());
+    expect(
+      await fetchCensoredPlayers([{ username: "BlackHawk", clanTag: null }]),
+    ).toEqual([{ username: "BlackHawk", clanTag: null }]);
   });
 
-  it("returns null on a non-2xx response", async () => {
+  it("returns null when the response length does not match the request", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ message: "boom" }, false)),
+      vi.fn().mockResolvedValue(jsonResponse({ players: [] })),
     );
-    expect(await fetchBannedUsernames(["Alice"])).toBeNull();
+    expect(
+      await fetchCensoredPlayers([{ username: "Alice", clanTag: null }]),
+    ).toBeNull();
   });
 
   it("returns null on a malformed body", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ banned: ["Alice"] })),
+      vi.fn().mockResolvedValue(jsonResponse({ bannedIndices: [0] })),
     );
-    expect(await fetchBannedUsernames(["Alice"])).toBeNull();
+    expect(
+      await fetchCensoredPlayers([{ username: "Alice", clanTag: null }]),
+    ).toBeNull();
   });
 
-  it("returns null when fetch rejects (network error / timeout)", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("network down")),
-    );
-    expect(await fetchBannedUsernames(["Alice"])).toBeNull();
+  it("returns null on a 4xx without retrying", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: "bad payload" }, 400));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await fetchCensoredPlayers([{ username: "Alice", clanTag: null }]),
+    ).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores out-of-range indices", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ bannedIndices: [0, 99] })),
-    );
-    expect(await fetchBannedUsernames(["Alice"])).toEqual(new Set(["Alice"]));
+  it("retries once after a 5xx and succeeds", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ message: "boom" }, 500))
+      .mockResolvedValue(
+        jsonResponse({ players: [{ username: "Alice", clanTag: null }] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await fetchCensoredPlayers([{ username: "Alice", clanTag: null }]),
+    ).toEqual([{ username: "Alice", clanTag: null }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns null when both attempts fail (network error / timeout)", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await fetchCensoredPlayers([{ username: "Alice", clanTag: null }]),
+    ).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
-describe("GameServer username moderation", () => {
+describe("GameServer roster censoring at start", () => {
   let mockLogger: any;
 
   beforeEach(() => {
@@ -90,85 +134,68 @@ describe("GameServer username moderation", () => {
     vi.restoreAllMocks();
   });
 
-  function makeGame(usernames: Record<string, string>) {
+  function makeGame(
+    players: { clientID: string; username: string; clanTag: string | null }[],
+  ) {
     const game = new GameServer("test-game", mockLogger, Date.now(), {
       gameType: GameType.Private,
     } as any);
-    for (const [clientID, username] of Object.entries(usernames)) {
-      (game as any).allClients.set(clientID, { clientID, username });
+    for (const p of players) {
+      game.activeClients.push(p as any);
     }
     return game;
   }
 
-  const check = (game: GameServer) => (game as any).checkUsernames();
-  const intents = (game: GameServer) => (game as any).intents;
+  const censorAndStart = (game: GameServer) =>
+    (game as any).censorRosterAndStart();
 
-  const stubVerdict = (bannedIndices: number[]) => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ bannedIndices }));
-    vi.stubGlobal("fetch", fetchMock);
-    return fetchMock;
-  };
+  it("applies the display-ready pairs to the roster", async () => {
+    const game = makeGame([
+      { clientID: "c1", username: "xXblackxX", clanTag: "BAD" },
+      { clientID: "c2", username: "Alice", clanTag: "cool" },
+    ]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          players: [
+            { username: "SnugglePuppy", clanTag: null },
+            { username: "Alice", clanTag: "COOL" },
+          ],
+        }),
+      ),
+    );
 
-  it("injects a censor_player intent with a shadow name on a ban", async () => {
-    const game = makeGame({ c1: "BadName", c2: "Alice" });
-    stubVerdict([0]);
+    await censorAndStart(game);
 
-    await check(game);
-
-    expect(intents(game)).toHaveLength(1);
-    const intent = intents(game)[0];
-    expect(intent.type).toBe("censor_player");
-    expect(intent.clientID).toBe("c1");
-    expect(shadowNames).toContain(intent.username);
+    expect(game.activeClients[0].username).toBe("SnugglePuppy");
+    expect(game.activeClients[0].clanTag).toBeNull();
+    expect(game.activeClients[1].username).toBe("Alice");
+    expect(game.activeClients[1].clanTag).toBe("COOL");
   });
 
-  it("censors every client sharing a banned name", async () => {
-    const game = makeGame({ c1: "BadName", c2: "BadName" });
-    stubVerdict([0]);
-
-    await check(game);
-
-    expect(intents(game)).toHaveLength(2);
-    expect(
-      intents(game)
-        .map((i: any) => i.clientID)
-        .sort(),
-    ).toEqual(["c1", "c2"]);
-  });
-
-  it("logs an error and censors nothing when the API check fails", async () => {
-    const game = makeGame({ c1: "BadName" });
+  it("starts with names as-is when the check fails", async () => {
+    const game = makeGame([
+      { clientID: "c1", username: "xXblackxX", clanTag: "BAD" },
+    ]);
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("boom")));
 
-    await check(game);
+    await censorAndStart(game);
 
-    expect(intents(game)).toHaveLength(0);
-    expect(mockLogger.error).toHaveBeenCalled();
+    expect(game.activeClients[0].username).toBe("xXblackxX");
+    expect(game.activeClients[0].clanTag).toBe("BAD");
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "username check failed, starting with names as-is",
+    );
   });
 
-  it("skips the check entirely with no clients", async () => {
-    const game = makeGame({});
-    const fetchMock = stubVerdict([]);
+  it("skips the request entirely with an empty roster", async () => {
+    const game = makeGame([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
 
-    await check(game);
+    await censorAndStart(game);
 
     expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("rejects censor_player intents submitted by clients", () => {
-    const game = makeGame({ c1: "Alice" });
-    const result = game.handleIntent(
-      { type: "censor_player", clientID: "c2", username: "Evil" } as any,
-      {
-        clientID: "c1",
-        isLobbyCreator: false,
-        isAdmin: false,
-        isAdminBot: false,
-      },
-    );
-    expect(result.status).toBe(400);
-    expect(intents(game)).toHaveLength(0);
   });
 });

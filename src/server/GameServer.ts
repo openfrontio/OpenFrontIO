@@ -37,9 +37,8 @@ import { createPartialGameRecord, simpleHash } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
-import { shadowNames } from "./Privilege";
 import { ServerEnv } from "./ServerEnv";
-import { fetchBannedUsernames } from "./UsernameChecker";
+import { fetchCensoredPlayers } from "./UsernameChecker";
 import { VoteRound } from "./VoteTally";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -350,9 +349,6 @@ export class GameServer {
     switch (stamped.type) {
       case "mark_disconnected":
         return { status: 400, error: "mark_disconnected is server-internal" };
-
-      case "censor_player":
-        return { status: 400, error: "censor_player is server-internal" };
 
       case "kick_player": {
         if (!actor.isLobbyCreator && !actor.isAdmin) {
@@ -962,7 +958,39 @@ export class GameServer {
     // Set last ping to start so we don't immediately stop the game
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
+    void this.censorRosterAndStart();
+  }
 
+  // Screen the roster against the API's username_check before the start info
+  // is built: the response carries the display-ready (username, clanTag) pair
+  // for every player and is fixed for the whole game. On failure the game
+  // starts with names as-is rather than blocking the start.
+  private async censorRosterAndStart(): Promise<void> {
+    const clients = [...this.activeClients];
+    if (clients.length > 0) {
+      const checked = await fetchCensoredPlayers(
+        clients.map((c) => ({ username: c.username, clanTag: c.clanTag })),
+      );
+      if (checked === null) {
+        this.log.error("username check failed, starting with names as-is");
+      } else {
+        clients.forEach((c, i) => {
+          c.username = checked[i].username;
+          c.clanTag = checked[i].clanTag;
+        });
+      }
+    }
+    if (this._hasEnded) {
+      return;
+    }
+    try {
+      this.launch();
+    } catch (error) {
+      this.log.error(`error launching game: ${error}`);
+    }
+  }
+
+  private launch() {
     const friendsFor = this.buildFriendsLookup();
 
     const result = GameStartInfoSchema.safeParse({
@@ -1000,7 +1028,6 @@ export class GameServer {
       () => this.endTurn(),
       ServerEnv.turnIntervalMs(),
     );
-    void this.checkUsernames();
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
         clientID: c.clientID,
@@ -1131,39 +1158,6 @@ export class GameServer {
         c.ws.send(msg);
       }
     });
-  }
-
-  // Screen the roster once at start against the API's batch username_check
-  // and replace banned names via censor_player intents. Fire-and-forget: on
-  // failure just log — the cheap obscenity-library check at join is the
-  // fallback.
-  private async checkUsernames(): Promise<void> {
-    const clients = [...this.allClients.values()];
-    if (clients.length === 0) {
-      return;
-    }
-    const usernames = [...new Set(clients.map((c) => c.username))];
-    const banned = await fetchBannedUsernames(usernames);
-    if (this._hasEnded) {
-      return;
-    }
-    if (banned === null) {
-      this.log.error("username check failed, skipping API name moderation");
-      return;
-    }
-    for (const client of clients) {
-      if (!banned.has(client.username)) {
-        continue;
-      }
-      this.addIntent({
-        type: "censor_player",
-        clientID: client.clientID,
-        username: shadowNames[simpleHash(client.username) % shadowNames.length],
-      });
-      this.log.info("censoring banned username", {
-        clientID: client.clientID,
-      });
-    }
   }
 
   async end() {
