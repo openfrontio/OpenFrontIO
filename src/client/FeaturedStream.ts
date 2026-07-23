@@ -62,6 +62,26 @@ export function cornerFromCenter(
   return `${cy > vh / 2 ? "b" : "t"}${cx > vw / 2 ? "r" : "l"}` as Corner;
 }
 
+// True once a panel centered at (cx, cy) has been dragged past an edge of the vw x vh
+// viewport (its center is outside it), i.e. more than half of it is off-screen. Pure for tests.
+export function isOffFrame(
+  cx: number,
+  cy: number,
+  vw: number,
+  vh: number,
+): boolean {
+  return cx < 0 || cx > vw || cy < 0 || cy > vh;
+}
+
+// Touch devices report a coarse pointer; flick-to-dismiss is enabled only there (on desktop
+// the same drag just snaps to the nearest corner).
+function isCoarsePointer(): boolean {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 const SDK_SRC = "https://embed.twitch.tv/embed/v1.js";
 let sdkPromise: Promise<TwitchGlobal> | undefined;
 function loadTwitchSdk(): Promise<TwitchGlobal> {
@@ -88,6 +108,7 @@ export class FeaturedStream extends LitElement {
   @state() private minimized = false;
   @state() private corner: Corner = "br"; // which screen corner the panel snaps to
   @state() private dragPos: { x: number; y: number } | null = null; // free pos while dragging
+  @state() private dismissed = false; // mobile flick-off; page-visit only, not persisted
 
   private channels: string[] = [];
   private idx = 0;
@@ -150,6 +171,7 @@ export class FeaturedStream extends LitElement {
   };
   private onLeave = () => {
     this.inGame = false;
+    if (this.dismissed) return; // dismissed for this page visit: don't resurrect it
     // Back on the homepage: re-probe from the top so liveness is fresh and the panel only
     // reappears (and starts streaming) if a channel is actually live right now.
     if (this.recheckTimer) {
@@ -172,7 +194,7 @@ export class FeaturedStream extends LitElement {
   };
 
   private mountPlayer(Twitch: TwitchGlobal, i: number) {
-    if (this.inGame) return; // never mount an autoplaying embed behind the hidden panel
+    if (this.inGame || this.dismissed) return; // never mount behind a hidden/dismissed panel
     const host = this.querySelector(
       "#featured-stream-mount",
     ) as HTMLElement | null;
@@ -310,6 +332,14 @@ export class FeaturedStream extends LitElement {
       ) as HTMLElement | null;
       const cx = this.dragPos.x + (card?.offsetWidth ?? 360) / 2;
       const cy = this.dragPos.y + (card?.offsetHeight ?? 200) / 2;
+      // Touch only: flicking the panel off the edge dismisses it for this page visit.
+      if (
+        isCoarsePointer() &&
+        isOffFrame(cx, cy, window.innerWidth, window.innerHeight)
+      ) {
+        this.dismiss();
+        return;
+      }
       this.corner = cornerFromCenter(
         cx,
         cy,
@@ -323,6 +353,28 @@ export class FeaturedStream extends LitElement {
     }
   };
 
+  // A canceled pointer (the browser took over the gesture, e.g. a system swipe) is neither a
+  // click nor a drag release: just reset drag state so we don't open, snap, or dismiss.
+  private onDragCancel = () => {
+    this.dragging = false;
+    this.dragMoved = false;
+    this.dragPos = null;
+  };
+
+  // Hide the panel for the rest of this page visit. Deliberately NOT persisted: a refresh or
+  // the next visit brings it back (a light "not now", not a permanent opt-out). Stop probing
+  // and tear the player down so nothing keeps streaming behind the hidden panel.
+  private dismiss() {
+    this.dismissed = true;
+    this.dragPos = null;
+    this.mountGen++; // stale player callbacks fail fresh() and become no-ops
+    if (this.recheckTimer) {
+      clearTimeout(this.recheckTimer);
+      this.recheckTimer = null;
+    }
+    this.teardownPlayer();
+  }
+
   private toggleMinimize = () => {
     this.minimized = !this.minimized;
     localStorage.setItem(MIN_KEY, String(this.minimized));
@@ -330,7 +382,7 @@ export class FeaturedStream extends LitElement {
   };
 
   render() {
-    if (!this.channels.length) return html``;
+    if (!this.channels.length || this.dismissed) return html``;
     const channel = this.channels[this.idx] ?? "";
     const min = this.minimized;
     // Twitch pauses the player when it's off-screen/clipped (and hiding the embed violates
@@ -358,7 +410,7 @@ export class FeaturedStream extends LitElement {
           @pointerdown=${this.onDragDown}
           @pointermove=${this.onDragMove}
           @pointerup=${this.onDragUp}
-          @pointercancel=${this.onDragUp}
+          @pointercancel=${this.onDragCancel}
         >
           <button
             type="button"
