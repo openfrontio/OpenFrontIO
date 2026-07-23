@@ -460,7 +460,8 @@
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
       "structures": "Structures",
-      "transportShipTrail": "Boat Trail"
+      "transportShipTrail": "Boat Trail",
+      "warship": "Warship"
     }
   },
   "error_modal": {

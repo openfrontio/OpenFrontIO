@@ -30,6 +30,7 @@ import {
   EFFECT_PALETTE_BLOCKS,
   MAX_TRAIL_COLORS,
   STRUCTURES_EFFECT_BLOCK,
+  WARSHIP_EFFECT_BLOCK,
 } from "./render/gl/utils/ColorUtils";
 import {
   UT_ATOM_BOMB,
@@ -51,15 +52,18 @@ const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
 // The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
 // trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
 // transportShipTrail (nuke bit 0), block 1 = nukeTrail (nuke bit 1, set by
-// NUKE_TRAIL_BIT in TrailManager) — and structure.frag.glsl reads block
-// STRUCTURES_EFFECT_BLOCK (2). Reordering TRAIL_EFFECT_TYPES in CosmeticSchemas
-// (or moving the structures block) would silently swap effect colors, so these
-// guards fail the build if the shader-coupled order ever drifts.
+// NUKE_TRAIL_BIT in TrailManager) — structure.frag.glsl reads block
+// STRUCTURES_EFFECT_BLOCK (2), and unit.frag.glsl reads block
+// WARSHIP_EFFECT_BLOCK (3). Reordering TRAIL_EFFECT_TYPES in CosmeticSchemas
+// (or moving the structures/warship blocks) would silently swap effect colors,
+// so these guards fail the build if the shader-coupled order ever drifts.
 const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
   TRAIL_EFFECT_TYPES;
 void _EFFECT_BLOCK_ORDER;
 const _STRUCTURES_BLOCK_IS_2: 2 = STRUCTURES_EFFECT_BLOCK;
 void _STRUCTURES_BLOCK_IS_2;
+const _WARSHIP_BLOCK_IS_3: 3 = WARSHIP_EFFECT_BLOCK;
+void _WARSHIP_BLOCK_IS_3;
 
 // Attribute → render-param mappings:
 //   size      = the ring's final WIDTH (diameter) in world tiles when it fades
@@ -122,8 +126,9 @@ export class WebGLFrameBuilder {
   // Per-player effect palette, keyed by smallID. Layout is
   // 4096×(MAX_TRAIL_COLORS·EFFECT_PALETTE_BLOCKS): block 0 (rows 0–7) =
   // transportShipTrail, block 1 (rows 8–15) = nukeTrail, block 2 (rows 16–23)
-  // = structures. Consumed by TrailPass (block from the trail tile's nuke bit)
-  // and StructurePass (block 2).
+  // = structures, block 3 (rows 24–31) = warship. Consumed by TrailPass (block
+  // from the trail tile's nuke bit), StructurePass (block 2), and UnitPass
+  // (block 3).
   private readonly effectPalette: Float32Array;
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
@@ -477,16 +482,25 @@ export class WebGLFrameBuilder {
       // Resolve each trail-styled effectType into its own block of the effect
       // palette. rowBase block*MAX_TRAIL_COLORS must match the consumer
       // shaders' block layout (ship=0, nuke=1 in trail.frag.glsl; structures=2
-      // in structure.frag.glsl) — see _EFFECT_BLOCK_ORDER above. nukeExplosion
-      // is not trail-styled and renders through the FX pass instead.
-      const blockOrder = [...TRAIL_EFFECT_TYPES, "structures"] as const;
+      // in structure.frag.glsl; warship=3 in unit.frag.glsl) — see
+      // _EFFECT_BLOCK_ORDER above. nukeExplosion is not trail-styled and
+      // renders through the FX pass instead.
+      const blockOrder = [
+        ...TRAIL_EFFECT_TYPES,
+        "structures",
+        "warship",
+      ] as const;
       blockOrder.forEach((effectType, block) => {
         const selected = p.cosmetics.effects?.[effectType];
         if (!selected) return;
         const effect = findEffect(catalog, effectType, selected.name);
         if (!effect || effect.effectType !== effectType) return;
-        // Narrows attributes to trail attrs (structures share the shape).
-        if (!isTrailEffect(effect) && effect.effectType !== "structures") {
+        // Narrows attributes to trail attrs (structures/warship share the shape).
+        if (
+          !isTrailEffect(effect) &&
+          effect.effectType !== "structures" &&
+          effect.effectType !== "warship"
+        ) {
           return;
         }
         // Spiral vortexes render as ribbon geometry (SpiralRibbonPass) —
