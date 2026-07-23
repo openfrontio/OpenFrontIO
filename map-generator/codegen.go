@@ -93,6 +93,9 @@ func parseCustomTribes(raw []json.RawMessage) ([]customTribe, error) {
 		// Try as plain string first.
 		var s string
 		if err := json.Unmarshal(r, &s); err == nil {
+			if s == "" {
+				return nil, fmt.Errorf("custom_tribes[%d]: empty string", i)
+			}
 			tribes = append(tribes, customTribe{Name: s})
 			continue
 		}

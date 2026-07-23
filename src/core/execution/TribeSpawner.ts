@@ -1,4 +1,5 @@
-﻿import { Game, GameMapSize, PlayerInfo, PlayerType } from "../game/Game";
+﻿import { Cell, Game, GameMapSize, PlayerInfo, PlayerType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { type CustomTribe } from "../game/Maps.gen";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
@@ -10,15 +11,18 @@ export class TribeSpawner {
   private random: PseudoRandom;
   private tribeNameData: TribeNameData;
   private usedCustomTribes: Set<string> = new Set();
+  private nationTiles: Set<TileRef>;
 
   constructor(
     private gs: Game,
     private gameID: GameID,
+    nationCells: Cell[] = [],
   ) {
     // Use a different seed than createGameRunner (which uses simpleHash(gameID))
     // to avoid tribe IDs colliding with nation/human IDs from the same PRNG sequence.
     this.random = new PseudoRandom(simpleHash(gameID) + 2);
     this.tribeNameData = resolveTribeNameData(gs.config().gameConfig().gameMap);
+    this.nationTiles = new Set(nationCells.map((c) => gs.ref(c.x, c.y)));
   }
 
   spawnTribes(numTribes: number): SpawnExecution[] {
@@ -73,7 +77,8 @@ export class TribeSpawner {
     if (
       !this.gs.isLand(tile) ||
       this.gs.hasOwner(tile) ||
-      this.gs.isImpassable(tile)
+      this.gs.isImpassable(tile) ||
+      this.nationTiles.has(tile)
     ) {
       console.warn(
         `[TribeSpawner] Tribe "${ct.name}" spawn tile [${x},${y}] is not available`,

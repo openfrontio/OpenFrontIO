@@ -127,7 +127,13 @@ export class Executor {
   }
 
   spawnTribes(numTribes: number): SpawnExecution[] {
-    return new TribeSpawner(this.mg, this.gameID).spawnTribes(numTribes);
+    const nationCells = this.mg
+      .nations()
+      .map((n) => n.spawnCell)
+      .filter((c) => c !== undefined);
+    return new TribeSpawner(this.mg, this.gameID, nationCells).spawnTribes(
+      numTribes,
+    );
   }
 
   spawnPlayers(): SpawnExecution[] {
