@@ -242,7 +242,7 @@ export default defineConfig(({ mode }) => {
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
         env.STRIPE_PUBLISHABLE_KEY,
       ),
-      "process.env.API_DOMAIN": JSON.stringify(env.API_DOMAIN),
+      "process.env.API_DOMAIN": JSON.stringify(env.API_DOMAIN ?? ""),
       // Add other process.env variables if needed, OR migrate code to import.meta.env
     },
 
