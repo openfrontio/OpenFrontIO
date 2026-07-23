@@ -101,8 +101,8 @@ func parseCustomTribes(raw []json.RawMessage) ([]customTribe, error) {
 		}
 		// Try as object with name and optional coordinates.
 		var obj struct {
-			Name        string  `json:"name"`
-			Coordinates []int64 `json:"coordinates"`
+			Name        string           `json:"name"`
+			Coordinates *json.RawMessage `json:"coordinates"`
 		}
 		if err := json.Unmarshal(r, &obj); err != nil {
 			return nil, fmt.Errorf("custom_tribes[%d]: invalid entry: %w", i, err)
@@ -110,13 +110,17 @@ func parseCustomTribes(raw []json.RawMessage) ([]customTribe, error) {
 		if obj.Name == "" {
 			return nil, fmt.Errorf("custom_tribes[%d]: name is empty", i)
 		}
-		if len(obj.Coordinates) != 0 && len(obj.Coordinates) != 2 {
-			return nil, fmt.Errorf("custom_tribes[%d]: coordinates must be [x, y]", i)
-		}
 		ct := customTribe{Name: obj.Name}
-		if len(obj.Coordinates) == 2 {
-			coords := [2]int{int(obj.Coordinates[0]), int(obj.Coordinates[1])}
-			ct.Coordinates = &coords
+		if obj.Coordinates != nil {
+			var coords []int64
+			if err := json.Unmarshal(*obj.Coordinates, &coords); err != nil {
+				return nil, fmt.Errorf("custom_tribes[%d]: coordinates must be [x, y]", i)
+			}
+			if len(coords) != 2 {
+				return nil, fmt.Errorf("custom_tribes[%d]: coordinates must be [x, y]", i)
+			}
+			c := [2]int{int(coords[0]), int(coords[1])}
+			ct.Coordinates = &c
 		}
 		tribes = append(tribes, ct)
 	}
