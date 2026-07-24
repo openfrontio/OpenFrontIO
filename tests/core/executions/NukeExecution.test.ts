@@ -274,4 +274,30 @@ describe("NukeExecution", () => {
     // A second drain should be empty (queue was consumed).
     expect(game.drainNukeImpacts()).toHaveLength(0);
   });
+
+  test("drainNukeImpacts returns queued tiles for HydrogenBomb detonation", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.HydrogenBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 300);
+
+    const impacts = game.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+  });
 });
