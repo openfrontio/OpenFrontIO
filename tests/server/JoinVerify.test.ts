@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { TokenPayload } from "../../src/core/ApiSchemas";
 import {
   isSteamAuthenticated,
   planJoinVerify,
   verifyJoin,
 } from "../../src/server/JoinVerify";
-import type { TokenPayload } from "../../src/core/ApiSchemas";
 
 // verifyJoin resolves its endpoint from ServerEnv.jwtIssuer(), which throws
 // if DOMAIN is unset.
