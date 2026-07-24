@@ -645,6 +645,9 @@
     "import_json_desc": "Paste settings JSON from a friend and apply it",
     "import_json_invalid": "That doesn't look like valid settings JSON",
     "import_json_label": "Import settings JSON",
+    "layer_nukeable": "Nukeable",
+    "layer_placement_land": "Land layer",
+    "layer_placement_water": "Water layer",
     "lighting_ambient_desc": "Darkens the map and adds a glow around structures (0 = off)",
     "lighting_ambient_label": "Ambient light",
     "lighting_unit_glow_desc": "How far the glow spreads around units and structures",
@@ -685,6 +688,7 @@
     "section_effects": "Effects",
     "section_lighting": "Lighting",
     "section_map": "Map",
+    "section_map_layers": "Map Layers",
     "section_name_labels": "Name Labels",
     "section_presets": "Presets",
     "section_structure_icons": "Structure Icons",
@@ -1116,6 +1120,7 @@
     "search_results": "Search Results",
     "unfavorite": "Remove from favourites"
   },
+  "map_layers": {},
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
     "dismiss": "Dismiss",

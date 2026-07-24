@@ -566,6 +566,22 @@ async function createClientGame(
     const graphicsListenerAbort = new AbortController();
 
     view.setShowPatterns(userSettings.territoryPatterns());
+
+    // Set up map layers if the map defines any.
+    if (gameMap.layers && gameMap.layerImages) {
+      view.setMapLayers(gameMap.layers, gameMap.layerImages);
+      // Apply saved layer visibility overrides from graphics settings.
+      const overrides = userSettings.graphicsOverrides();
+      if (overrides.mapLayerVisibility) {
+        for (const layer of gameMap.layers) {
+          const vis = overrides.mapLayerVisibility[layer.id];
+          if (vis !== undefined) {
+            view.setLayerVisible(layer.id, vis);
+          }
+        }
+      }
+    }
+
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),

@@ -4,6 +4,7 @@ import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
 import { PauseGameIntentEvent } from "src/client/Transport";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
+import type { MapLayer } from "../../../core/game/TerrainMapLoader";
 import { UserSettings } from "../../../core/game/UserSettings";
 import "../../components/GraphicsPresetSelector";
 import { Controller } from "../../Controller";
@@ -154,6 +155,12 @@ export class ShowGraphicsSettingsModalEvent {
 export class GraphicsSettingsModal extends LitElement implements Controller {
   public eventBus: EventBus;
   public userSettings: UserSettings;
+  /** Map layers for the current game (set by GameRenderer on game start). */
+  public mapLayers: MapLayer[] = [];
+  /** Callback to toggle layer visibility on the renderer. */
+  public onLayerVisibilityChange:
+    | ((layerId: string, visible: boolean) => void)
+    | null = null;
 
   @state()
   private isVisible: boolean = false;
@@ -329,6 +336,33 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private onToggleNavalHighlight() {
     this.patchMapOverlay({ navalHighlight: !this.currentNavalHighlight() });
+  }
+
+  // ---- Map-layer visibility ----
+
+  private isLayerVisible(layerId: string): boolean {
+    const overrides = this.userSettings.graphicsOverrides();
+    // Default to visible if no override is set.
+    return overrides.mapLayerVisibility?.[layerId] ?? true;
+  }
+
+  private layerName(layerId: string): string {
+    const key = `map_layers.${layerId}`;
+    const translated = translateText(key);
+    // translateText returns the key itself when the translation is missing.
+    return translated === key ? layerId : translated;
+  }
+
+  private onToggleLayer(layerId: string) {
+    const current = this.userSettings.graphicsOverrides();
+    const currentVis = current.mapLayerVisibility ?? {};
+    const newVis = { ...currentVis, [layerId]: !this.isLayerVisible(layerId) };
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      mapLayerVisibility: newVis,
+    });
+    this.onLayerVisibilityChange?.(layerId, newVis[layerId]);
+    this.requestUpdate();
   }
 
   private currentHighlightFill(): number {
@@ -1440,6 +1474,43 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           ${railThickness.toFixed(1)}
         </div>
       </div>
+
+      ${this.mapLayers.length > 0
+        ? html`
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_map_layers")}
+            </div>
+            ${this.mapLayers.map(
+              (layer) => html`
+                <button
+                  class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                  @click=${() => this.onToggleLayer(layer.id)}
+                >
+                  <div class="flex-1">
+                    <div class="font-medium">${this.layerName(layer.id)}</div>
+                    <div class="text-sm text-slate-400">
+                      ${layer.placement === "land"
+                        ? translateText("graphics_setting.layer_placement_land")
+                        : translateText(
+                            "graphics_setting.layer_placement_water",
+                          )}
+                      ${layer.nukeable
+                        ? ` · ${translateText("graphics_setting.layer_nukeable")}`
+                        : ""}
+                    </div>
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${this.isLayerVisible(layer.id)
+                      ? translateText("user_setting.on")
+                      : translateText("user_setting.off")}
+                  </div>
+                </button>
+              `,
+            )}
+          `
+        : ""}
 
       <div
         class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"

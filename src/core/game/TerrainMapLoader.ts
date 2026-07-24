@@ -8,6 +8,10 @@ export type TerrainMapData = {
   gameMap: GameMap;
   miniGameMap: GameMap;
   teamGameSpawnAreas?: TeamGameSpawnAreas;
+  /** Map layers from the manifest, if any. */
+  layers?: MapLayer[];
+  /** Pre-loaded layer PNG images keyed by layer id. */
+  layerImages?: Map<string, ImageBitmap>;
 };
 
 const loadedMaps = new Map<string, TerrainMapData>();
@@ -29,6 +33,19 @@ export interface MapManifest {
   // the remainder is generated procedurally.
   additionalNations?: AdditionalNation[];
   teamGameSpawnAreas?: TeamGameSpawnAreas;
+  /** Optional map layers rendered between terrain and territory. */
+  layers?: MapLayer[];
+}
+
+export type LayerPlacement = "land" | "water";
+
+export interface MapLayer {
+  /** Unique identifier — also the PNG filename (without extension). */
+  id: string;
+  /** Whether the layer sits on land or water tiles. */
+  placement: LayerPlacement;
+  /** If true, the layer is permanently destroyed in nuke impact radii. */
+  nukeable?: boolean;
 }
 
 export interface Nation {
@@ -101,12 +118,45 @@ export async function loadTerrainMap(
     teamGameSpawnAreas = scaled;
   }
 
+  const layers = manifest.layers;
+
+  // Validate layer placements at game start.
+  if (layers) {
+    for (const layer of layers) {
+      if (layer.placement !== "land" && layer.placement !== "water") {
+        throw new Error(
+          `Map ${map}: layer "${layer.id}" has invalid placement "${layer.placement}" (must be "land" or "water")`,
+        );
+      }
+    }
+  }
+
+  // Load layer PNG images if the manifest defines layers.
+  let layerImages: Map<string, ImageBitmap> | undefined;
+  if (layers && layers.length > 0) {
+    layerImages = new Map();
+    await Promise.all(
+      layers.map(async (layer) => {
+        try {
+          const img = await mapFiles.layerPng(layer.id);
+          layerImages!.set(layer.id, img);
+        } catch (e) {
+          console.warn(
+            `[MapLoader] Failed to load layer "${layer.id}" for map ${map}: ${e}`,
+          );
+        }
+      }),
+    );
+  }
+
   const result = {
     nations: manifest.nations,
     additionalNations: manifest.additionalNations ?? [],
     gameMap: gameMap,
     miniGameMap: miniMap,
     teamGameSpawnAreas,
+    layers,
+    layerImages,
   };
   loadedMaps.set(cacheKey, result);
   return result;

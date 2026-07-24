@@ -30,6 +30,9 @@ export class NodeGameMapLoader implements GameMapLoader {
           fs.readFileSync(path.join(dir, "manifest.json"), "utf8"),
         ) as MapManifest,
       webpPath: path.join(dir, "thumbnail.webp"),
+      layerPng: async (_layerId: string) => {
+        throw new Error("Layer PNGs are not supported in NodeGameMapLoader");
+      },
     };
   }
 }

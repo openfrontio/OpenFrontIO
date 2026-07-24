@@ -64,6 +64,12 @@ export interface GameUpdateViewData {
   playerNameViewData?: Record<string, NameViewData>;
   tickExecutionDuration?: number;
   pendingTurns?: number;
+  /**
+   * Packed tile refs that were inside a nuke blast radius this tick.
+   * Used by the renderer to mark nukeable layer tiles as destroyed.
+   * Absent when no nukes detonated.
+   */
+  packedNukeImpacts?: Uint32Array;
 }
 
 export interface ErrorUpdate {

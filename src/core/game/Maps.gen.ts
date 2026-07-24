@@ -176,11 +176,24 @@ export interface MapInfo {
   themes?: string[];
   /** Custom tribe entry: a string (random spawn) or an object with name and coordinates. */
   customTribes?: CustomTribe[];
+  /** Map layers rendered between terrain and territory. */
+  layers?: MapLayer[];
 }
 
 export interface CustomTribe {
   name: string;
   coordinates?: [number, number];
+}
+
+export type LayerPlacement = "land" | "water";
+
+export interface MapLayer {
+  /** Unique identifier — also the PNG filename (without extension). */
+  id: string;
+  /** Whether the layer sits on land or water tiles. */
+  placement: LayerPlacement;
+  /** If true, the layer is permanently destroyed in nuke impact radii. */
+  nukeable?: boolean;
 }
 
 export const maps: readonly MapInfo[] = [

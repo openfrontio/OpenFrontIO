@@ -12,6 +12,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { MapLayer } from "../../../core/game/TerrainMapLoader";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -36,6 +37,9 @@ import type { RenderSettings } from "./RenderSettings";
 export class MapRenderer {
   private renderer: GPURenderer | null = null;
   private resizeObs: ResizeObserver | null = null;
+  // Stored layer data for context-restore re-creation.
+  private storedLayers: MapLayer[] = [];
+  private storedLayerImages: Map<string, ImageBitmap> = new Map();
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -104,6 +108,10 @@ export class MapRenderer {
 
   private handleContextRestored = () => {
     this.initRenderer();
+    // Re-apply stored layers to the new renderer.
+    if (this.storedLayers.length > 0 && this.storedLayerImages.size > 0) {
+      this.renderer?.setMapLayers(this.storedLayers, this.storedLayerImages);
+    }
     this.onContextRestored?.();
   };
 
@@ -246,6 +254,30 @@ export class MapRenderer {
   /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
   updateSmallPlayerGlow(set: Uint8Array | null): void {
     this.renderer?.updateSmallPlayerGlow(set);
+  }
+
+  // ---- Map layers ----
+
+  /** Set up map-layer passes from the loaded layer data. */
+  setMapLayers(layers: MapLayer[], images: Map<string, ImageBitmap>): void {
+    this.storedLayers = layers;
+    this.storedLayerImages = images;
+    this.renderer?.setMapLayers(layers, images);
+  }
+
+  /** Toggle visibility of a single map layer. */
+  setLayerVisible(layerId: string, visible: boolean): void {
+    this.renderer?.setLayerVisible(layerId, visible);
+  }
+
+  /** Mark a single tile as destroyed for a nukeable layer. */
+  markLayerTileDestroyed(layerId: string, tileIndex: number): void {
+    this.renderer?.markLayerTileDestroyed(layerId, tileIndex);
+  }
+
+  /** Bulk-update the destroyed mask for a nukeable layer. */
+  setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
+    this.renderer?.setLayerDestroyedMask(layerId, mask);
   }
 
   // ---- Selection box ----

@@ -196,6 +196,10 @@ export function createRenderer(
   }
   graphicsSettingsModal.userSettings = userSettings;
   graphicsSettingsModal.eventBus = eventBus;
+  graphicsSettingsModal.mapLayers = game.layers();
+  graphicsSettingsModal.onLayerVisibilityChange = (layerId, visible) => {
+    view.setLayerVisible(layerId, visible);
+  };
 
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {

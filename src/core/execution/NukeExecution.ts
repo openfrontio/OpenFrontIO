@@ -369,6 +369,9 @@ export class NukeExecution implements Execution {
       if (mg.isLand(tile)) {
         mg.queueWaterConversion(tile);
       }
+
+      // Record every tile in the blast radius for nukeable layer destruction.
+      mg.queueNukeImpact(tile);
     }
 
     // Then compute the explosion effect on each player

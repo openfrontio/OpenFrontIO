@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"image"
+	_ "image/png"
 	"log"
 	"log/slog"
 	"os"
@@ -156,6 +159,45 @@ func processMap(ctx context.Context, name string, isTest bool) error {
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "thumbnail.webp"), result.Thumbnail, 0644); err != nil {
 		return fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
+	}
+
+	// Copy layer PNGs and validate them.
+	if layersRaw, ok := manifest["layers"]; ok {
+		if layersArr, ok := layersRaw.([]interface{}); ok {
+			for _, layerRaw := range layersArr {
+				layer, ok := layerRaw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				layerID, _ := layer["id"].(string)
+				if layerID == "" {
+					continue
+				}
+				// Validate placement.
+				placement, _ := layer["placement"].(string)
+				if placement != "land" && placement != "water" {
+					return fmt.Errorf("map %s: layer %q has invalid placement %q (must be \"land\" or \"water\")", name, layerID, placement)
+				}
+				// Copy the layer PNG.
+				srcPng := filepath.Join(inputMapDir, name, layerID+".png")
+				dstPng := filepath.Join(mapDir, layerID+".png")
+				pngData, err := os.ReadFile(srcPng)
+				if err != nil {
+					return fmt.Errorf("map %s: layer %q PNG not found at %s: %w", name, layerID, srcPng, err)
+				}
+				// Validate dimensions match image.png.
+				img, _, err := image.DecodeConfig(bytes.NewReader(pngData))
+				if err != nil {
+					return fmt.Errorf("map %s: layer %q PNG failed to decode: %w", name, layerID, err)
+				}
+				if img.Width != result.Map.Width || img.Height != result.Map.Height {
+					return fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match map (%dx%d)", name, layerID, img.Width, img.Height, result.Map.Width, result.Map.Height)
+				}
+				if err := os.WriteFile(dstPng, pngData, 0644); err != nil {
+					return fmt.Errorf("failed to write layer PNG for %s/%s: %w", name, layerID, err)
+				}
+			}
+		}
 	}
 
 	// Serialize the updated manifest to JSON
