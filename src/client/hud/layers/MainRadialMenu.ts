@@ -25,6 +25,14 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 import { ContextMenuEvent } from "../../InputHandler";
 
+function emptyPlayerActions(): PlayerActions {
+  return {
+    canAttack: false,
+    buildableUnits: [],
+    canSendEmojiAllPlayers: false,
+  };
+}
+
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Controller {
   private radialMenu: RadialMenu;
@@ -87,22 +95,29 @@ export class MainRadialMenu extends LitElement implements Controller {
       if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
         return;
       }
-      if (this.game.myPlayer() === null) {
+      const clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.clickedTile = clickedTile;
+
+      // Spectators (replay, dead, pre-spawn): skip the action radial and open
+      // the read-only PlayerPanel directly when right-clicking on a player.
+      if (this.game.isSpectator()) {
+        if (this.game.owner(clickedTile).isPlayer()) {
+          this.playerPanel.show(emptyPlayerActions(), clickedTile);
+        }
         return;
       }
-      this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-            event.x,
-            event.y,
-          );
-        });
+
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) return;
+      myPlayer.actions(clickedTile).then((actions) => {
+        this.updatePlayerActions(
+          myPlayer,
+          actions,
+          clickedTile,
+          event.x,
+          event.y,
+        );
+      });
     });
   }
 
@@ -118,7 +133,7 @@ export class MainRadialMenu extends LitElement implements Controller {
     const tileOwner = this.game.owner(tile);
     const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
 
-    if (myPlayer && recipient) {
+    if (recipient) {
       this.chatIntegration.setupChatModal(myPlayer, recipient);
     }
 
@@ -161,16 +176,12 @@ export class MainRadialMenu extends LitElement implements Controller {
 
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
-    this.game
-      .myPlayer()!
-      .actions(this.clickedTile)
-      .then((actions) => {
-        this.updatePlayerActions(
-          this.game.myPlayer()!,
-          actions,
-          this.clickedTile!,
-        );
-      });
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer === null) return;
+    const tile = this.clickedTile;
+    myPlayer.actions(tile).then((actions) => {
+      this.updatePlayerActions(myPlayer, actions, tile);
+    });
   }
 
   closeMenu() {
