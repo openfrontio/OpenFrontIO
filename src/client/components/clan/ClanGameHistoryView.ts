@@ -16,6 +16,7 @@ import {
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
+import { usernameText } from "../ui/UsernameText";
 import { verifiedBadge } from "../ui/VerifiedBadge";
 import { renderLoadingSpinner, showToast } from "./ClanShared";
 
@@ -615,11 +616,11 @@ export class ClanGameHistoryView extends LitElement {
       <span class="inline-flex items-center gap-1 min-w-0 max-w-full">
         <button
           type="button"
-          class="font-bold text-blue-300 truncate hover:underline"
+          class="font-bold truncate hover:underline"
           title=${translateText("player_profile.view")}
           @click=${() => this.viewProfile(p.publicId)}
         >
-          ${p.username}
+          ${usernameText(p.username)}
         </button>
         ${p.verified === true ? verifiedBadge() : nothing}
       </span>

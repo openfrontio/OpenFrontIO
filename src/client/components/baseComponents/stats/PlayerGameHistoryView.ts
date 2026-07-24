@@ -16,6 +16,7 @@ import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
 import "../../CopyButton";
+import { usernameText } from "../../ui/UsernameText";
 import {
   formatAbsoluteTime,
   formatDayHeader,
@@ -502,6 +503,7 @@ export class PlayerGameHistoryView extends LitElement {
           ${this.renderField(
             translateText("account_modal.games_username"),
             game.username,
+            usernameText(game.username),
           )}
         </div>
         <div
@@ -530,7 +532,13 @@ export class PlayerGameHistoryView extends LitElement {
     `;
   }
 
-  private renderField(label: string, value: string): TemplateResult {
+  // `content` renders in place of the plain value (e.g. a username split into
+  // colored base and discriminator); `value` still supplies the tooltip.
+  private renderField(
+    label: string,
+    value: string,
+    content?: TemplateResult,
+  ): TemplateResult {
     return html`
       <div class="min-w-0">
         <div
@@ -538,7 +546,9 @@ export class PlayerGameHistoryView extends LitElement {
         >
           ${label}
         </div>
-        <div class="text-sm text-white truncate" title=${value}>${value}</div>
+        <div class="text-sm text-white truncate" title=${value}>
+          ${content ?? value}
+        </div>
       </div>
     `;
   }
