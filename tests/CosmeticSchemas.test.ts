@@ -734,6 +734,89 @@ describe("structures effects", () => {
   });
 });
 
+describe("warship effects", () => {
+  const gradient = {
+    name: "patriotic_warshipo",
+    effectType: "warship",
+    attributes: {
+      type: "gradient",
+      colors: ["#f00000", "#e6e6e6", "#1100ff"],
+      colorSize: 5,
+      movementSpeed: 10,
+    },
+    affiliateCode: null,
+    product: null,
+    priceHard: 10,
+    rarity: "common",
+  };
+  const transition = {
+    name: "warship_transition",
+    effectType: "warship",
+    attributes: {
+      type: "transition",
+      colors: ["#ff0000", "#ffffff", "#00ff88"],
+      frequency: 5,
+    },
+    affiliateCode: null,
+    product: null,
+    rarity: "common",
+  };
+
+  it("parses the gradient and transition catalog entries", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        warship: {
+          patriotic_warshipo: gradient,
+          warship_transition: transition,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(
+        result.data.effects?.warship?.patriotic_warshipo?.attributes.type,
+      ).toBe("gradient");
+      expect(
+        result.data.effects?.warship?.warship_transition?.attributes.type,
+      ).toBe("transition");
+    }
+  });
+
+  it("resolves the warship slot (slot = effectType)", () => {
+    expect(effectTypeForSlot("warship")).toBe("warship");
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: { warship: { patriotic_warshipo: gradient } },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(
+      findEffectForSlot(parsed.data, "warship", "patriotic_warshipo")?.name,
+    ).toBe("patriotic_warshipo");
+  });
+
+  it("shares trail attribute shapes but is not a trail effect", () => {
+    const eff = EffectSchema.parse(gradient);
+    // Renders through the warship palette block, not a trail block.
+    expect(isTrailEffect(eff)).toBe(false);
+    expect(effectMatchesSlot(eff, "warship")).toBe(true);
+    expect(effectMatchesSlot(eff, "structures")).toBe(false);
+    expect(effectMatchesSlot(eff, "transportShipTrail")).toBe(false);
+  });
+
+  it("rejects a warship effect with an unknown attribute type", () => {
+    expect(
+      EffectSchema.safeParse({
+        ...gradient,
+        attributes: { type: "sparkle", colors: [] },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("isTrailEffect", () => {
   it("is true for a trail effect and false for a nukeExplosion", () => {
     const trail = EffectSchema.parse({
