@@ -36,6 +36,8 @@ import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
+import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
+import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -55,10 +57,20 @@ export async function startWorker() {
   const server = http.createServer(app);
   const wss = new WebSocketServer({
     noServer: true,
-    maxPayload: 1024 * 1024, // 1MB
+    maxPayload: MAX_WEBSOCKET_PAYLOAD_BYTES,
   });
 
-  const gm = new GameManager(log);
+  const buildHash = ServerEnv.gitCommit();
+  const telemetry = createMatchTelemetryEmitter(process.env, log, {
+    buildHash,
+    instanceId: ServerEnv.instanceId(),
+    // Reuse the normalized worker id (defaults to 0 when WORKER_ID is unset) so
+    // telemetry identity matches routing and logging instead of reporting
+    // undefined.
+    workerId,
+  });
+  const gm = new GameManager(log, telemetry, buildHash);
+  server.on("close", () => telemetry.stop());
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);

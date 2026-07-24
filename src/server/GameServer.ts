@@ -38,6 +38,14 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { ServerEnv } from "./ServerEnv";
+import {
+  noopMatchTelemetryEmitter,
+  type MatchTelemetryEmitter,
+  type MatchTelemetryEvent,
+  type MatchTelemetryPayloads,
+  type MatchTelemetryType,
+  type TelemetryPlayerIdentity,
+} from "./telemetry/MatchTelemetry";
 import { VoteRound } from "./VoteTally";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -166,6 +174,14 @@ export class GameServer {
   // id instead of minting another lobby.
   private successorLobbyId: GameID | null = null;
 
+  private telemetrySequence = 0;
+  private telemetryTickCounts = new Map<
+    number,
+    { observed: number; enqueued: number; dropped: number }
+  >();
+  private replayArchiveAttempted = false;
+  private telemetryFinished = false;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -177,11 +193,95 @@ export class GameServer {
     // Matchmade team split from the matchmaking assignment: publicIds per
     // team. At start each client is stamped with its team's index.
     private matchmakingTeams?: string[][],
+    private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
+    private readonly telemetryBuildHash: string = "DEV",
   ) {
     this.log = log_.child({ gameID: id });
     if (startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
+    this.emitTelemetry("match_opened", {
+      lobbyCreatedAt: createdAt,
+      config: gameConfig,
+      publicGameType,
+      buildHash: telemetryBuildHash,
+      instanceId: ServerEnv.instanceId(),
+      workerId: ServerEnv.workerId(),
+      turnIntervalMs: ServerEnv.turnIntervalMs(),
+    });
+  }
+
+  private emitTelemetry<K extends MatchTelemetryType>(
+    type: K,
+    payload: MatchTelemetryPayloads[K],
+    serverTick: number = this.turns.length,
+  ): "enqueued" | "dropped" {
+    const event = {
+      schemaVersion: 1,
+      type,
+      matchId: this.id,
+      sequence: this.telemetrySequence++,
+      observedAt: Date.now(),
+      serverTick,
+      payload,
+    } as MatchTelemetryEvent;
+    try {
+      return this.telemetry.emit(event);
+    } catch {
+      return "dropped";
+    }
+  }
+
+  private identityFor(client: Client): TelemetryPlayerIdentity {
+    // persistentID is deliberately excluded from telemetry identity.
+    return {
+      clientId: client.clientID,
+      publicId: client.publicId,
+    };
+  }
+
+  private emitIntentObserved(
+    client: Client,
+    intent: unknown,
+    intentType: string | null,
+    outcome: "accepted" | "rejected",
+    serverTick: number,
+    reasonCode?: string,
+    reasonDetail?: string,
+  ): void {
+    const counts = this.telemetryTickCounts.get(serverTick) ?? {
+      observed: 0,
+      enqueued: 0,
+      dropped: 0,
+    };
+    counts.observed++;
+    const result = this.emitTelemetry(
+      "intent_observed",
+      {
+        identity: this.identityFor(client),
+        intentType,
+        outcome,
+        reasonCode,
+        reasonDetail,
+        intent,
+      },
+      serverTick,
+    );
+    counts[result === "enqueued" ? "enqueued" : "dropped"]++;
+    this.telemetryTickCounts.set(serverTick, counts);
+  }
+
+  private emitMatchFinished(): void {
+    if (this.telemetryFinished) {
+      return;
+    }
+    this.telemetryFinished = true;
+    this.emitTelemetry("match_finished", {
+      endedAt: Date.now(),
+      totalTurns: this.turns.length,
+      buildHash: this.telemetryBuildHash,
+      replayArchiveAttempted: this.replayArchiveAttempted,
+    });
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -338,33 +438,61 @@ export class GameServer {
   // actions and game-state guards live here. Returns an HTTP-style outcome the
   // caller maps (the bot route -> response, the websocket path -> a log).
   public handleIntent(intent: Intent, actor: IntentActor): IntentOutcome {
+    const serverTick = this.turns.length;
     const stamped: StampedIntent = { ...intent, clientID: actor.clientID };
+    const finish = (
+      outcome: IntentOutcome,
+      acceptedReasonCode?: string,
+    ): IntentOutcome => {
+      if (!actor.isAdminBot) {
+        const client = this.allClients.get(actor.clientID);
+        if (client !== undefined) {
+          const accepted = outcome.status === 200;
+          this.emitIntentObserved(
+            client,
+            stamped,
+            stamped.type,
+            accepted ? "accepted" : "rejected",
+            serverTick,
+            accepted ? acceptedReasonCode : String(outcome.status),
+            accepted ? undefined : outcome.error,
+          );
+        }
+      }
+      return outcome;
+    };
 
     // The admin bot only manages private games.
     if (actor.isAdminBot && this.isPublic()) {
-      return { status: 403, error: "admin bot cannot act on public games" };
+      return finish({
+        status: 403,
+        error: "admin bot cannot act on public games",
+      });
     }
 
     switch (stamped.type) {
       case "mark_disconnected":
-        return { status: 400, error: "mark_disconnected is server-internal" };
+        return finish({
+          status: 400,
+          error: "mark_disconnected is server-internal",
+        });
 
       case "kick_player": {
         if (!actor.isLobbyCreator && !actor.isAdmin) {
-          return {
+          return finish({
             status: 403,
             error: "only the lobby creator or an admin can kick players",
-          };
+          });
         }
         // A listed lobby recruits strangers from the public browser; letting
         // the host kick them is a griefing vector. Admins keep the power for
         // moderation. The listed flag survives game start on purpose, so a
         // publicly recruited game stays kick-free like a real public game.
         if (this.isListed() && !actor.isAdmin) {
-          return {
+          return finish({
             status: 403,
             error: "the host cannot kick players in a publicly listed lobby",
-          };
+          });
         }
         // Resolve the target to a clientID: an explicit clientID, or an account
         // publicId matched against allClients (a superset of activeClients that
@@ -377,10 +505,10 @@ export class GameServer {
           )?.clientID;
         }
         if (target === undefined) {
-          return { status: 404, error: "no matching player to kick" };
+          return finish({ status: 404, error: "no matching player to kick" });
         }
         if (stamped.clientID === target) {
-          return { status: 400, error: "cannot kick yourself" };
+          return finish({ status: 400, error: "cannot kick yourself" });
         }
         const reason =
           actor.isAdmin && !actor.isLobbyCreator
@@ -394,48 +522,54 @@ export class GameServer {
           gameID: this.id,
         });
         this.kickClient(target, reason);
-        return { status: 200 };
+        return finish({ status: 200 });
       }
 
       case "update_game_config": {
         if (!actor.isLobbyCreator && !actor.isAdminBot) {
-          return {
+          return finish({
             status: 403,
             error: "only the lobby creator can update game config",
-          };
+          });
         }
         if (this.isPublic()) {
-          return { status: 403, error: "cannot update a public game" };
+          return finish({ status: 403, error: "cannot update a public game" });
         }
         if (this.hasStarted()) {
-          return { status: 409, error: "game already started" };
+          return finish({ status: 409, error: "game already started" });
         }
         if (stamped.config.gameType === GameType.Public) {
-          return { status: 400, error: "cannot change a game to public" };
+          return finish({
+            status: 400,
+            error: "cannot change a game to public",
+          });
         }
         // Host cheats give the host an asymmetric advantage over players
         // recruited from the lobby browser. Listing is likewise rejected
         // while cheats are on (Worker's listing endpoint), so a listed
         // lobby can never have them.
         if (this.isListed() && hostCheatsEnabled(stamped.config.hostCheats)) {
-          return {
+          return finish({
             status: 409,
             error: "cannot enable host cheats in a publicly listed lobby",
-          };
+          });
         }
         this.updateGameConfig(stamped.config);
-        return { status: 200 };
+        return finish({ status: 200 });
       }
 
       case "toggle_game_start_timer": {
         if (!actor.isLobbyCreator && !actor.isAdminBot) {
-          return { status: 403, error: "only the lobby creator can start" };
+          return finish({
+            status: 403,
+            error: "only the lobby creator can start",
+          });
         }
         if (this.isPublic()) {
-          return { status: 403, error: "cannot start a public game" };
+          return finish({ status: 403, error: "cannot start a public game" });
         }
         if (this.hasStarted()) {
-          return { status: 409, error: "game already started" };
+          return finish({ status: 409, error: "game already started" });
         }
         if (this.startsAt) {
           this.startsAt = undefined;
@@ -444,17 +578,21 @@ export class GameServer {
             Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
           );
         }
-        return { status: 200 };
+        return finish({ status: 200 });
       }
 
       case "toggle_pause": {
         if (!actor.isLobbyCreator && !actor.isAdminBot) {
-          return { status: 403, error: "only the lobby creator can pause" };
+          return finish({
+            status: 403,
+            error: "only the lobby creator can pause",
+          });
         }
         // Pausing only makes sense once the game is running.
         if (!this.hasStarted()) {
-          return { status: 409, error: "game not started" };
+          return finish({ status: 409, error: "game not started" });
         }
+        const outcome = finish({ status: 200 });
         // Pausing: flush the intent into a turn before isPaused short-circuits
         // endTurn(). Unpausing: clear the flag first so the next turn runs.
         if (stamped.paused) {
@@ -466,18 +604,23 @@ export class GameServer {
           this.addIntent(stamped);
           this.endTurn();
         }
-        return { status: 200 };
+        return outcome;
       }
 
       default: {
         // Gameplay intents: websocket players only, into the turn queue.
         if (actor.isAdminBot) {
-          return { status: 400, error: "intent not permitted for admin bot" };
+          return finish({
+            status: 400,
+            error: "intent not permitted for admin bot",
+          });
         }
-        if (!this.isPaused) {
-          this.addIntent(stamped);
-        }
-        return { status: 200 };
+        // While paused the intent is accepted at ingress but not queued into a
+        // turn; tag it so telemetry can tell it apart from a queued intent.
+        const paused = this.isPaused;
+        const outcome = finish({ status: 200 }, paused ? "paused" : undefined);
+        if (!paused) this.addIntent(stamped);
+        return outcome;
       }
     }
   }
@@ -614,6 +757,13 @@ export class GameServer {
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
     this.allClients.set(client.clientID, client);
+    this.emitTelemetry("player_joined", {
+      identity: this.identityFor(client),
+      joinedAt: Date.now(),
+      username: client.username,
+      playerType: "human",
+      teamIndex: this.matchmakingTeamIndex(client),
+    });
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
@@ -700,9 +850,35 @@ export class GameServer {
         }
         const parsed = ClientMessageSchema.safeParse(json);
         if (!parsed.success) {
+          const reasonDetail = z.prettifyError(parsed.error);
+          if (
+            typeof json === "object" &&
+            json !== null &&
+            "type" in json &&
+            json.type === "intent" &&
+            "intent" in json
+          ) {
+            const rawIntent = json.intent;
+            const intentType =
+              typeof rawIntent === "object" &&
+              rawIntent !== null &&
+              "type" in rawIntent &&
+              typeof rawIntent.type === "string"
+                ? rawIntent.type
+                : null;
+            this.emitIntentObserved(
+              client,
+              rawIntent,
+              intentType,
+              "rejected",
+              this.turns.length,
+              KICK_REASON_INVALID_MESSAGE,
+              reasonDetail,
+            );
+          }
           this.log.warn(`Failed to parse client message, kicking`, {
             clientID: client.clientID,
-            error: z.prettifyError(parsed.error),
+            error: reasonDetail,
           });
           this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
@@ -715,6 +891,16 @@ export class GameServer {
           bytes,
         );
         if (rateResult === "kick") {
+          if (clientMsg.type === "intent") {
+            this.emitIntentObserved(
+              client,
+              { ...clientMsg.intent, clientID: client.clientID },
+              clientMsg.intent.type,
+              "rejected",
+              this.turns.length,
+              KICK_REASON_TOO_MUCH_DATA,
+            );
+          }
           this.log.warn(`Client rate limit exceeded, kicking`, {
             clientID: client.clientID,
             type: clientMsg.type,
@@ -723,6 +909,16 @@ export class GameServer {
           return;
         }
         if (rateResult === "limit") {
+          if (clientMsg.type === "intent") {
+            this.emitIntentObserved(
+              client,
+              { ...clientMsg.intent, clientID: client.clientID },
+              clientMsg.intent.type,
+              "rejected",
+              this.turns.length,
+              "limit",
+            );
+          }
           this.log.warn(`Client message rate limit exceeded, dropping`, {
             clientID: client.clientID,
             type: clientMsg.type,
@@ -995,6 +1191,12 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.emitTelemetry("match_started", {
+      startedAt: this._startTime,
+      gameStartInfo: this.gameStartInfo,
+      buildHash: this.telemetryBuildHash,
+      turnIntervalMs: ServerEnv.turnIntervalMs(),
+    });
     this.wireGameStartInfo = this.gameConfig.disableClanTags
       ? {
           ...this.gameStartInfo,
@@ -1126,6 +1328,21 @@ export class GameServer {
     };
     this.turns.push(pastTurn);
     this.intents = [];
+    const counts = this.telemetryTickCounts.get(pastTurn.turnNumber) ?? {
+      observed: 0,
+      enqueued: 0,
+      dropped: 0,
+    };
+    this.telemetryTickCounts.delete(pastTurn.turnNumber);
+    this.emitTelemetry(
+      "turn_committed",
+      {
+        turnNumber: pastTurn.turnNumber,
+        replayIntentCount: pastTurn.intents.length,
+        ...counts,
+      },
+      this.turns.length,
+    );
 
     this.handleSynchronization();
     this.checkDisconnectedStatus();
@@ -1155,6 +1372,7 @@ export class GameServer {
     });
     if (!this._hasPrestarted && !this._hasStarted) {
       this.log.info(`game not started, not archiving game`);
+      this.emitMatchFinished();
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
@@ -1193,6 +1411,7 @@ export class GameServer {
         error: errorDetails,
       });
     }
+    this.emitMatchFinished();
   }
 
   phase(): GamePhase {
@@ -1476,6 +1695,7 @@ export class GameServer {
         } satisfies PlayerRecord;
       },
     );
+    this.replayArchiveAttempted = true;
     archive(
       finalizeGameRecord(
         createPartialGameRecord(
