@@ -457,7 +457,9 @@ export class BuildPreviewController implements Controller {
       radiusTileY = this.game.y(upgradeTargetTile);
     }
 
-    const cost = u.cost;
+    const multiplier =
+      u.canUpgrade !== false ? this.uiState.upgradeMultiplier || 1 : 1;
+    const cost = u.cost * BigInt(multiplier);
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
@@ -467,6 +469,7 @@ export class BuildPreviewController implements Controller {
       canBuild: u.canBuild !== false,
       canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),
+      multiplier: multiplier,
       showCost: this.userSettings.cursorCostLabel(),
       canAfford: myPlayer.gold() >= cost,
       ghostRailPaths: u.ghostRailPaths,
@@ -508,6 +511,7 @@ export class BuildPreviewController implements Controller {
         new SendUpgradeStructureIntentEvent(
           this.ghostUnit.buildableUnit.canUpgrade,
           this.ghostUnit.buildableUnit.type,
+          this.uiState.upgradeMultiplier || 1,
         ),
       );
       this.removeGhostStructure();

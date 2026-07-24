@@ -412,6 +412,14 @@ export class PlayerView {
     return owned.filter((u) => types.includes(u.type()));
   }
 
+  unitsOwned(type: UnitType): number {
+    return this.units(type).length;
+  }
+
+  unitsConstructed(type: UnitType): number {
+    return this.units(type).filter((u) => !u.isUnderConstruction()).length;
+  }
+
   nameLocation(): NameViewData | undefined {
     return this.nameData;
   }

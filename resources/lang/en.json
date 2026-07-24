@@ -98,6 +98,8 @@
       "warship": "Captures trade ships, destroys ships and boats"
     },
     "not_enough_money": "Not enough money",
+    "select_upgrade_amount": "Select Upgrade Amount",
+    "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
   },
   "chat": {
@@ -1352,7 +1354,8 @@
   },
   "radial_menu": {
     "delete_unit_description": "Click to delete the nearest unit",
-    "delete_unit_title": "Delete Unit"
+    "delete_unit_title": "Delete Unit",
+    "upgrade_x": "Upgrade x{amount}"
   },
   "relation": {
     "default": "Default",

@@ -520,6 +520,7 @@ export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
   unitId: z.number(),
+  amount: z.number().int().min(1).max(50).optional(),
 });
 
 export const CancelAttackIntentSchema = z.object({

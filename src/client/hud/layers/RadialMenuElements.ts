@@ -21,6 +21,7 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
+import { SendUpgradeStructureIntentEvent } from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
@@ -86,6 +87,7 @@ export const COLORS = {
   build: "#e6c74a",
   building: "#1e3a5f",
   boat: "#2a82c9",
+  disabled: "#94a3b8",
   ally: "#4ade80",
   breakAlly: "#dc2626",
   breakAllyNoDebuff: "#d97706",
@@ -450,6 +452,60 @@ function createMenuElements(
         ].filter(
           (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
         ),
+        subMenu: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (
+            !buildableUnit ||
+            buildableUnit.canUpgrade === false ||
+            !params.buildMenu.canBuildOrUpgrade(item)
+          ) {
+            return [];
+          }
+          return [1, 5, 10, 25, 50].map((amount) => {
+            const cost = buildableUnit.cost * BigInt(amount);
+            return {
+              id: `upgrade_${item.unitType}_${amount}`,
+              name: translateText("build_menu.upgrade_amount", {
+                amount: amount.toString(),
+              }),
+              text: translateText("build_menu.upgrade_amount", {
+                amount: amount.toString(),
+              }),
+              fontSize: "20px",
+              color: (p: MenuElementParams) =>
+                (p.game.myPlayer()?.gold() ?? 0n) >= cost
+                  ? COLORS.building
+                  : COLORS.disabled,
+              icon: "",
+              tooltipItems: [
+                {
+                  text: translateText("radial_menu.upgrade_x", {
+                    amount: amount.toString(),
+                  }),
+                  className: "title",
+                },
+                {
+                  text: `${renderNumber(cost)} ${translateText("player_panel.gold")}`,
+                  className: "cost",
+                },
+              ],
+              disabled: (p: MenuElementParams) =>
+                (p.game.myPlayer()?.gold() ?? 0n) < cost,
+              action: (p: MenuElementParams) => {
+                p.eventBus.emit(
+                  new SendUpgradeStructureIntentEvent(
+                    buildableUnit.canUpgrade as number,
+                    buildableUnit.type,
+                    amount,
+                  ),
+                );
+                p.closeMenu();
+              },
+            };
+          });
+        },
         action: (params: MenuElementParams) => {
           const buildableUnit = params.playerActions.buildableUnits.find(
             (bu) => bu.type === item.unitType,
@@ -458,9 +514,11 @@ function createMenuElements(
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+            params.buildMenu.handleBuildClick(buildableUnit, params.tile);
+            params.closeMenu();
+          } else {
+            params.closeMenu();
           }
-          params.closeMenu();
         },
       };
     });
