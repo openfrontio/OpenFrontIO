@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { adGatekeeper } from "./AdGatekeeper";
 
 // ─── Gutter Ads ──────────────────────────────────────────────────────────────
 
@@ -72,8 +73,13 @@ export class HomepagePromos extends LitElement {
     } catch (e) {
       console.error("error destroying gutter ads", e);
     }
-    // The corner video must not keep playing during the game.
-    this.destroyCornerAdVideo();
+    // Adblock-detected users get NO in-game ads (the AdGatekeeper latch is
+    // permanent, surviving the blocker being disabled), so the corner video
+    // must not keep playing into the game for them. Blocker-free users keep
+    // it — same policy as InGamePromo's bottom-left ad.
+    if (!adGatekeeper.canShowAds) {
+      this.destroyCornerAdVideo();
+    }
   }
 
   public loadBottomRail(): void {
