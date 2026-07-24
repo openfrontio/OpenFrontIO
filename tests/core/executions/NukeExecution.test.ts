@@ -315,4 +315,43 @@ describe("NukeExecution", () => {
 
     expect(game.drainNukeImpacts()).toHaveLength(0);
   });
+
+  test("drainNukeImpacts returns queued tiles for water nukes", async () => {
+    const waterGame = await setup(
+      "big_plains",
+      { infiniteGold: true, instantBuild: true, waterNukes: true },
+      [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
+    );
+    (waterGame.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 10,
+      outer: 10,
+    }));
+
+    const waterPlayer = waterGame.player("player_id");
+    waterPlayer.conquer(waterGame.ref(1, 1));
+    waterPlayer.buildUnit(UnitType.MissileSilo, waterGame.ref(1, 1), {});
+
+    expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+
+    waterGame.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        waterPlayer,
+        waterGame.ref(50, 50),
+        waterGame.ref(1, 1),
+      ),
+    );
+    executeTicks(waterGame, 200);
+
+    const impacts = waterGame.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+    expect(impacts).toContain(waterGame.ref(50, 50));
+
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+  });
 });
