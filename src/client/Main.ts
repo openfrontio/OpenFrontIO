@@ -261,7 +261,7 @@ class Client {
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
-  }> | null = null;
+  } | null> | null = null;
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
@@ -310,8 +310,14 @@ class Client {
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
     // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // the user joins a lobby. This runs in the background before the user has
+    // asked to play, so any failure (e.g. a transient Cloudflare 600xxx on a
+    // cold load) must stay silent — the join-time path re-fetches and surfaces
+    // an error only if a token is actually needed. See getTurnstileToken().
+    this.turnstileTokenPromise = getTurnstileToken().catch((e) => {
+      console.warn("Turnstile prefetch failed; will retry on join", e);
+      return null;
+    });
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -1047,28 +1053,32 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
+    const prefetch = this.turnstileTokenPromise;
+    // Clear promise so a new token is fetched next time.
     this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
+
+    // Use the prefetched token when it exists and is still fresh. On crazygames
+    // the prefetch isn't usable, so always request a new token.
+    if (prefetch !== null && !crazyGamesSDK.isOnCrazyGames()) {
+      const token = await prefetch.catch(() => null);
+      const tokenTTL = 3 * 60 * 1000;
+      if (token && Date.now() < token.createdAt + tokenTTL) {
+        console.log("Prefetched turnstile token is valid");
+        return token.token;
+      }
+      console.log("No fresh prefetched turnstile token, getting new token");
+    } else {
+      console.log("No prefetched turnstile token, getting new token");
     }
 
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
+    // Fetch on demand. Unlike the prefetch, this runs at the moment the user is
+    // joining, so a failure to obtain a token is worth surfacing to them.
+    try {
       return (await getTurnstileToken())?.token ?? null;
+    } catch (e) {
+      console.error("Turnstile verification failed", e);
+      alert(translateText("turnstile.verification_failed"));
+      return null;
     }
   }
 }
@@ -1110,6 +1120,11 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
+// How long Turnstile waits before auto-retrying a failed challenge.
+const TURNSTILE_RETRY_INTERVAL_MS = 8000;
+// Overall budget for a single token request before we give up on retries.
+const TURNSTILE_OVERALL_TIMEOUT_MS = 30000;
+
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
@@ -1130,20 +1145,43 @@ async function getTurnstileToken(): Promise<{
     size: "normal",
     appearance: "interaction-only",
     theme: "light",
+    // Cloudflare emits transient challenge-execution failures (e.g. 600010) on
+    // cold loads that usually clear on a retry. Let Turnstile retry itself
+    // rather than failing on the first blip; the overall timeout below is the
+    // backstop if it never recovers.
+    retry: "auto",
+    "retry-interval": TURNSTILE_RETRY_INTERVAL_MS,
   });
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = () => {
+      clearTimeout(timeoutId);
+      window.turnstile.remove(widgetId);
+    };
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      finish();
+      reject(new Error("Turnstile timed out"));
+    }, TURNSTILE_OVERALL_TIMEOUT_MS);
+
     window.turnstile.execute(widgetId, {
       callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
+        if (settled) return;
+        settled = true;
+        finish();
+        console.log("Turnstile token received");
         resolve({ token, createdAt: Date.now() });
       },
+      // Returning true tells Turnstile the error was handled by the site and it
+      // should auto-retry (see `retry: "auto"` above). Don't tear the widget
+      // down or reject here — many 600xxx codes recover on a subsequent
+      // attempt, and the overall timeout guarantees we don't wait forever.
       "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
+        if (settled) return false;
+        console.warn(`Turnstile error (will retry): ${errorCode}`);
+        return true;
       },
     });
   });
