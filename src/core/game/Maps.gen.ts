@@ -32,6 +32,7 @@ export enum GameMapType {
   China = "China", // map-generator/assets/maps/china/info.json
   ChoppingBlock = "Chopping Block", // map-generator/assets/maps/choppingblock/info.json
   Conakry = "Conakry", // map-generator/assets/maps/conakry/info.json
+  Crimea = "Crimea", // map-generator/assets/maps/crimea/info.json
   DanishStraits = "Danish Straits", // map-generator/assets/maps/danishstraits/info.json
   DeglaciatedAntarctica = "Deglaciated Antarctica", // map-generator/assets/maps/deglaciatedantarctica/info.json
   Didier = "Didier", // map-generator/assets/maps/didier/info.json
@@ -394,6 +395,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["africa"],
     multiplayerFrequency: 3,
     specialTeamCount: 2,
+  },
+  {
+    id: "Crimea",
+    type: GameMapType.Crimea,
+    translationKey: "map.crimea",
+    categories: ["new", "europe"],
+    multiplayerFrequency: 4,
   },
   {
     id: "DanishStraits",
