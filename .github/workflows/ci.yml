@@ -46,8 +46,8 @@ jobs:
       - run: npm ci
       - run: npm run test:coverage
 
-  eslint:
-    name: 🔍 ESLint
+  lint:
+    name: 🔍 Lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -57,7 +57,7 @@ jobs:
           node-version: "24"
           cache: "npm"
       - run: npm ci
-      - run: npx eslint --format gha
+      - run: npm run lint:github
 
   prettier:
     name: 🎨 Prettier

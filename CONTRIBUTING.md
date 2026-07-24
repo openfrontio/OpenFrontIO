@@ -101,7 +101,7 @@ git checkout -b fix/issue-number-bug-name
 
 ### Coding Standards
 
-We enforce code quality using ESLint and Prettier. All code must follow existing style patterns, and new features should not break existing functionality.
+We enforce code quality using Oxlint, ESLint, and Prettier. ESLint remains during the Oxlint migration as a compatibility backstop. All code must follow existing style patterns, and new features should not break existing functionality.
 
 - **Format Code**: `npm run format`
 - **Lint Code**: `npm run lint`
