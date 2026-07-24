@@ -745,7 +745,7 @@ export async function fetchGameById(
 
 export async function fetchPlayerLeaderboard(
   page: number,
-): Promise<RankedLeaderboardResponse | "reached_limit" | false> {
+): Promise<RankedLeaderboardResponse | false> {
   try {
     const url = new URL(`${getApiBase()}/leaderboard/ranked`);
     url.searchParams.set("page", String(page));
@@ -762,13 +762,10 @@ export async function fetchPlayerLeaderboard(
       return false;
     }
 
-    const json = await res.json();
-    const parsed = RankedLeaderboardResponseSchema.safeParse(json);
+    // A page past the end of the leaderboard is an empty list, not an error —
+    // callers detect the end by receiving fewer entries than the page size.
+    const parsed = RankedLeaderboardResponseSchema.safeParse(await res.json());
     if (!parsed.success) {
-      // Handle "Page must be between X and Y" error as end of list
-      if (json?.message?.includes?.("Page must be between")) {
-        return "reached_limit";
-      }
       console.warn(
         "fetchPlayerLeaderboard: Zod validation failed",
         parsed.error.toString(),

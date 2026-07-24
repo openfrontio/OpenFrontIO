@@ -44,21 +44,15 @@ vi.mock("../../src/client/Api", () => {
   return {
     getApiBase: vi.fn(getApiBase),
     getUserMe: vi.fn(async () => false),
+    // Mirrors src/client/Api.ts: any non-ok response is a failure. The end of
+    // the leaderboard is signalled by a short page, never by an error body.
     fetchPlayerLeaderboard: vi.fn(async (page: number) => {
       const url = new URL(`${getApiBase()}/leaderboard/ranked`);
       url.searchParams.set("page", String(page));
       const res = await fetch(url.toString(), {
         headers: { Accept: "application/json" },
       });
-      if (!res.ok) {
-        if (res.status === 400) {
-          const errorJson = await res.json().catch(() => null);
-          if (errorJson?.message?.includes("Page must be between")) {
-            return "reached_limit";
-          }
-        }
-        return false;
-      }
+      if (!res.ok) return false;
       return res.json();
     }),
   };
@@ -291,6 +285,65 @@ describe("LeaderboardModal", () => {
         }),
       );
       expect(playerList!.currentUserEntry?.playerId).toBe("player-2");
+    });
+  });
+
+  describe("Player Pagination", () => {
+    const rankedPage = (count: number, startRank: number) => ({
+      "1v1": Array.from({ length: count }, (_, i) => ({
+        rank: startRank + i,
+        elo: 2000 - (startRank + i),
+        peakElo: 2000,
+        wins: 5,
+        losses: 5,
+        total: 10,
+        public_id: `player-${startRank + i}`,
+        username: `Player${startRank + i}`,
+        accountUsername: null,
+        clanTag: null,
+      })),
+    });
+
+    // Regression for #4500: a full first page followed by a page past the end
+    // of the data must stop paging quietly. It used to be a 400, which surfaced
+    // as a permanent "Try Again" footer and an infinite retry loop.
+    it("stops paging on an empty page without showing an error", async () => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock
+        .mockResolvedValueOnce(jsonRes(rankedPage(50, 1)))
+        .mockResolvedValueOnce(jsonRes({ "1v1": [] }));
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+      expect(playerList.playerData).toHaveLength(50);
+
+      await playerList.loadPlayerLeaderboard();
+      await playerList.updateComplete;
+
+      expect(playerList.playerData).toHaveLength(50);
+      expect(modal.textContent).not.toContain("Try Again");
+
+      // The end of the list is sticky: no further requests are made.
+      const callCount = fetchMock.mock.calls.length;
+      await playerList.loadPlayerLeaderboard();
+      expect(fetchMock.mock.calls.length).toBe(callCount);
+    });
+
+    it("shows Try Again when a page genuinely fails", async () => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock
+        .mockResolvedValueOnce(jsonRes(rankedPage(50, 1)))
+        .mockResolvedValueOnce(jsonRes({}, false, 500));
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+
+      await playerList.loadPlayerLeaderboard();
+      await playerList.updateComplete;
+
+      expect(modal.textContent).toContain("Try Again");
     });
   });
 

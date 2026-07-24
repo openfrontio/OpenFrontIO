@@ -63,12 +63,6 @@ export class LeaderboardPlayerList extends LitElement {
         throw new Error("Failed to load player leaderboard");
       }
 
-      if (result === "reached_limit") {
-        this.playerHasMore = false;
-        this.hasLoadedPlayers = true;
-        return;
-      }
-
       const nextPlayers: PlayerLeaderboardEntry[] = result[
         RankedType.OneVOne
       ].map((entry) => ({
