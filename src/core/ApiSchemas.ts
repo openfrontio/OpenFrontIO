@@ -347,7 +347,8 @@ export const PlayerLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The leaderboard displays this or
   // the playerId — the per-session name is deliberately ignored.
   accountUsername: z.string().nullable().optional(),
-  clanTag: RequiredClanTagSchema.nullable().optional(),
+  // No clanTag: 1v1 ranked is an individual ladder, and the tag the API
+  // reports is whatever the player last happened to use in any game mode.
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
