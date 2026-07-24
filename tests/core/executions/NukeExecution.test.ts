@@ -345,7 +345,17 @@ describe("NukeExecution", () => {
 
     const impacts = waterGame.drainNukeImpacts();
     expect(impacts.length).toBeGreaterThan(0);
+
+    // Target tile must be present.
     expect(impacts).toContain(waterGame.ref(50, 50));
+
+    // A tile on the blast boundary (distance exactly 10 from center).
+    expect(impacts).toContain(waterGame.ref(40, 50));
+
+    // With inner=outer=10 the blast is a filled circle of radius 10.
+    // pi*10^2 ~= 314 tiles; require at least 200 (conservative lower bound
+    // accounting for impassable terrain and map edges).
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
 
     for (const ref of impacts) {
       expect(typeof ref).toBe("number");
