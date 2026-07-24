@@ -1520,6 +1520,9 @@
     "sam_launcher": "SAM Launcher",
     "warship": "Warship"
   },
+  "update_available": {
+    "message": "A new version of OpenFront is available. The page will now refresh to update."
+  },
   "user_setting": {
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "alert_frame_label": "Alert Frame",

@@ -250,6 +250,10 @@ export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
   serverTime: z.number(),
   games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  // Build commit of the serving deployment. Clients on the homepage compare
+  // it to their own bundle's commit to detect that a new version deployed
+  // and prompt a refresh. Optional so clients tolerate older servers.
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const PublicLobbyCountsSchema = z.object({
@@ -879,6 +883,11 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  // Build commit of the client bundle. The sim only stays deterministic when
+  // every client in a game runs identical code, so the server rejects joins
+  // whose commit doesn't match its own (missing counts as a mismatch —
+  // pre-feature bundles are by definition stale).
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -887,6 +896,8 @@ export const ClientRejoinMessageSchema = z.object({
   // Note: clientID is NOT sent - server looks it up from persistentID in token
   lastTurn: z.number(),
   token: TokenSchema,
+  // See ClientJoinMessageSchema.gitCommit.
+  gitCommit: z.string().max(64).optional(),
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

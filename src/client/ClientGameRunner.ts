@@ -229,6 +229,12 @@ export function joinLobby(
             }),
           );
         });
+      } else if (message.error === "version_mismatch") {
+        // The server runs a newer build than this bundle (tab left open
+        // across a deploy). Reload to pick up the new version.
+        showInGameAlert(translateText("update_available.message")).then(() => {
+          window.location.reload();
+        });
       } else {
         showErrorModal(
           message.error,
