@@ -63,6 +63,7 @@ export class LeaderboardPlayerList extends LitElement {
         throw new Error("Failed to load player leaderboard");
       }
 
+      // Past the last page. Not an error: stop paging, leave the footer clear.
       if (result === "reached_limit") {
         this.playerHasMore = false;
         this.hasLoadedPlayers = true;
