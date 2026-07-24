@@ -37,12 +37,15 @@ export class PlayerName extends LitElement {
     const copyText =
       this.copyText !== "" ? this.copyText : (this.username ?? this.publicId);
     // Only an account username gets the blue-base + "#suffix" treatment; the
-    // publicId fallback stays a plain monospace chip.
+    // publicId fallback stays a plain monospace chip. A caller-supplied
+    // nameClass stays the styling authority (e.g. the leaderboard's sticky
+    // current-user row deliberately goes white), so the base inherits its
+    // color there instead of forcing the default blue.
     const nameContent =
       this.username !== null &&
       this.username !== undefined &&
       this.username !== ""
-        ? usernameText(this.username)
+        ? usernameText(this.username, this.nameClass !== "" ? "" : undefined)
         : null;
     // inline-flex so the element sits on one line with inline siblings
     // (dates, role chips) while keeping the badge glued to the name.

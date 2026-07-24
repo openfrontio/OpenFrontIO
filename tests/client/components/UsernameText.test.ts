@@ -80,4 +80,12 @@ describe("usernameText", () => {
     const spans = host.querySelectorAll("span");
     expect(spans[0].className).toBe("font-bold truncate");
   });
+
+  it("lets the base inherit color when given an empty base class", () => {
+    const host = document.createElement("div");
+    render(usernameText("player.1234", ""), host);
+    const spans = host.querySelectorAll("span");
+    expect(spans[0].className).toBe("");
+    expect(spans[1].textContent).toBe("#1234");
+  });
 });
