@@ -1012,6 +1012,7 @@ export class GameImpl implements Game {
     message: string,
     type: MessageType,
     playerID: PlayerID,
+    attackerName?: string,
   ): void {
     const id = this.player(playerID).smallID();
 
@@ -1021,6 +1022,7 @@ export class GameImpl implements Game {
       message: message,
       messageType: type,
       playerID: id,
+      attackerName: attackerName,
     });
   }
 

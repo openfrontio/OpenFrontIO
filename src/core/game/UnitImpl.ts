@@ -3,6 +3,7 @@ import {
   AllUnitParams,
   MessageType,
   Player,
+  Structures,
   Tick,
   TrainType,
   TrajectoryTile,
@@ -216,6 +217,24 @@ export class UnitImpl implements Unit {
         this.mg.stats().unitLose(this._owner, this._type);
         break;
     }
+    if (Structures.has(this._type)) {
+      this.mg.displayMessage(
+        "events_display.unit_captured",
+        MessageType.CAPTURED_ENEMY_UNIT,
+        newOwner.id(),
+        undefined,
+        { unit: this._type, name: this._owner.displayName() },
+        this.id(),
+      );
+      this.mg.displayMessage(
+        "events_display.unit_lost",
+        MessageType.UNIT_DESTROYED,
+        this._owner.id(),
+        undefined,
+        { unit: this._type, name: newOwner.displayName() },
+        this.id(),
+      );
+    }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
     this._owner = newOwner;
@@ -326,11 +345,15 @@ export class UnitImpl implements Unit {
   }
 
   private displayMessageOnDeleted(): void {
-    // Only warships and transport ships are worth notifying about; everything
+    if (!this._owner.isAlive()) {
+      return;
+    }
+    // Only warships, transport ships, and structures are worth notifying about; everything
     // else is either visible on the map or too low-stakes to surface.
     if (
       this._type !== UnitType.Warship &&
-      this._type !== UnitType.TransportShip
+      this._type !== UnitType.TransportShip &&
+      !Structures.has(this._type)
     ) {
       return;
     }

@@ -32,6 +32,32 @@ import {
   translateText,
 } from "../../Utils";
 
+const UNIT_TRANSLATION_KEYS: Record<string, string> = {
+  City: "city",
+  Port: "port",
+  "Defense Post": "defense_post",
+  "SAM Launcher": "sam_launcher",
+  "Missile Silo": "missile_silo",
+  Factory: "factory",
+  Warship: "warship",
+  Transport: "boat",
+  "Atom Bomb": "atom_bomb",
+  "Hydrogen Bomb": "hydrogen_bomb",
+  MIRV: "mirv",
+};
+
+const getTranslatedUnitName = (unitType: string, plural: boolean): string => {
+  const key = UNIT_TRANSLATION_KEYS[unitType];
+  if (!key) return unitType;
+  return translateText(plural ? `unit_type_plural.${key}` : `unit_type.${key}`);
+};
+
+const INBOUND_NUKE_KEYS: Record<number, string> = {
+  [MessageType.NUKE_INBOUND]: "events_display.atom_bomb_inbound",
+  [MessageType.HYDROGEN_BOMB_INBOUND]: "events_display.hydrogen_bomb_inbound",
+  [MessageType.MIRV_INBOUND]: "events_display.mirv_inbound",
+};
+
 interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
@@ -41,6 +67,12 @@ interface GameEvent {
   onDelete?: () => void;
   focusID?: number;
   unitView?: UnitView;
+  groupKey?: string;
+  count?: number;
+  unitType?: string;
+  targetPlayerName?: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
 }
 
 const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
@@ -242,6 +274,39 @@ export class EventsDisplay extends LitElement implements Controller {
   }
 
   private addEvent(event: GameEvent) {
+    if (event.groupKey) {
+      const existing = this.events.find(
+        (e) =>
+          e.groupKey === event.groupKey &&
+          this.game.ticks() - e.createdAt <= 30,
+      );
+      if (existing) {
+        existing.count = (existing.count ?? 1) + 1;
+        existing.createdAt = this.game.ticks();
+        if (event.unitView !== undefined) {
+          existing.unitView = event.unitView;
+        }
+        if (event.focusID !== undefined) {
+          existing.focusID = event.focusID;
+        }
+
+        if (existing.messageKey) {
+          const params: Record<string, string | number> = {
+            ...existing.messageParams,
+            count: existing.count,
+          };
+          if (existing.messageParams?.unit) {
+            params.unit = getTranslatedUnitName(
+              existing.unitType ?? "",
+              existing.count > 1,
+            );
+          }
+          existing.description = translateText(existing.messageKey, params);
+        }
+        this.requestUpdate();
+        return;
+      }
+    }
     this.events = [...this.events, event];
     this.requestUpdate();
   }
@@ -261,21 +326,48 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    let description: string = event.message;
-    if (event.message.startsWith("events_display.")) {
-      description = translateText(event.message, event.params ?? {});
+    const params = { ...event.params };
+    if (params.unit) {
+      params.unit = getTranslatedUnitName(String(params.unit), false);
     }
 
-    const unitView =
-      event.unitID !== undefined ? this.game.unit(event.unitID) : undefined;
+    const description = event.message.startsWith("events_display.")
+      ? translateText(event.message, { ...params, count: 1 })
+      : event.message;
+
+    let groupKey: string | undefined;
+    const unitType = String(event.params?.unit ?? "");
+    const targetPlayerName = String(event.params?.name ?? "");
+
+    if (event.message === "events_display.unit_destroyed") {
+      groupKey = `destroyed_${unitType}`;
+    } else if (event.message === "events_display.unit_captured") {
+      groupKey = `captured_${unitType}_${targetPlayerName}`;
+    } else if (event.message === "events_display.unit_lost") {
+      groupKey = `lost_${unitType}_${targetPlayerName}`;
+    } else if (event.message === "events_display.missile_intercepted") {
+      groupKey = `intercepted_${unitType}`;
+    }
+
     this.addEvent({
-      description: description,
+      description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
-      unitView: unitView,
+      unitView:
+        event.unitID !== undefined ? this.game.unit(event.unitID) : undefined,
       focusID: event.focusPlayerID,
+      groupKey,
+      count: 1,
+      unitType,
+      targetPlayerName,
+      messageKey: event.message.startsWith("events_display.")
+        ? event.message
+        : undefined,
+      messageParams: event.message.startsWith("events_display.")
+        ? event.params
+        : undefined,
     });
   }
 
@@ -530,20 +622,47 @@ export class EventsDisplay extends LitElement implements Controller {
 
   onUnitIncomingEvent(event: UnitIncomingUpdate) {
     const myPlayer = this.game.myPlayer();
-
     if (!myPlayer || myPlayer.smallID() !== event.playerID) {
       return;
     }
 
-    const unitView = this.game.unit(event.unitID);
+    let description = event.message;
+    let groupKey: string | undefined;
+    let unitType: string | undefined;
+    let messageKey: string | undefined;
+    let messageParams: Record<string, string | number> | undefined;
+
+    if (event.attackerName) {
+      messageKey = INBOUND_NUKE_KEYS[event.messageType];
+      if (messageKey) {
+        messageParams = { name: event.attackerName };
+        description = translateText(messageKey, { ...messageParams, count: 1 });
+        if (event.messageType === MessageType.NUKE_INBOUND) {
+          unitType = "Atom Bomb";
+          groupKey = `inbound_atom_${event.attackerName}`;
+        } else if (event.messageType === MessageType.HYDROGEN_BOMB_INBOUND) {
+          unitType = "Hydrogen Bomb";
+          groupKey = `inbound_hydrogen_${event.attackerName}`;
+        } else if (event.messageType === MessageType.MIRV_INBOUND) {
+          unitType = "MIRV";
+          groupKey = `inbound_mirv_${event.attackerName}`;
+        }
+      }
+    }
 
     this.addEvent({
-      description: event.message,
+      description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
-      unitView: unitView,
+      unitView: this.game.unit(event.unitID),
+      groupKey,
+      count: 1,
+      unitType,
+      targetPlayerName: event.attackerName,
+      messageKey,
+      messageParams,
     });
   }
 

@@ -93,6 +93,7 @@ export class MirvExecution implements Execution {
         `⚠️⚠️⚠️ ${this.player.displayName()} - MIRV INBOUND ⚠️⚠️⚠️`,
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
+        this.player.displayName(),
       );
     }
 

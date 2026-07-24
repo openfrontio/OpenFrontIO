@@ -157,6 +157,7 @@ export class TransportShipExecution implements Execution {
         `Naval invasion incoming from ${this.attacker.displayName()} (${renderTroops(this.boat.troops())})`,
         MessageType.NAVAL_INVASION_INBOUND,
         this.target.id(),
+        this.attacker.displayName(),
       );
     }
 

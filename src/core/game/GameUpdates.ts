@@ -340,6 +340,7 @@ export interface UnitIncomingUpdate {
   message: string;
   messageType: MessageType;
   playerID: number;
+  attackerName?: string;
 }
 
 export interface EmbargoUpdate {
