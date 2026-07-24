@@ -94,6 +94,14 @@ export class MirvExecution implements Execution {
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );
+
+      // after sending a nuke set the missilesilo on cooldown
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .find((silo) => silo.tile() === spawn);
+      if (silo) {
+        silo.launch();
+      }
     }
 
     const result = this.pathFinder.next(
