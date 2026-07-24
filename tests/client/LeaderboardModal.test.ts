@@ -272,7 +272,6 @@ describe("LeaderboardModal", () => {
         expect.objectContaining({
           playerId: "player-1",
           accountUsername: "alpha.4821",
-          clanTag: "[AAA]",
           elo: 1200,
           games: 10,
           wins: 6,
@@ -286,11 +285,40 @@ describe("LeaderboardModal", () => {
         expect.objectContaining({
           playerId: "player-2",
           accountUsername: null,
-          clanTag: undefined,
           winRate: 0.4,
         }),
       );
       expect(playerList!.currentUserEntry?.playerId).toBe("player-2");
+    });
+
+    // 1v1 ranked is an individual ladder, and the tag the API reports is
+    // whatever the player last used in any mode — so it is not carried over.
+    it("drops the clan tag the API sends", async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [
+            {
+              rank: 1,
+              elo: 1200,
+              peakElo: 1300,
+              wins: 6,
+              losses: 4,
+              total: 10,
+              public_id: "player-1",
+              username: "Alpha",
+              accountUsername: "alpha.4821",
+              clanTag: "[AAA]",
+            },
+          ],
+        }),
+      );
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+
+      expect(playerList.playerData[0]).not.toHaveProperty("clanTag");
+      expect(modal.textContent).not.toContain("[AAA]");
     });
   });
 

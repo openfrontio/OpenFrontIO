@@ -75,7 +75,6 @@ export class LeaderboardPlayerList extends LitElement {
         rank: entry.rank,
         playerId: entry.public_id,
         accountUsername: entry.accountUsername ?? null,
-        clanTag: entry.clanTag ?? undefined,
         elo: entry.elo,
         games: entry.total,
         wins: entry.wins,
@@ -218,6 +217,67 @@ export class LeaderboardPlayerList extends LitElement {
     void this.updateComplete.then(() => this.maybeLoadMorePlayers());
   }
 
+  // The pinned "your ranking" row lives in the table's own <tfoot> rather than
+  // in an overlay. `table-fixed w-full` stretches the colgroup widths to fill
+  // the container, so the resolved widths depend on the modal size and cannot
+  // be reproduced by a separate element; and below 34rem the table scrolls
+  // horizontally, which an overlay outside .scroll-container would not follow.
+  private renderStickyUserRow() {
+    if (!this.currentUserEntry) return nothing;
+    const entry = this.currentUserEntry;
+
+    return html`
+      <tfoot
+        class="sticky bottom-0 z-20 transition-opacity duration-200 ${this
+          .showStickyUser
+          ? "opacity-100"
+          : "opacity-0 pointer-events-none"}"
+        aria-hidden=${this.showStickyUser ? nothing : "true"}
+      >
+        <tr class="bg-blue-600 border-t border-blue-400/30 shadow-2xl">
+          <td class="py-3 px-4 text-center">
+            <div
+              class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+            >
+              ${entry.rank}
+            </div>
+          </td>
+          <td class="py-3 px-4">
+            <div class="flex flex-col">
+              <span
+                class="text-[10px] uppercase font-bold text-blue-200/80 leading-tight"
+                >${translateText("leaderboard_modal.your_ranking")}</span
+              >
+              <player-name
+                .username=${entry.accountUsername}
+                .publicId=${entry.playerId}
+                .nameClass=${"font-bold text-white truncate text-base hover:underline"}
+                .onNameClick=${() => this.openProfile(entry.playerId)}
+              ></player-name>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <span class="font-mono text-white font-bold">${entry.elo}</span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <span class="font-mono text-white font-bold">${entry.games}</span>
+          </td>
+          <td class="py-3 px-4 text-right pr-6">
+            <div class="inline-flex flex-col items-end">
+              <span class="font-mono font-bold text-white"
+                >${(entry.winRate * 100).toFixed(1)}%</span
+              >
+              <span
+                class="text-[10px] uppercase text-blue-200/80 font-bold tracking-wider"
+                >${translateText("leaderboard_modal.ratio")}</span
+              >
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    `;
+  }
+
   private renderPlayerRow(player: PlayerLeaderboardEntry) {
     const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
     const displayRank = player.rank;
@@ -252,13 +312,6 @@ export class LeaderboardPlayerList extends LitElement {
         </td>
         <td class="py-3 px-4">
           <div class="flex items-center gap-2">
-            ${player.clanTag
-              ? html`<div
-                  class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
-                >
-                  ${player.clanTag}
-                </div>`
-              : ""}
             <player-name
               .username=${player.accountUsername}
               .publicId=${player.playerId}
@@ -379,12 +432,16 @@ export class LeaderboardPlayerList extends LitElement {
 
     return html`
       <div class="h-full">
-        <div class="h-full border border-white/5 bg-black/20 relative">
+        <!--
+          No bottom border: the pinned "your ranking" row sits flush against
+          this edge, and a dark hairline under a saturated blue row reads as a
+          stray outline. The rows above it end on their own border-b.
+        -->
+        <div
+          class="h-full border-x border-t border-white/5 bg-black/20 relative"
+        >
           <div
-            class="scroll-container h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
-              .showStickyUser
-              ? "pb-20"
-              : "pb-0"}"
+            class="scroll-container h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20"
             @scroll=${() => this.handleScroll()}
           >
             <table class="w-full text-sm border-collapse table-fixed">
@@ -419,62 +476,10 @@ export class LeaderboardPlayerList extends LitElement {
               <tbody>
                 ${this.playerData.map((player) => this.renderPlayerRow(player))}
               </tbody>
+              ${this.renderStickyUserRow()}
             </table>
             ${this.renderPlayerFooter()}
           </div>
-          ${this.currentUserEntry
-            ? html`
-                <div class="absolute inset-x-0 bottom-0 z-20">
-                  <div
-                    class="bg-blue-600/90 backdrop-blur-md border-t border-blue-400/30 py-4 px-6 shadow-2xl flex items-center transition-all duration-200 ${this
-                      .showStickyUser
-                      ? "opacity-100 translate-y-0"
-                      : "opacity-0 translate-y-3 pointer-events-none"}"
-                    aria-hidden=${this.showStickyUser ? nothing : "true"}
-                  >
-                    <div class="w-10 text-center">
-                      <div
-                        class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
-                      >
-                        ${this.currentUserEntry.rank}
-                      </div>
-                    </div>
-                    <div class="flex-1 flex flex-col ml-4">
-                      <span
-                        class="text-[10px] uppercase font-bold text-blue-200/60 leading-tight"
-                        >${translateText(
-                          "leaderboard_modal.your_ranking",
-                        )}</span
-                      >
-                      <div class="flex items-center gap-2">
-                        ${this.currentUserEntry.clanTag
-                          ? html`<div
-                              class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-300/40 text-[10px] font-bold text-blue-100 shrink-0"
-                            >
-                              ${this.currentUserEntry.clanTag}
-                            </div>`
-                          : ""}
-                        <player-name
-                          .username=${this.currentUserEntry.accountUsername}
-                          .publicId=${this.currentUserEntry.playerId}
-                          .nameClass=${"font-bold text-white text-base hover:underline"}
-                          .onNameClick=${() =>
-                            this.openProfile(this.currentUserEntry!.playerId)}
-                        ></player-name>
-                      </div>
-                    </div>
-                    <div class="flex flex-col items-end w-20">
-                      <div class="font-mono text-white font-bold text-lg">
-                        ${this.currentUserEntry.elo}
-                        <span class="text-[10px] text-white/60"
-                          >${translateText("leaderboard_modal.elo")}</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              `
-            : ""}
         </div>
       </div>
     `;
