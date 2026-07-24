@@ -314,10 +314,17 @@ class Client {
     // asked to play, so any failure (e.g. a transient Cloudflare 600xxx on a
     // cold load) must stay silent — the join-time path re-fetches and surfaces
     // an error only if a token is actually needed. See getTurnstileToken().
-    this.turnstileTokenPromise = getTurnstileToken().catch((e) => {
-      console.warn("Turnstile prefetch failed; will retry on join", e);
-      return null;
-    });
+    //
+    // Skip the prefetch on CrazyGames: getTurnstileToken(lobby) always requests
+    // a fresh token there and never reuses the prefetched one, so starting it
+    // would render a second widget into #turnstile-container while the
+    // abandoned prefetch is still (re)trying.
+    if (!crazyGamesSDK.isOnCrazyGames()) {
+      this.turnstileTokenPromise = getTurnstileToken().catch((e) => {
+        console.warn("Turnstile prefetch failed; will retry on join", e);
+        return null;
+      });
+    }
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
