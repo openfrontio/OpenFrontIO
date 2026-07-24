@@ -446,7 +446,8 @@ export const AllianceExtensionIntentSchema = z.object({
 export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: ID.nullable(),
-  troops: z.number().nonnegative().nullable(),
+  troopCount: z.number().int().nonnegative(),
+  troopRatio: z.number().int().gt(0).max(100),
 });
 
 export const SpawnIntentSchema = z.object({
@@ -456,7 +457,8 @@ export const SpawnIntentSchema = z.object({
 
 export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
-  troops: z.number().nonnegative(),
+  troopCount: z.number().int().nonnegative(),
+  troopRatio: z.number().int().gt(0).max(100),
   dst: z.number(),
 });
 
