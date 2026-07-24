@@ -3,6 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { isVerifiedUsername } from "../../core/ApiSchemas";
 import { translateText } from "../Utils";
 import "./CopyButton";
+import { usernameText } from "./ui/UsernameText";
 import { verifiedBadge } from "./ui/VerifiedBadge";
 
 /**
@@ -35,6 +36,17 @@ export class PlayerName extends LitElement {
     const displayName = this.username ?? this.publicId;
     const copyText =
       this.copyText !== "" ? this.copyText : (this.username ?? this.publicId);
+    // Only an account username gets the blue-base + "#suffix" treatment; the
+    // publicId fallback stays a plain monospace chip. A caller-supplied
+    // nameClass stays the styling authority (e.g. the leaderboard's sticky
+    // current-user row deliberately goes white), so the base inherits its
+    // color there instead of forcing the default blue.
+    const nameContent =
+      this.username !== null &&
+      this.username !== undefined &&
+      this.username !== ""
+        ? usernameText(this.username, this.nameClass !== "" ? "" : undefined)
+        : null;
     // inline-flex so the element sits on one line with inline siblings
     // (dates, role chips) while keeping the badge glued to the name.
     return html`
@@ -49,12 +61,13 @@ export class PlayerName extends LitElement {
               aria-label=${translateText("player_profile.view")}
               @click=${() => this.onNameClick?.()}
             >
-              ${displayName}
+              ${nameContent ?? displayName}
             </button>`
           : html`<copy-button
               compact
               .copyText=${copyText}
               .displayText=${displayName}
+              .displayContent=${nameContent}
               .showVisibilityToggle=${false}
               .showCopyIcon=${false}
             ></copy-button>`}

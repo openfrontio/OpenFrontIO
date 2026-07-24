@@ -9,6 +9,7 @@ import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/PlayerName";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { translateText } from "./Utils";
 
@@ -55,7 +56,7 @@ export class PlayerProfileModal extends BaseModal {
         ? html`<span
             class="text-white text-xl lg:text-2xl font-bold tracking-wide break-words hyphens-auto min-w-0 inline-flex items-center gap-2"
           >
-            ${this.username}
+            ${usernameText(this.username)}
             ${isVerifiedUsername(this.username)
               ? verifiedBadge("w-5 h-5")
               : nothing}
