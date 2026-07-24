@@ -8,6 +8,7 @@ export class HomepagePromos extends LitElement {
   @state() private isVisible: boolean = false;
   @state() private adLoaded: boolean = false;
   private cornerAdLoaded: boolean = false;
+  private cornerAdDestroyed: boolean = false;
 
   private onUserMeResponse = () => {
     if (window.adsEnabled) {
@@ -64,13 +65,15 @@ export class HomepagePromos extends LitElement {
     this.isVisible = false;
     this.adLoaded = false;
     try {
-      // Only destroy gutter ads; bottom_rail persists into spawn phase.
+      // Destroy gutter ads; bottom_rail persists into spawn phase.
       window.ramp.destroyUnits(this.leftAdType);
       window.ramp.destroyUnits(this.rightAdType);
       console.log("successfully destroyed gutter ads");
     } catch (e) {
       console.error("error destroying gutter ads", e);
     }
+    // The corner video must not keep playing during the game.
+    this.destroyCornerAdVideo();
   }
 
   public loadBottomRail(): void {
@@ -149,7 +152,7 @@ export class HomepagePromos extends LitElement {
   }
 
   private loadCornerAdVideo(): void {
-    if (this.cornerAdLoaded) return;
+    if (this.cornerAdLoaded || this.cornerAdDestroyed) return;
     if (window.innerWidth < 1280) return;
     if (!window.ramp) {
       console.warn("Playwire RAMP not available for corner_ad_video");
@@ -161,6 +164,8 @@ export class HomepagePromos extends LitElement {
           window.ramp
             .addUnits([{ type: "corner_ad_video" }])
             .then(() => {
+              // Game started while the unit was still loading — never show it.
+              if (this.cornerAdDestroyed) return;
               this.cornerAdLoaded = true;
               window.ramp.displayUnits();
               console.log("corner_ad_video loaded");
@@ -174,6 +179,27 @@ export class HomepagePromos extends LitElement {
       });
     } catch (error) {
       console.error("Failed to load corner_ad_video:", error);
+    }
+  }
+
+  private destroyCornerAdVideo(): void {
+    // Latch first so an addUnits call still in flight skips displayUnits.
+    this.cornerAdDestroyed = true;
+    if (!this.cornerAdLoaded) return;
+    this.cornerAdLoaded = false;
+    try {
+      window.ramp
+        .destroyUnits("corner_ad_video")
+        // No-selector units can be registered under a pw-oop- id (see
+        // destroyBottomRail); retry with the prefixed name if the plain
+        // type isn't recognized.
+        .catch(() => window.ramp.destroyUnits("pw-oop-corner_ad_video"))
+        .then(() => console.log("corner_ad_video destroyed"))
+        .catch((e: unknown) => {
+          console.error("Error destroying corner_ad_video:", e);
+        });
+    } catch (e) {
+      console.error("Error destroying corner_ad_video:", e);
     }
   }
 
