@@ -554,6 +554,7 @@ export class ClanGameHistoryView extends LitElement {
             translateText("clan_modal.history_clan_winners"),
             winners,
             "text-green-400",
+            "winners",
           )
         : ""}
       ${losers.length > 0
@@ -561,6 +562,7 @@ export class ClanGameHistoryView extends LitElement {
             translateText("clan_modal.history_clan_members"),
             losers,
             "text-white/40",
+            "losers",
           )
         : ""}
     `;
@@ -570,16 +572,33 @@ export class ClanGameHistoryView extends LitElement {
     label: string,
     players: ClanGame["clanPlayers"],
     labelClass: string,
+    sectionKey: string,
   ): TemplateResult {
     return html`
       <div
         class="px-4 py-2 border-t border-white/5 text-xs text-white/60 flex flex-wrap items-center gap-x-1 gap-y-1"
+        data-player-section=${sectionKey}
       >
         <span
           class="text-[10px] font-bold uppercase tracking-wider mr-1 ${labelClass}"
           >${label}:</span
         >
-        ${players.map((p) => this.renderClanPlayerName(p))}
+        ${players.map((p, i) =>
+          i === 0
+            ? this.renderClanPlayerName(p)
+            : // Keep the separator and its following name in one flex item so
+              // a wrapping roster never strands a lone middot at a line end.
+              html`<span
+                class="inline-flex items-center gap-x-1 min-w-0 max-w-full"
+              >
+                <span
+                  class="text-white text-2xl leading-none select-none"
+                  aria-hidden="true"
+                  data-name-separator
+                  >&middot;</span
+                >${this.renderClanPlayerName(p)}
+              </span>`,
+        )}
       </div>
     `;
   }

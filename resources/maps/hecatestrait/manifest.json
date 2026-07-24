@@ -1,0 +1,144 @@
+{
+  "categories": ["north_america", "new"],
+  "id": "Hecatestrait",
+  "map": {
+    "height": 1932,
+    "num_land_tiles": 2267717,
+    "width": 2248
+  },
+  "map16x": {
+    "height": 483,
+    "num_land_tiles": 132518,
+    "width": 562
+  },
+  "map4x": {
+    "height": 966,
+    "num_land_tiles": 553178,
+    "width": 1124
+  },
+  "multiplayer_frequency": 4,
+  "name": "Hecate Strait",
+  "nations": [
+    {
+      "coordinates": [421, 628],
+      "flag": "haida_flag",
+      "name": "Old Massett Village"
+    },
+    {
+      "coordinates": [467, 983],
+      "flag": "haida_flag",
+      "name": "Skidegate"
+    },
+    {
+      "coordinates": [494, 759],
+      "flag": "haida_flag",
+      "name": "Cape Ball"
+    },
+    {
+      "coordinates": [552, 1081],
+      "flag": "haida_flag",
+      "name": "Cumshewa"
+    },
+    {
+      "coordinates": [199, 555],
+      "flag": "haida_flag",
+      "name": "Dadens"
+    },
+    {
+      "coordinates": [457, 1007],
+      "flag": "haida_flag",
+      "name": "Haina"
+    },
+    {
+      "coordinates": [522, 615],
+      "flag": "haida_flag",
+      "name": "Hiellen"
+    },
+    {
+      "coordinates": [896, 743],
+      "name": "Gitxaala Nation"
+    },
+    {
+      "coordinates": [893, 487],
+      "name": "Metlakatla"
+    },
+    {
+      "coordinates": [899, 389],
+      "name": "Lax-kw'alaams"
+    },
+    {
+      "coordinates": [1385, 653],
+      "name": "Haisla Nation"
+    },
+    {
+      "coordinates": [1418, 388],
+      "name": "Kitsumkalum"
+    },
+    {
+      "coordinates": [1441, 401],
+      "name": "Kitselas"
+    },
+    {
+      "coordinates": [1028, 173],
+      "name": "Gingolx Village"
+    },
+    {
+      "coordinates": [1134, 159],
+      "name": "Laxgalts'ap Village"
+    },
+    {
+      "coordinates": [1242, 81],
+      "name": "Gitwinksihlkw"
+    },
+    {
+      "coordinates": [1273, 68],
+      "name": "Gitlaxt'aamix Village"
+    },
+    {
+      "coordinates": [1215, 911],
+      "name": "Gitga'at First Nation"
+    },
+    {
+      "coordinates": [1413, 1294],
+      "name": "Kitasoo"
+    },
+    {
+      "coordinates": [1515, 1478],
+      "name": "Heiltsuk"
+    },
+    {
+      "coordinates": [1776, 1690],
+      "name": "Wuikinuxv Nation"
+    },
+    {
+      "coordinates": [1904, 1382],
+      "name": "Nuxalk Nation"
+    },
+    {
+      "coordinates": [682, 1511],
+      "flag": "haida_flag",
+      "name": "Ninstints"
+    },
+    {
+      "coordinates": [2138, 646],
+      "name": "Skin Tyee"
+    },
+    {
+      "coordinates": [2155, 657],
+      "name": "Nee-Tahi-Buhn"
+    },
+    {
+      "coordinates": [2184, 645],
+      "name": "Cheslatta Carrier Nation"
+    },
+    {
+      "coordinates": [2174, 525],
+      "name": "Lake Babine Nation"
+    },
+    {
+      "coordinates": [2165, 525],
+      "name": "Ts'il Kaz Koh"
+    }
+  ],
+  "translation_key": "map.hecatestrait"
+}

@@ -506,6 +506,19 @@ export class GameServer {
     return this.admittedPersistentIds.has(persistentID);
   }
 
+  // Screened identity stored for this player's client record, or null if
+  // the record (or its reconnect mapping) is gone. Lets the join path skip
+  // re-screening a reconnect whose submitted identity is unchanged.
+  public storedIdentity(
+    persistentID: string,
+  ): { username: string; clanTag: string | null } | null {
+    const clientID = this.getClientIdForPersistentId(persistentID);
+    if (clientID === null) return null;
+    const client = this.allClients.get(clientID);
+    if (client === undefined) return null;
+    return { username: client.username, clanTag: client.clanTag };
+  }
+
   public joinClient(
     client: Client,
   ): "joined" | "kicked" | "rejected" | "not_allowlisted" {
@@ -617,7 +630,8 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // WebSocket is always updated. Optional identity updates are applied only
+  // WebSocket is always updated. Identity updates — already screened by the
+  // caller (join_verify, or the local fallback censor) — are applied only
   // before the game has started.
   public rejoinClient(
     ws: WebSocket,
@@ -646,7 +660,7 @@ export class GameServer {
     if (identityUpdate && !this.hasStarted()) {
       // The verified badge vouches for the exact join name — a pre-start
       // identity change under it must drop the badge (the rejoin path skips
-      // the Worker's join-time validation).
+      // the Worker's join-time badge validation).
       if (
         identityUpdate.username !== client.username &&
         client.cosmetics?.verified

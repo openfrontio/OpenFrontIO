@@ -3,19 +3,19 @@
   "display_name": "Milky Way",
   "id": "MilkyWay",
   "map": {
-    "height": 1500,
+    "height": 1748,
     "num_land_tiles": 442979,
-    "width": 1500
+    "width": 1748
   },
   "map16x": {
-    "height": 375,
-    "num_land_tiles": 24777,
-    "width": 375
+    "height": 437,
+    "num_land_tiles": 24782,
+    "width": 437
   },
   "map4x": {
-    "height": 750,
-    "num_land_tiles": 105978,
-    "width": 750
+    "height": 874,
+    "num_land_tiles": 105950,
+    "width": 874
   },
   "multiplayer_frequency": 8,
   "name": "MilkyWay",

@@ -285,8 +285,8 @@ export class GPURenderer {
 
     // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
     // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
-    // block 2 = structures). Starts zeroed (color count 0 everywhere = no
-    // effect → territory/player color).
+    // block 2 = structures, block 3 = warship). Starts zeroed (color count 0
+    // everywhere = no effect → territory/player color).
     const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
@@ -547,6 +547,7 @@ export class GPURenderer {
       gl,
       header,
       this.paletteTex,
+      this.effectTex,
       this.settings,
       config,
     );

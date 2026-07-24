@@ -21,7 +21,6 @@ export class PrivilegeRefresher {
 
   constructor(
     private cosmeticsEndpoint: string,
-    private profaneWordsEndpoint: string,
     private apiKey: string,
     private reservedClanTagsEndpoint: string,
     parentLog: Logger,
@@ -60,13 +59,8 @@ export class PrivilegeRefresher {
         }
       };
 
-      const [
-        cosmeticsResponse,
-        profaneWordsResponse,
-        reservedClanTagsResponse,
-      ] = await Promise.all([
+      const [cosmeticsResponse, reservedClanTagsResponse] = await Promise.all([
         fetchWithTimeout(this.cosmeticsEndpoint),
-        fetchWithTimeout(this.profaneWordsEndpoint),
         fetchWithTimeout(this.reservedClanTagsEndpoint),
       ]);
 
@@ -103,26 +97,9 @@ export class PrivilegeRefresher {
         reservedClanTagsResult.data.map((tag) => tag.toUpperCase()),
       );
 
-      let bannedWords: string[] = [];
-      if (profaneWordsResponse && profaneWordsResponse.ok) {
-        try {
-          bannedWords = await profaneWordsResponse.json();
-          this.log.info(
-            `Loaded ${bannedWords.length} profane words from ${this.profaneWordsEndpoint}`,
-          );
-        } catch (error) {
-          this.log.warn(`Failed to parse profane words JSON, using empty list`);
-        }
-      } else {
-        this.log.warn(
-          `Failed to fetch profane words (status ${profaneWordsResponse?.status ?? "network error"}), using empty list`,
-        );
-      }
-
       this.privilegeChecker = new PrivilegeCheckerImpl(
         result.data,
         base64url.decode,
-        bannedWords,
         reservedClanTags,
       );
       this.cosmeticFlagUrls = new Set(

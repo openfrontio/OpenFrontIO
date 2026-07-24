@@ -412,14 +412,18 @@
     "hard": "Plutonium",
     "legendary": "Legendary",
     "per_day": "/day",
-    "public_lobbies": "Create public lobbies",
+    "public_lobbies": "Public lobbies",
+    "public_lobbies_info": "Host custom lobbies that are publicly listed for anyone to join.",
     "rare": "Rare",
     "search": "Search...",
     "soft": "Caps",
     "title": "Cosmetics",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
-    "usd_value": "Value: {usd}"
+    "unlimited_ranked_info": "No limit on how many ranked games you can play.",
+    "usd_value": "Value: {usd}",
+    "verified_name": "Verified username",
+    "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
@@ -460,7 +464,8 @@
       "nukeExplosion": "Nuke Explosion",
       "nukeTrail": "Nuke Trail",
       "structures": "Structures",
-      "transportShipTrail": "Boat Trail"
+      "transportShipTrail": "Boat Trail",
+      "warship": "Warship"
     }
   },
   "error_modal": {
@@ -991,6 +996,7 @@
     "china": "China",
     "choppingblock": "Chopping Block",
     "conakry": "Conakry",
+    "crimea": "Crimea",
     "danishstraits": "Danish Straits",
     "deglaciatedantarctica": "Deglaciated Antarctica",
     "didier": "Didier",
@@ -1003,6 +1009,7 @@
     "faroeislands": "Faroe Islands",
     "favorites": "Favourites",
     "featured": "Featured",
+    "fingerlakes": "Finger Lakes",
     "fourislands": "Four Islands",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "germany": "Germany",
@@ -1012,6 +1019,7 @@
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "halkidiki": "Halkidiki",
     "hawaii": "Hawaii",
+    "hecatestrait": "Hecate Strait",
     "hongkong": "Hong Kong",
     "iceland": "Iceland",
     "indiansubcontinent": "Indian Subcontinent",
@@ -1050,6 +1058,7 @@
     "sanfrancisco": "San Francisco",
     "scandinavia": "Scandinavia",
     "sierpinski": "Sierpinski",
+    "sol": "Sol",
     "southamerica": "South America",
     "southeastasia": "Southeast Asia",
     "straitofgibraltar": "Strait of Gibraltar",

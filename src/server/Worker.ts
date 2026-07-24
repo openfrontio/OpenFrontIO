@@ -20,10 +20,12 @@ import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { archive, finalizeGameRecord } from "./Archive";
+import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
+import { planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { enforceVerifiedBadge } from "./Privilege";
@@ -34,7 +36,6 @@ import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
-import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -75,7 +76,6 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     ServerEnv.jwtIssuer() + "/cosmetics.json",
-    ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
@@ -487,21 +487,102 @@ export async function startWorker() {
           return;
         }
 
-        // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
-        const { clanTag: censoredClanTag, username: censoredUsername } =
-          privilegeRefresher
-            .get()
-            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+        // Basic local screen as the fallback identity for the paths
+        // join_verify doesn't cover: Dev and API failure (fail-open joins).
+        // An approved join_verify overwrites it with the API's display-ready
+        // pair below.
+        let { username, clanTag } = censorPlayer(
+          clientMsg.username,
+          clientMsg.clanTag ?? null,
+        );
 
-        // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization
+        // Gate the join and screen the display name in one API call: status
+        // is the Turnstile verdict, and the response carries the
+        // display-ready (username, clanTag) pair, so a banned name is never
+        // visible — not even in the lobby. Turnstile gates the FIRST join
+        // only: an already-admitted player who reconnects or refreshes must
+        // not be re-challenged — their original token is single-use and was
+        // already redeemed — so the token is omitted for them and the API
+        // runs the name check alone (an omitted token is always approved).
+        // Re-admits only call out when the verdict could matter (pre-start,
+        // with a changed identity); otherwise the reconnect proceeds with
+        // zero API calls, keeping mass reconnects at game start off the
+        // API. Runs before the rejoin attempt so a pre-start identity
+        // change on refresh is screened before it is applied.
+        let verifySkipped = false;
+        if (ServerEnv.env() !== GameEnv.Dev) {
+          const game = gm.game(clientMsg.gameID);
+          const stored = game?.storedIdentity(persistentId) ?? null;
+          // SECURITY: the reject/skip/verify split (first joins must
+          // present a token, only re-admits may omit it) lives in
+          // planJoinVerify — see its doc comment.
+          const plan = planJoinVerify({
+            isReadmit: game?.wasAdmitted(persistentId) ?? false,
+            gameStarted: game?.hasStarted() ?? false,
+            turnstileToken: clientMsg.turnstileToken ?? null,
+            identityUnchanged:
+              stored !== null &&
+              stored.username === clientMsg.username &&
+              stored.clanTag === (clientMsg.clanTag ?? null),
+          });
+          if (plan.action === "reject") {
+            log.warn("Unauthorized: missing Turnstile token", {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+            });
+            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            return;
+          }
+          if (plan.action === "verify") {
+            const verdict = await verifyJoin(
+              ip,
+              plan.token,
+              clientMsg.username,
+              clientMsg.clanTag ?? null,
+            );
+            switch (verdict.status) {
+              case "approved":
+                username = verdict.username;
+                clanTag = verdict.clanTag;
+                break;
+              case "rejected":
+                // Only reachable on first joins: re-admits omit the token,
+                // which the API always approves.
+                log.warn("Unauthorized: Turnstile token rejected", {
+                  persistentID: persistentId,
+                  gameID: clientMsg.gameID,
+                  reason: verdict.reason,
+                });
+                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                return;
+              case "error":
+                // Fail open: the locally screened name stands.
+                log.error("join_verify error", {
+                  persistentID: persistentId,
+                  gameID: clientMsg.gameID,
+                  reason: verdict.reason,
+                });
+            }
+          } else {
+            verifySkipped = true;
+          }
+        }
+
+        // Try to reconnect an existing client (e.g., page refresh) with the
+        // screened identity — before the game starts, a refresh under a new
+        // name updates the displayed identity like a fresh join would. When
+        // the verify was skipped, no identity update is passed: the stored
+        // identity was screened at admission and must not be clobbered by
+        // the coarser local fallback.
+        // If successful, skip the rest of the join authorization.
         if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-            clanTag: censoredClanTag,
-          })
+          gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            0,
+            verifySkipped ? undefined : { username, clanTag },
+          )
         ) {
           return;
         }
@@ -557,12 +638,12 @@ export async function startWorker() {
         // dropped to prevent impersonation. Fictional tags pass through.
         const resolution = privilegeRefresher
           .get()
-          .resolveClanTag(censoredClanTag, ownedClanTags);
+          .resolveClanTag(clanTag, ownedClanTags);
         if (resolution.dropped) {
           log.warn("Dropped clan tag: player is not a member", {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
-            clanTag: censoredClanTag,
+            clanTag,
           });
         }
         const resolvedClanTag = resolution.tag;
@@ -585,7 +666,7 @@ export async function startWorker() {
         if (
           enforceVerifiedBadge(
             cosmeticResult.cosmetics,
-            censoredUsername,
+            username,
             accountUsername ?? null,
           )
         ) {
@@ -593,40 +674,6 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-        }
-
-        // Turnstile gates the FIRST join only. An already-admitted player who
-        // reconnects (e.g. a socket drop during the lobby->start transition,
-        // after which the server has cleared their reconnection mapping) must
-        // not be re-challenged: their original Turnstile token is single-use
-        // and was already redeemed, so re-verifying it would always fail.
-        if (
-          ServerEnv.env() !== GameEnv.Dev &&
-          !gm.wasAdmitted(clientMsg.gameID, persistentId)
-        ) {
-          const turnstileResult = await verifyTurnstileToken(
-            ip,
-            clientMsg.turnstileToken,
-          );
-          switch (turnstileResult.status) {
-            case "approved":
-              break;
-            case "rejected":
-              log.warn("Unauthorized: Turnstile token rejected", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: turnstileResult.reason,
-              });
-              ws.close(1002, "Unauthorized: Turnstile token rejected");
-              return;
-            case "error":
-              // Fail open, allow the client to join.
-              log.error("Turnstile token error", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: turnstileResult.reason,
-              });
-          }
         }
 
         // Create client and add to game
@@ -637,7 +684,7 @@ export async function startWorker() {
           claims?.role ?? null,
           flares,
           ip,
-          censoredUsername,
+          username,
           resolvedClanTag,
           ws,
           cosmeticResult.cosmetics,
