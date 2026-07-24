@@ -16,27 +16,24 @@ export function splitAccountUsername(username: string): {
 }
 
 /**
- * Standard visual form of an account username: the base in blue followed by a
- * muted "#1234", separated by a non-breaking space. It has to be real text:
- * a caller's `hover:underline` propagates to descendants but is painted per
- * text run, so padding or margin between the two spans leaves an unpainted
- * gap and the underline arrives in two pieces (verified in Chrome — pl-1 and
- * ml-1 both break it, "&nbsp;" does not). Non-breaking so the suffix can
- * never wrap away from the name it belongs to. Bare names (verified claim
- * holders) render as just the blue base.
- *
- * `baseClass` lets a caller keep its own name styling (weight, truncation,
- * hover) — it is applied to the base span, whose own color declaration wins
- * over any color inherited from the row around it.
+ * Account username as a blue base plus a muted "#1234" (bare names render as
+ * just the base). `baseClass` styles the base span, so a caller's own row
+ * styling — color, weight, truncation — wins over the default.
  */
 export function usernameText(
   username: string,
   baseClass = "text-blue-300",
 ): TemplateResult {
   const { base, discriminator } = splitAccountUsername(username);
-  return html`<span class=${baseClass}>${base}</span>${discriminator === null
+  // The outer span keeps the name a single flex item: a bare separator text
+  // node becomes an item of its own and collects the parent's `gap` on both
+  // sides. The separator itself must be real text, not padding or margin — a
+  // caller's hover:underline is painted per text run, so a box gap splits it.
+  return html`<span
+    ><span class=${baseClass}>${base}</span>${discriminator === null
       ? nothing
       : html`&nbsp;<span class="text-white/40 font-normal"
             >#${discriminator}</span
-          >`}`;
+          >`}</span
+  >`;
 }

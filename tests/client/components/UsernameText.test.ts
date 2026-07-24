@@ -49,15 +49,31 @@ describe("splitAccountUsername", () => {
   });
 });
 
+// The name renders inside one wrapper span; these are its parts.
+function partsOf(host: HTMLElement): HTMLElement[] {
+  return [...host.firstElementChild!.children] as HTMLElement[];
+}
+
 describe("usernameText", () => {
   it("renders the base in blue and the suffix as a muted #", () => {
+    const parts = partsOf(renderToHost("player.1234"));
+    expect(parts).toHaveLength(2);
+    expect(parts[0].textContent).toBe("player");
+    expect(parts[0].className).toContain("text-blue-300");
+    expect(parts[1].textContent).toBe("#1234");
+    expect(parts[1].className).toContain("text-white/40");
+  });
+
+  // A flex parent turns every child \u2014 including a bare separator text node \u2014
+  // into its own flex item, so the profile-modal title's gap-2 landed on both
+  // sides of the space. One wrapper keeps the name a single item.
+  it("renders as a single element so a flex parent can't split it", () => {
     const host = renderToHost("player.1234");
-    const spans = host.querySelectorAll("span");
-    expect(spans).toHaveLength(2);
-    expect(spans[0].textContent).toBe("player");
-    expect(spans[0].className).toContain("text-blue-300");
-    expect(spans[1].textContent).toBe("#1234");
-    expect(spans[1].className).toContain("text-white/40");
+    expect(host.childElementCount).toBe(1);
+    expect(host.firstElementChild!.tagName).toBe("SPAN");
+    expect(
+      [...host.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE),
+    ).toHaveLength(0);
   });
 
   // The separator must be real text, not padding/margin: a caller's
@@ -65,31 +81,29 @@ describe("usernameText", () => {
   // underline in two. Non-breaking so the suffix can't wrap away.
   it("separates the suffix with a non-breaking space, not a box gap", () => {
     const host = renderToHost("player.1234");
-    const suffix = host.querySelectorAll("span")[1];
+    const suffix = partsOf(host)[1];
     expect(host.textContent).toBe("player\u00a0#1234");
     expect(suffix.className).not.toContain("pl-");
     expect(suffix.className).not.toContain("ml-");
   });
 
   it("renders a bare name as the base alone", () => {
-    const host = renderToHost("player");
-    const spans = host.querySelectorAll("span");
-    expect(spans).toHaveLength(1);
-    expect(spans[0].textContent).toBe("player");
+    const parts = partsOf(renderToHost("player"));
+    expect(parts).toHaveLength(1);
+    expect(parts[0].textContent).toBe("player");
   });
 
   it("honors a caller-supplied base class", () => {
     const host = document.createElement("div");
     render(usernameText("player.1234", "font-bold truncate"), host);
-    const spans = host.querySelectorAll("span");
-    expect(spans[0].className).toBe("font-bold truncate");
+    expect(partsOf(host)[0].className).toBe("font-bold truncate");
   });
 
   it("lets the base inherit color when given an empty base class", () => {
     const host = document.createElement("div");
     render(usernameText("player.1234", ""), host);
-    const spans = host.querySelectorAll("span");
-    expect(spans[0].className).toBe("");
-    expect(spans[1].textContent).toBe("#1234");
+    const parts = partsOf(host);
+    expect(parts[0].className).toBe("");
+    expect(parts[1].textContent).toBe("#1234");
   });
 });
