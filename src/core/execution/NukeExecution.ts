@@ -39,11 +39,10 @@ export class NukeExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     if (this.speed === -1) {
-      this.speed = this.mg.config().defaultNukeSpeed();
+      this.speed = this.mg.config().nukeSpeed(this.nukeType);
     }
     this.pathFinder = UniversalPathFinding.Parabola(mg, {
       increment: this.speed,
-      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
       directionUp: this.rocketDirectionUp,
     });
   }
@@ -189,11 +188,13 @@ export class NukeExecution implements Execution {
         this.active = false;
         return;
       }
-      this.src = spawn;
+      // The launch tile can be overridden by the caller (e.g. MIRV warheads
+      // launch from the MIRV separation point, not a silo).
+      this.src ??= spawn;
       // Nuke trajectories cannot pass over impassable terrain, just as they
       // cannot exceed the map border. Check the full parabola path before
       // launching; if any tile is impassable, abort the launch.
-      const path = this.pathFinder.findPath(spawn, this.dst) ?? [];
+      const path = this.pathFinder.findPath(this.src, this.dst) ?? [];
       for (const tile of path) {
         if (this.mg.isImpassable(tile)) {
           console.warn(`nuke trajectory crosses impassable terrain`);
@@ -201,7 +202,7 @@ export class NukeExecution implements Execution {
           return;
         }
       }
-      this.nuke = this.player.buildUnit(this.nukeType, spawn, {
+      this.nuke = this.player.buildUnit(this.nukeType, this.src, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
@@ -286,7 +287,6 @@ export class NukeExecution implements Execution {
     }
     const pathFinder = UniversalPathFinding.Parabola(this.mg, {
       increment: this.speed,
-      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
       directionUp: this.rocketDirectionUp,
     });
     const path: TileRef[] = [this.src];

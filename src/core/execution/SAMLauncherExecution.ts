@@ -1,12 +1,4 @@
-import {
-  Execution,
-  Game,
-  isUnit,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, isUnit, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -114,7 +106,7 @@ class SAMTargetingSystem {
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
-      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRVWarhead],
       ({ unit }) => {
         if (!isUnit(unit) || unit.targetedBySAM()) return false;
         if (unit.owner() === this.sam.owner()) return false;
@@ -203,10 +195,6 @@ export class SAMLauncherExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
 
-  // As MIRV go very fast we have to detect them very early but we only
-  // shoot the one targeting very close (MIRVWarheadProtectionRadius)
-  private MIRVWarheadSearchRadius = 400;
-  private MIRVWarheadProtectionRadius = 50;
   private targetingSystem: SAMTargetingSystem;
 
   private pseudoRandom: PseudoRandom | undefined;
@@ -271,87 +259,20 @@ export class SAMLauncherExecution implements Execution {
 
     this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
-    const mirvWarheadTargets = this.mg.nearbyUnits(
-      this.sam.tile(),
-      this.MIRVWarheadSearchRadius,
-      UnitType.MIRVWarhead,
-      ({ unit }) => {
-        if (!isUnit(unit)) return false;
-        if (unit.owner() === this.player) return false;
-
-        // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
-        const nukeOwner = unit.owner();
-        if (this.player.isFriendly(nukeOwner)) {
-          if (
-            this.mg.getWinner() === null ||
-            !this.player.isOnSameTeam(nukeOwner)
-          ) {
-            return false;
-          }
-        }
-
-        const dst = unit.targetTile();
-        return (
-          this.sam !== null &&
-          dst !== undefined &&
-          this.mg.manhattanDist(dst, this.sam.tile()) <
-            this.MIRVWarheadProtectionRadius
-        );
-      },
-    );
-
-    let target: Target | null = null;
-    if (mirvWarheadTargets.length === 0) {
-      target = this.targetingSystem.getSingleTarget(ticks);
-    }
-
     // target is already filtered to exclude nukes targeted by other SAMs
-    if (target || mirvWarheadTargets.length > 0) {
+    const target = this.targetingSystem.getSingleTarget(ticks);
+    if (target !== null) {
       this.sam.launch();
-      const type =
-        mirvWarheadTargets.length > 0
-          ? UnitType.MIRVWarhead
-          : target?.unit.type();
-      if (type === undefined) throw new Error("Unknown unit type");
-      if (mirvWarheadTargets.length > 0) {
-        const samOwner = this.sam.owner();
-
-        // Message
-        this.mg.displayMessage(
-          "events_display.mirv_warheads_intercepted",
-          MessageType.SAM_HIT,
-          samOwner.id(),
-          undefined,
-          { count: mirvWarheadTargets.length },
-        );
-
-        mirvWarheadTargets.forEach(({ unit: u }) => {
-          // Delete warheads
-          u.delete();
-        });
-
-        // Record stats
-        this.mg
-          .stats()
-          .bombIntercept(
-            samOwner,
-            UnitType.MIRVWarhead,
-            mirvWarheadTargets.length,
-          );
-      } else if (target !== null) {
-        target.unit.setTargetedBySAM(true);
-        this.mg.addExecution(
-          new SAMMissileExecution(
-            this.sam.tile(),
-            this.sam.owner(),
-            this.sam,
-            target.unit,
-            target.tile,
-          ),
-        );
-      } else {
-        throw new Error("target is null");
-      }
+      target.unit.setTargetedBySAM(true);
+      this.mg.addExecution(
+        new SAMMissileExecution(
+          this.sam.tile(),
+          this.sam.owner(),
+          this.sam,
+          target.unit,
+          target.tile,
+        ),
+      );
     }
   }
 
