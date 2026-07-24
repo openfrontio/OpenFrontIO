@@ -244,4 +244,124 @@ describe("NukeExecution", () => {
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);
   });
+
+  test("drainNukeImpacts returns all queued tiles after detonation and empty on subsequent drain", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    // No nukes yet — drain should be empty.
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 200);
+
+    // After detonation, drainNukeImpacts should return all blast-radius tiles.
+    const impacts = game.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // The target tile (50,50) must be among the impacted tiles.
+    const targetRef = game.ref(50, 50);
+    expect(impacts).toContain(targetRef);
+
+    // With inner=outer=10 the blast is a filled circle of radius 10.
+    // pi*10^2 ~= 314 tiles; require at least 200 (conservative lower bound
+    // accounting for impassable terrain and map edges).
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
+
+    // Every returned tile ref should be a valid number.
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    // A second drain should be empty (queue was consumed).
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+  });
+
+  test("drainNukeImpacts returns queued tiles for HydrogenBomb detonation", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.HydrogenBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 300);
+
+    const impacts = game.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // Target tile must be present.
+    expect(impacts).toContain(game.ref(50, 50));
+
+    // HydrogenBomb has a larger blast radius than AtomBomb.
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
+
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+  });
+
+  test("drainNukeImpacts returns queued tiles for water nukes", async () => {
+    const waterGame = await setup(
+      "big_plains",
+      { infiniteGold: true, instantBuild: true, waterNukes: true },
+      [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
+    );
+    (waterGame.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 10,
+      outer: 10,
+    }));
+
+    const waterPlayer = waterGame.player("player_id");
+    waterPlayer.conquer(waterGame.ref(1, 1));
+    waterPlayer.buildUnit(UnitType.MissileSilo, waterGame.ref(1, 1), {});
+
+    expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+
+    waterGame.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        waterPlayer,
+        waterGame.ref(50, 50),
+        waterGame.ref(1, 1),
+      ),
+    );
+    executeTicks(waterGame, 200);
+
+    const impacts = waterGame.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // Target tile must be present.
+    expect(impacts).toContain(waterGame.ref(50, 50));
+
+    // A tile on the blast boundary (distance exactly 10 from center).
+    expect(impacts).toContain(waterGame.ref(40, 50));
+
+    // With inner=outer=10 the blast is a filled circle of radius 10.
+    // pi*10^2 ~= 314 tiles; require at least 200 (conservative lower bound
+    // accounting for impassable terrain and map edges).
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
+
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+  });
 });

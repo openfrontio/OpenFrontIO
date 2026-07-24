@@ -116,6 +116,8 @@ export class GameImpl implements Game {
   private _waterManager: WaterManager;
   private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
+  /** Tiles from nuke blast radii this tick, drained by the renderer. */
+  private _nukeImpactQueue: TileRef[] = [];
 
   constructor(
     private _humans: PlayerInfo[],
@@ -287,6 +289,16 @@ export class GameImpl implements Game {
       return;
     }
     this._waterManager.queueTile(tile);
+  }
+
+  queueNukeImpact(tile: TileRef): void {
+    this._nukeImpactQueue.push(tile);
+  }
+
+  drainNukeImpacts(): TileRef[] {
+    const tiles = this._nukeImpactQueue;
+    this._nukeImpactQueue = [];
+    return tiles;
   }
 
   unit(id: number): Unit | undefined {

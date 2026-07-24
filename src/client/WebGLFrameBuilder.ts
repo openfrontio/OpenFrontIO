@@ -211,6 +211,7 @@ export class WebGLFrameBuilder {
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
+    this.syncNukeImpacts(gameView);
     this.resolveDeadUnitExplosions(gameView);
     uploadFrameData(this.view, gameView.frameData());
   }
@@ -288,6 +289,22 @@ export class WebGLFrameBuilder {
       this.terrainDeltaBytes[i] = gameView.terrainByte(refs[i]);
     }
     this.view.applyTerrainDelta(refs, this.terrainDeltaBytes);
+  }
+
+  /**
+   * Mark nukeable layer tiles as destroyed from this tick's nuke impacts.
+   * Uses the full blast radius (both land and water tiles), not just the
+   * terrain-changed subset.  Batches tile updates per layer for a single
+   * GPU texture upload per nukeable layer.
+   */
+  private syncNukeImpacts(gameView: GameView): void {
+    const nukedTiles = gameView.recentlyNukedTiles();
+    if (nukedTiles.length === 0) return;
+    const layers = gameView.layers();
+    for (const layer of layers) {
+      if (!layer.nukeable) continue;
+      this.view.markLayerTilesDestroyed(layer.id, nukedTiles);
+    }
   }
 
   private syncLocalPlayer(gameView: GameView): void {

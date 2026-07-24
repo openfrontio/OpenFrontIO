@@ -861,6 +861,12 @@ export interface Game extends GameMap {
 
   /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
   queueWaterConversion(tile: TileRef): void;
+
+  /** Queue a tile that was inside a nuke blast radius (for nukeable layer destruction). */
+  queueNukeImpact(tile: TileRef): void;
+
+  /** Drain all tiles from nuke impacts this tick. Called once per tick. */
+  drainNukeImpacts(): TileRef[];
 }
 
 export interface PlayerActions {

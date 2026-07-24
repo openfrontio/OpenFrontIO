@@ -31,6 +31,8 @@ export class FetchGameMapLoader implements GameMapLoader {
       map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
       manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
       webpPath: this.url(fileName, "thumbnail.webp"),
+      layerPng: (layerId: string) =>
+        this.loadImageBitmap(this.url(fileName, `${layerId}.png`)),
     } satisfies MapData;
 
     this.maps.set(map, mapData);
@@ -71,5 +73,19 @@ export class FetchGameMapLoader implements GameMapLoader {
     }
 
     return response.json();
+  }
+
+  private async loadImageBitmap(url: string): Promise<ImageBitmap> {
+    const startTime = performance.now();
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load ${url}: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+    console.log(
+      `[MapLoader] ${url}: ${(performance.now() - startTime).toFixed(0)}ms`,
+    );
+    return bitmap;
   }
 }
