@@ -555,7 +555,7 @@ export class NationNukeBehavior {
     targetTile: TileRef,
     excludedSamIds?: Set<number>,
   ): boolean {
-    const speed = this.game.config().defaultNukeSpeed();
+    const speed = this.game.config().nukeSpeed(UnitType.AtomBomb);
     const pathFinder = UniversalPathFinding.Parabola(this.game, {
       increment: speed,
       distanceBasedHeight: true, // Atom/Hydrogen bombs use distance-based height
@@ -643,7 +643,7 @@ export class NationNukeBehavior {
     targetTile: TileRef,
   ): boolean {
     const pathFinder = UniversalPathFinding.Parabola(this.game, {
-      increment: this.game.config().defaultNukeSpeed(),
+      increment: this.game.config().nukeSpeed(UnitType.AtomBomb),
       distanceBasedHeight: true,
       directionUp: true,
     });
@@ -859,7 +859,7 @@ export class NationNukeBehavior {
       // distance to target (via nukeSpawn). Our planning must mirror that order.
       // Silos with interceptable trajectories will still be picked first by
       // NukeExecution — their bombs launch but get intercepted, "wasting" slots.
-      const nukeSpeed = this.game.config().defaultNukeSpeed();
+      const nukeSpeed = this.game.config().nukeSpeed(UnitType.AtomBomb);
       const allAvailableSilos: {
         silo: Unit;
         slots: number;

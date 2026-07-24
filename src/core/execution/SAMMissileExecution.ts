@@ -42,8 +42,12 @@ export class SAMMissileExecution implements Execution {
       this.active = false;
       return;
     }
-    // Mirv warheads are too fast, and mirv shouldn't be stopped ever
-    const nukesWhitelist = [UnitType.AtomBomb, UnitType.HydrogenBomb];
+    // The MIRV carrier itself can't be intercepted, only its warheads
+    const nukesWhitelist = [
+      UnitType.AtomBomb,
+      UnitType.HydrogenBomb,
+      UnitType.MIRVWarhead,
+    ];
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||

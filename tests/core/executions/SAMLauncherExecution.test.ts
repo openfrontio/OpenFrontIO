@@ -131,6 +131,43 @@ describe("SAM", () => {
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
   });
 
+  test("one sam should take down one MIRV warhead", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    attacker.buildUnit(UnitType.MIRVWarhead, game.ref(1, 1), {
+      targetTile: game.ref(3, 1),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(3, 1), targetable: true },
+      ],
+    });
+    executeTicks(game, 3);
+
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(0);
+  });
+
+  test("sam should intercept an in-flight MIRV warhead like any other nuke", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    // Warhead launched from a distant separation point at a tile near the SAM
+    const nukeExecution = new NukeExecution(
+      UnitType.MIRVWarhead,
+      attacker,
+      game.ref(3, 3),
+      game.ref(60, 60),
+    );
+    game.addExecution(nukeExecution);
+
+    executeTicks(game, 40);
+
+    expect(nukeExecution.isActive()).toBeFalsy();
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(0);
+    expect(sam.isInCooldown()).toBeTruthy();
+  });
+
   test("sam should cooldown as long as configured", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
 
@@ -194,7 +231,7 @@ describe("SAM", () => {
     game.addExecution(nukeExecution);
     // Long distance nuke: compute the proper number of ticks
     const ticksToExecute = Math.ceil(
-      targetDistance / game.config().defaultNukeSpeed() + 1,
+      targetDistance / game.config().nukeSpeed(UnitType.AtomBomb) + 1,
     );
     executeTicks(game, ticksToExecute);
 
@@ -229,7 +266,7 @@ describe("SAM", () => {
     game.addExecution(nukeExecution);
     // Long distance nuke: compute the proper number of ticks
     const ticksToExecute = Math.ceil(
-      targetDistance / game.config().defaultNukeSpeed() + 1,
+      targetDistance / game.config().nukeSpeed(UnitType.AtomBomb) + 1,
     );
     executeTicks(game, ticksToExecute);
     expect(nukeExecution.isActive()).toBeFalsy();
