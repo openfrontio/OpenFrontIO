@@ -48,6 +48,7 @@ export const TokenPayloadSchema = z.object({
     // In case new roles are added in the future.
     .or(z.string())
     .optional(),
+  provider: z.string().optional(),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 
