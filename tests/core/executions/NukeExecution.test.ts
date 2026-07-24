@@ -261,9 +261,18 @@ describe("NukeExecution", () => {
     );
     executeTicks(game, 200);
 
-    // After detonation, drainNukeImpacts should return a non-empty array.
+    // After detonation, drainNukeImpacts should return all blast-radius tiles.
     const impacts = game.drainNukeImpacts();
     expect(impacts.length).toBeGreaterThan(0);
+
+    // The target tile (50,50) must be among the impacted tiles.
+    const targetRef = game.ref(50, 50);
+    expect(impacts).toContain(targetRef);
+
+    // With inner=outer=10 the blast is a filled circle of radius 10.
+    // pi*10^2 ~= 314 tiles; require at least 200 (conservative lower bound
+    // accounting for impassable terrain and map edges).
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
 
     // Every returned tile ref should be a valid number.
     for (const ref of impacts) {
@@ -292,6 +301,12 @@ describe("NukeExecution", () => {
 
     const impacts = game.drainNukeImpacts();
     expect(impacts.length).toBeGreaterThan(0);
+
+    // Target tile must be present.
+    expect(impacts).toContain(game.ref(50, 50));
+
+    // HydrogenBomb has a larger blast radius than AtomBomb.
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
 
     for (const ref of impacts) {
       expect(typeof ref).toBe("number");

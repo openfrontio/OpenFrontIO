@@ -6,9 +6,9 @@
 const VALID_ID_RE = /^[a-zA-Z0-9-]+$/;
 
 export interface LayerDefinition {
-  id: string;
-  placement: string;
-  nukeable?: boolean;
+  id: unknown;
+  placement: unknown;
+  nukeable?: unknown;
 }
 
 /**
@@ -25,13 +25,17 @@ export function validateLayer(
   const errors: string[] = [];
   const prefix = `${mapName}: layers[${index}]`;
 
-  if (!layer.id || layer.id === "") {
+  if (typeof layer.id !== "string") {
+    errors.push(`${prefix} "id" must be a string, got ${typeof layer.id}`);
+    return errors;
+  }
+  if (layer.id === "") {
     errors.push(`${prefix} "id" must not be empty`);
   }
   if (layer.id === "image") {
     errors.push(`${prefix} "id" must not be "image" (reserved)`);
   }
-  if (layer.id && !VALID_ID_RE.test(layer.id)) {
+  if (layer.id !== "" && !VALID_ID_RE.test(layer.id)) {
     errors.push(
       `${prefix} "id" (${JSON.stringify(layer.id)}) must be alphanumeric (hyphens allowed)`,
     );
@@ -43,6 +47,11 @@ export function validateLayer(
   if (layer.placement !== "land" && layer.placement !== "water") {
     errors.push(
       `${prefix} "placement" (${JSON.stringify(layer.placement)}) must be "land" or "water"`,
+    );
+  }
+  if (layer.nukeable !== undefined && typeof layer.nukeable !== "boolean") {
+    errors.push(
+      `${prefix} "nukeable" must be a boolean if present, got ${typeof layer.nukeable}`,
     );
   }
 

@@ -594,13 +594,8 @@ describe("Map consistency", () => {
 
   test("Layer names exist in en.json map_layers section", () => {
     const enContent = JSON.parse(fs.readFileSync(EN_JSON, "utf8"));
-    const mapLayersSection = enContent.map_layers as
-      | Record<string, string>
-      | undefined;
-    if (!mapLayersSection) {
-      // No layers defined anywhere — that's fine.
-      return;
-    }
+    const mapLayersSection =
+      (enContent.map_layers as Record<string, string> | undefined) ?? {};
 
     const errors: string[] = [];
     for (const key of allMapKeys) {
