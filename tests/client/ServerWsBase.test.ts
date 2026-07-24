@@ -44,9 +44,9 @@ describe("deriveServerWsBase", () => {
     });
 
     it("targets the dev default host over wss", () => {
-      expect(deriveServerWsBase("main.openfront.dev", "app:", "openfront")).toBe(
-        "wss://main.openfront.dev",
-      );
+      expect(
+        deriveServerWsBase("main.openfront.dev", "app:", "openfront"),
+      ).toBe("wss://main.openfront.dev");
     });
 
     it("targets a branch-specific subdomain over wss", () => {
