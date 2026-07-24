@@ -365,6 +365,16 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  /**
+   * Re-apply layer visibility from current overrides to the renderer.
+   * Called after reset or preset import so the WebGL passes stay in sync.
+   */
+  private syncLayerVisibility() {
+    for (const layer of this.mapLayers) {
+      this.onLayerVisibilityChange?.(layer.id, this.isLayerVisible(layer.id));
+    }
+  }
+
   private currentHighlightFill(): number {
     return (
       this.userSettings.graphicsOverrides().mapOverlay?.highlightFillBrighten ??
@@ -720,11 +730,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private onResetClick() {
     this.userSettings.setGraphicsOverrides({});
+    this.syncLayerVisibility();
     this.requestUpdate();
   }
 
   private applyPreset(overrides: GraphicsOverrides) {
     this.userSettings.setGraphicsOverrides(overrides);
+    this.syncLayerVisibility();
     this.requestUpdate();
   }
 

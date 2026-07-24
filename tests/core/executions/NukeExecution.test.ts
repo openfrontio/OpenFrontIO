@@ -244,4 +244,34 @@ describe("NukeExecution", () => {
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);
   });
+
+  test("drainNukeImpacts returns all queued tiles after detonation and empty on subsequent drain", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    // No nukes yet — drain should be empty.
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 200);
+
+    // After detonation, drainNukeImpacts should return a non-empty array.
+    const impacts = game.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // Every returned tile ref should be a valid number.
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    // A second drain should be empty (queue was consumed).
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+  });
 });

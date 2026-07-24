@@ -149,8 +149,8 @@ export class GPURenderer {
   private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
 
-  // Map-layer passes (one per layer, drawn between terrain and territory).
-  private mapLayerPasses: MapLayerPass[] = [];
+  // Map-layer passes keyed by layer id, drawn between terrain and territory.
+  private mapLayerPasses: Map<string, MapLayerPass> = new Map();
   /** R8UI terrain-bytes texture shared by all layer passes. */
   private terrainBytesTex: WebGLTexture | null = null;
   /** Stored layer definitions for context-restore re-creation. */
@@ -1296,7 +1296,7 @@ export class GPURenderer {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     // Map layers sit between terrain and territory.
-    for (const layerPass of this.mapLayerPasses) {
+    for (const layerPass of this.mapLayerPasses.values()) {
       layerPass.draw(cam);
     }
     if (pe.territory) this.territoryPass.draw(cam);
@@ -1363,8 +1363,8 @@ export class GPURenderer {
    */
   setMapLayers(layers: MapLayer[], images: Map<string, ImageBitmap>): void {
     // Dispose any previous layer passes.
-    for (const p of this.mapLayerPasses) p.dispose();
-    this.mapLayerPasses = [];
+    for (const p of this.mapLayerPasses.values()) p.dispose();
+    this.mapLayerPasses.clear();
     this.storedLayers = layers;
     this.storedLayerImages = images;
 
@@ -1387,27 +1387,21 @@ export class GPURenderer {
         placement,
         layer.nukeable ?? false,
       );
-      this.mapLayerPasses.push(pass);
+      this.mapLayerPasses.set(layer.id, pass);
     }
   }
 
   /** Toggle visibility of a single layer (driven by graphics settings). */
   setLayerVisible(layerId: string, visible: boolean): void {
-    const idx = this.storedLayers.findIndex((l) => l.id === layerId);
-    if (idx >= 0 && idx < this.mapLayerPasses.length) {
-      this.mapLayerPasses[idx].setVisible(visible);
-    }
+    this.mapLayerPasses.get(layerId)?.setVisible(visible);
   }
 
   /**
-   * Mark a single tile as destroyed for a nukeable layer.  Called
-   * incrementally when a nuke detonates.
+   * Mark tiles as destroyed for a nukeable layer.  Called when a nuke
+   * detonates; batches all tile updates into a single GPU upload.
    */
-  markLayerTileDestroyed(layerId: string, tileIndex: number): void {
-    const idx = this.storedLayers.findIndex((l) => l.id === layerId);
-    if (idx >= 0 && idx < this.mapLayerPasses.length) {
-      this.mapLayerPasses[idx].markTileDestroyed(tileIndex);
-    }
+  markLayerTilesDestroyed(layerId: string, tileIndices: number[]): void {
+    this.mapLayerPasses.get(layerId)?.markTilesDestroyed(tileIndices);
   }
 
   /**
@@ -1415,10 +1409,7 @@ export class GPURenderer {
    * state).
    */
   setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
-    const idx = this.storedLayers.findIndex((l) => l.id === layerId);
-    if (idx >= 0 && idx < this.mapLayerPasses.length) {
-      this.mapLayerPasses[idx].updateDestroyedMask(mask);
-    }
+    this.mapLayerPasses.get(layerId)?.updateDestroyedMask(mask);
   }
 
   // ---------------------------------------------------------------------------
@@ -1427,8 +1418,8 @@ export class GPURenderer {
 
   dispose(): void {
     this.stopLoop();
-    for (const p of this.mapLayerPasses) p.dispose();
-    this.mapLayerPasses = [];
+    for (const p of this.mapLayerPasses.values()) p.dispose();
+    this.mapLayerPasses.clear();
     if (this.terrainBytesTex) {
       this.gl.deleteTexture(this.terrainBytesTex);
       this.terrainBytesTex = null;

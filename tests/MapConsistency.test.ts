@@ -7,6 +7,7 @@ import {
   MapInfo,
   maps,
 } from "../src/core/game/Game";
+import { validateLayer } from "./util/layerValidation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -462,7 +463,6 @@ describe("Map consistency", () => {
 
   test("Layer definitions in info.json are valid", () => {
     const errors: string[] = [];
-    const VALID_ID_RE = /^[a-zA-Z0-9-]+$/;
 
     for (const key of allMapKeys) {
       const info = readInfoJson(key);
@@ -474,31 +474,7 @@ describe("Map consistency", () => {
 
       const ids = new Set<string>();
       for (let i = 0; i < layers.length; i++) {
-        const layer = layers[i];
-        if (!layer.id || layer.id === "") {
-          errors.push(`${key}: layers[${i}] "id" must not be empty`);
-        }
-        if (layer.id === "image") {
-          errors.push(
-            `${key}: layers[${i}] "id" must not be "image" (reserved)`,
-          );
-        }
-        if (layer.id && !VALID_ID_RE.test(layer.id)) {
-          errors.push(
-            `${key}: layers[${i}] "id" (${JSON.stringify(layer.id)}) must be alphanumeric (hyphens allowed)`,
-          );
-        }
-        if (ids.has(layer.id)) {
-          errors.push(
-            `${key}: layers[${i}] duplicate layer id ${JSON.stringify(layer.id)}`,
-          );
-        }
-        ids.add(layer.id);
-        if (layer.placement !== "land" && layer.placement !== "water") {
-          errors.push(
-            `${key}: layers[${i}] "placement" (${JSON.stringify(layer.placement)}) must be "land" or "water"`,
-          );
-        }
+        errors.push(...validateLayer(layers[i], i, key, ids));
       }
     }
     if (errors.length > 0) {

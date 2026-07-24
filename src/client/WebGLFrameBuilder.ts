@@ -294,7 +294,8 @@ export class WebGLFrameBuilder {
   /**
    * Mark nukeable layer tiles as destroyed from this tick's nuke impacts.
    * Uses the full blast radius (both land and water tiles), not just the
-   * terrain-changed subset.
+   * terrain-changed subset.  Batches tile updates per layer for a single
+   * GPU texture upload per nukeable layer.
    */
   private syncNukeImpacts(gameView: GameView): void {
     const nukedTiles = gameView.recentlyNukedTiles();
@@ -302,9 +303,7 @@ export class WebGLFrameBuilder {
     const layers = gameView.layers();
     for (const layer of layers) {
       if (!layer.nukeable) continue;
-      for (const ref of nukedTiles) {
-        this.view.markLayerTileDestroyed(layer.id, ref);
-      }
+      this.view.markLayerTilesDestroyed(layer.id, nukedTiles);
     }
   }
 

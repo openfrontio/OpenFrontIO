@@ -132,13 +132,25 @@ export async function loadTerrainMap(
   }
 
   // Load layer PNG images if the manifest defines layers.
+  // For Compact maps, downsample to map4x dimensions to match the game map.
   let layerImages: Map<string, ImageBitmap> | undefined;
   if (layers && layers.length > 0) {
     layerImages = new Map();
+    const compactW =
+      mapSize === GameMapSize.Compact ? manifest.map4x.width : undefined;
+    const compactH =
+      mapSize === GameMapSize.Compact ? manifest.map4x.height : undefined;
     await Promise.all(
       layers.map(async (layer) => {
         try {
-          const img = await mapFiles.layerPng(layer.id);
+          let img = await mapFiles.layerPng(layer.id);
+          if (compactW !== undefined && compactH !== undefined) {
+            img = await createImageBitmap(img, {
+              resizeWidth: compactW,
+              resizeHeight: compactH,
+              resizeQuality: "high",
+            });
+          }
           layerImages!.set(layer.id, img);
         } catch (e) {
           console.warn(

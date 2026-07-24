@@ -25,6 +25,9 @@ export class MapLayerPass {
   private uPlacement: WebGLUniformLocation;
   private uNukeable: WebGLUniformLocation;
   private uVisible: WebGLUniformLocation;
+  private uLayerTex: WebGLUniformLocation;
+  private uTerrainBytes: WebGLUniformLocation;
+  private uDestroyedMask: WebGLUniformLocation;
 
   /** CPU-side copy of the destroyed mask for context-restore re-uploads. */
   private destroyedData: Uint8Array;
@@ -52,6 +55,12 @@ export class MapLayerPass {
     this.uPlacement = gl.getUniformLocation(this.program, "uPlacement")!;
     this.uNukeable = gl.getUniformLocation(this.program, "uNukeable")!;
     this.uVisible = gl.getUniformLocation(this.program, "uVisible")!;
+    this.uLayerTex = gl.getUniformLocation(this.program, "uLayerTex")!;
+    this.uTerrainBytes = gl.getUniformLocation(this.program, "uTerrainBytes")!;
+    this.uDestroyedMask = gl.getUniformLocation(
+      this.program,
+      "uDestroyedMask",
+    )!;
 
     // Layer RGBA texture from the ImageBitmap.
     this.layerTex = createTexture2D(gl, {
@@ -138,6 +147,33 @@ export class MapLayerPass {
     );
   }
 
+  /**
+   * Batch-mark multiple tiles as destroyed.  Binds the texture once and
+   * uploads all new tile bytes in a single call, avoiding per-tile
+   * rebind overhead.
+   */
+  markTilesDestroyed(tileIndices: number[]): void {
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.destroyedTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    for (const tileIndex of tileIndices) {
+      if (tileIndex < 0 || tileIndex >= this.mapW * this.mapH) continue;
+      if (this.destroyedData[tileIndex] === 1) continue;
+      this.destroyedData[tileIndex] = 1;
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        tileIndex % this.mapW,
+        Math.floor(tileIndex / this.mapW),
+        1,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array([1]),
+      );
+    }
+  }
+
   /** Re-upload all GPU resources (used after WebGL context restore). */
   restoreFrom(image: ImageBitmap): void {
     const gl = this.gl;
@@ -185,10 +221,10 @@ export class MapLayerPass {
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.destroyedTex);
 
-    // Sampler bindings (match shader uniform locations).
-    gl.uniform1i(gl.getUniformLocation(this.program, "uLayerTex")!, 0);
-    gl.uniform1i(gl.getUniformLocation(this.program, "uTerrainBytes")!, 1);
-    gl.uniform1i(gl.getUniformLocation(this.program, "uDestroyedMask")!, 2);
+    // Sampler bindings (cached uniform locations).
+    gl.uniform1i(this.uLayerTex, 0);
+    gl.uniform1i(this.uTerrainBytes, 1);
+    gl.uniform1i(this.uDestroyedMask, 2);
 
     gl.uniformMatrix3fv(this.uCamera, false, cam);
     gl.uniform1i(this.uPlacement, this.placement);

@@ -270,9 +270,9 @@ export class MapRenderer {
     this.renderer?.setLayerVisible(layerId, visible);
   }
 
-  /** Mark a single tile as destroyed for a nukeable layer. */
-  markLayerTileDestroyed(layerId: string, tileIndex: number): void {
-    this.renderer?.markLayerTileDestroyed(layerId, tileIndex);
+  /** Batch-mark tiles as destroyed for a nukeable layer. */
+  markLayerTilesDestroyed(layerId: string, tileIndices: number[]): void {
+    this.renderer?.markLayerTilesDestroyed(layerId, tileIndices);
   }
 
   /** Bulk-update the destroyed mask for a nukeable layer. */
