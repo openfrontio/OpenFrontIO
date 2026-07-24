@@ -336,9 +336,12 @@ class Client {
     modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // Prefetch turnstile token so it is available when the user joins a lobby.
+    // Desktop (Steam) has no Turnstile script and is server-side exempt, so
+    // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
+    // script" after its load wait.
+    this.turnstileTokenPromise =
+      ClientEnv.instanceId() === "desktop" ? null : getTurnstileToken();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -1152,6 +1155,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
+      ClientEnv.instanceId() === "desktop" ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;
