@@ -743,6 +743,21 @@ export async function fetchGameById(
   }
 }
 
+// The API answers a page past the end of the ranked leaderboard with a 400
+// instead of an empty list, so the end is only detectable from the error body.
+// Its wording is part of the contract; the bounds vary with the page cap.
+const PAGE_BOUNDS_MESSAGE = /^Page must be between \d+ and \d+$/;
+
+export function isPageBoundsMessage(body: unknown): boolean {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "message" in body &&
+    typeof body.message === "string" &&
+    PAGE_BOUNDS_MESSAGE.test(body.message)
+  );
+}
+
 export async function fetchPlayerLeaderboard(
   page: number,
 ): Promise<RankedLeaderboardResponse | "reached_limit" | false> {
@@ -754,6 +769,12 @@ export async function fetchPlayerLeaderboard(
     });
 
     if (!res.ok) {
+      if (res.status === 400) {
+        const body = await res.json().catch(() => null);
+        if (isPageBoundsMessage(body)) {
+          return "reached_limit";
+        }
+      }
       console.warn(
         "fetchPlayerLeaderboard: unexpected status",
         res.status,
@@ -762,13 +783,8 @@ export async function fetchPlayerLeaderboard(
       return false;
     }
 
-    const json = await res.json();
-    const parsed = RankedLeaderboardResponseSchema.safeParse(json);
+    const parsed = RankedLeaderboardResponseSchema.safeParse(await res.json());
     if (!parsed.success) {
-      // Handle "Page must be between X and Y" error as end of list
-      if (json?.message?.includes?.("Page must be between")) {
-        return "reached_limit";
-      }
       console.warn(
         "fetchPlayerLeaderboard: Zod validation failed",
         parsed.error.toString(),

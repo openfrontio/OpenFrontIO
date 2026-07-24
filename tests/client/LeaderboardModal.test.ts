@@ -39,11 +39,17 @@ vi.mock("../../src/client/Utils", () => ({
   }),
 }));
 
-vi.mock("../../src/client/Api", () => {
+vi.mock("../../src/client/Api", async () => {
+  // Share the real end-of-list matcher so this mock cannot drift from it.
+  const { isPageBoundsMessage } = await vi.importActual<
+    typeof import("../../src/client/Api")
+  >("../../src/client/Api");
   const getApiBase = () => "http://localhost:3000";
   return {
     getApiBase: vi.fn(getApiBase),
     getUserMe: vi.fn(async () => false),
+    isPageBoundsMessage,
+    // Mirrors the control flow of the real fetchPlayerLeaderboard.
     fetchPlayerLeaderboard: vi.fn(async (page: number) => {
       const url = new URL(`${getApiBase()}/leaderboard/ranked`);
       url.searchParams.set("page", String(page));
@@ -52,10 +58,8 @@ vi.mock("../../src/client/Api", () => {
       });
       if (!res.ok) {
         if (res.status === 400) {
-          const errorJson = await res.json().catch(() => null);
-          if (errorJson?.message?.includes("Page must be between")) {
-            return "reached_limit";
-          }
+          const body = await res.json().catch(() => null);
+          if (isPageBoundsMessage(body)) return "reached_limit";
         }
         return false;
       }
@@ -291,6 +295,95 @@ describe("LeaderboardModal", () => {
         }),
       );
       expect(playerList!.currentUserEntry?.playerId).toBe("player-2");
+    });
+  });
+
+  describe("Player Pagination", () => {
+    const rankedPage = (count: number, startRank: number) => ({
+      "1v1": Array.from({ length: count }, (_, i) => ({
+        rank: startRank + i,
+        elo: 2000 - (startRank + i),
+        peakElo: 2000,
+        wins: 5,
+        losses: 5,
+        total: 10,
+        public_id: `player-${startRank + i}`,
+        username: `Player${startRank + i}`,
+        accountUsername: null,
+        clanTag: null,
+      })),
+    });
+
+    // The body the API actually sends for a page past the end.
+    const pastEnd = jsonRes(
+      { error: "Bad request", message: "Page must be between 1 and 2" },
+      false,
+      400,
+    );
+
+    it("stops paging past the last page without showing an error", async () => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock
+        .mockResolvedValueOnce(jsonRes(rankedPage(50, 1)))
+        .mockResolvedValueOnce(pastEnd);
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+      expect(playerList.playerData).toHaveLength(50);
+
+      await playerList.loadPlayerLeaderboard();
+      await playerList.updateComplete;
+
+      expect(playerList.playerData).toHaveLength(50);
+      expect(modal.textContent).not.toContain("Try Again");
+
+      // The end of the list is sticky: no further requests are made.
+      const callCount = fetchMock.mock.calls.length;
+      await playerList.loadPlayerLeaderboard();
+      expect(fetchMock.mock.calls.length).toBe(callCount);
+    });
+
+    it("stops paging on a short page", async () => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce(jsonRes(rankedPage(20, 1)));
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+
+      const callCount = fetchMock.mock.calls.length;
+      await playerList.loadPlayerLeaderboard();
+      expect(fetchMock.mock.calls.length).toBe(callCount);
+      expect(modal.textContent).not.toContain("Try Again");
+    });
+
+    // Only the page-bounds 400 means "end of data".
+    it.each([
+      ["500", jsonRes({}, false, 500)],
+      ["unrelated 400", jsonRes({ error: "Bad request" }, false, 400)],
+      [
+        "400 mentioning a page",
+        jsonRes(
+          { error: "Bad request", message: "Invalid page parameter" },
+          false,
+          400,
+        ),
+      ],
+    ])("shows Try Again when a page genuinely fails (%s)", async (_, bad) => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock
+        .mockResolvedValueOnce(jsonRes(rankedPage(50, 1)))
+        .mockResolvedValueOnce(bad);
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+
+      await playerList.loadPlayerLeaderboard();
+      await playerList.updateComplete;
+
+      expect(modal.textContent).toContain("Try Again");
     });
   });
 
