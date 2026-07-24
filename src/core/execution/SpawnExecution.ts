@@ -27,6 +27,10 @@ export class SpawnExecution implements Execution {
     gameID: GameID,
     private playerInfo: PlayerInfo,
     public tile?: TileRef,
+    // True when this spawn came from a client "spawn" intent (a player choosing
+    // where to spawn). Internal spawns — nations, bots, random-spawn placement —
+    // leave this false and are never gated by the spawn phase.
+    private fromIntent: boolean = false,
   ) {
     this.random = new PseudoRandom(
       simpleHash(playerInfo.id) + simpleHash(gameID),
@@ -40,20 +44,24 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    // Security: a client-requested spawn is only valid during the spawn phase.
+    // Once the phase has ended, ignore the intent so a player can neither spawn
+    // for the first time nor re-spawn mid-game. This closes the "teleport"
+    // exploit, where a crafted spawn intent relinquished a player's territory
+    // and re-conquered it elsewhere. Internal spawns (nations, bots, random
+    // spawn placement) are queued during the spawn phase by trusted code and
+    // may land a tick later — they set fromIntent=false and are not gated here.
+    // inSpawnPhase() is deterministic game state, so the intent is an identical
+    // no-op on every client.
+    if (this.fromIntent && !this.mg.inSpawnPhase()) {
+      return;
+    }
+
     let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
     } else {
       player = this.mg.addPlayer(this.playerInfo);
-    }
-
-    // Security: a spawn intent may only place or relocate a player's starting
-    // territory during the spawn phase. Once the game is underway, an
-    // already-spawned player who sends a spawn intent is attempting to
-    // teleport — relinquishing their territory and re-conquering it elsewhere.
-    // Ignore it so the intent is a deterministic no-op on every client.
-    if (!this.mg.inSpawnPhase() && player.hasSpawned()) {
-      return;
     }
 
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
