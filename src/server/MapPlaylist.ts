@@ -118,6 +118,7 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Luna,
   GameMapType.ArchipelagoSea,
   GameMapType.ChoppingBlock,
+  GameMapType.Sol,
 ]);
 
 // Maps that are entirely land.

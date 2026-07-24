@@ -90,6 +90,7 @@ export enum GameMapType {
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
   Sierpinski = "Sierpinski", // map-generator/assets/maps/sierpinski/info.json
+  Sol = "Sol", // map-generator/assets/maps/sol/info.json
   SouthAmerica = "South America", // map-generator/assets/maps/southamerica/info.json
   SoutheastAsia = "SoutheastAsia", // map-generator/assets/maps/southeastasia/info.json
   StraitOfGibraltar = "Strait of Gibraltar", // map-generator/assets/maps/straitofgibraltar/info.json
@@ -1222,6 +1223,13 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Sierpinski,
     translationKey: "map.sierpinski",
     categories: ["arcade"],
+    multiplayerFrequency: 10,
+  },
+  {
+    id: "Sol",
+    type: GameMapType.Sol,
+    translationKey: "map.sol",
+    categories: ["cosmic", "new"],
     multiplayerFrequency: 10,
   },
   {
