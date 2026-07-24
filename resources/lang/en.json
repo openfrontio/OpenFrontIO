@@ -1328,6 +1328,9 @@
     "unknown": "Unknown",
     "yes": "Yes"
   },
+  "turnstile": {
+    "verification_failed": "Verification failed. Please refresh and try again."
+  },
   "unit_type": {
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",
