@@ -206,7 +206,6 @@ export class SAMLauncherExecution implements Execution {
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
-  private MIRVWarheadProtectionRadius = 50;
   private targetingSystem: SAMTargetingSystem;
 
   private pseudoRandom: PseudoRandom | undefined;
@@ -295,11 +294,10 @@ export class SAMLauncherExecution implements Execution {
           this.sam !== null &&
           dst !== undefined &&
           this.mg.manhattanDist(dst, this.sam.tile()) <
-            this.MIRVWarheadProtectionRadius
+            this.mg.config().samRange(this.sam.level())
         );
       },
     );
-
     let target: Target | null = null;
     if (mirvWarheadTargets.length === 0) {
       target = this.targetingSystem.getSingleTarget(ticks);
@@ -324,8 +322,15 @@ export class SAMLauncherExecution implements Execution {
           undefined,
           { count: mirvWarheadTargets.length },
         );
-
-        mirvWarheadTargets.forEach(({ unit: u }) => {
+        let amountOfWarheads = 0;
+        mirvWarheadTargets.forEach(({ unit: u }, i) => {
+          if (this.sam !== null && i > 0) {
+            if (this.sam.isInCooldown()) {
+              return;
+            }
+            this.sam.launch();
+          }
+          amountOfWarheads++;
           // Delete warheads
           u.delete();
         });
@@ -333,11 +338,7 @@ export class SAMLauncherExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .bombIntercept(
-            samOwner,
-            UnitType.MIRVWarhead,
-            mirvWarheadTargets.length,
-          );
+          .bombIntercept(samOwner, UnitType.MIRVWarhead, amountOfWarheads);
       } else if (target !== null) {
         target.unit.setTargetedBySAM(true);
         this.mg.addExecution(
