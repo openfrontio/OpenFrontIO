@@ -1,0 +1,142 @@
+{
+  "id": "Crimea",
+  "name": "Crimea",
+  "translation_key": "map.crimea",
+  "categories": ["new", "europe"],
+  "multiplayer_frequency": 4,
+
+  "nations": [
+    {
+      "coordinates": [539, 1112],
+      "name": "Sevastopol",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [503, 661],
+      "name": "Yevpatoria",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1722, 649],
+      "name": "Kerch",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [770, 837],
+      "name": "Simferopol",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [928, 420],
+      "name": "Dzhankoi",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1241, 826],
+      "name": "Feodosia",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [154, 101],
+      "name": "Ukraine",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [611, 190],
+      "name": "Krasnoperekopsk",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [2011, 693],
+      "name": "Russia",
+      "flag": "ru"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [940, 1000],
+      "name": "Alushta",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [797, 1117],
+      "name": "Yalta",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [695, 1188],
+      "name": "Alupka",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [559, 110],
+      "name": "Armiansk",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [314, 114],
+      "name": "Skadovsk",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [665, 992],
+      "name": "Bakhchysarai",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1004, 788],
+      "name": "Bilohirsk",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [584, 729],
+      "name": "Saky",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1514, 594],
+      "name": "Shcholkine",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1148, 760],
+      "name": "Staryi Krym",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1139, 913],
+      "name": "Sudak",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [822, 617],
+      "name": "Krasnogvardeyskoye",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [534, 393],
+      "name": "Rozdolne",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1043, 539],
+      "name": "Azovske",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1108, 279],
+      "name": "Strilkove",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [948, 194],
+      "name": "Chonhar",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1091, 647],
+      "name": "Sovjets'kyi",
+      "flag": "crimea"
+    }
+  ]
+}

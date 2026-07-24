@@ -54,6 +54,7 @@ import "./NewsModal";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
+import "./SteamLinkSignpost";
 import { StoreModal } from "./Store";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -243,6 +244,7 @@ declare global {
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
+    "game-starting": CustomEvent;
     "update-game-config": CustomEvent;
   }
 }
@@ -937,6 +939,11 @@ class Client {
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
+    // Ensure the one-shot Steam name-seed has settled before reading
+    // getUsername(), mirroring how getClanCheck() runs in parallel with the
+    // handshake. whenSeeded() always resolves (falling back to the generated
+    // anon name on failure/timeout), so this can only delay, never block.
+    await this.usernameInput?.whenSeeded();
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs(),
@@ -958,6 +965,9 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
+      // The game is actually starting now (lobby wait is over). Let listeners that stay up
+      // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
+      document.dispatchEvent(new CustomEvent("game-starting"));
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {

@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import featuredStream from "../../../resources/featured-stream.json";
 import { getFeaturedStream } from "../../../src/client/Api";
-import { cornerFromCenter } from "../../../src/client/FeaturedStream";
+import { ClientEnv } from "../../../src/client/ClientEnv";
+import {
+  cornerFromCenter,
+  isOffFrame,
+} from "../../../src/client/FeaturedStream";
 import { FeaturedStreamSchema } from "../../../src/core/ApiSchemas";
 
 describe("FeaturedStream", () => {
@@ -65,10 +69,25 @@ describe("FeaturedStream", () => {
     beforeEach(() => {
       vi.unstubAllGlobals();
       vi.spyOn(console, "warn").mockImplementation(() => {});
+      // getApiBase() → getAudience() now reads the JWT audience from
+      // BOOTSTRAP_CONFIG (ClientEnv), so getFeaturedStream needs it present or
+      // it throws before fetch and silently falls back. The value is irrelevant
+      // here since fetch is stubbed; we only need a well-formed config.
+      (window as any).BOOTSTRAP_CONFIG = {
+        gameEnv: "prod",
+        numWorkers: 1,
+        turnstileSiteKey: "x",
+        jwtAudience: "openfront.io",
+        instanceId: "desktop",
+        gitCommit: "test",
+      };
+      ClientEnv.reset();
     });
     afterEach(() => {
       vi.restoreAllMocks();
       vi.unstubAllGlobals();
+      delete (window as any).BOOTSTRAP_CONFIG;
+      ClientEnv.reset();
     });
 
     const stubFetch = (impl: () => unknown) =>
@@ -120,6 +139,21 @@ describe("FeaturedStream", () => {
       expect(cornerFromCenter(900, 100, 1000, 800)).toBe("tr");
       expect(cornerFromCenter(100, 700, 1000, 800)).toBe("bl");
       expect(cornerFromCenter(900, 700, 1000, 800)).toBe("br");
+    });
+  });
+
+  describe("isOffFrame", () => {
+    it("is false while the center is inside the viewport", () => {
+      expect(isOffFrame(500, 400, 1000, 800)).toBe(false);
+      expect(isOffFrame(0, 0, 1000, 800)).toBe(false);
+      expect(isOffFrame(1000, 800, 1000, 800)).toBe(false);
+    });
+
+    it("is true once the center passes any edge (flick-to-dismiss)", () => {
+      expect(isOffFrame(-1, 400, 1000, 800)).toBe(true); // left
+      expect(isOffFrame(1001, 400, 1000, 800)).toBe(true); // right
+      expect(isOffFrame(500, -1, 1000, 800)).toBe(true); // top
+      expect(isOffFrame(500, 801, 1000, 800)).toBe(true); // bottom
     });
   });
 });

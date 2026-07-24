@@ -4,17 +4,17 @@
   "id": "Asia",
   "map": {
     "height": 1200,
-    "num_land_tiles": 1079855,
+    "num_land_tiles": 1079587,
     "width": 2000
   },
   "map16x": {
     "height": 300,
-    "num_land_tiles": 64855,
+    "num_land_tiles": 64809,
     "width": 500
   },
   "map4x": {
     "height": 600,
-    "num_land_tiles": 265625,
+    "num_land_tiles": 265522,
     "width": 1000
   },
   "multiplayer_frequency": 6,

@@ -5,6 +5,7 @@ import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { steamSDK } from "./SteamSDK";
 import { generateCryptoRandomUUID } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
@@ -190,6 +191,14 @@ async function refreshJwt(): Promise<void> {
 }
 
 async function doRefreshJwt(): Promise<void> {
+  if (steamSDK.isOnSteam()) {
+    const ticket = await steamSDK.getTicket();
+    if (ticket) {
+      // On Steam, we exchange a Steam Web-API ticket for our session. No
+      // ticket (Steam unavailable) falls through to the guest flow below.
+      return doSteamLogin(ticket);
+    }
+  }
   if (crazyGamesSDK.isOnCrazyGames()) {
     const token = await crazyGamesSDK.getUserToken();
     if (token) {
@@ -246,6 +255,33 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     __jwt = jwt;
   } catch (e) {
     console.error("CrazyGames login failed", e);
+    __jwt = null;
+  }
+}
+
+// Exchange a Steam Web-API ticket for our session. Like CrazyGames, the
+// refresh cookie isn't usable from app://openfront (cross-site), so we
+// re-exchange a fresh ticket on expiry rather than hitting /auth/refresh.
+async function doSteamLogin(ticket: string): Promise<void> {
+  try {
+    console.log("Logging in with Steam");
+    const response = await fetch(getApiBase() + "/auth/steam", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticket }),
+    });
+    if (response.status !== 200) {
+      console.error("Steam login failed", response);
+      __jwt = null;
+      return;
+    }
+    const json = await response.json();
+    const { jwt, expiresIn } = json;
+    __expiresAt = Date.now() + expiresIn * 1000;
+    console.log("Steam login succeeded");
+    __jwt = jwt;
+  } catch (e) {
+    console.error("Steam login failed", e);
     __jwt = null;
   }
 }

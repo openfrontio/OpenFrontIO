@@ -4,6 +4,7 @@
   "translation_key": "map.korea",
   "categories": ["asia", "countries"],
   "multiplayer_frequency": 5,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [845, 1587],
