@@ -82,7 +82,7 @@
         numWorkers: <%- numWorkers %>,
         turnstileSiteKey: <%- turnstileSiteKey %>,
         jwtAudience: <%- jwtAudience %>,
-        instanceId: <%- instanceId %>,
+        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %>
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
