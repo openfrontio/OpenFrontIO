@@ -84,6 +84,27 @@
     "username_title": "Username",
     "your_subscription": "Your Subscription"
   },
+  "ban_notice": {
+    "appeal": "If you believe this is a mistake, contact us on Discord.",
+    "category": {
+      "cheating": "Cheating or unauthorised software",
+      "child_safety": "Child-safety violation",
+      "disruptive_play": "Disruptive play, griefing or spam",
+      "exploiting": "Exploiting bugs",
+      "harassment": "Harassment, threats or abuse",
+      "hate_speech": "Hate speech or discrimination",
+      "inappropriate_content": "Inappropriate or explicit content",
+      "multi_accounting": "Multi-accounting / ban evasion",
+      "offensive_identifier": "Offensive username, clan tag or flag",
+      "other": "Terms of Service violation",
+      "rank_manipulation": "Rank or rating manipulation",
+      "teaming": "Teaming or collusion"
+    },
+    "permanent": "This ban is permanent.",
+    "reason": "Reason: {reason}",
+    "title": "Your account is banned",
+    "until": "Banned until {date}."
+  },
   "build_menu": {
     "desc": {
       "atom_bomb": "Small explosion",
