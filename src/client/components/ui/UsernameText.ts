@@ -17,12 +17,13 @@ export function splitAccountUsername(username: string): {
 
 /**
  * Standard visual form of an account username: the base in blue followed by a
- * muted "#1234". The gap before the "#" is padding rather than a literal space
- * so it never wraps or collapses away from the name it belongs to — and
- * padding specifically, not margin, because a caller's `hover:underline`
- * paints across a descendant's padding but leaves a margin gap blank, which
- * would break the underline in two. Bare names (verified claim holders)
- * render as just the blue base.
+ * muted "#1234", separated by a non-breaking space. It has to be real text:
+ * a caller's `hover:underline` propagates to descendants but is painted per
+ * text run, so padding or margin between the two spans leaves an unpainted
+ * gap and the underline arrives in two pieces (verified in Chrome — pl-1 and
+ * ml-1 both break it, "&nbsp;" does not). Non-breaking so the suffix can
+ * never wrap away from the name it belongs to. Bare names (verified claim
+ * holders) render as just the blue base.
  *
  * `baseClass` lets a caller keep its own name styling (weight, truncation,
  * hover) — it is applied to the base span, whose own color declaration wins
@@ -35,7 +36,7 @@ export function usernameText(
   const { base, discriminator } = splitAccountUsername(username);
   return html`<span class=${baseClass}>${base}</span>${discriminator === null
       ? nothing
-      : html`<span class="pl-1 text-white/40 font-normal"
-          >#${discriminator}</span
-        >`}`;
+      : html`&nbsp;<span class="text-white/40 font-normal"
+            >#${discriminator}</span
+          >`}`;
 }

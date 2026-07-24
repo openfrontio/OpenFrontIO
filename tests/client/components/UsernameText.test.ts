@@ -60,14 +60,15 @@ describe("usernameText", () => {
     expect(spans[1].className).toContain("text-white/40");
   });
 
-  // Padding, not margin: a caller's hover:underline paints across a
-  // descendant's padding but skips a margin gap, splitting the underline.
-  it("spaces the suffix with padding rather than a text space", () => {
+  // The separator must be real text, not padding/margin: a caller's
+  // hover:underline is painted per text run, so a box gap splits the
+  // underline in two. Non-breaking so the suffix can't wrap away.
+  it("separates the suffix with a non-breaking space, not a box gap", () => {
     const host = renderToHost("player.1234");
     const suffix = host.querySelectorAll("span")[1];
-    expect(suffix.className).toContain("pl-1");
+    expect(host.textContent).toBe("player\u00a0#1234");
+    expect(suffix.className).not.toContain("pl-");
     expect(suffix.className).not.toContain("ml-");
-    expect(host.textContent).toBe("player#1234");
   });
 
   it("renders a bare name as the base alone", () => {
