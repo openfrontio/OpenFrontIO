@@ -15,7 +15,7 @@ import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
 
-export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
+export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
 export function normaliseMapKey(mapName: string): string {
   return mapName.toLowerCase().replace(/[\s.]+/g, "");
