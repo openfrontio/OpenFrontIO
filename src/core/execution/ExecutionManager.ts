@@ -25,7 +25,6 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
-import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
@@ -124,16 +123,6 @@ export class Executor {
       default:
         throw new Error(`intent type ${intent} not found`);
     }
-  }
-
-  spawnTribes(numTribes: number): SpawnExecution[] {
-    const nationCells = this.mg
-      .nations()
-      .map((n) => n.spawnCell)
-      .filter((c): c is NonNullable<typeof c> => c !== undefined);
-    return new TribeSpawner(this.mg, this.gameID, nationCells).spawnTribes(
-      numTribes,
-    );
   }
 
   spawnPlayers(): SpawnExecution[] {

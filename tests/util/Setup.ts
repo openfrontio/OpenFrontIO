@@ -7,11 +7,12 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  Nation,
   PlayerInfo,
   PlayerType,
 } from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
-import { RegionMap } from "../../src/core/game/RegionMap";
+import { CountriesJson, RegionMap } from "../../src/core/game/RegionMap";
 import {
   genTerrainFromBin,
   MapManifest,
@@ -30,6 +31,10 @@ export async function setup(
   // Optional per-tile region ids (region-based conquest); built into a
   // RegionMap against the full-resolution game map.
   regionRaster?: Uint16Array,
+  // Optional country grouping of the regions (country-start mode).
+  countries?: CountriesJson,
+  // Optional nations registered on the game (game.nations()).
+  nations: Nation[] = [],
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -76,11 +81,13 @@ export async function setup(
   const config = new ConfigClass(gameConfig, new UserSettings(), false);
 
   const regionMap =
-    regionRaster !== undefined ? new RegionMap(regionRaster, gameMap) : null;
+    regionRaster !== undefined
+      ? new RegionMap(regionRaster, gameMap, countries)
+      : null;
 
   const game = createGame(
     humans,
-    [],
+    nations,
     gameMap,
     miniGameMap,
     config,

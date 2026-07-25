@@ -2,6 +2,10 @@ import fs from "fs";
 import path from "path";
 import { GameMapType } from "../../../src/core/game/Game";
 import { GameMapLoader, MapData } from "../../../src/core/game/GameMapLoader";
+import {
+  CountriesJson,
+  REGION_ENABLED_MAPS,
+} from "../../../src/core/game/RegionMap";
 import { MapManifest } from "../../../src/core/game/TerrainMapLoader";
 
 /**
@@ -30,6 +34,16 @@ export class NodeGameMapLoader implements GameMapLoader {
           fs.readFileSync(path.join(dir, "manifest.json"), "utf8"),
         ) as MapManifest,
       webpPath: path.join(dir, "thumbnail.webp"),
+      ...(REGION_ENABLED_MAPS.has(map)
+        ? {
+            regionsBin: readBin("regions.bin"),
+            regions4xBin: readBin("regions4x.bin"),
+            countriesJson: async () =>
+              JSON.parse(
+                fs.readFileSync(path.join(dir, "countries.json"), "utf8"),
+              ) as CountriesJson,
+          }
+        : {}),
     };
   }
 }

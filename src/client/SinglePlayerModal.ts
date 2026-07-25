@@ -34,7 +34,6 @@ import {
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
-  sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
 
@@ -43,7 +42,9 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.Europe,
   selectedDifficulty: Difficulty.Easy,
-  bots: 400,
+  // Tribes are not spawned in this fork (country-start mode); kept at 0 for
+  // config/replay compatibility.
+  bots: 0,
   infiniteGold: false,
   infiniteTroops: false,
   compactMap: false,
@@ -423,16 +424,12 @@ export class SinglePlayerModal extends BaseModal {
               },
               options: {
                 titleKey: "single_modal.options_title",
-                bots: {
-                  value: this.bots,
-                  labelKey: "single_modal.bots",
-                  disabledKey: "single_modal.bots_disabled",
-                },
                 nations: {
                   value: this.nations,
                   defaultValue: this.defaultNationCount,
                   labelKey: "single_modal.nations",
                   disabledKey: "single_modal.nations_disabled",
+                  hidden: true,
                 },
                 toggles: [
                   {
@@ -510,7 +507,6 @@ export class SinglePlayerModal extends BaseModal {
   private hasOptionsChanged(): boolean {
     return (
       this.nations !== this.defaultNationCount ||
-      this.bots !== DEFAULT_OPTIONS.bots ||
       this.infiniteGold !== DEFAULT_OPTIONS.infiniteGold ||
       this.infiniteTroops !== DEFAULT_OPTIONS.infiniteTroops ||
       this.compactMap !== DEFAULT_OPTIONS.compactMap ||
@@ -854,10 +850,9 @@ export class SinglePlayerModal extends BaseModal {
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
-              nations: sliderToNationsConfig(
-                this.nations,
-                this.defaultNationCount,
-              ),
+              // Country-start mode: nation count always follows the map's
+              // country data; the nations slider is hidden.
+              nations: "default",
               ...(this.goldMultiplier && this.goldMultiplierValue
                 ? { goldMultiplier: this.goldMultiplierValue }
                 : {}),

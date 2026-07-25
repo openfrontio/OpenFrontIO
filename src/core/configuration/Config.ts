@@ -856,6 +856,17 @@ export class Config {
     }
   }
 
+  /**
+   * Starting troops when a player (human or nation) takes a whole country in
+   * country-start mode. 20% of max troops — the vanilla blob start (25k) is
+   * roughly 20% of the blob's max — with nation difficulty scaling inherited
+   * from maxTroops. Call after the country's tiles have been conquered so
+   * numTilesOwned reflects the country size.
+   */
+  countrySpawnTroops(player: Player | PlayerView): number {
+    return Math.floor(0.2 * this.maxTroops(player));
+  }
+
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
 

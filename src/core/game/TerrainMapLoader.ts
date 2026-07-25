@@ -115,7 +115,7 @@ export async function loadTerrainMap(
       mapSize === GameMapSize.Normal
         ? mapFiles.regionsBin
         : mapFiles.regions4xBin;
-    if (regionLoader === undefined) {
+    if (regionLoader === undefined || mapFiles.countriesJson === undefined) {
       throw new Error(
         `map ${map} is region-enabled but the map loader provides no region data`,
       );
@@ -123,6 +123,7 @@ export async function loadTerrainMap(
     regionMap = new RegionMap(
       decodeRegionRaster(await regionLoader()),
       gameMap,
+      await mapFiles.countriesJson(),
     );
   }
 
