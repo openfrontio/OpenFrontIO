@@ -98,7 +98,7 @@
     "@types/compression": "^1.8.1",
     "colord": "^2.9.3",
     "compression": "^1.8.1",
-    "dompurify": "^3.4.11",
+    "dompurify": "^3.4.12",
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",
     "express": "^5.2.1",
