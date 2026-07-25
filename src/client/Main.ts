@@ -1109,6 +1109,16 @@ const hideCrazyGamesElements = () => {
   }
 };
 
+// Turnstile token request tuning. Declared before bootstrap() runs: on a warm
+// load (document already interactive and the Turnstile script already present)
+// initialize() calls getTurnstileToken() synchronously, which would otherwise
+// read these consts while they're still in the temporal dead zone.
+//
+// How long Turnstile waits before auto-retrying a failed challenge.
+const TURNSTILE_RETRY_INTERVAL_MS = 8000;
+// Overall budget for a single token request (script load + execution).
+const TURNSTILE_OVERALL_TIMEOUT_MS = 30000;
+
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
@@ -1137,24 +1147,21 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-// How long Turnstile waits before auto-retrying a failed challenge.
-const TURNSTILE_RETRY_INTERVAL_MS = 8000;
-// Overall budget for a single token request before we give up on retries.
-const TURNSTILE_OVERALL_TIMEOUT_MS = 30000;
-
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
 }> {
-  // Wait for Turnstile script to load (handles slow connections)
-  let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
-  }
+  // Single deadline covering both script loading and widget execution, so the
+  // whole request stays within TURNSTILE_OVERALL_TIMEOUT_MS rather than paying
+  // the script-load wait on top of the execution timeout.
+  const deadline = Date.now() + TURNSTILE_OVERALL_TIMEOUT_MS;
 
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
+  // Wait for Turnstile script to load (handles slow connections).
+  while (typeof window.turnstile === "undefined") {
+    if (Date.now() >= deadline) {
+      throw new Error("Failed to load Turnstile script");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   const widgetId = window.turnstile.render("#turnstile-container", {
@@ -1176,12 +1183,15 @@ async function getTurnstileToken(): Promise<{
       clearTimeout(timeoutId);
       window.turnstile.remove(widgetId);
     };
-    const timeoutId = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      finish();
-      reject(new Error("Turnstile timed out"));
-    }, TURNSTILE_OVERALL_TIMEOUT_MS);
+    const timeoutId = setTimeout(
+      () => {
+        if (settled) return;
+        settled = true;
+        finish();
+        reject(new Error("Turnstile timed out"));
+      },
+      Math.max(0, deadline - Date.now()),
+    );
 
     window.turnstile.execute(widgetId, {
       callback: (token: string) => {
