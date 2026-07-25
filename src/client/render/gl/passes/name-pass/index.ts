@@ -291,6 +291,24 @@ export class NamePass {
   }
 
   /**
+   * Replace cached flag URLs live (e.g. a human adopts a country flag after
+   * spawning in country-start mode). Re-requests the atlas layer for the new
+   * URL; the slot's icon row picks the new layer up on the next updateNames.
+   */
+  refreshFlags(flagUrls: Map<string, string | undefined>): void {
+    for (const [id, url] of flagUrls) {
+      const p = this.playerByID.get(id);
+      if (p === undefined || p.flag === url) continue;
+      p.flag = url;
+      const slot = this.slots.get(id);
+      if (slot === undefined) continue;
+      slot.flagUrl = url;
+      slot.flagLayerIdx = -1;
+      if (url) this.resolveSlotFlag(slot);
+    }
+  }
+
+  /**
    * Request the texture layer for a slot's flag (called once at slot creation).
    * If the image is already loaded the layer index is set immediately; otherwise
    * the slot joins a wait list and is updated when the image arrives.

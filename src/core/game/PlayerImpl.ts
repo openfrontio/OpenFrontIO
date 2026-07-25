@@ -139,6 +139,10 @@ export class PlayerImpl implements Player {
   public _alliances: MutableAlliance[] = [];
 
   private _spawnTile: TileRef | undefined;
+  // Country-start mode: when a human claims a country, their displayed name
+  // becomes that country's name. Deterministic (derived from the region map);
+  // never feeds simulation logic. Their real PlayerInfo.name is unchanged.
+  private _spawnCountryId: number | null = null;
   private _isDisconnected = false;
 
   /**
@@ -356,7 +360,26 @@ export class PlayerImpl implements Player {
     return this.playerInfo.name;
   }
   displayName(): string {
+    if (this._spawnCountryId !== null) {
+      const rm = this.mg.regionMap();
+      if (
+        rm !== null &&
+        rm.hasCountries() &&
+        this._spawnCountryId >= 1 &&
+        this._spawnCountryId <= rm.countryCount()
+      ) {
+        return rm.countryName(this._spawnCountryId);
+      }
+    }
     return this.playerInfo.displayName;
+  }
+
+  setSpawnCountry(countryId: number): void {
+    this._spawnCountryId = countryId;
+  }
+
+  spawnCountryId(): number | null {
+    return this._spawnCountryId;
   }
 
   clientID(): ClientID | null {

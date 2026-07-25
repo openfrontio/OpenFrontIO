@@ -425,6 +425,10 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "country_picker": {
+    "taken": "Taken",
+    "title": "Pick a country"
+  },
   "difficulty": {
     "difficulty": "Nation difficulty",
     "easy": "Easy",
@@ -698,6 +702,7 @@
   },
   "heads_up_message": {
     "catching_up": "Catching up...",
+    "choose_country": "Pick a country to play as",
     "choose_spawn": "Choose a starting location",
     "dont_show_again": "Don't show again",
     "ffa_collusion": "Reminder: teaming up before the game is not allowed in FFA",

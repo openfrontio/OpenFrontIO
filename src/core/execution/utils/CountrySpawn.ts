@@ -3,7 +3,7 @@
  * the spawn phase. Used by SpawnExecution (humans) and NationExecution
  * (country nations).
  */
-import { Game, Player } from "../../game/Game";
+import { Game, Player, PlayerType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PlayerExecution } from "../PlayerExecution";
 
@@ -36,4 +36,10 @@ export function conquerCountry(
   }
   player.setSpawnTile(center);
   player.setTroops(mg.config().countrySpawnTroops(player));
+  // Humans "become" the country they claim: their displayed name turns into
+  // the country name for the rest of the game. Nations keep their own name
+  // (NationCreation already names them after their country).
+  if (player.type() === PlayerType.Human) {
+    player.setSpawnCountry(countryId);
+  }
 }

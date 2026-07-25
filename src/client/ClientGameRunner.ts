@@ -1005,6 +1005,25 @@ export class ClientGameRunner {
     }
   }
 
+  /**
+   * Whether a spawn click on `tile` should be accepted.
+   *
+   * Normal maps: only unowned land is spawnable (nations haven't painted the
+   * map yet). Country-start maps: nations pre-fill every country, so an owned
+   * tile is fine to click — the spawn claims that whole country. We only block
+   * a tile already owned by *another human*, mirroring the first-click-wins
+   * rule in SpawnExecution (a human keeps a country another human took).
+   */
+  private isSpawnClickable(tile: TileRef): boolean {
+    if (this.gameView.regionMap()?.hasCountries()) {
+      const owner = this.gameView.owner(tile);
+      if (!owner.isPlayer() || owner.type() !== PlayerType.Human) return true;
+      const me = this.gameView.myPlayer();
+      return me !== null && owner.id() === me.id();
+    }
+    return !this.gameView.hasOwner(tile);
+  }
+
   private inputEvent(event: MouseUpEvent) {
     if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
       return;
@@ -1020,7 +1039,7 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
     if (
       this.gameView.isLand(tile) &&
-      !this.gameView.hasOwner(tile) &&
+      this.isSpawnClickable(tile) &&
       this.gameView.inSpawnPhase() &&
       !this.gameView.config().isRandomSpawn()
     ) {

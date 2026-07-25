@@ -15,6 +15,7 @@ import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
   GameUpdateType,
   GameUpdateViewData,
+  PlayerUpdate,
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
 import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
@@ -22,6 +23,7 @@ import {
   MotionPlanRecord,
   unpackMotionPlans,
 } from "../../core/game/MotionPlans";
+import { RegionMap } from "../../core/game/RegionMap";
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
@@ -139,6 +141,13 @@ export class GameView implements GameMap {
   private toDelete = new Set<number>();
 
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+  /**
+   * Country-start mode only: country display name -> resolved flag asset path.
+   * Lets a human who claimed a country adopt that country's flag on their map
+   * label (their personal cosmetic flag is overridden — becoming the country
+   * wins). Empty on maps without country data.
+   */
+  private _countryFlagByName: Map<string, string> = new Map();
 
   private _map: GameMap;
 
@@ -179,9 +188,13 @@ export class GameView implements GameMap {
         const name = regionMap.countryName(cid);
         if (this._cosmetics.has(name)) continue;
         const flag = regionMap.countryFlag(cid);
+        const flagPath = flag ? `/flags/${flag}.svg` : undefined;
         this._cosmetics.set(name, {
-          flag: flag ? `/flags/${flag}.svg` : undefined,
+          flag: flagPath,
         } satisfies PlayerCosmetics);
+        if (flagPath !== undefined) {
+          this._countryFlagByName.set(name, flagPath);
+        }
       }
     }
 
@@ -380,6 +393,24 @@ export class GameView implements GameMap {
 
       if (existing !== undefined) {
         existing.applyUpdate(pu);
+        // displayName lives on PlayerStatic (not PlayerState), so applyUpdate()
+        // never touches it. Apply it here when it changes — e.g. country-start
+        // mode renames a human to the country they claimed. Also adopt the
+        // country flag so the on-map label matches (the label refresh that
+        // pushes both to the GL name pass runs in WebGLFrameBuilder).
+        if (
+          pu.displayName !== undefined &&
+          existing.static.displayName !== pu.displayName
+        ) {
+          existing.static.displayName = pu.displayName;
+          this._namesDirty = true;
+          if (existing.type() === PlayerType.Human) {
+            const flag = this._countryFlagByName.get(pu.displayName);
+            if (flag !== undefined) {
+              existing.cosmetics = { ...existing.cosmetics, flag };
+            }
+          }
+        }
         const nextNameData = gu.playerNameViewData?.[pu.id];
         if (nextNameData !== undefined) {
           existing.nameData = nextNameData;
@@ -389,14 +420,7 @@ export class GameView implements GameMap {
           this,
           pu,
           gu.playerNameViewData?.[pu.id],
-          // First check human by clientID, then check nation by name.
-          // Only match by name for actual Nations — not Bots (tribes) whose
-          // random names may coincidentally match a nation name.
-          this._cosmetics.get(pu.clientID ?? "") ??
-            (pu.playerType === PlayerType.Nation
-              ? this._cosmetics.get(pu.name!)
-              : undefined) ??
-            {},
+          this.resolveCosmetics(pu),
         );
         this._players.set(pu.id, player);
         this._playerStates.set(pu.smallID!, player.state);
@@ -1064,6 +1088,31 @@ export class GameView implements GameMap {
 
   owner(tile: TileRef): PlayerView | TerraNullius {
     return this.playerBySmallID(this.ownerID(tile));
+  }
+
+  /** Region/country data for this map, or null when the map has none. */
+  regionMap(): RegionMap | null {
+    return this._mapData.regionMap ?? null;
+  }
+
+  /**
+   * Resolve a player's cosmetics at creation. Humans match by clientID;
+   * Nations match by name (Bots/tribes never — their random names may collide
+   * with a nation name). In country-start mode a human whose displayName is
+   * already a country (e.g. replay / late join) adopts that country's flag.
+   */
+  private resolveCosmetics(pu: PlayerUpdate): PlayerCosmetics {
+    const base =
+      this._cosmetics.get(pu.clientID ?? "") ??
+      (pu.playerType === PlayerType.Nation
+        ? this._cosmetics.get(pu.name!)
+        : undefined) ??
+      {};
+    if (pu.playerType === PlayerType.Human && pu.displayName !== undefined) {
+      const flag = this._countryFlagByName.get(pu.displayName);
+      if (flag !== undefined) return { ...base, flag };
+    }
+    return base;
   }
 
   ticks(): Tick {

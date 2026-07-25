@@ -147,6 +147,11 @@ export class WebGLFrameBuilder {
    * just first-seen — re-uploads only when the tile actually changes.
    */
   private readonly lastSpawnTile = new Map<number, number>();
+  /**
+   * Country-start mode: per-human "displayName + flag" signature, so the on-map
+   * label is only re-pushed to the GL name pass when it actually changes.
+   */
+  private readonly countryLabelSig = new Map<number, string>();
   /** Skin atlas allocated once on first syncPlayers — player set is locked at game start. */
   private skinsInitialized = false;
   // The renderer needs to know which player is "me" so affiliation tint,
@@ -170,6 +175,7 @@ export class WebGLFrameBuilder {
     this.knownSmallIDs.clear();
     this.effectResolved.clear();
     this.lastSpawnTile.clear();
+    this.countryLabelSig.clear();
     this.localPlayerSmallID = 0;
     this.skinsInitialized = false;
   }
@@ -200,6 +206,43 @@ export class WebGLFrameBuilder {
     this.view.refreshNames(displayNames);
   }
 
+  /**
+   * Re-resolve every player's flag image and push it to the renderer so map
+   * labels update live (used when a human adopts a country flag on spawn).
+   */
+  refreshFlags(gameView: GameView): void {
+    const flags = new Map<string, string | undefined>();
+    for (const p of gameView.players()) {
+      const ref = p.cosmetics.flag;
+      flags.set(p.id(), ref ? assetUrl(ref) : undefined);
+    }
+    this.view.refreshFlags(flags);
+  }
+
+  /**
+   * Country-start mode: a human's on-map label (name + flag) changes the tick
+   * they claim / relocate a country. The GL name pass only picks name/flag
+   * strings up via an explicit refresh, so detect a changed human label here
+   * and push both. Cheap: humans are few and this no-ops on every other map.
+   */
+  private syncCountryLabels(gameView: GameView): void {
+    const rm = gameView.regionMap();
+    if (rm === null || !rm.hasCountries()) return;
+    let dirty = false;
+    for (const p of gameView.players()) {
+      if (p.type() !== PlayerType.Human) continue;
+      const sig = `${p.displayName()} ${p.cosmetics.flag ?? ""}`;
+      if (this.countryLabelSig.get(p.smallID()) !== sig) {
+        this.countryLabelSig.set(p.smallID(), sig);
+        dirty = true;
+      }
+    }
+    if (dirty) {
+      this.refreshNames(gameView);
+      this.refreshFlags(gameView);
+    }
+  }
+
   private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
   private glowRescanTick = 0;
 
@@ -211,6 +254,7 @@ export class WebGLFrameBuilder {
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
+    this.syncCountryLabels(gameView);
     this.resolveDeadUnitExplosions(gameView);
     uploadFrameData(this.view, gameView.frameData());
   }

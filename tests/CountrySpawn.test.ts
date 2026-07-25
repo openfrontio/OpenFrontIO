@@ -21,6 +21,7 @@ import {
   PlayerInfo,
   PlayerType,
 } from "../src/core/game/Game";
+import { GameUpdateType, PlayerUpdate } from "../src/core/game/GameUpdates";
 import { CountriesJson } from "../src/core/game/RegionMap";
 import { GameConfig, GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
@@ -244,6 +245,67 @@ describe("Country-start mode", () => {
     expect(humanPlayer.hasSpawned()).toBe(true);
     expect([ALPHA_TILES, BRAVO_TILES]).toContain(humanPlayer.numTilesOwned());
     expectCountryUniformOwnership(game);
+  });
+
+  test("a human who claims a country takes the country's display name (real name unchanged)", async () => {
+    const { game } = await setupGame();
+    executeTicks(game, 31);
+    const human = addHuman(game, "human_1");
+    game.addExecution(new SpawnExecution(gameID, human, game.ref(10, 10)));
+
+    // Drive the spawn ticks manually so we can read the emitted PlayerUpdate.
+    // displayName only rides the diff on the tick it changes, so collect it
+    // across the two spawn ticks.
+    let emittedDisplayName: string | undefined;
+    const humanPlayer = game.player("human_1");
+    for (let i = 0; i < 2; i++) {
+      const updates = game.executeNextTick();
+      for (const u of updates[GameUpdateType.Player] as PlayerUpdate[]) {
+        if (u.id === humanPlayer.id() && u.displayName !== undefined) {
+          emittedDisplayName = u.displayName;
+        }
+      }
+    }
+
+    // Claimed Alpha (country id 1) — displayName becomes the country name.
+    expect(humanPlayer.displayName()).toBe("Alpha");
+    expect(humanPlayer.spawnCountryId()).toBe(1);
+    // Real identity is untouched (used for lobby/win-screen).
+    expect(humanPlayer.name()).toBe("human_1");
+    // The PlayerUpdate emitted for the human carries the country name.
+    expect(emittedDisplayName).toBe("Alpha");
+  });
+
+  test("relocation repoints the human's display name to the new country; the returned nation keeps its own", async () => {
+    const { game } = await setupGame();
+    executeTicks(game, 31);
+    const human = addHuman(game, "human_1");
+    game.addExecution(new SpawnExecution(gameID, human, game.ref(10, 10)));
+    executeTicks(game, 2);
+    expect(game.player("human_1").displayName()).toBe("Alpha");
+
+    // Relocate into Bravo (country id 2, bottom-left quadrant).
+    game.addExecution(new SpawnExecution(gameID, human, game.ref(10, 80)));
+    executeTicks(game, 2);
+
+    const humanPlayer = game.player("human_1");
+    expect(humanPlayer.displayName()).toBe("Bravo");
+    expect(humanPlayer.spawnCountryId()).toBe(2);
+    expect(humanPlayer.name()).toBe("human_1");
+    // The nation that got Alpha handed back keeps its own display name.
+    const alpha = game.player("nation_1");
+    expect(alpha.displayName()).toBe("Alpha");
+    expect(alpha.spawnCountryId()).toBeNull();
+  });
+
+  test("a nation's display name is its own name (unchanged by country claim)", async () => {
+    const { game } = await setupGame();
+    executeTicks(game, 31);
+    const bravo = game.player("nation_2");
+    expect(bravo.displayName()).toBe("Bravo");
+    expect(bravo.name()).toBe("Bravo");
+    // Nations are never marked with a spawn country.
+    expect(bravo.spawnCountryId()).toBeNull();
   });
 
   test("post-spawn: dormant nation deactivates, live nations run the AI without errors", async () => {

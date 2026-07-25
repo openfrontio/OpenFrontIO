@@ -891,6 +891,11 @@ export class GPURenderer {
     this.namePass.refreshNames(displayNames);
   }
 
+  /** Re-resolve player flag images live (e.g. country-start flag adoption). */
+  refreshFlags(flagUrls: Map<string, string | undefined>): void {
+    this.namePass.refreshFlags(flagUrls);
+  }
+
   updateRelations(data: Uint8Array, size: number): void {
     this.borderPass.updateRelations(data, size);
     this.affiliationPalette.updateRelations(data, size);

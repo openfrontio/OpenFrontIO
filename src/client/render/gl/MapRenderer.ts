@@ -191,6 +191,9 @@ export class MapRenderer {
   refreshNames(displayNames: Map<string, string>): void {
     this.renderer?.refreshNames(displayNames);
   }
+  refreshFlags(flagUrls: Map<string, string | undefined>): void {
+    this.renderer?.refreshFlags(flagUrls);
+  }
   updateRelations(data: Uint8Array, size: number): void {
     this.renderer?.updateRelations(data, size);
   }

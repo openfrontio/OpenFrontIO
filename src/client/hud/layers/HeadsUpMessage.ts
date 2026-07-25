@@ -140,8 +140,11 @@ export class HeadsUpMessage extends LitElement implements Controller {
         seconds: Math.round(this.game.config().spawnImmunityDuration() / 10),
       });
     }
-    return this.game.config().isRandomSpawn()
-      ? translateText("heads_up_message.random_spawn")
+    if (this.game.config().isRandomSpawn()) {
+      return translateText("heads_up_message.random_spawn");
+    }
+    return this.game.regionMap()?.hasCountries()
+      ? translateText("heads_up_message.choose_country")
       : translateText("heads_up_message.choose_spawn");
   }
 

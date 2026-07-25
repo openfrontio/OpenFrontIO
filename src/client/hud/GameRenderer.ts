@@ -22,6 +22,7 @@ import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
+import { CountryPicker } from "./layers/CountryPicker";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
@@ -277,6 +278,15 @@ export function createRenderer(
   }
   inGamePromo.game = game;
 
+  const countryPicker = document.querySelector(
+    "country-picker",
+  ) as CountryPicker;
+  if (!(countryPicker instanceof CountryPicker)) {
+    console.error("country picker not found");
+  }
+  countryPicker.game = game;
+  countryPicker.eventBus = eventBus;
+
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
     new BuildPreviewController(
@@ -309,6 +319,7 @@ export function createRenderer(
     ),
     spawnTimer,
     immunityTimer,
+    countryPicker,
     gameLeftSidebar,
     unitDisplay,
     gameRightSidebar,

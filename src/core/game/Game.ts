@@ -553,6 +553,11 @@ export interface Player {
   info(): PlayerInfo;
   name(): string;
   displayName(): string;
+  // Country-start mode: mark the player as having claimed the given country so
+  // their displayName() becomes the country name. spawnCountryId() is null
+  // until set. Never feeds simulation logic.
+  setSpawnCountry(countryId: number): void;
+  spawnCountryId(): number | null;
   clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;
