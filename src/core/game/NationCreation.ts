@@ -10,7 +10,36 @@ import {
   PlayerInfo,
   PlayerType,
 } from "./Game";
+import { RegionMap } from "./RegionMap";
 import { AdditionalNation, Nation as ManifestNation } from "./TerrainMapLoader";
+
+/**
+ * Country-start mode: one nation per country in countries.json order.
+ * Deterministic PRNG consumption — exactly one nextID() per country, in
+ * ascending country-id order (humans draw their IDs first in
+ * createGameRunner, as before).
+ */
+export function createCountryNations(
+  regionMap: RegionMap,
+  random: PseudoRandom,
+): Nation[] {
+  const nations: Nation[] = [];
+  for (let countryId = 1; countryId <= regionMap.countryCount(); countryId++) {
+    nations.push(
+      new Nation(
+        undefined,
+        new PlayerInfo(
+          regionMap.countryName(countryId),
+          PlayerType.Nation,
+          null,
+          random.nextID(),
+        ),
+        countryId,
+      ),
+    );
+  }
+  return nations;
+}
 
 /**
  * Creates the nations array for a game.

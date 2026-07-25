@@ -684,7 +684,8 @@ export class JoinLobbyModal extends BaseModal {
         ></lobby-config-item>`,
       );
     {
-      const defaultBots = isCompact ? 100 : 400;
+      // Tribes are not spawned in this fork; bots default to 0 everywhere.
+      const defaultBots = 0;
       if (c.bots !== defaultBots)
         cards.push(
           html`<lobby-config-item

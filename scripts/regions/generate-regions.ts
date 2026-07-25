@@ -19,7 +19,10 @@
  *   7. Drop empty regions, renumber densely.
  *   8. Downsample to the map4x grid (majority of each 2×2 block + fill).
  *   9. Emit resources/maps/europe/regions.bin (uint16 LE), regions4x.bin and
- *      regions.json (metadata for debugging; not fetched at runtime).
+ *      regions.json (region metadata: id/name/country per region; consumed by
+ *      scripts/regions/generate-countries.ts to build countries.json, the
+ *      runtime country grouping for country-start mode — re-run
+ *      `npm run gen-countries` after regenerating regions).
  *
  * Run: npm run gen-regions -- [--ne-dir /path/to/cache]
  *

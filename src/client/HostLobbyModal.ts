@@ -48,7 +48,6 @@ import {
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
-  sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
 
@@ -65,7 +64,9 @@ export class HostLobbyModal extends BaseModal {
     super();
     this.id = "page-host-lobby";
   }
-  @state() private bots: number = 400;
+  // Tribes are not spawned in this fork (country-start mode); kept at 0 for
+  // config/replay compatibility.
+  @state() private bots: number = 0;
   @state() private spawnImmunity: boolean = false;
   @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
   @state() private infiniteGold: boolean = false;
@@ -488,16 +489,12 @@ export class HostLobbyModal extends BaseModal {
               },
               options: {
                 titleKey: "host_modal.options_title",
-                bots: {
-                  value: this.bots,
-                  labelKey: "host_modal.bots",
-                  disabledKey: "host_modal.bots_disabled",
-                },
                 nations: {
                   value: this.nations,
                   defaultValue: this.defaultNationCount,
                   labelKey: "host_modal.nations",
                   disabledKey: "host_modal.nations_disabled",
+                  hidden: true,
                 },
                 toggles: [
                   {
@@ -795,7 +792,7 @@ export class HostLobbyModal extends BaseModal {
     this.defaultNationCount = 0;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
-    this.bots = 400;
+    this.bots = 0;
     this.spawnImmunity = false;
     this.spawnImmunityDurationMinutes = undefined;
     this.infiniteGold = false;
@@ -1339,10 +1336,9 @@ export class HostLobbyModal extends BaseModal {
               ? spawnImmunityTicks
               : null,
             playerTeams: this.teamCount,
-            nations: sliderToNationsConfig(
-              this.nations,
-              this.defaultNationCount,
-            ),
+            // Country-start mode: nation count always follows the map's
+            // country data; the nations slider is hidden.
+            nations: "default",
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
             startDelay: this.startDelayValue,
             goldMultiplier:

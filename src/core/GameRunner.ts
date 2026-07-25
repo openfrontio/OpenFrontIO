@@ -26,7 +26,10 @@ import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
-import { createNationsForGame } from "./game/NationCreation";
+import {
+  createCountryNations,
+  createNationsForGame,
+} from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -59,13 +62,21 @@ export async function createGameRunner(
     );
   });
 
-  const nations = createNationsForGame(
-    gameStart,
-    gameMap.nations,
-    gameMap.additionalNations,
-    humans.length,
-    random,
-  );
+  // Country-start mode (maps with country data): one nation per country,
+  // pre-filling its whole country during the spawn phase. The manifest's
+  // nations become UI metadata only. "disabled" still means no nations.
+  const countryMode = gameMap.regionMap?.hasCountries() ?? false;
+  const nations = countryMode
+    ? gameStart.config.nations === "disabled"
+      ? []
+      : createCountryNations(gameMap.regionMap!, random)
+    : createNationsForGame(
+        gameStart,
+        gameMap.nations,
+        gameMap.additionalNations,
+        humans.length,
+        random,
+      );
 
   const game: Game = createGame(
     humans,
@@ -109,11 +120,9 @@ export class GameRunner {
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
-    if (this.game.config().bots() > 0) {
-      this.game.addExecution(
-        ...this.execManager.spawnTribes(this.game.config().bots()),
-      );
-    }
+    // Tribes (bot players) are not spawned in this fork: the map is
+    // pre-filled by country nations instead (`bots` is kept in the config
+    // schema for replay compatibility only).
     this.game.addExecution(new WinCheckExecution());
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());

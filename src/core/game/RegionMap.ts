@@ -81,6 +81,19 @@ export interface RegionTerrainView {
   isImpassable(ref: TileRef): boolean;
 }
 
+/** One country: a named, flagged group of region ids (countries.json entry). */
+export interface CountryData {
+  name: string;
+  flag: string;
+  regions: number[];
+}
+
+/** Parsed resources/maps/<map>/countries.json. */
+export interface CountriesJson {
+  version: number;
+  countries: CountryData[];
+}
+
 /**
  * Immutable region raster + CSR tile lists. Constructed once per loaded map;
  * ids on non-ownable tiles are cleared so `regionId()` is 0 there.
@@ -96,7 +109,20 @@ export class RegionMap {
   private readonly csrOffsets: Uint32Array;
   private readonly csrTiles: Uint32Array;
 
-  constructor(raster: Uint16Array, map: RegionTerrainView) {
+  // Country data (country-start mode). Index 0 unused; country ids are
+  // 1..countryCount_ in countries.json order. Empty when no countries given.
+  private readonly countryNames_: string[] = [];
+  private readonly countryFlags_: string[] = [];
+  /** Region ids per country, ascending (deterministic iteration order). */
+  private readonly countryRegions_: number[][] = [];
+  /** regionId → country id (0 = unassigned; only when countries present). */
+  private readonly regionCountry_: Uint16Array;
+
+  constructor(
+    raster: Uint16Array,
+    map: RegionTerrainView,
+    countries?: CountriesJson | null,
+  ) {
     const w = map.width();
     const h = map.height();
     if (raster.length !== w * h) {
@@ -133,6 +159,63 @@ export class RegionMap {
     for (let t = 0; t < n; t++) {
       const id = raster[t];
       if (id !== 0) this.csrTiles[cursor[id]++] = t;
+    }
+
+    if (countries === undefined || countries === null) {
+      this.regionCountry_ = new Uint16Array(0);
+      return;
+    }
+
+    // Validate the countries form a partition of the region-id space: every
+    // region id 1..N (N = max of the raster's highest id and the highest id
+    // referenced in countries.json) belongs to exactly one country. Ids
+    // referenced beyond the raster's max are tolerated as long as they are
+    // covered — a region can be empty in a given raster (e.g. lost during the
+    // Compact 4x downsample) while still listed in the shared countries.json.
+    if (countries.countries.length === 0) {
+      throw new Error("countries.json contains no countries");
+    }
+    let maxRef = 0;
+    for (const c of countries.countries) {
+      for (const r of c.regions) {
+        if (!Number.isInteger(r) || r < 1) {
+          throw new Error(`country ${c.name} has invalid region id ${r}`);
+        }
+        if (r > maxRef) maxRef = r;
+      }
+    }
+    const top = Math.max(maxRef, this.regionCount_);
+    this.regionCountry_ = new Uint16Array(top + 1);
+    const seenNames = new Set<string>();
+    countries.countries.forEach((c, idx) => {
+      const countryId = idx + 1;
+      if (c.name === "") {
+        throw new Error(`country ${countryId} has an empty name`);
+      }
+      if (seenNames.has(c.name)) {
+        throw new Error(`duplicate country name ${c.name}`);
+      }
+      seenNames.add(c.name);
+      if (c.regions.length === 0) {
+        throw new Error(`country ${c.name} has no regions`);
+      }
+      for (const r of c.regions) {
+        if (this.regionCountry_[r] !== 0) {
+          throw new Error(
+            `region ${r} is assigned to multiple countries ` +
+              `(${this.countryNames_[this.regionCountry_[r]]} and ${c.name})`,
+          );
+        }
+        this.regionCountry_[r] = countryId;
+      }
+      this.countryNames_[countryId] = c.name;
+      this.countryFlags_[countryId] = c.flag;
+      this.countryRegions_[countryId] = [...c.regions].sort((a, b) => a - b);
+    });
+    for (let id = 1; id <= top; id++) {
+      if (this.regionCountry_[id] === 0) {
+        throw new Error(`region ${id} is not covered by any country`);
+      }
     }
   }
 
@@ -171,6 +254,78 @@ export class RegionMap {
   /** Border mask for rendering (see computeRegionBorderMask). */
   computeBorderMask(): Uint8Array {
     return computeRegionBorderMask(this.ids, this.width_, this.height_);
+  }
+
+  // -------------------------------------------------------------------------
+  // Countries (country-start mode)
+  // -------------------------------------------------------------------------
+
+  /** Whether country data was supplied (country-start mode is active). */
+  hasCountries(): boolean {
+    return this.countryNames_.length > 0;
+  }
+
+  /** Number of countries; country ids are 1..countryCount(). */
+  countryCount(): number {
+    return Math.max(0, this.countryNames_.length - 1);
+  }
+
+  countryName(countryId: number): string {
+    const name = this.countryNames_[countryId];
+    if (name === undefined) {
+      throw new Error(`unknown country id ${countryId}`);
+    }
+    return name;
+  }
+
+  countryFlag(countryId: number): string {
+    const flag = this.countryFlags_[countryId];
+    if (flag === undefined) {
+      throw new Error(`unknown country id ${countryId}`);
+    }
+    return flag;
+  }
+
+  /** Country id owning the region; 0 when unknown/no country data. */
+  countryOfRegion(regionId: number): number {
+    return regionId >= 0 && regionId < this.regionCountry_.length
+      ? this.regionCountry_[regionId]
+      : 0;
+  }
+
+  /** Country id of a tile; 0 for water/impassable/no country data. */
+  countryOfTile(tile: TileRef): number {
+    return this.countryOfRegion(this.ids[tile]);
+  }
+
+  /**
+   * Iterate every ownable tile of the country: regions in ascending region-id
+   * order, tiles in ascending TileRef order within each region (deterministic).
+   */
+  forEachCountryTile(countryId: number, cb: (tile: TileRef) => void): void {
+    const regions = this.countryRegions_[countryId];
+    if (regions === undefined) return;
+    for (const regionId of regions) {
+      this.forEachRegionTile(regionId, cb);
+    }
+  }
+
+  /**
+   * Deterministic representative tile of the country: the first CSR tile of
+   * its lowest non-empty region id. Undefined when every region is empty in
+   * this raster (should not happen for real countries).
+   */
+  countryCanonicalTile(countryId: number): TileRef | undefined {
+    const regions = this.countryRegions_[countryId];
+    if (regions === undefined) return undefined;
+    for (const regionId of regions) {
+      if (regionId > this.regionCount_) continue;
+      const start = this.csrOffsets[regionId];
+      if (start < this.csrOffsets[regionId + 1]) {
+        return this.csrTiles[start];
+      }
+    }
+    return undefined;
   }
 }
 

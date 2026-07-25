@@ -172,7 +172,7 @@ export class MapPlaylist {
           : "default",
       gameMode: mode,
       playerTeams,
-      bots: isCompact ? 100 : 400,
+      bots: 0,
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
       disableClanTags: mode === GameMode.FFA ? true : undefined,
@@ -379,7 +379,7 @@ export class MapPlaylist {
       nations,
       gameMode: mode,
       playerTeams,
-      bots: isCompact ? 100 : 400,
+      bots: 0,
       spawnImmunityDuration:
         peaceTimeDuration ??
         this.getSpawnImmunityDuration(playerTeams, startingGold),
@@ -408,7 +408,7 @@ export class MapPlaylist {
       randomSpawn: false,
       nations: "disabled",
       gameMode: GameMode.FFA,
-      bots: isCompact ? 100 : 400,
+      bots: 0,
       spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
@@ -433,7 +433,7 @@ export class MapPlaylist {
       nations: "disabled",
       gameMode: GameMode.Team,
       playerTeams: 2,
-      bots: 100,
+      bots: 0,
       spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;

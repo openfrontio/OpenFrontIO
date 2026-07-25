@@ -28,6 +28,7 @@
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
     "gen-regions": "tsx scripts/regions/generate-regions.ts",
+    "gen-countries": "tsx scripts/regions/generate-countries.ts",
     "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {

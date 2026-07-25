@@ -1,7 +1,7 @@
 import { assetUrl } from "../AssetUrls";
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
-import { REGION_ENABLED_MAPS } from "./RegionMap";
+import { CountriesJson, REGION_ENABLED_MAPS } from "./RegionMap";
 import { MapManifest } from "./TerrainMapLoader";
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
@@ -64,6 +64,16 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
             ),
             regions4xBin: this.createLazyLoader(() =>
               loadBinary(mapAssetUrl("regions4x.bin")),
+            ),
+            countriesJson: this.createLazyLoader(() =>
+              fetch(mapAssetUrl("countries.json")).then((res) => {
+                if (!res.ok) {
+                  throw new Error(
+                    `Failed to load ${mapAssetUrl("countries.json")}`,
+                  );
+                }
+                return res.json() as Promise<CountriesJson>;
+              }),
             ),
           }
         : {}),

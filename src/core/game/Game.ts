@@ -312,6 +312,9 @@ export class Nation {
   constructor(
     public readonly spawnCell: Cell | undefined,
     public readonly playerInfo: PlayerInfo,
+    // Country-start mode: id of the RegionMap country this nation represents
+    // and pre-fills during the spawn phase.
+    public readonly countryId?: number,
   ) {}
 }
 

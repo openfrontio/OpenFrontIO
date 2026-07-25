@@ -38,6 +38,8 @@ export class FetchGameMapLoader implements GameMapLoader {
               this.loadBinaryFromUrl(this.url(fileName, "regions.bin")),
             regions4xBin: () =>
               this.loadBinaryFromUrl(this.url(fileName, "regions4x.bin")),
+            countriesJson: () =>
+              this.loadJsonFromUrl(this.url(fileName, "countries.json")),
           }
         : {}),
     } satisfies MapData;

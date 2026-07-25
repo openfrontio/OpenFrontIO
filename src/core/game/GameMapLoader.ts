@@ -1,4 +1,5 @@
 import { GameMapType } from "./Game";
+import { CountriesJson } from "./RegionMap";
 import { MapManifest } from "./TerrainMapLoader";
 
 export interface GameMapLoader {
@@ -15,4 +16,8 @@ export interface MapData {
   // REGION_ENABLED_MAPS; a fetch failure there must reject (determinism).
   regionsBin?: () => Promise<Uint8Array>;
   regions4xBin?: () => Promise<Uint8Array>;
+  // Country grouping of regions (country-start mode). Only populated for
+  // maps in REGION_ENABLED_MAPS; region ids are size-independent so one file
+  // serves both rasters. A fetch failure must reject (determinism).
+  countriesJson?: () => Promise<CountriesJson>;
 }

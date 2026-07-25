@@ -23,6 +23,7 @@ import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { SpawnExecution } from "./SpawnExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
+import { conquerCountry } from "./utils/CountrySpawn";
 
 export class NationExecution implements Execution {
   private active = true;
@@ -44,6 +45,13 @@ export class NationExecution implements Execution {
   private triggerRatio: number;
   private reserveRatio: number;
   private expandRatio: number;
+  /**
+   * Country-start mode: tick (within the spawn phase) at which this nation
+   * paints its whole country. Staggered per nation so the map fills in over
+   * the first ~30 ticks instead of flooding a single tick with millions of
+   * tile updates.
+   */
+  private staggerTick: number;
 
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
@@ -57,6 +65,7 @@ export class NationExecution implements Execution {
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
+    this.staggerTick = this.random.nextInt(1, 30);
   }
 
   init(mg: Game) {
@@ -104,7 +113,14 @@ export class NationExecution implements Execution {
       return;
     }
 
-    if (this.mg.inSpawnPhase()) {
+    // Country-start mode: this nation pre-fills its whole country instead of
+    // blob-spawning near a manifest cell.
+    if (this.countryMode()) {
+      if (this.countryTick(ticks)) {
+        return;
+      }
+      // Fall through to the post-spawn AI (attack/alliance/structures/...).
+    } else if (this.mg.inSpawnPhase()) {
       if (this.player.hasSpawned()) {
         // Already on the map — periodically re-spawn so the nation
         // visibly hops to different locations during the spawn phase.
@@ -174,7 +190,10 @@ export class NationExecution implements Execution {
 
     if (!this.behaviorsInitialized) {
       this.initializeBehaviors();
-      this.attackBehavior.forceSendAttack(this.mg.terraNullius());
+      if (!this.countryMode()) {
+        // No terra nullius to grab on a fully political map.
+        this.attackBehavior.forceSendAttack(this.mg.terraNullius());
+      }
       return;
     }
 
@@ -207,6 +226,63 @@ export class NationExecution implements Execution {
     this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
     this.nukeBehavior.maybeSendNuke();
+  }
+
+  /** Country-start mode: this nation owns a country on a map with country data. */
+  private countryMode(): boolean {
+    return (
+      this.nation.countryId !== undefined &&
+      (this.mg.regionMap()?.hasCountries() ?? false)
+    );
+  }
+
+  /**
+   * Country-start spawn handling. Returns true when this tick is fully
+   * handled (still spawning/waiting/dead); false to fall through to the
+   * regular post-spawn AI.
+   */
+  private countryTick(ticks: number): boolean {
+    if (this.player === null) throw new Error("Player not initialized");
+    const rm = this.mg.regionMap();
+    const countryId = this.nation.countryId;
+    if (rm === null || countryId === undefined) return false;
+
+    const canonical = rm.countryCanonicalTile(countryId);
+    if (canonical === undefined) {
+      // Country has no tiles in this raster — nothing to ever do.
+      this.active = false;
+      return true;
+    }
+    const owner = this.mg.owner(canonical);
+
+    if (this.mg.inSpawnPhase()) {
+      if (ticks < this.staggerTick) return true;
+      if (owner === this.player) {
+        // Already painted; wait out the spawn phase.
+        return true;
+      }
+      if (owner.isPlayer()) {
+        // A human took the country — wait, they may still relocate away
+        // (SpawnExecution returns the country to us if they do).
+        return true;
+      }
+      conquerCountry(this.mg, this.player, countryId, canonical);
+      return true;
+    }
+
+    // Post-spawn phase.
+    if (!this.player.hasSpawned()) {
+      if (owner.isPlayer()) {
+        // Human-held before we ever painted — this nation never existed.
+        this.active = false;
+        return true;
+      }
+      // Spawn ended before our stagger tick and the country is free: take it
+      // now (common in singleplayer, where the human's click ends the phase).
+      conquerCountry(this.mg, this.player, countryId, canonical);
+      return true;
+    }
+    return false;
   }
 
   private initializeBehaviors(): void {

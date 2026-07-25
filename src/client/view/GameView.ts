@@ -171,6 +171,19 @@ export class GameView implements GameMap {
         flag: extra.flag ? `/flags/${extra.flag}.svg` : undefined,
       } satisfies PlayerCosmetics);
     }
+    // Country-start mode: nations are created from the region map's country
+    // list (names may differ from the manifest nations), keyed by name too.
+    const regionMap = this._mapData.regionMap;
+    if (regionMap !== undefined && regionMap.hasCountries()) {
+      for (let cid = 1; cid <= regionMap.countryCount(); cid++) {
+        const name = regionMap.countryName(cid);
+        if (this._cosmetics.has(name)) continue;
+        const flag = regionMap.countryFlag(cid);
+        this._cosmetics.set(name, {
+          flag: flag ? `/flags/${flag}.svg` : undefined,
+        } satisfies PlayerCosmetics);
+      }
+    }
 
     const mapW = this._map.width();
     const mapH = this._map.height();
