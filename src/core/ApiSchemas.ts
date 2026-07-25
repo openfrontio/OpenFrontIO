@@ -291,11 +291,13 @@ export type GetMyTribeNamesResponse = z.infer<
   typeof GetMyTribeNamesResponseSchema
 >;
 
-// POST /users/@me/tribe_names response (201). The name always starts `pending`.
+// POST /users/@me/tribe_names response (201). The name starts `pending`
+// today, but accept any status — a stricter literal would fail the parse
+// (and show "purchase failed") after the player was already charged.
 export const PostTribeNameResponseSchema = z.object({
   id: z.string(),
   displayName: z.string(),
-  status: z.literal("pending"),
+  status: TribeNameStatusSchema,
   pricePaid: z.string(),
 });
 export type PostTribeNameResponse = z.infer<typeof PostTribeNameResponseSchema>;

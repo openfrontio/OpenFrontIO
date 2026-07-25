@@ -1465,6 +1465,7 @@
     "tribe_status_active": "Active",
     "tribe_status_rejected": "Rejected",
     "tribes": "Tribes",
+    "tribes_load_failed": "Couldn't load your tribe names. Reopen the store to retry.",
     "tribes_login_required": "Log in to buy and manage tribe names.",
     "tribes_purchase_description": "Your name gets assigned to a bot tribe in real multiplayer games. It goes live right away.",
     "tribes_purchase_heading": "Buy a Tribe Name",

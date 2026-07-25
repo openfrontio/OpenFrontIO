@@ -245,6 +245,7 @@ export class LangSelector extends LitElement {
       "effects-grid",
       "matchmaking-button",
       "token-login",
+      "tribes-panel",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

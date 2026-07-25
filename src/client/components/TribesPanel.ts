@@ -147,6 +147,10 @@ export class TribesPanel extends LitElement {
     await this.load();
     invalidateUserMe();
     const fresh = await getUserMe();
+    // getUserMe returns false on any error, not just auth — broadcasting
+    // that would flip the whole app to its logged-out UI right after a
+    // successful purchase. A stale header balance is the better failure.
+    if (fresh === false) return;
     document.dispatchEvent(
       new CustomEvent("userMeResponse", {
         detail: fresh,
@@ -245,7 +249,14 @@ export class TribesPanel extends LitElement {
     if (this.data === null) {
       return renderLoadingSpinner();
     }
-    const names = this.data === false ? [] : this.data.names;
+    if (this.data === false) {
+      return html`<p
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.tribes_load_failed")}
+      </p>`;
+    }
+    const names = this.data.names;
     if (names.length === 0) {
       return html`<p
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
