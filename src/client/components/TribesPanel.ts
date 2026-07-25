@@ -121,14 +121,14 @@ export class TribesPanel extends LitElement {
     }
     if (result.code === "rate_limited") {
       const secs = result.retryAfterSeconds;
+      // The server always sends Retry-After; if it's somehow missing, the
+      // generic failure message below covers it.
       this.notice = {
         kind: "error",
         text:
           secs && secs > 0
-            ? translateText("store.tribe_rate_limited_seconds", {
-                seconds: secs,
-              })
-            : translateText("store.tribe_rate_limited"),
+            ? translateText("store.tribe_rate_limited", { seconds: secs })
+            : translateText("store.tribe_purchase_failed"),
       };
       return;
     }
