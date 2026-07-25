@@ -97,7 +97,7 @@ describe("GameServer match telemetry", () => {
       {
         donateGold: false,
         donateTroops: false,
-        gameMap: GameMapType.World,
+        gameMap: GameMapType.Europe,
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
         difficulty: Difficulty.Easy,

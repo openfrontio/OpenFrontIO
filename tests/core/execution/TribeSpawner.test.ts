@@ -47,7 +47,10 @@ describe("TribeSpawner", () => {
   });
 
   test("positioned tribes spawn before random tribes", async () => {
-    const game = await setup("plains", { bots: 3, gameMap: GameMapType.Asia });
+    const game = await setup("plains", {
+      bots: 3,
+      gameMap: GameMapType.Europe,
+    });
     const tile = findLandTile(game);
     const x = game.x(tile);
     const y = game.y(tile);
@@ -74,7 +77,7 @@ describe("TribeSpawner", () => {
   test("compact-map coordinates are halved", async () => {
     const game = await setup("plains", {
       bots: 1,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
       gameMapSize: GameMapSize.Compact,
     });
     const tile = findLandTile(game);
@@ -97,7 +100,7 @@ describe("TribeSpawner", () => {
   test("returns undefined for coordinates on water", async () => {
     const game = await setup("ocean_and_land", {
       bots: 1,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
     });
     const tile = findWaterTile(game);
     const x = game.x(tile);
@@ -122,7 +125,7 @@ describe("TribeSpawner", () => {
   test("falls back to random names when positioned spawn fails", async () => {
     const game = await setup("half_land_half_ocean", {
       bots: 2,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
     });
 
     mockResolveTribeNameData.mockReturnValue({
@@ -153,7 +156,7 @@ describe("TribeSpawner", () => {
   test("failed positioned tribe is NOT spawned randomly", async () => {
     const game = await setup("half_land_half_ocean", {
       bots: 3,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
     });
 
     mockResolveTribeNameData.mockReturnValue({
@@ -178,7 +181,7 @@ describe("TribeSpawner", () => {
   test("random tribe selection avoids duplicates", async () => {
     const game = await setup("plains", {
       bots: 3,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
     });
 
     mockResolveTribeNameData.mockReturnValue({
@@ -200,7 +203,7 @@ describe("TribeSpawner", () => {
   test("no positioned tribes uses all random names", async () => {
     const game = await setup("plains", {
       bots: 2,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
     });
 
     mockResolveTribeNameData.mockReturnValue({
@@ -220,7 +223,7 @@ describe("TribeSpawner", () => {
   test("all players spawn on valid land tiles", async () => {
     const game = await setup("plains", {
       bots: 0,
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
     });
 
     mockResolveTribeNameData.mockReturnValue({

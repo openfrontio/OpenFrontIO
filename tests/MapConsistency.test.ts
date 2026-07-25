@@ -23,17 +23,7 @@ const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 
 // Maps excluded from the frequency requirement (not part of regular playlists).
-const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
-  "GiantWorldMap",
-  "Oceania",
-  "BaikalNukeWars",
-  "Tourney1",
-  "Tourney2",
-  "Tourney3",
-  "Tourney4",
-  "EuropeClassic",
-  "BritanniaClassic",
-]);
+const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([]);
 
 // Keys in the en.json "map" section that are UI strings, not map names.
 const EN_JSON_META_KEYS = new Set([

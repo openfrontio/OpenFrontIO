@@ -24,7 +24,7 @@ describe("resolveTribeNameData", () => {
 
   test("returns default theme for a map with no theme or customTribes", () => {
     // Most maps in Maps.gen.ts have no theme/customTribes defined.
-    const data = resolveTribeNameData(GameMapType.World);
+    const data = resolveTribeNameData(GameMapType.Europe);
     expect(data.prefixes.length).toBeGreaterThan(0);
     expect(data.suffixes.length).toBeGreaterThan(0);
     expect(data.customTribes).toBeUndefined();

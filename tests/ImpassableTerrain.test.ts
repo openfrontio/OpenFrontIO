@@ -78,7 +78,7 @@ async function setupImpassableGame(humans: PlayerInfo[] = []): Promise<Game> {
   );
 
   const gameConfig: GameConfig = {
-    gameMap: GameMapType.Asia,
+    gameMap: GameMapType.Europe,
     gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,

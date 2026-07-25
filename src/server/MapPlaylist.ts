@@ -26,16 +26,9 @@ import { getMapLandTiles } from "./MapLandTiles";
 const log = logger.child({});
 
 // Arcade-style maps only appear in the "special" playlist.
-const ARCADE_MAPS = new Set<GameMapType>([
-  GameMapType.TheBox,
-  GameMapType.ChoppingBlock,
-  GameMapType.Didier,
-  GameMapType.DidierFrance,
-  GameMapType.Labyrinth,
-  GameMapType.Sierpinski,
-  GameMapType.Onion,
-]);
-const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
+// Europe-only fork: no arcade or special-only maps remain.
+const ARCADE_MAPS = new Set<GameMapType>([]);
+const SPECIAL_ONLY_MAPS = new Set<GameMapType>([]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
@@ -112,21 +105,11 @@ const DOOMSDAY_ROTATION_SPEEDS = [
 
 // Maps where water nukes have a higher chance on top of the normal pool
 // Water nukes are especially fun here
-const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
-  GameMapType.FourIslands,
-  GameMapType.Baikal,
-  GameMapType.Luna,
-  GameMapType.ArchipelagoSea,
-  GameMapType.ChoppingBlock,
-  GameMapType.Sol,
-]);
+const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([]);
 
 // Maps that are entirely land.
 // - Water nukes forced on 75% of the time (overrides WATER_NUKES_BOOSTED_MAPS)
-const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([
-  GameMapType.TheBox,
-  GameMapType.Alps,
-]);
+const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([]);
 
 // Modifiers that cannot be active at the same time.
 const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
@@ -219,11 +202,6 @@ export class MapPlaylist {
       playerTeams === Quads
     ) {
       excludedModifiers.push("isRandomSpawn");
-    }
-
-    // No gold multi on FourIslands team games - Too high chance of 3h long stalemates
-    if (map === GameMapType.FourIslands && mode === GameMode.Team) {
-      excludedModifiers.push("goldMultiplier");
     }
 
     // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
@@ -412,13 +390,7 @@ export class MapPlaylist {
   }
 
   public get1v1Config(): GameConfig {
-    const maps = [
-      GameMapType.Australia, // 40%
-      GameMapType.Australia,
-      GameMapType.Iceland, // 20%
-      GameMapType.Asia, // 20%
-      GameMapType.EuropeClassic, // 20%
-    ];
+    const maps = [GameMapType.Europe];
     const isCompact = Math.random() < 0.2;
     return {
       donateGold: false,
@@ -443,13 +415,7 @@ export class MapPlaylist {
   }
 
   public get2v2Config(): GameConfig {
-    const maps = [
-      GameMapType.Australia, // 40%
-      GameMapType.Australia,
-      GameMapType.Iceland, // 20%
-      GameMapType.Asia, // 20%
-      GameMapType.EuropeClassic, // 20%
-    ];
+    const maps = [GameMapType.Europe];
     return {
       donateGold: true,
       donateTroops: true,

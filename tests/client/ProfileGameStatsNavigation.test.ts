@@ -140,7 +140,7 @@ describe("Profile Games stats navigation", () => {
     const game = await setup(
       "world",
       {
-        gameMap: GameMapType.World,
+        gameMap: GameMapType.Europe,
         gameMode: GameMode.FFA,
         gameType: GameType.Public,
       },

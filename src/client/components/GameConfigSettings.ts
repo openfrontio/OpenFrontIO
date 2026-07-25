@@ -6,7 +6,7 @@ import {
   nothing,
   svg,
 } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 import {
   DOOMSDAY_CLOCK_SPEEDS,
   DoomsdayClockSpeed,
@@ -192,8 +192,6 @@ export interface ToggleOptionConfig {
 export interface GameConfigSettingsData {
   map: {
     selected: GameMapType;
-    useRandom: boolean;
-    randomMapDivider?: boolean;
     showMedals?: boolean;
     mapWins?: Map<GameMapType, Set<Difficulty>>;
   };
@@ -240,7 +238,6 @@ export interface GameConfigSettingsData {
 export class GameConfigSettings extends LitElement {
   @property({ attribute: false }) settings?: GameConfigSettingsData;
   @property({ attribute: false }) sectionGapClass = "space-y-6";
-  @state() private mapSearchQuery = "";
 
   createRenderRoot() {
     return this;
@@ -256,21 +253,8 @@ export class GameConfigSettings extends LitElement {
     );
   }
 
-  private handleMapSearchInput = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    this.mapSearchQuery = input.value;
-  };
-
-  private clearMapSearch = () => {
-    this.mapSearchQuery = "";
-  };
-
   private handleSelectMap = (map: GameMapType) => {
     this.emit("map-selected", { map });
-  };
-
-  private handleSelectRandom = () => {
-    this.emit("random-map-selected", {});
   };
 
   private handleDifficultySelect = (difficulty: Difficulty) => {
@@ -391,42 +375,6 @@ export class GameConfigSettings extends LitElement {
     });
   }
 
-  private renderMapSearchInput(): TemplateResult {
-    return html`<div class="relative">
-      <input
-        type="text"
-        placeholder="${translateText("map_component.search_maps")}"
-        .value=${this.mapSearchQuery}
-        @input=${this.handleMapSearchInput}
-        class="w-48 px-3 py-1.5 pl-8 pr-7 rounded-lg text-sm bg-transparent border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-malibu-blue/50 transition-all"
-      />
-      <svg
-        class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-      >
-        <path
-          fill-rule="evenodd"
-          d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-          clip-rule="evenodd"
-        />
-      </svg>
-      ${this.mapSearchQuery
-        ? html`<button
-            type="button"
-            @click=${this.clearMapSearch}
-            class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
-          >
-            <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-              />
-            </svg>
-          </button>`
-        : null}
-    </div>`;
-  }
-
   render() {
     if (!this.settings) return nothing;
     const settings = this.settings;
@@ -440,16 +388,10 @@ export class GameConfigSettings extends LitElement {
           "map.map",
           html`<map-picker
             .selectedMap=${settings.map.selected}
-            .useRandomMap=${settings.map.useRandom}
-            .randomMapDivider=${settings.map.randomMapDivider ?? false}
             .showMedals=${settings.map.showMedals ?? false}
             .mapWins=${settings.map.mapWins ?? new Map()}
             .onSelectMap=${this.handleSelectMap}
-            .onSelectRandom=${this.handleSelectRandom}
-            .searchQuery=${this.mapSearchQuery}
           ></map-picker>`,
-          undefined,
-          this.renderMapSearchInput(),
         )}
         ${renderSection(
           DIFFICULTY_ICON,

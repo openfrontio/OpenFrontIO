@@ -35,7 +35,7 @@ import { GameInfoView } from "../../src/client/components/baseComponents/stats/G
 import { LangSelector } from "../../src/client/LangSelector";
 
 const config: GameConfig = {
-  gameMap: GameMapType.Montreal,
+  gameMap: GameMapType.Europe,
   difficulty: Difficulty.Medium,
   donateGold: false,
   donateTroops: false,
@@ -132,11 +132,11 @@ describe("GameInfoView", () => {
   });
 
   it("renders the game summary, controls, and player rows", async () => {
-    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
+    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Europe));
     view = mountView("game-1");
 
     await waitForRender(view, () => {
-      expect(view!.textContent).toContain(GameMapType.Montreal);
+      expect(view!.textContent).toContain(GameMapType.Europe);
       expect(view!.querySelector("ranking-controls")).not.toBeNull();
       expect(view!.querySelector("section")?.getAttribute("aria-label")).toBe(
         "game_info_modal.survival_time",
@@ -146,7 +146,7 @@ describe("GameInfoView", () => {
   });
 
   it("shows the game start using the history-card date format", async () => {
-    const session = makeSession("game-1", GameMapType.Montreal);
+    const session = makeSession("game-1", GameMapType.Europe);
     session.info.start = Date.UTC(2026, 3, 20, 16, 38, 22);
     fetchMock.mockResolvedValue(session);
     view = mountView("game-1");
@@ -162,7 +162,7 @@ describe("GameInfoView", () => {
   });
 
   it("uses a translated fallback for an unknown game type", async () => {
-    const session = makeSession("game-1", GameMapType.Montreal);
+    const session = makeSession("game-1", GameMapType.Europe);
     session.info.config.gameType = "future-game-type" as GameType;
     fetchMock.mockResolvedValue(session);
     view = mountView("game-1");
@@ -174,15 +174,15 @@ describe("GameInfoView", () => {
   });
 
   it("replaces a failed map image with the map fallback", async () => {
-    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
+    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Europe));
     view = mountView("game-1");
 
     await waitForRender(view, () => {
       const image = view!.querySelector<HTMLImageElement>("[data-map-image]");
       expect(image?.getAttribute("src")).toBe(
-        `/maps/${GameMapType.Montreal}.webp`,
+        `/maps/${GameMapType.Europe}.webp`,
       );
-      expect(image?.alt).toBe(GameMapType.Montreal);
+      expect(image?.alt).toBe(GameMapType.Europe);
       expect(view!.querySelector("[data-map-fallback]")).toBeNull();
     });
 
@@ -198,7 +198,7 @@ describe("GameInfoView", () => {
 
   it("renders the no-winner state for a game without ranked players", async () => {
     fetchMock.mockResolvedValue(
-      makeSession("empty", GameMapType.Montreal, false),
+      makeSession("empty", GameMapType.Europe, false),
     );
     view = mountView("empty");
 
@@ -232,10 +232,10 @@ describe("GameInfoView", () => {
       await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
       expect(fetchMock).toHaveBeenNthCalledWith(2, "retry-game");
 
-      retry.resolve(makeSession("retry-game", GameMapType.Montreal));
+      retry.resolve(makeSession("retry-game", GameMapType.Europe));
       await retry.promise;
       await waitForRender(view, () => {
-        expect(view!.textContent).toContain(GameMapType.Montreal);
+        expect(view!.textContent).toContain(GameMapType.Europe);
         expect(view!.textContent).not.toContain("game_info_modal.load_failed");
         expect(view!.querySelectorAll("player-row")).toHaveLength(1);
       });
@@ -245,7 +245,7 @@ describe("GameInfoView", () => {
   });
 
   it("clears rendered game state when gameId becomes null", async () => {
-    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
+    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Europe));
     view = mountView("game-1");
 
     await waitForRender(view, () => {
@@ -275,7 +275,7 @@ describe("GameInfoView", () => {
       expect(view!.textContent?.trim()).toBe("");
     });
 
-    pending.resolve(makeSession("pending", GameMapType.Montreal));
+    pending.resolve(makeSession("pending", GameMapType.Europe));
     await pending.promise;
     await Promise.resolve();
     await view.updateComplete;
@@ -290,7 +290,7 @@ describe("GameInfoView", () => {
   });
 
   it("refreshes the stats view and translated ranking controls", async () => {
-    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Montreal));
+    fetchMock.mockResolvedValue(makeSession("game-1", GameMapType.Europe));
     view = mountView("game-1");
 
     await waitForRender(view, () => {
@@ -336,12 +336,14 @@ describe("GameInfoView", () => {
       expect(view!.textContent).toContain(GameMapType.Europe);
     });
 
-    first.resolve(makeSession("first", GameMapType.Montreal));
+    // The stale record uses a raw map name (only Europe remains in the enum)
+    // so the assertion can tell the two responses apart.
+    first.resolve(makeSession("first", "Stale Map" as GameMapType));
     await first.promise;
     await Promise.resolve();
     await view.updateComplete;
 
     expect(view.textContent).toContain(GameMapType.Europe);
-    expect(view.textContent).not.toContain(GameMapType.Montreal);
+    expect(view.textContent).not.toContain("Stale Map");
   });
 });
