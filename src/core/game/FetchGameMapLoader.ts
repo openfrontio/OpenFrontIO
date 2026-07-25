@@ -1,5 +1,6 @@
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { REGION_ENABLED_MAPS } from "./RegionMap";
 
 export class FetchGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
@@ -31,6 +32,14 @@ export class FetchGameMapLoader implements GameMapLoader {
       map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
       manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
       webpPath: this.url(fileName, "thumbnail.webp"),
+      ...(REGION_ENABLED_MAPS.has(map)
+        ? {
+            regionsBin: () =>
+              this.loadBinaryFromUrl(this.url(fileName, "regions.bin")),
+            regions4xBin: () =>
+              this.loadBinaryFromUrl(this.url(fileName, "regions4x.bin")),
+          }
+        : {}),
     } satisfies MapData;
 
     this.maps.set(map, mapData);

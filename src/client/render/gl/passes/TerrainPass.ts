@@ -49,6 +49,10 @@ export class TerrainPass {
     mapW: number,
     mapH: number,
     terrainColors?: TerrainColorOverrides,
+    // Optional region-border mask: masked texels are darkened in the baked
+    // texture (region-based conquest maps). Cosmetic only; not applied by
+    // applyTerrainDelta (a water-nuked tile stops being a border tile anyway).
+    private borderMask?: Uint8Array,
   ) {
     this.mapW = mapW;
     this.mapH = mapH;
@@ -66,7 +70,13 @@ export class TerrainPass {
       internalFormat: gl.RGBA8,
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
-      data: buildTerrainRGBA(terrainBytes, mapW, mapH, terrainColors),
+      data: buildTerrainRGBA(
+        terrainBytes,
+        mapW,
+        mapH,
+        terrainColors,
+        this.borderMask,
+      ),
       filter: gl.NEAREST, // pixel-crisp at all zoom levels
     });
 
@@ -96,6 +106,7 @@ export class TerrainPass {
         this.mapW,
         this.mapH,
         terrainColors,
+        this.borderMask,
       ),
     );
   }

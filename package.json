@@ -27,6 +27,7 @@
     "lint:fix": "eslint --fix",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
+    "gen-regions": "tsx scripts/regions/generate-regions.ts",
     "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {

@@ -316,6 +316,9 @@ function createWebGLView(
   };
 
   const palette = new Float32Array(4096 * 2 * 4);
+  // Region-based conquest maps: bake region borders into the static terrain
+  // texture (darkened texels). Cosmetic only.
+  const regionBorderMask = terrainMap.regionMap?.computeBorderMask();
   // Log the GPU init result on every session so we can size the real % of
   // users on software/missing WebGL2. MapRenderer constructs the GL context;
   // a non-accelerated context throws GLUnavailableError (handled by the
@@ -341,6 +344,7 @@ function createWebGLView(
       settings,
       captureRaf,
       captureCaf,
+      regionBorderMask,
     );
   } catch (e) {
     if (e instanceof GLUnavailableError) {

@@ -45,6 +45,7 @@ import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
+import { RegionMap, RegionTracker } from "./RegionMap";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
@@ -59,6 +60,7 @@ export function createGame(
   miniGameMap: GameMap,
   config: Config,
   teamGameSpawnAreas?: TeamGameSpawnAreas,
+  regionMap?: RegionMap | null,
 ): Game {
   const stats = new StatsImpl();
   return new GameImpl(
@@ -69,6 +71,7 @@ export function createGame(
     config,
     stats,
     teamGameSpawnAreas,
+    regionMap,
   );
 }
 
@@ -117,6 +120,14 @@ export class GameImpl implements Game {
   private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
+  // Region-based conquest ("majority snap"). Null on maps without region
+  // data — behavior is then bit-identical to before this feature existed.
+  private _regionMap: RegionMap | null = null;
+  private regionTracker: RegionTracker | null = null;
+  // Re-entrancy guard: snapRegion conquers through conquer(), which must keep
+  // updating the tracker but must not trigger nested snaps.
+  private snapInProgress = false;
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -125,10 +136,16 @@ export class GameImpl implements Game {
     private _config: Config,
     private _stats: Stats,
     teamGameSpawnAreas?: TeamGameSpawnAreas,
+    regionMap?: RegionMap | null,
   ) {
     const constructorStart = performance.now();
 
     this._teamGameSpawnAreas = teamGameSpawnAreas;
+    this._regionMap = regionMap ?? null;
+    this.regionTracker =
+      this._regionMap !== null
+        ? new RegionTracker(this._regionMap, _config.regionCaptureThreshold())
+        : null;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -269,12 +286,30 @@ export class GameImpl implements Game {
     if (this.hasOwner(tile)) {
       throw Error(`cannot set water, tile ${tile} has owner`);
     }
+    // Region bookkeeping: an ownable land tile is leaving the region total.
+    // Shrinking the total can push an existing owner over the capture
+    // threshold — snap for them if so (tile is guaranteed unowned here).
+    let majorityChange = null;
+    if (this.regionTracker !== null && !this._map.isImpassable(tile)) {
+      majorityChange = this.regionTracker.onLandLost(tile);
+    }
     // Clear fallout if present (water tiles shouldn't have fallout)
     if (this._map.hasFallout(tile)) {
       this._map.setFallout(tile, false);
     }
     this._map.setWater(tile);
     this.recordTileUpdate(tile);
+
+    if (
+      majorityChange !== null &&
+      !this.snapInProgress &&
+      !this.inSpawnPhase()
+    ) {
+      const owner = this.playerBySmallID(majorityChange.ownerSmallID);
+      if (owner.isPlayer()) {
+        this.snapRegion(majorityChange.regionId, owner as PlayerImpl);
+      }
+    }
   }
 
   queueWaterConversion(tile: TileRef): void {
@@ -747,6 +782,48 @@ export class GameImpl implements Game {
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
     this.recordTileUpdate(tile);
+
+    if (this.regionTracker !== null) {
+      const snapRegionId = this.regionTracker.recordConquer(
+        tile,
+        previousOwner.isPlayer() ? previousOwner.smallID() : 0,
+        owner.smallID(),
+      );
+      if (snapRegionId !== -1 && !this.snapInProgress && !this.inSpawnPhase()) {
+        this.snapRegion(snapRegionId, owner);
+      }
+    }
+  }
+
+  /**
+   * Region snap: `owner` crossed the capture threshold in the region, so every
+   * remaining ownable tile of the region that is not already theirs and not
+   * held by a friendly (ally/team) player is conquered through the normal
+   * conquer() path. Tiles are visited in ascending TileRef order
+   * (deterministic); tiles water-nuked since generation are skipped.
+   */
+  private snapRegion(regionId: number, owner: PlayerImpl): void {
+    if (this._regionMap === null) return;
+    this.snapInProgress = true;
+    try {
+      const ownerSmall = owner.smallID();
+      this._regionMap.forEachRegionTile(regionId, (tile) => {
+        if (!this._map.isLand(tile) || this._map.isImpassable(tile)) return;
+        const holderSmall = this._map.ownerID(tile);
+        if (holderSmall === ownerSmall) return;
+        if (holderSmall !== 0) {
+          const holder = this.playerBySmallID(holderSmall);
+          if (holder.isPlayer() && owner.isFriendly(holder)) return;
+        }
+        this.conquer(owner, tile);
+      });
+    } finally {
+      this.snapInProgress = false;
+    }
+  }
+
+  regionMap(): RegionMap | null {
+    return this._regionMap;
   }
 
   relinquish(tile: TileRef) {
@@ -765,6 +842,8 @@ export class GameImpl implements Game {
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
     this.recordTileUpdate(tile);
+
+    this.regionTracker?.recordRelinquish(tile, previousOwner.smallID());
   }
 
   // Reusable neighbor buffer to avoid closures/allocation in updateBorders.

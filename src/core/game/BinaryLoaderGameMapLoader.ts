@@ -1,6 +1,7 @@
 import { assetUrl } from "../AssetUrls";
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { REGION_ENABLED_MAPS } from "./RegionMap";
 import { MapManifest } from "./TerrainMapLoader";
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
@@ -56,6 +57,16 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         }),
       ),
       webpPath: mapAssetUrl("thumbnail.webp"),
+      ...(REGION_ENABLED_MAPS.has(map)
+        ? {
+            regionsBin: this.createLazyLoader(() =>
+              loadBinary(mapAssetUrl("regions.bin")),
+            ),
+            regions4xBin: this.createLazyLoader(() =>
+              loadBinary(mapAssetUrl("regions4x.bin")),
+            ),
+          }
+        : {}),
     } satisfies MapData;
 
     this.maps.set(map, mapData);
