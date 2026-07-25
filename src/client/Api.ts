@@ -353,7 +353,7 @@ export type PurchaseTribeNameResult =
   // 400: invalid, disallowed, or insufficient balance. `message` is the
   // server's player-facing reason (already English, shown as-is).
   | { ok: false; code: "invalid"; message?: string }
-  // 409: the player already has this name pending or live.
+  // 409: the name is already taken (names are globally unique).
   | { ok: false; code: "duplicate" }
   // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
   // header (null when absent/unparseable).

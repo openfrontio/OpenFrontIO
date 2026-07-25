@@ -1456,7 +1456,7 @@
     "subscriptions": "Subscriptions",
     "switch_button": "Switch",
     "title": "Store",
-    "tribe_duplicate": "You already have this name.",
+    "tribe_duplicate": "Name already taken.",
     "tribe_name_placeholder": "Enter a tribe name",
     "tribe_name_required": "Enter a name first.",
     "tribe_purchase_failed": "Purchase failed. Please try again.",
