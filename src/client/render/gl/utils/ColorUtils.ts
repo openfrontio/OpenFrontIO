@@ -171,10 +171,19 @@ export function buildTerrainRGBA(
   w: number,
   h: number,
   colors?: TerrainColorOverrides,
+  // Optional per-tile mask (e.g. region borders): masked texels are darkened
+  // ~25% in the baked texture. Cosmetic only.
+  borderMask?: Uint8Array,
 ): Uint8Array {
   const pixels = new Uint8Array(w * h * 4);
   for (let i = 0; i < w * h; i++) {
     encodeTerrainTile(terrainBytes[i], pixels, i * 4, colors);
+    if (borderMask !== undefined && borderMask[i] !== 0) {
+      const o = i * 4;
+      pixels[o] = (pixels[o] * 3) >> 2;
+      pixels[o + 1] = (pixels[o + 1] * 3) >> 2;
+      pixels[o + 2] = (pixels[o + 2] * 3) >> 2;
+    }
   }
   return pixels;
 }

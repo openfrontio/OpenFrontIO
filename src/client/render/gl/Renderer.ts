@@ -207,6 +207,9 @@ export class GPURenderer {
     settings: RenderSettings,
     raf: typeof requestAnimationFrame = requestAnimationFrame.bind(window),
     caf: typeof cancelAnimationFrame = cancelAnimationFrame.bind(window),
+    // Optional region-border mask baked into the terrain texture (darkened
+    // texels; region-based conquest maps only). Cosmetic.
+    borderMask?: Uint8Array,
   ) {
     this.canvas = canvas;
     // Settings are resolved (defaults + user overrides) by the caller and
@@ -268,6 +271,7 @@ export class GPURenderer {
         mountainColor:
           hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
       },
+      borderMask,
     );
 
     // --- Shared palette texture (RGBA32F, 4096×2) ---

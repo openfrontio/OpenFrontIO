@@ -1,6 +1,11 @@
 import { GameMapSize, GameMapType, TeamGameSpawnAreas } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";
+import {
+  decodeRegionRaster,
+  REGION_ENABLED_MAPS,
+  RegionMap,
+} from "./RegionMap";
 
 export type TerrainMapData = {
   nations: Nation[];
@@ -8,6 +13,9 @@ export type TerrainMapData = {
   gameMap: GameMap;
   miniGameMap: GameMap;
   teamGameSpawnAreas?: TeamGameSpawnAreas;
+  // Present only for maps in REGION_ENABLED_MAPS; built against gameMap
+  // (regions.bin for Normal, regions4x.bin for Compact).
+  regionMap?: RegionMap;
 };
 
 const loadedMaps = new Map<string, TerrainMapData>();
@@ -101,12 +109,30 @@ export async function loadTerrainMap(
     teamGameSpawnAreas = scaled;
   }
 
+  let regionMap: RegionMap | undefined;
+  if (REGION_ENABLED_MAPS.has(map)) {
+    const regionLoader =
+      mapSize === GameMapSize.Normal
+        ? mapFiles.regionsBin
+        : mapFiles.regions4xBin;
+    if (regionLoader === undefined) {
+      throw new Error(
+        `map ${map} is region-enabled but the map loader provides no region data`,
+      );
+    }
+    regionMap = new RegionMap(
+      decodeRegionRaster(await regionLoader()),
+      gameMap,
+    );
+  }
+
   const result = {
     nations: manifest.nations,
     additionalNations: manifest.additionalNations ?? [],
     gameMap: gameMap,
     miniGameMap: miniMap,
     teamGameSpawnAreas,
+    regionMap,
   };
   loadedMaps.set(cacheKey, result);
   return result;

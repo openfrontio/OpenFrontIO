@@ -59,6 +59,9 @@ export class MapRenderer {
     private settings: RenderSettings,
     private raf?: typeof requestAnimationFrame,
     private caf?: typeof cancelAnimationFrame,
+    // Optional region-border mask baked into the terrain texture. Retained so
+    // a context restore re-bakes it too.
+    private borderMask?: Uint8Array,
   ) {
     this.initRenderer();
 
@@ -88,6 +91,7 @@ export class MapRenderer {
       this.settings,
       this.raf,
       this.caf,
+      this.borderMask,
     );
 
     const rect = this.canvas.getBoundingClientRect();

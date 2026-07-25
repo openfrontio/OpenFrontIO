@@ -12,6 +12,7 @@ import {
 } from "./GameUpdates";
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
+import type { RegionMap } from "./RegionMap";
 import { Stats } from "./Stats";
 import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
@@ -716,6 +717,8 @@ export interface Game extends GameMap {
   height(): number;
   map(): GameMap;
   miniMap(): GameMap;
+  // Region-based conquest data; null on maps without region data.
+  regionMap(): RegionMap | null;
   forEachTile(fn: (tile: TileRef) => void): void;
   // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
   // order as neighbors().

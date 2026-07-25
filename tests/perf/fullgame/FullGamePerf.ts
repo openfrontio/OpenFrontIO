@@ -111,7 +111,7 @@ function resolveMap(name: string): GameMapType {
 
 function parseArgs(argv: string[]): Options {
   const opts: Options = {
-    map: GameMapType.World,
+    map: GameMapType.Europe,
     ticks: 1800,
     bots: 400,
     nations: "default",

@@ -20,7 +20,7 @@ import {
 
 describe("Ranking class", () => {
   const mockConfig: GameConfig = {
-    gameMap: GameMapType.Montreal,
+    gameMap: GameMapType.Europe,
     difficulty: Difficulty.Medium,
     donateGold: false,
     donateTroops: false,

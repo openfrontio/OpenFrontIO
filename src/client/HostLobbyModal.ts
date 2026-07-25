@@ -44,7 +44,6 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
-  getRandomMapType,
   getUpdatedDisabledUnits,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
@@ -55,7 +54,7 @@ import {
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
-  @state() private selectedMap: GameMapType = GameMapType.World;
+  @state() private selectedMap: GameMapType = GameMapType.Europe;
   @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private nations: number = 0;
   @state() private defaultNationCount: number = 0;
@@ -95,7 +94,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
-  @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private hostCheatsEnabled: boolean = false;
   @state() private hostCheatInfiniteGold: boolean = false;
@@ -477,8 +475,6 @@ export class HostLobbyModal extends BaseModal {
             .settings=${{
               map: {
                 selected: this.selectedMap,
-                useRandom: this.useRandomMap,
-                randomMapDivider: true,
               },
               difficulty: {
                 selected: this.selectedDifficulty,
@@ -580,7 +576,6 @@ export class HostLobbyModal extends BaseModal {
               },
             }}
             @map-selected=${this.handleConfigMapSelected}
-            @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
             @doomsday-clock-speed-selected=${this
               .handleConfigDoomsdayClockSpeedSelected}
@@ -794,7 +789,7 @@ export class HostLobbyModal extends BaseModal {
     }
 
     // Reset all transient form state to ensure clean slate
-    this.selectedMap = GameMapType.World;
+    this.selectedMap = GameMapType.Europe;
     this.selectedDifficulty = Difficulty.Easy;
     this.nations = 0;
     this.defaultNationCount = 0;
@@ -813,7 +808,6 @@ export class HostLobbyModal extends BaseModal {
     this.instantBuild = false;
     this.randomSpawn = false;
     this.compactMap = false;
-    this.useRandomMap = false;
     this.disabledUnits = [];
     this.lobbyId = "";
     this.clients = [];
@@ -843,20 +837,8 @@ export class HostLobbyModal extends BaseModal {
     this.autoStartAt = null;
   }
 
-  private async handleSelectRandomMap() {
-    this.useRandomMap = true;
-    this.selectedMap = getRandomMapType();
-    await this.loadNationCount();
-    this.putGameConfig();
-  }
-
-  private handleConfigRandomMapSelected = () => {
-    void this.handleSelectRandomMap();
-  };
-
   private async handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
-    this.useRandomMap = false;
     await this.loadNationCount();
     this.putGameConfig();
   }
@@ -1417,7 +1399,7 @@ export class HostLobbyModal extends BaseModal {
   private async toggleGameStartTimer() {
     await this.putGameConfig();
     console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}`,
     );
 
     // If the modal closes as part of starting the game, do not leave the lobby

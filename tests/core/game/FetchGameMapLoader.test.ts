@@ -15,16 +15,14 @@ describe("FetchGameMapLoader", () => {
     const loader = new FetchGameMapLoader(
       (path) => `/_assets/maps/${path}.hashed`,
     );
-    const mapData = loader.getMapData(GameMapType.BritanniaClassic);
+    const mapData = loader.getMapData(GameMapType.Europe);
 
-    expect(mapData.webpPath).toBe(
-      "/_assets/maps/britanniaclassic/thumbnail.webp.hashed",
-    );
+    expect(mapData.webpPath).toBe("/_assets/maps/europe/thumbnail.webp.hashed");
 
     await mapData.manifest();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/_assets/maps/britanniaclassic/manifest.json.hashed",
+      "/_assets/maps/europe/manifest.json.hashed",
     );
   });
 });

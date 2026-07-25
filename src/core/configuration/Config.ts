@@ -594,6 +594,15 @@ export class Config {
     return 30;
   }
 
+  /**
+   * Region-based conquest (maps with region data only): fraction of a
+   * region's ownable land a player must exceed for the whole region to snap
+   * to them. Strictly-greater-than comparison; 0.5 = majority.
+   */
+  regionCaptureThreshold(): number {
+    return 0.5;
+  }
+
   percentageTilesOwnedToWin(): number {
     if (this._gameConfig.gameMode === GameMode.Team) {
       return 95;

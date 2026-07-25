@@ -1,0 +1,4266 @@
+{
+  "version": 1,
+  "regionCount": 852,
+  "regions": [
+    {
+      "id": 1,
+      "name": "Berat",
+      "country": "AL"
+    },
+    {
+      "id": 2,
+      "name": "Dibër",
+      "country": "AL"
+    },
+    {
+      "id": 3,
+      "name": "Durrës",
+      "country": "AL"
+    },
+    {
+      "id": 4,
+      "name": "Elbasan",
+      "country": "AL"
+    },
+    {
+      "id": 5,
+      "name": "Fier",
+      "country": "AL"
+    },
+    {
+      "id": 6,
+      "name": "Gjirokastër",
+      "country": "AL"
+    },
+    {
+      "id": 7,
+      "name": "Korçë",
+      "country": "AL"
+    },
+    {
+      "id": 8,
+      "name": "Kukës",
+      "country": "AL"
+    },
+    {
+      "id": 9,
+      "name": "Lezhë",
+      "country": "AL"
+    },
+    {
+      "id": 10,
+      "name": "Shkodër",
+      "country": "AL"
+    },
+    {
+      "id": 11,
+      "name": "Tiranë",
+      "country": "AL"
+    },
+    {
+      "id": 12,
+      "name": "Vlorë",
+      "country": "AL"
+    },
+    {
+      "id": 13,
+      "name": "Burgenland",
+      "country": "AT"
+    },
+    {
+      "id": 14,
+      "name": "Kärnten",
+      "country": "AT"
+    },
+    {
+      "id": 15,
+      "name": "Niederösterreich",
+      "country": "AT"
+    },
+    {
+      "id": 16,
+      "name": "Oberösterreich",
+      "country": "AT"
+    },
+    {
+      "id": 17,
+      "name": "Salzburg",
+      "country": "AT"
+    },
+    {
+      "id": 18,
+      "name": "Steiermark",
+      "country": "AT"
+    },
+    {
+      "id": 19,
+      "name": "Tirol",
+      "country": "AT"
+    },
+    {
+      "id": 20,
+      "name": "Vorarlberg",
+      "country": "AT"
+    },
+    {
+      "id": 21,
+      "name": "Wien",
+      "country": "AT"
+    },
+    {
+      "id": 22,
+      "name": "Akrotiri",
+      "country": "Akrotiri Sovereign Base Area"
+    },
+    {
+      "id": 23,
+      "name": "Adrar",
+      "country": "Algeria"
+    },
+    {
+      "id": 24,
+      "name": "Alger",
+      "country": "Algeria"
+    },
+    {
+      "id": 25,
+      "name": "Annaba",
+      "country": "Algeria"
+    },
+    {
+      "id": 26,
+      "name": "Aïn Defla",
+      "country": "Algeria"
+    },
+    {
+      "id": 27,
+      "name": "Aïn Témouchent",
+      "country": "Algeria"
+    },
+    {
+      "id": 28,
+      "name": "Batna",
+      "country": "Algeria"
+    },
+    {
+      "id": 29,
+      "name": "Biskra",
+      "country": "Algeria"
+    },
+    {
+      "id": 30,
+      "name": "Blida",
+      "country": "Algeria"
+    },
+    {
+      "id": 31,
+      "name": "Bordj Bou Arréridj",
+      "country": "Algeria"
+    },
+    {
+      "id": 32,
+      "name": "Bouira",
+      "country": "Algeria"
+    },
+    {
+      "id": 33,
+      "name": "Boumerdès",
+      "country": "Algeria"
+    },
+    {
+      "id": 34,
+      "name": "Béchar",
+      "country": "Algeria"
+    },
+    {
+      "id": 35,
+      "name": "Béjaïa",
+      "country": "Algeria"
+    },
+    {
+      "id": 36,
+      "name": "Chlef",
+      "country": "Algeria"
+    },
+    {
+      "id": 37,
+      "name": "Constantine",
+      "country": "Algeria"
+    },
+    {
+      "id": 38,
+      "name": "Djelfa",
+      "country": "Algeria"
+    },
+    {
+      "id": 39,
+      "name": "El Bayadh",
+      "country": "Algeria"
+    },
+    {
+      "id": 40,
+      "name": "El Oued",
+      "country": "Algeria"
+    },
+    {
+      "id": 41,
+      "name": "El Tarf",
+      "country": "Algeria"
+    },
+    {
+      "id": 42,
+      "name": "Ghardaïa",
+      "country": "Algeria"
+    },
+    {
+      "id": 43,
+      "name": "Guelma",
+      "country": "Algeria"
+    },
+    {
+      "id": 44,
+      "name": "Jijel",
+      "country": "Algeria"
+    },
+    {
+      "id": 45,
+      "name": "Khenchela",
+      "country": "Algeria"
+    },
+    {
+      "id": 46,
+      "name": "Laghouat",
+      "country": "Algeria"
+    },
+    {
+      "id": 47,
+      "name": "M'Sila",
+      "country": "Algeria"
+    },
+    {
+      "id": 48,
+      "name": "Mascara",
+      "country": "Algeria"
+    },
+    {
+      "id": 49,
+      "name": "Mila",
+      "country": "Algeria"
+    },
+    {
+      "id": 50,
+      "name": "Mostaganem",
+      "country": "Algeria"
+    },
+    {
+      "id": 51,
+      "name": "Médéa",
+      "country": "Algeria"
+    },
+    {
+      "id": 52,
+      "name": "Naâma",
+      "country": "Algeria"
+    },
+    {
+      "id": 53,
+      "name": "Oran",
+      "country": "Algeria"
+    },
+    {
+      "id": 54,
+      "name": "Ouargla",
+      "country": "Algeria"
+    },
+    {
+      "id": 55,
+      "name": "Oum el Bouaghi",
+      "country": "Algeria"
+    },
+    {
+      "id": 56,
+      "name": "Relizane",
+      "country": "Algeria"
+    },
+    {
+      "id": 57,
+      "name": "Saïda",
+      "country": "Algeria"
+    },
+    {
+      "id": 58,
+      "name": "Sidi Bel Abbès",
+      "country": "Algeria"
+    },
+    {
+      "id": 59,
+      "name": "Skikda",
+      "country": "Algeria"
+    },
+    {
+      "id": 60,
+      "name": "Souk Ahras",
+      "country": "Algeria"
+    },
+    {
+      "id": 61,
+      "name": "Sétif",
+      "country": "Algeria"
+    },
+    {
+      "id": 62,
+      "name": "Tiaret",
+      "country": "Algeria"
+    },
+    {
+      "id": 63,
+      "name": "Tipaza",
+      "country": "Algeria"
+    },
+    {
+      "id": 64,
+      "name": "Tissemsilt",
+      "country": "Algeria"
+    },
+    {
+      "id": 65,
+      "name": "Tizi Ouzou",
+      "country": "Algeria"
+    },
+    {
+      "id": 66,
+      "name": "Tlemcen",
+      "country": "Algeria"
+    },
+    {
+      "id": 67,
+      "name": "Tébessa",
+      "country": "Algeria"
+    },
+    {
+      "id": 68,
+      "name": "Aragatsotn",
+      "country": "Armenia"
+    },
+    {
+      "id": 69,
+      "name": "Ararat",
+      "country": "Armenia"
+    },
+    {
+      "id": 70,
+      "name": "Armavir",
+      "country": "Armenia"
+    },
+    {
+      "id": 71,
+      "name": "Erevan",
+      "country": "Armenia"
+    },
+    {
+      "id": 72,
+      "name": "Gegharkunik",
+      "country": "Armenia"
+    },
+    {
+      "id": 73,
+      "name": "Kotayk",
+      "country": "Armenia"
+    },
+    {
+      "id": 74,
+      "name": "Lori",
+      "country": "Armenia"
+    },
+    {
+      "id": 75,
+      "name": "Shirak",
+      "country": "Armenia"
+    },
+    {
+      "id": 76,
+      "name": "Syunik",
+      "country": "Armenia"
+    },
+    {
+      "id": 77,
+      "name": "Tavush",
+      "country": "Armenia"
+    },
+    {
+      "id": 78,
+      "name": "Vayots Dzor",
+      "country": "Armenia"
+    },
+    {
+      "id": 79,
+      "name": "Ağdam",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 80,
+      "name": "Ağstafa",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 81,
+      "name": "Babək",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 82,
+      "name": "Balakən",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 83,
+      "name": "Culfa",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 84,
+      "name": "Cəbrayıl",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 85,
+      "name": "Daşkəsən",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 86,
+      "name": "Goranboy",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 87,
+      "name": "Gədəbəy",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 88,
+      "name": "Gəncə",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 89,
+      "name": "Kangarli",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 90,
+      "name": "Kəlbəcər",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 91,
+      "name": "Lankaran",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 92,
+      "name": "Naxçıvan",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 93,
+      "name": "Ordubad",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 94,
+      "name": "Qax",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 95,
+      "name": "Qazax",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 96,
+      "name": "Qubadli",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 97,
+      "name": "Samux",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 98,
+      "name": "Sədərək",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 99,
+      "name": "Tovuz",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 100,
+      "name": "Tərtər",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 101,
+      "name": "Xanlar",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 102,
+      "name": "Xocalı",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 103,
+      "name": "Xocavənd",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 104,
+      "name": "Zaqatala",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 105,
+      "name": "Zəngilan",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 106,
+      "name": "Şahbuz",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 107,
+      "name": "Şuşa",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 108,
+      "name": "Şəmkir",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 109,
+      "name": "Şərur",
+      "country": "Azerbaijan"
+    },
+    {
+      "id": 110,
+      "name": "Brčko",
+      "country": "BA"
+    },
+    {
+      "id": 111,
+      "name": "Federacija BiH",
+      "country": "BA"
+    },
+    {
+      "id": 112,
+      "name": "Republika Srpska",
+      "country": "BA"
+    },
+    {
+      "id": 113,
+      "name": "Antwerp",
+      "country": "BE"
+    },
+    {
+      "id": 114,
+      "name": "Brussels",
+      "country": "BE"
+    },
+    {
+      "id": 115,
+      "name": "East Flanders",
+      "country": "BE"
+    },
+    {
+      "id": 116,
+      "name": "Flemish Brabant",
+      "country": "BE"
+    },
+    {
+      "id": 117,
+      "name": "Hainaut",
+      "country": "BE"
+    },
+    {
+      "id": 118,
+      "name": "Liege",
+      "country": "BE"
+    },
+    {
+      "id": 119,
+      "name": "Limburg",
+      "country": "BE"
+    },
+    {
+      "id": 120,
+      "name": "Luxembourg",
+      "country": "BE"
+    },
+    {
+      "id": 121,
+      "name": "Namur",
+      "country": "BE"
+    },
+    {
+      "id": 122,
+      "name": "Walloon Brabant",
+      "country": "BE"
+    },
+    {
+      "id": 123,
+      "name": "West Flanders",
+      "country": "BE"
+    },
+    {
+      "id": 124,
+      "name": "Blagoevgrad",
+      "country": "BG"
+    },
+    {
+      "id": 125,
+      "name": "Burgas",
+      "country": "BG"
+    },
+    {
+      "id": 126,
+      "name": "Dobrich",
+      "country": "BG"
+    },
+    {
+      "id": 127,
+      "name": "Gabrovo",
+      "country": "BG"
+    },
+    {
+      "id": 128,
+      "name": "Grad Sofiya",
+      "country": "BG"
+    },
+    {
+      "id": 129,
+      "name": "Haskovo",
+      "country": "BG"
+    },
+    {
+      "id": 130,
+      "name": "Kardzhali",
+      "country": "BG"
+    },
+    {
+      "id": 131,
+      "name": "Kyustendil",
+      "country": "BG"
+    },
+    {
+      "id": 132,
+      "name": "Lovech",
+      "country": "BG"
+    },
+    {
+      "id": 133,
+      "name": "Montana",
+      "country": "BG"
+    },
+    {
+      "id": 134,
+      "name": "Pazardzhik",
+      "country": "BG"
+    },
+    {
+      "id": 135,
+      "name": "Pernik",
+      "country": "BG"
+    },
+    {
+      "id": 136,
+      "name": "Pleven",
+      "country": "BG"
+    },
+    {
+      "id": 137,
+      "name": "Plovdiv",
+      "country": "BG"
+    },
+    {
+      "id": 138,
+      "name": "Razgrad",
+      "country": "BG"
+    },
+    {
+      "id": 139,
+      "name": "Ruse",
+      "country": "BG"
+    },
+    {
+      "id": 140,
+      "name": "Shumen",
+      "country": "BG"
+    },
+    {
+      "id": 141,
+      "name": "Silistra",
+      "country": "BG"
+    },
+    {
+      "id": 142,
+      "name": "Sliven",
+      "country": "BG"
+    },
+    {
+      "id": 143,
+      "name": "Smolyan",
+      "country": "BG"
+    },
+    {
+      "id": 144,
+      "name": "Sofia",
+      "country": "BG"
+    },
+    {
+      "id": 145,
+      "name": "Stara Zagora",
+      "country": "BG"
+    },
+    {
+      "id": 146,
+      "name": "Targovishte",
+      "country": "BG"
+    },
+    {
+      "id": 147,
+      "name": "Varna",
+      "country": "BG"
+    },
+    {
+      "id": 148,
+      "name": "Veliko Tarnovo",
+      "country": "BG"
+    },
+    {
+      "id": 149,
+      "name": "Vidin",
+      "country": "BG"
+    },
+    {
+      "id": 150,
+      "name": "Vratsa",
+      "country": "BG"
+    },
+    {
+      "id": 151,
+      "name": "Yambol",
+      "country": "BG"
+    },
+    {
+      "id": 152,
+      "name": "Brest",
+      "country": "BY"
+    },
+    {
+      "id": 153,
+      "name": "Gomel",
+      "country": "BY"
+    },
+    {
+      "id": 154,
+      "name": "Grodno",
+      "country": "BY"
+    },
+    {
+      "id": 155,
+      "name": "Minsk",
+      "country": "BY"
+    },
+    {
+      "id": 156,
+      "name": "Minsk City",
+      "country": "BY"
+    },
+    {
+      "id": 157,
+      "name": "Mogilev",
+      "country": "BY"
+    },
+    {
+      "id": 158,
+      "name": "Vitebsk",
+      "country": "BY"
+    },
+    {
+      "id": 159,
+      "name": "Aargau",
+      "country": "CH"
+    },
+    {
+      "id": 160,
+      "name": "Appenzell Ausserrhoden",
+      "country": "CH"
+    },
+    {
+      "id": 161,
+      "name": "Appenzell Innerrhoden",
+      "country": "CH"
+    },
+    {
+      "id": 162,
+      "name": "Basel-Landschaft",
+      "country": "CH"
+    },
+    {
+      "id": 163,
+      "name": "Basel-Stadt",
+      "country": "CH"
+    },
+    {
+      "id": 164,
+      "name": "Bern",
+      "country": "CH"
+    },
+    {
+      "id": 165,
+      "name": "Fribourg",
+      "country": "CH"
+    },
+    {
+      "id": 166,
+      "name": "Genève",
+      "country": "CH"
+    },
+    {
+      "id": 167,
+      "name": "Glarus",
+      "country": "CH"
+    },
+    {
+      "id": 168,
+      "name": "Graubünden",
+      "country": "CH"
+    },
+    {
+      "id": 169,
+      "name": "Jura",
+      "country": "CH"
+    },
+    {
+      "id": 170,
+      "name": "Lucerne",
+      "country": "CH"
+    },
+    {
+      "id": 171,
+      "name": "Neuchâtel",
+      "country": "CH"
+    },
+    {
+      "id": 172,
+      "name": "Nidwalden",
+      "country": "CH"
+    },
+    {
+      "id": 173,
+      "name": "Obwalden",
+      "country": "CH"
+    },
+    {
+      "id": 174,
+      "name": "Sankt Gallen",
+      "country": "CH"
+    },
+    {
+      "id": 175,
+      "name": "Schaffhausen",
+      "country": "CH"
+    },
+    {
+      "id": 176,
+      "name": "Schwyz",
+      "country": "CH"
+    },
+    {
+      "id": 177,
+      "name": "Solothurn",
+      "country": "CH"
+    },
+    {
+      "id": 178,
+      "name": "Thurgau",
+      "country": "CH"
+    },
+    {
+      "id": 179,
+      "name": "Ticino",
+      "country": "CH"
+    },
+    {
+      "id": 180,
+      "name": "Uri",
+      "country": "CH"
+    },
+    {
+      "id": 181,
+      "name": "Valais",
+      "country": "CH"
+    },
+    {
+      "id": 182,
+      "name": "Vaud",
+      "country": "CH"
+    },
+    {
+      "id": 183,
+      "name": "Zug",
+      "country": "CH"
+    },
+    {
+      "id": 184,
+      "name": "Zürich",
+      "country": "CH"
+    },
+    {
+      "id": 185,
+      "name": "Jihomoravský",
+      "country": "CZ"
+    },
+    {
+      "id": 186,
+      "name": "Jihočeský",
+      "country": "CZ"
+    },
+    {
+      "id": 187,
+      "name": "Karlovarský",
+      "country": "CZ"
+    },
+    {
+      "id": 188,
+      "name": "Královéhradecký",
+      "country": "CZ"
+    },
+    {
+      "id": 189,
+      "name": "Liberecký",
+      "country": "CZ"
+    },
+    {
+      "id": 190,
+      "name": "Moravskoslezský",
+      "country": "CZ"
+    },
+    {
+      "id": 191,
+      "name": "Olomoucký",
+      "country": "CZ"
+    },
+    {
+      "id": 192,
+      "name": "Pardubický",
+      "country": "CZ"
+    },
+    {
+      "id": 193,
+      "name": "Plzeňský",
+      "country": "CZ"
+    },
+    {
+      "id": 194,
+      "name": "Prague",
+      "country": "CZ"
+    },
+    {
+      "id": 195,
+      "name": "Středočeský",
+      "country": "CZ"
+    },
+    {
+      "id": 196,
+      "name": "Vysočina",
+      "country": "CZ"
+    },
+    {
+      "id": 197,
+      "name": "Zlínský",
+      "country": "CZ"
+    },
+    {
+      "id": 198,
+      "name": "Ústecký",
+      "country": "CZ"
+    },
+    {
+      "id": 199,
+      "name": "Famagusta",
+      "country": "Cyprus"
+    },
+    {
+      "id": 200,
+      "name": "Larnaca",
+      "country": "Cyprus"
+    },
+    {
+      "id": 201,
+      "name": "Limassol",
+      "country": "Cyprus"
+    },
+    {
+      "id": 202,
+      "name": "Nicosia",
+      "country": "Cyprus"
+    },
+    {
+      "id": 203,
+      "name": "Paphos",
+      "country": "Cyprus"
+    },
+    {
+      "id": 204,
+      "name": "Baden-Württemberg",
+      "country": "DE"
+    },
+    {
+      "id": 205,
+      "name": "Bayern",
+      "country": "DE"
+    },
+    {
+      "id": 206,
+      "name": "Berlin",
+      "country": "DE"
+    },
+    {
+      "id": 207,
+      "name": "Brandenburg",
+      "country": "DE"
+    },
+    {
+      "id": 208,
+      "name": "Bremen",
+      "country": "DE"
+    },
+    {
+      "id": 209,
+      "name": "Hamburg",
+      "country": "DE"
+    },
+    {
+      "id": 210,
+      "name": "Hessen",
+      "country": "DE"
+    },
+    {
+      "id": 211,
+      "name": "Mecklenburg-Vorpommern",
+      "country": "DE"
+    },
+    {
+      "id": 212,
+      "name": "Niedersachsen",
+      "country": "DE"
+    },
+    {
+      "id": 213,
+      "name": "Nordrhein-Westfalen",
+      "country": "DE"
+    },
+    {
+      "id": 214,
+      "name": "Rheinland-Pfalz",
+      "country": "DE"
+    },
+    {
+      "id": 215,
+      "name": "Saarland",
+      "country": "DE"
+    },
+    {
+      "id": 216,
+      "name": "Sachsen",
+      "country": "DE"
+    },
+    {
+      "id": 217,
+      "name": "Sachsen-Anhalt",
+      "country": "DE"
+    },
+    {
+      "id": 218,
+      "name": "Schleswig-Holstein",
+      "country": "DE"
+    },
+    {
+      "id": 219,
+      "name": "Thüringen",
+      "country": "DE"
+    },
+    {
+      "id": 220,
+      "name": "Hovedstaden",
+      "country": "DK"
+    },
+    {
+      "id": 221,
+      "name": "Midtjylland",
+      "country": "DK"
+    },
+    {
+      "id": 222,
+      "name": "Nordjylland",
+      "country": "DK"
+    },
+    {
+      "id": 223,
+      "name": "Sjælland",
+      "country": "DK"
+    },
+    {
+      "id": 224,
+      "name": "Syddanmark",
+      "country": "DK"
+    },
+    {
+      "id": 225,
+      "name": "Dhekelia",
+      "country": "Dhekelia Sovereign Base Area"
+    },
+    {
+      "id": 226,
+      "name": "Harju",
+      "country": "EE"
+    },
+    {
+      "id": 227,
+      "name": "Hiiu",
+      "country": "EE"
+    },
+    {
+      "id": 228,
+      "name": "Ida-Viru",
+      "country": "EE"
+    },
+    {
+      "id": 229,
+      "name": "Järva",
+      "country": "EE"
+    },
+    {
+      "id": 230,
+      "name": "Jõgeva",
+      "country": "EE"
+    },
+    {
+      "id": 231,
+      "name": "Lääne",
+      "country": "EE"
+    },
+    {
+      "id": 232,
+      "name": "Lääne-Viru",
+      "country": "EE"
+    },
+    {
+      "id": 233,
+      "name": "Pärnu",
+      "country": "EE"
+    },
+    {
+      "id": 234,
+      "name": "Põlva",
+      "country": "EE"
+    },
+    {
+      "id": 235,
+      "name": "Rapla",
+      "country": "EE"
+    },
+    {
+      "id": 236,
+      "name": "Saare",
+      "country": "EE"
+    },
+    {
+      "id": 237,
+      "name": "Tartu",
+      "country": "EE"
+    },
+    {
+      "id": 238,
+      "name": "Valga",
+      "country": "EE"
+    },
+    {
+      "id": 239,
+      "name": "Viljandi",
+      "country": "EE"
+    },
+    {
+      "id": 240,
+      "name": "Võru",
+      "country": "EE"
+    },
+    {
+      "id": 241,
+      "name": "Andalucía",
+      "country": "ES"
+    },
+    {
+      "id": 242,
+      "name": "Aragón",
+      "country": "ES"
+    },
+    {
+      "id": 243,
+      "name": "Asturias",
+      "country": "ES"
+    },
+    {
+      "id": 244,
+      "name": "Cantabria",
+      "country": "ES"
+    },
+    {
+      "id": 245,
+      "name": "Castilla y León",
+      "country": "ES"
+    },
+    {
+      "id": 246,
+      "name": "Castilla-La Mancha",
+      "country": "ES"
+    },
+    {
+      "id": 247,
+      "name": "Cataluña",
+      "country": "ES"
+    },
+    {
+      "id": 248,
+      "name": "Extremadura",
+      "country": "ES"
+    },
+    {
+      "id": 249,
+      "name": "Foral de Navarra",
+      "country": "ES"
+    },
+    {
+      "id": 250,
+      "name": "Galicia",
+      "country": "ES"
+    },
+    {
+      "id": 251,
+      "name": "Islas Baleares",
+      "country": "ES"
+    },
+    {
+      "id": 252,
+      "name": "La Rioja",
+      "country": "ES"
+    },
+    {
+      "id": 253,
+      "name": "Madrid",
+      "country": "ES"
+    },
+    {
+      "id": 254,
+      "name": "Murcia",
+      "country": "ES"
+    },
+    {
+      "id": 255,
+      "name": "País Vasco",
+      "country": "ES"
+    },
+    {
+      "id": 256,
+      "name": "Valenciana",
+      "country": "ES"
+    },
+    {
+      "id": 257,
+      "name": "Ad Daqahliyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 258,
+      "name": "Al Buhayrah",
+      "country": "Egypt"
+    },
+    {
+      "id": 259,
+      "name": "Al Gharbiyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 260,
+      "name": "Al Iskandariyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 261,
+      "name": "Al Isma`iliyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 262,
+      "name": "Al Jizah",
+      "country": "Egypt"
+    },
+    {
+      "id": 263,
+      "name": "Al Minufiyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 264,
+      "name": "Al Qahirah",
+      "country": "Egypt"
+    },
+    {
+      "id": 265,
+      "name": "Al Qalyubiyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 266,
+      "name": "As Suways",
+      "country": "Egypt"
+    },
+    {
+      "id": 267,
+      "name": "Ash Sharqiyah",
+      "country": "Egypt"
+    },
+    {
+      "id": 268,
+      "name": "Bur Sa`id",
+      "country": "Egypt"
+    },
+    {
+      "id": 269,
+      "name": "Dumyat",
+      "country": "Egypt"
+    },
+    {
+      "id": 270,
+      "name": "Kafr ash Shaykh",
+      "country": "Egypt"
+    },
+    {
+      "id": 271,
+      "name": "Matruh",
+      "country": "Egypt"
+    },
+    {
+      "id": 272,
+      "name": "Shamal Sina'",
+      "country": "Egypt"
+    },
+    {
+      "id": 273,
+      "name": "Central Finland",
+      "country": "FI"
+    },
+    {
+      "id": 274,
+      "name": "Central Ostrobothnia",
+      "country": "FI"
+    },
+    {
+      "id": 275,
+      "name": "Finland Proper",
+      "country": "FI"
+    },
+    {
+      "id": 276,
+      "name": "Kainuu",
+      "country": "FI"
+    },
+    {
+      "id": 277,
+      "name": "Kymenlaakso",
+      "country": "FI"
+    },
+    {
+      "id": 278,
+      "name": "Lapland",
+      "country": "FI"
+    },
+    {
+      "id": 279,
+      "name": "North Karelia",
+      "country": "FI"
+    },
+    {
+      "id": 280,
+      "name": "Northern Ostrobothnia",
+      "country": "FI"
+    },
+    {
+      "id": 281,
+      "name": "Northern Savonia",
+      "country": "FI"
+    },
+    {
+      "id": 282,
+      "name": "Ostrobothnia",
+      "country": "FI"
+    },
+    {
+      "id": 283,
+      "name": "Pirkanmaa",
+      "country": "FI"
+    },
+    {
+      "id": 284,
+      "name": "Päijät-Häme",
+      "country": "FI"
+    },
+    {
+      "id": 285,
+      "name": "Satakunta",
+      "country": "FI"
+    },
+    {
+      "id": 286,
+      "name": "South Karelia",
+      "country": "FI"
+    },
+    {
+      "id": 287,
+      "name": "Southern Ostrobothnia",
+      "country": "FI"
+    },
+    {
+      "id": 288,
+      "name": "Southern Savonia",
+      "country": "FI"
+    },
+    {
+      "id": 289,
+      "name": "Tavastia Proper",
+      "country": "FI"
+    },
+    {
+      "id": 290,
+      "name": "Uusimaa",
+      "country": "FI"
+    },
+    {
+      "id": 291,
+      "name": "Åland",
+      "country": "FI"
+    },
+    {
+      "id": 292,
+      "name": "Auvergne-Rhône-Alpes",
+      "country": "FR"
+    },
+    {
+      "id": 293,
+      "name": "Bourgogne-Franche-Comté",
+      "country": "FR"
+    },
+    {
+      "id": 294,
+      "name": "Bretagne",
+      "country": "FR"
+    },
+    {
+      "id": 295,
+      "name": "Centre-Val de Loire",
+      "country": "FR"
+    },
+    {
+      "id": 296,
+      "name": "Corse",
+      "country": "FR"
+    },
+    {
+      "id": 297,
+      "name": "Grand Est",
+      "country": "FR"
+    },
+    {
+      "id": 298,
+      "name": "Hauts-de-France",
+      "country": "FR"
+    },
+    {
+      "id": 299,
+      "name": "Normandie",
+      "country": "FR"
+    },
+    {
+      "id": 300,
+      "name": "Nouvelle-Aquitaine",
+      "country": "FR"
+    },
+    {
+      "id": 301,
+      "name": "Occitanie",
+      "country": "FR"
+    },
+    {
+      "id": 302,
+      "name": "Pays de la Loire",
+      "country": "FR"
+    },
+    {
+      "id": 303,
+      "name": "Provence-Alpes-Côte-d'Azur",
+      "country": "FR"
+    },
+    {
+      "id": 304,
+      "name": "Île-de-France",
+      "country": "FR"
+    },
+    {
+      "id": 305,
+      "name": "Eysturoyar",
+      "country": "Faroe Islands"
+    },
+    {
+      "id": 306,
+      "name": "East",
+      "country": "GB"
+    },
+    {
+      "id": 307,
+      "name": "East Midlands",
+      "country": "GB"
+    },
+    {
+      "id": 308,
+      "name": "Greater London",
+      "country": "GB"
+    },
+    {
+      "id": 309,
+      "name": "North East",
+      "country": "GB"
+    },
+    {
+      "id": 310,
+      "name": "North West",
+      "country": "GB"
+    },
+    {
+      "id": 311,
+      "name": "Northern Ireland",
+      "country": "GB"
+    },
+    {
+      "id": 312,
+      "name": "Scotland",
+      "country": "GB"
+    },
+    {
+      "id": 313,
+      "name": "South East",
+      "country": "GB"
+    },
+    {
+      "id": 314,
+      "name": "South West",
+      "country": "GB"
+    },
+    {
+      "id": 315,
+      "name": "Wales",
+      "country": "GB"
+    },
+    {
+      "id": 316,
+      "name": "West Midlands",
+      "country": "GB"
+    },
+    {
+      "id": 317,
+      "name": "Yorkshire and the Humber",
+      "country": "GB"
+    },
+    {
+      "id": 318,
+      "name": "Anatoliki Makedonia kai Thraki",
+      "country": "GR"
+    },
+    {
+      "id": 319,
+      "name": "Attiki",
+      "country": "GR"
+    },
+    {
+      "id": 320,
+      "name": "Dytiki Ellada",
+      "country": "GR"
+    },
+    {
+      "id": 321,
+      "name": "Dytiki Makedonia",
+      "country": "GR"
+    },
+    {
+      "id": 322,
+      "name": "Ionioi Nisoi",
+      "country": "GR"
+    },
+    {
+      "id": 323,
+      "name": "Ipeiros",
+      "country": "GR"
+    },
+    {
+      "id": 324,
+      "name": "Kentriki Makedonia",
+      "country": "GR"
+    },
+    {
+      "id": 325,
+      "name": "Kriti",
+      "country": "GR"
+    },
+    {
+      "id": 326,
+      "name": "Notio Aigaio",
+      "country": "GR"
+    },
+    {
+      "id": 327,
+      "name": "Peloponnisos",
+      "country": "GR"
+    },
+    {
+      "id": 328,
+      "name": "Stereá Elláda",
+      "country": "GR"
+    },
+    {
+      "id": 329,
+      "name": "Thessalia",
+      "country": "GR"
+    },
+    {
+      "id": 330,
+      "name": "Voreio Aigaio",
+      "country": "GR"
+    },
+    {
+      "id": 331,
+      "name": "Gaza Strip",
+      "country": "Gaza Strip"
+    },
+    {
+      "id": 332,
+      "name": "Abkhazia",
+      "country": "Georgia"
+    },
+    {
+      "id": 333,
+      "name": "Ajaria",
+      "country": "Georgia"
+    },
+    {
+      "id": 334,
+      "name": "Guria",
+      "country": "Georgia"
+    },
+    {
+      "id": 335,
+      "name": "Imereti",
+      "country": "Georgia"
+    },
+    {
+      "id": 336,
+      "name": "Kakheti",
+      "country": "Georgia"
+    },
+    {
+      "id": 337,
+      "name": "Kvemo Kartli",
+      "country": "Georgia"
+    },
+    {
+      "id": 338,
+      "name": "Mtskheta-Mtianeti",
+      "country": "Georgia"
+    },
+    {
+      "id": 339,
+      "name": "Racha-Lechkhumi-Kvemo Svaneti",
+      "country": "Georgia"
+    },
+    {
+      "id": 340,
+      "name": "Samegrelo-Zemo Svaneti",
+      "country": "Georgia"
+    },
+    {
+      "id": 341,
+      "name": "Samtskhe-Javakheti",
+      "country": "Georgia"
+    },
+    {
+      "id": 342,
+      "name": "Shida Kartli",
+      "country": "Georgia"
+    },
+    {
+      "id": 343,
+      "name": "Tbilisi",
+      "country": "Georgia"
+    },
+    {
+      "id": 344,
+      "name": "Bjelovarsko-bilogorska",
+      "country": "HR"
+    },
+    {
+      "id": 345,
+      "name": "Brodsko-Posavska",
+      "country": "HR"
+    },
+    {
+      "id": 346,
+      "name": "Dubrovacko-Neretvanska",
+      "country": "HR"
+    },
+    {
+      "id": 347,
+      "name": "Grad Zagreb",
+      "country": "HR"
+    },
+    {
+      "id": 348,
+      "name": "Istarska",
+      "country": "HR"
+    },
+    {
+      "id": 349,
+      "name": "Karlovacka",
+      "country": "HR"
+    },
+    {
+      "id": 350,
+      "name": "Koprivničko-Križevačka",
+      "country": "HR"
+    },
+    {
+      "id": 351,
+      "name": "Krapinsko-Zagorska",
+      "country": "HR"
+    },
+    {
+      "id": 352,
+      "name": "Licko-Senjska",
+      "country": "HR"
+    },
+    {
+      "id": 353,
+      "name": "Medimurska",
+      "country": "HR"
+    },
+    {
+      "id": 354,
+      "name": "Osjecko-Baranjska",
+      "country": "HR"
+    },
+    {
+      "id": 355,
+      "name": "Primorsko-Goranska",
+      "country": "HR"
+    },
+    {
+      "id": 356,
+      "name": "Sisacko-Moslavacka",
+      "country": "HR"
+    },
+    {
+      "id": 357,
+      "name": "Splitsko-Dalmatinska",
+      "country": "HR"
+    },
+    {
+      "id": 358,
+      "name": "Varaždinska",
+      "country": "HR"
+    },
+    {
+      "id": 359,
+      "name": "Viroviticko-Podravska",
+      "country": "HR"
+    },
+    {
+      "id": 360,
+      "name": "Vukovarsko-Srijemska",
+      "country": "HR"
+    },
+    {
+      "id": 361,
+      "name": "Zadarska",
+      "country": "HR"
+    },
+    {
+      "id": 362,
+      "name": "Zagrebacka",
+      "country": "HR"
+    },
+    {
+      "id": 363,
+      "name": "Šibensko-Kninska",
+      "country": "HR"
+    },
+    {
+      "id": 364,
+      "name": "Baranya",
+      "country": "HU"
+    },
+    {
+      "id": 365,
+      "name": "Borsod-Abaúj-Zemplén",
+      "country": "HU"
+    },
+    {
+      "id": 366,
+      "name": "Budapest",
+      "country": "HU"
+    },
+    {
+      "id": 367,
+      "name": "Bács-Kiskun",
+      "country": "HU"
+    },
+    {
+      "id": 368,
+      "name": "Békés",
+      "country": "HU"
+    },
+    {
+      "id": 369,
+      "name": "Csongrád",
+      "country": "HU"
+    },
+    {
+      "id": 370,
+      "name": "Fejér",
+      "country": "HU"
+    },
+    {
+      "id": 371,
+      "name": "Gyor-Moson-Sopron",
+      "country": "HU"
+    },
+    {
+      "id": 372,
+      "name": "Hajdú-Bihar",
+      "country": "HU"
+    },
+    {
+      "id": 373,
+      "name": "Heves",
+      "country": "HU"
+    },
+    {
+      "id": 374,
+      "name": "Jász-Nagykun-Szolnok",
+      "country": "HU"
+    },
+    {
+      "id": 375,
+      "name": "Komárom-Esztergom",
+      "country": "HU"
+    },
+    {
+      "id": 376,
+      "name": "Nógrád",
+      "country": "HU"
+    },
+    {
+      "id": 377,
+      "name": "Pest",
+      "country": "HU"
+    },
+    {
+      "id": 378,
+      "name": "Somogy",
+      "country": "HU"
+    },
+    {
+      "id": 379,
+      "name": "Szabolcs-Szatmár-Bereg",
+      "country": "HU"
+    },
+    {
+      "id": 380,
+      "name": "Tolna",
+      "country": "HU"
+    },
+    {
+      "id": 381,
+      "name": "Vas",
+      "country": "HU"
+    },
+    {
+      "id": 382,
+      "name": "Veszprém",
+      "country": "HU"
+    },
+    {
+      "id": 383,
+      "name": "Zala",
+      "country": "HU"
+    },
+    {
+      "id": 384,
+      "name": "Connacht",
+      "country": "IE"
+    },
+    {
+      "id": 385,
+      "name": "Leinster",
+      "country": "IE"
+    },
+    {
+      "id": 386,
+      "name": "Munster",
+      "country": "IE"
+    },
+    {
+      "id": 387,
+      "name": "Ulster",
+      "country": "IE"
+    },
+    {
+      "id": 388,
+      "name": "Iceland",
+      "country": "IS"
+    },
+    {
+      "id": 389,
+      "name": "Abruzzo",
+      "country": "IT"
+    },
+    {
+      "id": 390,
+      "name": "Apulia",
+      "country": "IT"
+    },
+    {
+      "id": 391,
+      "name": "Basilicata",
+      "country": "IT"
+    },
+    {
+      "id": 392,
+      "name": "Calabria",
+      "country": "IT"
+    },
+    {
+      "id": 393,
+      "name": "Campania",
+      "country": "IT"
+    },
+    {
+      "id": 394,
+      "name": "Emilia-Romagna",
+      "country": "IT"
+    },
+    {
+      "id": 395,
+      "name": "Friuli-Venezia Giulia",
+      "country": "IT"
+    },
+    {
+      "id": 396,
+      "name": "Lazio",
+      "country": "IT"
+    },
+    {
+      "id": 397,
+      "name": "Liguria",
+      "country": "IT"
+    },
+    {
+      "id": 398,
+      "name": "Lombardia",
+      "country": "IT"
+    },
+    {
+      "id": 399,
+      "name": "Marche",
+      "country": "IT"
+    },
+    {
+      "id": 400,
+      "name": "Molise",
+      "country": "IT"
+    },
+    {
+      "id": 401,
+      "name": "Piemonte",
+      "country": "IT"
+    },
+    {
+      "id": 402,
+      "name": "Sardegna",
+      "country": "IT"
+    },
+    {
+      "id": 403,
+      "name": "Sicily",
+      "country": "IT"
+    },
+    {
+      "id": 404,
+      "name": "Toscana",
+      "country": "IT"
+    },
+    {
+      "id": 405,
+      "name": "Trentino-Alto Adige",
+      "country": "IT"
+    },
+    {
+      "id": 406,
+      "name": "Umbria",
+      "country": "IT"
+    },
+    {
+      "id": 407,
+      "name": "Valle d'Aosta",
+      "country": "IT"
+    },
+    {
+      "id": 408,
+      "name": "Veneto",
+      "country": "IT"
+    },
+    {
+      "id": 409,
+      "name": "Ardebil",
+      "country": "Iran"
+    },
+    {
+      "id": 410,
+      "name": "East Azarbaijan",
+      "country": "Iran"
+    },
+    {
+      "id": 411,
+      "name": "Ilam",
+      "country": "Iran"
+    },
+    {
+      "id": 412,
+      "name": "Kermanshah",
+      "country": "Iran"
+    },
+    {
+      "id": 413,
+      "name": "Kordestan",
+      "country": "Iran"
+    },
+    {
+      "id": 414,
+      "name": "West Azarbaijan",
+      "country": "Iran"
+    },
+    {
+      "id": 415,
+      "name": "Al-Anbar",
+      "country": "Iraq"
+    },
+    {
+      "id": 416,
+      "name": "Al-Basrah",
+      "country": "Iraq"
+    },
+    {
+      "id": 417,
+      "name": "Al-Muthannia",
+      "country": "Iraq"
+    },
+    {
+      "id": 418,
+      "name": "Al-Qādisiyyah",
+      "country": "Iraq"
+    },
+    {
+      "id": 419,
+      "name": "An-Najaf",
+      "country": "Iraq"
+    },
+    {
+      "id": 420,
+      "name": "Arbil",
+      "country": "Iraq"
+    },
+    {
+      "id": 421,
+      "name": "As-Sulaymaniyah",
+      "country": "Iraq"
+    },
+    {
+      "id": 422,
+      "name": "At-Ta'mim",
+      "country": "Iraq"
+    },
+    {
+      "id": 423,
+      "name": "Babil",
+      "country": "Iraq"
+    },
+    {
+      "id": 424,
+      "name": "Baghdad",
+      "country": "Iraq"
+    },
+    {
+      "id": 425,
+      "name": "Dhi-Qar",
+      "country": "Iraq"
+    },
+    {
+      "id": 426,
+      "name": "Dihok",
+      "country": "Iraq"
+    },
+    {
+      "id": 427,
+      "name": "Diyala",
+      "country": "Iraq"
+    },
+    {
+      "id": 428,
+      "name": "Karbala'",
+      "country": "Iraq"
+    },
+    {
+      "id": 429,
+      "name": "Maysan",
+      "country": "Iraq"
+    },
+    {
+      "id": 430,
+      "name": "Ninawa",
+      "country": "Iraq"
+    },
+    {
+      "id": 431,
+      "name": "Sala ad-Din",
+      "country": "Iraq"
+    },
+    {
+      "id": 432,
+      "name": "Wasit",
+      "country": "Iraq"
+    },
+    {
+      "id": 433,
+      "name": "Isle of Man",
+      "country": "Isle of Man"
+    },
+    {
+      "id": 434,
+      "name": "HaDarom",
+      "country": "Israel"
+    },
+    {
+      "id": 435,
+      "name": "HaMerkaz",
+      "country": "Israel"
+    },
+    {
+      "id": 436,
+      "name": "HaZafon",
+      "country": "Israel"
+    },
+    {
+      "id": 437,
+      "name": "Haifa",
+      "country": "Israel"
+    },
+    {
+      "id": 438,
+      "name": "Jerusalem",
+      "country": "Israel"
+    },
+    {
+      "id": 439,
+      "name": "Tel Aviv",
+      "country": "Israel"
+    },
+    {
+      "id": 440,
+      "name": "Jersey",
+      "country": "Jersey"
+    },
+    {
+      "id": 441,
+      "name": "Ajlun",
+      "country": "Jordan"
+    },
+    {
+      "id": 442,
+      "name": "Amman",
+      "country": "Jordan"
+    },
+    {
+      "id": 443,
+      "name": "Aqaba",
+      "country": "Jordan"
+    },
+    {
+      "id": 444,
+      "name": "Balqa",
+      "country": "Jordan"
+    },
+    {
+      "id": 445,
+      "name": "Irbid",
+      "country": "Jordan"
+    },
+    {
+      "id": 446,
+      "name": "Jarash",
+      "country": "Jordan"
+    },
+    {
+      "id": 447,
+      "name": "Karak",
+      "country": "Jordan"
+    },
+    {
+      "id": 448,
+      "name": "Ma`an",
+      "country": "Jordan"
+    },
+    {
+      "id": 449,
+      "name": "Madaba",
+      "country": "Jordan"
+    },
+    {
+      "id": 450,
+      "name": "Mafraq",
+      "country": "Jordan"
+    },
+    {
+      "id": 451,
+      "name": "Tafilah",
+      "country": "Jordan"
+    },
+    {
+      "id": 452,
+      "name": "Zarqa",
+      "country": "Jordan"
+    },
+    {
+      "id": 453,
+      "name": "West Kazakhstan",
+      "country": "Kazakhstan"
+    },
+    {
+      "id": 454,
+      "name": "Alytaus",
+      "country": "LT"
+    },
+    {
+      "id": 455,
+      "name": "Kauno",
+      "country": "LT"
+    },
+    {
+      "id": 456,
+      "name": "Klaipedos",
+      "country": "LT"
+    },
+    {
+      "id": 457,
+      "name": "Marijampoles",
+      "country": "LT"
+    },
+    {
+      "id": 458,
+      "name": "Panevezio",
+      "country": "LT"
+    },
+    {
+      "id": 459,
+      "name": "Taurages",
+      "country": "LT"
+    },
+    {
+      "id": 460,
+      "name": "Telšiai",
+      "country": "LT"
+    },
+    {
+      "id": 461,
+      "name": "Utenos",
+      "country": "LT"
+    },
+    {
+      "id": 462,
+      "name": "Vilniaus",
+      "country": "LT"
+    },
+    {
+      "id": 463,
+      "name": "Šiauliai",
+      "country": "LT"
+    },
+    {
+      "id": 464,
+      "name": "Luxembourg",
+      "country": "LU"
+    },
+    {
+      "id": 465,
+      "name": "Kurzeme",
+      "country": "LV"
+    },
+    {
+      "id": 466,
+      "name": "Latgale",
+      "country": "LV"
+    },
+    {
+      "id": 467,
+      "name": "Riga",
+      "country": "LV"
+    },
+    {
+      "id": 468,
+      "name": "Vidzeme",
+      "country": "LV"
+    },
+    {
+      "id": 469,
+      "name": "Zemgale",
+      "country": "LV"
+    },
+    {
+      "id": 470,
+      "name": "An Nabatiyah",
+      "country": "Lebanon"
+    },
+    {
+      "id": 471,
+      "name": "Beirut",
+      "country": "Lebanon"
+    },
+    {
+      "id": 472,
+      "name": "Beqaa",
+      "country": "Lebanon"
+    },
+    {
+      "id": 473,
+      "name": "Mount Lebanon",
+      "country": "Lebanon"
+    },
+    {
+      "id": 474,
+      "name": "North Lebanon",
+      "country": "Lebanon"
+    },
+    {
+      "id": 475,
+      "name": "South Lebanon",
+      "country": "Lebanon"
+    },
+    {
+      "id": 476,
+      "name": "Ajdabiya",
+      "country": "Libya"
+    },
+    {
+      "id": 477,
+      "name": "Al Butnan",
+      "country": "Libya"
+    },
+    {
+      "id": 478,
+      "name": "Al Jabal al Akhdar",
+      "country": "Libya"
+    },
+    {
+      "id": 479,
+      "name": "Al Jifarah",
+      "country": "Libya"
+    },
+    {
+      "id": 480,
+      "name": "Al Marj",
+      "country": "Libya"
+    },
+    {
+      "id": 481,
+      "name": "Al Marqab",
+      "country": "Libya"
+    },
+    {
+      "id": 482,
+      "name": "Al Qubbah",
+      "country": "Libya"
+    },
+    {
+      "id": 483,
+      "name": "An Nuqat al Khams",
+      "country": "Libya"
+    },
+    {
+      "id": 484,
+      "name": "Az Zawiyah",
+      "country": "Libya"
+    },
+    {
+      "id": 485,
+      "name": "Benghazi",
+      "country": "Libya"
+    },
+    {
+      "id": 486,
+      "name": "Ghadamis",
+      "country": "Libya"
+    },
+    {
+      "id": 487,
+      "name": "Misratah",
+      "country": "Libya"
+    },
+    {
+      "id": 488,
+      "name": "Mizdah",
+      "country": "Libya"
+    },
+    {
+      "id": 489,
+      "name": "Surt",
+      "country": "Libya"
+    },
+    {
+      "id": 490,
+      "name": "Tajura' wa an Nawahi al Arba",
+      "country": "Libya"
+    },
+    {
+      "id": 491,
+      "name": "Center",
+      "country": "MD"
+    },
+    {
+      "id": 492,
+      "name": "North",
+      "country": "MD"
+    },
+    {
+      "id": 493,
+      "name": "South",
+      "country": "MD"
+    },
+    {
+      "id": 494,
+      "name": "Transnistria",
+      "country": "MD"
+    },
+    {
+      "id": 495,
+      "name": "Coast",
+      "country": "ME"
+    },
+    {
+      "id": 496,
+      "name": "North",
+      "country": "ME"
+    },
+    {
+      "id": 497,
+      "name": "East",
+      "country": "MK"
+    },
+    {
+      "id": 498,
+      "name": "Skopje",
+      "country": "MK"
+    },
+    {
+      "id": 499,
+      "name": "South",
+      "country": "MK"
+    },
+    {
+      "id": 500,
+      "name": "West",
+      "country": "MK"
+    },
+    {
+      "id": 501,
+      "name": "Malta",
+      "country": "MT"
+    },
+    {
+      "id": 502,
+      "name": "Chaouia - Ouardigha",
+      "country": "Morocco"
+    },
+    {
+      "id": 503,
+      "name": "Doukkala - Abda",
+      "country": "Morocco"
+    },
+    {
+      "id": 504,
+      "name": "Fès - Boulemane",
+      "country": "Morocco"
+    },
+    {
+      "id": 505,
+      "name": "Gharb - Chrarda - Béni Hssen",
+      "country": "Morocco"
+    },
+    {
+      "id": 506,
+      "name": "Grand Casablanca",
+      "country": "Morocco"
+    },
+    {
+      "id": 507,
+      "name": "Guelmim - Es-Semara",
+      "country": "Morocco"
+    },
+    {
+      "id": 508,
+      "name": "Marrakech - Tensift - Al Haouz",
+      "country": "Morocco"
+    },
+    {
+      "id": 509,
+      "name": "Meknès - Tafilalet",
+      "country": "Morocco"
+    },
+    {
+      "id": 510,
+      "name": "Oriental",
+      "country": "Morocco"
+    },
+    {
+      "id": 511,
+      "name": "Rabat - Salé - Zemmour - Zaer",
+      "country": "Morocco"
+    },
+    {
+      "id": 512,
+      "name": "Souss - Massa - Draâ",
+      "country": "Morocco"
+    },
+    {
+      "id": 513,
+      "name": "Tadla - Azilal",
+      "country": "Morocco"
+    },
+    {
+      "id": 514,
+      "name": "Tanger - Tétouan",
+      "country": "Morocco"
+    },
+    {
+      "id": 515,
+      "name": "Taza - Al Hoceima - Taounate",
+      "country": "Morocco"
+    },
+    {
+      "id": 516,
+      "name": "Drenthe",
+      "country": "NL"
+    },
+    {
+      "id": 517,
+      "name": "Flevoland",
+      "country": "NL"
+    },
+    {
+      "id": 518,
+      "name": "Friesland",
+      "country": "NL"
+    },
+    {
+      "id": 519,
+      "name": "Gelderland",
+      "country": "NL"
+    },
+    {
+      "id": 520,
+      "name": "Groningen",
+      "country": "NL"
+    },
+    {
+      "id": 521,
+      "name": "Limburg",
+      "country": "NL"
+    },
+    {
+      "id": 522,
+      "name": "Noord-Brabant",
+      "country": "NL"
+    },
+    {
+      "id": 523,
+      "name": "Noord-Holland",
+      "country": "NL"
+    },
+    {
+      "id": 524,
+      "name": "Overijssel",
+      "country": "NL"
+    },
+    {
+      "id": 525,
+      "name": "Utrecht",
+      "country": "NL"
+    },
+    {
+      "id": 526,
+      "name": "Zeeland",
+      "country": "NL"
+    },
+    {
+      "id": 527,
+      "name": "Zuid-Holland",
+      "country": "NL"
+    },
+    {
+      "id": 528,
+      "name": "Agder",
+      "country": "NO"
+    },
+    {
+      "id": 529,
+      "name": "Akershus",
+      "country": "NO"
+    },
+    {
+      "id": 530,
+      "name": "Buskerud",
+      "country": "NO"
+    },
+    {
+      "id": 531,
+      "name": "Finnmark",
+      "country": "NO"
+    },
+    {
+      "id": 532,
+      "name": "Innlandet",
+      "country": "NO"
+    },
+    {
+      "id": 533,
+      "name": "Møre og Romsdal",
+      "country": "NO"
+    },
+    {
+      "id": 534,
+      "name": "Nordland",
+      "country": "NO"
+    },
+    {
+      "id": 535,
+      "name": "Oslo",
+      "country": "NO"
+    },
+    {
+      "id": 536,
+      "name": "Rogaland",
+      "country": "NO"
+    },
+    {
+      "id": 537,
+      "name": "Telemark",
+      "country": "NO"
+    },
+    {
+      "id": 538,
+      "name": "Troms",
+      "country": "NO"
+    },
+    {
+      "id": 539,
+      "name": "Trøndelag",
+      "country": "NO"
+    },
+    {
+      "id": 540,
+      "name": "Vestfold",
+      "country": "NO"
+    },
+    {
+      "id": 541,
+      "name": "Vestland",
+      "country": "NO"
+    },
+    {
+      "id": 542,
+      "name": "Østfold",
+      "country": "NO"
+    },
+    {
+      "id": 543,
+      "name": "Northern Cyprus",
+      "country": "Northern Cyprus"
+    },
+    {
+      "id": 544,
+      "name": "Greater Poland",
+      "country": "PL"
+    },
+    {
+      "id": 545,
+      "name": "Kuyavian-Pomeranian",
+      "country": "PL"
+    },
+    {
+      "id": 546,
+      "name": "Lesser Poland",
+      "country": "PL"
+    },
+    {
+      "id": 547,
+      "name": "Lower Silesian",
+      "country": "PL"
+    },
+    {
+      "id": 548,
+      "name": "Lublin",
+      "country": "PL"
+    },
+    {
+      "id": 549,
+      "name": "Lubusz",
+      "country": "PL"
+    },
+    {
+      "id": 550,
+      "name": "Masovian",
+      "country": "PL"
+    },
+    {
+      "id": 551,
+      "name": "Opole",
+      "country": "PL"
+    },
+    {
+      "id": 552,
+      "name": "Podlachian",
+      "country": "PL"
+    },
+    {
+      "id": 553,
+      "name": "Pomeranian",
+      "country": "PL"
+    },
+    {
+      "id": 554,
+      "name": "Silesian",
+      "country": "PL"
+    },
+    {
+      "id": 555,
+      "name": "Subcarpathian",
+      "country": "PL"
+    },
+    {
+      "id": 556,
+      "name": "Warmian-Masurian",
+      "country": "PL"
+    },
+    {
+      "id": 557,
+      "name": "West Pomeranian",
+      "country": "PL"
+    },
+    {
+      "id": 558,
+      "name": "Łódź",
+      "country": "PL"
+    },
+    {
+      "id": 559,
+      "name": "Świętokrzyskie",
+      "country": "PL"
+    },
+    {
+      "id": 560,
+      "name": "Alentejo",
+      "country": "PT"
+    },
+    {
+      "id": 561,
+      "name": "Algarve",
+      "country": "PT"
+    },
+    {
+      "id": 562,
+      "name": "Centro",
+      "country": "PT"
+    },
+    {
+      "id": 563,
+      "name": "Lisboa",
+      "country": "PT"
+    },
+    {
+      "id": 564,
+      "name": "Norte",
+      "country": "PT"
+    },
+    {
+      "id": 565,
+      "name": "Alba",
+      "country": "RO"
+    },
+    {
+      "id": 566,
+      "name": "Arad",
+      "country": "RO"
+    },
+    {
+      "id": 567,
+      "name": "Arges",
+      "country": "RO"
+    },
+    {
+      "id": 568,
+      "name": "Bacau",
+      "country": "RO"
+    },
+    {
+      "id": 569,
+      "name": "Bihor",
+      "country": "RO"
+    },
+    {
+      "id": 570,
+      "name": "Bistrita-Nasaud",
+      "country": "RO"
+    },
+    {
+      "id": 571,
+      "name": "Botosani",
+      "country": "RO"
+    },
+    {
+      "id": 572,
+      "name": "Braila",
+      "country": "RO"
+    },
+    {
+      "id": 573,
+      "name": "Brasov",
+      "country": "RO"
+    },
+    {
+      "id": 574,
+      "name": "Bucharest",
+      "country": "RO"
+    },
+    {
+      "id": 575,
+      "name": "Buzau",
+      "country": "RO"
+    },
+    {
+      "id": 576,
+      "name": "Calarasi",
+      "country": "RO"
+    },
+    {
+      "id": 577,
+      "name": "Caras-Severin",
+      "country": "RO"
+    },
+    {
+      "id": 578,
+      "name": "Cluj",
+      "country": "RO"
+    },
+    {
+      "id": 579,
+      "name": "Constanta",
+      "country": "RO"
+    },
+    {
+      "id": 580,
+      "name": "Covasna",
+      "country": "RO"
+    },
+    {
+      "id": 581,
+      "name": "Dolj",
+      "country": "RO"
+    },
+    {
+      "id": 582,
+      "name": "Dâmbovita",
+      "country": "RO"
+    },
+    {
+      "id": 583,
+      "name": "Galati",
+      "country": "RO"
+    },
+    {
+      "id": 584,
+      "name": "Giurgiu",
+      "country": "RO"
+    },
+    {
+      "id": 585,
+      "name": "Gorj",
+      "country": "RO"
+    },
+    {
+      "id": 586,
+      "name": "Harghita",
+      "country": "RO"
+    },
+    {
+      "id": 587,
+      "name": "Hunedoara",
+      "country": "RO"
+    },
+    {
+      "id": 588,
+      "name": "Ialomita",
+      "country": "RO"
+    },
+    {
+      "id": 589,
+      "name": "Iasi",
+      "country": "RO"
+    },
+    {
+      "id": 590,
+      "name": "Ilfov",
+      "country": "RO"
+    },
+    {
+      "id": 591,
+      "name": "Maramures",
+      "country": "RO"
+    },
+    {
+      "id": 592,
+      "name": "Mehedinti",
+      "country": "RO"
+    },
+    {
+      "id": 593,
+      "name": "Mures",
+      "country": "RO"
+    },
+    {
+      "id": 594,
+      "name": "Neamt",
+      "country": "RO"
+    },
+    {
+      "id": 595,
+      "name": "Olt",
+      "country": "RO"
+    },
+    {
+      "id": 596,
+      "name": "Prahova",
+      "country": "RO"
+    },
+    {
+      "id": 597,
+      "name": "Salaj",
+      "country": "RO"
+    },
+    {
+      "id": 598,
+      "name": "Satu Mare",
+      "country": "RO"
+    },
+    {
+      "id": 599,
+      "name": "Sibiu",
+      "country": "RO"
+    },
+    {
+      "id": 600,
+      "name": "Suceava",
+      "country": "RO"
+    },
+    {
+      "id": 601,
+      "name": "Teleorman",
+      "country": "RO"
+    },
+    {
+      "id": 602,
+      "name": "Timis",
+      "country": "RO"
+    },
+    {
+      "id": 603,
+      "name": "Tulcea",
+      "country": "RO"
+    },
+    {
+      "id": 604,
+      "name": "Vaslui",
+      "country": "RO"
+    },
+    {
+      "id": 605,
+      "name": "Vrancea",
+      "country": "RO"
+    },
+    {
+      "id": 606,
+      "name": "Vâlcea",
+      "country": "RO"
+    },
+    {
+      "id": 607,
+      "name": "Belgrade",
+      "country": "RS"
+    },
+    {
+      "id": 608,
+      "name": "Southern and Eastern Serbia",
+      "country": "RS"
+    },
+    {
+      "id": 609,
+      "name": "Vojvodina",
+      "country": "RS"
+    },
+    {
+      "id": 610,
+      "name": "Šumadija and Western Serbia",
+      "country": "RS"
+    },
+    {
+      "id": 611,
+      "name": "Adygey",
+      "country": "RU"
+    },
+    {
+      "id": 612,
+      "name": "Arkhangel'sk",
+      "country": "RU"
+    },
+    {
+      "id": 613,
+      "name": "Astrakhan'",
+      "country": "RU"
+    },
+    {
+      "id": 614,
+      "name": "Belgorod",
+      "country": "RU"
+    },
+    {
+      "id": 615,
+      "name": "Bryansk",
+      "country": "RU"
+    },
+    {
+      "id": 616,
+      "name": "Chechnya",
+      "country": "RU"
+    },
+    {
+      "id": 617,
+      "name": "Chuvash",
+      "country": "RU"
+    },
+    {
+      "id": 618,
+      "name": "Dagestan",
+      "country": "RU"
+    },
+    {
+      "id": 619,
+      "name": "Ingush",
+      "country": "RU"
+    },
+    {
+      "id": 620,
+      "name": "Ivanovo",
+      "country": "RU"
+    },
+    {
+      "id": 621,
+      "name": "Kabardin-Balkar",
+      "country": "RU"
+    },
+    {
+      "id": 622,
+      "name": "Kaliningrad",
+      "country": "RU"
+    },
+    {
+      "id": 623,
+      "name": "Kalmyk",
+      "country": "RU"
+    },
+    {
+      "id": 624,
+      "name": "Kaluga",
+      "country": "RU"
+    },
+    {
+      "id": 625,
+      "name": "Karachay-Cherkess",
+      "country": "RU"
+    },
+    {
+      "id": 626,
+      "name": "Karelia",
+      "country": "RU"
+    },
+    {
+      "id": 627,
+      "name": "Kirov",
+      "country": "RU"
+    },
+    {
+      "id": 628,
+      "name": "Komi",
+      "country": "RU"
+    },
+    {
+      "id": 629,
+      "name": "Kostroma",
+      "country": "RU"
+    },
+    {
+      "id": 630,
+      "name": "Krasnodar",
+      "country": "RU"
+    },
+    {
+      "id": 631,
+      "name": "Kursk",
+      "country": "RU"
+    },
+    {
+      "id": 632,
+      "name": "Leningrad",
+      "country": "RU"
+    },
+    {
+      "id": 633,
+      "name": "Lipetsk",
+      "country": "RU"
+    },
+    {
+      "id": 634,
+      "name": "Mariy-El",
+      "country": "RU"
+    },
+    {
+      "id": 635,
+      "name": "Mordovia",
+      "country": "RU"
+    },
+    {
+      "id": 636,
+      "name": "Moscow",
+      "country": "RU"
+    },
+    {
+      "id": 637,
+      "name": "Murmansk",
+      "country": "RU"
+    },
+    {
+      "id": 638,
+      "name": "Nenets",
+      "country": "RU"
+    },
+    {
+      "id": 639,
+      "name": "Nizhegorod",
+      "country": "RU"
+    },
+    {
+      "id": 640,
+      "name": "North Ossetia",
+      "country": "RU"
+    },
+    {
+      "id": 641,
+      "name": "Novgorod",
+      "country": "RU"
+    },
+    {
+      "id": 642,
+      "name": "Orel",
+      "country": "RU"
+    },
+    {
+      "id": 643,
+      "name": "Penza",
+      "country": "RU"
+    },
+    {
+      "id": 644,
+      "name": "Pskov",
+      "country": "RU"
+    },
+    {
+      "id": 645,
+      "name": "Rostov",
+      "country": "RU"
+    },
+    {
+      "id": 646,
+      "name": "Ryazan'",
+      "country": "RU"
+    },
+    {
+      "id": 647,
+      "name": "Saratov",
+      "country": "RU"
+    },
+    {
+      "id": 648,
+      "name": "Smolensk",
+      "country": "RU"
+    },
+    {
+      "id": 649,
+      "name": "Stavropol'",
+      "country": "RU"
+    },
+    {
+      "id": 650,
+      "name": "Tambov",
+      "country": "RU"
+    },
+    {
+      "id": 651,
+      "name": "Tula",
+      "country": "RU"
+    },
+    {
+      "id": 652,
+      "name": "Tver",
+      "country": "RU"
+    },
+    {
+      "id": 653,
+      "name": "Ul'yanovsk",
+      "country": "RU"
+    },
+    {
+      "id": 654,
+      "name": "Vladimir",
+      "country": "RU"
+    },
+    {
+      "id": 655,
+      "name": "Volgograd",
+      "country": "RU"
+    },
+    {
+      "id": 656,
+      "name": "Vologda",
+      "country": "RU"
+    },
+    {
+      "id": 657,
+      "name": "Voronezh",
+      "country": "RU"
+    },
+    {
+      "id": 658,
+      "name": "Yaroslavl'",
+      "country": "RU"
+    },
+    {
+      "id": 659,
+      "name": "Blekinge",
+      "country": "SE"
+    },
+    {
+      "id": 660,
+      "name": "Dalarna",
+      "country": "SE"
+    },
+    {
+      "id": 661,
+      "name": "Gotland",
+      "country": "SE"
+    },
+    {
+      "id": 662,
+      "name": "Gävleborg",
+      "country": "SE"
+    },
+    {
+      "id": 663,
+      "name": "Halland",
+      "country": "SE"
+    },
+    {
+      "id": 664,
+      "name": "Jämtland",
+      "country": "SE"
+    },
+    {
+      "id": 665,
+      "name": "Jönköping",
+      "country": "SE"
+    },
+    {
+      "id": 666,
+      "name": "Kalmar",
+      "country": "SE"
+    },
+    {
+      "id": 667,
+      "name": "Kronoberg",
+      "country": "SE"
+    },
+    {
+      "id": 668,
+      "name": "Norrbotten",
+      "country": "SE"
+    },
+    {
+      "id": 669,
+      "name": "Orebro",
+      "country": "SE"
+    },
+    {
+      "id": 670,
+      "name": "Skåne",
+      "country": "SE"
+    },
+    {
+      "id": 671,
+      "name": "Stockholm",
+      "country": "SE"
+    },
+    {
+      "id": 672,
+      "name": "Södermanland",
+      "country": "SE"
+    },
+    {
+      "id": 673,
+      "name": "Uppsala",
+      "country": "SE"
+    },
+    {
+      "id": 674,
+      "name": "Värmland",
+      "country": "SE"
+    },
+    {
+      "id": 675,
+      "name": "Västerbotten",
+      "country": "SE"
+    },
+    {
+      "id": 676,
+      "name": "Västernorrland",
+      "country": "SE"
+    },
+    {
+      "id": 677,
+      "name": "Västmanland",
+      "country": "SE"
+    },
+    {
+      "id": 678,
+      "name": "Västra Götaland",
+      "country": "SE"
+    },
+    {
+      "id": 679,
+      "name": "Östergötland",
+      "country": "SE"
+    },
+    {
+      "id": 680,
+      "name": "Gorenjska",
+      "country": "SI"
+    },
+    {
+      "id": 681,
+      "name": "Goriška",
+      "country": "SI"
+    },
+    {
+      "id": 682,
+      "name": "Jugovzhodna Slovenija",
+      "country": "SI"
+    },
+    {
+      "id": 683,
+      "name": "Koroška",
+      "country": "SI"
+    },
+    {
+      "id": 684,
+      "name": "Notranjsko-kraška",
+      "country": "SI"
+    },
+    {
+      "id": 685,
+      "name": "Obalno-kraška",
+      "country": "SI"
+    },
+    {
+      "id": 686,
+      "name": "Osrednjeslovenska",
+      "country": "SI"
+    },
+    {
+      "id": 687,
+      "name": "Podravska",
+      "country": "SI"
+    },
+    {
+      "id": 688,
+      "name": "Pomurska",
+      "country": "SI"
+    },
+    {
+      "id": 689,
+      "name": "Savinjska",
+      "country": "SI"
+    },
+    {
+      "id": 690,
+      "name": "Spodnjeposavska",
+      "country": "SI"
+    },
+    {
+      "id": 691,
+      "name": "Zasavska",
+      "country": "SI"
+    },
+    {
+      "id": 692,
+      "name": "Banskobystrický",
+      "country": "SK"
+    },
+    {
+      "id": 693,
+      "name": "Bratislavský",
+      "country": "SK"
+    },
+    {
+      "id": 694,
+      "name": "Košický",
+      "country": "SK"
+    },
+    {
+      "id": 695,
+      "name": "Nitriansky",
+      "country": "SK"
+    },
+    {
+      "id": 696,
+      "name": "Prešovský",
+      "country": "SK"
+    },
+    {
+      "id": 697,
+      "name": "Trenčiansky",
+      "country": "SK"
+    },
+    {
+      "id": 698,
+      "name": "Trnavský",
+      "country": "SK"
+    },
+    {
+      "id": 699,
+      "name": "Žilinský",
+      "country": "SK"
+    },
+    {
+      "id": 700,
+      "name": "Al Hudud ash Shamaliyah",
+      "country": "Saudi Arabia"
+    },
+    {
+      "id": 701,
+      "name": "Al Jawf",
+      "country": "Saudi Arabia"
+    },
+    {
+      "id": 702,
+      "name": "Aleppo",
+      "country": "Syria"
+    },
+    {
+      "id": 703,
+      "name": "Ar Raqqah",
+      "country": "Syria"
+    },
+    {
+      "id": 704,
+      "name": "As Suwayda'",
+      "country": "Syria"
+    },
+    {
+      "id": 705,
+      "name": "Damascus",
+      "country": "Syria"
+    },
+    {
+      "id": 706,
+      "name": "Dar`a",
+      "country": "Syria"
+    },
+    {
+      "id": 707,
+      "name": "Dayr Az Zawr",
+      "country": "Syria"
+    },
+    {
+      "id": 708,
+      "name": "Hamah",
+      "country": "Syria"
+    },
+    {
+      "id": 709,
+      "name": "Hasaka (Al Haksa)",
+      "country": "Syria"
+    },
+    {
+      "id": 710,
+      "name": "Homs (Hims)",
+      "country": "Syria"
+    },
+    {
+      "id": 711,
+      "name": "Idlib",
+      "country": "Syria"
+    },
+    {
+      "id": 712,
+      "name": "Lattakia",
+      "country": "Syria"
+    },
+    {
+      "id": 713,
+      "name": "Quneitra",
+      "country": "Syria"
+    },
+    {
+      "id": 714,
+      "name": "Rif Dimashq",
+      "country": "Syria"
+    },
+    {
+      "id": 715,
+      "name": "Tartus",
+      "country": "Syria"
+    },
+    {
+      "id": 716,
+      "name": "UNDOF",
+      "country": "Syria"
+    },
+    {
+      "id": 717,
+      "name": "Adana",
+      "country": "TR"
+    },
+    {
+      "id": 718,
+      "name": "Adiyaman",
+      "country": "TR"
+    },
+    {
+      "id": 719,
+      "name": "Afyonkarahisar",
+      "country": "TR"
+    },
+    {
+      "id": 720,
+      "name": "Agri",
+      "country": "TR"
+    },
+    {
+      "id": 721,
+      "name": "Aksaray",
+      "country": "TR"
+    },
+    {
+      "id": 722,
+      "name": "Amasya",
+      "country": "TR"
+    },
+    {
+      "id": 723,
+      "name": "Ankara",
+      "country": "TR"
+    },
+    {
+      "id": 724,
+      "name": "Antalya",
+      "country": "TR"
+    },
+    {
+      "id": 725,
+      "name": "Ardahan",
+      "country": "TR"
+    },
+    {
+      "id": 726,
+      "name": "Artvin",
+      "country": "TR"
+    },
+    {
+      "id": 727,
+      "name": "Aydin",
+      "country": "TR"
+    },
+    {
+      "id": 728,
+      "name": "Balikesir",
+      "country": "TR"
+    },
+    {
+      "id": 729,
+      "name": "Bartın",
+      "country": "TR"
+    },
+    {
+      "id": 730,
+      "name": "Batman",
+      "country": "TR"
+    },
+    {
+      "id": 731,
+      "name": "Bayburt",
+      "country": "TR"
+    },
+    {
+      "id": 732,
+      "name": "Bilecik",
+      "country": "TR"
+    },
+    {
+      "id": 733,
+      "name": "Bingöl",
+      "country": "TR"
+    },
+    {
+      "id": 734,
+      "name": "Bitlis",
+      "country": "TR"
+    },
+    {
+      "id": 735,
+      "name": "Bolu",
+      "country": "TR"
+    },
+    {
+      "id": 736,
+      "name": "Burdur",
+      "country": "TR"
+    },
+    {
+      "id": 737,
+      "name": "Bursa",
+      "country": "TR"
+    },
+    {
+      "id": 738,
+      "name": "Denizli",
+      "country": "TR"
+    },
+    {
+      "id": 739,
+      "name": "Diyarbakir",
+      "country": "TR"
+    },
+    {
+      "id": 740,
+      "name": "Düzce",
+      "country": "TR"
+    },
+    {
+      "id": 741,
+      "name": "Edirne-Kırklareli",
+      "country": "TR"
+    },
+    {
+      "id": 742,
+      "name": "Elazig",
+      "country": "TR"
+    },
+    {
+      "id": 743,
+      "name": "Erzincan",
+      "country": "TR"
+    },
+    {
+      "id": 744,
+      "name": "Erzurum",
+      "country": "TR"
+    },
+    {
+      "id": 745,
+      "name": "Eskisehir",
+      "country": "TR"
+    },
+    {
+      "id": 746,
+      "name": "Gaziantep",
+      "country": "TR"
+    },
+    {
+      "id": 747,
+      "name": "Giresun",
+      "country": "TR"
+    },
+    {
+      "id": 748,
+      "name": "Gümüshane",
+      "country": "TR"
+    },
+    {
+      "id": 749,
+      "name": "Hakkari",
+      "country": "TR"
+    },
+    {
+      "id": 750,
+      "name": "Hatay",
+      "country": "TR"
+    },
+    {
+      "id": 751,
+      "name": "Isparta",
+      "country": "TR"
+    },
+    {
+      "id": 752,
+      "name": "Istanbul",
+      "country": "TR"
+    },
+    {
+      "id": 753,
+      "name": "Izmir",
+      "country": "TR"
+    },
+    {
+      "id": 754,
+      "name": "Iğdir",
+      "country": "TR"
+    },
+    {
+      "id": 755,
+      "name": "K. Maras",
+      "country": "TR"
+    },
+    {
+      "id": 756,
+      "name": "Karabük",
+      "country": "TR"
+    },
+    {
+      "id": 757,
+      "name": "Karaman",
+      "country": "TR"
+    },
+    {
+      "id": 758,
+      "name": "Kars",
+      "country": "TR"
+    },
+    {
+      "id": 759,
+      "name": "Kastamonu",
+      "country": "TR"
+    },
+    {
+      "id": 760,
+      "name": "Kayseri",
+      "country": "TR"
+    },
+    {
+      "id": 761,
+      "name": "Kilis",
+      "country": "TR"
+    },
+    {
+      "id": 762,
+      "name": "Kinkkale",
+      "country": "TR"
+    },
+    {
+      "id": 763,
+      "name": "Kirsehir",
+      "country": "TR"
+    },
+    {
+      "id": 764,
+      "name": "Kocaeli",
+      "country": "TR"
+    },
+    {
+      "id": 765,
+      "name": "Konya",
+      "country": "TR"
+    },
+    {
+      "id": 766,
+      "name": "Kütahya",
+      "country": "TR"
+    },
+    {
+      "id": 767,
+      "name": "Malatya",
+      "country": "TR"
+    },
+    {
+      "id": 768,
+      "name": "Manisa",
+      "country": "TR"
+    },
+    {
+      "id": 769,
+      "name": "Mardin",
+      "country": "TR"
+    },
+    {
+      "id": 770,
+      "name": "Mersin",
+      "country": "TR"
+    },
+    {
+      "id": 771,
+      "name": "Mugla",
+      "country": "TR"
+    },
+    {
+      "id": 772,
+      "name": "Mus",
+      "country": "TR"
+    },
+    {
+      "id": 773,
+      "name": "Nevsehir",
+      "country": "TR"
+    },
+    {
+      "id": 774,
+      "name": "Nigde",
+      "country": "TR"
+    },
+    {
+      "id": 775,
+      "name": "Ordu",
+      "country": "TR"
+    },
+    {
+      "id": 776,
+      "name": "Osmaniye",
+      "country": "TR"
+    },
+    {
+      "id": 777,
+      "name": "Rize",
+      "country": "TR"
+    },
+    {
+      "id": 778,
+      "name": "Sakarya",
+      "country": "TR"
+    },
+    {
+      "id": 779,
+      "name": "Samsun",
+      "country": "TR"
+    },
+    {
+      "id": 780,
+      "name": "Sanliurfa",
+      "country": "TR"
+    },
+    {
+      "id": 781,
+      "name": "Siirt",
+      "country": "TR"
+    },
+    {
+      "id": 782,
+      "name": "Sinop",
+      "country": "TR"
+    },
+    {
+      "id": 783,
+      "name": "Sirnak",
+      "country": "TR"
+    },
+    {
+      "id": 784,
+      "name": "Sivas",
+      "country": "TR"
+    },
+    {
+      "id": 785,
+      "name": "Tekirdağ",
+      "country": "TR"
+    },
+    {
+      "id": 786,
+      "name": "Tokat",
+      "country": "TR"
+    },
+    {
+      "id": 787,
+      "name": "Trabzon",
+      "country": "TR"
+    },
+    {
+      "id": 788,
+      "name": "Tunceli",
+      "country": "TR"
+    },
+    {
+      "id": 789,
+      "name": "Usak",
+      "country": "TR"
+    },
+    {
+      "id": 790,
+      "name": "Van",
+      "country": "TR"
+    },
+    {
+      "id": 791,
+      "name": "Yalova",
+      "country": "TR"
+    },
+    {
+      "id": 792,
+      "name": "Yozgat",
+      "country": "TR"
+    },
+    {
+      "id": 793,
+      "name": "Zinguldak",
+      "country": "TR"
+    },
+    {
+      "id": 794,
+      "name": "Çanakkale",
+      "country": "TR"
+    },
+    {
+      "id": 795,
+      "name": "Çankiri",
+      "country": "TR"
+    },
+    {
+      "id": 796,
+      "name": "Çorum",
+      "country": "TR"
+    },
+    {
+      "id": 797,
+      "name": "Ben Arous (Tunis Sud)",
+      "country": "Tunisia"
+    },
+    {
+      "id": 798,
+      "name": "Bizerte",
+      "country": "Tunisia"
+    },
+    {
+      "id": 799,
+      "name": "Béja",
+      "country": "Tunisia"
+    },
+    {
+      "id": 800,
+      "name": "Gabès",
+      "country": "Tunisia"
+    },
+    {
+      "id": 801,
+      "name": "Gafsa",
+      "country": "Tunisia"
+    },
+    {
+      "id": 802,
+      "name": "Jendouba",
+      "country": "Tunisia"
+    },
+    {
+      "id": 803,
+      "name": "Kairouan",
+      "country": "Tunisia"
+    },
+    {
+      "id": 804,
+      "name": "Kassérine",
+      "country": "Tunisia"
+    },
+    {
+      "id": 805,
+      "name": "Kebili",
+      "country": "Tunisia"
+    },
+    {
+      "id": 806,
+      "name": "Le Kef",
+      "country": "Tunisia"
+    },
+    {
+      "id": 807,
+      "name": "Mahdia",
+      "country": "Tunisia"
+    },
+    {
+      "id": 808,
+      "name": "Manubah",
+      "country": "Tunisia"
+    },
+    {
+      "id": 809,
+      "name": "Monastir",
+      "country": "Tunisia"
+    },
+    {
+      "id": 810,
+      "name": "Médenine",
+      "country": "Tunisia"
+    },
+    {
+      "id": 811,
+      "name": "Nabeul",
+      "country": "Tunisia"
+    },
+    {
+      "id": 812,
+      "name": "Sfax",
+      "country": "Tunisia"
+    },
+    {
+      "id": 813,
+      "name": "Sidi Bou Zid",
+      "country": "Tunisia"
+    },
+    {
+      "id": 814,
+      "name": "Siliana",
+      "country": "Tunisia"
+    },
+    {
+      "id": 815,
+      "name": "Sousse",
+      "country": "Tunisia"
+    },
+    {
+      "id": 816,
+      "name": "Tataouine",
+      "country": "Tunisia"
+    },
+    {
+      "id": 817,
+      "name": "Tozeur",
+      "country": "Tunisia"
+    },
+    {
+      "id": 818,
+      "name": "Tunis",
+      "country": "Tunisia"
+    },
+    {
+      "id": 819,
+      "name": "Zaghouan",
+      "country": "Tunisia"
+    },
+    {
+      "id": 820,
+      "name": "Cherkasy",
+      "country": "UA"
+    },
+    {
+      "id": 821,
+      "name": "Chernihiv",
+      "country": "UA"
+    },
+    {
+      "id": 822,
+      "name": "Chernivtsi",
+      "country": "UA"
+    },
+    {
+      "id": 823,
+      "name": "Crimea",
+      "country": "UA"
+    },
+    {
+      "id": 824,
+      "name": "Dnipropetrovs'k",
+      "country": "UA"
+    },
+    {
+      "id": 825,
+      "name": "Donets'k",
+      "country": "UA"
+    },
+    {
+      "id": 826,
+      "name": "Ivano-Frankivs'k",
+      "country": "UA"
+    },
+    {
+      "id": 827,
+      "name": "Kharkiv",
+      "country": "UA"
+    },
+    {
+      "id": 828,
+      "name": "Kherson",
+      "country": "UA"
+    },
+    {
+      "id": 829,
+      "name": "Khmel'nyts'kyy",
+      "country": "UA"
+    },
+    {
+      "id": 830,
+      "name": "Kiev",
+      "country": "UA"
+    },
+    {
+      "id": 831,
+      "name": "Kirovohrad",
+      "country": "UA"
+    },
+    {
+      "id": 832,
+      "name": "L'viv",
+      "country": "UA"
+    },
+    {
+      "id": 833,
+      "name": "Luhans'k",
+      "country": "UA"
+    },
+    {
+      "id": 834,
+      "name": "Mykolayiv",
+      "country": "UA"
+    },
+    {
+      "id": 835,
+      "name": "Odessa",
+      "country": "UA"
+    },
+    {
+      "id": 836,
+      "name": "Poltava",
+      "country": "UA"
+    },
+    {
+      "id": 837,
+      "name": "Rivne",
+      "country": "UA"
+    },
+    {
+      "id": 838,
+      "name": "Sumy",
+      "country": "UA"
+    },
+    {
+      "id": 839,
+      "name": "Ternopil'",
+      "country": "UA"
+    },
+    {
+      "id": 840,
+      "name": "Transcarpathia",
+      "country": "UA"
+    },
+    {
+      "id": 841,
+      "name": "Vinnytsya",
+      "country": "UA"
+    },
+    {
+      "id": 842,
+      "name": "Volyn",
+      "country": "UA"
+    },
+    {
+      "id": 843,
+      "name": "Zaporizhzhya",
+      "country": "UA"
+    },
+    {
+      "id": 844,
+      "name": "Zhytomyr",
+      "country": "UA"
+    },
+    {
+      "id": 845,
+      "name": "West Bank",
+      "country": "West Bank"
+    },
+    {
+      "id": 846,
+      "name": "Gnjilane",
+      "country": "XK"
+    },
+    {
+      "id": 847,
+      "name": "Kosovska Mitrovica",
+      "country": "XK"
+    },
+    {
+      "id": 848,
+      "name": "Peć",
+      "country": "XK"
+    },
+    {
+      "id": 849,
+      "name": "Pristina",
+      "country": "XK"
+    },
+    {
+      "id": 850,
+      "name": "Prizren",
+      "country": "XK"
+    },
+    {
+      "id": 851,
+      "name": "Uroševac",
+      "country": "XK"
+    },
+    {
+      "id": 852,
+      "name": "Đakovica",
+      "country": "XK"
+    }
+  ]
+}

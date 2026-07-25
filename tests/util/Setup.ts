@@ -11,6 +11,7 @@ import {
   PlayerType,
 } from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
+import { RegionMap } from "../../src/core/game/RegionMap";
 import {
   genTerrainFromBin,
   MapManifest,
@@ -26,6 +27,9 @@ export async function setup(
   currentDir: string = __dirname,
   ConfigClass: typeof TestConfig = TestConfig,
   autoEndSpawnPhase: boolean = true,
+  // Optional per-tile region ids (region-based conquest); built into a
+  // RegionMap against the full-resolution game map.
+  regionRaster?: Uint16Array,
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -54,7 +58,7 @@ export async function setup(
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
   const gameConfig: GameConfig = {
-    gameMap: GameMapType.Asia,
+    gameMap: GameMapType.Europe,
     gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
@@ -71,7 +75,18 @@ export async function setup(
   };
   const config = new ConfigClass(gameConfig, new UserSettings(), false);
 
-  const game = createGame(humans, [], gameMap, miniGameMap, config);
+  const regionMap =
+    regionRaster !== undefined ? new RegionMap(regionRaster, gameMap) : null;
+
+  const game = createGame(
+    humans,
+    [],
+    gameMap,
+    miniGameMap,
+    config,
+    undefined,
+    regionMap,
+  );
   if (autoEndSpawnPhase) game.endSpawnPhase();
   return game;
 }

@@ -211,7 +211,7 @@ describe("Config.trainGold trade stop penalty", () => {
 
   beforeEach(() => {
     const gameConfig: GameConfig = {
-      gameMap: GameMapType.Asia,
+      gameMap: GameMapType.Europe,
       gameMapSize: GameMapSize.Normal,
       gameMode: GameMode.FFA,
       gameType: GameType.Singleplayer,
