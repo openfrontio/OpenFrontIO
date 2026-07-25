@@ -31,6 +31,7 @@ export enum GameMapType {
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
   China = "China", // map-generator/assets/maps/china/info.json
   ChoppingBlock = "Chopping Block", // map-generator/assets/maps/choppingblock/info.json
+  ClearwaterLakes = "Clearwater Lakes", // map-generator/assets/maps/clearwaterlakes/info.json
   Conakry = "Conakry", // map-generator/assets/maps/conakry/info.json
   Crimea = "Crimea", // map-generator/assets/maps/crimea/info.json
   DanishStraits = "Danish Straits", // map-generator/assets/maps/danishstraits/info.json
@@ -389,6 +390,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["arcade"],
     multiplayerFrequency: 5,
     specialTeamCount: 4,
+  },
+  {
+    id: "ClearwaterLakes",
+    type: GameMapType.ClearwaterLakes,
+    translationKey: "map.clearwaterlakes",
+    categories: ["new", "north_america"],
+    multiplayerFrequency: 3,
   },
   {
     id: "Conakry",

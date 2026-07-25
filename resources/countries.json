@@ -143,6 +143,11 @@
     "name": "Angola"
   },
   {
+    "code": "Anishinaabe",
+    "continent": "North America",
+    "name": "Anishinaabe"
+  },
+  {
     "code": "gq-an",
     "continent": "Africa",
     "name": "Annobon"
@@ -1223,7 +1228,7 @@
     "name": "Hamburg"
   },
   {
-    "code": "Haida",
+    "code": "haida_flag",
     "continent": "North America",
     "name": "Haida"
   },
@@ -1300,6 +1305,11 @@
     "code": "id",
     "continent": "Asia",
     "name": "Indonesia"
+  },
+  {
+    "code": "Inuvialuit",
+    "continent": "North America",
+    "name": "Inuvialuit"
   },
   {
     "code": "Iowa",
@@ -1908,6 +1918,11 @@
     "name": "Merseyside"
   },
   {
+    "code": "Metis",
+    "continent": "North America",
+    "name": "Métis"
+  },
+  {
     "code": "mx",
     "continent": "North America",
     "name": "Mexico"
@@ -1921,6 +1936,11 @@
     "code": "Michigan",
     "continent": "North America",
     "name": "Michigan"
+  },
+  {
+    "code": "Mi'kmaq",
+    "continent": "North America",
+    "name": "Mi'kmaq"
   },
   {
     "code": "minas_gerais",
@@ -2040,6 +2060,11 @@
   {
     "code": "NATO",
     "name": "NATO"
+  },
+  {
+    "code": "Natuaqanek",
+    "continent": "North America",
+    "name": "Natuaqanek"
   },
   {
     "code": "nr",
@@ -2254,6 +2279,11 @@
     "code": "novascotia",
     "continent": "North America",
     "name": "Nova Scotia"
+  },
+  {
+    "code": "Nunavik",
+    "continent": "North America",
+    "name": "Nunavik"
   },
   {
     "code": "Nunavut",
