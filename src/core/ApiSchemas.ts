@@ -257,6 +257,49 @@ export const PutUsernameResponseSchema = z.object({
 });
 export type PutUsernameResponse = z.infer<typeof PutUsernameResponseSchema>;
 
+// Custom tribe names — text names a player buys with hard currency that get
+// assigned to bots ("tribes") in real games. Names go live right away; review
+// is post-hoc. Status is the backend moderation state: `pending` (bought,
+// not yet reviewed) or `live` (reviewed, kept), both in rotation; `rejected`
+// (taken down before review) or `revoked` (taken down after). The UI collapses
+// these to active vs. rejected. The wire serializes bigints as strings, so
+// `id` stays a string.
+export const TribeNameStatusSchema = z.enum([
+  "pending",
+  "live",
+  "rejected",
+  "revoked",
+]);
+export type TribeNameStatus = z.infer<typeof TribeNameStatusSchema>;
+
+export const TribeNameSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  status: TribeNameStatusSchema,
+  // Player-facing explanation, set only when a mod rejects/revokes the name.
+  reviewReason: z.string().nullable(),
+});
+export type TribeName = z.infer<typeof TribeNameSchema>;
+
+// GET /users/@me/tribe_names. `priceHard` is the current purchase price in
+// plutonium (server-provided so the client doesn't hardcode it).
+export const GetMyTribeNamesResponseSchema = z.object({
+  priceHard: z.coerce.number(),
+  names: z.array(TribeNameSchema),
+});
+export type GetMyTribeNamesResponse = z.infer<
+  typeof GetMyTribeNamesResponseSchema
+>;
+
+// POST /users/@me/tribe_names response (201). The name always starts `pending`.
+export const PostTribeNameResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  status: z.literal("pending"),
+  pricePaid: z.string(),
+});
+export type PostTribeNameResponse = z.infer<typeof PostTribeNameResponseSchema>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,

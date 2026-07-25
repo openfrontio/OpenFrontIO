@@ -8,11 +8,15 @@ import {
   ClaimRewardResponse,
   ClaimRewardResponseSchema,
   FeaturedStreamSchema,
+  GetMyTribeNamesResponse,
+  GetMyTribeNamesResponseSchema,
   NewsItemSchema,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
   PlayerProfile,
   PlayerProfileSchema,
+  PostTribeNameResponse,
+  PostTribeNameResponseSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
   PutUsernameResponse,
@@ -302,6 +306,116 @@ export async function updateUsername(
     return { ok: true, data: parsed.data };
   } catch (e) {
     console.error("updateUsername: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// GET /users/@me/tribe_names — the player's purchased custom tribe names plus
+// the current purchase price. Auth required; returns false when logged out or
+// on any error (callers show a login/empty state rather than a hard failure).
+export async function getMyTribeNames(): Promise<
+  GetMyTribeNamesResponse | false
+> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/tribe_names`, {
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "getMyTribeNames: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const parsed = GetMyTribeNamesResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("getMyTribeNames: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.error("getMyTribeNames: request failed", e);
+    return false;
+  }
+}
+
+export type PurchaseTribeNameResult =
+  | { ok: true; data: PostTribeNameResponse }
+  // 400: invalid, disallowed, or insufficient balance. `message` is the
+  // server's player-facing reason (already English, shown as-is).
+  | { ok: false; code: "invalid"; message?: string }
+  // 409: the player already has this name pending or live.
+  | { ok: false; code: "duplicate" }
+  // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
+  // header (null when absent/unparseable).
+  | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
+  | { ok: false; code: "failed" };
+
+// POST /users/@me/tribe_names — buy a custom tribe name (200 plutonium). The
+// name is screened, charged, and goes live right away as `pending`; review is
+// post-hoc and only takes bad names down. Spends hard currency, so callers
+// should invalidate the cached /users/@me afterwards.
+export async function purchaseTribeName(
+  name: string,
+): Promise<PurchaseTribeNameResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/tribe_names`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ name }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      return {
+        ok: false,
+        code: "invalid",
+        message: typeof body?.reason === "string" ? body.reason : undefined,
+      };
+    }
+    if (response.status === 409) {
+      return { ok: false, code: "duplicate" };
+    }
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After");
+      const seconds = retryAfter === null ? NaN : Number(retryAfter);
+      return {
+        ok: false,
+        code: "rate_limited",
+        retryAfterSeconds: Number.isFinite(seconds) ? seconds : null,
+      };
+    }
+    if (!response.ok) {
+      console.error(
+        "purchaseTribeName: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PostTribeNameResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("purchaseTribeName: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("purchaseTribeName: request failed", e);
     return { ok: false, code: "failed" };
   }
 }
