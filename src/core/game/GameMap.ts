@@ -167,7 +167,9 @@ export class GameMapImpl implements GameMap {
   }
 
   isValidRef(ref: TileRef): boolean {
-    return ref >= 0 && ref < this.width_ * this.height_;
+    return (
+      Number.isInteger(ref) && ref >= 0 && ref < this.width_ * this.height_
+    );
   }
 
   x(ref: TileRef): number {
