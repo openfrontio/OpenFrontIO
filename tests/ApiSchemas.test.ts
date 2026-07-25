@@ -98,6 +98,97 @@ describe("PlayerProfileSchema", () => {
   });
 });
 
+describe("PlayerProfileSchema clans", () => {
+  const base = {
+    createdAt: "2024-01-15T12:00:00.000Z",
+    stats: {},
+  };
+  const clan = {
+    tag: "ALP",
+    name: "Alpha Clan",
+    role: "leader",
+    joinedAt: "2024-02-01T12:00:00.000Z",
+    memberCount: 12,
+  };
+
+  it("accepts a profile carrying clan memberships", () => {
+    const result = PlayerProfileSchema.safeParse({
+      ...base,
+      clans: [clan, { ...clan, tag: "ZET", role: "member", memberCount: 1 }],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clans).toHaveLength(2);
+      expect(result.data.clans?.[0].role).toBe("leader");
+      expect(result.data.clans?.[1].memberCount).toBe(1);
+    }
+  });
+
+  it("accepts a profile without clans (older API)", () => {
+    const result = PlayerProfileSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clans).toBeUndefined();
+    }
+  });
+
+  it("accepts an empty clan list", () => {
+    const result = PlayerProfileSchema.safeParse({ ...base, clans: [] });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clans).toEqual([]);
+    }
+  });
+
+  it.each(["owner", "admin", "Leader", ""])(
+    "rejects the unknown role %j",
+    (role) => {
+      expect(
+        PlayerProfileSchema.safeParse({ ...base, clans: [{ ...clan, role }] })
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([0, -1, 1.5, "12", null])(
+    "rejects the invalid memberCount %j",
+    (memberCount) => {
+      expect(
+        PlayerProfileSchema.safeParse({
+          ...base,
+          clans: [{ ...clan, memberCount }],
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("rejects a clan tag outside the clan-tag charset/length", () => {
+    // ClanTagSchema: 2-5 uppercase alphanumerics.
+    for (const tag of ["a", "toolongtag", "a b", ""]) {
+      expect(
+        PlayerProfileSchema.safeParse({ ...base, clans: [{ ...clan, tag }] })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  it("rejects a non-ISO joinedAt", () => {
+    expect(
+      PlayerProfileSchema.safeParse({
+        ...base,
+        clans: [{ ...clan, joinedAt: "last tuesday" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a clan entry missing required fields", () => {
+    expect(
+      PlayerProfileSchema.safeParse({ ...base, clans: [{ tag: "ALP" }] })
+        .success,
+    ).toBe(false);
+  });
+});
+
 describe("FriendEntrySchema", () => {
   const base = {
     publicId: "abc123",
