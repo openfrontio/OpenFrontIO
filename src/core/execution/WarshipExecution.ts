@@ -764,7 +764,12 @@ export class WarshipExecution implements Execution {
     const warshipComponent = this.mg.getWaterComponent(this.warship.tile());
 
     const patrolTile = this.warship.warshipState().patrolTile;
-    if (patrolTile === undefined) {
+    // A non-integer or out-of-range patrolTile makes mg.x()/mg.y() return
+    // undefined, so every candidate coordinate below is NaN, isValidCoord is
+    // always false, and the loop's out-of-bounds `continue` (which does not
+    // advance expandCount) spins forever, hanging the whole synchronous sim.
+    // Bail out instead of trusting patrolTile is a valid tile.
+    if (patrolTile === undefined || !this.mg.isValidRef(patrolTile)) {
       return undefined;
     }
 
