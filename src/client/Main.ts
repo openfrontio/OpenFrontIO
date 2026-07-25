@@ -863,10 +863,23 @@ class Client {
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
+
+    // Resolve the Turnstile token before opening the connection. A genuine
+    // failure aborts the join: proceeding with a null token would just hit a
+    // guaranteed server-side rejection. The user is told to refresh and retry.
+    let turnstileToken: string | null;
+    try {
+      turnstileToken = await this.getTurnstileToken(lobby);
+    } catch (e) {
+      console.error("Turnstile verification failed", e);
+      alert(translateText("turnstile.verification_failed"));
+      return;
+    }
+
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs(),
-      turnstileToken: await this.getTurnstileToken(lobby),
+      turnstileToken,
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       clanTagCheck: this.usernameInput?.getClanCheck(),
@@ -1079,14 +1092,11 @@ class Client {
     }
 
     // Fetch on demand. Unlike the prefetch, this runs at the moment the user is
-    // joining, so a failure to obtain a token is worth surfacing to them.
-    try {
-      return (await getTurnstileToken())?.token ?? null;
-    } catch (e) {
-      console.error("Turnstile verification failed", e);
-      alert(translateText("turnstile.verification_failed"));
-      return null;
-    }
+    // joining. Let a genuine failure propagate: the caller aborts the join and
+    // surfaces the error. Returning a null token instead would send the join
+    // through to a guaranteed server-side rejection (Worker rejects a missing
+    // token), producing a confusing second failure.
+    return (await getTurnstileToken())?.token ?? null;
   }
 }
 
