@@ -58,6 +58,7 @@
     "sub_status_unpaid": "Unpaid",
     "subscription_portal_failed": "Failed to open the subscription management portal.",
     "tab_account": "Account",
+    "tab_clans": "Clans",
     "tab_friends": "Friends",
     "tab_games": "Games",
     "tab_settings": "Settings",
@@ -1226,6 +1227,7 @@
   },
   "player_profile": {
     "loading": "Loading profile...",
+    "no_clans": "This player isn't in any clans.",
     "not_found": "Player profile not found",
     "share": "Share Profile",
     "title": "Player Profile",
