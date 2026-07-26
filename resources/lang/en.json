@@ -1419,6 +1419,9 @@
   "steam": {
     "link_signpost": "Have an existing OpenFront account? Account linking is coming in a later update."
   },
+  "steam_user_header": {
+    "avatar_alt": "Steam avatar"
+  },
   "store": {
     "already_subscribed": "Already subscribed.",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
