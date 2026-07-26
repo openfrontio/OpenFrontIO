@@ -23,6 +23,7 @@ import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
+import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
@@ -131,7 +132,7 @@ export class AccountModal extends BaseModal {
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      !!(me?.discord ?? me?.google ?? me?.email) ||
+      !!(me?.discord ?? me?.google ?? me?.email ?? me?.steam) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
   }
@@ -335,6 +336,11 @@ export class AccountModal extends BaseModal {
               <discord-user-header
                 .data=${this.userMeResponse?.user?.discord ?? null}
               ></discord-user-header>
+              ${this.userMeResponse?.user?.steam
+                ? html`<steam-user-header
+                    .data=${this.userMeResponse.user.steam}
+                  ></steam-user-header>`
+                : null}
               ${this.renderLoggedInAs()}
             </div>
           </div>
@@ -531,6 +537,15 @@ export class AccountModal extends BaseModal {
           </div>
           ${this.renderCurrency()} ${this.renderGoogleLink()}
           ${this.renderLogoutButton()}
+        </div>
+      `;
+    } else if (me?.steam) {
+      // Steam is the primary login and v1 does not support linking a second
+      // identity or unlinking Steam itself, so no Discord/Google CTA here —
+      // just the currency balance and (session) logout.
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     }
