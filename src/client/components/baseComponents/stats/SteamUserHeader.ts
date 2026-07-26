@@ -33,6 +33,9 @@ export class SteamUserHeader extends LitElement {
                   class="w-12 h-12 rounded-full block"
                   src="${avatar}"
                   alt="${translateText("steam_user_header.avatar_alt")}"
+                  @error=${(e: Event) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
               </div>
             `
