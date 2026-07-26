@@ -718,12 +718,26 @@ export const PlayerSchema = z.object({
   teamIndex: z.number().int().nonnegative().optional(),
 });
 
+// A purchased bot tribe name drawn for this game by the API. publicId is the
+// tribe name's stable id (never a player id); ownerClientId matches
+// players[].clientID in the same start info, null when the owner is not in
+// this game. Mirrors infra's TribeSchema — embed API objects verbatim.
+export const TribeSchema = z.object({
+  name: SafeString.min(1).max(64),
+  publicId: z.string().min(1).max(64),
+  ownerClientId: ID.nullable(),
+});
+export type Tribe = z.infer<typeof TribeSchema>;
+
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: z.number(),
   visibleAt: z.number().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
+  // Custom bot tribe names in use this game (public games only). Rides the
+  // analytics record to infra at game end for owner appearance stats.
+  tribes: z.array(TribeSchema).max(100).optional(),
 });
 
 export const WinnerSchema = z

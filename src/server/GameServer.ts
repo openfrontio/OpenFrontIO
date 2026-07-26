@@ -31,12 +31,14 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
+  Tribe,
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, simpleHash } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { fetchCustomTribes } from "./CustomTribes";
 import { ServerEnv } from "./ServerEnv";
 import {
   noopMatchTelemetryEmitter,
@@ -134,6 +136,10 @@ export class GameServer {
   private log: Logger;
 
   private _hasPrestarted = false;
+
+  // Purchased bot tribe names drawn for this game, set when the prestart
+  // fetch lands (undefined until then / on fetch failure / non-public games).
+  private tribes?: Tribe[];
 
   private kickedPersistentIds: Set<string> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
@@ -1056,6 +1062,7 @@ export class GameServer {
       return;
     }
     this._hasPrestarted = true;
+    this.fetchTribes();
 
     const prestartMsg = ServerPrestartMessageSchema.safeParse({
       type: "prestart",
@@ -1083,6 +1090,34 @@ export class GameServer {
         c.ws.send(msg);
       }
     });
+  }
+
+  // Public games draw purchased bot tribe names from the API at prestart —
+  // its 1.5s timeout fits the 2s prestart->start gap, so the pool is
+  // normally in hand when start() builds the game start info. Best effort:
+  // on timeout/error the game starts with organic bot names.
+  private fetchTribes(): void {
+    if (!this.isPublic() || this.gameConfig.bots === 0) {
+      return;
+    }
+    // Logged-in humans only — guests can't own tribe names.
+    const players = this.activeClients.flatMap((c) =>
+      c.publicId !== undefined
+        ? [{ clientId: c.clientID, publicId: c.publicId }]
+        : [],
+    );
+    fetchCustomTribes(players)
+      .then((tribes) => {
+        // One tribe per bot: with fewer bots than tribes, drop from the
+        // tail (the global-pool slice).
+        const used = tribes.slice(0, this.gameConfig.bots);
+        if (used.length > 0) {
+          this.tribes = used;
+        }
+      })
+      .catch((error) => {
+        this.log.warn(`failed to fetch custom tribes: ${error}`);
+      });
   }
 
   private startLobbyInfoBroadcast() {
@@ -1184,6 +1219,7 @@ export class GameServer {
         friends: friendsFor(c),
         teamIndex: this.matchmakingTeamIndex(c),
       })),
+      tribes: this.tribes,
     });
     if (!result.success) {
       const error = z.prettifyError(result.error);
