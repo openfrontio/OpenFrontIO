@@ -698,20 +698,21 @@ export class Transport {
     this.sendIntent({ type: "toggle_game_start_timer" });
   }
 
-  private sendIntent(intent: Intent) {
+  private sendIntent(intent: Intent): boolean {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
         type: "intent",
         intent: intent,
       } satisfies ClientIntentMessage;
       this.sendMsg(msg);
-    } else {
-      console.log(
-        "WebSocket is not open. Current state:",
-        this.socket?.readyState,
-      );
-      console.log("attempting reconnect");
+      return true;
     }
+    console.log(
+      "WebSocket is not open. Current state:",
+      this.socket?.readyState,
+    );
+    console.log("attempting reconnect");
+    return false;
   }
 
   private sendMsg(msg: ClientMessage) {

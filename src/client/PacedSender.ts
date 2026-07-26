@@ -5,12 +5,12 @@
  * has to be spread out rather than emitted all at once.
  */
 export class PacedSender {
-  private readonly queue: (() => void)[] = [];
+  private readonly queue: (() => boolean)[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly intervalMs: number) {}
 
-  push(send: () => void): void {
+  push(send: () => boolean): void {
     this.queue.push(send);
     if (this.timer === null) this.next();
   }
@@ -24,12 +24,14 @@ export class PacedSender {
   }
 
   private next(): void {
-    const send = this.queue.shift();
+    const send = this.queue[0];
     if (send === undefined) {
       this.timer = null;
       return;
     }
-    send();
+    // Keep the item queued if it could not be sent, so a reconnect does not
+    // lose it. leaveGame() clears the queue when the game is over.
+    if (send()) this.queue.shift();
     this.timer = setTimeout(() => this.next(), this.intervalMs);
   }
 }
