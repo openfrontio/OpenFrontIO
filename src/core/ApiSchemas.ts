@@ -332,6 +332,19 @@ export const PlayerProfileSchema = z.object({
   // an API without the field still parse.
   username: z.string().nullable().optional(),
   stats: PlayerStatsTreeSchema,
+  // Clans this player belongs to, tag-ordered. Optional so responses from an
+  // API without the field still parse (→ no clans shown).
+  clans: z
+    .array(
+      z.object({
+        tag: RequiredClanTagSchema,
+        name: z.string(),
+        role: z.enum(["leader", "officer", "member"]),
+        joinedAt: z.iso.datetime(),
+        memberCount: z.number().int().min(1),
+      }),
+    )
+    .optional(),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 

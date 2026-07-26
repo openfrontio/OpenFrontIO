@@ -17,6 +17,7 @@ export enum GameMapType {
   BaikalNukeWars = "Baikal Nuke Wars", // map-generator/assets/maps/baikalnukewars/info.json
   BajaCalifornia = "Baja California", // map-generator/assets/maps/bajacalifornia/info.json
   Balkans = "Balkans", // map-generator/assets/maps/balkans/info.json
+  Balkhash = "Balkhash", // map-generator/assets/maps/balkhash/info.json
   Baltics = "Baltics", // map-generator/assets/maps/baltics/info.json
   BeringSea = "Bering Sea", // map-generator/assets/maps/beringsea/info.json
   BeringStrait = "Bering Strait", // map-generator/assets/maps/beringstrait/info.json
@@ -31,6 +32,7 @@ export enum GameMapType {
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
   China = "China", // map-generator/assets/maps/china/info.json
   ChoppingBlock = "Chopping Block", // map-generator/assets/maps/choppingblock/info.json
+  ClearwaterLakes = "Clearwater Lakes", // map-generator/assets/maps/clearwaterlakes/info.json
   Conakry = "Conakry", // map-generator/assets/maps/conakry/info.json
   Crimea = "Crimea", // map-generator/assets/maps/crimea/info.json
   DanishStraits = "Danish Straits", // map-generator/assets/maps/danishstraits/info.json
@@ -287,6 +289,13 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 6,
   },
   {
+    id: "Balkhash",
+    type: GameMapType.Balkhash,
+    translationKey: "map.balkhash",
+    categories: ["new", "asia"],
+    multiplayerFrequency: 4,
+  },
+  {
     id: "Baltics",
     type: GameMapType.Baltics,
     translationKey: "map.baltics",
@@ -389,6 +398,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["arcade"],
     multiplayerFrequency: 5,
     specialTeamCount: 4,
+  },
+  {
+    id: "ClearwaterLakes",
+    type: GameMapType.ClearwaterLakes,
+    translationKey: "map.clearwaterlakes",
+    categories: ["new", "north_america"],
+    multiplayerFrequency: 3,
   },
   {
     id: "Conakry",
