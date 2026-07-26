@@ -51,6 +51,15 @@ function toPosixPath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
 }
 
+function toRelativePosixPath(
+  rootDir: string,
+  dirent: { parentPath: string; name: string },
+): string {
+  // when cwd is used in globSync, dirent.parentPath is "."
+  const absolutePath = path.join(dirent.parentPath, dirent.name);
+  return toPosixPath(path.relative(rootDir, absolutePath));
+}
+
 function createContentHash(filePath: string): string {
   const content = fs.readFileSync(filePath);
   return createHash("sha256")
@@ -280,7 +289,7 @@ export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
         exclude: ["**/.*", ".*"], // .gitignore etc (like dot: false)
       })) {
         if (dirent.isDirectory()) continue;
-        files.add(dirent.name); // pure filename with dirent.name so no normalizeAssetPath needed 
+        files.add(normalizeAssetPath(toRelativePosixPath(sourceDir, dirent))); // convert dirent (like posix:true)
       }
     }
   }
@@ -295,7 +304,9 @@ export function listRootPublicFiles(resourcesDir: string): string[] {
       exclude: ["**/.*", ".*"],
     })
     .filter((dirent) => !dirent.isDirectory())
-    .map((dirent) => dirent.name)
+    .map((dirent) =>
+      normalizeAssetPath(toRelativePosixPath(resourcesDir, dirent)),
+    )
     .filter((file) => shouldKeepRootPublicFile(file))
     .sort();
 }
