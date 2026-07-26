@@ -210,6 +210,9 @@ export class Transport {
 
   private pingInterval: number | null = null;
   private readonly warshipBatches: PacedSender;
+  // The server discards intents until it has processed our join, and an open
+  // socket says nothing about that. Its first message does.
+  private joined = false;
   public readonly isLocal: boolean;
 
   constructor(
@@ -363,6 +366,7 @@ export class Transport {
     // the desktop app://openfront origin), not window.location.host.
     const workerPath = ClientEnv.workerPath(this.lobbyConfig.gameID);
     this.socket = new WebSocket(`${ClientEnv.serverWsBase()}/${workerPath}`);
+    this.joined = false;
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -383,6 +387,7 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
+      this.joined = true;
       try {
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
@@ -699,7 +704,10 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent): boolean {
-    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+    if (
+      this.isLocal ||
+      (this.joined && this.socket?.readyState === WebSocket.OPEN)
+    ) {
       const msg = {
         type: "intent",
         intent: intent,
