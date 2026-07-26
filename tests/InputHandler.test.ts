@@ -2,12 +2,13 @@ import {
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   InputHandler,
+  UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
 import { UIState } from "../src/client/UIState";
-import { GameView, PlayerView } from "../src/client/view";
+import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
@@ -1094,5 +1095,59 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("crosshair");
     window.dispatchEvent(new Event("blur"));
     expect(mockCanvas.style.cursor).toBe("");
+  });
+});
+
+describe("InputHandler right-click cancels unit selection (#4692)", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let canvas: HTMLCanvasElement;
+
+  beforeEach(() => {
+    new UserSettings().removeCached(KEYBINDS_KEY, false);
+    canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 600;
+    eventBus = new EventBus();
+    inputHandler = new InputHandler(
+      {
+        inSpawnPhase: () => false,
+        myPlayer: () => ({ isAlive: () => true }),
+      } as unknown as GameView,
+      { attackRatio: 20, ghostStructure: null, rocketDirectionUp: true },
+      canvas,
+      eventBus,
+    );
+    inputHandler.initialize();
+  });
+
+  afterEach(() => inputHandler.destroy());
+
+  const rightClick = () =>
+    inputHandler["onContextMenu"]({
+      preventDefault: () => {},
+      clientX: 100,
+      clientY: 100,
+    } as unknown as MouseEvent);
+
+  const emittedTypes = (spy: ReturnType<typeof vi.spyOn>) =>
+    spy.mock.calls.map((c: unknown[]) => (c[0] as object).constructor.name);
+
+  it("opens the context menu on right-click when nothing is selected", () => {
+    const emit = vi.spyOn(eventBus, "emit");
+    rightClick();
+    expect(emittedTypes(emit)).toContain("ContextMenuEvent");
+  });
+
+  it("cancels the selection and suppresses the context menu when a warship is selected", () => {
+    // Select a warship (wires unitSelectionActive via the real listener).
+    eventBus.emit(
+      new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+    );
+    const emit = vi.spyOn(eventBus, "emit");
+    rightClick();
+    const types = emittedTypes(emit);
+    expect(types).toContain("UnitSelectionEvent"); // deselect emitted
+    expect(types).not.toContain("ContextMenuEvent"); // menu suppressed
   });
 });
