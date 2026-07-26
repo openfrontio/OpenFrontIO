@@ -12,6 +12,7 @@ import {
 import { TileRef } from "../core/game/GameMap";
 import {
   AllPlayersStats,
+  batchMoveWarshipUnitIds,
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
@@ -649,11 +650,13 @@ export class Transport {
   }
 
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
-    this.sendIntent({
-      type: "move_warship",
-      unitIds: event.unitIds,
-      tile: event.tile,
-    });
+    for (const unitIds of batchMoveWarshipUnitIds(event.unitIds, event.tile)) {
+      this.sendIntent({
+        type: "move_warship",
+        unitIds,
+        tile: event.tile,
+      });
+    }
   }
 
   private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
