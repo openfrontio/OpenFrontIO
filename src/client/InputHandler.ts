@@ -237,6 +237,9 @@ export class InputHandler {
   private selectionBoxActive: boolean = false;
   // True while warships are selected via box (waiting for move target click)
   private multiSelectionActive: boolean = false;
+  // True while any warship/boat is selected (single or multi) — right-click
+  // cancels the selection instead of opening the context menu (#4692).
+  private unitSelectionActive: boolean = false;
 
   // Touch long-press state
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -426,6 +429,8 @@ export class InputHandler {
     }
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
+      this.unitSelectionActive =
+        e.isSelected && (e.unit !== null || (e.units ?? []).length > 0);
       if (e.isSelected && (e.units ?? []).length > 0) {
         // Multi-selection active
         this.multiSelectionActive = true;
@@ -990,6 +995,12 @@ export class InputHandler {
     }
     if (this.uiState.ghostStructure !== null) {
       this.setGhostStructure(null);
+      return;
+    }
+    // If a warship/boat is selected, right-click cancels the selection rather
+    // than opening the context menu (#4692).
+    if (this.unitSelectionActive) {
+      this.eventBus.emit(new UnitSelectionEvent(null, false));
       return;
     }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
