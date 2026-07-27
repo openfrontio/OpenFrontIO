@@ -719,12 +719,14 @@ export const PlayerSchema = z.object({
 });
 
 // A purchased bot tribe name in use this game (active names are globally
-// unique, so the name alone identifies the tribe). Infra parses these
-// objects .loose() at analytics ingest — keep the object shape, and fields
-// may be added later without breaking record parsing.
-export const TribeSchema = z.object({
-  name: SafeString.min(1).max(64),
-});
+// unique, so the name alone identifies the tribe). Loose to mirror infra's
+// analytics-ingest schema — a field the API adds later flows through to the
+// record without a game-side change, instead of being silently stripped.
+export const TribeSchema = z
+  .object({
+    name: SafeString.min(1).max(64),
+  })
+  .loose();
 export type Tribe = z.infer<typeof TribeSchema>;
 
 export const GameStartInfoSchema = z.object({

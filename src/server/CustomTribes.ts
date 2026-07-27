@@ -2,8 +2,8 @@ import { z } from "zod";
 import { Tribe, TribeSchema } from "../core/Schemas";
 import { ServerEnv } from "./ServerEnv";
 
-// Any extra per-tribe fields the API sends are stripped — only the name is
-// used in games.
+// TribeSchema is loose: extra per-tribe fields the API sends pass through
+// into the game start info (and thus the analytics record) unchanged.
 const CustomTribesResponseSchema = z.object({
   tribes: TribeSchema.array().max(100),
 });

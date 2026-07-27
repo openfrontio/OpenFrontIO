@@ -34,16 +34,18 @@ describe("fetchCustomTribes", () => {
     expect(JSON.parse(init.body)).toEqual({ players });
   });
 
-  it("strips extra per-tribe fields the API sends", async () => {
+  it("passes extra per-tribe fields through for the analytics record", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
         jsonResponse({
-          tribes: [{ name: "Dragon Riders", futureField: "ignored" }],
+          tribes: [{ name: "Dragon Riders", futureField: "kept" }],
         }),
       ),
     );
-    expect(await fetchCustomTribes([])).toEqual([{ name: "Dragon Riders" }]);
+    expect(await fetchCustomTribes([])).toEqual([
+      { name: "Dragon Riders", futureField: "kept" },
+    ]);
   });
 
   it("returns an empty pool for an empty lobby", async () => {
