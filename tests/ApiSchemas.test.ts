@@ -10,11 +10,13 @@ import {
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
   PlayerProfileSchema,
+  PostTribeBoostResponseSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
   RewardSchema,
+  TribeNameSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
@@ -769,5 +771,79 @@ describe("isVerifiedUsername", () => {
 
   it("never verifies a TEMPORARY#### server rename, even though it is bare", () => {
     expect(isVerifiedUsername("TEMPORARY1234")).toBe(false);
+  });
+});
+
+describe("TribeNameSchema boost fields", () => {
+  const base = {
+    id: "7",
+    displayName: "Iron Legion",
+    status: "live",
+    reviewReason: null,
+  };
+
+  it("parses a boosted name", () => {
+    const result = TribeNameSchema.safeParse({
+      ...base,
+      activeBoosts: 2,
+      boostExpiresAt: "2026-08-23T18:04:11.000Z",
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBe(2);
+    expect(result.data.boostExpiresAt).toBe("2026-08-23T18:04:11.000Z");
+  });
+
+  it("parses an unboosted name (count 0, null expiry)", () => {
+    const result = TribeNameSchema.safeParse({
+      ...base,
+      activeBoosts: 0,
+      boostExpiresAt: null,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBe(0);
+    expect(result.data.boostExpiresAt).toBeNull();
+  });
+
+  it("parses a response without boost fields (older API)", () => {
+    const result = TribeNameSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBeUndefined();
+    expect(result.data.boostExpiresAt).toBeUndefined();
+  });
+
+  it("rejects a malformed boost expiry", () => {
+    expect(
+      TribeNameSchema.safeParse({ ...base, boostExpiresAt: "next tuesday" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("PostTribeBoostResponseSchema", () => {
+  it("parses the documented 201 response", () => {
+    const result = PostTribeBoostResponseSchema.safeParse({
+      id: "42",
+      customTribeNameId: "7",
+      expiresAt: "2026-08-23T18:04:11.000Z",
+      pricePaid: "100",
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    // Bigints come as strings on the wire and must stay strings.
+    expect(result.data.id).toBe("42");
+    expect(result.data.pricePaid).toBe("100");
+  });
+
+  it("rejects a response without expiresAt", () => {
+    expect(
+      PostTribeBoostResponseSchema.safeParse({
+        id: "42",
+        customTribeNameId: "7",
+        pricePaid: "100",
+      }).success,
+    ).toBe(false);
   });
 });

@@ -1083,3 +1083,37 @@ describe("verified badge on cosmetics schemas", () => {
     );
   });
 });
+
+describe("CosmeticsSchema tribeNames pricing", () => {
+  it("parses the tribeNames config block", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      tribeNames: {
+        priceHard: 200,
+        boostPriceHard: 100,
+        boostDurationDays: 30,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribeNames?.boostPriceHard).toBe(100);
+  });
+
+  it("parses a cosmetics.json without tribeNames (older API)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribeNames).toBeUndefined();
+  });
+
+  it("rejects a tribeNames block missing the boost price", () => {
+    expect(
+      CosmeticsSchema.safeParse({
+        patterns: {},
+        flags: {},
+        tribeNames: { priceHard: 200, boostDurationDays: 30 },
+      }).success,
+    ).toBe(false);
+  });
+});
