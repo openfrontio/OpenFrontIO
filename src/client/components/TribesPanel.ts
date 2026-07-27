@@ -103,8 +103,13 @@ export class TribesPanel extends LitElement {
     this.tribeNamesConfig = cosmetics?.tribeNames ?? null;
   }
 
+  // Name purchase price: cosmetics.json is the source of truth; older APIs
+  // served it on the list response instead.
   private get price(): number | null {
-    return this.data ? this.data.priceHard : null;
+    return (
+      this.tribeNamesConfig?.priceHard ??
+      (this.data ? (this.data.priceHard ?? null) : null)
+    );
   }
 
   private get hardBalance(): number {

@@ -2,6 +2,7 @@ import {
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponseSchema,
   FriendEntrySchema,
+  GetMyTribeNamesResponseSchema,
   GoogleUser,
   GoogleUserSchema,
   isTemporaryUsername,
@@ -819,6 +820,28 @@ describe("TribeNameSchema boost fields", () => {
       TribeNameSchema.safeParse({ ...base, boostExpiresAt: "next tuesday" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("GetMyTribeNamesResponseSchema", () => {
+  // Regression: the API stopped serving priceHard on this endpoint when
+  // pricing moved to cosmetics.json; a required z.coerce.number() turned the
+  // absent field into NaN and failed the whole list parse.
+  it("parses a response without priceHard (pricing moved to cosmetics.json)", () => {
+    const result = GetMyTribeNamesResponseSchema.safeParse({ names: [] });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.priceHard).toBeUndefined();
+  });
+
+  it("still parses the legacy response with a stringified priceHard", () => {
+    const result = GetMyTribeNamesResponseSchema.safeParse({
+      priceHard: "200",
+      names: [],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.priceHard).toBe(200);
   });
 });
 
