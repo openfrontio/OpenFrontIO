@@ -349,6 +349,7 @@ export class GameView implements GameMap {
       if (pu.clientID !== undefined && pu.clientID === this._myClientID) {
         pu.name = this._myUsername;
         pu.displayName = myDisplayName;
+        pu.clanTag = this._myClanTag;
       }
 
       if (pu.smallID !== undefined) {

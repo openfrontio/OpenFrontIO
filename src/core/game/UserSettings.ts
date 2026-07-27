@@ -400,7 +400,10 @@ export class UserSettings {
   }
 
   statsColumns(kind: StatsTableKind): ColumnId[] {
-    return this.getColumnIds(STATS_COLUMNS_KEYS[kind], DEFAULT_STATS_COLUMNS);
+    return this.getColumnIds(
+      STATS_COLUMNS_KEYS[kind],
+      DEFAULT_STATS_COLUMNS[kind],
+    );
   }
 
   setStatsColumns(kind: StatsTableKind, ids: ColumnId[]): void {

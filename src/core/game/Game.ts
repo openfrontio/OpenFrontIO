@@ -549,6 +549,7 @@ export interface Player {
   info(): PlayerInfo;
   name(): string;
   displayName(): string;
+  clanTag(): string | null;
   clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;

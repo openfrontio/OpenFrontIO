@@ -221,6 +221,7 @@ export interface PlayerUpdate {
   clientID?: ClientID | null;
   name?: string;
   displayName?: string;
+  clanTag?: string | null;
   team?: Team;
   smallID?: number;
   playerType?: PlayerType;

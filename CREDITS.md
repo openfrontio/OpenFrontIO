@@ -111,6 +111,8 @@ Licensed under ODbL
 Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
 Pay Per Click icon by [Fauzan Adiima](https://thenounproject.com/creator/fauzan94/) – https://thenounproject.com/icon/pay-per-click-2586454/
 Medal icon by [Snow](https://thenounproject.com/snowdoll/) – https://thenounproject.com/icon/medal-4567887/
+Guild icon by Trimanggolo Mulyo – https://thenounproject.com/icon/guild-8266144/
+Team icon by Hanbai – https://thenounproject.com/icon/team-8364170/
 
 ### Flags
 
