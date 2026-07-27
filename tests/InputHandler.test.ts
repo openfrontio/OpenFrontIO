@@ -1,6 +1,7 @@
 import {
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
+  ContextMenuEvent,
   InputHandler,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
@@ -1146,8 +1147,16 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
     );
     const emit = vi.spyOn(eventBus, "emit");
     rightClick();
-    const types = emittedTypes(emit);
-    expect(types).toContain("UnitSelectionEvent"); // deselect emitted
-    expect(types).not.toContain("ContextMenuEvent"); // menu suppressed
+    const emitted = emit.mock.calls.map((c: unknown[]) => c[0]);
+    // A deselection specifically (unit === null, isSelected === false) must be
+    // emitted — not just any UnitSelectionEvent.
+    const deselect = emitted.find(
+      (e): e is UnitSelectionEvent => e instanceof UnitSelectionEvent,
+    );
+    expect(deselect).toBeDefined();
+    expect(deselect!.unit).toBeNull();
+    expect(deselect!.isSelected).toBe(false);
+    // ...and the context menu must NOT open.
+    expect(emitted.some((e) => e instanceof ContextMenuEvent)).toBe(false);
   });
 });
