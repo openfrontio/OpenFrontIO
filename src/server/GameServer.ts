@@ -31,6 +31,7 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
+  Tribe,
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, simpleHash } from "../core/Util";
@@ -138,7 +139,7 @@ export class GameServer {
 
   // Purchased bot tribe names drawn for this game, set when the prestart
   // fetch lands (undefined until then / on fetch failure / non-public games).
-  private tribes?: string[];
+  private tribes?: Tribe[];
 
   private kickedPersistentIds: Set<string> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();

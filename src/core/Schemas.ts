@@ -718,9 +718,14 @@ export const PlayerSchema = z.object({
   teamIndex: z.number().int().nonnegative().optional(),
 });
 
-// A purchased bot tribe name drawn for this game by the API (active names
-// are globally unique, so the name alone identifies the tribe).
-export const TribeNameSchema = SafeString.min(1).max(64);
+// A purchased bot tribe name in use this game (active names are globally
+// unique, so the name alone identifies the tribe). Infra parses these
+// objects .loose() at analytics ingest — keep the object shape, and fields
+// may be added later without breaking record parsing.
+export const TribeSchema = z.object({
+  name: SafeString.min(1).max(64),
+});
+export type Tribe = z.infer<typeof TribeSchema>;
 
 export const GameStartInfoSchema = z.object({
   gameID: ID,
@@ -730,7 +735,7 @@ export const GameStartInfoSchema = z.object({
   players: PlayerSchema.array(),
   // Purchased bot tribe names in use this game (public games only). Rides
   // the analytics record to infra at game end for owner appearance stats.
-  tribes: z.array(TribeNameSchema).max(100).optional(),
+  tribes: z.array(TribeSchema).max(100).optional(),
 });
 
 export const WinnerSchema = z

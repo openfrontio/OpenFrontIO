@@ -14,7 +14,7 @@ describe("fetchCustomTribes", () => {
     vi.unstubAllGlobals();
   });
 
-  it("posts the lobby players and returns the tribe names", async () => {
+  it("posts the lobby players and returns the tribes", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         tribes: [{ name: "Dragon Riders" }, { name: "Night Wolves" }],
@@ -24,8 +24,8 @@ describe("fetchCustomTribes", () => {
 
     const players = [{ clientId: "abcd1234", publicId: "pub-1" }];
     expect(await fetchCustomTribes(players)).toEqual([
-      "Dragon Riders",
-      "Night Wolves",
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
     ]);
 
     const [url, init] = fetchMock.mock.calls[0];
@@ -43,7 +43,7 @@ describe("fetchCustomTribes", () => {
         }),
       ),
     );
-    expect(await fetchCustomTribes([])).toEqual(["Dragon Riders"]);
+    expect(await fetchCustomTribes([])).toEqual([{ name: "Dragon Riders" }]);
   });
 
   it("returns an empty pool for an empty lobby", async () => {

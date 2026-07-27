@@ -74,8 +74,8 @@ describe("GameServer custom tribes", () => {
 
   it("fetches the pool at prestart and embeds the tribes in the start info", async () => {
     vi.mocked(fetchCustomTribes).mockResolvedValue([
-      "Dragon Riders",
-      "Night Wolves",
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
     ]);
     const game = makeGame();
     game.activeClients.push(
@@ -91,15 +91,15 @@ describe("GameServer custom tribes", () => {
       { clientId: "abcd1234", publicId: "pub-1" },
     ]);
     expect((game as any).gameStartInfo.tribes).toEqual([
-      "Dragon Riders",
-      "Night Wolves",
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
     ]);
   });
 
   it("drops tribes from the tail when there are fewer bots", async () => {
     vi.mocked(fetchCustomTribes).mockResolvedValue([
-      "Dragon Riders",
-      "Night Wolves",
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
     ]);
     const game = makeGame({ bots: 1 });
 
@@ -107,7 +107,9 @@ describe("GameServer custom tribes", () => {
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toEqual(["Dragon Riders"]);
+    expect((game as any).gameStartInfo.tribes).toEqual([
+      { name: "Dragon Riders" },
+    ]);
   });
 
   it("skips the fetch for non-public games", async () => {
