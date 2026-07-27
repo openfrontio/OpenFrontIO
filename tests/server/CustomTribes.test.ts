@@ -9,35 +9,41 @@ function jsonResponse(body: unknown, status = 200) {
   return { ok: status < 300, status, json: async () => body };
 }
 
-const dragons = {
-  name: "Dragon Riders",
-  publicId: "AbC123xYz9AbC123xYz9Ab",
-  ownerClientId: "abcd1234",
-};
-const wolves = {
-  name: "Night Wolves",
-  publicId: "Zz9876543210Zz98765432",
-  ownerClientId: null,
-};
-
 describe("fetchCustomTribes", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("posts the lobby players and returns the parsed tribes", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ tribes: [dragons, wolves] }));
+  it("posts the lobby players and returns the tribe names", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        tribes: [{ name: "Dragon Riders" }, { name: "Night Wolves" }],
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const players = [{ clientId: "abcd1234", publicId: "pub-1" }];
-    expect(await fetchCustomTribes(players)).toEqual([dragons, wolves]);
+    expect(await fetchCustomTribes(players)).toEqual([
+      "Dragon Riders",
+      "Night Wolves",
+    ]);
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/custom_tribes");
     expect(init.headers["x-api-key"]).toBeDefined();
     expect(JSON.parse(init.body)).toEqual({ players });
+  });
+
+  it("strips extra per-tribe fields the API sends", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          tribes: [{ name: "Dragon Riders", futureField: "ignored" }],
+        }),
+      ),
+    );
+    expect(await fetchCustomTribes([])).toEqual(["Dragon Riders"]);
   });
 
   it("returns an empty pool for an empty lobby", async () => {
@@ -78,7 +84,7 @@ describe("fetchCustomTribes", () => {
   });
 
   it("throws on a tribe that fails validation", async () => {
-    const badTribe = { name: "X", publicId: "", ownerClientId: null };
+    const badTribe = { name: "" };
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(jsonResponse({ tribes: [badTribe] })),

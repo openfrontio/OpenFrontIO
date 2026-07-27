@@ -21,17 +21,6 @@ import { GameType } from "../../src/core/game/Game";
 import { fetchCustomTribes } from "../../src/server/CustomTribes";
 import { GameServer } from "../../src/server/GameServer";
 
-const dragons = {
-  name: "Dragon Riders",
-  publicId: "AbC123xYz9AbC123xYz9Ab",
-  ownerClientId: "abcd1234",
-};
-const wolves = {
-  name: "Night Wolves",
-  publicId: "Zz9876543210Zz98765432",
-  ownerClientId: null,
-};
-
 function fakeClient(clientID: string, publicId?: string) {
   return {
     clientID,
@@ -84,7 +73,10 @@ describe("GameServer custom tribes", () => {
   }
 
   it("fetches the pool at prestart and embeds the tribes in the start info", async () => {
-    vi.mocked(fetchCustomTribes).mockResolvedValue([dragons, wolves]);
+    vi.mocked(fetchCustomTribes).mockResolvedValue([
+      "Dragon Riders",
+      "Night Wolves",
+    ]);
     const game = makeGame();
     game.activeClients.push(
       fakeClient("abcd1234", "pub-1"),
@@ -98,18 +90,24 @@ describe("GameServer custom tribes", () => {
     expect(fetchCustomTribes).toHaveBeenCalledWith([
       { clientId: "abcd1234", publicId: "pub-1" },
     ]);
-    expect((game as any).gameStartInfo.tribes).toEqual([dragons, wolves]);
+    expect((game as any).gameStartInfo.tribes).toEqual([
+      "Dragon Riders",
+      "Night Wolves",
+    ]);
   });
 
   it("drops tribes from the tail when there are fewer bots", async () => {
-    vi.mocked(fetchCustomTribes).mockResolvedValue([dragons, wolves]);
+    vi.mocked(fetchCustomTribes).mockResolvedValue([
+      "Dragon Riders",
+      "Night Wolves",
+    ]);
     const game = makeGame({ bots: 1 });
 
     game.prestart();
     await flushMicrotasks();
     game.start();
 
-    expect((game as any).gameStartInfo.tribes).toEqual([dragons]);
+    expect((game as any).gameStartInfo.tribes).toEqual(["Dragon Riders"]);
   });
 
   it("skips the fetch for non-public games", async () => {

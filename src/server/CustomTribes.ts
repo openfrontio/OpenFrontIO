@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { Tribe, TribeSchema } from "../core/Schemas";
+import { TribeNameSchema } from "../core/Schemas";
 import { ServerEnv } from "./ServerEnv";
 
+// Any extra per-tribe fields the API sends are stripped — only the name is
+// used in games.
 const CustomTribesResponseSchema = z.object({
-  tribes: TribeSchema.array().max(100),
+  tribes: z.object({ name: TribeNameSchema }).array().max(100),
 });
 
 // A logged-in human in the lobby: in-game client id + account public id.
@@ -24,7 +26,7 @@ export interface TribePoolPlayer {
  */
 export async function fetchCustomTribes(
   players: TribePoolPlayer[],
-): Promise<Tribe[]> {
+): Promise<string[]> {
   const response = await fetch(`${ServerEnv.jwtIssuer()}/custom_tribes`, {
     method: "POST",
     signal: AbortSignal.timeout(1500),
@@ -43,5 +45,5 @@ export async function fetchCustomTribes(
       `custom_tribes returned malformed response: ${parsed.error.message}`,
     );
   }
-  return parsed.data.tribes;
+  return parsed.data.tribes.map((t) => t.name);
 }
