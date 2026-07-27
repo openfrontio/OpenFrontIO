@@ -331,7 +331,9 @@ export class TribesPanel extends LitElement {
     </section>`;
   }
 
-  // "2 boosts · next expires Aug 23" under an actively boosted name.
+  // "2 boosts · until Aug 23" under an actively boosted name. The date is
+  // when the LAST boost lapses (the API serves max(expiresAt)), i.e. when
+  // the name stops being boosted entirely.
   private renderBoostStatus(tribe: TribeName): TemplateResult | typeof nothing {
     const boosts = tribe.activeBoosts ?? 0;
     if (boosts === 0) return nothing;
@@ -339,16 +341,19 @@ export class TribesPanel extends LitElement {
       boosts === 1
         ? translateText("store.tribe_boost_count")
         : translateText("store.tribe_boost_count_plural", { count: boosts });
-    const next = tribe.boostExpiresAt
-      ? new Date(tribe.boostExpiresAt).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        })
-      : null;
+    // The wire format has wobbled (ISO vs raw pg text); if this browser
+    // can't parse it, show the count alone rather than "Invalid Date".
+    const parsed = tribe.boostExpiresAt ? new Date(tribe.boostExpiresAt) : null;
+    const until =
+      parsed !== null && !Number.isNaN(parsed.getTime())
+        ? parsed.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })
+        : null;
     return html`<span class="text-xs text-amber-300 mt-0.5">
-      ${countText}${next
-        ? html` ·
-          ${translateText("store.tribe_boost_next_expiry", { date: next })}`
+      ${countText}${until
+        ? html` · ${translateText("store.tribe_boost_until", { date: until })}`
         : ""}
     </span>`;
   }

@@ -282,8 +282,12 @@ export const TribeNameSchema = z.object({
   // so this + 1 is the multiplier to display. Optional for older responses.
   activeBoosts: z.coerce.number().optional(),
   // When the LAST unexpired boost lapses (the name stops being boosted
-  // entirely); null when unboosted.
-  boostExpiresAt: z.iso.datetime().nullable().optional(),
+  // entirely); null when unboosted. Deliberately a plain string, not
+  // z.iso.datetime(): the API has served raw pg text here
+  // ("2026-08-23 18:04:11+00"), and a strict format check on a
+  // display-only date fails the whole list parse. The renderer guards
+  // unparseable values.
+  boostExpiresAt: z.string().nullable().optional(),
 });
 export type TribeName = z.infer<typeof TribeNameSchema>;
 

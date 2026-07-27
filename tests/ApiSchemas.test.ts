@@ -815,11 +815,17 @@ describe("TribeNameSchema boost fields", () => {
     expect(result.data.boostExpiresAt).toBeUndefined();
   });
 
-  it("rejects a malformed boost expiry", () => {
-    expect(
-      TribeNameSchema.safeParse({ ...base, boostExpiresAt: "next tuesday" })
-        .success,
-    ).toBe(false);
+  // Regression: the list endpoint's boostExpiresAt comes from a raw SQL
+  // max() that bypasses the ORM's Date mapping, so the wire carried pg text
+  // ("2026-08-23 18:04:11+00"); a strict z.iso.datetime() failed the whole
+  // list parse. The field is a plain string and the renderer guards it.
+  it("tolerates a non-ISO boost expiry (raw pg text)", () => {
+    const result = TribeNameSchema.safeParse({
+      ...base,
+      activeBoosts: 1,
+      boostExpiresAt: "2026-08-23 18:04:11+00",
+    });
+    expect(result.success).toBe(true);
   });
 });
 
