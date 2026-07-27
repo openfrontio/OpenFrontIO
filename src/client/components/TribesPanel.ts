@@ -331,23 +331,24 @@ export class TribesPanel extends LitElement {
     </section>`;
   }
 
-  // "3× boosted · until Aug 23" under an actively boosted name. activeBoosts
-  // is the unexpired boost count and the draw weight is 1 + activeBoosts, so
-  // count + 1 is the multiplier players see.
+  // "2 boosts · next expires Aug 23" under an actively boosted name.
   private renderBoostStatus(tribe: TribeName): TemplateResult | typeof nothing {
     const boosts = tribe.activeBoosts ?? 0;
     if (boosts === 0) return nothing;
-    const until = tribe.boostExpiresAt
+    const countText =
+      boosts === 1
+        ? translateText("store.tribe_boost_count")
+        : translateText("store.tribe_boost_count_plural", { count: boosts });
+    const next = tribe.boostExpiresAt
       ? new Date(tribe.boostExpiresAt).toLocaleDateString(undefined, {
           month: "short",
           day: "numeric",
         })
       : null;
     return html`<span class="text-xs text-amber-300 mt-0.5">
-      ${translateText("store.tribe_boost_active", {
-        multiplier: boosts + 1,
-      })}${until
-        ? html` · ${translateText("store.tribe_boost_until", { date: until })}`
+      ${countText}${next
+        ? html` ·
+          ${translateText("store.tribe_boost_next_expiry", { date: next })}`
         : ""}
     </span>`;
   }
@@ -407,7 +408,12 @@ export class TribesPanel extends LitElement {
         ${translateText("store.tribes_load_failed")}
       </p>`;
     }
-    const names = this.data.names;
+    // Most-boosted names first. The sort is stable, so within equal boost
+    // counts the API's newest-first order is preserved (unboosted and
+    // rejected names all tie at 0 and keep their relative order).
+    const names = [...this.data.names].sort(
+      (a, b) => (b.activeBoosts ?? 0) - (a.activeBoosts ?? 0),
+    );
     if (names.length === 0) {
       return html`<p
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
