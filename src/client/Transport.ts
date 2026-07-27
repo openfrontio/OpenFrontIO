@@ -427,6 +427,7 @@ export class Transport {
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
+      gitCommit: ClientEnv.gitCommit(),
     } satisfies ClientJoinMessage);
   }
 
@@ -437,6 +438,7 @@ export class Transport {
       // Note: clientID is not sent - server looks it up from persistentID in token
       lastTurn: lastTurn,
       token: await getPlayToken(),
+      gitCommit: ClientEnv.gitCommit(),
     } satisfies ClientRejoinMessage);
   }
 
