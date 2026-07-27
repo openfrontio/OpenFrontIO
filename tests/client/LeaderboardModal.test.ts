@@ -244,9 +244,7 @@ describe("LeaderboardModal", () => {
               losses: 4,
               total: 10,
               public_id: "player-1",
-              username: "Alpha",
               accountUsername: "alpha.4821",
-              clanTag: "[AAA]",
             },
             {
               rank: 2,
@@ -256,9 +254,7 @@ describe("LeaderboardModal", () => {
               losses: 6,
               total: 10,
               public_id: "player-2",
-              username: "Bravo",
-              accountUsername: null,
-              clanTag: null,
+              accountUsername: "bravo",
             },
           ],
         }),
@@ -276,7 +272,6 @@ describe("LeaderboardModal", () => {
         expect.objectContaining({
           playerId: "player-1",
           accountUsername: "alpha.4821",
-          clanTag: "[AAA]",
           elo: 1200,
           games: 10,
           wins: 6,
@@ -284,13 +279,10 @@ describe("LeaderboardModal", () => {
           winRate: 0.6,
         }),
       );
-      // The session username ("Bravo") is deliberately ignored — display
-      // falls back to the playerId when no account username is set.
       expect(playerData[1]).toEqual(
         expect.objectContaining({
           playerId: "player-2",
-          accountUsername: null,
-          clanTag: undefined,
+          accountUsername: "bravo",
           winRate: 0.4,
         }),
       );
@@ -308,9 +300,7 @@ describe("LeaderboardModal", () => {
         losses: 5,
         total: 10,
         public_id: `player-${startRank + i}`,
-        username: `Player${startRank + i}`,
-        accountUsername: null,
-        clanTag: null,
+        accountUsername: `player${startRank + i}.1234`,
       })),
     });
 

@@ -222,10 +222,9 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
     losses: 5,
     total: 15,
     public_id: "abc123",
-    username: "xX_Sniper_Xx",
   };
 
-  it("keeps accountUsername verbatim alongside the session username", () => {
+  it("keeps accountUsername verbatim", () => {
     const result = RankedLeaderboardEntrySchema.safeParse({
       ...base,
       accountUsername: "bob.4821",
@@ -233,21 +232,32 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.accountUsername).toBe("bob.4821");
-      expect(result.data.username).toBe("xX_Sniper_Xx");
     }
   });
 
-  it("accepts accountUsername: null (player never set one)", () => {
+  it.each([
+    { username: "xX_Sniper_Xx", clanTag: "ABC" },
+    { username: "[ABC]", clanTag: null },
+    { username: null, clanTag: null },
+  ])("ignores stale session fields %j", (stale) => {
     const result = RankedLeaderboardEntrySchema.safeParse({
       ...base,
-      accountUsername: null,
+      ...stale,
+      accountUsername: "bob.4821",
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts an entry without accountUsername (older API)", () => {
-    expect(RankedLeaderboardEntrySchema.safeParse(base).success).toBe(true);
-  });
+  it.each([null, undefined])(
+    "rejects accountUsername: %s",
+    (accountUsername) => {
+      const result = RankedLeaderboardEntrySchema.safeParse({
+        ...base,
+        accountUsername,
+      });
+      expect(result.success).toBe(false);
+    },
+  );
 });
 
 describe("PlayerGameModeFilterSchema", () => {

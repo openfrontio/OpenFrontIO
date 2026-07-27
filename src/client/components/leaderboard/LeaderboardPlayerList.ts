@@ -75,8 +75,7 @@ export class LeaderboardPlayerList extends LitElement {
       ].map((entry) => ({
         rank: entry.rank,
         playerId: entry.public_id,
-        accountUsername: entry.accountUsername ?? null,
-        clanTag: entry.clanTag ?? undefined,
+        accountUsername: entry.accountUsername,
         elo: entry.elo,
         games: entry.total,
         wins: entry.wins,
@@ -252,21 +251,12 @@ export class LeaderboardPlayerList extends LitElement {
           </div>
         </td>
         <td class="py-3 px-4">
-          <div class="flex items-center gap-2">
-            ${player.clanTag
-              ? html`<div
-                  class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
-                >
-                  ${player.clanTag}
-                </div>`
-              : ""}
-            <player-name
-              .username=${player.accountUsername}
-              .publicId=${player.playerId}
-              .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
-              .onNameClick=${() => this.openProfile(player.playerId)}
-            ></player-name>
-          </div>
+          <player-name
+            .username=${player.accountUsername}
+            .publicId=${player.playerId}
+            .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
+            .onNameClick=${() => this.openProfile(player.playerId)}
+          ></player-name>
         </td>
         <td class="py-3 px-4 text-right">
           <span class="font-mono text-white font-medium">${player.elo}</span>
@@ -447,22 +437,13 @@ export class LeaderboardPlayerList extends LitElement {
                           "leaderboard_modal.your_ranking",
                         )}</span
                       >
-                      <div class="flex items-center gap-2">
-                        ${this.currentUserEntry.clanTag
-                          ? html`<div
-                              class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-300/40 text-[10px] font-bold text-blue-100 shrink-0"
-                            >
-                              ${this.currentUserEntry.clanTag}
-                            </div>`
-                          : ""}
-                        <player-name
-                          .username=${this.currentUserEntry.accountUsername}
-                          .publicId=${this.currentUserEntry.playerId}
-                          .nameClass=${"font-bold text-white text-base hover:underline"}
-                          .onNameClick=${() =>
-                            this.openProfile(this.currentUserEntry!.playerId)}
-                        ></player-name>
-                      </div>
+                      <player-name
+                        .username=${this.currentUserEntry.accountUsername}
+                        .publicId=${this.currentUserEntry.playerId}
+                        .nameClass=${"font-bold text-white text-base hover:underline"}
+                        .onNameClick=${() =>
+                          this.openProfile(this.currentUserEntry!.playerId)}
+                      ></player-name>
                     </div>
                     <div class="flex flex-col items-end w-20">
                       <div class="font-mono text-white font-bold text-lg">

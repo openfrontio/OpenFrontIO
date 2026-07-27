@@ -4,16 +4,6 @@ import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { Difficulty, GameMode, RankedType } from "./game/Game";
 
-function stripClanTagFromUsername(username: string): string {
-  return username.replace(/^\s*\[[a-zA-Z0-9]{2,5}\]\s*/u, "").trim();
-}
-
-// Historical leaderboard rows can include legacy usernames
-// that predate current strict join-time validation rules.
-const LeaderboardUsernameSchema = z
-  .string()
-  .transform(stripClanTagFromUsername)
-  .pipe(z.string().min(1).max(64));
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
 export const RefreshResponseSchema = z.object({
@@ -402,10 +392,7 @@ export type PublicPlayerGamesResponse = z.infer<
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
-  // Account username (null = never set). The leaderboard displays this or
-  // the playerId — the per-session name is deliberately ignored.
-  accountUsername: z.string().nullable().optional(),
-  clanTag: RequiredClanTagSchema.nullable().optional(),
+  accountUsername: z.string(),
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
@@ -432,13 +419,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   losses: z.number(),
   total: z.number(),
   public_id: z.string(),
-  user: DiscordUserSchema.nullable().optional(),
-  username: LeaderboardUsernameSchema,
-  // Account username (null = never set), unlike `username` which is the name
-  // from the player's most recent ranked session. The client displays
-  // `accountUsername ?? public_id` and ignores the session name.
-  accountUsername: z.string().nullable().optional(),
-  clanTag: RequiredClanTagSchema.nullable().optional(),
+  accountUsername: z.string(),
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
