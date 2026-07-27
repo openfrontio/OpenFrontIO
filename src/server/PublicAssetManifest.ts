@@ -1,6 +1,5 @@
 import { createHash } from "crypto";
 import fs from "fs";
-import { globSync } from "glob";
 import path from "path";
 import {
   type AssetManifest,
@@ -50,6 +49,15 @@ type DerivedPublicAssetRenderer = {
 
 function toPosixPath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
+}
+
+function toRelativePosixPath(
+  rootDir: string,
+  dirent: { parentPath: string; name: string },
+): string {
+  // when cwd is used in globSync, dirent.parentPath is "."
+  const absolutePath = path.join(dirent.parentPath, dirent.name);
+  return toPosixPath(path.relative(rootDir, absolutePath));
 }
 
 function createContentHash(filePath: string): string {
@@ -272,16 +280,16 @@ export function shouldKeepRootPublicFile(relativePath: string): boolean {
 
 export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
   const files = new Set<string>();
-  for (const dir of sourceDirs) {
-    if (!fs.existsSync(dir)) continue;
+  for (const sourceDir of sourceDirs) {
+    if (!fs.existsSync(sourceDir)) continue;
     for (const pattern of HASHED_PUBLIC_ASSET_GLOBS) {
-      for (const file of globSync(pattern, {
-        cwd: dir,
-        nodir: true,
-        dot: false,
-        posix: true,
+      for (const dirent of fs.globSync(pattern, {
+        cwd: sourceDir,
+        withFileTypes: true, // return dirent to exclude directories (like nodir: true)
+        exclude: ["**/.*", ".*"], // .gitignore etc (like dot: false)
       })) {
-        files.add(normalizeAssetPath(file));
+        if (dirent.isDirectory()) continue;
+        files.add(normalizeAssetPath(toRelativePosixPath(sourceDir, dirent))); // convert dirent (like posix:true)
       }
     }
   }
@@ -289,13 +297,16 @@ export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
 }
 
 export function listRootPublicFiles(resourcesDir: string): string[] {
-  return globSync("**/*", {
-    cwd: resourcesDir,
-    nodir: true,
-    dot: false,
-    posix: true,
-  })
-    .map((file) => normalizeAssetPath(file))
+  return fs
+    .globSync("**/*", {
+      cwd: resourcesDir,
+      withFileTypes: true,
+      exclude: ["**/.*", ".*"],
+    })
+    .filter((dirent) => !dirent.isDirectory())
+    .map((dirent) =>
+      normalizeAssetPath(toRelativePosixPath(resourcesDir, dirent)),
+    )
     .filter((file) => shouldKeepRootPublicFile(file))
     .sort();
 }

@@ -60,7 +60,6 @@
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-formatter-gha": "^2.0.1",
-    "glob": "^13.0.6",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
