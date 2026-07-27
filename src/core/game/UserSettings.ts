@@ -551,6 +551,18 @@ export class UserSettings {
     }
   }
 
+  /**
+   * Unbind every keybind at once: set each default action to "Null" (the same
+   * sentinel a single per-key Unbind uses), so keybinds() drops them all.
+   */
+  unbindAllKeybinds(isMac: boolean): void {
+    const unbound: Record<string, string> = {};
+    for (const action of Object.keys(getDefaultKeybinds(isMac))) {
+      unbound[action] = "Null";
+    }
+    this.setKeybinds(unbound);
+  }
+
   soundEffectsVolume(): number {
     return this.getFloat("settings.soundEffectsVolume", 0);
   }
