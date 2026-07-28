@@ -4,7 +4,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { isSteamPrimaryUser } from "./accountIdentity";
+import { isSteamPrimaryUser } from "./AccountIdentity";
 import {
   fetchPlayerById,
   getUserMe,
@@ -133,7 +133,10 @@ export class AccountModal extends BaseModal {
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      !!(me?.discord || me?.google || me?.email || me?.steam) ||
+      // `??` (repo lint rule) with `steam` ordered before `email`: a present
+      // steam identity is reached before an empty-string `email` can short-
+      // circuit the chain and mis-classify a Steam user as not-linked.
+      !!(me?.discord ?? me?.google ?? me?.steam ?? me?.email) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSteamPrimaryUser } from "../../src/client/accountIdentity";
+import { isSteamPrimaryUser } from "../../src/client/AccountIdentity";
 import { UserMeResponse } from "../../src/core/ApiSchemas";
 
 type User = UserMeResponse["user"];
