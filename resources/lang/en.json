@@ -1150,6 +1150,7 @@
     "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
     "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "queue_size": "Players in queue: {count}",
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",

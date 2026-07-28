@@ -16,6 +16,7 @@ export class MatchmakingModal extends BaseModal {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
   private connectTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private watchdogTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private intentionalClose = false;
   // Which queue to join; set by Main from the open-matchmaking event
@@ -25,6 +26,7 @@ export class MatchmakingModal extends BaseModal {
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
+  @state() private queueSize: number | null = null;
   private elo: number | string = "...";
 
   constructor() {
@@ -87,10 +89,21 @@ export class MatchmakingModal extends BaseModal {
       );
     }
     if (this.gameID === null) {
-      return this.renderLoadingSpinner(
-        translateText("matchmaking_modal.searching"),
-        "green",
-      );
+      return html`
+        ${this.queueSize !== null
+          ? html`
+              <p class="text-center text-white/60">
+                ${translateText("matchmaking_modal.queue_size", {
+                  count: this.queueSize,
+                })}
+              </p>
+            `
+          : ""}
+        ${this.renderLoadingSpinner(
+          translateText("matchmaking_modal.searching"),
+          "green",
+        )}
+      `;
     } else {
       return this.renderLoadingSpinner(
         translateText("matchmaking_modal.waiting_for_game"),
@@ -106,8 +119,39 @@ export class MatchmakingModal extends BaseModal {
     window.location.hash = "modal=store&tab=subscriptions";
   };
 
+  // The lobby writes to every queued socket every ~3s (queue-size), so
+  // prolonged silence means the connection died without a close frame
+  // (locked phone, dropped wifi). Left alone, that leaves a ghost in the
+  // queue and games start short-handed — only the client can detect this,
+  // so reconnect. Rejoining is safe: one account holds one queue slot.
+  private resetWatchdog() {
+    this.clearWatchdog();
+    this.watchdogTimeout = setTimeout(() => {
+      console.warn("[Matchmaking] no server message for 15s, reconnecting");
+      if (this.socket) {
+        // A dead socket can take a long time to emit its close event;
+        // detach handlers so it can't trigger a second reconnect later.
+        this.socket.onclose = null;
+        this.socket.onmessage = null;
+        this.socket.onerror = null;
+        this.socket.close();
+      }
+      this.connected = false;
+      this.queueSize = null;
+      this.connect();
+    }, 15000);
+  }
+
+  private clearWatchdog() {
+    if (this.watchdogTimeout) {
+      clearTimeout(this.watchdogTimeout);
+      this.watchdogTimeout = null;
+    }
+  }
+
   private async connect() {
-    // A pending join timer from a previous socket must not fire on this one.
+    // Pending timers from a previous socket must not fire on this one.
+    this.clearWatchdog();
     if (this.connectTimeout) {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
@@ -133,13 +177,22 @@ export class MatchmakingModal extends BaseModal {
           }),
         );
         this.connected = true;
+        // The server starts broadcasting queue-size once we're queued;
+        // from here on, silence means the connection is dead.
+        this.resetWatchdog();
         this.requestUpdate();
       }, 2000);
     };
     this.socket.onmessage = (event) => {
       console.log(event.data);
+      this.resetWatchdog();
       const data = JSON.parse(event.data);
+      if (data.type === "queue-size") {
+        this.queueSize = data.count;
+        return;
+      }
       if (data.type === "match-assignment") {
+        this.clearWatchdog();
         this.intentionalClose = true;
         this.socket?.close();
         console.log(`matchmaking: got game ID: ${data.gameId}`);
@@ -154,6 +207,8 @@ export class MatchmakingModal extends BaseModal {
       console.log(
         `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
       );
+      this.clearWatchdog();
+      this.queueSize = null;
       if (this.intentionalClose || this.gameID !== null) {
         return;
       }
@@ -235,6 +290,7 @@ export class MatchmakingModal extends BaseModal {
     this.gameID = null;
     this.intentionalClose = false;
     this.limitReached = false;
+    this.queueSize = null;
     this.reconnectAttempts = 0;
     this.connect();
   }
@@ -243,6 +299,7 @@ export class MatchmakingModal extends BaseModal {
     this.connected = false;
     this.intentionalClose = true;
     this.socket?.close();
+    this.clearWatchdog();
     if (this.connectTimeout) {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
