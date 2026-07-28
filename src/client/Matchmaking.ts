@@ -112,6 +112,28 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
+  // Re-enter the queue after a pre-start match cancellation (a matched
+  // player never connected to the game server). The modal is normally still
+  // open on "waiting for game" at that point — reset back to searching and
+  // reconnect. Returns false when the modal was closed in the meantime, so
+  // the caller knows nothing was rejoined.
+  public requeue(): boolean {
+    if (!this.isModalOpen) {
+      return false;
+    }
+    if (this.gameCheckInterval) {
+      clearInterval(this.gameCheckInterval);
+      this.gameCheckInterval = null;
+    }
+    this.connected = false;
+    this.gameID = null;
+    this.intentionalClose = false;
+    this.limitReached = false;
+    this.reconnectAttempts = 0;
+    this.connect();
+    return true;
+  }
+
   private openSubscriptions = () => {
     // The matchmaking modal isn't registered with the modal router, so it
     // won't be closed by the store opening from the hash change.

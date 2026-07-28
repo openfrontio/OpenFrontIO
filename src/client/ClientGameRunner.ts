@@ -231,23 +231,31 @@ export function joinLobby(
         });
       } else if (message.error === "kick_reason.match_cancelled") {
         // A matched player never connected and the server cancelled the game
-        // pre-start. The matchmaking modal is still open behind the lobby
-        // wait (it only closes at prestart) — close it so its spinner
-        // doesn't outlive the game.
-        showInGameAlert(translateText("kick_reason.match_cancelled")).then(
-          () => {
-            const matchmaking = document.querySelector("matchmaking-modal") as
-              | (HTMLElement & { close?: () => void })
-              | null;
-            matchmaking?.close?.();
-            document.dispatchEvent(
-              new CustomEvent("leave-lobby", {
-                detail: { lobby: lobbyConfig.gameID, cause: "match-cancelled" },
-                bubbles: true,
-                composed: true,
-              }),
-            );
-          },
+        // pre-start. Tear down the dead lobby, then put the matchmaking
+        // modal — still open on "waiting for game" (it only closes at
+        // prestart) — straight back into the queue so the players who did
+        // connect don't have to requeue by hand. A non-blocking toast
+        // explains why; an alert here would keep them out of the queue
+        // until dismissed.
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID, cause: "match-cancelled" },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+        const matchmaking = document.querySelector("matchmaking-modal") as
+          | (HTMLElement & { requeue?: () => boolean })
+          | null;
+        matchmaking?.requeue?.();
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("kick_reason.match_cancelled"),
+              color: "red",
+              duration: 5000,
+            },
+          }),
         );
       } else {
         showErrorModal(
