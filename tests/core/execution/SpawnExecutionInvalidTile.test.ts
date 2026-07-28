@@ -12,6 +12,22 @@ const gameID: GameID = "test_game";
 // there when overriding later positional args.
 const setupDir = path.join(__dirname, "../../util");
 
+// executeNextTick() ticks already-inited executions first and only then inits
+// newly added ones, so a freshly added execution does not actually run until
+// the second call.
+function runPendingExecutions(game: Game): void {
+  game.executeNextTick();
+  game.executeNextTick();
+}
+
+function firstSpawnableTile(game: Game): number {
+  const map = game.map();
+  for (let ref = 0; ref < map.width() * map.height(); ref++) {
+    if (map.isLand(ref) && !map.isImpassable(ref)) return ref;
+  }
+  throw new Error("no spawnable land tile on test map");
+}
+
 describe("SpawnExecution rejects invalid tile refs", () => {
   let game: Game;
   let info: PlayerInfo;
@@ -21,12 +37,12 @@ describe("SpawnExecution rejects invalid tile refs", () => {
     game = await setup("ocean_and_land");
     info = new PlayerInfo("spawner", PlayerType.Human, null, "spawner");
     game.addPlayer(info);
-    validTile = game.ref(0, 10);
+    validTile = firstSpawnableTile(game);
   });
 
   test("a valid spawn tile still spawns the player", () => {
     game.addExecution(new SpawnExecution(gameID, info, validTile));
-    game.executeNextTick();
+    runPendingExecutions(game);
 
     const player = game.player(info.id);
     expect(player.hasSpawned()).toBe(true);
@@ -37,7 +53,7 @@ describe("SpawnExecution rejects invalid tile refs", () => {
   // terrain buffers, so it must never place territory.
   test("a fractional spawn tile is a no-op", () => {
     game.addExecution(new SpawnExecution(gameID, info, validTile + 0.5));
-    game.executeNextTick();
+    runPendingExecutions(game);
 
     const player = game.player(info.id);
     expect(player.hasSpawned()).toBe(false);
@@ -47,7 +63,7 @@ describe("SpawnExecution rejects invalid tile refs", () => {
   test("an out-of-range spawn tile is a no-op", () => {
     const outOfRange = game.map().width() * game.map().height();
     game.addExecution(new SpawnExecution(gameID, info, outOfRange));
-    game.executeNextTick();
+    runPendingExecutions(game);
 
     const player = game.player(info.id);
     expect(player.hasSpawned()).toBe(false);
@@ -73,16 +89,17 @@ describe("SpawnExecution validates before relinquishing territory", () => {
 
     const info = new PlayerInfo("spawner", PlayerType.Human, null, "spawner");
     game.addPlayer(info);
+    const validTile = firstSpawnableTile(game);
 
-    game.addExecution(new SpawnExecution(gameID, info, game.ref(0, 10)));
-    game.executeNextTick();
+    game.addExecution(new SpawnExecution(gameID, info, validTile));
+    runPendingExecutions(game);
 
     const player = game.player(info.id);
     const owned = player.numTilesOwned();
     expect(owned).toBeGreaterThan(0);
 
-    game.addExecution(new SpawnExecution(gameID, info, game.ref(0, 10) + 0.5));
-    game.executeNextTick();
+    game.addExecution(new SpawnExecution(gameID, info, validTile + 0.5));
+    runPendingExecutions(game);
 
     expect(player.numTilesOwned()).toBe(owned);
   });
