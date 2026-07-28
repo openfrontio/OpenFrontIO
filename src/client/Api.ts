@@ -15,6 +15,8 @@ import {
   PlayerGameTypeFilter,
   PlayerProfile,
   PlayerProfileSchema,
+  PostTribeBoostResponse,
+  PostTribeBoostResponseSchema,
   PostTribeNameResponse,
   PostTribeNameResponseSchema,
   PublicPlayerGamesResponse,
@@ -416,6 +418,77 @@ export async function purchaseTribeName(
     return { ok: true, data: parsed.data };
   } catch (e) {
     console.error("purchaseTribeName: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+export type BoostTribeNameResult =
+  | { ok: true; data: PostTribeBoostResponse }
+  // 400 with a player-facing reason — today that's only "Insufficient
+  // balance" (the balance moved since the client's pre-check).
+  | { ok: false; code: "insufficient_balance" }
+  // 404: not the caller's name, or it's no longer active (rejected/revoked).
+  // Deliberately indistinguishable server-side — refresh the list.
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "failed" };
+
+// POST /users/@me/tribe_names/:id/boosts — buy a 30-day boost for an active
+// tribe name. Boosts stack without limit and the endpoint has no rate limit,
+// so the Idempotency-Key is what stops a double-submit from charging twice:
+// callers generate a fresh UUID per user-initiated click. Nothing is charged
+// on any error. Spends hard currency — callers refresh /users/@me and the
+// name list afterwards (boost state is only served by the list endpoint).
+export async function boostTribeName(
+  id: string,
+  idempotencyKey: string,
+): Promise<BoostTribeNameResult> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/users/@me/tribe_names/${encodeURIComponent(id)}/boosts`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: await getAuthHeader(),
+          "Idempotency-Key": idempotencyKey,
+        },
+      },
+    );
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      // {"reason": "..."} is the player-facing 400 (insufficient balance);
+      // {"resource": "id"} means a malformed id — a client bug, not a
+      // player error, so it falls through to the generic failure.
+      if (typeof body?.reason === "string") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      console.error("boostTribeName: bad request", body);
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 404) {
+      return { ok: false, code: "not_found" };
+    }
+    if (!response.ok) {
+      console.error(
+        "boostTribeName: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PostTribeBoostResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("boostTribeName: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("boostTribeName: request failed", e);
     return { ok: false, code: "failed" };
   }
 }

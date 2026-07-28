@@ -278,13 +278,22 @@ export const TribeNameSchema = z.object({
   status: TribeNameStatusSchema,
   // Player-facing explanation, set only when a mod rejects/revokes the name.
   reviewReason: z.string().nullable(),
+  // Count of unexpired boosts. The in-game draw weight is 1 + activeBoosts,
+  // so this + 1 is the multiplier to display. Optional for older responses.
+  activeBoosts: z.coerce.number().optional(),
+  // When the LAST unexpired boost lapses (the name stops being boosted
+  // entirely); null when unboosted. Deliberately a plain string, not
+  // z.iso.datetime(): the API has served raw pg text here
+  // ("2026-08-23 18:04:11+00"), and a strict format check on a
+  // display-only date fails the whole list parse. The renderer guards
+  // unparseable values.
+  boostExpiresAt: z.string().nullable().optional(),
 });
 export type TribeName = z.infer<typeof TribeNameSchema>;
 
-// GET /users/@me/tribe_names. `priceHard` is the current purchase price in
-// plutonium (server-provided so the client doesn't hardcode it).
+// GET /users/@me/tribe_names. Prices live in cosmetics.json
+// (tribeNames.priceHard) — this endpoint only serves the player's names.
 export const GetMyTribeNamesResponseSchema = z.object({
-  priceHard: z.coerce.number(),
   names: z.array(TribeNameSchema),
 });
 export type GetMyTribeNamesResponse = z.infer<
@@ -301,6 +310,20 @@ export const PostTribeNameResponseSchema = z.object({
   pricePaid: z.string(),
 });
 export type PostTribeNameResponse = z.infer<typeof PostTribeNameResponseSchema>;
+
+// POST /users/@me/tribe_names/:id/boosts response (201). Ids and pricePaid
+// are stringified bigints. Boost state (activeBoosts/boostExpiresAt) is
+// deliberately absent — re-fetch the name list after a purchase instead of
+// reconstructing it client-side.
+export const PostTribeBoostResponseSchema = z.object({
+  id: z.string(),
+  customTribeNameId: z.string(),
+  expiresAt: z.iso.datetime(),
+  pricePaid: z.string(),
+});
+export type PostTribeBoostResponse = z.infer<
+  typeof PostTribeBoostResponseSchema
+>;
 
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,

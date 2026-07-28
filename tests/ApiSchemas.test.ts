@@ -2,6 +2,7 @@ import {
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponseSchema,
   FriendEntrySchema,
+  GetMyTribeNamesResponseSchema,
   GoogleUser,
   GoogleUserSchema,
   isTemporaryUsername,
@@ -10,11 +11,13 @@ import {
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
   PlayerProfileSchema,
+  PostTribeBoostResponseSchema,
   PublicPlayerGameSchema,
   PublicPlayerGamesResponseSchema,
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
   RewardSchema,
+  TribeNameSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
@@ -769,5 +772,103 @@ describe("isVerifiedUsername", () => {
 
   it("never verifies a TEMPORARY#### server rename, even though it is bare", () => {
     expect(isVerifiedUsername("TEMPORARY1234")).toBe(false);
+  });
+});
+
+describe("TribeNameSchema boost fields", () => {
+  const base = {
+    id: "7",
+    displayName: "Iron Legion",
+    status: "live",
+    reviewReason: null,
+  };
+
+  it("parses a boosted name", () => {
+    const result = TribeNameSchema.safeParse({
+      ...base,
+      activeBoosts: 2,
+      boostExpiresAt: "2026-08-23T18:04:11.000Z",
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBe(2);
+    expect(result.data.boostExpiresAt).toBe("2026-08-23T18:04:11.000Z");
+  });
+
+  it("parses an unboosted name (count 0, null expiry)", () => {
+    const result = TribeNameSchema.safeParse({
+      ...base,
+      activeBoosts: 0,
+      boostExpiresAt: null,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBe(0);
+    expect(result.data.boostExpiresAt).toBeNull();
+  });
+
+  it("parses a response without boost fields (older API)", () => {
+    const result = TribeNameSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBeUndefined();
+    expect(result.data.boostExpiresAt).toBeUndefined();
+  });
+
+  // Regression: the list endpoint's boostExpiresAt comes from a raw SQL
+  // max() that bypasses the ORM's Date mapping, so the wire carried pg text
+  // ("2026-08-23 18:04:11+00"); a strict z.iso.datetime() failed the whole
+  // list parse. The field is a plain string and the renderer guards it.
+  it("tolerates a non-ISO boost expiry (raw pg text)", () => {
+    const result = TribeNameSchema.safeParse({
+      ...base,
+      activeBoosts: 1,
+      boostExpiresAt: "2026-08-23 18:04:11+00",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("GetMyTribeNamesResponseSchema", () => {
+  it("parses the names-only response (pricing lives in cosmetics.json)", () => {
+    expect(GetMyTribeNamesResponseSchema.safeParse({ names: [] }).success).toBe(
+      true,
+    );
+  });
+
+  it("strips a legacy priceHard instead of rejecting it", () => {
+    const result = GetMyTribeNamesResponseSchema.safeParse({
+      priceHard: "200",
+      names: [],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect("priceHard" in result.data).toBe(false);
+  });
+});
+
+describe("PostTribeBoostResponseSchema", () => {
+  it("parses the documented 201 response", () => {
+    const result = PostTribeBoostResponseSchema.safeParse({
+      id: "42",
+      customTribeNameId: "7",
+      expiresAt: "2026-08-23T18:04:11.000Z",
+      pricePaid: "100",
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    // Bigints come as strings on the wire and must stay strings.
+    expect(result.data.id).toBe("42");
+    expect(result.data.pricePaid).toBe("100");
+  });
+
+  it("rejects a response without expiresAt", () => {
+    expect(
+      PostTribeBoostResponseSchema.safeParse({
+        id: "42",
+        customTribeNameId: "7",
+        pricePaid: "100",
+      }).success,
+    ).toBe(false);
   });
 });
