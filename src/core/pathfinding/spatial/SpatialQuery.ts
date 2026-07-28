@@ -36,6 +36,12 @@ export class SpatialQuery {
     predicate: (t: TileRef) => boolean,
   ): TileRef | null {
     const map = this.game.map();
+    // `from` can trace back to a network intent. `visited` is a Uint32Array, so
+    // a fractional ref makes `visited[t] = gen` a silent no-op that always reads
+    // back undefined — the dedup fails and the stack grows until it OOMs. Every
+    // caller is individually guarded today; this keeps the trap from being
+    // re-armed by a future one.
+    if (!map.isValidRef(from)) return null;
     const scratch = tileTraversalScratch(this.game);
     const gen = bumpTraversalGeneration(scratch);
     const visited = scratch.visited;
