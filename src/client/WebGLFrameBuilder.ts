@@ -303,7 +303,13 @@ export class WebGLFrameBuilder {
     const layers = gameView.layers();
     for (const layer of layers) {
       if (!layer.nukeable) continue;
-      this.view.markLayerTilesDestroyed(layer.id, nukedTiles);
+      // Filter blast-radius tiles to only those matching this layer's
+      // placement.  A water layer only needs water tiles destroyed; land
+      // tiles in the blast radius are invisible to it (shader discards).
+      const wantLand = layer.placement === "land";
+      const tiles = nukedTiles.filter((t) => gameView.isLand(t) === wantLand);
+      if (tiles.length === 0) continue;
+      this.view.markLayerTilesDestroyed(layer.id, tiles);
     }
   }
 

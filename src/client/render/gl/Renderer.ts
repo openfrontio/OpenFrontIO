@@ -157,6 +157,8 @@ export class GPURenderer {
   private storedLayers: MapLayer[] = [];
   /** Stored layer images for context-restore re-creation. */
   private storedLayerImages: Map<string, ImageBitmap> = new Map();
+  /** Scratch buffer for per-tile terrain byte uploads (avoids allocations). */
+  private terrainDeltaScratch = new Uint8Array(1);
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
@@ -953,27 +955,41 @@ export class GPURenderer {
     this.terrainPass.applyTerrainDelta(refs, terrainBytes);
     this.railroadPass.applyTerrainDelta(refs, terrainBytes);
     // Update the shared R8UI terrain-bytes texture used by map-layer passes.
-    if (this.terrainBytesTex && refs.length > 0) {
-      const gl = this.gl;
-      gl.bindTexture(gl.TEXTURE_2D, this.terrainBytesTex);
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-      for (let i = 0; i < refs.length; i++) {
-        const ref = refs[i];
-        const x = ref % this.mapW;
-        const y = Math.floor(ref / this.mapW);
-        const pixel = new Uint8Array([terrainBytes[i]]);
-        gl.texSubImage2D(
-          gl.TEXTURE_2D,
-          0,
-          x,
-          y,
-          1,
-          1,
-          gl.RED_INTEGER,
-          gl.UNSIGNED_BYTE,
-          pixel,
-        );
-      }
+    if (!this.terrainBytesTex) return;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.terrainBytesTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    // Full-map fast path: single texSubImage2D instead of per-tile uploads.
+    if (refs.length === this.mapW * this.mapH) {
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        this.mapW,
+        this.mapH,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        terrainBytes,
+      );
+      return;
+    }
+    for (let i = 0; i < refs.length; i++) {
+      const ref = refs[i];
+      const x = ref % this.mapW;
+      const y = Math.floor(ref / this.mapW);
+      this.terrainDeltaScratch[0] = terrainBytes[i];
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        x,
+        y,
+        1,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        this.terrainDeltaScratch,
+      );
     }
   }
 

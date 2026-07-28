@@ -40,6 +40,9 @@ export class MapRenderer {
   // Stored layer data for context-restore re-creation.
   private storedLayers: MapLayer[] = [];
   private storedLayerImages: Map<string, ImageBitmap> = new Map();
+  // Layer state that survives context loss (GPU textures do not).
+  private layerVisibility = new Map<string, boolean>();
+  private layerDestroyedMasks = new Map<string, Uint8Array>();
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -111,6 +114,14 @@ export class MapRenderer {
     // Re-apply stored layers to the new renderer.
     if (this.storedLayers.length > 0 && this.storedLayerImages.size > 0) {
       this.renderer?.setMapLayers(this.storedLayers, this.storedLayerImages);
+      // Re-apply visibility overrides.
+      for (const [id, vis] of this.layerVisibility) {
+        this.renderer?.setLayerVisible(id, vis);
+      }
+      // Re-apply destroyed masks.
+      for (const [id, mask] of this.layerDestroyedMasks) {
+        this.renderer?.setLayerDestroyedMask(id, mask);
+      }
     }
     this.onContextRestored?.();
   };
@@ -267,16 +278,27 @@ export class MapRenderer {
 
   /** Toggle visibility of a single map layer. */
   setLayerVisible(layerId: string, visible: boolean): void {
+    this.layerVisibility.set(layerId, visible);
     this.renderer?.setLayerVisible(layerId, visible);
   }
 
   /** Batch-mark tiles as destroyed for a nukeable layer. */
   markLayerTilesDestroyed(layerId: string, tileIndices: number[]): void {
+    // Accumulate into the CPU-side mask for context-restore.
+    let mask = this.layerDestroyedMasks.get(layerId);
+    if (!mask) {
+      mask = new Uint8Array(this.header.mapWidth * this.header.mapHeight);
+      this.layerDestroyedMasks.set(layerId, mask);
+    }
+    for (const t of tileIndices) {
+      if (t >= 0 && t < mask.length) mask[t] = 1;
+    }
     this.renderer?.markLayerTilesDestroyed(layerId, tileIndices);
   }
 
   /** Bulk-update the destroyed mask for a nukeable layer. */
   setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
+    this.layerDestroyedMasks.set(layerId, new Uint8Array(mask));
     this.renderer?.setLayerDestroyedMask(layerId, mask);
   }
 

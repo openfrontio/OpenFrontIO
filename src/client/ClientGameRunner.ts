@@ -27,7 +27,11 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
+import {
+  loadLayerImages,
+  loadTerrainMap,
+  TerrainMapData,
+} from "../core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -155,6 +159,7 @@ export function joinLobby(
         message.gameMap,
         message.gameMapSize,
         terrainMapFileLoader,
+        false, // Layer images loaded off the critical path after game start.
       );
       resolvePrestart();
     }
@@ -513,6 +518,7 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMap,
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
+      false, // Layer images loaded off the critical path after game start.
     );
   }
   // Kick off the font-atlas fetch so it overlaps with worker init; the
@@ -568,17 +574,42 @@ async function createClientGame(
     view.setShowPatterns(userSettings.territoryPatterns());
 
     // Set up map layers if the map defines any.
-    if (gameMap.layers && gameMap.layerImages) {
-      view.setMapLayers(gameMap.layers, gameMap.layerImages);
-      // Apply saved layer visibility overrides from graphics settings.
-      const overrides = userSettings.graphicsOverrides();
-      if (overrides.mapLayerVisibility) {
-        for (const layer of gameMap.layers) {
-          const vis = overrides.mapLayerVisibility[layer.id];
-          if (vis !== undefined) {
-            view.setLayerVisible(layer.id, vis);
+    if (gameMap.layers && gameMap.layers.length > 0) {
+      const applyLayerVisibility = () => {
+        const overrides = userSettings.graphicsOverrides();
+        if (overrides.mapLayerVisibility) {
+          for (const layer of gameMap.layers!) {
+            const vis = overrides.mapLayerVisibility[layer.id];
+            if (vis !== undefined) {
+              view.setLayerVisible(layer.id, vis);
+            }
           }
         }
+      };
+
+      if (gameMap.layerImages) {
+        // Images already loaded (e.g. from cache) — set up immediately.
+        view.setMapLayers(gameMap.layers, gameMap.layerImages);
+        applyLayerVisibility();
+      } else {
+        // Layer images loaded off the critical path. Start fetching now;
+        // the renderer tolerates missing layers (warn + skip) until they
+        // arrive.
+        loadLayerImages(
+          lobbyConfig.gameStartInfo.config.gameMap,
+          lobbyConfig.gameStartInfo.config.gameMapSize,
+          mapLoader,
+          gameMap.layers,
+        )
+          .then((images) => {
+            if (!graphicsListenerAbort.signal.aborted) {
+              view.setMapLayers(gameMap.layers!, images);
+              applyLayerVisibility();
+            }
+          })
+          .catch((e) =>
+            console.warn("[ClientGameRunner] Failed to load layer images:", e),
+          );
       }
     }
 

@@ -64,6 +64,9 @@ export async function loadTerrainMap(
   map: GameMapType,
   mapSize: GameMapSize,
   terrainMapFileLoader: GameMapLoader,
+  /** Whether to load layer PNG images inline. The Web Worker path should
+   *  pass false — it never renders layers and should not retain ImageBitmaps. */
+  loadImages: boolean = true,
 ): Promise<TerrainMapData> {
   const cacheKey = `${map}:${mapSize}`;
   const cached = loadedMaps.get(cacheKey);
@@ -131,10 +134,12 @@ export async function loadTerrainMap(
     }
   }
 
-  // Load layer PNG images if the manifest defines layers.
+  // Load layer PNG images if requested and the manifest defines layers.
   // For Compact maps, downsample to map4x dimensions to match the game map.
+  // When loadImages=false (e.g. Web Worker), skip image loading — the caller
+  // can use loadLayerImages() separately.
   let layerImages: Map<string, ImageBitmap> | undefined;
-  if (layers && layers.length > 0) {
+  if (loadImages && layers && layers.length > 0) {
     layerImages = new Map();
     const compactW =
       mapSize === GameMapSize.Compact ? manifest.map4x.width : undefined;
@@ -172,6 +177,46 @@ export async function loadTerrainMap(
   };
   loadedMaps.set(cacheKey, result);
   return result;
+}
+
+/**
+ * Load layer PNG images for a map that already has layer definitions.
+ * Call this off the critical path (after the game has started) and pass
+ * the result to `Renderer.setMapLayers()`.
+ */
+export async function loadLayerImages(
+  map: GameMapType,
+  mapSize: GameMapSize,
+  terrainMapFileLoader: GameMapLoader,
+  layers: MapLayer[],
+): Promise<Map<string, ImageBitmap>> {
+  const mapFiles = terrainMapFileLoader.getMapData(map);
+  const manifest = await mapFiles.manifest();
+  const images = new Map<string, ImageBitmap>();
+  const compactW =
+    mapSize === GameMapSize.Compact ? manifest.map4x.width : undefined;
+  const compactH =
+    mapSize === GameMapSize.Compact ? manifest.map4x.height : undefined;
+  await Promise.all(
+    layers.map(async (layer) => {
+      try {
+        let img = await mapFiles.layerPng(layer.id);
+        if (compactW !== undefined && compactH !== undefined) {
+          img = await createImageBitmap(img, {
+            resizeWidth: compactW,
+            resizeHeight: compactH,
+            resizeQuality: "high",
+          });
+        }
+        images.set(layer.id, img);
+      } catch (e) {
+        console.warn(
+          `[MapLoader] Failed to load layer "${layer.id}" for map ${map}: ${e}`,
+        );
+      }
+    }),
+  );
+  return images;
 }
 
 export async function genTerrainFromBin(

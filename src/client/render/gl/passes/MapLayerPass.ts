@@ -153,25 +153,48 @@ export class MapLayerPass {
    * rebind overhead.
    */
   markTilesDestroyed(tileIndices: number[]): void {
-    const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.destroyedTex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    // Update CPU-side mask and find the bounding box of new destroyed tiles.
+    let minX = this.mapW,
+      minY = this.mapH,
+      maxX = -1,
+      maxY = -1;
+    let anyNew = false;
     for (const tileIndex of tileIndices) {
       if (tileIndex < 0 || tileIndex >= this.mapW * this.mapH) continue;
       if (this.destroyedData[tileIndex] === 1) continue;
       this.destroyedData[tileIndex] = 1;
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        tileIndex % this.mapW,
-        Math.floor(tileIndex / this.mapW),
-        1,
-        1,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        new Uint8Array([1]),
-      );
+      const x = tileIndex % this.mapW;
+      const y = (tileIndex - x) / this.mapW;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      anyNew = true;
     }
+    if (!anyNew) return;
+    // Single sub-region upload instead of per-tile 1×1 calls.
+    const gl = this.gl;
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+    const buf = new Uint8Array(w * h);
+    for (let row = minY; row <= maxY; row++) {
+      const srcOff = row * this.mapW + minX;
+      const dstOff = (row - minY) * w;
+      buf.set(this.destroyedData.subarray(srcOff, srcOff + w), dstOff);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, this.destroyedTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      minX,
+      minY,
+      w,
+      h,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      buf,
+    );
   }
 
   /** Re-upload all GPU resources (used after WebGL context restore). */
