@@ -46,7 +46,7 @@ export interface ColumnRow {
   readonly value: number;
 }
 
-type ValueGetter = (player: PlayerView, game: GameView) => number;
+export type ValueGetter = (player: PlayerView, game: GameView) => number;
 
 export interface ColumnDef {
   readonly id: ColumnId;

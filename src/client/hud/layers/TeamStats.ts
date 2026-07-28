@@ -4,7 +4,7 @@ import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import type { ColumnId } from "../../StatsConstants";
 import { translateText } from "../../Utils";
 import type { GameView, PlayerView } from "../../view";
-import type { ColumnDef } from "./lib/StatsColumns";
+import type { ColumnDef, ValueGetter } from "./lib/StatsColumns";
 
 export function aggregateTeamValues(
   players: readonly PlayerView[],
@@ -12,7 +12,10 @@ export function aggregateTeamValues(
   game: GameView,
 ): ReadonlyMap<ColumnId, number> {
   // Only columns with a number behind them have anything to add up.
-  const totalled = columns.filter((column) => column.value !== undefined);
+  const totalled = columns.filter(
+    (column): column is ColumnDef & { value: ValueGetter } =>
+      column.value !== undefined,
+  );
   const values = new Map<ColumnId, number>(
     totalled.map((column) => [column.id, 0]),
   );
@@ -22,7 +25,7 @@ export function aggregateTeamValues(
     for (const column of totalled) {
       values.set(
         column.id,
-        (values.get(column.id) ?? 0) + column.value!(player, game),
+        (values.get(column.id) ?? 0) + column.value(player, game),
       );
     }
   }
