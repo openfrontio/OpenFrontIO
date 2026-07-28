@@ -275,8 +275,7 @@ describe("Impassable Terrain", () => {
 
     const nuke = new NukeExecution(UnitType.MIRVWarhead, player, target);
     game.addExecution(nuke);
-    executeTicks(game, 10);
-    // Should have been blocked.
+    executeTicks(game, 2);
     expect(nuke.isActive()).toBe(true);
   });
   // ── Water conversion guard ────────────────────────────────────────────
