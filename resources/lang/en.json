@@ -931,6 +931,8 @@
     "no_stats": "No stats available",
     "player": "Player",
     "rank": "Rank",
+    "ranked_2v2_tab": "2v2 Ranked",
+    "ranked_no_stats": "No ranked games have been played on this ladder yet",
     "ranked_tab": "1v1 Ranked",
     "ratio": "Ratio",
     "refresh_time": "Refreshed every 1 hour",
