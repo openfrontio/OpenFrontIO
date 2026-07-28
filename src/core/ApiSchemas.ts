@@ -291,13 +291,9 @@ export const TribeNameSchema = z.object({
 });
 export type TribeName = z.infer<typeof TribeNameSchema>;
 
-// GET /users/@me/tribe_names. The name purchase price now lives in
-// cosmetics.json (tribeNames.priceHard); older API responses served it here
-// instead, so keep the field as an optional fallback. NOTE: a bare
-// z.coerce.number() would turn the now-absent field into NaN and fail the
-// whole list parse.
+// GET /users/@me/tribe_names. Prices live in cosmetics.json
+// (tribeNames.priceHard) — this endpoint only serves the player's names.
 export const GetMyTribeNamesResponseSchema = z.object({
-  priceHard: z.coerce.number().optional(),
   names: z.array(TribeNameSchema),
 });
 export type GetMyTribeNamesResponse = z.infer<

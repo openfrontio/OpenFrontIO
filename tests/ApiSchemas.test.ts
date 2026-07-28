@@ -830,24 +830,20 @@ describe("TribeNameSchema boost fields", () => {
 });
 
 describe("GetMyTribeNamesResponseSchema", () => {
-  // Regression: the API stopped serving priceHard on this endpoint when
-  // pricing moved to cosmetics.json; a required z.coerce.number() turned the
-  // absent field into NaN and failed the whole list parse.
-  it("parses a response without priceHard (pricing moved to cosmetics.json)", () => {
-    const result = GetMyTribeNamesResponseSchema.safeParse({ names: [] });
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-    expect(result.data.priceHard).toBeUndefined();
+  it("parses the names-only response (pricing lives in cosmetics.json)", () => {
+    expect(GetMyTribeNamesResponseSchema.safeParse({ names: [] }).success).toBe(
+      true,
+    );
   });
 
-  it("still parses the legacy response with a stringified priceHard", () => {
+  it("strips a legacy priceHard instead of rejecting it", () => {
     const result = GetMyTribeNamesResponseSchema.safeParse({
       priceHard: "200",
       names: [],
     });
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data.priceHard).toBe(200);
+    expect("priceHard" in result.data).toBe(false);
   });
 });
 

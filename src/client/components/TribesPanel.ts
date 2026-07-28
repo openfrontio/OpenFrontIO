@@ -58,8 +58,7 @@ export class TribesPanel extends LitElement {
   @property({ attribute: false }) userMeResponse: UserMeResponse | false =
     false;
 
-  // null = not loaded yet; false = load failed; otherwise the fetched data
-  // (which also carries the current purchase price).
+  // null = not loaded yet; false = load failed; otherwise the fetched data.
   @state() private data: GetMyTribeNamesResponse | false | null = null;
   @state() private purchasing = false;
   @state() private notice: { kind: "success" | "error"; text: string } | null =
@@ -103,13 +102,10 @@ export class TribesPanel extends LitElement {
     this.tribeNamesConfig = cosmetics?.tribeNames ?? null;
   }
 
-  // Name purchase price: cosmetics.json is the source of truth; older APIs
-  // served it on the list response instead.
+  // Name purchase price from cosmetics.json — the only source; the button
+  // stays disabled when the tribeNames block is absent.
   private get price(): number | null {
-    return (
-      this.tribeNamesConfig?.priceHard ??
-      (this.data ? (this.data.priceHard ?? null) : null)
-    );
+    return this.tribeNamesConfig?.priceHard ?? null;
   }
 
   private get hardBalance(): number {
