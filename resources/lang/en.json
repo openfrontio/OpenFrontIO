@@ -1438,6 +1438,12 @@
     "avatar_alt": "Steam avatar",
     "default_name": "Steam player"
   },
+  "steam_wishlist": {
+    "cta": "Wishlist now",
+    "on_steam": "OpenFront on Steam",
+    "release": "Available Q3 2026",
+    "title": "Wishlist OpenFront on Steam!"
+  },
   "store": {
     "already_subscribed": "Already subscribed.",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
@@ -1733,7 +1739,6 @@
     "spectate": "Spectate",
     "support_openfront": "Support OpenFront!",
     "territory_pattern": "Purchase a territory skin to go ad-free!",
-    "wishlist": "Wishlist on Steam!",
     "you_won": "You Won!",
     "your_team": "Your team won!",
     "youtube_tutorial": "Need some help?"
