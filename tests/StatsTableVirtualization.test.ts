@@ -5,7 +5,9 @@ import { UserSettings } from "../src/core/game/UserSettings";
 function player(id: string, tiles: number): PlayerView {
   return {
     id: () => id,
+    name: () => id,
     displayName: () => id,
+    clanTag: () => null,
     numTilesOwned: () => tiles,
     gold: () => BigInt(tiles),
     troops: () => tiles,

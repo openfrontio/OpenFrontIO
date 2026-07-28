@@ -317,6 +317,7 @@ export class PlayerImpl implements Player {
       clientID: this.clientID(),
       name: this.name(),
       displayName: this.displayName(),
+      clanTag: this.clanTag(),
       id: this.id(),
       team: this.team() ?? undefined,
       smallID: this.smallID(),
@@ -358,7 +359,9 @@ export class PlayerImpl implements Player {
   displayName(): string {
     return this.playerInfo.displayName;
   }
-
+  clanTag(): string | null {
+    return this.playerInfo.clanTag;
+  }
   clientID(): ClientID | null {
     return this.playerInfo.clientID;
   }

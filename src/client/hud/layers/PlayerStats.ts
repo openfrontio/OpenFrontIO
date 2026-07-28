@@ -10,7 +10,6 @@ export class PlayerStats extends StatsTable {
   public eventBus: EventBus | null = null;
 
   protected readonly tableKind = "player";
-  protected readonly nameLabelKey = "leaderboard.player";
 
   protected buildRows(
     game: GameView,
@@ -23,7 +22,8 @@ export class PlayerStats extends StatsTable {
       .filter((player) => player.isAlive())
       .map((player) => ({
         key: player.id(),
-        name: player.displayName(),
+        name: player.name(),
+        clanTag: player.clanTag(),
         values: columnValues(player, game, columns),
         emphasized:
           myPlayer !== null &&
