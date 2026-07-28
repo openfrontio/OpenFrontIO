@@ -101,6 +101,20 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
     expect(game.phase()).not.toBe(GamePhase.Finished);
   });
 
+  it("does not cancel unknown ranked types — new modes must opt in", () => {
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      { gameType: GameType.Public, rankedType: "3v3", maxPlayers: 6 } as any,
+      undefined,
+      Date.now() + 15000,
+    );
+    expect(game.joinClient(makeClient("c1", "p1"))).toBe("joined");
+
+    expect(game.cancelShortHandedMatch()).toBe(false);
+  });
+
   it("does not cancel non-ranked games, even short-handed", () => {
     const game = new GameServer(
       "test-game",

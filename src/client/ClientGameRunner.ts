@@ -244,10 +244,7 @@ export function joinLobby(
             composed: true,
           }),
         );
-        const matchmaking = document.querySelector("matchmaking-modal") as
-          | (HTMLElement & { requeue?: () => boolean })
-          | null;
-        matchmaking?.requeue?.();
+        document.dispatchEvent(new CustomEvent("matchmaking-requeue"));
         window.dispatchEvent(
           new CustomEvent("show-message", {
             detail: {

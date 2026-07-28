@@ -6,7 +6,7 @@ import { z } from "zod";
 import { anonAnimalName } from "../core/AnonAnimals";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
-import { GameMode, GameType } from "../core/game/Game";
+import { GameMode, GameType, RankedType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -1064,7 +1064,13 @@ export class GameServer {
   // the absent player never contested (1v1). Called at the start deadline;
   // cancels the game and returns true when a matched player never connected.
   public cancelShortHandedMatch(): boolean {
-    if (this.gameConfig.rankedType === undefined) {
+    // Explicitly 1v1/2v2 only — a future ranked type must opt in rather
+    // than inherit pre-start cancellation.
+    const rankedType = this.gameConfig.rankedType;
+    if (
+      rankedType !== RankedType.OneVOne &&
+      rankedType !== RankedType.TwoVTwo
+    ) {
       return false;
     }
     const expected = this.gameConfig.maxPlayers;
