@@ -61,9 +61,10 @@ export class SteamWishlist extends LitElement {
   @property({ type: String }) campaign = "";
 
   /**
-   * Set false to keep the iframe unloaded. Placements that stay in the DOM
-   * while hidden (the win modal) use this so Steam is only contacted once the
-   * widget is actually on screen.
+   * Set false to keep the iframe out of the DOM entirely. Placements that stay
+   * mounted while hidden (the win modal) use this so no browsing context is
+   * created and Steam is only contacted once the widget is actually on screen.
+   * The wrapper still reserves its height, so flipping this causes no jump.
    */
   @property({ type: Boolean }) active = true;
 
@@ -115,16 +116,20 @@ export class SteamWishlist extends LitElement {
         class="steam-wishlist-frame w-full mx-auto overflow-hidden"
         style="max-width: ${WIDGET_WIDTH}px; height: ${WIDGET_HEIGHT * scale}px"
       >
-        <iframe
-          class="block border-0 origin-top-left"
-          width=${frameWidth}
-          height=${WIDGET_HEIGHT}
-          style="transform: scale(${scale})"
-          src=${this.active ? steamWidgetUrl(this.campaign) : ""}
-          title=${translateText("steam_wishlist.title")}
-          loading="lazy"
-          scrolling="no"
-        ></iframe>
+        ${this.active
+          ? html`
+              <iframe
+                class="block border-0 origin-top-left"
+                width=${frameWidth}
+                height=${WIDGET_HEIGHT}
+                style="transform: scale(${scale})"
+                src=${steamWidgetUrl(this.campaign)}
+                title=${translateText("steam_wishlist.title")}
+                loading="lazy"
+                scrolling="no"
+              ></iframe>
+            `
+          : nothing}
       </div>
     `;
   }
