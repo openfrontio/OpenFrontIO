@@ -322,14 +322,18 @@ describe("SAM", () => {
     });
 
     // Close AtomBomb targeting right on the SAM (1, 1)
-    const dangerousNuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
-      targetTile: game.ref(1, 1),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(1, 2), targetable: true },
-        { tile: game.ref(1, 1), targetable: true },
-      ],
-    });
+    const dangerousNuke = attacker.buildUnit(
+      UnitType.AtomBomb,
+      game.ref(1, 2),
+      {
+        targetTile: game.ref(1, 1),
+        trajectory: [
+          { tile: game.ref(1, 1), targetable: true },
+          { tile: game.ref(1, 2), targetable: true },
+          { tile: game.ref(1, 1), targetable: true },
+        ],
+      },
+    );
 
     executeTicks(game, 3);
 
