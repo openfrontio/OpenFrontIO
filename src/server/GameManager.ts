@@ -138,7 +138,9 @@ export class GameManager {
         game.maybeAutoStartListed();
       }
       if (phase === GamePhase.Active) {
-        if (!game.hasStarted()) {
+        // A matchmade game missing a player at the start deadline is
+        // cancelled instead of started short-handed.
+        if (!game.hasStarted() && !game.cancelShortHandedMatch()) {
           // Prestart tells clients to start loading the game.
           game.prestart();
           // Start game on delay to allow time for clients to connect.

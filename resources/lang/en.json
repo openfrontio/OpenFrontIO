@@ -890,7 +890,8 @@
     "admin": "Kicked by an admin",
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
     "host_left": "The host has left the lobby.",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "match_cancelled": "Match cancelled: a player failed to connect. You have not lost any ELO."
   },
   "lang": {
     "en": "English",
@@ -1023,6 +1024,7 @@
     "featured": "Featured",
     "fingerlakes": "Finger Lakes",
     "fourislands": "Four Islands",
+    "france": "France",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
@@ -1150,6 +1152,7 @@
     "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
     "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "queue_size": "Players in queue: {count}",
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
@@ -1436,6 +1439,12 @@
   "steam_user_header": {
     "avatar_alt": "Steam avatar",
     "default_name": "Steam player"
+  },
+  "steam_wishlist": {
+    "cta": "Wishlist now",
+    "on_steam": "OpenFront on Steam",
+    "release": "Available Q3 2026",
+    "title": "Wishlist OpenFront on Steam!"
   },
   "store": {
     "already_subscribed": "Already subscribed.",
@@ -1732,7 +1741,6 @@
     "spectate": "Spectate",
     "support_openfront": "Support OpenFront!",
     "territory_pattern": "Purchase a territory skin to go ad-free!",
-    "wishlist": "Wishlist on Steam!",
     "you_won": "You Won!",
     "your_team": "Your team won!",
     "youtube_tutorial": "Need some help?"

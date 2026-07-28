@@ -99,6 +99,11 @@
     "name": "Almoravid Dynasty"
   },
   {
+    "code": "fr-a",
+    "continent": "Europe",
+    "name": "Alsace"
+  },
+  {
     "code": "Amazigh flag",
     "continent": "Africa",
     "name": "Amazigh Flag"
@@ -268,6 +273,16 @@
     "name": "Australian Aboriginal Flag"
   },
   {
+    "code": "fr-c",
+    "continent": "Europe",
+    "name": "Auvergne"
+  },
+  {
+    "code": "fr-ara",
+    "continent": "Europe",
+    "name": "Auvergne-Rhône-Alpes"
+  },
+  {
     "code": "Ayyubid Dynasty",
     "continent": "Asia",
     "name": "Ayyubid Dynasty"
@@ -417,6 +432,11 @@
     "name": "Botswana"
   },
   {
+    "code": "fr-bfc",
+    "continent": "Europe",
+    "name": "Bourgogne-Franche-Comté"
+  },
+  {
     "code": "bv",
     "name": "Bouvet Island"
   },
@@ -486,9 +506,14 @@
     "name": "Burkina Faso"
   },
   {
-    "code": "burgundy",
+    "code": "fr-d",
     "continent": "Europe",
     "name": "Burgundy"
+  },
+  {
+    "code": "burgundy",
+    "continent": "Europe",
+    "name": "Cross Of Burgundy"
   },
   {
     "code": "Burma",
@@ -580,6 +605,11 @@
     "name": "Central African Republic"
   },
   {
+    "code": "fr-cvl",
+    "continent": "Europe",
+    "name": "Centre-Val de Loire"
+  },
+  {
     "code": "Chaco",
     "continent": "South America",
     "name": "Chaco"
@@ -593,6 +623,11 @@
     "code": "Chaldea",
     "continent": "Asia",
     "name": "Chaldea"
+  },
+  {
+    "code": "fr-g",
+    "continent": "Europe",
+    "name": "Champagne-Ardenne"
   },
   {
     "code": "Cherokee Nation",
@@ -1064,9 +1099,19 @@
     "name": "France"
   },
   {
+    "code": "fr-i",
+    "continent": "Europe",
+    "name": "Franche-Comté"
+  },
+  {
     "code": "1_Franks",
     "continent": "Europe",
     "name": "Franks"
+  },
+  {
+    "code": "Free France",
+    "continent": "Europe",
+    "name": "Free France"
   },
   {
     "code": "French foreign legion",
@@ -1110,6 +1155,11 @@
     "code": "gm",
     "continent": "Africa",
     "name": "Gambia"
+  },
+  {
+    "code": "Gascony",
+    "continent": "Europe",
+    "name": "Gascony"
   },
   {
     "code": "Garamant",
@@ -1166,6 +1216,11 @@
     "code": "Golden Horde",
     "continent": "Asia",
     "name": "Golden Horde"
+  },
+  {
+    "code": "fr-ges",
+    "continent": "Europe",
+    "name": "Grand Est"
   },
   {
     "code": "Grand Duchy of Finland",
@@ -1253,6 +1308,11 @@
     "name": "Haida"
   },
   {
+    "code": "fr-hdf",
+    "continent": "Europe",
+    "name": "Hauts-de-France"
+  },
+  {
     "code": "Hawaii",
     "continent": "Oceania",
     "name": "Hawaii"
@@ -1300,6 +1360,11 @@
     "code": "Idaho",
     "continent": "North America",
     "name": "Idaho"
+  },
+  {
+    "code": "fr-idf",
+    "continent": "Europe",
+    "name": "Île-de-France"
   },
   {
     "code": "Illinois (Centennial)",
@@ -1532,6 +1597,11 @@
     "name": "Kingdom of Egypt"
   },
   {
+    "code": "Kingdom of France",
+    "continent": "Europe",
+    "name": "Kingdom of France"
+  },
+  {
     "code": "Kingdom of Iraq",
     "continent": "Asia",
     "name": "Kingdom of Iraq"
@@ -1661,6 +1731,11 @@
     "name": "Lancashire"
   },
   {
+    "code": "fr-k",
+    "continent": "Europe",
+    "name": "Languedoc-Roussillon"
+  },
+  {
     "code": "la",
     "continent": "Asia",
     "name": "Laos"
@@ -1734,6 +1809,11 @@
     "name": "Lincoln"
   },
   {
+    "code": "fr-l",
+    "continent": "Europe",
+    "name": "Limousin"
+  },
+  {
     "code": "Listenbourg",
     "name": "Listenbourg"
   },
@@ -1756,6 +1836,11 @@
     "code": "Los Rios",
     "continent": "South America",
     "name": "Los Rios"
+  },
+  {
+    "code": "fr-m",
+    "continent": "Europe",
+    "name": "Lorraine"
   },
   {
     "code": "Louisiana",
@@ -2088,6 +2173,11 @@
     "name": "Namibia"
   },
   {
+    "code": "Napoleon",
+    "continent": "Europe",
+    "name": "Napoleon"
+  },
+  {
     "code": "NATO",
     "name": "NATO"
   },
@@ -2306,6 +2396,11 @@
     "name": "Norway"
   },
   {
+    "code": "fr-naq",
+    "continent": "Europe",
+    "name": "Nouvelle-Aquitaine"
+  },
+  {
     "code": "novascotia",
     "continent": "North America",
     "name": "Nova Scotia"
@@ -2421,6 +2516,11 @@
     "name": "Paris"
   },
   {
+    "code": "fr-pdl",
+    "continent": "Europe",
+    "name": "Pays de la Loire"
+  },
+  {
     "code": "Pennsylvania",
     "continent": "North America",
     "name": "Pennsylvania"
@@ -2466,6 +2566,11 @@
     "name": "Phrygia"
   },
   {
+    "code": "fr-s",
+    "continent": "Europe",
+    "name": "Picardy"
+  },
+  {
     "code": "Pine Tree Flag",
     "continent": "North America",
     "name": "Pine Tree Flag"
@@ -2474,6 +2579,11 @@
     "code": "pn",
     "continent": "Oceania",
     "name": "Pitcairn"
+  },
+  {
+    "code": "fr-t",
+    "continent": "Europe",
+    "name": "Poitou-Charentes"
   },
   {
     "code": "pl",
@@ -2518,6 +2628,11 @@
     "code": "provence",
     "continent": "Europe",
     "name": "Provence"
+  },
+  {
+    "code": "fr-pac",
+    "continent": "Europe",
+    "name": "Provence-Alpes-Côte d'Azur"
   },
   {
     "code": "prussia",
@@ -2617,6 +2732,11 @@
     "code": "Rhode_Island",
     "continent": "North America",
     "name": "Rhode Island"
+  },
+  {
+    "code": "fr-v",
+    "continent": "Europe",
+    "name": "Rhône-Alpes"
   },
   {
     "code": "rio_de_janeiro",

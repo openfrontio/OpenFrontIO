@@ -246,6 +246,8 @@ export class LangSelector extends LitElement {
       "matchmaking-button",
       "token-login",
       "tribes-panel",
+      "steam-wishlist",
+      "steam-wishlist-button",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

@@ -862,7 +862,13 @@ function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
               ? { ...baseConfig, allowedPublicIds: parsed.data.players }
               : baseConfig,
             undefined,
-            Date.now() + 7000,
+            // Deadline for the slowest player: after match-assignment the
+            // client still has to poll game existence, pass Turnstile, and
+            // clear join auth; anyone not connected when start() fires is
+            // left out of the roster and the ranked game starts short-handed.
+            // A full lobby is NOT delayed by this — hasReachedMaxPlayerCount
+            // flips the phase to Active as soon as everyone has joined.
+            Date.now() + 15000,
             undefined,
             parsed.success ? parsed.data.teams : undefined,
           );
