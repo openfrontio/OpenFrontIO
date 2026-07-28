@@ -47,6 +47,7 @@ export enum GameMapType {
   FaroeIslands = "Faroe Islands", // map-generator/assets/maps/faroeislands/info.json
   FingerLakes = "Finger Lakes", // map-generator/assets/maps/fingerlakes/info.json
   FourIslands = "Four Islands", // map-generator/assets/maps/fourislands/info.json
+  France = "France", // map-generator/assets/maps/france/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
@@ -508,6 +509,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["fictional"],
     multiplayerFrequency: 4,
     specialTeamCount: 4,
+  },
+  {
+    id: "France",
+    type: GameMapType.France,
+    translationKey: "map.france",
+    categories: ["new", "europe", "countries"],
+    multiplayerFrequency: 8,
   },
   {
     id: "GatewayToTheAtlantic",
