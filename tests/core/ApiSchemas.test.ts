@@ -25,4 +25,16 @@ describe("UserMeResponseSchema steam identity", () => {
     });
     expect(parsed.user.steam?.steamId).toBe("77");
   });
+
+  it("accepts a user.steam identity with null personaName/avatarUrl (GetPlayerSummaries fallback)", () => {
+    const parsed = UserMeResponseSchema.parse({
+      user: {
+        steam: { steamId: "77", personaName: null, avatarUrl: null },
+      },
+      player: samplePlayer(),
+    });
+    expect(parsed.user.steam?.steamId).toBe("77");
+    expect(parsed.user.steam?.personaName).toBeNull();
+    expect(parsed.user.steam?.avatarUrl).toBeNull();
+  });
 });

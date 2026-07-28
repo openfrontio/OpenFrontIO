@@ -1420,7 +1420,8 @@
     "link_signpost": "Have an existing OpenFront account? Account linking is coming in a later update."
   },
   "steam_user_header": {
-    "avatar_alt": "Steam avatar"
+    "avatar_alt": "Steam avatar",
+    "default_name": "Steam player"
   },
   "store": {
     "already_subscribed": "Already subscribed.",

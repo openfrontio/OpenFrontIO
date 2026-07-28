@@ -28,7 +28,8 @@ export class SteamUserHeader extends LitElement {
 
   render() {
     if (!this._data) return html``;
-    const name = this._data.personaName ?? "";
+    const name =
+      this._data.personaName || translateText("steam_user_header.default_name");
     const avatar = this._data.avatarUrl;
     return html`
       <div class="flex items-center gap-2">

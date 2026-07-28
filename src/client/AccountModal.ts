@@ -132,7 +132,7 @@ export class AccountModal extends BaseModal {
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      !!(me?.discord ?? me?.google ?? me?.email ?? me?.steam) ||
+      !!(me?.discord || me?.google || me?.email || me?.steam) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
   }
@@ -140,7 +140,8 @@ export class AccountModal extends BaseModal {
   // Steam is the primary (and only, in v1) identity for a Steam user — no
   // linking UI (email/Google) is offered for them; see renderSettingsTab.
   private isSteamPrimary(): boolean {
-    return !!this.userMeResponse?.user?.steam;
+    const me = this.userMeResponse?.user;
+    return !!me?.steam && !me.discord && !me.google && !me.email;
   }
 
   protected modalConfig() {
