@@ -513,6 +513,10 @@ export type RankedLeaderboardEntry = z.infer<
 
 export const RankedLeaderboardResponseSchema = z.object({
   [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
+  // Each ranked type is its own ladder, ranked independently: a player can
+  // appear on both with a different elo and rank. Defaulted because an API
+  // deployment that predates the 2v2 ladder omits the key entirely.
+  [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema

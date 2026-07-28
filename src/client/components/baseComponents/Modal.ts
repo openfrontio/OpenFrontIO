@@ -91,7 +91,7 @@ export class OModal extends LitElement {
     return html`
       <div
         role="tablist"
-        class="flex justify-center border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
+        class="flex flex-wrap justify-center border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
       >
         ${this.tabs.map((tab) => {
           const active = this.activeTab === tab.key;
