@@ -1,0 +1,54 @@
+{
+  "name": "Yangtze River",
+  "id": "YangtzeRiver",
+  "translation_key": "map.yangtzeriver",
+  "categories": ["new", "asia"],
+  "multiplayer_frequency": 3,
+  "nations": [
+    {
+      "coordinates": [3306, 1778],
+      "name": "Shanghai",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1926, 640],
+      "name": "Taizhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [2695, 894],
+      "name": "Nantong",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [2223, 1072],
+      "name": "Changzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1040, 1054],
+      "name": "Nanjing",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [86, 2200],
+      "name": "Wuhu",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1548, 872],
+      "name": "Zhenjiang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [749, 1529],
+      "name": "Ma'anshan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [3724, 2544],
+      "name": "Daishan Island",
+      "flag": "cn"
+    }
+  ]
+}
