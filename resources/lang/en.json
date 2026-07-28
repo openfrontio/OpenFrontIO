@@ -936,7 +936,7 @@
     "tribes_name": "Name",
     "tribes_no_stats": "No tribes have appeared in a game yet",
     "tribes_reach": "Player Reach",
-    "tribes_reach_tooltip": "The total number of players in the games this name appeared in. One player who saw the same name in three games counts three times.",
+    "tribes_reach_tooltip": "The total number of players in the games this name appeared in.",
     "tribes_reach_value_tooltip": "Appeared in games with {count} players",
     "tribes_tab": "Tribes",
     "tribes_window": "Rolling {days}-day window ({start} – {end})",
