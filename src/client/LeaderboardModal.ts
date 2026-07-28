@@ -5,8 +5,12 @@ import "./components/leaderboard/LeaderboardClanTable";
 import type { LeaderboardClanTable } from "./components/leaderboard/LeaderboardClanTable";
 import "./components/leaderboard/LeaderboardPlayerList";
 import type { LeaderboardPlayerList } from "./components/leaderboard/LeaderboardPlayerList";
+import "./components/leaderboard/LeaderboardTribeTable";
+import type { LeaderboardTribeTable } from "./components/leaderboard/LeaderboardTribeTable";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
+
+const TAB_KEYS = ["players", "clans", "tribes"] as const;
 
 @customElement("leaderboard-modal")
 export class LeaderboardModal extends BaseModal {
@@ -19,6 +23,8 @@ export class LeaderboardModal extends BaseModal {
   private playerList?: LeaderboardPlayerList;
   @query("leaderboard-clan-table")
   private clanTable?: LeaderboardClanTable;
+  @query("leaderboard-tribe-table")
+  private tribeTable?: LeaderboardTribeTable;
 
   private loadToken = 0;
 
@@ -30,8 +36,15 @@ export class LeaderboardModal extends BaseModal {
           label: translateText("leaderboard_modal.ranked_tab"),
         },
         { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
+        { key: "tribes", label: translateText("leaderboard_modal.tribes_tab") },
       ],
     };
+  }
+
+  private tabComponent(tab: string) {
+    if (tab === "players") return this.playerList;
+    if (tab === "clans") return this.clanTable;
+    return this.tribeTable;
   }
 
   protected onOpen(): void {
@@ -45,26 +58,29 @@ export class LeaderboardModal extends BaseModal {
   private loadActiveTabData() {
     const token = ++this.loadToken;
 
+    const active = this.activeTab;
+
     const run = async () => {
       if (token !== this.loadToken) return;
 
-      if (this.activeTab === "players") {
+      if (active === "players") {
         await this.playerList?.ensureLoaded();
         if (token !== this.loadToken) return;
         this.playerList?.handleTabActivated();
       } else {
-        await this.clanTable?.ensureLoaded();
+        await this.tabComponent(active)?.ensureLoaded();
       }
 
       queueMicrotask(() => {
         if (token !== this.loadToken) return;
-        if (this.activeTab === "players") void this.clanTable?.ensureLoaded();
-        else void this.playerList?.ensureLoaded();
+        for (const key of TAB_KEYS) {
+          if (key !== active) void this.tabComponent(key)?.ensureLoaded();
+        }
       });
     };
 
     void (async () => {
-      if (!(this.activeTab === "players" ? this.playerList : this.clanTable)) {
+      if (!this.tabComponent(active)) {
         await this.updateComplete;
       }
       await run();
@@ -101,7 +117,9 @@ export class LeaderboardModal extends BaseModal {
             ${translateText("leaderboard_modal.title")}
           </span>
           ${this.activeTab === "clans" ? dateRange : ""}
-          ${this.activeTab === "players" ? refreshTime : ""}
+          ${this.activeTab === "players" || this.activeTab === "tribes"
+            ? refreshTime
+            : ""}
         </div>
       `,
       onBack: () => this.close(),
@@ -121,6 +139,9 @@ export class LeaderboardModal extends BaseModal {
             event: CustomEvent<{ start: string; end: string }>,
           ) => this.handleClanDateRangeChange(event)}
         ></leaderboard-clan-table>
+        <leaderboard-tribe-table
+          class=${this.activeTab === "tribes" ? "h-full" : "hidden"}
+        ></leaderboard-tribe-table>
       </div>
     `;
   }

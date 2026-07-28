@@ -25,6 +25,8 @@ import {
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
+  TribeLeaderboardResponse,
+  TribeLeaderboardResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
@@ -984,6 +986,61 @@ export async function fetchPlayerLeaderboard(
     console.error("fetchPlayerLeaderboard: request failed", err);
     return false;
   }
+}
+
+const TRIBE_LEADERBOARD_PAGE_SIZE = 50;
+
+async function fetchTribeLeaderboardPage(
+  page: number,
+): Promise<TribeLeaderboardResponse | false> {
+  try {
+    const url = new URL(`${getApiBase()}/leaderboard/tribes`);
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      console.warn(
+        "fetchTribeLeaderboardPage: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const parsed = TribeLeaderboardResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchTribeLeaderboardPage: Zod validation failed",
+        parsed.error.toString(),
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.error("fetchTribeLeaderboardPage: request failed", err);
+    return false;
+  }
+}
+
+// Fetches the whole tribe-name board. It caps at two 50-entry pages and the
+// response carries no total or hasMore, so a full first page is the only
+// signal that a second one exists — and the common case early on is one
+// short page, i.e. a single request.
+export async function fetchTribeLeaderboard(): Promise<
+  TribeLeaderboardResponse | false
+> {
+  const first = await fetchTribeLeaderboardPage(1);
+  if (first === false) return false;
+  if (first.tribes.length < TRIBE_LEADERBOARD_PAGE_SIZE) return first;
+
+  // A truncated board beats an error screen, so keep page 1 if the tail fails.
+  const second = await fetchTribeLeaderboardPage(2);
+  if (second === false) return first;
+
+  return { ...first, tribes: [...first.tribes, ...second.tribes] };
 }
 
 export async function getNews(): Promise<NewsItem[]> {
