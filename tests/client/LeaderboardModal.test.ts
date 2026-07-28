@@ -643,8 +643,18 @@ describe("LeaderboardModal", () => {
     });
 
     it("selects the 2v2 ladder from its tab", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-        jsonRes({ "1v1": [], "2v2": [] }),
+      // The tab click also prefetches the clan and tribe tabs, so route by
+      // URL: a blanket resolved value would feed them ladder-shaped JSON and
+      // crash their renders after the test ends.
+      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+        async (input: any) => {
+          const url =
+            typeof input === "string" ? input : (input?.url ?? String(input));
+          if (url.includes("/leaderboard/ranked")) {
+            return jsonRes({ "1v1": [], "2v2": [] });
+          }
+          return jsonRes({}, false, 404);
+        },
       );
 
       modal.inline = true;
