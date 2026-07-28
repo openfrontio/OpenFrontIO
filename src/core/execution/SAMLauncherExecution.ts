@@ -96,13 +96,57 @@ class SAMTargetingSystem {
     return undefined;
   }
 
-  public getSingleTarget(ticks: number): Target | null {
+  private computeTargetScore(target: Target): number {
+    const samTile = this.sam.tile();
+    const unit = target.unit;
+    const trajectory = unit.trajectory();
+    const currentIndex = unit.trajectoryIndex();
+    const timeToExplode = Math.max(1, trajectory.length - currentIndex);
+
+    const targetTile =
+      unit.targetTile() ??
+      (trajectory.length > 0 ? trajectory[trajectory.length - 1].tile : samTile);
+
+    const distToSilo = this.mg.manhattanDist(samTile, targetTile);
+
+    // Type bonus: Hydro gets +70,001
+    // (70,000 offset balances the distance bonus between Hydro at 100 and Atom at 30)
+    const typeBonus = unit.type() === UnitType.HydrogenBomb ? 70_001 : 0;
+
+    // Distance bonus: Closer to silo higher score (-1,000 pts per unit distance)
+    // due to manhattanDist, distToSilo can exceed 150 diagonally, 200000 starting point.
+    const distanceBonus = Math.max(0, 200_000 - distToSilo * 1000);
+
+    // Time based score: +100 pts per tick earlier
+    // Since all nukes are already guaranteed to need a SAM response at this tick,
+    // this is only a very minor tiebreaker.
+    const urgencyBonus = Math.max(0, 10_000 - timeToExplode * 100);
+
+    return typeBonus + distanceBonus + urgencyBonus;
+  }
+
+  private sortTargets(targets: Target[]): Target[] {
+    if (targets.length <= 1) return targets;
+
+    // Create a map for quick look-up time.
+    const scores = new Map<Target, number>();
+    for (const target of targets) {
+      scores.set(target, this.computeTargetScore(target));
+    }
+
+    // Sort by score, js' Timsort guarantees O(n log n)
+    return targets.sort((a, b) => scores.get(b)! - scores.get(a)!);
+  }
+
+  public getValidTargets(ticks: number): Target[] {
     const samTile = this.sam.tile();
     const range = this.mg.config().samRange(this.sam.level());
     const rangeSquared = range * range;
 
-    // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().maxSamRange() * 2;
+    // Look beyond the SAM range so it can preshot nukes. 
+    // Every missile should be spotted in time to allow it to be shot down at maxSamRange
+    // Times 3 is barely not enough for a MIRV warhead (speed 22 vs SAM 12)
+    const detectionRange = this.mg.config().maxSamRange() * 4;
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
@@ -128,7 +172,7 @@ class SAMTargetingSystem {
     // Clear unreachable nukes that went out of range
     this.updateUnreachableNukes(nukes);
 
-    let best: Target | null = null;
+    const targets: Target[] = [];
     for (const nuke of nukes) {
       const nukeId = nuke.unit.id();
       const cached = this.precomputedNukes.get(nukeId);
@@ -139,14 +183,7 @@ class SAMTargetingSystem {
         }
         if (cached.tick === ticks) {
           // Time to shoot!
-          const target = { tile: cached.tile, unit: nuke.unit };
-          if (
-            best === null ||
-            (target.unit.type() === UnitType.HydrogenBomb &&
-              best.unit.type() !== UnitType.HydrogenBomb)
-          ) {
-            best = target;
-          }
+          targets.push({ tile: cached.tile, unit: nuke.unit});
           this.precomputedNukes.delete(nukeId);
           continue;
         }
@@ -165,15 +202,10 @@ class SAMTargetingSystem {
       if (interceptionTile !== undefined) {
         if (interceptionTile.tick <= 1) {
           // Shoot instantly
-
-          const target = { unit: nuke.unit, tile: interceptionTile.tile };
-          if (
-            best === null ||
-            (target.unit.type() === UnitType.HydrogenBomb &&
-              best.unit.type() !== UnitType.HydrogenBomb)
-          ) {
-            best = target;
-          }
+          targets.push({
+            unit: nuke.unit,
+            tile: interceptionTile.tile,
+          });
         } else {
           // Nuke will be reachable but not yet. Store the result.
           this.precomputedNukes.set(nukeId, {
@@ -187,7 +219,7 @@ class SAMTargetingSystem {
       }
     }
 
-    return best;
+    return this.sortTargets(targets);
   }
 }
 
@@ -260,8 +292,11 @@ export class SAMLauncherExecution implements Execution {
     this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
     // target is already filtered to exclude nukes targeted by other SAMs
-    const target = this.targetingSystem.getSingleTarget(ticks);
-    if (target !== null) {
+    const targets = this.targetingSystem.getValidTargets(ticks);
+    for (const target of targets) {
+      if (this.sam.isInCooldown()) {
+        break; 
+      }
       this.sam.launch();
       target.unit.setTargetedBySAM(true);
       this.mg.addExecution(
