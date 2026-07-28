@@ -4,7 +4,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { isSteamPrimaryUser } from "./AccountIdentity";
+import { hasLinkedIdentity, isSteamPrimaryUser } from "./AccountIdentity";
 import {
   fetchPlayerById,
   getUserMe,
@@ -128,15 +128,11 @@ export class AccountModal extends BaseModal {
   }
 
   private isLinkedAccount(): boolean {
-    const me = this.userMeResponse?.user;
     // The CrazyGames identity only counts once the backend token exchange
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      // `??` (repo lint rule) with `steam` ordered before `email`: a present
-      // steam identity is reached before an empty-string `email` can short-
-      // circuit the chain and mis-classify a Steam user as not-linked.
-      !!(me?.discord ?? me?.google ?? me?.steam ?? me?.email) ||
+      hasLinkedIdentity(this.userMeResponse?.user) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
   }
