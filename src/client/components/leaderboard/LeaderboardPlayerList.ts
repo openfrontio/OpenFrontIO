@@ -224,17 +224,11 @@ export class LeaderboardPlayerList extends LitElement {
   // be reproduced by a separate element; and below 34rem the table scrolls
   // horizontally, which an overlay outside .scroll-container would not follow.
   private renderStickyUserRow() {
-    if (!this.currentUserEntry) return nothing;
+    if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
 
     return html`
-      <tfoot
-        class="sticky bottom-0 z-20 transition-opacity duration-200 ${this
-          .showStickyUser
-          ? "opacity-100"
-          : "opacity-0 pointer-events-none"}"
-        aria-hidden=${this.showStickyUser ? nothing : "true"}
-      >
+      <tfoot class="sticky bottom-0 z-20">
         <tr class="bg-blue-600 border-t border-blue-400/30 shadow-2xl">
           <td class="py-3 px-4 text-center">
             <div

@@ -129,6 +129,7 @@ describe("LeaderboardModal", () => {
       updateComplete: Promise<unknown>;
       playerData: Array<Record<string, unknown>>;
       currentUserEntry?: { playerId: string } | null;
+      showStickyUser: boolean;
     } | null;
 
   beforeEach(async () => {
@@ -323,6 +324,86 @@ describe("LeaderboardModal", () => {
 
       expect(playerList.playerData[0]).not.toHaveProperty("clanTag");
       expect(modal.textContent).not.toContain("[AAA]");
+    });
+
+    // The pinned "your ranking" row has to stay inside the table — its column
+    // widths come from the table's own colgroup, so anything rendered outside
+    // it goes out of alignment the moment the modal is resized. The cell count
+    // is what breaks if a column is added to the header and not the footer.
+    it("pins the user row as a tfoot inside the table", async () => {
+      const { getUserMe } = await import("../../src/client/Api");
+      (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        player: { publicId: "player-1" },
+      });
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [
+            {
+              rank: 1,
+              elo: 1200,
+              peakElo: 1300,
+              wins: 6,
+              losses: 4,
+              total: 10,
+              public_id: "player-1",
+              username: "Alpha",
+              accountUsername: "alpha.4821",
+            },
+          ],
+        }),
+      );
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      // jsdom has no layout, so the scroll-position check that normally drives
+      // this always concludes the user's own row is on screen. Force it on.
+      playerList.showStickyUser = true;
+      await playerList.updateComplete;
+
+      const table = modal.querySelector("leaderboard-player-list table")!;
+      const tfoot = table.querySelector(":scope > tfoot");
+      expect(tfoot).toBeTruthy();
+      expect(tfoot!.querySelectorAll("td")).toHaveLength(
+        table.querySelectorAll("thead th").length,
+      );
+    });
+
+    // opacity leaves the row in flow: hiding it that way reserved a row of
+    // blank space at the end of the table.
+    it("removes the pinned row from the table when it is not showing", async () => {
+      const { getUserMe } = await import("../../src/client/Api");
+      (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        player: { publicId: "player-1" },
+      });
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [
+            {
+              rank: 1,
+              elo: 1200,
+              peakElo: 1300,
+              wins: 6,
+              losses: 4,
+              total: 10,
+              public_id: "player-1",
+              username: "Alpha",
+              accountUsername: "alpha.4821",
+            },
+          ],
+        }),
+      );
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      playerList.showStickyUser = false;
+      await playerList.updateComplete;
+
+      expect(playerList.currentUserEntry?.playerId).toBe("player-1");
+      expect(
+        modal.querySelector("leaderboard-player-list table tfoot"),
+      ).toBeNull();
     });
   });
 
