@@ -71,6 +71,13 @@ export const GoogleUserSchema = z.object({
 });
 export type GoogleUser = z.infer<typeof GoogleUserSchema>;
 
+export const SteamUserSchema = z.object({
+  steamId: z.string(),
+  personaName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+});
+export type SteamUser = z.infer<typeof SteamUserSchema>;
+
 const SingleplayerMapAchievementSchema = z.object({
   mapName: z.string(),
   difficulty: z.enum(Difficulty),
@@ -151,6 +158,7 @@ export const UserMeResponseSchema = z.object({
     discord: DiscordUserSchema.optional(),
     google: GoogleUserSchema.optional(),
     email: z.string().optional(),
+    steam: SteamUserSchema.optional(),
   }),
   player: z.object({
     publicId: z.string(),
@@ -278,13 +286,22 @@ export const TribeNameSchema = z.object({
   status: TribeNameStatusSchema,
   // Player-facing explanation, set only when a mod rejects/revokes the name.
   reviewReason: z.string().nullable(),
+  // Count of unexpired boosts. The in-game draw weight is 1 + activeBoosts,
+  // so this + 1 is the multiplier to display. Optional for older responses.
+  activeBoosts: z.coerce.number().optional(),
+  // When the LAST unexpired boost lapses (the name stops being boosted
+  // entirely); null when unboosted. Deliberately a plain string, not
+  // z.iso.datetime(): the API has served raw pg text here
+  // ("2026-08-23 18:04:11+00"), and a strict format check on a
+  // display-only date fails the whole list parse. The renderer guards
+  // unparseable values.
+  boostExpiresAt: z.string().nullable().optional(),
 });
 export type TribeName = z.infer<typeof TribeNameSchema>;
 
-// GET /users/@me/tribe_names. `priceHard` is the current purchase price in
-// plutonium (server-provided so the client doesn't hardcode it).
+// GET /users/@me/tribe_names. Prices live in cosmetics.json
+// (tribeNames.priceHard) — this endpoint only serves the player's names.
 export const GetMyTribeNamesResponseSchema = z.object({
-  priceHard: z.coerce.number(),
   names: z.array(TribeNameSchema),
 });
 export type GetMyTribeNamesResponse = z.infer<
@@ -301,6 +318,55 @@ export const PostTribeNameResponseSchema = z.object({
   pricePaid: z.string(),
 });
 export type PostTribeNameResponse = z.infer<typeof PostTribeNameResponseSchema>;
+
+// POST /users/@me/tribe_names/:id/boosts response (201). Ids and pricePaid
+// are stringified bigints. Boost state (activeBoosts/boostExpiresAt) is
+// deliberately absent — re-fetch the name list after a purchase instead of
+// reconstructing it client-side.
+export const PostTribeBoostResponseSchema = z.object({
+  id: z.string(),
+  customTribeNameId: z.string(),
+  expiresAt: z.iso.datetime(),
+  pricePaid: z.string(),
+});
+export type PostTribeBoostResponse = z.infer<
+  typeof PostTribeBoostResponseSchema
+>;
+
+// GET /leaderboard/tribes?page=N — public, ranked by rolling 30-day player
+// reach. Pages are 1-based, 50 per page, capped at page 2 (top 100); the
+// response carries no total or hasMore, so a full page is the only signal
+// that another one may exist.
+export const TribeLeaderboardEntrySchema = z.object({
+  // Absolute across pages: page 2 starts at rank 51.
+  rank: z.number(),
+  name: z.string(),
+  gamesAppeared: z.number(),
+  // Impressions, NOT distinct players — one player who saw the name in
+  // three games counts three times. Never label this "people seen by".
+  playerReach: z.number(),
+  // The buyer, same pair the ranked board exposes: the public id to link a
+  // profile with, and the account display name (null when they've never set
+  // one — fall back to the public id, which is what <player-name> does).
+  ownerPublicId: z.string(),
+  ownerUsername: z.string().nullable(),
+});
+export type TribeLeaderboardEntry = z.infer<typeof TribeLeaderboardEntrySchema>;
+
+export const TribeLeaderboardResponseSchema = z.object({
+  windowDays: z.number(),
+  // Inclusive YYYY-MM-DD bounds of the window. Plain strings rather than
+  // z.iso.date(): they are display-only, and a strict format check on a
+  // date field would fail the whole board parse if the wire format wobbles
+  // the way boostExpiresAt's did above. The renderer guards what it can't
+  // read and drops the caption.
+  start: z.string(),
+  end: z.string(),
+  tribes: TribeLeaderboardEntrySchema.array(),
+});
+export type TribeLeaderboardResponse = z.infer<
+  typeof TribeLeaderboardResponseSchema
+>;
 
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,

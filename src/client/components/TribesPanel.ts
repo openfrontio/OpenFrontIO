@@ -1,4 +1,4 @@
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   GetMyTribeNamesResponse,
@@ -6,14 +6,19 @@ import {
   TribeNameStatus,
   UserMeResponse,
 } from "../../core/ApiSchemas";
+import { Cosmetics } from "../../core/CosmeticSchemas";
 import {
+  boostTribeName,
   getMyTribeNames,
   getUserMe,
   invalidateUserMe,
   purchaseTribeName,
 } from "../Api";
+import { fetchCosmetics, InsufficientCurrency } from "../Cosmetics";
+import { showInGameConfirm } from "../InGameModal";
 import { translateText } from "../Utils";
 import { renderLoadingSpinner } from "./BaseModal";
+import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
 
 const MAX_TRIBE_NAME_LENGTH = 100;
@@ -53,12 +58,24 @@ export class TribesPanel extends LitElement {
   @property({ attribute: false }) userMeResponse: UserMeResponse | false =
     false;
 
-  // null = not loaded yet; false = load failed; otherwise the fetched data
-  // (which also carries the current purchase price).
+  // null = not loaded yet; false = load failed; otherwise the fetched data.
   @state() private data: GetMyTribeNamesResponse | false | null = null;
   @state() private purchasing = false;
   @state() private notice: { kind: "success" | "error"; text: string } | null =
     null;
+  // Boost pricing from cosmetics.json; null hides boost purchasing entirely
+  // (an older cosmetics.json without the tribeNames block).
+  @state() private tribeNamesConfig: NonNullable<
+    Cosmetics["tribeNames"]
+  > | null = null;
+  // id of the name whose boost purchase is in flight (all boost buttons
+  // disable while set, preventing the double-submit the API doc warns about).
+  @state() private boostingId: string | null = null;
+  @state() private boostNotice: {
+    kind: "success" | "error";
+    text: string;
+  } | null = null;
+  @state() private insufficientInfo: InsufficientCurrency | null = null;
 
   @query("#tribe-name-input") private input?: HTMLInputElement;
 
@@ -77,11 +94,23 @@ export class TribesPanel extends LitElement {
   }
 
   private async load() {
-    this.data = await getMyTribeNames();
+    const [data, cosmetics] = await Promise.all([
+      getMyTribeNames(),
+      fetchCosmetics(), // cached after the first call
+    ]);
+    this.data = data;
+    this.tribeNamesConfig = cosmetics?.tribeNames ?? null;
   }
 
+  // Name purchase price from cosmetics.json — the only source; the button
+  // stays disabled when the tribeNames block is absent.
   private get price(): number | null {
-    return this.data ? this.data.priceHard : null;
+    return this.tribeNamesConfig?.priceHard ?? null;
+  }
+
+  private get hardBalance(): number {
+    if (this.userMeResponse === false) return 0;
+    return this.userMeResponse.player.currency?.hard ?? 0;
   }
 
   private submit = async (e: Event) => {
@@ -160,6 +189,80 @@ export class TribesPanel extends LitElement {
     );
   }
 
+  private showInsufficient(tribe: TribeName, price: number) {
+    this.insufficientInfo = {
+      currency: translateText("cosmetics.hard"),
+      shortfall: Math.max(1, price - this.hardBalance),
+      item: tribe.displayName,
+      canTopUp: true,
+    };
+  }
+
+  private boost = async (tribe: TribeName) => {
+    const cfg = this.tribeNamesConfig;
+    if (cfg === null || this.boostingId !== null) return;
+    const price = cfg.boostPriceHard;
+
+    // Don't let the player submit into a guaranteed 400 — offer top-up.
+    if (this.hardBalance < price) {
+      this.showInsufficient(tribe, price);
+      return;
+    }
+
+    const confirmed = await showInGameConfirm(
+      translateText("store.tribe_boost_confirm", {
+        name: tribe.displayName,
+        price,
+        days: cfg.boostDurationDays,
+      }),
+      {
+        heading: translateText("store.tribe_boost_heading"),
+        variant: "warning",
+      },
+    );
+    if (!confirmed) return;
+
+    this.boostingId = tribe.id;
+    this.boostNotice = null;
+    // Fresh key per user-initiated purchase. We never auto-retry (a retry of
+    // this click would reuse it), so the key's job is to make an accidental
+    // duplicate submit return the original boost instead of charging twice.
+    const result = await boostTribeName(tribe.id, crypto.randomUUID());
+    this.boostingId = null;
+
+    if (result.ok) {
+      this.boostNotice = {
+        kind: "success",
+        text: translateText("store.tribe_boost_success", {
+          name: tribe.displayName,
+        }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "insufficient_balance") {
+      // The balance moved under us (another tab, another purchase) —
+      // refresh it and show the top-up path.
+      await this.refreshAfterPurchase();
+      this.showInsufficient(tribe, price);
+      return;
+    }
+    if (result.code === "not_found") {
+      // Taken down while the page was open; the refreshed list will come
+      // back rejected/revoked with the review reason.
+      this.boostNotice = {
+        kind: "error",
+        text: translateText("store.tribe_boost_gone"),
+      };
+      await this.load();
+      return;
+    }
+    this.boostNotice = {
+      kind: "error",
+      text: translateText("store.tribe_boost_failed"),
+    };
+  };
+
   private renderLoginPrompt(): TemplateResult {
     return html`<div
       class="flex flex-col items-center justify-center gap-4 py-16 text-center"
@@ -224,6 +327,52 @@ export class TribesPanel extends LitElement {
     </section>`;
   }
 
+  // "2 boosts · until Aug 23" under an actively boosted name. The date is
+  // when the LAST boost lapses (the API serves max(expiresAt)), i.e. when
+  // the name stops being boosted entirely.
+  private renderBoostStatus(tribe: TribeName): TemplateResult | typeof nothing {
+    const boosts = tribe.activeBoosts ?? 0;
+    if (boosts === 0) return nothing;
+    const countText =
+      boosts === 1
+        ? translateText("store.tribe_boost_count")
+        : translateText("store.tribe_boost_count_plural", { count: boosts });
+    // The wire format has wobbled (ISO vs raw pg text); if this browser
+    // can't parse it, show the count alone rather than "Invalid Date".
+    const parsed = tribe.boostExpiresAt ? new Date(tribe.boostExpiresAt) : null;
+    const until =
+      parsed !== null && !Number.isNaN(parsed.getTime())
+        ? parsed.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })
+        : null;
+    return html`<span class="text-xs text-amber-300 mt-0.5">
+      ${countText}${until
+        ? html` · ${translateText("store.tribe_boost_until", { date: until })}`
+        : ""}
+    </span>`;
+  }
+
+  private renderBoostButton(tribe: TribeName): TemplateResult | typeof nothing {
+    const cfg = this.tribeNamesConfig;
+    // Only active (pending/live) names can be boosted, and only when
+    // cosmetics.json serves the price — never hardcode it.
+    if (cfg === null || DISPLAY_STATE[tribe.status] !== "active") {
+      return nothing;
+    }
+    return html`<button
+      class="shrink-0 flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+      ?disabled=${this.boostingId !== null}
+      @click=${() => this.boost(tribe)}
+    >
+      ${translateText("store.tribe_boost_button")}
+      <span class="flex items-center gap-0.5 normal-case">
+        <plutonium-icon .size=${14}></plutonium-icon>${cfg.boostPriceHard}
+      </span>
+    </button>`;
+  }
+
   private renderTribeRow(tribe: TribeName): TemplateResult {
     const meta = STATE_META[DISPLAY_STATE[tribe.status]];
     return html`<div
@@ -231,17 +380,21 @@ export class TribesPanel extends LitElement {
     >
       <div class="flex flex-col min-w-0">
         <span class="font-bold text-white truncate">${tribe.displayName}</span>
+        ${this.renderBoostStatus(tribe)}
         ${tribe.reviewReason
           ? html`<span class="text-xs text-white/50 mt-0.5"
               >${tribe.reviewReason}</span
             >`
           : ""}
       </div>
-      <span
-        class="shrink-0 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded border ${meta.classes}"
-      >
-        ${translateText(meta.labelKey)}
-      </span>
+      <div class="shrink-0 flex items-center gap-2">
+        ${this.renderBoostButton(tribe)}
+        <span
+          class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded border ${meta.classes}"
+        >
+          ${translateText(meta.labelKey)}
+        </span>
+      </div>
     </div>`;
   }
 
@@ -256,7 +409,12 @@ export class TribesPanel extends LitElement {
         ${translateText("store.tribes_load_failed")}
       </p>`;
     }
-    const names = this.data.names;
+    // Most-boosted names first. The sort is stable, so within equal boost
+    // counts the API's newest-first order is preserved (unboosted and
+    // rejected names all tie at 0 and keep their relative order).
+    const names = [...this.data.names].sort(
+      (a, b) => (b.activeBoosts ?? 0) - (a.activeBoosts ?? 0),
+    );
     if (names.length === 0) {
       return html`<p
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
@@ -283,8 +441,22 @@ export class TribesPanel extends LitElement {
         >
           ${translateText("store.your_tribes_heading")}
         </h3>
+        ${this.boostNotice
+          ? html`<p
+              class="text-sm font-medium px-1 ${this.boostNotice.kind ===
+              "success"
+                ? "text-green-400"
+                : "text-red-400"}"
+            >
+              ${this.boostNotice.text}
+            </p>`
+          : ""}
         ${this.renderList()}
       </section>
+      <insufficient-currency-dialog
+        .info=${this.insufficientInfo}
+        @close=${() => (this.insufficientInfo = null)}
+      ></insufficient-currency-dialog>
     </div>`;
   }
 }
