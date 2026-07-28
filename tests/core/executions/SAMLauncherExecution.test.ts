@@ -305,4 +305,68 @@ describe("SAM", () => {
 
     expect(sam.missileTimerQueue()).toHaveLength(0);
   });
+
+  test("SAM should prioritize nuke targeting close to SAM launcher over distant nuke", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    // Distant AtomBomb landing far away (at 10, 1)
+    attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
+      targetTile: game.ref(10, 1),
+      trajectory: [
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(5, 3), targetable: true },
+        { tile: game.ref(10, 1), targetable: true },
+      ],
+    });
+
+    // Close AtomBomb targeting right on the SAM (1, 1)
+    const dangerousNuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
+      targetTile: game.ref(1, 1),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(1, 2), targetable: true },
+        { tile: game.ref(1, 1), targetable: true },
+      ],
+    });
+
+    executeTicks(game, 3);
+
+    // The dangerous nuke aimed directly at the SAM launcher should be intercepted first
+    expect(dangerousNuke.isActive()).toBeFalsy();
+  });
+
+  test("upgraded SAM launcher should launch multiple missiles in a single tick if multiple targets arrive", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    sam.increaseLevel(); // Level 2 allows 2 missile slots
+    sam.reloadMissile(); // Reload the slot added by increaseLevel()
+    expect(sam.level()).toBe(2);
+    expect(sam.isInCooldown()).toBeFalsy();
+
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    const nuke1 = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
+      targetTile: game.ref(3, 1),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(3, 1), targetable: true },
+      ],
+    });
+
+    const nuke2 = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
+      targetTile: game.ref(1, 3),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(1, 2), targetable: true },
+        { tile: game.ref(1, 3), targetable: true },
+      ],
+    });
+
+    executeTicks(game, 3);
+
+    // Both nukes should be intercepted simultaneously by the level-2 SAM launcher
+    expect(nuke1.isActive()).toBeFalsy();
+    expect(nuke2.isActive()).toBeFalsy();
+  });
 });
