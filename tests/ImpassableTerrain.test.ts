@@ -266,6 +266,20 @@ describe("Impassable Terrain", () => {
     expect(nuke.isActive()).toBe(false);
   });
 
+
+  test("MIRV warhead not blocked by impassable terrain", () => {
+    player.conquer(game.ref(20, 100));
+    player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
+    // Target is on the right side of the wall — trajectory must cross it.
+    const target = game.ref(150, 100);
+    expect(game.isImpassable(target)).toBe(false);
+
+    const nuke = new NukeExecution(UnitType.MIRVWarhead, player, target);
+    game.addExecution(nuke);
+    executeTicks(game, 10);
+    // Should have been blocked.
+    expect(nuke.isActive()).toBe(true);
+  })
   // ── Water conversion guard ────────────────────────────────────────────
 
   test("setWater does not convert impassable tiles", () => {
