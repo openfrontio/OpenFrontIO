@@ -7,6 +7,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Unit,
   UnitType,
 } from "../../../src/core/game/Game";
 import { GameID } from "../../../src/core/Schemas";
@@ -368,5 +369,43 @@ describe("SAM", () => {
     // Both nukes should be intercepted simultaneously by the level-2 SAM launcher
     expect(nuke1.isActive()).toBeFalsy();
     expect(nuke2.isActive()).toBeFalsy();
+  });
+
+  test("high-level SAM launcher should shoot down multiple MIRV warheads arriving in the same tick", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    for (let i = 1; i < 50; i++) {
+      sam.increaseLevel();
+      sam.reloadMissile();
+    }
+    expect(sam.level()).toBe(50);
+    expect(sam.isInCooldown()).toBeFalsy();
+
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    const warheads: Unit[] = [];
+    for (let i = 0; i < 10; i++) {
+      const warhead = attacker.buildUnit(
+        UnitType.MIRVWarhead,
+        game.ref(1, 2 + i),
+        {
+          targetTile: game.ref(1, 15 + i),
+          trajectory: [
+            { tile: game.ref(1, 1), targetable: true },
+            { tile: game.ref(1, 2 + i), targetable: true },
+            { tile: game.ref(1, 15 + i), targetable: true },
+          ],
+        },
+      );
+      warheads.push(warhead);
+    }
+
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(10);
+
+    executeTicks(game, 3);
+
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(0);
+    for (const w of warheads) {
+      expect(w.isActive()).toBeFalsy();
+    }
   });
 });
