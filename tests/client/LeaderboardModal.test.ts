@@ -65,6 +65,23 @@ vi.mock("../../src/client/Api", async () => {
       }
       return res.json();
     }),
+    // Mirrors the real fetchTribeLeaderboard: page 1, plus page 2 only when
+    // page 1 came back exactly full.
+    fetchTribeLeaderboard: vi.fn(async () => {
+      const load = async (page: number) => {
+        const url = new URL(`${getApiBase()}/leaderboard/tribes`);
+        url.searchParams.set("page", String(page));
+        const res = await fetch(url.toString(), {
+          headers: { Accept: "application/json" },
+        });
+        return res.ok ? res.json() : false;
+      };
+      const first = await load(1);
+      if (first === false || first.tribes.length < 50) return first;
+      const second = await load(2);
+      if (second === false) return first;
+      return { ...first, tribes: [...first.tribes, ...second.tribes] };
+    }),
   };
 });
 
@@ -99,6 +116,14 @@ beforeEach(() => {
       }
       if (url.includes("/leaderboard/ranked")) {
         return jsonRes({ "1v1": [] });
+      }
+      if (url.includes("/leaderboard/tribes")) {
+        return jsonRes({
+          windowDays: 30,
+          start: "2026-06-27",
+          end: "2026-07-27",
+          tribes: [],
+        });
       }
       return jsonRes({}, false, 404);
     }),

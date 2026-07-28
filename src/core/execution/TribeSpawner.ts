@@ -25,7 +25,10 @@ export class TribeSpawner {
     this.nationTiles = new Set(nationCells.map((c) => gs.ref(c.x, c.y)));
   }
 
-  spawnTribes(numTribes: number): SpawnExecution[] {
+  spawnTribes(
+    numTribes: number,
+    purchasedNames: string[] = [],
+  ): SpawnExecution[] {
     const tribes: SpawnExecution[] = [];
     const { customTribes } = this.tribeNameData;
 
@@ -42,9 +45,32 @@ export class TribeSpawner {
       }
     }
 
+    // Purchased tribe names (GameStartInfo.tribes) each go to one randomly
+    // selected remaining slot; with fewer slots than names, drop from the
+    // tail (the API's global-pool slice). Guarded so games without purchased
+    // names consume the PRNG exactly as before — old replays must not shift.
+    //
+    // The analytics record assumes every passed name spawns: the server
+    // embeds the list capped only at the bot count, while positioned tribes
+    // shrink `remaining` here. No map ships positioned customTribes today,
+    // but one that does (with a low bot count) would make the record
+    // over-claim appearances for tail names that never spawned.
+    const remaining = numTribes - tribes.length;
+    let purchasedBySlot = new Map<number, string>();
+    if (purchasedNames.length > 0 && remaining > 0) {
+      const used = purchasedNames.slice(0, remaining);
+      const slots = this.random
+        .shuffleArray([...Array(remaining).keys()])
+        .slice(0, used.length);
+      purchasedBySlot = new Map(slots.map((slot, i) => [slot, used[i]]));
+    }
+
     // Fill remaining slots with random-spawn tribes.
+    let slot = 0;
     while (tribes.length < numTribes) {
-      tribes.push(this.spawnTribe(this.randomTribeName()));
+      const purchased = purchasedBySlot.get(slot);
+      tribes.push(this.spawnTribe(purchased ?? this.randomTribeName()));
+      slot++;
     }
     return tribes;
   }

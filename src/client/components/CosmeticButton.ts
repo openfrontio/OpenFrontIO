@@ -258,7 +258,7 @@ export class CosmeticButton extends LitElement {
         >
         ${pack.bonusAmount > 0
           ? html`<div
-              class="absolute top-3 -right-8 bg-green-500 text-white text-[10px] font-black px-8 py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
+              class="absolute top-8 -right-10 w-40 bg-green-500 text-white text-[10px] font-black py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
             >
               ${translateText("cosmetics.free", {
                 numFree: pack.bonusAmount.toLocaleString(),
