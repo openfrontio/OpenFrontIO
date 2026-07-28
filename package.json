@@ -15,6 +15,7 @@
     "test": "vitest run && vitest run tests/server",
     "test:matchmaking": "node tests/matchmaking/contained.mjs",
     "test:matchmaking:e2e": "node tests/matchmaking/e2e.mjs",
+    "test:matchmaking:cancel": "node tests/matchmaking/e2e-cancel.mjs",
     "perf": "npx tsx tests/perf/run-all.ts",
     "perf:game": "npx tsx tests/perf/fullgame/FullGamePerf.ts",
     "perf:client": "npx tsx tests/perf/client/ClientUpdatePerf.ts",
