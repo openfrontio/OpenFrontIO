@@ -10,11 +10,19 @@ import {
 import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
+import {
+  noopMatchTelemetryEmitter,
+  type MatchTelemetryEmitter,
+} from "./telemetry/MatchTelemetry";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
-  constructor(private log: Logger) {
+  constructor(
+    private log: Logger,
+    private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
+    private readonly telemetryBuildHash: string = "DEV",
+  ) {
     setInterval(() => this.tick(), 1000);
   }
 
@@ -96,6 +104,8 @@ export class GameManager {
       startsAt,
       publicGameType,
       matchmakingTeams,
+      this.telemetry,
+      this.telemetryBuildHash,
     );
     this.games.set(id, game);
     return game;

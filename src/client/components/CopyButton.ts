@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserSettings } from "../../core/game/UserSettings";
@@ -13,6 +13,11 @@ export class CopyButton extends LitElement {
   includeLobbyQuery = false;
   @property({ type: String, attribute: "copy-text" }) copyText = "";
   @property({ type: String, attribute: "display-text" }) displayText = "";
+  // Rich label override (e.g. a username split into colored base and
+  // discriminator). Takes precedence over displayText when set; displayText
+  // should still be passed as the plain-text equivalent for the masked and
+  // "copied" states.
+  @property({ attribute: false }) displayContent: TemplateResult | null = null;
   @property({ type: Boolean, attribute: "show-visibility-toggle" })
   showVisibilityToggle = true;
   @property({ type: Boolean, attribute: "show-copy-icon" })
@@ -99,7 +104,9 @@ export class CopyButton extends LitElement {
   render() {
     const canCopy = this.canCopy();
     const allowMask = this.showVisibilityToggle && !this.compact;
-    const rawLabel = this.displayText || this.lobbyId || this.copyText;
+    const rawLabel =
+      this.displayContent ??
+      (this.displayText || this.lobbyId || this.copyText);
     const label = this.copySuccess
       ? translateText("common.copied")
       : allowMask && !this.lobbyIdVisible

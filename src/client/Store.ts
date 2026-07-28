@@ -10,6 +10,7 @@ import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
+import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
@@ -25,7 +26,8 @@ type StoreTab =
   | "crowns"
   | "effects"
   | "packs"
-  | "subscriptions";
+  | "subscriptions"
+  | "tribes";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -47,6 +49,7 @@ export class StoreModal extends BaseModal {
         { key: "flags", label: translateText("store.flags") },
         { key: "crowns", label: translateText("store.crowns") },
         { key: "effects", label: translateText("store.effects") },
+        { key: "tribes", label: translateText("store.tribes") },
       ],
     };
   }
@@ -300,10 +303,18 @@ export class StoreModal extends BaseModal {
         return this.renderEffectGrid();
       case "subscriptions":
         return this.renderSubscriptionGrid();
+      case "tribes":
+        return this.renderTribeGrid();
       case "packs":
       default:
         return this.renderPackGrid();
     }
+  }
+
+  private renderTribeGrid(): TemplateResult {
+    return html`<tribes-panel
+      .userMeResponse=${this.userMeResponse}
+    ></tribes-panel>`;
   }
 
   private renderAffiliateGrid(): TemplateResult {

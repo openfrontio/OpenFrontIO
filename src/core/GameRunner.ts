@@ -78,7 +78,12 @@ export async function createGameRunner(
 
   const gr = new GameRunner(
     game,
-    new Executor(game, gameStart.gameID, clientID),
+    new Executor(
+      game,
+      gameStart.gameID,
+      clientID,
+      gameStart.tribes?.map((t) => t.name),
+    ),
     callBack,
   );
   gr.init();

@@ -908,8 +908,17 @@ export class Config {
     return 100;
   }
 
-  defaultNukeSpeed(): number {
-    return 10;
+  nukeSpeed(unitType: UnitType): number {
+    switch (unitType) {
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        return 10;
+      case UnitType.MIRV:
+        return 15;
+      case UnitType.MIRVWarhead:
+        return 22;
+    }
+    throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
   defaultNukeTargetableRange(): number {

@@ -96,7 +96,9 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     incomingAttacks: pu.incomingAttacks!,
     outgoingAllianceRequests: pu.outgoingAllianceRequests!.slice(),
     alliances: pu.alliances!,
-    outgoingEmojis: pu.outgoingEmojis!,
+    // Respect the client-side "Disable emojis" setting: when off, never surface
+    // emoji data to any renderer/overlay that reads this shared state (#4430).
+    outgoingEmojis: userSettings.emojis() ? pu.outgoingEmojis! : [],
   };
 }
 
@@ -266,6 +268,11 @@ export class PlayerView {
    */
   applyUpdate(pu: PlayerUpdate): void {
     applyStateUpdate(this.state, pu);
+    // applyStateUpdate refreshes outgoingEmojis every tick; re-apply the
+    // "Disable emojis" setting so live emojis stay hidden when it's off (#4430).
+    if (!userSettings.emojis()) {
+      this.state.outgoingEmojis = [];
+    }
   }
 
   /** Set the renderer-format embargoes (smallIDs). */

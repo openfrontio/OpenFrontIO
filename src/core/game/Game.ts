@@ -291,6 +291,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 }
 
