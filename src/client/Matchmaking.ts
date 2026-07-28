@@ -112,6 +112,29 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
+  // Re-enter the queue after a pre-start match cancellation (a matched
+  // player never connected to the game server). The modal is normally still
+  // open on "waiting for game" at that point — reset back to searching and
+  // reconnect. Returns false when the modal was closed in the meantime, so
+  // the caller knows nothing was rejoined.
+  public requeue(): boolean {
+    if (!this.isModalOpen) {
+      return false;
+    }
+    if (this.gameCheckInterval) {
+      clearInterval(this.gameCheckInterval);
+      this.gameCheckInterval = null;
+    }
+    this.connected = false;
+    this.gameID = null;
+    this.intentionalClose = false;
+    this.limitReached = false;
+    this.queueSize = null;
+    this.reconnectAttempts = 0;
+    this.connect();
+    return true;
+  }
+
   private openSubscriptions = () => {
     // The matchmaking modal isn't registered with the modal router, so it
     // won't be closed by the store opening from the hash change.
@@ -155,6 +178,24 @@ export class MatchmakingModal extends BaseModal {
     if (this.connectTimeout) {
       clearTimeout(this.connectTimeout);
       this.connectTimeout = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    // Nor may the previous socket itself: requeue()/onOpen() reset
+    // intentionalClose and gameID before reconnecting, so a delayed close
+    // event from the old socket would look unexpected and schedule a
+    // duplicate connection — the server would then kick this one as
+    // "replaced by newer connection".
+    if (this.socket) {
+      this.socket.onopen = null;
+      this.socket.onmessage = null;
+      this.socket.onerror = null;
+      this.socket.onclose = null;
+      if (this.socket.readyState !== WebSocket.CLOSED) {
+        this.socket.close();
+      }
     }
     this.socket = new WebSocket(
       `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,

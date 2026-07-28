@@ -890,7 +890,8 @@
     "admin": "Kicked by an admin",
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
     "host_left": "The host has left the lobby.",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "match_cancelled": "Match cancelled: a player failed to connect. You have not lost any ELO."
   },
   "lang": {
     "en": "English",

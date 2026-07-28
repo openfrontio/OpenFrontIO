@@ -6,7 +6,7 @@ import { z } from "zod";
 import { anonAnimalName } from "../core/AnonAnimals";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
-import { GameMode, GameType } from "../core/game/Game";
+import { GameMode, GameType, RankedType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -80,6 +80,7 @@ const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_ADMIN = "kick_reason.admin";
 const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
+const KICK_REASON_MATCH_CANCELLED = "kick_reason.match_cancelled";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
@@ -1055,6 +1056,38 @@ export class GameServer {
 
   public numDesyncedClients(): number {
     return this.outOfSyncClients.size;
+  }
+
+  // Matchmade ranked games (1v1/2v2) must start with full attendance: the
+  // roster freezes at start(), so a game missing a player would run
+  // short-handed only to be voided by the sim (2v2) or hand out a walkover
+  // the absent player never contested (1v1). Called at the start deadline;
+  // cancels the game and returns true when a matched player never connected.
+  public cancelShortHandedMatch(): boolean {
+    // Explicitly 1v1/2v2 only — a future ranked type must opt in rather
+    // than inherit pre-start cancellation.
+    const rankedType = this.gameConfig.rankedType;
+    if (
+      rankedType !== RankedType.OneVOne &&
+      rankedType !== RankedType.TwoVTwo
+    ) {
+      return false;
+    }
+    const expected = this.gameConfig.maxPlayers;
+    if (expected === undefined || this.activeClients.length >= expected) {
+      return false;
+    }
+    this.log.info("cancelling matchmade game, missing players at deadline", {
+      gameID: this.id,
+      connected: this.activeClients.length,
+      expected,
+    });
+    for (const c of [...this.activeClients]) {
+      this.kickClient(c.clientID, KICK_REASON_MATCH_CANCELLED);
+    }
+    // phase() reports Finished once ended, so GameManager's next tick prunes.
+    this._hasEnded = true;
+    return true;
   }
 
   public prestart() {

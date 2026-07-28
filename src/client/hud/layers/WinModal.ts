@@ -263,12 +263,19 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleRequeue() {
     this.hide();
-    // Navigate to homepage and open matchmaking modal for the same mode
-    const requeue =
-      this.game.config().gameConfig().rankedType === RankedType.TwoVTwo
-        ? "/?requeue=2v2"
-        : "/?requeue";
-    window.location.href = requeue;
+    // Requeue for the same mode; Main owns the mechanism (currently a
+    // reload with the requeue param, which reopens the queue after the
+    // page teardown).
+    document.dispatchEvent(
+      new CustomEvent("matchmaking-requeue", {
+        detail: {
+          mode:
+            this.game.config().gameConfig().rankedType === RankedType.TwoVTwo
+              ? ("2v2" as const)
+              : ("1v1" as const),
+        },
+      }),
+    );
   }
 
   init() {}
