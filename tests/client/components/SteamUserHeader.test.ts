@@ -63,6 +63,21 @@ describe("SteamUserHeader", () => {
     expect(header.textContent).toContain("steam_user_header.default_name");
   });
 
+  // Steam permits padded persona names, so a whitespace-only name is real
+  // input. This is what the `?.trim()` predicate buys over a plain truthiness
+  // check — without this test, simplifying it back would go unnoticed.
+  it("falls back to the default name for a whitespace-only persona name", async () => {
+    const profile: SteamUser = {
+      steamId: "76561198000000007",
+      personaName: "   ",
+      avatarUrl: null,
+    };
+    header.data = profile;
+    await header.updateComplete;
+
+    expect(header.textContent).toContain("steam_user_header.default_name");
+  });
+
   it("hides the <img> once it fires an error event", async () => {
     const profile: SteamUser = {
       steamId: "76561198000000004",

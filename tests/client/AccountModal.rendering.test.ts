@@ -130,4 +130,37 @@ describe("AccountModal — rendering", () => {
     expect(modal.querySelector("currency-display")).toBeTruthy();
     expect(text).toContain("account_modal.log_out");
   });
+
+  // The complement of the test above, and it earns its keep twice over:
+  //
+  // 1. It covers the direction the isSteamPrimary() primacy fix was about —
+  //    a non-Steam user must keep their account-linking UI.
+  // 2. It pins `account_modal.link_google` *positively*. The assertions above
+  //    are negative checks against translation-key literals, which silently
+  //    decay into no-ops if a key is ever renamed. Asserting the same key is
+  //    present here means a rename breaks this test loudly instead.
+  it("keeps the Google-link CTA for a Discord user (unaffected by the Steam branch)", async () => {
+    const userMe = makeUserMe({
+      discord: {
+        id: "1",
+        avatar: null,
+        username: "player",
+        global_name: null,
+        discriminator: "0",
+      },
+    });
+    await setLoggedInUser(userMe);
+
+    const text = modal.textContent ?? "";
+
+    // Discord takes the first branch of renderLoggedInAs() — no Steam header.
+    expect(modal.querySelector("steam-user-header")).toBeNull();
+
+    // The linking CTA a Steam-primary user does NOT get.
+    expect(text).toContain("account_modal.link_google");
+
+    // Still a logged-in view, not the login-options screen.
+    expect(modal.querySelector("currency-display")).toBeTruthy();
+    expect(text).toContain("account_modal.log_out");
+  });
 });
