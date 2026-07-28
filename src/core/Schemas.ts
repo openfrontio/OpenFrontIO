@@ -534,9 +534,34 @@ export const CancelBoatIntentSchema = z.object({
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
-  unitIds: z.array(z.number().int()).nonempty(),
+  unitIds: z.array(z.number().int()).nonempty().max(1000),
   tile: z.number(),
 });
+
+// Client messages larger than this get the client kicked by ClientMsgRateLimiter.
+export const MAX_INTENT_SIZE = 2000;
+
+export function batchMoveWarshipUnitIds(
+  unitIds: readonly number[],
+  tile: number,
+): number[][] {
+  const overhead = JSON.stringify({
+    type: "intent",
+    intent: { type: "move_warship", unitIds: [], tile },
+  } satisfies ClientIntentMessage).length;
+  const batches: number[][] = [];
+  let size = overhead;
+  for (const unitId of unitIds) {
+    const unitIdSize = String(unitId).length + 1;
+    if (batches.length === 0 || size + unitIdSize > MAX_INTENT_SIZE) {
+      batches.push([]);
+      size = overhead;
+    }
+    batches[batches.length - 1].push(unitId);
+    size += unitIdSize;
+  }
+  return batches;
+}
 
 export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),

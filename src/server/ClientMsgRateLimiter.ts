@@ -1,9 +1,8 @@
 import { RateLimiter } from "limiter";
-import { ClientID } from "../core/Schemas";
+import { ClientID, MAX_INTENT_SIZE } from "../core/Schemas";
 
 const INTENTS_PER_SECOND = 10;
 const INTENTS_PER_MINUTE = 150;
-const MAX_INTENT_SIZE = 2000;
 const TOTAL_BYTES = 5 * 1024 * 1024; // 5MB per client
 export type RateLimitResult = "ok" | "limit" | "kick";
 

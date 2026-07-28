@@ -12,6 +12,7 @@ import {
 import { TileRef } from "../core/game/GameMap";
 import {
   AllPlayersStats,
+  batchMoveWarshipUnitIds,
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
@@ -32,8 +33,14 @@ import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { showInGameAlert } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
+import { PacedSender } from "./PacedSender";
 import { translateText } from "./Utils";
 import { PlayerView } from "./view";
+
+// Spacing between batched move_warship intents. The server allows 10 intents
+// per second across all types; this stays clear of that with room for the
+// player's other actions.
+const WARSHIP_BATCH_INTERVAL_MS = 150;
 
 export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -202,6 +209,10 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
+  private readonly warshipBatches: PacedSender;
+  // The server discards intents until it has processed our join, and an open
+  // socket says nothing about that. Its first message does.
+  private joined = false;
   public readonly isLocal: boolean;
 
   constructor(
@@ -213,6 +224,10 @@ export class Transport {
     this.isLocal =
       lobbyConfig.gameRecord !== undefined ||
       lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
+    // The local server has no rate limiter, so only remote games need spacing.
+    this.warshipBatches = new PacedSender(
+      this.isLocal ? 0 : WARSHIP_BATCH_INTERVAL_MS,
+    );
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
@@ -351,6 +366,7 @@ export class Transport {
     // the desktop app://openfront origin), not window.location.host.
     const workerPath = ClientEnv.workerPath(this.lobbyConfig.gameID);
     this.socket = new WebSocket(`${ClientEnv.serverWsBase()}/${workerPath}`);
+    this.joined = false;
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -371,6 +387,7 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
+      this.joined = true;
       try {
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
@@ -441,6 +458,7 @@ export class Transport {
   }
 
   leaveGame() {
+    this.warshipBatches.clear();
     if (this.isLocal) {
       this.localServer.endGame();
       return;
@@ -649,11 +667,15 @@ export class Transport {
   }
 
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
-    this.sendIntent({
-      type: "move_warship",
-      unitIds: event.unitIds,
-      tile: event.tile,
-    });
+    for (const unitIds of batchMoveWarshipUnitIds(event.unitIds, event.tile)) {
+      this.warshipBatches.push(() =>
+        this.sendIntent({
+          type: "move_warship",
+          unitIds,
+          tile: event.tile,
+        }),
+      );
+    }
   }
 
   private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
@@ -681,20 +703,24 @@ export class Transport {
     this.sendIntent({ type: "toggle_game_start_timer" });
   }
 
-  private sendIntent(intent: Intent) {
-    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+  private sendIntent(intent: Intent): boolean {
+    if (
+      this.isLocal ||
+      (this.joined && this.socket?.readyState === WebSocket.OPEN)
+    ) {
       const msg = {
         type: "intent",
         intent: intent,
       } satisfies ClientIntentMessage;
       this.sendMsg(msg);
-    } else {
-      console.log(
-        "WebSocket is not open. Current state:",
-        this.socket?.readyState,
-      );
-      console.log("attempting reconnect");
+      return true;
     }
+    console.log(
+      "WebSocket is not open. Current state:",
+      this.socket?.readyState,
+    );
+    console.log("attempting reconnect");
+    return false;
   }
 
   private sendMsg(msg: ClientMessage) {
