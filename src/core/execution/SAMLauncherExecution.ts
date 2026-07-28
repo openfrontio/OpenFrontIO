@@ -88,7 +88,19 @@ class SAMTargetingSystem {
         const nukeTickToReach = i - currentIndex;
         const samTickToReach = this.tickToReach(samTile, trajectoryTile.tile);
         const tickBeforeShooting = nukeTickToReach - samTickToReach;
-        if (samTickToReach < explosionTick && tickBeforeShooting >= 0) {
+        if (samTickToReach <= explosionTick && tickBeforeShooting >= 0) {
+          // Edge case: last tick was out of range, this one is in range, but exploding
+          if (
+            i > currentIndex &&
+            this.mg.euclideanDistSquared(samTile, trajectory[i - 1].tile) >
+              rangeSquared &&
+            samTickToReach === explosionTick
+          ) {
+            return {
+              tick: tickBeforeShooting - 1,
+              tile: trajectory[i - 1].tile,
+            };
+          }
           return { tick: tickBeforeShooting, tile: trajectoryTile.tile };
         }
       }
