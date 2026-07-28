@@ -137,6 +137,12 @@ export class AccountModal extends BaseModal {
     );
   }
 
+  // Steam is the primary (and only, in v1) identity for a Steam user — no
+  // linking UI (email/Google) is offered for them; see renderSettingsTab.
+  private isSteamPrimary(): boolean {
+    return !!this.userMeResponse?.user?.steam;
+  }
+
   protected modalConfig() {
     if (this.isLoadingUser || !this.isLinkedAccount()) {
       return {};
@@ -230,7 +236,9 @@ export class AccountModal extends BaseModal {
               </button>`
             : nothing}
         </div>
-        ${hasEmail ? nothing : this.renderEmailBinding()}
+        ${hasEmail || this.isSteamPrimary()
+          ? nothing
+          : this.renderEmailBinding()}
       </div>
     `;
   }
