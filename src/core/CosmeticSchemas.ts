@@ -432,6 +432,16 @@ export const CosmeticsSchema = z.object({
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
+  // Custom tribe name pricing (store Tribes tab) — served here so the client
+  // never hardcodes it. Optional: an older cosmetics.json parses, and the UI
+  // hides boost purchasing when absent.
+  tribeNames: z
+    .object({
+      priceHard: z.number(),
+      boostPriceHard: z.number(),
+      boostDurationDays: z.number(),
+    })
+    .optional(),
 });
 
 /**
