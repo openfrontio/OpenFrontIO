@@ -111,4 +111,20 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
     const game = makeGame(["pub-ok"]);
     expect((game.gameConfig as any).allowedPublicIds).toEqual(["pub-ok"]);
   });
+
+  it("keeps publicId lists out of the start info (wire + archived record)", () => {
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+      allowedPublicIds: ["pub-ok"],
+      nameRevealPublicIds: ["pub-reveal"],
+    } as any);
+    expect(game.joinClient(makeClient("c1", "p1", "pub-ok"))).toBe("joined");
+    game.start();
+
+    const config = (game as any).gameStartInfo.config;
+    expect(config.allowedPublicIds).toBeUndefined();
+    expect(config.nameRevealPublicIds).toBeUndefined();
+    // The server still enforces the allowlist from its own config.
+    expect((game.gameConfig as any).allowedPublicIds).toEqual(["pub-ok"]);
+  });
 });
