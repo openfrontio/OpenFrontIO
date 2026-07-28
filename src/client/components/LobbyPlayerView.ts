@@ -369,9 +369,14 @@ export class LobbyTeamView extends LitElement {
           c.friends ?? [],
         ),
     );
+    const isDuosTriosQuads =
+      this.teamCount === Duos ||
+      this.teamCount === Trios ||
+      this.teamCount === Quads;
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
+      isDuosTriosQuads,
       this.effectiveNationCount,
     );
     const buckets = new Map<Team, ClientInfo[]>();

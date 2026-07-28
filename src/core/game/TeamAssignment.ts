@@ -6,6 +6,7 @@ import { PlayerInfo, PlayerType, Team } from "./Game";
 export function assignTeams(
   players: PlayerInfo[],
   teams: Team[],
+  isDuosTriosQuads: boolean,
   maxTeamSize: number = getMaxTeamSize(players.length, teams.length),
 ): Map<PlayerInfo, Team | "kicked"> {
   const result = new Map<PlayerInfo, Team | "kicked">();
@@ -103,7 +104,7 @@ export function assignTeams(
       p.clientID !== null ? friendGraph.get(p.clientID) : undefined;
     let bestTeam: Team | null = null;
     let bestFriendCount = -1;
-    let bestSize = Infinity;
+    let bestSize = isDuosTriosQuads ? -1 : Infinity;
     for (const t of teams) {
       const size = teamPlayerCount.get(t) ?? 0;
       if (size >= maxTeamSize) continue;
@@ -115,7 +116,8 @@ export function assignTeams(
       }
       if (
         friendsOnTeam > bestFriendCount ||
-        (friendsOnTeam === bestFriendCount && size < bestSize)
+        (friendsOnTeam === bestFriendCount &&
+          (isDuosTriosQuads ? size > bestSize : size < bestSize))
       ) {
         bestFriendCount = friendsOnTeam;
         bestSize = size;
@@ -141,6 +143,7 @@ export function assignTeams(
   const otherPlayers = nonClanPlayers.filter(
     (p) => p.playerType !== PlayerType.Nation,
   );
+
   for (const p of otherPlayers.concat(nationPlayers)) {
     placePlayer(p);
   }
@@ -151,13 +154,14 @@ export function assignTeams(
 export function assignTeamsLobbyPreview(
   players: PlayerInfo[],
   teams: Team[],
+  isDuosTriosQuads: boolean,
   nationCount: number,
 ): Map<PlayerInfo, Team | "kicked"> {
   const maxTeamSize = getMaxTeamSize(
     players.length + nationCount,
     teams.length,
   );
-  return assignTeams(players, teams, maxTeamSize);
+  return assignTeams(players, teams, isDuosTriosQuads, maxTeamSize);
 }
 
 export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
