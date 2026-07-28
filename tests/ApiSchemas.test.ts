@@ -17,6 +17,7 @@ import {
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
   RewardSchema,
+  TribeLeaderboardResponseSchema,
   TribeNameSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
@@ -826,6 +827,93 @@ describe("TribeNameSchema boost fields", () => {
       boostExpiresAt: "2026-08-23 18:04:11+00",
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("TribeLeaderboardResponseSchema", () => {
+  const entry = {
+    rank: 1,
+    name: "Dragon Riders",
+    gamesAppeared: 140,
+    playerReach: 12400,
+    ownerPublicId: "aB3xK9zQ",
+    ownerUsername: "wolfpack.4821",
+  };
+  const base = {
+    windowDays: 30,
+    start: "2026-06-27",
+    end: "2026-07-27",
+    tribes: [entry],
+  };
+
+  it("parses a board page", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].playerReach).toBe(12400);
+    expect(result.data.windowDays).toBe(30);
+    expect(result.data.tribes[0].ownerUsername).toBe("wolfpack.4821");
+  });
+
+  // The buyer has never set an account username; the row falls back to the
+  // public id (<player-name> does that, so null must survive the parse).
+  it("parses an entry whose owner has no username", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, ownerUsername: null }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].ownerUsername).toBeNull();
+    expect(result.data.tribes[0].ownerPublicId).toBe("aB3xK9zQ");
+  });
+
+  it.each(["ownerPublicId", "ownerUsername"])(
+    "rejects an entry missing %s",
+    (field) => {
+      const tribe: Record<string, unknown> = { ...entry };
+      delete tribe[field];
+      expect(
+        TribeLeaderboardResponseSchema.safeParse({ ...base, tribes: [tribe] })
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it("parses an empty board", () => {
+    expect(
+      TribeLeaderboardResponseSchema.safeParse({ ...base, tribes: [] }).success,
+    ).toBe(true);
+  });
+
+  // The window bounds are display-only. They are plain strings so a wobble in
+  // the wire format (see boostExpiresAt) cannot fail the whole board parse the
+  // way a strict z.iso.date() would; the renderer drops what it can't read.
+  it("tolerates window bounds that are not YYYY-MM-DD", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      start: "2026-06-27T00:00:00.000Z",
+      end: "2026-07-27 18:04:11+00",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a page missing the tribes array", () => {
+    expect(
+      TribeLeaderboardResponseSchema.safeParse({
+        windowDays: base.windowDays,
+        start: base.start,
+        end: base.end,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an entry with a non-numeric reach", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, playerReach: "12400" }],
+    });
+    expect(result.success).toBe(false);
   });
 });
 

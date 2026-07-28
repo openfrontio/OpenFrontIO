@@ -325,6 +325,41 @@ export type PostTribeBoostResponse = z.infer<
   typeof PostTribeBoostResponseSchema
 >;
 
+// GET /leaderboard/tribes?page=N — public, ranked by rolling 30-day player
+// reach. Pages are 1-based, 50 per page, capped at page 2 (top 100); the
+// response carries no total or hasMore, so a full page is the only signal
+// that another one may exist.
+export const TribeLeaderboardEntrySchema = z.object({
+  // Absolute across pages: page 2 starts at rank 51.
+  rank: z.number(),
+  name: z.string(),
+  gamesAppeared: z.number(),
+  // Impressions, NOT distinct players — one player who saw the name in
+  // three games counts three times. Never label this "people seen by".
+  playerReach: z.number(),
+  // The buyer, same pair the ranked board exposes: the public id to link a
+  // profile with, and the account display name (null when they've never set
+  // one — fall back to the public id, which is what <player-name> does).
+  ownerPublicId: z.string(),
+  ownerUsername: z.string().nullable(),
+});
+export type TribeLeaderboardEntry = z.infer<typeof TribeLeaderboardEntrySchema>;
+
+export const TribeLeaderboardResponseSchema = z.object({
+  windowDays: z.number(),
+  // Inclusive YYYY-MM-DD bounds of the window. Plain strings rather than
+  // z.iso.date(): they are display-only, and a strict format check on a
+  // date field would fail the whole board parse if the wire format wobbles
+  // the way boostExpiresAt's did above. The renderer guards what it can't
+  // read and drops the caption.
+  start: z.string(),
+  end: z.string(),
+  tribes: TribeLeaderboardEntrySchema.array(),
+});
+export type TribeLeaderboardResponse = z.infer<
+  typeof TribeLeaderboardResponseSchema
+>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,
