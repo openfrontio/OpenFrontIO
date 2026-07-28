@@ -229,6 +229,26 @@ export function joinLobby(
             }),
           );
         });
+      } else if (message.error === "kick_reason.match_cancelled") {
+        // A matched player never connected and the server cancelled the game
+        // pre-start. The matchmaking modal is still open behind the lobby
+        // wait (it only closes at prestart) — close it so its spinner
+        // doesn't outlive the game.
+        showInGameAlert(translateText("kick_reason.match_cancelled")).then(
+          () => {
+            const matchmaking = document.querySelector("matchmaking-modal") as
+              | (HTMLElement & { close?: () => void })
+              | null;
+            matchmaking?.close?.();
+            document.dispatchEvent(
+              new CustomEvent("leave-lobby", {
+                detail: { lobby: lobbyConfig.gameID, cause: "match-cancelled" },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+          },
+        );
       } else {
         showErrorModal(
           message.error,
