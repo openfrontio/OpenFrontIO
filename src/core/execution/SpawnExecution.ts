@@ -40,6 +40,15 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    // Security: `tile` arrives straight off a spawn intent. A fractional or
+    // out-of-range ref indexes past the terrain buffers, so downstream lookups
+    // read back undefined instead of failing. Reject it before relinquishing
+    // any territory, so a malformed intent is a clean no-op on every client.
+    if (this.tile !== undefined && !this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: invalid spawn tile ${this.tile}`);
+      return;
+    }
+
     let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
