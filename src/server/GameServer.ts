@@ -1205,11 +1205,19 @@ export class GameServer {
 
     const friendsFor = this.buildFriendsLookup();
 
+    // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
+    // enforced server-side against this.gameConfig (joinClient / seesReal).
+    // Keep them out of gameStartInfo: its config goes to every client in the
+    // start message and into the publicly downloadable game record.
+    const config = { ...this.gameConfig };
+    delete config.allowedPublicIds;
+    delete config.nameRevealPublicIds;
+
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
-      config: this.gameConfig,
+      config,
       players: this.activeClients.map((c) => ({
         username: c.username,
         clanTag: c.clanTag ?? null,
