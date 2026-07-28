@@ -4,6 +4,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
+import { isSteamPrimaryUser } from "./accountIdentity";
 import {
   fetchPlayerById,
   getUserMe,
@@ -140,8 +141,7 @@ export class AccountModal extends BaseModal {
   // Steam is the primary (and only, in v1) identity for a Steam user — no
   // linking UI (email/Google) is offered for them; see renderSettingsTab.
   private isSteamPrimary(): boolean {
-    const me = this.userMeResponse?.user;
-    return !!me?.steam && !me.discord && !me.google && !me.email;
+    return isSteamPrimaryUser(this.userMeResponse?.user);
   }
 
   protected modalConfig() {
