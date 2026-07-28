@@ -105,7 +105,9 @@ class SAMTargetingSystem {
 
     const targetTile =
       unit.targetTile() ??
-      (trajectory.length > 0 ? trajectory[trajectory.length - 1].tile : samTile);
+      (trajectory.length > 0
+        ? trajectory[trajectory.length - 1].tile
+        : samTile);
 
     const distToSilo = this.mg.manhattanDist(samTile, targetTile);
 
@@ -143,7 +145,7 @@ class SAMTargetingSystem {
     const range = this.mg.config().samRange(this.sam.level());
     const rangeSquared = range * range;
 
-    // Look beyond the SAM range so it can preshot nukes. 
+    // Look beyond the SAM range so it can preshot nukes.
     // Every missile should be spotted in time to allow it to be shot down at maxSamRange
     // Times 3 is barely not enough for a MIRV warhead (speed 22 vs SAM 12)
     const detectionRange = this.mg.config().maxSamRange() * 4;
@@ -183,7 +185,7 @@ class SAMTargetingSystem {
         }
         if (cached.tick === ticks) {
           // Time to shoot!
-          targets.push({ tile: cached.tile, unit: nuke.unit});
+          targets.push({ tile: cached.tile, unit: nuke.unit });
           this.precomputedNukes.delete(nukeId);
           continue;
         }
@@ -295,7 +297,7 @@ export class SAMLauncherExecution implements Execution {
     const targets = this.targetingSystem.getValidTargets(ticks);
     for (const target of targets) {
       if (this.sam.isInCooldown()) {
-        break; 
+        break;
       }
       this.sam.launch();
       target.unit.setTargetedBySAM(true);
