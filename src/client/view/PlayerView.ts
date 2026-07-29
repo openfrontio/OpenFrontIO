@@ -61,6 +61,7 @@ function staticFromUpdate(pu: PlayerUpdate): PlayerStatic {
     id: pu.id,
     name: pu.name!,
     displayName: pu.displayName!,
+    clanTag: pu.clanTag ?? null,
     clientID: pu.clientID ?? null,
     playerType: gamePlayerTypeToEnum(pu.playerType!),
     team: pu.team ?? null,
@@ -437,7 +438,11 @@ export class PlayerView {
       ? this.anonymousName
       : this.static.displayName;
   }
-
+  clanTag(): string | null {
+    return this.anonymousName !== null && userSettings.anonymousNames()
+      ? null
+      : this.static.clanTag;
+  }
   clientID(): ClientID | null {
     return this.static.clientID;
   }

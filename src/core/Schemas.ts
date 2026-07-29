@@ -451,13 +451,17 @@ export const AttackIntentSchema = z.object({
 
 export const SpawnIntentSchema = z.object({
   type: z.literal("spawn"),
-  tile: z.number(),
+  // A TileRef indexes the typed-array terrain buffers, so it must be a
+  // non-negative integer. Fractional refs silently corrupt those lookups.
+  tile: z.number().int().nonnegative(),
 });
 
 export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
+  // Not .int(): troops are fractional throughout the sim (attackRatio *
+  // troops(), combat attrition), and the client sends the raw float.
   troops: z.number().nonnegative(),
-  dst: z.number(),
+  dst: z.number().int().nonnegative(),
 });
 
 export const AllianceRequestIntentSchema = z.object({
@@ -512,14 +516,14 @@ export const DonateTroopIntentSchema = z.object({
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  tile: z.number(),
+  tile: z.number().int().nonnegative(),
   rocketDirectionUp: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
-  unitId: z.number(),
+  unitId: z.number().int().nonnegative(),
 });
 
 export const CancelAttackIntentSchema = z.object({
@@ -529,18 +533,18 @@ export const CancelAttackIntentSchema = z.object({
 
 export const CancelBoatIntentSchema = z.object({
   type: z.literal("cancel_boat"),
-  unitID: z.number(),
+  unitID: z.number().int().nonnegative(),
 });
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
   unitIds: z.array(z.number().int()).nonempty(),
-  tile: z.number(),
+  tile: z.number().int().nonnegative(),
 });
 
 export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),
-  unitId: z.number(),
+  unitId: z.number().int().nonnegative(),
 });
 
 export const QuickChatIntentSchema = z.object({

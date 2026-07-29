@@ -47,3 +47,15 @@ Prerequisites:
 On failure the harness dumps both players' browser consoles — close code
 1008 means the worker rejected the play token; no assignment usually means
 the worker rejected the game server's `x-api-key` checkin.
+
+## Cancellation — `npm run test:matchmaking:cancel`
+
+Same stack (and prerequisites) as the e2e harness. Four players queue for
+2v2; one has its `/exists` polls blocked, so it never connects to the
+created game — simulating a client that fails to connect in time. Asserts
+that at the start deadline the server cancels the game instead of starting
+it 3-handed, that the three connected players get the
+`kick_reason.match_cancelled` toast, dispatch `leave-lobby`, and are
+automatically requeued (modal back in the searching state), that the
+no-show is left untouched, and that the cancelled game is pruned without
+an archive.

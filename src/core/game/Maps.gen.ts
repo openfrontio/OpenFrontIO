@@ -47,6 +47,7 @@ export enum GameMapType {
   FaroeIslands = "Faroe Islands", // map-generator/assets/maps/faroeislands/info.json
   FingerLakes = "Finger Lakes", // map-generator/assets/maps/fingerlakes/info.json
   FourIslands = "Four Islands", // map-generator/assets/maps/fourislands/info.json
+  France = "France", // map-generator/assets/maps/france/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
@@ -112,6 +113,7 @@ export enum GameMapType {
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
+  Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
@@ -508,6 +510,13 @@ export const maps: readonly MapInfo[] = [
     categories: ["fictional"],
     multiplayerFrequency: 4,
     specialTeamCount: 4,
+  },
+  {
+    id: "France",
+    type: GameMapType.France,
+    translationKey: "map.france",
+    categories: ["new", "europe", "countries"],
+    multiplayerFrequency: 8,
   },
   {
     id: "GatewayToTheAtlantic",
@@ -1387,6 +1396,14 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.venice",
     categories: ["europe"],
     multiplayerFrequency: 6,
+  },
+  {
+    id: "Vietnam",
+    type: GameMapType.Vietnam,
+    translationKey: "map.vietnam",
+    categories: ["new", "countries", "asia"],
+    multiplayerFrequency: 4,
+    specialTeamCount: 2,
   },
   {
     id: "WarshipWarship",

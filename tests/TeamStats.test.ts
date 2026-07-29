@@ -1,4 +1,4 @@
-import type { ColumnDef } from "../src/client/hud/layers/lib/StatsColumns";
+import { columnById } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,
@@ -25,32 +25,32 @@ describe("aggregateTeamValues", () => {
     otherAlivePlayer.addGold(30n);
     deadPlayer.addGold(100n);
 
-    const selected: ColumnDef[] = [
-      {
-        id: "tiles",
-        labelKey: "leaderboard.owned",
-        valueAlignment: "end",
-        value: (player) => player.numTilesOwned(),
-        renderValue: (value) => `tiles:${value}`,
-      },
-      {
-        id: "gold",
-        labelKey: "leaderboard.gold",
-        valueAlignment: "end",
-        value: (player) => Number(player.gold()),
-        renderValue: (value) => `gold:${value}`,
-      },
-    ];
+    expect(
+      Object.fromEntries(
+        aggregateTeamValues(
+          game.allPlayers() as unknown as PlayerView[],
+          [columnById("tiles"), columnById("gold")],
+          game as unknown as GameView,
+        ),
+      ),
+    ).toEqual({ tiles: 20, gold: 80 });
+  });
+
+  it("skips columns that have no number behind them", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("alive", PlayerType.Human),
+    ]);
+    game.player("alive").conquer(game.ref(0, 0));
 
     expect(
       Object.fromEntries(
         aggregateTeamValues(
           game.allPlayers() as unknown as PlayerView[],
-          selected,
+          [columnById("rank"), columnById("player"), columnById("tiles")],
           game as unknown as GameView,
         ),
       ),
-    ).toEqual({ tiles: 20, gold: 80 });
+    ).toEqual({ tiles: 1 });
   });
 });
 

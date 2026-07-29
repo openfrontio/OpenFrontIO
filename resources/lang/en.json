@@ -890,7 +890,8 @@
     "admin": "Kicked by an admin",
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
     "host_left": "The host has left the lobby.",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "match_cancelled": "Match cancelled: a player failed to connect. You have not lost any ELO."
   },
   "lang": {
     "en": "English",
@@ -902,6 +903,7 @@
     "allies": "Allies",
     "betrayals": "Betrayals",
     "cities": "Cities",
+    "clan": "Clan",
     "configure_columns": "Configure columns",
     "factories": "Factories",
     "gold": "Gold",
@@ -910,6 +912,7 @@
     "owned": "Owned",
     "player": "Player",
     "ports": "Ports",
+    "rank": "Rank",
     "sams": "SAMs",
     "team": "Team",
     "troops": "Troops",
@@ -928,6 +931,8 @@
     "no_stats": "No stats available",
     "player": "Player",
     "rank": "Rank",
+    "ranked_2v2_tab": "2v2 Ranked",
+    "ranked_no_stats": "No ranked games have been played on this ladder yet",
     "ranked_tab": "1v1 Ranked",
     "ratio": "Ratio",
     "refresh_time": "Refreshed every 1 hour",
@@ -1021,6 +1026,7 @@
     "featured": "Featured",
     "fingerlakes": "Finger Lakes",
     "fourislands": "Four Islands",
+    "france": "France",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
@@ -1088,6 +1094,7 @@
     "twolakes": "Two Lakes",
     "unitedstates": "United States",
     "venice": "Venice",
+    "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
     "world": "World",
     "worldinverted": "World Inverted",
@@ -1148,6 +1155,7 @@
     "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
     "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "queue_size": "Players in queue: {count}",
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
@@ -1430,6 +1438,16 @@
   },
   "steam": {
     "link_signpost": "Have an existing OpenFront account? Account linking is coming in a later update."
+  },
+  "steam_user_header": {
+    "avatar_alt": "Steam avatar",
+    "default_name": "Steam player"
+  },
+  "steam_wishlist": {
+    "cta": "Wishlist now",
+    "on_steam": "OpenFront on Steam",
+    "release": "Available Q3 2026",
+    "title": "Wishlist OpenFront on Steam!"
   },
   "store": {
     "already_subscribed": "Already subscribed.",
@@ -1726,7 +1744,6 @@
     "spectate": "Spectate",
     "support_openfront": "Support OpenFront!",
     "territory_pattern": "Purchase a territory skin to go ad-free!",
-    "wishlist": "Wishlist on Steam!",
     "you_won": "You Won!",
     "your_team": "Your team won!",
     "youtube_tutorial": "Need some help?"

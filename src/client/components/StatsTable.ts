@@ -2,33 +2,30 @@ import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { UserSettings } from "../../core/game/UserSettings";
-import { profileIcon } from "../hud/HotbarIcons";
 import "../hud/layers/ColumnPicker";
 import {
-  COLUMN_DEFS,
+  type ColumnAlignment,
   type ColumnDef,
-  columnById,
+  columnsFor,
 } from "../hud/layers/lib/StatsColumns";
-import {
-  type ColumnId,
-  DEFAULT_STATS_COLUMNS,
-  type StatsTableKind,
-} from "../StatsConstants";
+import { type ColumnId, type StatsTableKind } from "../StatsConstants";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
 
 export interface StatsRow {
   key: string;
   name: string;
+  clanTag?: string | null;
   values: ReadonlyMap<ColumnId, number>;
   emphasized?: boolean;
   pinned?: boolean;
   onClick?: () => void;
 }
 
-interface RenderedStatsRow extends Omit<StatsRow, "values"> {
+/** A row plus the rank it renders at (list-wide, not window-relative). */
+interface PlacedRow {
+  row: StatsRow;
   position: number;
-  cells: readonly string[];
 }
 
 // Fallbacks cover the first render before measurement and jsdom (tests),
@@ -39,6 +36,17 @@ const OVERSCAN_ROWS = 4;
 // The pinned row only renders separately when the viewer sits below the
 // always-visible top ranks of the scroll window.
 const PINNED_VISIBLE_THRESHOLD = 4;
+// Trailing chrome track holding the ⚙️ menu, not a column of data.
+const PICKER_TRACK = "32px";
+
+const ALIGNMENT_CLASS: Record<ColumnAlignment, string> = {
+  start: "justify-start text-left",
+  center: "justify-center text-center",
+  end: "justify-end text-right",
+};
+const CELL_CLASS = "h-6 md:h-8 lg:h-9 min-w-0 px-1 flex items-center";
+const DIVIDER_CLASS = "border-l border-l-slate-600/40";
+const HEADER_DIVIDER_CLASS = "border-l border-l-slate-500";
 
 export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
@@ -46,7 +54,6 @@ export abstract class StatsTable extends LitElement {
   @property({ type: Boolean }) visible = false;
 
   protected abstract readonly tableKind: StatsTableKind;
-  protected abstract readonly nameLabelKey: string;
   protected abstract buildRows(
     game: GameView,
     columns: readonly ColumnDef[],
@@ -56,7 +63,7 @@ export abstract class StatsTable extends LitElement {
   private rows: StatsRow[] = [];
 
   @state()
-  private sortKey: ColumnId = DEFAULT_STATS_COLUMNS[0];
+  private sortKey: ColumnId | null = null;
 
   @state()
   private sortOrder: "asc" | "desc" = "desc";
@@ -106,8 +113,15 @@ export abstract class StatsTable extends LitElement {
     if (this.visible) this.updateStats();
   }
 
-  private selectedColumns(): ColumnDef[] {
-    return this.userSettings.statsColumns(this.tableKind).map(columnById);
+  /**
+   * Columns this render shows: every non-hideable column plus the hideable
+   * ones the ⚙️ menu has selected, in registry order.
+   */
+  private visibleColumns(): readonly ColumnDef[] {
+    const selected = this.userSettings.statsColumns(this.tableKind);
+    return columnsFor(this.tableKind).filter(
+      (column) => !column.isHideable || selected.includes(column.id),
+    );
   }
 
   private setSort(key: ColumnId) {
@@ -128,40 +142,163 @@ export abstract class StatsTable extends LitElement {
   private updateStats() {
     if (this.game === null) return;
 
-    const selected = this.selectedColumns();
-    if (!selected.some((column) => column.id === this.sortKey)) {
-      this.sortKey = selected[0].id;
+    const columns = this.visibleColumns();
+    // Only orderable columns have a number to sort on. When none is visible
+    // the rows keep the order buildRows produced.
+    const orderable = columns.filter((column) => column.isOrderable);
+    if (
+      orderable.length > 0 &&
+      !orderable.some((column) => column.id === this.sortKey)
+    ) {
+      this.sortKey = orderable[0].id;
       this.sortOrder = "desc";
     }
 
+    const sortKey = this.sortKey;
+    const rows = this.buildRows(this.game, columns);
     const direction = this.sortOrder === "asc" ? 1 : -1;
-    this.rows = this.buildRows(this.game, selected).sort(
-      (a, b) =>
-        direction *
-        ((a.values.get(this.sortKey) ?? 0) - (b.values.get(this.sortKey) ?? 0)),
-    );
+    this.rows =
+      orderable.length === 0 || sortKey === null
+        ? rows
+        : rows.sort(
+            (a, b) =>
+              direction *
+              ((a.values.get(sortKey) ?? 0) - (b.values.get(sortKey) ?? 0)),
+          );
     this.requestUpdate();
+  }
+
+  private renderHeaderVisual(column: ColumnDef, label: string) {
+    const visual = column.headerVisual;
+    if (visual === undefined) return html`<span>${label}</span>`;
+    if (visual.kind === "text") return html`<span>${visual.text}</span>`;
+    return html`<span class="inline-flex items-start">
+      <img
+        class="size-[1.1rem] object-contain ${visual.white === true
+          ? "brightness-0 invert"
+          : ""}"
+        src=${visual.src}
+        alt=""
+        aria-hidden="true"
+      />${visual.superscript
+        ? html`<img
+            class="size-[0.825rem] object-contain -ml-0.5 ${visual.superscript
+              .white === true
+              ? "brightness-0 invert"
+              : ""}"
+            src=${visual.superscript.src}
+            alt=""
+            aria-hidden="true"
+          />`
+        : nothing}
+    </span>`;
+  }
+
+  private renderHeaderCell(column: ColumnDef, index: number) {
+    const label = translateText(column.labelKey);
+    const visual = this.renderHeaderVisual(column, label);
+    const sorted = this.sortKey === column.id;
+    return html`
+      <div
+        class="stats-table-header-cell ${CELL_CLASS} justify-center text-center whitespace-nowrap border-b border-b-slate-500 ${index >
+        0
+          ? HEADER_DIVIDER_CLASS
+          : ""}"
+        role="columnheader"
+        title=${label}
+        aria-sort=${column.isOrderable
+          ? sorted
+            ? this.sortOrder === "asc"
+              ? "ascending"
+              : "descending"
+            : "none"
+          : nothing}
+      >
+        ${column.isOrderable
+          ? html`<button
+              class="inline-flex items-center justify-center gap-1 hover:text-sky-200 transition-colors"
+              aria-label=${label}
+              @click=${() => this.setSort(column.id)}
+            >
+              ${visual}
+              ${sorted
+                ? html`<span class="text-sky-300" aria-hidden="true"
+                    >${this.sortOrder === "asc" ? "↑" : "↓"}</span
+                  >`
+                : nothing}
+            </button>`
+          : visual}
+      </div>
+    `;
+  }
+
+  private renderCell(
+    column: ColumnDef,
+    index: number,
+    text: string,
+    borderClass: string,
+  ) {
+    return html`
+      <div
+        class="stats-table-cell ${CELL_CLASS} ${ALIGNMENT_CLASS[
+          column.align
+        ]} tabular-nums ${index > 0 ? DIVIDER_CLASS : ""} ${borderClass}"
+        role="cell"
+      >
+        <span class="block w-full truncate">${text}</span>
+      </div>
+    `;
+  }
+
+  private renderRow(
+    game: GameView,
+    columns: readonly ColumnDef[],
+    { row, position }: PlacedRow,
+    borderClass: string,
+    pinned = false,
+  ) {
+    return html`
+      <div
+        class="stats-table-row grid col-span-full hover:bg-slate-600/60 ${pinned
+          ? "stats-table-pinned-row bg-gray-700/95"
+          : ""} ${row.emphasized ? "font-bold" : ""} ${row.onClick
+          ? "cursor-pointer"
+          : ""}"
+        style="grid-template-columns: subgrid; grid-column: 1 / -1;"
+        role="row"
+        @click=${row.onClick ?? nothing}
+      >
+        ${repeat(
+          columns,
+          (column) => column.id,
+          (column, index) =>
+            this.renderCell(
+              column,
+              index,
+              column.cell(
+                { ...row, position, value: row.values.get(column.id) ?? 0 },
+                game,
+              ),
+              borderClass,
+            ),
+        )}
+        <div
+          class="h-6 md:h-8 lg:h-9 ${DIVIDER_CLASS} ${borderClass}"
+          aria-hidden="true"
+        ></div>
+      </div>
+    `;
   }
 
   render() {
     const game = this.game;
     if (!this.visible || game === null) return html``;
 
-    const selected = this.selectedColumns();
-    const toRendered = (
-      { values, ...row }: StatsRow,
-      position: number,
-    ): RenderedStatsRow => ({
-      ...row,
-      position,
-      cells: selected.map((column) =>
-        column.renderValue(values.get(column.id) ?? 0, game),
-      ),
-    });
+    const columns = this.visibleColumns();
     const pinnedIndex = this.rows.findIndex((row) => row.pinned);
-    const pinnedRow =
+    const pinnedRow: PlacedRow | null =
       pinnedIndex > PINNED_VISIBLE_THRESHOLD
-        ? toRendered(this.rows[pinnedIndex], pinnedIndex + 1)
+        ? { row: this.rows[pinnedIndex], position: pinnedIndex + 1 }
         : null;
     const listRows =
       pinnedRow === null
@@ -179,76 +316,27 @@ export abstract class StatsTable extends LitElement {
         (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx,
       ) + OVERSCAN_ROWS,
     );
-    const scrollableRows = listRows
+    const scrollableRows: PlacedRow[] = listRows
       .slice(firstIndex, lastIndex)
       .map((row, sliceIndex) => {
         const index = firstIndex + sliceIndex;
-        return toRendered(
+        return {
           row,
-          pinnedRow !== null && index >= pinnedIndex ? index + 2 : index + 1,
-        );
+          position:
+            pinnedRow !== null && index >= pinnedIndex ? index + 2 : index + 1,
+        };
       });
     const topSpacerPx = firstIndex * this.rowHeightPx;
     const bottomSpacerPx = (listRows.length - lastIndex) * this.rowHeightPx;
-    // Stat tracks stay content-sized intrinsically, then split only the spare
-    // width supplied by a wider sibling. Rank, name, and picker remain fixed.
-    const gridTemplate = `30px 100px${" auto".repeat(selected.length)} 32px`;
+    // "auto" tracks stay content-sized intrinsically, then split only the
+    // spare width supplied by a wider sibling; fixed tracks never stretch.
+    const gridTemplate = `${columns
+      .map((column) => column.width)
+      .join(" ")} ${PICKER_TRACK}`;
     const scrollHeight =
       pinnedRow === null
         ? "max-h-[7.5rem] md:max-h-[10rem] lg:max-h-[11.25rem]"
         : "max-h-[6rem] md:max-h-[8rem] lg:max-h-[9rem]";
-
-    const renderRow = (
-      row: RenderedStatsRow,
-      borderClass: string,
-      pinned = false,
-    ) => html`
-      <div
-        class="stats-table-row grid col-span-full hover:bg-slate-600/60 ${pinned
-          ? "stats-table-pinned-row bg-gray-700/95"
-          : ""} ${row.emphasized ? "font-bold" : ""} ${row.onClick
-          ? "cursor-pointer"
-          : ""}"
-        style="grid-template-columns: subgrid; grid-column: 1 / -1;"
-        role="row"
-        @click=${row.onClick ?? nothing}
-      >
-        <div
-          class="h-6 md:h-8 lg:h-9 flex items-center justify-center ${borderClass}"
-          role="cell"
-        >
-          ${row.position}
-        </div>
-        <div
-          class="h-6 md:h-8 lg:h-9 min-w-0 px-1 flex items-center text-left ${borderClass}"
-          role="cell"
-        >
-          <span class="block w-full truncate">${row.name}</span>
-        </div>
-        ${repeat(
-          row.cells,
-          (_cell, index) => selected[index].id,
-          (cell, index) => {
-            const alignment =
-              selected[index].valueAlignment === "center"
-                ? "justify-center text-center"
-                : "justify-end text-right";
-            return html`
-              <div
-                class="h-6 md:h-8 lg:h-9 px-1 flex items-center ${alignment} tabular-nums whitespace-nowrap border-l border-l-slate-600/40 ${borderClass}"
-                role="cell"
-              >
-                ${cell}
-              </div>
-            `;
-          },
-        )}
-        <div
-          class="h-6 md:h-8 lg:h-9 border-l border-l-slate-600/40 ${borderClass}"
-          aria-hidden="true"
-        ></div>
-      </div>
-    `;
 
     return html`
       <div class="stats-table relative mt-1 text-white text-xs lg:text-sm">
@@ -266,93 +354,21 @@ export abstract class StatsTable extends LitElement {
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="row"
             >
-              <div
-                class="h-6 md:h-8 lg:h-9 flex items-center justify-center border-b border-b-slate-500"
-                role="columnheader"
-              >
-                #
-              </div>
-              <div
-                class="h-6 md:h-8 lg:h-9 min-w-0 px-1 flex items-center justify-center text-center border-b border-b-slate-500"
-                role="columnheader"
-                title=${translateText(this.nameLabelKey)}
-              >
-                <img
-                  class="size-[1.1rem] object-contain"
-                  src=${profileIcon}
-                  alt=${translateText(this.nameLabelKey)}
-                />
-              </div>
               ${repeat(
-                selected,
+                columns,
                 (column) => column.id,
-                (column) => {
-                  const label = translateText(column.labelKey);
-                  return html`
-                    <div
-                      class="h-6 md:h-8 lg:h-9 px-1 flex items-center justify-center text-center border-b border-b-slate-500 border-l border-l-slate-500 whitespace-nowrap"
-                      role="columnheader"
-                      aria-sort=${this.sortKey === column.id
-                        ? this.sortOrder === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"}
-                    >
-                      <button
-                        class="inline-flex items-center justify-center gap-1 hover:text-sky-200 transition-colors"
-                        title=${column.headerVisual === undefined
-                          ? nothing
-                          : label}
-                        aria-label=${label}
-                        @click=${() => this.setSort(column.id)}
-                      >
-                        ${column.headerVisual?.kind === "icon"
-                          ? html`<span class="inline-flex items-start">
-                              <img
-                                class="size-[1.1rem] object-contain ${column
-                                  .headerVisual.white === true
-                                  ? "brightness-0 invert"
-                                  : ""}"
-                                src=${column.headerVisual.src}
-                                alt=""
-                                aria-hidden="true"
-                              />${column.headerVisual.superscript
-                                ? html`<img
-                                    class="size-[0.825rem] object-contain -ml-0.5 ${column
-                                      .headerVisual.superscript.white === true
-                                      ? "brightness-0 invert"
-                                      : ""}"
-                                    src=${column.headerVisual.superscript.src}
-                                    alt=""
-                                    aria-hidden="true"
-                                  />`
-                                : nothing}
-                            </span>`
-                          : column.headerVisual?.kind === "emoji"
-                            ? html`<span
-                                class="text-[1.1rem] leading-none"
-                                aria-hidden="true"
-                                >${column.headerVisual.text}</span
-                              >`
-                            : html`<span>${label}</span>`}
-                        ${this.sortKey === column.id
-                          ? html`<span class="text-sky-300" aria-hidden="true"
-                              >${this.sortOrder === "asc" ? "↑" : "↓"}</span
-                            >`
-                          : nothing}
-                      </button>
-                    </div>
-                  `;
-                },
+                (column, index) => this.renderHeaderCell(column, index),
               )}
               <div
-                class="h-6 md:h-8 lg:h-9 px-1 flex items-center justify-center border-b border-b-slate-500 border-l border-l-slate-500"
+                class="${CELL_CLASS} justify-center border-b border-b-slate-500 ${HEADER_DIVIDER_CLASS}"
                 role="columnheader"
               >
                 <column-picker
                   class="inline-flex"
-                  .columns=${COLUMN_DEFS}
-                  .selected=${selected.map((column) => column.id)}
+                  .columns=${columnsFor(this.tableKind).filter(
+                    (column) => column.isHideable,
+                  )}
+                  .selected=${this.userSettings.statsColumns(this.tableKind)}
                   @columns-changed=${this.onColumnsChanged}
                 ></column-picker>
               </div>
@@ -373,10 +389,12 @@ export abstract class StatsTable extends LitElement {
                 : nothing}
               ${repeat(
                 scrollableRows,
-                (row) => row.key,
-                (row, index) =>
-                  renderRow(
-                    row,
+                (placed) => placed.row.key,
+                (placed, index) =>
+                  this.renderRow(
+                    game,
+                    columns,
+                    placed,
                     index < scrollableRows.length - 1 ||
                       pinnedRow !== null ||
                       bottomSpacerPx > 0
@@ -393,7 +411,9 @@ export abstract class StatsTable extends LitElement {
                 : nothing}
             </div>
 
-            ${pinnedRow === null ? nothing : renderRow(pinnedRow, "", true)}
+            ${pinnedRow === null
+              ? nothing
+              : this.renderRow(game, columns, pinnedRow, "", true)}
           </div>
         </div>
       </div>

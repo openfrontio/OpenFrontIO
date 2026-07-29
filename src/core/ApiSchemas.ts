@@ -71,6 +71,13 @@ export const GoogleUserSchema = z.object({
 });
 export type GoogleUser = z.infer<typeof GoogleUserSchema>;
 
+export const SteamUserSchema = z.object({
+  steamId: z.string(),
+  personaName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+});
+export type SteamUser = z.infer<typeof SteamUserSchema>;
+
 const SingleplayerMapAchievementSchema = z.object({
   mapName: z.string(),
   difficulty: z.enum(Difficulty),
@@ -151,6 +158,7 @@ export const UserMeResponseSchema = z.object({
     discord: DiscordUserSchema.optional(),
     google: GoogleUserSchema.optional(),
     email: z.string().optional(),
+    steam: SteamUserSchema.optional(),
   }),
   player: z.object({
     publicId: z.string(),
@@ -463,7 +471,8 @@ export const PlayerLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The leaderboard displays this or
   // the playerId — the per-session name is deliberately ignored.
   accountUsername: z.string().nullable().optional(),
-  clanTag: RequiredClanTagSchema.nullable().optional(),
+  // No clanTag: 1v1 ranked is an individual ladder, and the tag the API
+  // reports is whatever the player last happened to use in any game mode.
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
@@ -504,6 +513,10 @@ export type RankedLeaderboardEntry = z.infer<
 
 export const RankedLeaderboardResponseSchema = z.object({
   [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
+  // Each ranked type is its own ladder, ranked independently: a player can
+  // appear on both with a different elo and rank. Defaulted because an API
+  // deployment that predates the 2v2 ladder omits the key entirely.
+  [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema

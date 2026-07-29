@@ -64,6 +64,54 @@ describe("Player update diffing (toUpdate)", () => {
     expect(full!.outgoingEmojis).toEqual([]);
   });
 
+  test("first toUpdate carries the clan tag unmerged next to displayName", () => {
+    const eveInfo = new PlayerInfo(
+      "eve",
+      PlayerType.Human,
+      "eve_client",
+      "eve_id",
+      false,
+      "ABCDE",
+    );
+    game.addPlayer(eveInfo);
+    const full = game.player("eve_id").toUpdate();
+    expect(full).not.toBeNull();
+    // Consumers that lay the two out separately read clanTag; consumers that
+    // want the merged form keep reading displayName.
+    expect(full!.clanTag).toBe("ABCDE");
+    expect(full!.name).toBe("eve");
+    expect(full!.displayName).toBe("[ABCDE] eve");
+  });
+
+  test("clanTag is null in the snapshot for a player without a clan", () => {
+    const franInfo = new PlayerInfo(
+      "fran",
+      PlayerType.Human,
+      "fran_client",
+      "fran_id",
+    );
+    game.addPlayer(franInfo);
+    expect(game.player("fran_id").toUpdate()!.clanTag).toBeNull();
+  });
+
+  test("an unchanged clan tag stays out of later diffs", () => {
+    const gusInfo = new PlayerInfo(
+      "gus",
+      PlayerType.Human,
+      "gus_client",
+      "gus_id",
+      false,
+      "ABCDE",
+    );
+    game.addPlayer(gusInfo);
+    const gus = game.player("gus_id");
+    gus.toUpdate(); // first full snapshot
+    gus.markTraitor();
+    const diff = gus.toUpdate();
+    expect(diff).not.toBeNull();
+    expect(diff!.clanTag).toBeUndefined();
+  });
+
   test("toUpdate returns null when nothing changed", () => {
     alice.toUpdate(); // first full snapshot
     expect(alice.toUpdate()).toBeNull();

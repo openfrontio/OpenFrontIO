@@ -338,3 +338,51 @@ describe("PlayerView emoji display setting (#4430)", () => {
     expect(p.state.outgoingEmojis).toEqual([]);
   });
 });
+
+describe("PlayerView clan tag", () => {
+  function resetSettings() {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  function setAnonymousNames(enabled: boolean) {
+    localStorage.setItem("settings.anonymousNames", String(enabled));
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  beforeEach(resetSettings);
+
+  it("forwards the tag without brackets, alongside the merged displayName", () => {
+    const p = makePlayerView({
+      data: { name: "Alice", displayName: "[ABCDE] Alice", clanTag: "ABCDE" },
+    });
+    expect(p.clanTag()).toBe("ABCDE");
+    expect(p.name()).toBe("Alice");
+    expect(p.displayName()).toBe("[ABCDE] Alice");
+  });
+
+  it("is null when the update carries no tag", () => {
+    expect(makePlayerView().clanTag()).toBeNull();
+    expect(
+      makePlayerView({ data: { clanTag: undefined } }).clanTag(),
+    ).toBeNull();
+  });
+
+  it("is hidden under anonymous names, like displayName", () => {
+    const p = makePlayerView({
+      data: {
+        clientID: "someone-else",
+        name: "Alice",
+        displayName: "[ABCDE] Alice",
+        clanTag: "ABCDE",
+      },
+    });
+    setAnonymousNames(true);
+    expect(p.clanTag()).toBeNull();
+    expect(p.displayName()).not.toContain("ABCDE");
+  });
+});
