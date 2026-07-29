@@ -67,8 +67,11 @@ export class StreamingNow extends LitElement {
     const streams = cfg.enabled ? cfg.streams : [];
     // Highest viewer counts first (defensive; the backend already sorts).
     this.streams = [...streams].sort((a, b) => b.viewers - a.viewers);
-    // Collapse the host so the sibling news box takes the full row when nobody is live.
-    this.style.display = this.streams.length === 0 ? "none" : "";
+    // Collapse the host when nobody is live; .streaming-live lets the play-page strip
+    // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
+    const live = this.streams.length > 0;
+    this.style.display = live ? "" : "none";
+    this.classList.toggle("streaming-live", live);
   }
 
   render() {
