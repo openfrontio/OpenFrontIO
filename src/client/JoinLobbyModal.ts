@@ -59,6 +59,7 @@ export class JoinLobbyModal extends BaseModal {
   // Subscriber-hosted private lobbies listed in the public browser, shown on
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
+  @state() private hostedLobbiesLoaded = false;
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -66,6 +67,7 @@ export class JoinLobbyModal extends BaseModal {
 
   private readonly hostedLobbySocket = new PublicLobbySocket((lobbies) => {
     this.hostedLobbies = lobbies.games?.hosted ?? [];
+    this.hostedLobbiesLoaded = true;
   });
 
   private isPrivateLobby(): boolean {
@@ -258,6 +260,22 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private renderHostedLobbies() {
+    let content: TemplateResult;
+    if (!this.hostedLobbiesLoaded) {
+      content = html`<div class="flex justify-center py-3">
+        <div
+          class="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"
+        ></div>
+      </div>`;
+    } else if (this.hostedLobbies.length === 0) {
+      content = html`<p class="text-sm text-white/50">
+        ${translateText("private_lobby.no_open_lobbies")}
+      </p>`;
+    } else {
+      content = html`<div class="flex flex-col gap-2">
+        ${this.hostedLobbies.map((lobby) => this.renderHostedLobbyRow(lobby))}
+      </div>`;
+    }
     return html`
       <div class="pt-2">
         <div
@@ -265,15 +283,7 @@ export class JoinLobbyModal extends BaseModal {
         >
           ${translateText("private_lobby.open_lobbies")}
         </div>
-        ${this.hostedLobbies.length === 0
-          ? html`<p class="text-sm text-white/50">
-              ${translateText("private_lobby.no_open_lobbies")}
-            </p>`
-          : html`<div class="flex flex-col gap-2">
-              ${this.hostedLobbies.map((lobby) =>
-                this.renderHostedLobbyRow(lobby),
-              )}
-            </div>`}
+        ${content}
       </div>
     `;
   }
@@ -342,6 +352,7 @@ export class JoinLobbyModal extends BaseModal {
     // disarmLeaveOnClose() runs, no close cascade can re-arm it and
     // disconnect the player mid game-start.
     this.leaveLobbyOnClose = true;
+    this.hostedLobbiesLoaded = false;
     void this.hostedLobbySocket.start();
     const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
     const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
@@ -439,6 +450,7 @@ export class JoinLobbyModal extends BaseModal {
   protected onClose(): void {
     this.hostedLobbySocket.stop();
     this.hostedLobbies = [];
+    this.hostedLobbiesLoaded = false;
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
 
