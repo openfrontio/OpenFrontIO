@@ -307,7 +307,8 @@ export class LocalServer {
     try {
       const authHeader = await getAuthHeader();
       if (authHeader === "") {
-        // The archive API requires a logged-in session.
+        // The archive API requires a session. Guests have one too, so this
+        // only trips when none could be established (e.g. API unreachable).
         return;
       }
       // Replays refuse to load unless the archived commit matches the client
