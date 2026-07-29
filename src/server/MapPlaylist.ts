@@ -459,7 +459,7 @@ export class MapPlaylist {
       gameMode: GameMode.Team,
       playerTeams: 2,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: 30 * 10,
+      spawnImmunityDuration: 60 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
