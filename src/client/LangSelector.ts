@@ -233,7 +233,6 @@ export class LangSelector extends LitElement {
       "cosmetics-input",
       "fluent-slider",
       "news-modal",
-
       "account-modal",
       "game-stats-modal",
       "player-profile-modal",
@@ -243,7 +242,6 @@ export class LangSelector extends LitElement {
       "flag-input-modal",
       "flag-input",
       "effects-grid",
-
       "token-login",
       "tribes-panel",
       "steam-wishlist",
