@@ -159,6 +159,20 @@ export class UsernameInput extends LitElement {
       : null;
   }
 
+  public clearClanTag(expectedTag?: string): void {
+    if (
+      expectedTag !== undefined &&
+      this.clanTag.toUpperCase() !== expectedTag.toUpperCase()
+    ) {
+      return;
+    }
+    this.clanTag = "";
+    this.clanTagOwnershipError = "";
+    this.validateAndStore();
+    this.startClanCheck();
+    this.requestUpdate();
+  }
+
   // Resolves to the clan tag to actually submit (null when it should be
   // dropped). The join flow awaits this so the ownership check — kicked off on
   // input — can run in parallel with the WebSocket handshake.
