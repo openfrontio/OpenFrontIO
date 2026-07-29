@@ -271,11 +271,16 @@ export class NukeExecution implements Execution {
       // The SAM logic should be the main source of truth, since missiles can skip pixels
       // and be affected by execution order
       const shouldBeDestroyed =
-        this.mg.nearbyUnits(this.dst, this.mg.config().defaultSamMissileSpeed(), UnitType.SAMMissile, ({ unit }) => {
-          if (!isUnit(unit) || unit.owner() === this.nuke?.owner())
-            return false;
-          return unit.targetUnit()?.id() === this.nuke?.id();
-        }).length >= 1;
+        this.mg.nearbyUnits(
+          this.dst,
+          this.mg.config().defaultSamMissileSpeed(),
+          UnitType.SAMMissile,
+          ({ unit }) => {
+            if (!isUnit(unit) || unit.owner() === this.nuke?.owner())
+              return false;
+            return unit.targetUnit()?.id() === this.nuke?.id();
+          },
+        ).length >= 1;
       if (!shouldBeDestroyed) this.detonate();
     } else if (result.status === PathStatus.NEXT) {
       this.updateNukeTargetable();
