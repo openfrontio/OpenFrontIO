@@ -737,6 +737,7 @@ export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: z.number(),
   visibleAt: z.number().optional(),
+  listed: z.boolean().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
   // Purchased bot tribe names in use this game (public games only). Rides

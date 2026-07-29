@@ -595,6 +595,12 @@ export class GameServer {
             error: "only the lobby creator can pause",
           });
         }
+        if (this.isListed() && !actor.isAdminBot) {
+          return finish({
+            status: 403,
+            error: "the host cannot pause a publicly listed game",
+          });
+        }
         // Pausing only makes sense once the game is running.
         if (!this.hasStarted()) {
           return finish({ status: 409, error: "game not started" });
@@ -1274,15 +1280,19 @@ export class GameServer {
       buildHash: this.telemetryBuildHash,
       turnIntervalMs: ServerEnv.turnIntervalMs(),
     });
+    const wireGameStartInfo = {
+      ...this.gameStartInfo,
+      listed: this.listed,
+    };
     this.wireGameStartInfo = this.gameConfig.disableClanTags
       ? {
-          ...this.gameStartInfo,
+          ...wireGameStartInfo,
           players: this.gameStartInfo.players.map((p) => ({
             ...p,
             clanTag: null,
           })),
         }
-      : this.gameStartInfo;
+      : wireGameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),

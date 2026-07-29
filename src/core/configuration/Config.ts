@@ -119,6 +119,7 @@ export class Config {
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
+    public readonly listed: boolean = false,
   ) {}
 
   isReplay(): boolean {
