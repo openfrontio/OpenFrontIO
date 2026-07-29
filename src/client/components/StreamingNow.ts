@@ -2,7 +2,6 @@ import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { LiveStream } from "../../core/ApiSchemas";
 import { getLiveStreams } from "../Api";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { translateText } from "../Utils";
 
 const REFRESH_MS = 90_000; // re-fetch the served list so counts/liveness stay fresh
@@ -44,10 +43,6 @@ export class StreamingNow extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.style.display = "none"; // hidden until the first load finds a live stream (no flash)
-    // Never on CrazyGames: a panel of Twitch/YouTube links is cross-promotion to external
-    // platforms, which their gameplay requirements prohibit (only menu community links are
-    // excepted). Don't even poll there.
-    if (crazyGamesSDK.isOnCrazyGames()) return;
     // Desktop-only (the host also carries `hidden lg:block`): on phones the play page is
     // too tight for another strip, so skip the polling entirely. Checked once at connect;
     // a mid-session resize across the breakpoint is handled by the classes alone.

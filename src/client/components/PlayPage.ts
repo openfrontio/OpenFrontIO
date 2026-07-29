@@ -118,8 +118,7 @@ export class PlayPage extends LitElement {
           <!-- Who is live playing OpenFront. Desktop only (hidden below lg), and stays
                display:none until the served live-streams.json has at least one live
                stream — either way the row collapses and news/username keep the full
-               space. Excluded on CrazyGames inside the component (external links are
-               cross-promotion under their rules). -->
+               space. -->
           <streaming-now
             class="hidden lg:block lg:col-span-2 w-full min-w-0"
           ></streaming-now>
