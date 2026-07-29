@@ -78,9 +78,8 @@ class SAMTargetingSystem {
     const trajectory = unit.trajectory();
     const currentIndex = unit.trajectoryIndex();
 
-    // Nuke Execution happens before SAM execution. It cannot intercept the final tick.
+    // NukeExecution happens before SAMMissileExecution. It cannot intercept the final tick.
     const maxInterceptionIndex = trajectory.length - 2;
-    const explosionTick = maxInterceptionIndex - currentIndex;
     for (let i = currentIndex; i <= maxInterceptionIndex; i++) {
       const trajectoryTile = trajectory[i];
       if (
@@ -91,7 +90,7 @@ class SAMTargetingSystem {
         const nukeTickToReach = i - currentIndex;
         const samTickToReach = this.tickToReach(samTile, trajectoryTile.tile);
         const tickBeforeShooting = nukeTickToReach - samTickToReach;
-        if (samTickToReach <= explosionTick && tickBeforeShooting >= 0) {
+        if (tickBeforeShooting >= 0) {
           return { tick: tickBeforeShooting, tile: trajectoryTile.tile };
         }
       }
@@ -114,7 +113,7 @@ class SAMTargetingSystem {
         );
         const tickBeforeShooting = nukeTickToReach - samTickToReach;
         // can we shoot the nuke the tick before it explodes?
-        if (samTickToReach <= explosionTick && tickBeforeShooting >= 0) {
+        if (tickBeforeShooting >= 0) {
           return { tick: tickBeforeShooting, tile: targetInFlightTile.tile };
         }
       }
