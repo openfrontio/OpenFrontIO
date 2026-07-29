@@ -250,7 +250,9 @@ export interface UnitParamsMap {
 
   [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: Record<string, never>;
+  [UnitType.SAMMissile]: {
+    targetUnit: Unit;
+  };
 
   [UnitType.Port]: Record<string, never>;
 
