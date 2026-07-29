@@ -67,7 +67,6 @@ export class SAMMissileExecution implements Execution {
         this.targetTile,
       );
       if (result.status === PathStatus.COMPLETE) {
-        console.log("DONE!");
         this.mg.displayMessage(
           "events_display.missile_intercepted",
           MessageType.SAM_HIT,
