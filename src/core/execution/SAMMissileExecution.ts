@@ -30,14 +30,13 @@ export class SAMMissileExecution implements Execution {
     this.pathFinder = PathFinding.Air(mg);
     this.mg = mg;
     this.speed = this.mg.config().defaultSamMissileSpeed();
+    this.tick(ticks);
   }
 
   tick(ticks: number): void {
-    this.SAMMissile ??= this._owner.buildUnit(
-      UnitType.SAMMissile,
-      this.spawn,
-      {},
-    );
+    this.SAMMissile ??= this._owner.buildUnit(UnitType.SAMMissile, this.spawn, {
+      targetUnit: this.target,
+    });
     if (!this.SAMMissile.isActive()) {
       this.active = false;
       return;

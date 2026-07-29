@@ -146,7 +146,8 @@ export class DistanceBasedBezierCurve extends CubicBezierCurve {
 
       if (cumulativeDistance >= pixelSpacing) {
         this.cachedPoints.push(currentPoint);
-        cumulativeDistance = 0;
+        // Reset cumulative distance, don't discard excess
+        cumulativeDistance -= pixelSpacing;
       }
 
       prevPoint = currentPoint;

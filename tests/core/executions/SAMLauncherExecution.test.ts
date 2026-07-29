@@ -7,6 +7,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Unit,
   UnitType,
 } from "../../../src/core/game/Game";
 import { GameID } from "../../../src/core/Schemas";
@@ -304,5 +305,143 @@ describe("SAM", () => {
     executeTicks(game, game.config().SAMCooldown() + 1);
 
     expect(sam.missileTimerQueue()).toHaveLength(0);
+  });
+
+  test("SAM should prioritize nuke targeting close to SAM launcher over distant nuke", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    // Distant AtomBomb landing far away (at 10, 1)
+    attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
+      targetTile: game.ref(10, 1),
+      trajectory: [
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(5, 3), targetable: true },
+        { tile: game.ref(10, 1), targetable: true },
+      ],
+    });
+
+    // Close AtomBomb targeting right on the SAM (1, 1)
+    const dangerousNuke = attacker.buildUnit(
+      UnitType.AtomBomb,
+      game.ref(1, 2),
+      {
+        targetTile: game.ref(1, 1),
+        trajectory: [
+          { tile: game.ref(1, 1), targetable: true },
+          { tile: game.ref(1, 2), targetable: true },
+          { tile: game.ref(1, 1), targetable: true },
+        ],
+      },
+    );
+
+    executeTicks(game, 3);
+
+    // The dangerous nuke aimed directly at the SAM launcher should be intercepted first
+    expect(dangerousNuke.reachedTarget()).toBeFalsy();
+    expect(dangerousNuke.wasDestroyedByEnemy()).toBeTruthy();
+  });
+
+  test("upgraded SAM launcher should launch multiple missiles in a single tick if multiple targets arrive", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    sam.increaseLevel(); // Level 2 allows 2 missile slots
+    sam.reloadMissile(); // Reload the slot added by increaseLevel()
+    expect(sam.level()).toBe(2);
+    expect(sam.isInCooldown()).toBeFalsy();
+
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    const nuke1 = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
+      targetTile: game.ref(3, 1),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(3, 1), targetable: true },
+      ],
+    });
+
+    const nuke2 = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
+      targetTile: game.ref(1, 3),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(1, 2), targetable: true },
+        { tile: game.ref(1, 3), targetable: true },
+      ],
+    });
+
+    executeTicks(game, 3);
+
+    // Both nukes should be intercepted simultaneously by the level-2 SAM launcher
+    expect(nuke1.reachedTarget()).toBeFalsy();
+    expect(nuke1.wasDestroyedByEnemy()).toBeTruthy();
+    expect(nuke2.reachedTarget()).toBeFalsy();
+    expect(nuke2.wasDestroyedByEnemy()).toBeTruthy();
+  });
+
+  test("high-level SAM launcher should shoot down multiple MIRV warheads arriving in the same tick", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    for (let i = 1; i < 50; i++) {
+      sam.increaseLevel();
+      sam.reloadMissile();
+    }
+    expect(sam.level()).toBe(50);
+    expect(sam.isInCooldown()).toBeFalsy();
+
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    const warheads: Unit[] = [];
+    for (let i = 0; i < 10; i++) {
+      const warhead = attacker.buildUnit(
+        UnitType.MIRVWarhead,
+        game.ref(1, 2 + i),
+        {
+          targetTile: game.ref(1, 15 + i),
+          trajectory: [
+            { tile: game.ref(1, 1), targetable: true },
+            { tile: game.ref(1, 2 + i), targetable: true },
+            { tile: game.ref(1, 15 + i), targetable: true },
+          ],
+        },
+      );
+      warheads.push(warhead);
+    }
+
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(10);
+
+    executeTicks(game, 3);
+
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(0);
+    for (const w of warheads) {
+      expect(w.reachedTarget()).toBeFalsy();
+      expect(w.wasDestroyedByEnemy()).toBeTruthy();
+    }
+  });
+
+  test("SAM launcher should intercept nuke in-flight before reaching detonation tile at SAM range edge", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, game.ref(1, 1), sam));
+    // Nuke whose target is inside SAM range but near its edge
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(149, 1), {
+      targetTile: game.ref(17, 1),
+      trajectory: [
+        { tile: game.ref(149, 1), targetable: true },
+        { tile: game.ref(137, 1), targetable: true },
+        { tile: game.ref(125, 1), targetable: true },
+        { tile: game.ref(113, 1), targetable: true },
+        { tile: game.ref(101, 1), targetable: true },
+        { tile: game.ref(89, 1), targetable: true },
+        { tile: game.ref(77, 1), targetable: true },
+        { tile: game.ref(65, 1), targetable: true },
+        { tile: game.ref(53, 1), targetable: true },
+        { tile: game.ref(41, 1), targetable: true },
+        { tile: game.ref(29, 1), targetable: true },
+        { tile: game.ref(17, 1), targetable: true },
+      ],
+    });
+
+    executeTicks(game, 11);
+    // Nuke should be intercepted in-flight before detonating on destination tile
+    expect(nuke.reachedTarget()).toBeFalsy();
+    expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
   });
 });

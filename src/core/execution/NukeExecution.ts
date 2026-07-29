@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  isUnit,
   MessageType,
   Player,
   Structures,
@@ -261,9 +262,26 @@ export class NukeExecution implements Execution {
 
     // Move to next tile
     const result = this.pathFinder.next(this.src!, this.dst, this.speed);
+
     if (result.status === PathStatus.COMPLETE) {
-      this.detonate();
-      return;
+      // move it afterward for visual effect
+      this.nuke.move(result.node);
+
+      // Check for very close SAM missiles that are targeting this.
+      // The SAM logic should be the main source of truth, since missiles can skip pixels
+      // and be affected by execution order
+      const shouldBeDestroyed =
+        this.mg.nearbyUnits(
+          this.dst,
+          this.mg.config().defaultSamMissileSpeed(),
+          UnitType.SAMMissile,
+          ({ unit }) => {
+            if (!isUnit(unit) || unit.owner() === this.nuke?.owner())
+              return false;
+            return unit.targetUnit()?.id() === this.nuke?.id();
+          },
+        ).length >= 1;
+      if (!shouldBeDestroyed) this.detonate();
     } else if (result.status === PathStatus.NEXT) {
       this.updateNukeTargetable();
       this.nuke.move(result.node);
