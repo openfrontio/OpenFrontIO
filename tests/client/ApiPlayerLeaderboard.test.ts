@@ -23,7 +23,6 @@ const entry = (rank: number) => ({
   losses: 5,
   total: 15,
   public_id: `player-${rank}`,
-  username: "Alpha",
   accountUsername: "alpha.0001",
 });
 
@@ -45,7 +44,7 @@ beforeEach(() => {
 describe("fetchPlayerLeaderboard", () => {
   it("returns the parsed page", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      res({ "1v1": [entry(1)] }),
+      res({ "1v1": [entry(1)], "2v2": [] }),
     );
 
     const result = await fetchPlayerLeaderboard(1);
@@ -56,7 +55,7 @@ describe("fetchPlayerLeaderboard", () => {
 
   it("requests the page it was asked for", async () => {
     const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValueOnce(res({ "1v1": [] }));
+    fetchMock.mockResolvedValueOnce(res({ "1v1": [], "2v2": [] }));
 
     await fetchPlayerLeaderboard(3);
     expect(String(fetchMock.mock.calls[0][0])).toContain("page=3");

@@ -117,7 +117,7 @@ beforeEach(() => {
         return jsonRes({ start: "...", end: "...", clans: [] });
       }
       if (url.includes("/leaderboard/ranked")) {
-        return jsonRes({ "1v1": [] });
+        return jsonRes({ "1v1": [], "2v2": [] });
       }
       if (url.includes("/leaderboard/tribes")) {
         return jsonRes({
@@ -283,9 +283,7 @@ describe("LeaderboardModal", () => {
               losses: 4,
               total: 10,
               public_id: "player-1",
-              username: "Alpha",
               accountUsername: "alpha.4821",
-              clanTag: "[AAA]",
             },
             {
               rank: 2,
@@ -295,11 +293,10 @@ describe("LeaderboardModal", () => {
               losses: 6,
               total: 10,
               public_id: "player-2",
-              username: "Bravo",
               accountUsername: null,
-              clanTag: null,
             },
           ],
+          "2v2": [],
         }),
       });
 
@@ -322,8 +319,7 @@ describe("LeaderboardModal", () => {
           winRate: 0.6,
         }),
       );
-      // The session username ("Bravo") is deliberately ignored — display
-      // falls back to the playerId when no account username is set.
+      // No account username: the player-name component displays public_id.
       expect(playerData[1]).toEqual(
         expect.objectContaining({
           playerId: "player-2",
@@ -332,36 +328,7 @@ describe("LeaderboardModal", () => {
         }),
       );
       expect(playerList!.currentUserEntry?.playerId).toBe("player-2");
-    });
-
-    // 1v1 ranked is an individual ladder, and the tag the API reports is
-    // whatever the player last used in any mode — so it is not carried over.
-    it("drops the clan tag the API sends", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        jsonRes({
-          "1v1": [
-            {
-              rank: 1,
-              elo: 1200,
-              peakElo: 1300,
-              wins: 6,
-              losses: 4,
-              total: 10,
-              public_id: "player-1",
-              username: "Alpha",
-              accountUsername: "alpha.4821",
-              clanTag: "[AAA]",
-            },
-          ],
-        }),
-      );
-
-      const playerList = getPlayerList()!;
-      await playerList.loadPlayerLeaderboard(true);
-      await playerList.updateComplete;
-
-      expect(playerList.playerData[0]).not.toHaveProperty("clanTag");
-      expect(modal.textContent).not.toContain("[AAA]");
+      expect(modal.textContent).toContain("player-2");
     });
 
     // The pinned "your ranking" row has to stay inside the table — its column
@@ -385,10 +352,10 @@ describe("LeaderboardModal", () => {
               losses: 4,
               total: 10,
               public_id: "player-1",
-              username: "Alpha",
               accountUsername: "alpha.4821",
             },
           ],
+          "2v2": [],
         }),
       );
 
@@ -426,10 +393,10 @@ describe("LeaderboardModal", () => {
               losses: 4,
               total: 10,
               public_id: "player-1",
-              username: "Alpha",
               accountUsername: "alpha.4821",
             },
           ],
+          "2v2": [],
         }),
       );
 
@@ -455,10 +422,9 @@ describe("LeaderboardModal", () => {
         losses: 5,
         total: 10,
         public_id: `player-${startRank + i}`,
-        username: `Player${startRank + i}`,
         accountUsername: null,
-        clanTag: null,
       })),
+      "2v2": [],
     });
 
     // The body the API actually sends for a page past the end.
@@ -545,7 +511,6 @@ describe("LeaderboardModal", () => {
       losses: 1,
       total: 2,
       public_id: publicId,
-      username: publicId,
       accountUsername: publicId,
     });
 

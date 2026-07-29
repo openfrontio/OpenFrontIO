@@ -1,14 +1,21 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { getUserMe, hasLinkedAccount } from "./Api";
+import { getUserMe, hasLinkedAccount, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { JoinLobbyEvent } from "./Main";
+import type { JoinLobbyEvent } from "./Main";
+import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
+
+type MatchmakingJoin = {
+  type: "join";
+  jwt: string;
+  clanTag?: string;
+};
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
@@ -26,6 +33,7 @@ export class MatchmakingModal extends BaseModal {
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
   @state() private queueSize: number | null = null;
+  private selectedClanTag: string | null = null;
   private elo: number | string = "...";
 
   constructor() {
@@ -171,6 +179,57 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
+  private selectedClanFrom(userMe: UserMeResponse): string | null {
+    if (this.mode !== "2v2") {
+      return null;
+    }
+    const selectedTag = document
+      .querySelector<UsernameInput>("username-input")
+      ?.getClanTag();
+    if (selectedTag === null || selectedTag === undefined) {
+      return null;
+    }
+    return (
+      userMe.player.clans?.find(
+        (clan) => clan.tag.toUpperCase() === selectedTag.toUpperCase(),
+      )?.tag ?? null
+    );
+  }
+
+  private showMatchmakingError(messageKey: string) {
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText(messageKey),
+          color: "red",
+          duration: 5000,
+        },
+      }),
+    );
+  }
+
+  private handleInvalidClan() {
+    const rejectedClanTag = this.selectedClanTag;
+    this.connected = false;
+    this.close();
+    this.showMatchmakingError("matchmaking_modal.invalid_clan");
+
+    invalidateUserMe();
+    void getUserMe().then((userMe) => {
+      if (userMe === false || rejectedClanTag === null) {
+        return;
+      }
+      const stillMember = userMe.player.clans?.some(
+        (clan) => clan.tag.toUpperCase() === rejectedClanTag.toUpperCase(),
+      );
+      if (!stillMember) {
+        document
+          .querySelector<UsernameInput>("username-input")
+          ?.clearClanTag(rejectedClanTag);
+      }
+    });
+  }
+
   private async connect() {
     // Pending timers from a previous socket must not fire on this one.
     this.clearWatchdog();
@@ -210,12 +269,14 @@ export class MatchmakingModal extends BaseModal {
         // otherwise the "searching" message will be shown immediately.
         // Also wait so people who back out immediately aren't added
         // to the matchmaking queue.
-        this.socket.send(
-          JSON.stringify({
-            type: "join",
-            jwt: await getPlayToken(),
-          }),
-        );
+        const message: MatchmakingJoin = {
+          type: "join",
+          jwt: await getPlayToken(),
+          ...(this.selectedClanTag === null
+            ? {}
+            : { clanTag: this.selectedClanTag }),
+        };
+        this.socket.send(JSON.stringify(message));
         this.connected = true;
         // The server starts broadcasting queue-size once we're queued;
         // from here on, silence means the connection is dead.
@@ -258,6 +319,16 @@ export class MatchmakingModal extends BaseModal {
       if (event.code === 1008 && event.reason === "ranked_limit_reached") {
         this.connected = false;
         this.limitReached = true;
+        return;
+      }
+      if (event.code === 1008 && event.reason === "invalid_clan") {
+        this.handleInvalidClan();
+        return;
+      }
+      if (event.code === 1011 && event.reason === "clan_verification_failed") {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.clan_verification_failed");
         return;
       }
       if (event.code === 1000) {
@@ -325,6 +396,7 @@ export class MatchmakingModal extends BaseModal {
         ? userMe.player.leaderboard?.twoVtwo
         : userMe.player.leaderboard?.oneVone;
     this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
+    this.selectedClanTag = this.selectedClanFrom(userMe);
 
     this.connected = false;
     this.gameID = null;

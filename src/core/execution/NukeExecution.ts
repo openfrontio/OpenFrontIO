@@ -191,15 +191,17 @@ export class NukeExecution implements Execution {
       // The launch tile can be overridden by the caller (e.g. MIRV warheads
       // launch from the MIRV separation point, not a silo).
       this.src ??= spawn;
-      // Nuke trajectories cannot pass over impassable terrain, just as they
+      // Nuke trajectories cannot pass over impassable terrain unless they are MIRV warheads, just as they
       // cannot exceed the map border. Check the full parabola path before
       // launching; if any tile is impassable, abort the launch.
-      const path = this.pathFinder.findPath(this.src, this.dst) ?? [];
-      for (const tile of path) {
-        if (this.mg.isImpassable(tile)) {
-          console.warn(`nuke trajectory crosses impassable terrain`);
-          this.active = false;
-          return;
+      if (this.nukeType !== UnitType.MIRVWarhead) {
+        const path = this.pathFinder.findPath(this.src, this.dst) ?? [];
+        for (const tile of path) {
+          if (this.mg.isImpassable(tile)) {
+            console.warn(`nuke trajectory crosses impassable terrain`);
+            this.active = false;
+            return;
+          }
         }
       }
       this.nuke = this.player.buildUnit(this.nukeType, this.src, {
