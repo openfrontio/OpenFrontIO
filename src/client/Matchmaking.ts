@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { getUserMe, hasLinkedAccount, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
