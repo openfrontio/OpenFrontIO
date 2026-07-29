@@ -43,9 +43,7 @@ export class StreamingNow extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.style.display = "none"; // hidden until the first load finds a live stream (no flash)
-    // Desktop-only (the host also carries `hidden lg:block`): on phones the play page is
-    // too tight for another strip, so skip the polling entirely. Checked once at connect;
-    // a mid-session resize across the breakpoint is handled by the classes alone.
+    // Desktop only (host carries `hidden lg:block`); below lg, don't even poll.
     if (
       typeof window.matchMedia === "function" &&
       !window.matchMedia("(min-width: 1024px)").matches

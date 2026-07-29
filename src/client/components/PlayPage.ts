@@ -115,10 +115,7 @@ export class PlayPage extends LitElement {
           <!-- News box above username -->
           <news-box class="lg:col-span-2"></news-box>
 
-          <!-- Who is live playing OpenFront. Desktop only (hidden below lg), and stays
-               display:none until the served live-streams.json has at least one live
-               stream — either way the row collapses and news/username keep the full
-               space. -->
+          <!-- Desktop only; collapses when nobody is live, so news/username keep the row. -->
           <streaming-now
             class="hidden lg:block lg:col-span-2 w-full min-w-0"
           ></streaming-now>
