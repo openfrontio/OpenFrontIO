@@ -1510,6 +1510,12 @@
     "tribes_purchase_heading": "Buy a Tribe Name",
     "your_tribes_heading": "Your Tribe Names"
   },
+  "streaming_now": {
+    "live_count": "{count} Streaming",
+    "title": "Streaming Now",
+    "viewers": "{count} watching",
+    "watch": "Watch {name}"
+  },
   "team_colors": {
     "blue": "Blue",
     "bot": "Tribes",

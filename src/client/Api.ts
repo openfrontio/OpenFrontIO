@@ -1,7 +1,12 @@
 import featuredStreamFallback from "resources/featured-stream.json";
+import liveStreamsFallback from "resources/live-streams.json";
 import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
-import type { FeaturedStreamConfig, NewsItem } from "../core/ApiSchemas";
+import type {
+  FeaturedStreamConfig,
+  LiveStreamsConfig,
+  NewsItem,
+} from "../core/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
@@ -10,6 +15,7 @@ import {
   FeaturedStreamSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
+  LiveStreamsSchema,
   NewsItemSchema,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
@@ -1084,5 +1090,28 @@ export async function getFeaturedStream(): Promise<FeaturedStreamConfig> {
   } catch (err) {
     console.warn("getFeaturedStream: request failed, using fallback", err);
     return FeaturedStreamSchema.parse(featuredStreamFallback);
+  }
+}
+
+// Live-stream list for the "Streaming Now" panel, served like news.json (API-hosted JSON
+// + bundled fallback). Fails closed (bundled OFF config) on any error or bad payload.
+export async function getLiveStreams(): Promise<LiveStreamsConfig> {
+  try {
+    const res = await fetch(`${getApiBase()}/live-streams.json`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status !== 200) {
+      console.warn("getLiveStreams: unexpected status", res.status);
+      return LiveStreamsSchema.parse(liveStreamsFallback);
+    }
+    const parsed = LiveStreamsSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("getLiveStreams: Zod validation failed", parsed.error);
+      return LiveStreamsSchema.parse(liveStreamsFallback);
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("getLiveStreams: request failed, using fallback", err);
+    return LiveStreamsSchema.parse(liveStreamsFallback);
   }
 }

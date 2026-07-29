@@ -4,6 +4,7 @@ import { assetUrl } from "../../core/AssetUrls";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import "./NewsBox";
 import "./SteamWishlist";
+import "./StreamingNow";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
@@ -113,6 +114,11 @@ export class PlayPage extends LitElement {
 
           <!-- News box above username -->
           <news-box class="lg:col-span-2"></news-box>
+
+          <!-- Who is live playing OpenFront. Renders nothing (display:none) until the
+               served live-streams.json has at least one live stream, so the layout is
+               untouched when nobody is live. -->
+          <streaming-now class="lg:col-span-2 w-full min-w-0"></streaming-now>
 
           <!-- Username: left col -->
           <div
