@@ -6,6 +6,7 @@ import {
   ClientID,
   ClientMessage,
   ClientSendWinnerMessage,
+  PartialGameRecord,
   PartialGameRecordSchema,
   PlayerRecord,
   ServerMessage,
@@ -18,7 +19,8 @@ import {
   decompressGameRecord,
   replacer,
 } from "../core/Util";
-import { getPersistentID } from "./Auth";
+import { getApiBase } from "./Api";
+import { getAuthHeader, getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,
@@ -297,27 +299,37 @@ export class LocalServer {
       console.error("Error parsing game record", error);
       return;
     }
-    const workerPath = ClientEnv.workerPath(
-      this.lobbyConfig.gameStartInfo.gameID,
-    );
 
-    const jsonString = JSON.stringify(result.data, replacer);
+    this.archiveGame(result.data);
+  }
 
-    compress(jsonString)
-      .then((compressedData) => {
-        return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Encoding": "gzip",
-          },
-          body: compressedData,
-          keepalive: true, // Ensures request completes even if page unloads
-        });
-      })
-      .catch((error) => {
-        console.error("Failed to archive singleplayer game:", error);
+  private async archiveGame(record: PartialGameRecord): Promise<void> {
+    try {
+      const authHeader = await getAuthHeader();
+      if (authHeader === "") {
+        // The archive API requires a logged-in session.
+        return;
+      }
+      // Replays refuse to load unless the archived commit matches the client
+      // build, and the API worker can't stamp it (it has a different build).
+      const jsonString = JSON.stringify(
+        { ...record, gitCommit: ClientEnv.gitCommit() },
+        replacer,
+      );
+      const compressedData = await compress(jsonString);
+      await fetch(`${getApiBase()}/archive_singleplayer_game`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+          Authorization: authHeader,
+        },
+        body: compressedData,
+        keepalive: true, // Ensures request completes even if page unloads
       });
+    } catch (error) {
+      console.error("Failed to archive singleplayer game:", error);
+    }
   }
 }
 
