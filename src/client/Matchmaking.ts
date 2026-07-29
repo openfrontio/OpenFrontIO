@@ -309,7 +309,7 @@ export class MatchmakingModal extends BaseModal {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
-            message: translateText("matchmaking_button.must_login"),
+            message: translateText("matchmaking_modal.must_login"),
             color: "red",
             duration: 3000,
           },
