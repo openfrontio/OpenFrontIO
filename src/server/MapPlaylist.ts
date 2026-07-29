@@ -462,7 +462,7 @@ export class MapPlaylist {
       rankedType: RankedType.TwoVTwo,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: 10,
+      maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
       randomSpawn: false,
       nations: "disabled",
