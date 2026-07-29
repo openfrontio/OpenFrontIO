@@ -450,24 +450,25 @@ export class MapPlaylist {
       GameMapType.Asia, // 20%
       GameMapType.EuropeClassic, // 20%
     ];
+    const isCompact = Math.random() < 0.5;
     return {
       donateGold: true,
       donateTroops: true,
       gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 4,
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Compact,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
       rankedType: RankedType.TwoVTwo,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: 10,
+      maxTimerValue: 15,
       instantBuild: false,
       randomSpawn: false,
       nations: "disabled",
       gameMode: GameMode.Team,
       playerTeams: 2,
-      bots: 100,
+      bots: isCompact ? 100 : 400,
       spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
