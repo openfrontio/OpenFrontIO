@@ -346,8 +346,8 @@ export const maps: readonly MapInfo[] = [
     id: "BranchingPaths",
     type: GameMapType.BranchingPaths,
     translationKey: "map.branchingpaths",
-    categories: ["arcade", "fictional", "new"],
-    multiplayerFrequency: 3,
+    categories: ["fictional", "new"],
+    multiplayerFrequency: 7,
     specialTeamCount: 3,
   },
   {
