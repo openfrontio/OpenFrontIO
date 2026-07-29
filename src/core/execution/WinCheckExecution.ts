@@ -121,6 +121,29 @@ export class WinCheckExecution implements Execution {
 
   checkWinnerTeam(): void {
     if (this.mg === null) throw new Error("Not initialized");
+
+    if (this.mg.config().gameConfig().rankedType === RankedType.TwoVTwo) {
+      // players() only returns alive players, so a team drops out of this set
+      // once every member is dead or disconnected.
+      const teamsRemaining = new Set<Team>();
+      for (const player of this.mg.players()) {
+        if (player.type() !== PlayerType.Human || player.isDisconnected()) {
+          continue;
+        }
+        const team = player.team();
+        if (team !== null) {
+          teamsRemaining.add(team);
+        }
+      }
+      if (teamsRemaining.size === 1) {
+        const [winner] = teamsRemaining;
+        this.mg.setWinner(winner, this.mg.stats().stats());
+        console.log(`${winner} has won the game`);
+        this.active = false;
+        return;
+      }
+    }
+
     const teamToTiles = new Map<Team, number>();
     for (const player of this.mg.players()) {
       const team = player.team();
