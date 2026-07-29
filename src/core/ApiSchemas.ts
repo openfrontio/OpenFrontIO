@@ -575,7 +575,14 @@ const HttpsUrlSchema = z.url({ protocol: /^https$/ });
 // validated so a malformed entry fails the config closed (see getLiveStreams).
 export const LiveStreamSchema = z.object({
   platform: z.enum(["twitch", "youtube"]),
-  channel: z.string().min(1).max(100),
+  // Login/handle as it appears in the watch URL (twitch.tv/<login>, youtube.com/@handle).
+  // One conservative charset for both platforms — no slashes, queries, or whitespace — so
+  // an entry can't smuggle path/query segments into the derived URL.
+  channel: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^@?[A-Za-z0-9._-]+$/, "invalid channel handle"),
   displayName: z.string().min(1).max(100),
   title: z.string().max(200).optional(),
   viewers: z.number().int().nonnegative().default(0),

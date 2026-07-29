@@ -1071,47 +1071,50 @@ export async function getNews(): Promise<NewsItem[]> {
   }
 }
 
-// Featured-stream config, served like news.json (API-hosted JSON + bundled fallback).
-export async function getFeaturedStream(): Promise<FeaturedStreamConfig> {
+// Fetch an API-served JSON config (news.json-style: served file + bundled fallback).
+// Any error, non-200, or invalid payload falls back, parsed through the same schema so
+// the fallback is validated too. The timeout guards recurring callers (StreamingNow
+// polls every 90s) from a fetch that never settles.
+async function getServedConfig<T>(
+  name: string,
+  schema: z.ZodType<T>,
+  fallback: unknown,
+): Promise<T> {
   try {
-    const res = await fetch(`${getApiBase()}/featured-stream.json`, {
+    const res = await fetch(`${getApiBase()}/${name}`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.status !== 200) {
-      console.warn("getFeaturedStream: unexpected status", res.status);
-      return FeaturedStreamSchema.parse(featuredStreamFallback);
+      console.warn(`${name}: unexpected status`, res.status);
+      return schema.parse(fallback);
     }
-    const parsed = FeaturedStreamSchema.safeParse(await res.json());
+    const parsed = schema.safeParse(await res.json());
     if (!parsed.success) {
-      console.warn("getFeaturedStream: Zod validation failed", parsed.error);
-      return FeaturedStreamSchema.parse(featuredStreamFallback);
+      console.warn(`${name}: Zod validation failed`, parsed.error);
+      return schema.parse(fallback);
     }
     return parsed.data;
   } catch (err) {
-    console.warn("getFeaturedStream: request failed, using fallback", err);
-    return FeaturedStreamSchema.parse(featuredStreamFallback);
+    console.warn(`${name}: request failed, using fallback`, err);
+    return schema.parse(fallback);
   }
 }
 
-// Live-stream list for the "Streaming Now" panel, served like news.json (API-hosted JSON
-// + bundled fallback). Fails closed (bundled OFF config) on any error or bad payload.
+// Featured-stream config, served like news.json (API-hosted JSON + bundled fallback).
+export async function getFeaturedStream(): Promise<FeaturedStreamConfig> {
+  return getServedConfig(
+    "featured-stream.json",
+    FeaturedStreamSchema,
+    featuredStreamFallback,
+  );
+}
+
+// Live-stream list for the "Streaming Now" panel. Fails closed (bundled OFF config).
 export async function getLiveStreams(): Promise<LiveStreamsConfig> {
-  try {
-    const res = await fetch(`${getApiBase()}/live-streams.json`, {
-      headers: { Accept: "application/json" },
-    });
-    if (res.status !== 200) {
-      console.warn("getLiveStreams: unexpected status", res.status);
-      return LiveStreamsSchema.parse(liveStreamsFallback);
-    }
-    const parsed = LiveStreamsSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      console.warn("getLiveStreams: Zod validation failed", parsed.error);
-      return LiveStreamsSchema.parse(liveStreamsFallback);
-    }
-    return parsed.data;
-  } catch (err) {
-    console.warn("getLiveStreams: request failed, using fallback", err);
-    return LiveStreamsSchema.parse(liveStreamsFallback);
-  }
+  return getServedConfig(
+    "live-streams.json",
+    LiveStreamsSchema,
+    liveStreamsFallback,
+  );
 }

@@ -17,20 +17,22 @@ export class CosmeticBackground extends LitElement {
   @state() private pattern: PlayerPattern | null = null;
   @state() private skin: PlayerSkin | null = null;
   private abort: AbortController | null = null;
+  private loadGen = 0;
 
   createRenderRoot() {
     return this;
   }
 
-  async connectedCallback() {
+  connectedCallback() {
     super.connectedCallback();
     this.abort = new AbortController();
-    await this.load();
+    // Listener before the initial load, so a change fired mid-request isn't missed.
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       () => void this.load(),
       { signal: this.abort.signal },
     );
+    void this.load();
   }
 
   disconnectedCallback() {
@@ -40,8 +42,9 @@ export class CosmeticBackground extends LitElement {
   }
 
   private async load() {
+    const gen = ++this.loadGen; // overlapping loads: only the newest may apply
     const c = await getPlayerCosmetics();
-    if (!this.isConnected) return;
+    if (gen !== this.loadGen || !this.isConnected) return;
     this.pattern = c.pattern ?? null;
     this.skin = c.skin ?? null;
   }

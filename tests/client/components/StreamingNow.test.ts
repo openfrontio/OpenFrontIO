@@ -89,6 +89,30 @@ describe("StreamingNow", () => {
       expect(parsed.success).toBe(false);
     });
 
+    it("rejects channels with URL delimiters or whitespace", () => {
+      for (const channel of ["foo/bar", "x?y=1", "a b", "x#frag", ""]) {
+        const parsed = LiveStreamsSchema.safeParse({
+          enabled: true,
+          streams: [{ platform: "twitch", channel, displayName: "X" }],
+        });
+        expect(parsed.success).toBe(false);
+      }
+    });
+
+    it("accepts normal Twitch logins and YouTube handles", () => {
+      for (const channel of [
+        "openfrontmasters",
+        "@OpenFront_Masters",
+        "a.b-c",
+      ]) {
+        const parsed = LiveStreamsSchema.safeParse({
+          enabled: true,
+          streams: [{ platform: "youtube", channel, displayName: "X" }],
+        });
+        expect(parsed.success).toBe(true);
+      }
+    });
+
     it("rejects non-https url schemes (no javascript:/http:)", () => {
       for (const url of ["javascript:alert(1)", "http://example.com"]) {
         const parsed = LiveStreamsSchema.safeParse({
