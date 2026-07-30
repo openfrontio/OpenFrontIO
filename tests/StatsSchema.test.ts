@@ -1,4 +1,7 @@
-import { PlayerStatsLeafSchema } from "../src/core/ApiSchemas";
+import {
+  PlayerStatsLeafSchema,
+  PlayerStatsTreeSchema,
+} from "../src/core/ApiSchemas";
 import { PlayerStatsSchema } from "../src/core/StatsSchemas";
 
 function testPlayerSchema(
@@ -91,5 +94,24 @@ describe("PlayerStatsLeafSchema", () => {
       stats: {},
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("PlayerStatsTreeSchema", () => {
+  test("accepts Humans Vs Nations as a separate profile stats mode", () => {
+    const result = PlayerStatsTreeSchema.parse({
+      Public: {
+        "Humans Vs Nations": {
+          Hard: {
+            wins: "1",
+            losses: "2",
+            total: "3",
+            stats: {},
+          },
+        },
+      },
+    });
+
+    expect(result.Public?.["Humans Vs Nations"]?.Hard?.total).toBe(3n);
   });
 });

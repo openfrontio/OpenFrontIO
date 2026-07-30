@@ -24,6 +24,9 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
       if (key === "player_stats_tree.all") {
         return "All";
       }
+      if (key === "game_mode.hvn") {
+        return "Humans vs Nations";
+      }
       return key;
     },
   };
@@ -301,6 +304,73 @@ describe("PlayerStatsSummary", () => {
     expect(summary?.parentElement?.classList.contains("py-3")).toBe(true);
   });
 
+  it("shows Humans vs Nations separately from ordinary Team games", async () => {
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = {
+      Public: {
+        "Free For All": {
+          Medium: leafWithTotal(1n),
+        },
+        Team: {
+          Medium: leafWithTotal(2n),
+        },
+        "Humans Vs Nations": {
+          Hard: leafWithTotal(4n),
+        },
+      },
+    };
+    document.body.append(tree);
+
+    await tree.updateComplete;
+    await clickTab(tree, "player_stats_tree.public");
+
+    const modeRow = tree.querySelectorAll('[role="tablist"]')[1];
+    expect(
+      Array.from(
+        modeRow.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      ).map((button) => button.textContent?.trim()),
+    ).toEqual(["All", "game_mode.ffa", "game_mode.teams", "Humans vs Nations"]);
+
+    await clickTab(tree, "Humans vs Nations");
+
+    expect(getRenderedLeaf(tree)?.total).toBe(4n);
+  });
+
+  it("hides difficulty for Public and merges every difficulty bucket", async () => {
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = {
+      Public: {
+        "Free For All": {
+          Easy: leafWithTotal(1n),
+          Medium: leafWithTotal(2n),
+        },
+        Team: {
+          Hard: leafWithTotal(4n),
+        },
+      },
+      Private: {
+        Team: {
+          Hard: leafWithTotal(8n),
+          Easy: leafWithTotal(16n),
+        },
+      },
+    };
+    document.body.append(tree);
+
+    await tree.updateComplete;
+    await clickTab(tree, "player_stats_tree.private");
+    await clickTab(tree, "difficulty.hard");
+    expect(getRenderedLeaf(tree)?.total).toBe(8n);
+
+    await clickTab(tree, "player_stats_tree.public");
+
+    expect(tree.querySelectorAll('[role="tablist"]')).toHaveLength(2);
+    expect(getRenderedLeaf(tree)?.total).toBe(7n);
+
+    await clickTab(tree, "game_mode.ffa");
+    expect(getRenderedLeaf(tree)?.total).toBe(3n);
+  });
+
   it("puts All first in every filter and aggregates the selected branches", async () => {
     const statsTree: PlayerStatsTree = {
       Public: {
@@ -355,7 +425,7 @@ describe("PlayerStatsSummary", () => {
 
     await clickTab(tree, "player_stats_tree.public");
     rows = Array.from(tree.querySelectorAll('[role="tablist"]'));
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(2);
     for (const row of rows) {
       expect(
         row.querySelector<HTMLButtonElement>('[role="tab"]')?.textContent,
@@ -366,11 +436,8 @@ describe("PlayerStatsSummary", () => {
     await clickTab(tree, "game_mode.ffa");
     expect(getRenderedLeaf(tree)?.total).toBe(3n);
 
-    await clickTab(tree, "difficulty.medium");
-    expect(getRenderedLeaf(tree)?.total).toBe(2n);
-
-    await clickTabInRow(tree, 2, "All");
-    expect(getRenderedLeaf(tree)?.total).toBe(3n);
+    await clickTab(tree, "game_mode.teams");
+    expect(getRenderedLeaf(tree)?.total).toBe(12n);
 
     await clickTabInRow(tree, 1, "All");
     expect(getRenderedLeaf(tree)?.total).toBe(15n);

@@ -1,13 +1,17 @@
 import { LitElement, PropertyValues, TemplateResult, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
+import {
+  PlayerStatsGameMode,
+  PlayerStatsGameModes,
+  PlayerStatsLeaf,
+  PlayerStatsTree,
+} from "../../../../core/ApiSchemas";
 import {
   Difficulty,
   GameMode,
   GameType,
   RankedType,
   isDifficulty,
-  isGameMode,
 } from "../../../../core/game/Game";
 import { PlayerStats } from "../../../../core/StatsSchemas";
 import { translateText } from "../../../Utils";
@@ -18,7 +22,7 @@ const ALL_SELECTION = "all" as const;
 type AllSelection = typeof ALL_SELECTION;
 type AvailableType = GameType | "Ranked";
 type TypeSelection = AvailableType | AllSelection;
-type ModeSelection = GameMode | AllSelection;
+type ModeSelection = PlayerStatsGameMode | AllSelection;
 type DifficultySelection = Difficulty | AllSelection;
 type RankedTypeSelection = RankedType | AllSelection;
 const TYPE_ORDER: readonly AvailableType[] = [
@@ -52,9 +56,9 @@ export class PlayerStatsTreeView extends LitElement {
     );
   }
 
-  private get availableModes(): GameMode[] {
+  private get availableModes(): PlayerStatsGameMode[] {
     if (!this.typeNode) return [];
-    return Object.keys(this.typeNode).filter(isGameMode);
+    return PlayerStatsGameModes.filter((mode) => this.typeNode?.[mode]);
   }
 
   private get availableRankedTypes(): RankedType[] {
@@ -65,7 +69,7 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private get availableDifficulties(): Difficulty[] {
-    if (!this.typeNode) return [];
+    if (!this.typeNode || this.selectedType === GameType.Public) return [];
     const modes =
       this.selectedMode === ALL_SELECTION
         ? this.availableModes
@@ -75,10 +79,10 @@ export class PlayerStatsTreeView extends LitElement {
     );
   }
 
-  private labelForMode(m: GameMode) {
-    return m === GameMode.FFA
-      ? translateText("game_mode.ffa")
-      : translateText("game_mode.teams");
+  private labelForMode(m: PlayerStatsGameMode) {
+    if (m === GameMode.FFA) return translateText("game_mode.ffa");
+    if (m === GameMode.Team) return translateText("game_mode.teams");
+    return translateText("game_mode.hvn");
   }
 
   private labelForType(t: TypeSelection) {
@@ -161,7 +165,9 @@ export class PlayerStatsTreeView extends LitElement {
       this.getGameTypeLeaves(
         this.selectedType,
         this.selectedMode,
-        this.selectedDifficulty,
+        this.selectedType === GameType.Public
+          ? ALL_SELECTION
+          : this.selectedDifficulty,
       ),
     );
   }
@@ -175,7 +181,7 @@ export class PlayerStatsTreeView extends LitElement {
     if (!typeNode) return [];
     const modes =
       modeSelection === ALL_SELECTION
-        ? Object.keys(typeNode).filter(isGameMode)
+        ? PlayerStatsGameModes.filter((mode) => typeNode[mode])
         : [modeSelection];
 
     return modes.flatMap((mode) => {

@@ -600,6 +600,7 @@
   },
   "game_mode": {
     "ffa": "Free for All",
+    "hvn": "Humans vs Nations",
     "teams": "Teams"
   },
   "game_starting_modal": {

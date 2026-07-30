@@ -2,7 +2,7 @@ import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMode, RankedType } from "./game/Game";
+import { Difficulty, GameMode, HumansVsNations, RankedType } from "./game/Game";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -417,8 +417,15 @@ export const PlayerStatsLeafSchema = z.object({
 });
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
+export const PlayerStatsGameModes = [
+  GameMode.FFA,
+  GameMode.Team,
+  HumansVsNations,
+] as const;
+export type PlayerStatsGameMode = (typeof PlayerStatsGameModes)[number];
+
 const GameModeStatsSchema = z.partialRecord(
-  z.enum(GameMode),
+  z.enum(PlayerStatsGameModes),
   z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
 );
 
