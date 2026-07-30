@@ -1,4 +1,5 @@
 import { UserMeResponse } from "../core/ApiSchemas";
+import { hasLinkedIdentity } from "./AccountIdentity";
 import { getDiscordAvatarUrl, translateText } from "./Utils";
 
 // Renders the persistent top-nav account button from the resolved /users/@me
@@ -31,15 +32,27 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const navToken = Symbol();
   if (avatarEl) avatarEl._navToken = navToken;
 
+  // Logged in, but with no avatar or badge to show (e.g. Steam without a
+  // cached avatar, or an avatar that failed to load): the person icon alone,
+  // minus the signed-out prompt.
+  const showLoggedInPlain = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.add("hidden");
+    signInTextEl?.classList.add("hidden");
+    button?.classList.add("border", "border-white/20");
+  };
+
   const showAvatar = (src: string, alt?: string) => {
     if (avatarEl) {
       avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
       // If the avatar fails to load (bad URL / CDN issue / offline), fall back
-      // to the default sign-in UI instead of leaving a broken image.
+      // to the provider-neutral logged-in state rather than leaving a broken
+      // image or a mismatched default (the button is used by Discord and Steam).
       avatarEl.onerror = () => {
         if (avatarEl._navToken !== navToken) return;
         avatarEl.onerror = null;
-        avatarEl.src = "https://cdn.discordapp.com/embed/avatars/0.png";
+        showLoggedInPlain();
       };
       avatarEl.onload = () => {
         // Only handle if this is the latest update
@@ -69,16 +82,6 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     avatarEl?.classList.add("hidden");
     personIconEl?.classList.remove("hidden");
     emailBadgeEl?.classList.remove("hidden");
-    signInTextEl?.classList.add("hidden");
-    button?.classList.add("border", "border-white/20");
-  };
-
-  // Logged in, but with no avatar or badge to show (e.g. Steam without a
-  // cached avatar): the person icon alone, minus the signed-out prompt.
-  const showLoggedInPlain = () => {
-    avatarEl?.classList.add("hidden");
-    personIconEl?.classList.remove("hidden");
-    emailBadgeEl?.classList.add("hidden");
     signInTextEl?.classList.add("hidden");
     button?.classList.add("border", "border-white/20");
   };
@@ -129,6 +132,15 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     userMeResponse !== false ? userMeResponse.user.google : undefined;
   if (google) {
     showEmailLoggedIn();
+    return;
+  }
+
+  // A linked identity that reached here rendered nothing rich (e.g. a Discord
+  // account whose avatar URL didn't resolve, or a missing avatar element): the
+  // user is still authenticated, so show the logged-in person icon. Only a
+  // session with no linked identity at all gets the sign-in prompt.
+  if (userMeResponse !== false && hasLinkedIdentity(userMeResponse.user)) {
+    showLoggedInPlain();
     return;
   }
 

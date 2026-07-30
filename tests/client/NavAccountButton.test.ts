@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
+import { getDiscordAvatarUrl } from "../../src/client/Utils";
+import type { DiscordUser, UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -31,20 +32,29 @@ function userMe(user: UserMeResponse["user"]): UserMeResponse {
   return { user, player: {} as UserMeResponse["player"] };
 }
 
+const discordUser: DiscordUser = {
+  id: "1",
+  avatar: "abc",
+  username: "JishDiscord",
+  global_name: "Jish",
+  discriminator: "0",
+};
+
 const hidden = (el: Element) => el.classList.contains("hidden");
 
 describe("updateAccountNavButton", () => {
-  beforeEach(() => mountNav());
+  let nav: ReturnType<typeof mountNav>;
+  beforeEach(() => {
+    nav = mountNav();
+  });
 
   it("shows the sign-in prompt for a signed-out user", () => {
-    const nav = mountNav();
     updateAccountNavButton(false);
     expect(hidden(nav.signInText)).toBe(false);
     expect(hidden(nav.avatar)).toBe(true);
   });
 
   it("shows the Steam avatar (not the sign-in prompt) for a Steam session", () => {
-    const nav = mountNav();
     updateAccountNavButton(
       userMe({
         steam: {
@@ -63,7 +73,6 @@ describe("updateAccountNavButton", () => {
   });
 
   it("shows the logged-in person icon for a Steam session with no avatar", () => {
-    const nav = mountNav();
     updateAccountNavButton(
       userMe({
         steam: {
@@ -81,9 +90,36 @@ describe("updateAccountNavButton", () => {
   });
 
   it("shows the email badge for an email session", () => {
-    const nav = mountNav();
     updateAccountNavButton(userMe({ email: "player@example.com" }));
     expect(hidden(nav.signInText)).toBe(true);
     expect(hidden(nav.emailBadge)).toBe(false);
+  });
+
+  it("prefers the Discord avatar over Steam for a linked account", () => {
+    updateAccountNavButton(
+      userMe({
+        discord: discordUser,
+        steam: {
+          steamId: "76561198024013188",
+          personaName: "Jish",
+          avatarUrl: "https://avatars.steamstatic.com/abc_full.jpg",
+        },
+      }),
+    );
+    // Discord is checked first, so its avatar wins — not the Steam one.
+    expect(hidden(nav.avatar)).toBe(false);
+    expect(nav.avatar.getAttribute("src")).toBe(
+      "https://cdn/discord-avatar.png",
+    );
+  });
+
+  it("keeps a Discord user with no resolvable avatar logged in", () => {
+    // A modern Discord account (no discriminator) with no custom avatar yields
+    // no URL — it must still read as logged in, not fall through to sign-in.
+    vi.mocked(getDiscordAvatarUrl).mockReturnValueOnce(null);
+    updateAccountNavButton(userMe({ discord: discordUser }));
+    expect(hidden(nav.signInText)).toBe(true);
+    expect(hidden(nav.personIcon)).toBe(false);
+    expect(hidden(nav.avatar)).toBe(true);
   });
 });
