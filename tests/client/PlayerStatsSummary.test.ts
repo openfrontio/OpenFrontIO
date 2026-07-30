@@ -143,7 +143,7 @@ describe("PlayerStatsSummary", () => {
     });
   });
 
-  it("renders one W/L panel and six responsive gameplay cards", async () => {
+  it("renders six gameplay cards as 2x3 on mobile and 3x2 on desktop", async () => {
     const summary = document.createElement(
       "player-stats-summary",
     ) as PlayerStatsSummary;
@@ -182,9 +182,11 @@ describe("PlayerStatsSummary", () => {
       ),
     ).toBe(true);
     expect(summary.querySelectorAll("[data-stat]")).toHaveLength(6);
-    expect(
-      summary.querySelector("[data-stat]")?.parentElement?.classList,
-    ).toContain("lg:grid-cols-6");
+    const metricGrid =
+      summary.querySelector("[data-stat]")?.parentElement?.classList;
+    expect(metricGrid).toContain("grid-cols-2");
+    expect(metricGrid).toContain("sm:grid-cols-3");
+    expect(metricGrid).not.toContain("lg:grid-cols-6");
     expect(
       summary.querySelector('[data-stat="playerKills"]')?.textContent,
     ).toContain("2.0");
