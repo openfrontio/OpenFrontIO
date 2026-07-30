@@ -13,13 +13,11 @@ import {
   ClientMessageSchema,
   ID,
   MAX_HOSTED_LOBBIES,
-  PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
-import { archive, finalizeGameRecord } from "./Archive";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -373,52 +371,6 @@ export async function startWorker() {
   });
 
   registerAdminBotRoutes({ app, gm, workerId, log });
-
-  app.post("/api/archive_singleplayer_game", async (req, res) => {
-    try {
-      const record = req.body;
-
-      const result = PartialGameRecordSchema.safeParse(record);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        log.info(error);
-        return res.status(400).json({ error });
-      }
-      const gameRecord = result.data;
-
-      if (gameRecord.info.config.gameType !== GameType.Singleplayer) {
-        log.warn(
-          `cannot archive singleplayer with game type ${gameRecord.info.config.gameType}`,
-          {
-            gameID: gameRecord.info.gameID,
-          },
-        );
-        return res.status(400).json({ error: "Invalid request" });
-      }
-
-      if (result.data.info.players.length !== 1) {
-        log.warn(`cannot archive singleplayer game multiple players`, {
-          gameID: gameRecord.info.gameID,
-        });
-        return res.status(400).json({ error: "Invalid request" });
-      }
-
-      log.info("archiving singleplayer game", {
-        gameID: gameRecord.info.gameID,
-      });
-
-      archive(
-        finalizeGameRecord(gameRecord),
-        privilegeRefresher.getCosmeticFlagUrls(),
-      );
-      res.json({
-        success: true,
-      });
-    } catch (error) {
-      log.error("Error processing archive request:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
