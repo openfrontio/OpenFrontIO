@@ -327,9 +327,9 @@ export class TribesPanel extends LitElement {
     </section>`;
   }
 
-  // "2 boosts · until Aug 23" under an actively boosted name. The date is
-  // when the LAST boost lapses (the API serves max(expiresAt)), i.e. when
-  // the name stops being boosted entirely.
+  // "2 boosts · next boost expires Aug 5" under an actively boosted name.
+  // The date is when the NEXT boost lapses (the API serves min(expiresAt)),
+  // i.e. when the count drops — not when boosting ends entirely.
   private renderBoostStatus(tribe: TribeName): TemplateResult | typeof nothing {
     const boosts = tribe.activeBoosts ?? 0;
     if (boosts === 0) return nothing;
@@ -349,7 +349,8 @@ export class TribesPanel extends LitElement {
         : null;
     return html`<span class="text-xs text-amber-300 mt-0.5">
       ${countText}${until
-        ? html` · ${translateText("store.tribe_boost_until", { date: until })}`
+        ? html` ·
+          ${translateText("store.tribe_boost_next_expiry", { date: until })}`
         : ""}
     </span>`;
   }
