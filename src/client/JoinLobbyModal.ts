@@ -603,24 +603,15 @@ export class JoinLobbyModal extends BaseModal {
     if (c.maxTimerValue)
       items.push({
         label: translateText("private_lobby.game_length"),
-        value: `${c.maxTimerValue} min`,
+        value: renderDuration(c.maxTimerValue * 60),
       });
     if (
       c.spawnImmunityDuration &&
       Math.round(c.spawnImmunityDuration / 10) !== 5
     ) {
-      const totalSeconds = Math.round(c.spawnImmunityDuration / 10);
-      let immunityValue: string;
-      if (totalSeconds < 60) {
-        immunityValue = `${totalSeconds}s`;
-      } else if (totalSeconds % 60 > 0) {
-        immunityValue = `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`;
-      } else {
-        immunityValue = `${Math.floor(totalSeconds / 60)} min`;
-      }
       items.push({
         label: translateText("private_lobby.pvp_immunity"),
-        value: immunityValue,
+        value: renderDuration(Math.round(c.spawnImmunityDuration / 10)),
       });
     }
     if (c.startingGold)
@@ -641,7 +632,7 @@ export class JoinLobbyModal extends BaseModal {
     else if (typeof c.customAllianceDuration === "number")
       items.push({
         label: translateText("public_game_modifier.disable_alliances_label"),
-        value: `${c.customAllianceDuration}m`,
+        value: renderDuration(c.customAllianceDuration * 60),
       });
     if (c.waterNukes)
       items.push({
