@@ -296,6 +296,11 @@ export class JoinLobbyModal extends BaseModal {
           `maps/${encodeURIComponent(normaliseMapKey(c.gameMap))}/thumbnail.webp`,
         )
       : "";
+    // Nation count for this map isn't loaded pre-join, so the numeric-nations
+    // default comparison is skipped in the row chips.
+    const settings = c ? this.notableSettings(c, null) : [];
+    const disabledUnitCount = c?.disabledUnits?.length ?? 0;
+    const enabled = translateText("common.enabled");
     return html`
       <button
         type="button"
@@ -315,6 +320,27 @@ export class JoinLobbyModal extends BaseModal {
           <span class="text-xs text-white/60"
             >${c ? this.modeSubtitle(c) : ""}</span
           >
+          ${settings.length > 0 || disabledUnitCount > 0
+            ? html`<div class="flex flex-wrap gap-1 mt-1">
+                ${settings.map((s) => {
+                  // Some labels (e.g. host_modal.bots) already end with ": ".
+                  const label = s.label.replace(/[:\s]+$/, "");
+                  return html`<span
+                    class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
+                    >${s.value === enabled
+                      ? label
+                      : `${label}: ${s.value}`}</span
+                  >`;
+                })}
+                ${disabledUnitCount > 0
+                  ? html`<span
+                      class="px-1.5 py-0.5 bg-red-500/20 text-red-200 text-[10px] rounded font-bold border border-red-500/30"
+                      >${translateText("private_lobby.disabled_units")}:
+                      ${disabledUnitCount}</span
+                    >`
+                  : ""}
+              </div>`
+            : ""}
         </div>
         <div
           class="flex items-center gap-1 text-white/80 text-xs font-bold shrink-0"
@@ -529,6 +555,150 @@ export class JoinLobbyModal extends BaseModal {
     return translateText("game_mode.ffa");
   }
 
+  // Non-default settings worth surfacing, shared by the post-join config view
+  // and the open-lobby rows. Pass null nationCount to skip the numeric-nations
+  // default comparison (it needs the map manifest, loaded only post-join).
+  private notableSettings(
+    c: GameConfig,
+    nationCount: number | null,
+  ): { label: string; value: string }[] {
+    const isTeam = c.gameMode === GameMode.Team;
+    const enabled = translateText("common.enabled");
+    const disabled = translateText("common.disabled");
+    const pm = c.publicGameModifiers;
+    const items: { label: string; value: string }[] = [];
+    if (pm?.isCrowded)
+      items.push({
+        label: translateText("host_modal.crowded"),
+        value: enabled,
+      });
+    if (
+      pm?.isHardNations ||
+      (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy)
+    )
+      items.push({
+        label: translateText("difficulty.difficulty"),
+        value: translateText(`difficulty.${c.difficulty.toLowerCase()}`),
+      });
+    if (c.infiniteTroops)
+      items.push({
+        label: translateText("host_modal.infinite_troops"),
+        value: enabled,
+      });
+    if (c.infiniteGold)
+      items.push({
+        label: translateText("host_modal.infinite_gold"),
+        value: enabled,
+      });
+    if (c.instantBuild)
+      items.push({
+        label: translateText("host_modal.instant_build"),
+        value: enabled,
+      });
+    if (c.randomSpawn)
+      items.push({
+        label: translateText("host_modal.random_spawn"),
+        value: enabled,
+      });
+    if (c.maxTimerValue)
+      items.push({
+        label: translateText("private_lobby.game_length"),
+        value: renderDuration(c.maxTimerValue * 60),
+      });
+    if (
+      c.spawnImmunityDuration &&
+      Math.round(c.spawnImmunityDuration / 10) !== 5
+    ) {
+      items.push({
+        label: translateText("private_lobby.pvp_immunity"),
+        value: renderDuration(Math.round(c.spawnImmunityDuration / 10)),
+      });
+    }
+    if (c.startingGold)
+      items.push({
+        label: translateText("private_lobby.starting_gold"),
+        value: `${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}M`,
+      });
+    if (c.goldMultiplier)
+      items.push({
+        label: translateText("host_modal.gold_multiplier"),
+        value: `x${c.goldMultiplier}`,
+      });
+    if (c.customAllianceDuration === 0 || c.disableAlliances)
+      items.push({
+        label: translateText("public_game_modifier.disable_alliances_label"),
+        value: disabled,
+      });
+    else if (
+      typeof c.customAllianceDuration === "number" &&
+      // 5 minutes is the sim fallback (Config.allianceDuration), so an
+      // explicit 5 changes nothing worth surfacing.
+      c.customAllianceDuration !== 5
+    )
+      items.push({
+        label: translateText("public_game_modifier.disable_alliances_label"),
+        value: renderDuration(c.customAllianceDuration * 60),
+      });
+    if (c.waterNukes)
+      items.push({
+        label: translateText("public_game_modifier.water_nukes_label"),
+        value: enabled,
+      });
+    if (c.doomsdayClock?.enabled)
+      items.push({
+        label: translateText("public_game_modifier.doomsday_clock_label"),
+        value: translateText(
+          `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
+        ),
+      });
+    if (c.anonymizeNames)
+      items.push({
+        label: translateText("host_modal.anonymous_players"),
+        value: enabled,
+      });
+    if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
+      items.push({
+        label: translateText("host_modal.donate_gold"),
+        value: c.donateGold ? enabled : disabled,
+      });
+    if ((isTeam && !c.donateTroops) || (!isTeam && c.donateTroops))
+      items.push({
+        label: translateText("host_modal.donate_troops"),
+        value: c.donateTroops ? enabled : disabled,
+      });
+    const isCompact =
+      c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
+    if (isCompact)
+      items.push({
+        label: translateText("host_modal.compact_map"),
+        value: enabled,
+      });
+    {
+      const defaultBots = isCompact ? 100 : 400;
+      if (c.bots !== defaultBots)
+        items.push({
+          label: translateText("host_modal.bots"),
+          value: String(c.bots),
+        });
+    }
+    if (nationCount !== null) {
+      const defaultNations = isCompact
+        ? Math.max(0, Math.floor(nationCount * 0.25))
+        : nationCount;
+      if (typeof c.nations === "number" && c.nations !== defaultNations)
+        items.push({
+          label: translateText("host_modal.nations"),
+          value: String(c.nations),
+        });
+    }
+    if (c.nations === "disabled" && !(c.gameType === GameType.Public && isTeam))
+      items.push({
+        label: translateText("host_modal.nations"),
+        value: disabled,
+      });
+    return items;
+  }
+
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 
@@ -538,192 +708,15 @@ export class JoinLobbyModal extends BaseModal {
     const thumbnailUrl = assetUrl(
       `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
     );
-    const isTeam = c.gameMode === GameMode.Team;
     const modeSubtitle = this.modeSubtitle(c);
 
-    const pm = c.publicGameModifiers;
-    const cards: TemplateResult[] = [];
-    if (pm?.isCrowded)
-      cards.push(
+    const cards = this.notableSettings(c, this.nationCount).map(
+      (s) =>
         html`<lobby-config-item
-          .label=${translateText("host_modal.crowded")}
-          .value=${translateText("common.enabled")}
+          .label=${s.label}
+          .value=${s.value}
         ></lobby-config-item>`,
-      );
-    if (
-      pm?.isHardNations ||
-      (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy)
-    )
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("difficulty.difficulty")}
-          .value=${translateText(`difficulty.${c.difficulty.toLowerCase()}`)}
-        ></lobby-config-item>`,
-      );
-    if (c.infiniteTroops)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.infinite_troops")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    if (c.infiniteGold)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.infinite_gold")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    if (c.instantBuild)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.instant_build")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    if (c.randomSpawn)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.random_spawn")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    if (c.maxTimerValue)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("private_lobby.game_length")}
-          .value=${`${c.maxTimerValue} min`}
-        ></lobby-config-item>`,
-      );
-    if (
-      c.spawnImmunityDuration &&
-      Math.round(c.spawnImmunityDuration / 10) !== 5
-    ) {
-      const totalSeconds = Math.round(c.spawnImmunityDuration / 10);
-      const immunityValue =
-        totalSeconds < 60
-          ? `${totalSeconds}s`
-          : totalSeconds % 60 > 0
-            ? `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`
-            : `${Math.floor(totalSeconds / 60)} min`;
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("private_lobby.pvp_immunity")}
-          .value=${immunityValue}
-        ></lobby-config-item>`,
-      );
-    }
-    if (c.startingGold)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("private_lobby.starting_gold")}
-          .value=${`${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}M`}
-        ></lobby-config-item>`,
-      );
-    if (c.goldMultiplier)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.gold_multiplier")}
-          .value=${`x${c.goldMultiplier}`}
-        ></lobby-config-item>`,
-      );
-    if (c.customAllianceDuration === 0 || c.disableAlliances)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText(
-            "public_game_modifier.disable_alliances_label",
-          )}
-          .value=${translateText("common.disabled")}
-        ></lobby-config-item>`,
-      );
-    else if (typeof c.customAllianceDuration === "number")
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText(
-            "public_game_modifier.disable_alliances_label",
-          )}
-          .value=${`${c.customAllianceDuration}m`}
-        ></lobby-config-item>`,
-      );
-    if (c.waterNukes)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("public_game_modifier.water_nukes_label")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    if (c.doomsdayClock?.enabled)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("public_game_modifier.doomsday_clock_label")}
-          .value=${translateText(
-            `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
-          )}
-        ></lobby-config-item>`,
-      );
-    if (c.anonymizeNames)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.anonymous_players")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.donate_gold")}
-          .value=${translateText(
-            c.donateGold ? "common.enabled" : "common.disabled",
-          )}
-        ></lobby-config-item>`,
-      );
-    if ((isTeam && !c.donateTroops) || (!isTeam && c.donateTroops))
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.donate_troops")}
-          .value=${translateText(
-            c.donateTroops ? "common.enabled" : "common.disabled",
-          )}
-        ></lobby-config-item>`,
-      );
-    const isCompact =
-      c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
-    if (isCompact)
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.compact_map")}
-          .value=${translateText("common.enabled")}
-        ></lobby-config-item>`,
-      );
-    {
-      const defaultBots = isCompact ? 100 : 400;
-      if (c.bots !== defaultBots)
-        cards.push(
-          html`<lobby-config-item
-            .label=${translateText("host_modal.bots")}
-            .value=${String(c.bots)}
-          ></lobby-config-item>`,
-        );
-    }
-    {
-      const defaultNations = isCompact
-        ? Math.max(0, Math.floor(this.nationCount * 0.25))
-        : this.nationCount;
-      if (typeof c.nations === "number" && c.nations !== defaultNations)
-        cards.push(
-          html`<lobby-config-item
-            .label=${translateText("host_modal.nations")}
-            .value=${String(c.nations)}
-          ></lobby-config-item>`,
-        );
-    }
-    if (c.nations === "disabled" && !(c.gameType === GameType.Public && isTeam))
-      cards.push(
-        html`<lobby-config-item
-          .label=${translateText("host_modal.nations")}
-          .value=${translateText("common.disabled")}
-        ></lobby-config-item>`,
-      );
+    );
 
     return html`
       <div class="flex items-center gap-3 mb-6">

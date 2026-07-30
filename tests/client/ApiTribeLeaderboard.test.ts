@@ -23,6 +23,7 @@ const entry = (rank: number) => ({
   ownerPublicId: `owner-${rank}`,
   // Odd ranks have no account username, so the fallback path is exercised too.
   ownerUsername: rank % 2 === 0 ? `buyer.${rank}` : null,
+  activeBoosts: 0,
 });
 
 const board = (ranks: number[]) => ({
