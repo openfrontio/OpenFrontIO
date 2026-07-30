@@ -631,7 +631,7 @@ export class UnitImpl implements Unit {
       this._missileTimerQueue.push(this.mg.ticks());
       //inner if to reduce if checks
       if (this.type() === UnitType.SAMLauncher) {
-         this._recheckSAMRange = true;
+        this._recheckSAMRange = true;
       }
     }
     this.mg.addUpdate(this.toUpdate());
@@ -643,7 +643,7 @@ export class UnitImpl implements Unit {
       this._missileTimerQueue.pop();
       //inner if to reduce if checks
       if (this.type() === UnitType.SAMLauncher) {
-         this._recheckSAMRange = true;
+        this._recheckSAMRange = true;
       }
     }
     if (this._level <= 0) {

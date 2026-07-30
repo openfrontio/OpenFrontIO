@@ -519,7 +519,7 @@ export interface Unit {
   missileTimerQueue(): number[];
 
   // SAMs
-  needsSamRangeRecheck(): boolean  | undefined;
+  needsSamRangeRecheck(): boolean | undefined;
   setSamRangeRecheck(samRangeRecheck: boolean): void;
 
   // Trade Ships

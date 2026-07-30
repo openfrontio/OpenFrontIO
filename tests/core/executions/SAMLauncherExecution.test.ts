@@ -473,14 +473,13 @@ describe("SAM", () => {
     sam.increaseLevel();
     sam.reloadMissile();
     expect(sam.needsSamRangeRecheck()).toBeTruthy();
-    
+
     //Custom test config range always returns 20 no matter SAM level, mock 26 for range increase.
     vi.spyOn(game.config(), "samRange").mockReturnValue(26);
-    
+
     // Run next ticks: cache should be cleared and nuke intercepted under new range.
     executeTicks(game, 6);
     expect(nuke.reachedTarget()).toBeFalsy();
     expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
   });
 });
-
