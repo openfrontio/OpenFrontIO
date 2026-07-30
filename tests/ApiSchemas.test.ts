@@ -918,6 +918,37 @@ describe("TribeLeaderboardResponseSchema", () => {
     },
   );
 
+  it("parses an entry with an active boost count", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, activeBoosts: 2 }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBe(2);
+  });
+
+  // Cached responses from before the API served activeBoosts lack the field
+  // (the board is cached for 1h) — the parse must not fail on them.
+  it("parses an entry without activeBoosts (older API)", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBeUndefined();
+  });
+
+  // Same coercion tolerance as TribeNameSchema.activeBoosts: a count that
+  // arrives as a stringified number must not fail the whole board parse.
+  it("coerces a stringified boost count", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, activeBoosts: "3" }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBe(3);
+  });
+
   it("parses an empty board", () => {
     expect(
       TribeLeaderboardResponseSchema.safeParse({ ...base, tribes: [] }).success,

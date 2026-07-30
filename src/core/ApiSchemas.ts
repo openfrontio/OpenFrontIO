@@ -340,6 +340,12 @@ export const TribeLeaderboardEntrySchema = z.object({
   // one — fall back to the public id, which is what <player-name> does).
   ownerPublicId: z.string(),
   ownerUsername: z.string().nullable(),
+  // Count of unexpired boosts — same predicate and name as the owner-facing
+  // field on GET /users/@me/tribe_names above, so it matches what the owner
+  // sees (display multiplier = this + 1). A "now" snapshot behind the board's
+  // 1h cache, not a window aggregate. Optional: cached responses from before
+  // the API served it lack the field.
+  activeBoosts: z.coerce.number().optional(),
 });
 export type TribeLeaderboardEntry = z.infer<typeof TribeLeaderboardEntrySchema>;
 

@@ -1,6 +1,9 @@
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { TribeLeaderboardResponse } from "../../../core/ApiSchemas";
+import {
+  TribeLeaderboardEntry,
+  TribeLeaderboardResponse,
+} from "../../../core/ApiSchemas";
 import { fetchTribeLeaderboard } from "../../Api";
 import { translateText } from "../../Utils";
 import "../PlayerName";
@@ -176,6 +179,26 @@ export class LeaderboardTribeTable extends LitElement {
     `;
   }
 
+  // "3×" in the Boost column. The in-game draw weight is 1 + activeBoosts,
+  // so the multiplier shown is count + 1 — the same convention the owner's
+  // store UI uses. Unboosted names get a dim dash rather than an empty cell.
+  private renderBoostCell(tribe: TribeLeaderboardEntry): TemplateResult {
+    const boosts = tribe.activeBoosts ?? 0;
+    if (boosts === 0) {
+      return html`<span class="text-white/20">—</span>`;
+    }
+    const multiplier = boosts + 1;
+    return html`<span
+      class="font-mono font-medium text-amber-300"
+      title=${translateText("leaderboard_modal.tribes_boost_value_tooltip", {
+        multiplier,
+      })}
+      >${translateText("leaderboard_modal.tribes_boost_value", {
+        multiplier,
+      })}</span
+    >`;
+  }
+
   // "Rolling 30-day window (Jun 27 – Jul 27)" — the figures mean nothing
   // without the span they cover. Dropped entirely if the dates are unreadable.
   private renderWindow(data: TribeLeaderboardResponse) {
@@ -215,10 +238,11 @@ export class LeaderboardTribeTable extends LitElement {
             <table class="w-full text-sm border-collapse table-fixed">
               <!-- Sized to keep Player Reach — the column the board is
                    ranked by — on screen at mobile widths rather than behind
-                   a horizontal scroll. -->
+                   a horizontal scroll (26rem total, fits ~420px). -->
               <colgroup>
                 <col style="width: 3.5rem" />
-                <col style="width: 8rem" />
+                <col style="width: 7rem" />
+                <col style="width: 4rem" />
                 <col style="width: 4.5rem" />
                 <col style="width: 7rem" />
               </colgroup>
@@ -231,6 +255,14 @@ export class LeaderboardTribeTable extends LitElement {
                   </th>
                   <th class="py-4 px-4 text-left font-bold">
                     ${translateText("leaderboard_modal.tribes_name")}
+                  </th>
+                  <th
+                    class="py-4 px-2 text-right font-bold whitespace-nowrap"
+                    title=${translateText(
+                      "leaderboard_modal.tribes_boost_tooltip",
+                    )}
+                  >
+                    ${translateText("leaderboard_modal.tribes_boost")}
                   </th>
                   <th class="py-4 px-4 text-right font-bold whitespace-nowrap">
                     ${translateText("leaderboard_modal.games")}
@@ -278,6 +310,9 @@ export class LeaderboardTribeTable extends LitElement {
                               this.openProfile(tribe.ownerPublicId)}
                           ></player-name>
                         </div>
+                      </td>
+                      <td class="py-3 px-2 text-right">
+                        ${this.renderBoostCell(tribe)}
                       </td>
                       <td
                         class="py-3 px-4 text-right font-mono text-white/80"
