@@ -1156,6 +1156,9 @@
     "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
     "limit_upsell": "Get unlimited ranked",
     "no_elo": "No ELO yet",
+    "party_searching_duo": "Searching for game as a duo...",
+    "party_waiting": "Waiting for your teammate...",
+    "party_waiting_hint": "You'll queue together once {id} picks 2v2 with your ID.",
     "queue_size": "Players in queue: {count}",
     "replaced": "You joined matchmaking from another tab or window.",
     "searching": "Searching for game...",
@@ -1375,6 +1378,10 @@
   "radial_menu": {
     "delete_unit_description": "Click to delete the nearest unit",
     "delete_unit_title": "Delete Unit"
+  },
+  "ranked_modal": {
+    "teammate_hint": "Optional. Both of you must enter each other's player ID to queue as a team.",
+    "teammate_placeholder": "Teammate Player ID (optional)"
   },
   "relation": {
     "default": "Default",

@@ -4,6 +4,7 @@ import { UserMeResponse } from "../../core/ApiSchemas";
 import { getUserMe, hasLinkedAccount } from "../Api";
 import { userAuth } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { getRankedTeammate, setRankedTeammate } from "../RankedTeammate";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
 import { modalHeader } from "./ui/ModalHeader";
@@ -12,6 +13,11 @@ import { modalHeader } from "./ui/ModalHeader";
 export class RankedModal extends BaseModal {
   protected routerName = "ranked";
 
+  // Shared by both live cards. h-full so they stay the same height once the 2v2
+  // card grows to hold the teammate field.
+  private static readonly CARD_CLASS =
+    "flex flex-col w-full h-full min-h-[9.5rem] rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3";
+
   @state() private elo: number | string = "...";
   @state() private elo2v2: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
@@ -19,6 +25,10 @@ export class RankedModal extends BaseModal {
   // CrazyGames players authenticate through the SDK, not a linked
   // Discord/Google/email account, so track that separately for ranked.
   @state() private crazyGamesSignedIn = false;
+  // Optional 2v2 teammate, by public id. Empty = ordinary solo queue. Ids are
+  // permanent, so it is remembered between sessions: a regular duo exchanges
+  // ids once and never types them again.
+  @state() private teammateId = "";
 
   // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
   private isRankedEligible(): boolean {
@@ -75,6 +85,7 @@ export class RankedModal extends BaseModal {
     this.elo = "...";
     this.elo2v2 = "...";
     this.errorMessage = null;
+    this.teammateId = getRankedTeammate() ?? "";
 
     try {
       const userMe = await getUserMe();
@@ -111,20 +122,10 @@ export class RankedModal extends BaseModal {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           ${this.renderCard(
             translateText("mode_selector.ranked_1v1_title"),
-            this.errorMessage ??
-              (this.isRankedEligible()
-                ? translateText("matchmaking_modal.elo", { elo: this.elo })
-                : translateText("mode_selector.ranked_title")),
+            this.modeSubtitle(this.elo),
             () => this.handleRanked("1v1"),
           )}
-          ${this.renderCard(
-            translateText("mode_selector.ranked_2v2_title"),
-            this.errorMessage ??
-              (this.isRankedEligible()
-                ? translateText("matchmaking_modal.elo", { elo: this.elo2v2 })
-                : translateText("mode_selector.ranked_title")),
-            () => this.handleRanked("2v2"),
-          )}
+          ${this.render2v2Card()}
           ${this.renderDisabledCard(
             translateText("mode_selector.coming_soon"),
             "",
@@ -138,45 +139,111 @@ export class RankedModal extends BaseModal {
     `;
   }
 
+  // Subtitle under a mode's title: the error, else the player's ELO for that
+  // mode, else a plain label when they can't play ranked yet.
+  private modeSubtitle(elo: number | string): string {
+    if (this.errorMessage !== null) return this.errorMessage;
+    return this.isRankedEligible()
+      ? translateText("matchmaking_modal.elo", { elo })
+      : translateText("mode_selector.ranked_title");
+  }
+
+  // Title + subtitle block, shared by every card so the three variants can't
+  // drift apart typographically.
+  private cardBody(title: string, subtitle: string, muted = false) {
+    return html`
+      <div class="flex flex-col items-center gap-1 text-center">
+        <h3
+          class="text-lg sm:text-xl font-bold ${muted
+            ? "text-white/60"
+            : "text-white"} uppercase tracking-widest leading-tight"
+        >
+          ${title}
+        </h3>
+        <p
+          class="text-xs ${muted
+            ? "text-white/40"
+            : "text-white/80"} uppercase tracking-wider whitespace-pre-line leading-tight"
+        >
+          ${subtitle}
+        </p>
+      </div>
+    `;
+  }
+
   private renderCard(title: string, subtitle: string, onClick: () => void) {
     return html`
-      <button
-        @click=${onClick}
-        class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3"
-      >
-        <div class="flex flex-col items-center gap-1 text-center">
-          <h3
-            class="text-lg sm:text-xl font-bold text-white uppercase tracking-widest leading-tight"
-          >
-            ${title}
-          </h3>
-          <p
-            class="text-xs text-white/80 uppercase tracking-wider whitespace-pre-line leading-tight"
-          >
-            ${subtitle}
-          </p>
-        </div>
+      <button @click=${onClick} class=${RankedModal.CARD_CLASS}>
+        ${this.cardBody(title, subtitle)}
       </button>
     `;
   }
 
+  // The 2v2 card carries the teammate field inside it, pinned to the bottom so
+  // the title/ELO block stays centred exactly like the 1v1 card's. It is a div
+  // rather than a button because a <button> may not contain an <input> (invalid
+  // HTML, and every click in the field would fire the queue action), so the card
+  // keeps button semantics via role/tabindex and the input stops its own events
+  // from bubbling up to the card.
+  private render2v2Card() {
+    const queue = () => this.handleRanked("2v2");
+    return html`
+      <div
+        role="button"
+        tabindex="0"
+        class="${RankedModal.CARD_CLASS} relative cursor-pointer"
+        @click=${queue}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            queue();
+          }
+        }}
+      >
+        ${this.cardBody(
+          translateText("mode_selector.ranked_2v2_title"),
+          this.modeSubtitle(this.elo2v2),
+        )}
+        ${this.isRankedEligible()
+          ? html`
+              <input
+                type="text"
+                .value=${this.teammateId}
+                @input=${this.onTeammateInput}
+                @click=${(e: Event) => e.stopPropagation()}
+                @keydown=${(e: Event) => e.stopPropagation()}
+                maxlength="22"
+                aria-label=${translateText("ranked_modal.teammate_placeholder")}
+                placeholder=${translateText(
+                  "ranked_modal.teammate_placeholder",
+                )}
+                title=${translateText("ranked_modal.teammate_hint")}
+                class="absolute bottom-3 left-3 right-3 mx-auto h-8 max-w-[15rem] cursor-text rounded-lg border border-white/25 bg-black/20 px-2 text-center text-xs tracking-wider text-white placeholder-white/60 transition-colors focus:border-white/50 focus:bg-black/30 focus:outline-none"
+              />
+            `
+          : ""}
+      </div>
+    `;
+  }
+
+  // Own id is never a valid teammate: it would hold the player out of matching
+  // forever waiting on themselves.
+  private onTeammateInput = (e: Event) => {
+    const entered = (e.target as HTMLInputElement).value.trim();
+    const ownId =
+      this.userMeResponse === false
+        ? null
+        : this.userMeResponse.player.publicId;
+    this.teammateId = entered === ownId ? "" : entered;
+    setRankedTeammate(this.teammateId);
+  };
+
   private renderDisabledCard(title: string, subtitle: string) {
     return html`
       <div
-        class="group relative isolate flex flex-col w-full h-28 sm:h-32 overflow-hidden rounded-2xl bg-slate-900/40 backdrop-blur-md border-0 shadow-none p-6 items-center justify-center gap-3 opacity-50 cursor-not-allowed"
+        class="group relative isolate flex flex-col w-full h-full min-h-[9.5rem] overflow-hidden rounded-2xl bg-slate-900/40 backdrop-blur-md border-0 shadow-none p-6 items-center justify-center gap-3 opacity-50 cursor-not-allowed"
       >
-        <div class="flex flex-col items-center gap-1 text-center">
-          <h3
-            class="text-lg sm:text-xl font-bold text-white/60 uppercase tracking-widest leading-tight"
-          >
-            ${title}
-          </h3>
-          <p
-            class="text-xs text-white/40 uppercase tracking-wider whitespace-pre-line leading-tight"
-          >
-            ${subtitle}
-          </p>
-        </div>
+        ${this.cardBody(title, subtitle, true)}
       </div>
     `;
   }
