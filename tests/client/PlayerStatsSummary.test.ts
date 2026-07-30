@@ -18,6 +18,9 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
       if (key === "player_stats_tree.stats_played") {
         return "Played";
       }
+      if (key === "player_stats_tree.stats_last_100") {
+        return "Last 100";
+      }
       if (key === "player_stats_tree.all") {
         return "All";
       }
@@ -40,6 +43,13 @@ const leaf: PlayerStatsLeaf = {
   wins: 3n,
   losses: 2n,
   total: 5n,
+  recentGames: [
+    { gameId: 5n, won: true },
+    { gameId: 4n, won: true },
+    { gameId: 3n, won: false },
+    { gameId: 2n, won: true },
+    { gameId: 1n, won: true },
+  ],
   stats: {
     attacks: [10_000n, 4_000n, 500n],
     conquests: [10n, 5n, 2n],
@@ -105,6 +115,7 @@ describe("PlayerStatsSummary", () => {
   it("derives the selected bucket's win rate and split kill metrics", () => {
     expect(buildPlayerStatsSummary(leaf)).toEqual({
       winRate: "60.0%",
+      recentWinRate: "80.0%",
       played: "5",
       wins: "3",
       losses: "2",
@@ -155,6 +166,7 @@ describe("PlayerStatsSummary", () => {
     expect(summary.querySelector("[data-win-rate]")?.textContent).toContain(
       "60.0%",
     );
+    expect(summary.querySelector("[data-last-100]")).toBeNull();
     expect(
       summary.querySelector('[data-record-stat="played"]')?.textContent,
     ).toContain("Played");
@@ -204,6 +216,47 @@ describe("PlayerStatsSummary", () => {
     );
     expect(summary.querySelector('[data-stat="gold"]')?.textContent).toContain(
       "300",
+    );
+  });
+
+  it("shows no recent win rate when the selected bucket has no recent games", () => {
+    expect(
+      buildPlayerStatsSummary({ ...leaf, recentGames: [] }).recentWinRate,
+    ).toBe("—");
+  });
+
+  it("shows Last 100 only after the active category exceeds 100 played games", async () => {
+    const summary = document.createElement(
+      "player-stats-summary",
+    ) as PlayerStatsSummary;
+    summary.leaf = {
+      ...leaf,
+      wins: 75n,
+      losses: 25n,
+      total: 100n,
+      recentGames: Array.from({ length: 100 }, (_, index) => ({
+        gameId: BigInt(100 - index),
+        won: index < 75,
+      })),
+    };
+    document.body.append(summary);
+
+    await summary.updateComplete;
+
+    expect(summary.querySelector("[data-last-100]")).toBeNull();
+
+    summary.leaf = {
+      ...summary.leaf,
+      wins: 76n,
+      total: 101n,
+    };
+    await summary.updateComplete;
+
+    expect(summary.querySelector("[data-last-100]")?.textContent).toContain(
+      "Last 100",
+    );
+    expect(summary.querySelector("[data-last-100]")?.textContent).toContain(
+      "75.0%",
     );
   });
 
@@ -335,6 +388,52 @@ describe("PlayerStatsSummary", () => {
 
     await clickTabInRow(tree, 1, "All");
     expect(getRenderedLeaf(tree)?.total).toBe(96n);
+  });
+
+  it("merges the newest 100 unique outcomes across the active All filters", async () => {
+    const publicRecent = Array.from({ length: 100 }, (_, index) => ({
+      gameId: BigInt(200 - index * 2),
+      won: index % 2 === 0,
+    }));
+    const privateRecent = [
+      { gameId: 200n, won: true },
+      ...Array.from({ length: 100 }, (_, index) => ({
+        gameId: BigInt(199 - index * 2),
+        won: index % 2 !== 0,
+      })),
+    ];
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = {
+      Public: {
+        "Free For All": {
+          Medium: {
+            ...leafWithTotal(100n),
+            recentGames: publicRecent,
+          },
+        },
+      },
+      Private: {
+        Team: {
+          Hard: {
+            ...leafWithTotal(100n),
+            recentGames: privateRecent,
+          },
+        },
+      },
+    };
+    document.body.append(tree);
+
+    await tree.updateComplete;
+
+    const mergedRecent = getRenderedLeaf(tree)?.recentGames;
+    expect(mergedRecent).toHaveLength(100);
+    expect(mergedRecent?.slice(0, 3).map((game) => game.gameId)).toEqual([
+      200n,
+      199n,
+      198n,
+    ]);
+    expect(mergedRecent?.[mergedRecent.length - 1]?.gameId).toBe(101n);
+    expect(new Set(mergedRecent?.map((game) => game.gameId)).size).toBe(100);
   });
 
   it("resets every filter to All when the profile stats tree changes", async () => {

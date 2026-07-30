@@ -19,6 +19,7 @@ export interface PlayerSummaryMetric {
 
 export interface PlayerStatsSummaryData {
   winRate: string;
+  recentWinRate: string;
   played: string;
   wins: string;
   losses: string;
@@ -68,11 +69,17 @@ export function buildPlayerStatsSummary(
     0n,
   );
   const gold = sum(stats?.gold);
+  const recentGames = leaf.recentGames ?? [];
+  const recentWins = recentGames.filter((game) => game.won).length;
 
   return {
     winRate:
       games > 0n
         ? `${((Number(leaf.wins) / Number(games)) * 100).toFixed(1)}%`
+        : "—",
+    recentWinRate:
+      recentGames.length > 0
+        ? `${((recentWins / recentGames.length) * 100).toFixed(1)}%`
         : "—",
     played: renderNumber(games),
     wins: renderNumber(leaf.wins),
@@ -123,6 +130,8 @@ export class PlayerStatsSummary extends LitElement {
   render() {
     if (!this.leaf) return html``;
     const summary = buildPlayerStatsSummary(this.leaf);
+    const showRecentWinRate =
+      this.leaf.total > 100n && (this.leaf.recentGames?.length ?? 0) > 0;
     const recordStats = [
       {
         key: "played",
@@ -159,17 +168,35 @@ export class PlayerStatsSummary extends LitElement {
           <div
             class="relative grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] sm:items-center"
           >
-            <div>
-              <div
-                class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60"
-              >
-                ${translateText("player_stats_tree.stats_win_rate")}
+            <div class=${showRecentWinRate ? "grid grid-cols-2 gap-4" : ""}>
+              <div>
+                <div
+                  class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60"
+                >
+                  ${translateText("player_stats_tree.stats_win_rate")}
+                </div>
+                <div
+                  class="mt-1 text-3xl font-black leading-none tabular-nums text-emerald-300"
+                >
+                  ${summary.winRate}
+                </div>
               </div>
-              <div
-                class="mt-1 text-3xl font-black leading-none tabular-nums text-emerald-300"
-              >
-                ${summary.winRate}
-              </div>
+              ${showRecentWinRate
+                ? html`
+                    <div data-last-100>
+                      <div
+                        class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60"
+                      >
+                        ${translateText("player_stats_tree.stats_last_100")}
+                      </div>
+                      <div
+                        class="mt-1 text-3xl font-black leading-none tabular-nums text-cyan-300"
+                      >
+                        ${summary.recentWinRate}
+                      </div>
+                    </div>
+                  `
+                : ""}
             </div>
             <div
               data-record-group

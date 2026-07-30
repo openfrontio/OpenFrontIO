@@ -56,6 +56,24 @@ describe("StatsSchema", () => {
 });
 
 describe("PlayerStatsLeafSchema", () => {
+  test("parses optional recent game IDs and outcomes", () => {
+    const result = PlayerStatsLeafSchema.parse({
+      wins: "1",
+      losses: "1",
+      total: "2",
+      stats: {},
+      recentGames: [
+        { gameId: "102", won: true },
+        { gameId: "101", won: false },
+      ],
+    });
+
+    expect(result.recentGames).toEqual([
+      { gameId: 102n, won: true },
+      { gameId: 101n, won: false },
+    ]);
+  });
+
   test("null stat values coerce to 0n", () => {
     const result = PlayerStatsLeafSchema.safeParse({
       wins: "0",

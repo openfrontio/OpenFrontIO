@@ -406,6 +406,14 @@ export const PlayerStatsLeafSchema = z.object({
   losses: BigIntStringSchema,
   total: BigIntStringSchema,
   stats: PlayerStatsSchema,
+  recentGames: z
+    .array(
+      z.object({
+        gameId: BigIntStringSchema,
+        won: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 

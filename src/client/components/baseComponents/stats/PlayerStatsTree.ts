@@ -215,6 +215,7 @@ export class PlayerStatsTreeView extends LitElement {
           losses: leaf.losses,
           total: leaf.total,
           stats: this.cloneStats(leaf.stats),
+          recentGames: this.mergeRecentGames(undefined, leaf.recentGames),
         };
       }
       return {
@@ -222,8 +223,31 @@ export class PlayerStatsTreeView extends LitElement {
         losses: merged.losses + leaf.losses,
         total: merged.total + leaf.total,
         stats: this.mergeStats(merged.stats, leaf.stats),
+        recentGames: this.mergeRecentGames(
+          merged.recentGames,
+          leaf.recentGames,
+        ),
       };
     }, null);
+  }
+
+  private mergeRecentGames(
+    base: PlayerStatsLeaf["recentGames"],
+    next: PlayerStatsLeaf["recentGames"],
+  ): PlayerStatsLeaf["recentGames"] {
+    if (!base && !next) return undefined;
+    const byGameId = new Map<
+      bigint,
+      NonNullable<PlayerStatsLeaf["recentGames"]>[number]
+    >();
+    for (const game of [...(base ?? []), ...(next ?? [])]) {
+      byGameId.set(game.gameId, game);
+    }
+    return [...byGameId.values()]
+      .sort((left, right) =>
+        left.gameId === right.gameId ? 0 : left.gameId > right.gameId ? -1 : 1,
+      )
+      .slice(0, 100);
   }
 
   private syncSelection(): void {
