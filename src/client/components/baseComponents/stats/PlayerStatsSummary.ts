@@ -4,9 +4,9 @@ import type { PlayerStatsLeaf } from "../../../../core/ApiSchemas";
 import { renderNumber, translateText } from "../../../Utils";
 
 type PlayerSummaryMetricKey =
-  | "games"
-  | "victories"
-  | "conquests"
+  | "playerKills"
+  | "nationKills"
+  | "tribeKills"
   | "attacks"
   | "nukes"
   | "gold";
@@ -19,24 +19,25 @@ export interface PlayerSummaryMetric {
 
 export interface PlayerStatsSummaryData {
   winRate: string;
+  played: string;
   wins: string;
   losses: string;
   metrics: PlayerSummaryMetric[];
 }
 
 const METRIC_LABELS: Record<PlayerSummaryMetricKey, string> = {
-  games: "player_stats_tree.stats_games_played",
-  victories: "player_stats_tree.stats_victories",
-  conquests: "player_stats_tree.stats_conquests_per_game",
+  playerKills: "player_stats_tree.stats_player_kills_per_game",
+  nationKills: "player_stats_tree.stats_nation_kills_per_game",
+  tribeKills: "player_stats_tree.stats_tribe_kills_per_game",
   attacks: "player_stats_tree.stats_attacks_per_game",
   nukes: "player_stats_tree.stats_nukes_per_game",
   gold: "player_stats_tree.stats_gold_per_game",
 };
 
 const METRIC_TONES: Record<PlayerSummaryMetricKey, string> = {
-  games: "text-sky-300 border-sky-400/20",
-  victories: "text-emerald-300 border-emerald-400/20",
-  conquests: "text-violet-300 border-violet-400/20",
+  playerKills: "text-violet-300 border-violet-400/20",
+  nationKills: "text-fuchsia-300 border-fuchsia-400/20",
+  tribeKills: "text-orange-300 border-orange-400/20",
   attacks: "text-cyan-300 border-cyan-400/20",
   nukes: "text-rose-300 border-rose-400/20",
   gold: "text-amber-300 border-amber-400/20",
@@ -59,7 +60,8 @@ export function buildPlayerStatsSummary(
 ): PlayerStatsSummaryData {
   const games = leaf.total;
   const stats = leaf.stats;
-  const conquests = sum(stats?.conquests);
+  const [playerKills = 0n, nationKills = 0n, tribeKills = 0n] =
+    stats?.conquests ?? [];
   const attacks = stats?.attacks?.[0] ?? 0n;
   const nukes = Object.values(stats?.bombs ?? {}).reduce(
     (total, values) => total + (values?.[0] ?? 0n),
@@ -72,23 +74,24 @@ export function buildPlayerStatsSummary(
       games > 0n
         ? `${((Number(leaf.wins) / Number(games)) * 100).toFixed(1)}%`
         : "—",
+    played: renderNumber(games),
     wins: renderNumber(leaf.wins),
     losses: renderNumber(leaf.losses),
     metrics: [
       {
-        key: "games",
-        value: renderNumber(games),
-        total: null,
+        key: "playerKills",
+        value: formatPerGame(playerKills, games),
+        total: renderNumber(playerKills),
       },
       {
-        key: "victories",
-        value: renderNumber(leaf.wins),
-        total: null,
+        key: "nationKills",
+        value: formatPerGame(nationKills, games),
+        total: renderNumber(nationKills),
       },
       {
-        key: "conquests",
-        value: formatPerGame(conquests, games),
-        total: renderNumber(conquests),
+        key: "tribeKills",
+        value: formatPerGame(tribeKills, games),
+        total: renderNumber(tribeKills),
       },
       {
         key: "attacks",
@@ -120,6 +123,26 @@ export class PlayerStatsSummary extends LitElement {
   render() {
     if (!this.leaf) return html``;
     const summary = buildPlayerStatsSummary(this.leaf);
+    const recordStats = [
+      {
+        key: "played",
+        label: "player_stats_tree.stats_played",
+        value: summary.played,
+        tone: "text-sky-200",
+      },
+      {
+        key: "victories",
+        label: "player_stats_tree.stats_victories",
+        value: summary.wins,
+        tone: "text-emerald-300",
+      },
+      {
+        key: "losses",
+        label: "player_stats_tree.stats_losses",
+        value: summary.losses,
+        tone: "text-rose-300",
+      },
+    ] as const;
 
     return html`
       <section
@@ -133,7 +156,9 @@ export class PlayerStatsSummary extends LitElement {
           <div
             class="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-aquarius/10 blur-2xl"
           ></div>
-          <div class="relative flex items-end justify-between gap-4">
+          <div
+            class="relative grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] sm:items-center"
+          >
             <div>
               <div
                 class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60"
@@ -147,12 +172,31 @@ export class PlayerStatsSummary extends LitElement {
               </div>
             </div>
             <div
-              class="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold tabular-nums text-white/70"
+              data-record-group
+              class="grid grid-cols-3 overflow-hidden rounded-lg border border-white/10 bg-black/20 shadow-inner shadow-black/20"
             >
-              ${translateText("player_stats_tree.stats_record", {
-                wins: summary.wins,
-                losses: summary.losses,
-              })}
+              ${recordStats.map(
+                (stat, index) => html`
+                  <div
+                    data-record-stat=${stat.key}
+                    class="min-w-0 px-2 py-3 text-center ${index === 0
+                      ? ""
+                      : "border-l border-white/10"}"
+                  >
+                    <div
+                      class="truncate text-[10px] font-bold uppercase tracking-wider text-blue-200/55"
+                      title=${translateText(stat.label)}
+                    >
+                      ${translateText(stat.label)}
+                    </div>
+                    <div
+                      class="mt-1 truncate text-xl font-black leading-none tabular-nums ${stat.tone}"
+                    >
+                      ${stat.value}
+                    </div>
+                  </div>
+                `,
+              )}
             </div>
           </div>
         </div>

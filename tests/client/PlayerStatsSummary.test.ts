@@ -15,6 +15,9 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
       if (key === "player_stats_tree.stats_total") {
         return `${args?.total} total`;
       }
+      if (key === "player_stats_tree.stats_played") {
+        return "Played";
+      }
       if (key === "player_stats_tree.all") {
         return "All";
       }
@@ -39,7 +42,7 @@ const leaf: PlayerStatsLeaf = {
   total: 5n,
   stats: {
     attacks: [10_000n, 4_000n, 500n],
-    conquests: [10n, 5n],
+    conquests: [10n, 5n, 2n],
     bombs: {
       abomb: [5n, 4n, 1n],
       hbomb: [5n, 3n, 2n],
@@ -99,26 +102,27 @@ describe("PlayerStatsSummary", () => {
     document.body.replaceChildren();
   });
 
-  it("derives the selected bucket's win rate and six profile metrics", () => {
+  it("derives the selected bucket's win rate and split kill metrics", () => {
     expect(buildPlayerStatsSummary(leaf)).toEqual({
       winRate: "60.0%",
+      played: "5",
       wins: "3",
       losses: "2",
       metrics: [
         {
-          key: "games",
-          value: "5",
-          total: null,
+          key: "playerKills",
+          value: "2.0",
+          total: "10",
         },
         {
-          key: "victories",
-          value: "3",
-          total: null,
+          key: "nationKills",
+          value: "1.0",
+          total: "5",
         },
         {
-          key: "conquests",
-          value: "3.0",
-          total: "15",
+          key: "tribeKills",
+          value: "0.4",
+          total: "2",
         },
         {
           key: "attacks",
@@ -139,7 +143,7 @@ describe("PlayerStatsSummary", () => {
     });
   });
 
-  it("renders a prominent record and exactly six responsive stat cards", async () => {
+  it("renders one W/L panel and six responsive gameplay cards", async () => {
     const summary = document.createElement(
       "player-stats-summary",
     ) as PlayerStatsSummary;
@@ -151,11 +155,45 @@ describe("PlayerStatsSummary", () => {
     expect(summary.querySelector("[data-win-rate]")?.textContent).toContain(
       "60.0%",
     );
-    expect(summary.textContent).toContain("3W / 2L");
+    expect(
+      summary.querySelector('[data-record-stat="played"]')?.textContent,
+    ).toContain("Played");
+    expect(
+      summary.querySelector('[data-record-stat="played"]')?.textContent,
+    ).toContain("5");
+    expect(
+      summary.querySelector('[data-record-stat="victories"]')?.textContent,
+    ).toContain("3");
+    expect(
+      summary.querySelector('[data-record-stat="losses"]')?.textContent,
+    ).toContain("2");
+    const recordGroup = summary.querySelector("[data-record-group]");
+    expect(recordGroup).not.toBeNull();
+    const recordStats = Array.from(
+      recordGroup?.querySelectorAll("[data-record-stat]") ?? [],
+    );
+    expect(recordStats).toHaveLength(3);
+    expect(
+      recordStats.every(
+        (stat) =>
+          stat.classList.contains("px-2") &&
+          stat.classList.contains("py-3") &&
+          stat.classList.contains("text-center"),
+      ),
+    ).toBe(true);
     expect(summary.querySelectorAll("[data-stat]")).toHaveLength(6);
     expect(
-      summary.querySelector('[data-stat="conquests"]')?.textContent,
-    ).toContain("3.0");
+      summary.querySelector("[data-stat]")?.parentElement?.classList,
+    ).toContain("lg:grid-cols-6");
+    expect(
+      summary.querySelector('[data-stat="playerKills"]')?.textContent,
+    ).toContain("2.0");
+    expect(
+      summary.querySelector('[data-stat="nationKills"]')?.textContent,
+    ).toContain("1.0");
+    expect(
+      summary.querySelector('[data-stat="tribeKills"]')?.textContent,
+    ).toContain("0.4");
     expect(
       summary.querySelector('[data-stat="attacks"]')?.textContent,
     ).toContain("2.00K");
