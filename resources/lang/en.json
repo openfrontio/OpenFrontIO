@@ -1301,6 +1301,7 @@
     "workers": "Workers"
   },
   "player_stats_tree": {
+    "all": "All",
     "mode": "Mode",
     "no_stats": "No stats recorded for this selection.",
     "private": "Private",
@@ -1309,10 +1310,16 @@
     "ranked_1v1": "1v1",
     "ranked_2v2": "2v2",
     "solo": "Solo",
+    "stats_attacks_per_game": "Attacks / Game",
+    "stats_conquests_per_game": "Conquests / Game",
     "stats_games_played": "Games Played",
-    "stats_losses": "Losses",
-    "stats_wins": "Wins",
-    "stats_wlr": "Win:Loss Ratio"
+    "stats_gold_per_game": "Gold / Game",
+    "stats_nukes_per_game": "Nukes / Game",
+    "stats_record": "{wins}W / {losses}L",
+    "stats_summary": "Performance summary",
+    "stats_total": "{total} total",
+    "stats_victories": "Victories",
+    "stats_win_rate": "Win Rate"
   },
   "player_type": {
     "bot": "Tribe",

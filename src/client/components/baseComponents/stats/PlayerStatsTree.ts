@@ -8,47 +8,48 @@ import {
   RankedType,
   isDifficulty,
   isGameMode,
-  isGameType,
 } from "../../../../core/game/Game";
 import { PlayerStats } from "../../../../core/StatsSchemas";
-import { renderNumber, translateText } from "../../../Utils";
-import "./PlayerStatsGrid";
+import { translateText } from "../../../Utils";
+import "./PlayerStatsSummary";
 import "./PlayerStatsTable";
+
+const ALL_SELECTION = "all" as const;
+type AllSelection = typeof ALL_SELECTION;
+type AvailableType = GameType | "Ranked";
+type TypeSelection = AvailableType | AllSelection;
+type ModeSelection = GameMode | AllSelection;
+type DifficultySelection = Difficulty | AllSelection;
+type RankedTypeSelection = RankedType | AllSelection;
+const TYPE_ORDER: readonly AvailableType[] = [
+  GameType.Public,
+  GameType.Private,
+  "Ranked",
+  GameType.Singleplayer,
+];
 
 @customElement("player-stats-tree-view")
 export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
-  @state() selectedType: GameType | "Ranked" = GameType.Public;
-  @state() selectedMode: GameMode = GameMode.FFA;
-  @state() selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() selectedRankedType: RankedType = RankedType.OneVOne;
+  @state() selectedType: TypeSelection = ALL_SELECTION;
+  @state() selectedMode: ModeSelection = ALL_SELECTION;
+  @state() selectedDifficulty: DifficultySelection = ALL_SELECTION;
+  @state() selectedRankedType: RankedTypeSelection = ALL_SELECTION;
+
   private get typeNode() {
-    if (this.selectedType === "Ranked") return undefined;
+    if (this.selectedType === ALL_SELECTION || this.selectedType === "Ranked") {
+      return undefined;
+    }
     return this.statsTree?.[this.selectedType];
   }
 
-  private get modeNode() {
-    return this.typeNode?.[this.selectedMode];
-  }
-
-  private get shouldMergeDifficulties() {
-    return this.selectedType === GameType.Public;
-  }
-
-  private get availableTypes(): (GameType | "Ranked")[] {
+  private get availableTypes(): AvailableType[] {
     if (!this.statsTree) return [];
-    const types: (GameType | "Ranked")[] = Object.keys(this.statsTree).filter(
-      (k): k is GameType =>
-        isGameType(k) &&
-        Object.keys(this.statsTree![k as GameType] ?? {}).length > 0,
+    return TYPE_ORDER.filter((type) =>
+      type === "Ranked"
+        ? Object.keys(this.statsTree?.Ranked ?? {}).length > 0
+        : Object.keys(this.statsTree?.[type] ?? {}).length > 0,
     );
-    if (
-      this.statsTree.Ranked &&
-      Object.keys(this.statsTree.Ranked).length > 0
-    ) {
-      types.push("Ranked");
-    }
-    return types;
   }
 
   private get availableModes(): GameMode[] {
@@ -64,8 +65,14 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private get availableDifficulties(): Difficulty[] {
-    if (!this.modeNode) return [];
-    return Object.keys(this.modeNode).filter(isDifficulty);
+    if (!this.typeNode) return [];
+    const modes =
+      this.selectedMode === ALL_SELECTION
+        ? this.availableModes
+        : [this.selectedMode];
+    return Object.values(Difficulty).filter((difficulty) =>
+      modes.some((mode) => this.typeNode?.[mode]?.[difficulty]),
+    );
   }
 
   private labelForMode(m: GameMode) {
@@ -74,7 +81,10 @@ export class PlayerStatsTreeView extends LitElement {
       : translateText("game_mode.teams");
   }
 
-  private labelForType(t: GameType | "Ranked") {
+  private labelForType(t: TypeSelection) {
+    if (t === ALL_SELECTION) {
+      return translateText("player_stats_tree.all");
+    }
     return t === "Ranked"
       ? translateText("player_stats_tree.ranked")
       : t === GameType.Public
@@ -133,23 +143,72 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
+    if (this.selectedType === ALL_SELECTION) {
+      return this.mergeLeaves(
+        this.availableTypes.flatMap((type) =>
+          type === "Ranked"
+            ? this.getRankedLeaves(ALL_SELECTION)
+            : this.getGameTypeLeaves(type, ALL_SELECTION, ALL_SELECTION),
+        ),
+      );
+    }
+
     if (this.selectedType === "Ranked") {
-      return this.statsTree?.Ranked?.[this.selectedRankedType] ?? null;
+      return this.mergeLeaves(this.getRankedLeaves(this.selectedRankedType));
     }
 
-    const modeNode = this.modeNode;
-    if (!modeNode) return null;
+    return this.mergeLeaves(
+      this.getGameTypeLeaves(
+        this.selectedType,
+        this.selectedMode,
+        this.selectedDifficulty,
+      ),
+    );
+  }
 
-    if (!this.shouldMergeDifficulties) {
-      return modeNode[this.selectedDifficulty] ?? null;
-    }
+  private getGameTypeLeaves(
+    type: GameType,
+    modeSelection: ModeSelection,
+    difficultySelection: DifficultySelection,
+  ): PlayerStatsLeaf[] {
+    const typeNode = this.statsTree?.[type];
+    if (!typeNode) return [];
+    const modes =
+      modeSelection === ALL_SELECTION
+        ? Object.keys(typeNode).filter(isGameMode)
+        : [modeSelection];
 
-    const diffKeys = Object.keys(modeNode).filter(isDifficulty);
-    if (!diffKeys.length) return null;
+    return modes.flatMap((mode) => {
+      const modeNode = typeNode[mode];
+      if (!modeNode) return [];
+      const difficulties =
+        difficultySelection === ALL_SELECTION
+          ? Object.keys(modeNode).filter(isDifficulty)
+          : [difficultySelection];
+      return difficulties.flatMap((difficulty) => {
+        const leaf = modeNode[difficulty];
+        return leaf ? [leaf] : [];
+      });
+    });
+  }
 
-    return diffKeys.reduce<PlayerStatsLeaf | null>((merged, diffKey) => {
-      const leaf = modeNode[diffKey];
-      if (!leaf) return merged;
+  private getRankedLeaves(
+    rankedTypeSelection: RankedTypeSelection,
+  ): PlayerStatsLeaf[] {
+    const rankedNode = this.statsTree?.Ranked;
+    if (!rankedNode) return [];
+    const rankedTypes =
+      rankedTypeSelection === ALL_SELECTION
+        ? this.availableRankedTypes
+        : [rankedTypeSelection];
+    return rankedTypes.flatMap((rankedType) => {
+      const leaf = rankedNode[rankedType];
+      return leaf ? [leaf] : [];
+    });
+  }
+
+  private mergeLeaves(leaves: PlayerStatsLeaf[]): PlayerStatsLeaf | null {
+    return leaves.reduce<PlayerStatsLeaf | null>((merged, leaf) => {
       if (!merged) {
         return {
           wins: leaf.wins,
@@ -169,34 +228,48 @@ export class PlayerStatsTreeView extends LitElement {
 
   private syncSelection(): void {
     const types = this.availableTypes;
-    if (types.length && !types.includes(this.selectedType as GameType)) {
-      this.selectedType = types[0];
+    if (
+      this.selectedType !== ALL_SELECTION &&
+      !types.includes(this.selectedType)
+    ) {
+      this.selectedType = ALL_SELECTION;
+    }
+    if (this.selectedType === ALL_SELECTION) {
+      return;
     }
     if (this.selectedType === "Ranked") {
       const rankedTypes = this.availableRankedTypes;
       if (
-        rankedTypes.length &&
+        this.selectedRankedType !== ALL_SELECTION &&
         !rankedTypes.includes(this.selectedRankedType)
       ) {
-        this.selectedRankedType = rankedTypes[0];
+        this.selectedRankedType = ALL_SELECTION;
       }
       return;
     }
     const modes = this.availableModes;
-    if (modes.length && !modes.includes(this.selectedMode)) {
-      this.selectedMode = modes[0];
+    if (
+      this.selectedMode !== ALL_SELECTION &&
+      !modes.includes(this.selectedMode)
+    ) {
+      this.selectedMode = ALL_SELECTION;
     }
     const diffs = this.availableDifficulties;
     if (
-      !this.shouldMergeDifficulties &&
-      diffs.length &&
+      this.selectedDifficulty !== ALL_SELECTION &&
       !diffs.includes(this.selectedDifficulty)
     ) {
-      this.selectedDifficulty = diffs[0];
+      this.selectedDifficulty = ALL_SELECTION;
     }
   }
 
   protected willUpdate(changedProperties: PropertyValues) {
+    if (changedProperties.has("statsTree")) {
+      this.selectedType = ALL_SELECTION;
+      this.selectedMode = ALL_SELECTION;
+      this.selectedDifficulty = ALL_SELECTION;
+      this.selectedRankedType = ALL_SELECTION;
+    }
     if (
       changedProperties.has("statsTree") ||
       changedProperties.has("selectedType") ||
@@ -208,25 +281,25 @@ export class PlayerStatsTreeView extends LitElement {
     }
   }
 
-  private setGameType(t: GameType | "Ranked") {
+  private setGameType(t: TypeSelection) {
     if (this.selectedType === t) return;
     this.selectedType = t;
     this.requestUpdate();
   }
 
-  private setMode(m: GameMode) {
+  private setMode(m: ModeSelection) {
     if (this.selectedMode === m) return;
     this.selectedMode = m;
     this.requestUpdate();
   }
 
-  private setRankedType(r: RankedType) {
+  private setRankedType(r: RankedTypeSelection) {
     if (this.selectedRankedType === r) return;
     this.selectedRankedType = r;
     this.requestUpdate();
   }
 
-  private setDifficulty(d: Difficulty) {
+  private setDifficulty(d: DifficultySelection) {
     if (this.selectedDifficulty === d) return;
     this.selectedDifficulty = d;
     this.requestUpdate();
@@ -312,40 +385,51 @@ export class PlayerStatsTreeView extends LitElement {
     const diffs = this.availableDifficulties;
     const rankedTypes = this.availableRankedTypes;
     const leaf = this.getSelectedLeaf();
-    const wlr = leaf
-      ? leaf.losses === 0n
-        ? Number(leaf.wins)
-        : Number(leaf.wins) / Number(leaf.losses)
-      : 0;
 
     return html`
       <div class="flex flex-col gap-4">
         <!-- Filters: a type row, then a context-dependent second row (ranked
              type / mode / difficulty), styled like the game-history tab. -->
         <div class="space-y-2">
-          ${this.renderFilterRow(
-            types.map((t) =>
+          ${this.renderFilterRow([
+            this.renderFilterTab(
+              this.labelForType(ALL_SELECTION),
+              this.selectedType === ALL_SELECTION,
+              () => this.setGameType(ALL_SELECTION),
+            ),
+            ...types.map((t) =>
               this.renderFilterTab(
                 this.labelForType(t),
                 this.selectedType === t,
                 () => this.setGameType(t),
               ),
             ),
-          )}
+          ])}
           ${this.selectedType === "Ranked" && rankedTypes.length
-            ? this.renderFilterRow(
-                rankedTypes.map((r) =>
+            ? this.renderFilterRow([
+                this.renderFilterTab(
+                  this.labelForType(ALL_SELECTION),
+                  this.selectedRankedType === ALL_SELECTION,
+                  () => this.setRankedType(ALL_SELECTION),
+                ),
+                ...rankedTypes.map((r) =>
                   this.renderFilterTab(
                     this.labelForRankedType(r) ?? "",
                     this.selectedRankedType === r,
                     () => this.setRankedType(r),
                   ),
                 ),
-              )
+              ])
             : nothing}
           ${modes.length
-            ? this.renderFilterRow(
-                modes.map((m) =>
+            ? this.renderFilterRow([
+                this.renderFilterTab(
+                  this.labelForType(ALL_SELECTION),
+                  this.selectedMode === ALL_SELECTION,
+                  () => this.setMode(ALL_SELECTION),
+                  translateText("player_stats_tree.mode"),
+                ),
+                ...modes.map((m) =>
                   this.renderFilterTab(
                     this.labelForMode(m),
                     this.selectedMode === m,
@@ -353,11 +437,17 @@ export class PlayerStatsTreeView extends LitElement {
                     translateText("player_stats_tree.mode"),
                   ),
                 ),
-              )
+              ])
             : nothing}
-          ${!this.shouldMergeDifficulties && diffs.length
-            ? this.renderFilterRow(
-                diffs.map((d) =>
+          ${diffs.length
+            ? this.renderFilterRow([
+                this.renderFilterTab(
+                  this.labelForType(ALL_SELECTION),
+                  this.selectedDifficulty === ALL_SELECTION,
+                  () => this.setDifficulty(ALL_SELECTION),
+                  translateText("difficulty.difficulty"),
+                ),
+                ...diffs.map((d) =>
                   this.renderFilterTab(
                     translateText(`difficulty.${d.toLowerCase()}`),
                     this.selectedDifficulty === d,
@@ -365,27 +455,16 @@ export class PlayerStatsTreeView extends LitElement {
                     translateText("difficulty.difficulty"),
                   ),
                 ),
-              )
+              ])
             : nothing}
         </div>
 
         ${leaf
           ? html`
-              <div class="space-y-6 border-t border-white/10 pt-3">
-                <player-stats-grid
-                  .titles=${[
-                    translateText("player_stats_tree.stats_wins"),
-                    translateText("player_stats_tree.stats_losses"),
-                    translateText("player_stats_tree.stats_wlr"),
-                    translateText("player_stats_tree.stats_games_played"),
-                  ]}
-                  .values=${[
-                    renderNumber(leaf.wins),
-                    renderNumber(leaf.losses),
-                    wlr.toFixed(2),
-                    renderNumber(leaf.total),
-                  ]}
-                ></player-stats-grid>
+              <div class="border-t border-white/10">
+                <div class="py-3">
+                  <player-stats-summary .leaf=${leaf}></player-stats-summary>
+                </div>
 
                 <div class="border-t border-white/10 pt-6">
                   <player-stats-table

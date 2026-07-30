@@ -1,0 +1,343 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/client/Utils", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/Utils")>();
+  return {
+    ...actual,
+    translateText: (
+      key: string,
+      args?: Record<string, string | number>,
+    ): string => {
+      if (key === "player_stats_tree.stats_record") {
+        return `${args?.wins}W / ${args?.losses}L`;
+      }
+      if (key === "player_stats_tree.stats_total") {
+        return `${args?.total} total`;
+      }
+      if (key === "player_stats_tree.all") {
+        return "All";
+      }
+      return key;
+    },
+  };
+});
+
+import {
+  PlayerStatsSummary,
+  buildPlayerStatsSummary,
+} from "../../src/client/components/baseComponents/stats/PlayerStatsSummary";
+import { PlayerStatsTreeView } from "../../src/client/components/baseComponents/stats/PlayerStatsTree";
+import type {
+  PlayerStatsLeaf,
+  PlayerStatsTree,
+} from "../../src/core/ApiSchemas";
+
+const leaf: PlayerStatsLeaf = {
+  wins: 3n,
+  losses: 2n,
+  total: 5n,
+  stats: {
+    attacks: [10_000n, 4_000n, 500n],
+    conquests: [10n, 5n],
+    bombs: {
+      abomb: [5n, 4n, 1n],
+      hbomb: [5n, 3n, 2n],
+    },
+    gold: [100n, 200n, 300n, 400n, 500n],
+  },
+};
+
+function leafWithTotal(total: bigint): PlayerStatsLeaf {
+  return {
+    wins: total,
+    losses: 0n,
+    total,
+    stats: {
+      conquests: [total],
+    },
+  };
+}
+
+function getRenderedLeaf(
+  tree: PlayerStatsTreeView,
+): PlayerStatsLeaf | undefined {
+  return tree.querySelector<PlayerStatsSummary>("player-stats-summary")?.leaf;
+}
+
+async function clickTab(
+  tree: PlayerStatsTreeView,
+  label: string,
+): Promise<void> {
+  const button = Array.from(
+    tree.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+  ).find((candidate) => candidate.textContent?.trim() === label);
+  expect(button, `tab "${label}" should exist`).toBeDefined();
+  button?.click();
+  await tree.updateComplete;
+}
+
+async function clickTabInRow(
+  tree: PlayerStatsTreeView,
+  rowIndex: number,
+  label: string,
+): Promise<void> {
+  const row = tree.querySelectorAll('[role="tablist"]')[rowIndex];
+  const button = Array.from(
+    row?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [],
+  ).find((candidate) => candidate.textContent?.trim() === label);
+  expect(
+    button,
+    `tab "${label}" should exist in row ${rowIndex}`,
+  ).toBeDefined();
+  button?.click();
+  await tree.updateComplete;
+}
+
+describe("PlayerStatsSummary", () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it("derives the selected bucket's win rate and six profile metrics", () => {
+    expect(buildPlayerStatsSummary(leaf)).toEqual({
+      winRate: "60.0%",
+      wins: "3",
+      losses: "2",
+      metrics: [
+        {
+          key: "games",
+          value: "5",
+          total: null,
+        },
+        {
+          key: "victories",
+          value: "3",
+          total: null,
+        },
+        {
+          key: "conquests",
+          value: "3.0",
+          total: "15",
+        },
+        {
+          key: "attacks",
+          value: "2.00K",
+          total: "10.0K",
+        },
+        {
+          key: "nukes",
+          value: "2.0",
+          total: "10",
+        },
+        {
+          key: "gold",
+          value: "300",
+          total: "1.50K",
+        },
+      ],
+    });
+  });
+
+  it("renders a prominent record and exactly six responsive stat cards", async () => {
+    const summary = document.createElement(
+      "player-stats-summary",
+    ) as PlayerStatsSummary;
+    summary.leaf = leaf;
+    document.body.append(summary);
+
+    await summary.updateComplete;
+
+    expect(summary.querySelector("[data-win-rate]")?.textContent).toContain(
+      "60.0%",
+    );
+    expect(summary.textContent).toContain("3W / 2L");
+    expect(summary.querySelectorAll("[data-stat]")).toHaveLength(6);
+    expect(
+      summary.querySelector('[data-stat="conquests"]')?.textContent,
+    ).toContain("3.0");
+    expect(
+      summary.querySelector('[data-stat="attacks"]')?.textContent,
+    ).toContain("2.00K");
+    expect(summary.querySelector('[data-stat="nukes"]')?.textContent).toContain(
+      "2.0",
+    );
+    expect(summary.querySelector('[data-stat="gold"]')?.textContent).toContain(
+      "300",
+    );
+  });
+
+  it("replaces the legacy four-card grid in the selected stats tree", async () => {
+    const statsTree: PlayerStatsTree = {
+      Public: {
+        "Free For All": {
+          Medium: leaf,
+        },
+      },
+    };
+    // Instantiate the real class directly so profile-modal tests that register
+    // a lightweight stand-in under the same custom-element tag cannot mask the
+    // integration behavior this test covers.
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = statsTree;
+    document.body.append(tree);
+
+    await tree.updateComplete;
+
+    const summary = tree.querySelector(
+      "player-stats-summary",
+    ) as PlayerStatsSummary | null;
+    expect(summary?.leaf).toEqual(leaf);
+    expect(tree.querySelector("player-stats-grid")).toBeNull();
+  });
+
+  it("gives the performance summary equal padding above and below", async () => {
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = {
+      Public: {
+        "Free For All": {
+          Medium: leaf,
+        },
+      },
+    };
+    document.body.append(tree);
+
+    await tree.updateComplete;
+
+    const summary = tree.querySelector("player-stats-summary");
+    expect(summary?.parentElement?.classList.contains("py-3")).toBe(true);
+  });
+
+  it("puts All first in every filter and aggregates the selected branches", async () => {
+    const statsTree: PlayerStatsTree = {
+      Public: {
+        "Free For All": {
+          Easy: leafWithTotal(1n),
+          Medium: leafWithTotal(2n),
+        },
+        Team: {
+          Easy: leafWithTotal(4n),
+          Hard: leafWithTotal(8n),
+        },
+      },
+      Private: {
+        "Free For All": {
+          Impossible: leafWithTotal(16n),
+        },
+      },
+      Ranked: {
+        "1v1": leafWithTotal(32n),
+        "2v2": leafWithTotal(64n),
+      },
+      Singleplayer: {
+        Team: {
+          Hard: leafWithTotal(128n),
+        },
+      },
+    };
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = statsTree;
+    document.body.append(tree);
+
+    await tree.updateComplete;
+
+    let rows = Array.from(tree.querySelectorAll('[role="tablist"]'));
+    expect(rows).toHaveLength(1);
+    expect(
+      Array.from(
+        rows[0].querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      ).map((button) => button.textContent?.trim()),
+    ).toEqual([
+      "All",
+      "player_stats_tree.public",
+      "player_stats_tree.private",
+      "player_stats_tree.ranked",
+      "player_stats_tree.solo",
+    ]);
+    expect(
+      rows[0].querySelector<HTMLButtonElement>('[role="tab"]')?.textContent,
+    ).toContain("All");
+    expect(getRenderedLeaf(tree)?.total).toBe(255n);
+    expect(getRenderedLeaf(tree)?.stats?.conquests).toEqual([255n]);
+
+    await clickTab(tree, "player_stats_tree.public");
+    rows = Array.from(tree.querySelectorAll('[role="tablist"]'));
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(
+        row.querySelector<HTMLButtonElement>('[role="tab"]')?.textContent,
+      ).toContain("All");
+    }
+    expect(getRenderedLeaf(tree)?.total).toBe(15n);
+
+    await clickTab(tree, "game_mode.ffa");
+    expect(getRenderedLeaf(tree)?.total).toBe(3n);
+
+    await clickTab(tree, "difficulty.medium");
+    expect(getRenderedLeaf(tree)?.total).toBe(2n);
+
+    await clickTabInRow(tree, 2, "All");
+    expect(getRenderedLeaf(tree)?.total).toBe(3n);
+
+    await clickTabInRow(tree, 1, "All");
+    expect(getRenderedLeaf(tree)?.total).toBe(15n);
+
+    await clickTab(tree, "player_stats_tree.ranked");
+    rows = Array.from(tree.querySelectorAll('[role="tablist"]'));
+    expect(rows).toHaveLength(2);
+    expect(
+      rows[1].querySelector<HTMLButtonElement>('[role="tab"]')?.textContent,
+    ).toContain("All");
+    expect(getRenderedLeaf(tree)?.total).toBe(96n);
+
+    await clickTab(tree, "player_stats_tree.ranked_2v2");
+    expect(getRenderedLeaf(tree)?.total).toBe(64n);
+
+    await clickTabInRow(tree, 1, "All");
+    expect(getRenderedLeaf(tree)?.total).toBe(96n);
+  });
+
+  it("resets every filter to All when the profile stats tree changes", async () => {
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = {
+      Public: {
+        "Free For All": {
+          Medium: leafWithTotal(1n),
+        },
+      },
+      Ranked: {
+        "2v2": leafWithTotal(2n),
+      },
+    };
+    document.body.append(tree);
+    await tree.updateComplete;
+
+    await clickTab(tree, "player_stats_tree.ranked");
+    await clickTab(tree, "player_stats_tree.ranked_2v2");
+    expect(getRenderedLeaf(tree)?.total).toBe(2n);
+
+    tree.statsTree = {
+      Public: {
+        Team: {
+          Hard: leafWithTotal(10n),
+        },
+      },
+      Private: {
+        "Free For All": {
+          Impossible: leafWithTotal(20n),
+        },
+      },
+      Ranked: {
+        "2v2": leafWithTotal(30n),
+      },
+    };
+    await tree.updateComplete;
+
+    const rows = tree.querySelectorAll('[role="tablist"]');
+    const firstTab = rows[0].querySelector<HTMLButtonElement>('[role="tab"]');
+    expect(rows).toHaveLength(1);
+    expect(firstTab?.textContent).toContain("All");
+    expect(firstTab?.getAttribute("aria-selected")).toBe("true");
+    expect(getRenderedLeaf(tree)?.total).toBe(60n);
+  });
+});
