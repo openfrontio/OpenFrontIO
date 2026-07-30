@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { documentStylesSheet } from "./SharedStyles";
 
 export type OModalTab = { key: string; label: string };
@@ -9,6 +9,8 @@ export class OModal extends LitElement {
   static styles = [documentStylesSheet()];
 
   @state() public isModalOpen = false;
+
+  @query("[data-modal-scroll]") private scrollContainer?: HTMLElement;
 
   static openCount = 0;
 
@@ -62,6 +64,16 @@ export class OModal extends LitElement {
     }
   }
 
+  public getScrollTop(): number {
+    return this.scrollContainer?.scrollTop ?? 0;
+  }
+
+  public setScrollTop(scrollTop: number): void {
+    if (this.scrollContainer) {
+      this.scrollContainer.scrollTop = scrollTop;
+    }
+  }
+
   disconnectedCallback() {
     // Ensure global counter is decremented if this modal is removed while open.
     if (this.isModalOpen && !this.inline) {
@@ -79,7 +91,7 @@ export class OModal extends LitElement {
     return html`
       <div
         role="tablist"
-        class="flex justify-center border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
+        class="flex flex-wrap justify-center border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
       >
         ${this.tabs.map((tab) => {
           const active = this.activeTab === tab.key;
@@ -157,7 +169,7 @@ export class OModal extends LitElement {
           <section class="${sectionClass}">
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}
-            <div class="flex-1 min-h-0 overflow-y-auto">
+            <div data-modal-scroll class="flex-1 min-h-0 overflow-y-auto">
               <slot></slot>
             </div>
           </section>

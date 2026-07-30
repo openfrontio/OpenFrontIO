@@ -3,7 +3,6 @@ import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
-  doomsdayClockSideRequiredTiles,
   doomsdayClockWaveState,
 } from "../src/core/game/DoomsdayClock";
 import {
@@ -410,13 +409,15 @@ describe("DoomsdayClockExecution (warship decay)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Team modes: the bar applies to a whole team's combined territory, and every
-// member shares the fate (skull + drain together).
+// Team modes: the bar applies to a whole team's combined territory — the SAME
+// bar a solo side faces, regardless of headcount — and every member shares the
+// fate (skull + drain together).
 // ---------------------------------------------------------------------------
 
 describe("DoomsdayClockExecution (teams)", () => {
   function teamGame(teams: { team: string; tiles: number[] }[]) {
-    // base bar 200 @ land 1000; a team's threshold = 200 x its member count.
+    // WAVE_TICK sits in the veryfast 26% hold @ land 1000 -> every side's bar
+    // is 260, team or solo.
     const game = new FakeGame(1000, sdConfig(), []);
     game.gameMode = GameMode.Team;
     const players: FakePlayer[] = [];
@@ -432,8 +433,8 @@ describe("DoomsdayClockExecution (teams)", () => {
   }
 
   it("judges a team on combined territory and skulls every member when below", () => {
-    // Both teams size 2 -> threshold 200x2=400. Red 250+250=500 safe;
-    // Blue 50+50=100 below -> both Blue skulled.
+    // Bar 260. Red 250+250=500 above (and the leader); Blue 50+50=100 below
+    // -> both Blue members skulled together.
     const { game, players } = teamGame([
       { team: "Red", tiles: [250, 250] },
       { team: "Blue", tiles: [50, 50] },
@@ -452,8 +453,8 @@ describe("DoomsdayClockExecution (teams)", () => {
   });
 
   it("spares a tiny member whose team is collectively above the bar", () => {
-    // Size 2 -> threshold 400. Red 400+40=440 -> safe, so the 40-tile member
-    // is NOT skulled.
+    // Bar 260. Red 400+40=440 above -> safe, so the 40-tile member is NOT
+    // skulled even though 40 is far below the bar on its own.
     const { game, players } = teamGame([
       { team: "Red", tiles: [400, 40] },
       { team: "Blue", tiles: [50, 50] },
@@ -465,20 +466,44 @@ describe("DoomsdayClockExecution (teams)", () => {
     expect(blue1.inDoomsdayClock()).toBe(true);
   });
 
-  it("scales the threshold by team size (a bigger team must hold more)", () => {
-    // base bar 200. Red is 3 members -> threshold 600; Blue is 1 -> threshold 200.
-    // Blue leads on tiles (crown-exempt), so Red is squeezed purely by its size.
+  it("does NOT scale the bar by headcount (a team faces the same bar as a solo)", () => {
+    // Bar 260 for every side. Red (2 members, 300 combined) is safe — the old
+    // headcount-scaled rule would have demanded 260x2=520 and skulled them.
+    // Green (3 members, 240 combined) is below the SOLO bar -> skulled: being
+    // three players earns no leniency either.
     const { game, players } = teamGame([
-      { team: "Red", tiles: [200, 200, 100] }, // 500 combined, < 600, not leader
-      { team: "Blue", tiles: [700] }, // leader, and 700 >= 200 -> safe
+      { team: "Blue", tiles: [700] }, // leader
+      { team: "Red", tiles: [150, 150] }, // 300 >= 260 -> safe
+      { team: "Green", tiles: [100, 80, 60] }, // 240 < 260 -> skulled
     ]);
-    const [red1, red2, red3, blue1] = players;
+    const [blue1, red1, red2, green1, green2, green3] = players;
     const exec = makeExec(game);
     runAt(exec, game, WAVE_TICK);
-    expect(red1.inDoomsdayClock()).toBe(true); // 500 < 200x3
-    expect(red2.inDoomsdayClock()).toBe(true);
-    expect(red3.inDoomsdayClock()).toBe(true);
     expect(blue1.inDoomsdayClock()).toBe(false); // leader
+    expect(red1.inDoomsdayClock()).toBe(false);
+    expect(red2.inDoomsdayClock()).toBe(false);
+    expect(green1.inDoomsdayClock()).toBe(true);
+    expect(green2.inDoomsdayClock()).toBe(true);
+    expect(green3.inDoomsdayClock()).toBe(true);
+  });
+
+  it("keeps the bar unchanged when a teammate dies", () => {
+    // Bar 260. Red holds 300+5: safe before AND after losing the 5-tile member
+    // (still 300 >= 260). The old rule moved the bar with the alive headcount:
+    // 520 while both lived (skulled), 260 after the death (saved by dying) —
+    // deaths must never move the bar.
+    const { game, players } = teamGame([
+      { team: "Blue", tiles: [700] }, // leader
+      { team: "Red", tiles: [300, 5] },
+    ]);
+    const [, red1, red2] = players;
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(red1.inDoomsdayClock()).toBe(false); // 305 >= 260 (old rule: < 520)
+    expect(red2.inDoomsdayClock()).toBe(false);
+    red2.kill();
+    runAt(exec, game, WAVE_TICK + 10);
+    expect(red1.inDoomsdayClock()).toBe(false); // 300 >= 260, bar unmoved
   });
 
   it("idles when only one team remains", () => {
@@ -526,21 +551,6 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
       prev = r;
     }
     expect(doomsdayClockRequiredTiles("normal", 0, 1800)).toBe(0);
-  });
-});
-
-describe("doomsdayClockSideRequiredTiles (headcount scaling)", () => {
-  const land = 10000;
-
-  it("scales the base share by side size and caps at the whole map", () => {
-    // veryfast at 800s sits in the 26% hold -> base 2600 tiles.
-    expect(doomsdayClockRequiredTiles("veryfast", land, 800)).toBe(2600);
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 1)).toBe(2600); // solo
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 2)).toBe(5200); // 2x
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 4)).toBe(
-      10000,
-    ); // 10400 capped at the map
-    expect(doomsdayClockSideRequiredTiles("veryfast", land, 800, 0)).toBe(2600); // min size 1
   });
 });
 

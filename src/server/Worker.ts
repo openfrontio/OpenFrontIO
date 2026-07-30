@@ -13,19 +13,20 @@ import {
   ClientMessageSchema,
   ID,
   MAX_HOSTED_LOBBIES,
-  PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
-import { archive, finalizeGameRecord } from "./Archive";
+import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import type { GameServer } from "./GameServer";
+import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { enforceVerifiedBadge } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
@@ -33,7 +34,8 @@ import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
-import { verifyTurnstileToken } from "./Turnstile";
+import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
+import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -53,10 +55,20 @@ export async function startWorker() {
   const server = http.createServer(app);
   const wss = new WebSocketServer({
     noServer: true,
-    maxPayload: 1024 * 1024, // 1MB
+    maxPayload: MAX_WEBSOCKET_PAYLOAD_BYTES,
   });
 
-  const gm = new GameManager(log);
+  const buildHash = ServerEnv.gitCommit();
+  const telemetry = createMatchTelemetryEmitter(process.env, log, {
+    buildHash,
+    instanceId: ServerEnv.instanceId(),
+    // Reuse the normalized worker id (defaults to 0 when WORKER_ID is unset) so
+    // telemetry identity matches routing and logging instead of reporting
+    // undefined.
+    workerId,
+  });
+  const gm = new GameManager(log, telemetry, buildHash);
+  server.on("close", () => telemetry.stop());
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
@@ -74,7 +86,6 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     ServerEnv.jwtIssuer() + "/cosmetics.json",
-    ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
@@ -361,52 +372,6 @@ export async function startWorker() {
 
   registerAdminBotRoutes({ app, gm, workerId, log });
 
-  app.post("/api/archive_singleplayer_game", async (req, res) => {
-    try {
-      const record = req.body;
-
-      const result = PartialGameRecordSchema.safeParse(record);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        log.info(error);
-        return res.status(400).json({ error });
-      }
-      const gameRecord = result.data;
-
-      if (gameRecord.info.config.gameType !== GameType.Singleplayer) {
-        log.warn(
-          `cannot archive singleplayer with game type ${gameRecord.info.config.gameType}`,
-          {
-            gameID: gameRecord.info.gameID,
-          },
-        );
-        return res.status(400).json({ error: "Invalid request" });
-      }
-
-      if (result.data.info.players.length !== 1) {
-        log.warn(`cannot archive singleplayer game multiple players`, {
-          gameID: gameRecord.info.gameID,
-        });
-        return res.status(400).json({ error: "Invalid request" });
-      }
-
-      log.info("archiving singleplayer game", {
-        gameID: gameRecord.info.gameID,
-      });
-
-      archive(
-        finalizeGameRecord(gameRecord),
-        privilegeRefresher.getCosmeticFlagUrls(),
-      );
-      res.json({
-        success: true,
-      });
-    } catch (error) {
-      log.error("Error processing archive request:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on("message", async (message: string) => {
@@ -486,21 +451,114 @@ export async function startWorker() {
           return;
         }
 
-        // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
-        const { clanTag: censoredClanTag, username: censoredUsername } =
-          privilegeRefresher
-            .get()
-            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+        // Basic local screen as the fallback identity for the paths
+        // join_verify doesn't cover: Dev and API failure (fail-open joins).
+        // An approved join_verify overwrites it with the API's display-ready
+        // pair below.
+        let { username, clanTag } = censorPlayer(
+          clientMsg.username,
+          clientMsg.clanTag ?? null,
+        );
 
-        // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization
+        // Gate the join and screen the display name in one API call: status
+        // is the Turnstile verdict, and the response carries the
+        // display-ready (username, clanTag) pair, so a banned name is never
+        // visible — not even in the lobby. Turnstile gates the FIRST join
+        // only: an already-admitted player who reconnects or refreshes must
+        // not be re-challenged — their original token is single-use and was
+        // already redeemed — so the token is omitted for them and the API
+        // runs the name check alone (an omitted token is always approved).
+        // Re-admits only call out when the verdict could matter (pre-start,
+        // with a changed identity); otherwise the reconnect proceeds with
+        // zero API calls, keeping mass reconnects at game start off the
+        // API. Runs before the rejoin attempt so a pre-start identity
+        // change on refresh is screened before it is applied.
+        let verifySkipped = false;
+        if (ServerEnv.env() !== GameEnv.Dev) {
+          const game = gm.game(clientMsg.gameID);
+          const stored = game?.storedIdentity(persistentId) ?? null;
+          const isReadmit = game?.wasAdmitted(persistentId) ?? false;
+          const steamAuthed = isSteamAuthenticated(claims);
+          // SECURITY: the reject/skip/verify split (first joins must
+          // present a token, only re-admits may omit it) lives in
+          // planJoinVerify — see its doc comment. Steam-authenticated first
+          // joins are the one sanctioned null-token first join: Steam
+          // ownership (a signed, unforgeable provider="steam" claim) stands
+          // in for the bot check, and the name check still runs.
+          const plan = planJoinVerify({
+            isReadmit,
+            gameStarted: game?.hasStarted() ?? false,
+            turnstileToken: clientMsg.turnstileToken ?? null,
+            identityUnchanged:
+              stored !== null &&
+              stored.username === clientMsg.username &&
+              stored.clanTag === (clientMsg.clanTag ?? null),
+            steamAuthed,
+          });
+          if (steamAuthed && !isReadmit) {
+            log.info(
+              "Steam-authed join: skipping Turnstile siteverify (name check still runs)",
+              { persistentID: persistentId, gameID: clientMsg.gameID },
+            );
+          }
+          if (plan.action === "reject") {
+            log.warn("Unauthorized: missing Turnstile token", {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+            });
+            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            return;
+          }
+          if (plan.action === "verify") {
+            const verdict = await verifyJoin(
+              ip,
+              plan.token,
+              clientMsg.username,
+              clientMsg.clanTag ?? null,
+            );
+            switch (verdict.status) {
+              case "approved":
+                username = verdict.username;
+                clanTag = verdict.clanTag;
+                break;
+              case "rejected":
+                // Only reachable on first joins: re-admits omit the token,
+                // which the API always approves.
+                log.warn("Unauthorized: Turnstile token rejected", {
+                  persistentID: persistentId,
+                  gameID: clientMsg.gameID,
+                  reason: verdict.reason,
+                });
+                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                return;
+              case "error":
+                // Fail open: the locally screened name stands.
+                log.error("join_verify error", {
+                  persistentID: persistentId,
+                  gameID: clientMsg.gameID,
+                  reason: verdict.reason,
+                });
+            }
+          } else {
+            verifySkipped = true;
+          }
+        }
+
+        // Try to reconnect an existing client (e.g., page refresh) with the
+        // screened identity — before the game starts, a refresh under a new
+        // name updates the displayed identity like a fresh join would. When
+        // the verify was skipped, no identity update is passed: the stored
+        // identity was screened at admission and must not be clobbered by
+        // the coarser local fallback.
+        // If successful, skip the rest of the join authorization.
         if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-            clanTag: censoredClanTag,
-          })
+          gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            0,
+            verifySkipped ? undefined : { username, clanTag },
+          )
         ) {
           return;
         }
@@ -509,6 +567,9 @@ export async function startWorker() {
         let publicId: string | undefined;
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
+        let accountUsername:
+          | { username?: string | null; usernameStatus?: string }
+          | undefined;
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
@@ -532,6 +593,7 @@ export async function startWorker() {
           publicId = result.response.player.publicId;
           friends = result.response.player.friends;
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
+          accountUsername = result.response.player;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -552,12 +614,12 @@ export async function startWorker() {
         // dropped to prevent impersonation. Fictional tags pass through.
         const resolution = privilegeRefresher
           .get()
-          .resolveClanTag(censoredClanTag, ownedClanTags);
+          .resolveClanTag(clanTag, ownedClanTags);
         if (resolution.dropped) {
           log.warn("Dropped clan tag: player is not a member", {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
-            clanTag: censoredClanTag,
+            clanTag,
           });
         }
         const resolvedClanTag = resolution.tag;
@@ -575,38 +637,19 @@ export async function startWorker() {
           return;
         }
 
-        // Turnstile gates the FIRST join only. An already-admitted player who
-        // reconnects (e.g. a socket drop during the lobby->start transition,
-        // after which the server has cleared their reconnection mapping) must
-        // not be re-challenged: their original Turnstile token is single-use
-        // and was already redeemed, so re-verifying it would always fail.
+        // An undefined account means an anonymous persistent-ID join (no
+        // /users/@me fetch) — enforceVerifiedBadge treats that as Dev-only.
         if (
-          ServerEnv.env() !== GameEnv.Dev &&
-          !gm.wasAdmitted(clientMsg.gameID, persistentId)
+          enforceVerifiedBadge(
+            cosmeticResult.cosmetics,
+            username,
+            accountUsername ?? null,
+          )
         ) {
-          const turnstileResult = await verifyTurnstileToken(
-            ip,
-            clientMsg.turnstileToken,
-          );
-          switch (turnstileResult.status) {
-            case "approved":
-              break;
-            case "rejected":
-              log.warn("Unauthorized: Turnstile token rejected", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: turnstileResult.reason,
-              });
-              ws.close(1002, "Unauthorized: Turnstile token rejected");
-              return;
-            case "error":
-              // Fail open, allow the client to join.
-              log.error("Turnstile token error", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                reason: turnstileResult.reason,
-              });
-          }
+          log.info("Stripped unvouched verified-badge claim", {
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
+          });
         }
 
         // Create client and add to game
@@ -617,7 +660,7 @@ export async function startWorker() {
           claims?.role ?? null,
           flares,
           ip,
-          censoredUsername,
+          username,
           resolvedClanTag,
           ws,
           cosmeticResult.cosmetics,
@@ -771,7 +814,13 @@ function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
               ? { ...baseConfig, allowedPublicIds: parsed.data.players }
               : baseConfig,
             undefined,
-            Date.now() + 7000,
+            // Deadline for the slowest player: after match-assignment the
+            // client still has to poll game existence, pass Turnstile, and
+            // clear join auth; anyone not connected when start() fires is
+            // left out of the roster and the ranked game starts short-handed.
+            // A full lobby is NOT delayed by this — hasReachedMaxPlayerCount
+            // flips the phase to Active as soon as everyone has joined.
+            Date.now() + 15000,
             undefined,
             parsed.success ? parsed.data.teams : undefined,
           );

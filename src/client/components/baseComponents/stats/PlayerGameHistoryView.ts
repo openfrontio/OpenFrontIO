@@ -1,4 +1,9 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import {
+  html,
+  LitElement,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
   type PlayerGameModeFilter,
@@ -7,7 +12,6 @@ import {
 } from "../../../../core/ApiSchemas";
 import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
-import { GameInfoModal } from "../../../GameInfoModal";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
@@ -82,19 +86,46 @@ export class PlayerGameHistoryView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.syncToPublicId();
+  }
+
+  // Hydrate from the cache when it matches the current player, otherwise load
+  // that player's history fresh.
+  private syncToPublicId() {
     if (this.cachedState && this.cachedState.publicId === this.publicId) {
       this.games = this.cachedState.games;
       this.nextCursor = this.cachedState.nextCursor;
       this.typeFilter = this.cachedState.typeFilter;
       this.modeFilter = this.cachedState.modeFilter;
+      this.appendFailed = false;
+      this.loadState = "ok";
     } else if (this.publicId) {
-      this.reload();
+      // Fresh player → show the default (All) view rather than inheriting the
+      // previous player's filters. No-op on first mount (already defaults).
+      this.typeFilter = "all";
+      this.modeFilter = "all";
+      void this.reload();
     }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this.teardownObserver();
+  }
+
+  willUpdate(changed: PropertyValues) {
+    // Reload when the host swaps in a different player after mount (e.g. a
+    // manual hash edit routes the profile modal to a new publicId). Lit reuses
+    // this element, so connectedCallback won't fire again. The undefined check
+    // skips the initial render, which connectedCallback already handled.
+    const previous = changed.get("publicId");
+    if (
+      changed.has("publicId") &&
+      previous !== undefined &&
+      previous !== this.publicId
+    ) {
+      this.syncToPublicId();
+    }
   }
 
   updated() {
@@ -212,19 +243,14 @@ export class PlayerGameHistoryView extends LitElement {
     );
   }
 
-  // Opens the game-info ranking overlay on top of the account modal. The modal
-  // is a global singleton in the document (queried the same way as Main.ts),
-  // so we don't close the account modal — the overlay layers above it.
-  private showRanking(gameId: string) {
-    const gameInfoModal = document.querySelector(
-      "game-info-modal",
-    ) as GameInfoModal | null;
-    if (!gameInfoModal) {
-      console.warn("Game info modal element not found");
-      return;
-    }
-    void gameInfoModal.loadGame(gameId);
-    gameInfoModal.open();
+  private showStats(gameId: string) {
+    this.dispatchEvent(
+      new CustomEvent<{ gameId: string }>("view-stats", {
+        detail: { gameId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   render() {
@@ -452,7 +478,7 @@ export class PlayerGameHistoryView extends LitElement {
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              @click=${() => this.showRanking(game.gameId)}
+              @click=${() => this.showStats(game.gameId)}
               class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
             >
               ${translateText("game_list.stats")}

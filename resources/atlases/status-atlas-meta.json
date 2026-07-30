@@ -15,6 +15,7 @@
     "nukeRed": 7,
     "nukeWhite": 8,
     "allianceFaded": 9,
-    "doomsdayClock": 10
+    "doomsdayClock": 10,
+    "verified": 11
   }
 }

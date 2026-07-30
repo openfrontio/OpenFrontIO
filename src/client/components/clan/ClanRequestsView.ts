@@ -8,7 +8,7 @@ import {
   fetchClanRequests,
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
-import "../CopyButton";
+import "../PlayerName";
 import {
   filterRequestsBySearch,
   formatClanDate,
@@ -153,13 +153,10 @@ export class ClanRequestsView extends LitElement {
                       class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
                     >
                       <div class="flex-1 min-w-0">
-                        <copy-button
-                          compact
-                          .copyText=${req.publicId}
-                          .displayText=${req.publicId}
-                          .showVisibilityToggle=${false}
-                          .showCopyIcon=${false}
-                        ></copy-button>
+                        <player-name
+                          .username=${req.username}
+                          .publicId=${req.publicId}
+                        ></player-name>
                         <span class="text-white/30 text-[10px]">
                           ${translateText("clan_modal.requested_on", {
                             tag: this.selectedClan?.tag ?? this.clanTag,

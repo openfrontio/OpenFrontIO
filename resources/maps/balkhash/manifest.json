@@ -1,0 +1,192 @@
+{
+  "additionalNations": [
+    {
+      "flag": "Alash Autonomy",
+      "name": "Alash Autonomy"
+    },
+    {
+      "flag": "Bukhara",
+      "name": "Bukhara"
+    },
+    {
+      "flag": "Göktürks Khaganate",
+      "name": "Göktürks Khaganate"
+    },
+    {
+      "flag": "Golden Horde",
+      "name": "Golden Horde"
+    },
+    {
+      "flag": "Kazakh Khanate",
+      "name": "Kazakh Khanate"
+    },
+    {
+      "flag": "Khiva",
+      "name": "Khiva"
+    },
+    {
+      "flag": "Timurid Empire",
+      "name": "Timurid Empire"
+    },
+    {
+      "flag": "Turkestan",
+      "name": "Turkestan"
+    },
+    {
+      "flag": "Turkestan Autonomy",
+      "name": "Turkestan Autonomy"
+    }
+  ],
+  "categories": ["new", "asia"],
+  "id": "Balkhash",
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 2361045,
+    "width": 3300
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 143351,
+    "width": 825
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 584289,
+    "width": 1650
+  },
+  "multiplayer_frequency": 4,
+  "name": "Balkhash",
+  "nations": [
+    {
+      "coordinates": [979, 101],
+      "flag": "kz",
+      "name": "Balkhash"
+    },
+    {
+      "coordinates": [639, 288],
+      "flag": "kz",
+      "name": "Gulshat"
+    },
+    {
+      "coordinates": [483, 515],
+      "flag": "kz",
+      "name": "Tasaral"
+    },
+    {
+      "coordinates": [310, 718],
+      "flag": "kz",
+      "name": "Priosersk"
+    },
+    {
+      "coordinates": [178, 887],
+      "flag": "kz",
+      "name": "Kashkanteniz"
+    },
+    {
+      "coordinates": [304, 1166],
+      "flag": "kz",
+      "name": "Mynaral"
+    },
+    {
+      "coordinates": [448, 1313],
+      "flag": "kz",
+      "name": "Ulken"
+    },
+    {
+      "coordinates": [549, 1168],
+      "flag": "kz",
+      "name": "Kuygan"
+    },
+    {
+      "coordinates": [437, 1491],
+      "flag": "kz",
+      "name": "Mirnyy"
+    },
+    {
+      "coordinates": [588, 1484],
+      "flag": "kz",
+      "name": "Aksuyek"
+    },
+    {
+      "coordinates": [792, 1407],
+      "flag": "kz",
+      "name": "Balatopar"
+    },
+    {
+      "coordinates": [974, 1038],
+      "flag": "kz",
+      "name": "Bozingen"
+    },
+    {
+      "coordinates": [841, 806],
+      "flag": "kz",
+      "name": "Karaoy"
+    },
+    {
+      "coordinates": [688, 1127],
+      "flag": "kz",
+      "name": "Zhideli"
+    },
+    {
+      "coordinates": [940, 472],
+      "flag": "kz",
+      "name": "Yuzhnyy Bereg"
+    },
+    {
+      "coordinates": [1482, 165],
+      "flag": "kz",
+      "name": "Aqzhaydaq"
+    },
+    {
+      "coordinates": [2076, 296],
+      "flag": "kz",
+      "name": "Balay"
+    },
+    {
+      "coordinates": [2067, 431],
+      "flag": "kz",
+      "name": "Kopbirlik"
+    },
+    {
+      "coordinates": [2260, 258],
+      "flag": "kz",
+      "name": "Maykamis"
+    },
+    {
+      "coordinates": [2628, 524],
+      "flag": "kz",
+      "name": "Ulgi"
+    },
+    {
+      "coordinates": [2639, 721],
+      "flag": "kz",
+      "name": "Kuraksu"
+    },
+    {
+      "coordinates": [2945, 550],
+      "flag": "kz",
+      "name": "Lepsy"
+    },
+    {
+      "coordinates": [3124, 315],
+      "flag": "kz",
+      "name": "Aqbalyq"
+    },
+    {
+      "coordinates": [3247, 197],
+      "flag": "kz",
+      "name": "Kokshalpin"
+    },
+    {
+      "coordinates": [3032, 433],
+      "flag": "kz",
+      "name": "Arganaty"
+    },
+    {
+      "coordinates": [1393, 148],
+      "flag": "kz",
+      "name": "Aqoy"
+    }
+  ],
+  "translation_key": "map.balkhash"
+}

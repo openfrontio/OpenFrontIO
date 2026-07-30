@@ -1,4 +1,4 @@
-import { AllPlayersStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
@@ -290,6 +290,20 @@ export class StatsImpl implements Stats {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     p.finalTiles = _bigint(tiles);
+  }
+
+  recordKilledBy(victim: Player, killerClientID: ClientID | null): void {
+    const p = this._makePlayerStats(victim);
+    if (p === undefined) return;
+    // First write wins; `undefined` means unstamped, and `null` is a valid
+    // recorded value (eliminated by a non-client killer).
+    if (p.killedBy === undefined) p.killedBy = killerClientID;
+  }
+
+  recordDeathPosition(victim: Player, position: number): void {
+    const p = this._makePlayerStats(victim);
+    if (p === undefined) return;
+    p.deathPosition ??= position; // first write wins
   }
 
   recordKill(player: Player, victim: Player, tick: BigIntLike): void {

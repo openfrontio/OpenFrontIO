@@ -19,7 +19,6 @@ import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
-const highlightIcon = assetUrl("images/HighlightIconWhite.svg");
 const mouseIcon = assetUrl("images/MouseIconWhite.svg");
 const ninjaIcon = assetUrl("images/NinjaIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -205,12 +204,6 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  private onHighlightGlowStrengthChange(event: Event) {
-    const strength = parseFloat((event.target as HTMLInputElement).value) / 100;
-    this.userSettings.setHighlightGlowStrength(strength);
-    this.requestUpdate();
-  }
-
   render() {
     if (!this.isVisible) {
       return null;
@@ -356,36 +349,6 @@ export class SettingsModal extends LitElement implements Controller {
                   : translateText("user_setting.off")}
               </div>
             </button>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-            >
-              <img
-                src=${highlightIcon}
-                alt="highlightGlowStrength"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.highlight_glow_strength_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.highlight_small_players_desc")}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="500"
-                  .value=${this.userSettings.highlightGlowStrength() * 100}
-                  @input=${this.onHighlightGlowStrengthChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400">
-                ${Math.round(this.userSettings.highlightGlowStrength() * 100)}%
-              </div>
-            </div>
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"

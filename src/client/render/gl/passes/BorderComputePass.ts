@@ -196,6 +196,12 @@ export class BorderComputePass {
    * of that.
    */
   patchTile(x: number, y: number, prevOwner: number, newOwner: number): void {
+    if (this.globalDirty) return;
+    if (this.scatter.count > 2048) {
+      this.globalDirty = true;
+      this.scatter.clear();
+      return;
+    }
     this.scatter.pushWithNeighbors(x, y, prevOwner, newOwner);
   }
 

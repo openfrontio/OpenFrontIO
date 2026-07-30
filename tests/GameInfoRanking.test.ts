@@ -122,12 +122,37 @@ describe("Ranking class", () => {
     expect(p1.conquests).toStrictEqual([5n]);
     expect(p1.atoms).toBe(1);
     expect(p1.mirv).toBe(2);
+    expect(p1.killedAt).toBeUndefined();
+
+    const p3 = players.find((p) => p.id === "p3")!;
+    expect(p3.killedAt).toBe(600);
+  });
+
+  test("preserves a zero death timestamp", () => {
+    const session = makeSession();
+    session.info.players[0]!.stats!.killedAt = 0n;
+
+    const r = new Ranking(session);
+    const p1 = r.allPlayers.find((p) => p.id === "p1")!;
+    expect(p1.killedAt).toBe(0);
+    expect(r.score(p1, RankType.Lifetime)).toBe(0);
   });
 
   test("correctly identifies winner", () => {
     const r = new Ranking(makeSession());
     const p2 = r.sortedBy(RankType.ConquestHumans).find((p) => p.id === "p2")!;
     expect(p2.winner).toBe(true);
+  });
+
+  test("scores player, nation, and tribe kills separately", () => {
+    const session = makeSession();
+    session.info.players[0]!.stats!.conquests = [5n, 3n, 2n];
+    const ranking = new Ranking(session);
+    const player = ranking.allPlayers.find((entry) => entry.id === "p1")!;
+
+    expect(ranking.score(player, RankType.ConquestHumans)).toBe(5);
+    expect(ranking.score(player, RankType.ConquestNations)).toBe(3);
+    expect(ranking.score(player, RankType.ConquestBots)).toBe(2);
   });
 
   test("rank by total gold", () => {

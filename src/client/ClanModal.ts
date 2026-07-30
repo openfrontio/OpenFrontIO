@@ -19,6 +19,7 @@ import "./components/ConfirmDialog";
 import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { modalRouter } from "./ModalRouter";
+import type { ProfileOrigin } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
 type View =
@@ -75,6 +76,23 @@ export class ClanModal extends BaseModal {
   // selection and accumulated scroll on the previous clan. Keyed-by-tag
   // would persist across hops if that becomes desired.
   private gameHistoryCache: ClanGameHistoryCache | null = null;
+  private gameHistoryScrollTop = 0;
+  // Opening a sibling modal (game stats or a player profile) closes this
+  // inline modal. These one-shot flags keep that close/open pair from clearing
+  // or reloading the clan detail that the sibling's Back button returns to.
+  private preserveStateForModalHandoff = false;
+  private returningFromModalHandoff = false;
+  // Which detail tab opened the player-profile modal, so its Back button lands
+  // on that tab (Members vs Game History) rather than always Members.
+  private profileOpenedFromGameHistory = false;
+  // The profile whose Clans tab opened this clan, so Back can return there,
+  // plus that profile's own origin — it parks here for the detour because the
+  // profile modal is reused by any member profile opened along the way. Only
+  // the innermost hop is remembered: a clan reached through a chain of profile
+  // detours backs out to the profile that opened it, and the clan under that
+  // is not restored (see `returnFromPlayerProfile`).
+  private openedFromProfile: string | null = null;
+  private openedFromProfileOrigin: ProfileOrigin | null = null;
   private previousListTab: ListTab = "my-clans";
 
   private get onListView(): boolean {
@@ -148,6 +166,26 @@ export class ClanModal extends BaseModal {
     >`;
   }
 
+  // Every exit from the clan detail calls this first: when a profile opened the
+  // clan, Back belongs to that profile, not this modal's list. False = no
+  // profile origin, so the caller does its normal list navigation.
+  private backToProfile(): boolean {
+    const publicId = this.openedFromProfile;
+    if (publicId === null) return false;
+    const origin = this.openedFromProfileOrigin;
+    this.openedFromProfile = null;
+    this.openedFromProfileOrigin = null;
+    this.close();
+    document
+      .querySelector<
+        HTMLElement & {
+          returnFromClan(publicId: string, origin: ProfileOrigin | null): void;
+        }
+      >("player-profile-modal")
+      ?.returnFromClan(publicId, origin);
+    return true;
+  }
+
   private renderSubViewHeader() {
     const clan = this.selectedClan;
     const ariaLabel = translateText("common.back");
@@ -191,6 +229,7 @@ export class ClanModal extends BaseModal {
     return modalHeader({
       title: clan?.name ?? translateText("clan_modal.title"),
       onBack: () => {
+        if (this.backToProfile()) return;
         this.view = "list";
         this.selectedClan = null;
         this.selectedClanTag = "";
@@ -206,6 +245,13 @@ export class ClanModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    if (this.returningFromModalHandoff) {
+      this.returningFromModalHandoff = false;
+      return;
+    }
+    // openFromProfile() re-sets these right after open().
+    this.openedFromProfile = null;
+    this.openedFromProfileOrigin = null;
     const targetTag =
       typeof args?.clan === "string"
         ? args.clan.trim()
@@ -219,6 +265,9 @@ export class ClanModal extends BaseModal {
   }
 
   protected onClose(): void {
+    if (this.preserveStateForModalHandoff) return;
+    this.openedFromProfile = null;
+    this.openedFromProfileOrigin = null;
     this.activeTab = "my-clans";
     this.previousListTab = "my-clans";
     this.view = "list";
@@ -228,6 +277,8 @@ export class ClanModal extends BaseModal {
     this.browseCache = null;
     this.detailCache = null;
     this.gameHistoryCache = null;
+    this.gameHistoryScrollTop = 0;
+    this.returningFromModalHandoff = false;
   }
 
   private async loadMyClans(opts: { allowGuest?: boolean } = {}) {
@@ -321,6 +372,7 @@ export class ClanModal extends BaseModal {
             this.selectedClanTag = "";
             this.myRole = null;
             this.detailCache = null;
+            if (this.backToProfile()) return;
             this.view = "list";
             this.setActiveTab(this.previousListTab);
           }}
@@ -370,6 +422,10 @@ export class ClanModal extends BaseModal {
           @history-updated=${(e: CustomEvent<ClanGameHistoryCache>) => {
             this.gameHistoryCache = e.detail;
           }}
+          @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
+            this.openGameStats(e.detail.gameId)}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
           @close-clan-modal=${() => this.close()}
         ></clan-game-history-view>`;
       }
@@ -384,6 +440,8 @@ export class ClanModal extends BaseModal {
           ? this.detailCache
           : null}
         @navigate-back=${() => {
+          // Raised when the clan fails to load.
+          if (this.backToProfile()) return;
           this.view = "list";
           this.selectedClan = null;
           this.selectedClanTag = "";
@@ -429,6 +487,8 @@ export class ClanModal extends BaseModal {
             pendingRequestCount: e.detail.pendingRequestCount,
           };
         }}
+        @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+          this.openPlayerProfile(e.detail.publicId)}
         @navigate-manage=${() => (this.view = "manage")}
         @navigate-requests=${() => (this.view = "requests")}
         @clan-joined=${(e: CustomEvent<{ tag: string }>) => {
@@ -447,6 +507,7 @@ export class ClanModal extends BaseModal {
           this.selectedClanTag = "";
           this.myRole = null;
           this.detailCache = null;
+          if (this.backToProfile()) return;
           this.view = "list";
           this.setActiveTab(this.previousListTab);
         }}
@@ -500,6 +561,100 @@ export class ClanModal extends BaseModal {
     // modalConfig() returns detail tabs; setActiveTab anchors activeTab to
     // "overview" and syncs the URL router (routerName = "clan").
     this.setActiveTab("overview");
+  }
+
+  private openGameStats(gameId: string): void {
+    const statsModal = document.querySelector<
+      HTMLElement & { openFromClan(gameId: string): void }
+    >("game-stats-modal");
+    if (!statsModal) return;
+
+    this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    this.preserveStateForModalHandoff = true;
+    try {
+      statsModal.openFromClan(gameId);
+    } finally {
+      this.preserveStateForModalHandoff = false;
+    }
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromClan(publicId: string): void }
+    >("player-profile-modal");
+    if (!profileModal) return;
+
+    // Route the profile modal's Back button to whichever tab opened it. Only
+    // the game-history tab needs its scroll position preserved on return.
+    this.profileOpenedFromGameHistory = this.activeTab === "game-history";
+    if (this.profileOpenedFromGameHistory) {
+      this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    }
+
+    // Same handoff as openGameStats: keep clan state so the profile modal's
+    // back button can land on the originating tab without a refetch.
+    this.preserveStateForModalHandoff = true;
+    try {
+      profileModal.openFromClan(publicId);
+    } finally {
+      this.preserveStateForModalHandoff = false;
+    }
+  }
+
+  // Entry point for the profile modal's Back button (opened via openFromClan
+  // from either the Members or Game History tab).
+  public returnFromPlayerProfile(): void {
+    // Nothing showing means the profile detoured through one of its own clans,
+    // which reset this modal. Nothing is restored — land on the clan list
+    // rather than leave the user on an empty page.
+    if (!this.selectedClanTag) {
+      this.open({});
+      return;
+    }
+    if (this.profileOpenedFromGameHistory) {
+      this.returnToGameHistory();
+    } else {
+      this.returnToMembers();
+    }
+  }
+
+  // Entry point from a player profile's Clans tab. Origin is set after open()
+  // because onOpen clears it (same as the profile modal's openFrom* helpers).
+  public openFromProfile(
+    tag: string,
+    publicId: string,
+    origin: ProfileOrigin | null,
+  ): void {
+    this.open({ clan: tag });
+    this.openedFromProfile = publicId;
+    this.openedFromProfileOrigin = origin;
+  }
+
+  public returnToMembers(): void {
+    const tag = this.selectedClanTag;
+    if (!tag) return;
+
+    this.returningFromModalHandoff = true;
+    this.open({ clan: tag, tab: "members" });
+  }
+
+  public returnToGameHistory(): void {
+    const tag = this.selectedClanTag;
+    if (!tag) return;
+
+    this.returningFromModalHandoff = true;
+    this.open({ clan: tag, tab: "game-history" });
+    void this.restoreGameHistoryScroll();
+  }
+
+  private async restoreGameHistoryScroll(): Promise<void> {
+    await this.updateComplete;
+    await this.modalEl?.updateComplete;
+    const historyView = this.querySelector<
+      HTMLElement & { updateComplete?: Promise<boolean> }
+    >("clan-game-history-view");
+    await historyView?.updateComplete;
+    this.modalEl?.setScrollTop(this.gameHistoryScrollTop);
   }
 
   private renderMyClans() {

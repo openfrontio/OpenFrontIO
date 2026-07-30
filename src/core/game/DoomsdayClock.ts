@@ -107,8 +107,15 @@ function requiredBasisPoints(
 }
 
 /**
- * Base minimum tiles one player must own at `elapsed` game seconds. One floored
- * integer ratio, so every client agrees.
+ * Minimum tiles one SIDE must hold at `elapsed` game seconds — a solo player in
+ * FFA, a whole team's combined territory in team modes. The bar is identical
+ * for every side regardless of headcount: the clock's job is to shrink the
+ * number of viable sides (floor(100 / wave%) can be above the bar at once,
+ * down to 1 at the final 55% wave), and elimination happens at side
+ * granularity, so scaling by member count only distorts it — a headcount-
+ * scaled bar saturated at "hold the whole map" for big teams the moment the
+ * grace ended, and dropped whenever a teammate died. One floored integer
+ * ratio, so every client agrees.
  */
 export function doomsdayClockRequiredTiles(
   speed: DoomsdayClockSpeed,
@@ -117,22 +124,6 @@ export function doomsdayClockRequiredTiles(
 ): number {
   if (land <= 0) return 0;
   return Math.floor((requiredBasisPoints(speed, elapsed) * land) / 10000);
-}
-
-/**
- * Threshold a whole side must hold: the base per-player share scaled by the
- * side's headcount, so a team of N must hold N× what a solo player holds (FFA
- * sides are size 1, i.e. unscaled). Capped at the whole map. Shared by the sim
- * and the HUD so the two always agree.
- */
-export function doomsdayClockSideRequiredTiles(
-  speed: DoomsdayClockSpeed,
-  land: number,
-  elapsed: number,
-  sideSize: number,
-): number {
-  const base = doomsdayClockRequiredTiles(speed, land, elapsed);
-  return Math.min(land, base * Math.max(1, sideSize));
 }
 
 export interface DoomsdayClockWaveState {

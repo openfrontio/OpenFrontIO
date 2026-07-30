@@ -58,7 +58,7 @@ export class CosmeticButton extends LitElement {
     const variants = this.variants;
     if (variants && variants.length > 0) {
       return (
-        variants.find((v) => v.key === this.activeVariantKey) ?? variants[0]
+        variants.find((v) => v.key === this.activeVariantKey) ?? this.resolved
       );
     }
     return this.resolved;
@@ -258,7 +258,7 @@ export class CosmeticButton extends LitElement {
         >
         ${pack.bonusAmount > 0
           ? html`<div
-              class="absolute top-3 -right-8 bg-green-500 text-white text-[10px] font-black px-8 py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
+              class="absolute top-8 -right-10 w-40 bg-green-500 text-white text-[10px] font-black py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
             >
               ${translateText("cosmetics.free", {
                 numFree: pack.bonusAmount.toLocaleString(),
@@ -271,12 +271,9 @@ export class CosmeticButton extends LitElement {
     if (this.activeResolved.type === "subscription") {
       const sub = this.activeResolved.cosmetic as Subscription;
       return html`<div
-        class="flex flex-col items-center justify-between h-full w-full text-center gap-2 p-1"
+        class="flex flex-col items-center justify-center h-full w-full text-center gap-2 p-1"
       >
-        <span class="text-xs text-white/70 line-clamp-3 px-1"
-          >${sub.description}</span
-        >
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col items-center gap-1 w-full">
           <div class="flex items-center gap-1.5">
             <plutonium-icon .size=${24}></plutonium-icon>
             <span class="text-sm font-bold text-green-400"
@@ -295,16 +292,26 @@ export class CosmeticButton extends LitElement {
               >${translateText("cosmetics.per_day")}</span
             >
           </div>
+          <span
+            class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+            ><span class="text-green-400">✓</span> ${translateText(
+              "cosmetics.verified_name",
+            )}</span
+          >
           ${sub.unlimitedRanked
             ? html`<span
-                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
-                >${translateText("cosmetics.unlimited_ranked")}</span
+                class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                ><span class="text-green-400">✓</span> ${translateText(
+                  "cosmetics.unlimited_ranked",
+                )}</span
               >`
             : nothing}
           ${sub.canCreatePublicLobbies
             ? html`<span
-                class="text-[10px] font-bold text-purple-300 uppercase tracking-wide"
-                >${translateText("cosmetics.public_lobbies")}</span
+                class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                ><span class="text-green-400">✓</span> ${translateText(
+                  "cosmetics.public_lobbies",
+                )}</span
               >`
             : nothing}
         </div>
@@ -326,6 +333,31 @@ export class CosmeticButton extends LitElement {
         }
       }}
     />`;
+  }
+
+  /** Perk labels + in-depth explanations shown in the "?" tooltip. */
+  private subscriptionPerks(): Array<{ label: string; info: string }> {
+    if (this.activeResolved.type !== "subscription") return [];
+    const sub = this.activeResolved.cosmetic as Subscription;
+    const perks = [
+      {
+        label: translateText("cosmetics.verified_name"),
+        info: translateText("cosmetics.verified_name_info"),
+      },
+    ];
+    if (sub.unlimitedRanked) {
+      perks.push({
+        label: translateText("cosmetics.unlimited_ranked"),
+        info: translateText("cosmetics.unlimited_ranked_info"),
+      });
+    }
+    if (sub.canCreatePublicLobbies) {
+      perks.push({
+        label: translateText("cosmetics.public_lobbies"),
+        info: translateText("cosmetics.public_lobbies_info"),
+      });
+    }
+    return perks;
   }
 
   render() {
@@ -397,6 +429,7 @@ export class CosmeticButton extends LitElement {
                 .colorPalette=${active.colorPalette?.name}
                 .showAdFree=${isPurchasable}
                 .usdValue=${usdValue}
+                .perks=${this.subscriptionPerks()}
               ></cosmetic-info>`
             : nothing}
 

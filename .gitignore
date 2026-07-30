@@ -1,5 +1,6 @@
 build/
 node_modules/
+.worktrees/
 out/
 static/
 coverage/
@@ -24,3 +25,4 @@ tests/perf/output/
 
 # Locally built Go binary (gen-maps uses `go run .`)
 map-generator/map-generator
+map-generator/map-generator.exe

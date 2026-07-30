@@ -307,17 +307,25 @@ export class PlayerImpl implements Player {
       }
     }
 
+    // OFM live standings: elimination info is stored on the player's stats
+    // (set live in the sim via mg.stats()), surfaced here so it rides the live
+    // PlayerUpdate every tick rather than only appearing in the game-end record.
+    const deathStats = this.mg.stats().getPlayerStats(this);
+
     return {
       type: GameUpdateType.Player,
       clientID: this.clientID(),
       name: this.name(),
       displayName: this.displayName(),
+      clanTag: this.clanTag(),
       id: this.id(),
       team: this.team() ?? undefined,
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
       isDisconnected: this.isDisconnected(),
+      killedBy: deathStats?.killedBy ?? null,
+      deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
@@ -351,7 +359,9 @@ export class PlayerImpl implements Player {
   displayName(): string {
     return this.playerInfo.displayName;
   }
-
+  clanTag(): string | null {
+    return this.playerInfo.clanTag;
+  }
   clientID(): ClientID | null {
     return this.playerInfo.clientID;
   }

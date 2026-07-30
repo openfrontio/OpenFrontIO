@@ -21,6 +21,7 @@ function makeClient(
   role: string | null = null,
   publicId: string | undefined = undefined,
   friends: string[] = [],
+  cosmetics: { verified?: boolean } | undefined = undefined,
 ): Client {
   return new Client(
     clientID,
@@ -32,7 +33,7 @@ function makeClient(
     username,
     clanTag,
     makeMockWs() as any,
-    undefined,
+    cosmetics,
     publicId,
     friends,
   );
@@ -67,9 +68,17 @@ function makeGame(
   [
     makeClient("creator", "creator-pid", "CreatorReal", "HOST"),
     makeClient("admin", "admin-pid", "AdminReal", "ADM", "admin"),
-    makeClient("alice", "alice-pid", "AliceReal", "AAA", null, "alice-pub", [
-      "bob-pub",
-    ]),
+    makeClient(
+      "alice",
+      "alice-pid",
+      "AliceReal",
+      "AAA",
+      null,
+      "alice-pub",
+      ["bob-pub"],
+      // Join-time validated cosmetics (enforceVerifiedBadge already ran).
+      { verified: true },
+    ),
     makeClient("bob", "bob-pid", "BobReal", "BBB", null, "bob-pub"),
   ].forEach((c) => game.joinClient(c));
   return game;
@@ -152,6 +161,30 @@ describe("anonymizeNames: gameInfo (lobby / HTTP / preview)", () => {
     expect(byId(game.gameInfo("alice"), "bob").username).toBe(
       byId(game.gameInfo("alice"), "bob").username,
     );
+  });
+});
+
+describe("verified badge in gameInfo", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("real entries carry verified from the join-validated cosmetics", () => {
+    const info = makeGame(false).gameInfo("bob");
+    expect(byId(info, "alice").verified).toBe(true);
+    expect(byId(info, "bob").verified).toBeUndefined();
+  });
+
+  it("anonymized entries never carry verified", () => {
+    const info = makeGame(true).gameInfo("bob");
+    expect(byId(info, "alice").verified).toBeUndefined();
+  });
+
+  it("the anonymized player still sees their own badge", () => {
+    const info = makeGame(true).gameInfo("alice");
+    expect(byId(info, "alice").verified).toBe(true);
   });
 });
 

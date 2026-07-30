@@ -1,6 +1,6 @@
 import version from "resources/version.txt?raw";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
+import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
@@ -14,6 +14,8 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { adGatekeeper } from "./AdGatekeeper";
+import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
@@ -24,14 +26,16 @@ import "./CosmeticsModal";
 import { CosmeticsModal } from "./CosmeticsModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { isDesktopShell } from "./DesktopShell";
+import "./FeaturedStream";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
 import { FlagInputModal } from "./FlagInputModal";
-import { GameInfoModal } from "./GameInfoModal";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
+import "./GameStatsModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
@@ -45,10 +49,13 @@ import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
+import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
+import "./SteamLinkSignpost";
 import { StoreModal } from "./Store";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -59,12 +66,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
-import {
-  getDiscordAvatarUrl,
-  incrementGamesPlayed,
-  isInIframe,
-  translateText,
-} from "./Utils";
+import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
@@ -82,105 +84,6 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
-
-function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
-  const button = document.getElementById("nav-account-button");
-  if (!button) return;
-
-  const avatarEl = document.getElementById("nav-account-avatar") as
-    | (HTMLImageElement & { _navToken?: symbol })
-    | null;
-  const personIconEl = document.getElementById(
-    "nav-account-person-icon",
-  ) as SVGElement | null;
-  const emailBadgeEl = document.getElementById(
-    "nav-account-email-badge",
-  ) as HTMLElement | null;
-  const signInTextEl = document.getElementById(
-    "nav-account-signin-text",
-  ) as HTMLSpanElement | null;
-
-  // Auth state is resolved, so the button no longer shows the loading spinner.
-  document
-    .getElementById("nav-account-loading-spinner")
-    ?.classList.add("hidden");
-
-  // Unique token for this update call
-  const navToken = Symbol();
-  if (avatarEl) avatarEl._navToken = navToken;
-
-  const showAvatar = (src: string, alt?: string) => {
-    if (avatarEl) {
-      avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
-      // If the avatar fails to load (bad URL / CDN issue / offline), fall back
-      // to the default sign-in UI instead of leaving a broken image.
-      avatarEl.onerror = () => {
-        if (avatarEl._navToken !== navToken) return;
-        avatarEl.onerror = null;
-        avatarEl.src = "https://cdn.discordapp.com/embed/avatars/0.png";
-      };
-      avatarEl.onload = () => {
-        // Only handle if this is the latest update
-        if (avatarEl._navToken !== navToken) return;
-        // Clear error handler after a successful load.
-        avatarEl.onerror = null;
-      };
-      avatarEl.src = src;
-      avatarEl.classList.remove("hidden");
-    }
-    personIconEl?.classList.add("hidden");
-    emailBadgeEl?.classList.add("hidden");
-    signInTextEl?.classList.add("hidden");
-    button?.classList.remove("border", "border-white/20");
-  };
-
-  const showSignIn = () => {
-    avatarEl?.classList.add("hidden");
-    personIconEl?.classList.remove("hidden");
-    emailBadgeEl?.classList.add("hidden");
-    signInTextEl?.classList.remove("hidden");
-    // Restore border when showing signin state
-    button?.classList.add("border", "border-white/20");
-  };
-
-  const showEmailLoggedIn = () => {
-    avatarEl?.classList.add("hidden");
-    personIconEl?.classList.remove("hidden");
-    emailBadgeEl?.classList.remove("hidden");
-    signInTextEl?.classList.add("hidden");
-    button?.classList.add("border", "border-white/20");
-  };
-
-  const discord =
-    userMeResponse !== false ? userMeResponse.user.discord : undefined;
-  if (discord && avatarEl) {
-    const avatarAlt = translateText("main.user_avatar_alt", {
-      username: discord.username,
-    });
-    const url = getDiscordAvatarUrl(discord);
-    if (url) {
-      showAvatar(url, avatarAlt);
-      return;
-    }
-  }
-
-  const email =
-    userMeResponse !== false ? userMeResponse.user.email : undefined;
-  if (email) {
-    showEmailLoggedIn();
-    return;
-  }
-
-  // Google logins have no avatar; show the same person/email badge as magic-link.
-  const google =
-    userMeResponse !== false ? userMeResponse.user.google : undefined;
-  if (google) {
-    showEmailLoggedIn();
-    return;
-  }
-
-  showSignIn();
-}
 
 declare global {
   interface Window {
@@ -236,8 +139,10 @@ declare global {
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
+    "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
+    "game-starting": CustomEvent;
     "update-game-config": CustomEvent;
   }
 }
@@ -300,6 +205,14 @@ class Client {
       tag: "account-modal",
       pageId: "page-account",
     });
+    modalRouter.register("stats", {
+      tag: "game-stats-modal",
+      pageId: "page-stats",
+    });
+    modalRouter.register("profile", {
+      tag: "player-profile-modal",
+      pageId: "page-profile",
+    });
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
     modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
     modalRouter.register("language", {
@@ -321,9 +234,12 @@ class Client {
     modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // Prefetch turnstile token so it is available when the user joins a lobby.
+    // Desktop (Steam) has no Turnstile script and is server-side exempt, so
+    // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
+    // script" after its load wait.
+    this.turnstileTokenPromise =
+      ClientEnv.instanceId() === "desktop" ? null : getTurnstileToken();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -396,14 +312,14 @@ class Client {
       "open-matchmaking",
       this.handleOpenMatchmaking.bind(this),
     );
+    document.addEventListener(
+      "matchmaking-requeue",
+      this.handleMatchmakingRequeue.bind(this),
+    );
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
       console.warn("Help modal element not found");
-    }
-    const giModal = document.querySelector("game-info-modal") as GameInfoModal;
-    if (!giModal || !(giModal instanceof GameInfoModal)) {
-      console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
@@ -497,7 +413,24 @@ class Client {
       }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
-      window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
+      window.adsEnabled =
+        !isAdFree && !crazyGamesSDK.isOnCrazyGames() && !isDesktopShell();
+      // Ad-eligible users only: paid/adfree users must never load Admiral (its
+      // adblock popup fires autonomously once the payload runs). Start watching
+      // adblock state; once a blocker is ever detected the in-game ad is
+      // suppressed forever (persisted) — those users are highly ad-sensitive.
+      if (window.adsEnabled) {
+        loadAdmiral();
+        // Admiral's read is more reliable than our DOM bait, so use it as a
+        // fast initial signal. A blocker that whitelists this site still shows
+        // ads, so "blocked" means adblocking AND not whitelisted.
+        onAdmiralMeasured((res) => {
+          adGatekeeper.seed(
+            res.adblocking === true && res.whitelisted !== true,
+          );
+        });
+        adGatekeeper.start();
+      }
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -513,14 +446,41 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
 
-        // Unclaimed-rewards popup — only on a clean homepage load, never over
-        // a deep link (join URL, #modal=..., #purchase-completed, ...).
-        const rewards = userMeResponse.player.rewards ?? [];
+        // Popups below only on a clean homepage load, never over a deep link
+        // (join URL, #modal=..., #purchase-completed, ...).
+        const cleanHomepage =
+          window.location.pathname === "/" && window.location.hash === "";
+
+        // The server renamed this subscriber to TEMPORARY#### because their
+        // bare name was exclusively taken while they were unentitled; the
+        // rename is free (cooldown cleared). Prompt for a real name; takes
+        // priority over the rewards popup — the account modal shows the
+        // rewards panel anyway.
+        const { usernameStatus, usernameBase } = userMeResponse.player;
         if (
-          rewards.length > 0 &&
-          window.location.pathname === "/" &&
-          window.location.hash === ""
+          cleanHomepage &&
+          (usernameStatus === "premium" || usernameStatus === "indefinite") &&
+          isTemporaryUsername(usernameBase)
         ) {
+          const goRename = await showInGameConfirm(
+            translateText("account_modal.username_temporary_prompt"),
+            {
+              heading: translateText("account_modal.username_title"),
+              variant: "warning",
+              confirmText: translateText(
+                "account_modal.username_temporary_prompt_confirm",
+              ),
+            },
+          );
+          if (goRename) {
+            window.location.hash = "modal=account";
+          }
+          return;
+        }
+
+        // Unclaimed-rewards popup.
+        const rewards = userMeResponse.player.rewards ?? [];
+        if (rewards.length > 0 && cleanHomepage) {
           this.rewardsModal?.openWithRewards(rewards);
         }
       }
@@ -884,6 +844,11 @@ class Client {
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
+    // Ensure the one-shot Steam name-seed has settled before reading
+    // getUsername(), mirroring how getClanCheck() runs in parallel with the
+    // handshake. whenSeeded() always resolves (falling back to the generated
+    // anon name on failure/timeout), so this can only delay, never block.
+    await this.usernameInput?.whenSeeded();
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs(),
@@ -905,6 +870,9 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
+      // The game is actually starting now (lobby wait is over). Let listeners that stay up
+      // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
+      document.dispatchEvent(new CustomEvent("game-starting"));
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
@@ -1050,6 +1018,25 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
+  // Puts the player back into the ranked queue. From a pre-start match
+  // cancellation the matchmaking modal is still open and rejoins in place,
+  // keeping its mode. From a finished game (WinModal passes the mode) the
+  // page needs the reload teardown, so navigate home with the requeue
+  // param and let consumeRequeueUrl() reopen the queue. A modeless
+  // dispatch with no open modal (the player closed it mid-wait) stays a
+  // no-op — don't force them back into a queue they left.
+  private handleMatchmakingRequeue(
+    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+  ) {
+    if (this.matchmakingModal?.requeue()) {
+      return;
+    }
+    if (event.detail?.mode !== undefined) {
+      window.location.href =
+        event.detail.mode === "2v2" ? "/?requeue=2v2" : "/?requeue";
+    }
+  }
+
   private handleOpenMatchmaking(
     event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
   ) {
@@ -1089,6 +1076,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
+      ClientEnv.instanceId() === "desktop" ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;

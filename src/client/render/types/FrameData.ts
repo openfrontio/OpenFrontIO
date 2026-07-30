@@ -1,3 +1,4 @@
+import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type { FrameEvents } from "./FrameEvents";
 import type {
   AttackRingInput,
@@ -51,6 +52,13 @@ export interface FrameData {
    */
   readonly trailDirtyRowMin: number;
   readonly trailDirtyRowMax: number;
+
+  /**
+   * Live spiral nukeTrail ribbons (helix polylines from SpiralTrails) —
+   * empty while no spiral-cosmetic nuke is in flight. Live ref, mutated in
+   * place each tick like the state buffers above.
+   */
+  readonly spiralRibbons: readonly SpiralRibbon[];
 
   // ── Derived (computed once by producer) ────────────────────────────────
 

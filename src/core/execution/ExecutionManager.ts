@@ -37,6 +37,8 @@ export class Executor {
     private mg: Game,
     private gameID: GameID,
     private clientID: ClientID | undefined,
+    // Purchased bot tribe names drawn for this game (GameStartInfo.tribes).
+    private purchasedTribeNames: string[] = [],
   ) {
     // Add one to avoid id collisions with tribes.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
@@ -127,7 +129,14 @@ export class Executor {
   }
 
   spawnTribes(numTribes: number): SpawnExecution[] {
-    return new TribeSpawner(this.mg, this.gameID).spawnTribes(numTribes);
+    const nationCells = this.mg
+      .nations()
+      .map((n) => n.spawnCell)
+      .filter((c): c is NonNullable<typeof c> => c !== undefined);
+    return new TribeSpawner(this.mg, this.gameID, nationCells).spawnTribes(
+      numTribes,
+      this.purchasedTribeNames,
+    );
   }
 
   spawnPlayers(): SpawnExecution[] {

@@ -12,6 +12,17 @@ describe("doomsday clock public modifier", () => {
     expect(mods[0].labelKey).toBe("public_game_modifier.doomsday_clock_label");
   });
 
+  it("names the preset when a speed is provided", () => {
+    const mods = getActiveModifiers({ isDoomsdayClock: true }, "fast");
+    expect(mods).toHaveLength(1);
+    expect(mods[0].badgeKey).toBe(
+      "public_game_modifier.doomsday_clock_with_speed",
+    );
+    expect(mods[0].labelKey).toBe("public_game_modifier.doomsday_clock_label");
+    // The speed is resolved to its translated label and passed as a badge param.
+    expect(mods[0].badgeParams?.speed).toBeDefined();
+  });
+
   it("omits the badge when the modifier is absent", () => {
     expect(getActiveModifiers({})).toHaveLength(0);
     expect(getActiveModifiers(undefined)).toHaveLength(0);

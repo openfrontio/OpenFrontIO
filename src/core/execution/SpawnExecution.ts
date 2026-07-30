@@ -40,11 +40,29 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    // Security: `tile` arrives straight off a spawn intent. A fractional or
+    // out-of-range ref indexes past the terrain buffers, so downstream lookups
+    // read back undefined instead of failing. Reject it before relinquishing
+    // any territory, so a malformed intent is a clean no-op on every client.
+    if (this.tile !== undefined && !this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: invalid spawn tile ${this.tile}`);
+      return;
+    }
+
     let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
     } else {
       player = this.mg.addPlayer(this.playerInfo);
+    }
+
+    // Security: a spawn intent may only place or relocate a player's starting
+    // territory during the spawn phase. Once the game is underway, an
+    // already-spawned player who sends a spawn intent is attempting to
+    // teleport — relinquishing their territory and re-conquering it elsewhere.
+    // Ignore it so the intent is a deterministic no-op on every client.
+    if (!this.mg.inSpawnPhase() && player.hasSpawned()) {
+      return;
     }
 
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location

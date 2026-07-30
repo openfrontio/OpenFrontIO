@@ -13,7 +13,11 @@ import {
   SubscriptionSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
-import { PlayerEffectSchema } from "../src/core/Schemas";
+import {
+  PlayerCosmeticRefsSchema,
+  PlayerCosmeticsSchema,
+  PlayerEffectSchema,
+} from "../src/core/Schemas";
 
 describe("Effect cosmetic schemas", () => {
   const base = {
@@ -94,6 +98,50 @@ describe("Effect cosmetic schemas", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("parses a spiral with colors, radius, strands, and rotationSpeed", () => {
+      const parsed = TrailEffectAttributesSchema.parse({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+      expect(parsed).toEqual({
+        type: "spiral",
+        colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      });
+    });
+
+    it("requires spiral radius/strands/rotationSpeed, radius > 0, integer strands", () => {
+      const valid = {
+        type: "spiral",
+        colors: ["#f00", "#00f"],
+        radius: 15,
+        strands: 4,
+        rotationSpeed: 5,
+      };
+      for (const key of ["radius", "strands", "rotationSpeed"] as const) {
+        const missing: Record<string, unknown> = { ...valid };
+        delete missing[key];
+        expect(TrailEffectAttributesSchema.safeParse(missing).success).toBe(
+          false,
+        );
+      }
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, radius: 0 }).success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 2.5 })
+          .success,
+      ).toBe(false);
+      expect(
+        TrailEffectAttributesSchema.safeParse({ ...valid, strands: 0 }).success,
+      ).toBe(false);
+    });
   });
 
   describe("EffectSchema", () => {
@@ -123,6 +171,26 @@ describe("Effect cosmetic schemas", () => {
             colorSize: 0.5,
             movementSpeed: 2,
           },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("parses a spiral nukeTrail effect (the catalog spiral_tail shape)", () => {
+      expect(
+        EffectSchema.safeParse({
+          name: "spiral_tail",
+          effectType: "nukeTrail",
+          attributes: {
+            type: "spiral",
+            colors: ["#ff0000", "#001eff", "#fcfcfc", "#00ffaa"],
+            radius: 15,
+            strands: 4,
+            rotationSpeed: 5,
+          },
+          affiliateCode: null,
+          product: null,
+          priceHard: 123,
+          rarity: "common",
         }).success,
       ).toBe(true);
     });
@@ -666,6 +734,89 @@ describe("structures effects", () => {
   });
 });
 
+describe("warship effects", () => {
+  const gradient = {
+    name: "patriotic_warshipo",
+    effectType: "warship",
+    attributes: {
+      type: "gradient",
+      colors: ["#f00000", "#e6e6e6", "#1100ff"],
+      colorSize: 5,
+      movementSpeed: 10,
+    },
+    affiliateCode: null,
+    product: null,
+    priceHard: 10,
+    rarity: "common",
+  };
+  const transition = {
+    name: "warship_transition",
+    effectType: "warship",
+    attributes: {
+      type: "transition",
+      colors: ["#ff0000", "#ffffff", "#00ff88"],
+      frequency: 5,
+    },
+    affiliateCode: null,
+    product: null,
+    rarity: "common",
+  };
+
+  it("parses the gradient and transition catalog entries", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        warship: {
+          patriotic_warshipo: gradient,
+          warship_transition: transition,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(
+        result.data.effects?.warship?.patriotic_warshipo?.attributes.type,
+      ).toBe("gradient");
+      expect(
+        result.data.effects?.warship?.warship_transition?.attributes.type,
+      ).toBe("transition");
+    }
+  });
+
+  it("resolves the warship slot (slot = effectType)", () => {
+    expect(effectTypeForSlot("warship")).toBe("warship");
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: { warship: { patriotic_warshipo: gradient } },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(
+      findEffectForSlot(parsed.data, "warship", "patriotic_warshipo")?.name,
+    ).toBe("patriotic_warshipo");
+  });
+
+  it("shares trail attribute shapes but is not a trail effect", () => {
+    const eff = EffectSchema.parse(gradient);
+    // Renders through the warship palette block, not a trail block.
+    expect(isTrailEffect(eff)).toBe(false);
+    expect(effectMatchesSlot(eff, "warship")).toBe(true);
+    expect(effectMatchesSlot(eff, "structures")).toBe(false);
+    expect(effectMatchesSlot(eff, "transportShipTrail")).toBe(false);
+  });
+
+  it("rejects a warship effect with an unknown attribute type", () => {
+    expect(
+      EffectSchema.safeParse({
+        ...gradient,
+        attributes: { type: "sparkle", colors: [] },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("isTrailEffect", () => {
   it("is true for a trail effect and false for a nukeExplosion", () => {
     const trail = EffectSchema.parse({
@@ -897,6 +1048,72 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
     expect(
       SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
         .success,
+    ).toBe(false);
+  });
+});
+
+describe("verified badge on cosmetics schemas", () => {
+  it("accepts a verified claim on refs and resolved cosmetics", () => {
+    const refs = PlayerCosmeticRefsSchema.safeParse({ verified: true });
+    expect(refs.success).toBe(true);
+    if (refs.success) {
+      expect(refs.data.verified).toBe(true);
+    }
+    const resolved = PlayerCosmeticsSchema.safeParse({ verified: true });
+    expect(resolved.success).toBe(true);
+    if (resolved.success) {
+      expect(resolved.data.verified).toBe(true);
+    }
+  });
+
+  it("stays optional (old clients omit it)", () => {
+    const refs = PlayerCosmeticRefsSchema.safeParse({});
+    expect(refs.success).toBe(true);
+    if (refs.success) {
+      expect(refs.data.verified).toBeUndefined();
+    }
+  });
+
+  it("rejects a non-boolean verified", () => {
+    expect(
+      PlayerCosmeticRefsSchema.safeParse({ verified: "yes" }).success,
+    ).toBe(false);
+    expect(PlayerCosmeticsSchema.safeParse({ verified: 1 }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("CosmeticsSchema tribeNames pricing", () => {
+  it("parses the tribeNames config block", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      tribeNames: {
+        priceHard: 200,
+        boostPriceHard: 100,
+        boostDurationDays: 30,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribeNames?.boostPriceHard).toBe(100);
+  });
+
+  it("parses a cosmetics.json without tribeNames (older API)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribeNames).toBeUndefined();
+  });
+
+  it("rejects a tribeNames block missing the boost price", () => {
+    expect(
+      CosmeticsSchema.safeParse({
+        patterns: {},
+        flags: {},
+        tribeNames: { priceHard: 200, boostDurationDays: 30 },
+      }).success,
     ).toBe(false);
   });
 });

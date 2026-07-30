@@ -404,6 +404,24 @@ describe("listed lobby host powers", () => {
     expect(game.handleIntent(kick, asHost).status).toBe(200);
   });
 
+  it("blocks host pause controls while listed", () => {
+    const game = makeGame("g-pause");
+    (game as any)._hasStarted = true;
+    game.setListed(true);
+
+    const pause = { type: "toggle_pause", paused: true } as any;
+    expect(game.handleIntent(pause, asHost)).toEqual({
+      status: 403,
+      error: "the host cannot pause a publicly listed game",
+    });
+    expect((game as any).isPaused).toBe(false);
+
+    // Unlisting restores the host's pause control.
+    game.setListed(false);
+    expect(game.handleIntent(pause, asHost).status).toBe(200);
+    expect((game as any).isPaused).toBe(true);
+  });
+
   it("lets admins kick in a listed lobby", () => {
     const game = makeGame("g-admin-kick");
     game.joinClient(makeClient("host", CREATOR, fakeWs()));
@@ -520,6 +538,27 @@ describe("MasterLobbyService hosted lobbies", () => {
       "aaa",
       "ccc",
     ]);
+  });
+
+  it("keeps the valid lobbies when a report contains a malformed entry", () => {
+    const { service, workers } = createService();
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [
+        // Missing publicGameType, like a matchmaking game reported by
+        // mistake. It must be dropped without discarding the whole report.
+        { gameID: "bad", numClients: 0 },
+        hostedLobby("ok", "creator-a"),
+      ],
+    });
+
+    (service as any).broadcastLobbies();
+
+    const broadcast = sentMessages(workers[0]).find(
+      (m) => m.type === "lobbiesBroadcast",
+    );
+    const hosted = broadcast.publicGames.games.hosted;
+    expect(hosted.map((l: InternalGameInfo) => l.gameID)).toEqual(["ok"]);
   });
 
   it("delists a dedup loser only after two consecutive losing broadcasts", () => {
@@ -693,6 +732,35 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
     expect(reported.gameConfig.hostCheats).toBeUndefined();
+  });
+
+  it("excludes matchmaking games (Public but no publicGameType) from the report", () => {
+    const ranked = new GameServer(
+      "ranked-g1",
+      mockLogger,
+      Date.now(),
+      { gameType: GameType.Public, allowedPublicIds: ["p1", "p2"] } as any,
+      undefined,
+      Date.now() + 7000,
+      undefined, // matchmaking games are created without a publicGameType
+    );
+    const ffa = new GameServer(
+      "ffa-g1",
+      mockLogger,
+      Date.now(),
+      { gameType: GameType.Public } as any,
+      undefined,
+      undefined,
+      "ffa",
+    );
+    gm.publicLobbies.mockReturnValue([ranked, ffa]);
+
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+
+    const lobbyList = sendToMaster.mock.calls
+      .map((c: any[]) => c[0])
+      .find((m: any) => m.type === "lobbyList");
+    expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
   });
 
   it("strips creatorID from broadcasts and primed snapshots sent to clients", () => {

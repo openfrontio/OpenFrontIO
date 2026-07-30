@@ -2,9 +2,8 @@
   "id": "Japan",
   "name": "Japan",
   "translation_key": "map.japan",
-  "categories": ["featured", "asia"],
+  "categories": ["countries", "asia"],
   "multiplayer_frequency": 6,
-  "featured_rank": 7,
   "nations": [
     {
       "coordinates": [1895, 288],

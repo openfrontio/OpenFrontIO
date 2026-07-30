@@ -4,6 +4,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
+import { hasLinkedIdentity, isSteamPrimaryUser } from "./AccountIdentity";
 import {
   fetchPlayerById,
   getUserMe,
@@ -23,6 +24,7 @@ import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
+import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
@@ -32,8 +34,10 @@ import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { playerProfileUrl } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -51,6 +55,8 @@ export class AccountModal extends BaseModal {
   private statsTree: PlayerStatsTree | null = null;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
+  private gamesScrollTop = 0;
+  private restoreGamesScrollAfterOpen = false;
   private cosmetics: Cosmetics | null = null;
 
   constructor() {
@@ -68,13 +74,11 @@ export class AccountModal extends BaseModal {
         // different account) so stats/history from the previous player don't
         // linger.
         if (this.userMeResponse?.player?.publicId !== previousPublicId) {
-          this.statsTree = null;
-          this.gameHistoryCache = null;
+          this.resetPlayerData();
           this.requestUpdate();
         }
       } else {
-        this.statsTree = null;
-        this.gameHistoryCache = null;
+        this.resetPlayerData();
         this.requestUpdate();
       }
     });
@@ -105,39 +109,38 @@ export class AccountModal extends BaseModal {
   protected renderHeaderSlot() {
     const isLoggedIn = !!this.userMeResponse?.user;
     const publicId = this.userMeResponse?.player?.publicId ?? "";
-    const displayId = publicId || translateText("account_modal.not_found");
     return modalHeader({
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
       rightContent:
-        isLoggedIn && !this.isLoadingUser
+        isLoggedIn && !this.isLoadingUser && publicId
           ? html`
-              <div class="flex items-center gap-2">
-                <span
-                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                  >${translateText("account_modal.public_player_id")}</span
-                >
-                <copy-button
-                  .lobbyId=${publicId}
-                  .copyText=${publicId}
-                  .displayText=${displayId}
-                ></copy-button>
-              </div>
+              <copy-button
+                class="shrink-0"
+                .copyText=${playerProfileUrl(publicId)}
+                .displayText=${translateText("player_profile.share")}
+                .showVisibilityToggle=${false}
+              ></copy-button>
             `
           : undefined,
     });
   }
 
   private isLinkedAccount(): boolean {
-    const me = this.userMeResponse?.user;
     // The CrazyGames identity only counts once the backend token exchange
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      !!(me?.discord ?? me?.google ?? me?.email) ||
+      hasLinkedIdentity(this.userMeResponse?.user) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
+  }
+
+  // Steam is the primary (and only, in v1) identity for a Steam user — no
+  // linking UI (email/Google) is offered for them; see renderSettingsTab.
+  private isSteamPrimary(): boolean {
+    return isSteamPrimaryUser(this.userMeResponse?.user);
   }
 
   protected modalConfig() {
@@ -233,7 +236,9 @@ export class AccountModal extends BaseModal {
               </button>`
             : nothing}
         </div>
-        ${hasEmail ? nothing : this.renderEmailBinding()}
+        ${hasEmail || this.isSteamPrimary()
+          ? nothing
+          : this.renderEmailBinding()}
       </div>
     `;
   }
@@ -304,7 +309,22 @@ export class AccountModal extends BaseModal {
 
   private renderFriendsTab(): TemplateResult {
     const myPublicId = this.userMeResponse?.player?.publicId ?? "";
-    return html`<friends-list .myPublicId=${myPublicId}></friends-list>`;
+    return html`<friends-list
+      .myPublicId=${myPublicId}
+      @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+        this.openPlayerProfile(e.detail.publicId)}
+    ></friends-list>`;
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromAccount(publicId: string): void }
+    >("player-profile-modal");
+    profileModal?.openFromAccount(publicId);
+  }
+
+  public returnToFriends(): void {
+    this.open({ tab: "friends" });
   }
 
   private renderAccountTab(): TemplateResult {
@@ -324,11 +344,17 @@ export class AccountModal extends BaseModal {
               <discord-user-header
                 .data=${this.userMeResponse?.user?.discord ?? null}
               ></discord-user-header>
+              ${this.userMeResponse?.user?.steam
+                ? html`<steam-user-header
+                    .data=${this.userMeResponse.user.steam}
+                  ></steam-user-header>`
+                : null}
               ${this.renderLoggedInAs()}
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -358,7 +384,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderRewardsPanel()} ${this.renderSubscriptionPanel()}
+        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
   }
@@ -394,15 +421,9 @@ export class AccountModal extends BaseModal {
       );
     }
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span class="text-blue-400">📊</span>
-          ${translateText("account_modal.stats_overview")}
-        </h3>
-        <player-stats-tree-view
-          .statsTree=${this.statsTree}
-        ></player-stats-tree-view>
-      </div>
+      <player-stats-tree-view
+        .statsTree=${this.statsTree}
+      ></player-stats-tree-view>
     `;
   }
 
@@ -423,6 +444,8 @@ export class AccountModal extends BaseModal {
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
         }}
+        @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
+          this.openGameStats(e.detail.gameId)}
         @view-game=${(e: CustomEvent<{ gameId: string }>) =>
           void this.viewGame(e.detail.gameId)}
       ></player-game-history-view>
@@ -438,6 +461,14 @@ export class AccountModal extends BaseModal {
         <p class="text-white/60 text-sm">${message}</p>
       </div>
     `;
+  }
+
+  // Account-username management (custom-usernames). Hidden when the API
+  // doesn't return the username fields yet (older backend).
+  private renderUsernamePanel(): TemplateResult | "" {
+    const player = this.userMeResponse?.player;
+    if (!player || player.usernameStatus === undefined) return "";
+    return html`<username-panel .player=${player}></username-panel>`;
   }
 
   private renderRewardsPanel(): TemplateResult | "" {
@@ -516,6 +547,15 @@ export class AccountModal extends BaseModal {
           ${this.renderLogoutButton()}
         </div>
       `;
+    } else if (me?.steam) {
+      // Steam is the primary login and v1 does not support linking a second
+      // identity or unlinking Steam itself, so no Discord/Google CTA here —
+      // just the currency balance and (session) logout.
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
+        </div>
+      `;
     }
     return html``;
   }
@@ -574,6 +614,45 @@ export class AccountModal extends BaseModal {
     window.dispatchEvent(
       new CustomEvent("join-changed", { detail: { gameId: encodedGameId } }),
     );
+  }
+
+  private openGameStats(gameId: string): void {
+    this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    const statsModal = document.querySelector<
+      HTMLElement & { openFromAccount(gameId: string): void }
+    >("game-stats-modal");
+    statsModal?.openFromAccount(gameId);
+  }
+
+  public returnToGames(): void {
+    this.restoreGamesScrollAfterOpen = true;
+    this.open({ tab: "games" });
+  }
+
+  private async restoreGamesScroll(): Promise<void> {
+    await this.updateComplete;
+    await this.modalEl?.updateComplete;
+    const historyView = this.querySelector<
+      HTMLElement & { updateComplete?: Promise<boolean> }
+    >("player-game-history-view");
+    await historyView?.updateComplete;
+    this.modalEl?.setScrollTop(this.gamesScrollTop);
+  }
+
+  private finishLoadingUser(): void {
+    this.isLoadingUser = false;
+    this.requestUpdate();
+    if (this.restoreGamesScrollAfterOpen) {
+      this.restoreGamesScrollAfterOpen = false;
+      void this.restoreGamesScroll();
+    }
+  }
+
+  private resetPlayerData(): void {
+    this.statsTree = null;
+    this.gameHistoryCache = null;
+    this.gamesScrollTop = 0;
+    this.restoreGamesScrollAfterOpen = false;
   }
 
   private renderLogoutButton(): TemplateResult {
@@ -790,13 +869,11 @@ export class AccountModal extends BaseModal {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
-        this.isLoadingUser = false;
-        this.requestUpdate();
+        this.finishLoadingUser();
       })
       .catch((err) => {
         console.warn("Failed to fetch user info in AccountModal.open():", err);
-        this.isLoadingUser = false;
-        this.requestUpdate();
+        this.finishLoadingUser();
       });
     this.requestUpdate();
   }

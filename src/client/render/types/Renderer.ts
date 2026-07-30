@@ -20,6 +20,7 @@ export interface PlayerStatic {
   id: string;
   name: string;
   displayName: string;
+  clanTag: string | null;
   clientID: string | null;
   playerType: PlayerTypeEnum;
   team: string | null;
@@ -28,6 +29,8 @@ export interface PlayerStatic {
   flag?: string;
   /** Resolved crown-cosmetic image URL, or undefined for no crown. */
   crown?: string;
+  /** Plays under the verified account username — blue check next to the name. */
+  verified?: boolean;
   /** Hex color (e.g. "#ff0000"). Populated from territoryColor (live) or palette (replay). */
   color?: string;
 }
@@ -59,6 +62,8 @@ export interface PlayerState {
   smallID: number;
   isAlive: boolean;
   isDisconnected: boolean;
+  killedBy: string | null;
+  deathPosition: number | null;
   tilesOwned: number;
   gold: number;
   troops: number;

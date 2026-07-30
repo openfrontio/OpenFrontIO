@@ -50,7 +50,7 @@ export class MirvExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.targetPlayer = this.mg.owner(this.dst);
-    this.speed = this.mg.config().defaultNukeSpeed();
+    this.speed = this.mg.config().nukeSpeed(UnitType.MIRV);
     this.pathFinder = UniversalPathFinding.Parabola(mg, {
       increment: this.speed,
     });
@@ -94,6 +94,14 @@ export class MirvExecution implements Execution {
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );
+
+      // after sending a nuke set the missilesilo on cooldown
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .find((silo) => silo.tile() === spawn);
+      if (silo) {
+        silo.launch();
+      }
     }
 
     const result = this.pathFinder.next(
@@ -121,6 +129,7 @@ export class MirvExecution implements Execution {
     this.baseY = this.mg.y(this.dst);
 
     const destinations = this.selectDestinations();
+    const warheadSpeed = this.mg.config().nukeSpeed(UnitType.MIRVWarhead);
     for (const [i, dst] of destinations.entries()) {
       this.mg.addExecution(
         new NukeExecution(
@@ -128,7 +137,7 @@ export class MirvExecution implements Execution {
           this.player,
           dst,
           this.nuke.tile(),
-          15 + Math.floor((i / this.warheadCount) * 5),
+          warheadSpeed + Math.floor((i / this.warheadCount) * 5),
           //   this.random.nextInt(5, 9),
           this.random.nextInt(0, 15),
         ),

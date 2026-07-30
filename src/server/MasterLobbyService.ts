@@ -8,6 +8,7 @@ import {
 import { generateID } from "../core/Util";
 import {
   InternalGameInfo,
+  InternalGameInfoSchema,
   MasterCreateGame,
   MasterLobbiesBroadcast,
   MasterUpdateGame,
@@ -57,10 +58,28 @@ export class MasterLobbyService {
           this.handleWorkerReady(msg.workerId);
           break;
         case "lobbyList":
-          this.workerLobbies.set(workerId, msg.lobbies);
+          this.workerLobbies.set(workerId, this.validLobbies(msg.lobbies));
           break;
       }
     });
+  }
+
+  // Lobby entries are validated individually so one malformed entry only
+  // drops itself. Rejecting the whole report would freeze this worker's
+  // lobbies in the master's view for as long as the bad entry exists —
+  // stale broadcasts to every client, countdown resets, and duplicate
+  // scheduling.
+  private validLobbies(lobbies: unknown[]): InternalGameInfo[] {
+    const valid: InternalGameInfo[] = [];
+    for (const lobby of lobbies) {
+      const result = InternalGameInfoSchema.safeParse(lobby);
+      if (result.success) {
+        valid.push(result.data);
+      } else {
+        this.log.error("Dropping invalid lobby in worker report:", lobby);
+      }
+    }
+    return valid;
   }
 
   removeWorker(workerId: number) {

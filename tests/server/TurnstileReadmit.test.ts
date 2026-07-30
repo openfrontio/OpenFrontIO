@@ -127,4 +127,32 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
     game.kickClient("c1");
     expect(game.wasAdmitted("p1")).toBe(false);
   });
+
+  // storedIdentity feeds the join path's identityUnchanged check: a stored
+  // pair lets an unchanged reconnect skip join_verify, while null (record
+  // gone) must force a re-screen.
+  it("storedIdentity returns the screened pair for a joined player", () => {
+    const game = makeGame();
+    expect(game.joinClient(makeClient("c1", "p1", makeMockWs()))).toBe(
+      "joined",
+    );
+    expect(game.storedIdentity("p1")).toEqual({
+      username: "TestUser",
+      clanTag: null,
+    });
+    expect(game.storedIdentity("nobody")).toBeNull();
+  });
+
+  it("storedIdentity returns null once a lobby-phase disconnect clears the mapping", () => {
+    const game = makeGame();
+    const ws = makeMockWs();
+    expect(game.joinClient(makeClient("c1", "p1", ws))).toBe("joined");
+
+    ws.emit("close");
+
+    // Still admitted (no Turnstile re-check), but with no stored identity
+    // the reconnect must be re-screened rather than skipped.
+    expect(game.wasAdmitted("p1")).toBe(true);
+    expect(game.storedIdentity("p1")).toBeNull();
+  });
 });

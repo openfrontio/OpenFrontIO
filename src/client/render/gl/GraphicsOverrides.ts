@@ -1,7 +1,16 @@
 import { z } from "zod";
 
+/**
+ * Selectable theme palettes. Each name maps to a `<name>-theme.json` in
+ * gl/ (registered in RenderSettings' THEMES) — extend both when adding a
+ * new palette.
+ */
+export const PALETTE_NAMES = ["default", "colorblind"] as const;
+
 export const GraphicsOverridesSchema = z
   .object({
+    // Which theme palette to render with (player colors, terrain tints, …).
+    palette: z.enum(PALETTE_NAMES),
     name: z
       .object({
         nameScaleFactor: z.number(),
@@ -24,6 +33,7 @@ export const GraphicsOverridesSchema = z
       .partial(),
     mapOverlay: z
       .object({
+        navalHighlight: z.boolean(),
         highlightFillBrighten: z.number(),
         highlightBrighten: z.number(),
         highlightThicken: z.number(),
@@ -33,6 +43,22 @@ export const GraphicsOverridesSchema = z
         // "#rrggbb" hex string; overrides the lingering fallout ground tint
         // left on territory after a nuke.
         staleNukeColor: z.string(),
+        // "#rrggbb" hex strings; normal-view relationship border tints for
+        // friendly (allied) and embargoed/enemy territory.
+        friendlyTintColor: z.string(),
+        embargoTintColor: z.string(),
+        // How strongly those tints override the territory border color (0-1).
+        friendlyTintRatio: z.number(),
+        embargoTintRatio: z.number(),
+      })
+      .partial(),
+    affiliation: z
+      .object({
+        // "#rrggbb" hex strings; alt-view border colors for your own, allied,
+        // and enemy territory.
+        selfColor: z.string(),
+        allyColor: z.string(),
+        enemyColor: z.string(),
       })
       .partial(),
     railroad: z
@@ -41,17 +67,18 @@ export const GraphicsOverridesSchema = z
         railThickness: z.number(),
       })
       .partial(),
+    smallPlayerGlow: z
+      .object({
+        // Aura around small players' territory: 0 = off, 1 = full brightness.
+        strength: z.number(),
+      })
+      .partial(),
     passEnabled: z
       .object({
         fx: z.boolean(),
         // Nuclear fallout effects: the broiling green territory bloom and its
         // light emission in day/night mode. Disable to improve performance.
         fallout: z.boolean(),
-      })
-      .partial(),
-    accessibility: z
-      .object({
-        colorblind: z.boolean(),
       })
       .partial(),
     terrain: z
@@ -77,3 +104,11 @@ export const GraphicsOverridesSchema = z
   .partial();
 
 export type GraphicsOverrides = z.infer<typeof GraphicsOverridesSchema>;
+
+/** User-saved graphics presets: preset name → the overrides it applies. */
+export const GraphicsPresetsSchema = z.record(
+  z.string(),
+  GraphicsOverridesSchema,
+);
+
+export type GraphicsPresets = z.infer<typeof GraphicsPresetsSchema>;

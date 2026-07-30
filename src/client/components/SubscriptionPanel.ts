@@ -8,6 +8,7 @@ import {
   openSubscriptionPortal,
 } from "../Api";
 import { translateCosmetic } from "../Cosmetics";
+import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./CapIcon";
@@ -28,7 +29,9 @@ export class SubscriptionPanel extends LitElement {
   private handleManage = async (): Promise<void> => {
     const url = await openSubscriptionPortal();
     if (url === false) {
-      alert(translateText("account_modal.subscription_portal_failed"));
+      await showInGameAlert(
+        translateText("account_modal.subscription_portal_failed"),
+      );
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
@@ -39,16 +42,21 @@ export class SubscriptionPanel extends LitElement {
   };
 
   private handleCancel = async (): Promise<void> => {
-    const confirmed = window.confirm(
+    const confirmed = await showInGameConfirm(
       translateText("account_modal.cancel_subscription_confirm"),
+      { heading: translateText("account_modal.cancel_subscription") },
     );
     if (!confirmed) return;
     const ok = await cancelSubscription();
     if (!ok) {
-      alert(translateText("account_modal.cancel_subscription_failed"));
+      await showInGameAlert(
+        translateText("account_modal.cancel_subscription_failed"),
+      );
       return;
     }
-    alert(translateText("account_modal.cancel_subscription_success"));
+    await showInGameAlert(
+      translateText("account_modal.cancel_subscription_success"),
+    );
     invalidateUserMe();
     window.location.reload();
   };

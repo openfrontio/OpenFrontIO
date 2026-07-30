@@ -1,0 +1,149 @@
+{
+  "categories": ["new", "europe", "countries"],
+  "id": "France",
+  "map": {
+    "height": 2424,
+    "num_land_tiles": 2047093,
+    "width": 2424
+  },
+  "map16x": {
+    "height": 606,
+    "num_land_tiles": 123911,
+    "width": 606
+  },
+  "map4x": {
+    "height": 1212,
+    "num_land_tiles": 506105,
+    "width": 1212
+  },
+  "multiplayer_frequency": 8,
+  "name": "France",
+  "nations": [
+    {
+      "coordinates": [1140, 389],
+      "flag": "Flanders",
+      "name": "Nord-Pas-de-Calais"
+    },
+    {
+      "coordinates": [1173, 579],
+      "flag": "fr-s",
+      "name": "Picardy"
+    },
+    {
+      "coordinates": [889, 579],
+      "flag": "normandy",
+      "name": "Haute-Normandie"
+    },
+    {
+      "coordinates": [684, 621],
+      "flag": "normandy",
+      "name": "Basse-Normandie"
+    },
+    {
+      "coordinates": [471, 835],
+      "flag": "brittany",
+      "name": "Brittany"
+    },
+    {
+      "coordinates": [1284, 714],
+      "flag": "fr-idf",
+      "name": "Île-de-France"
+    },
+    {
+      "coordinates": [1508, 641],
+      "flag": "fr-g",
+      "name": "Champagne-Ardenne"
+    },
+    {
+      "coordinates": [1787, 681],
+      "flag": "fr-m",
+      "name": "Lorraine"
+    },
+    {
+      "coordinates": [1920, 845],
+      "flag": "fr-a",
+      "name": "Alsace"
+    },
+    {
+      "coordinates": [1691, 1149],
+      "flag": "fr-i",
+      "name": "Franche-Comté"
+    },
+    {
+      "coordinates": [1440, 1037],
+      "flag": "fr-d",
+      "name": "Burgundy"
+    },
+    {
+      "coordinates": [1000, 897],
+      "flag": "fr-cvl",
+      "name": "Centre-Val de Loire"
+    },
+    {
+      "coordinates": [691, 1004],
+      "flag": "fr-pdl",
+      "name": "Pays de la Loire"
+    },
+    {
+      "coordinates": [771, 1349],
+      "flag": "fr-t",
+      "name": "Poitou-Charentes"
+    },
+    {
+      "coordinates": [727, 1833],
+      "flag": "aquitaine",
+      "name": "Aquitaine"
+    },
+    {
+      "coordinates": [1018, 1885],
+      "flag": "1_Occitania",
+      "name": "Midi-Pyrénées"
+    },
+    {
+      "coordinates": [1344, 1811],
+      "flag": "fr-k",
+      "name": "Languedoc-Roussillon"
+    },
+    {
+      "coordinates": [1792, 1700],
+      "flag": "fr-pac",
+      "name": "Provence-Alpes-Côte d'Azur"
+    },
+    {
+      "coordinates": [1635, 1460],
+      "flag": "fr-v",
+      "name": "Rhône-Alpes"
+    },
+    {
+      "coordinates": [1353, 1372],
+      "flag": "fr-c",
+      "name": "Auvergne"
+    },
+    {
+      "coordinates": [1053, 1326],
+      "flag": "fr-l",
+      "name": "Limousin"
+    },
+    {
+      "coordinates": [1936, 1788],
+      "flag": "mc",
+      "name": "Monaco"
+    },
+    {
+      "coordinates": [515, 606],
+      "flag": "je",
+      "name": "Jersey"
+    },
+    {
+      "coordinates": [445, 550],
+      "flag": "gg",
+      "name": "Guernsey"
+    },
+    {
+      "coordinates": [2201, 2120],
+      "flag": "Corsica",
+      "name": "Corsica"
+    }
+  ],
+  "translation_key": "map.france"
+}

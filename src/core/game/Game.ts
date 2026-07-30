@@ -105,6 +105,7 @@ export {
   GameMapType,
   mapCategoryOrder,
   maps,
+  type CustomTribe,
   type GameMapName,
   type MapCategory,
   type MapInfo,
@@ -249,7 +250,9 @@ export interface UnitParamsMap {
 
   [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: Record<string, never>;
+  [UnitType.SAMMissile]: {
+    targetUnit: Unit;
+  };
 
   [UnitType.Port]: Record<string, never>;
 
@@ -290,6 +293,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 }
 
@@ -547,6 +551,7 @@ export interface Player {
   info(): PlayerInfo;
   name(): string;
   displayName(): string;
+  clanTag(): string | null;
   clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;
@@ -762,7 +767,12 @@ export interface Game extends GameMap {
   drainPackedMotionPlans(): Uint32Array | null;
   drainPackedPlayerUpdates(): Float64Array | null;
   drainPackedAttackUpdates(): Float64Array | null;
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  // null ends the game with no winner (a cancelled match, e.g. a ranked game
+  // that didn't fill): the record is archived winnerless and never ranked.
+  setWinner(
+    winner: Player | Team | null,
+    allPlayersStats: AllPlayersStats,
+  ): void;
   getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;

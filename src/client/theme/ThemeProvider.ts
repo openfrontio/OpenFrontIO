@@ -2,8 +2,10 @@ import { Colord, colord, LabaColor } from "colord";
 import { PlayerType, Team } from "../../core/game/Game";
 import { UserSettings } from "../../core/game/UserSettings";
 import { simpleHash } from "../../core/Util";
+import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
 import {
   createThemeSettings,
+  ThemeName,
   ThemeSettings,
 } from "../render/gl/RenderSettings";
 import { PlayerView } from "../view";
@@ -259,15 +261,13 @@ export class SettingsTheme implements Theme {
  */
 class ThemeProvider {
   private readonly userSettings = new UserSettings();
-  private defaultTheme = new SettingsTheme(createThemeSettings("default"));
-  private colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+  private themes = createThemes();
 
-  /** The active theme, selected from the colorblind-mode preference. */
+  /** The active theme, selected from the palette graphics override. */
   current(): Theme {
-    if (this.userSettings.graphicsOverrides().accessibility?.colorblind) {
-      return this.colorblind;
-    }
-    return this.defaultTheme;
+    return this.themes[
+      this.userSettings.graphicsOverrides().palette ?? "default"
+    ];
   }
 
   /**
@@ -276,9 +276,17 @@ class ThemeProvider {
    * colour-pool depletion across games in a single session.
    */
   reset(): void {
-    this.defaultTheme = new SettingsTheme(createThemeSettings("default"));
-    this.colorblind = new SettingsTheme(createThemeSettings("colorblind"));
+    this.themes = createThemes();
   }
+}
+
+function createThemes(): Record<ThemeName, SettingsTheme> {
+  return Object.fromEntries(
+    PALETTE_NAMES.map((name) => [
+      name,
+      new SettingsTheme(createThemeSettings(name)),
+    ]),
+  ) as Record<ThemeName, SettingsTheme>;
 }
 
 export const themeProvider = new ThemeProvider();

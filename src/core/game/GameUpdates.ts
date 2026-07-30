@@ -221,11 +221,14 @@ export interface PlayerUpdate {
   clientID?: ClientID | null;
   name?: string;
   displayName?: string;
+  clanTag?: string | null;
   team?: Team;
   smallID?: number;
   playerType?: PlayerType;
   isAlive?: boolean;
   isDisconnected?: boolean;
+  killedBy?: ClientID | null;
+  deathPosition?: number | null;
   tilesOwned?: number;
   gold?: Gold;
   troops?: number;

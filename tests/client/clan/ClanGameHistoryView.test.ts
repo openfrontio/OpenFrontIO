@@ -378,6 +378,75 @@ describe("ClanGameHistoryView", () => {
     });
   });
 
+  describe("name separators", () => {
+    async function renderGame(game: ClanGame): Promise<ClanGameHistoryView> {
+      mockFetch(() => Promise.resolve(okPage([game])));
+      const el = await mountView();
+      await flushAsync(el);
+      return el;
+    }
+    const separators = (root: ParentNode) =>
+      Array.from(root.querySelectorAll("[data-name-separator]"));
+    const section = (el: ClanGameHistoryView, key: "winners" | "losers") =>
+      el.querySelector(`[data-player-section="${key}"]`);
+
+    it("inserts one separator between two names in a section", async () => {
+      const el = await renderGame(
+        makeGame({
+          mode: "Team",
+          playerTeams: "Duos",
+          result: "victory",
+          clanPlayers: [
+            { publicId: "a", username: "alice", won: true },
+            { publicId: "b", username: "bob", won: true },
+          ],
+        }),
+      );
+      expect(el.textContent).toContain("alice");
+      expect(el.textContent).toContain("bob");
+      const seps = separators(el);
+      expect(seps).toHaveLength(1);
+      // Decorative: hidden from assistive tech.
+      expect(seps[0].getAttribute("aria-hidden")).toBe("true");
+    });
+
+    it("omits the separator for a single name", async () => {
+      const el = await renderGame(
+        makeGame({
+          clanPlayers: [{ publicId: "a", username: "alice", won: true }],
+        }),
+      );
+      expect(separators(el)).toHaveLength(0);
+    });
+
+    it("separates within each section, not across winners and losers", async () => {
+      // FFA with 2 winners + 1 loser: winners render "alice · bob" (one
+      // separator), losers render "carol" alone (none). No separator bridges
+      // the two sections.
+      const el = await renderGame(
+        makeGame({
+          mode: "Free For All",
+          playerTeams: null,
+          result: "victory",
+          clanPlayers: [
+            { publicId: "a", username: "alice", won: true },
+            { publicId: "b", username: "bob", won: true },
+            { publicId: "c", username: "carol", won: false },
+          ],
+        }),
+      );
+      const winners = section(el, "winners");
+      const losers = section(el, "losers");
+      expect(winners).not.toBeNull();
+      expect(losers).not.toBeNull();
+      expect(separators(winners!)).toHaveLength(1);
+      expect(separators(losers!)).toHaveLength(0);
+      for (const sep of separators(el)) {
+        expect(sep.getAttribute("aria-hidden")).toBe("true");
+      }
+    });
+  });
+
   describe("formatGameType", () => {
     async function typeLabelFor(game: ClanGame): Promise<string> {
       mockFetch(() => Promise.resolve(okPage([game])));
@@ -533,6 +602,37 @@ describe("ClanGameHistoryView", () => {
       await flushAsync(el);
 
       expect(el.textContent).toContain("clan_modal.history_yesterday");
+    });
+  });
+
+  describe("viewStats", () => {
+    it("emits a bubbling, composed view-stats event with the game id", async () => {
+      mockFetch(() =>
+        Promise.resolve(okPage([makeGame({ gameId: "stats-game" })])),
+      );
+      const el = await mountView();
+      await flushAsync(el);
+
+      const statsButton = Array.from(el.querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "game_list.stats",
+      );
+      expect(statsButton).toBeTruthy();
+
+      const events: CustomEvent<{ gameId: string }>[] = [];
+      const handleViewStats = (event: Event) => {
+        events.push(event as CustomEvent<{ gameId: string }>);
+      };
+      document.body.addEventListener("view-stats", handleViewStats);
+      try {
+        statsButton!.click();
+      } finally {
+        document.body.removeEventListener("view-stats", handleViewStats);
+      }
+
+      expect(events).toHaveLength(1);
+      expect(events[0].detail).toEqual({ gameId: "stats-game" });
+      expect(events[0].bubbles).toBe(true);
+      expect(events[0].composed).toBe(true);
     });
   });
 

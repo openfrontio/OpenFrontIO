@@ -82,7 +82,7 @@
         numWorkers: <%- numWorkers %>,
         turnstileSiteKey: <%- turnstileSiteKey %>,
         jwtAudience: <%- jwtAudience %>,
-        instanceId: <%- instanceId %>,
+        instanceId: <%- instanceId %>,<%- typeof serverHost !== "undefined" && serverHost ? "\n        serverHost: " + serverHost + "," : "" %>
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
@@ -207,6 +207,7 @@
 
       <homepage-promos></homepage-promos>
       <marketing-consent-toast></marketing-consent-toast>
+      <steam-link-signpost></steam-link-signpost>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -267,6 +268,16 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></account-modal>
+        <game-stats-modal
+          id="page-stats"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></game-stats-modal>
+        <player-profile-modal
+          id="page-profile"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></player-profile-modal>
         <help-modal
           id="page-help"
           inline
@@ -362,16 +373,19 @@
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
     <in-game-promo></in-game-promo>
-    <game-info-modal></game-info-modal>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <multi-tab-modal></multi-tab-modal>
     <game-left-sidebar></game-left-sidebar>
     <performance-overlay></performance-overlay>
     <player-info-overlay></player-info-overlay>
-    <leader-board></leader-board>
-    <team-stats></team-stats>
     <heads-up-message></heads-up-message>
+
+    <!-- Featured stream: direct <body> child (NOT inside the in-[.in-game]:hidden
+         home container) so the Twitch iframe is never display:none'd during a game,
+         which would unmount the player and break ToS-compliant playback. The
+         component is position:fixed and self-manages visibility (pauses in-game). -->
+    <featured-stream></featured-stream>
 
     <!-- Scripts -->
     <script>

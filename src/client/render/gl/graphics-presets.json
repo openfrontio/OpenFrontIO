@@ -1,0 +1,30 @@
+[
+  {
+    "nameKey": "graphics_setting.preset_default",
+    "descKey": "graphics_setting.preset_default_desc",
+    "overrides": {}
+  },
+  {
+    "nameKey": "graphics_setting.preset_night",
+    "descKey": "graphics_setting.preset_night_desc",
+    "overrides": { "lighting": { "ambient": 0.36 } }
+  },
+  {
+    "nameKey": "graphics_setting.preset_colorblind",
+    "descKey": "graphics_setting.preset_colorblind_desc",
+    "overrides": {
+      "palette": "colorblind",
+      "affiliation": {
+        "selfColor": "#0072b2",
+        "allyColor": "#56b4e9",
+        "enemyColor": "#d55e00"
+      },
+      "mapOverlay": {
+        "friendlyTintColor": "#0072b2",
+        "embargoTintColor": "#d55e00",
+        "friendlyTintRatio": 0.85,
+        "embargoTintRatio": 0.85
+      }
+    }
+  }
+]

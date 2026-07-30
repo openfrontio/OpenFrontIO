@@ -1,4 +1,9 @@
-import { EFFECTS_KEY, UserSettings } from "../src/core/game/UserSettings";
+import {
+  EFFECTS_KEY,
+  PLAYER_STATS_COLUMNS_KEY,
+  TEAM_STATS_COLUMNS_KEY,
+  UserSettings,
+} from "../src/core/game/UserSettings";
 
 describe("UserSettings effect selection", () => {
   beforeEach(() => {
@@ -59,7 +64,7 @@ describe("UserSettings effect selection", () => {
   });
 });
 
-describe("UserSettings highlight glow strength", () => {
+describe("UserSettings stats columns", () => {
   beforeEach(() => {
     localStorage.clear();
     (
@@ -67,22 +72,70 @@ describe("UserSettings highlight glow strength", () => {
     ).cache.clear();
   });
 
-  it("defaults to 1 (100%, on)", () => {
-    expect(new UserSettings().highlightGlowStrength()).toBe(1);
+  it("returns defaults when nothing is stored", () => {
+    // The player table opens with the clan tag shown; a team has no tag.
+    expect(new UserSettings().statsColumns("player")).toEqual([
+      "clan",
+      "tiles",
+      "gold",
+      "maxtroops",
+    ]);
+    expect(new UserSettings().statsColumns("team")).toEqual([
+      "tiles",
+      "gold",
+      "maxtroops",
+    ]);
   });
 
-  it("persists a set value, including 0 (off)", () => {
+  it("round-trips a selection in registry order", () => {
     const s = new UserSettings();
-    s.setHighlightGlowStrength(2.5);
-    expect(s.highlightGlowStrength()).toBe(2.5);
-    s.setHighlightGlowStrength(0);
-    expect(s.highlightGlowStrength()).toBe(0);
+    // Stored order is check order; getter returns registry (display) order.
+    s.setStatsColumns("player", ["warships", "gold"]);
+    expect(s.statsColumns("player")).toEqual(["gold", "warships"]);
   });
 
-  it("shares state across instances via the static cache", () => {
-    // The settings modal and the renderer's frame builder each hold their own
-    // UserSettings; a change in one must be visible to the other.
-    new UserSettings().setHighlightGlowStrength(3);
-    expect(new UserSettings().highlightGlowStrength()).toBe(3);
+  it("filters unknown ids", () => {
+    localStorage.setItem(
+      PLAYER_STATS_COLUMNS_KEY,
+      JSON.stringify(["gold", "bogus"]),
+    );
+    expect(new UserSettings().statsColumns("player")).toEqual(["gold"]);
+  });
+
+  it("drops the removed attacks column from persisted selections", () => {
+    localStorage.setItem(
+      PLAYER_STATS_COLUMNS_KEY,
+      JSON.stringify(["attacks", "gold"]),
+    );
+    expect(new UserSettings().statsColumns("player")).toEqual(["gold"]);
+  });
+
+  it("falls back to defaults on corrupt JSON", () => {
+    localStorage.setItem(PLAYER_STATS_COLUMNS_KEY, "not json");
+    expect(new UserSettings().statsColumns("player")).toEqual([
+      "clan",
+      "tiles",
+      "gold",
+      "maxtroops",
+    ]);
+  });
+
+  it("falls back to defaults when no valid ids remain", () => {
+    localStorage.setItem(PLAYER_STATS_COLUMNS_KEY, JSON.stringify(["bogus"]));
+    expect(new UserSettings().statsColumns("player")).toEqual([
+      "clan",
+      "tiles",
+      "gold",
+      "maxtroops",
+    ]);
+  });
+
+  it("keeps player and team selections independent", () => {
+    const s = new UserSettings();
+    s.setStatsColumns("player", ["gold"]);
+    s.setStatsColumns("team", ["warships"]);
+    expect(s.statsColumns("player")).toEqual(["gold"]);
+    expect(s.statsColumns("team")).toEqual(["warships"]);
+    expect(localStorage.getItem(TEAM_STATS_COLUMNS_KEY)).toBe('["warships"]');
   });
 });

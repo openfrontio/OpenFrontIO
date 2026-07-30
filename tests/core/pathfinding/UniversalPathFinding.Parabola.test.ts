@@ -22,7 +22,7 @@ describe("UniversalPathFinding.Parabola", () => {
       const path = finder.findPath(from, to);
 
       expect(path).not.toBeNull();
-      expect(path!.length).toBe(39);
+      expect(path!.length).toBe(40);
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
     });
@@ -61,7 +61,7 @@ describe("UniversalPathFinding.Parabola", () => {
       const path = finder.findPath(from, to);
 
       expect(path).not.toBeNull();
-      expect(path!.length).toBe(43);
+      expect(path!.length).toBe(45);
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
     });
@@ -240,7 +240,7 @@ describe("UniversalPathFinding.Parabola", () => {
       const path = finder.findPath(from, to);
 
       expect(path).not.toBeNull();
-      expect(path!.length).toBe(28);
+      expect(path!.length).toBe(29);
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
     });
