@@ -876,6 +876,7 @@ describe("TribeLeaderboardResponseSchema", () => {
     playerReach: 12400,
     ownerPublicId: "aB3xK9zQ",
     ownerUsername: "wolfpack.4821",
+    activeBoosts: 0,
   };
   const base = {
     windowDays: 30,
@@ -906,7 +907,9 @@ describe("TribeLeaderboardResponseSchema", () => {
     expect(result.data.tribes[0].ownerPublicId).toBe("aB3xK9zQ");
   });
 
-  it.each(["ownerPublicId", "ownerUsername"])(
+  // A missing activeBoosts fails via coercion (undefined → NaN), so its
+  // ZodError reads "received NaN" rather than "required" — still a rejection.
+  it.each(["ownerPublicId", "ownerUsername", "activeBoosts"])(
     "rejects an entry missing %s",
     (field) => {
       const tribe: Record<string, unknown> = { ...entry };
@@ -917,6 +920,28 @@ describe("TribeLeaderboardResponseSchema", () => {
       ).toBe(false);
     },
   );
+
+  it("parses an entry with an active boost count", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, activeBoosts: 2 }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBe(2);
+  });
+
+  // Same coercion tolerance as TribeNameSchema.activeBoosts: a count that
+  // arrives as a stringified number must not fail the whole board parse.
+  it("coerces a stringified boost count", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, activeBoosts: "3" }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBe(3);
+  });
 
   it("parses an empty board", () => {
     expect(
