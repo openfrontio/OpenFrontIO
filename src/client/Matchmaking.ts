@@ -170,18 +170,17 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
-    this.resetPartyState();
+    this.loadTeammate();
     this.connect();
     return true;
   }
 
-  // Re-read on every queue entry so all paths agree. partyStatus stays null
-  // until the SERVER reports pairing: assuming "held" would strand a client
+  // Re-read on every queue entry so all paths agree. The status itself is never
+  // assumed, only taken from the server: guessing "held" would strand a client
   // deployed ahead of the server on "waiting" while it queues normally.
-  private resetPartyState() {
+  private loadTeammate() {
     this.teammatePublicId =
       this.mode === "2v2" ? getRankedTeammate(this.myPublicId) : null;
-    this.partyStatus = null;
   }
 
   private openSubscriptions = () => {
@@ -273,6 +272,10 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private async connect() {
+    // Pairing state belongs to the socket that reported it. Reconnects (watchdog,
+    // close retry) call connect() directly, so clearing here stops a stale
+    // waiting/ready outliving its connection.
+    this.partyStatus = null;
     // Pending timers from a previous socket must not fire on this one.
     this.clearWatchdog();
     if (this.connectTimeout) {
@@ -455,7 +458,7 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
-    this.resetPartyState();
+    this.loadTeammate();
     this.connect();
   }
 
