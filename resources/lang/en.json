@@ -1045,6 +1045,7 @@
     "juandefucastrait": "Juan De Fuca Strait",
     "korea": "Korea",
     "labyrinth": "Labyrinth",
+    "lasvegasstrip": "Las Vegas Strip",
     "lemnos": "Lemnos",
     "levant": "Levant",
     "lisbon": "Lisbon",
@@ -1148,8 +1149,10 @@
     "play_ranked": "1v1 Ranked Matchmaking"
   },
   "matchmaking_modal": {
+    "clan_verification_failed": "Clan membership could not be verified. Please try matchmaking again.",
     "connecting": "Connecting to matchmaking server...",
     "elo": "Your ELO: {elo}",
+    "invalid_clan": "Your selected clan is no longer valid. Please select a current clan and queue again.",
     "limit_reached": "You're out of free ranked matches.",
     "limit_reached_info": "Free matches refill daily. Subscribe for unlimited ranked play.",
     "limit_upsell": "Get unlimited ranked",

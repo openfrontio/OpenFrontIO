@@ -737,6 +737,7 @@ export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: z.number(),
   visibleAt: z.number().optional(),
+  listed: z.boolean().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
   // Purchased bot tribe names in use this game (public games only). Rides
@@ -954,8 +955,11 @@ export type ClientAnalyticsRecord = z.infer<
 
 export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   gitCommit: GitCommitSchema,
-  subdomain: z.string(),
-  domain: z.string(),
+  // Absent on client-archived singleplayer records: those are stored by the
+  // API worker exactly as the client sent them, and no game server (whose
+  // identity these fields record) is involved.
+  subdomain: z.string().optional(),
+  domain: z.string().optional(),
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;

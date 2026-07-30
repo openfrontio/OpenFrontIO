@@ -25,16 +25,6 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-// Arcade-style maps only appear in the "special" playlist.
-const ARCADE_MAPS = new Set<GameMapType>([
-  GameMapType.TheBox,
-  GameMapType.ChoppingBlock,
-  GameMapType.Didier,
-  GameMapType.DidierFrance,
-  GameMapType.Labyrinth,
-  GameMapType.Sierpinski,
-  GameMapType.Onion,
-]);
 const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.
@@ -469,7 +459,7 @@ export class MapPlaylist {
       gameMode: GameMode.Team,
       playerTeams: 2,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: 30 * 10,
+      spawnImmunityDuration: 60 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -535,10 +525,7 @@ export class MapPlaylist {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
-      if (
-        type !== "special" &&
-        (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
-      ) {
+      if (type !== "special" && SPECIAL_ONLY_MAPS.has(map)) {
         return;
       }
       let freq = mapInfo.multiplayerFrequency;

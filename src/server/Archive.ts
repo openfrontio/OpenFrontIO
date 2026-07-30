@@ -1,5 +1,4 @@
 import z from "zod";
-import { GameType } from "../core/game/Game";
 import {
   GameID,
   GameRecord,
@@ -13,15 +12,8 @@ import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({ component: "Archive" });
 
-export async function archive(
-  gameRecord: GameRecord,
-  trustedCosmeticFlagUrls: Set<string> = new Set(),
-) {
+export async function archive(gameRecord: GameRecord) {
   try {
-    if (gameRecord.info.config.gameType === GameType.Singleplayer) {
-      stripUntrustedFlagUrls(gameRecord, trustedCosmeticFlagUrls);
-    }
-
     const parsed = GameRecordSchema.safeParse(gameRecord);
     if (!parsed.success) {
       log.error(`invalid game record: ${z.prettifyError(parsed.error)}`, {
@@ -93,25 +85,4 @@ export function finalizeGameRecord(
     subdomain: ServerEnv.subdomain(),
     domain: ServerEnv.domain(),
   };
-}
-
-function stripUntrustedFlagUrls(
-  gameRecord: GameRecord,
-  trustedCosmeticFlagUrls: Set<string>,
-): void {
-  for (const player of gameRecord.info.players) {
-    const flag = player.cosmetics?.flag;
-    if (
-      flag === undefined ||
-      !/^https?:\/\//i.test(flag) ||
-      trustedCosmeticFlagUrls.has(flag)
-    ) {
-      continue;
-    }
-    log.warn("dropping untrusted singleplayer replay flag", {
-      gameID: gameRecord.info.gameID,
-      clientID: player.clientID,
-    });
-    player.cosmetics!.flag = undefined;
-  }
 }
