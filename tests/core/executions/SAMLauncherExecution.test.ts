@@ -444,4 +444,43 @@ describe("SAM", () => {
     expect(nuke.reachedTarget()).toBeFalsy();
     expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
   });
+
+  test("leveling up a SAM launcher should recheck range and intercept a nuke previously out of range", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const execution = new SAMLauncherExecution(defender, game.ref(1, 1), sam);
+    game.addExecution(execution);
+
+    // Level 1 SAM range squared is 15^2 = 225.
+    // Nuke trajectory is at distance ~25 from SAM (out of level 1 range).
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(50, 1), {
+      targetTile: game.ref(25, 1),
+      trajectory: [
+        { tile: game.ref(50, 1), targetable: true },
+        { tile: game.ref(45, 1), targetable: true },
+        { tile: game.ref(40, 1), targetable: true },
+        { tile: game.ref(35, 1), targetable: true },
+        { tile: game.ref(30, 1), targetable: true },
+        { tile: game.ref(25, 1), targetable: true },
+      ],
+    });
+
+    // Run ticks at level 1: nuke should be marked as unreachable / out of range.
+    executeTicks(game, 2);
+    expect(nuke.isActive()).toBeTruthy();
+    expect(nuke.wasDestroyedByEnemy()).toBeFalsy();
+
+    // Level up SAM launcher: and sets recheck flag.
+    sam.increaseLevel();
+    sam.reloadMissile();
+    expect(sam.needsSamRangeRecheck()).toBeTruthy();
+    
+    //Custom test config range always returns 20 no matter SAM level, mock 26 for range increase.
+    vi.spyOn(game.config(), "samRange").mockReturnValue(26);
+    
+    // Run next ticks: cache should be cleared and nuke intercepted under new range.
+    executeTicks(game, 6);
+    expect(nuke.reachedTarget()).toBeFalsy();
+    expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
+  });
 });
+

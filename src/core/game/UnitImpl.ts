@@ -36,6 +36,8 @@ export class UnitImpl implements Unit {
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
+  //Needs to recheck range on upgrade
+  private _recheckSAMRange: boolean = false;
   private _hasTrainStation: boolean = false;
   private _level: number = 1;
   private _targetable: boolean = true;
@@ -150,6 +152,7 @@ export class UnitImpl implements Unit {
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
+      recheckSAMRange: this._recheckSAMRange,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
@@ -626,6 +629,10 @@ export class UnitImpl implements Unit {
     this._level++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.push(this.mg.ticks());
+      //inner if to reduce if checks
+      if (this.type() === UnitType.SAMLauncher) {
+         this._recheckSAMRange = true;
+      }
     }
     this.mg.addUpdate(this.toUpdate());
   }
@@ -634,6 +641,10 @@ export class UnitImpl implements Unit {
     this._level--;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.pop();
+      //inner if to reduce if checks
+      if (this.type() === UnitType.SAMLauncher) {
+         this._recheckSAMRange = true;
+      }
     }
     if (this._level <= 0) {
       this.delete(true, destroyer);
@@ -644,6 +655,17 @@ export class UnitImpl implements Unit {
 
   trainType(): TrainType | undefined {
     return this._trainType;
+  }
+
+  needsSamRangeRecheck(): boolean | undefined {
+    return this._recheckSAMRange;
+  }
+
+  setSamRangeRecheck(samRangeRecheck: boolean): void {
+    if (this._recheckSAMRange !== samRangeRecheck) {
+      this._recheckSAMRange = samRangeRecheck;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
   isLoaded(): boolean | undefined {
