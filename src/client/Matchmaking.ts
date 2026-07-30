@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
@@ -381,7 +381,7 @@ export class MatchmakingModal extends BaseModal {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
-            message: translateText("matchmaking_button.must_login"),
+            message: translateText("matchmaking_modal.must_login"),
             color: "red",
             duration: 3000,
           },
@@ -465,68 +465,5 @@ export class MatchmakingModal extends BaseModal {
         composed: true,
       }),
     );
-  }
-}
-
-@customElement("matchmaking-button")
-export class MatchmakingButton extends LitElement {
-  @state() private isLoggedIn = false;
-
-  constructor() {
-    super();
-  }
-
-  async connectedCallback() {
-    super.connectedCallback();
-    // Listen for user authentication changes
-    document.addEventListener("userMeResponse", (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail) {
-        const userMeResponse = customEvent.detail as UserMeResponse | false;
-        this.isLoggedIn = hasLinkedAccount(userMeResponse);
-      }
-    });
-  }
-
-  createRenderRoot() {
-    return this;
-  }
-
-  render() {
-    return this.isLoggedIn
-      ? html`
-          <button
-            @click="${this.handleLoggedInClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
-            title="${translateText("matchmaking_modal.title")}"
-          >
-            <span class="relative z-10 text-2xl">
-              ${translateText("matchmaking_button.play_ranked")}
-            </span>
-            <span
-              class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
-            >
-              ${translateText("matchmaking_button.description")}
-            </span>
-          </button>
-        `
-      : html`
-          <button
-            @click="${this.handleLoggedOutClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
-          >
-            <span class="relative z-10 text-2xl">
-              ${translateText("matchmaking_button.login_required")}
-            </span>
-          </button>
-        `;
-  }
-
-  private handleLoggedInClick() {
-    document.dispatchEvent(new CustomEvent("open-matchmaking"));
-  }
-
-  private handleLoggedOutClick() {
-    window.showPage?.("page-account");
   }
 }
