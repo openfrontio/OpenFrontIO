@@ -64,6 +64,7 @@ describe("boost column", () => {
     playerReach: 12400,
     ownerPublicId: "aB3xK9zQ",
     ownerUsername: null,
+    activeBoosts: 0,
     ...overrides,
   });
 
@@ -119,12 +120,6 @@ describe("boost column", () => {
 
   it("shows no multiplier at zero boosts", async () => {
     await renderBoard([entry({ activeBoosts: 0 })]);
-    expect(boostValues()).toHaveLength(0);
-  });
-
-  // Cached responses from before the API served the field lack it entirely.
-  it("shows no multiplier when the field is absent (older API)", async () => {
-    await renderBoard([entry()]);
     expect(boostValues()).toHaveLength(0);
   });
 

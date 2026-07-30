@@ -876,6 +876,7 @@ describe("TribeLeaderboardResponseSchema", () => {
     playerReach: 12400,
     ownerPublicId: "aB3xK9zQ",
     ownerUsername: "wolfpack.4821",
+    activeBoosts: 0,
   };
   const base = {
     windowDays: 30,
@@ -906,7 +907,9 @@ describe("TribeLeaderboardResponseSchema", () => {
     expect(result.data.tribes[0].ownerPublicId).toBe("aB3xK9zQ");
   });
 
-  it.each(["ownerPublicId", "ownerUsername"])(
+  // A missing activeBoosts fails via coercion (undefined → NaN), so its
+  // ZodError reads "received NaN" rather than "required" — still a rejection.
+  it.each(["ownerPublicId", "ownerUsername", "activeBoosts"])(
     "rejects an entry missing %s",
     (field) => {
       const tribe: Record<string, unknown> = { ...entry };
@@ -926,15 +929,6 @@ describe("TribeLeaderboardResponseSchema", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.tribes[0].activeBoosts).toBe(2);
-  });
-
-  // Cached responses from before the API served activeBoosts lack the field
-  // (the board is cached for 1h) — the parse must not fail on them.
-  it("parses an entry without activeBoosts (older API)", () => {
-    const result = TribeLeaderboardResponseSchema.safeParse(base);
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-    expect(result.data.tribes[0].activeBoosts).toBeUndefined();
   });
 
   // Same coercion tolerance as TribeNameSchema.activeBoosts: a count that

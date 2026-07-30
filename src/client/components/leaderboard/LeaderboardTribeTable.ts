@@ -183,7 +183,7 @@ export class LeaderboardTribeTable extends LitElement {
   // so the multiplier shown is count + 1 — the same convention the owner's
   // store UI uses. Unboosted names get a dim dash rather than an empty cell.
   private renderBoostCell(tribe: TribeLeaderboardEntry): TemplateResult {
-    const boosts = tribe.activeBoosts ?? 0;
+    const boosts = tribe.activeBoosts;
     if (boosts === 0) {
       return html`<span class="text-white/20">—</span>`;
     }
