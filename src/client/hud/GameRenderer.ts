@@ -5,6 +5,7 @@ import { AttackingTroopsController } from "../controllers/AttackingTroopsControl
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
 import { LiveStatsController } from "../controllers/LiveStatsController";
+import { MapLayerController } from "../controllers/MapLayerController";
 import { SoundEffectController } from "../controllers/SoundEffectController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
@@ -49,6 +50,7 @@ export function createRenderer(
   eventBus: EventBus,
   playerRole: string | null,
   view: MapRenderer,
+  mapLayerController?: MapLayerController,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
   const userSettings = new UserSettings();
@@ -297,6 +299,7 @@ export function createRenderer(
     new ViewModeController(eventBus, view),
     new AttackingTroopsController(game, eventBus, userSettings, view),
     new SoundEffectController(game, eventBus),
+    ...(mapLayerController ? [mapLayerController] : []),
     eventsDisplay,
     actionableEvents,
     attacksDisplay,

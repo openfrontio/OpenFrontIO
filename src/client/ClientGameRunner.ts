@@ -27,11 +27,7 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import {
-  loadLayerImages,
-  loadTerrainMap,
-  TerrainMapData,
-} from "../core/game/TerrainMapLoader";
+import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -71,6 +67,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
   applyGraphicsOverrides,
@@ -573,45 +570,15 @@ async function createClientGame(
 
     view.setShowPatterns(userSettings.territoryPatterns());
 
-    // Set up map layers if the map defines any.
-    if (gameMap.layers && gameMap.layers.length > 0) {
-      const applyLayerVisibility = () => {
-        const overrides = userSettings.graphicsOverrides();
-        if (overrides.mapLayerVisibility) {
-          for (const layer of gameMap.layers!) {
-            const vis = overrides.mapLayerVisibility[layer.id];
-            if (vis !== undefined) {
-              view.setLayerVisible(layer.id, vis);
-            }
-          }
-        }
-      };
-
-      if (gameMap.layerImages) {
-        // Images already loaded (e.g. from cache) — set up immediately.
-        view.setMapLayers(gameMap.layers, gameMap.layerImages);
-        applyLayerVisibility();
-      } else {
-        // Layer images loaded off the critical path. Start fetching now;
-        // the renderer tolerates missing layers (warn + skip) until they
-        // arrive.
-        loadLayerImages(
-          lobbyConfig.gameStartInfo.config.gameMap,
-          lobbyConfig.gameStartInfo.config.gameMapSize,
-          mapLoader,
-          gameMap.layers,
-        )
-          .then((images) => {
-            if (!graphicsListenerAbort.signal.aborted) {
-              view.setMapLayers(gameMap.layers!, images);
-              applyLayerVisibility();
-            }
-          })
-          .catch((e) =>
-            console.warn("[ClientGameRunner] Failed to load layer images:", e),
-          );
-      }
-    }
+    const mapLayerController = new MapLayerController(
+      view,
+      gameMap,
+      userSettings,
+      lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
+      mapLoader,
+      graphicsListenerAbort.signal,
+    );
 
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
@@ -690,6 +657,7 @@ async function createClientGame(
       eventBus,
       lobbyConfig.playerRole,
       view,
+      mapLayerController,
     );
 
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
