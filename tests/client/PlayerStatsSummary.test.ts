@@ -46,13 +46,6 @@ const leaf: PlayerStatsLeaf = {
   wins: 3n,
   losses: 2n,
   total: 5n,
-  recentGames: [
-    { gameId: 5n, won: true },
-    { gameId: 4n, won: true },
-    { gameId: 3n, won: false },
-    { gameId: 2n, won: true },
-    { gameId: 1n, won: true },
-  ],
   stats: {
     attacks: [10_000n, 4_000n, 500n],
     conquests: [10n, 5n, 2n],
@@ -62,6 +55,11 @@ const leaf: PlayerStatsLeaf = {
     },
     gold: [100n, 200n, 300n, 400n, 500n],
   },
+};
+
+const leafWithRecent: PlayerStatsLeaf = {
+  ...leaf,
+  recent: { games: 5, wins: 4 },
 };
 
 function leafWithTotal(total: bigint): PlayerStatsLeaf {
@@ -116,7 +114,7 @@ describe("PlayerStatsSummary", () => {
   });
 
   it("derives the selected bucket's win rate and split kill metrics", () => {
-    expect(buildPlayerStatsSummary(leaf)).toEqual({
+    expect(buildPlayerStatsSummary(leafWithRecent)).toEqual({
       winRate: "60.0%",
       recentWinRate: "80.0%",
       played: "5",
@@ -223,9 +221,7 @@ describe("PlayerStatsSummary", () => {
   });
 
   it("shows no recent win rate when the selected bucket has no recent games", () => {
-    expect(
-      buildPlayerStatsSummary({ ...leaf, recentGames: [] }).recentWinRate,
-    ).toBe("—");
+    expect(buildPlayerStatsSummary(leaf).recentWinRate).toBe("—");
   });
 
   it("shows Last 100 only after the active category exceeds 100 played games", async () => {
@@ -237,10 +233,7 @@ describe("PlayerStatsSummary", () => {
       wins: 75n,
       losses: 25n,
       total: 100n,
-      recentGames: Array.from({ length: 100 }, (_, index) => ({
-        gameId: BigInt(100 - index),
-        won: index < 75,
-      })),
+      recent: { games: 100, wins: 75 },
     };
     document.body.append(summary);
 
@@ -457,50 +450,85 @@ describe("PlayerStatsSummary", () => {
     expect(getRenderedLeaf(tree)?.total).toBe(96n);
   });
 
-  it("merges the newest 100 unique outcomes across the active All filters", async () => {
-    const publicRecent = Array.from({ length: 100 }, (_, index) => ({
-      gameId: BigInt(200 - index * 2),
-      won: index % 2 === 0,
-    }));
-    const privateRecent = [
-      { gameId: 200n, won: true },
-      ...Array.from({ length: 100 }, (_, index) => ({
-        gameId: BigInt(199 - index * 2),
-        won: index % 2 !== 0,
-      })),
-    ];
+  it("uses the exact recent aggregate for every active filter", async () => {
     const tree = new PlayerStatsTreeView();
     tree.statsTree = {
       Public: {
         "Free For All": {
-          Medium: {
-            ...leafWithTotal(100n),
-            recentGames: publicRecent,
-          },
+          Medium: leafWithTotal(101n),
         },
       },
       Private: {
+        "Free For All": {
+          Easy: leafWithTotal(101n),
+          Hard: leafWithTotal(101n),
+        },
         Team: {
-          Hard: {
-            ...leafWithTotal(100n),
-            recentGames: privateRecent,
+          Hard: leafWithTotal(101n),
+        },
+      },
+      Ranked: {
+        "1v1": leafWithTotal(101n),
+        "2v2": leafWithTotal(101n),
+      },
+      recent: {
+        all: { games: 100, wins: 60 },
+        Public: {
+          all: { games: 100, wins: 61 },
+          Medium: { games: 100, wins: 61 },
+          "Free For All": {
+            all: { games: 100, wins: 62 },
+            Medium: { games: 100, wins: 62 },
           },
+        },
+        Private: {
+          all: { games: 100, wins: 63 },
+          Hard: { games: 100, wins: 64 },
+          "Free For All": {
+            all: { games: 100, wins: 65 },
+            Easy: { games: 100, wins: 66 },
+            Hard: { games: 100, wins: 67 },
+          },
+          Team: {
+            all: { games: 100, wins: 68 },
+            Hard: { games: 100, wins: 69 },
+          },
+        },
+        Ranked: {
+          all: { games: 100, wins: 70 },
+          "1v1": { games: 100, wins: 71 },
+          "2v2": { games: 100, wins: 72 },
         },
       },
     };
     document.body.append(tree);
 
     await tree.updateComplete;
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 60 });
 
-    const mergedRecent = getRenderedLeaf(tree)?.recentGames;
-    expect(mergedRecent).toHaveLength(100);
-    expect(mergedRecent?.slice(0, 3).map((game) => game.gameId)).toEqual([
-      200n,
-      199n,
-      198n,
-    ]);
-    expect(mergedRecent?.[mergedRecent.length - 1]?.gameId).toBe(101n);
-    expect(new Set(mergedRecent?.map((game) => game.gameId)).size).toBe(100);
+    await clickTab(tree, "player_stats_tree.private");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 63 });
+
+    await clickTab(tree, "difficulty.hard");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 64 });
+
+    await clickTab(tree, "game_mode.ffa");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 67 });
+
+    await clickTabInRow(tree, 2, "All");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 65 });
+
+    await clickTab(tree, "player_stats_tree.public");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 62 });
+
+    await clickTabInRow(tree, 1, "All");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 61 });
+
+    await clickTab(tree, "player_stats_tree.ranked");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 70 });
+
+    await clickTab(tree, "player_stats_tree.ranked_1v1");
+    expect(getRenderedLeaf(tree)?.recent).toEqual({ games: 100, wins: 71 });
   });
 
   it("resets every filter to All when the profile stats tree changes", async () => {

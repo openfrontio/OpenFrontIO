@@ -1,6 +1,7 @@
 import { LitElement, PropertyValues, TemplateResult, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  PlayerRecentStats,
   PlayerStatsGameMode,
   PlayerStatsGameModes,
   PlayerStatsLeaf,
@@ -147,29 +148,60 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
+    let leaf: PlayerStatsLeaf | null;
     if (this.selectedType === ALL_SELECTION) {
-      return this.mergeLeaves(
+      leaf = this.mergeLeaves(
         this.availableTypes.flatMap((type) =>
           type === "Ranked"
             ? this.getRankedLeaves(ALL_SELECTION)
             : this.getGameTypeLeaves(type, ALL_SELECTION, ALL_SELECTION),
         ),
       );
+    } else if (this.selectedType === "Ranked") {
+      leaf = this.mergeLeaves(this.getRankedLeaves(this.selectedRankedType));
+    } else {
+      leaf = this.mergeLeaves(
+        this.getGameTypeLeaves(
+          this.selectedType,
+          this.selectedMode,
+          this.selectedType === GameType.Public
+            ? ALL_SELECTION
+            : this.selectedDifficulty,
+        ),
+      );
     }
+    if (!leaf) return null;
+    const recent = this.getSelectedRecentStats();
+    return recent ? { ...leaf, recent } : leaf;
+  }
 
+  private getSelectedRecentStats(): PlayerRecentStats | undefined {
+    const recent = this.statsTree?.recent;
+    if (!recent) return undefined;
+    if (this.selectedType === ALL_SELECTION) return recent.all;
     if (this.selectedType === "Ranked") {
-      return this.mergeLeaves(this.getRankedLeaves(this.selectedRankedType));
+      const rankedRecent = recent.Ranked;
+      if (!rankedRecent) return undefined;
+      return this.selectedRankedType === ALL_SELECTION
+        ? rankedRecent.all
+        : rankedRecent[this.selectedRankedType];
     }
 
-    return this.mergeLeaves(
-      this.getGameTypeLeaves(
-        this.selectedType,
-        this.selectedMode,
-        this.selectedType === GameType.Public
-          ? ALL_SELECTION
-          : this.selectedDifficulty,
-      ),
-    );
+    const typeRecent = recent[this.selectedType];
+    if (!typeRecent) return undefined;
+    if (this.selectedMode === ALL_SELECTION) {
+      return this.selectedType === GameType.Public ||
+        this.selectedDifficulty === ALL_SELECTION
+        ? typeRecent.all
+        : typeRecent[this.selectedDifficulty];
+    }
+
+    const modeRecent = typeRecent[this.selectedMode];
+    if (!modeRecent) return undefined;
+    return this.selectedType === GameType.Public ||
+      this.selectedDifficulty === ALL_SELECTION
+      ? modeRecent.all
+      : modeRecent[this.selectedDifficulty];
   }
 
   private getGameTypeLeaves(

@@ -69,8 +69,10 @@ export function buildPlayerStatsSummary(
     0n,
   );
   const gold = sum(stats?.gold);
-  const recentGames = leaf.recentGames ?? [];
-  const recentWins = recentGames.filter((game) => game.won).length;
+  const legacyRecentGames = leaf.recentGames ?? [];
+  const recentGames = leaf.recent?.games ?? legacyRecentGames.length;
+  const recentWins =
+    leaf.recent?.wins ?? legacyRecentGames.filter((game) => game.won).length;
 
   return {
     winRate:
@@ -78,8 +80,8 @@ export function buildPlayerStatsSummary(
         ? `${((Number(leaf.wins) / Number(games)) * 100).toFixed(1)}%`
         : "—",
     recentWinRate:
-      recentGames.length > 0
-        ? `${((recentWins / recentGames.length) * 100).toFixed(1)}%`
+      recentGames > 0
+        ? `${((recentWins / recentGames) * 100).toFixed(1)}%`
         : "—",
     played: renderNumber(games),
     wins: renderNumber(leaf.wins),
@@ -130,8 +132,9 @@ export class PlayerStatsSummary extends LitElement {
   render() {
     if (!this.leaf) return html``;
     const summary = buildPlayerStatsSummary(this.leaf);
-    const showRecentWinRate =
-      this.leaf.total > 100n && (this.leaf.recentGames?.length ?? 0) > 0;
+    const recentGames =
+      this.leaf.recent?.games ?? this.leaf.recentGames?.length ?? 0;
+    const showRecentWinRate = this.leaf.total > 100n && recentGames > 0;
     const recordStats = [
       {
         key: "played",
