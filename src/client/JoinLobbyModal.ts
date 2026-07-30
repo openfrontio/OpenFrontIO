@@ -629,7 +629,12 @@ export class JoinLobbyModal extends BaseModal {
         label: translateText("public_game_modifier.disable_alliances_label"),
         value: disabled,
       });
-    else if (typeof c.customAllianceDuration === "number")
+    else if (
+      typeof c.customAllianceDuration === "number" &&
+      // 5 minutes is the sim fallback (Config.allianceDuration), so an
+      // explicit 5 changes nothing worth surfacing.
+      c.customAllianceDuration !== 5
+    )
       items.push({
         label: translateText("public_game_modifier.disable_alliances_label"),
         value: renderDuration(c.customAllianceDuration * 60),
