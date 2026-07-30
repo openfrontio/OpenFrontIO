@@ -31,18 +31,17 @@ export class MatchmakingModal extends BaseModal {
   // Which queue to join; set by Main from the open-matchmaking event
   // before the modal opens.
   public mode: "1v1" | "2v2" = "1v1";
-  // Optional 2v2 teammate (public id), read from storage at queue time so every
-  // entry path agrees: the ranked screen, the requeue URL after a finished game
-  // (which reloads the page), and an in-place requeue. The server holds this
-  // player out of matching until that teammate queues and names them back, then
-  // puts the pair on one team. Because it is chosen before the queue is joined,
-  // there is no window where you can be matched solo while your teammate is
-  // still getting ready.
+  // Optional 2v2 teammate (public id), read from storage at queue time so the
+  // ranked screen, the requeue URL and an in-place requeue all agree. The server
+  // holds this player out of matching until that teammate names them back.
+  // Chosen before queueing, so you can never be matched solo mid-setup.
   private teammatePublicId: string | null = null;
   @state() private connected = false;
   // Server-reported pairing state: waiting = held for the teammate,
   // ready = both named each other and the duo is searching.
   @state() private partyStatus: "waiting" | "ready" | null = null;
+  // Own id, so a stale self-reference is never sent as a teammate.
+  private myPublicId: string | null = null;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
@@ -110,8 +109,8 @@ export class MatchmakingModal extends BaseModal {
       );
     }
     if (this.gameID === null) {
-      // Held for a teammate: don't claim to be searching, because this player is
-      // deliberately excluded from the pool until the other side queues too.
+      // Held for a teammate: don't claim to be searching, since this player is
+      // excluded from the pool until the other side queues too.
       if (this.partyStatus === "waiting") {
         return html`
           ${this.renderLoadingSpinner(
@@ -176,13 +175,12 @@ export class MatchmakingModal extends BaseModal {
     return true;
   }
 
-  // Read the chosen teammate fresh on every queue entry (ranked screen, requeue
-  // URL after a finished game, in-place requeue) so all three paths agree.
-  // partyStatus stays null until the SERVER reports the pairing: assuming "held"
-  // would leave a client deployed ahead of the server stuck on "waiting" forever
-  // while it is in fact queueing normally.
+  // Re-read on every queue entry so all paths agree. partyStatus stays null
+  // until the SERVER reports pairing: assuming "held" would strand a client
+  // deployed ahead of the server on "waiting" while it queues normally.
   private resetPartyState() {
-    this.teammatePublicId = this.mode === "2v2" ? getRankedTeammate() : null;
+    this.teammatePublicId =
+      this.mode === "2v2" ? getRankedTeammate(this.myPublicId) : null;
     this.partyStatus = null;
   }
 
@@ -443,6 +441,7 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
+    this.myPublicId = userMe.player.publicId;
     const row =
       this.mode === "2v2"
         ? userMe.player.leaderboard?.twoVtwo

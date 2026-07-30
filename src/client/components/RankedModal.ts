@@ -13,8 +13,7 @@ import { modalHeader } from "./ui/ModalHeader";
 export class RankedModal extends BaseModal {
   protected routerName = "ranked";
 
-  // Shared by both live cards. h-full so they stay the same height once the 2v2
-  // card grows to hold the teammate field.
+  // Shared by both live cards; h-full keeps them the same height.
   private static readonly CARD_CLASS =
     "flex flex-col w-full h-full min-h-[9.5rem] rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3";
 
@@ -26,9 +25,14 @@ export class RankedModal extends BaseModal {
   // Discord/Google/email account, so track that separately for ranked.
   @state() private crazyGamesSignedIn = false;
   // Optional 2v2 teammate, by public id. Empty = ordinary solo queue. Ids are
-  // permanent, so it is remembered between sessions: a regular duo exchanges
-  // ids once and never types them again.
+  // permanent, so a regular duo exchanges them once.
   @state() private teammateId = "";
+
+  private ownPublicId(): string | null {
+    return this.userMeResponse === false
+      ? null
+      : this.userMeResponse.player.publicId;
+  }
 
   // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
   private isRankedEligible(): boolean {
@@ -100,6 +104,8 @@ export class RankedModal extends BaseModal {
       this.elo = translateText("map_component.error");
       this.elo2v2 = translateText("map_component.error");
     } finally {
+      // Re-check now the player is known, so a stale self-reference isn't shown.
+      this.teammateId = getRankedTeammate(this.ownPublicId()) ?? "";
       this.updateElo();
     }
   }
@@ -139,8 +145,7 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  // Subtitle under a mode's title: the error, else the player's ELO for that
-  // mode, else a plain label when they can't play ranked yet.
+  // Error, else this mode's ELO, else a plain label when ranked isn't available.
   private modeSubtitle(elo: number | string): string {
     if (this.errorMessage !== null) return this.errorMessage;
     return this.isRankedEligible()
@@ -148,8 +153,7 @@ export class RankedModal extends BaseModal {
       : translateText("mode_selector.ranked_title");
   }
 
-  // Title + subtitle block, shared by every card so the three variants can't
-  // drift apart typographically.
+  // Shared by every card so the variants can't drift apart typographically.
   private cardBody(title: string, subtitle: string, muted = false) {
     return html`
       <div class="flex flex-col items-center gap-1 text-center">
@@ -179,12 +183,10 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  // The 2v2 card carries the teammate field inside it, pinned to the bottom so
-  // the title/ELO block stays centred exactly like the 1v1 card's. It is a div
-  // rather than a button because a <button> may not contain an <input> (invalid
-  // HTML, and every click in the field would fire the queue action), so the card
-  // keeps button semantics via role/tabindex and the input stops its own events
-  // from bubbling up to the card.
+  // The teammate field is pinned to the bottom and out of the flow, so the
+  // title/ELO block stays centred like the 1v1 card's. A div rather than a button
+  // because <button> may not contain <input>; button semantics come from
+  // role/tabindex, and the input stops its events reaching the card.
   private render2v2Card() {
     const queue = () => this.handleRanked("2v2");
     return html`
@@ -226,8 +228,7 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  // Own id is never a valid teammate: it would hold the player out of matching
-  // forever waiting on themselves.
+  // Own id is never a valid teammate: you'd wait on yourself.
   private onTeammateInput = (e: Event) => {
     const entered = (e.target as HTMLInputElement).value.trim();
     const ownId =
