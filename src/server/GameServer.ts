@@ -688,11 +688,13 @@ export class GameServer {
     }
 
     // OFM: if an allowlist is set, only those publicIds may join. Re-checked on
-    // every join attempt
+    // every join attempt. Admins/root bypass it so moderation can reach any
+    // private lobby; a kick still applies (checked above).
     const allowedPublicIds = this.gameConfig.allowedPublicIds;
     if (
       allowedPublicIds !== undefined &&
       allowedPublicIds.length > 0 &&
+      !isAdminRole(client.role) &&
       (client.publicId === undefined ||
         !allowedPublicIds.includes(client.publicId))
     ) {
