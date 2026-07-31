@@ -73,7 +73,11 @@ function normalizeCustomTribes(raw: unknown): CustomTribe[] | undefined {
   if (!Array.isArray(raw) || raw.length === 0) return undefined;
   return raw.map((entry) => {
     if (typeof entry === "string") return { name: entry };
-    return entry as CustomTribe;
+    const obj = entry as { name?: string; coordinates?: [number, number] };
+    // Reconstruct with consistent key order (name first) to match gen-maps output
+    if (obj.coordinates)
+      return { name: obj.name!, coordinates: obj.coordinates };
+    return { name: obj.name! };
   });
 }
 
