@@ -12,7 +12,10 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
-import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
+import {
+  clearParabolaDirection,
+  ParabolaUniversalPathFinder,
+} from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
@@ -193,16 +196,27 @@ export class NukeExecution implements Execution {
       // launch from the MIRV separation point, not a silo).
       this.src ??= spawn;
       // Nuke trajectories cannot pass over impassable terrain unless they are MIRV warheads, just as they
-      // cannot exceed the map border. Check the full parabola path before
-      // launching; if any tile is impassable, abort the launch.
+      // cannot exceed the map border. Fly the requested curve direction if
+      // it is clear, otherwise the opposite one; if both curves cross
+      // impassable terrain, abort the launch.
       if (this.nukeType !== UnitType.MIRVWarhead) {
-        const path = this.pathFinder.findPath(this.src, this.dst) ?? [];
-        for (const tile of path) {
-          if (this.mg.isImpassable(tile)) {
-            console.warn(`nuke trajectory crosses impassable terrain`);
-            this.active = false;
-            return;
-          }
+        const direction = clearParabolaDirection(
+          this.mg,
+          this.src,
+          this.dst,
+          this.rocketDirectionUp,
+        );
+        if (direction === null) {
+          console.warn(`nuke trajectory crosses impassable terrain`);
+          this.active = false;
+          return;
+        }
+        if (direction !== this.rocketDirectionUp) {
+          this.rocketDirectionUp = direction;
+          this.pathFinder = UniversalPathFinding.Parabola(this.mg, {
+            increment: this.speed,
+            directionUp: direction,
+          });
         }
       }
       this.nuke = this.player.buildUnit(this.nukeType, this.src, {

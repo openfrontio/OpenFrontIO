@@ -13,6 +13,7 @@ import {
 } from "../../game/Game";
 import { TileRef, euclDistFN } from "../../game/GameMap";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
+import { clearParabolaDirection } from "../../pathfinding/PathFinder.Parabola";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
@@ -144,12 +145,6 @@ export class NationNukeBehavior {
           difficulty === Difficulty.Impossible) &&
         this.isTrajectoryInterceptableBySam(spawnTile, tile)
       ) {
-        continue;
-      }
-
-      // On all difficulties, avoid trajectories that cross impassable terrain
-      // (the simulation aborts such launches — see NukeExecution).
-      if (this.isTrajectoryBlockedByImpassable(spawnTile, tile)) {
         continue;
       }
 
@@ -635,25 +630,17 @@ export class NationNukeBehavior {
 
   /**
    * Check if the parabolic nuke trajectory from spawnTile to targetTile
-   * crosses any impassable terrain. Mirrors the check in NukeExecution that
-   * aborts such launches
+   * crosses impassable terrain on BOTH curve directions. Mirrors
+   * NukeExecution, which flips to the opposite curve when the requested one
+   * is blocked and aborts only when both are.
    */
   private isTrajectoryBlockedByImpassable(
     spawnTile: TileRef,
     targetTile: TileRef,
   ): boolean {
-    const pathFinder = UniversalPathFinding.Parabola(this.game, {
-      increment: this.game.config().nukeSpeed(UnitType.AtomBomb),
-      distanceBasedHeight: true,
-      directionUp: true,
-    });
-    const path = pathFinder.findPath(spawnTile, targetTile) ?? [];
-    for (const tile of path) {
-      if (this.game.isImpassable(tile)) {
-        return true;
-      }
-    }
-    return false;
+    return (
+      clearParabolaDirection(this.game, spawnTile, targetTile, true) === null
+    );
   }
 
   private isValidNukeTile(t: TileRef, nukeTarget: Player | null): boolean {
