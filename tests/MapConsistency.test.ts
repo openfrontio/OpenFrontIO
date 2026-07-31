@@ -71,9 +71,30 @@ function orOmitted(value: unknown): unknown {
  */
 function normalizeCustomTribes(raw: unknown): CustomTribe[] | undefined {
   if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  return raw.map((entry) => {
-    if (typeof entry === "string") return { name: entry };
-    return entry as CustomTribe;
+  return raw.map((entry, i) => {
+    if (typeof entry === "string") {
+      if (entry === "") throw new Error(`custom_tribes[${i}]: empty string`);
+      return { name: entry };
+    }
+    if (entry === null || typeof entry !== "object")
+      throw new Error(`custom_tribes[${i}]: invalid entry`);
+    const obj = entry as { name?: unknown; coordinates?: unknown };
+    if (typeof obj.name !== "string" || obj.name === "")
+      throw new Error(`custom_tribes[${i}]: name must be a non-empty string`);
+    if (obj.coordinates !== undefined) {
+      if (
+        !Array.isArray(obj.coordinates) ||
+        obj.coordinates.length !== 2 ||
+        typeof obj.coordinates[0] !== "number" ||
+        typeof obj.coordinates[1] !== "number"
+      )
+        throw new Error(`custom_tribes[${i}]: coordinates must be [x, y]`);
+      return {
+        name: obj.name,
+        coordinates: obj.coordinates as [number, number],
+      };
+    }
+    return { name: obj.name };
   });
 }
 
