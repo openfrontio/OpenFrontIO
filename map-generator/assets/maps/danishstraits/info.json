@@ -12,12 +12,12 @@
     },
     {
       "coordinates": [252, 43],
-      "name": "\u00d8stlandet",
+      "name": "Østlandet",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [737, 791],
-      "name": "Sk\u00e5ne",
+      "name": "Skåne",
       "flag": "Sweden Norway Union"
     },
     {
@@ -27,22 +27,22 @@
     },
     {
       "coordinates": [846, 488],
-      "name": "Sm\u00e5land",
+      "name": "Småland",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [701, 260],
-      "name": "V\u00e4sterg\u00f6tland",
+      "name": "Västergötland",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [501, 273],
-      "name": "Bohusl\u00e4n",
+      "name": "Bohuslän",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [843, 278],
-      "name": "\u00d6sterg\u00f6tland",
+      "name": "Östergötland",
       "flag": "Sweden Norway Union"
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "coordinates": [833, 73],
-      "name": "N\u00e4rke",
+      "name": "Närke",
       "flag": "Sweden Norway Union"
     },
     {

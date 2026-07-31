@@ -32,7 +32,7 @@
     },
     {
       "coordinates": [1284, 714],
-      "name": "\u00cele-de-France",
+      "name": "Île-de-France",
       "flag": "fr-idf"
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "coordinates": [1691, 1149],
-      "name": "Franche-Comt\u00e9",
+      "name": "Franche-Comté",
       "flag": "fr-i"
     },
     {
@@ -82,7 +82,7 @@
     },
     {
       "coordinates": [1018, 1885],
-      "name": "Midi-Pyr\u00e9n\u00e9es",
+      "name": "Midi-Pyrénées",
       "flag": "1_Occitania"
     },
     {
@@ -92,12 +92,12 @@
     },
     {
       "coordinates": [1792, 1700],
-      "name": "Provence-Alpes-C\u00f4te d'Azur",
+      "name": "Provence-Alpes-Côte d'Azur",
       "flag": "fr-pac"
     },
     {
       "coordinates": [1635, 1460],
-      "name": "Rh\u00f4ne-Alpes",
+      "name": "Rhône-Alpes",
       "flag": "fr-v"
     },
     {

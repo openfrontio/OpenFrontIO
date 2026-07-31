@@ -97,7 +97,7 @@
     },
     {
       "coordinates": [781, 1865],
-      "name": "Sk\u00e5ne",
+      "name": "Skåne",
       "flag": "se"
     },
     {
@@ -179,12 +179,12 @@
     },
     {
       "coordinates": [689, 920],
-      "name": "Tr\u00f8ndelag",
+      "name": "Trøndelag",
       "flag": "no"
     },
     {
       "coordinates": [765, 1148],
-      "name": "J\u00e4mtland",
+      "name": "Jämtland",
       "flag": "se"
     },
     {
@@ -199,12 +199,12 @@
     },
     {
       "coordinates": [728, 1688],
-      "name": "V\u00e4stra G\u00f6taland",
+      "name": "Västra Götaland",
       "flag": "se"
     },
     {
       "coordinates": [869, 1756],
-      "name": "J\u00f6nk\u00f6ping",
+      "name": "Jönköping",
       "flag": "se"
     },
     {
@@ -214,7 +214,7 @@
     },
     {
       "coordinates": [926, 1307],
-      "name": "G\u00e4vleborg",
+      "name": "Gävleborg",
       "flag": "se"
     },
     {
@@ -239,7 +239,7 @@
     },
     {
       "coordinates": [971, 877],
-      "name": "V\u00e4sterbotten",
+      "name": "Västerbotten",
       "flag": "se"
     },
     {
