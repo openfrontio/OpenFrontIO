@@ -11,6 +11,55 @@ export interface ParabolaOptions {
 
 const PARABOLA_MIN_HEIGHT = 50;
 
+// Fine sampling increment for impassable checks — independent of nuke speed
+// so that a fast nuke cannot "skip over" a thin impassable strip that a slow
+// one would hit.
+const BLOCKED_CHECK_INCREMENT = 1;
+
+/**
+ * True if the parabola from `from` to `to` crosses impassable terrain.
+ * Uses the same curve construction as nuke flight but samples it finely,
+ * so the result does not depend on the nuke's speed.
+ */
+export function isParabolaBlocked(
+  gameMap: GameMap,
+  from: TileRef,
+  to: TileRef,
+  directionUp: boolean,
+): boolean {
+  const finder = new ParabolaUniversalPathFinder(gameMap, {
+    increment: BLOCKED_CHECK_INCREMENT,
+    directionUp,
+  });
+  const path = finder.findPath(from, to) ?? [];
+  for (const tile of path) {
+    if (gameMap.isImpassable(tile)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Pick a curve direction whose parabola avoids impassable terrain:
+ * the preferred direction if clear, otherwise the opposite direction if
+ * clear, otherwise null (no clear path).
+ */
+export function clearParabolaDirection(
+  gameMap: GameMap,
+  from: TileRef,
+  to: TileRef,
+  preferUp: boolean,
+): boolean | null {
+  if (!isParabolaBlocked(gameMap, from, to, preferUp)) {
+    return preferUp;
+  }
+  if (!isParabolaBlocked(gameMap, from, to, !preferUp)) {
+    return !preferUp;
+  }
+  return null;
+}
+
 export class ParabolaUniversalPathFinder implements SteppingPathFinder<TileRef> {
   private curve: DistanceBasedBezierCurve | null = null;
   private lastTo: TileRef | null = null;

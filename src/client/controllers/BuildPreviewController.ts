@@ -19,6 +19,7 @@ import {
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
 import { UserSettings } from "../../core/game/UserSettings";
+import { clearParabolaDirection } from "../../core/pathfinding/PathFinder.Parabola";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,
@@ -85,6 +86,7 @@ export class BuildPreviewController implements Controller {
   private nukeTrajectoryStatic: {
     srcX: number;
     srcY: number;
+    directionUp: boolean;
     sams: SAMInfo[];
     isBlocked: (x: number, y: number) => boolean;
   } | null = null;
@@ -149,7 +151,7 @@ export class BuildPreviewController implements Controller {
               w.x - 0.5,
               w.y - 0.5,
               this.game.height(),
-              this.uiState.rocketDirectionUp,
+              traj.directionUp,
               traj.sams,
               traj.isBlocked,
             ),
@@ -316,9 +318,10 @@ export class BuildPreviewController implements Controller {
 
     // Mirror PlayerImpl.nukeSpawn (the source NukeExecution actually fires
     // from): only silos that are active, not reloading, and not under
-    // construction are eligible, and the nearest is chosen by Manhattan
-    // distance. Keeping these in sync prevents the preview arc from
-    // originating from a silo the game wouldn't use.
+    // construction are eligible, and the nearest (Manhattan distance) whose
+    // parabola avoids impassable terrain on the up or down curve is chosen.
+    // Keeping these in sync prevents the preview arc from originating from
+    // a silo the game wouldn't use.
     const silos = myPlayer
       .units(UnitType.MissileSilo)
       .filter(
@@ -331,15 +334,31 @@ export class BuildPreviewController implements Controller {
 
     const dstX = this.game.x(tileRef);
     const dstY = this.game.y(tileRef);
+    silos.sort(
+      (a, b) =>
+        Math.abs(this.game.x(a.tile()) - dstX) +
+        Math.abs(this.game.y(a.tile()) - dstY) -
+        (Math.abs(this.game.x(b.tile()) - dstX) +
+          Math.abs(this.game.y(b.tile()) - dstY)),
+    );
+
+    // NukeExecution flies the requested curve direction if clear, otherwise
+    // the opposite one — resolve the direction the sim would actually use.
+    // If every silo is blocked both ways, fall back to the nearest silo and
+    // the requested direction so the arc renders red with the blocked X.
     let bestSilo = silos[0];
-    let bestDist = Infinity;
+    let directionUp = this.uiState.rocketDirectionUp;
     for (const s of silos) {
-      const sx = this.game.x(s.tile());
-      const sy = this.game.y(s.tile());
-      const d = Math.abs(sx - dstX) + Math.abs(sy - dstY);
-      if (d < bestDist) {
-        bestDist = d;
+      const dir = clearParabolaDirection(
+        this.game,
+        s.tile(),
+        tileRef,
+        this.uiState.rocketDirectionUp,
+      );
+      if (dir !== null) {
         bestSilo = s;
+        directionUp = dir;
+        break;
       }
     }
     const srcX = this.game.x(bestSilo.tile());
@@ -396,6 +415,7 @@ export class BuildPreviewController implements Controller {
     this.nukeTrajectoryStatic = {
       srcX,
       srcY,
+      directionUp,
       sams,
       isBlocked: (x: number, y: number) => {
         if (!this.game.isValidCoord(x, y)) return false;
