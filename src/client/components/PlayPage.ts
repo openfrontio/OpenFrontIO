@@ -2,8 +2,10 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
+import "./CosmeticBackground";
 import "./NewsBox";
 import "./SteamWishlist";
+import "./StreamingNow";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
@@ -103,52 +105,59 @@ export class PlayPage extends LitElement {
           </div>
         </div>
 
+        <!-- Top strip: news + identity on the left, Streaming Now on the right. The 2fr/1fr
+             split only exists while the panel is live (.streaming-live via has-[]) —
+             otherwise the left column takes the full row. -->
         <div
-          class="w-full pb-4 lg:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-[2fr_1fr] lg:gap-4"
+          class="w-full pb-4 lg:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-1 lg:has-[.streaming-live]:grid-cols-[2fr_1fr] lg:gap-4 lg:items-stretch"
         >
           <!-- Mobile: spacer for fixed top bar -->
           <div
-            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2 -mb-4"
+            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] -mb-4"
           ></div>
 
-          <!-- News box above username -->
-          <news-box class="lg:col-span-2"></news-box>
+          <!-- Left column: news banner + identity row, stacked tight. -->
+          <div class="flex flex-col gap-2 min-w-0">
+            <news-box></news-box>
 
-          <!-- Username: left col -->
-          <div
-            class="px-2 py-2 bg-surface border-y border-white/10 overflow-visible relative z-20 lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:border-y-0 lg:rounded-xl"
-          >
-            <div class="flex items-center gap-2 min-w-0 w-full">
-              <username-input
-                class="flex-1 min-w-0 h-10 lg:h-[50px]"
-              ></username-input>
-              <flag-input
-                id="flag-input-mobile"
-                show-select-label
-                class="shrink-0 lg:hidden h-10 w-10"
-              ></flag-input>
-              <cosmetics-input
-                id="cosmetics-input-mobile"
-                show-select-label
-                adaptive-size
-                class="no-crazygames shrink-0 lg:hidden"
-              ></cosmetics-input>
+            <!-- Identity row: flag + tag/username + skin in one line. Flag sits before the
+                 tag (where it shows in-game), skin at the end; both preview the current
+                 selection. Replaces the old separate SELECT SKIN / SELECT FLAG buttons. -->
+            <div
+              class="relative bg-surface border-y border-white/10 overflow-visible flex items-center sm:min-h-[60px] sm:flex-1 sm:z-20 sm:border-y-0 sm:rounded-xl"
+            >
+              <!-- Selected skin/pattern fills the bubble like the player's territory in
+                   game (the skin button updates it), shown as a frame around the controls. -->
+              <cosmetic-background
+                class="absolute inset-0 z-0 overflow-hidden sm:rounded-xl pointer-events-none"
+              ></cosmetic-background>
+              <!-- Controls share one surface bubble so it reads as a single clean bar
+                   (buttons blend at rest and only highlight on hover). -->
+              <div
+                class="relative z-10 flex h-full w-full min-w-0 items-center gap-2 bg-surface/80 p-1 sm:rounded-xl"
+              >
+                <flag-input
+                  show-select-label
+                  class="shrink-0 h-full max-h-[52px] aspect-square"
+                ></flag-input>
+                <username-input
+                  class="flex-1 min-w-0 h-10 sm:h-[50px]"
+                ></username-input>
+                <!-- Raised 3D shadow so the skin pops off the bar and is easy to spot. -->
+                <cosmetics-input
+                  id="cosmetics-input-mobile"
+                  show-select-label
+                  class="no-crazygames shrink-0 h-full max-h-[52px] aspect-square rounded-lg [box-shadow:0_3px_6px_#00000099,0_1px_2px_#000000cc]"
+                ></cosmetics-input>
+              </div>
             </div>
           </div>
 
-          <!-- Flag + cosmetics: right col -->
-          <div class="hidden lg:flex h-[60px] gap-2">
-            <flag-input
-              id="flag-input-desktop"
-              show-select-label
-              class="flex-1 h-full"
-            ></flag-input>
-            <cosmetics-input
-              id="cosmetics-input-desktop"
-              show-select-label
-              class="no-crazygames flex-1 h-full"
-            ></cosmetics-input>
-          </div>
+          <!-- Right column: Streaming Now (desktop only), stretched to the left column's
+               full height so the top strip has no dead space. -->
+          <streaming-now
+            class="hidden lg:flex lg:h-full lg:flex-col w-full min-w-0"
+          ></streaming-now>
         </div>
 
         <game-mode-selector></game-mode-selector>
