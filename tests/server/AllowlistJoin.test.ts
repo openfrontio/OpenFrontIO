@@ -34,12 +34,13 @@ function makeClient(
   clientID: string,
   persistentID: string,
   publicId: string | undefined,
+  role: string | null = null,
 ): Client {
   return new Client(
     clientID,
     persistentID,
     null,
-    null,
+    role,
     undefined,
     "127.0.0.1",
     "TestUser",
@@ -85,6 +86,41 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
     );
     expect(game.joinClient(makeClient("c3", "p3", undefined))).toBe(
       "not_allowlisted",
+    );
+  });
+
+  it("lets admins and root bypass the allowlist", () => {
+    const game = makeGame(["pub-ok"]);
+    expect(game.joinClient(makeClient("c1", "p1", "pub-no", "admin"))).toBe(
+      "joined",
+    );
+    expect(game.joinClient(makeClient("c2", "p2", "pub-no", "root"))).toBe(
+      "joined",
+    );
+    // No publicId at all (anonymous persistent-ID join) still bypasses.
+    expect(game.joinClient(makeClient("c3", "p3", undefined, "admin"))).toBe(
+      "joined",
+    );
+  });
+
+  it("does not let mod or unknown roles bypass the allowlist", () => {
+    const game = makeGame(["pub-ok"]);
+    expect(game.joinClient(makeClient("c1", "p1", "pub-no", "mod"))).toBe(
+      "not_allowlisted",
+    );
+    expect(game.joinClient(makeClient("c2", "p2", "pub-no", "flagged"))).toBe(
+      "not_allowlisted",
+    );
+  });
+
+  it("still keeps a kicked admin out of an allowlisted lobby", () => {
+    const game = makeGame(["pub-ok"]);
+    expect(game.joinClient(makeClient("c1", "p1", "pub-no", "admin"))).toBe(
+      "joined",
+    );
+    game.kickClient("c1");
+    expect(game.joinClient(makeClient("c1b", "p1", "pub-no", "admin"))).toBe(
+      "kicked",
     );
   });
 
