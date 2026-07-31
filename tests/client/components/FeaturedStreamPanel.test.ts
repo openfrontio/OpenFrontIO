@@ -52,6 +52,9 @@ const cfg = (
 
 describe("featured-stream panel", () => {
   beforeEach(async () => {
+    // shouldAdvanceTime keeps awaited microtask/0ms hops working while still letting a test
+    // inspect pending timers and jump the poll interval.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     FakePlayer.constructed = [];
     FakePlayer.last = undefined;
     localStorage.clear();
@@ -64,6 +67,8 @@ describe("featured-stream panel", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     delete (window as unknown as { Twitch?: unknown }).Twitch;
+    delete (window as unknown as { adsEnabled?: boolean }).adsEnabled;
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -117,6 +122,59 @@ describe("featured-stream panel", () => {
     FakePlayer.last!.fire(FakePlayer.READY);
     await el.updateComplete;
     expect(card()).toBeNull();
+  });
+
+  // Closing must stop everything: no poll left scheduled, no player rebuilt. Minimizing
+  // deliberately does not, because Twitch's terms disallow an obscured embed, so the
+  // minimized panel stays a visible thumbnail that keeps playing.
+  describe("after the user closes the panel", () => {
+    const clickByLabel = (el: HTMLElement, label: string) => {
+      const btn = el.querySelector(
+        `[aria-label="${label}"]`,
+      ) as HTMLElement | null;
+      expect(btn, `no button labelled ${label}`).not.toBeNull();
+      btn!.click();
+    };
+
+    const openThenClose = async () => {
+      // The x only exists for ad-free users, and only once minimized.
+      (window as unknown as { adsEnabled?: boolean }).adsEnabled = false;
+      const el = await mount(cfg(true, ["openfrontmasters"]));
+      FakePlayer.last!.fire(FakePlayer.READY);
+      await el.updateComplete;
+      clickByLabel(el, "featured_stream.minimize");
+      await el.updateComplete;
+      clickByLabel(el, "common.close");
+      await el.updateComplete;
+      return el;
+    };
+
+    it("removes the panel and stops polling entirely", async () => {
+      await openThenClose();
+      expect(card()).toBeNull();
+      const before = getFeaturedStream.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(getFeaturedStream).toHaveBeenCalledTimes(before); // no further requests
+      expect(FakePlayer.constructed).toEqual(["openfrontmasters"]); // no new player
+    });
+
+    // Positive control: the same 10 minute jump does keep polling while the panel is only
+    // waiting for someone to go live, so the assertion above is not vacuous.
+    it("(control) keeps polling while nobody is live", async () => {
+      await mount(cfg(true, []));
+      const before = getFeaturedStream.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(getFeaturedStream.mock.calls.length).toBeGreaterThan(before);
+    });
+
+    it("does not come back when a game ends", async () => {
+      const el = await openThenClose();
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      await el.updateComplete;
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(card()).toBeNull();
+      expect(FakePlayer.constructed).toEqual(["openfrontmasters"]);
+    });
   });
 
   it("hides the panel when a live stream ends mid-session", async () => {

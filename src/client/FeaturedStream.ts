@@ -260,10 +260,14 @@ export class FeaturedStream extends LitElement {
     } catch (e) {
       // SDK blocked (extension, network): try again on the next poll rather than never.
       console.error("featured-stream: Twitch SDK load failed", e);
+      if (this.dismissed) return;
       this.goOffline();
       this.schedulePoll();
       return;
     }
+    // A close (or a game start) during the SDK load must not mount, and must not leave a
+    // poll scheduled behind it.
+    if (this.inGame || this.dismissed) return;
     if (this.channel !== channel) return; // superseded while the SDK loaded
     const host = this.querySelector(
       "#featured-stream-mount",
