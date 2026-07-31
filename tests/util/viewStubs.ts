@@ -160,6 +160,7 @@ export function makeUnitUpdate(
     targetable: true,
     markedForDeletion: false,
     missileTimerQueue: [],
+    recheckSAMRange: false,
     level: 1,
     hasTrainStation: false,
     ...overrides,
