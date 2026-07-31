@@ -96,7 +96,9 @@ export class FriendsList extends LitElement {
   }
 
   private async handleSend(): Promise<void> {
-    const target = this.addInput.trim();
+    // Names render as `wonder#5005` but resolve on the stored `wonder.5005`
+    // form, so accept either. Public ids never contain "#".
+    const target = this.addInput.trim().replace(/#/g, ".");
     if (!target) return;
     if (target === this.myPublicId) {
       showToast(translateText("friends.cannot_friend_self"), "red");
