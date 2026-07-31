@@ -135,5 +135,6 @@
       "name": "Bornholm",
       "flag": "dk"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

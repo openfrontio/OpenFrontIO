@@ -214,5 +214,6 @@
       }
     ]
   },
+  "themes": ["asia"],
   "translation_key": "map.vietnam"
 }

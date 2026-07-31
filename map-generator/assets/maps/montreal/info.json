@@ -65,5 +65,6 @@
       "flag": "Quebec",
       "name": "Pointe-aux-Trembles"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

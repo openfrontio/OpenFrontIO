@@ -136,5 +136,6 @@
       "name": "Franks"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.britanniaclassic"
 }

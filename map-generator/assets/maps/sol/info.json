@@ -235,5 +235,6 @@
       "name": "Uranus Trojans",
       "flag": "uranus"
     }
-  ]
+  ],
+  "themes": ["space"]
 }

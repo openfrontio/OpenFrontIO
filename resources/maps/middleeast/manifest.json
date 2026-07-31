@@ -155,5 +155,6 @@
       "name": "Russian State"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.middleeast"
 }

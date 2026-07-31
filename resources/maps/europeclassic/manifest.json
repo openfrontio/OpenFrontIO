@@ -206,5 +206,6 @@
       "name": "Denmark"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.europeclassic"
 }

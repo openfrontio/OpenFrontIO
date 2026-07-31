@@ -361,5 +361,6 @@
       "name": "Azores",
       "flag": "pt-azores"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

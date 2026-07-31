@@ -331,5 +331,6 @@
       "name": "Polo Towers",
       "flag": "Nevada"
     }
-  ]
+  ],
+  "themes": ["north_america", "western"]
 }

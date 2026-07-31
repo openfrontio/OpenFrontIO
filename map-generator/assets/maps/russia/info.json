@@ -415,5 +415,6 @@
       "name": "Zabaykalsky",
       "flag": "RU-ZAB"
     }
-  ]
+  ],
+  "themes": ["europe", "asia"]
 }

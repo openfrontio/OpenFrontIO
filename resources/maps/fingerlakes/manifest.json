@@ -70,5 +70,6 @@
       "name": "Hammondsport"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.fingerlakes"
 }

@@ -346,5 +346,6 @@
       "name": "Hard Rock Casino"
     }
   ],
+  "themes": ["north_america", "western"],
   "translation_key": "map.lasvegasstrip"
 }

@@ -197,5 +197,6 @@
       }
     ]
   },
+  "themes": ["asia"],
   "translation_key": "map.korea"
 }

@@ -317,5 +317,6 @@
       "name": "Zemgale",
       "flag": "lv"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

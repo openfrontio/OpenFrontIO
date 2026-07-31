@@ -59,5 +59,6 @@
       "coordinates": [1238, 349],
       "name": "Ottoman Empire"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

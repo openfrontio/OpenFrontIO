@@ -55,5 +55,6 @@
       "name": "Hammondsport",
       "flag": "New_York"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

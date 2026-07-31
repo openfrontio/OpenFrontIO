@@ -332,5 +332,6 @@
       "name": "Ma Clique"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.china"
 }

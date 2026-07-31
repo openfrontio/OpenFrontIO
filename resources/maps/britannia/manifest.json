@@ -119,5 +119,6 @@
       "name": "Fermanagh"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.britannia"
 }

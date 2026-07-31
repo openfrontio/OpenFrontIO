@@ -75,5 +75,6 @@
       "name": "El Mansoura"
     }
   ],
+  "themes": ["africa"],
   "translation_key": "map.niledelta"
 }

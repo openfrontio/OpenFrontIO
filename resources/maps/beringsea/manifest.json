@@ -157,5 +157,6 @@
       }
     ]
   },
+  "themes": ["asia", "north_america"],
   "translation_key": "map.beringsea"
 }
