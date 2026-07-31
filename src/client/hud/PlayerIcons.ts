@@ -14,10 +14,8 @@ const embargoWhiteIcon = assetUrl("images/EmbargoWhiteIcon.svg");
 const nukeRedIcon = assetUrl("images/NukeIconRed.svg");
 const nukeWhiteIcon = assetUrl("images/NukeIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIcon.svg");
-const traitorIcon = assetUrl("images/TraitorIcon.svg");
 const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
 
-const TRAITOR_ICON_ID = "traitor" as const;
 const DOOMSDAY_CLOCK_ICON_ID = "doomsday-clock" as const;
 const CROWN_ICON_ID = "crown" as const;
 const DISCONNECTED_ICON_ID = "disconnected" as const;
@@ -75,15 +73,6 @@ export function getPlayerIcons(
       id: CROWN_ICON_ID,
       kind: IMAGE_ICON_KIND,
       src: crownUrl ? assetUrl(crownUrl) : crownIcon,
-    });
-  }
-
-  // Traitor icon
-  if (player.isTraitor()) {
-    icons.push({
-      id: TRAITOR_ICON_ID,
-      kind: IMAGE_ICON_KIND,
-      src: traitorIcon,
     });
   }
 
