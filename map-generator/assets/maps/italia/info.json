@@ -7,7 +7,8 @@
   "nations": [
     {
       "coordinates": [1038, 993],
-      "name": "Kingdom of the Two Sicilies"
+      "name": "Kingdom of the Two Sicilies",
+      "flag": "TwoSicilies"
     },
     {
       "coordinates": [370, 1137],
@@ -17,24 +18,27 @@
     {
       "coordinates": [785, 578],
       "name": "Papal States",
-      "flag": "va"
+      "flag": "PapalStates"
     },
     {
       "coordinates": [625, 534],
-      "name": "Tuscany"
+      "name": "Grand Duchy of Tuscany",
+      "flag": "Grand Duchy of Tuscany"
     },
     {
       "coordinates": [595, 190],
-      "name": "Venice",
+      "name": "Republic of Venice",
       "flag": "venice"
     },
     {
       "coordinates": [469, 386],
-      "name": "Modena"
+      "name": "Duchy of Modena",
+      "flag": "Duchy of Modena and Reggio"
     },
     {
       "coordinates": [391, 254],
-      "name": "Parma"
+      "name": "Duchy of Parma",
+      "flag": "Duchy of Parma"
     },
     {
       "coordinates": [361, 68],
@@ -43,7 +47,8 @@
     },
     {
       "coordinates": [278, 774],
-      "name": "Kingdom of Sardinia"
+      "name": "Kingdom of Sardinia",
+      "flag": "Kingdom of Sardinia"
     },
     {
       "coordinates": [29, 266],
@@ -56,8 +61,24 @@
       "flag": "Habsburg Austria"
     },
     {
+      "coordinates": [870, 1240],
+      "name": "Colony of Malta",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1255, 31],
+      "name": "Kingdom of Hungary",
+      "flag": "Kingdom of Hungary"
+    },
+    {
+      "coordinates": [630, 350],
+      "name": "San Marino",
+      "flag": "sm"
+    },
+    {
       "coordinates": [1238, 349],
-      "name": "Ottoman Empire"
+      "name": "Ottoman Empire",
+      "flag": "tr"
     }
   ],
   "themes": ["europe"]
