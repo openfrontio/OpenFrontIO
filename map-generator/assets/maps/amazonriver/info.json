@@ -7,7 +7,7 @@
   "nations": [
     {
       "coordinates": [524, 60],
-      "name": "Boa Esperança",
+      "name": "Boa Esperan\u00e7a",
       "flag": "br"
     },
     {
@@ -17,7 +17,7 @@
     },
     {
       "coordinates": [1056, 8],
-      "name": "Paraíso",
+      "name": "Para\u00edso",
       "flag": "br"
     },
     {
@@ -27,12 +27,12 @@
     },
     {
       "coordinates": [1662, 254],
-      "name": "São Paulo de Olivença",
+      "name": "S\u00e3o Paulo de Oliven\u00e7a",
       "flag": "br"
     },
     {
       "coordinates": [1807, 8],
-      "name": "São João",
+      "name": "S\u00e3o Jo\u00e3o",
       "flag": "br"
     },
     {
@@ -57,7 +57,7 @@
     },
     {
       "coordinates": [2937, 199],
-      "name": "Caturiá",
+      "name": "Caturi\u00e1",
       "flag": "br"
     },
     {
@@ -72,7 +72,7 @@
     },
     {
       "coordinates": [3405, 237],
-      "name": "São João",
+      "name": "S\u00e3o Jo\u00e3o",
       "flag": "br"
     },
     {
@@ -82,12 +82,12 @@
     },
     {
       "coordinates": [3861, 244],
-      "name": "União",
+      "name": "Uni\u00e3o",
       "flag": "br"
     },
     {
       "coordinates": [4409, 211],
-      "name": "Amaturá",
+      "name": "Amatur\u00e1",
       "flag": "br"
     },
     {
@@ -110,5 +110,6 @@
       "name": "Baia",
       "flag": "br"
     }
-  ]
+  ],
+  "themes": ["south_america"]
 }

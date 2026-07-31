@@ -97,7 +97,7 @@
     },
     {
       "coordinates": [781, 1865],
-      "name": "Skåne",
+      "name": "Sk\u00e5ne",
       "flag": "se"
     },
     {
@@ -179,12 +179,12 @@
     },
     {
       "coordinates": [689, 920],
-      "name": "Trøndelag",
+      "name": "Tr\u00f8ndelag",
       "flag": "no"
     },
     {
       "coordinates": [765, 1148],
-      "name": "Jämtland",
+      "name": "J\u00e4mtland",
       "flag": "se"
     },
     {
@@ -199,12 +199,12 @@
     },
     {
       "coordinates": [728, 1688],
-      "name": "Västra Götaland",
+      "name": "V\u00e4stra G\u00f6taland",
       "flag": "se"
     },
     {
       "coordinates": [869, 1756],
-      "name": "Jönköping",
+      "name": "J\u00f6nk\u00f6ping",
       "flag": "se"
     },
     {
@@ -214,7 +214,7 @@
     },
     {
       "coordinates": [926, 1307],
-      "name": "Gävleborg",
+      "name": "G\u00e4vleborg",
       "flag": "se"
     },
     {
@@ -239,7 +239,7 @@
     },
     {
       "coordinates": [971, 877],
-      "name": "Västerbotten",
+      "name": "V\u00e4sterbotten",
       "flag": "se"
     },
     {
@@ -317,5 +317,6 @@
       "name": "Zemgale",
       "flag": "lv"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

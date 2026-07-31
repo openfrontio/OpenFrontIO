@@ -8,7 +8,7 @@
   "nations": [
     {
       "coordinates": [145, 767],
-      "name": "Kökar",
+      "name": "K\u00f6kar",
       "flag": "ax"
     },
     {
@@ -18,57 +18,57 @@
     },
     {
       "coordinates": [1097, 1268],
-      "name": "Utö",
+      "name": "Ut\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [1870, 888],
-      "name": "Trunsö",
+      "name": "Truns\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [2274, 962],
-      "name": "Borstö",
+      "name": "Borst\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [1551, 610],
-      "name": "Aspö",
+      "name": "Asp\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [1704, 783],
-      "name": "Långholm",
+      "name": "L\u00e5ngholm",
       "flag": "fi"
     },
     {
       "coordinates": [1865, 578],
-      "name": "Nötö",
+      "name": "N\u00f6t\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [2732, 932],
-      "name": "Vanö",
+      "name": "Van\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [2992, 1179],
-      "name": "Örö",
+      "name": "\u00d6r\u00f6",
       "flag": "fi"
     },
     {
       "coordinates": [3053, 614],
-      "name": "Högsåra",
+      "name": "H\u00f6gs\u00e5ra",
       "flag": "fi"
     },
     {
       "coordinates": [1324, 252],
-      "name": "Brunskär",
+      "name": "Brunsk\u00e4r",
       "flag": "fi"
     },
     {
       "coordinates": [1074, 111],
-      "name": "Kälö",
+      "name": "K\u00e4l\u00f6",
       "flag": "fi"
     },
     {
@@ -78,22 +78,22 @@
     },
     {
       "coordinates": [222, 625],
-      "name": "Hellsö",
+      "name": "Hells\u00f6",
       "flag": "ax"
     },
     {
       "coordinates": [1661, 23],
-      "name": "Korpoström",
+      "name": "Korpostr\u00f6m",
       "flag": "fi"
     },
     {
       "coordinates": [44, 343],
-      "name": "Kyrkogardsö",
+      "name": "Kyrkogards\u00f6",
       "flag": "ax"
     },
     {
       "coordinates": [2453, 142],
-      "name": "Stenskär",
+      "name": "Stensk\u00e4r",
       "flag": "fi"
     },
     {
@@ -106,5 +106,6 @@
       "name": "Hammarsboda",
       "flag": "fi"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

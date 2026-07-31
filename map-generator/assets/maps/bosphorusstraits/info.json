@@ -18,7 +18,7 @@
     },
     {
       "coordinates": [700, 316],
-      "name": "Çekmeköy",
+      "name": "\u00c7ekmek\u00f6y",
       "flag": "tr"
     },
     {
@@ -33,12 +33,12 @@
     },
     {
       "coordinates": [486, 381],
-      "name": "Üsküdar",
+      "name": "\u00dcsk\u00fcdar",
       "flag": "tr"
     },
     {
       "coordinates": [534, 425],
-      "name": "Kadiköy",
+      "name": "Kadik\u00f6y",
       "flag": "tr"
     },
     {
@@ -63,7 +63,7 @@
     },
     {
       "coordinates": [128, 46],
-      "name": "Arnavutköy",
+      "name": "Arnavutk\u00f6y",
       "flag": "tr"
     },
     {
@@ -73,12 +73,12 @@
     },
     {
       "coordinates": [42, 325],
-      "name": "Büyükçekmece",
+      "name": "B\u00fcy\u00fck\u00e7ekmece",
       "flag": "tr"
     },
     {
       "coordinates": [336, 175],
-      "name": "Eyüpsultan",
+      "name": "Ey\u00fcpsultan",
       "flag": "tr"
     },
     {
@@ -98,7 +98,7 @@
     },
     {
       "coordinates": [308, 412],
-      "name": "Bakirköy",
+      "name": "Bakirk\u00f6y",
       "flag": "tr"
     },
     {
@@ -132,5 +132,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "themes": ["europe", "asia"]
 }

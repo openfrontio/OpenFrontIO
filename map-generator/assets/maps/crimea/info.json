@@ -4,7 +4,6 @@
   "translation_key": "map.crimea",
   "categories": ["new", "europe"],
   "multiplayer_frequency": 4,
-
   "nations": [
     {
       "coordinates": [539, 1112],
@@ -138,5 +137,6 @@
       "name": "Sovjets'kyi",
       "flag": "crimea"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

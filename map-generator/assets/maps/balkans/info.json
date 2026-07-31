@@ -77,7 +77,7 @@
     },
     {
       "coordinates": [1953, 1443],
-      "name": "Türkiye",
+      "name": "T\u00fcrkiye",
       "flag": "tr"
     },
     {
@@ -317,5 +317,6 @@
       "name": "Western Macedonia",
       "flag": "gr"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

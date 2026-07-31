@@ -130,5 +130,6 @@
       "name": "Hawaii"
     }
   ],
+  "themes": ["oceania"],
   "translation_key": "map.oceania"
 }

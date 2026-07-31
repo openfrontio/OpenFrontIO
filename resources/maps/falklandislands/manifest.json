@@ -97,5 +97,6 @@
       }
     ]
   },
+  "themes": ["south_america"],
   "translation_key": "map.falklandislands"
 }

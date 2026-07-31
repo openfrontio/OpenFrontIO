@@ -12,12 +12,12 @@
     },
     {
       "coordinates": [252, 43],
-      "name": "Østlandet",
+      "name": "\u00d8stlandet",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [737, 791],
-      "name": "Skåne",
+      "name": "Sk\u00e5ne",
       "flag": "Sweden Norway Union"
     },
     {
@@ -27,22 +27,22 @@
     },
     {
       "coordinates": [846, 488],
-      "name": "Småland",
+      "name": "Sm\u00e5land",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [701, 260],
-      "name": "Västergötland",
+      "name": "V\u00e4sterg\u00f6tland",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [501, 273],
-      "name": "Bohuslän",
+      "name": "Bohusl\u00e4n",
       "flag": "Sweden Norway Union"
     },
     {
       "coordinates": [843, 278],
-      "name": "Östergötland",
+      "name": "\u00d6sterg\u00f6tland",
       "flag": "Sweden Norway Union"
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "coordinates": [833, 73],
-      "name": "Närke",
+      "name": "N\u00e4rke",
       "flag": "Sweden Norway Union"
     },
     {
@@ -135,5 +135,6 @@
       "name": "Bornholm",
       "flag": "dk"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

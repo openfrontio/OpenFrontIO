@@ -333,5 +333,6 @@
       "name": "Wa State"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.southeastasia"
 }

@@ -146,5 +146,6 @@
       "name": "Ukraine"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.asia"
 }

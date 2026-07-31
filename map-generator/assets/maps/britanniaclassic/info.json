@@ -98,7 +98,7 @@
     },
     {
       "coordinates": [564, 845],
-      "name": "Southern Uí Néill",
+      "name": "Southern U\u00ed N\u00e9ill",
       "flag": "1_Southern Ui Neill"
     },
     {
@@ -113,7 +113,7 @@
     },
     {
       "coordinates": [416, 678],
-      "name": "Northern Uí Néill",
+      "name": "Northern U\u00ed N\u00e9ill",
       "flag": "1_Northern Ui Neill"
     },
     {
@@ -121,5 +121,6 @@
       "name": "Franks",
       "flag": "1_Franks"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

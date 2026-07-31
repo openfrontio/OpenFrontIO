@@ -103,7 +103,7 @@
     },
     {
       "coordinates": [1614, 834],
-      "name": "Türkiye",
+      "name": "T\u00fcrkiye",
       "flag": "tr"
     },
     {
@@ -163,7 +163,7 @@
     },
     {
       "coordinates": [1277, 90],
-      "name": "Sápmi",
+      "name": "S\u00e1pmi",
       "flag": "Sami flag"
     },
     {
@@ -191,5 +191,6 @@
       "name": "Denmark",
       "flag": "dk"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

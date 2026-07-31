@@ -98,7 +98,7 @@
     },
     {
       "coordinates": [2334, 1313],
-      "name": "Türkiye",
+      "name": "T\u00fcrkiye",
       "flag": "tr"
     },
     {
@@ -218,7 +218,7 @@
     },
     {
       "coordinates": [1900, 132],
-      "name": "Sápmi",
+      "name": "S\u00e1pmi",
       "flag": "Sami flag"
     },
     {
@@ -266,5 +266,6 @@
       "name": "Monaco",
       "flag": "mc"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

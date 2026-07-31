@@ -152,5 +152,6 @@
       "name": "Russia"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.crimea"
 }

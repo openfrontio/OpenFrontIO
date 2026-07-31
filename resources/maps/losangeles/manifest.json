@@ -150,5 +150,6 @@
       "name": "Encino"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.losangeles"
 }
