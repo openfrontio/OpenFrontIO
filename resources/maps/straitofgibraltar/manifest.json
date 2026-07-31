@@ -20,18 +20,9 @@
   "name": "Strait of Gibraltar",
   "nations": [
     {
-      "coordinates": [1941, 1031],
-      "name": "Rif"
-    },
-    {
       "coordinates": [2733, 1190],
       "flag": "dz",
       "name": "Algeria"
-    },
-    {
-      "coordinates": [1287, 1175],
-      "flag": "ma",
-      "name": "Morocco"
     },
     {
       "coordinates": [414, 59],
@@ -39,17 +30,74 @@
       "name": "Portugal"
     },
     {
-      "coordinates": [2675, 49],
-      "flag": "es",
-      "name": "Spain"
-    },
-    {
-      "coordinates": [1271, 1393],
+      "coordinates": [1619, 1383],
+      "flag": "Amazigh flag",
       "name": "Shilha"
     },
     {
-      "coordinates": [1555, 258],
-      "name": "Andalusia"
+      "coordinates": [990, 59],
+      "flag": "es-an",
+      "name": "Huelva"
+    },
+    {
+      "coordinates": [1435, 370],
+      "flag": "es-an",
+      "name": "Cadiz"
+    },
+    {
+      "coordinates": [1871, 230],
+      "flag": "es-an",
+      "name": "Malaga"
+    },
+    {
+      "coordinates": [2330, 211],
+      "flag": "es-an",
+      "name": "Granada"
+    },
+    {
+      "coordinates": [1457, 70],
+      "flag": "seville",
+      "name": "Seville"
+    },
+    {
+      "coordinates": [2805, 177],
+      "flag": "es-an",
+      "name": "Almeria"
+    },
+    {
+      "coordinates": [1599, 590],
+      "flag": "gi",
+      "name": "Gibraltar"
+    },
+    {
+      "coordinates": [1558, 718],
+      "flag": "es-ce",
+      "name": "Ceuta"
+    },
+    {
+      "coordinates": [2575, 904],
+      "flag": "es-ml",
+      "name": "Melilla"
+    },
+    {
+      "coordinates": [1456, 857],
+      "flag": "ma",
+      "name": "Tangier"
+    },
+    {
+      "coordinates": [1098, 1364],
+      "flag": "ma",
+      "name": "Rabat"
+    },
+    {
+      "coordinates": [1950, 1100],
+      "flag": "Rif",
+      "name": "Rif"
+    },
+    {
+      "coordinates": [2439, 1225],
+      "flag": "ma",
+      "name": "Oujda"
     }
   ],
   "special_team_count": 2,
