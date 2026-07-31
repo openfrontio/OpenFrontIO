@@ -2,7 +2,7 @@
   "id": "MoreThanLuck",
   "name": "More Than Luck",
   "translation_key": "map.morethanluck",
-  "categories": ["arcade", "fictional", "new"],
+  "categories": ["arcade", "new"],
   "multiplayer_frequency": 7,
   "special_team_count": 5,
 

@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  isUnit,
   MessageType,
   Player,
   Structures,
@@ -191,15 +192,17 @@ export class NukeExecution implements Execution {
       // The launch tile can be overridden by the caller (e.g. MIRV warheads
       // launch from the MIRV separation point, not a silo).
       this.src ??= spawn;
-      // Nuke trajectories cannot pass over impassable terrain, just as they
+      // Nuke trajectories cannot pass over impassable terrain unless they are MIRV warheads, just as they
       // cannot exceed the map border. Check the full parabola path before
       // launching; if any tile is impassable, abort the launch.
-      const path = this.pathFinder.findPath(this.src, this.dst) ?? [];
-      for (const tile of path) {
-        if (this.mg.isImpassable(tile)) {
-          console.warn(`nuke trajectory crosses impassable terrain`);
-          this.active = false;
-          return;
+      if (this.nukeType !== UnitType.MIRVWarhead) {
+        const path = this.pathFinder.findPath(this.src, this.dst) ?? [];
+        for (const tile of path) {
+          if (this.mg.isImpassable(tile)) {
+            console.warn(`nuke trajectory crosses impassable terrain`);
+            this.active = false;
+            return;
+          }
         }
       }
       this.nuke = this.player.buildUnit(this.nukeType, this.src, {
@@ -259,9 +262,26 @@ export class NukeExecution implements Execution {
 
     // Move to next tile
     const result = this.pathFinder.next(this.src!, this.dst, this.speed);
+
     if (result.status === PathStatus.COMPLETE) {
-      this.detonate();
-      return;
+      // move it afterward for visual effect
+      this.nuke.move(result.node);
+
+      // Check for very close SAM missiles that are targeting this.
+      // The SAM logic should be the main source of truth, since missiles can skip pixels
+      // and be affected by execution order
+      const shouldBeDestroyed =
+        this.mg.nearbyUnits(
+          this.dst,
+          this.mg.config().defaultSamMissileSpeed(),
+          UnitType.SAMMissile,
+          ({ unit }) => {
+            if (!isUnit(unit) || unit.owner() === this.nuke?.owner())
+              return false;
+            return unit.targetUnit()?.id() === this.nuke?.id();
+          },
+        ).length >= 1;
+      if (!shouldBeDestroyed) this.detonate();
     } else if (result.status === PathStatus.NEXT) {
       this.updateNukeTargetable();
       this.nuke.move(result.node);

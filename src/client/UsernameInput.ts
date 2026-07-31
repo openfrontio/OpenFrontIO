@@ -159,6 +159,20 @@ export class UsernameInput extends LitElement {
       : null;
   }
 
+  public clearClanTag(expectedTag?: string): void {
+    if (
+      expectedTag !== undefined &&
+      this.clanTag.toUpperCase() !== expectedTag.toUpperCase()
+    ) {
+      return;
+    }
+    this.clanTag = "";
+    this.clanTagOwnershipError = "";
+    this.validateAndStore();
+    this.startClanCheck();
+    this.requestUpdate();
+  }
+
   // Resolves to the clan tag to actually submit (null when it should be
   // dropped). The join flow awaits this so the ownership check — kicked off on
   // input — can run in parallel with the WebSocket handshake.
@@ -300,7 +314,7 @@ export class UsernameInput extends LitElement {
             maxlength="${MAX_CLAN_TAG_LENGTH}"
             aria-busy=${this.clanCheckPending ? "true" : "false"}
             aria-invalid=${this.clanTagOwnershipError ? "true" : "false"}
-            class="w-[6rem] text-xl font-medium tracking-wider text-center uppercase bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
+            class="w-[6rem] text-xl font-medium tracking-wider text-center uppercase bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60 [text-shadow:0_1px_2px_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.7)]"
           />
           ${this.clanCheckPending
             ? html`<span
@@ -322,7 +336,7 @@ export class UsernameInput extends LitElement {
           title=${this.verifiedActive
             ? translateText("username.verified_heading")
             : ""}
-          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent disabled:text-blue-400 disabled:cursor-not-allowed"
+          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent disabled:text-blue-400 disabled:cursor-not-allowed [text-shadow:0_1px_2px_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.7)]"
         />
         <button
           type="button"

@@ -28,7 +28,7 @@ const toPlayerEntry = (
 ): PlayerLeaderboardEntry => ({
   rank: entry.rank,
   playerId: entry.public_id,
-  accountUsername: entry.accountUsername ?? null,
+  accountUsername: entry.accountUsername,
   elo: entry.elo,
   games: entry.total,
   wins: entry.wins,

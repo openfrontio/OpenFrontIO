@@ -73,7 +73,7 @@ export class FlagInput extends LitElement {
     return html`
       <button
         id="flag-input"
-        class="flag-btn p-0 m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:shadow-[var(--shadow-action-card-hover)] rounded-lg overflow-hidden"
+        class="flag-btn p-0 m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
       >
@@ -83,7 +83,7 @@ export class FlagInput extends LitElement {
         ></span>
         ${showSelect
           ? html`<span
-              class="text-[7px] lg:text-[10px] font-black tracking-wider text-white uppercase leading-tight lg:leading-none w-full text-center px-0.5 lg:px-1"
+              class="text-[7px] sm:text-[10px] font-black tracking-wider text-white uppercase leading-tight sm:leading-none w-full text-center px-0.5 sm:px-1"
             >
               ${translateText("flag_input.title")}
             </span>`

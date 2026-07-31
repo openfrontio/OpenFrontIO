@@ -1,15 +1,22 @@
-import { html, LitElement } from "lit";
+import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getUserMe, hasLinkedAccount } from "./Api";
+import { getUserMe, hasLinkedAccount, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { JoinLobbyEvent } from "./Main";
+import type { JoinLobbyEvent } from "./Main";
+import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
+
+type MatchmakingJoin = {
+  type: "join";
+  jwt: string;
+  clanTag?: string;
+};
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
@@ -27,6 +34,7 @@ export class MatchmakingModal extends BaseModal {
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
   @state() private queueSize: number | null = null;
+  private selectedClanTag: string | null = null;
   private elo: number | string = "...";
 
   constructor() {
@@ -172,6 +180,57 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
+  private selectedClanFrom(userMe: UserMeResponse): string | null {
+    if (this.mode !== "2v2") {
+      return null;
+    }
+    const selectedTag = document
+      .querySelector<UsernameInput>("username-input")
+      ?.getClanTag();
+    if (selectedTag === null || selectedTag === undefined) {
+      return null;
+    }
+    return (
+      userMe.player.clans?.find(
+        (clan) => clan.tag.toUpperCase() === selectedTag.toUpperCase(),
+      )?.tag ?? null
+    );
+  }
+
+  private showMatchmakingError(messageKey: string) {
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText(messageKey),
+          color: "red",
+          duration: 5000,
+        },
+      }),
+    );
+  }
+
+  private handleInvalidClan() {
+    const rejectedClanTag = this.selectedClanTag;
+    this.connected = false;
+    this.close();
+    this.showMatchmakingError("matchmaking_modal.invalid_clan");
+
+    invalidateUserMe();
+    void getUserMe().then((userMe) => {
+      if (userMe === false || rejectedClanTag === null) {
+        return;
+      }
+      const stillMember = userMe.player.clans?.some(
+        (clan) => clan.tag.toUpperCase() === rejectedClanTag.toUpperCase(),
+      );
+      if (!stillMember) {
+        document
+          .querySelector<UsernameInput>("username-input")
+          ?.clearClanTag(rejectedClanTag);
+      }
+    });
+  }
+
   private async connect() {
     // Pending timers from a previous socket must not fire on this one.
     this.clearWatchdog();
@@ -211,12 +270,14 @@ export class MatchmakingModal extends BaseModal {
         // otherwise the "searching" message will be shown immediately.
         // Also wait so people who back out immediately aren't added
         // to the matchmaking queue.
-        this.socket.send(
-          JSON.stringify({
-            type: "join",
-            jwt: await getPlayToken(),
-          }),
-        );
+        const message: MatchmakingJoin = {
+          type: "join",
+          jwt: await getPlayToken(),
+          ...(this.selectedClanTag === null
+            ? {}
+            : { clanTag: this.selectedClanTag }),
+        };
+        this.socket.send(JSON.stringify(message));
         this.connected = true;
         // The server starts broadcasting queue-size once we're queued;
         // from here on, silence means the connection is dead.
@@ -259,6 +320,16 @@ export class MatchmakingModal extends BaseModal {
       if (event.code === 1008 && event.reason === "ranked_limit_reached") {
         this.connected = false;
         this.limitReached = true;
+        return;
+      }
+      if (event.code === 1008 && event.reason === "invalid_clan") {
+        this.handleInvalidClan();
+        return;
+      }
+      if (event.code === 1011 && event.reason === "clan_verification_failed") {
+        this.connected = false;
+        this.close();
+        this.showMatchmakingError("matchmaking_modal.clan_verification_failed");
         return;
       }
       if (event.code === 1000) {
@@ -310,7 +381,7 @@ export class MatchmakingModal extends BaseModal {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
-            message: translateText("matchmaking_button.must_login"),
+            message: translateText("matchmaking_modal.must_login"),
             color: "red",
             duration: 3000,
           },
@@ -326,6 +397,7 @@ export class MatchmakingModal extends BaseModal {
         ? userMe.player.leaderboard?.twoVtwo
         : userMe.player.leaderboard?.oneVone;
     this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
+    this.selectedClanTag = this.selectedClanFrom(userMe);
 
     this.connected = false;
     this.gameID = null;
@@ -393,68 +465,5 @@ export class MatchmakingModal extends BaseModal {
         composed: true,
       }),
     );
-  }
-}
-
-@customElement("matchmaking-button")
-export class MatchmakingButton extends LitElement {
-  @state() private isLoggedIn = false;
-
-  constructor() {
-    super();
-  }
-
-  async connectedCallback() {
-    super.connectedCallback();
-    // Listen for user authentication changes
-    document.addEventListener("userMeResponse", (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail) {
-        const userMeResponse = customEvent.detail as UserMeResponse | false;
-        this.isLoggedIn = hasLinkedAccount(userMeResponse);
-      }
-    });
-  }
-
-  createRenderRoot() {
-    return this;
-  }
-
-  render() {
-    return this.isLoggedIn
-      ? html`
-          <button
-            @click="${this.handleLoggedInClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
-            title="${translateText("matchmaking_modal.title")}"
-          >
-            <span class="relative z-10 text-2xl">
-              ${translateText("matchmaking_button.play_ranked")}
-            </span>
-            <span
-              class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
-            >
-              ${translateText("matchmaking_button.description")}
-            </span>
-          </button>
-        `
-      : html`
-          <button
-            @click="${this.handleLoggedOutClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
-          >
-            <span class="relative z-10 text-2xl">
-              ${translateText("matchmaking_button.login_required")}
-            </span>
-          </button>
-        `;
-  }
-
-  private handleLoggedInClick() {
-    document.dispatchEvent(new CustomEvent("open-matchmaking"));
-  }
-
-  private handleLoggedOutClick() {
-    window.showPage?.("page-account");
   }
 }

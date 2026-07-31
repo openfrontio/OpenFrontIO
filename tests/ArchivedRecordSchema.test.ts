@@ -1,6 +1,7 @@
 import {
   AnalyticsRecordSchema,
   ArchivedAnalyticsRecordSchema,
+  GameRecordSchema,
 } from "../src/core/Schemas";
 
 // A record as an old build would have written it: no `nations` in the config,
@@ -105,5 +106,36 @@ describe("ArchivedAnalyticsRecordSchema", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.info.config.gameMap).toBe("Deglaciated Antarctica");
+  });
+
+  // Client-archived singleplayer records are stored by the API worker exactly
+  // as the client sent them — no game server involved, so no subdomain/domain.
+  test("parses record without subdomain/domain", () => {
+    const base = oldRecord();
+    const record = {
+      version: base.version,
+      gitCommit: base.gitCommit,
+      info: {
+        ...base.info,
+        config: { ...base.info.config, nations: "disabled" },
+        players: [
+          {
+            ...base.info.players[0],
+            username: "NormalName",
+            clanTag: "ABC",
+            stats: { conquests: ["1", "2", "0"] },
+          },
+        ],
+      },
+    };
+
+    expect(AnalyticsRecordSchema.safeParse(record).success).toBe(true);
+    expect(ArchivedAnalyticsRecordSchema.safeParse(record).success).toBe(true);
+    // Replays parse the fetched record with GameRecordSchema
+    // (JoinLobbyModal.checkArchivedGame); a failure there surfaces as a bogus
+    // "created with a different version" error.
+    expect(GameRecordSchema.safeParse({ ...record, turns: [] }).success).toBe(
+      true,
+    );
   });
 });

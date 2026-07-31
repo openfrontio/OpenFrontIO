@@ -65,3 +65,26 @@ describe("UsernameInput Steam seeding", () => {
     expect(generated.length).toBeGreaterThan(0);
   });
 });
+
+describe("UsernameInput clan selection", () => {
+  it("clears the selected clan when it matches the rejected tag", () => {
+    const el = new UsernameInput();
+    Object.assign(el, { baseUsername: "Player", clanTag: "ALLY" });
+    localStorage.setItem("username", "Player");
+    localStorage.setItem("clanTag", "ALLY");
+
+    el.clearClanTag("ally");
+
+    expect(el.getClanTag()).toBeNull();
+    expect(localStorage.getItem("clanTag")).toBe("");
+  });
+
+  it("preserves a newer clan selection", () => {
+    const el = new UsernameInput();
+    Object.assign(el, { baseUsername: "Player", clanTag: "BETA" });
+
+    el.clearClanTag("ALLY");
+
+    expect(el.getClanTag()).toBe("BETA");
+  });
+});

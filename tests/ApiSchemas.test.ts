@@ -10,6 +10,7 @@ import {
   PlayerGameModeFilterSchema,
   PlayerGameResultSchema,
   PlayerGameTypeFilterSchema,
+  PlayerLeaderboardEntrySchema,
   PlayerProfileSchema,
   PostTribeBoostResponseSchema,
   PublicPlayerGameSchema,
@@ -217,6 +218,22 @@ describe("FriendEntrySchema", () => {
   });
 });
 
+describe("PlayerLeaderboardEntrySchema accountUsername", () => {
+  it("rejects a mapped entry without accountUsername", () => {
+    expect(
+      PlayerLeaderboardEntrySchema.safeParse({
+        rank: 1,
+        playerId: "abc123",
+        elo: 1500,
+        games: 15,
+        wins: 10,
+        losses: 5,
+        winRate: 2 / 3,
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("RankedLeaderboardEntrySchema accountUsername", () => {
   const base = {
     rank: 1,
@@ -226,10 +243,9 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
     losses: 5,
     total: 15,
     public_id: "abc123",
-    username: "xX_Sniper_Xx",
   };
 
-  it("keeps accountUsername verbatim alongside the session username", () => {
+  it("keeps accountUsername verbatim", () => {
     const result = RankedLeaderboardEntrySchema.safeParse({
       ...base,
       accountUsername: "bob.4821",
@@ -237,11 +253,10 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.accountUsername).toBe("bob.4821");
-      expect(result.data.username).toBe("xX_Sniper_Xx");
     }
   });
 
-  it("accepts accountUsername: null (player never set one)", () => {
+  it("accepts the current API contract with accountUsername: null", () => {
     const result = RankedLeaderboardEntrySchema.safeParse({
       ...base,
       accountUsername: null,
@@ -249,8 +264,31 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts an entry without accountUsername (older API)", () => {
-    expect(RankedLeaderboardEntrySchema.safeParse(base).success).toBe(true);
+  it("drops legacy ranked identity fields", () => {
+    const result = RankedLeaderboardEntrySchema.safeParse({
+      ...base,
+      accountUsername: "bob.4821",
+      user: {
+        id: "discord-id",
+        avatar: null,
+        username: "discord-user",
+        global_name: null,
+        discriminator: "0",
+      },
+      username: "session-name",
+      clanTag: "ABC",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("user");
+      expect(result.data).not.toHaveProperty("username");
+      expect(result.data).not.toHaveProperty("clanTag");
+    }
+  });
+
+  it("rejects an entry without accountUsername", () => {
+    expect(RankedLeaderboardEntrySchema.safeParse(base).success).toBe(false);
   });
 });
 
@@ -838,6 +876,7 @@ describe("TribeLeaderboardResponseSchema", () => {
     playerReach: 12400,
     ownerPublicId: "aB3xK9zQ",
     ownerUsername: "wolfpack.4821",
+    activeBoosts: 0,
   };
   const base = {
     windowDays: 30,
@@ -868,7 +907,9 @@ describe("TribeLeaderboardResponseSchema", () => {
     expect(result.data.tribes[0].ownerPublicId).toBe("aB3xK9zQ");
   });
 
-  it.each(["ownerPublicId", "ownerUsername"])(
+  // A missing activeBoosts fails via coercion (undefined → NaN), so its
+  // ZodError reads "received NaN" rather than "required" — still a rejection.
+  it.each(["ownerPublicId", "ownerUsername", "activeBoosts"])(
     "rejects an entry missing %s",
     (field) => {
       const tribe: Record<string, unknown> = { ...entry };
@@ -879,6 +920,28 @@ describe("TribeLeaderboardResponseSchema", () => {
       ).toBe(false);
     },
   );
+
+  it("parses an entry with an active boost count", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, activeBoosts: 2 }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBe(2);
+  });
+
+  // Same coercion tolerance as TribeNameSchema.activeBoosts: a count that
+  // arrives as a stringified number must not fail the whole board parse.
+  it("coerces a stringified boost count", () => {
+    const result = TribeLeaderboardResponseSchema.safeParse({
+      ...base,
+      tribes: [{ ...entry, activeBoosts: "3" }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribes[0].activeBoosts).toBe(3);
+  });
 
   it("parses an empty board", () => {
     expect(

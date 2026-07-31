@@ -1,5 +1,3 @@
-import { LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PlayerActions } from "../../../core/game/Game";
@@ -25,8 +23,7 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 import { ContextMenuEvent } from "../../InputHandler";
 
-@customElement("main-radial-menu")
-export class MainRadialMenu extends LitElement implements Controller {
+export class MainRadialMenu implements Controller {
   private radialMenu: RadialMenu;
 
   private playerActionHandler: PlayerActionHandler;
@@ -47,8 +44,6 @@ export class MainRadialMenu extends LitElement implements Controller {
     private uiState: UIState,
     private playerPanel: PlayerPanel,
   ) {
-    super();
-
     const menuConfig: RadialMenuConfig = {
       centerButtonIcon: swordIcon,
       tooltipStyle: `

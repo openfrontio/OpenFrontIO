@@ -2,8 +2,8 @@
   "id": "BranchingPaths",
   "name": "Branching Paths",
   "translation_key": "map.branchingpaths",
-  "categories": ["arcade", "fictional", "new"],
-  "multiplayer_frequency": 3,
+  "categories": ["arcade", "new"],
+  "multiplayer_frequency": 7,
   "special_team_count": 3,
   "nations": [
     {

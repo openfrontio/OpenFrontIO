@@ -66,6 +66,7 @@ export enum GameMapType {
   JuanDeFucaStrait = "Juan De Fuca Strait", // map-generator/assets/maps/juandefucastrait/info.json
   Korea = "Korea", // map-generator/assets/maps/korea/info.json
   Labyrinth = "Labyrinth", // map-generator/assets/maps/labyrinth/info.json
+  LasVegasStrip = "Las Vegas Strip", // map-generator/assets/maps/lasvegasstrip/info.json
   Lemnos = "Lemnos", // map-generator/assets/maps/lemnos/info.json
   Levant = "Levant", // map-generator/assets/maps/levant/info.json
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
@@ -347,8 +348,8 @@ export const maps: readonly MapInfo[] = [
     id: "BranchingPaths",
     type: GameMapType.BranchingPaths,
     translationKey: "map.branchingpaths",
-    categories: ["arcade", "fictional", "new"],
-    multiplayerFrequency: 3,
+    categories: ["arcade", "new"],
+    multiplayerFrequency: 7,
     specialTeamCount: 3,
   },
   {
@@ -1059,6 +1060,13 @@ export const maps: readonly MapInfo[] = [
     multiplayerFrequency: 6,
   },
   {
+    id: "LasVegasStrip",
+    type: GameMapType.LasVegasStrip,
+    translationKey: "map.lasvegasstrip",
+    categories: ["north_america", "new"],
+    multiplayerFrequency: 3,
+  },
+  {
     id: "Lemnos",
     type: GameMapType.Lemnos,
     translationKey: "map.lemnos",
@@ -1154,7 +1162,7 @@ export const maps: readonly MapInfo[] = [
     id: "MoreThanLuck",
     type: GameMapType.MoreThanLuck,
     translationKey: "map.morethanluck",
-    categories: ["arcade", "fictional", "new"],
+    categories: ["arcade", "new"],
     multiplayerFrequency: 7,
     specialTeamCount: 5,
   },
