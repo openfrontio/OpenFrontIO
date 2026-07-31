@@ -45,5 +45,6 @@
       "name": "Liechtenstein",
       "flag": "li"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

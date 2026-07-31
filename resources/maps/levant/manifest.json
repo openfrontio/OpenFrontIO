@@ -332,5 +332,6 @@
       "name": "Knights Hospitaller"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.levant"
 }

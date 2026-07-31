@@ -107,7 +107,7 @@
     },
     {
       "coordinates": [1028, 250],
-      "name": "Kohtla-Järve",
+      "name": "Kohtla-J\u00e4rve",
       "flag": "ee"
     },
     {
@@ -312,5 +312,6 @@
       "name": "Hlybokaye",
       "flag": "by"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

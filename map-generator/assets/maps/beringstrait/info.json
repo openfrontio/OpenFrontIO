@@ -32,5 +32,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "themes": ["asia", "north_america"]
 }

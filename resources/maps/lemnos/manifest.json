@@ -65,5 +65,6 @@
       "name": "Pyrgos"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.lemnos"
 }

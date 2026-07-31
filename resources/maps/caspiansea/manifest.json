@@ -97,5 +97,6 @@
       }
     ]
   },
+  "themes": ["asia"],
   "translation_key": "map.caspiansea"
 }

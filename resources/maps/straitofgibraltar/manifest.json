@@ -69,5 +69,6 @@
       }
     ]
   },
+  "themes": ["europe", "africa"],
   "translation_key": "map.straitofgibraltar"
 }

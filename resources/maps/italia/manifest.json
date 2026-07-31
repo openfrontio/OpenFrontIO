@@ -74,5 +74,6 @@
       "name": "Ottoman Empire"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.italia"
 }

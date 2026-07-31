@@ -118,7 +118,7 @@
     },
     {
       "coordinates": [1267, 794],
-      "name": "Pará",
+      "name": "Par\u00e1",
       "flag": "Para"
     },
     {
@@ -128,8 +128,9 @@
     },
     {
       "coordinates": [1374, 1404],
-      "name": "São Paulo",
+      "name": "S\u00e3o Paulo",
       "flag": "Sao Paulo"
     }
-  ]
+  ],
+  "themes": ["south_america"]
 }

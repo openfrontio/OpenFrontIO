@@ -332,5 +332,6 @@
       "name": "New Hampshire"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.unitedstates"
 }

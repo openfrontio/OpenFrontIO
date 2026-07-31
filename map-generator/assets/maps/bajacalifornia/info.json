@@ -45,5 +45,6 @@
       "name": "New Mexico",
       "flag": "New_Mexico"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

@@ -25,5 +25,6 @@
       "flag": "ie",
       "name": "Achill"
     }
-  ]
+  ],
+  "themes": ["europe", "scary"]
 }

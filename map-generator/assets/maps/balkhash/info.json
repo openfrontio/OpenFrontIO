@@ -146,8 +146,8 @@
       "flag": "Bukhara"
     },
     {
-      "name": "Göktürks Khaganate",
-      "flag": "Göktürks Khaganate"
+      "name": "G\u00f6kt\u00fcrks Khaganate",
+      "flag": "G\u00f6kt\u00fcrks Khaganate"
     },
     {
       "name": "Golden Horde",
@@ -173,5 +173,6 @@
       "name": "Turkestan Autonomy",
       "flag": "Turkestan Autonomy"
     }
-  ]
+  ],
+  "themes": ["asia"]
 }
