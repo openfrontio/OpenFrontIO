@@ -59,6 +59,15 @@ type mapInfo struct {
 	Nations []struct {
 		Name string `json:"name"`
 	} `json:"nations"`
+	// Map layers rendered between terrain and territory.
+	Layers []mapLayer `json:"layers"`
+}
+
+// mapLayer represents a single map layer definition from info.json.
+type mapLayer struct {
+	ID        string `json:"id"`
+	Placement string `json:"placement"`
+	Nukeable  bool   `json:"nukeable"`
 }
 
 // hasCategory reports whether the map lists the given category.
@@ -213,6 +222,31 @@ func loadMapInfos() ([]mapInfo, error) {
 			}
 			seen[category] = true
 		}
+		// Validate layers.
+		{
+			layerIDs := make(map[string]bool)
+			for i, layer := range info.Layers {
+				if layer.ID == "" {
+					return nil, fmt.Errorf("map %s: info.json layers[%d] \"id\" must not be empty", m.Name, i)
+				}
+				if layer.ID == "image" {
+					return nil, fmt.Errorf("map %s: info.json layers[%d] \"id\" must not be \"image\"", m.Name, i)
+				}
+				// Check alphanumeric + hyphen.
+				for _, ch := range layer.ID {
+					if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-') {
+						return nil, fmt.Errorf("map %s: info.json layers[%d] \"id\" (%q) must be alphanumeric (hyphens allowed)", m.Name, i, layer.ID)
+					}
+				}
+				if layerIDs[layer.ID] {
+					return nil, fmt.Errorf("map %s: info.json layers[%d] duplicate layer id %q", m.Name, i, layer.ID)
+				}
+				layerIDs[layer.ID] = true
+				if layer.Placement != "land" && layer.Placement != "water" {
+					return nil, fmt.Errorf("map %s: info.json layers[%d] \"placement\" (%q) must be \"land\" or \"water\"", m.Name, i, layer.Placement)
+				}
+			}
+		}
 		infos = append(infos, info)
 	}
 	return infos, nil
@@ -277,10 +311,22 @@ func generateMapsTS(infos []mapInfo) error {
 	b.WriteString("  themes?: string[];\n")
 	b.WriteString("  /** Custom tribe entry: a string (random spawn) or an object with name and coordinates. */\n")
 	b.WriteString("  customTribes?: CustomTribe[];\n")
+	b.WriteString("  /** Map layers rendered between terrain and territory. */\n")
+	b.WriteString("  layers?: MapLayer[];\n")
 	b.WriteString("}\n\n")
 	b.WriteString("export interface CustomTribe {\n")
 	b.WriteString("  name: string;\n")
 	b.WriteString("  coordinates?: [number, number];\n")
+	b.WriteString("}\n\n")
+
+	b.WriteString("export type LayerPlacement = \"land\" | \"water\";\n\n")
+	b.WriteString("export interface MapLayer {\n")
+	b.WriteString("  /** Unique identifier — also the PNG filename (without extension). */\n")
+	b.WriteString("  id: string;\n")
+	b.WriteString("  /** Whether the layer sits on land or water tiles. */\n")
+	b.WriteString("  placement: LayerPlacement;\n")
+	b.WriteString("  /** If true, the layer is permanently destroyed in nuke impact radii. */\n")
+	b.WriteString("  nukeable?: boolean;\n")
 	b.WriteString("}\n\n")
 
 	b.WriteString("export const maps: readonly MapInfo[] = [\n")
@@ -326,6 +372,20 @@ func generateMapsTS(infos []mapInfo) error {
 				} else {
 					b.WriteString(fmt.Sprintf("{name: %q}", ct.Name))
 				}
+			}
+			b.WriteString("],\n")
+		}
+		if len(info.Layers) > 0 {
+			b.WriteString("    layers: [")
+			for i, layer := range info.Layers {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				nukStr := ""
+				if layer.Nukeable {
+					nukStr = ", nukeable: true"
+				}
+				b.WriteString(fmt.Sprintf("{id: %q, placement: %q%s}", layer.ID, layer.Placement, nukStr))
 			}
 			b.WriteString("],\n")
 		}
@@ -380,6 +440,25 @@ func generateEnJSON(infos []mapInfo) error {
 		section[strings.ToLower(info.ID)] = info.displayName()
 	}
 	root["map"] = section
+
+	// Update the "map_layers" section with layer display names.
+	// Keyed by layer id; the value is the layer id (used as default display name).
+	layersSection := make(map[string]interface{})
+	if existing, ok := root["map_layers"].(map[string]interface{}); ok {
+		for key, value := range existing {
+			layersSection[key] = value
+		}
+	}
+	// Collect all layer IDs across all maps.
+	for _, info := range infos {
+		for _, layer := range info.Layers {
+			if _, exists := layersSection[layer.ID]; !exists {
+				// Default display name: the layer id itself.
+				layersSection[layer.ID] = layer.ID
+			}
+		}
+	}
+	root["map_layers"] = layersSection
 
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)

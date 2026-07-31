@@ -109,6 +109,11 @@ export class TerrainPass {
    */
   applyTerrainDelta(refs: readonly number[], bytes: Uint8Array): void {
     if (refs.length === 0) return;
+    // Full-map fast path: rebuild the entire RGBA texture in one upload.
+    if (refs.length === this.mapW * this.mapH) {
+      this.setTerrainColors(this.terrainColors);
+      return;
+    }
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
