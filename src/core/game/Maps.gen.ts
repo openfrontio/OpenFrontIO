@@ -1281,7 +1281,7 @@ export const maps: readonly MapInfo[] = [
       { name: "La Habra Heights", coordinates: [1739, 840] },
       { name: "Fountain Valley", coordinates: [1784, 1434] },
       { name: "Rossmoor", coordinates: [1508, 1243] },
-      { name: "Hormosa Beach", coordinates: [891, 1165] },
+      { name: "Hermosa Beach", coordinates: [891, 1165] },
       { name: "Lennox", coordinates: [946, 926] },
       { name: "Del Aire", coordinates: [886, 979] },
       { name: "Tuna Canyon", coordinates: [370, 698] },
