@@ -32,7 +32,7 @@ export const EMOJI_ICON_KIND = "emoji" as const;
 
 interface PlayerIconDescriptor {
   id: string;
-  kind: string;
+  kind: typeof IMAGE_ICON_KIND | typeof EMOJI_ICON_KIND;
   /** Image URL for image icons */
   src?: string;
   /** Text content for emoji icons */
