@@ -96,9 +96,11 @@ export class FriendsList extends LitElement {
   }
 
   private async handleSend(): Promise<void> {
-    // Names render as `wonder#5005` but resolve on the stored `wonder.5005`
-    // form, so accept either. Public ids never contain "#".
-    const target = this.addInput.trim().replace(/#/g, ".");
+    // Names render as `wonder #5005` — with a non-breaking space (see
+    // usernameText) that survives a copy-paste — but resolve on the stored
+    // `wonder.5005` form, so accept either. `\s` covers the nbsp. Public ids
+    // never contain "#".
+    const target = this.addInput.trim().replace(/\s*#\s*/g, ".");
     if (!target) return;
     if (target === this.myPublicId) {
       showToast(translateText("friends.cannot_friend_self"), "red");
