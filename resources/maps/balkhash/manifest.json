@@ -188,5 +188,6 @@
       "name": "Aqoy"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.balkhash"
 }

@@ -250,5 +250,6 @@
       "name": "Uranus Trojans"
     }
   ],
+  "themes": ["space"],
   "translation_key": "map.sol"
 }

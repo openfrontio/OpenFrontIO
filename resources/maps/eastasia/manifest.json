@@ -130,5 +130,6 @@
       "name": "Kinki"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.eastasia"
 }

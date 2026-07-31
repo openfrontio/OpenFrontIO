@@ -332,5 +332,6 @@
       "name": "San Andres"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.caribbean"
 }

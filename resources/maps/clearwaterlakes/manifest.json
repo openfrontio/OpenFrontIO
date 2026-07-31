@@ -85,5 +85,6 @@
       "name": "Baie Crafton"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.clearwaterlakes"
 }

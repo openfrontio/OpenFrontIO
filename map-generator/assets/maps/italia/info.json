@@ -80,5 +80,6 @@
       "name": "Ottoman Empire",
       "flag": "tr"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

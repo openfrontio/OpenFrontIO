@@ -266,5 +266,6 @@
       "name": "Monaco",
       "flag": "mc"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

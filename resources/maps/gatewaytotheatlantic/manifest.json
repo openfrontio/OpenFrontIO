@@ -155,5 +155,6 @@
       "name": "Holy Roman Empire"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.gatewaytotheatlantic"
 }

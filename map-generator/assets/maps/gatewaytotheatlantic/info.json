@@ -140,5 +140,6 @@
       "name": "Holy Roman Empire",
       "flag": "Holy Roman Empire"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

@@ -110,5 +110,6 @@
       "name": "Bodega Bay",
       "flag": "California"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }
