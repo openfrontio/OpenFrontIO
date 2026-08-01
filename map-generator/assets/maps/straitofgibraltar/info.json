@@ -7,18 +7,9 @@
   "special_team_count": 2,
   "nations": [
     {
-      "coordinates": [1941, 1031],
-      "name": "Rif"
-    },
-    {
       "coordinates": [2733, 1190],
       "name": "Algeria",
       "flag": "dz"
-    },
-    {
-      "coordinates": [1287, 1175],
-      "name": "Morocco",
-      "flag": "ma"
     },
     {
       "coordinates": [414, 59],
@@ -26,17 +17,74 @@
       "flag": "pt"
     },
     {
-      "coordinates": [2675, 49],
-      "name": "Spain",
-      "flag": "es"
+      "coordinates": [1619, 1383],
+      "name": "Shilha",
+      "flag": "Amazigh flag"
     },
     {
-      "coordinates": [1271, 1393],
-      "name": "Shilha"
+      "coordinates": [990, 59],
+      "name": "Huelva",
+      "flag": "es-an"
     },
     {
-      "coordinates": [1555, 258],
-      "name": "Andalusia"
+      "coordinates": [1435, 370],
+      "name": "Cadiz",
+      "flag": "es-an"
+    },
+    {
+      "coordinates": [1871, 230],
+      "name": "Malaga",
+      "flag": "es-an"
+    },
+    {
+      "coordinates": [2330, 211],
+      "name": "Granada",
+      "flag": "es-an"
+    },
+    {
+      "coordinates": [1457, 70],
+      "name": "Seville",
+      "flag": "seville"
+    },
+    {
+      "coordinates": [2805, 177],
+      "name": "Almeria",
+      "flag": "es-an"
+    },
+    {
+      "coordinates": [1599, 590],
+      "name": "Gibraltar",
+      "flag": "gi"
+    },
+    {
+      "coordinates": [1558, 718],
+      "name": "Ceuta",
+      "flag": "es-ce"
+    },
+    {
+      "coordinates": [2575, 904],
+      "name": "Melilla",
+      "flag": "es-ml"
+    },
+    {
+      "coordinates": [1456, 857],
+      "name": "Tangier",
+      "flag": "ma"
+    },
+    {
+      "coordinates": [1098, 1364],
+      "name": "Rabat",
+      "flag": "ma"
+    },
+    {
+      "coordinates": [1950, 1100],
+      "name": "Rif",
+      "flag": "Rif"
+    },
+    {
+      "coordinates": [2439, 1225],
+      "name": "Oujda",
+      "flag": "ma"
     }
   ],
   "teamGameSpawnAreas": {
@@ -54,5 +102,6 @@
         "y": 651
       }
     ]
-  }
+  },
+  "themes": ["europe", "africa"]
 }

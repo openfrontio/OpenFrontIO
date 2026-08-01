@@ -140,5 +140,6 @@
       "name": "Ts'il Kaz Koh"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.hecatestrait"
 }

@@ -181,11 +181,24 @@ export interface MapInfo {
   themes?: string[];
   /** Custom tribe entry: a string (random spawn) or an object with name and coordinates. */
   customTribes?: CustomTribe[];
+  /** Map layers rendered between terrain and territory. */
+  layers?: MapLayer[];
 }
 
 export interface CustomTribe {
   name: string;
   coordinates?: [number, number];
+}
+
+export type LayerPlacement = "land" | "water";
+
+export interface MapLayer {
+  /** Unique identifier — also the PNG filename (without extension). */
+  id: string;
+  /** Whether the layer sits on land or water tiles. */
+  placement: LayerPlacement;
+  /** If true, the layer is permanently destroyed in nuke impact radii. */
+  nukeable?: boolean;
 }
 
 export const maps: readonly MapInfo[] = [
@@ -195,6 +208,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.achiran",
     categories: ["fictional", "europe"],
     multiplayerFrequency: 5,
+    themes: ["europe", "scary"],
   },
   {
     id: "Aegean",
@@ -203,6 +217,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["europe", "asia"],
     multiplayerFrequency: 6,
     specialTeamCount: 2,
+    themes: ["europe", "asia"],
   },
   {
     id: "Africa",
@@ -211,6 +226,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["featured", "continental", "africa"],
     multiplayerFrequency: 7,
     featuredRank: 6,
+    themes: ["africa"],
   },
   {
     id: "Alps",
@@ -218,6 +234,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.alps",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "AmazonRiver",
@@ -225,6 +242,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.amazonriver",
     categories: ["south_america"],
     multiplayerFrequency: 3,
+    themes: ["south_america"],
   },
   {
     id: "Antarctica",
@@ -239,6 +257,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.archipelagosea",
     categories: ["europe"],
     multiplayerFrequency: 3,
+    themes: ["europe"],
   },
   {
     id: "Arctic",
@@ -246,6 +265,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.arctic",
     categories: ["europe", "north_america", "asia"],
     multiplayerFrequency: 6,
+    themes: ["europe", "asia", "north_america"],
   },
   {
     id: "Asia",
@@ -254,6 +274,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["featured", "continental", "asia"],
     multiplayerFrequency: 6,
     featuredRank: 5,
+    themes: ["asia"],
   },
   {
     id: "Australia",
@@ -261,6 +282,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.australia",
     categories: ["oceania"],
     multiplayerFrequency: 4,
+    themes: ["oceania"],
   },
   {
     id: "Baikal",
@@ -269,6 +291,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia"],
     multiplayerFrequency: 5,
     specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "BaikalNukeWars",
@@ -283,6 +306,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.bajacalifornia",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    themes: ["north_america"],
   },
   {
     id: "Balkans",
@@ -290,6 +314,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.balkans",
     categories: ["europe"],
     multiplayerFrequency: 6,
+    themes: ["europe"],
   },
   {
     id: "Balkhash",
@@ -297,6 +322,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.balkhash",
     categories: ["new", "asia"],
     multiplayerFrequency: 4,
+    themes: ["asia"],
   },
   {
     id: "Baltics",
@@ -304,6 +330,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.baltics",
     categories: ["europe", "new"],
     multiplayerFrequency: 5,
+    themes: ["europe"],
   },
   {
     id: "BeringSea",
@@ -312,6 +339,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia", "north_america"],
     multiplayerFrequency: 5,
     specialTeamCount: 2,
+    themes: ["asia", "north_america"],
   },
   {
     id: "BeringStrait",
@@ -320,6 +348,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia", "north_america"],
     multiplayerFrequency: 2,
     specialTeamCount: 2,
+    themes: ["asia", "north_america"],
   },
   {
     id: "BetweenTwoSeas",
@@ -327,6 +356,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.betweentwoseas",
     categories: ["europe", "asia"],
     multiplayerFrequency: 5,
+    themes: ["europe", "asia"],
   },
   {
     id: "BlackSea",
@@ -334,6 +364,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.blacksea",
     categories: ["europe", "asia"],
     multiplayerFrequency: 6,
+    themes: ["europe", "asia"],
   },
   {
     id: "BosphorusStraits",
@@ -342,6 +373,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["europe", "asia"],
     multiplayerFrequency: 3,
     specialTeamCount: 2,
+    themes: ["europe", "asia"],
   },
   {
     id: "BranchingPaths",
@@ -357,6 +389,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.britannia",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    themes: ["europe"],
   },
   {
     id: "BritanniaClassic",
@@ -364,6 +397,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.britanniaclassic",
     categories: ["europe"],
     multiplayerFrequency: 0,
+    themes: ["europe"],
   },
   {
     id: "Caribbean",
@@ -371,6 +405,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caribbean",
     categories: ["north_america"],
     multiplayerFrequency: 5,
+    themes: ["north_america"],
   },
   {
     id: "CaspianSea",
@@ -379,6 +414,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia", "new"],
     multiplayerFrequency: 5,
     specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "Caucasus",
@@ -386,6 +422,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.caucasus",
     categories: ["europe", "asia"],
     multiplayerFrequency: 5,
+    themes: ["europe", "asia"],
   },
   {
     id: "China",
@@ -393,6 +430,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.china",
     categories: ["asia", "countries", "new"],
     multiplayerFrequency: 8,
+    themes: ["asia"],
   },
   {
     id: "ChoppingBlock",
@@ -408,6 +446,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.clearwaterlakes",
     categories: ["new", "north_america"],
     multiplayerFrequency: 3,
+    themes: ["north_america"],
   },
   {
     id: "Conakry",
@@ -416,6 +455,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["africa"],
     multiplayerFrequency: 3,
     specialTeamCount: 2,
+    themes: ["africa"],
   },
   {
     id: "Crimea",
@@ -423,6 +463,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.crimea",
     categories: ["new", "europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "DanishStraits",
@@ -430,6 +471,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.danishstraits",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    themes: ["europe"],
   },
   {
     id: "DeglaciatedAntarctica",
@@ -465,6 +507,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.eastasia",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    themes: ["asia"],
   },
   {
     id: "Europe",
@@ -473,6 +516,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["featured", "continental", "europe"],
     multiplayerFrequency: 7,
     featuredRank: 2,
+    themes: ["europe"],
   },
   {
     id: "EuropeClassic",
@@ -480,6 +524,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.europeclassic",
     categories: ["europe", "continental"],
     multiplayerFrequency: 0,
+    themes: ["europe"],
   },
   {
     id: "FalklandIslands",
@@ -488,6 +533,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["south_america"],
     multiplayerFrequency: 4,
     specialTeamCount: 2,
+    themes: ["south_america"],
   },
   {
     id: "FaroeIslands",
@@ -495,6 +541,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.faroeislands",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "FingerLakes",
@@ -502,6 +549,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.fingerlakes",
     categories: ["new", "north_america"],
     multiplayerFrequency: 4,
+    themes: ["north_america"],
   },
   {
     id: "FourIslands",
@@ -517,6 +565,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.france",
     categories: ["new", "europe", "countries"],
     multiplayerFrequency: 8,
+    themes: ["europe"],
   },
   {
     id: "GatewayToTheAtlantic",
@@ -524,6 +573,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.gatewaytotheatlantic",
     categories: ["europe"],
     multiplayerFrequency: 5,
+    themes: ["europe"],
   },
   {
     id: "Germany",
@@ -531,6 +581,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.germany",
     categories: ["europe", "new"],
     multiplayerFrequency: 5,
+    themes: ["europe"],
     customTribes: [
       { name: "Aachen, Städteregion" },
       { name: "Ahrweiler" },
@@ -955,6 +1006,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.greatlakes",
     categories: ["north_america"],
     multiplayerFrequency: 6,
+    themes: ["north_america"],
   },
   {
     id: "GulfOfGuinea",
@@ -962,6 +1014,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.gulfofguinea",
     categories: ["africa", "new"],
     multiplayerFrequency: 5,
+    themes: ["africa"],
   },
   {
     id: "GulfOfStLawrence",
@@ -970,6 +1023,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["north_america"],
     multiplayerFrequency: 4,
     specialTeamCount: 3,
+    themes: ["north_america"],
   },
   {
     id: "Halkidiki",
@@ -977,6 +1031,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.halkidiki",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "Hawaii",
@@ -984,6 +1039,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.hawaii",
     categories: ["oceania"],
     multiplayerFrequency: 4,
+    themes: ["oceania"],
   },
   {
     id: "Hecatestrait",
@@ -991,6 +1047,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.hecatestrait",
     categories: ["north_america", "new"],
     multiplayerFrequency: 4,
+    themes: ["north_america"],
   },
   {
     id: "HongKong",
@@ -998,6 +1055,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.hongkong",
     categories: ["asia"],
     multiplayerFrequency: 6,
+    themes: ["asia"],
   },
   {
     id: "Iceland",
@@ -1005,6 +1063,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.iceland",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "IndianSubcontinent",
@@ -1012,6 +1071,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.indiansubcontinent",
     categories: ["asia"],
     multiplayerFrequency: 8,
+    themes: ["asia"],
   },
   {
     id: "IrishSea",
@@ -1020,6 +1080,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["europe", "new"],
     multiplayerFrequency: 5,
     specialTeamCount: 3,
+    themes: ["europe"],
   },
   {
     id: "Italia",
@@ -1027,6 +1088,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.italia",
     categories: ["europe"],
     multiplayerFrequency: 6,
+    themes: ["europe"],
   },
   {
     id: "Japan",
@@ -1034,6 +1096,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.japan",
     categories: ["countries", "asia"],
     multiplayerFrequency: 6,
+    themes: ["asia"],
   },
   {
     id: "JuanDeFucaStrait",
@@ -1042,6 +1105,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["north_america"],
     multiplayerFrequency: 4,
     specialTeamCount: 3,
+    themes: ["north_america"],
   },
   {
     id: "Korea",
@@ -1050,6 +1114,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia", "countries"],
     multiplayerFrequency: 5,
     specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "Labyrinth",
@@ -1064,6 +1129,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lasvegasstrip",
     categories: ["north_america", "new"],
     multiplayerFrequency: 3,
+    themes: ["north_america", "western"],
   },
   {
     id: "Lemnos",
@@ -1071,6 +1137,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lemnos",
     categories: ["europe"],
     multiplayerFrequency: 3,
+    themes: ["europe"],
   },
   {
     id: "Levant",
@@ -1078,6 +1145,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.levant",
     categories: ["asia", "new"],
     multiplayerFrequency: 5,
+    themes: ["asia"],
   },
   {
     id: "Lisbon",
@@ -1085,6 +1153,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.lisbon",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "LosAngeles",
@@ -1092,6 +1161,147 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.losangeles",
     categories: ["north_america"],
     multiplayerFrequency: 8,
+    themes: ["north_america"],
+    customTribes: [
+      { name: "Arcadia", coordinates: [1524, 441] },
+      { name: "El Monte", coordinates: [1544, 572] },
+      { name: "Alhambra", coordinates: [1355, 520] },
+      { name: "Monterey Park", coordinates: [1341, 623] },
+      { name: "Whittier", coordinates: [1502, 820] },
+      { name: "Buena Park", coordinates: [1649, 1079] },
+      { name: "Seal Beach", coordinates: [1461, 1360] },
+      { name: "Westminster", coordinates: [1645, 1354] },
+      { name: "Garden Grove", coordinates: [1724, 1238] },
+      { name: "Cerritos", coordinates: [1523, 1065] },
+      { name: "Cypress", coordinates: [1550, 1181] },
+      { name: "La Habra", coordinates: [1691, 890] },
+      { name: "Brea", coordinates: [1787, 935] },
+      { name: "Fullerton", coordinates: [1737, 1013] },
+      { name: "Santa Fe Springs", coordinates: [1527, 905] },
+      { name: "Hacienda Heights", coordinates: [1672, 760] },
+      { name: "City of Industry", coordinates: [1643, 645] },
+      { name: "Baldwin Park", coordinates: [1658, 551] },
+      { name: "Irwindale", coordinates: [1693, 474] },
+      { name: "Monrovia", coordinates: [1589, 330] },
+      { name: "Rosemead", coordinates: [1448, 588] },
+      { name: "Azusa", coordinates: [1768, 404] },
+      { name: "West Covina", coordinates: [1749, 592] },
+      { name: "Montebello", coordinates: [1372, 721] },
+      { name: "Pico Rivera", coordinates: [1438, 786] },
+      { name: "Commerce", coordinates: [1329, 802] },
+      { name: "East Los Angeles", coordinates: [1235, 658] },
+      { name: "Eagle Rock", coordinates: [1196, 459] },
+      { name: "Highland Park", coordinates: [1225, 549] },
+      { name: "Echo Park", coordinates: [1057, 587] },
+      { name: "Koreatown", coordinates: [1020, 654] },
+      { name: "DTLA", coordinates: [1117, 642] },
+      { name: "Vernon", coordinates: [1173, 746] },
+      { name: "Huntington Park", coordinates: [1158, 829] },
+      { name: "South Gate", coordinates: [1216, 878] },
+      { name: "Bell", coordinates: [1258, 824] },
+      { name: "South Los Angeles", coordinates: [1045, 861] },
+      { name: "Lynwood", coordinates: [1225, 951] },
+      { name: "Bellflower", coordinates: [1405, 1019] },
+      { name: "Paramount", coordinates: [1302, 1022] },
+      { name: "Lakewood", coordinates: [1387, 1123] },
+      { name: "Signal Hill", coordinates: [1322, 1229] },
+      { name: "Los Alamitos", coordinates: [1467, 1213] },
+      { name: "Costa Mesa", coordinates: [1789, 1522] },
+      { name: "Rose Hills", coordinates: [1530, 710] },
+      { name: "Temple City", coordinates: [1473, 501] },
+      { name: "San Marino", coordinates: [1397, 456] },
+      { name: "Palos Verdes", coordinates: [891, 1358] },
+      { name: "San Pedro", coordinates: [1082, 1371] },
+      { name: "Carson", coordinates: [1111, 1172] },
+      { name: "El Segundo", coordinates: [836, 1013] },
+      { name: "Redondo Beach", coordinates: [896, 1212] },
+      { name: "Manhattan Beach", coordinates: [866, 1120] },
+      { name: "Lomita", coordinates: [1028, 1243] },
+      { name: "Gardena", coordinates: [1027, 1040] },
+      { name: "Lawndale", coordinates: [938, 1034] },
+      { name: "Culver City", coordinates: [870, 777] },
+      { name: "Baldwin Hills", coordinates: [944, 791] },
+      { name: "Studio City", coordinates: [811, 479] },
+      { name: "Laurel Canyon", coordinates: [840, 551] },
+      { name: "Hawthorne", coordinates: [945, 973] },
+      { name: "Old Torrance", coordinates: [999, 1152] },
+      { name: "Expo Park", coordinates: [1033, 775] },
+      { name: "Leimert Park", coordinates: [937, 741] },
+      { name: "West Hollywood", coordinates: [940, 611] },
+      { name: "La Brea", coordinates: [937, 667] },
+      { name: "Marina Del Rey", coordinates: [748, 889] },
+      { name: "Westchester", coordinates: [828, 863] },
+      { name: "Westdale", coordinates: [756, 781] },
+      { name: "West Athens", coordinates: [1088, 962] },
+      { name: "Rancho Dominguez", coordinates: [1181, 1112] },
+      { name: "Terminal Island", coordinates: [1163, 1403] },
+      { name: "Altadena", coordinates: [1332, 285] },
+      { name: "Sierra Madre", coordinates: [1448, 335] },
+      { name: "La Canada Flintridge", coordinates: [1156, 268] },
+      { name: "La Crescenta", coordinates: [1009, 211] },
+      { name: "Tujunga", coordinates: [890, 135] },
+      { name: "Burbank", coordinates: [997, 348] },
+      { name: "Griffith Park", coordinates: [1003, 479] },
+      { name: "Burbank Airport", coordinates: [848, 317] },
+      { name: "NoHo", coordinates: [860, 406] },
+      { name: "Van Nuys", coordinates: [689, 322] },
+      { name: "Panorama City", coordinates: [705, 244] },
+      { name: "Calabasas", coordinates: [267, 554] },
+      { name: "Topanga", coordinates: [472, 611] },
+      { name: "Chatsworth", coordinates: [438, 254] },
+      { name: "Northridge", coordinates: [566, 276] },
+      { name: "Reseda", coordinates: [563, 391] },
+      { name: "Canoga Park", coordinates: [429, 369] },
+      { name: "Agoura Hills", coordinates: [167, 473] },
+      { name: "Hidden Hills", coordinates: [326, 416] },
+      { name: "Granada Hills", coordinates: [564, 156] },
+      { name: "Sylmar", coordinates: [645, 90] },
+      { name: "Moorpark", coordinates: [33, 244] },
+      { name: "Brentwood", coordinates: [642, 667] },
+      { name: "Pacific Palisades", coordinates: [580, 727] },
+      { name: "Sherman Oaks", coordinates: [712, 469] },
+      { name: "Simi Valley", coordinates: [154, 246] },
+      { name: "Santa Susana", coordinates: [308, 245] },
+      { name: "Stanton", coordinates: [1674, 1174] },
+      { name: "LGB Airport", coordinates: [1292, 1147] },
+      { name: "Avalon", coordinates: [958, 2132] },
+      { name: "Two Harbors", coordinates: [607, 1951] },
+      { name: "Bell Gardens", coordinates: [1324, 874] },
+      { name: "Duarte", coordinates: [1641, 374] },
+      { name: "South El Monte", coordinates: [1511, 633] },
+      { name: "Avocado Heights", coordinates: [1575, 639] },
+      { name: "West Puente Valley", coordinates: [1645, 600] },
+      { name: "Valinda", coordinates: [1719, 647] },
+      { name: "La Mirada", coordinates: [1610, 961] },
+      { name: "Artesia", coordinates: [1490, 1103] },
+      { name: "Norwalk", coordinates: [1486, 972] },
+      { name: "Alamitos Beach", coordinates: [1321, 1312] },
+      { name: "Boyle Heights", coordinates: [1183, 670] },
+      { name: "Chinatown", coordinates: [1131, 613] },
+      { name: "West Los Angeles", coordinates: [792, 710] },
+      { name: "Universal Studios", coordinates: [927, 467] },
+      { name: "Point Dume", coordinates: [57, 825] },
+      { name: "Wilmington", coordinates: [1145, 1252] },
+      { name: "Westside", coordinates: [1210, 1230] },
+      { name: "South Pasadena", coordinates: [1307, 493] },
+      { name: "San Gabriel", coordinates: [1409, 538] },
+      { name: "Hastings Ranch", coordinates: [1436, 396] },
+      { name: "Vincent", coordinates: [1734, 516] },
+      { name: "Bradbury", coordinates: [1700, 326] },
+      { name: "Mount Wilson", coordinates: [1558, 226] },
+      { name: "Angeles Forest", coordinates: [1722, 124] },
+      { name: "Rowland Heights", coordinates: [1788, 781] },
+      { name: "La Habra Heights", coordinates: [1739, 840] },
+      { name: "Fountain Valley", coordinates: [1784, 1434] },
+      { name: "Rossmoor", coordinates: [1508, 1243] },
+      { name: "Hermosa Beach", coordinates: [891, 1165] },
+      { name: "Lennox", coordinates: [946, 926] },
+      { name: "Del Aire", coordinates: [886, 979] },
+      { name: "Tuna Canyon", coordinates: [370, 698] },
+      { name: "South Park", coordinates: [1085, 680] },
+      { name: "Cudahy", coordinates: [1270, 866] },
+      { name: "Maywood", coordinates: [1257, 762] },
+    ],
   },
   {
     id: "Luna",
@@ -1107,6 +1317,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.manicouagan",
     categories: ["north_america"],
     multiplayerFrequency: 4,
+    themes: ["north_america"],
   },
   {
     id: "MareNostrum",
@@ -1114,6 +1325,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.marenostrum",
     categories: ["europe", "asia", "africa"],
     multiplayerFrequency: 6,
+    themes: ["europe", "asia", "africa"],
   },
   {
     id: "Mars",
@@ -1128,6 +1340,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.mena",
     categories: ["asia", "africa"],
     multiplayerFrequency: 6,
+    themes: ["asia", "africa"],
   },
   {
     id: "MiddleEast",
@@ -1135,6 +1348,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.middleeast",
     categories: ["asia"],
     multiplayerFrequency: 8,
+    themes: ["asia"],
   },
   {
     id: "MilkyWay",
@@ -1149,6 +1363,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.mississippiriver",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    themes: ["north_america"],
   },
   {
     id: "Montreal",
@@ -1156,6 +1371,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.montreal",
     categories: ["north_america"],
     multiplayerFrequency: 6,
+    themes: ["north_america"],
   },
   {
     id: "MoreThanLuck",
@@ -1171,6 +1387,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.newyorkcity",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    themes: ["north_america"],
   },
   {
     id: "NileDelta",
@@ -1178,6 +1395,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.niledelta",
     categories: ["africa"],
     multiplayerFrequency: 4,
+    themes: ["africa"],
   },
   {
     id: "NorthAmerica",
@@ -1186,6 +1404,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["featured", "continental", "north_america"],
     multiplayerFrequency: 5,
     featuredRank: 3,
+    themes: ["north_america"],
   },
   {
     id: "NorthwestPassage",
@@ -1193,6 +1412,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.northwestpassage",
     categories: ["north_america"],
     multiplayerFrequency: 5,
+    themes: ["north_america"],
   },
   {
     id: "Oceania",
@@ -1200,6 +1420,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.oceania",
     categories: ["oceania", "continental"],
     multiplayerFrequency: 0,
+    themes: ["oceania"],
   },
   {
     id: "Onion",
@@ -1236,6 +1457,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.russia",
     categories: ["europe", "asia", "new", "countries"],
     multiplayerFrequency: 8,
+    themes: ["europe", "asia"],
   },
   {
     id: "SanFrancisco",
@@ -1243,6 +1465,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.sanfrancisco",
     categories: ["north_america"],
     multiplayerFrequency: 3,
+    themes: ["north_america"],
   },
   {
     id: "Scandinavia",
@@ -1250,6 +1473,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.scandinavia",
     categories: ["europe", "new"],
     multiplayerFrequency: 7,
+    themes: ["europe"],
   },
   {
     id: "Sierpinski",
@@ -1264,6 +1488,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.sol",
     categories: ["cosmic", "new"],
     multiplayerFrequency: 10,
+    themes: ["space"],
   },
   {
     id: "SouthAmerica",
@@ -1272,6 +1497,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["featured", "continental", "south_america"],
     multiplayerFrequency: 5,
     featuredRank: 4,
+    themes: ["south_america"],
   },
   {
     id: "SoutheastAsia",
@@ -1279,6 +1505,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.southeastasia",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    themes: ["asia"],
   },
   {
     id: "StraitOfGibraltar",
@@ -1287,6 +1514,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["europe", "africa"],
     multiplayerFrequency: 5,
     specialTeamCount: 2,
+    themes: ["europe", "africa"],
   },
   {
     id: "StraitOfHormuz",
@@ -1295,6 +1523,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia"],
     multiplayerFrequency: 4,
     specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "StraitOfMalacca",
@@ -1302,6 +1531,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.straitofmalacca",
     categories: ["asia"],
     multiplayerFrequency: 4,
+    themes: ["asia"],
   },
   {
     id: "Surrounded",
@@ -1317,6 +1547,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.svalmel",
     categories: ["fictional", "europe", "north_america"],
     multiplayerFrequency: 8,
+    themes: ["europe", "north_america"],
   },
   {
     id: "TaiwanStrait",
@@ -1325,6 +1556,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia"],
     multiplayerFrequency: 5,
     specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "TheBox",
@@ -1339,6 +1571,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.tierradelfuego",
     categories: ["south_america", "new"],
     multiplayerFrequency: 5,
+    themes: ["south_america"],
   },
   {
     id: "Titan",
@@ -1389,6 +1622,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.twolakes",
     categories: ["europe"],
     multiplayerFrequency: 4,
+    themes: ["europe"],
   },
   {
     id: "UnitedStates",
@@ -1396,6 +1630,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.unitedstates",
     categories: ["north_america", "new", "countries"],
     multiplayerFrequency: 9,
+    themes: ["north_america"],
   },
   {
     id: "Venice",
@@ -1403,6 +1638,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.venice",
     categories: ["europe"],
     multiplayerFrequency: 6,
+    themes: ["europe"],
   },
   {
     id: "Vietnam",
@@ -1411,6 +1647,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["new", "countries", "asia"],
     multiplayerFrequency: 4,
     specialTeamCount: 2,
+    themes: ["asia"],
   },
   {
     id: "WarshipWarship",
@@ -1440,6 +1677,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.yellowsea",
     categories: ["asia"],
     multiplayerFrequency: 5,
+    themes: ["asia"],
   },
   {
     id: "Yenisei",
@@ -1447,5 +1685,6 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.yenisei",
     categories: ["asia"],
     multiplayerFrequency: 6,
+    themes: ["asia"],
   },
 ];

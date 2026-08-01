@@ -120,5 +120,6 @@
       "name": "San Gregorio"
     }
   ],
+  "themes": ["south_america"],
   "translation_key": "map.tierradelfuego"
 }

@@ -190,5 +190,6 @@
       "name": "Rouyn-Noranda"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.greatlakes"
 }

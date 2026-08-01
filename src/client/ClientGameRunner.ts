@@ -67,6 +67,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
   applyGraphicsOverrides,
@@ -155,6 +156,7 @@ export function joinLobby(
         message.gameMap,
         message.gameMapSize,
         terrainMapFileLoader,
+        false, // Layer images loaded off the critical path after game start.
       );
       resolvePrestart();
     }
@@ -539,6 +541,7 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMap,
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
+      false, // Layer images loaded off the critical path after game start.
     );
   }
   // Kick off the font-atlas fetch so it overlaps with worker init; the
@@ -592,6 +595,17 @@ async function createClientGame(
     const graphicsListenerAbort = new AbortController();
 
     view.setShowPatterns(userSettings.territoryPatterns());
+
+    const mapLayerController = new MapLayerController(
+      view,
+      gameMap,
+      userSettings,
+      lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
+      mapLoader,
+      graphicsListenerAbort.signal,
+    );
+
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
@@ -669,6 +683,7 @@ async function createClientGame(
       eventBus,
       lobbyConfig.playerRole,
       view,
+      mapLayerController,
     );
 
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(

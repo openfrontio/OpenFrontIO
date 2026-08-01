@@ -45,5 +45,6 @@
       "name": "Thrace",
       "flag": "gr"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

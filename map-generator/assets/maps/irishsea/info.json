@@ -318,5 +318,6 @@
       "name": "Caernarfon",
       "flag": "gb-wls"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

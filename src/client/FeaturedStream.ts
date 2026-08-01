@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { FeaturedStreamConfig } from "../core/ApiSchemas";
 import { getFeaturedStream } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isDesktopShell } from "./DesktopShell";
@@ -8,15 +9,21 @@ import { translateText } from "./Utils";
 // Homepage "featured stream" panel: embeds a Twitch channel and shows ONLY while it is
 // actually live, then hides. Config comes from getFeaturedStream() (a JSON the API serves
 // like news.json, with a bundled fallback in resources/featured-stream.json): an `enabled`
-// toggle + a `channels` list. Disabled or no channels = feature off (renders nothing).
-// With several channels, the first one that is live wins (e.g. the OFM channel for
-// tournaments + the OF channel for releases).
+// toggle + a `channels` list, ordered by priority (e.g. the OFM channel for tournaments
+// ahead of the OF channel for releases). Disabled or empty = feature off (renders nothing).
 //
-// Live detection is client-side via the Twitch Embed SDK (no backend, no API secret).
-// Quirks handled: an offline-at-load channel fires READY -> ENDED (no OFFLINE), so we read
-// the initial state synchronously with getEnded() on READY; events from a superseded
-// player are ignored via a mount generation counter; and if every channel is offline we
-// re-check periodically so the panel still appears when a stream goes live later.
+// Liveness is decided server-side: the API polls Twitch Helix on a cron and lists only
+// channels that are live right now, so `channels[0]` is simply what to embed. The client
+// used to work this out itself by mounting a real autoplaying Twitch.Player per configured
+// channel and reading its ONLINE/OFFLINE events, which cost ~300 Twitch requests on every
+// page load (measured) while the panel stayed invisible, and put an offline-and-hidden
+// player on the page. Now nothing Twitch-related loads until there is a live channel, and
+// an offline period costs one small JSON poll per minute.
+//
+// The player is still watched once mounted: OFFLINE/ENDED hides the panel, which covers
+// the stream ending mid-session and the ~3 min worst-case staleness of the served config
+// (2 min cron + 60s edge cache). An offline-at-load channel fires READY -> ENDED with no
+// OFFLINE, so the initial state is read synchronously with getEnded() on READY.
 
 interface TwitchPlayer {
   addEventListener(event: string, cb: () => void): void;
@@ -46,7 +53,9 @@ export type Corner = "tl" | "tr" | "bl" | "br";
 const CORNER_KEY = "featured-stream-corner";
 const MIN_KEY = "featured-stream-minimized";
 const CLOSED_KEY = "featured-stream-closed"; // ad-free close, remembered for the current day
-const RECHECK_MS = 60_000; // re-probe interval when every channel is offline
+// How often to re-ask the served config who is live while nothing is showing. This is one
+// small JSON fetch against our own API (60s edge cache), not a Twitch request.
+const POLL_MS = 60_000;
 
 // Local calendar day, used to scope the "closed" and "minimized" states to the current stream:
 // each is stored with the day it was set and ignored once the day changes, so the panel resets
@@ -82,6 +91,13 @@ export function isOffFrame(
   vh: number,
 ): boolean {
   return cx < 0 || cx > vw || cy < 0 || cy > vh;
+}
+
+// Which channel to embed for a served config, or null for "embed nothing". The API lists
+// only channels its Helix poll currently sees live, in priority order, so this is just the
+// first entry — no client-side probing. Pure for tests.
+export function channelToEmbed(cfg: FeaturedStreamConfig): string | null {
+  return cfg.enabled ? (cfg.channels[0] ?? null) : null;
 }
 
 // Touch devices report a coarse pointer; flick-to-dismiss is enabled only there (on desktop
@@ -120,12 +136,11 @@ export class FeaturedStream extends LitElement {
   @state() private corner: Corner = "br"; // which screen corner the panel snaps to
   @state() private dragPos: { x: number; y: number } | null = null; // free pos while dragging
   @state() private dismissed = false; // closed; ad-free close persists for the day, flick session-only
+  @state() private channel: string | null = null; // channel the API reports live, or none
 
-  private channels: string[] = [];
-  private idx = 0;
   private player?: TwitchPlayer;
   private mountGen = 0; // bumped each mount; events from older mounts are ignored
-  private recheckTimer: ReturnType<typeof setTimeout> | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private dragOff = { x: 0, y: 0 };
   private dragStart = { x: 0, y: 0 };
   private dragging = false;
@@ -155,8 +170,7 @@ export class FeaturedStream extends LitElement {
     super.disconnectedCallback();
     document.removeEventListener("game-starting", this.onGameStart);
     document.removeEventListener("leave-lobby", this.onLeave);
-    if (this.recheckTimer) clearTimeout(this.recheckTimer);
-    this.recheckTimer = null;
+    this.clearPoll();
     this.teardownPlayer();
   }
 
@@ -175,25 +189,16 @@ export class FeaturedStream extends LitElement {
       return;
     }
     if (closedDay) localStorage.removeItem(CLOSED_KEY);
-    // Channels come from the served config (like news.json), with a bundled fallback.
-    const cfg = await getFeaturedStream();
-    if (!cfg.enabled || cfg.channels.length === 0) return; // off / nothing configured
-    this.channels = cfg.channels;
-    this.requestUpdate(); // channels is not reactive; force the card (+ mount node) to render
-    await this.updateComplete;
-    void this.start();
+    void this.poll();
   }
 
   // The panel stays up through the lobby/queue wait and hides only once the game actually
-  // starts (Main dispatches game-starting at prestart). Stop probing while in game: a pending
-  // recheck (or a stream coming online) must not mount a fresh autoplaying player behind the
-  // hidden panel — an obscured embed (Twitch ToS). Pause the current player; we re-probe on leave.
+  // starts (Main dispatches game-starting at prestart). Stop polling while in game: a stream
+  // coming online must not mount an autoplaying player behind the hidden panel — an obscured
+  // embed (Twitch ToS). Pause the current player; we re-poll on leave.
   private onGameStart = () => {
     this.inGame = true;
-    if (this.recheckTimer) {
-      clearTimeout(this.recheckTimer);
-      this.recheckTimer = null;
-    }
+    this.clearPoll();
     try {
       this.player?.pause();
     } catch {
@@ -203,35 +208,74 @@ export class FeaturedStream extends LitElement {
   private onLeave = () => {
     this.inGame = false;
     if (this.dismissed) return; // dismissed for this page visit: don't resurrect it
-    // Back on the homepage: re-probe from the top so liveness is fresh and the panel only
-    // reappears (and starts streaming) if a channel is actually live right now.
-    if (this.recheckTimer) {
-      clearTimeout(this.recheckTimer);
-      this.recheckTimer = null;
-    }
-    this.idx = 0;
-    void this.start();
+    // Back on the homepage: re-read the config so the panel only reappears (and starts
+    // streaming) if a channel is live right now.
+    void this.poll();
   };
 
-  private start = async () => {
-    if (!this.channels.length) return; // feature off / gated: never load the Twitch SDK
+  // Ask the API who is live. While a stream is showing there is nothing to poll for — the
+  // player's own OFFLINE/ENDED tells us when it ends, and we resume polling then.
+  private poll = async () => {
+    this.clearPoll();
+    if (this.inGame || this.dismissed) return;
+    const channel = channelToEmbed(await getFeaturedStream());
+    if (this.inGame || this.dismissed) return; // state can change across the await
+    if (channel === null) {
+      this.goOffline();
+      this.schedulePoll();
+      return;
+    }
+    if (channel === this.channel && this.player) {
+      this.kickPlay(); // already embedding it; resume if a game had paused it
+      return;
+    }
+    this.channel = channel;
+    await this.updateComplete; // render the card so the mount node exists
+    await this.mountPlayer(channel);
+  };
+
+  private schedulePoll() {
+    this.clearPoll();
+    this.pollTimer = setTimeout(() => void this.poll(), POLL_MS);
+  }
+
+  private clearPoll() {
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    this.pollTimer = null;
+  }
+
+  // Nothing to show: drop the card (and the mount node with it) and stop streaming.
+  private goOffline() {
+    this.channel = null;
+    this.live = false;
+    this.mountGen++; // stale player callbacks fail fresh() and become no-ops
+    this.teardownPlayer();
+  }
+
+  private async mountPlayer(channel: string) {
+    if (this.inGame || this.dismissed) return; // never mount behind a hidden/dismissed panel
     let Twitch: TwitchGlobal;
     try {
       Twitch = await loadTwitchSdk();
     } catch (e) {
+      // SDK blocked (extension, network): try again on the next poll rather than never.
       console.error("featured-stream: Twitch SDK load failed", e);
+      if (this.dismissed) return;
+      this.goOffline();
+      this.schedulePoll();
       return;
     }
-    this.mountPlayer(Twitch, this.idx);
-  };
-
-  private mountPlayer(Twitch: TwitchGlobal, i: number) {
-    if (this.inGame || this.dismissed) return; // never mount behind a hidden/dismissed panel
+    // A close (or a game start) during the SDK load must not mount, and must not leave a
+    // poll scheduled behind it.
+    if (this.inGame || this.dismissed) return;
+    if (this.channel !== channel) return; // superseded while the SDK loaded
     const host = this.querySelector(
       "#featured-stream-mount",
     ) as HTMLElement | null;
-    const channel = this.channels[i];
-    if (!host || !channel) return;
+    if (!host) {
+      this.schedulePoll(); // no mount node: retry rather than stalling the panel forever
+      return;
+    }
     this.teardownPlayer(); // destroy the previous player so its listeners can't fire
     host.innerHTML = "";
     const gen = ++this.mountGen;
@@ -246,15 +290,22 @@ export class FeaturedStream extends LitElement {
     });
     this.player = player;
     const P = Twitch.Player;
+    // The API already said this channel is live, so these events are about it *stopping*
+    // (or the config being stale). Either way: hide and go back to polling.
+    const ended = () => {
+      if (!fresh()) return;
+      this.goOffline();
+      this.schedulePoll();
+    };
     player.addEventListener(P.READY, () => {
       if (!fresh()) return;
       // offline-at-load = READY -> ENDED (no OFFLINE); read state synchronously here
-      if (player.getEnded()) this.advance(Twitch);
-      else this.setLive(i);
+      if (player.getEnded()) ended();
+      else this.setLive();
     });
-    player.addEventListener(P.ONLINE, () => fresh() && this.setLive(i));
-    player.addEventListener(P.OFFLINE, () => fresh() && this.advance(Twitch));
-    player.addEventListener(P.ENDED, () => fresh() && this.advance(Twitch));
+    player.addEventListener(P.ONLINE, () => fresh() && this.setLive());
+    player.addEventListener(P.OFFLINE, ended);
+    player.addEventListener(P.ENDED, ended);
   }
 
   private teardownPlayer() {
@@ -266,34 +317,9 @@ export class FeaturedStream extends LitElement {
     this.player = undefined;
   }
 
-  private setLive(i: number) {
-    this.idx = i;
+  private setLive() {
     this.live = true;
     this.kickPlay();
-  }
-
-  // Current channel offline -> try the next configured one. Bumping mountGen first makes
-  // the current player's remaining events no-ops (so a duplicate OFFLINE/ENDED can't skip
-  // a channel). If all channels are offline, re-probe later so the panel can still appear.
-  private advance(Twitch: TwitchGlobal) {
-    this.mountGen++;
-    this.live = false;
-    this.idx++;
-    if (this.idx < this.channels.length) {
-      this.mountPlayer(Twitch, this.idx);
-    } else {
-      this.teardownPlayer();
-      this.scheduleRecheck(Twitch);
-    }
-  }
-
-  private scheduleRecheck(Twitch: TwitchGlobal) {
-    if (this.recheckTimer) clearTimeout(this.recheckTimer);
-    this.recheckTimer = setTimeout(() => {
-      this.recheckTimer = null;
-      this.idx = 0;
-      this.mountPlayer(Twitch, 0);
-    }, RECHECK_MS);
   }
 
   // Autoplay can be blocked while the panel is hidden; once it's visible, nudge playback.
@@ -317,9 +343,8 @@ export class FeaturedStream extends LitElement {
   }
 
   private openStream = () => {
-    const channel = this.channels[this.idx];
-    if (channel)
-      window.open(`https://twitch.tv/${channel}`, "_blank", "noopener");
+    if (this.channel)
+      window.open(`https://twitch.tv/${this.channel}`, "_blank", "noopener");
   };
 
   // The header is a drag handle: a click (no drag) opens the stream, a drag (past a small
@@ -403,10 +428,7 @@ export class FeaturedStream extends LitElement {
     this.dismissed = true;
     this.dragPos = null;
     this.mountGen++; // stale player callbacks fail fresh() and become no-ops
-    if (this.recheckTimer) {
-      clearTimeout(this.recheckTimer);
-      this.recheckTimer = null;
-    }
+    this.clearPoll();
     this.teardownPlayer();
   }
 
@@ -429,8 +451,8 @@ export class FeaturedStream extends LitElement {
   private onClose = () => this.dismiss(this.adFree);
 
   render() {
-    if (!this.channels.length || this.dismissed) return html``;
-    const channel = this.channels[this.idx] ?? "";
+    if (this.channel === null || this.dismissed) return html``;
+    const channel = this.channel;
     const min = this.minimized;
     // Twitch pauses the player when it's off-screen/clipped (and hiding the embed violates
     // Twitch ToS), so "minimized" stays a small but still-visible corner thumbnail that

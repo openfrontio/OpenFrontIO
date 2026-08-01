@@ -130,5 +130,6 @@
       "name": "Corsica",
       "flag": "Corsica"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

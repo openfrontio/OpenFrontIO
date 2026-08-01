@@ -3,6 +3,7 @@ import featuredStream from "../../../resources/featured-stream.json";
 import { getFeaturedStream } from "../../../src/client/Api";
 import { ClientEnv } from "../../../src/client/ClientEnv";
 import {
+  channelToEmbed,
   cornerFromCenter,
   isOffFrame,
 } from "../../../src/client/FeaturedStream";
@@ -130,6 +131,28 @@ describe("FeaturedStream", () => {
     it("falls back when the request rejects (network error)", async () => {
       stubFetch(() => Promise.reject(new Error("network down")));
       expect(await getFeaturedStream()).toEqual(off);
+    });
+  });
+
+  describe("channelToEmbed", () => {
+    const cfg = (enabled: boolean, channels: string[]) =>
+      FeaturedStreamSchema.parse({ enabled, channels });
+
+    it("embeds nothing when the API reports no live channel", () => {
+      // The API lists only channels its Helix poll sees live, so an empty list means
+      // "nobody is live" — the client must not load the Twitch SDK or a player at all.
+      expect(channelToEmbed(cfg(false, []))).toBeNull();
+      expect(channelToEmbed(cfg(true, []))).toBeNull();
+    });
+
+    it("embeds nothing when disabled, even with channels listed", () => {
+      expect(channelToEmbed(cfg(false, ["openfrontmasters"]))).toBeNull();
+    });
+
+    it("takes the first channel as the API's priority order", () => {
+      expect(channelToEmbed(cfg(true, ["openfrontmasters", "openfront"]))).toBe(
+        "openfrontmasters",
+      );
     });
   });
 

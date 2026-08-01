@@ -157,5 +157,6 @@
       }
     ]
   },
+  "themes": ["europe", "asia"],
   "translation_key": "map.aegean"
 }

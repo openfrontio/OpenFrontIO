@@ -8,6 +8,7 @@ import {
   toInt,
   within,
 } from "../Util";
+import { clearParabolaDirection } from "../pathfinding/PathFinder.Parabola";
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
@@ -1464,14 +1465,29 @@ export class PlayerImpl implements Player {
     }
 
     // only get missilesilos that are not on cooldown and not under construction
-    const bestSilo = findClosestBy(
-      this.units(UnitType.MissileSilo),
-      (silo) => mg.manhattanDist(silo.tile(), tile),
+    const readySilos = this.units(UnitType.MissileSilo).filter(
       (silo) =>
         silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
     );
+    readySilos.sort(
+      (a, b) =>
+        mg.manhattanDist(a.tile(), tile) - mg.manhattanDist(b.tile(), tile),
+    );
 
-    return bestSilo?.tile() ?? false;
+    if (nukeType === UnitType.MIRV) {
+      // MIRVs fly to a separation point high above the map and their
+      // warheads are exempt from impassable checks, so any silo works.
+      return readySilos[0]?.tile() ?? false;
+    }
+
+    // Closest silo whose trajectory (up or down curve) avoids impassable
+    // terrain. NukeExecution picks the actual curve direction.
+    for (const silo of readySilos) {
+      if (clearParabolaDirection(mg, silo.tile(), tile, true) !== null) {
+        return silo.tile();
+      }
+    }
+    return false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {

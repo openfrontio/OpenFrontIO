@@ -1,6 +1,5 @@
-import { html, LitElement } from "lit";
-import { customElement, property, query } from "lit/decorators.js";
-import version from "resources/version.txt?raw";
+import { html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
 import { BaseModal } from "./components/BaseModal";
@@ -50,45 +49,5 @@ export class NewsModal extends BaseModal {
         .then((markdown) => (this.markdown = markdown))
         .catch(() => (this.markdown = "Failed to load"));
     }
-  }
-}
-
-@customElement("news-button")
-export class NewsButton extends LitElement {
-  @query("news-modal") private newsModal!: NewsModal;
-
-  connectedCallback() {
-    super.connectedCallback();
-    this.checkForNewVersion();
-  }
-
-  private checkForNewVersion() {
-    const lastSeenVersion = localStorage.getItem("last-seen-version");
-    if (lastSeenVersion !== null && lastSeenVersion !== version) {
-      setTimeout(() => {
-        this.open();
-      }, 500);
-    }
-  }
-
-  public open() {
-    localStorage.setItem("last-seen-version", version);
-    this.newsModal.open();
-  }
-
-  render() {
-    return html`
-      <button
-        class="border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)] hidden"
-        @click=${this.open}
-      >
-        <img
-          class="size-[48px] dark:invert"
-          src="${assetUrl("images/Megaphone.svg")}"
-          alt=${translateText("news.title")}
-        />
-      </button>
-      <news-modal></news-modal>
-    `;
   }
 }
