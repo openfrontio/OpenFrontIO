@@ -239,10 +239,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     const icons = getPlayerIcons({
       game: this.game,
       player,
-      // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
-      includeAllianceIcon: false,
       firstPlace,
-      alliancesDisabled: this.game.config().disableAlliances(),
     });
 
     if (icons.length === 0) {
