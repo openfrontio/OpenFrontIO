@@ -429,13 +429,6 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
-    // Old links used top-level tab=patterns|flags|crowns; map them onto the
-    // grouped cosmetics tab so they still land on the right grid.
-    const tab = typeof args?.tab === "string" ? args.tab : null;
-    if (COSMETICS_SUB_TABS.includes(tab as CosmeticsSubTab)) {
-      this.cosmeticsSubTab = tab as CosmeticsSubTab;
-      this.activeTab = "cosmetics";
-    }
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
