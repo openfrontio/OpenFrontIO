@@ -11,12 +11,21 @@
     "cancel_subscription_failed": "Impossible de résilier l'abonnement. Veuillez réessayer ou utiliser Gérer.",
     "cancel_subscription_success": "Abonnement résilié. L'accès se poursuit jusqu'à la fin de la période de facturation.",
     "change_tier": "Changer l'abonnement",
+    "claim": "Récupérer",
+    "claim_all": "Tout récupérer",
+    "claim_failed": "Impossible de récupérer la récompense. Veuillez réessayer.",
     "clear_session": "Effacer la session",
     "connected_as": "Connecté en tant que",
     "email_placeholder": "Entrez votre adresse email",
     "enter_email_address": "Veuillez saisir une adresse e-mail",
     "failed_to_send_recovery_email": "Échec de l'envoi de l'e-mail de récupération",
     "fetching_account": "Récupération des informations du compte...",
+    "games_clan_tag": "Tag de Clan",
+    "games_result_incomplete": "Inachevée",
+    "games_type_private": "Privées",
+    "games_type_public": "Publiques",
+    "games_type_singleplayer": "Solo",
+    "games_username": "Pseudo",
     "get_magic_link": "Obtenir un Lien Magique",
     "google_alt": "Google",
     "link_discord": "Lier un Compte Discord",
@@ -30,15 +39,17 @@
     "linked_to_google_email": "Lié à Google ({email})",
     "log_out": "Se Déconnecter",
     "manage_subscription": "Gérer",
+    "marketing_desc": "Nouveautés occasionnelles, événements, et mises à jour. Se désabonner à tout moment.",
+    "marketing_no_email": "Lier une adresse mail à votre compte pour vous abonner aux mises à jour.",
+    "marketing_title": "Emails sur les mises à jour",
     "no_games": "Pas encore de parties jouées.",
     "no_stats": "Pas encore de statistiques disponibles. Jouez des parties pour débuter le suivi.",
-    "not_found": "Introuvable",
     "or": "OU",
-    "public_player_id": "ID public du joueur :",
     "reactivate_subscription": "Réactiver",
     "recovery_email_sent": "Courriel de récupération envoyé à {email}",
+    "reward_daily": "Récompense quotidienne de l'abonnement",
+    "reward_signup_bonus": "Bonus de souscription à un abonnement",
     "sign_in_desc": "Connectez-vous pour enregistrer vos statistiques et progrès",
-    "stats_overview": "Aperçu des Statistiques",
     "sub_price_monthly": "{price}/mois",
     "sub_renews_on": "Renouvellement le {date}",
     "sub_status_active": "Actif",
@@ -55,9 +66,32 @@
     "tab_account": "Compte",
     "tab_friends": "Amis",
     "tab_games": "Parties",
+    "tab_settings": "Paramètres",
     "tab_stats": "Statistiques",
     "title": "Compte",
-    "your_subscription": "Votre abonnement"
+    "unclaimed_rewards": "Récompenses non récupérées",
+    "username_confirm_abandon": "Vous abandonnerez définitivement votre nom réservé \"{name}\".",
+    "username_confirm_body": "Vous devrez garder votre nouveau nom pendant 30 jours.",
+    "username_confirm_button": "Changer de nom",
+    "username_confirm_case_only": "Votre nouveau nom ne change de l'ancien que par les majuscules — la limite de 30 jours sera quand même instaurée.",
+    "username_confirm_heading": "Changer votre nom ?",
+    "username_cooldown_until": "Vous pourrez changer à nouveau changer de nom le {date}.",
+    "username_error_cooldown": "Vous pourrez changer à nouveau changer de nom dans {days} jour(s).",
+    "username_error_failed": "Impossible de changer votre nom. Veuillez réessayer plus tard.",
+    "username_error_profane": "Ce nom n'est pas autorisé.",
+    "username_error_taken": "Ce nom est déjà pris — essayez-en un autre.",
+    "username_grace_warning": "Vous perdrez le droit exclusif sur \"{name}\" le {date}. Prolongez votre abonnement pour le conserver.",
+    "username_not_set": "Revendiquez votre nom — il vous identifie à travers toutes vos parties.",
+    "username_placeholder": "Entrez un nom",
+    "username_save": "Sauvegarder",
+    "username_temporary_notice": "Votre nom a été pris par un autre joueur. Choisissez-en un nouveau — ce changement ne coûtera rien.",
+    "username_temporary_prompt": "Votre nom a été pris par un autre joueur. Voulez-vous en choisir un nouveau maintenant — ce changement ne coûtera rien.",
+    "username_temporary_prompt_confirm": "Choisir un nom",
+    "username_title": "Nom",
+    "your_subscription": "Votre abonnement",
+    "not_found": "Introuvable",
+    "public_player_id": "ID public de joueur :",
+    "stats_overview": "Aperçu des Statistiques"
   },
   "build_menu": {
     "desc": {
@@ -210,6 +244,8 @@
     "history_clan_players": "Joueurs d'un clan",
     "history_clan_players_value": "{clanCount} / {total} total",
     "history_clan_winners": "Membres du Clan gagnants",
+    "history_date_at": "{date} {time}",
+    "history_date_full": "{day} {month} {year}",
     "history_duration": "Durée",
     "history_empty": "Pas encore de parties jouées.",
     "history_end_of_history": "Fin de l'historique.",
@@ -325,8 +361,7 @@
     "title": "Clans",
     "transfer_leadership": "Transférer le commandement",
     "transfer_warning": "Cela donnera le commandement du clan au membre sélectionné. Vous deviendrez un membre ordinaire. Cette action ne peut pas être annulée.",
-    "unban": "Pardonner",
-    "discord_url_placeholder": "https://discord.gg/..."
+    "unban": "Pardonner"
   },
   "common": {
     "available": "Disponible",
@@ -375,8 +410,9 @@
     "traitor_neighbor_info": "Vous pouvez trahir quelqu'un en état de trahison sans risquer d'avoir le debuff de traître vous-même."
   },
   "cosmetics": {
-    "adfree": "sans publicité à vie !",
+    "adfree": "Sans publicités à vie !",
     "artist_label": "Artiste :",
+    "button_title": "Choisissez vos cosmétiques !",
     "color_label": "Couleur :",
     "common": "Commun",
     "epic": "Épique",
@@ -384,9 +420,14 @@
     "hard": "Plutonium",
     "legendary": "Légendaire",
     "per_day": "/jour",
+    "public_lobbies": "Créer des salons publics",
     "rare": "Rare",
+    "search": "Rechercher...",
     "soft": "Capsule",
-    "uncommon": "Peu commun"
+    "title": "Cosmétiques",
+    "uncommon": "Peu commun",
+    "unlimited_ranked": "Classés illimités",
+    "usd_value": "Valeur : {usd}"
   },
   "difficulty": {
     "difficulty": "Difficulté des nations",
@@ -398,8 +439,41 @@
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },
+  "doomsday_clock": {
+    "collapsing": "Compression -{rate}/s",
+    "decay_in": "Détérioration dans {secs}s",
+    "final": "Zone finale, maintenez un pourcentage minimal de {pct}%",
+    "growing": "Atteindra {pct}% dans {time}",
+    "hold": "Maintenir ≥ {pct}%",
+    "next_wave": "Début du changement vers {pct}% dans {time}",
+    "stable": "Stable",
+    "title": "Mort Subite",
+    "unstable": "Instable",
+    "you": "Vous {pct}%",
+    "your_team": "{team}: {pct}%"
+  },
+  "doomsday_clock_speed": {
+    "fast": "Rapide",
+    "normal": "Normal",
+    "slow": "Lent",
+    "veryfast": "Très rapide"
+  },
+  "effects": {
+    "nukeType": {
+      "atom": "Bombe atomique",
+      "hydro": "Bombe à hydrogène",
+      "mirvWarhead": "MIRV"
+    },
+    "type": {
+      "nukeExplosion": "Explosions des bombes",
+      "nukeTrail": "Trainée des bombes",
+      "structures": "Structures",
+      "transportShipTrail": "Trainée des bateaux"
+    }
+  },
   "error_modal": {
     "connection_error": "Erreur de connexion !",
+    "connection_refused": "Connexion refusée : {reason}",
     "copied": "Copié !",
     "copy_clipboard": "Copier dans le presse-papier",
     "crashed": "Le jeu a planté !",
@@ -434,7 +508,6 @@
     "focus": "Focaliser",
     "hydrogen_bomb_detonated": "{name} - Bombe hydrogène explosée",
     "ignore": "Ignorer",
-    "mirv_warheads_intercepted": "{count, plural, one {{count} ogive nucléaire MIRV a été interceptée} other {{count} ogives nucléaire MIRV ont été interceptées}}",
     "missile_intercepted": "Le missile a intercepté {unit}",
     "no_boats_available": "Aucun bateau disponible, max {max}",
     "received_gold_from_captured_ship": "{gold} ors reçu pour la capture d'un navire de {name}",
@@ -451,7 +524,8 @@
     "trade_ship_captured": "Votre bateau de commerce a été capturé par {name}",
     "unit_destroyed": "Votre {unit} a été détruit",
     "unit_voluntarily_deleted": "Unité volontairement supprimée",
-    "wants_to_renew_alliance": "{name} souhaite renouveler votre alliance"
+    "wants_to_renew_alliance": "{name} souhaite renouveler votre alliance",
+    "mirv_warheads_intercepted": "{count, plural, one {{count} ogive nucléaire MIRV a été interceptée} other {{count} ogives nucléaire MIRV ont été interceptées}}"
   },
   "flag_input": {
     "button_title": "Choisissez un drapeau !",
@@ -500,34 +574,26 @@
     "duration": "Durée",
     "economy": "Économie",
     "hydros": "Hydros",
+    "load_failed": "Impossible de charger les statistiques des parties.",
     "loading_game_info": "Chargement des stats du jeu",
     "mirv": "MIRV",
     "naval_trade": "Échange maritime",
     "no_winner": "Cette partie s'est terminée sans aucun gagnant (ou une Nation a gagné)",
     "num_of_conquests_bots": "Tribus tuées",
     "num_of_conquests_humans": "Joueurs tués",
+    "num_of_conquests_nations": "Nations tuées",
     "pirate": "Pirate",
     "players": "Joueurs",
+    "retry": "Réessayer",
     "stolen_gold": "Volé avec des navires de guerre",
     "survival_time": "Temps de survie",
     "total_gold": "Total",
     "train_trade": "Train",
-    "war": "Guerre",
-    "bombs": "Bombes",
-    "conquests": "Conquêtes",
-    "title": "Infos sur la partie",
-    "trade": "Commercer"
+    "unknown_game_type": "Type de partie inconnu",
+    "war": "Guerre"
   },
   "game_list": {
-    "details": "Détails",
-    "difficulty": "Difficulté",
-    "game_id": "ID de la partie",
-    "map": "Carte",
-    "mode": "Mode",
-    "ranking": "Classé",
-    "recent_games": "Parties récentes",
-    "replay": "Revoir",
-    "type": "Type"
+    "stats": "Statistiques"
   },
   "game_mode": {
     "ffa": "Chacun pour soi",
@@ -576,6 +642,8 @@
     "name_cull_desc": "Cacher les noms plus petits que cette taille",
     "name_cull_label": "Taille minimum du nom",
     "name_scale_label": "Échelle du nom",
+    "naval_hover_highlight_desc": "Surbrillance du propriétaire des bateaux lorsque ceux-ci sont survolés.",
+    "naval_hover_highlight_label": "Surbrillance navale",
     "nuke_color_desc": "Couleur du territoire irradié après une explosion.",
     "nuke_color_label": "Couleur des radiations",
     "ocean_color_desc": "Couleur de base des mers, rivières et océans.",
@@ -590,7 +658,6 @@
     "reset_label": "Réinitialiser (par défaut)",
     "sand_color_desc": "Couleur de base des littoraux.",
     "sand_color_label": "Couleur des côtes",
-    "section_accessibility": "Accessibilité",
     "section_effects": "Effets",
     "section_lighting": "Éclairage",
     "section_map": "Carte",
@@ -603,7 +670,8 @@
     "territory_alpha_label": "Opacité du territoire d'un joueur",
     "territory_sat_desc": "Permet de changer l'éclat des couleurs du territoire possédé par un joueur (le plus bas les atténue)",
     "territory_sat_label": "Saturation du territoire d'un joueur",
-    "title": "Paramètres graphiques"
+    "title": "Paramètres graphiques",
+    "section_accessibility": "Accessibilité"
   },
   "heads_up_message": {
     "catching_up": "Rattrapage...",
@@ -661,7 +729,7 @@
     "build_silo": "Silo à missiles",
     "build_silo_desc": "Permet de lancer des missiles.",
     "build_warship": "Navire de guerre",
-    "build_warship_desc": "Patrouille dans une zone, capturant les navires commerciaux ennemis et détruisant leurs bateaux (navires de transport) et navires de guerre. Apparaît dans le Port le plus proche et patrouille la zone que vous avez cliquée pour le construire. Vous pouvez contrôler les vaisseaux de guerre en cliquant sur eux (voir Attaque sous Raccourcis) puis en cliquant sur la nouvelle zone dans laquelle vous voulez les déplacer.",
+    "build_warship_desc": "Patrouille dans une zone, capturant les navires commerciaux ennemis et détruisant leurs bateaux (navires de transport) et navires de guerre. Apparaît dans le Port le plus proche et patrouille la zone que vous avez cliqué pour le construire. Vous pouvez contrôler les vaisseaux de guerre en cliquant sur eux (voir Attaque sous Raccourcis) puis en cliquant sur la nouvelle zone vers laquelle vous voulez les déplacer. Les navires de guerre peuvent monter de niveau (max 3) en capturant des bateaux de commerce et en détruisant des bateaux de transports ainsi que d'autres navires de guerre.",
     "drag": "glisser",
     "exit_confirmation": "Êtes-vous sûr de vouloir quitter le jeu ?",
     "game_id_tooltip": "ID de la partie",
@@ -724,12 +792,15 @@
   "host_modal": {
     "anonymous_players": "Joueurs anonymes",
     "assigned_teams": "Équipes Attribuées",
+    "auto_start_timer": "Temps avant que la partie ne démarre automatiquement",
     "bots": "Tribus",
     "bots_disabled": "Désactivé",
     "compact_map": "Carte compacte",
     "crowded": "Variante de Foule",
+    "custom_alliances": "Durée des alliances",
     "donate_gold": "Donner de l'or",
     "donate_troops": "Donner des troupes",
+    "doomsday_clock": "Mort subite",
     "empty_team": "Vide",
     "empty_teams": "Équipes vides",
     "enables_title": "Désactiver les unités",
@@ -763,6 +834,8 @@
     "starting_gold": "Or de départ (En millions)",
     "starting_gold_placeholder": "5",
     "starting_in": "Lancement dans {time}. Cliquez pour annuler",
+    "subscription_required_body": "Vous avez besoin d'un abonnement pour rendre votre salon public.",
+    "subscription_required_title": "Abonnement requis",
     "team_count": "Nombre d'équipes",
     "teams_Duos": "Duos (équipes de 2)",
     "teams_Humans Vs Nations": "Humains vs Nations",
@@ -770,9 +843,11 @@
     "teams_Trios": "Trios (équipes de 3)",
     "title": "Créer un Salon Privé",
     "toggle_name_reveal": "Afficher/Masquer les véritables noms pour ce joueur",
+    "view_subscriptions": "Voir les abonnements",
+    "visibility_private": "Privé",
+    "visibility_public": "Public",
     "waiting": "En attente de joueurs...",
-    "water_nukes": "Bombes à eau",
-    "disable_alliances": "Désactiver les alliances"
+    "water_nukes": "Bombes à eau"
   },
   "ios_banner": {
     "got_it": "J'ai compris",
@@ -801,10 +876,10 @@
     "owned": "Possédé",
     "player": "Joueur",
     "sams": "SAMs",
-    "show_control": "Afficher les commandes",
-    "show_units": "Afficher les unités",
     "team": "Équipe",
-    "warships": "Vaisseaux de guerre"
+    "warships": "Vaisseaux de guerre",
+    "show_control": "Afficher les commandes",
+    "show_units": "Afficher les unités"
   },
   "leaderboard_modal": {
     "clan": "Clan",
@@ -854,8 +929,7 @@
     "title": "OpenFront (ALPHA)",
     "troubleshooting": "Dépannage",
     "user_avatar_alt": "Avatar de {username}",
-    "wiki": "Wiki",
-    "game_info": "Infos sur la partie"
+    "wiki": "Wiki"
   },
   "map": {
     "achiran": "Achiran",
@@ -873,15 +947,19 @@
     "baikalnukewars": "Baïkal (Guerres Nucléaires)",
     "bajacalifornia": "Basse-Californie",
     "balkans": "Balkans",
+    "baltics": "Terres Baltiques",
     "beringsea": "Mer de Béring",
     "beringstrait": "Détroit de Béring",
     "betweentwoseas": "Entre deux mers",
     "blacksea": "Mer Noire",
     "bosphorusstraits": "Détroits du Bosphore",
+    "branchingpaths": "Ramifications",
     "britannia": "Grande-Bretagne",
     "britanniaclassic": "Grande-Bretagne (Classique)",
     "caribbean": "Caraïbes",
+    "caspiansea": "Mer Caspienne",
     "caucasus": "Caucase",
+    "china": "Chine de Qing",
     "choppingblock": "Carréidoscope",
     "conakry": "Conakry",
     "danishstraits": "Détroits Danois",
@@ -898,20 +976,24 @@
     "featured": "En vedette",
     "fourislands": "Quatre Îles",
     "gatewaytotheatlantic": "Porte de l'Atlantique",
+    "germany": "Allemagne",
     "giantworldmap": "Carte du monde géante",
     "greatlakes": "Grands Lacs",
+    "gulfofguinea": "Golfe de Guinée",
     "gulfofstlawrence": "Golfe du Saint-Laurent",
     "halkidiki": "Chalcidique",
     "hawaii": "Hawaï",
     "hongkong": "Hong Kong",
     "iceland": "Islande",
     "indiansubcontinent": "Sous-continent Indien",
+    "irishsea": "Mer d'Irlande",
     "italia": "Italie",
     "japan": "Japon",
     "juandefucastrait": "Détroit de Juan De Fuca",
     "korea": "Corée",
     "labyrinth": "Labyrinthe",
     "lemnos": "Lemnos",
+    "levant": "Levant",
     "lisbon": "Lisbonne",
     "losangeles": "Los Angeles",
     "luna": "Luna",
@@ -924,6 +1006,7 @@
     "milkyway": "Voie lactée",
     "mississippiriver": "Mississippi",
     "montreal": "Montréal",
+    "morethanluck": "Cinq Feuilles",
     "newyorkcity": "New York City",
     "niledelta": "Delta du Nil",
     "northamerica": "Amérique du Nord",
@@ -934,7 +1017,9 @@
     "passage": "Passage",
     "pluto": "Pluton",
     "random": "Aléatoire",
+    "russia": "Russie",
     "sanfrancisco": "San Francisco",
+    "scandinavia": "Scandinavie",
     "sierpinski": "Sierpinski",
     "southamerica": "Amérique du Sud",
     "southeastasia": "Asie du Sud-Est",
@@ -945,6 +1030,7 @@
     "svalmel": "Svalmel",
     "taiwanstrait": "Détroit de Taïwan",
     "thebox": "La boite",
+    "tierradelfuego": "Tierra Del Fuego",
     "titan": "Titan",
     "tourney1": "Tournoi 2 Équipes",
     "tourney2": "Tournoi 3 Équipes",
@@ -981,27 +1067,36 @@
     "world": "Monde"
   },
   "map_component": {
+    "collapse_all": "Tout réduire",
     "error": "Erreur",
+    "expand_all": "Montrer tout",
     "favorite": "Ajouter aux favoris",
     "favorites_empty": "Cliquez sur l'étoile de n'importe quelle carte pour l'ajouter aux favoris",
     "loading": "Chargement...",
     "no_results": "Aucune carte trouvée",
-    "search_maps": "Rechercher une carte...",
+    "search_maps": "Rechercher de carte...",
     "search_results": "Résultats de la recherche",
     "unfavorite": "Retirer des favoris"
   },
-  "matchmaking_button": {
-    "description": "(ALPHA)",
-    "login_required": "Connectez-vous pour jouer en mode classé",
-    "must_login": "Vous devez être connecté pour jouer en mode classé.",
-    "play_ranked": "Matchmaking 1v1 classé"
+  "marketing_consent": {
+    "body": "Recevoir les actualités et mises à jour par e-mail. Modifiez à tout moment depuis votre compte.",
+    "dismiss": "Ignorer",
+    "error": "Échec de la sauvegarde. Veuillez réessayer.",
+    "no": "Non merci",
+    "title": "Voulez-vous rester informé·e des nouveautés d'OpenFront ?",
+    "yes": "Oui s'il vous plaît"
   },
   "matchmaking_modal": {
     "connecting": "Connexion au serveur de matchmaking...",
     "elo": "Votre ELO : {elo}",
+    "limit_reached": "Vous êtes à court de matchs Classés gratuits.",
+    "limit_reached_info": "Les matchs gratuits se remplissent quotidiennement. Prenez un abonnement pour jouer en Classés sans limites.",
+    "limit_upsell": "Jouez en Classés sans limites",
     "no_elo": "Pas encore d'ELO",
+    "replaced": "Vous avez rejoint la recherche de groupe depuis un autre onglet ou une autre fenêtre.",
     "searching": "Recherche d'une partie...",
     "title": "Matchmaking 1v1 Classé (ALPHA)",
+    "title_2v2": "Matchmaking Classé 2v2 (ALPHA)",
     "waiting_for_game": "En attente du début de la partie..."
   },
   "mode_selector": {
@@ -1012,6 +1107,13 @@
     "teams_count": "{teamCount} équipes",
     "teams_of": " {teamCount} équipes de {playersPerTeam}",
     "teams_title": "Équipes"
+  },
+  "new_lobby_prompt": {
+    "confirm": "Commencer un nouveau salon ? Tous les joueurs seront invités à rejoindre.",
+    "dismiss": "Ignorer",
+    "failed": "Impossible de créer un nouveau salon. Veuillez réessayer.",
+    "join": "Rejoindre",
+    "message": "L'hôte a démarré un nouveau salon"
   },
   "news": {
     "title": "Notes de version"
@@ -1077,6 +1179,13 @@
     "traitor": "Traître",
     "troops": "Troupes"
   },
+  "player_profile": {
+    "loading": "Chargement du profil...",
+    "not_found": "Profil de joueur introuvable",
+    "share": "Partager le profil",
+    "title": "Profil de joueur",
+    "view": "Voir le profil"
+  },
   "player_stats_table": {
     "arrived": "Arrivés",
     "attack": "Attaque",
@@ -1126,6 +1235,7 @@
     "public": "Public",
     "ranked": "Classé",
     "ranked_1v1": "1v1",
+    "ranked_2v2": "2v2",
     "solo": "Solo",
     "stats_games_played": "Parties jouées",
     "stats_losses": "Défaites",
@@ -1145,7 +1255,15 @@
     "host_cheats": "Privilèges de l'hôte",
     "join_lobby": "Rejoindre le salon",
     "joined_waiting": "Salon rejoint ! En attente du démarrage de l'hôte...",
+    "listing_failed": "Échec de la mise à jour de la liste des salons. Veuillez réessayer.",
+    "listing_full": "La liste de salons publics est complète. Veuillez réessayer plus tard.",
+    "listing_host_cheats_enabled": "Désactiver les privilèges de l'hôte pour rendre votre salon public.",
+    "listing_limit_reached": "Vous avez déjà un salon public.",
+    "listing_requires_subscription": "Un abonnement actif est requis pour ouvrir un salon public.",
+    "listing_whitelist_enabled": "Désactivez la liste blanche pour rendre votre salon public.",
+    "no_open_lobbies": "Aucun salon ouvert à l'heure actuelle",
     "not_found": "Salon introuvable. Veuillez vérifier l'ID et réessayer.",
+    "open_lobbies": "Salons ouverts",
     "pvp_immunity": "Durée d'immunité des joueurs",
     "starting_gold": "Or de départ",
     "title": "Rejoindre un salon privé",
@@ -1156,6 +1274,9 @@
     "crowded": "Foule",
     "disable_alliances": "Alliances désactivées",
     "disable_alliances_label": "Alliances",
+    "doomsday_clock": "Mort subite",
+    "doomsday_clock_label": "Mort subite",
+    "doomsday_clock_with_speed": "Mort subite : {speed}",
     "gold_multiplier": "x{amount} Multiplicateur d'Or",
     "hard_nations": "Nations difficiles",
     "nukes_disabled": "Bombes nucléaires désactivées",
@@ -1202,6 +1323,9 @@
     "game_speed": "Vitesse de jeu",
     "replay_speed": "Vitesse de relecture"
   },
+  "rewards_modal": {
+    "title": "Récompenses"
+  },
   "select_lang": {
     "title": "Sélectionner une langue"
   },
@@ -1222,6 +1346,8 @@
     "bots": "Tribus",
     "bots_disabled": "Désactivé",
     "compact_map": "Carte compacte",
+    "custom_alliances": "Durée des alliances",
+    "doomsday_clock": "Mort subite",
     "enables_title": "Désactiver les Unités",
     "gold_multiplier": "Multiplicateur d'or",
     "gold_multiplier_placeholder": "2.0x",
@@ -1231,6 +1357,9 @@
     "max_timer": "Durée de jeu (minutes)",
     "max_timer_invalid": "Veuillez entrer une valeur max valide pour le minuteur (1-120 minutes)",
     "max_timer_placeholder": "Mins",
+    "medals_earned": "Médailles",
+    "medals_of_maps": "sur {total} cartes",
+    "mins_placeholder": "Mins",
     "nations": "Nations",
     "nations_disabled": "Désactivées",
     "options_changed_no_achievements": "Paramètres personnalisés - succès désactivés",
@@ -1241,35 +1370,44 @@
     "starting_gold": "Or de départ (En millions)",
     "starting_gold_placeholder": "5",
     "toggle_achievements": "Activer / Désactiver les succès",
-    "water_nukes": "Bombes à eau",
-    "disable_alliances": "Désactiver les alliances"
+    "water_nukes": "Bombes à eau"
   },
   "store": {
     "already_subscribed": "Déjà abonné.",
     "change_tier_failed": "Votre abonnement n'a pas pu être actualisé. Merci de réessayer.",
+    "change_tier_rate_limited": "Vous venez de changer de grade. Veuillez patienter une minute avant de changer à nouveau.",
     "change_tier_success": "Changé pour {tier}.",
     "checkout_failed": "Échec de la création de la scène de paiement.",
     "confirm_downgrade": "Rétrograder vers {tier}? Vous obtiendrez un crédit pour la portion inutilisée de votre abonnement actuel.",
+    "confirm_purchase_body": "Acheter {item} pour {amount, number} {currency} ?",
+    "confirm_purchase_title": "Confirmer l'achat",
     "confirm_upgrade": "Promouvoir à {tier} ? Vous serez maintenant débité de la différence au prorata.",
+    "crowns": "Couronnes",
     "currency_pack_purchase_success": "Achat du pack de monnaie réussi !",
+    "custom_amount": "Choisissez la quantité",
+    "custom_currency_purchase_success": "Achat de plutonium réussi !",
+    "effects": "Effets",
     "flags": "Drapeaux",
+    "insufficient_currency_body": "Vous avez besoin de {amount, number} plus {currency} pour acheter {item}.",
+    "insufficient_currency_title": "Pas assez de {currency}",
     "login_required": "Vous devez être connecté·e pour acheter avec de la monnaie.",
+    "no_crowns": "Pas de couronnes disponibles. Revenez plus tard pour de nouveaux items.",
+    "no_effects": "Pas d'effets disponibles. Revenez plus tard pour de nouveaux items.",
     "no_flags": "Aucun drapeau disponible. Revenez plus tard.",
     "no_skins": "Aucun skin disponible, Revenez plus tard.",
     "no_subscriptions": "Aucun abonnement disponible. Revenez plus tard pour de nouveaux items.",
     "packs": "Packs",
     "patterns": "Skins",
+    "plutonium_amount": "Quantité de plutonium",
     "price_per_month": "/mois",
+    "purchase_currency": "Acheter {currency}",
     "purchase_failed": "Échec de l'achat. Veuillez réessayer.",
     "purchase_success": "Achat réussit : {name}",
+    "subscribed": "Abonné·e",
     "subscription_purchase_success": "Abonnement activé !",
     "subscriptions": "Abonnements",
     "switch_button": "Changer",
-    "title": "Boutique",
-    "current_plan": "Abonnement actuel",
-    "no_packs": "Aucun pack disponible, Revenez plus tard.",
-    "not_enough_currency": "Pas assez de monnaie pour cet achat.",
-    "subscribe_button": "S'abonner"
+    "title": "Boutique"
   },
   "team_colors": {
     "blue": "Bleu",
@@ -1288,10 +1426,7 @@
       "default": "Par défaut"
     },
     "select_skin": "Sélectionnez le motif",
-    "selected": "sélectionné",
-    "purchase": "Acheter",
-    "search": "Recherche...",
-    "title": "Skins"
+    "selected": "sélectionné"
   },
   "token_login_modal": {
     "logging_in": "Connexion en cours...",
@@ -1388,8 +1523,6 @@
     "camera_movement": "Mouvement de la caméra",
     "center_camera": "Centrer la caméra",
     "center_camera_desc": "Centrer la caméra sur le joueur",
-    "colorblind_desc": "Utiliser les couleurs du territoire et des bordures favorables aux daltoniens",
-    "colorblind_label": "Mode daltonien",
     "coordinate_grid_desc": "Activer/désactiver l'affichage de la grille de coordonnées",
     "coordinate_grid_label": "Grille de coordonnées",
     "cursor_cost_label_desc": "Afficher une pastille indiquant le coût sous l'icône du curseur de construction",
@@ -1411,12 +1544,16 @@
     "game_speed_up_desc": "Avancer la vitesse du jeu d'un cran. Solo uniquement.",
     "go_to_player_desc": "Activer/désactiver le zoom sur le joueur au début d'une partie.",
     "go_to_player_label": "Aller au joueur au lancement de la partie",
+    "graphics_refresh_modifier": "Actualisation des graphismes",
+    "graphics_refresh_modifier_desc": "Maintenez cette touche ainsi que R enfoncés pour actualiser les graphismes",
     "graphics_settings_desc": "Ajuster l'apparence de la carte",
     "graphics_settings_label": "Paramètres graphiques",
     "ground_attack": "Attaque au sol",
     "ground_attack_desc": "Envoyez une attaque au sol sur la tuile sous votre curseur.",
     "help_messages_desc": "Afficher des conseils et des avertissements contextuels pendant la partie, tels que des avertissements sur la limite de troupes et des conseils généraux de jeu.",
     "help_messages_label": "Messages d'aide",
+    "highlight_glow_strength_label": "Force de la surbrillance",
+    "highlight_small_players_desc": "Mettre les joueurs les plus petits en surbrillance pour les rendre plus visibles.",
     "keybind_conflict_error": "La clé {key} est déjà liée à une autre action.",
     "keybinds_hint": "Cliquez sur une touche pour la redéfinir. Vous pouvez assigner une seule touche ou Maj + la combinaison de touches.",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
@@ -1467,9 +1604,12 @@
     "zoom_in": "Zoom avant",
     "zoom_in_desc": "Zoom sur la carte",
     "zoom_out": "Zoom arrière",
-    "zoom_out_desc": "Dézoom de la carte"
+    "zoom_out_desc": "Dézoom de la carte",
+    "colorblind_desc": "Utiliser les couleurs du territoire et des bordures favorables aux daltoniens",
+    "colorblind_label": "Mode daltonien"
   },
   "username": {
+    "account_invalid_chars": "Les pseudonymes peuvent contenir des lettres, chiffres et tirets.",
     "enter_username": "Entrez votre nom d'utilisateur",
     "invalid_chars": "Le pseudonyme peut seulement contenir des lettres, chiffres, espaces et underscores.",
     "not_string": "Le nom d'utilisateur doit être une chaîne de caractères.",
@@ -1479,7 +1619,12 @@
     "tag_too_long": "Un tag de clan ne peut pas excéder 5 caractères alphanumériques.",
     "tag_too_short": "Le tag de clan doit faire 2 à 5 caractères alphanumériques.",
     "too_long": "Le nom d'utilisateur ne doit pas dépasser {max} caractères.",
-    "too_short": "Le nom d'utilisateur doit comporter au moins {min} caractères."
+    "too_short": "Le nom d'utilisateur doit comporter au moins {min} caractères.",
+    "verified_heading": "Nom vérifié",
+    "verified_player": "Joueur vérifié",
+    "verified_sub_required": "Vous avez besoin d'un abonnement actif pour jouer avec votre nom vérifié.",
+    "verified_sub_required_confirm": "Voir la boutique",
+    "verified_toggle": "Vérifié"
   },
   "win_modal": {
     "died": "Vous êtes mort·e.",
@@ -1489,15 +1634,22 @@
     "join_server": "Rejoindre le Serveur",
     "keep": "Continuer à jouer",
     "nation_won": "La nation {nation} a gagné !",
+    "new_lobby": "Nouveau salon",
     "other_team": "L'équipe {team} a gagné !",
     "other_won": "{player} a gagné !",
     "requeue": "Rejouer",
     "spectate": "Regarder",
     "support_openfront": "Soutenir OpenFront!",
     "territory_pattern": "Achetez une décoration de territoire pour retirer les publicités !",
-    "wishlist": "Liste de souhaits sur Steam !",
     "you_won": "Vous avez gagné !",
     "your_team": "Votre équipe a gagné !",
-    "youtube_tutorial": "Besoin d'aide ?"
+    "youtube_tutorial": "Besoin d'aide ?",
+    "wishlist": "Liste de souhaits sur Steam !"
+  },
+  "matchmaking_button": {
+    "description": "(ALPHA)",
+    "login_required": "Connectez-vous pour jouer en mode classé",
+    "must_login": "Vous devez être connecté pour jouer en mode classé.",
+    "play_ranked": "Matchmaking 1v1 classé"
   }
 }
