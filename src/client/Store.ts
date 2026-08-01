@@ -21,13 +21,15 @@ import {
 import { translateText } from "./Utils";
 
 type StoreTab =
-  | "patterns"
-  | "flags"
-  | "crowns"
+  | "cosmetics"
   | "effects"
+  | "merch"
   | "packs"
   | "subscriptions"
   | "tribes";
+
+const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
+type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -35,6 +37,7 @@ export class StoreModal extends BaseModal {
   private cosmetics: Cosmetics | null = null;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
+  private cosmeticsSubTab: CosmeticsSubTab = "patterns";
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -45,11 +48,10 @@ export class StoreModal extends BaseModal {
       tabs: [
         { key: "packs", label: translateText("store.packs") },
         { key: "subscriptions", label: translateText("store.subscriptions") },
-        { key: "patterns", label: translateText("store.patterns") },
-        { key: "flags", label: translateText("store.flags") },
-        { key: "crowns", label: translateText("store.crowns") },
+        { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
+        { key: "merch", label: translateText("store.merch") },
       ],
     };
   }
@@ -206,6 +208,76 @@ export class StoreModal extends BaseModal {
     `;
   }
 
+  // Skins / Flags / Crowns grouped under one top-level tab; a sub-tab bar
+  // (styled like effects-grid's) picks which grid shows.
+  private renderCosmeticsPanel(): TemplateResult {
+    let grid: TemplateResult;
+    if (this.cosmeticsSubTab === "flags") {
+      grid = this.renderFlagGrid();
+    } else if (this.cosmeticsSubTab === "crowns") {
+      grid = this.renderCrownGrid();
+    } else {
+      grid = this.renderPatternGrid();
+    }
+    return html`
+      <div
+        class="flex items-center justify-center gap-6 border-b border-white/10 px-4"
+      >
+        ${COSMETICS_SUB_TABS.map((tab) => {
+          const active = this.cosmeticsSubTab === tab;
+          return html`<button
+            class="-mb-px border-b-2 px-2 py-3 text-sm font-black uppercase tracking-wider transition-colors ${active
+              ? "border-blue-500 text-blue-400"
+              : "border-transparent text-white/50 hover:text-white/80"}"
+            @click=${() => {
+              this.cosmeticsSubTab = tab;
+              this.requestUpdate();
+            }}
+          >
+            ${translateText(`store.${tab}`)}
+          </button>`;
+        })}
+      </div>
+      ${grid}
+    `;
+  }
+
+  private renderMerchPanel(): TemplateResult {
+    return html`
+      <div
+        class="flex flex-col items-center justify-center gap-6 p-12 min-h-[300px]"
+      >
+        <p class="text-white/70 text-lg text-center">
+          ${translateText("store.merch_blurb")}
+        </p>
+        <a
+          href="https://merch.openfront.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center gap-3 rounded-xl bg-malibu-blue hover:bg-aquarius text-white font-bold uppercase tracking-wider py-4 px-8 text-lg lg:text-xl transition-all duration-300 transform hover:-translate-y-px"
+        >
+          ${translateText("store.merch_visit_store")}
+          <svg
+            class="h-5 w-5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+            />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </a>
+      </div>
+    `;
+  }
+
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
@@ -293,12 +365,10 @@ export class StoreModal extends BaseModal {
       return this.renderAffiliateGrid();
     }
     switch (key as StoreTab) {
-      case "patterns":
-        return this.renderPatternGrid();
-      case "flags":
-        return this.renderFlagGrid();
-      case "crowns":
-        return this.renderCrownGrid();
+      case "cosmetics":
+        return this.renderCosmeticsPanel();
+      case "merch":
+        return this.renderMerchPanel();
       case "effects":
         return this.renderEffectGrid();
       case "subscriptions":
@@ -359,6 +429,13 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
+    // Old links used top-level tab=patterns|flags|crowns; map them onto the
+    // grouped cosmetics tab so they still land on the right grid.
+    const tab = typeof args?.tab === "string" ? args.tab : null;
+    if (COSMETICS_SUB_TABS.includes(tab as CosmeticsSubTab)) {
+      this.cosmeticsSubTab = tab as CosmeticsSubTab;
+      this.activeTab = "cosmetics";
+    }
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
