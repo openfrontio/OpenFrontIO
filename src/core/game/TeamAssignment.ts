@@ -1,7 +1,7 @@
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID } from "../Schemas";
+import { ClientID, TeamCountConfig } from "../Schemas";
 import { simpleHash } from "../Util";
-import { PlayerInfo, PlayerType, Team } from "./Game";
+import { Duos, PlayerInfo, PlayerType, Quads, Team, Trios } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],
@@ -154,14 +154,19 @@ export function assignTeams(
 export function assignTeamsLobbyPreview(
   players: PlayerInfo[],
   teams: Team[],
-  isDuosTriosQuads: boolean,
+  teamCount: TeamCountConfig,
   nationCount: number,
 ): Map<PlayerInfo, Team | "kicked"> {
   const maxTeamSize = getMaxTeamSize(
     players.length + nationCount,
     teams.length,
   );
-  return assignTeams(players, teams, isDuosTriosQuads, maxTeamSize);
+  return assignTeams(
+    players,
+    teams,
+    teamCount === Duos || teamCount === Trios || teamCount === Quads,
+    maxTeamSize,
+  );
 }
 
 export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
