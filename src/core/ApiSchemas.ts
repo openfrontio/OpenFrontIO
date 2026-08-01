@@ -365,6 +365,42 @@ export type TribeLeaderboardResponse = z.infer<
   typeof TribeLeaderboardResponseSchema
 >;
 
+// GET /public/tribe/:name — the public stats page for one custom tribe name.
+// No auth; the name goes URL-encoded in the path and lookup is case- and
+// whitespace-insensitive (the response carries the canonical display form).
+// Responses are live, unlike the leaderboard's ~1h cache, so small
+// discrepancies between this and the board are expected. 404 means unknown,
+// rejected/revoked, or owner banned — indistinguishable on purpose. A name
+// with no game appearances yet is a 200 with zeroed figures, not a 404.
+export const TribeStatsFiguresSchema = z.object({
+  gamesAppeared: z.number(),
+  // Impressions, NOT distinct players (see TribeLeaderboardEntry.playerReach):
+  // display as "appeared in games with N players", never "seen by N people".
+  playerReach: z.number(),
+});
+
+export const TribeStatsResponseSchema = z.object({
+  // Canonical display name.
+  name: z.string(),
+  // The buyer, same pair the tribes leaderboard exposes; ownerUsername is
+  // null when they never set one — fall back to the public id.
+  ownerPublicId: z.string(),
+  ownerUsername: z.string().nullable(),
+  // Unexpired boosts; display multiplier = this + 1, same convention as
+  // TribeNameSchema.activeBoosts. Coerced for the same wire tolerance.
+  activeBoosts: z.coerce.number(),
+  lifetime: TribeStatsFiguresSchema,
+  // Same rolling window the tribes leaderboard ranks by, so these figures
+  // match the board. Bounds are plain strings, not z.iso.date(), for the
+  // same display-only tolerance as TribeLeaderboardResponse's.
+  window: TribeStatsFiguresSchema.extend({
+    days: z.number(),
+    start: z.string(),
+    end: z.string(),
+  }),
+});
+export type TribeStatsResponse = z.infer<typeof TribeStatsResponseSchema>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,

@@ -20,6 +20,7 @@ import {
   RewardSchema,
   TribeLeaderboardResponseSchema,
   TribeNameSchema,
+  TribeStatsResponseSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
 
@@ -975,6 +976,101 @@ describe("TribeLeaderboardResponseSchema", () => {
     const result = TribeLeaderboardResponseSchema.safeParse({
       ...base,
       tribes: [{ ...entry, playerReach: "12400" }],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("TribeStatsResponseSchema", () => {
+  const base = {
+    name: "Cool Tribe",
+    ownerPublicId: "aB3xK9zQ",
+    ownerUsername: "Ada.4821",
+    activeBoosts: 2,
+    lifetime: { gamesAppeared: 107, playerReach: 10699 },
+    window: {
+      days: 30,
+      start: "2026-07-02",
+      end: "2026-08-01",
+      gamesAppeared: 7,
+      playerReach: 700,
+    },
+  };
+
+  it("parses a full response", () => {
+    const result = TribeStatsResponseSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.name).toBe("Cool Tribe");
+    expect(result.data.activeBoosts).toBe(2);
+    expect(result.data.lifetime.playerReach).toBe(10699);
+    expect(result.data.window.gamesAppeared).toBe(7);
+  });
+
+  // The buyer has never set an account username; the dialog falls back to
+  // the public id (<player-name> does that, so null must survive the parse).
+  it("parses a response whose owner has no username", () => {
+    const result = TribeStatsResponseSchema.safeParse({
+      ...base,
+      ownerUsername: null,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.ownerUsername).toBeNull();
+  });
+
+  // A name that exists but hasn't appeared in any games yet is a 200 with
+  // zeroed figures, not a 404.
+  it("parses a zeroed response for a name with no appearances", () => {
+    const result = TribeStatsResponseSchema.safeParse({
+      ...base,
+      activeBoosts: 0,
+      lifetime: { gamesAppeared: 0, playerReach: 0 },
+      window: { ...base.window, gamesAppeared: 0, playerReach: 0 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // Same coercion tolerance as TribeNameSchema.activeBoosts: a count that
+  // arrives as a stringified number must not fail the parse.
+  it("coerces a stringified boost count", () => {
+    const result = TribeStatsResponseSchema.safeParse({
+      ...base,
+      activeBoosts: "3",
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.activeBoosts).toBe(3);
+  });
+
+  // The window bounds are display-only plain strings (see the leaderboard's
+  // start/end); the dialog drops the date span it can't read rather than
+  // failing the whole parse.
+  it("tolerates window bounds that are not YYYY-MM-DD", () => {
+    const result = TribeStatsResponseSchema.safeParse({
+      ...base,
+      window: {
+        ...base.window,
+        start: "2026-07-02T00:00:00.000Z",
+        end: "2026-08-01 18:04:11+00",
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each(["name", "ownerPublicId", "lifetime", "window"])(
+    "rejects a response missing %s",
+    (field) => {
+      const body: Record<string, unknown> = { ...base };
+      delete body[field];
+      expect(TribeStatsResponseSchema.safeParse(body).success).toBe(false);
+    },
+  );
+
+  it("rejects a non-numeric reach", () => {
+    const result = TribeStatsResponseSchema.safeParse({
+      ...base,
+      lifetime: { gamesAppeared: 107, playerReach: "10699" },
     });
     expect(result.success).toBe(false);
   });

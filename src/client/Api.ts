@@ -33,6 +33,8 @@ import {
   RankedLeaderboardResponseSchema,
   TribeLeaderboardResponse,
   TribeLeaderboardResponseSchema,
+  TribeStatsResponse,
+  TribeStatsResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
@@ -498,6 +500,38 @@ export async function boostTribeName(
   } catch (e) {
     console.error("boostTribeName: request failed", e);
     return { ok: false, code: "failed" };
+  }
+}
+
+// GET /public/tribe/:name — live stats for one custom tribe name. Public
+// (no auth), so it works for any name, but 404s for names that are unknown,
+// rejected/revoked, or whose owner is banned — that folds into false along
+// with every other failure, since callers can't act on the difference.
+export async function fetchTribeStats(
+  name: string,
+): Promise<TribeStatsResponse | false> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/public/tribe/${encodeURIComponent(name)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (res.status !== 200) {
+      console.warn(
+        "fetchTribeStats: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+    const parsed = TribeStatsResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("fetchTribeStats: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchTribeStats: request failed", err);
+    return false;
   }
 }
 
