@@ -1781,6 +1781,13 @@ export class GameServer {
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
+          // Simulation inputs: teamIndex pins matchmade teams, friends bias
+          // team grouping, isLobbyCreator gates host cheats. Replays rebuild
+          // GameStartInfo from these records, so dropping any of them makes
+          // the replay diverge from the recorded hashes (desync errors).
+          teamIndex: player.teamIndex,
+          friends: player.friends,
+          isLobbyCreator: player.isLobbyCreator,
         } satisfies PlayerRecord;
       },
     );
