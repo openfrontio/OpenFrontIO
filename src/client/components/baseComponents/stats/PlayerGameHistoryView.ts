@@ -467,18 +467,12 @@ export class PlayerGameHistoryView extends LitElement {
         <div
           class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5"
         >
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="text-[10px] font-bold uppercase tracking-wider text-white/40"
-              >${translateText("clan_modal.history_game_id")}:</span
-            >
-            <copy-button
-              compact
-              .copyText=${game.gameId}
-              .displayText=${game.gameId}
-              .showVisibilityToggle=${false}
-            ></copy-button>
-          </div>
+          <copy-button
+            compact
+            .copyText=${game.gameId}
+            .displayText=${game.gameId}
+            .showVisibilityToggle=${false}
+          ></copy-button>
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
