@@ -1,5 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
@@ -9,7 +10,6 @@ import {
 import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../Utils";
-import "../CopyButton";
 import {
   formatAbsoluteTime,
   formatDayHeader,
@@ -18,6 +18,9 @@ import {
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
 import { verifiedBadge } from "../ui/VerifiedBadge";
 import { renderLoadingSpinner, showToast } from "./ClanShared";
+
+const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
+const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 
 type FilterKey = ClanGameFilter | "all";
 
@@ -430,34 +433,42 @@ export class ClanGameHistoryView extends LitElement {
             </div>`
           : ""}
         <div
-          class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5"
+          class="flex items-center justify-end px-4 py-3 border-b border-white/5"
         >
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="text-[10px] font-bold uppercase tracking-wider text-white/40"
-              >${translateText("clan_modal.history_game_id")}:</span
-            >
-            <copy-button
-              compact
-              .copyText=${game.gameId}
-              .displayText=${game.gameId}
-              .showVisibilityToggle=${false}
-            ></copy-button>
-          </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
+              title=${translateText("game_list.stats")}
+              aria-label=${translateText("game_list.stats")}
               @click=${() => this.showStats(game.gameId)}
-              class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+              class="inline-flex w-8 h-8 items-center justify-center text-white/80 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
             >
-              ${translateText("game_list.stats")}
+              <img
+                src=${statsIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only">${translateText("game_list.stats")}</span>
             </button>
             <button
               type="button"
+              title=${translateText("clan_modal.history_watch_replay")}
+              aria-label=${translateText("clan_modal.history_watch_replay")}
               @click=${() => this.watchReplay(game.gameId)}
-              class="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
             >
-              ${translateText("clan_modal.history_watch_replay")}
+              <img
+                src=${replayIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("clan_modal.history_watch_replay")}</span
+              >
             </button>
           </div>
         </div>
