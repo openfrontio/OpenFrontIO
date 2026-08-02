@@ -51,7 +51,6 @@ The API exposes Content-Range and accepts these request headers:
 | GET    | /leaderboard/public/ffa           | Public free-for-all leaderboard                     |
 | GET    | /leaderboard/ranked               | Ranked 1v1 and 2v2 leaderboards                     |
 | GET    | /leaderboard/tribes               | Custom tribe-name leaderboard                       |
-| GET    | /users/:persistentId              | Anonymous persistent-player lookup                  |
 | GET    | /matchmaking/join                 | Matchmaking WebSocket                               |
 | GET    | /public/\*                        | Public asset fallback, mainly for local development |
 
@@ -401,16 +400,6 @@ returns 400. The response is:
 result is victory, defeat, or incomplete. totalPlayers, playerTeams, and
 clanTag can be null. username and clanTag reflect the identity recorded in
 that game session. Unknown players return 404.
-
-### GET /users/:persistentId
-
-Looks up the public player ID associated with an anonymous persistent player.
-The path accepts a UUID or the literal REDACTED. A successful response is:
-
-    { "player": { "publicId": "..." } }
-
-This endpoint only resolves anonymous players without a linked Discord
-identity. Other cases return 404.
 
 ## Public clans and leaderboards
 
