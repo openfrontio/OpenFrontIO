@@ -105,8 +105,8 @@ void main() {
   // A crown cosmetic skins the first-place crown (slot 0).
   vCrownLayer = (iconSlot == 0 && pd8.x >= 0.0) ? int(pd8.x) : -1;
 
-  // Early out: dead player OR emoji is active
-  if (pd1.w <= 0.0 || pd4.y >= 0.0) {
+  // Early out: dead player only (emoji no longer hides status icons)
+  if (pd1.w <= 0.0) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vLocalUV = vec2(0.0);
@@ -182,20 +182,22 @@ void main() {
     iconX = wx + pd3.w * nameWorldScale + iconWorldSize * 0.12;
     iconY = wy - iconWorldSize * 0.4;
   } else {
-    // Count active icons and position of this one (left-to-right)
-    int totalActive = 0;
-    for (int i = 0; i < 9; i++) {
-      if (statusFlag[i] > 0.5) totalActive++;
-    }
+    // Count active status icons and position of this one (left-to-right).
+    // If an emoji is also active it occupies one extra slot on the right,
+    // so include it in the total for centering purposes.
+    // totalActive is precomputed by the CPU into pd8.z — single source of truth.
+    int totalActive = int(pd8.z);
+    bool hasEmoji = (pd4.y >= 0.0);
+    int totalItems = totalActive + (hasEmoji ? 1 : 0);
     int myIndex = countBelow(iconSlot);
 
-    // Horizontal centering: spread icons evenly above the name
+    // Horizontal centering: treat status icons + emoji as one group.
     float gap = iconWorldSize * 0.15;
-    float totalWidth = float(totalActive) * iconWorldSize + float(totalActive - 1) * gap;
+    float totalWidth = float(totalItems) * iconWorldSize + float(totalItems - 1) * gap;
     float startX = wx - totalWidth * 0.5;
     iconX = startX + float(myIndex) * (iconWorldSize + gap);
 
-    // Position: row above the emoji row
+    // Position: same row as the emoji
     iconY = wy - uFontBase * nameWorldScale * uStatusRowOffset;
   }
 
