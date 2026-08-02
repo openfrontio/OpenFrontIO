@@ -1728,7 +1728,7 @@
     "zoom_out_desc": "Zoom out the map"
   },
   "username": {
-    "account_invalid_chars": "Username can only contain letters, numbers, underscores, and hyphens.",
+    "account_invalid_chars": "Username can only contain letters, numbers, underscores, hyphens, and single spaces between words.",
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "not_string": "Username must be a string.",
