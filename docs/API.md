@@ -286,7 +286,7 @@ The requested range may be at most two days. Optional filters:
 - type: Singleplayer, Public, or Private
 - mode: Free For All or Team
 - rankedType: unranked, 1v1, or 2v2
-- playerTeams: Duos, Trios, Quads, HumansVsNations, or a numeric team count
+- playerTeams: Duos, Trios, Quads, Humans Vs Nations, or a numeric team count
 - limit: 1–1000, default 50
 - offset: non-negative integer, default 0
 
@@ -628,8 +628,8 @@ Returns the public catalog grouped by:
 Purchasable entries include price as a display string, priceInCents,
 productId, and priceId when applicable; unavailable products have a null
 product entry. Cosmetic entries also expose their name, rarity, optional
-affiliateCode, and soft/hard in-game prices. Patterns include pattern,
-description, and optional color-palette availability. Flags, skins, and crowns
+affiliateCode, and soft/hard in-game prices. Patterns include pattern and
+optional color-palette availability. Flags, skins, and crowns
 include a public url. Effects are grouped by effect type; current groups
 include transportShipTrail, nukeTrail, nukeExplosion, structures, and warship,
 with type-specific attributes.
@@ -1094,8 +1094,9 @@ Response:
       "pendingRequests": 0
     }
 
-username can be null. pendingRequests is included for managers and is omitted
-for ordinary members. All stats are public-game clan stats;
+username can be null. stats is optional and may be omitted for compatibility
+members. pendingRequests is included for managers and is omitted for ordinary
+members. All stats are public-game clan stats;
 the bucket names describe the aggregation used by the API.
 
 ### GET /clans/:clanTag/games
@@ -1290,8 +1291,9 @@ Claims all pending rewards in one transaction. The response is:
       }
     }
 
-Calling this with no pending rewards is successful and returns an empty
-claimed array.
+Each claimed entry always includes id. currencyType, amount, reason, note, and
+claimedAt are optional server metadata. Calling this with no pending rewards is
+successful and returns an empty claimed array.
 
 ### POST /shop/purchase
 
