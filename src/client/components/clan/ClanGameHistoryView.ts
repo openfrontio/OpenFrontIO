@@ -10,7 +10,6 @@ import {
 import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../Utils";
-import "../CopyButton";
 import {
   formatAbsoluteTime,
   formatDayHeader,
@@ -434,14 +433,8 @@ export class ClanGameHistoryView extends LitElement {
             </div>`
           : ""}
         <div
-          class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5"
+          class="flex items-center justify-end px-4 py-3 border-b border-white/5"
         >
-          <copy-button
-            compact
-            .copyText=${game.gameId}
-            .displayText=${game.gameId}
-            .showVisibilityToggle=${false}
-          ></copy-button>
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
