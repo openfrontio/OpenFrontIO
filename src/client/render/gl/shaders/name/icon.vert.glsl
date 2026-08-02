@@ -125,7 +125,7 @@ void main() {
     float atlasW = uEmojiAtlasW;
     float atlasH = uEmojiAtlasH;
 
-    float emojiWorldSize = uFontBase * nameWorldScale * 1.0;
+    float emojiWorldSize = uFontBase * nameWorldScale * 1.1;
 
     // Read precomputed active status icon count from pd8.z (set by CPU, avoids
     // duplicating flag logic here and in status-icon.vert.glsl).
