@@ -751,8 +751,8 @@ shape; dates are serialized as ISO strings:
           "singleplayerMap": []
         },
         "leaderboard": {
-          "oneVone": { "elo": 1000, "maxElo": 1000 },
-          "twoVtwo": { "elo": 1000, "maxElo": 1000 }
+          "oneVone": { "elo": 1000 },
+          "twoVtwo": { "elo": 1000 }
         },
         "currency": { "soft": "0", "hard": "0" },
         "rewards": [],
@@ -1199,7 +1199,8 @@ The following endpoints take:
 - POST /clans/:clanTag/unban — officer
 - POST /clans/:clanTag/promote — leader; member to officer
 - POST /clans/:clanTag/demote — leader; officer to member
-- POST /clans/:clanTag/transfer — leader; transfers leadership to a member
+- POST /clans/:clanTag/transfer — leader; transfers leadership to any
+  non-leader member, including officers
 
 These successful mutations return 204. Self-targeting and invalid role
 transitions return 400 or 403; missing players/members return 404. Banning an
