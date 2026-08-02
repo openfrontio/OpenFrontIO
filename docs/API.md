@@ -75,47 +75,45 @@ The OAuth and session endpoints are also unauthenticated at the HTTP layer:
 Every endpoint in this table requires a user JWT unless noted otherwise.
 Clan endpoints additionally require the role shown in the detailed reference.
 
-| Method       | Path                               | Required role or purpose            |
-| ------------ | ---------------------------------- | ----------------------------------- |
-| GET, POST    | /users/@me                         | Read or change profile visibility   |
-| PUT          | /users/@me/username                | Change username                     |
-| GET, POST    | /users/@me/tribe_names             | Read or buy custom tribe names      |
-| POST         | /users/@me/tribe_names/:id/boosts  | Boost one owned tribe name          |
-| GET, POST    | /marketing/consent                 | Read or change email consent        |
-| GET          | /auth/link/google                  | Start Google account linking        |
-| POST         | /colors/random                     | Generate a random player color      |
-| POST         | /archive_singleplayer_game         | Archive a browser singleplayer game |
-| POST         | /flares_granted/temporary          | Grant a short-lived cosmetic trial  |
-| GET          | /friends                           | List friends                        |
-| GET          | /friends/requests                  | List friend requests                |
-| POST, DELETE | /friends/requests/:publicId        | Create or withdraw a request        |
-| POST         | /friends/requests/:publicId/accept | Accept a request                    |
-| DELETE       | /friends/:publicId                 | Remove a friend                     |
-| GET          | /clans                             | Browse clans                        |
-| GET          | /clans/:clanTag                    | Read clan details                   |
-| GET          | /clans/:clanTag/members            | Member list (member)                |
-| GET          | /clans/:clanTag/games              | Clan game history (member)          |
-| PATCH        | /clans/:clanTag                    | Update clan (officer)               |
-| DELETE       | /clans/:clanTag                    | Disband clan (leader)               |
-| POST         | /clans/:clanTag/join               | Join or request to join             |
-| POST         | /clans/:clanTag/leave              | Leave clan (member)                 |
-| POST         | /clans/:clanTag/kick               | Kick a member (officer)             |
-| POST         | /clans/:clanTag/ban                | Ban a player (officer)              |
-| POST         | /clans/:clanTag/unban              | Remove a clan ban (officer)         |
-| POST         | /clans/:clanTag/promote            | Promote a member (leader)           |
-| POST         | /clans/:clanTag/demote             | Demote an officer (leader)          |
-| POST         | /clans/:clanTag/transfer           | Transfer leadership (leader)        |
-| GET          | /clans/:clanTag/bans               | List bans (officer)                 |
-| GET          | /clans/:clanTag/requests           | List join requests (officer)        |
-| POST         | /clans/:clanTag/requests/approve   | Approve a join request (officer)    |
-| POST         | /clans/:clanTag/requests/deny      | Deny a join request (officer)       |
-| POST         | /clans/:clanTag/requests/withdraw  | Withdraw your join request          |
-| POST         | /subscriptions/@me/cancel          | Cancel a subscription               |
-| POST         | /subscriptions/@me/change-tier     | Change subscription tier            |
-| POST         | /subscriptions/@me/portal          | Create a billing-portal session     |
-| POST         | /rewards/claim-all                 | Claim all available rewards         |
-| POST         | /rewards/:rewardId/claim           | Claim one reward                    |
-| POST         | /shop/purchase                     | Spend in-game currency              |
+| Method       | Path                               | Required role or purpose          |
+| ------------ | ---------------------------------- | --------------------------------- |
+| GET, POST    | /users/@me                         | Read or change profile visibility |
+| PUT          | /users/@me/username                | Change username                   |
+| GET, POST    | /users/@me/tribe_names             | Read or buy custom tribe names    |
+| POST         | /users/@me/tribe_names/:id/boosts  | Boost one owned tribe name        |
+| GET, POST    | /marketing/consent                 | Read or change email consent      |
+| GET          | /auth/link/google                  | Start Google account linking      |
+| POST         | /colors/random                     | Generate a random player color    |
+| GET          | /friends                           | List friends                      |
+| GET          | /friends/requests                  | List friend requests              |
+| POST, DELETE | /friends/requests/:publicId        | Create or withdraw a request      |
+| POST         | /friends/requests/:publicId/accept | Accept a request                  |
+| DELETE       | /friends/:publicId                 | Remove a friend                   |
+| GET          | /clans                             | Browse clans                      |
+| GET          | /clans/:clanTag                    | Read clan details                 |
+| GET          | /clans/:clanTag/members            | Member list (member)              |
+| GET          | /clans/:clanTag/games              | Clan game history (member)        |
+| PATCH        | /clans/:clanTag                    | Update clan (officer)             |
+| DELETE       | /clans/:clanTag                    | Disband clan (leader)             |
+| POST         | /clans/:clanTag/join               | Join or request to join           |
+| POST         | /clans/:clanTag/leave              | Leave clan (member)               |
+| POST         | /clans/:clanTag/kick               | Kick a member (officer)           |
+| POST         | /clans/:clanTag/ban                | Ban a player (officer)            |
+| POST         | /clans/:clanTag/unban              | Remove a clan ban (officer)       |
+| POST         | /clans/:clanTag/promote            | Promote a member (leader)         |
+| POST         | /clans/:clanTag/demote             | Demote an officer (leader)        |
+| POST         | /clans/:clanTag/transfer           | Transfer leadership (leader)      |
+| GET          | /clans/:clanTag/bans               | List bans (officer)               |
+| GET          | /clans/:clanTag/requests           | List join requests (officer)      |
+| POST         | /clans/:clanTag/requests/approve   | Approve a join request (officer)  |
+| POST         | /clans/:clanTag/requests/deny      | Deny a join request (officer)     |
+| POST         | /clans/:clanTag/requests/withdraw  | Withdraw your join request        |
+| POST         | /subscriptions/@me/cancel          | Cancel a subscription             |
+| POST         | /subscriptions/@me/change-tier     | Change subscription tier          |
+| POST         | /subscriptions/@me/portal          | Create a billing-portal session   |
+| POST         | /rewards/claim-all                 | Claim all available rewards       |
+| POST         | /rewards/:rewardId/claim           | Claim one reward                  |
+| POST         | /shop/purchase                     | Spend in-game currency            |
 
 ## Common conventions
 
@@ -910,31 +908,6 @@ Generates and stores a random player color:
 
 The endpoint is limited to once per minute per player and returns 429 when
 called sooner.
-
-### POST /flares_granted/temporary
-
-Grants a six-minute trial for a shop pattern. Body:
-
-    { "flare": "pattern:example" }
-
-The pattern must exist and be for sale. Each player can use this trial once
-per 24 hours. Response:
-
-    { "expiresAt": "2026-01-01T12:06:00.000Z" }
-
-### POST /archive_singleplayer_game
-
-Archives a client-authored singleplayer GameRecord. The payload must pass the
-game-record schema, have config.gameType=Singleplayer, and contain exactly one
-player. The server stamps that player's persistent identity from the JWT and
-removes untrusted external flag URLs.
-
-Clients may gzip the JSON body and send:
-
-    Content-Encoding: gzip
-
-Success returns 204. Duplicate game IDs return 409; malformed or invalid
-records return 400. This endpoint is rate-limited to one archive per minute.
 
 ## Friends
 
