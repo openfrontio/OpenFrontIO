@@ -221,7 +221,9 @@ export class CosmeticContainer extends LitElement {
     this.style.position = "relative";
     this.style.background = `linear-gradient(to top, ${cfg.gradient} 0%, rgba(15,15,20,0.85) 100%)`;
     this.style.border = `1px solid ${this.selected ? cfg.glow : cfg.border}`;
-    this.style.backdropFilter = "blur(8px)";
+    // No per-tile backdrop-filter: the tile gradient is ~85% opaque over the
+    // modal's already-blurred shell, so the blur is invisible — but dozens of
+    // blur surfaces made every animated frame in the store expensive.
     this.style.borderRadius = "0.75rem";
     this.style.transition =
       "border-color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s";
