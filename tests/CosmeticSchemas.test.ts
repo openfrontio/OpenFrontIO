@@ -992,6 +992,7 @@ describe("SubscriptionSchema unlimitedRanked", () => {
     priceMonthly: 5,
     dailySoftCurrency: 100,
     dailyHardCurrency: 10,
+    hardCurrencySignupBonus: 100,
     canCreatePublicLobbies: false,
   };
 
@@ -1026,6 +1027,7 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
     priceMonthly: 5,
     dailySoftCurrency: 100,
     dailyHardCurrency: 10,
+    hardCurrencySignupBonus: 100,
     unlimitedRanked: false,
   };
 
@@ -1047,6 +1049,42 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
   it("rejects a non-boolean canCreatePublicLobbies", () => {
     expect(
       SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("SubscriptionSchema hardCurrencySignupBonus", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+  };
+
+  it("rejects a tier without hardCurrencySignupBonus", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with hardCurrencySignupBonus", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      hardCurrencySignupBonus: 250,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.hardCurrencySignupBonus).toBe(250);
+    }
+  });
+
+  it("rejects a non-number hardCurrencySignupBonus", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, hardCurrencySignupBonus: "250" })
         .success,
     ).toBe(false);
   });

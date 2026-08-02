@@ -398,6 +398,8 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   priceMonthly: z.number(),
   dailySoftCurrency: z.number(),
   dailyHardCurrency: z.number(),
+  // One-time plutonium grant on subscribing (advertised on the store tile).
+  hardCurrencySignupBonus: z.number(),
   // Whether this tier exempts subscribers from the free-ranked-play limits
   // (advertised on the store tile).
   unlimitedRanked: z.boolean(),
