@@ -286,7 +286,7 @@ The requested range may be at most two days. Optional filters:
 - type: Singleplayer, Public, or Private
 - mode: Free For All or Team
 - rankedType: unranked, 1v1, or 2v2
-- playerTeams: team filter, up to 20 characters
+- playerTeams: Duos, Trios, Quads, HumansVsNations, or a numeric team count
 - limit: 1–1000, default 50
 - offset: non-negative integer, default 0
 
@@ -302,7 +302,7 @@ Each result contains:
       "numPlayers": 10,
       "maxPlayers": 20,
       "lobbyFillTime": 15000,
-      "playerTeams": "2v2",
+      "playerTeams": "Duos",
       "rankedType": "unranked"
     }
 
@@ -339,7 +339,9 @@ contains:
 - current clan memberships with tag, name, role, joinedAt, and memberCount
 
 Private Discord identity data is omitted for a private profile. The profile
-stats exclude singleplayer games from the public unranked aggregates.
+stats exclude singleplayer games from the public unranked aggregates. The
+wins, losses, and total counters in each populated stats leaf are decimal
+strings to preserve integer precision.
 
 ### GET /public/player/:publicId/sessions
 
@@ -382,7 +384,7 @@ returns 400. The response is:
           "map": "map-id",
           "mode": "Team",
           "type": "Public",
-          "playerTeams": "2v2",
+          "playerTeams": "Duos",
           "rankedType": "unranked",
           "result": "victory",
           "totalPlayers": 10,
@@ -765,16 +767,20 @@ shape; dates are serialized as ISO strings:
       }
     }
 
-user contains only the identity providers linked to the account. For Steam
-identities, personaName and avatarUrl may be null when profile metadata is
-unavailable. ban is null
+user contains only the identity providers linked to the account. Discord
+global_name may be null. For Steam identities, personaName and avatarUrl may
+be null when profile metadata is unavailable. username, usernameBase, and
+usernameDiscriminator may be null or omitted when no account username has been
+chosen. ban is null
 or an object with category, reason, and expiresAt. The player fields report
 entitlements, cosmetics, achievements, ranked ELO, currency balances, pending
 rewards, clan memberships, pending clan requests, friend public IDs,
 subscription status, and marketing-consent state.
 
 currency and reward amounts are decimal strings to preserve integer precision.
-rewards are not included in the balance until claimed. subscription is null or
+Each clanRequests entry contains tag, name, and an ISO createdAt timestamp; the
+array is empty when there are no pending requests. rewards are not included in
+the balance until claimed. subscription is null or
 contains tier, status, currentPeriodEnd, and cancelAtPeriodEnd. The four
 usernameStatus values are unclaimed, claimed, premium, and indefinite.
 
@@ -956,6 +962,8 @@ Returns both directions. publicId in each entry identifies the other player:
       "outgoing": []
     }
 
+username may be null when the other player has not chosen an account username.
+
 ### POST /friends/requests/:publicId
 
 Sends a request to a public ID, full display name, or bare premium name. The
@@ -1107,7 +1115,7 @@ The page size is fixed at 10. The response is:
           "durationSeconds": 1200,
           "map": "map-id",
           "mode": "Team",
-          "playerTeams": "2v2",
+          "playerTeams": "Duos",
           "rankedType": "unranked",
           "result": "victory",
           "totalPlayers": 10,
