@@ -72,6 +72,16 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitIds, intent.tile);
       case "spawn":
+        // Security: a spawn intent is only honored during the spawn phase. Once
+        // it ends, a client relaying a spawn intent is attempting the "late
+        // spawn" exploit — skipping the spawn phase to materialize a base on the
+        // running map, or teleporting an existing one by relinquishing and
+        // re-conquering elsewhere. Drop it to a deterministic no-op on every
+        // client. Internal spawns (nations, bots, random spawn) construct
+        // SpawnExecution directly and are unaffected.
+        if (!this.mg.inSpawnPhase()) {
+          return new NoOpExecution();
+        }
         return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(player, intent.dst, intent.troops);
