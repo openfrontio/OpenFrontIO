@@ -10,19 +10,22 @@ import {
   type PlayerGameTypeFilter,
   type PublicPlayerGame,
 } from "../../../../core/ApiSchemas";
+import { assetUrl } from "../../../../core/AssetUrls";
 import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
 import "../../CopyButton";
-import { renderGameHistoryActions } from "./GameHistoryActions";
 import {
   formatAbsoluteTime,
   formatDayHeader,
   groupByDay,
 } from "./GameHistoryDates";
 import { formatGameType } from "./GameTypeLabels";
+
+const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
+const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 
 type TypeKey = PlayerGameTypeFilter | "all";
 type ModeKey = PlayerGameModeFilter | "all";
@@ -476,10 +479,42 @@ export class PlayerGameHistoryView extends LitElement {
               .showVisibilityToggle=${false}
             ></copy-button>
           </div>
-          ${renderGameHistoryActions(
-            () => this.showStats(game.gameId),
-            () => this.watchReplay(game.gameId),
-          )}
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              title=${translateText("game_list.stats")}
+              aria-label=${translateText("game_list.stats")}
+              @click=${() => this.showStats(game.gameId)}
+              class="inline-flex w-8 h-8 items-center justify-center text-white/80 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+            >
+              <img
+                src=${statsIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only">${translateText("game_list.stats")}</span>
+            </button>
+            <button
+              type="button"
+              title=${translateText("clan_modal.history_watch_replay")}
+              aria-label=${translateText("clan_modal.history_watch_replay")}
+              @click=${() => this.watchReplay(game.gameId)}
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              <img
+                src=${replayIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("clan_modal.history_watch_replay")}</span
+              >
+            </button>
+          </div>
         </div>
         <div
           class="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 justify-items-center text-center border-b border-white/5"
