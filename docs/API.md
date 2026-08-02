@@ -121,8 +121,9 @@ Send a short-lived player JWT as:
     Authorization: Bearer <jwt>
 
 The API also sets an HttpOnly refresh-session cookie. Access tokens expire
-after about 15 minutes; refresh sessions expire after about 30 days. Browser
-clients should send credentials on cross-origin requests.
+after about 15 minutes. Refresh sessions expire after 30 days of inactivity;
+successful refreshes renew the cookie and periodically rotate the session
+token. Browser clients should send credentials on cross-origin requests.
 
 The JWKS endpoint is:
 
@@ -156,9 +157,10 @@ also include Retry-After.
 
 ### Dates, identifiers, and pagination
 
-Unless an endpoint says otherwise, timestamps are ISO 8601 strings. Public
-player references accept a public ID, a full display name in base.disc form,
-or a bare premium name. Player references are limited to 25 characters.
+Unless an endpoint says otherwise, timestamps are ISO 8601 strings. Where a
+path accepts a player reference rather than a literal public ID, it accepts a
+public ID, a full display name in base.disc form, or a bare premium name.
+Player references are limited to 25 characters.
 
 Page-based endpoints use page numbers starting at 1. Cursor values are opaque:
 clients must not parse or manufacture them, and should retain the cursor
@@ -187,8 +189,10 @@ has no body.
 
 #### POST /auth/revoke
 
-Deletes the current refresh session. For a Discord-backed session it also
-revokes the provider token when available. The response has no body.
+Deletes the current refresh session and clears the refresh cookie. For a
+Discord-backed session it also attempts to revoke the provider token. Discord,
+Google, guest, email, and CrazyGames sessions return 204 with no body. A Steam
+session is deleted but currently returns 500 with reason unsupported provider.
 
 ### OAuth login
 
@@ -196,21 +200,24 @@ revokes the provider token when available. The response has no body.
 
 #### GET /auth/login/google
 
-Query parameters:
+Required query parameter:
 
 - redirect_uri: an allowlisted callback destination
 
-The API generates and stores the OAuth state; callers do not supply it.
-These endpoints redirect to the provider. The corresponding callbacks are:
+Missing or invalid values return 400. The API generates and stores the OAuth
+state; callers do not supply it. Success returns a 302 redirect to the
+provider. The corresponding callbacks are:
 
 #### GET /auth/callback/discord
 
 #### GET /auth/callback/google
 
-The callbacks validate the state and provider response, set the refresh
-cookie, and redirect to the original allowlisted destination. Integrations
-should use the documented redirect flow rather than expecting a JWT in a URL
-fragment.
+The callbacks validate the state and provider response. Successful login
+callbacks set the refresh cookie and 302-redirect to the original allowlisted
+destination. A Google account-link callback instead requires the original live
+refresh cookie, sets no new cookie, and redirects with link=google,
+link=cancel, link=already_linked, or link=error. Integrations should use this
+redirect flow rather than expecting a JWT in a URL fragment.
 
 ### One-time login links
 
@@ -223,8 +230,11 @@ Body:
       "redirectDomain": "https://example.com"
     }
 
-The endpoint sends a one-time link when the address is eligible. The token is
-valid for 15 minutes.
+The endpoint sends a one-time link when the address is eligible and returns 204
+with no body. redirectDomain must be an allowlisted full redirect URI. The
+email must already belong to an account, or the request must include a valid
+refresh session to associate a new email; otherwise the endpoint returns 400.
+The token is valid for 15 minutes.
 
 #### GET /auth/login/token?login-token=<token>
 
@@ -267,8 +277,8 @@ Requires a user JWT. Returns:
 
     { "url": "https://accounts.google.com/..." }
 
-The returned URL starts the linking flow. The callback redirects with a
-completion status such as link=google, cancel, already_linked, or error.
+The returned URL starts the linking flow. The callback behavior and exact
+completion statuses are described in the OAuth callback section above.
 
 ## Public games and players
 
@@ -286,7 +296,8 @@ The requested range may be at most two days. Optional filters:
 - type: Singleplayer, Public, or Private
 - mode: Free For All or Team
 - rankedType: unranked, 1v1, or 2v2
-- playerTeams: Duos, Trios, Quads, Humans Vs Nations, or a numeric team count
+- playerTeams: exact non-empty player-team label, at most 20 characters (for
+  example Duos, Trios, Quads, Humans Vs Nations, 5v5, or 4v4v4)
 - limit: 1–1000, default 50
 - offset: non-negative integer, default 0
 
@@ -310,7 +321,9 @@ Values such as end, difficulty, player counts, lobbyFillTime,
 playerTeams, and rankedType may be null. lobbyFillTime is milliseconds from
 lobby visibility or creation until the game starts. The response includes:
 
-    Content-Range: games <offset>-<last>/<total>
+    Content-Range: games <offset>-<exclusiveEnd>/<total>
+
+exclusiveEnd is offset plus the number of entries returned.
 
 ### GET /public/game/:gameId
 
@@ -341,7 +354,10 @@ contains:
 Private Discord identity data is omitted for a private profile. The profile
 stats exclude singleplayer games from the public unranked aggregates. The
 wins, losses, and total counters in each populated stats leaf are decimal
-strings to preserve integer precision.
+strings to preserve integer precision. The path segment also accepts a
+base.disc display name or bare premium username and returns the canonical
+publicId. The sessions and games subroutes below require that canonical public
+ID rather than a username reference.
 
 ### GET /public/player/:publicId/sessions
 
@@ -360,7 +376,8 @@ Returns the player's recorded sessions. A result has this shape:
       "hasWon": true
     }
 
-Nullable session fields may be null. A player with no sessions returns 404.
+Nullable session fields may be null. Session order is unspecified. A player
+with no sessions returns 404.
 
 ### GET /public/player/:publicId/games
 
@@ -381,7 +398,7 @@ returns 400. The response is:
           "gameId": "game-id",
           "start": "2026-01-01T12:00:00.000Z",
           "durationSeconds": 1200,
-          "map": "map-id",
+          "map": "TestMap",
           "mode": "Team",
           "type": "Public",
           "playerTeams": "Duos",
@@ -397,7 +414,8 @@ returns 400. The response is:
 
 result is victory, defeat, or incomplete. totalPlayers, playerTeams, and
 clanTag can be null. username and clanTag reflect the identity recorded in
-that game session. Unknown players return 404.
+that game session. Results are ordered by descending session game ID, normally
+newest first. Unknown players return 404.
 
 ## Public clans and leaderboards
 
@@ -457,6 +475,9 @@ team-count labels. Each wl and weightedWL value is [wins, losses]. The
 weighted values use the clan's team-size ratio and game difficulty; this
 endpoint does not apply the rolling leaderboard's time decay.
 
+A valid tag with no matching sessions, including an unregistered tag, returns
+200 with zero-valued statistics.
+
 ### GET /public/clan/:clanTag/sessions
 
 Uses the same required start and end parameters and one-day maximum as the
@@ -488,7 +509,9 @@ Response:
 
 Sessions are newest first. score is positive for a win and negative for a
 loss. A session can include historical clan-member counts even when the
-player's current membership has changed.
+player's current membership has changed. A valid tag with no matching
+sessions, including an unregistered tag, returns 200 with results: [] and
+total: 0.
 
 ### GET /public/clans/leaderboard
 
@@ -517,8 +540,8 @@ are sorted by weightedWins and the response is:
       ]
     }
 
-The response is cached for about one hour. The implementation also applies
-the configured historical cutoff when calculating the rolling window.
+The response is cached for about one hour. The implementation also applies a
+historical cutoff of 2025-11-12 when calculating the rolling window.
 
 ### GET /leaderboard/:type/:mode
 
@@ -543,8 +566,9 @@ Each entry contains:
       }
     }
 
-user may be null when there is no public linked Discord profile. This route is
-cached briefly (about one minute).
+user may be null when there is no public linked Discord profile. username may
+be null when the player has not set an account username. This route is cached
+briefly (about one minute).
 
 ### GET /leaderboard/ranked
 
@@ -601,15 +625,19 @@ response is:
       ]
     }
 
-playerReach is the accumulated impression/reach metric, not a distinct-player
-count. ownerUsername can be null. This leaderboard is cached for about one
-hour.
+Each page contains up to 50 entries, and ranks are absolute across pages.
+Entries are sorted by playerReach descending, then gamesAppeared descending,
+then stable internal ID order. playerReach is the accumulated impression/reach
+metric, not a distinct-player count. ownerUsername can be null. This
+leaderboard is cached for about one hour.
 
 ## Public feeds and catalog
 
-These feeds are intentionally unauthenticated and are suitable for loading
-the public website or game client. They are normally cached for about one
-minute unless stated otherwise.
+The four JSON feeds below are unauthenticated and normally return
+Cache-Control: public, max-age=60. The worker retains successful values for up
+to 120 seconds and may serve an expired value with max-age=0 while revalidating
+in the background. Local development bypasses this cache. /ping is not
+cache-wrapped, and /public/\* has its own asset cache policy.
 
 ### GET /cosmetics.json
 
@@ -625,23 +653,26 @@ Returns the public catalog grouped by:
 - subscriptions
 - tribeNames
 
-Purchasable entries include price as a display string, priceInCents,
-productId, and priceId when applicable; unavailable products have a null
-product entry. Cosmetic entries also expose their name, rarity, optional
-affiliateCode, and soft/hard in-game prices. Patterns include pattern and
-optional color-palette availability. Flags, skins, and crowns
-include a public url. Effects are grouped by effect type; current groups
-include transportShipTrail, nukeTrail, nukeExplosion, structures, and warship,
-with type-specific attributes.
+Cosmetic entries always include name, rarity, affiliateCode (a string or
+null), and product (an object containing price, priceInCents, productId, and
+priceId, or null). priceSoft, priceHard, and artist are omitted when unset.
+Patterns also include pattern, description, and a colorPalettes array of
+objects containing name and isArchived. Flags, skins, and crowns include a url
+string, which is empty when no URL is configured. Effects are grouped by
+effect type; current groups include transportShipTrail, nukeTrail,
+nukeExplosion, structures, and warship. Each effect contains its effectType
+and type-specific attributes.
 
-Color palettes contain name, primaryColor, and secondaryColor as strings.
-Currency packs contain name, displayName, currency, amount, bonusAmount,
-rarity, and a product when purchasable. Subscription entries contain name,
-description, priceMonthly, daily soft/hard currency, lobby/ranked
-entitlements, signup bonus, rarity, and a product. Tribe-name catalog entries
-include the current hard-currency name price, boost price, and boost duration.
-Clients should use this feed instead of hard-coding catalog prices or asset
-URLs.
+Color palettes contain name, primaryColor, and secondaryColor, where
+secondaryColor may be null. Only active, fully configured currency packs are
+emitted, so each has a non-null product; they also contain name, displayName,
+currency, amount, bonusAmount, affiliateCode: null, and rarity. Active
+subscription tiers are emitted even when their product is null. Their fields
+include name, description, priceMonthly, dailySoftCurrency,
+dailyHardCurrency, canCreatePublicLobbies, unlimitedRanked,
+hardCurrencySignupBonus, rarity, and product. tribeNames contains priceHard,
+boostPriceHard, and boostDurationDays. Clients should use this feed instead of
+hard-coding catalog prices or asset URLs.
 
 ### GET /ping
 
@@ -661,9 +692,8 @@ Returns published news, omitting disabled entries:
       }
     ]
 
-Entries may provide either a literal description or a
-descriptionTranslationKey for client-side localization. url may be null. The
-exact type values are managed by the API catalog.
+description is always a literal string. url may be null. type is a string whose
+managed values are controlled by the API catalog.
 
 ### GET /featured-stream.json
 
@@ -678,7 +708,8 @@ channels contains valid Twitch login names.
 
 ### GET /live-streams.json
 
-Returns the current configured roster:
+Returns live Twitch streams from the latest provider snapshot, followed by
+configured YouTube entries. enabled is true exactly when streams is non-empty:
 
     {
       "enabled": true,
@@ -695,15 +726,19 @@ Returns the current configured roster:
       ]
     }
 
-platform is twitch or youtube. title, viewers, avatarUrl, and url may be
-omitted when the provider has not supplied them.
+platform is twitch or youtube. viewers is always a non-negative integer and is
+0 when a configured YouTube entry has no count. title, avatarUrl, and url may
+be omitted.
 
 ### GET /public/\*
 
-Serves an asset from the configured public bucket when the API is running in
-a mode with public-bucket fallback enabled. Production clients should use the
-asset URLs returned by /cosmetics.json; they should not construct bucket keys
-or depend on this fallback route.
+This fallback serves objects only when PUBLIC_BUCKET_URL points to a URL whose
+pathname is /public, which is the local-development configuration. Other
+deployments, empty keys, and missing objects return 404. Successful responses
+use the stored content type or application/octet-stream and include
+Cache-Control: public, max-age=31536000, Access-Control-Allow-Origin: \*, CSP
+sandboxing, and X-Content-Type-Options: nosniff. Production clients should use
+the asset URLs returned by /cosmetics.json.
 
 ## Authenticated account endpoints
 
@@ -748,11 +783,12 @@ shape; dates are serialized as ISO strings:
         "flareExpiration": {},
         "tempFlaresCooldown": false,
         "achievements": {
-          "singleplayerMap": []
+          "singleplayerMap": [],
+          "player": []
         },
         "leaderboard": {
-          "oneVone": { "elo": 1000 },
-          "twoVtwo": { "elo": 1000 }
+          "oneVone": { "elo": 1000, "maxElo": 1100 },
+          "twoVtwo": { "elo": 1000, "maxElo": 1050 }
         },
         "currency": { "soft": "0", "hard": "0" },
         "rewards": [],
@@ -767,17 +803,23 @@ shape; dates are serialized as ISO strings:
       }
     }
 
-user contains only the identity providers linked to the account. Discord
-global_name may be null. For Steam identities, personaName and avatarUrl may
-be null when profile metadata is unavailable. username, usernameBase, and
-usernameDiscriminator may be null or omitted when no account username has been
-chosen. ban is null
+Identity-provider properties are independently optional. A present google
+object may omit email. Discord global_name may be null. For Steam identities,
+personaName and avatarUrl may be null when profile metadata is unavailable.
+username, usernameBase, and usernameDiscriminator are always present and are
+null when no account username has been chosen. ban is null
 or an object with category, reason, and expiresAt. The player fields report
 entitlements, cosmetics, achievements, ranked ELO, currency balances, pending
 rewards, clan memberships, pending clan requests, friend public IDs,
 subscription status, and marketing-consent state.
 
 currency and reward amounts are decimal strings to preserve integer precision.
+Each leaderboard ladder contains numeric elo and maxElo values.
+flareExpiration maps flare names to Unix-epoch millisecond timestamps. Each
+reward entry contains id, currencyType, amount, reason, note, and an ISO
+createdAt timestamp; note may be null. player.friends contains at most 250
+public IDs in ascending public-ID order; use GET /friends for the complete
+paginated list.
 Each clanRequests entry contains tag, name, and an ISO createdAt timestamp; the
 array is empty when there are no pending requests. rewards are not included in
 the balance until claimed. subscription is null or
@@ -800,9 +842,10 @@ Body:
 
     { "username": "NewName" }
 
-username is trimmed, must contain 3–20 ASCII letters, numbers, underscores,
-or hyphens, and is subject to the username moderation and namespace checks.
-The change cooldown is 30 days.
+username is trimmed and must be 3–20 characters. It may contain ASCII letters,
+numbers, underscores, and hyphens, with single spaces between non-empty word
+segments. It is subject to the username moderation and namespace checks. The
+change cooldown is 30 days.
 
 Response:
 
@@ -876,7 +919,7 @@ Adds a 30-day rotation boost to an owned active name. Boosts stack.
 The current hard-currency price is published by cosmetics.json (currently 100).
 The optional Idempotency-Key header makes a retry safe for the same purchase.
 
-Response:
+A successful purchase returns 201:
 
     {
       "id": "456",
@@ -963,6 +1006,7 @@ Returns both directions. publicId in each entry identifies the other player:
     }
 
 username may be null when the other player has not chosen an account username.
+incoming and outgoing are each ordered oldest first.
 
 ### POST /friends/requests/:publicId
 
@@ -978,8 +1022,9 @@ and the response is 201:
 
     { "status": "accepted" }
 
-Self-targeting returns 400. Already-friends, duplicate-request, and a full
-recipient inbox return 409.
+Self-targeting returns 400. Already-friends and duplicate requests return 409.
+A recipient may have at most 250 pending incoming requests; additional
+requests return 409.
 
 ### POST /friends/requests/:publicId/accept
 
@@ -1032,6 +1077,10 @@ Response:
       "page": 1,
       "limit": 10
     }
+
+Without sortField, results are ordered by name ascending, then clan ID
+ascending. With sortField, sortOrder defaults to ASC; clan ID ascending breaks
+ties.
 
 ### GET /clans/:clanTag
 
@@ -1094,10 +1143,14 @@ Response:
       "pendingRequests": 0
     }
 
-username can be null. stats is optional and may be omitted for compatibility
-members. pendingRequests is included for managers and is omitted for ordinary
-members. All stats are public-game clan stats;
-the bucket names describe the aggregation used by the API.
+username can be null. stats is included in every current response, with
+zero-valued buckets for members without qualifying games; clients may tolerate
+its absence only for compatibility with older deployments. With sort=default,
+members are ordered leader, officer, member, then joinedAt ascending. For
+statistic sorts, order defaults to desc; ties are ordered by role then joinedAt
+ascending. pendingRequests is included for managers and omitted for ordinary
+members. All stats are public-game clan stats; the bucket names describe the
+aggregation used by the API.
 
 ### GET /clans/:clanTag/games
 
@@ -1114,7 +1167,7 @@ The page size is fixed at 10. The response is:
           "gameId": "game-id",
           "start": "2026-01-01T12:00:00.000Z",
           "durationSeconds": 1200,
-          "map": "map-id",
+          "map": "TestMap",
           "mode": "Team",
           "playerTeams": "Duos",
           "rankedType": "unranked",
@@ -1134,7 +1187,9 @@ The page size is fixed at 10. The response is:
     }
 
 result is victory, defeat, or incomplete. totalPlayers and playerTeams can be
-null; rankedType is a string. The cursor is tied to filter.
+null; rankedType is a string. Games are returned newest first, with game ID
+descending as the timestamp tie-breaker. A malformed cursor, or a cursor used
+with a different filter, returns 400.
 
 ### PATCH /clans/:clanTag
 
@@ -1150,7 +1205,10 @@ Requires an officer. Send one or more fields:
 name is 1–30 characters using ASCII letters, digits, spaces, underscores, or
 hyphens. description is at most 200 characters. Set discordUrl to null or an
 empty string to clear it. Only the leader can change isOpen or discordUrl;
-Discord invites must be valid and never-expiring.
+Discord invites must be valid and never-expiring. A non-empty invite is
+normalized to https://discord.gg/<code>. Verification of a changed invite is
+limited to once per player per minute and may return 429. Changing isOpen to
+true automatically approves all pending requests as members.
 
 Response:
 
@@ -1177,9 +1235,9 @@ A closed clan creates a pending request and returns 202:
 
     { "status": "requested" }
 
-The endpoint is rate-limited to one join attempt per minute. A banned player
-gets 403 with code BANNED and an optional reason. Existing membership or a
-duplicate request returns 409.
+A successful join or request creation is limited to one per minute; failed
+attempts do not consume the limit. A banned player gets 403 with code BANNED
+and an optional reason. Existing membership or a duplicate request returns 409.
 
 ### POST /clans/:clanTag/leave
 
@@ -1202,9 +1260,13 @@ The following endpoints take:
 - POST /clans/:clanTag/transfer — leader; transfers leadership to any
   non-leader member, including officers
 
-These successful mutations return 204. Self-targeting and invalid role
-transitions return 400 or 403; missing players/members return 404. Banning an
-already-banned player returns 409.
+These successful mutations return 204. Kick, ban, and transfer reject
+self-targeting with 400. Invalid role transitions return 400 or 403; missing
+players/members return 404. Banning an already-banned player returns 409. A
+successful ban removes the target's pending request and, when the caller may
+remove their role, their membership. Unbanning does not restore either;
+unbanning a player who is not banned returns 409. A leadership transfer makes
+the target leader and the former leader a member.
 
 ### GET /clans/:clanTag/bans
 
@@ -1213,12 +1275,12 @@ pagination defaults (page 1, limit 10, maximum 50).
 
 Response entries contain publicId, username, bannedBy, bannedByUsername,
 reason, and createdAt. Usernames may be null, and reason is null when no ban
-reason was supplied.
+reason was supplied. Bans are ordered newest first by createdAt.
 
 ### GET /clans/:clanTag/requests
 
-Requires an officer. Standard page and limit parameters are supported.
-Response:
+Requires an officer. page is a positive integer (default 1), and limit is
+1–50 (default 10). Requests are ordered oldest first by createdAt. Response:
 
     {
       "results": [
@@ -1240,7 +1302,8 @@ username may be null when the requester has not set an account username.
 ### POST /clans/:clanTag/requests/deny
 
 Require an officer and take the targetPublicId body shown above. Success
-returns 204. Approving a banned player returns 409; missing requests return 404.
+returns 204. Approving a banned player returns 409, does not add membership,
+and removes that pending request. Missing requests return 404.
 
 ### POST /clans/:clanTag/requests/withdraw
 
@@ -1266,10 +1329,10 @@ Claims one pending reward and credits the balance atomically. The response is:
       }
     }
 
-Amounts are decimal strings. note may be null. The current server also
+id and amount are decimal strings. note may be null. The current server also
 returns the reward metadata shown above, while the updated currency balances
-are the required result for clients. Unknown, already-claimed, or another
-player's reward returns 404.
+are the required result for clients. A malformed rewardId returns 400. Unknown,
+already-claimed, or another player's reward returns 404.
 
 ### POST /rewards/claim-all
 
@@ -1292,9 +1355,9 @@ Claims all pending rewards in one transaction. The response is:
       }
     }
 
-Each claimed entry always includes id. currencyType, amount, reason, note, and
-claimedAt are optional server metadata. Calling this with no pending rewards is
-successful and returns an empty claimed array.
+Each claimed entry includes id, currencyType, amount, reason, note, and
+claimedAt. id and amount are decimal strings, and note may be null. Calling
+this with no pending rewards is successful and returns an empty claimed array.
 
 ### POST /shop/purchase
 
@@ -1322,26 +1385,27 @@ Response:
     }
 
 Already-owned items return 409. Insufficient balance or unavailable items
-return 400.
+return 400. On success, the cosmetic is granted, the requested currency is
+debited atomically, and the player's adfree flag is set to true.
 
 ## Matchmaking WebSocket
 
 ### GET /matchmaking/join
 
-This endpoint upgrades to a WebSocket. It is not authenticated by an HTTP
-Authorization header; authenticate the socket by sending the JWT in the first
-message.
+This endpoint upgrades only when Upgrade: websocket is supplied; otherwise it
+returns HTTP 426. The HTTP Authorization header is not used.
 
 Query parameters:
 
-- instance_id: matchmaking instance name
-- mode: 1v1 or 2v2, default 1v1
+- instance_id: required non-empty matchmaking instance name
+- mode: case-sensitive 1v1 or 2v2, default 1v1
 
 Production example:
 
     wss://api.openfront.io/matchmaking/join?instance_id=eu-west&mode=1v1
 
-After the socket opens, send:
+After the socket opens, send a join message to authenticate and enter the
+queue:
 
     {
       "type": "join",
@@ -1349,11 +1413,16 @@ After the socket opens, send:
       "clanTag": "ABC"
     }
 
-clanTag is optional and is relevant to 2v2 matching. When supplied for 2v2,
-the player must be a member of that clan. The server also checks the player's
-ranked-play allowance.
+clanTag is used only for 2v2. When supplied, it is normalized and the player
+must be a member of that clan. The server also checks the player's ranked-play
+allowance. Only messages with type join enter this flow; other message types
+are ignored. The server imposes no join-message or queue timeout.
 
-While queued, the server may send:
+Queues are independent for each instance_id and mode pair. A match requires
+compatible queued players and an available game-server check-in. An unmatched
+game-server check-in ends after about 15 seconds with hasAssignment: false.
+
+On its roughly three-second alarm cadence, the server broadcasts:
 
     { "type": "queue-size", "count": 4 }
 
@@ -1361,9 +1430,9 @@ When a match is assigned:
 
     { "type": "match-assignment", "gameId": "game-id" }
 
-Invalid JWT, ranked-play limits, or an invalid clan close the socket with
-policy code 1008. A failed clan verification can use 1011. Missing
-instance_id or an invalid mode returns HTTP 400; a non-WebSocket request
-returns HTTP 426. When the same player joins from a newer socket, the older
-socket closes normally with code 1000 and reason `Replaced by newer
-connection`; only the newest socket remains queued.
+Missing instance_id or an invalid mode returns HTTP 400. Socket close reasons
+are 1008 Invalid session, 1008 ranked_limit_reached, 1008 invalid_clan, and
+1011 clan_verification_failed. When the same player joins from a newer socket
+in the same instance_id and mode queue, the older socket closes with code 1000
+and reason Replaced by newer connection; only the newest socket remains in
+that queue.
