@@ -20,6 +20,7 @@ import { translateText } from "../Utils";
 import { renderLoadingSpinner } from "./BaseModal";
 import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
+import "./TribeStatsView";
 
 const MAX_TRIBE_NAME_LENGTH = 100;
 
@@ -76,6 +77,8 @@ export class TribesPanel extends LitElement {
     text: string;
   } | null = null;
   @state() private insufficientInfo: InsufficientCurrency | null = null;
+  // Name whose stats page is open in place of the list; null shows the list.
+  @state() private statsName: string | null = null;
 
   @query("#tribe-name-input") private input?: HTMLInputElement;
 
@@ -374,6 +377,18 @@ export class TribesPanel extends LitElement {
     </button>`;
   }
 
+  // Rejected/revoked names deliberately 404 on the public stats endpoint,
+  // so only active names get the button.
+  private renderStatsButton(tribe: TribeName): TemplateResult | typeof nothing {
+    if (DISPLAY_STATE[tribe.status] !== "active") return nothing;
+    return html`<button
+      class="shrink-0 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-bold uppercase tracking-wider rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+      @click=${() => (this.statsName = tribe.displayName)}
+    >
+      ${translateText("store.tribe_stats_button")}
+    </button>`;
+  }
+
   private renderTribeRow(tribe: TribeName): TemplateResult {
     const meta = STATE_META[DISPLAY_STATE[tribe.status]];
     return html`<div
@@ -389,7 +404,7 @@ export class TribesPanel extends LitElement {
           : ""}
       </div>
       <div class="shrink-0 flex items-center gap-2">
-        ${this.renderBoostButton(tribe)}
+        ${this.renderStatsButton(tribe)} ${this.renderBoostButton(tribe)}
         <span
           class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded border ${meta.classes}"
         >
@@ -431,6 +446,18 @@ export class TribesPanel extends LitElement {
   render(): TemplateResult {
     if (this.userMeResponse === false) {
       return this.renderLoginPrompt();
+    }
+    // The stats page takes over the whole tab, profile-modal style; its back
+    // button returns to the list.
+    if (this.statsName !== null) {
+      return html`<div
+        class="p-6 lg:p-8 flex flex-col gap-6 max-w-2xl mx-auto w-full"
+      >
+        <tribe-stats-view
+          .tribeName=${this.statsName}
+          @back=${() => (this.statsName = null)}
+        ></tribe-stats-view>
+      </div>`;
     }
     return html`<div
       class="p-6 lg:p-8 flex flex-col gap-6 max-w-2xl mx-auto w-full"
