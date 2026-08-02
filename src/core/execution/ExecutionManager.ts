@@ -72,6 +72,9 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitIds, intent.tile);
       case "spawn":
+        if (!this.mg.inSpawnPhase()) {
+          return new NoOpExecution();
+        }
         return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(player, intent.dst, intent.troops);
