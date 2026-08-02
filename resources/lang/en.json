@@ -507,7 +507,7 @@
     "focus": "Focus",
     "hydrogen_bomb_detonated": "{name} - hydrogen bomb detonated",
     "ignore": "Ignore",
-    "missile_intercepted": "Missile intercepted {unit}",
+    "missile_intercepted": "SAM intercepted {unit}",
     "no_boats_available": "No boats available, max {max}",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
