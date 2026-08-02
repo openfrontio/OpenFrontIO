@@ -75,45 +75,47 @@ The OAuth and session endpoints are also unauthenticated at the HTTP layer:
 Every endpoint in this table requires a user JWT unless noted otherwise.
 Clan endpoints additionally require the role shown in the detailed reference.
 
-| Method       | Path                               | Required role or purpose          |
-| ------------ | ---------------------------------- | --------------------------------- |
-| GET, POST    | /users/@me                         | Read or change profile visibility |
-| PUT          | /users/@me/username                | Change username                   |
-| GET, POST    | /users/@me/tribe_names             | Read or buy custom tribe names    |
-| POST         | /users/@me/tribe_names/:id/boosts  | Boost one owned tribe name        |
-| GET, POST    | /marketing/consent                 | Read or change email consent      |
-| GET          | /auth/link/google                  | Start Google account linking      |
-| POST         | /colors/random                     | Generate a random player color    |
-| GET          | /friends                           | List friends                      |
-| GET          | /friends/requests                  | List friend requests              |
-| POST, DELETE | /friends/requests/:publicId        | Create or withdraw a request      |
-| POST         | /friends/requests/:publicId/accept | Accept a request                  |
-| DELETE       | /friends/:publicId                 | Remove a friend                   |
-| GET          | /clans                             | Browse clans                      |
-| GET          | /clans/:clanTag                    | Read clan details                 |
-| GET          | /clans/:clanTag/members            | Member list (member)              |
-| GET          | /clans/:clanTag/games              | Clan game history (member)        |
-| PATCH        | /clans/:clanTag                    | Update clan (officer)             |
-| DELETE       | /clans/:clanTag                    | Disband clan (leader)             |
-| POST         | /clans/:clanTag/join               | Join or request to join           |
-| POST         | /clans/:clanTag/leave              | Leave clan (member)               |
-| POST         | /clans/:clanTag/kick               | Kick a member (officer)           |
-| POST         | /clans/:clanTag/ban                | Ban a player (officer)            |
-| POST         | /clans/:clanTag/unban              | Remove a clan ban (officer)       |
-| POST         | /clans/:clanTag/promote            | Promote a member (leader)         |
-| POST         | /clans/:clanTag/demote             | Demote an officer (leader)        |
-| POST         | /clans/:clanTag/transfer           | Transfer leadership (leader)      |
-| GET          | /clans/:clanTag/bans               | List bans (officer)               |
-| GET          | /clans/:clanTag/requests           | List join requests (officer)      |
-| POST         | /clans/:clanTag/requests/approve   | Approve a join request (officer)  |
-| POST         | /clans/:clanTag/requests/deny      | Deny a join request (officer)     |
-| POST         | /clans/:clanTag/requests/withdraw  | Withdraw your join request        |
-| POST         | /subscriptions/@me/cancel          | Cancel a subscription             |
-| POST         | /subscriptions/@me/change-tier     | Change subscription tier          |
-| POST         | /subscriptions/@me/portal          | Create a billing-portal session   |
-| POST         | /rewards/claim-all                 | Claim all available rewards       |
-| POST         | /rewards/:rewardId/claim           | Claim one reward                  |
-| POST         | /shop/purchase                     | Spend in-game currency            |
+| Method       | Path                                    | Required role or purpose          |
+| ------------ | --------------------------------------- | --------------------------------- |
+| GET, POST    | /users/@me                              | Read or change profile visibility |
+| PUT          | /users/@me/username                     | Change username                   |
+| GET, POST    | /users/@me/tribe_names                  | Read or buy custom tribe names    |
+| POST         | /users/@me/tribe_names/:id/boosts       | Boost one owned tribe name        |
+| GET, POST    | /marketing/consent                      | Read or change email consent      |
+| GET          | /auth/link/google                       | Start Google account linking      |
+| POST         | /colors/random                          | Generate a random player color    |
+| GET          | /friends                                | List friends                      |
+| GET          | /friends/requests                       | List friend requests              |
+| POST, DELETE | /friends/requests/:publicId             | Create or withdraw a request      |
+| POST         | /friends/requests/:publicId/accept      | Accept a request                  |
+| DELETE       | /friends/:publicId                      | Remove a friend                   |
+| GET          | /clans                                  | Browse clans                      |
+| GET          | /clans/:clanTag                         | Read clan details                 |
+| GET          | /clans/:clanTag/members                 | Member list (member)              |
+| GET          | /clans/:clanTag/games                   | Clan game history (member)        |
+| PATCH        | /clans/:clanTag                         | Update clan (officer)             |
+| DELETE       | /clans/:clanTag                         | Disband clan (leader)             |
+| POST         | /clans/:clanTag/join                    | Join or request to join           |
+| POST         | /clans/:clanTag/leave                   | Leave clan (member)               |
+| POST         | /clans/:clanTag/kick                    | Kick a member (officer)           |
+| POST         | /clans/:clanTag/ban                     | Ban a player (officer)            |
+| POST         | /clans/:clanTag/unban                   | Remove a clan ban (officer)       |
+| POST         | /clans/:clanTag/promote                 | Promote a member (leader)         |
+| POST         | /clans/:clanTag/demote                  | Demote an officer (leader)        |
+| POST         | /clans/:clanTag/transfer                | Transfer leadership (leader)      |
+| GET          | /clans/:clanTag/bans                    | List bans (officer)               |
+| GET          | /clans/:clanTag/requests                | List join requests (officer)      |
+| POST         | /clans/:clanTag/requests/approve        | Approve a join request (officer)  |
+| POST         | /clans/:clanTag/requests/deny           | Deny a join request (officer)     |
+| POST         | /clans/:clanTag/requests/withdraw       | Withdraw your join request        |
+| POST         | /subscriptions/@me/cancel               | Cancel a subscription             |
+| POST         | /subscriptions/@me/change-tier          | Change subscription tier          |
+| POST         | /subscriptions/@me/portal               | Create a billing-portal session   |
+| POST         | /stripe/create-checkout-session         | Create a catalog checkout         |
+| POST         | /stripe/create-custom-currency-checkout | Create a hard-currency checkout   |
+| POST         | /rewards/claim-all                      | Claim all available rewards       |
+| POST         | /rewards/:rewardId/claim                | Claim one reward                  |
+| POST         | /shop/purchase                          | Spend in-game currency            |
 
 ## Common conventions
 
@@ -304,13 +306,14 @@ Each result contains:
       "difficulty": null,
       "numPlayers": 10,
       "maxPlayers": 20,
-      "lobbyFillTime": 15,
+      "lobbyFillTime": 15000,
       "playerTeams": "2v2",
       "rankedType": "unranked"
     }
 
 Values such as end, difficulty, player counts, lobbyFillTime,
-playerTeams, and rankedType may be null. The response includes:
+playerTeams, and rankedType may be null. lobbyFillTime is milliseconds from
+lobby visibility or creation until the game starts. The response includes:
 
     Content-Range: games <offset>-<last>/<total>
 
@@ -661,7 +664,9 @@ Returns published news, omitting disabled entries:
       }
     ]
 
-url may be null. The exact type values are managed by the API catalog.
+Entries may provide either a literal description or a
+descriptionTranslationKey for client-side localization. url may be null. The
+exact type values are managed by the API catalog.
 
 ### GET /featured-stream.json
 
@@ -745,7 +750,9 @@ shape; dates are serialized as ISO strings:
         "flares": ["pattern:example"],
         "flareExpiration": {},
         "tempFlaresCooldown": false,
-        "achievements": {},
+        "achievements": {
+          "singleplayerMap": []
+        },
         "leaderboard": {
           "oneVone": { "elo": 1000, "maxElo": 1000 },
           "twoVtwo": { "elo": 1000, "maxElo": 1000 }
@@ -838,7 +845,9 @@ an impression metric, not a distinct-player count.
 
 ### POST /users/@me/tribe_names
 
-Purchases a custom tribe name and puts it into the moderation queue.
+Purchases a custom tribe name. It enters game rotation immediately with
+status pending; moderation is post-purchase and may later reject or revoke
+the name.
 
 Body:
 
@@ -1080,8 +1089,8 @@ Response:
       "pendingRequests": 0
     }
 
-username can be null. pendingRequests is included for managers and can be
-omitted or null for ordinary members. All stats are public-game clan stats;
+username can be null. pendingRequests is included for managers and is omitted
+for ordinary members. All stats are public-game clan stats;
 the bucket names describe the aggregation used by the API.
 
 ### GET /clans/:clanTag/games
@@ -1347,6 +1356,39 @@ returnUrl must be an allowlisted URL. Response:
 The endpoint requires an active Stripe-backed subscription. Admin-granted
 subscriptions do not have a Stripe billing portal.
 
+### POST /stripe/create-checkout-session
+
+Creates a Stripe Checkout session for a catalog product identified by
+priceId. The product may be a cosmetic, currency pack, or subscription. The
+hostname must be an allowlisted game origin; colorPaletteName is optional for
+palette variants.
+
+Body:
+
+    {
+      "priceId": "price_...",
+      "hostname": "https://openfront.io",
+      "colorPaletteName": "sunset"
+    }
+
+The response contains a Stripe Checkout URL. Invalid products or redirect
+hostnames return 400.
+
+### POST /stripe/create-custom-currency-checkout
+
+Creates a Stripe Checkout session for a custom hard-currency purchase.
+
+Body:
+
+    {
+      "hardAmount": 100,
+      "hostname": "https://openfront.io"
+    }
+
+hardAmount must be an integer from 20 through 2000; the current rate is 20
+hard currency per US dollar. The response contains a Stripe Checkout URL.
+Invalid amounts or redirect hostnames return 400.
+
 ## Matchmaking WebSocket
 
 ### GET /matchmaking/join
@@ -1387,4 +1429,6 @@ When a match is assigned:
 Invalid JWT, ranked-play limits, or an invalid clan close the socket with
 policy code 1008. A failed clan verification can use 1011. Missing
 instance_id or an invalid mode returns HTTP 400; a non-WebSocket request
-returns HTTP 426.
+returns HTTP 426. When the same player joins from a newer socket, the older
+socket closes normally with code 1000 and reason `Replaced by newer
+connection`; only the newest socket remains queued.
