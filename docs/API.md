@@ -108,9 +108,6 @@ Clan endpoints additionally require the role shown in the detailed reference.
 | POST         | /clans/:clanTag/requests/approve   | Approve a join request (officer)  |
 | POST         | /clans/:clanTag/requests/deny      | Deny a join request (officer)     |
 | POST         | /clans/:clanTag/requests/withdraw  | Withdraw your join request        |
-| POST         | /subscriptions/@me/cancel          | Cancel a subscription             |
-| POST         | /subscriptions/@me/change-tier     | Change subscription tier          |
-| POST         | /subscriptions/@me/portal          | Create a billing-portal session   |
 | POST         | /rewards/claim-all                 | Claim all available rewards       |
 | POST         | /rewards/:rewardId/claim           | Claim one reward                  |
 | POST         | /shop/purchase                     | Spend in-game currency            |
@@ -1240,7 +1237,7 @@ returns 204. Approving a banned player returns 409; missing requests return 404.
 Requires a user JWT, takes an empty body, and withdraws the caller's pending
 request. Success returns 204; no pending request returns 404.
 
-## Currency, rewards, and subscriptions
+## Currency and rewards
 
 ### POST /rewards/:rewardId/claim
 
@@ -1315,51 +1312,6 @@ Response:
 
 Already-owned items return 409. Insufficient balance or unavailable items
 return 400.
-
-### POST /subscriptions/@me/cancel
-
-Cancels the current subscription at the end of its paid period. Response:
-
-    {
-      "status": "active",
-      "currentPeriodEnd": "2026-02-01T00:00:00.000Z",
-      "cancelAtPeriodEnd": true
-    }
-
-The player retains entitlements until period end. An already-pending
-cancellation returns 409; no entitled subscription returns 404. An
-administrator-granted subscription has no Stripe period and is revoked
-immediately.
-
-### POST /subscriptions/@me/change-tier
-
-Body:
-
-    { "tierName": "premium" }
-
-The target tier must be active and different from the current tier. Response:
-
-    {
-      "tier": "premium",
-      "cancelAtPeriodEnd": false
-    }
-
-Upgrades invoice the difference immediately; downgrades use Stripe
-proration. The local tier is canonical after the Stripe webhook, so clients
-should refetch /users/@me. This operation is rate-limited to once per minute.
-
-### POST /subscriptions/@me/portal
-
-Body:
-
-    { "returnUrl": "https://openfront.io/account" }
-
-returnUrl must be an allowlisted URL. Response:
-
-    { "url": "https://billing.stripe.com/..." }
-
-The endpoint requires an active Stripe-backed subscription. Admin-granted
-subscriptions do not have a Stripe billing portal.
 
 ## Matchmaking WebSocket
 
