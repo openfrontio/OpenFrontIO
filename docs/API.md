@@ -233,8 +233,12 @@ returns 400. The response is:
           "clanTag": "ABC"
         }
       ],
-      "nextCursor": "opaque-cursor-or-null"
+      "nextCursor": "eyJnYW1lSWQiOiIxMjM0NSJ9"
     }
+
+nextCursor is a JSON string when another page exists and JSON null on the
+last page. Stop paginating when it is null; never send the literal string
+"null" back as a cursor.
 
 result is victory, defeat, or incomplete. totalPlayers, playerTeams, and
 clanTag can be null. username and clanTag reflect the identity recorded in
