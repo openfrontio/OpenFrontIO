@@ -383,6 +383,7 @@ describe("TribeSpawner", () => {
   test("valid nation cell prevents positioned tribe from occupying that tile", async () => {
     const game = await setup("plains", { bots: 1, gameMap: GameMapType.Asia });
     const tile = findLandTile(game);
+    expect(game.hasOwner(tile)).toBe(false);
     const x = game.x(tile);
     const y = game.y(tile);
 
