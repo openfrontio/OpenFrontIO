@@ -596,10 +596,15 @@ export type NewsItem = z.infer<typeof NewsItemSchema>;
 // entry closed rather than rendering it).
 const HttpsUrlSchema = z.url({ protocol: /^https$/ });
 
-// One live stream in the homepage "Streaming Now" panel. Filled by a backend job (Twitch
-// Helix for auto-discovery; YouTube curated) and served like news.json. `channel` is the
-// login/handle used to derive the watch URL when `url` is absent; image/link fields are
-// validated so a malformed entry fails the config closed (see getLiveStreams).
+// One verified-live stream in the homepage streaming features. Produced only by the
+// API's cron (Twitch Helix; YouTube RSS + videos.list) and served by GET /streams.json.
+// `channel` is the login/handle used to derive the watch URL when `url` is absent;
+// image/link fields are validated so a malformed entry fails the feed closed.
+//
+// `startedAt` is required on purpose. It can only come from a live lookup, so a payload
+// built from static config cannot satisfy this schema — which means an API still serving
+// the older {enabled, channels} shape fails validation and falls back to "show nothing",
+// rather than being mistaken for a current one. Liveness is never decided on the client.
 export const LiveStreamSchema = z.object({
   platform: z.enum(["twitch", "youtube"]),
   // Login/handle as it appears in the watch URL (twitch.tv/<login>, youtube.com/@handle).
@@ -615,8 +620,23 @@ export const LiveStreamSchema = z.object({
   viewers: z.number().int().nonnegative().default(0),
   avatarUrl: HttpsUrlSchema.optional(),
   url: HttpsUrlSchema.optional(),
+  startedAt: z.iso.datetime(),
 });
 export type LiveStream = z.infer<typeof LiveStreamSchema>;
+
+// The single served feed (GET /streams.json). `featured` is the embed candidate list in
+// admin priority order; `live` is the "Streaming Now" list sorted by viewers.
+//
+// There is no `enabled` flag: an empty array means "show nothing". An overloaded toggle
+// is exactly what made the old payload ambiguous — it meant "configured" in one API
+// version and "live" in the next, with an identical shape. `verifiedAt` is when the API
+// built the feed, so the client can refuse one the edge served long after the cron died.
+export const StreamsFeedSchema = z.object({
+  verifiedAt: z.iso.datetime(),
+  featured: z.array(LiveStreamSchema).default([]),
+  live: z.array(LiveStreamSchema).default([]),
+});
+export type StreamsFeed = z.infer<typeof StreamsFeedSchema>;
 
 // Config for the homepage "Streaming Now" panel, served like news.json (API-hosted JSON
 // with a bundled fallback). `enabled` is the on/off toggle; `streams` is the live list.
