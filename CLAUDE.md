@@ -11,8 +11,8 @@ npm run start:client     # Client only
 npm run start:server-dev # Server only
 npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
-npm run lint             # ESLint
-npm run lint:fix         # ESLint with auto-fix
+npm run lint             # Oxlint + ESLint
+npm run lint:fix         # Oxlint + ESLint with auto-fix
 npm run format           # Prettier
 npm run build-prod       # Production build
 ```

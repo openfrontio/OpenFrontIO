@@ -1,79 +1,82 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import featuredStream from "../../../resources/featured-stream.json";
-import { getFeaturedStream } from "../../../src/client/Api";
+import { getStreams } from "../../../src/client/Api";
 import { ClientEnv } from "../../../src/client/ClientEnv";
 import {
-  channelToEmbed,
   cornerFromCenter,
+  featuredStream,
   isOffFrame,
 } from "../../../src/client/FeaturedStream";
-import { FeaturedStreamSchema } from "../../../src/core/ApiSchemas";
+import { StreamsFeed } from "../../../src/core/ApiSchemas";
+
+const entry = {
+  platform: "twitch" as const,
+  channel: "openfrontmasters",
+  displayName: "OFM",
+  viewers: 100,
+  url: "https://twitch.tv/openfrontmasters",
+  startedAt: "2026-08-03T12:00:00Z",
+};
+
+const feed = (featured: (typeof entry)[]): StreamsFeed => ({
+  verifiedAt: "2026-08-03T13:00:00Z",
+  featured,
+  live: [],
+});
 
 describe("FeaturedStream", () => {
-  describe("bundled config (resources/featured-stream.json)", () => {
-    it("validates against the schema", () => {
-      expect(FeaturedStreamSchema.safeParse(featuredStream).success).toBe(true);
+  describe("featuredStream", () => {
+    it("embeds nothing when the API lists no live channel", () => {
+      // The API lists only channels its cron sees live, so an empty list means nobody
+      // is live — the client must not load the Twitch SDK or a player at all.
+      expect(featuredStream(feed([]), new Set())).toBeNull();
     });
 
-    it("is off by default (no channel shown unless OF turns it on)", () => {
-      const cfg = FeaturedStreamSchema.parse(featuredStream);
-      expect(cfg.enabled).toBe(false);
-      expect(cfg.channels).toEqual([]);
-    });
-  });
-
-  describe("FeaturedStreamSchema", () => {
-    it("defaults to disabled with no channels", () => {
-      const cfg = FeaturedStreamSchema.parse({});
-      expect(cfg.enabled).toBe(false);
-      expect(cfg.channels).toEqual([]);
+    it("takes the first entry as the API's priority order", () => {
+      const second = { ...entry, channel: "openfront" };
+      expect(featuredStream(feed([entry, second]), new Set())?.channel).toBe(
+        "openfrontmasters",
+      );
     });
 
-    it("accepts enabled with a channel list", () => {
-      const cfg = FeaturedStreamSchema.parse({
-        enabled: true,
-        channels: ["openfrontmasters", "openfront"],
-      });
-      expect(cfg.enabled).toBe(true);
-      expect(cfg.channels).toEqual(["openfrontmasters", "openfront"]);
+    // The bug: an offline-but-listed channel re-mounted a full Twitch player every 60s
+    // forever, because goOffline() nulled the very state the dedupe guard depended on.
+    // Suppression is now keyed on the broadcast itself, so it survives that reset.
+    it("skips a broadcast already known dead", () => {
+      const dead = new Set(["twitch:openfrontmasters:2026-08-03T12:00:00Z"]);
+      expect(featuredStream(feed([entry]), dead)).toBeNull();
     });
 
-    it("drops bad channel entries instead of failing the whole config", () => {
-      // Non-strings, too-short, illegal chars, and full URLs are all dropped
-      // individually so one garbage entry can't silently disable the feature for
-      // every client; the valid login still comes through.
-      const cfg = FeaturedStreamSchema.parse({
-        enabled: true,
-        channels: [
-          1,
-          "ab",
-          "has space",
-          "bad!",
-          "https://twitch.tv/x",
-          "openfrontmasters",
-        ],
-      });
-      expect(cfg.channels).toEqual(["openfrontmasters"]);
+    it("falls through to the next live channel when the first is dead", () => {
+      const second = { ...entry, channel: "openfront" };
+      const dead = new Set(["twitch:openfrontmasters:2026-08-03T12:00:00Z"]);
+      expect(featuredStream(feed([entry, second]), dead)?.channel).toBe(
+        "openfront",
+      );
     });
 
-    it("accepts a valid channel login", () => {
-      expect(
-        FeaturedStreamSchema.safeParse({ channels: ["eslcs", "es_l_2"] })
-          .success,
-      ).toBe(true);
+    // A genuine restart has a new startedAt, so it is embeddable again.
+    it("embeds the same channel again after it restarts", () => {
+      const dead = new Set(["twitch:openfrontmasters:2026-08-03T12:00:00Z"]);
+      const restarted = { ...entry, startedAt: "2026-08-03T18:00:00Z" };
+      expect(featuredStream(feed([restarted]), dead)?.startedAt).toBe(
+        "2026-08-03T18:00:00Z",
+      );
     });
   });
 
-  describe("getFeaturedStream", () => {
-    const off = { enabled: false, channels: [] };
+  describe("getStreams", () => {
+    const empty = {
+      verifiedAt: "1970-01-01T00:00:00.000Z",
+      featured: [],
+      live: [],
+    };
 
     beforeEach(() => {
       vi.unstubAllGlobals();
       vi.spyOn(console, "warn").mockImplementation(() => {});
-      // getApiBase() → getAudience() now reads the JWT audience from
-      // BOOTSTRAP_CONFIG (ClientEnv), so getFeaturedStream needs it present or
-      // it throws before fetch and silently falls back. The value is irrelevant
-      // here since fetch is stubbed; we only need a well-formed config.
+      // getApiBase() → getAudience() reads the JWT audience from BOOTSTRAP_CONFIG
+      // (ClientEnv), so getStreams needs it present or it throws before fetch and
+      // silently falls back. The value is irrelevant here since fetch is stubbed.
       (window as any).BOOTSTRAP_CONFIG = {
         gameEnv: "prod",
         numWorkers: 1,
@@ -94,65 +97,56 @@ describe("FeaturedStream", () => {
     const stubFetch = (impl: () => unknown) =>
       vi.stubGlobal("fetch", vi.fn(impl));
 
-    it("returns the served config on HTTP 200 with valid JSON", async () => {
+    it("returns the served feed on HTTP 200 with valid JSON", async () => {
       stubFetch(() =>
         Promise.resolve({
           status: 200,
-          json: async () => ({ enabled: true, channels: ["eslcs"] }),
+          json: async () => feed([entry]),
         }),
       );
-      const cfg = await getFeaturedStream();
-      expect(cfg).toEqual({ enabled: true, channels: ["eslcs"] });
+      const served = await getStreams();
+      expect(served.featured).toHaveLength(1);
+      expect(served.featured[0].startedAt).toBe("2026-08-03T12:00:00Z");
     });
 
-    it("falls back to the bundled config on a non-200 status", async () => {
-      stubFetch(() => Promise.resolve({ status: 404, json: async () => ({}) }));
-      expect(await getFeaturedStream()).toEqual(off);
-    });
-
-    it("drops invalid channels instead of failing the whole config", async () => {
+    // An API still serving the pre-cutover contract is healthy and returns 200, so this
+    // is the case the old client could not detect. It must now be indistinguishable
+    // from the API being down.
+    it("falls back when the API serves the legacy {enabled, channels} payload", async () => {
       stubFetch(() =>
         Promise.resolve({
           status: 200,
           json: async () => ({
             enabled: true,
-            channels: ["valid_chan", "bad name!", "x"],
+            channels: ["openfrontmasters"],
           }),
         }),
       );
-      // "bad name!" (space/!) and "x" (too short) are dropped; the valid one stays,
-      // so one garbage entry can't silently disable the feature for everyone.
-      expect(await getFeaturedStream()).toEqual({
-        enabled: true,
-        channels: ["valid_chan"],
-      });
+      expect(await getStreams()).toEqual(empty);
+    });
+
+    it("falls back when an entry has no startedAt", async () => {
+      stubFetch(() =>
+        Promise.resolve({
+          status: 200,
+          json: async () => ({
+            verifiedAt: "2026-08-03T13:00:00Z",
+            featured: [{ ...entry, startedAt: undefined }],
+            live: [],
+          }),
+        }),
+      );
+      expect(await getStreams()).toEqual(empty);
+    });
+
+    it("falls back to the bundled feed on a non-200 status", async () => {
+      stubFetch(() => Promise.resolve({ status: 404, json: async () => ({}) }));
+      expect(await getStreams()).toEqual(empty);
     });
 
     it("falls back when the request rejects (network error)", async () => {
       stubFetch(() => Promise.reject(new Error("network down")));
-      expect(await getFeaturedStream()).toEqual(off);
-    });
-  });
-
-  describe("channelToEmbed", () => {
-    const cfg = (enabled: boolean, channels: string[]) =>
-      FeaturedStreamSchema.parse({ enabled, channels });
-
-    it("embeds nothing when the API reports no live channel", () => {
-      // The API lists only channels its Helix poll sees live, so an empty list means
-      // "nobody is live" — the client must not load the Twitch SDK or a player at all.
-      expect(channelToEmbed(cfg(false, []))).toBeNull();
-      expect(channelToEmbed(cfg(true, []))).toBeNull();
-    });
-
-    it("embeds nothing when disabled, even with channels listed", () => {
-      expect(channelToEmbed(cfg(false, ["openfrontmasters"]))).toBeNull();
-    });
-
-    it("takes the first channel as the API's priority order", () => {
-      expect(channelToEmbed(cfg(true, ["openfrontmasters", "openfront"]))).toBe(
-        "openfrontmasters",
-      );
+      expect(await getStreams()).toEqual(empty);
     });
   });
 

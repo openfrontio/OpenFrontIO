@@ -667,10 +667,21 @@ export class NamePass {
     d[off + 30] = slot.allianceFraction;
     d[off + 31] = slot.allianceRemainingTicks;
 
-    // Column 8: crownLayerIdx (crown cosmetic), verified badge, rest free
+    // Column 8: crownLayerIdx (crown cosmetic), verified badge, statusIconCount, free
     d[off + 32] = slot.crownLayerIdx;
     d[off + 33] = slot.static.verified === true ? 1.0 : 0.0;
-    d[off + 34] = 0.0;
+    // Count of active status-row icons so shaders don't recompute it independently.
+    d[off + 34] = [
+      slot.crown,
+      slot.traitor,
+      slot.disconnected,
+      slot.alliance,
+      slot.allianceReq,
+      slot.target,
+      slot.embargo,
+      slot.nukeActive,
+      slot.inDoomsdayClock || slot.doomsdayClockDraining,
+    ].filter(Boolean).length;
     d[off + 35] = 0.0;
 
     this.playerDataDirty = true;

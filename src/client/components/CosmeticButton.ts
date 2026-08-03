@@ -274,19 +274,19 @@ export class CosmeticButton extends LitElement {
         class="flex flex-col items-center justify-center h-full w-full text-center gap-2 p-1"
       >
         <div class="flex flex-col items-center gap-1 w-full">
-          <div class="flex items-center gap-1.5">
+          <div class="self-start flex items-center gap-1.5">
+            <plutonium-icon .size=${24}></plutonium-icon>
+            <span class="text-sm font-bold text-green-400"
+              >${sub.hardCurrencySignupBonus.toLocaleString()}</span
+            >
+            <span class="text-[10px] text-white/50 uppercase"
+              >${translateText("cosmetics.signup_bonus")}</span
+            >
+          </div>
+          <div class="self-start flex items-center gap-1.5">
             <plutonium-icon .size=${24}></plutonium-icon>
             <span class="text-sm font-bold text-green-400"
               >${sub.dailyHardCurrency.toLocaleString()}</span
-            >
-            <span class="text-[10px] text-white/50 uppercase"
-              >${translateText("cosmetics.per_day")}</span
-            >
-          </div>
-          <div class="flex items-center gap-1.5">
-            <cap-icon .size=${24}></cap-icon>
-            <span class="text-sm font-bold text-amber-700"
-              >${sub.dailySoftCurrency.toLocaleString()}</span
             >
             <span class="text-[10px] text-white/50 uppercase"
               >${translateText("cosmetics.per_day")}</span

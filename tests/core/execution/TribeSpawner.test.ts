@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import type { Game } from "../../../src/core/game/Game";
 import {
+  Cell,
   GameMapSize,
   GameMapType,
   PlayerType,
@@ -359,5 +360,49 @@ describe("TribeSpawner", () => {
       expect(tile).toBeDefined();
       expect(game.isLand(tile)).toBe(true);
     }
+  });
+
+  test("constructor ignores out-of-bounds nation cells without throwing", async () => {
+    const game = await setup("plains", { bots: 1, gameMap: GameMapType.Asia });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Test"],
+      suffixes: ["Tribe"],
+    });
+
+    const oobCell = new Cell(99999, 99999);
+    // Must not throw despite the out-of-bounds cell.
+    const spawner = new TribeSpawner(game, GAME_ID, [oobCell]);
+    const execs = spawner.spawnTribes(1);
+
+    expect(execs).toHaveLength(1);
+    // Tribe should still spawn normally (random, no fixed tile).
+    expect(execs[0].tile).toBeUndefined();
+  });
+
+  test("valid nation cell prevents positioned tribe from occupying that tile", async () => {
+    const game = await setup("plains", { bots: 1, gameMap: GameMapType.Asia });
+    const tile = findLandTile(game);
+    expect(game.hasOwner(tile)).toBe(false);
+    const x = game.x(tile);
+    const y = game.y(tile);
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Test"],
+      suffixes: ["Tribe"],
+      customTribes: [{ name: "Occupied", coordinates: [x, y] }],
+    });
+
+    // A nation already sits on this tile.
+    const nationCell = new Cell(x, y);
+    const spawner = new TribeSpawner(game, GAME_ID, [nationCell]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const execs = spawner.spawnTribes(1);
+
+    expect(execs).toHaveLength(1);
+    // The positioned tribe was rejected (tile occupied by nation), so
+    // it falls back to a random spawn with no fixed tile.
+    expect(execs[0].tile).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
   });
 });

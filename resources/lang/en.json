@@ -244,7 +244,6 @@
     "history_filter_all": "All",
     "history_filter_hvn": "HvN",
     "history_filter_ranked": "Ranked",
-    "history_game_id": "Game ID",
     "history_game_type": "Game Type",
     "history_load_more_failed": "Couldn't load more games.",
     "history_map": "Map",
@@ -371,7 +370,6 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Enabled",
-    "got_it": "Got it",
     "map_default": "Map default",
     "month_apr": "April",
     "month_aug": "August",
@@ -417,6 +415,7 @@
     "public_lobbies_info": "Host custom lobbies that are publicly listed for anyone to join.",
     "rare": "Rare",
     "search": "Search...",
+    "signup_bonus": "Signup bonus",
     "soft": "Caps",
     "title": "Cosmetics",
     "uncommon": "Uncommon",
@@ -506,7 +505,7 @@
     "focus": "Focus",
     "hydrogen_bomb_detonated": "{name} - hydrogen bomb detonated",
     "ignore": "Ignore",
-    "missile_intercepted": "Missile intercepted {unit}",
+    "missile_intercepted": "SAM intercepted {unit}",
     "no_boats_available": "No boats available, max {max}",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
@@ -526,6 +525,7 @@
   },
   "featured_stream": {
     "expand": "Expand",
+    "hide_today": "Hide for today",
     "live": "LIVE",
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
@@ -1442,9 +1442,6 @@
     "toggle_achievements": "Toggle achievements",
     "water_nukes": "Water nukes"
   },
-  "steam": {
-    "link_signpost": "Have an existing OpenFront account? Account linking is coming in a later update."
-  },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",
     "default_name": "Steam player"
@@ -1512,6 +1509,16 @@
     "tribe_purchase_failed": "Purchase failed. Please try again.",
     "tribe_purchase_live": "\"{name}\" is now live in games.",
     "tribe_rate_limited": "You're buying names too quickly. Try again in {seconds}s.",
+    "tribe_stats_boosted": "{multiplier}× boosted",
+    "tribe_stats_button": "Stats",
+    "tribe_stats_failed": "Couldn't load stats. Please try again later.",
+    "tribe_stats_games": "Games",
+    "tribe_stats_lifetime": "Lifetime",
+    "tribe_stats_owner": "Owner",
+    "tribe_stats_reach": "Player Reach",
+    "tribe_stats_reach_tooltip": "Appeared in games with {count} players",
+    "tribe_stats_window": "Last {days} days ({start} – {end})",
+    "tribe_stats_window_short": "Last {days} days",
     "tribe_status_active": "Active",
     "tribe_status_rejected": "Rejected",
     "tribes": "Tribes",
@@ -1727,7 +1734,7 @@
     "zoom_out_desc": "Zoom out the map"
   },
   "username": {
-    "account_invalid_chars": "Username can only contain letters, numbers, underscores, and hyphens.",
+    "account_invalid_chars": "Username can only contain letters, numbers, underscores, hyphens, and single spaces between words.",
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "not_string": "Username must be a string.",

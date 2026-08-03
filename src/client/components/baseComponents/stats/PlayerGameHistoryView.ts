@@ -10,18 +10,21 @@ import {
   type PlayerGameTypeFilter,
   type PublicPlayerGame,
 } from "../../../../core/ApiSchemas";
+import { assetUrl } from "../../../../core/AssetUrls";
 import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
-import "../../CopyButton";
 import {
   formatAbsoluteTime,
   formatDayHeader,
   groupByDay,
 } from "./GameHistoryDates";
 import { formatGameType } from "./GameTypeLabels";
+
+const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
+const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 
 type TypeKey = PlayerGameTypeFilter | "all";
 type ModeKey = PlayerGameModeFilter | "all";
@@ -427,10 +430,12 @@ export class PlayerGameHistoryView extends LitElement {
     const mapDisplayName = game.map ? (getMapName(game.map) ?? game.map) : null;
 
     return html`
-      <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div
+        class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+      >
         ${mapWebpPath
           ? html`<div
-              class="relative w-full aspect-[3/1] overflow-hidden bg-surface"
+              class="relative w-full aspect-[30/15] overflow-hidden bg-surface"
             >
               <img
                 src=${mapWebpPath}
@@ -450,7 +455,7 @@ export class PlayerGameHistoryView extends LitElement {
                     ${mapDisplayName}
                   </div>`
                 : ""}
-              <div class="absolute top-2 right-2">
+              <div class="absolute top-2 left-2">
                 ${this.renderResultBadge(game)}
               </div>
               <div
@@ -461,34 +466,44 @@ export class PlayerGameHistoryView extends LitElement {
             </div>`
           : ""}
         <div
-          class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5"
+          class=${mapWebpPath
+            ? "absolute top-2 right-2 z-[1]"
+            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
         >
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="text-[10px] font-bold uppercase tracking-wider text-white/40"
-              >${translateText("clan_modal.history_game_id")}:</span
-            >
-            <copy-button
-              compact
-              .copyText=${game.gameId}
-              .displayText=${game.gameId}
-              .showVisibilityToggle=${false}
-            ></copy-button>
-          </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
+              title=${translateText("game_list.stats")}
+              aria-label=${translateText("game_list.stats")}
               @click=${() => this.showStats(game.gameId)}
-              class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
             >
-              ${translateText("game_list.stats")}
+              <img
+                src=${statsIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only">${translateText("game_list.stats")}</span>
             </button>
             <button
               type="button"
+              title=${translateText("clan_modal.history_watch_replay")}
+              aria-label=${translateText("clan_modal.history_watch_replay")}
               @click=${() => this.watchReplay(game.gameId)}
-              class="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
             >
-              ${translateText("clan_modal.history_watch_replay")}
+              <img
+                src=${replayIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("clan_modal.history_watch_replay")}</span
+              >
             </button>
           </div>
         </div>

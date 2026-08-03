@@ -365,6 +365,42 @@ export type TribeLeaderboardResponse = z.infer<
   typeof TribeLeaderboardResponseSchema
 >;
 
+// GET /public/tribe/:name — the public stats page for one custom tribe name.
+// No auth; the name goes URL-encoded in the path and lookup is case- and
+// whitespace-insensitive (the response carries the canonical display form).
+// Responses are live, unlike the leaderboard's ~1h cache, so small
+// discrepancies between this and the board are expected. 404 means unknown,
+// rejected/revoked, or owner banned — indistinguishable on purpose. A name
+// with no game appearances yet is a 200 with zeroed figures, not a 404.
+export const TribeStatsFiguresSchema = z.object({
+  gamesAppeared: z.number(),
+  // Impressions, NOT distinct players (see TribeLeaderboardEntry.playerReach):
+  // display as "appeared in games with N players", never "seen by N people".
+  playerReach: z.number(),
+});
+
+export const TribeStatsResponseSchema = z.object({
+  // Canonical display name.
+  name: z.string(),
+  // The buyer, same pair the tribes leaderboard exposes; ownerUsername is
+  // null when they never set one — fall back to the public id.
+  ownerPublicId: z.string(),
+  ownerUsername: z.string().nullable(),
+  // Unexpired boosts; display multiplier = this + 1, same convention as
+  // TribeNameSchema.activeBoosts. Coerced for the same wire tolerance.
+  activeBoosts: z.coerce.number(),
+  lifetime: TribeStatsFiguresSchema,
+  // Same rolling window the tribes leaderboard ranks by, so these figures
+  // match the board. Bounds are plain strings, not z.iso.date(), for the
+  // same display-only tolerance as TribeLeaderboardResponse's.
+  window: TribeStatsFiguresSchema.extend({
+    days: z.number(),
+    start: z.string(),
+    end: z.string(),
+  }),
+});
+export type TribeStatsResponse = z.infer<typeof TribeStatsResponseSchema>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,
@@ -560,10 +596,15 @@ export type NewsItem = z.infer<typeof NewsItemSchema>;
 // entry closed rather than rendering it).
 const HttpsUrlSchema = z.url({ protocol: /^https$/ });
 
-// One live stream in the homepage "Streaming Now" panel. Filled by a backend job (Twitch
-// Helix for auto-discovery; YouTube curated) and served like news.json. `channel` is the
-// login/handle used to derive the watch URL when `url` is absent; image/link fields are
-// validated so a malformed entry fails the config closed (see getLiveStreams).
+// One verified-live stream in the homepage streaming features. Produced only by the
+// API's cron (Twitch Helix; YouTube RSS + videos.list) and served by GET /streams.json.
+// `channel` is the login/handle used to derive the watch URL when `url` is absent;
+// image/link fields are validated so a malformed entry fails the feed closed.
+//
+// `startedAt` is required on purpose. It can only come from a live lookup, so a payload
+// built from static config cannot satisfy this schema — which means an API still serving
+// the older {enabled, channels} shape fails validation and falls back to "show nothing",
+// rather than being mistaken for a current one. Liveness is never decided on the client.
 export const LiveStreamSchema = z.object({
   platform: z.enum(["twitch", "youtube"]),
   // Login/handle as it appears in the watch URL (twitch.tv/<login>, youtube.com/@handle).
@@ -579,35 +620,20 @@ export const LiveStreamSchema = z.object({
   viewers: z.number().int().nonnegative().default(0),
   avatarUrl: HttpsUrlSchema.optional(),
   url: HttpsUrlSchema.optional(),
+  startedAt: z.iso.datetime(),
 });
 export type LiveStream = z.infer<typeof LiveStreamSchema>;
 
-// Config for the homepage "Streaming Now" panel, served like news.json (API-hosted JSON
-// with a bundled fallback). `enabled` is the on/off toggle; `streams` is the live list.
-// Disabled or empty = panel hidden.
-export const LiveStreamsSchema = z.object({
-  enabled: z.boolean().default(false),
-  streams: z.array(LiveStreamSchema).default([]),
+// The single served feed (GET /streams.json). `featured` is the embed candidate list in
+// admin priority order; `live` is the "Streaming Now" list sorted by viewers.
+//
+// There is no `enabled` flag: an empty array means "show nothing". An overloaded toggle
+// is exactly what made the old payload ambiguous — it meant "configured" in one API
+// version and "live" in the next, with an identical shape. `verifiedAt` is when the API
+// built the feed, so the client can refuse one the edge served long after the cron died.
+export const StreamsFeedSchema = z.object({
+  verifiedAt: z.iso.datetime(),
+  featured: z.array(LiveStreamSchema).default([]),
+  live: z.array(LiveStreamSchema).default([]),
 });
-export type LiveStreamsConfig = z.infer<typeof LiveStreamsSchema>;
-
-// Config for the homepage featured-stream panel, served like news.json (a JSON the API
-// hosts, with a bundled fallback). `enabled` is the on/off signal; `channels` is the
-// Twitch channel logins to show (first one that is live wins). Invalid/garbage logins are
-// dropped individually (trimmed, matched to the Twitch login format) rather than failing
-// the whole config closed — one bad entry must not silently disable the feature for every
-// client; the valid channels still flow through.
-const TWITCH_LOGIN = /^[a-zA-Z0-9_]{3,25}$/;
-export const FeaturedStreamSchema = z.object({
-  enabled: z.boolean().default(false),
-  channels: z
-    .array(z.unknown())
-    .default([])
-    .transform((cs) =>
-      cs
-        .filter((c): c is string => typeof c === "string")
-        .map((c) => c.trim())
-        .filter((c) => TWITCH_LOGIN.test(c)),
-    ),
-});
-export type FeaturedStreamConfig = z.infer<typeof FeaturedStreamSchema>;
+export type StreamsFeed = z.infer<typeof StreamsFeedSchema>;
