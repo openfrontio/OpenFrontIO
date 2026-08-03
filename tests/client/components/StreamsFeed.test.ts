@@ -1,9 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import streamsFallback from "../../../resources/streams.json";
+import { getStreams } from "../../../src/client/Api";
+import {
+  broadcastKey,
+  isFeedFresh,
+  streamsFeed,
+} from "../../../src/client/StreamsFeed";
 import { StreamsFeedSchema } from "../../../src/core/ApiSchemas";
 
+vi.mock("../../../src/client/Api", () => ({ getStreams: vi.fn() }));
+const getStreamsMock = vi.mocked(getStreams);
+
 const entry = {
-  platform: "twitch",
+  platform: "twitch" as const,
   channel: "openfrontmasters",
   displayName: "OFM",
   viewers: 100,
@@ -93,5 +102,110 @@ describe("bundled fallback (resources/streams.json)", () => {
     const feed = StreamsFeedSchema.parse(streamsFallback);
     expect(feed.featured).toEqual([]);
     expect(feed.live).toEqual([]);
+  });
+});
+
+describe("isFeedFresh", () => {
+  const now = Date.parse("2026-08-03T13:00:00Z");
+
+  it("accepts a feed built moments ago", () => {
+    expect(isFeedFresh("2026-08-03T12:59:00Z", now)).toBe(true);
+  });
+
+  // The cron writes every 2 min and the snapshot TTL is 10 min, so anything older means
+  // the cron is dead and the edge is serving a corpse. Show nothing.
+  it("rejects a feed older than the 10 minute window", () => {
+    expect(isFeedFresh("2026-08-03T12:49:00Z", now)).toBe(false);
+  });
+
+  it("rejects an unparseable timestamp", () => {
+    expect(isFeedFresh("not a date", now)).toBe(false);
+  });
+});
+
+describe("broadcastKey", () => {
+  it("is stable for the same broadcast", () => {
+    expect(broadcastKey(entry)).toBe(
+      "twitch:openfrontmasters:2026-08-03T12:00:00Z",
+    );
+  });
+
+  // A streamer going offline and starting a NEW broadcast must produce a new key, so a
+  // genuine restart is embeddable again even though the previous one was suppressed.
+  it("changes when the same channel starts a new broadcast", () => {
+    expect(
+      broadcastKey({ ...entry, startedAt: "2026-08-03T18:00:00Z" }),
+    ).not.toBe(broadcastKey(entry));
+  });
+});
+
+describe("streamsFeed polling lifecycle", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    getStreamsMock.mockReset();
+    getStreamsMock.mockResolvedValue({
+      verifiedAt: new Date().toISOString(),
+      featured: [],
+      live: [],
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Two independent pollers for one answer is what made this spammy in the first place.
+  it("serves both subscribers from a single fetch", async () => {
+    const unsubA = streamsFeed.subscribe(() => {});
+    const unsubB = streamsFeed.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getStreamsMock).toHaveBeenCalledTimes(1);
+    unsubA();
+    unsubB();
+  });
+
+  // The whole reason StreamingNow leaked: it kept polling through an entire game,
+  // because <play-page> is never removed from the DOM so disconnectedCallback never ran.
+  it("stops polling once a game starts and resumes on leave", async () => {
+    const unsub = streamsFeed.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const before = getStreamsMock.mock.calls.length;
+
+    document.dispatchEvent(new CustomEvent("game-starting"));
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    expect(getStreamsMock.mock.calls.length).toBe(before);
+
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getStreamsMock.mock.calls.length).toBeGreaterThan(before);
+    unsub();
+  });
+
+  it("stops polling when the last subscriber goes away", async () => {
+    const unsub = streamsFeed.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const before = getStreamsMock.mock.calls.length;
+    unsub();
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    expect(getStreamsMock.mock.calls.length).toBe(before);
+  });
+
+  it("hands subscribers an empty feed when the served one is stale", async () => {
+    getStreamsMock.mockResolvedValue({
+      verifiedAt: "1970-01-01T00:00:00.000Z",
+      featured: [entry],
+      live: [entry],
+    });
+    let seen: unknown = null;
+    const unsub = streamsFeed.subscribe((feed) => {
+      seen = feed;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(seen).toEqual({
+      verifiedAt: "1970-01-01T00:00:00.000Z",
+      featured: [],
+      live: [],
+    });
+    unsub();
   });
 });
