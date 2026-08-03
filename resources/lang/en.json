@@ -23,6 +23,7 @@
     "get_magic_link": "Get Magic Link",
     "google_alt": "Google",
     "link_discord": "Link Discord Account",
+    "link_existing_account": "Link an existing account",
     "link_google": "Link Google Account",
     "link_google_already_linked": "That Google account is already linked to another player.",
     "link_google_error": "Couldn't link your Google account. Please make sure you're signed in and try again.",
