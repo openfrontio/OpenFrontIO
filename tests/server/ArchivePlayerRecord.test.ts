@@ -77,4 +77,45 @@ describe("archiveGame player records", () => {
       isLobbyCreator: false,
     });
   });
+
+  it("carries custom tribe names into the archived record for infra ingest and replays", () => {
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Public,
+    } as any);
+
+    (game as any).gameStartInfo = {
+      gameID: "test-game",
+      lobbyCreatedAt: 0,
+      config: { gameType: GameType.Public },
+      players: [],
+      tribes: [{ name: "Dragon Riders" }, { name: "Night Wolves" }],
+    };
+
+    (game as any).archiveGame();
+
+    expect(archive).toHaveBeenCalledTimes(1);
+    const record = vi.mocked(archive).mock.calls[0][0] as any;
+    expect(record.info.tribes).toEqual([
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
+    ]);
+  });
+
+  it("omits tribes from the archived record when none were fetched", () => {
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Public,
+    } as any);
+
+    (game as any).gameStartInfo = {
+      gameID: "test-game",
+      lobbyCreatedAt: 0,
+      config: { gameType: GameType.Public },
+      players: [],
+    };
+
+    (game as any).archiveGame();
+
+    const record = vi.mocked(archive).mock.calls[0][0] as any;
+    expect(record.info.tribes).toBeUndefined();
+  });
 });
