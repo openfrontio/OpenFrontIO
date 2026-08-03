@@ -39,7 +39,11 @@ import {
   GameRecordSchema,
   GameStartInfo,
 } from "../../src/core/Schemas";
-import { decompressGameRecord, simpleHash } from "../../src/core/Util";
+import {
+  decompressGameRecord,
+  simpleHash,
+  toWireGameStartInfo,
+} from "../../src/core/Util";
 import { NodeGameMapLoader } from "../perf/fullgame/NodeGameMapLoader";
 
 const PROJECT_ROOT = path.resolve(
@@ -144,13 +148,14 @@ async function main(): Promise<void> {
     return { ...p, teamIndex };
   });
 
-  const gameStart: GameStartInfo = {
+  // Same wire blanking the client replay path applies (see toWireGameStartInfo).
+  const gameStart: GameStartInfo = toWireGameStartInfo({
     gameID: info.gameID,
     lobbyCreatedAt: info.lobbyCreatedAt,
     config: info.config,
     players,
     tribes: info.tribes,
-  };
+  });
 
   console.log(
     `Replaying ${info.gameID}: ${info.config.gameMap} ` +

@@ -10,6 +10,7 @@ import {
   GameStartInfo,
   PublicGameInfo,
 } from "../core/Schemas";
+import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -855,7 +856,13 @@ class Client {
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
-      gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
+      gameStartInfo:
+        lobby.gameStartInfo ??
+        // Replays simulate from the archived record; re-apply the server's
+        // wire blanking or team games desync (see toWireGameStartInfo).
+        (lobby.gameRecord
+          ? toWireGameStartInfo(lobby.gameRecord.info)
+          : undefined),
       gameRecord: lobby.gameRecord,
     });
 
