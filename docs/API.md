@@ -5,6 +5,10 @@ worker. It documents endpoints intended for the game client, public websites,
 and player integrations. It is kept aligned with the route registry and
 endpoint schemas in the infra repository.
 
+## API Usage
+
+> **Warning:** Rate limits are very strict. Join the [Discord](https://discord.gg/K9zernJB5z) to request higher rate limits.
+
 ## Base URLs
 
 Production:
