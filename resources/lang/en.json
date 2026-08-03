@@ -1445,6 +1445,22 @@
   "steam": {
     "link_signpost": "Have an existing OpenFront account? Account linking is coming in a later update."
   },
+  "steam_link_modal": {
+    "confirm": "Link Account",
+    "confirm_prompt": "Link Steam {persona} with account {username}?",
+    "linking": "Linking…",
+    "load_error": "Couldn't load your account details. Please try again from Steam.",
+    "loading_placeholder": "…",
+    "reason_account_already_has_steam": "Your account is already linked to a different Steam account.",
+    "reason_expired": "This link has expired. Please try again from Steam.",
+    "reason_failed": "Something went wrong. Please try again.",
+    "reason_steam_has_progress": "This Steam account already has its own progress and can't be merged.",
+    "reason_steam_linked_elsewhere": "This Steam account is already linked to a different OpenFront account.",
+    "success": "Your Steam account is now linked.",
+    "title": "Link Steam Account",
+    "unknown_persona": "your Steam account",
+    "unknown_username": "your account"
+  },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",
     "default_name": "Steam player"

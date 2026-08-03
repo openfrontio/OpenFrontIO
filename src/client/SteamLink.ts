@@ -36,6 +36,43 @@ export function takePendingLink(): string | null {
   return token;
 }
 
+export type SteamLinkTicketResult =
+  | { ok: true; personaName: string | null }
+  | { ok: false };
+
+// GET /auth/steam/link_ticket/:token — the Steam persona for the confirmation
+// modal. Unauthenticated (anyone holding the token can poll it), and the
+// server response is deliberately narrow: `state`/`reason` exist for the
+// desktop gate's own polling, not for this — only `personaName` is read here.
+// Returns { ok: false } on any error (unknown/expired token, network failure,
+// bad shape) so the modal can render a single "couldn't load" state rather
+// than guessing at a name.
+export async function fetchSteamLinkTicket(
+  token: string,
+): Promise<SteamLinkTicketResult> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/auth/steam/link_ticket/${encodeURIComponent(token)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (response.status !== 200) {
+      console.warn(
+        "fetchSteamLinkTicket: unexpected status",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false };
+    }
+    const body = await response.json();
+    const personaName =
+      typeof body?.personaName === "string" ? body.personaName : null;
+    return { ok: true, personaName };
+  } catch (e) {
+    console.error("fetchSteamLinkTicket: request failed", e);
+    return { ok: false };
+  }
+}
+
 export type RedeemSteamLinkResult =
   | { ok: true }
   | { ok: false; reason: string };

@@ -14,6 +14,7 @@ vi.mock("../../src/client/Auth", () => ({
 }));
 
 import {
+  fetchSteamLinkTicket,
   parseSteamLinkToken,
   redeemSteamLink,
   stashPendingLink,
@@ -113,5 +114,49 @@ describe("redeemSteamLink", () => {
     const result = await redeemSteamLink("tok123");
 
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("fetchSteamLinkTicket", () => {
+  it("fetches the persona for the confirmation modal, unauthenticated", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ state: "pending", reason: null, personaName: "Ada" }, 200),
+    );
+
+    const result = await fetchSteamLinkTicket("tok123");
+
+    expect(result).toEqual({ ok: true, personaName: "Ada" });
+    expect(fetchMock()).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock().mock.calls[0];
+    expect(String(url)).toContain("/auth/steam/link_ticket/tok123");
+    // Unauthenticated: no Authorization header sent (unlike redeemSteamLink).
+    expect(
+      (init as RequestInit | undefined)?.headers as
+        | Record<string, string>
+        | undefined,
+    ).not.toHaveProperty("Authorization");
+  });
+
+  it("passes through a null persona (Steam declined to resolve one)", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ state: "pending", reason: null, personaName: null }, 200),
+    );
+
+    expect(await fetchSteamLinkTicket("tok123")).toEqual({
+      ok: true,
+      personaName: null,
+    });
+  });
+
+  it("returns ok:false for an unknown/expired token (404)", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 404));
+
+    expect(await fetchSteamLinkTicket("tok123")).toEqual({ ok: false });
+  });
+
+  it("returns ok:false when the request throws", async () => {
+    fetchMock().mockRejectedValueOnce(new TypeError("network down"));
+
+    expect(await fetchSteamLinkTicket("tok123")).toEqual({ ok: false });
   });
 });

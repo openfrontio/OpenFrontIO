@@ -54,6 +54,9 @@ import "./NewsModal";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
+import { parseSteamLinkToken, takePendingLink } from "./SteamLink";
+import "./SteamLinkModal";
+import { SteamLinkModal } from "./SteamLinkModal";
 import "./SteamLinkSignpost";
 import { StoreModal } from "./Store";
 import { TokenLoginModal } from "./TokenLoginModal";
@@ -174,6 +177,7 @@ class Client {
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
   private rewardsModal: RewardsModal;
+  private steamLinkModal: SteamLinkModal;
   private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
@@ -404,6 +408,16 @@ class Client {
       console.warn("Rewards modal element not found");
     }
 
+    this.steamLinkModal = document.querySelector(
+      "steam-link-modal",
+    ) as SteamLinkModal;
+    if (
+      !this.steamLinkModal ||
+      !(this.steamLinkModal instanceof SteamLinkModal)
+    ) {
+      console.warn("Steam link modal element not found");
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (crazyGamesSDK.isOnCrazyGames()) {
         void updateCrazyGamesNavButton();
@@ -444,6 +458,20 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
+
+        // Resume a Steam-link confirmation that was interrupted by a login
+        // redirect (Discord/Google OAuth, magic link): the modal stashed the
+        // token and sent the player to log in via #modal=account, so a login
+        // redirect commonly lands back there rather than on a clean "/" —
+        // this must NOT be gated on cleanHomepage below. Only read the stash
+        // once login is confirmed: takePendingLink() consumes it on read, so
+        // a speculative read while logged out would burn a token that a
+        // *later* successful login should still get to resume.
+        const pendingLink = takePendingLink();
+        if (pendingLink) {
+          void this.steamLinkModal?.openWithToken(pendingLink);
+          return;
+        }
 
         // Popups below only on a clean homepage load, never over a deep link
         // (join URL, #modal=..., #purchase-completed, ...).
@@ -750,6 +778,17 @@ class Client {
       return;
     }
 
+    // The desktop Electron shell's account-linking gate opens the browser
+    // here (see SteamLink.ts for the full handoff). Checked against the raw
+    // hash, not decodedHash — parseSteamLinkToken's prefix match is exact
+    // and the token itself is opaque, so no decoding is needed or expected.
+    const steamLinkToken = parseSteamLinkToken(hash);
+    if (steamLinkToken) {
+      strip();
+      void this.steamLinkModal?.openWithToken(steamLinkToken);
+      return;
+    }
+
     const pathMatch = window.location.pathname.match(
       /^\/(?:w\d+\/)?game\/([^/]+)/,
     );
@@ -905,6 +944,7 @@ class Client {
         "account-button",
         "leaderboard-button",
         "token-login",
+        "steam-link-modal",
         "matchmaking-modal",
         "clan-modal",
         "lang-selector",
