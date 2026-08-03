@@ -97,6 +97,7 @@ export enum GameMapType {
   Sol = "Sol", // map-generator/assets/maps/sol/info.json
   SouthAmerica = "South America", // map-generator/assets/maps/southamerica/info.json
   SoutheastAsia = "SoutheastAsia", // map-generator/assets/maps/southeastasia/info.json
+  Spiraled = "Spiraled", //// map-generator/assets/maps/spiraled/info.json
   StraitOfGibraltar = "Strait of Gibraltar", // map-generator/assets/maps/straitofgibraltar/info.json
   StraitOfHormuz = "Strait of Hormuz", // map-generator/assets/maps/straitofhormuz/info.json
   StraitOfMalacca = "Strait Of Malacca", // map-generator/assets/maps/straitofmalacca/info.json

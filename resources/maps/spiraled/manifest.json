@@ -1,0 +1,538 @@
+{
+  "categories": [
+    "new"
+  ],
+  "id": "test01",
+  "map": {
+    "height": 1200,
+    "num_land_tiles": 727304,
+    "width": 1200
+  },
+  "map16x": {
+    "height": 300,
+    "num_land_tiles": 39544,
+    "width": 300
+  },
+  "map4x": {
+    "height": 600,
+    "num_land_tiles": 173632,
+    "width": 600
+  },
+  "multiplayer_frequency": 4,
+  "name": "test01",
+  "nations": [
+    {
+      "coordinates": [
+        185,
+        151
+      ],
+      "name": "1A",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        542,
+        19
+      ],
+      "name": "1B",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        905,
+        124
+      ],
+      "name": "1C",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1115,
+        433
+      ],
+      "name": "1D",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1076,
+        806
+      ],
+      "name": "1E",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        795,
+        1056
+      ],
+      "name": "1F",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        419,
+        1036
+      ],
+      "name": "1G",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        180,
+        748
+      ],
+      "name": "1H",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        245,
+        379
+      ],
+      "name": "1I",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        576,
+        215
+      ],
+      "name": "1J",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        892,
+        404
+      ],
+      "name": "1K",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        867,
+        767
+      ],
+      "name": "1L",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        522,
+        864
+      ],
+      "name": "1M",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        381,
+        542
+      ],
+      "name": "1N",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        700,
+        471
+      ],
+      "name": "1O",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        558,
+        632
+      ],
+      "name": "1P",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1048,
+        188
+      ],
+      "name": "2A",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1179,
+        541
+      ],
+      "name": "2B",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1076,
+        904
+      ],
+      "name": "2C",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        765,
+        1118
+      ],
+      "name": "2D",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        392,
+        1079
+      ],
+      "name": "2E",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        142,
+        797
+      ],
+      "name": "2F",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        162,
+        419
+      ],
+      "name": "2G",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        452,
+        182
+      ],
+      "name": "2H",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        819,
+        248
+      ],
+      "name": "2I",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        985,
+        577
+      ],
+      "name": "2J",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        795,
+        894
+      ],
+      "name": "2K",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        432,
+        868
+      ],
+      "name": "2L",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        335,
+        520
+      ],
+      "name": "2M",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        654,
+        384
+      ],
+      "name": "2N",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        730,
+        697
+      ],
+      "name": "2O",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        568,
+        559
+      ],
+      "name": "2P",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1012,
+        1047
+      ],
+      "name": "3A",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        658,
+        1180
+      ],
+      "name": "3B",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        296,
+        1077
+      ],
+      "name": "3C",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        84,
+        767
+      ],
+      "name": "3D",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        121,
+        392
+      ],
+      "name": "3E",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        405,
+        143
+      ],
+      "name": "3F",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        779,
+        165
+      ],
+      "name": "3G",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1018,
+        451
+      ],
+      "name": "3H",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        954,
+        817
+      ],
+      "name": "3I",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        622,
+        986
+      ],
+      "name": "3J",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        306,
+        797
+      ],
+      "name": "3K",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        330,
+        431
+      ],
+      "name": "3L",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        678,
+        339
+      ],
+      "name": "3M",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        818,
+        655
+      ],
+      "name": "3N",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        501,
+        730
+      ],
+      "name": "3O",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        642,
+        567
+      ],
+      "name": "3P",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        153,
+        1012
+      ],
+      "name": "4A",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        21,
+        657
+      ],
+      "name": "4B",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        121,
+        296
+      ],
+      "name": "4C",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        434,
+        83
+      ],
+      "name": "4D",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        807,
+        124
+      ],
+      "name": "4E",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1057,
+        405
+      ],
+      "name": "4F",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1035,
+        779
+      ],
+      "name": "4G",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        749,
+        1017
+      ],
+      "name": "4H",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        381,
+        954
+      ],
+      "name": "4I",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        212,
+        622
+      ],
+      "name": "4J",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        405,
+        307
+      ],
+      "name": "4K",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        768,
+        333
+      ],
+      "name": "4L",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        862,
+        678
+      ],
+      "name": "4M",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        543,
+        820
+      ],
+      "name": "4N",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        470,
+        502
+      ],
+      "name": "4O",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        633,
+        644
+      ],
+      "name": "4P",
+      "strength": 1
+    }
+  ],
+  "translation_key": "map.test01"
+}
