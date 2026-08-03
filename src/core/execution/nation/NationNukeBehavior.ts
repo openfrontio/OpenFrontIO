@@ -13,7 +13,6 @@ import {
 } from "../../game/Game";
 import { TileRef, euclDistFN } from "../../game/GameMap";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
-import { clearParabolaDirection } from "../../pathfinding/PathFinder.Parabola";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
@@ -628,21 +627,6 @@ export class NationNukeBehavior {
     return false;
   }
 
-  /**
-   * Check if the parabolic nuke trajectory from spawnTile to targetTile
-   * crosses impassable terrain on BOTH curve directions. Mirrors
-   * NukeExecution, which flips to the opposite curve when the requested one
-   * is blocked and aborts only when both are.
-   */
-  private isTrajectoryBlockedByImpassable(
-    spawnTile: TileRef,
-    targetTile: TileRef,
-  ): boolean {
-    return (
-      clearParabolaDirection(this.game, spawnTile, targetTile, true) === null
-    );
-  }
-
   private isValidNukeTile(t: TileRef, nukeTarget: Player | null): boolean {
     const difficulty = this.game.config().gameConfig().difficulty;
 
@@ -871,10 +855,6 @@ export class NationNukeBehavior {
         });
         const trajectory = pathFinder.findPath(silo.tile(), targetTile) ?? [];
         if (trajectory.length === 0) continue;
-        // Skip silos whose trajectory crosses impassable terrain — the
-        // simulation would abort these launches (see NukeExecution).
-        if (this.isTrajectoryBlockedByImpassable(silo.tile(), targetTile))
-          continue;
         allAvailableSilos.push({
           silo,
           slots: availableSlots,
@@ -1064,8 +1044,7 @@ export class NationNukeBehavior {
 
     // First pass: find silos with an unblocked trajectory to the failed
     // target. Only these contribute slots to the overwhelm plan.
-    // "Unblocked" means not interceptable by non-covering enemy SAMs AND
-    // not crossing impassable terrain (the sim aborts those launches).
+    // "Unblocked" means not interceptable by non-covering enemy SAMs.
     const unblockedSilos: Unit[] = [];
     for (const silo of silos) {
       if (
@@ -1073,10 +1052,6 @@ export class NationNukeBehavior {
           silo.tile(),
           failedTarget.targetTile,
           failedTarget.coveringSamIds,
-        ) &&
-        !this.isTrajectoryBlockedByImpassable(
-          silo.tile(),
-          failedTarget.targetTile,
         )
       ) {
         unblockedSilos.push(silo);
