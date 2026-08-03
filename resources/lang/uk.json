@@ -64,6 +64,7 @@
     "sub_status_unpaid": "Не сплачена",
     "subscription_portal_failed": "Не вдалося відкрити портал управління підпискою.",
     "tab_account": "Акаунт",
+    "tab_clans": "Клани",
     "tab_friends": "Друзі",
     "tab_games": "Ігри",
     "tab_settings": "Налаштування",
@@ -75,9 +76,9 @@
     "username_confirm_button": "Змінити ім’я",
     "username_confirm_case_only": "Нове ім’я відрізняється від поточного тільки регістром, але 30-денне блокування розпочнеться в будь-якому разі.",
     "username_confirm_heading": "Змінити ім’я гравця?",
-    "username_cooldown_until": "Ви зможете повторно змінити ім’я користувача {date}.",
-    "username_error_cooldown": "Ви зможете повторно змінити ім’я користувача через {days} дн.",
-    "username_error_failed": "Не вдалося змінити ім’я користувача. Спробуйте ще раз пізніше.",
+    "username_cooldown_until": "Ви зможете повторно змінити ім’я гравця {date}.",
+    "username_error_cooldown": "Ви зможете повторно змінити ім’я гравця через {days} дн.",
+    "username_error_failed": "Не вдалося змінити ім’я гравця. Спробуйте ще раз пізніше.",
     "username_error_profane": "Це ім’я гравця неприпустиме.",
     "username_error_taken": "Це ім’я гравця вже зайнято — спробуйте інше.",
     "username_grace_warning": "Ви втратите ексклюзивне право на «{name}» {date}. Поновіть підписку, щоб зберегти його.",
@@ -88,10 +89,7 @@
     "username_temporary_prompt": "Ваше ім’я гравця було зайняте іншим гравцем. Обрати нове зараз? Перейменування безплатне.",
     "username_temporary_prompt_confirm": "Оберіть ім’я",
     "username_title": "Ім’я гравця",
-    "your_subscription": "Ваша підписка",
-    "not_found": "Не знайдено",
-    "public_player_id": "Публічний ID:",
-    "stats_overview": "Огляд статистики"
+    "your_subscription": "Ваша підписка"
   },
   "build_menu": {
     "desc": {
@@ -252,7 +250,6 @@
     "history_filter_all": "Усе",
     "history_filter_hvn": "ЛпН",
     "history_filter_ranked": "Рейтингова гра",
-    "history_game_id": "ID гри",
     "history_game_type": "Тип гри",
     "history_load_more_failed": "Не вдалося завантажити більше ігор.",
     "history_map": "Мапа",
@@ -361,7 +358,8 @@
     "title": "Клани",
     "transfer_leadership": "Передати лідерство",
     "transfer_warning": "Обраний учасник стане новим лідером. Ви станете звичайним учасником. Цю дію неможливо скасувати.",
-    "unban": "Розблокувати"
+    "unban": "Розблокувати",
+    "history_game_id": "ID гри"
   },
   "common": {
     "available": "Доступно",
@@ -379,6 +377,7 @@
     "duration_minute_short": " хв",
     "duration_second_short": " с",
     "enabled": "Увімкнено",
+    "got_it": "Зрозуміло",
     "map_default": "Типово для мапи",
     "month_apr": "Квітень",
     "month_aug": "Серпень",
@@ -420,14 +419,18 @@
     "hard": "Плутоній",
     "legendary": "Легендарний",
     "per_day": "/день",
-    "public_lobbies": "Створення публічних лобі",
+    "public_lobbies": "Публічні лобі",
+    "public_lobbies_info": "Створюйте власні лобі, які доступні всім.",
     "rare": "Рідкісний",
     "search": "Пошук...",
     "soft": "Кришечки",
     "title": "Косметика",
     "uncommon": "Незвичайний",
     "unlimited_ranked": "Безлімітний рейтинговий підбір",
-    "usd_value": "Ціна: {usd}"
+    "unlimited_ranked_info": "Необмежена кількість рейтингових матчів.",
+    "usd_value": "Ціна: {usd}",
+    "verified_name": "Підтверджене ім’я гравця",
+    "verified_name_info": "Ваше ім’я гравця зарезервоване для вашого акаунту і показується в грі зі значком підтвердження."
   },
   "difficulty": {
     "difficulty": "Складність націй",
@@ -468,7 +471,8 @@
       "nukeExplosion": "Вибухи бомб",
       "nukeTrail": "Сліди бомб",
       "structures": "Споруди",
-      "transportShipTrail": "Сліди суден"
+      "transportShipTrail": "Сліди суден",
+      "warship": "Військовий корабель"
     }
   },
   "error_modal": {
@@ -524,8 +528,13 @@
     "trade_ship_captured": "{name} захоплює ваш торговий корабель",
     "unit_destroyed": "Ваш юніт «{unit}» було знищено",
     "unit_voluntarily_deleted": "Юніт добровільно видалено",
-    "wants_to_renew_alliance": "{name} хоче поновити ваш союз",
-    "mirv_warheads_intercepted": "{count, plural, one {Перехоплено {count} боєголовку РГЧ ІН} few {Перехоплено {count} боєголовки РГЧ ІН} many {Перехоплено {count} боєголовок РГЧ ІН} other {Перехоплено {count} боєголовок РГЧ ІН}}"
+    "wants_to_renew_alliance": "{name} хоче поновити ваш союз"
+  },
+  "featured_stream": {
+    "expand": "Розгорнути",
+    "live": "НАЖИВО",
+    "minimize": "Згорнути",
+    "open_on_twitch": "Відкрити {channel} на Twitch"
   },
   "flag_input": {
     "button_title": "Обери прапор!",
@@ -605,6 +614,8 @@
     "title": "Гра починається..."
   },
   "graphics_setting": {
+    "advanced_desc": "Підлаштування окремих параметрів графіки",
+    "advanced_label": "Розширені налаштування",
     "black": "Чорний",
     "classic_icons_desc": "Світліший контур з майже чорною серединою",
     "classic_icons_label": "Класичні значки",
@@ -615,6 +626,9 @@
     "colored_names_label": "Колір імен",
     "coordinate_grid_opacity_desc": "Непрозорість координатної сітки (нижчі значення дозволяють бачити більше об’єктів)",
     "coordinate_grid_opacity_label": "Непрозорість координатної сітки",
+    "copy_json_copied": "Скопійовано!",
+    "copy_json_desc": "Копіювати поточні налаштування у форматі JSON, щоб ділитися ними з друзями",
+    "copy_json_label": "Копіювати налаштування як JSON",
     "fallout_desc": "Показувати зелене світіння радіоактивного забруднення на опроміненій території. Вимкніть, щоб покращити продуктивність",
     "fallout_label": "Ефекти радіоактивного забруднення",
     "highland_color_desc": "Основний колір для височинної місцевості.",
@@ -633,6 +647,13 @@
     "hover_glow_width_label": "Розмір підсвічування при наведенні",
     "icon_size_desc": "Розмір промальовки значків споруд на мапі",
     "icon_size_label": "Розмір значків споруд",
+    "import_json_apply": "Застосувати",
+    "import_json_desc": "Вставити налаштування друга у форматі JSON і застосувати їх",
+    "import_json_invalid": "Це не виглядає як дійсний JSON з налаштуваннями",
+    "import_json_label": "Імпортувати налаштування з JSON",
+    "layer_nukeable": "Вибухи",
+    "layer_placement_land": "Шар землі",
+    "layer_placement_water": "Шар води",
     "lighting_ambient_desc": "Затінює карту та додає світіння навколо споруд (0 — вимкнено)",
     "lighting_ambient_label": "Навколишнє освітлення",
     "lighting_unit_glow_desc": "Як далеко розповсюджується світіння навколо юнітів і споруд",
@@ -650,6 +671,16 @@
     "ocean_color_label": "Колір океану",
     "plains_color_desc": "Основний колір для низової місцевості.",
     "plains_color_label": "Колір рівнин",
+    "preset_colorblind": "Дальтонізм",
+    "preset_colorblind_desc": "Кольори територій і кордонів, адаптовані для дальтоніків",
+    "preset_custom": "Власний",
+    "preset_default": "Типовий",
+    "preset_default_desc": "Типовий вигляд OpenFront",
+    "preset_delete_confirm": "Видалити пресет «{name}»?",
+    "preset_migrated_name": "Мої налаштування",
+    "preset_name_placeholder": "Назва шаблона",
+    "preset_night": "Ніч",
+    "preset_night_desc": "Затемнена мапа зі структурами та юнітами, що світяться",
     "rail_distance_desc": "На якій відстані віддалені залізничні колії залишаються видимими",
     "rail_distance_label": "Відстань промальовки залізничних колій",
     "rail_thickness_desc": "Ширина промальовки залізничних колій",
@@ -658,10 +689,14 @@
     "reset_label": "Повернути типові",
     "sand_color_desc": "Основний колір для берегів.",
     "sand_color_label": "Колір берегів",
+    "save_preset_label": "Зберегти",
+    "section_custom_presets": "Власні шаблони",
     "section_effects": "Ефекти",
     "section_lighting": "Освітлення",
     "section_map": "Мапа",
+    "section_map_layers": "Шари мапи",
     "section_name_labels": "Надписи імен",
+    "section_presets": "Шаблони",
     "section_structure_icons": "Значки споруд",
     "section_terrain": "Рельєф",
     "structure_dots_desc": "Перетворювати значки споруд на маленькі крапки при віддаленні",
@@ -670,8 +705,7 @@
     "territory_alpha_label": "Непрозорість територій",
     "territory_sat_desc": "Барвистість кольорів заповнення територій (нижні значення приглушають їх)",
     "territory_sat_label": "Насиченість територій",
-    "title": "Налаштування графіки",
-    "section_accessibility": "Доступність"
+    "title": "Налаштування графіки"
   },
   "heads_up_message": {
     "catching_up": "Синхронізація...",
@@ -866,20 +900,27 @@
     "admin": "Вигнано адміністратором",
     "duplicate_session": "Вигнано з гри (можливо, ви грали на іншій вкладці)",
     "host_left": "Хост покинув лобі.",
-    "lobby_creator": "Вигнано власником лобі"
+    "lobby_creator": "Вигнано власником лобі",
+    "match_cancelled": "Матч скасовано: гравцю не вдалося під’єднатися. Ваш ELO не знижено."
   },
   "leaderboard": {
+    "allies": "Союзники",
+    "betrayals": "Зради",
     "cities": "Міста",
+    "clan": "Клан",
+    "configure_columns": "Налаштувати стовпці",
+    "factories": "Фабрики",
     "gold": "Золото",
     "launchers": "Установки",
     "maxtroops": "Ліміт військ",
     "owned": "Влада",
     "player": "Гравець",
+    "ports": "Порти",
+    "rank": "Місце",
     "sams": "ЗРК",
     "team": "Команда",
-    "warships": "Військові кораблі",
-    "show_control": "Показати підконтрольні території",
-    "show_units": "Показати юніти"
+    "troops": "Війська",
+    "warships": "Військові кораблі"
   },
   "leaderboard_modal": {
     "clan": "Клан",
@@ -894,10 +935,24 @@
     "no_stats": "Статистика недоступна",
     "player": "Гравець",
     "rank": "Ранг",
+    "ranked_2v2_tab": "Рейтингові ігри 2 на 2",
+    "ranked_no_stats": "У цьому рейтингу ще не зіграно жодного матчу",
     "ranked_tab": "Рейтингові ігри 1 на 1",
     "ratio": "Коефіцієнт",
     "refresh_time": "Оновлюється щогодини",
     "title": "Таблиця лідерів",
+    "tribes_boost": "Бусти",
+    "tribes_boost_tooltip": "Назви з бустом частіше з’являються в іграх інших гравців",
+    "tribes_boost_value": "{multiplier}×",
+    "tribes_boost_value_tooltip": "З’являється в іграх інших гравців у {multiplier}× частіше",
+    "tribes_games_tooltip": "Появи в іграх: {count}",
+    "tribes_name": "Назва",
+    "tribes_no_stats": "Жодне плем’я ще не з’являлося в іграх",
+    "tribes_reach": "Охоплення гравців",
+    "tribes_reach_tooltip": "Загальна кількість гравців у іграх, в яких з’явилася ця назва.",
+    "tribes_reach_value_tooltip": "З’являлися в іграх з {count} гравцями",
+    "tribes_tab": "Племена",
+    "tribes_window": "Ковзне {days}-денне вікно ({start} – {end})",
     "try_again": "Спробувати ще раз",
     "win_loss_ratio": "Перемоги/Невдачі",
     "win_score": "Рахунок перемог",
@@ -947,6 +1002,7 @@
     "baikalnukewars": "Байкал (ядерні війни)",
     "bajacalifornia": "Нижня Каліфорнія",
     "balkans": "Балкани",
+    "balkhash": "Балхаш",
     "baltics": "Прибалтика",
     "beringsea": "Берингове море",
     "beringstrait": "Берингова протока",
@@ -961,7 +1017,9 @@
     "caucasus": "Кавказ",
     "china": "Китай",
     "choppingblock": "Колодки",
+    "clearwaterlakes": "Озера Клірвотер",
     "conakry": "Конакрі",
+    "crimea": "Крим",
     "danishstraits": "Данська протока",
     "deglaciatedantarctica": "Розтала Антарктида",
     "didier": "Дідьє",
@@ -974,7 +1032,9 @@
     "faroeislands": "Фарерські острови",
     "favorites": "Улюблені",
     "featured": "Рекомендовані",
+    "fingerlakes": "Озера Фінгер",
     "fourislands": "Чотири острови",
+    "france": "Франція",
     "gatewaytotheatlantic": "Гібралтарська протока",
     "germany": "Німеччина",
     "giantworldmap": "Велетенська мапа світу",
@@ -983,6 +1043,7 @@
     "gulfofstlawrence": "Затока Св. Лаврентія",
     "halkidiki": "Халкідіки",
     "hawaii": "Гаваї",
+    "hecatestrait": "Протока Геката",
     "hongkong": "Гонконг",
     "iceland": "Ісландія",
     "indiansubcontinent": "Індійський субконтинент",
@@ -992,6 +1053,7 @@
     "juandefucastrait": "Протока Хуан-де-Фука",
     "korea": "Корея",
     "labyrinth": "Лабіринт",
+    "lasvegasstrip": "Лас-Вегас-Стріп",
     "lemnos": "Лемнос",
     "levant": "Левант",
     "lisbon": "Лісабон",
@@ -1021,6 +1083,7 @@
     "sanfrancisco": "Сан-Франциско",
     "scandinavia": "Скандинавія",
     "sierpinski": "Серпінський",
+    "sol": "Сол",
     "southamerica": "Південна Америка",
     "southeastasia": "Південно-Східна Азія",
     "straitofgibraltar": "Гібралтарська протока",
@@ -1040,6 +1103,7 @@
     "twolakes": "Два озера",
     "unitedstates": "Сполучені Штати Америки",
     "venice": "Венеція",
+    "vietnam": "В’єтнам",
     "warshipwarship": "Корабель-корабель",
     "world": "Світ",
     "worldinverted": "Інвертований світ",
@@ -1078,6 +1142,7 @@
     "search_results": "Результати пошуку",
     "unfavorite": "Вилучити з улюблених"
   },
+  "map_layers": {},
   "marketing_consent": {
     "body": "Новини та оновлення електронною поштою. Змініть їх у будь-який час у своєму акаунті.",
     "dismiss": "Відхилити",
@@ -1087,12 +1152,16 @@
     "yes": "Так, будь ласка"
   },
   "matchmaking_modal": {
-    "connecting": "Підключення до сервера підбору гравців...",
+    "clan_verification_failed": "Не вдалося підтвердити участь у клані. Спробуйте ще раз.",
+    "connecting": "Під’єднання до сервера підбору гравців...",
     "elo": "Ваш ELO: {elo}",
+    "invalid_clan": "Вибраний клан більше не доступний. Виберіть поточний клан і повторіть пошук.",
     "limit_reached": "У вас закінчилися безплатні рейтингові матчі.",
     "limit_reached_info": "Безплатні матчі поповнюються щодня. Підпишіться, щоб грати в рейтинг без обмежень.",
     "limit_upsell": "Отримати безлімітний рейтинг",
+    "must_login": "Ви повинні увійти, щоб грати в рейтинг.",
     "no_elo": "ELO відсутній",
+    "queue_size": "Гравці в черзі: {count}",
     "replaced": "Ви приєдналися до підбору гравців з іншої вкладки або вікна.",
     "searching": "Пошук гри...",
     "title": "Рейтинговий підбір 1 на 1 (АЛЬФА)",
@@ -1181,6 +1250,7 @@
   },
   "player_profile": {
     "loading": "Завантаження профілю...",
+    "no_clans": "Цей гравець не є учасником жодного клану.",
     "not_found": "Профіль гравця не знайдено",
     "share": "Поділитися профілем",
     "title": "Профіль гравця",
@@ -1294,7 +1364,7 @@
     "water_nukes_label": "Водяні бомби"
   },
   "public_lobby": {
-    "connecting": "Підключення до лобі...",
+    "connecting": "Під’єднання до лобі...",
     "join_timeout": "Ви не доєдналися до гри вчасно.",
     "players_per_team": "по {num}",
     "started": "Почато",
@@ -1372,6 +1442,19 @@
     "toggle_achievements": "Перемикання досягнень",
     "water_nukes": "Водяні бомби"
   },
+  "steam": {
+    "link_signpost": "Уже маєте акаунт OpenFront? Прив’язування акаунтів з’явиться у майбутніх оновленнях."
+  },
+  "steam_user_header": {
+    "avatar_alt": "Steam-аватар",
+    "default_name": "Steam-гравець"
+  },
+  "steam_wishlist": {
+    "cta": "Додайте до списку бажаного",
+    "on_steam": "OpenFront у Steam",
+    "release": "Випуск III кварталу 2026",
+    "title": "Додайте OpenFront до списку бажаного у Steam!"
+  },
   "store": {
     "already_subscribed": "Підписку вже оформлено.",
     "change_tier_failed": "Не вдалось оновити підписку. Спробуйте ще раз.",
@@ -1396,6 +1479,7 @@
     "no_flags": "Немає доступних прапорів. Повертайтеся пізніше за новими товарами.",
     "no_skins": "Немає доступних скінів. Повертайтеся пізніше за новими товарами.",
     "no_subscriptions": "Немає доступних підписок. Повертайтеся пізніше за новими товарами.",
+    "no_tribes": "Ви ще не купили жодної назви племені.",
     "packs": "Набори",
     "patterns": "Скіни",
     "plutonium_amount": "Кількість плутонію",
@@ -1403,11 +1487,41 @@
     "purchase_currency": "Купити {currency}",
     "purchase_failed": "Покупка не вдалася. Спробуйте ще раз.",
     "purchase_success": "Покупку здійснено: {name}",
+    "purchase_tribe_button": "Придбати",
     "subscribed": "Підписано",
     "subscription_purchase_success": "Підписку активовано!",
     "subscriptions": "Підписки",
     "switch_button": "Змінити",
-    "title": "Крамниця"
+    "title": "Крамниця",
+    "tribe_boost_button": "Буст",
+    "tribe_boost_confirm": "Застосувати буст на «{name}» за {price} плутонію? Протягом {days} дн воно частіше з’являтиметься в іграх інших гравців.",
+    "tribe_boost_count": "1 буст",
+    "tribe_boost_count_plural": "{count} бустів",
+    "tribe_boost_failed": "Буст не вдався. Спробуйте ще раз.",
+    "tribe_boost_gone": "Ця назва більше не активна, тому на ній не можна застосувати буст.",
+    "tribe_boost_heading": "Буст назви племені",
+    "tribe_boost_next_expiry": "наступний буст спливає {date}",
+    "tribe_boost_success": "Застосовано буст на «{name}».",
+    "tribe_duplicate": "Назва вже зайнята.",
+    "tribe_name_placeholder": "Введіть назву племені",
+    "tribe_name_required": "Спочатку введіть назву.",
+    "tribe_purchase_failed": "Покупка не вдалася. Спробуйте ще раз.",
+    "tribe_purchase_live": "«{name}» тепер з’являється в іграх.",
+    "tribe_rate_limited": "Ви купуєте назви занадто швидко. Спробуйте знову через {seconds} с.",
+    "tribe_status_active": "Активно",
+    "tribe_status_rejected": "Відхилено",
+    "tribes": "Племена",
+    "tribes_load_failed": "Не вдалося завантажити ваші назви племен. Відкрийте крамницю знову, щоб повторити ще раз.",
+    "tribes_login_required": "Увійдіть, щоб купувати назви племен і керувати ними.",
+    "tribes_purchase_description": "Ваше ім’я буде присвоєно боту-племені у справжніх мережевих іграх. Воно стане доступним одразу.",
+    "tribes_purchase_heading": "Купити назву племені",
+    "your_tribes_heading": "Ваші назви племен"
+  },
+  "streaming_now": {
+    "live_count": "{count} в етері",
+    "title": "Поточні трансляції",
+    "viewers": "Глядачі: {count}",
+    "watch": "Дивитися {name}"
   },
   "team_colors": {
     "blue": "Сині",
@@ -1544,6 +1658,8 @@
     "game_speed_up_desc": "Наступна швидкість гри (0,5; 1; 2; макс.). Тільки у грі наодинці.",
     "go_to_player_desc": "Перемкнути наближення до гравця на початку гри.",
     "go_to_player_label": "Почати на гравці",
+    "graphics_preset_desc": "Виберіть шаблон вигляду мапи. Підлаштуйте його або створіть власний у налаштуваннях графіки.",
+    "graphics_preset_label": "Шаблон графіки",
     "graphics_refresh_modifier": "Модифікатор оновлення графіки",
     "graphics_refresh_modifier_desc": "Утримуйте цю клавішу і R, щоб оновити графіку",
     "graphics_settings_desc": "Налаштувати вигляд мапи",
@@ -1604,9 +1720,7 @@
     "zoom_in": "Збільшити масштаб",
     "zoom_in_desc": "Збільшити масштаб мапи",
     "zoom_out": "Зменшити масштаб",
-    "zoom_out_desc": "Зменшити масштаб мапи",
-    "colorblind_desc": "Використовувати кольори територій і кордонів, придатні для дальтоніків",
-    "colorblind_label": "Режим для дальтоніків"
+    "zoom_out_desc": "Зменшити масштаб мапи"
   },
   "username": {
     "account_invalid_chars": "Імʼя гравця може містити лише латинські літери, цифри, знаки підкреслення та дефіси.",
@@ -1633,6 +1747,7 @@
     "join_discord": "Приєднуйтеся до нашої Discord-спільноти!",
     "join_server": "Приєднатися до сервера",
     "keep": "Продовжити гру",
+    "match_cancelled": "Матч скасовано: не всі гравці з’явилися",
     "nation_won": "Нація {nation} перемогла!",
     "new_lobby": "Нове лобі",
     "other_team": "{team} перемогли!",
@@ -1643,13 +1758,6 @@
     "territory_pattern": "Придбайте скін території, щоб позбавитися від реклами!",
     "you_won": "Ви перемогли!",
     "your_team": "Ваша команда перемогла!",
-    "youtube_tutorial": "Потрібна допомога?",
-    "wishlist": "Додавайте до списку бажаного в Steam!"
-  },
-  "matchmaking_button": {
-    "description": "(АЛЬФА)",
-    "login_required": "Увійдіть, щоб грати в рейтинг!",
-    "must_login": "Ви повинні увійти, щоб грати в рейтинг.",
-    "play_ranked": "Рейтинговий підбір 1 на 1"
+    "youtube_tutorial": "Потрібна допомога?"
   }
 }

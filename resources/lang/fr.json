@@ -64,6 +64,7 @@
     "sub_status_unpaid": "Impayé",
     "subscription_portal_failed": "Échec de l'ouverture du portail de gestion des abonnements.",
     "tab_account": "Compte",
+    "tab_clans": "Clans",
     "tab_friends": "Amis",
     "tab_games": "Parties",
     "tab_settings": "Paramètres",
@@ -88,10 +89,7 @@
     "username_temporary_prompt": "Votre nom a été pris par un autre joueur. Voulez-vous en choisir un nouveau maintenant — ce changement ne coûtera rien.",
     "username_temporary_prompt_confirm": "Choisir un nom",
     "username_title": "Nom",
-    "your_subscription": "Votre abonnement",
-    "not_found": "Introuvable",
-    "public_player_id": "ID public de joueur :",
-    "stats_overview": "Aperçu des Statistiques"
+    "your_subscription": "Votre abonnement"
   },
   "build_menu": {
     "desc": {
@@ -252,7 +250,6 @@
     "history_filter_all": "Tout",
     "history_filter_hvn": "HvN",
     "history_filter_ranked": "Classé",
-    "history_game_id": "ID de la partie",
     "history_game_type": "Type de partie",
     "history_load_more_failed": "Impossible de charger plus de parties.",
     "history_map": "Carte",
@@ -361,7 +358,8 @@
     "title": "Clans",
     "transfer_leadership": "Transférer le commandement",
     "transfer_warning": "Cela donnera le commandement du clan au membre sélectionné. Vous deviendrez un membre ordinaire. Cette action ne peut pas être annulée.",
-    "unban": "Pardonner"
+    "unban": "Pardonner",
+    "history_game_id": "ID de la partie"
   },
   "common": {
     "available": "Disponible",
@@ -379,6 +377,7 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Activé",
+    "got_it": "J'ai compris",
     "map_default": "Carte par défaut",
     "month_apr": "Avril",
     "month_aug": "Août",
@@ -421,13 +420,17 @@
     "legendary": "Légendaire",
     "per_day": "/jour",
     "public_lobbies": "Créer des salons publics",
+    "public_lobbies_info": "Hébergez des salons personnalisés publics que tout le monde peut rejoindre.",
     "rare": "Rare",
     "search": "Rechercher...",
     "soft": "Capsule",
     "title": "Cosmétiques",
     "uncommon": "Peu commun",
     "unlimited_ranked": "Classés illimités",
-    "usd_value": "Valeur : {usd}"
+    "unlimited_ranked_info": "Jouez autant de parties classées que vous le souhaitez.",
+    "usd_value": "Valeur : {usd}",
+    "verified_name": "Nom d’utilisateur vérifié",
+    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge de vérification en jeu."
   },
   "difficulty": {
     "difficulty": "Difficulté des nations",
@@ -468,7 +471,8 @@
       "nukeExplosion": "Explosions des bombes",
       "nukeTrail": "Trainée des bombes",
       "structures": "Structures",
-      "transportShipTrail": "Trainée des bateaux"
+      "transportShipTrail": "Trainée des bateaux",
+      "warship": "Vaisseaux de guerre"
     }
   },
   "error_modal": {
@@ -524,8 +528,13 @@
     "trade_ship_captured": "Votre bateau de commerce a été capturé par {name}",
     "unit_destroyed": "Votre {unit} a été détruit",
     "unit_voluntarily_deleted": "Unité volontairement supprimée",
-    "wants_to_renew_alliance": "{name} souhaite renouveler votre alliance",
-    "mirv_warheads_intercepted": "{count, plural, one {{count} ogive nucléaire MIRV a été interceptée} other {{count} ogives nucléaire MIRV ont été interceptées}}"
+    "wants_to_renew_alliance": "{name} souhaite renouveler votre alliance"
+  },
+  "featured_stream": {
+    "expand": "Agrandir",
+    "live": "EN DIRECT",
+    "minimize": "Réduire",
+    "open_on_twitch": "Ouvrir {channel} dans Twitch"
   },
   "flag_input": {
     "button_title": "Choisissez un drapeau !",
@@ -605,6 +614,8 @@
     "title": "La partie est en train de commencer..."
   },
   "graphics_setting": {
+    "advanced_desc": "Réglez individuellement chaque option graphique",
+    "advanced_label": "Paramètres avancés",
     "black": "Noir",
     "classic_icons_desc": "Contour plus léger avec un intérieur presque noir",
     "classic_icons_label": "Icônes classiques",
@@ -615,6 +626,9 @@
     "colored_names_label": "Couleur du nom",
     "coordinate_grid_opacity_desc": "Permet de changer la transparence de la grille de coordonnées (baisser l'opacité laisse voir plus clairement au travers de la grille)",
     "coordinate_grid_opacity_label": "Opacité de la grille de coordonnées",
+    "copy_json_copied": "Copié !",
+    "copy_json_desc": "Copiez les paramètres actuels au format JSON pour les partager avec vos amis",
+    "copy_json_label": "Copier les paramètres au format JSON",
     "fallout_desc": "Montrer la lueur des radiations sur les territoires irradiés. Désactiver pour améliorer les performances",
     "fallout_label": "Effets de radiation",
     "highland_color_desc": "Couleur de base pour le terrain de hauteur moyenne.",
@@ -633,6 +647,13 @@
     "hover_glow_width_label": "Taille de la lueur",
     "icon_size_desc": "Permet de changer la taille des icônes de structures affichées sur la carte",
     "icon_size_label": "Taille des icônes de structure",
+    "import_json_apply": "Appliquer",
+    "import_json_desc": "Collez les paramètres JSON d’un ami pour les appliquer",
+    "import_json_invalid": "Ces paramètres JSON ne semblent pas valides",
+    "import_json_label": "Importer des paramètres au format JSON",
+    "layer_nukeable": "Ciblable par une frappe nucléaire",
+    "layer_placement_land": "Couche terrestre",
+    "layer_placement_water": "Couche aquatique",
     "lighting_ambient_desc": "Assombrit la carte et ajoute une lueur autour des structures (0=désactivé)",
     "lighting_ambient_label": "Éclairage ambiant",
     "lighting_unit_glow_desc": "Permet de définir jusqu'où s'étend la lueur autour des unités et des structures",
@@ -650,6 +671,16 @@
     "ocean_color_label": "Couleur de l'eau",
     "plains_color_desc": "Couleur de base pour le terrain le plus bas.",
     "plains_color_label": "Couleur des plaines",
+    "preset_colorblind": "Daltonisme",
+    "preset_colorblind_desc": "Couleurs des territoires et des frontières adaptées aux personnes daltoniennes",
+    "preset_custom": "Personnalisé",
+    "preset_default": "Par défaut",
+    "preset_default_desc": "L’apparence standard d’OpenFront",
+    "preset_delete_confirm": "Supprimer le préréglage « {name} » ?",
+    "preset_migrated_name": "Mes paramètres",
+    "preset_name_placeholder": "Nom du préréglage",
+    "preset_night": "Nuit",
+    "preset_night_desc": "Carte assombrie avec des bâtiments et des unités lumineux",
     "rail_distance_desc": "Permet de changer jusqu'à quelle distance de zoom les rails restent visibles",
     "rail_distance_label": "Distance d'affichage des rails",
     "rail_thickness_desc": "Permet de changer l'épaisseur des rails",
@@ -658,10 +689,14 @@
     "reset_label": "Réinitialiser (par défaut)",
     "sand_color_desc": "Couleur de base des littoraux.",
     "sand_color_label": "Couleur des côtes",
+    "save_preset_label": "Sauvegarder",
+    "section_custom_presets": "Préréglages personnalisés",
     "section_effects": "Effets",
     "section_lighting": "Éclairage",
     "section_map": "Carte",
+    "section_map_layers": "Couches de la carte",
     "section_name_labels": "Label du nom",
+    "section_presets": "Préréglages",
     "section_structure_icons": "Icônes des bâtiments",
     "section_terrain": "Terrain",
     "structure_dots_desc": "Permet de réduire les icônes de structure en petits points lors du zoom arrière",
@@ -670,8 +705,7 @@
     "territory_alpha_label": "Opacité du territoire d'un joueur",
     "territory_sat_desc": "Permet de changer l'éclat des couleurs du territoire possédé par un joueur (le plus bas les atténue)",
     "territory_sat_label": "Saturation du territoire d'un joueur",
-    "title": "Paramètres graphiques",
-    "section_accessibility": "Accessibilité"
+    "title": "Paramètres graphiques"
   },
   "heads_up_message": {
     "catching_up": "Rattrapage...",
@@ -866,20 +900,27 @@
     "admin": "Expulsé par un admin",
     "duplicate_session": "Expulsé de la partie (vous jouiez peut-être dans un autre onglet)",
     "host_left": "L'hôte a quitté le salon.",
-    "lobby_creator": "Expulsé par le créateur du lobby"
+    "lobby_creator": "Expulsé par le créateur du lobby",
+    "match_cancelled": "Partie annulée : un joueur n’a pas réussi à se connecter. Vous n’avez pas perdu d'ELO."
   },
   "leaderboard": {
+    "allies": "Alliés",
+    "betrayals": "Trahisons",
     "cities": "Villes",
+    "clan": "Clan",
+    "configure_columns": "Configurer les colonnes",
+    "factories": "Usines",
     "gold": "Or",
     "launchers": "Lanceurs",
     "maxtroops": "Troupes max",
     "owned": "Possédé",
     "player": "Joueur",
+    "ports": "Ports",
+    "rank": "Rang",
     "sams": "SAMs",
     "team": "Équipe",
-    "warships": "Vaisseaux de guerre",
-    "show_control": "Afficher les commandes",
-    "show_units": "Afficher les unités"
+    "troops": "Troupes",
+    "warships": "Vaisseaux de guerre"
   },
   "leaderboard_modal": {
     "clan": "Clan",
@@ -894,10 +935,24 @@
     "no_stats": "Aucune statistique disponible",
     "player": "Joueur",
     "rank": "Rang",
+    "ranked_2v2_tab": "2v2 Classé",
+    "ranked_no_stats": "Aucune partie classée n’a encore été jouée dans ce classement",
     "ranked_tab": "1v1 Classé",
     "ratio": "Ratio",
     "refresh_time": "Actualisé toutes les heures",
     "title": "Classement",
+    "tribes_boost": "Mises en avant",
+    "tribes_boost_tooltip": "Les noms mis en avant apparaissent plus souvent dans les parties des autres joueurs",
+    "tribes_boost_value": "{multiplier}×",
+    "tribes_boost_value_tooltip": "Apparaît {multiplier}× plus souvent dans les parties des autres joueurs",
+    "tribes_games_tooltip": "Apparu dans {count} parties",
+    "tribes_name": "Nom",
+    "tribes_no_stats": "Aucune tribu n’est encore apparue dans une partie",
+    "tribes_reach": "Joueurs touchés",
+    "tribes_reach_tooltip": "Nombre total de joueurs présents dans les parties où ce nom est apparu.",
+    "tribes_reach_value_tooltip": "Apparu dans des parties regroupant {count} joueurs",
+    "tribes_tab": "Tribus",
+    "tribes_window": "Période glissante de {days} jours ({start} – {end})",
     "try_again": "Retenter",
     "win_loss_ratio": "Victoires/Défaites",
     "win_score": "Score de Victoire",
@@ -947,6 +1002,7 @@
     "baikalnukewars": "Baïkal (Guerres Nucléaires)",
     "bajacalifornia": "Basse-Californie",
     "balkans": "Balkans",
+    "balkhash": "Lac Balkhach",
     "baltics": "Terres Baltiques",
     "beringsea": "Mer de Béring",
     "beringstrait": "Détroit de Béring",
@@ -961,7 +1017,9 @@
     "caucasus": "Caucase",
     "china": "Chine de Qing",
     "choppingblock": "Carréidoscope",
+    "clearwaterlakes": "Lacs Wiyâshâkimî",
     "conakry": "Conakry",
+    "crimea": "Crimée",
     "danishstraits": "Détroits Danois",
     "deglaciatedantarctica": "Antarctique Déglacée",
     "didier": "Didier",
@@ -974,7 +1032,9 @@
     "faroeislands": "Îles Féroé",
     "favorites": "Favoris",
     "featured": "En vedette",
+    "fingerlakes": "Finger Lakes",
     "fourislands": "Quatre Îles",
+    "france": "France",
     "gatewaytotheatlantic": "Porte de l'Atlantique",
     "germany": "Allemagne",
     "giantworldmap": "Carte du monde géante",
@@ -983,6 +1043,7 @@
     "gulfofstlawrence": "Golfe du Saint-Laurent",
     "halkidiki": "Chalcidique",
     "hawaii": "Hawaï",
+    "hecatestrait": "Détroit d’Hecate",
     "hongkong": "Hong Kong",
     "iceland": "Islande",
     "indiansubcontinent": "Sous-continent Indien",
@@ -992,6 +1053,7 @@
     "juandefucastrait": "Détroit de Juan De Fuca",
     "korea": "Corée",
     "labyrinth": "Labyrinthe",
+    "lasvegasstrip": "Strip de Las Vegas",
     "lemnos": "Lemnos",
     "levant": "Levant",
     "lisbon": "Lisbonne",
@@ -1021,6 +1083,7 @@
     "sanfrancisco": "San Francisco",
     "scandinavia": "Scandinavie",
     "sierpinski": "Sierpinski",
+    "sol": "Système solaire",
     "southamerica": "Amérique du Sud",
     "southeastasia": "Asie du Sud-Est",
     "straitofgibraltar": "Détroit de Gibraltar",
@@ -1040,6 +1103,7 @@
     "twolakes": "Deux Lacs",
     "unitedstates": "États-Unis",
     "venice": "Venise",
+    "vietnam": "Viêt Nam",
     "warshipwarship": "Warship Warship",
     "world": "Monde",
     "worldinverted": "Monde inversé",
@@ -1078,6 +1142,7 @@
     "search_results": "Résultats de la recherche",
     "unfavorite": "Retirer des favoris"
   },
+  "map_layers": {},
   "marketing_consent": {
     "body": "Recevoir les actualités et mises à jour par e-mail. Modifiez à tout moment depuis votre compte.",
     "dismiss": "Ignorer",
@@ -1087,12 +1152,16 @@
     "yes": "Oui s'il vous plaît"
   },
   "matchmaking_modal": {
+    "clan_verification_failed": "Impossible de vérifier votre appartenance au clan. Veuillez relancer la recherche de partie.",
     "connecting": "Connexion au serveur de matchmaking...",
     "elo": "Votre ELO : {elo}",
+    "invalid_clan": "Le clan sélectionné n’est plus valide. Veuillez sélectionner un clan valide, puis relancer la recherche de partie.",
     "limit_reached": "Vous êtes à court de matchs Classés gratuits.",
     "limit_reached_info": "Les matchs gratuits se remplissent quotidiennement. Prenez un abonnement pour jouer en Classés sans limites.",
     "limit_upsell": "Jouez en Classés sans limites",
+    "must_login": "Vous devez être connecté pour jouer en classé.",
     "no_elo": "Pas encore d'ELO",
+    "queue_size": "Joueur dans la file attente : {count}",
     "replaced": "Vous avez rejoint la recherche de groupe depuis un autre onglet ou une autre fenêtre.",
     "searching": "Recherche d'une partie...",
     "title": "Matchmaking 1v1 Classé (ALPHA)",
@@ -1181,6 +1250,7 @@
   },
   "player_profile": {
     "loading": "Chargement du profil...",
+    "no_clans": "Ce joueur n'appartient à aucun clan.",
     "not_found": "Profil de joueur introuvable",
     "share": "Partager le profil",
     "title": "Profil de joueur",
@@ -1372,6 +1442,19 @@
     "toggle_achievements": "Activer / Désactiver les succès",
     "water_nukes": "Bombes à eau"
   },
+  "steam": {
+    "link_signpost": "Avez-vous déjà un compte OpenFront existant ? La liaison de compte arrive dans une mise à jour future."
+  },
+  "steam_user_header": {
+    "avatar_alt": "Avatar Steam",
+    "default_name": "Joueur Steam"
+  },
+  "steam_wishlist": {
+    "cta": "Ajouter à la liste de souhaits",
+    "on_steam": "OpenFront sur Steam",
+    "release": "Disponible au 3ᵉ trimestre 2026",
+    "title": "Ajoutez OpenFront à votre liste de souhaits sur Steam !"
+  },
   "store": {
     "already_subscribed": "Déjà abonné.",
     "change_tier_failed": "Votre abonnement n'a pas pu être actualisé. Merci de réessayer.",
@@ -1396,6 +1479,7 @@
     "no_flags": "Aucun drapeau disponible. Revenez plus tard.",
     "no_skins": "Aucun skin disponible, Revenez plus tard.",
     "no_subscriptions": "Aucun abonnement disponible. Revenez plus tard pour de nouveaux items.",
+    "no_tribes": "Vous n’avez encore acheté aucun nom de tribu.",
     "packs": "Packs",
     "patterns": "Skins",
     "plutonium_amount": "Quantité de plutonium",
@@ -1403,11 +1487,41 @@
     "purchase_currency": "Acheter {currency}",
     "purchase_failed": "Échec de l'achat. Veuillez réessayer.",
     "purchase_success": "Achat réussit : {name}",
+    "purchase_tribe_button": "Acheter",
     "subscribed": "Abonné·e",
     "subscription_purchase_success": "Abonnement activé !",
     "subscriptions": "Abonnements",
     "switch_button": "Changer",
-    "title": "Boutique"
+    "title": "Boutique",
+    "tribe_boost_button": "Mettre en avant",
+    "tribe_boost_confirm": "Mettre « {name} » en avant pour {price} Plutonium ? Ce nom apparaîtra plus souvent dans les parties des autres joueurs pendant les {days} prochains jours.",
+    "tribe_boost_count": "1 mise en avant",
+    "tribe_boost_count_plural": "{count} mises en avant",
+    "tribe_boost_failed": "Échec de la mise en avant. Veuillez réessayer.",
+    "tribe_boost_gone": "Ce nom n’est plus actif et ne peut donc pas être mis en avant.",
+    "tribe_boost_heading": "Mettre en avant un nom de tribu",
+    "tribe_boost_next_expiry": "la prochaine mise en avant expirera le {date}",
+    "tribe_boost_success": "« {name} » a été mis en avant.",
+    "tribe_duplicate": "Ce nom est déjà pris.",
+    "tribe_name_placeholder": "Saisissez un nom de tribu",
+    "tribe_name_required": "Saisissez d’abord un nom.",
+    "tribe_purchase_failed": "Échec de l’achat. Veuillez réessayer.",
+    "tribe_purchase_live": "« {name} » apparaîtra désormais dans les parties.",
+    "tribe_rate_limited": "Vous achetez des noms trop rapidement. Réessayez dans {seconds} s.",
+    "tribe_status_active": "Actif",
+    "tribe_status_rejected": "Refusé",
+    "tribes": "Tribus",
+    "tribes_load_failed": "Impossible de charger vos noms de tribu. Rouvrez la boutique pour réessayer.",
+    "tribes_login_required": "Connectez-vous pour acheter et gérer des noms de tribu.",
+    "tribes_purchase_description": "Votre nom est attribué à une tribu contrôlée par un bot dans de vraies parties multijoueur. Il apparaît immédiatement en jeu.",
+    "tribes_purchase_heading": "Acheter un nom de tribu",
+    "your_tribes_heading": "Vos noms de tribu"
+  },
+  "streaming_now": {
+    "live_count": "{count} en direct",
+    "title": "En direct maintenant",
+    "viewers": "{count} spectateurs",
+    "watch": "Regarder {name}"
   },
   "team_colors": {
     "blue": "Bleu",
@@ -1544,6 +1658,8 @@
     "game_speed_up_desc": "Avancer la vitesse du jeu d'un cran. Solo uniquement.",
     "go_to_player_desc": "Activer/désactiver le zoom sur le joueur au début d'une partie.",
     "go_to_player_label": "Aller au joueur au lancement de la partie",
+    "graphics_preset_desc": "Choisissez une apparence prédéfinie pour la carte. Ajustez-la ou créez la vôtre dans les paramètres graphiques du jeu.",
+    "graphics_preset_label": "Préréglage graphique",
     "graphics_refresh_modifier": "Actualisation des graphismes",
     "graphics_refresh_modifier_desc": "Maintenez cette touche ainsi que R enfoncés pour actualiser les graphismes",
     "graphics_settings_desc": "Ajuster l'apparence de la carte",
@@ -1604,9 +1720,7 @@
     "zoom_in": "Zoom avant",
     "zoom_in_desc": "Zoom sur la carte",
     "zoom_out": "Zoom arrière",
-    "zoom_out_desc": "Dézoom de la carte",
-    "colorblind_desc": "Utiliser les couleurs du territoire et des bordures favorables aux daltoniens",
-    "colorblind_label": "Mode daltonien"
+    "zoom_out_desc": "Dézoom de la carte"
   },
   "username": {
     "account_invalid_chars": "Les pseudonymes peuvent contenir des lettres, chiffres et tirets.",
@@ -1633,6 +1747,7 @@
     "join_discord": "Rejoignez notre communauté Discord !",
     "join_server": "Rejoindre le Serveur",
     "keep": "Continuer à jouer",
+    "match_cancelled": "Partie annulée : Certains joueurs ne sont pas apparus",
     "nation_won": "La nation {nation} a gagné !",
     "new_lobby": "Nouveau salon",
     "other_team": "L'équipe {team} a gagné !",
@@ -1643,13 +1758,6 @@
     "territory_pattern": "Achetez une décoration de territoire pour retirer les publicités !",
     "you_won": "Vous avez gagné !",
     "your_team": "Votre équipe a gagné !",
-    "youtube_tutorial": "Besoin d'aide ?",
-    "wishlist": "Liste de souhaits sur Steam !"
-  },
-  "matchmaking_button": {
-    "description": "(ALPHA)",
-    "login_required": "Connectez-vous pour jouer en mode classé",
-    "must_login": "Vous devez être connecté pour jouer en mode classé.",
-    "play_ranked": "Matchmaking 1v1 classé"
+    "youtube_tutorial": "Besoin d'aide ?"
   }
 }
