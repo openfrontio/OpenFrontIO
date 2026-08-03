@@ -360,7 +360,7 @@ export async function startWorker() {
     baseDir: __dirname,
   });
 
-  registerAdminBotRoutes({ app, gm, workerId, log });
+  registerAdminBotRoutes({ app, gm, workerId, log, lobbyService });
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
     try {

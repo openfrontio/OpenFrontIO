@@ -14,9 +14,11 @@ import {
   GameConfigSchema,
   ID,
   IntentSchema,
+  MAX_HOSTED_LOBBIES,
 } from "../core/Schemas";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
+import type { WorkerLobbyService } from "./WorkerLobbyService";
 
 function timingSafeEqualStr(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -50,8 +52,10 @@ export function registerAdminBotRoutes(opts: {
   gm: GameManager;
   workerId: number;
   log: Logger;
+  // Needed only for the listing route's cluster-wide cap check.
+  lobbyService: WorkerLobbyService;
 }) {
-  const { app, gm, workerId, log } = opts;
+  const { app, gm, workerId, log, lobbyService } = opts;
 
   // Validate game id format and that this worker owns it. Returns false and
   // sends the error response when the id is bad/misrouted.
@@ -118,6 +122,71 @@ export function registerAdminBotRoutes(opts: {
       gameID: id,
       liveStats: game.liveStats(),
     });
+  });
+
+  // Publicly list (or delist) a bot-hosted lobby, so players outside the
+  // creating community can find it in the "Open Lobbies" browser.
+  //
+  // Why a separate route from POST /api/game/:id/listing: that one authorizes a
+  // HUMAN host — verifyClientToken -> isCreator(persistentId) -> active
+  // subscription. An admin-bot lobby is deliberately created with NO
+  // creatorPersistentID (see create_game above), so it has no owner to match and
+  // no account to bill; the admin bot key IS the authorization. The safety checks
+  // that protect BROWSERS are kept identical, and only the two owner-centric ones
+  // are dropped:
+  //   kept    - not public, not started, no join whitelist, no host cheats,
+  //             cluster-wide MAX_HOSTED_LOBBIES cap
+  //   dropped - isCreator (no owner by construction)
+  //           - subscription check (no account; the key is the gate)
+  //           - one-listed-lobby-per-creator (hashedCreatorID is undefined, so
+  //             there is nothing to key it on — a bot legitimately runs several
+  //             concurrent lobbies, e.g. one per region)
+  //
+  // The auto-start fuse in setListed is intentionally preserved: a bot arms its
+  // own countdown (toggle_game_start_timer) well inside the deadline, so the fuse
+  // only ever fires if the bot goes away — exactly the case it exists for.
+  app.post("/api/adminbot/game/:id/listing", requireAdminBotKey, (req, res) => {
+    const id = req.params.id as string;
+    if (!ownsGame(id, res)) return;
+
+    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    }
+    const { listed } = parsed.data;
+
+    const game = gm.game(id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    if (game.isPublic() || game.hasStarted()) {
+      return res.status(409).json({ error: "Game cannot be listed" });
+    }
+
+    if (listed) {
+      // A whitelisted lobby would be advertised to everyone yet reject every
+      // joiner, and the whitelist is stripped from the broadcast so browsers
+      // could not tell why.
+      if (game.hasJoinWhitelist()) {
+        return res.status(409).json({ error: "listing_whitelist_enabled" });
+      }
+      // Host cheats give the host an asymmetric advantage over players recruited
+      // from the lobby browser.
+      if (game.hasHostCheats()) {
+        return res.status(409).json({ error: "listing_host_cheats_enabled" });
+      }
+      // Cluster-wide cap to prevent listing spam. Approximate here (the
+      // broadcast lags by ~1s); the master's cap is the backstop.
+      if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
+        return res.status(409).json({ error: "listing_full" });
+      }
+    }
+
+    game.setListed(listed);
+    log.info(`admin bot ${listed ? "listed" : "delisted"} lobby`, {
+      gameID: id,
+    });
+    res.json({ listed });
   });
 
   // Send an intent. Honors the lobby-management intents; everything else 400.

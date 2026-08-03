@@ -199,7 +199,13 @@ function captureStatsHandler(gm: unknown) {
     },
   };
   const log: any = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-  registerAdminBotRoutes({ app, gm: gm as any, workerId: 0, log });
+  registerAdminBotRoutes({
+    app,
+    gm: gm as any,
+    workerId: 0,
+    log,
+    lobbyService: {} as any,
+  });
   return routes["/api/adminbot/game/:id/stats"];
 }
 
