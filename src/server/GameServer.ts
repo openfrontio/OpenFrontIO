@@ -1804,6 +1804,7 @@ export class GameServer {
           this.winner?.winner,
           this.createdAt,
           this.visibleAt,
+          this.gameStartInfo.tribes,
         ),
       ),
     );

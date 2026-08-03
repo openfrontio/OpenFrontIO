@@ -9,6 +9,7 @@ import {
   GameRecord,
   PartialGameRecord,
   PlayerRecord,
+  Tribe,
   Turn,
   Winner,
 } from "./Schemas";
@@ -264,6 +265,10 @@ export function createPartialGameRecord(
   lobbyCreatedAt?: number,
   // Time the lobby became visible to players (ms).
   visibleAt?: number,
+  // Purchased bot tribe names in use this game (public games only). Infra
+  // ingest reads them from the record for owner appearance stats, and
+  // replays rebuild GameStartInfo from the record so the same names spawn.
+  tribes?: Tribe[],
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -291,6 +296,7 @@ export function createPartialGameRecord(
       duration,
       num_turns,
       winner,
+      tribes,
     },
     version: "v0.0.2",
     turns,
