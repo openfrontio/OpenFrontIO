@@ -53,6 +53,7 @@ class StreamsFeedPoller {
   private inGame = false;
   private wired = false;
   private tickInFlight = false;
+  private generation = 0; // bumped by reset(); ticks from an older generation are inert
   private latest: StreamsFeed = EMPTY_FEED;
 
   // Components subscribe on connect and call the returned function on disconnect.
@@ -124,10 +125,16 @@ class StreamsFeedPoller {
 
   private async tick() {
     if (!this.canPoll()) return;
+    // A tick can be awaiting getStreams() when reset() lands. Everything it touches
+    // afterwards — the cached feed, the listeners, tickInFlight, the next timer — would
+    // by then belong to whatever came after the reset, so an orphaned tick must do
+    // nothing at all.
+    const generation = this.generation;
+    const current = () => generation === this.generation;
     this.tickInFlight = true;
     try {
       const feed = await getStreams();
-      if (this.canPoll()) {
+      if (current() && this.canPoll()) {
         // canPoll can flip across the await; if it did, keep the previous feed and let
         // the resume path start a fresh tick.
         this.latest = isFeedFresh(feed.verifiedAt, Date.now())
@@ -141,9 +148,10 @@ class StreamsFeedPoller {
       // try for that reason: one bad fetch must not end polling for the whole session.
       console.error("streams-feed: fetch failed", e);
     } finally {
-      this.tickInFlight = false;
+      // If a reset happened, the newer tick owns the flag — leave it alone.
+      if (current()) this.tickInFlight = false;
     }
-    if (this.canPoll() && this.timer === null) {
+    if (current() && this.canPoll() && this.timer === null) {
       this.timer = setTimeout(() => {
         this.timer = null;
         void this.tick();
@@ -154,6 +162,7 @@ class StreamsFeedPoller {
   // Test seam: the poller is a module singleton, so its state would otherwise leak
   // between tests in a file and make them order-dependent. Not used in production.
   reset() {
+    this.generation++; // orphan any tick currently awaiting getStreams()
     this.stop();
     this.listeners.clear();
     this.inGame = false;

@@ -248,6 +248,36 @@ describe("streamsFeed polling lifecycle", () => {
     unsub();
   });
 
+  // reset() cleared the flags but could not stop a tick already awaiting getStreams().
+  // That tick would then deliver the previous test's feed to the next test's subscribers
+  // and clear a tickInFlight it no longer owned.
+  it("orphans a tick that is still in flight when reset() runs", async () => {
+    let settleFirst: (feed: StreamsFeedType) => void = () => {};
+    getStreamsMock.mockImplementationOnce(
+      () => new Promise<StreamsFeedType>((resolve) => (settleFirst = resolve)),
+    );
+    streamsFeed.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0); // first tick is now awaiting the fetch
+
+    streamsFeed.reset(); // what afterEach does between tests
+
+    const seen: StreamsFeedType[] = [];
+    const unsub = streamsFeed.subscribe((feed) => seen.push(feed));
+    seen.length = 0; // discard the immediate empty hand-off on subscribe
+
+    // The abandoned fetch settles with a feed full of live streams.
+    settleFirst({
+      verifiedAt: new Date().toISOString(),
+      featured: [entry],
+      live: [entry],
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    // The new subscriber must only ever see its own (empty) feed.
+    expect(seen.every((feed) => feed.live.length === 0)).toBe(true);
+    unsub();
+  });
+
   // A module singleton feeding two components: one bad listener must not stop the feed
   // for the other. Previously a synchronous throw skipped the setTimeout entirely.
   it("keeps polling when one subscriber throws", async () => {
