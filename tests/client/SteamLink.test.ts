@@ -13,6 +13,7 @@ vi.mock("../../src/client/Auth", () => ({
   userAuth: vi.fn(async () => false),
 }));
 
+import { getAuthHeader, logOut } from "../../src/client/Auth";
 import {
   fetchSteamLinkTicket,
   parseSteamLinkToken,
@@ -34,6 +35,12 @@ beforeEach(() => {
   process.env.API_DOMAIN = "api.test";
   vi.stubGlobal("fetch", vi.fn());
   vi.spyOn(console, "error").mockImplementation(() => {});
+  // Clears call history from the previous test while keeping the default
+  // "Bearer test-jwt" / no-op implementations set in the vi.mock factories
+  // above (some tests below override getAuthHeader for a single call via
+  // mockResolvedValueOnce, so this must not touch that default).
+  vi.mocked(getAuthHeader).mockClear();
+  vi.mocked(logOut).mockClear();
 });
 
 describe("parseSteamLinkToken", () => {
@@ -73,10 +80,34 @@ describe("redeemSteamLink", () => {
   });
 
   // 200 is idempotent server-side (re-redeeming an already-linked pair also
-  // returns 200), so the client doesn't need to special-case that.
+  // returns 200), so the client doesn't need to special-case that — it can
+  // just call again and get another ok.
   it("treats a repeat redemption as ok", async () => {
-    fetchMock().mockResolvedValueOnce(res({}, 200));
+    fetchMock()
+      .mockResolvedValueOnce(res({}, 200))
+      .mockResolvedValueOnce(res({}, 200));
+
     expect(await redeemSteamLink("tok123")).toEqual({ ok: true });
+    expect(await redeemSteamLink("tok123")).toEqual({ ok: true });
+    expect(fetchMock()).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses to fire when there is no auth session", async () => {
+    vi.mocked(getAuthHeader).mockResolvedValueOnce("");
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result.ok).toBe(false);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("clears the stale session and fails on 401", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 401));
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result.ok).toBe(false);
+    expect(logOut).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces the server's 409 reason verbatim", async () => {

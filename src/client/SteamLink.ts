@@ -1,5 +1,5 @@
 import { getApiBase } from "./Api";
-import { getAuthHeader } from "./Auth";
+import { getAuthHeader, logOut } from "./Auth";
 
 // The desktop Electron shell's account-linking gate opens the browser at
 // `<site>#steam-link?token=<opaque>`. The hash (never a query string, so it
@@ -83,28 +83,43 @@ export type RedeemSteamLinkResult =
 //
 // Status mapping:
 //   200 -> ok
+//   401 -> stale cached JWT; clears it via logOut() before failing, matching
+//          the convention every other authenticated call in Api.ts follows
+//          (e.g. setMarketingConsent, updateUsername, getMyTribeNames).
 //   409 -> refused; `reason` is the server's machine-readable code verbatim
 //          (e.g. "steam_has_progress") so the UI can render a specific
 //          message. Never mapped to a generic failure or reworded.
 //   410 -> the ticket expired; mapped to reason "expired".
-//   anything else (4xx/5xx/network error) -> reason "failed". Deliberately
-//   distinct from "expired"/the 409 reasons: a later task (429 throttling)
-//   needs to tell these apart, so they must not collapse into one bucket.
+//   anything else (4xx/5xx/network error, including 429) -> reason "failed".
+//   This collapses 429/500/network errors into one generic bucket for now; a
+//   later task adds Retry-After-aware 429 handling and will need to split
+//   that case out then, not here.
 export async function redeemSteamLink(
   token: string,
 ): Promise<RedeemSteamLinkResult> {
   try {
+    // Mirrors linkGoogle's guard in Auth.ts: getAuthHeader() returns "" rather
+    // than throwing when logged out, and firing with an empty Authorization
+    // header would just bounce off the server as a confusing failure.
+    const authHeader = await getAuthHeader();
+    if (authHeader === "") return { ok: false, reason: "failed" };
+
     const response = await fetch(`${getApiBase()}/auth/steam/link`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: await getAuthHeader(),
+        Authorization: authHeader,
       },
       body: JSON.stringify({ token }),
     });
 
     if (response.status === 200) {
       return { ok: true };
+    }
+
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, reason: "failed" };
     }
 
     if (response.status === 409) {
