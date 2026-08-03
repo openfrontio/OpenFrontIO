@@ -35,6 +35,16 @@ export function broadcastKey(stream: LiveStream): string {
   return `${stream.platform}:${stream.channel}:${stream.startedAt}`;
 }
 
+// Where to send someone who clicks a stream: the explicit url if the API supplied one,
+// otherwise derived from the platform. Lives here rather than in either panel so both use
+// the same rule — a Twitch-only fallback would send YouTube viewers to the wrong site.
+export function watchUrl(stream: LiveStream): string {
+  if (stream.url) return stream.url;
+  return stream.platform === "youtube"
+    ? `https://www.youtube.com/${stream.channel}`
+    : `https://www.twitch.tv/${stream.channel}`;
+}
+
 type Listener = (feed: StreamsFeed) => void;
 
 class StreamsFeedPoller {
@@ -117,18 +127,38 @@ class StreamsFeedPoller {
     this.tickInFlight = true;
     try {
       const feed = await getStreams();
-      if (!this.canPoll()) return; // state can change across the await
-      this.latest = isFeedFresh(feed.verifiedAt, Date.now())
-        ? feed
-        : EMPTY_FEED;
-      for (const fn of this.listeners) this.deliver(fn, this.latest);
+      if (this.canPoll()) {
+        // canPoll can flip across the await; if it did, keep the previous feed and let
+        // the resume path start a fresh tick.
+        this.latest = isFeedFresh(feed.verifiedAt, Date.now())
+          ? feed
+          : EMPTY_FEED;
+        for (const fn of this.listeners) this.deliver(fn, this.latest);
+      }
+    } catch (e) {
+      // getStreams() swallows fetch and validation errors itself, but it can still throw
+      // if the bundled fallback ever fails to parse. Scheduling below is outside this
+      // try for that reason: one bad fetch must not end polling for the whole session.
+      console.error("streams-feed: fetch failed", e);
+    } finally {
+      this.tickInFlight = false;
+    }
+    if (this.canPoll() && this.timer === null) {
       this.timer = setTimeout(() => {
         this.timer = null;
         void this.tick();
       }, POLL_MS);
-    } finally {
-      this.tickInFlight = false;
     }
+  }
+
+  // Test seam: the poller is a module singleton, so its state would otherwise leak
+  // between tests in a file and make them order-dependent. Not used in production.
+  reset() {
+    this.stop();
+    this.listeners.clear();
+    this.inGame = false;
+    this.tickInFlight = false;
+    this.latest = EMPTY_FEED;
   }
 }
 

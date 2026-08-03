@@ -1,16 +1,8 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { LiveStream } from "../../core/ApiSchemas";
-import { streamsFeed } from "../StreamsFeed";
+import { streamsFeed, watchUrl } from "../StreamsFeed";
 import { translateText } from "../Utils";
-
-// Watch URL for a stream: explicit `url` wins, else derive from platform + channel.
-export function watchUrl(s: LiveStream): string {
-  if (s.url) return s.url;
-  return s.platform === "youtube"
-    ? `https://www.youtube.com/${s.channel}`
-    : `https://www.twitch.tv/${s.channel}`;
-}
 
 // Compact viewer count: 932 -> "932", 1234 -> "1.2K", 12345 -> "12K", 1.2e6 -> "1.2M".
 export function formatViewers(n: number): string {

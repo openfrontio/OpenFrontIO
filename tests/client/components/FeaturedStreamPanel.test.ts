@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EMPTY_FEED, streamsFeed } from "../../../src/client/StreamsFeed";
+import { streamsFeed } from "../../../src/client/StreamsFeed";
 import type { LiveStream, StreamsFeed } from "../../../src/core/ApiSchemas";
 
 // Mounting behaviour of the <featured-stream> panel. The point of these tests is the
@@ -85,10 +85,10 @@ describe("featured-stream panel", () => {
 
   afterEach(() => {
     document.body.innerHTML = ""; // disconnect -> the panel unsubscribes
-    // streamsFeed is a module singleton, so its last feed would otherwise be handed
-    // synchronously to the next test's panel on subscribe and construct a player before
-    // that test's own feed arrives. Clear the cached value between tests.
-    (streamsFeed as unknown as { latest: StreamsFeed }).latest = EMPTY_FEED;
+    // streamsFeed is a module singleton: without this its cached feed and in-game flag
+    // carry into the next test, which would construct a player before that test's own
+    // feed arrives, or leave polling stopped.
+    streamsFeed.reset();
     delete (window as unknown as { Twitch?: unknown }).Twitch;
     delete (window as unknown as { adsEnabled?: boolean }).adsEnabled;
     vi.useRealTimers();

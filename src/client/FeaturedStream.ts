@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { LiveStream, StreamsFeed } from "../core/ApiSchemas";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isDesktopShell } from "./DesktopShell";
-import { broadcastKey, streamsFeed } from "./StreamsFeed";
+import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";
 import { translateText } from "./Utils";
 
 // Homepage "featured stream" panel: embeds a Twitch channel and shows ONLY while it is
@@ -347,13 +347,12 @@ export class FeaturedStream extends LitElement {
     return this.live && !this.inGame;
   }
 
-  // `url` is optional in the schema, so fall back to deriving it rather than letting the
-  // click become a silent no-op.
+  // `url` is optional in the schema, so derive it rather than letting the click become a
+  // silent no-op. Shared with the Streaming Now panel so the derivation stays
+  // platform-aware in both.
   private openStream = () => {
     const stream = this.stream;
-    if (!stream) return;
-    const url = stream.url ?? `https://twitch.tv/${stream.channel}`;
-    window.open(url, "_blank", "noopener");
+    if (stream) window.open(watchUrl(stream), "_blank", "noopener");
   };
 
   // The header is a drag handle: a click (no drag) opens the stream, a drag (past a small

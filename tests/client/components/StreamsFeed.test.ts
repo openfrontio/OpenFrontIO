@@ -6,7 +6,10 @@ import {
   isFeedFresh,
   streamsFeed,
 } from "../../../src/client/StreamsFeed";
-import { StreamsFeedSchema } from "../../../src/core/ApiSchemas";
+import {
+  StreamsFeedSchema,
+  StreamsFeed as StreamsFeedType,
+} from "../../../src/core/ApiSchemas";
 
 vi.mock("../../../src/client/Api", () => ({ getStreams: vi.fn() }));
 const getStreamsMock = vi.mocked(getStreams);
@@ -151,6 +154,9 @@ describe("streamsFeed polling lifecycle", () => {
   });
 
   afterEach(() => {
+    // Module singleton: clear cached feed, listeners and lifecycle flags so these tests
+    // stay order-independent.
+    streamsFeed.reset();
     vi.useRealTimers();
   });
 
@@ -211,6 +217,34 @@ describe("streamsFeed polling lifecycle", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     await vi.advanceTimersByTimeAsync(0);
     expect(getStreamsMock.mock.calls.length).toBeGreaterThan(before);
+    unsub();
+  });
+
+  // getStreams() normally swallows its own errors, but it can still throw if the bundled
+  // fallback fails to parse. The next poll was scheduled only on the success path, so one
+  // throw froze the feed for the rest of the session.
+  it("keeps polling after a fetch rejects", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    getStreamsMock.mockRejectedValueOnce(new Error("fallback unparseable"));
+    const unsub = streamsFeed.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const afterFailure = getStreamsMock.mock.calls.length;
+    expect(afterFailure).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(getStreamsMock.mock.calls.length).toBeGreaterThan(afterFailure);
+    unsub();
+  });
+
+  it("recovers the feed after a transient fetch failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    getStreamsMock.mockRejectedValueOnce(new Error("network down"));
+    const seen: StreamsFeedType[] = [];
+    const unsub = streamsFeed.subscribe((feed) => seen.push(feed));
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(61_000);
+    // The immediate empty hand-off on subscribe, then a real feed from the retry.
+    expect(seen.length).toBeGreaterThan(1);
     unsub();
   });
 

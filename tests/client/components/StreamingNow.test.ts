@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  formatViewers,
-  watchUrl,
-} from "../../../src/client/components/StreamingNow";
-import { EMPTY_FEED, streamsFeed } from "../../../src/client/StreamsFeed";
+import { formatViewers } from "../../../src/client/components/StreamingNow";
+import { streamsFeed, watchUrl } from "../../../src/client/StreamsFeed";
 import type { StreamsFeed } from "../../../src/core/ApiSchemas";
 
 const getStreams = vi.fn<() => Promise<StreamsFeed>>();
@@ -103,7 +100,7 @@ describe("StreamingNow", () => {
 
     afterEach(() => {
       document.body.innerHTML = "";
-      (streamsFeed as unknown as { latest: StreamsFeed }).latest = EMPTY_FEED;
+      streamsFeed.reset();
       vi.useRealTimers();
       vi.clearAllMocks();
       vi.unstubAllGlobals();
