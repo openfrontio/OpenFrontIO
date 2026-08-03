@@ -525,6 +525,7 @@
   },
   "featured_stream": {
     "expand": "Expand",
+    "hide_today": "Hide for today",
     "live": "LIVE",
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"

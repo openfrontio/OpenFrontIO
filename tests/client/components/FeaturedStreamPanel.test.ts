@@ -203,7 +203,7 @@ describe("featured-stream panel", () => {
   // Closing must stop everything: no poll left scheduled, no player rebuilt. Minimizing
   // deliberately does not, because Twitch's terms disallow an obscured embed, so the
   // minimized panel stays a visible thumbnail that keeps playing.
-  describe("after the user closes the panel", () => {
+  describe("closing", () => {
     const clickByLabel = (el: HTMLElement, label: string) => {
       const btn = el.querySelector(
         `[aria-label="${label}"]`,
@@ -212,21 +212,39 @@ describe("featured-stream panel", () => {
       btn!.click();
     };
 
-    const openThenClose = async () => {
-      // The x only exists for ad-free users, and only once minimized.
-      (window as unknown as { adsEnabled?: boolean }).adsEnabled = false;
+    const open = async (adFree: boolean) => {
+      (window as unknown as { adsEnabled?: boolean }).adsEnabled = !adFree;
       const el = await mount(stream("openfrontmasters"));
       FakePlayer.last!.fire(FakePlayer.READY);
-      await el.updateComplete;
-      clickByLabel(el, "featured_stream.minimize");
-      await el.updateComplete;
-      clickByLabel(el, "common.close");
       await el.updateComplete;
       return el;
     };
 
+    // The point of this change: closing no longer requires minimising first, and is no
+    // longer reserved for people who have paid.
+    it("offers close to an ad-supported user without minimising first", async () => {
+      const el = await open(false);
+      expect(el.querySelector('[aria-label="common.close"]')).not.toBeNull();
+      expect(
+        el.querySelector('[aria-label="featured_stream.hide_today"]'),
+      ).toBeNull(); // hide-for-today stays ad-free only
+    });
+
+    it("offers all three controls to an ad-free user", async () => {
+      const el = await open(true);
+      expect(
+        el.querySelector('[aria-label="featured_stream.minimize"]'),
+      ).not.toBeNull();
+      expect(el.querySelector('[aria-label="common.close"]')).not.toBeNull();
+      expect(
+        el.querySelector('[aria-label="featured_stream.hide_today"]'),
+      ).not.toBeNull();
+    });
+
     it("removes the panel and stops polling entirely", async () => {
-      await openThenClose();
+      const el = await open(false);
+      clickByLabel(el, "common.close");
+      await el.updateComplete;
       expect(card()).toBeNull();
       const before = getStreams.mock.calls.length;
       await vi.advanceTimersByTimeAsync(10 * 60_000);
@@ -244,12 +262,53 @@ describe("featured-stream panel", () => {
     });
 
     it("does not come back when a game ends", async () => {
-      const el = await openThenClose();
+      const el = await open(false);
+      clickByLabel(el, "common.close");
+      await el.updateComplete;
       document.dispatchEvent(new CustomEvent("leave-lobby"));
       await el.updateComplete;
       await vi.advanceTimersByTimeAsync(10 * 60_000);
       expect(card()).toBeNull();
       expect(FakePlayer.constructed).toEqual(["openfrontmasters"]);
+    });
+
+    // A plain close is for this visit only, whoever you are.
+    it("does not persist an ordinary close, even for an ad-free user", async () => {
+      const el = await open(true);
+      clickByLabel(el, "common.close");
+      await el.updateComplete;
+      expect(localStorage.getItem("featured-stream-closed")).toBeNull();
+    });
+
+    it("persists hide-for-today and suppresses the panel on the next visit", async () => {
+      const el = await open(true);
+      clickByLabel(el, "featured_stream.hide_today");
+      await el.updateComplete;
+      expect(localStorage.getItem("featured-stream-closed")).not.toBeNull();
+
+      // Remount as if the page were reloaded the same day. Built by hand rather than via
+      // mount(), which waits for a fetch this path must never make.
+      document.body.innerHTML = "";
+      streamsFeed.reset();
+      getStreams.mockClear();
+      const again = document.createElement("featured-stream") as HTMLElement & {
+        updateComplete: Promise<boolean>;
+      };
+      document.body.appendChild(again);
+      await again.updateComplete;
+      await vi.advanceTimersByTimeAsync(1000);
+      await again.updateComplete;
+      expect(card()).toBeNull();
+      expect(getStreams).not.toHaveBeenCalled(); // never even asks the API
+    });
+
+    it("shows again once the stored day is stale", async () => {
+      localStorage.setItem("featured-stream-closed", "1999-1-1");
+      const el = await mount(stream("openfrontmasters"));
+      FakePlayer.last!.fire(FakePlayer.READY);
+      await el.updateComplete;
+      expect(card()).not.toBeNull();
+      expect(localStorage.getItem("featured-stream-closed")).toBeNull(); // pruned
     });
   });
 
