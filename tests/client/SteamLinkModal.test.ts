@@ -7,6 +7,7 @@ const isLoggedInMock = vi.hoisted(() => vi.fn());
 const stashPendingLinkMock = vi.hoisted(() => vi.fn());
 const fetchSteamLinkTicketMock = vi.hoisted(() => vi.fn());
 const redeemSteamLinkMock = vi.hoisted(() => vi.fn());
+const redeemSteamLinkCodeMock = vi.hoisted(() => vi.fn());
 const getUserMeMock = vi.hoisted(() => vi.fn());
 const invalidateUserMeMock = vi.hoisted(() => vi.fn());
 
@@ -17,11 +18,21 @@ vi.mock("../../src/client/Auth", () => ({
 // This is the interface produced by the previous task (SteamLink.ts). Mocking
 // it here means this file tests the modal's UI/wiring only — parseSteamLinkToken
 // / redeem status-mapping already has its own coverage in SteamLink.test.ts.
-vi.mock("../../src/client/SteamLink", () => ({
-  stashPendingLink: stashPendingLinkMock,
-  fetchSteamLinkTicket: fetchSteamLinkTicketMock,
-  redeemSteamLink: redeemSteamLinkMock,
-}));
+// normalizeSteamLinkCode/isValidSteamLinkCode are kept real (via importActual)
+// since they're pure and already covered there — re-mocking them here would
+// just be reimplementing them a second time in this file.
+vi.mock("../../src/client/SteamLink", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/SteamLink")>();
+  return {
+    normalizeSteamLinkCode: actual.normalizeSteamLinkCode,
+    isValidSteamLinkCode: actual.isValidSteamLinkCode,
+    stashPendingLink: stashPendingLinkMock,
+    fetchSteamLinkTicket: fetchSteamLinkTicketMock,
+    redeemSteamLink: redeemSteamLinkMock,
+    redeemSteamLinkCode: redeemSteamLinkCodeMock,
+  };
+});
 
 vi.mock("../../src/client/Api", () => ({
   getUserMe: getUserMeMock,
@@ -236,5 +247,148 @@ describe("SteamLinkModal", () => {
     });
     expect(redeemSteamLinkMock).toHaveBeenCalledWith("tok-abc");
     expect(invalidateUserMeMock).toHaveBeenCalled();
+  });
+
+  // ─── Code-entry path (Task 17) ──────────────────────────────────────────
+  // The desktop gate's fallback: when the browser handoff itself fails, it
+  // shows an 8-character code instead of opening a token-carrying URL. There
+  // is no ticket to look up a Steam persona from for this path (see
+  // SteamLink.ts's fetchSteamLinkTicket doc comment) — these tests pin that
+  // the confirm step still appears, still names the *web* account, and just
+  // falls back to the existing "unknown persona" copy instead of a real name.
+  describe("code entry", () => {
+    const codeInput = () =>
+      modal.querySelector<HTMLInputElement>("input.steam-link-code-input");
+    const codeSubmitButton = () =>
+      modal.querySelector<HTMLButtonElement>(
+        "button.steam-link-code-submit-btn",
+      );
+
+    const typeCode = (raw: string) => {
+      const input = codeInput();
+      expect(input).not.toBeNull();
+      input!.value = raw;
+      input!.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    it("when not logged in, routes to the login flow instead of showing the form", async () => {
+      isLoggedInMock.mockResolvedValue(false);
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      expect(window.location.hash).toBe("#modal=account");
+      expect(modal.isOpen()).toBe(false);
+      expect(getUserMeMock).not.toHaveBeenCalled();
+      expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
+      expect(redeemSteamLinkCodeMock).not.toHaveBeenCalled();
+    });
+
+    it("shows a code-entry form when logged in", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      expect(modal.isOpen()).toBe(true);
+      expect(codeInput()).not.toBeNull();
+      expect(codeSubmitButton()).not.toBeNull();
+    });
+
+    it("rejects a malformed code inline, with no network call at all", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      // Contains 'O', which the fixed alphabet deliberately excludes.
+      typeCode("2345678O");
+      codeSubmitButton()?.click();
+      await modal.updateComplete;
+
+      expect(modal.textContent).toContain("steam_link_modal.invalid_code");
+      expect(getUserMeMock).not.toHaveBeenCalled();
+      expect(redeemSteamLinkCodeMock).not.toHaveBeenCalled();
+    });
+
+    it("normalizes a well-formed code (lower case, spaces, hyphen) and proceeds to confirm, showing the web account but no persona", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("  abcd-efgh  ");
+      codeSubmitButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+
+      // No ticket lookup exists for a code — the persona side of the prompt
+      // must fall back to the same "unknown persona" copy the token path
+      // uses when Steam declines to resolve a name, not a blank/crash.
+      expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
+      expect(modal.textContent).toContain("steam_link_modal.unknown_persona");
+      expect(modal.textContent).toContain("web.1234");
+    });
+
+    it("posts the normalized code, not the raw typed value, to redeemSteamLinkCode on confirm", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      redeemSteamLinkCodeMock.mockResolvedValue({ ok: true });
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("  abcd-efgh  ");
+      codeSubmitButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+
+      confirmButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("steam_link_modal.success");
+      });
+      expect(redeemSteamLinkCodeMock).toHaveBeenCalledWith("ABCDEFGH");
+      expect(redeemSteamLinkMock).not.toHaveBeenCalled();
+    });
+
+    it("renders a distinct message for a 429 refusal instead of a generic/wrong-code message", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      redeemSteamLinkCodeMock.mockResolvedValue({
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: 30,
+      });
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("ABCDEFGH");
+      codeSubmitButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+
+      confirmButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain(
+          "steam_link_modal.reason_rate_limited",
+        );
+      });
+      expect(modal.textContent).not.toContain("steam_link_modal.reason_failed");
+    });
   });
 });

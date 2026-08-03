@@ -54,7 +54,11 @@ import "./NewsModal";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
-import { parseSteamLinkToken, takePendingLink } from "./SteamLink";
+import {
+  isSteamLinkHash,
+  parseSteamLinkToken,
+  takePendingLink,
+} from "./SteamLink";
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import "./SteamLinkSignpost";
@@ -786,6 +790,18 @@ class Client {
     if (steamLinkToken) {
       strip();
       void this.steamLinkModal?.openWithToken(steamLinkToken);
+      return;
+    }
+
+    // Fallback: the gate's browser handoff itself can fail (wrong default
+    // browser, an odd Linux setup, Steam's overlay browser), in which case it
+    // shows an 8-character code instead and tells the player to enter it on
+    // the website. There's no token in that case, so parseSteamLinkToken
+    // above returns null — this is the bare `#steam-link` hash the code path
+    // lands on instead (see SteamLink.ts's isSteamLinkHash).
+    if (isSteamLinkHash(hash)) {
+      strip();
+      void this.steamLinkModal?.openForCodeEntry();
       return;
     }
 

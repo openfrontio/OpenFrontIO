@@ -16,15 +16,24 @@ vi.mock("../../src/client/Auth", () => ({
 import { getAuthHeader, logOut } from "../../src/client/Auth";
 import {
   fetchSteamLinkTicket,
+  isSteamLinkHash,
+  isValidSteamLinkCode,
+  normalizeSteamLinkCode,
   parseSteamLinkToken,
   redeemSteamLink,
+  redeemSteamLinkCode,
   stashPendingLink,
   takePendingLink,
 } from "../../src/client/SteamLink";
 
-const res = (body: unknown, status = 200) => ({
+const res = (
+  body: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+) => ({
   status,
   json: async () => body,
+  headers: { get: (name: string) => headers[name] ?? null },
 });
 
 const fetchMock = () => global.fetch as ReturnType<typeof vi.fn>;
@@ -50,6 +59,58 @@ describe("parseSteamLinkToken", () => {
   it("returns null for unrelated hashes", () => {
     expect(parseSteamLinkToken("#token-login?token-login=x")).toBeNull();
     expect(parseSteamLinkToken("")).toBeNull();
+  });
+});
+
+describe("isSteamLinkHash", () => {
+  it("is true for the token-carrying hash", () => {
+    expect(isSteamLinkHash("#steam-link?token=abc123")).toBe(true);
+  });
+  it("is true for the bare hash (the code-entry fallback destination)", () => {
+    expect(isSteamLinkHash("#steam-link")).toBe(true);
+  });
+  it("is false for unrelated hashes", () => {
+    expect(isSteamLinkHash("#token-login?token-login=x")).toBe(false);
+    expect(isSteamLinkHash("")).toBe(false);
+    // Must not fuzzy-match a hash that merely starts similarly.
+    expect(isSteamLinkHash("#steam-linked-something")).toBe(false);
+  });
+});
+
+describe("normalizeSteamLinkCode", () => {
+  it("uppercases, trims surrounding whitespace, and strips the presentation hyphen", () => {
+    expect(normalizeSteamLinkCode("  abcd-2345  ")).toBe("ABCD2345");
+  });
+  it("is a no-op on an already-normalized code", () => {
+    expect(normalizeSteamLinkCode("ABCD2345")).toBe("ABCD2345");
+  });
+  it("does not remap ambiguous characters (0/O, 1/I/L, U are not in the alphabet)", () => {
+    // These are deliberately NOT corrected to their look-alikes — a code
+    // containing one is malformed, not a typo to guess at.
+    expect(normalizeSteamLinkCode("0OIL1U23")).toBe("0OIL1U23");
+  });
+});
+
+describe("isValidSteamLinkCode", () => {
+  it("accepts an 8-character code drawn from the fixed alphabet", () => {
+    expect(isValidSteamLinkCode("23456789")).toBe(true);
+    expect(isValidSteamLinkCode("ABCDEFGH")).toBe(true);
+  });
+  it("rejects a code containing an excluded ambiguous character", () => {
+    expect(isValidSteamLinkCode("2345678O")).toBe(false);
+    expect(isValidSteamLinkCode("2345678I")).toBe(false);
+    expect(isValidSteamLinkCode("2345678L")).toBe(false);
+    expect(isValidSteamLinkCode("2345678U")).toBe(false);
+    expect(isValidSteamLinkCode("23456780")).toBe(false);
+    expect(isValidSteamLinkCode("23456781")).toBe(false);
+  });
+  it("rejects the wrong length", () => {
+    expect(isValidSteamLinkCode("2345678")).toBe(false); // 7
+    expect(isValidSteamLinkCode("234567899")).toBe(false); // 9
+    expect(isValidSteamLinkCode("")).toBe(false);
+  });
+  it("rejects lower case (validation runs after normalization, not instead of it)", () => {
+    expect(isValidSteamLinkCode("abcdefgh")).toBe(false);
   });
 });
 
@@ -145,6 +206,78 @@ describe("redeemSteamLink", () => {
     const result = await redeemSteamLink("tok123");
 
     expect(result.ok).toBe(false);
+  });
+
+  // 429 must never collapse into "failed": the throttle refuses even a
+  // correct token/code once tripped, so "that was wrong" would be actively
+  // misleading. Distinguishing it is the point of this task.
+  it("maps 429 to a distinct 'rate_limited' reason with the parsed Retry-After seconds", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429, { "Retry-After": "30" }));
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 30,
+    });
+  });
+
+  it("degrades to a null retryAfterSeconds when the Retry-After header is absent", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429));
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: null,
+    });
+  });
+
+  it("still maps unrelated failures (e.g. 500) to 'failed', not 'rate_limited'", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 500));
+
+    const result = await redeemSteamLink("tok123");
+
+    expect(result).toEqual({ ok: false, reason: "failed" });
+  });
+});
+
+describe("redeemSteamLinkCode", () => {
+  it("posts { code } (not { token }) to the same redeem endpoint", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 200));
+
+    const result = await redeemSteamLinkCode("ABCD2345");
+
+    expect(result).toEqual({ ok: true });
+    const [url, init] = fetchMock().mock.calls[0];
+    expect(String(url)).toContain("/auth/steam/link");
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      code: "ABCD2345",
+    });
+  });
+
+  it("surfaces the server's 409 reason verbatim, same as the token path", async () => {
+    fetchMock().mockResolvedValueOnce(
+      res({ reason: "steam_has_progress" }, 409),
+    );
+
+    const result = await redeemSteamLinkCode("ABCD2345");
+
+    expect(result).toEqual({ ok: false, reason: "steam_has_progress" });
+  });
+
+  it("maps 429 to 'rate_limited', same as the token path", async () => {
+    fetchMock().mockResolvedValueOnce(res({}, 429, { "Retry-After": "12" }));
+
+    const result = await redeemSteamLinkCode("ABCD2345");
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 12,
+    });
   });
 });
 
