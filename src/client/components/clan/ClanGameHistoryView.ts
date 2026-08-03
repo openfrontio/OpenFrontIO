@@ -399,7 +399,9 @@ export class ClanGameHistoryView extends LitElement {
     }
 
     return html`
-      <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div
+        class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+      >
         ${mapWebpPath
           ? html`<div
               class="relative w-full aspect-[3/1] overflow-hidden bg-surface"
@@ -433,7 +435,9 @@ export class ClanGameHistoryView extends LitElement {
             </div>`
           : ""}
         <div
-          class="flex items-center justify-end px-4 py-3 border-b border-white/5"
+          class=${mapWebpPath
+            ? "absolute top-2 left-2 z-[1]"
+            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
         >
           <div class="flex items-center gap-2 shrink-0">
             <button
@@ -441,7 +445,7 @@ export class ClanGameHistoryView extends LitElement {
               title=${translateText("game_list.stats")}
               aria-label=${translateText("game_list.stats")}
               @click=${() => this.showStats(game.gameId)}
-              class="inline-flex w-8 h-8 items-center justify-center text-white/80 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+              class="inline-flex w-8 h-8 items-center justify-center text-white/80 bg-black/60 hover:bg-black/80 backdrop-blur-sm border border-white/10 rounded-lg transition-colors"
             >
               <img
                 src=${statsIcon}
