@@ -55,7 +55,7 @@ declare global {
 export type Corner = "tl" | "tr" | "bl" | "br";
 const CORNER_KEY = "featured-stream-corner";
 const MIN_KEY = "featured-stream-minimized";
-const CLOSED_KEY = "featured-stream-closed"; // ad-free close, remembered for the current day
+const CLOSED_KEY = "featured-stream-closed"; // "hide for today" (ad-free), scoped to the day
 
 // Local calendar day, used to scope the "closed" and "minimized" states to the current stream:
 // each is stored with the day it was set and ignored once the day changes, so the panel resets
@@ -138,7 +138,7 @@ export class FeaturedStream extends LitElement {
   @state() private minimized = false;
   @state() private corner: Corner = "br"; // which screen corner the panel snaps to
   @state() private dragPos: { x: number; y: number } | null = null; // free pos while dragging
-  @state() private dismissed = false; // closed; ad-free close persists for the day, flick session-only
+  @state() private dismissed = false; // closed for this visit; only ⊘ persists it
   @state() private stream: LiveStream | null = null; // broadcast the API reports live
 
   private player?: TwitchPlayer;
@@ -189,8 +189,8 @@ export class FeaturedStream extends LitElement {
     // Steam's no-in-game-ads rules (and can't satisfy Twitch's parent-domain check in the
     // shell). Matches how the rest of the app suppresses promos off the open web.
     if (crazyGamesSDK.isOnCrazyGames() || isDesktopShell()) return;
-    // An ad-free user who closed the panel stays closed for the rest of that day (only the
-    // ad-free x/flick writes this key, so it never suppresses the panel for ad-supported users).
+    // An ad-free user who chose "hide for today" stays hidden for the rest of that day
+    // (only that button writes this key, so an ordinary close never suppresses a later visit).
     // A value from an earlier day is stale: drop it so the next day's stream shows again.
     const closedDay = localStorage.getItem(CLOSED_KEY);
     if (closedDay === todayKey()) {
@@ -397,13 +397,14 @@ export class FeaturedStream extends LitElement {
       ) as HTMLElement | null;
       const cx = this.dragPos.x + (card?.offsetWidth ?? 360) / 2;
       const cy = this.dragPos.y + (card?.offsetHeight ?? 200) / 2;
-      // Touch only: flicking the panel off the edge closes it (persisted for ad-free users,
-      // session-only otherwise).
+      // Touch only: flicking the panel off the edge closes it for this page visit. A
+      // flick is a casual gesture, so it deliberately never persists — hiding for the
+      // day is only ever the explicit ⊘.
       if (
         isCoarsePointer() &&
         isOffFrame(cx, cy, window.innerWidth, window.innerHeight)
       ) {
-        this.dismiss(this.adFree);
+        this.dismiss(false);
         return;
       }
       this.corner = cornerFromCenter(
@@ -450,14 +451,18 @@ export class FeaturedStream extends LitElement {
     this.kickPlay(); // resume playback after the resize either way
   };
 
-  // Only ad-free users get a close button (any shop purchase makes a user adfree for life,
-  // which zeroes window.adsEnabled); ad-supported users can only minimize. Checked with
-  // `=== false` so the button doesn't flash before /user/me resolves the entitlement.
+  // Everyone can minimize and close; ad-free users additionally get "hide for today"
+  // (any shop purchase makes a user adfree for life, which zeroes window.adsEnabled).
+  // Checked with `=== false` so the extra button doesn't flash before /user/me resolves
+  // the entitlement — a click landing before then simply closes for the visit instead.
   private get adFree(): boolean {
     return window.adsEnabled === false;
   }
 
-  private onClose = () => this.dismiss(this.adFree);
+  // Everyone can close. ✕ is always just for this page visit; only the ad-free ⊘ makes it
+  // stick, so a close never silently outlives the visit the user expected it to.
+  private onClose = () => this.dismiss(false);
+  private onHideToday = () => this.dismiss(true);
 
   render() {
     if (this.stream === null || this.dismissed) return html``;
@@ -518,13 +523,21 @@ export class FeaturedStream extends LitElement {
             >
               ${min ? "⤢" : "–"}
             </button>
-            ${min && this.adFree
+            <button
+              class="px-1 text-lg leading-none text-white/70 hover:text-white"
+              aria-label=${translateText("common.close")}
+              @click=${this.onClose}
+            >
+              ✕
+            </button>
+            ${this.adFree
               ? html`<button
                   class="px-1 text-lg leading-none text-white/70 hover:text-white"
-                  aria-label=${translateText("common.close")}
-                  @click=${this.onClose}
+                  aria-label=${translateText("featured_stream.hide_today")}
+                  title=${translateText("featured_stream.hide_today")}
+                  @click=${this.onHideToday}
                 >
-                  ✕
+                  ⊘
                 </button>`
               : ""}
           </div>
