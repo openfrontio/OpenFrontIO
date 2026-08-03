@@ -1,9 +1,10 @@
 # OpenFront API
 
-This is the public HTTP and WebSocket API exposed by the OpenFront API
-worker. It documents endpoints intended for the game client, public websites,
-and player integrations. It is kept aligned with the route registry and
-endpoint schemas in the infra repository.
+This is the public HTTP API exposed by the OpenFront API worker. It documents
+endpoints intended for the game client, public websites, and player
+integrations. It is kept aligned with the route registry and endpoint schemas
+in the infra repository. The matchmaking WebSocket is internal to the game
+client and is not covered here.
 
 ## API Usage
 
@@ -164,21 +165,27 @@ contains:
 - publicId and createdAt
 - username, when one is set
 - the linked Discord user object when the player has made the profile public
-- aggregated stats, including wins, losses, total games, and nested
-  FFA/team/Humans-vs-Nations/ranked counters
+- aggregated stats, including wins, losses, and total games, in a tree keyed
+  by game type (Public or Private), then game mode (Free For All or Team),
+  then difficulty, plus a separate Ranked branch keyed by 1v1 and 2v2
 - current clan memberships with tag, name, role, joinedAt, and memberCount
 
+Team games played as Humans vs Nations are not broken out in this tree; they
+are counted under Team. To split them out, use the hvn filter on the game
+history endpoint below.
+
 Private Discord identity data is omitted for a private profile. The profile
-stats exclude singleplayer games from the public unranked aggregates. The
-wins, losses, and total counters in each populated stats leaf are decimal
-strings to preserve integer precision. The path segment also accepts a
-base.disc display name or bare premium username and returns the canonical
-publicId. The sessions and games subroutes below require that canonical public
+stats exclude singleplayer games entirely, so no Singleplayer branch is
+returned. The wins, losses, and total counters in each populated stats leaf
+are decimal strings to preserve integer precision. The path segment also
+accepts a base.disc display name or bare premium username and returns the
+canonical publicId. The sessions and games subroutes below require that canonical public
 ID rather than a username reference.
 
 ### GET /public/player/:publicId/sessions
 
-Returns the player's recorded sessions. A result has this shape:
+Returns the player's recorded sessions as a JSON array. Each element has this
+shape:
 
     {
       "gameId": "game-id",
