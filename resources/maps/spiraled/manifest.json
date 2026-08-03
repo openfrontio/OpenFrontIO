@@ -1,8 +1,9 @@
 {
   "categories": [
-    "new"
+    "new",
+    "arcade"
   ],
-  "id": "test01",
+  "id": "Spiraled",
   "map": {
     "height": 1200,
     "num_land_tiles": 727304,
@@ -19,7 +20,7 @@
     "width": 600
   },
   "multiplayer_frequency": 4,
-  "name": "test01",
+  "name": "Spiraled",
   "nations": [
     {
       "coordinates": [
@@ -534,5 +535,5 @@
       "strength": 1
     }
   ],
-  "translation_key": "map.test01"
+  "translation_key": "map.spiraled"
 }

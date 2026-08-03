@@ -1,9 +1,9 @@
 {
-  "id": "test01",
-  "name": "test01",
-  "translation_key": "map.test01",
+  "id": "Spiraled",
+  "name": "Spiraled",
+  "translation_key": "map.spiraled",
   "categories": [
-    "new"
+    "new", "arcade"
   ],
   "multiplayer_frequency": 4,
   "nations": [
