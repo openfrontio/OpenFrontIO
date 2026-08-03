@@ -430,10 +430,12 @@ export class PlayerGameHistoryView extends LitElement {
     const mapDisplayName = game.map ? (getMapName(game.map) ?? game.map) : null;
 
     return html`
-      <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div
+        class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+      >
         ${mapWebpPath
           ? html`<div
-              class="relative w-full aspect-[3/1] overflow-hidden bg-surface"
+              class="relative w-full aspect-[30/15] overflow-hidden bg-surface"
             >
               <img
                 src=${mapWebpPath}
@@ -453,7 +455,7 @@ export class PlayerGameHistoryView extends LitElement {
                     ${mapDisplayName}
                   </div>`
                 : ""}
-              <div class="absolute top-2 right-2">
+              <div class="absolute top-2 left-2">
                 ${this.renderResultBadge(game)}
               </div>
               <div
@@ -464,7 +466,9 @@ export class PlayerGameHistoryView extends LitElement {
             </div>`
           : ""}
         <div
-          class="flex items-center justify-end px-4 py-3 border-b border-white/5"
+          class=${mapWebpPath
+            ? "absolute top-2 right-2 z-[1]"
+            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
         >
           <div class="flex items-center gap-2 shrink-0">
             <button
@@ -472,7 +476,7 @@ export class PlayerGameHistoryView extends LitElement {
               title=${translateText("game_list.stats")}
               aria-label=${translateText("game_list.stats")}
               @click=${() => this.showStats(game.gameId)}
-              class="inline-flex w-8 h-8 items-center justify-center text-white/80 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
             >
               <img
                 src=${statsIcon}
