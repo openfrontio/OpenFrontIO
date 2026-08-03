@@ -24,6 +24,11 @@ class FakePlayer {
   static readonly ENDED = "ended";
   static constructed: string[] = [];
   static last: FakePlayer | undefined;
+  // Set to make the next construction throw, standing in for a blocked/failed embed.
+  // A flag rather than a swapped-in class because FeaturedStream memoizes the resolved
+  // SDK in a module-level `sdkPromise`, so the first test's window.Twitch is what every
+  // later test in this file actually gets.
+  static failNext = false;
 
   ended = false;
   private handlers = new Map<string, () => void>();
@@ -31,6 +36,10 @@ class FakePlayer {
   constructor(_el: HTMLElement, opts: Record<string, unknown>) {
     FakePlayer.constructed.push(String(opts.channel));
     FakePlayer.last = this;
+    if (FakePlayer.failNext) {
+      FakePlayer.failNext = false;
+      throw new Error("embed blocked");
+    }
   }
   addEventListener(event: string, cb: () => void) {
     this.handlers.set(event, cb);
@@ -66,6 +75,7 @@ describe("featured-stream panel", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     FakePlayer.constructed = [];
     FakePlayer.last = undefined;
+    FakePlayer.failNext = false;
     localStorage.clear();
     (window as unknown as { Twitch: unknown }).Twitch = { Player: FakePlayer };
     // Importing registers the custom element; the SDK loader short-circuits on the
@@ -165,6 +175,23 @@ describe("featured-stream panel", () => {
     expect(FakePlayer.constructed).toEqual(["openfrontmasters"]);
 
     serve(stream("openfrontmasters", "2026-08-03T18:00:00Z"));
+    await vi.advanceTimersByTimeAsync(61_000);
+    await el.updateComplete;
+    expect(FakePlayer.constructed).toEqual([
+      "openfrontmasters",
+      "openfrontmasters",
+    ]);
+  });
+
+  // Regression: the dedupe guard originally checked only "same broadcast", so any mount
+  // that failed left `stream` set with no player and every later tick short-circuited to
+  // kickPlay() — a permanently blank card for the rest of the broadcast.
+  it("retries the mount after a player construction failure", async () => {
+    FakePlayer.failNext = true;
+    const el = await mount(stream("openfrontmasters"));
+    expect(FakePlayer.constructed).toEqual(["openfrontmasters"]); // attempted once
+    expect(card()?.className).toContain("opacity-0"); // nothing playing
+
     await vi.advanceTimersByTimeAsync(61_000);
     await el.updateComplete;
     expect(FakePlayer.constructed).toEqual([

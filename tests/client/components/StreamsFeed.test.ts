@@ -190,6 +190,49 @@ describe("streamsFeed polling lifecycle", () => {
     expect(getStreamsMock.mock.calls.length).toBe(before);
   });
 
+  // A backgrounded tab must not keep fetching. Spec-listed alongside the in-game stop.
+  it("stops polling while the tab is hidden and resumes when it returns", async () => {
+    const unsub = streamsFeed.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const before = getStreamsMock.mock.calls.length;
+
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    expect(getStreamsMock.mock.calls.length).toBe(before);
+
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => false,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getStreamsMock.mock.calls.length).toBeGreaterThan(before);
+    unsub();
+  });
+
+  // A module singleton feeding two components: one bad listener must not stop the feed
+  // for the other. Previously a synchronous throw skipped the setTimeout entirely.
+  it("keeps polling when one subscriber throws", async () => {
+    const good = vi.fn();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const unsubBad = streamsFeed.subscribe(() => {
+      throw new Error("listener blew up");
+    });
+    const unsubGood = streamsFeed.subscribe(good);
+    await vi.advanceTimersByTimeAsync(0);
+    const before = getStreamsMock.mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(getStreamsMock.mock.calls.length).toBeGreaterThan(before);
+    expect(good).toHaveBeenCalled(); // and the healthy listener still got the feed
+    unsubBad();
+    unsubGood();
+  });
+
   it("hands subscribers an empty feed when the served one is stale", async () => {
     getStreamsMock.mockResolvedValue({
       verifiedAt: "1970-01-01T00:00:00.000Z",

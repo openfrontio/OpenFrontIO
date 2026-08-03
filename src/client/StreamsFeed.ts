@@ -50,7 +50,10 @@ class StreamsFeedPoller {
   subscribe(fn: Listener): () => void {
     this.wire();
     this.listeners.add(fn);
-    fn(this.latest);
+    // Hand over the cached feed immediately so a newly mounted component renders without
+    // waiting a round trip — but re-check freshness rather than trusting the value, since
+    // polling stops in-game and while hidden, so `latest` can be arbitrarily old by now.
+    this.deliver(fn, this.freshLatest());
     this.resume();
     return () => {
       this.listeners.delete(fn);
@@ -80,6 +83,22 @@ class StreamsFeedPoller {
     return this.listeners.size > 0 && !this.inGame && !document.hidden;
   }
 
+  private freshLatest(): StreamsFeed {
+    return isFeedFresh(this.latest.verifiedAt, Date.now())
+      ? this.latest
+      : EMPTY_FEED;
+  }
+
+  // A subscriber that throws must not take the feed down for everyone else: the loop
+  // that notifies them and the scheduling of the next poll both live in tick().
+  private deliver(fn: Listener, feed: StreamsFeed) {
+    try {
+      fn(feed);
+    } catch (e) {
+      console.error("streams-feed: listener failed", e);
+    }
+  }
+
   // Guarded against double-starting: a second subscriber arriving while the first
   // fetch is still in flight must not kick off its own request.
   private resume() {
@@ -102,7 +121,7 @@ class StreamsFeedPoller {
       this.latest = isFeedFresh(feed.verifiedAt, Date.now())
         ? feed
         : EMPTY_FEED;
-      for (const fn of this.listeners) fn(this.latest);
+      for (const fn of this.listeners) this.deliver(fn, this.latest);
       this.timer = setTimeout(() => {
         this.timer = null;
         void this.tick();

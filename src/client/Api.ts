@@ -1101,8 +1101,8 @@ export async function getNews(): Promise<NewsItem[]> {
 
 // Fetch an API-served JSON config (news.json-style: served file + bundled fallback).
 // Any error, non-200, or invalid payload falls back, parsed through the same schema so
-// the fallback is validated too. The timeout guards recurring callers (StreamingNow
-// polls every 90s) from a fetch that never settles.
+// the fallback is validated too. The timeout guards recurring callers (StreamsFeed polls
+// every 60s) from a fetch that never settles.
 async function getServedConfig<T>(
   name: string,
   schema: z.ZodType<T>,

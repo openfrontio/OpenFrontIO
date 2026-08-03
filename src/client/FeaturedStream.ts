@@ -200,7 +200,11 @@ export class FeaturedStream extends LitElement {
     if (closedDay) localStorage.removeItem(CLOSED_KEY);
     // The shared poller owns the fetch cadence and stops itself in-game and while the
     // tab is hidden; this component only reacts to what it is handed.
-    this.unsubscribe = streamsFeed.subscribe((feed) => void this.onFeed(feed));
+    this.unsubscribe = streamsFeed.subscribe((feed) => {
+      this.onFeed(feed).catch((e) =>
+        console.error("featured-stream: feed handling failed", e),
+      );
+    });
   }
 
   // The panel stays up through the lobby/queue wait and hides only once the game actually
@@ -228,7 +232,17 @@ export class FeaturedStream extends LitElement {
       this.goOffline();
       return;
     }
-    if (this.stream && broadcastKey(this.stream) === broadcastKey(next)) {
+    // Same broadcast AND actually mounted. The `this.player` term matters: mountPlayer
+    // has several exits that leave `stream` set with no player (SDK blocked, mount node
+    // missing, a game starting mid-await). Without it, every later tick would take this
+    // branch and the mount would never be retried — a permanently blank card. It cannot
+    // reopen the old remount loop, because a broadcast that reported offline is filtered
+    // out by featuredStream() above and never reaches here.
+    if (
+      this.stream &&
+      this.player &&
+      broadcastKey(this.stream) === broadcastKey(next)
+    ) {
       this.kickPlay(); // already embedding it; resume if a game had paused it
       return;
     }
@@ -333,9 +347,13 @@ export class FeaturedStream extends LitElement {
     return this.live && !this.inGame;
   }
 
+  // `url` is optional in the schema, so fall back to deriving it rather than letting the
+  // click become a silent no-op.
   private openStream = () => {
-    const url = this.stream?.url;
-    if (url) window.open(url, "_blank", "noopener");
+    const stream = this.stream;
+    if (!stream) return;
+    const url = stream.url ?? `https://twitch.tv/${stream.channel}`;
+    window.open(url, "_blank", "noopener");
   };
 
   // The header is a drag handle: a click (no drag) opens the stream, a drag (past a small
