@@ -47,6 +47,7 @@ The API exposes Content-Range and accepts these request headers:
 | GET    | /public/clan/:clanTag             | Clan statistics                            |
 | GET    | /public/clan/:clanTag/exists      | Clan existence check                       |
 | GET    | /public/clan/:clanTag/sessions    | Clan game sessions                         |
+| GET    | /public/tribe/:name               | Purchased tribe-name stats                 |
 | GET    | /leaderboard/public/ffa           | Public free-for-all leaderboard            |
 | GET    | /leaderboard/ranked               | Ranked 1v1 and 2v2 leaderboards            |
 | GET    | /leaderboard/tribes               | Custom tribe-name leaderboard              |
@@ -446,6 +447,41 @@ Entries are sorted by playerReach descending, then gamesAppeared descending,
 then stable internal ID order. playerReach is the accumulated impression/reach
 metric, not a distinct-player count. ownerUsername can be null. This
 leaderboard is cached for about one hour.
+
+### GET /public/tribe/:name
+
+Looks up a purchased custom tribe name by its normalized name. Lookup is
+case- and whitespace-insensitive, and the response preserves the canonical
+display form.
+
+Only active names (`pending` or `live`) are visible. A name owned by an
+actively banned player, a rejected or revoked name, and an unknown name all
+return 404. A name that is empty after normalization returns 400.
+
+Response:
+
+    {
+      "name": "Cool Tribe",
+      "ownerPublicId": "abc123",
+      "ownerUsername": "Ada.4821",
+      "activeBoosts": 2,
+      "lifetime": {
+        "gamesAppeared": 107,
+        "playerReach": 10699
+      },
+      "window": {
+        "days": 30,
+        "start": "2026-07-02",
+        "end": "2026-08-01",
+        "gamesAppeared": 7,
+        "playerReach": 700
+      }
+    }
+
+`lifetime` contains all-time games-appeared and player-reach totals.
+`window` contains the same metrics for the rolling 30-day leaderboard window.
+`activeBoosts` counts only unexpired boosts. `ownerUsername` is null when the
+owner has not set an account username.
 
 ## Health
 
