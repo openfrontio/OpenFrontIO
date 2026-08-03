@@ -61,20 +61,93 @@ export function isValidSteamLinkCode(code: string): boolean {
   );
 }
 
+// What's stashed across a login redirect: either a token (from the browser
+// handoff) or a bare intent to resume the code-entry form (there is no code
+// to preserve — the player hadn't typed one yet when they were sent to log
+// in). One localStorage slot, one flow in flight at a time, so the two are
+// tagged rather than left to be told apart by shape — a stashed code-entry
+// intent must never be mistaken for a token, or vice versa.
+export type PendingLink =
+  | { kind: "token"; token: string }
+  | { kind: "code_entry" };
+
 // The token often needs to survive a login (magic link, Discord/Google OAuth
 // redirect) before it can be redeemed against an authenticated account, so it
 // is stashed in localStorage rather than held in memory.
 export function stashPendingLink(token: string): void {
-  localStorage.setItem(PENDING_LINK_KEY, token);
+  localStorage.setItem(
+    PENDING_LINK_KEY,
+    JSON.stringify({ kind: "token", token }),
+  );
 }
 
-// Consumed on read: once taken, a stale/already-handled token can't re-fire
-// on a later page load.
-export function takePendingLink(): string | null {
-  const token = localStorage.getItem(PENDING_LINK_KEY);
-  if (token === null) return null;
+// The code-entry form has nothing to preserve but the fact that the player
+// was on it — they're sent to log in before typing anything, so there's no
+// draft/code value to carry across. See SteamLinkModal.openForCodeEntry().
+export function stashPendingCodeEntry(): void {
+  localStorage.setItem(
+    PENDING_LINK_KEY,
+    JSON.stringify({ kind: "code_entry" }),
+  );
+}
+
+// Consumed on read: once taken, a stale/already-handled entry can't re-fire
+// on a later page load. Malformed/legacy storage (this used to hold a bare,
+// unquoted token string before the kind discriminator existed) degrades to
+// null rather than throwing — a leftover value from before this change must
+// not crash every subsequent page load for whoever still has one.
+export function takePendingLink(): PendingLink | null {
+  const raw = localStorage.getItem(PENDING_LINK_KEY);
+  if (raw === null) return null;
   localStorage.removeItem(PENDING_LINK_KEY);
-  return token;
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null && "kind" in parsed) {
+      const candidate = parsed as { kind: unknown; token?: unknown };
+      if (candidate.kind === "token" && typeof candidate.token === "string") {
+        return { kind: "token", token: candidate.token };
+      }
+      if (candidate.kind === "code_entry") {
+        return { kind: "code_entry" };
+      }
+    }
+  } catch {
+    // Legacy raw-string format, or otherwise unparsable — fall through to
+    // null below rather than throwing.
+  }
+  return null;
+}
+
+// The subset of SteamLinkModal's public surface resumePendingSteamLink needs
+// — kept as a small structural interface (rather than importing the modal
+// class itself) so this stays a plain, easily-unit-testable function with no
+// dependency on Lit/the DOM.
+export interface PendingLinkModal {
+  openWithToken(token: string): Promise<void>;
+  openForCodeEntry(): Promise<void>;
+}
+
+// Resumes a Steam-link flow that was interrupted by a login redirect
+// (Discord/Google OAuth, magic link, or the account modal's own login form)
+// — the one place both openWithToken's and openForCodeEntry's stashes get
+// read back. Returns true when something was resumed (callers should treat
+// that as "handled, stop routing further for this pass"), false when there
+// was nothing pending. A missing modal (element not found/not yet defined)
+// still consumes the stash — same "don't replay a stale entry" reasoning as
+// takePendingLink itself — it just has nothing to hand the result to.
+export function resumePendingSteamLink(
+  modal: PendingLinkModal | undefined,
+): boolean {
+  const pending = takePendingLink();
+  if (pending === null) return false;
+
+  if (pending.kind === "token") {
+    void modal?.openWithToken(pending.token);
+  } else {
+    void modal?.openForCodeEntry();
+  }
+  return true;
 }
 
 export type SteamLinkTicketResult =

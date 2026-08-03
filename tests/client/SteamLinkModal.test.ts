@@ -5,6 +5,7 @@ import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 const isLoggedInMock = vi.hoisted(() => vi.fn());
 const stashPendingLinkMock = vi.hoisted(() => vi.fn());
+const stashPendingCodeEntryMock = vi.hoisted(() => vi.fn());
 const fetchSteamLinkTicketMock = vi.hoisted(() => vi.fn());
 const redeemSteamLinkMock = vi.hoisted(() => vi.fn());
 const redeemSteamLinkCodeMock = vi.hoisted(() => vi.fn());
@@ -28,6 +29,7 @@ vi.mock("../../src/client/SteamLink", async (importOriginal) => {
     normalizeSteamLinkCode: actual.normalizeSteamLinkCode,
     isValidSteamLinkCode: actual.isValidSteamLinkCode,
     stashPendingLink: stashPendingLinkMock,
+    stashPendingCodeEntry: stashPendingCodeEntryMock,
     fetchSteamLinkTicket: fetchSteamLinkTicketMock,
     redeemSteamLink: redeemSteamLinkMock,
     redeemSteamLinkCode: redeemSteamLinkCodeMock,
@@ -271,12 +273,18 @@ describe("SteamLinkModal", () => {
       input!.dispatchEvent(new Event("input", { bubbles: true }));
     };
 
-    it("when not logged in, routes to the login flow instead of showing the form", async () => {
+    it("when not logged in, stashes a code-entry intent (not a token) and routes to the login flow", async () => {
       isLoggedInMock.mockResolvedValue(false);
 
       await modal.openForCodeEntry();
       await modal.updateComplete;
 
+      // The intent (not a code — nothing's been typed yet) must survive the
+      // login redirect so the player lands back on this form afterward,
+      // rather than the flow silently evaporating. See SteamLink.test.ts's
+      // resumePendingSteamLink suite for the resume side of this.
+      expect(stashPendingCodeEntryMock).toHaveBeenCalledTimes(1);
+      expect(stashPendingLinkMock).not.toHaveBeenCalled();
       expect(window.location.hash).toBe("#modal=account");
       expect(modal.isOpen()).toBe(false);
       expect(getUserMeMock).not.toHaveBeenCalled();
@@ -311,7 +319,7 @@ describe("SteamLinkModal", () => {
       expect(redeemSteamLinkCodeMock).not.toHaveBeenCalled();
     });
 
-    it("normalizes a well-formed code (lower case, spaces, hyphen) and proceeds to confirm, showing the web account but no persona", async () => {
+    it("normalizes a well-formed code (lower case, spaces, hyphen) and proceeds to confirm, showing the web account with the dedicated no-persona prompt", async () => {
       isLoggedInMock.mockResolvedValue(true);
       getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
 
@@ -326,12 +334,38 @@ describe("SteamLinkModal", () => {
         expect(confirmButton()?.disabled).toBe(false);
       });
 
-      // No ticket lookup exists for a code — the persona side of the prompt
-      // must fall back to the same "unknown persona" copy the token path
-      // uses when Steam declines to resolve a name, not a blank/crash.
+      // No ticket lookup exists for a code, so there's never a persona name
+      // to show on this path — it must use the dedicated no-persona prompt
+      // key (not the generic "Link Steam {persona} with account {username}"
+      // template with a filled-in placeholder, which reads as a doubled
+      // "Steam ... Steam account").
       expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
-      expect(modal.textContent).toContain("steam_link_modal.unknown_persona");
+      expect(modal.textContent).toContain(
+        "steam_link_modal.confirm_prompt_no_persona",
+      );
+      expect(modal.textContent).not.toContain(
+        "steam_link_modal.confirm_prompt:",
+      );
       expect(modal.textContent).toContain("web.1234");
+    });
+
+    it("pressing Enter in the code field submits it, same as clicking Continue", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("ABCDEFGH");
+      codeInput()?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      );
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+      expect(getUserMeMock).toHaveBeenCalledTimes(1);
     });
 
     it("posts the normalized code, not the raw typed value, to redeemSteamLinkCode on confirm", async () => {

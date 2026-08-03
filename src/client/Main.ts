@@ -57,7 +57,7 @@ import "./SinglePlayerModal";
 import {
   isSteamLinkHash,
   parseSteamLinkToken,
-  takePendingLink,
+  resumePendingSteamLink,
 } from "./SteamLink";
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
@@ -463,17 +463,16 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
 
-        // Resume a Steam-link confirmation that was interrupted by a login
-        // redirect (Discord/Google OAuth, magic link): the modal stashed the
-        // token and sent the player to log in via #modal=account, so a login
-        // redirect commonly lands back there rather than on a clean "/" —
-        // this must NOT be gated on cleanHomepage below. Only read the stash
-        // once login is confirmed: takePendingLink() consumes it on read, so
-        // a speculative read while logged out would burn a token that a
+        // Resume a Steam-link flow that was interrupted by a login redirect
+        // (Discord/Google OAuth, magic link): the modal stashed either a
+        // token or a bare code-entry intent and sent the player to log in
+        // via #modal=account, so a login redirect commonly lands back there
+        // rather than on a clean "/" — this must NOT be gated on
+        // cleanHomepage below. Only resume once login is confirmed:
+        // resumePendingSteamLink() consumes the stash on read, so a
+        // speculative call while logged out would burn an entry that a
         // *later* successful login should still get to resume.
-        const pendingLink = takePendingLink();
-        if (pendingLink) {
-          void this.steamLinkModal?.openWithToken(pendingLink);
+        if (resumePendingSteamLink(this.steamLinkModal)) {
           return;
         }
 

@@ -10,6 +10,7 @@ import {
   normalizeSteamLinkCode,
   redeemSteamLink,
   redeemSteamLinkCode,
+  stashPendingCodeEntry,
   stashPendingLink,
 } from "./SteamLink";
 import { translateText } from "./Utils";
@@ -70,8 +71,10 @@ const BUTTON_BASE =
  * possible either — there is nothing that resolves a persona from a code
  * alone, and this component does not invent one. The confirm step still
  * appears (still names the *web* account from /users/@me, still requires an
- * explicit click), it just falls back to the same "unknown persona" copy
- * already used when Steam itself declines to resolve a name.
+ * explicit click); the prompt just uses a dedicated no-persona phrasing
+ * (steam_link_modal.confirm_prompt_no_persona) rather than filling the
+ * generic template's {persona} slot with a placeholder noun, which reads as
+ * a doubled "Steam ... Steam account".
  */
 @customElement("steam-link-modal")
 export class SteamLinkModal extends BaseModal {
@@ -130,13 +133,16 @@ export class SteamLinkModal extends BaseModal {
 
   // Entry point for the fallback code (see the class doc comment above).
   // Same login precondition as openWithToken and for the same reason: the
-  // confirm step needs the logged-in account's name. Unlike a token, a
-  // not-yet-submitted code isn't stashed across the login redirect — there's
-  // nothing typed yet to preserve, so the player just re-opens this after
-  // logging in and re-enters it. That's a minor inconvenience (a few
-  // keystrokes), not a lost flow.
+  // confirm step needs the logged-in account's name. Unlike a token, there's
+  // no code to preserve yet (the player hasn't typed one) — but the *intent*
+  // to resume the code-entry form still has to survive the login redirect,
+  // or the whole point of this fallback (a route through when the browser
+  // handoff fails) evaporates on the one step most likely to interrupt it.
+  // See SteamLink.ts's stashPendingCodeEntry/resumePendingSteamLink and
+  // Main.ts's onUserMe for the resume side of this.
   public async openForCodeEntry(): Promise<void> {
     if (!(await isLoggedIn())) {
+      stashPendingCodeEntry();
       window.location.hash = "modal=account";
       return;
     }
@@ -216,7 +222,7 @@ export class SteamLinkModal extends BaseModal {
 
     // No ticket to fetch for a code (see the class doc comment) — just the
     // logged-in account's name. personaName stays null, which the ready-state
-    // render already falls back to "unknown_persona" for.
+    // render below renders via the dedicated no-persona prompt.
     void getUserMe().then((userMe) => {
       if (myRequestId !== this.requestId) return; // superseded
       if (userMe === false) {
@@ -316,6 +322,9 @@ export class SteamLinkModal extends BaseModal {
             placeholder=${translateText("steam_link_modal.code_placeholder")}
             .value=${this.codeDraft}
             @input=${(e: Event) => this.handleCodeInput(e)}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter") this.handleCodeSubmit();
+            }}
           />
           ${this.codeError
             ? html`<p class="text-red-400 text-sm text-center">
@@ -341,17 +350,28 @@ export class SteamLinkModal extends BaseModal {
     }
 
     const ready = this.loadState === "ready";
-    const persona = ready
-      ? (this.personaName ?? translateText("steam_link_modal.unknown_persona"))
-      : translateText("steam_link_modal.loading_placeholder");
     const account = ready
       ? (this.username ?? translateText("steam_link_modal.unknown_username"))
       : translateText("steam_link_modal.loading_placeholder");
 
-    const prompt = translateText("steam_link_modal.confirm_prompt", {
-      persona,
-      username: account,
-    });
+    // Once ready, a null personaName means there is genuinely no Steam name
+    // to show — always true for the code path (no ticket lookup exists for
+    // a code), and rarely also true for the token path when Steam itself
+    // declines to resolve one. Filling the generic template's {persona} slot
+    // with a placeholder noun in that case reads as "Link Steam your Steam
+    // account with account ..." — a doubled "Steam" — so it gets its own
+    // template instead of trying to make one string serve both cases.
+    const prompt =
+      ready && this.personaName === null
+        ? translateText("steam_link_modal.confirm_prompt_no_persona", {
+            username: account,
+          })
+        : translateText("steam_link_modal.confirm_prompt", {
+            persona: ready
+              ? (this.personaName as string)
+              : translateText("steam_link_modal.loading_placeholder"),
+            username: account,
+          });
 
     // "success" is handled by the early return above — by construction it
     // can't reach here, so only "redeeming" needs to gate the button.

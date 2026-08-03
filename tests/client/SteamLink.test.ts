@@ -22,6 +22,8 @@ import {
   parseSteamLinkToken,
   redeemSteamLink,
   redeemSteamLinkCode,
+  resumePendingSteamLink,
+  stashPendingCodeEntry,
   stashPendingLink,
   takePendingLink,
 } from "../../src/client/SteamLink";
@@ -115,9 +117,76 @@ describe("isValidSteamLinkCode", () => {
 });
 
 describe("pending link stash", () => {
-  it("survives a round trip and is consumed once", () => {
+  // Both a token and a bare "the player was mid-code-entry" intent share one
+  // storage slot (only one linking flow can be in flight at a time), so the
+  // stashed value carries an explicit `kind` — a resumed code-entry intent
+  // must never be mistaken for a token, or vice versa.
+  it("stashes and resumes a token, consumed once", () => {
     stashPendingLink("abc");
-    expect(takePendingLink()).toBe("abc");
+    expect(takePendingLink()).toEqual({ kind: "token", token: "abc" });
+    expect(takePendingLink()).toBeNull();
+  });
+
+  it("stashes and resumes a code-entry intent, consumed once", () => {
+    stashPendingCodeEntry();
+    expect(takePendingLink()).toEqual({ kind: "code_entry" });
+    expect(takePendingLink()).toBeNull();
+  });
+
+  it("returns null for a legacy raw-string stash instead of throwing", () => {
+    // Pre-migration format: stashPendingLink used to store the token as a
+    // bare (unquoted) string. A tab still holding one of those across this
+    // change must degrade safely, not crash takePendingLink for everyone.
+    localStorage.setItem("steam-link-pending", "tok-abc");
+    expect(() => takePendingLink()).not.toThrow();
+    expect(takePendingLink()).toBeNull();
+  });
+});
+
+describe("resumePendingSteamLink", () => {
+  const makeModal = () => ({
+    openWithToken: vi.fn(async () => {}),
+    openForCodeEntry: vi.fn(async () => {}),
+  });
+
+  it("resumes a stashed token via openWithToken", () => {
+    stashPendingLink("tok-abc");
+    const modal = makeModal();
+
+    const resumed = resumePendingSteamLink(modal);
+
+    expect(resumed).toBe(true);
+    expect(modal.openWithToken).toHaveBeenCalledWith("tok-abc");
+    expect(modal.openForCodeEntry).not.toHaveBeenCalled();
+  });
+
+  it("resumes a stashed code-entry intent via openForCodeEntry — the case that lands a logged-out #steam-link arrival back on the code form after login", () => {
+    stashPendingCodeEntry();
+    const modal = makeModal();
+
+    const resumed = resumePendingSteamLink(modal);
+
+    expect(resumed).toBe(true);
+    expect(modal.openForCodeEntry).toHaveBeenCalledTimes(1);
+    expect(modal.openWithToken).not.toHaveBeenCalled();
+  });
+
+  it("returns false and calls nothing when there is no pending link", () => {
+    const modal = makeModal();
+
+    const resumed = resumePendingSteamLink(modal);
+
+    expect(resumed).toBe(false);
+    expect(modal.openWithToken).not.toHaveBeenCalled();
+    expect(modal.openForCodeEntry).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op (returns false) when the modal element isn't present", () => {
+    stashPendingCodeEntry();
+    // Main.ts guards with `this.steamLinkModal?.` — mirror that here: a
+    // missing modal must not throw, and the stash is still consumed so a
+    // later page load can't replay it.
+    expect(() => resumePendingSteamLink(undefined)).not.toThrow();
     expect(takePendingLink()).toBeNull();
   });
 });

@@ -1452,6 +1452,7 @@
     "code_submit": "Continue",
     "confirm": "Link Account",
     "confirm_prompt": "Link Steam {persona} with account {username}?",
+    "confirm_prompt_no_persona": "Link your Steam account with account {username}?",
     "invalid_code": "That doesn't look like a valid code. Check it and try again.",
     "linking": "Linking…",
     "load_error": "Couldn't load your account details. Please try again from Steam.",
@@ -1464,7 +1465,6 @@
     "reason_steam_linked_elsewhere": "This Steam account is already linked to a different OpenFront account.",
     "success": "Your Steam account is now linked.",
     "title": "Link Steam Account",
-    "unknown_persona": "your Steam account",
     "unknown_username": "your account"
   },
   "steam_user_header": {
