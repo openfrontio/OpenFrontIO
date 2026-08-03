@@ -141,6 +141,33 @@ describe("SteamLinkModal", () => {
     expect(modal.textContent).toContain("web.1234");
   });
 
+  // player.username is null for any player who has never claimed a username
+  // — the default state (usernameStatus starts at "unclaimed") — so this is
+  // the common case, not an edge case. The confirm step exists precisely
+  // because a shared machine's browser might be logged into someone else's
+  // OpenFront session; showing a placeholder noun instead of an identifying
+  // value there guts the whole point of the screen. Follows the repo-wide
+  // `username ?? publicId` convention (see ApiSchemas.ts / PlayerName.ts).
+  it("falls back to the account's publicId when the username is unclaimed (null), never a placeholder noun", async () => {
+    isLoggedInMock.mockResolvedValue(true);
+    fetchSteamLinkTicketMock.mockResolvedValue({
+      ok: true,
+      personaName: "Ada",
+    });
+    getUserMeMock.mockResolvedValue(makeUserMe(null));
+
+    await modal.openWithToken("tok-abc");
+    await vi.waitFor(async () => {
+      await modal.updateComplete;
+      expect(confirmButton()?.disabled).toBe(false);
+    });
+
+    expect(modal.textContent).toContain("p1"); // publicId from makeUserMe
+    expect(modal.textContent).not.toContain(
+      "steam_link_modal.unknown_username",
+    );
+  });
+
   it("shows a load-error state with no confirm control when the ticket fetch fails", async () => {
     isLoggedInMock.mockResolvedValue(true);
     fetchSteamLinkTicketMock.mockResolvedValue({ ok: false });
@@ -256,8 +283,10 @@ describe("SteamLinkModal", () => {
   // shows an 8-character code instead of opening a token-carrying URL. There
   // is no ticket to look up a Steam persona from for this path (see
   // SteamLink.ts's fetchSteamLinkTicket doc comment) — these tests pin that
-  // the confirm step still appears, still names the *web* account, and just
-  // falls back to the existing "unknown persona" copy instead of a real name.
+  // the confirm step still appears, still names the *web* account (falling
+  // back through publicId — see the "identifies the account" tests below —
+  // never to a placeholder noun), and uses the dedicated no-persona prompt
+  // rather than a real Steam name.
   describe("code entry", () => {
     const codeInput = () =>
       modal.querySelector<HTMLInputElement>("input.steam-link-code-input");
@@ -347,6 +376,106 @@ describe("SteamLinkModal", () => {
         "steam_link_modal.confirm_prompt:",
       );
       expect(modal.textContent).toContain("web.1234");
+    });
+
+    it("falls back to the account's publicId when the username is unclaimed (null), never a placeholder noun", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe(null));
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("ABCDEFGH");
+      codeSubmitButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+
+      expect(modal.textContent).toContain("p1"); // publicId from makeUserMe
+      expect(modal.textContent).not.toContain(
+        "steam_link_modal.unknown_username",
+      );
+    });
+
+    it("shows the code-path's own load-error message (not the token path's 'try again from Steam' copy) when /users/@me fails", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(false);
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("ABCDEFGH");
+      codeSubmitButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(
+          modal
+            .querySelector(".steam-link-load-error-text")
+            ?.textContent?.trim(),
+        ).toBe("steam_link_modal.load_error_code");
+      });
+    });
+
+    // Task 17's whole point was giving a code-only player a route through.
+    // A refusal that strands them on a confirm screen with only Cancel (which
+    // closes the modal for good — Main.ts's strip() already removed
+    // #steam-link from the URL, so a refresh can't reopen it) recreates that
+    // same dead end one screen later. The alphabet still has eye-confusable
+    // pairs (B/8, S/5, 2/Z, G/6), so a one-character mistranscription is a
+    // realistic way to land here.
+    it("returns to the code-entry form, draft still prefilled, after a refused code — and a corrected code can be resubmitted without reopening the modal", async () => {
+      isLoggedInMock.mockResolvedValue(true);
+      getUserMeMock.mockResolvedValue(makeUserMe("web.1234"));
+      redeemSteamLinkCodeMock.mockResolvedValueOnce({
+        ok: false,
+        reason: "failed",
+      });
+
+      await modal.openForCodeEntry();
+      await modal.updateComplete;
+
+      typeCode("ABCDEFGH");
+      codeSubmitButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+
+      confirmButton()?.click();
+
+      // Back on the code-entry form — not stuck on a dead-end confirm
+      // screen — with the same draft still there to correct.
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(codeInput()).not.toBeNull();
+      });
+      expect(confirmButton()).toBeNull();
+      expect(codeInput()?.value).toBe("ABCDEFGH");
+      expect(modal.textContent).toContain("steam_link_modal.reason_failed");
+
+      // Correct one character and resubmit — proceeds as a fresh attempt,
+      // not stuck showing the previous refusal.
+      redeemSteamLinkCodeMock.mockResolvedValueOnce({ ok: true });
+      typeCode("ABCDEFGJ");
+      codeSubmitButton()?.click();
+
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(confirmButton()?.disabled).toBe(false);
+      });
+      // The stale failure from the first attempt must not resurface on this
+      // fresh ready state before Confirm has even been clicked again.
+      expect(modal.textContent).not.toContain("steam_link_modal.reason_failed");
+
+      confirmButton()?.click();
+      await vi.waitFor(async () => {
+        await modal.updateComplete;
+        expect(modal.textContent).toContain("steam_link_modal.success");
+      });
+      expect(redeemSteamLinkCodeMock).toHaveBeenLastCalledWith("ABCDEFGJ");
     });
 
     it("pressing Enter in the code field submits it, same as clicking Continue", async () => {

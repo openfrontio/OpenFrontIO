@@ -43,6 +43,22 @@ const REASON_KEYS: Record<string, string> = {
 };
 const DEFAULT_REASON_KEY = "steam_link_modal.reason_failed";
 
+// "rate_limited" is the one reason whose message takes a parameter
+// (Retry-After's seconds, when the server sent one) — every other reason is
+// a fixed string, so only this one needs the params argument at all.
+// Module-level (not a method) so both the ready-state render and the
+// code-mode failure handling in handleConfirm can reuse it.
+function reasonMessage(
+  reason: string | null,
+  retryAfterSeconds: number | null,
+): string {
+  const reasonKey = REASON_KEYS[reason ?? ""] ?? DEFAULT_REASON_KEY;
+  if (reason === "rate_limited") {
+    return translateText(reasonKey, { seconds: retryAfterSeconds ?? 0 });
+  }
+  return translateText(reasonKey);
+}
+
 const BUTTON_BASE =
   "flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl " +
   "transition-all disabled:opacity-50 disabled:pointer-events-none border-0";
@@ -183,7 +199,13 @@ export class SteamLinkModal extends BaseModal {
           return;
         }
         this.personaName = ticket.personaName;
-        this.username = userMe.player.username ?? null;
+        // player.username is null for anyone who has never claimed one — the
+        // default state, not an edge case (usernameStatus starts
+        // "unclaimed"). Falling back to a placeholder noun there would gut
+        // the whole point of this screen: identifying which web account is
+        // about to be linked. Follows the repo-wide `username ?? publicId`
+        // convention (ApiSchemas.ts, PlayerName.ts) instead.
+        this.username = userMe.player.username ?? userMe.player.publicId;
         this.loadState = "ready";
         this.requestUpdate();
       },
@@ -231,7 +253,9 @@ export class SteamLinkModal extends BaseModal {
         return;
       }
       this.personaName = null;
-      this.username = userMe.player.username ?? null;
+      // See the same fallback in onOpen() above — publicId, never a
+      // placeholder noun, when the account has no claimed username yet.
+      this.username = userMe.player.username ?? userMe.player.publicId;
       this.loadState = "ready";
       this.requestUpdate();
     });
@@ -269,6 +293,26 @@ export class SteamLinkModal extends BaseModal {
     if (result.ok) {
       invalidateUserMe();
       this.redeemState = "success";
+    } else if (this.mode === "code") {
+      // A refused code has nothing left to fix on this confirm screen —
+      // Confirm would just resubmit the exact same, already-refused code.
+      // The alphabet still has eye-confusable pairs (B/8, S/5, 2/Z, G/6), so
+      // a one-character mistranscription is a realistic way to land here,
+      // and the only other action was Cancel — which closes the modal for
+      // good (Main.ts's strip() already removed #steam-link from the URL,
+      // so a refresh can't reopen it). Go back to the field instead, with
+      // the refusal explained inline, so the player can correct a character
+      // and try again without leaving the modal. Reset the confirm state
+      // too, so a later, successful resubmission doesn't render this stale
+      // failure the instant it reaches "ready" again.
+      this.loadState = "code_entry";
+      this.codeError = reasonMessage(
+        result.reason,
+        result.retryAfterSeconds ?? null,
+      );
+      this.redeemState = "idle";
+      this.failureReason = null;
+      this.retryAfterSeconds = null;
     } else {
       this.redeemState = "failed";
       this.failureReason = result.reason;
@@ -279,10 +323,19 @@ export class SteamLinkModal extends BaseModal {
 
   protected renderBody(): TemplateResult {
     if (this.loadState === "load_error") {
+      // The token path's copy ("...try again from Steam") is the wrong
+      // instruction on the code path — the player is already on the
+      // website holding a code, not going back through Steam.
+      const loadErrorMessage =
+        this.mode === "code"
+          ? translateText("steam_link_modal.load_error_code")
+          : translateText("steam_link_modal.load_error");
       return html`
         <div class="flex flex-col gap-4 p-6 text-center">
-          <p class="text-red-300 text-sm font-medium">
-            ${translateText("steam_link_modal.load_error")}
+          <p
+            class="steam-link-load-error-text text-red-300 text-sm font-medium"
+          >
+            ${loadErrorMessage}
           </p>
           <button
             class="${BUTTON_BASE} bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80"
@@ -350,8 +403,14 @@ export class SteamLinkModal extends BaseModal {
     }
 
     const ready = this.loadState === "ready";
+    // this.username is only ever set from userMe.player.username ?? publicId
+    // (see onOpen/handleCodeSubmit) — always a real, identifying string once
+    // ready. The `?? ""` here is just a defensive TS-null guard, never
+    // expected to actually render; there is deliberately no "unknown
+    // account" placeholder text, since a shared-machine confirm screen that
+    // can't name the account defeats the point of asking at all.
     const account = ready
-      ? (this.username ?? translateText("steam_link_modal.unknown_username"))
+      ? (this.username ?? "")
       : translateText("steam_link_modal.loading_placeholder");
 
     // Once ready, a null personaName means there is genuinely no Steam name
@@ -381,26 +440,12 @@ export class SteamLinkModal extends BaseModal {
         ? translateText("steam_link_modal.linking")
         : translateText("steam_link_modal.confirm");
 
-    // "rate_limited" is the one reason whose message takes a parameter
-    // (Retry-After's seconds, when the server sent one) — every other reason
-    // is a fixed string, so only this one needs the params argument at all.
-    const failureMessage = () => {
-      const reasonKey =
-        REASON_KEYS[this.failureReason ?? ""] ?? DEFAULT_REASON_KEY;
-      if (this.failureReason === "rate_limited") {
-        return translateText(reasonKey, {
-          seconds: this.retryAfterSeconds ?? 0,
-        });
-      }
-      return translateText(reasonKey);
-    };
-
     return html`
       <div class="flex flex-col gap-6 p-6">
         <p class="text-white text-lg font-medium text-center">${prompt}</p>
         ${this.redeemState === "failed"
           ? html`<p class="text-red-400 text-sm text-center">
-              ${failureMessage()}
+              ${reasonMessage(this.failureReason, this.retryAfterSeconds)}
             </p>`
           : null}
         <div class="flex gap-3">

@@ -1456,6 +1456,7 @@
     "invalid_code": "That doesn't look like a valid code. Check it and try again.",
     "linking": "Linking…",
     "load_error": "Couldn't load your account details. Please try again from Steam.",
+    "load_error_code": "Couldn't load your account details. Please try again.",
     "loading_placeholder": "…",
     "reason_account_already_has_steam": "Your account is already linked to a different Steam account.",
     "reason_expired": "This link has expired. Please try again from Steam.",
@@ -1464,8 +1465,7 @@
     "reason_steam_has_progress": "This Steam account already has its own progress and can't be merged.",
     "reason_steam_linked_elsewhere": "This Steam account is already linked to a different OpenFront account.",
     "success": "Your Steam account is now linked.",
-    "title": "Link Steam Account",
-    "unknown_username": "your account"
+    "title": "Link Steam Account"
   },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",
