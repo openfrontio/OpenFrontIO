@@ -1,10 +1,8 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { LiveStream } from "../../core/ApiSchemas";
-import { getLiveStreams } from "../Api";
+import { streamsFeed } from "../StreamsFeed";
 import { translateText } from "../Utils";
-
-const REFRESH_MS = 90_000; // re-fetch the served list so counts/liveness stay fresh
 
 // Watch URL for a stream: explicit `url` wins, else derive from platform + channel.
 export function watchUrl(s: LiveStream): string {
@@ -25,15 +23,16 @@ export function formatViewers(n: number): string {
   return `${(n / 1_000_000).toFixed(1)}M`;
 }
 
-// Homepage "Streaming Now" panel: a fixed-size bubble showing who is live playing OpenFront,
-// fed by getLiveStreams() (served JSON + bundled fallback). Streamers are compact cards in a
-// horizontal slider, so the bubble never grows with the count. Stays hidden until there is a
-// live stream, so the sibling news box keeps the full row when nobody is live.
+// Homepage "Streaming Now" panel: a fixed-size bubble showing who is live playing
+// OpenFront, fed by the shared streams feed. Every entry has been verified live
+// server-side (Twitch via Helix, YouTube via videos.list), so nothing here decides
+// liveness or fetches from a platform to find out. Streamers are compact cards in a
+// horizontal slider, so the bubble never grows with the count. Stays hidden until there
+// is a live stream, so the sibling news box keeps the full row when nobody is live.
 @customElement("streaming-now")
 export class StreamingNow extends LitElement {
   @state() private streams: LiveStream[] = [];
-  private refreshTimer: ReturnType<typeof setInterval> | null = null;
-  private loadGen = 0; // ignore a stale fetch that resolves after a newer one
+  private unsubscribe: (() => void) | null = null;
 
   // Light DOM so Tailwind classes apply (matches NewsBox).
   createRenderRoot() {
@@ -42,36 +41,33 @@ export class StreamingNow extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.style.display = "none"; // hidden until the first load finds a live stream (no flash)
-    // Desktop only (host carries `hidden lg:block`); below lg, don't even poll.
+    this.style.display = "none"; // hidden until the feed reports a live stream (no flash)
+    // Desktop only (host carries `hidden lg:block`); below lg, don't even subscribe.
     if (
       typeof window.matchMedia === "function" &&
       !window.matchMedia("(min-width: 1024px)").matches
     ) {
       return;
     }
-    void this.load();
-    this.refreshTimer = setInterval(() => void this.load(), REFRESH_MS);
+    // The shared poller owns the cadence and stops itself in-game and while the tab is
+    // hidden. This previously ran its own setInterval and only cleared it in
+    // disconnectedCallback — which never fires, because <play-page> is never removed
+    // from the DOM — so it polled for the entire session, games included.
+    this.unsubscribe = streamsFeed.subscribe((feed) => {
+      // Highest viewer counts first (defensive; the API already sorts).
+      this.streams = [...feed.live].sort((a, b) => b.viewers - a.viewers);
+      // Collapse the host when nobody is live; .streaming-live lets the play-page strip
+      // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
+      const live = this.streams.length > 0;
+      this.style.display = live ? "" : "none";
+      this.classList.toggle("streaming-live", live);
+    });
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.refreshTimer) clearInterval(this.refreshTimer);
-    this.refreshTimer = null;
-  }
-
-  private async load() {
-    const gen = ++this.loadGen;
-    const cfg = await getLiveStreams();
-    if (gen !== this.loadGen) return; // superseded by a newer load()
-    const streams = cfg.enabled ? cfg.streams : [];
-    // Highest viewer counts first (defensive; the backend already sorts).
-    this.streams = [...streams].sort((a, b) => b.viewers - a.viewers);
-    // Collapse the host when nobody is live; .streaming-live lets the play-page strip
-    // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
-    const live = this.streams.length > 0;
-    this.style.display = live ? "" : "none";
-    this.classList.toggle("streaming-live", live);
+    this.unsubscribe?.();
+    this.unsubscribe = null;
   }
 
   render() {

@@ -1,9 +1,10 @@
-import liveStreamsFallback from "../../../resources/live-streams.json";
 import {
   formatViewers,
   watchUrl,
 } from "../../../src/client/components/StreamingNow";
-import { LiveStreamsSchema } from "../../../src/core/ApiSchemas";
+
+// Every entry in the feed is a verified-live broadcast, so startedAt is always present.
+const startedAt = "2026-08-03T12:00:00Z";
 
 describe("StreamingNow", () => {
   describe("watchUrl", () => {
@@ -14,6 +15,7 @@ describe("StreamingNow", () => {
           channel: "zixer",
           displayName: "Zixer",
           viewers: 0,
+          startedAt,
         }),
       ).toBe("https://www.twitch.tv/zixer");
     });
@@ -25,6 +27,7 @@ describe("StreamingNow", () => {
           channel: "@ofm",
           displayName: "OFM",
           viewers: 0,
+          startedAt,
         }),
       ).toBe("https://www.youtube.com/@ofm");
     });
@@ -36,6 +39,7 @@ describe("StreamingNow", () => {
           channel: "zixer",
           displayName: "Zixer",
           viewers: 0,
+          startedAt,
           url: "https://example.com/live",
         }),
       ).toBe("https://example.com/live");
@@ -51,86 +55,6 @@ describe("StreamingNow", () => {
       expect(formatViewers(12345)).toBe("12K");
       expect(formatViewers(999_600)).toBe("1.0M"); // no "1000K"
       expect(formatViewers(1_200_000)).toBe("1.2M");
-    });
-  });
-
-  describe("LiveStreamsSchema", () => {
-    it("parses a valid config and applies defaults", () => {
-      const cfg = LiveStreamsSchema.parse({
-        enabled: true,
-        streams: [
-          { platform: "twitch", channel: "zixer", displayName: "Zixer" },
-        ],
-      });
-      expect(cfg.enabled).toBe(true);
-      expect(cfg.streams[0].viewers).toBe(0); // default
-    });
-
-    it("rejects a malformed stream entry (fails closed)", () => {
-      const parsed = LiveStreamsSchema.safeParse({
-        enabled: true,
-        streams: [{ platform: "kick", channel: "x", displayName: "X" }],
-      });
-      expect(parsed.success).toBe(false);
-    });
-
-    it("rejects a non-URL avatarUrl", () => {
-      const parsed = LiveStreamsSchema.safeParse({
-        enabled: true,
-        streams: [
-          {
-            platform: "twitch",
-            channel: "x",
-            displayName: "X",
-            avatarUrl: "not a url",
-          },
-        ],
-      });
-      expect(parsed.success).toBe(false);
-    });
-
-    it("rejects channels with URL delimiters or whitespace", () => {
-      for (const channel of ["foo/bar", "x?y=1", "a b", "x#frag", ""]) {
-        const parsed = LiveStreamsSchema.safeParse({
-          enabled: true,
-          streams: [{ platform: "twitch", channel, displayName: "X" }],
-        });
-        expect(parsed.success).toBe(false);
-      }
-    });
-
-    it("accepts normal Twitch logins and YouTube handles", () => {
-      for (const channel of [
-        "openfrontmasters",
-        "@OpenFront_Masters",
-        "a.b-c",
-      ]) {
-        const parsed = LiveStreamsSchema.safeParse({
-          enabled: true,
-          streams: [{ platform: "youtube", channel, displayName: "X" }],
-        });
-        expect(parsed.success).toBe(true);
-      }
-    });
-
-    it("rejects non-https url schemes (no javascript:/http:)", () => {
-      for (const url of ["javascript:alert(1)", "http://example.com"]) {
-        const parsed = LiveStreamsSchema.safeParse({
-          enabled: true,
-          streams: [
-            { platform: "twitch", channel: "x", displayName: "X", url },
-          ],
-        });
-        expect(parsed.success).toBe(false);
-      }
-    });
-  });
-
-  describe("bundled fallback", () => {
-    it("is valid and ships disabled/empty", () => {
-      const cfg = LiveStreamsSchema.parse(liveStreamsFallback);
-      expect(cfg.enabled).toBe(false);
-      expect(cfg.streams).toEqual([]);
     });
   });
 });
