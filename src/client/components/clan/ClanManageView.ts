@@ -16,7 +16,7 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
-import "../PlayerName";
+import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   type ClanRole,
   defaultOrderForSort,
@@ -554,10 +554,7 @@ export class ClanManageView extends LitElement {
           >
             ${renderRoleIcon(member.role)}
           </div>
-          <player-name
-            .username=${member.username}
-            .publicId=${member.publicId}
-          ></player-name>
+          ${playerNameLink(this, member.username, member.publicId)}
           <span class="text-white/30 text-[10px] whitespace-nowrap">
             ${translateText("clan_modal.joined_date", {
               date: formatClanDate(member.joinedAt),

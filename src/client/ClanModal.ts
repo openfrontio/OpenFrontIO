@@ -356,6 +356,8 @@ export class ClanModal extends BaseModal {
           @navigate-detail=${() => (this.view = "detail")}
           @navigate-bans=${() => (this.view = "bans")}
           @navigate-transfer=${() => (this.view = "transfer")}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
           @clan-updated=${(e: CustomEvent<Partial<ClanInfo>>) => {
             if (this.selectedClan) {
               this.selectedClan = { ...this.selectedClan, ...e.detail };
@@ -383,6 +385,8 @@ export class ClanModal extends BaseModal {
           .clanTag=${this.selectedClanTag}
           .selectedClan=${this.selectedClan}
           @navigate-back=${() => (this.view = "manage")}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
           @leadership-transferred=${() => {
             this.loadMyClans().then(() =>
               this.openDetail(this.selectedClanTag),
@@ -395,6 +399,8 @@ export class ClanModal extends BaseModal {
           .clanTag=${this.selectedClanTag}
           .selectedClan=${this.selectedClan}
           @navigate-back=${() => (this.view = "detail")}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
           @request-approved=${() => {
             if (this.selectedClan) {
               this.selectedClan = {
@@ -410,6 +416,8 @@ export class ClanModal extends BaseModal {
         return html`<clan-bans-view
           .clanTag=${this.selectedClanTag}
           @navigate-back=${() => (this.view = "manage")}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
         ></clan-bans-view>`;
       }
       // Default: detail view — dispatched by the active detail tab
@@ -609,6 +617,13 @@ export class ClanModal extends BaseModal {
     // rather than leave the user on an empty page.
     if (!this.selectedClanTag) {
       this.open({});
+      return;
+    }
+    // A sub-view (manage / transfer / requests / bans) survived the handoff in
+    // `view`, so reopening without a tab lands the user back on it.
+    if (this.view !== "detail") {
+      this.returningFromModalHandoff = true;
+      this.open({ clan: this.selectedClanTag });
       return;
     }
     if (this.profileOpenedFromGameHistory) {
