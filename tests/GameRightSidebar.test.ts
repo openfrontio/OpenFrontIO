@@ -101,6 +101,34 @@ describe("GameRightSidebar end timer warnings", () => {
     expect(sidebar.querySelector('[role="alert"]')).toBeNull();
   });
 
+  it("clears an active warning across disconnect and reconnect", async () => {
+    vi.useFakeTimers();
+    const { sidebar, setRemainingSeconds } = createSidebar();
+
+    await setRemainingSeconds(60);
+    expect(sidebar.querySelector('[role="alert"]')).not.toBeNull();
+
+    sidebar.remove();
+    expect(vi.getTimerCount()).toBe(0);
+    document.body.appendChild(sidebar);
+    await sidebar.updateComplete;
+
+    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("dismisses an active warning when the timer reaches zero", async () => {
+    vi.useFakeTimers();
+    const { sidebar, setRemainingSeconds } = createSidebar();
+
+    await setRemainingSeconds(60);
+    expect(sidebar.querySelector('[role="alert"]')).not.toBeNull();
+
+    await setRemainingSeconds(0);
+
+    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("flashes the timer for the last 30 seconds", async () => {
     const { sidebar, setRemainingSeconds } = createSidebar();
 

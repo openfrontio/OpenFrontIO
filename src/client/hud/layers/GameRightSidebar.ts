@@ -136,10 +136,7 @@ export class GameRightSidebar extends LitElement implements Controller {
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
-    if (this.oneMinuteWarningTimeout !== null) {
-      window.clearTimeout(this.oneMinuteWarningTimeout);
-      this.oneMinuteWarningTimeout = null;
-    }
+    this.dismissOneMinuteWarning();
   }
 
   getTickIntervalMs() {
@@ -182,7 +179,11 @@ export class GameRightSidebar extends LitElement implements Controller {
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
-      this.maybeShowOneMinuteWarning();
+      if (this.timer === 0) {
+        this.dismissOneMinuteWarning();
+      } else {
+        this.maybeShowOneMinuteWarning();
+      }
     } else {
       this.timer = elapsedSeconds;
     }
