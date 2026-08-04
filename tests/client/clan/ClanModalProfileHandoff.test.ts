@@ -208,6 +208,25 @@ describe("ClanModal — player-profile handoff", () => {
     expect(getElState(modal, "activeTab")).toBe("members");
   });
 
+  it("returns a profile opened from a sub-view to that sub-view", async () => {
+    // Manage/transfer/requests/bans have no tab of their own, so the Members
+    // tab fallback would drop the user a level up from where they clicked.
+    modal.open({ clan: "AAA" });
+    await waitForSubComponent(modal, "clan-detail-view");
+    setState(modal, "myRole" as keyof ClanModal, "leader" as never);
+    setState(modal, "view" as keyof ClanModal, "manage" as never);
+    await waitForSubComponent(modal, "clan-manage-view");
+
+    dispatchViewProfile("player-P", "clan-manage-view");
+    await flushAsync(modal);
+
+    modal.returnFromPlayerProfile();
+    await flushAsync(modal);
+
+    expect(getElState(modal, "selectedClanTag")).toBe("AAA");
+    expect(getElState(modal, "view")).toBe("manage");
+  });
+
   it("returns a member's profile to the clan's Game History tab", async () => {
     modal.open({ clan: "AAA" });
     await waitForSubComponent(modal, "clan-detail-view");

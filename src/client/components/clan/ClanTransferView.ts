@@ -9,7 +9,7 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
-import "../PlayerName";
+import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   filterMembersBySearch,
   renderLoadingSpinner,
@@ -155,27 +155,36 @@ export class ClanTransferView extends LitElement {
         <div class="space-y-2">
           ${filterMembersBySearch(nonLeaders, this.memberSearch).map(
             (m) => html`
-              <button
-                @click=${() => (this.transferTarget = m.publicId)}
-                class="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border cursor-pointer transition-all text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50
+              <div
+                class="relative w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border transition-all text-left
                       ${this.transferTarget === m.publicId
                   ? "bg-amber-500/10 border-amber-500/20"
                   : "bg-white/5 border-white/10 hover:bg-white/10"}"
-                aria-selected=${this.transferTarget === m.publicId}
               >
+                <button
+                  type="button"
+                  @click=${() => (this.transferTarget = m.publicId)}
+                  aria-pressed=${this.transferTarget === m.publicId}
+                  aria-labelledby=${`transfer-target-${m.publicId}`}
+                  class="absolute inset-0 w-full h-full rounded-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                ></button>
                 <div
-                  class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-xs font-bold shrink-0"
+                  class="relative pointer-events-none w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-xs font-bold shrink-0"
                 >
                   ${renderRoleIcon(m.role)}
                 </div>
-                <div class="flex-1 min-w-0">
-                  <player-name
-                    .username=${m.username}
-                    .publicId=${m.publicId}
-                  ></player-name>
+                <div
+                  id=${`transfer-target-${m.publicId}`}
+                  class="relative pointer-events-none flex-1 min-w-0"
+                >
+                  <span
+                    class="pointer-events-auto inline-flex max-w-full min-w-0"
+                  >
+                    ${playerNameLink(this, m.username, m.publicId)}
+                  </span>
                 </div>
                 <span
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0
+                  class="relative pointer-events-none text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0
                         ${m.role === "officer"
                     ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                     : "bg-white/10 text-white/40 border border-white/10"}"
@@ -185,7 +194,7 @@ export class ClanTransferView extends LitElement {
                 ${this.transferTarget === m.publicId
                   ? html`<svg
                       xmlns="http://www.w3.org/2000/svg"
-                      class="w-5 h-5 text-amber-400 shrink-0"
+                      class="relative pointer-events-none w-5 h-5 text-amber-400 shrink-0"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -198,7 +207,7 @@ export class ClanTransferView extends LitElement {
                       />
                     </svg>`
                   : ""}
-              </button>
+              </div>
             `,
           )}
         </div>
