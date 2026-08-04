@@ -267,37 +267,43 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     hasAlliance: boolean;
     hasTeam: boolean;
   }): string {
-    const { nameLength, iconCount, hasFlag, hasBetrayal, hasAlliance, hasTeam } =
-      params;
+    const {
+      nameLength,
+      iconCount,
+      hasFlag,
+      hasBetrayal,
+      hasAlliance,
+      hasTeam,
+    } = params;
 
-    // Approximate char-widths each element occupies at --text-lg. 
-    const PRESSURE = { //35 39.8 just player 41 for none, 43.3 for one, 46.7 for two, 50.9 for three
+    // Approximate char-widths each element occupies at --text-lg.
+    const PRESSURE = {
+      //35 39.8 just player 41 for none, 43.3 for one, 46.7 for two, 50.9 for three
       playerType: 6,
-      perIcon:  2.25,
-      icon:     1.25,
-      flag:     1.5,
+      perIcon: 2.25,
+      icon: 1.25,
+      flag: 1.5,
       betrayal: 4,
       alliance: 5.5,
-      team:     2.5,
+      team: 2.5,
     } as const;
 
     const iconPressure =
       PRESSURE.playerType +
-      iconCount   * PRESSURE.perIcon + 
-      (iconCount   ? PRESSURE.icon     : 0) +
-      (hasFlag     ? PRESSURE.flag     : 0) +
+      iconCount * PRESSURE.perIcon +
+      (iconCount ? PRESSURE.icon : 0) +
+      (hasFlag ? PRESSURE.flag : 0) +
       (hasBetrayal ? PRESSURE.betrayal : 0) +
       (hasAlliance ? PRESSURE.alliance : 0) +
-      (hasTeam     ? PRESSURE.team     : 0);
+      (hasTeam ? PRESSURE.team : 0);
 
-    
     const isDesktop = window.innerWidth >= 1024;
 
     // How many chars fit at --text-lg.
     const capacity = isDesktop ? 34 : 37;
     const mobileFactor = isDesktop ? 1 : 1.29;
     const scale = (capacity - iconPressure * mobileFactor) / nameLength;
-    
+
     //  lg breakpoint (1024px)
     if (isDesktop) {
       return `clamp(var(--text-lg) * .65, var(--text-lg) * ${scale.toFixed(3)}, var(--text-lg))`;
@@ -328,7 +334,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         .find((alliance) => alliance.other === player.id());
       if (alliance !== undefined) {
         allianceHtml = html` <div
-          class="${traitorTicks === 0 ? "ml-auto" : ""} flex items-center  mr-0 gap-1 text-sm font-bold leading-tight min-w-[17%]"
+          class="${traitorTicks === 0
+            ? "ml-auto"
+            : ""} flex items-center  mr-0 gap-1 text-sm font-bold leading-tight min-w-[17%]"
         >
           <img src=${allianceIcon} width="20" height="20" />
           ${this.allianceExpirationText(alliance)}
@@ -338,17 +346,14 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     if (traitorTicks > 0) {
       betrayalHtml = html`<span class="flex ml-auto items-center shrink-0 "
-              ><img
-          src=${traitorIcon}
-          alt=""
-          class="w-4 h-4 shrink-0"
-        />
+        ><img src=${traitorIcon} alt="" class="w-4 h-4 shrink-0" />
         <span
           class="text-sm text-red-900 
           drop-shadow-[-.2px_-.2px_.8px_rgba(0,0,0,.7),.2px_.2px_.8px_rgba(0,0,0,.7)]"
         >
-          ${renderDuration(Math.floor(traitorTicks / 10))}
-        </span><span>`;
+          ${renderDuration(Math.floor(traitorTicks / 10))} </span
+        ><span></span
+      ></span>`;
     }
 
     let playerType = "";
@@ -404,7 +409,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           </div>
         </div>
         <!-- Right: Player identity + Units below -->
-        <div class="flex flex-col justify-between self-stretch w-[100%] flex-grow-1">
+        <div
+          class="flex flex-col justify-between self-stretch w-[100%] flex-grow-1"
+        >
           <div
             class="flex items-center gap-1 md:gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
               isFriendly ?? false,
@@ -416,14 +423,21 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   src=${assetUrl(player.cosmetics.flag!)}
                 />`
               : html``}
-            <div class="shrink-10000 min-w-0"><span class="font-mono inline-block leading-[1.2] wrap-anywhere" style="font-size: ${this.getNameFontSize({
-              nameLength: player.displayName().length,
-              iconCount: playerIcons.length,
-              hasFlag: !!player.cosmetics.flag,
-              hasBetrayal: betrayalHtml !== null,
-              hasAlliance: allianceHtml !== null,
-              hasTeam: playerTeam !== "" && player.type() !== PlayerType.Bot,
-            })}">${player.displayName()}</span></div>
+            <div class="shrink-10000 min-w-0">
+              <span
+                class="font-mono inline-block leading-[1.2] wrap-anywhere"
+                style="font-size: ${this.getNameFontSize({
+                  nameLength: player.displayName().length,
+                  iconCount: playerIcons.length,
+                  hasFlag: !!player.cosmetics.flag,
+                  hasBetrayal: betrayalHtml !== null,
+                  hasAlliance: allianceHtml !== null,
+                  hasTeam:
+                    playerTeam !== "" && player.type() !== PlayerType.Bot,
+                })}"
+                >${player.displayName()}</span
+              >
+            </div>
             ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
@@ -443,8 +457,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               : html`<span class="text-gray-400 text-xs font-normal"
                   >${playerType}</span
                 >`}
-            ${this.renderPlayerNameIcons(playerIcons)}
-            ${betrayalHtml ?? ""}
+            ${this.renderPlayerNameIcons(playerIcons)} ${betrayalHtml ?? ""}
             ${allianceHtml ?? ""}
           </div>
           <div class="flex gap-0.5 lg:gap-1 items-center mt-0.5">
