@@ -21,17 +21,23 @@ const PAGE_LIMIT = 20;
  * must be left alone.
  */
 export function extractPublicIdFromUrl(input: string): string {
-  if (!input.startsWith("http")) return input;
+  // Schemes are case-insensitive, so `HTTPS://…` is a real link too.
+  if (!/^https?:\/\//i.test(input)) return input;
+  let url: URL;
   try {
-    const url = new URL(input);
-    const params = new URLSearchParams(url.hash.replace(/^#/, ""));
-    const publicId = params.get("publicID");
-    if (publicId === null || publicId === "") return input;
-    return publicId;
-  } catch (error) {
-    console.warn("Failed to parse profile URL", error);
+    url = new URL(input);
+  } catch {
+    // Half-typed and malformed URLs land here on every keystroke — expected,
+    // so don't log; just hand the raw text back for the server to reject.
     return input;
   }
+  // Modals are hash-routed (`…/#modal=profile&publicID=abc12345`), so the id is
+  // in the fragment, not the query string — `url.searchParams` is always empty
+  // here. Parse the fragment's own `key=value&…` pairs instead.
+  const params = new URLSearchParams(url.hash.replace(/^#/, ""));
+  const publicId = params.get("publicID");
+  if (publicId === null || publicId === "") return input;
+  return publicId;
 }
 
 @customElement("friends-list")

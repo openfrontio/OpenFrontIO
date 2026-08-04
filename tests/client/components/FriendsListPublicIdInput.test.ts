@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { extractPublicIdFromUrl } from "../../../src/client/components/FriendsList";
 
 describe("extractPublicIdFromUrl", () => {
@@ -26,6 +26,14 @@ describe("extractPublicIdFromUrl", () => {
     ).toBe("a+b");
   });
 
+  it("accepts an uppercase scheme", () => {
+    expect(
+      extractPublicIdFromUrl(
+        "HTTPS://openfront.io/#modal=profile&publicID=95UoOPh3",
+      ),
+    ).toBe("95UoOPh3");
+  });
+
   it("leaves a bare public id untouched", () => {
     expect(extractPublicIdFromUrl("95UoOPh3")).toBe("95UoOPh3");
   });
@@ -39,7 +47,16 @@ describe("extractPublicIdFromUrl", () => {
     expect(extractPublicIdFromUrl(url)).toBe(url);
   });
 
-  it("returns the input for an unparseable url-ish string", () => {
+  it("returns the input for an unparseable url-ish string without logging", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     expect(extractPublicIdFromUrl("http://")).toBe("http://");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("leaves a non-http scheme untouched", () => {
+    expect(
+      extractPublicIdFromUrl("ftp://openfront.io/#publicID=95UoOPh3"),
+    ).toBe("ftp://openfront.io/#publicID=95UoOPh3");
   });
 });
