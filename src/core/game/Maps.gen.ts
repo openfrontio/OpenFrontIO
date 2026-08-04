@@ -118,6 +118,7 @@ export enum GameMapType {
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
+  YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
   Yenisei = "Yenisei", // map-generator/assets/maps/yenisei/info.json
 }
@@ -1670,6 +1671,13 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.worldinverted",
     categories: ["world", "fictional"],
     multiplayerFrequency: 8,
+  },
+  {
+    id: "YangtzeRiver",
+    type: GameMapType.YangtzeRiver,
+    translationKey: "map.yangtzeriver",
+    categories: ["new", "asia"],
+    multiplayerFrequency: 3,
   },
   {
     id: "YellowSea",
