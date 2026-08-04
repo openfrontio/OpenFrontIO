@@ -2,7 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { type ClanBan, fetchClanBans, unbanClanMember } from "../../ClanApi";
 import { translateText } from "../../Utils";
-import "../PlayerName";
+import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   formatClanDate,
   renderLoadingSpinner,
@@ -150,17 +150,15 @@ export class ClanBansView extends LitElement {
                             />
                           </svg>
                         </div>
-                        <player-name
-                          .username=${ban.username}
-                          .publicId=${ban.publicId}
-                        ></player-name>
+                        ${playerNameLink(this, ban.username, ban.publicId)}
                         <span class="text-white/30 text-xs shrink-0"
                           >${translateText("clan_modal.banned_by_label")}</span
                         >
-                        <player-name
-                          .username=${ban.bannedByUsername}
-                          .publicId=${ban.bannedBy}
-                        ></player-name>
+                        ${playerNameLink(
+                          this,
+                          ban.bannedByUsername,
+                          ban.bannedBy,
+                        )}
                         <span class="text-white/30 text-xs shrink-0"
                           >${formatClanDate(ban.createdAt)}</span
                         >
