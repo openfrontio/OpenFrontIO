@@ -113,7 +113,7 @@ describe("PlayerStatsSummary", () => {
     document.body.replaceChildren();
   });
 
-  it("derives the selected bucket's win rate and split kill metrics", () => {
+  it("derives the selected bucket's win rate and gameplay metrics", () => {
     expect(buildPlayerStatsSummary(leafWithRecent)).toEqual({
       winRate: "60.0%",
       recentWinRate: "80.0%",
@@ -121,21 +121,6 @@ describe("PlayerStatsSummary", () => {
       wins: "3",
       losses: "2",
       metrics: [
-        {
-          key: "playerKills",
-          value: "2.0",
-          total: "10",
-        },
-        {
-          key: "nationKills",
-          value: "1.0",
-          total: "5",
-        },
-        {
-          key: "tribeKills",
-          value: "0.4",
-          total: "2",
-        },
         {
           key: "attacks",
           value: "2.00K",
@@ -155,7 +140,7 @@ describe("PlayerStatsSummary", () => {
     });
   });
 
-  it("renders six gameplay cards as 2x3 on mobile and 3x2 on desktop", async () => {
+  it("renders three gameplay cards as 2+1 on mobile and a single row on desktop", async () => {
     const summary = document.createElement(
       "player-stats-summary",
     ) as PlayerStatsSummary;
@@ -194,21 +179,11 @@ describe("PlayerStatsSummary", () => {
           stat.classList.contains("text-center"),
       ),
     ).toBe(true);
-    expect(summary.querySelectorAll("[data-stat]")).toHaveLength(6);
+    expect(summary.querySelectorAll("[data-stat]")).toHaveLength(3);
     const metricGrid =
       summary.querySelector("[data-stat]")?.parentElement?.classList;
     expect(metricGrid).toContain("grid-cols-2");
     expect(metricGrid).toContain("sm:grid-cols-3");
-    expect(metricGrid).not.toContain("lg:grid-cols-6");
-    expect(
-      summary.querySelector('[data-stat="playerKills"]')?.textContent,
-    ).toContain("2.0");
-    expect(
-      summary.querySelector('[data-stat="nationKills"]')?.textContent,
-    ).toContain("1.0");
-    expect(
-      summary.querySelector('[data-stat="tribeKills"]')?.textContent,
-    ).toContain("0.4");
     expect(
       summary.querySelector('[data-stat="attacks"]')?.textContent,
     ).toContain("2.00K");

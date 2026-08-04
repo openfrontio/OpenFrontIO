@@ -3,13 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import type { PlayerStatsLeaf } from "../../../../core/ApiSchemas";
 import { renderNumber, translateText } from "../../../Utils";
 
-type PlayerSummaryMetricKey =
-  | "playerKills"
-  | "nationKills"
-  | "tribeKills"
-  | "attacks"
-  | "nukes"
-  | "gold";
+type PlayerSummaryMetricKey = "attacks" | "nukes" | "gold";
 
 export interface PlayerSummaryMetric {
   key: PlayerSummaryMetricKey;
@@ -27,18 +21,12 @@ export interface PlayerStatsSummaryData {
 }
 
 const METRIC_LABELS: Record<PlayerSummaryMetricKey, string> = {
-  playerKills: "player_stats_tree.stats_player_kills_per_game",
-  nationKills: "player_stats_tree.stats_nation_kills_per_game",
-  tribeKills: "player_stats_tree.stats_tribe_kills_per_game",
   attacks: "player_stats_tree.stats_attacks_per_game",
   nukes: "player_stats_tree.stats_nukes_per_game",
   gold: "player_stats_tree.stats_gold_per_game",
 };
 
 const METRIC_TONES: Record<PlayerSummaryMetricKey, string> = {
-  playerKills: "text-violet-300 border-violet-400/20",
-  nationKills: "text-fuchsia-300 border-fuchsia-400/20",
-  tribeKills: "text-orange-300 border-orange-400/20",
   attacks: "text-cyan-300 border-cyan-400/20",
   nukes: "text-rose-300 border-rose-400/20",
   gold: "text-amber-300 border-amber-400/20",
@@ -61,8 +49,6 @@ export function buildPlayerStatsSummary(
 ): PlayerStatsSummaryData {
   const games = leaf.total;
   const stats = leaf.stats;
-  const [playerKills = 0n, nationKills = 0n, tribeKills = 0n] =
-    stats?.conquests ?? [];
   const attacks = stats?.attacks?.[0] ?? 0n;
   const nukes = Object.values(stats?.bombs ?? {}).reduce(
     (total, values) => total + (values?.[0] ?? 0n),
@@ -87,21 +73,6 @@ export function buildPlayerStatsSummary(
     wins: renderNumber(leaf.wins),
     losses: renderNumber(leaf.losses),
     metrics: [
-      {
-        key: "playerKills",
-        value: formatPerGame(playerKills, games),
-        total: renderNumber(playerKills),
-      },
-      {
-        key: "nationKills",
-        value: formatPerGame(nationKills, games),
-        total: renderNumber(nationKills),
-      },
-      {
-        key: "tribeKills",
-        value: formatPerGame(tribeKills, games),
-        total: renderNumber(tribeKills),
-      },
       {
         key: "attacks",
         value: formatPerGame(attacks, games),

@@ -1315,13 +1315,10 @@
     "stats_gold_per_game": "Gold / Game",
     "stats_last_100": "Last 100",
     "stats_losses": "Losses",
-    "stats_nation_kills_per_game": "Nation Kills / Game",
     "stats_nukes_per_game": "Nukes / Game",
     "stats_played": "Played",
-    "stats_player_kills_per_game": "Player Kills / Game",
     "stats_summary": "Performance summary",
     "stats_total": "{total} total",
-    "stats_tribe_kills_per_game": "Tribe Kills / Game",
     "stats_victories": "Victories",
     "stats_win_rate": "Win Rate"
   },
