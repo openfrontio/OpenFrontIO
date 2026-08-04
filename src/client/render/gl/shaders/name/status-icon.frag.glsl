@@ -16,6 +16,7 @@ flat in vec2 vFadedUV0;
 flat in vec2 vFadedUV1;
 flat in float vFlashAlpha;
 flat in float vOutline;          // 1.0 = draw a dark outline behind this icon
+flat in float vDecay;            // 1.0 = tint this icon red (decaying skull)
 in float vHoverAlpha;
 
 out vec4 fragColor;
@@ -49,6 +50,12 @@ void main() {
 
     // Above the cut line → show faded; below → show colored
     texel = vLocalUV.y < topCut ? fadedTexel : texel;
+  }
+
+  // Decaying skull: tint red, keeping some luminance so its shading still reads.
+  if (vDecay > 0.5) {
+    float lum = dot(texel.rgb, vec3(0.299, 0.587, 0.114));
+    texel.rgb = vec3(0.90, 0.10, 0.10) * (0.55 + 0.45 * lum);
   }
 
   // Traitor flash + hover fade: modulate alpha

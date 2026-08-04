@@ -38,41 +38,44 @@ interface WaveSchedule {
 // share rises linearly during each ramp and is flat during the grace and pauses.
 //
 // Design: the clock is a STALEMATE-BREAKER, not an early-game culler. It stays at
-// 0% for the first 10 minutes (combat decides the early game), then a 6-wave
-// squeeze climbs to 55% by the preset's cap. Levels accelerate (4/9/16/26/40/55%)
-// so the endgame tightens; the 6th wave (55%) only one side can hold, so — with
-// the crown exemption — it forces out everyone but the leader for a single winner.
-// Grace is a flat 10:00 on every preset; presets differ only in how long the
-// squeeze takes: 55% at 45/35/25/15 min for slow/normal/fast/veryfast.
-const LEVELS = [400, 900, 1600, 2600, 4000, 5500]; // 4, 9, 16, 26, 40, 55%
+// 0% for the first 10 minutes (combat decides the early game), then climbs to 35%
+// by the preset's cap.
+//
+// Ceiling and steps come from 85 tournament games: the runner-up's share at game
+// end has never exceeded 21.6%, so a bar above ~16% catches the same players while
+// a higher one climbs past the leader's own share. Steps stay small because half
+// the players alive at the end hold under 0.4% of the map.
+const LEVELS = [200, 400, 700, 1100, 1700, 2500, 3500]; // 2/4/7/11/17/25/35%
 const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
-  // grace 10:00, then six ~208s ramps + 50s pauses -> 55% at 35:00.
+  // grace 10:00, then seven 168s ramps + 54s pauses -> 35% at 35:00.
   normal: {
     graceSeconds: 600,
-    rampSeconds: [208, 208, 208, 208, 208, 210],
-    pauseSeconds: [50, 50, 50, 50, 50, 0],
+    rampSeconds: [168, 168, 168, 168, 168, 168, 168],
+    pauseSeconds: [54, 54, 54, 54, 54, 54, 0],
     levels: LEVELS,
   },
-  // grace 10:00, then six ~292s ramps + 70s pauses -> 55% at 45:00.
+  // grace 10:00, then seven 240s ramps + 70s pauses -> 35% at 45:00.
   slow: {
     graceSeconds: 600,
-    rampSeconds: [292, 292, 292, 292, 292, 290],
-    pauseSeconds: [70, 70, 70, 70, 70, 0],
+    rampSeconds: [240, 240, 240, 240, 240, 240, 240],
+    pauseSeconds: [70, 70, 70, 70, 70, 70, 0],
     levels: LEVELS,
   },
-  // grace 10:00, then six 125s ramps + 30s pauses -> 4/9/16/26/40/55% at
-  // 12:05/14:40/17:15/19:50/22:25/25:00.
+  // grace 10:00, then seven 102s ramps + 31s pauses -> 2/4/7/11/17/25/35% at
+  // 11:42/13:55/16:08/18:21/20:34/22:47/25:00 — the final bar lands exactly on a
+  // 25-minute cap, so it has the whole endgame to act rather than arriving at the
+  // buzzer, which is what a ceiling reached only at the cap amounts to.
   fast: {
     graceSeconds: 600,
-    rampSeconds: [125, 125, 125, 125, 125, 125],
-    pauseSeconds: [30, 30, 30, 30, 30, 0],
+    rampSeconds: [102, 102, 102, 102, 102, 102, 102],
+    pauseSeconds: [31, 31, 31, 31, 31, 31, 0],
     levels: LEVELS,
   },
-  // grace 10:00, then six 40s ramps + 12s pauses -> 55% at 15:00 (tight squeeze).
+  // grace 10:00, then seven 36s ramps + 8s pauses -> 35% at 15:00.
   veryfast: {
     graceSeconds: 600,
-    rampSeconds: [40, 40, 40, 40, 40, 40],
-    pauseSeconds: [12, 12, 12, 12, 12, 0],
+    rampSeconds: [36, 36, 36, 36, 36, 36, 36],
+    pauseSeconds: [8, 8, 8, 8, 8, 8, 0],
     levels: LEVELS,
   },
 };
@@ -110,8 +113,10 @@ function requiredBasisPoints(
  * Minimum tiles one SIDE must hold at `elapsed` game seconds — a solo player in
  * FFA, a whole team's combined territory in team modes. The bar is identical
  * for every side regardless of headcount: the clock's job is to shrink the
- * number of viable sides (floor(100 / wave%) can be above the bar at once,
- * down to 1 at the final 55% wave), and elimination happens at side
+ * number of viable sides (floor(100 / wave%) can be above the bar at once — two
+ * at the final 35% wave, so the bar narrows the field but no longer forces a
+ * single winner by arithmetic alone; territory rot is what closes out the last
+ * pair), and elimination happens at side
  * granularity, so scaling by member count only distorts it — a headcount-
  * scaled bar saturated at "hold the whole map" for big teams the moment the
  * grace ended, and dropped whenever a teammate died. One floored integer
@@ -215,6 +220,71 @@ export interface DoomsdayClockDrainConfig {
   drainStartPercent: number;
   drainMaxPercent: number;
   drainRampSeconds: number;
+}
+
+/** Upper bound (exclusive) of both rot noise fields, so callers share a scale. */
+export const ROT_NOISE_SCALE = 1 << 16;
+
+// R2 low-discrepancy lattice constants (inverse plastic-number powers) at 2^32.
+const R2_X = 3242174889;
+const R2_Y = 2447445413;
+
+/**
+ * Even, blue-noise-like per-tile value in [0, ROT_NOISE_SCALE): used to place
+ * scattered pinholes. Taking the lowest values gives points that are near-evenly
+ * spaced, where a plain hash clumps — measured on a 60x60 grid, 0% of picks touch
+ * a neighbour here against 32% for white noise.
+ *
+ * Deliberately NOT avalanched: the evenness is the lattice being linear in x and
+ * y, and hashing the result measures worse than white noise (36% touching).
+ */
+export function rotSpeckleNoise(x: number, y: number, salt: number): number {
+  const h =
+    (Math.imul(x, R2_X) + Math.imul(y, R2_Y) + Math.imul(salt, 0x9e3779b9)) >>>
+    0;
+  return (h >>> 16) % ROT_NOISE_SCALE;
+}
+
+/**
+ * Unstructured per-tile value in [0, ROT_NOISE_SCALE): used to order the rot
+ * front. This one MUST be hashed. The lattice above is striped, and ranking an
+ * advancing front by it walks along a stripe and grows a straight 80x21 filament
+ * instead of a shape.
+ */
+export function rotFrontNoise(tile: number, salt: number): number {
+  let h = (Math.imul(tile, 0x27d4eb2d) ^ Math.imul(salt, 0x9e3779b9)) | 0;
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x2545f491);
+  h ^= h >>> 13;
+  return (h >>> 16) % ROT_NOISE_SCALE;
+}
+
+export interface DoomsdayClockFloorConfig {
+  /** Where the troop floor settles, as a percent of max (the long-run floor). */
+  drainFloorPercent: number;
+  /** Where the troop floor STARTS, as a percent of max, before it decays. */
+  floorStartPercent: number;
+  /** How long the floor takes to decay from the start down to drainFloorPercent. */
+  floorDecaySeconds: number;
+}
+
+/**
+ * Troop floor `secondsPastWarn` into the decay: linear from floorStartPercent down
+ * to drainFloorPercent over floorDecaySeconds, flat after. Integer-only.
+ */
+export function doomsdayClockTroopFloor(
+  maxTroops: number,
+  secondsPastWarn: number,
+  cfg: DoomsdayClockFloorConfig,
+): number {
+  const end = cfg.drainFloorPercent;
+  const span = cfg.floorStartPercent - end;
+  const t = Math.max(0, secondsPastWarn);
+  const pct =
+    span > 0 && cfg.floorDecaySeconds > 0 && t < cfg.floorDecaySeconds
+      ? cfg.floorStartPercent - Math.floor((span * t) / cfg.floorDecaySeconds)
+      : end;
+  return Math.floor((maxTroops * pct) / 100);
 }
 
 // Fixed-point scale for the convex drain curve. (t/r)^exponent is evaluated as a

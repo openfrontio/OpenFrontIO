@@ -565,6 +565,9 @@ export interface Player {
   markTraitor(): void;
   // Doomsday Clock (anti-stall): marked when below the rising territory bar.
   inDoomsdayClock(): boolean;
+  /** Territory is actively rotting away (the final doomsday phase). */
+  isDecaying(): boolean;
+  markRotted(): void;
   doomsdayClockTicks(): number;
   enterDoomsdayClock(): void;
   clearDoomsdayClock(): void;
