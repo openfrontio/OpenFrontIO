@@ -102,7 +102,7 @@ describe("PlayerStatsTable", () => {
       "player_stats_table.workers": "81",
       "player_stats_table.war": "82",
       "player_stats_table.trade": "83",
-      "player_stats_table.steal": "84",
+      "player_stats_table.piracy": "84",
       "player_stats_table.trains": "85",
       "player_stats_table.trains_external": "86",
     });
@@ -189,7 +189,7 @@ describe("PlayerStatsTable", () => {
       "player_stats_table.workers": "0",
       "player_stats_table.war": "0",
       "player_stats_table.trade": "0",
-      "player_stats_table.steal": "0",
+      "player_stats_table.piracy": "0",
       "player_stats_table.trains": "0",
       "player_stats_table.trains_external": "0",
     });

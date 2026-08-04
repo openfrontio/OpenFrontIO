@@ -256,7 +256,7 @@ export class PlayerStatsTable extends LitElement {
                     ${translateText("player_stats_table.trade")}
                   </th>
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.steal")}
+                    ${translateText("player_stats_table.piracy")}
                   </th>
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
                     ${translateText("player_stats_table.trains")}
