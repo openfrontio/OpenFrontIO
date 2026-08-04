@@ -10,7 +10,7 @@ import {
   sendFriendRequest,
 } from "../FriendsApi";
 import { showToast, translateText } from "../Utils";
-import "./PlayerName";
+import { playerNameLink } from "./ui/PlayerNameLink";
 
 const PAGE_LIMIT = 20;
 
@@ -221,18 +221,6 @@ export class FriendsList extends LitElement {
     return new Date(iso).toLocaleDateString();
   }
 
-  // Bubble up to the account modal, which opens the player profile modal
-  // (and its back button returns here). Same handoff as clan/leaderboard rows.
-  private viewProfile(publicId: string): void {
-    this.dispatchEvent(
-      new CustomEvent<{ publicId: string }>("view-profile", {
-        detail: { publicId },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
   render(): TemplateResult {
     if (this.loading) {
       return html`
@@ -347,12 +335,7 @@ export class FriendsList extends LitElement {
         class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
       >
         <div class="flex-1 min-w-0">
-          <player-name
-            .username=${entry.username}
-            .publicId=${entry.publicId}
-            .nameClass=${"font-bold text-blue-300 truncate hover:underline"}
-            .onNameClick=${() => this.viewProfile(entry.publicId)}
-          ></player-name>
+          ${playerNameLink(this, entry.username, entry.publicId)}
           <div class="text-white/30 text-[10px] mt-0.5">
             ${this.formatDate(entry.createdAt)}
           </div>
@@ -421,12 +404,7 @@ export class FriendsList extends LitElement {
                 class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
               >
                 <div class="flex-1 min-w-0">
-                  <player-name
-                    .username=${f.username}
-                    .publicId=${f.publicId}
-                    .nameClass=${"font-bold text-blue-300 truncate hover:underline"}
-                    .onNameClick=${() => this.viewProfile(f.publicId)}
-                  ></player-name>
+                  ${playerNameLink(this, f.username, f.publicId)}
                   <div class="text-white/30 text-[10px] mt-0.5">
                     ${translateText("friends.friends_since", {
                       date: this.formatDate(f.createdAt),
