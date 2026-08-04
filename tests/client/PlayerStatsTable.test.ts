@@ -59,18 +59,21 @@ function text(node: Element | null | undefined): string {
 }
 
 /**
- * Pairs each header with the cell in the same column position, for the table
- * whose first header matches `firstHeader`.
+ * Pairs each column header with the cell beneath it, for the section whose
+ * heading matches. Sections with a single unnamed row have no label column,
+ * so headers and cells line up one-to-one either way.
  */
 function columnsOf(
   root: PlayerStatsTable,
-  firstHeader: string,
+  heading: string,
   rowMatch?: string,
 ): Record<string, string> {
-  const table = Array.from(root.querySelectorAll("table")).find(
-    (candidate) => text(candidate.querySelector("th")) === firstHeader,
+  const section = Array.from(root.querySelectorAll(":scope > div > div")).find(
+    (candidate) => text(candidate.firstElementChild) === heading,
   );
-  expect(table, `table headed "${firstHeader}" should exist`).toBeDefined();
+  expect(section, `section "${heading}" should exist`).toBeDefined();
+  const table = section?.querySelector("table");
+  expect(table, `table under "${heading}" should exist`).toBeDefined();
 
   const headers = Array.from(table?.querySelectorAll("thead th") ?? []).map(
     text,
@@ -97,8 +100,7 @@ describe("PlayerStatsTable", () => {
   it("lines gold columns up with their sources", async () => {
     const table = await renderTable(stats);
 
-    expect(columnsOf(table, "player_stats_table.gold")).toEqual({
-      "player_stats_table.gold": "player_stats_table.count",
+    expect(columnsOf(table, "player_stats_table.gold_stats")).toEqual({
       "player_stats_table.workers": "81",
       "player_stats_table.war": "82",
       "player_stats_table.trade": "83",
@@ -111,10 +113,9 @@ describe("PlayerStatsTable", () => {
   it("shows attack counts under the matching headers", async () => {
     const table = await renderTable(stats);
 
-    expect(columnsOf(table, "player_stats_table.attack")).toEqual({
-      "player_stats_table.attack": "player_stats_table.count",
+    expect(columnsOf(table, "player_stats_table.attack_stats")).toEqual({
       "player_stats_table.sent": "11",
-      "player_stats_table.received": "12",
+      "player_stats_table.incoming": "12",
       "player_stats_table.cancelled": "13",
     });
   });
@@ -122,8 +123,7 @@ describe("PlayerStatsTable", () => {
   it("shows betrayals", async () => {
     const table = await renderTable(stats);
 
-    expect(columnsOf(table, "player_stats_table.alliances")).toEqual({
-      "player_stats_table.alliances": "player_stats_table.count",
+    expect(columnsOf(table, "player_stats_table.diplomacy_stats")).toEqual({
       "player_stats_table.betrayals": "7",
     });
   });
@@ -134,7 +134,7 @@ describe("PlayerStatsTable", () => {
     expect(
       columnsOf(
         table,
-        "player_stats_table.ship_type",
+        "player_stats_table.ship_arrivals",
         "player_stats_table.unit.trade",
       ),
     ).toEqual({
@@ -152,7 +152,7 @@ describe("PlayerStatsTable", () => {
     expect(
       columnsOf(
         table,
-        "player_stats_table.building",
+        "player_stats_table.building_stats",
         "player_stats_table.unit.city",
       ),
     ).toEqual({
@@ -164,28 +164,49 @@ describe("PlayerStatsTable", () => {
     });
   });
 
+  it("keeps warships out of the buildings table and gives them their own", async () => {
+    const table = await renderTable(stats);
+
+    const buildings = Array.from(table.querySelectorAll("table")).find(
+      (candidate) =>
+        text(candidate.querySelector("th")) === "player_stats_table.building",
+    );
+    expect(buildings, "buildings table should exist").toBeDefined();
+    // The six structures, with the warship row moved to its own section.
+    expect(buildings?.querySelectorAll("tbody tr")).toHaveLength(6);
+    expect(buildings?.textContent).not.toContain(
+      "player_stats_table.unit.wshp",
+    );
+
+    expect(columnsOf(table, "player_stats_table.warship_stats")).toEqual({
+      "player_stats_table.built": "151",
+      "player_stats_table.destroyed": "152",
+      "player_stats_table.captured": "153",
+      "player_stats_table.lost": "154",
+    });
+  });
+
   it("shows nuke columns in launched/landed/hits order", async () => {
     const table = await renderTable(stats);
 
     expect(
       columnsOf(
         table,
-        "player_stats_table.weapon",
+        "player_stats_table.nuke_stats",
         "player_stats_table.unit.abomb",
       ),
     ).toEqual({
       "player_stats_table.weapon": "player_stats_table.unit.abomb",
       "player_stats_table.launched": "41",
       "player_stats_table.landed": "42",
-      "player_stats_table.hits": "43",
+      "player_stats_table.intercepted": "43",
     });
   });
 
   it("renders zeroes rather than blanks when stats are missing", async () => {
     const table = await renderTable(undefined);
 
-    expect(columnsOf(table, "player_stats_table.gold")).toEqual({
-      "player_stats_table.gold": "player_stats_table.count",
+    expect(columnsOf(table, "player_stats_table.gold_stats")).toEqual({
       "player_stats_table.workers": "0",
       "player_stats_table.war": "0",
       "player_stats_table.trade": "0",
@@ -193,8 +214,7 @@ describe("PlayerStatsTable", () => {
       "player_stats_table.trains": "0",
       "player_stats_table.trains_external": "0",
     });
-    expect(columnsOf(table, "player_stats_table.alliances")).toEqual({
-      "player_stats_table.alliances": "player_stats_table.count",
+    expect(columnsOf(table, "player_stats_table.diplomacy_stats")).toEqual({
       "player_stats_table.betrayals": "0",
     });
   });

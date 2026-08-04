@@ -12,9 +12,6 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
       if (key === "player_stats_tree.stats_record") {
         return `${args?.wins}W / ${args?.losses}L`;
       }
-      if (key === "player_stats_tree.stats_total") {
-        return `${args?.total} total`;
-      }
       if (key === "player_stats_tree.stats_played") {
         return "Played";
       }
@@ -53,7 +50,18 @@ const leaf: PlayerStatsLeaf = {
       abomb: [5n, 4n, 1n],
       hbomb: [5n, 3n, 2n],
     },
-    gold: [100n, 200n, 300n, 400n, 500n],
+    gold: [100n, 200n, 300n, 400n, 500n, 600n],
+    boats: {
+      trans: [20n, 15n, 2n, 3n],
+      trade: [40n, 30n, 8n, 5n],
+    },
+    units: {
+      city: [10n, 1n, 2n, 3n],
+      fact: [4n, 0n, 0n, 0n],
+      defp: [3n, 0n, 0n, 0n],
+      port: [5n, 0n, 0n, 1n],
+      wshp: [7n, 2n, 1n, 4n],
+    },
   },
 };
 
@@ -122,25 +130,74 @@ describe("PlayerStatsSummary", () => {
       losses: "2",
       metrics: [
         {
-          key: "attacks",
+          key: "cities",
+          value: "2.0",
+        },
+        {
+          key: "ports",
+          value: "1.0",
+        },
+        {
+          key: "factories",
+          value: "0.8",
+        },
+        {
+          key: "defensePosts",
+          value: "0.6",
+        },
+        {
+          key: "transports",
+          value: "4.0",
+        },
+        {
+          key: "landings",
+          value: "3.0",
+        },
+        {
+          key: "tradeArrived",
+          value: "6.0",
+        },
+        {
+          key: "tradeCaptured",
+          value: "1.6",
+        },
+        {
+          key: "outgoing",
           value: "2.00K",
-          total: "10.0K",
+        },
+        {
+          key: "incoming",
+          value: "800",
         },
         {
           key: "nukes",
           value: "2.0",
-          total: "10",
         },
         {
-          key: "gold",
-          value: "300",
-          total: "1.50K",
+          key: "warships",
+          value: "1.4",
+        },
+        {
+          key: "tradeGold",
+          value: "60",
+        },
+        {
+          key: "piracyGold",
+          value: "80",
+        },
+        {
+          key: "trainGold",
+          value: "100",
+        },
+        {
+          key: "othersTrainGold",
+          value: "120",
         },
       ],
     });
   });
 
-  it("renders three gameplay cards as 2+1 on mobile and a single row on desktop", async () => {
+  it("renders sixteen gameplay cards as 4x4 on desktop", async () => {
     const summary = document.createElement(
       "player-stats-summary",
     ) as PlayerStatsSummary;
@@ -179,20 +236,67 @@ describe("PlayerStatsSummary", () => {
           stat.classList.contains("text-center"),
       ),
     ).toBe(true);
-    expect(summary.querySelectorAll("[data-stat]")).toHaveLength(3);
+    expect(summary.querySelectorAll("[data-stat]")).toHaveLength(16);
+    // Every tile spells out the unit next to the number rather than in the
+    // label, so the value reads as "16 / game".
+    const cities = summary.querySelector('[data-stat="cities"]');
+    expect(cities?.querySelector("[data-per-game]")?.textContent).toBe(
+      "player_stats_tree.stats_per_game_suffix",
+    );
+    expect(summary.querySelectorAll("[data-per-game]")).toHaveLength(16);
+
     const metricGrid =
       summary.querySelector("[data-stat]")?.parentElement?.classList;
     expect(metricGrid).toContain("grid-cols-2");
-    expect(metricGrid).toContain("sm:grid-cols-3");
+    expect(metricGrid).toContain("sm:grid-cols-4");
     expect(
-      summary.querySelector('[data-stat="attacks"]')?.textContent,
+      summary.querySelector('[data-stat="outgoing"]')?.textContent,
     ).toContain("2.00K");
+    expect(
+      summary.querySelector('[data-stat="incoming"]')?.textContent,
+    ).toContain("800");
+    expect(
+      summary.querySelector('[data-stat="warships"]')?.textContent,
+    ).toContain("1.4");
+    expect(
+      summary.querySelector('[data-stat="cities"]')?.textContent,
+    ).toContain("2.0");
+    expect(summary.querySelector('[data-stat="ports"]')?.textContent).toContain(
+      "1.0",
+    );
+    expect(
+      summary.querySelector('[data-stat="tradeGold"]')?.textContent,
+    ).toContain("60");
+    expect(
+      summary.querySelector('[data-stat="piracyGold"]')?.textContent,
+    ).toContain("80");
+    expect(
+      summary.querySelector('[data-stat="trainGold"]')?.textContent,
+    ).toContain("100");
+    expect(
+      summary.querySelector('[data-stat="othersTrainGold"]')?.textContent,
+    ).toContain("120");
     expect(summary.querySelector('[data-stat="nukes"]')?.textContent).toContain(
       "2.0",
     );
-    expect(summary.querySelector('[data-stat="gold"]')?.textContent).toContain(
-      "300",
-    );
+    expect(
+      summary.querySelector('[data-stat="factories"]')?.textContent,
+    ).toContain("0.8");
+    expect(
+      summary.querySelector('[data-stat="transports"]')?.textContent,
+    ).toContain("4.0");
+    expect(
+      summary.querySelector('[data-stat="tradeArrived"]')?.textContent,
+    ).toContain("6.0");
+    expect(
+      summary.querySelector('[data-stat="tradeCaptured"]')?.textContent,
+    ).toContain("1.6");
+    expect(
+      summary.querySelector('[data-stat="landings"]')?.textContent,
+    ).toContain("3.0");
+    expect(
+      summary.querySelector('[data-stat="defensePosts"]')?.textContent,
+    ).toContain("0.6");
   });
 
   it("shows no recent win rate when the selected bucket has no recent games", () => {
