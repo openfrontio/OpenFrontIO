@@ -123,5 +123,9 @@
     "ws": "^8.21.0",
     "zod": "^4.4.2"
   },
-  "type": "module"
+  "type": "module",
+  "allowScripts": {
+    "canvas@3.2.3": true,
+    "esbuild@0.28.1": true
+  }
 }

@@ -1,0 +1,456 @@
+{
+  "id": "Leeds",
+  "name": "Leeds",
+  "translation_key": "map.leeds",
+  "categories": [
+    "europe"
+	],
+  "mapInfoState": {
+    "width": 2205,
+    "height": 1224,
+    "originalWidth": 1800,
+    "originalHeight": 1000,
+    "cropData": {
+      "isCropped": false,
+      "cropX": 0,
+      "cropY": 0,
+      "cropWidth": 0,
+      "cropHeight": 0,
+      "originalWidth": 0,
+      "originalHeight": 0
+    },
+    "colorMappings": []
+  },
+  "nations": [
+    {
+      "coordinates": [1403, 448],
+      "name": "Quarry Hill",
+      "strength": 1
+    },
+    {
+      "coordinates": [1457, 918],
+      "name": "Clarence Dock",
+      "strength": 1
+    },
+    {
+      "coordinates": [1486, 804],
+      "name": "Fearn's Island",
+      "strength": 1
+    },
+    {
+      "coordinates": [1443, 691],
+      "name": "Steander",
+      "strength": 1
+    },
+    {
+      "coordinates": [1617, 595],
+      "name": "Bank",
+      "strength": 1
+    },
+    {
+      "coordinates": [1786, 772],
+      "name": "Richmond Hill",
+      "strength": 1
+    },
+    {
+      "coordinates": [1021, 566],
+      "name": "Trinity",
+      "strength": 1
+    },
+    {
+      "coordinates": [1070, 141],
+      "name": "Arena Quarter",
+      "strength": 1
+    },
+    {
+      "coordinates": [851, 257],
+      "name": "Millenium Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [636, 53],
+      "name": "University of Leeds",
+      "strength": 1
+    },
+    {
+      "coordinates": [1008, 833],
+      "name": "South Bank",
+      "strength": 1
+    },
+    {
+      "coordinates": [1201, 587],
+      "name": "Kirkgate",
+      "strength": 1
+    },
+    {
+      "coordinates": [872, 429],
+      "name": "Briggate",
+      "strength": 1
+    },
+    {
+      "coordinates": [1180, 881],
+      "name": "Aire Park",
+      "strength": 1
+    },
+    {
+      "coordinates": [1129, 691],
+      "name": "Crown Point",
+      "strength": 1
+    },
+    {
+      "coordinates": [1218, 642],
+      "name": "The Calls",
+      "strength": 1
+    },
+    {
+      "coordinates": [1244, 692],
+      "name": "Warehouse Hill",
+      "strength": 1
+    },
+    {
+      "coordinates": [723, 482],
+      "name": "City Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [798, 474],
+      "name": "Park Row",
+      "strength": 1
+    },
+    {
+      "coordinates": [1012, 375],
+      "name": "Dortmund Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [957, 383],
+      "name": "Headrow",
+      "strength": 1
+    },
+    {
+      "coordinates": [576, 344],
+      "name": "Park Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [1021, 251],
+      "name": "Merrion",
+      "strength": 1
+    },
+    {
+      "coordinates": [960, 125],
+      "name": "Queen Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [1493, 256],
+      "name": "Mabgate",
+      "strength": 1
+    },
+    {
+      "coordinates": [1757, 16],
+      "name": "St. James",
+      "strength": 1
+    },
+    {
+      "coordinates": [1232, 175],
+      "name": "Lovell Park",
+      "strength": 1
+    },
+    {
+      "coordinates": [1052, 15],
+      "name": "Little London",
+      "strength": 1
+    },
+    {
+      "coordinates": [792, 19],
+      "name": "Blenheims",
+      "strength": 1
+    },
+    {
+      "coordinates": [43, 774],
+      "name": "Armley",
+      "strength": 1
+    },
+    {
+      "coordinates": [568, 870],
+      "name": "Holbeck",
+      "strength": 1
+    },
+    {
+      "coordinates": [748, 779],
+      "name": "Granary Wharf",
+      "strength": 1
+    },
+    {
+      "coordinates": [841, 785],
+      "name": "Brewery Wharf",
+      "strength": 1
+    },
+    {
+      "coordinates": [1390, 785],
+      "name": "Leeds Dam Island",
+      "strength": 1
+    },
+    {
+      "coordinates": [1778, 924],
+      "name": "Cross Green",
+      "strength": 1
+    },
+    {
+      "coordinates": [1684, 985],
+      "name": "Knostrop",
+      "strength": 1
+    },
+    {
+      "coordinates": [440, 524],
+      "name": "Wellington Place",
+      "strength": 1
+    },
+    {
+      "coordinates": [462, 19],
+      "name": "Woodhouse",
+      "strength": 1
+    },
+    {
+      "coordinates": [55, 943],
+      "name": "Wortley",
+      "strength": 1
+    },
+    {
+      "coordinates": [670, 947],
+      "name": "Temple Works",
+      "strength": 1
+    },
+    {
+      "coordinates": [695, 831],
+      "name": "Temple Village",
+      "strength": 1
+    },
+    {
+      "coordinates": [450, 759],
+      "name": "Monk Bridge",
+      "strength": 1
+    },
+    {
+      "coordinates": [294, 518],
+      "name": "Wellington Bridge",
+      "strength": 1
+    },
+    {
+      "coordinates": [142, 265],
+      "name": "Kirkstall Road",
+      "strength": 1
+    },
+    {
+      "coordinates": [1223, 524],
+      "name": "Victoria Gate",
+      "strength": 1
+    },
+    {
+      "coordinates": [1298, 280],
+      "name": "Leylands",
+      "strength": 1
+    },
+    {
+      "coordinates": [1458, 45],
+      "name": "Sheepscar",
+      "strength": 1
+    },
+    {
+      "coordinates": [1762, 265],
+      "name": "Burmantofts",
+      "strength": 1
+    },
+    {
+      "coordinates": [1516, 700],
+      "name": "Flax Place",
+      "strength": 1
+    },
+    {
+      "coordinates": [1580, 697],
+      "name": "Saxton Gardens",
+      "strength": 1
+    },
+    {
+      "coordinates": [451, 825],
+      "name": "Whitehall",
+      "strength": 1
+    },
+    {
+      "coordinates": [791, 826],
+      "name": "Camp Field",
+      "strength": 1
+    },
+    {
+      "coordinates": [347, 207],
+      "name": "Hanover Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [226, 159],
+      "name": "Rosebank Gardens",
+      "strength": 1
+    },
+    {
+      "coordinates": [101, 384],
+      "name": "Albion Park",
+      "strength": 1
+    },
+    {
+      "coordinates": [1688, 130],
+      "name": "Lincoln Green",
+      "strength": 1
+    },
+    {
+      "coordinates": [1332, 625],
+      "name": "St. Peter's",
+      "strength": 1
+    },
+    {
+      "coordinates": [1027, 715],
+      "name": "Swinegate",
+      "strength": 1
+    },
+    {
+      "coordinates": [775, 531],
+      "name": "Bishopsgate",
+      "strength": 1
+    },
+    {
+      "coordinates": [901, 737],
+      "name": "Dark Arches",
+      "strength": 1
+    },
+    {
+      "coordinates": [625, 755],
+      "name": "Canal Wharf",
+      "strength": 1
+    },
+    {
+      "coordinates": [952, 557],
+      "name": "Calls Wharf",
+      "strength": 1
+    },
+    {
+      "coordinates": [809, 965],
+      "name": "Holbeck Mills",
+      "strength": 1
+    },
+    {
+      "coordinates": [1136, 826],
+      "name": "Tetley Yard",
+      "strength": 1
+    },
+    {
+      "coordinates": [1583, 358],
+      "name": "New Town",
+      "strength": 1
+    },
+    {
+      "coordinates": [1609, 240],
+      "name": "Primrose Hill",
+      "strength": 1
+    },
+    {
+      "coordinates": [1244, 426],
+      "name": "Eastgate",
+      "strength": 1
+    },
+    {
+      "coordinates": [694, 382],
+      "name": "Westgate",
+      "strength": 1
+    },
+    {
+      "coordinates": [829, 78],
+      "name": "Leeds Beckett University",
+      "strength": 1
+    },
+    {
+      "coordinates": [696, 214],
+      "name": "Leeds General Infirmary",
+      "strength": 1
+    },
+    {
+      "coordinates": [814, 307],
+      "name": "Civic Quarter",
+      "strength": 1
+    },
+    {
+      "coordinates": [508, 458],
+      "name": "Financial Quarter",
+      "strength": 1
+    },
+    {
+      "coordinates": [1158, 503],
+      "name": "Victoria Quarter",
+      "strength": 1
+    },
+    {
+      "coordinates": [924, 473],
+      "name": "Corn Exchange",
+      "strength": 1
+    },
+    {
+      "coordinates": [883, 865],
+      "name": "Bridgewater Place",
+      "strength": 1
+    },
+    {
+      "coordinates": [774, 152],
+      "name": "Clarendon",
+      "strength": 1
+    },
+    {
+      "coordinates": [1068, 86],
+      "name": "Sky Plaza",
+      "strength": 1
+    },
+    {
+      "coordinates": [1130, 204],
+      "name": "Opal Tower",
+      "strength": 1
+    },
+    {
+      "coordinates": [43, 55],
+      "name": "Burley",
+      "strength": 1
+    },
+    {
+      "coordinates": [1778, 622],
+      "name": "East End Park",
+      "strength": 1
+    },
+    {
+      "coordinates": [1681, 361],
+      "name": "Ebor Gardens",
+      "strength": 1
+    },
+    {
+      "coordinates": [1583, 521],
+      "name": "Marsh Lane",
+      "strength": 1
+    },
+    {
+      "coordinates": [826, 206],
+      "name": "Civic Hall",
+      "strength": 1
+    },
+    {
+      "coordinates": [650, 308],
+      "name": "Thoresby Place",
+      "strength": 1
+    },
+    {
+      "coordinates": [269, 581],
+      "name": "City Island",
+      "strength": 1
+    },
+    {
+      "coordinates": [309, 651],
+      "name": "Aire Valley",
+      "strength": 1
+    }
+  ]
+}
