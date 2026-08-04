@@ -8,6 +8,11 @@ import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
 import { modalHeader } from "./ui/ModalHeader";
 
+// Mirrors MAX_GROUPED_ELO_DIFF in the matchmaking API: past this rating gap a
+// queued clan/friend pair is split and both players are matched on their own.
+// The API owns the real value — keep the two in step when tuning it.
+const MAX_GROUPED_ELO_DIFF = 500;
+
 @customElement("ranked-modal")
 export class RankedModal extends BaseModal {
   protected routerName = "ranked";
@@ -134,6 +139,11 @@ export class RankedModal extends BaseModal {
             "",
           )}
         </div>
+        <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
+          ${translateText("mode_selector.ranked_pairing_note", {
+            maxEloDiff: MAX_GROUPED_ELO_DIFF,
+          })}
+        </p>
       </div>
     `;
   }
