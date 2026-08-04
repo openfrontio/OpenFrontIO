@@ -240,5 +240,6 @@
       "name": "France"
     }
   ],
+  "themes": ["europe", "asia", "north_america"],
   "translation_key": "map.arctic"
 }

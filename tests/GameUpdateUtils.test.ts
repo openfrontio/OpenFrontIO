@@ -70,6 +70,20 @@ describe("diffPlayerUpdate", () => {
     expect(diff.hasSpawned).toBeUndefined();
   });
 
+  it("carries a changed clanTag and stays quiet when it is unchanged", () => {
+    expect(
+      diffPlayerUpdate(
+        makePlayerUpdate({ clanTag: "ABCDE" }),
+        makePlayerUpdate({ clanTag: "ABCDE" }),
+      ),
+    ).toBeNull();
+    const diff = diffPlayerUpdate(
+      makePlayerUpdate({ clanTag: null }),
+      makePlayerUpdate({ clanTag: "ABCDE" }),
+    )!;
+    expect(diff.clanTag).toBe("ABCDE");
+  });
+
   it("emits killedBy + deathPosition when a player is eliminated", () => {
     const prev = makePlayerUpdate({ killedBy: null, deathPosition: null });
     const next = makePlayerUpdate({ killedBy: "client-b", deathPosition: 3 });

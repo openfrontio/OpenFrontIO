@@ -1,24 +1,34 @@
-import featuredStreamFallback from "resources/featured-stream.json";
 import newsItemsFallback from "resources/news.json";
+import streamsFallback from "resources/streams.json";
 import { z } from "zod";
-import type { FeaturedStreamConfig, NewsItem } from "../core/ApiSchemas";
+import type { NewsItem, StreamsFeed } from "../core/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponse,
   ClaimRewardResponseSchema,
-  FeaturedStreamSchema,
+  GetMyTribeNamesResponse,
+  GetMyTribeNamesResponseSchema,
   NewsItemSchema,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
   PlayerProfile,
   PlayerProfileSchema,
+  PostTribeBoostResponse,
+  PostTribeBoostResponseSchema,
+  PostTribeNameResponse,
+  PostTribeNameResponseSchema,
   PublicPlayerGamesResponse,
   PublicPlayerGamesResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
+  StreamsFeedSchema,
+  TribeLeaderboardResponse,
+  TribeLeaderboardResponseSchema,
+  TribeStatsResponse,
+  TribeStatsResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
@@ -303,6 +313,219 @@ export async function updateUsername(
   } catch (e) {
     console.error("updateUsername: request failed", e);
     return { ok: false, code: "failed" };
+  }
+}
+
+// GET /users/@me/tribe_names — the player's purchased custom tribe names plus
+// the current purchase price. Auth required; returns false when logged out or
+// on any error (callers show a login/empty state rather than a hard failure).
+export async function getMyTribeNames(): Promise<
+  GetMyTribeNamesResponse | false
+> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/tribe_names`, {
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "getMyTribeNames: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const parsed = GetMyTribeNamesResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("getMyTribeNames: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.error("getMyTribeNames: request failed", e);
+    return false;
+  }
+}
+
+export type PurchaseTribeNameResult =
+  | { ok: true; data: PostTribeNameResponse }
+  // 400: invalid, disallowed, or insufficient balance. `message` is the
+  // server's player-facing reason (already English, shown as-is).
+  | { ok: false; code: "invalid"; message?: string }
+  // 409: the name is already taken (names are globally unique).
+  | { ok: false; code: "duplicate" }
+  // 429: buying names too fast. `retryAfterSeconds` from the Retry-After
+  // header (null when absent/unparseable).
+  | { ok: false; code: "rate_limited"; retryAfterSeconds: number | null }
+  | { ok: false; code: "failed" };
+
+// POST /users/@me/tribe_names — buy a custom tribe name (200 plutonium). The
+// name is screened, charged, and goes live right away as `pending`; review is
+// post-hoc and only takes bad names down. Spends hard currency, so callers
+// should invalidate the cached /users/@me afterwards.
+export async function purchaseTribeName(
+  name: string,
+): Promise<PurchaseTribeNameResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/tribe_names`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ name }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      return {
+        ok: false,
+        code: "invalid",
+        message: typeof body?.reason === "string" ? body.reason : undefined,
+      };
+    }
+    if (response.status === 409) {
+      return { ok: false, code: "duplicate" };
+    }
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After");
+      const seconds = retryAfter === null ? NaN : Number(retryAfter);
+      return {
+        ok: false,
+        code: "rate_limited",
+        retryAfterSeconds: Number.isFinite(seconds) ? seconds : null,
+      };
+    }
+    if (!response.ok) {
+      console.error(
+        "purchaseTribeName: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PostTribeNameResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("purchaseTribeName: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("purchaseTribeName: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+export type BoostTribeNameResult =
+  | { ok: true; data: PostTribeBoostResponse }
+  // 400 with a player-facing reason — today that's only "Insufficient
+  // balance" (the balance moved since the client's pre-check).
+  | { ok: false; code: "insufficient_balance" }
+  // 404: not the caller's name, or it's no longer active (rejected/revoked).
+  // Deliberately indistinguishable server-side — refresh the list.
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "failed" };
+
+// POST /users/@me/tribe_names/:id/boosts — buy a 30-day boost for an active
+// tribe name. Boosts stack without limit and the endpoint has no rate limit,
+// so the Idempotency-Key is what stops a double-submit from charging twice:
+// callers generate a fresh UUID per user-initiated click. Nothing is charged
+// on any error. Spends hard currency — callers refresh /users/@me and the
+// name list afterwards (boost state is only served by the list endpoint).
+export async function boostTribeName(
+  id: string,
+  idempotencyKey: string,
+): Promise<BoostTribeNameResult> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/users/@me/tribe_names/${encodeURIComponent(id)}/boosts`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: await getAuthHeader(),
+          "Idempotency-Key": idempotencyKey,
+        },
+      },
+    );
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 400) {
+      const body = await response.json().catch(() => null);
+      // {"reason": "..."} is the player-facing 400 (insufficient balance);
+      // {"resource": "id"} means a malformed id — a client bug, not a
+      // player error, so it falls through to the generic failure.
+      if (typeof body?.reason === "string") {
+        return { ok: false, code: "insufficient_balance" };
+      }
+      console.error("boostTribeName: bad request", body);
+      return { ok: false, code: "failed" };
+    }
+    if (response.status === 404) {
+      return { ok: false, code: "not_found" };
+    }
+    if (!response.ok) {
+      console.error(
+        "boostTribeName: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = PostTribeBoostResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("boostTribeName: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("boostTribeName: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// GET /public/tribe/:name — live stats for one custom tribe name. Public
+// (no auth), so it works for any name, but 404s for names that are unknown,
+// rejected/revoked, or whose owner is banned — that folds into false along
+// with every other failure, since callers can't act on the difference.
+export async function fetchTribeStats(
+  name: string,
+): Promise<TribeStatsResponse | false> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/public/tribe/${encodeURIComponent(name)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (res.status !== 200) {
+      console.warn(
+        "fetchTribeStats: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+    const parsed = TribeStatsResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("fetchTribeStats: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchTribeStats: request failed", err);
+    return false;
   }
 }
 
@@ -679,7 +902,7 @@ export function getApiBase() {
   const domainname = getAudience();
 
   if (domainname === "localhost") {
-    const apiDomain = process?.env?.API_DOMAIN;
+    const apiDomain = process.env.API_DOMAIN;
     if (apiDomain) {
       return `https://${apiDomain}`;
     }
@@ -690,9 +913,9 @@ export function getApiBase() {
 }
 
 export function getAudience() {
-  const { hostname } = new URL(window.location.href);
-  const domainname = hostname.split(".").slice(-2).join(".");
-  return domainname;
+  // Sourced from BOOTSTRAP_CONFIG (server/desktop-injected) rather than
+  // window.location, so the desktop app (app://openfront) targets real infra.
+  return ClientEnv.jwtAudience();
 }
 
 // Check if the user's account is linked to a Discord, Google, or email account.
@@ -743,6 +966,21 @@ export async function fetchGameById(
   }
 }
 
+// The API answers a page past the end of the ranked leaderboard with a 400
+// instead of an empty list, so the end is only detectable from the error body.
+// Its wording is part of the contract; the bounds vary with the page cap.
+const PAGE_BOUNDS_MESSAGE = /^Page must be between \d+ and \d+$/;
+
+export function isPageBoundsMessage(body: unknown): boolean {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "message" in body &&
+    typeof body.message === "string" &&
+    PAGE_BOUNDS_MESSAGE.test(body.message)
+  );
+}
+
 export async function fetchPlayerLeaderboard(
   page: number,
 ): Promise<RankedLeaderboardResponse | "reached_limit" | false> {
@@ -754,6 +992,12 @@ export async function fetchPlayerLeaderboard(
     });
 
     if (!res.ok) {
+      if (res.status === 400) {
+        const body = await res.json().catch(() => null);
+        if (isPageBoundsMessage(body)) {
+          return "reached_limit";
+        }
+      }
       console.warn(
         "fetchPlayerLeaderboard: unexpected status",
         res.status,
@@ -762,13 +1006,8 @@ export async function fetchPlayerLeaderboard(
       return false;
     }
 
-    const json = await res.json();
-    const parsed = RankedLeaderboardResponseSchema.safeParse(json);
+    const parsed = RankedLeaderboardResponseSchema.safeParse(await res.json());
     if (!parsed.success) {
-      // Handle "Page must be between X and Y" error as end of list
-      if (json?.message?.includes?.("Page must be between")) {
-        return "reached_limit";
-      }
       console.warn(
         "fetchPlayerLeaderboard: Zod validation failed",
         parsed.error.toString(),
@@ -781,6 +1020,61 @@ export async function fetchPlayerLeaderboard(
     console.error("fetchPlayerLeaderboard: request failed", err);
     return false;
   }
+}
+
+const TRIBE_LEADERBOARD_PAGE_SIZE = 50;
+
+async function fetchTribeLeaderboardPage(
+  page: number,
+): Promise<TribeLeaderboardResponse | false> {
+  try {
+    const url = new URL(`${getApiBase()}/leaderboard/tribes`);
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      console.warn(
+        "fetchTribeLeaderboardPage: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const parsed = TribeLeaderboardResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchTribeLeaderboardPage: Zod validation failed",
+        parsed.error.toString(),
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.error("fetchTribeLeaderboardPage: request failed", err);
+    return false;
+  }
+}
+
+// Fetches the whole tribe-name board. It caps at two 50-entry pages and the
+// response carries no total or hasMore, so a full first page is the only
+// signal that a second one exists — and the common case early on is one
+// short page, i.e. a single request.
+export async function fetchTribeLeaderboard(): Promise<
+  TribeLeaderboardResponse | false
+> {
+  const first = await fetchTribeLeaderboardPage(1);
+  if (first === false) return false;
+  if (first.tribes.length < TRIBE_LEADERBOARD_PAGE_SIZE) return first;
+
+  // A truncated board beats an error screen, so keep page 1 if the tail fails.
+  const second = await fetchTribeLeaderboardPage(2);
+  if (second === false) return first;
+
+  return { ...first, tribes: [...first.tribes, ...second.tribes] };
 }
 
 export async function getNews(): Promise<NewsItem[]> {
@@ -805,24 +1099,41 @@ export async function getNews(): Promise<NewsItem[]> {
   }
 }
 
-// Featured-stream config, served like news.json (API-hosted JSON + bundled fallback).
-export async function getFeaturedStream(): Promise<FeaturedStreamConfig> {
+// Fetch an API-served JSON config (news.json-style: served file + bundled fallback).
+// Any error, non-200, or invalid payload falls back, parsed through the same schema so
+// the fallback is validated too. The timeout guards recurring callers (StreamsFeed polls
+// every 60s) from a fetch that never settles.
+async function getServedConfig<T>(
+  name: string,
+  schema: z.ZodType<T>,
+  fallback: unknown,
+): Promise<T> {
   try {
-    const res = await fetch(`${getApiBase()}/featured-stream.json`, {
+    const res = await fetch(`${getApiBase()}/${name}`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.status !== 200) {
-      console.warn("getFeaturedStream: unexpected status", res.status);
-      return FeaturedStreamSchema.parse(featuredStreamFallback);
+      console.warn(`${name}: unexpected status`, res.status);
+      return schema.parse(fallback);
     }
-    const parsed = FeaturedStreamSchema.safeParse(await res.json());
+    const parsed = schema.safeParse(await res.json());
     if (!parsed.success) {
-      console.warn("getFeaturedStream: Zod validation failed", parsed.error);
-      return FeaturedStreamSchema.parse(featuredStreamFallback);
+      console.warn(`${name}: Zod validation failed`, parsed.error);
+      return schema.parse(fallback);
     }
     return parsed.data;
   } catch (err) {
-    console.warn("getFeaturedStream: request failed, using fallback", err);
-    return FeaturedStreamSchema.parse(featuredStreamFallback);
+    console.warn(`${name}: request failed, using fallback`, err);
+    return schema.parse(fallback);
   }
+}
+
+// The single verified-live feed behind both homepage streaming features (API-hosted JSON
+// + bundled fallback). Every entry has already been confirmed live server-side, so
+// callers render what this returns without probing Twitch or YouTube themselves.
+//
+// Fails closed: any error, non-200, or legacy payload lands on the bundled empty feed.
+export async function getStreams(): Promise<StreamsFeed> {
+  return getServedConfig("streams.json", StreamsFeedSchema, streamsFallback);
 }

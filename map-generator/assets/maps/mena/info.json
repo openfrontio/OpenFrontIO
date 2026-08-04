@@ -181,5 +181,6 @@
       "name": "Kazakhstan",
       "flag": "kz"
     }
-  ]
+  ],
+  "themes": ["asia", "africa"]
 }

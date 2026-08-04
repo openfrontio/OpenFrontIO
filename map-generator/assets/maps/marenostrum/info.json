@@ -195,5 +195,6 @@
       "name": "Numidia",
       "flag": "Amazigh flag"
     }
-  ]
+  ],
+  "themes": ["europe", "asia", "africa"]
 }

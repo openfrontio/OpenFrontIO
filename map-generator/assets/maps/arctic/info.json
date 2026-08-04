@@ -225,5 +225,6 @@
       "name": "France",
       "flag": "fr"
     }
-  ]
+  ],
+  "themes": ["europe", "asia", "north_america"]
 }

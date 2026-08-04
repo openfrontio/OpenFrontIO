@@ -317,6 +317,7 @@ export class PlayerImpl implements Player {
       clientID: this.clientID(),
       name: this.name(),
       displayName: this.displayName(),
+      clanTag: this.clanTag(),
       id: this.id(),
       team: this.team() ?? undefined,
       smallID: this.smallID(),
@@ -358,7 +359,9 @@ export class PlayerImpl implements Player {
   displayName(): string {
     return this.playerInfo.displayName;
   }
-
+  clanTag(): string | null {
+    return this.playerInfo.clanTag;
+  }
   clientID(): ClientID | null {
     return this.playerInfo.clientID;
   }
@@ -1461,14 +1464,15 @@ export class PlayerImpl implements Player {
     }
 
     // only get missilesilos that are not on cooldown and not under construction
-    const bestSilo = findClosestBy(
-      this.units(UnitType.MissileSilo),
-      (silo) => mg.manhattanDist(silo.tile(), tile),
+    const readySilos = this.units(UnitType.MissileSilo).filter(
       (silo) =>
         silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
     );
-
-    return bestSilo?.tile() ?? false;
+    readySilos.sort(
+      (a, b) =>
+        mg.manhattanDist(a.tile(), tile) - mg.manhattanDist(b.tile(), tile),
+    );
+    return readySilos[0]?.tile() ?? false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {

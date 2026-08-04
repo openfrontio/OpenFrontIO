@@ -5,7 +5,13 @@ import { Controller } from "../Controller";
 import { PlaySoundEffectEvent, SoundEffect } from "../sound/Sounds";
 import { GameView, UnitView } from "../view";
 
+// A MIRV rains hundreds of warheads over a few seconds; playing a boom per
+// warhead churns the audio pipeline. Play at most one warhead boom per interval.
+const MIRV_HIT_SOUND_INTERVAL_TICKS = 5;
+
 export class SoundEffectController implements Controller {
+  private lastMirvHitSoundTick = -Infinity;
+
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
@@ -36,13 +42,26 @@ export class SoundEffectController implements Controller {
     }
     switch (unit.type()) {
       case UnitType.AtomBomb:
-      case UnitType.MIRVWarhead:
         this.onNukeDetonation(unit, "atom-hit");
+        break;
+      case UnitType.MIRVWarhead:
+        this.onMirvWarheadDetonation(unit);
         break;
       case UnitType.HydrogenBomb:
         this.onNukeDetonation(unit, "hydrogen-hit");
         break;
     }
+  }
+
+  private onMirvWarheadDetonation(unit: UnitView): void {
+    if (unit.isActive()) return;
+    if (!unit.reachedTarget()) return;
+    const tick = this.game.ticks();
+    if (tick - this.lastMirvHitSoundTick < MIRV_HIT_SOUND_INTERVAL_TICKS) {
+      return;
+    }
+    this.lastMirvHitSoundTick = tick;
+    this.emit("atom-hit");
   }
 
   private onCreated(unit: UnitView): void {

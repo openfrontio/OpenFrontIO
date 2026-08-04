@@ -25,16 +25,6 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-// Arcade-style maps only appear in the "special" playlist.
-const ARCADE_MAPS = new Set<GameMapType>([
-  GameMapType.TheBox,
-  GameMapType.ChoppingBlock,
-  GameMapType.Didier,
-  GameMapType.DidierFrance,
-  GameMapType.Labyrinth,
-  GameMapType.Sierpinski,
-  GameMapType.Onion,
-]);
 const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.
@@ -118,6 +108,7 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Luna,
   GameMapType.ArchipelagoSea,
   GameMapType.ChoppingBlock,
+  GameMapType.Sol,
 ]);
 
 // Maps that are entirely land.
@@ -449,25 +440,26 @@ export class MapPlaylist {
       GameMapType.Asia, // 20%
       GameMapType.EuropeClassic, // 20%
     ];
+    const isCompact = Math.random() < 0.5;
     return {
       donateGold: true,
       donateTroops: true,
       gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 4,
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Compact,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
       rankedType: RankedType.TwoVTwo,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: 10,
+      maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
       randomSpawn: false,
       nations: "disabled",
       gameMode: GameMode.Team,
       playerTeams: 2,
-      bots: 100,
-      spawnImmunityDuration: 30 * 10,
+      bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: 60 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -533,10 +525,7 @@ export class MapPlaylist {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
-      if (
-        type !== "special" &&
-        (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
-      ) {
+      if (type !== "special" && SPECIAL_ONLY_MAPS.has(map)) {
         return;
       }
       let freq = mapInfo.multiplayerFrequency;

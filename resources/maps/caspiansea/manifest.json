@@ -80,6 +80,7 @@
       "name": "Kalmykia"
     }
   ],
+  "special_team_count": 2,
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -96,5 +97,6 @@
       }
     ]
   },
+  "themes": ["asia"],
   "translation_key": "map.caspiansea"
 }

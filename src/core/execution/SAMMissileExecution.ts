@@ -30,20 +30,23 @@ export class SAMMissileExecution implements Execution {
     this.pathFinder = PathFinding.Air(mg);
     this.mg = mg;
     this.speed = this.mg.config().defaultSamMissileSpeed();
+    this.tick(ticks);
   }
 
   tick(ticks: number): void {
-    this.SAMMissile ??= this._owner.buildUnit(
-      UnitType.SAMMissile,
-      this.spawn,
-      {},
-    );
+    this.SAMMissile ??= this._owner.buildUnit(UnitType.SAMMissile, this.spawn, {
+      targetUnit: this.target,
+    });
     if (!this.SAMMissile.isActive()) {
       this.active = false;
       return;
     }
-    // Mirv warheads are too fast, and mirv shouldn't be stopped ever
-    const nukesWhitelist = [UnitType.AtomBomb, UnitType.HydrogenBomb];
+    // The MIRV carrier itself can't be intercepted, only its warheads
+    const nukesWhitelist = [
+      UnitType.AtomBomb,
+      UnitType.HydrogenBomb,
+      UnitType.MIRVWarhead,
+    ];
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||

@@ -1,6 +1,11 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { Cell } from "../core/game/Game";
-import { CenterCameraEvent, DragEvent, ZoomEvent } from "./InputHandler";
+import {
+  CenterCameraEvent,
+  DragEvent,
+  ZOOM_DELTA_DIVISOR,
+  ZoomEvent,
+} from "./InputHandler";
 import { GameView, PlayerView, UnitView } from "./view";
 
 export class GoToPlayerEvent implements GameEvent {
@@ -295,7 +300,7 @@ export class TransformHandler {
   onZoom(event: ZoomEvent) {
     this.clearTarget();
     const oldScale = this.scale;
-    const zoomFactor = 1 + event.delta / 600;
+    const zoomFactor = 1 + event.delta / ZOOM_DELTA_DIVISOR;
     this.scale /= zoomFactor;
 
     // Clamp the scale to prevent extreme zooming

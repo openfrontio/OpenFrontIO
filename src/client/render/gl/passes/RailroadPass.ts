@@ -129,6 +129,8 @@ export class RailroadPass {
 
   private localPlayerID = 0;
   private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
+  /** Scratch buffer for per-tile terrain byte uploads (avoids allocations). */
+  private terrainDeltaScratch = new Uint8Array(1);
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -246,12 +248,26 @@ export class RailroadPass {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.terrainTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    const scratch = new Uint8Array(1);
+    // Full-map fast path: single texSubImage2D instead of per-tile uploads.
+    if (refs.length === this.mapW * this.mapH) {
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        this.mapW,
+        this.mapH,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        bytes,
+      );
+      return;
+    }
     for (let i = 0; i < refs.length; i++) {
       const ref = refs[i];
       const x = ref % this.mapW;
       const y = (ref - x) / this.mapW;
-      scratch[0] = bytes[i];
+      this.terrainDeltaScratch[0] = bytes[i];
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
@@ -261,7 +277,7 @@ export class RailroadPass {
         1,
         gl.RED_INTEGER,
         gl.UNSIGNED_BYTE,
-        scratch,
+        this.terrainDeltaScratch,
       );
     }
   }

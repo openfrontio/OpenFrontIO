@@ -125,5 +125,6 @@
       "name": "Eastern Anatolia"
     }
   ],
+  "themes": ["europe", "asia"],
   "translation_key": "map.caucasus"
 }

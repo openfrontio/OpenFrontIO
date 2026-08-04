@@ -58,8 +58,9 @@ export class PublicLobbySocket {
       // fresh full message, and a stale base could mis-merge incoming deltas.
       this.lastFull = null;
 
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}${this.workerPath}/lobbies`;
+      // WS origin comes from ClientEnv (same-origin on web, audience-derived on
+      // the desktop app://openfront origin), not window.location.host.
+      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies`;
 
       this.ws = new WebSocket(wsUrl);
       this.wsAttemptCounted = false;

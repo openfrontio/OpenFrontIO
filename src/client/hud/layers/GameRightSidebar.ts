@@ -95,7 +95,10 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.eventBus.on(TogglePauseIntentEvent, () => {
       const isReplayOrSingleplayer =
         this._isSinglePlayer || this.game?.config()?.isReplay();
-      if (isReplayOrSingleplayer || this.isLobbyCreator) {
+      if (
+        isReplayOrSingleplayer ||
+        (this.isLobbyCreator && !this.game.config().listed)
+      ) {
         this.onPauseButtonClick();
       }
     });
@@ -321,7 +324,9 @@ export class GameRightSidebar extends LitElement implements Controller {
   maybeRenderReplayButtons() {
     const isReplayOrSingleplayer =
       this._isSinglePlayer || this.game?.config()?.isReplay();
-    const showPauseButton = isReplayOrSingleplayer || this.isLobbyCreator;
+    const showPauseButton =
+      isReplayOrSingleplayer ||
+      (this.isLobbyCreator && !this.game.config().listed);
     // The host of a private lobby can start a fresh lobby at any time, without
     // waiting to die or for the game to end.
     const showNewLobbyButton = this.isLobbyCreator && this.isPrivateLobby;

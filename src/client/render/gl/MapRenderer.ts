@@ -12,6 +12,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { MapLayer } from "../../../core/game/TerrainMapLoader";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -36,6 +37,12 @@ import type { RenderSettings } from "./RenderSettings";
 export class MapRenderer {
   private renderer: GPURenderer | null = null;
   private resizeObs: ResizeObserver | null = null;
+  // Stored layer data for context-restore re-creation.
+  private storedLayers: MapLayer[] = [];
+  private storedLayerImages: Map<string, ImageBitmap> = new Map();
+  // Layer state that survives context loss (GPU textures do not).
+  private layerVisibility = new Map<string, boolean>();
+  private layerDestroyedMasks = new Map<string, Uint8Array>();
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -104,6 +111,18 @@ export class MapRenderer {
 
   private handleContextRestored = () => {
     this.initRenderer();
+    // Re-apply stored layers to the new renderer.
+    if (this.storedLayers.length > 0 && this.storedLayerImages.size > 0) {
+      this.renderer?.setMapLayers(this.storedLayers, this.storedLayerImages);
+      // Re-apply visibility overrides.
+      for (const [id, vis] of this.layerVisibility) {
+        this.renderer?.setLayerVisible(id, vis);
+      }
+      // Re-apply destroyed masks.
+      for (const [id, mask] of this.layerDestroyedMasks) {
+        this.renderer?.setLayerDestroyedMask(id, mask);
+      }
+    }
     this.onContextRestored?.();
   };
 
@@ -246,6 +265,41 @@ export class MapRenderer {
   /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
   updateSmallPlayerGlow(set: Uint8Array | null): void {
     this.renderer?.updateSmallPlayerGlow(set);
+  }
+
+  // ---- Map layers ----
+
+  /** Set up map-layer passes from the loaded layer data. */
+  setMapLayers(layers: MapLayer[], images: Map<string, ImageBitmap>): void {
+    this.storedLayers = layers;
+    this.storedLayerImages = images;
+    this.renderer?.setMapLayers(layers, images);
+  }
+
+  /** Toggle visibility of a single map layer. */
+  setLayerVisible(layerId: string, visible: boolean): void {
+    this.layerVisibility.set(layerId, visible);
+    this.renderer?.setLayerVisible(layerId, visible);
+  }
+
+  /** Batch-mark tiles as destroyed for a nukeable layer. */
+  markLayerTilesDestroyed(layerId: string, tileIndices: number[]): void {
+    // Accumulate into the CPU-side mask for context-restore.
+    let mask = this.layerDestroyedMasks.get(layerId);
+    if (!mask) {
+      mask = new Uint8Array(this.header.mapWidth * this.header.mapHeight);
+      this.layerDestroyedMasks.set(layerId, mask);
+    }
+    for (const t of tileIndices) {
+      if (t >= 0 && t < mask.length) mask[t] = 1;
+    }
+    this.renderer?.markLayerTilesDestroyed(layerId, tileIndices);
+  }
+
+  /** Bulk-update the destroyed mask for a nukeable layer. */
+  setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
+    this.layerDestroyedMasks.set(layerId, new Uint8Array(mask));
+    this.renderer?.setLayerDestroyedMask(layerId, mask);
   }
 
   // ---- Selection box ----

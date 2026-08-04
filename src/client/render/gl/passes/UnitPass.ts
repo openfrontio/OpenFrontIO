@@ -53,7 +53,11 @@ import { DynamicInstanceBuffer } from "../DynamicBuffer";
 import type { RenderSettings } from "../RenderSettings";
 import unitFragSrc from "../shaders/unit/unit.frag.glsl?raw";
 import unitVertSrc from "../shaders/unit/unit.vert.glsl?raw";
-import { getPaletteSize } from "../utils/ColorUtils";
+import {
+  getPaletteSize,
+  MAX_TRAIL_COLORS,
+  WARSHIP_EFFECT_BLOCK,
+} from "../utils/ColorUtils";
 import { createProgram, shaderSrc } from "../utils/GlUtils";
 
 const unitAtlasUrl = assetUrl("atlases/unit-atlas.png");
@@ -86,6 +90,9 @@ const ATLAS_COLS = UNIT_ORDER.length;
 
 /** Atlas column of the hydrogen bomb — drives the GPU glow halo. */
 const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
+
+/** Atlas column of the warship — gates the warship cosmetic effect. */
+const WARSHIP_COL = UNIT_ORDER.indexOf(UT_WARSHIP);
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -193,6 +200,7 @@ export class UnitPass {
 
   private uCamera: WebGLUniformLocation;
   private uTick: WebGLUniformLocation;
+  private uTime: WebGLUniformLocation;
   private uUnitSize: WebGLUniformLocation;
   private uFlickerSpeed: WebGLUniformLocation;
   private uAngryColor: WebGLUniformLocation;
@@ -226,10 +234,14 @@ export class UnitPass {
 
   private quadBuf: WebGLBuffer;
   private paletteTex: WebGLTexture;
+  private effectTex: WebGLTexture;
   private atlasTex: WebGLTexture;
 
   /** Frame tick received from renderer — drives tick-based effects */
   private frameTick = 0;
+  /** Wall-clock start, for uTime (seconds) — matches StructurePass so the
+   *  warship effect animates at the same pace as the structures effect. */
+  private startTime = performance.now();
 
   /** unitType string → atlas column (0-11) */
   private typeToAtlasCol = new Map<string, number>();
@@ -244,6 +256,7 @@ export class UnitPass {
     gl: WebGL2RenderingContext,
     header: RendererConfig,
     paletteTex: WebGLTexture,
+    effectTex: WebGLTexture,
     settings: RenderSettings,
     config: Config,
   ) {
@@ -251,6 +264,7 @@ export class UnitPass {
     this.settings = settings;
     this.mapW = header.mapWidth;
     this.paletteTex = paletteTex;
+    this.effectTex = effectTex;
     this.tickIntervalMs = config.msPerTick();
 
     // Build unitType string → atlas column mapping
@@ -267,10 +281,16 @@ export class UnitPass {
     this.program = createProgram(
       gl,
       shaderSrc(unitVertSrc, { ATLAS_COLS, HYDROGEN_BOMB_COL }),
-      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize(), ATLAS_COLS }),
+      shaderSrc(unitFragSrc, {
+        PALETTE_SIZE: getPaletteSize(),
+        ATLAS_COLS,
+        WARSHIP_COL,
+        WARSHIP_EFFECT_ROW_BASE: WARSHIP_EFFECT_BLOCK * MAX_TRAIL_COLORS,
+      }),
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTick = gl.getUniformLocation(this.program, "uTick")!;
+    this.uTime = gl.getUniformLocation(this.program, "uTime")!;
     this.uUnitSize = gl.getUniformLocation(this.program, "uUnitSize")!;
     this.uFlickerSpeed = gl.getUniformLocation(this.program, "uFlickerSpeed")!;
     this.uAngryColor = gl.getUniformLocation(this.program, "uAngryColor")!;
@@ -302,6 +322,7 @@ export class UnitPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uAtlas"), 1);
     gl.uniform1i(gl.getUniformLocation(this.program, "uAffiliation"), 2);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uEffect"), 3);
 
     // Create placeholder atlas texture (1x1 gray pixel)
     this.atlasTex = gl.createTexture()!;
@@ -546,6 +567,7 @@ export class UnitPass {
     const us = this.settings.unit;
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uTick, this.frameTick);
+    gl.uniform1f(this.uTime, (performance.now() - this.startTime) / 1000);
     gl.uniform1f(this.uUnitSize, us.unitSize);
     gl.uniform1f(this.uFlickerSpeed, us.flickerSpeed);
     gl.uniform3f(this.uAngryColor, us.angryR, us.angryG, us.angryB);
@@ -571,6 +593,9 @@ export class UnitPass {
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, this.affiliationTex);
     }
+
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.effectTex);
   }
 
   /** Draw ground/sea units (boats, trains). Render below structures. */

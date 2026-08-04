@@ -430,5 +430,6 @@
       "name": "Zabaykalsky"
     }
   ],
+  "themes": ["europe", "asia"],
   "translation_key": "map.russia"
 }

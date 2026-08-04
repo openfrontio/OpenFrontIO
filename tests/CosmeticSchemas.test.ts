@@ -734,6 +734,89 @@ describe("structures effects", () => {
   });
 });
 
+describe("warship effects", () => {
+  const gradient = {
+    name: "patriotic_warshipo",
+    effectType: "warship",
+    attributes: {
+      type: "gradient",
+      colors: ["#f00000", "#e6e6e6", "#1100ff"],
+      colorSize: 5,
+      movementSpeed: 10,
+    },
+    affiliateCode: null,
+    product: null,
+    priceHard: 10,
+    rarity: "common",
+  };
+  const transition = {
+    name: "warship_transition",
+    effectType: "warship",
+    attributes: {
+      type: "transition",
+      colors: ["#ff0000", "#ffffff", "#00ff88"],
+      frequency: 5,
+    },
+    affiliateCode: null,
+    product: null,
+    rarity: "common",
+  };
+
+  it("parses the gradient and transition catalog entries", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: {
+        warship: {
+          patriotic_warshipo: gradient,
+          warship_transition: transition,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(
+        result.data.effects?.warship?.patriotic_warshipo?.attributes.type,
+      ).toBe("gradient");
+      expect(
+        result.data.effects?.warship?.warship_transition?.attributes.type,
+      ).toBe("transition");
+    }
+  });
+
+  it("resolves the warship slot (slot = effectType)", () => {
+    expect(effectTypeForSlot("warship")).toBe("warship");
+    const parsed = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      effects: { warship: { patriotic_warshipo: gradient } },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(
+      findEffectForSlot(parsed.data, "warship", "patriotic_warshipo")?.name,
+    ).toBe("patriotic_warshipo");
+  });
+
+  it("shares trail attribute shapes but is not a trail effect", () => {
+    const eff = EffectSchema.parse(gradient);
+    // Renders through the warship palette block, not a trail block.
+    expect(isTrailEffect(eff)).toBe(false);
+    expect(effectMatchesSlot(eff, "warship")).toBe(true);
+    expect(effectMatchesSlot(eff, "structures")).toBe(false);
+    expect(effectMatchesSlot(eff, "transportShipTrail")).toBe(false);
+  });
+
+  it("rejects a warship effect with an unknown attribute type", () => {
+    expect(
+      EffectSchema.safeParse({
+        ...gradient,
+        attributes: { type: "sparkle", colors: [] },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("isTrailEffect", () => {
   it("is true for a trail effect and false for a nukeExplosion", () => {
     const trail = EffectSchema.parse({
@@ -909,6 +992,7 @@ describe("SubscriptionSchema unlimitedRanked", () => {
     priceMonthly: 5,
     dailySoftCurrency: 100,
     dailyHardCurrency: 10,
+    hardCurrencySignupBonus: 100,
     canCreatePublicLobbies: false,
   };
 
@@ -943,6 +1027,7 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
     priceMonthly: 5,
     dailySoftCurrency: 100,
     dailyHardCurrency: 10,
+    hardCurrencySignupBonus: 100,
     unlimitedRanked: false,
   };
 
@@ -964,6 +1049,42 @@ describe("SubscriptionSchema canCreatePublicLobbies", () => {
   it("rejects a non-boolean canCreatePublicLobbies", () => {
     expect(
       SubscriptionSchema.safeParse({ ...base, canCreatePublicLobbies: "yes" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("SubscriptionSchema hardCurrencySignupBonus", () => {
+  const base = {
+    name: "gold",
+    product: null,
+    rarity: "epic",
+    description: "Gold tier",
+    priceMonthly: 5,
+    dailySoftCurrency: 100,
+    dailyHardCurrency: 10,
+    unlimitedRanked: false,
+    canCreatePublicLobbies: false,
+  };
+
+  it("rejects a tier without hardCurrencySignupBonus", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("accepts a tier with hardCurrencySignupBonus", () => {
+    const result = SubscriptionSchema.safeParse({
+      ...base,
+      hardCurrencySignupBonus: 250,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.hardCurrencySignupBonus).toBe(250);
+    }
+  });
+
+  it("rejects a non-number hardCurrencySignupBonus", () => {
+    expect(
+      SubscriptionSchema.safeParse({ ...base, hardCurrencySignupBonus: "250" })
         .success,
     ).toBe(false);
   });
@@ -998,5 +1119,39 @@ describe("verified badge on cosmetics schemas", () => {
     expect(PlayerCosmeticsSchema.safeParse({ verified: 1 }).success).toBe(
       false,
     );
+  });
+});
+
+describe("CosmeticsSchema tribeNames pricing", () => {
+  it("parses the tribeNames config block", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      tribeNames: {
+        priceHard: 200,
+        boostPriceHard: 100,
+        boostDurationDays: 30,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribeNames?.boostPriceHard).toBe(100);
+  });
+
+  it("parses a cosmetics.json without tribeNames (older API)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.tribeNames).toBeUndefined();
+  });
+
+  it("rejects a tribeNames block missing the boost price", () => {
+    expect(
+      CosmeticsSchema.safeParse({
+        patterns: {},
+        flags: {},
+        tribeNames: { priceHard: 200, boostDurationDays: 30 },
+      }).success,
+    ).toBe(false);
   });
 });

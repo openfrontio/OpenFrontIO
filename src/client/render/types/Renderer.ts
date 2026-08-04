@@ -20,6 +20,7 @@ export interface PlayerStatic {
   id: string;
   name: string;
   displayName: string;
+  clanTag: string | null;
   clientID: string | null;
   playerType: PlayerTypeEnum;
   team: string | null;

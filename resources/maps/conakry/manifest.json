@@ -137,5 +137,6 @@
       }
     ]
   },
+  "themes": ["africa"],
   "translation_key": "map.conakry"
 }

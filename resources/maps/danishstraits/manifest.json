@@ -150,5 +150,6 @@
       "name": "Bornholm"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.danishstraits"
 }

@@ -45,5 +45,6 @@
       "name": "Eastern Region",
       "flag": "is"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

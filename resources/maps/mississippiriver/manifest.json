@@ -332,5 +332,6 @@
       "name": "West Memphis"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.mississippiriver"
 }

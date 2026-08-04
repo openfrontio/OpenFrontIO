@@ -67,6 +67,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
   applyGraphicsOverrides,
@@ -155,6 +156,7 @@ export function joinLobby(
         message.gameMap,
         message.gameMapSize,
         terrainMapFileLoader,
+        false, // Layer images loaded off the critical path after game start.
       );
       resolvePrestart();
     }
@@ -229,6 +231,31 @@ export function joinLobby(
             }),
           );
         });
+      } else if (message.error === "kick_reason.match_cancelled") {
+        // A matched player never connected and the server cancelled the game
+        // pre-start. Tear down the dead lobby, then put the matchmaking
+        // modal — still open on "waiting for game" (it only closes at
+        // prestart) — straight back into the queue so the players who did
+        // connect don't have to requeue by hand. A non-blocking toast
+        // explains why; an alert here would keep them out of the queue
+        // until dismissed.
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID, cause: "match-cancelled" },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+        document.dispatchEvent(new CustomEvent("matchmaking-requeue"));
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("kick_reason.match_cancelled"),
+              color: "red",
+              duration: 5000,
+            },
+          }),
+        );
       } else {
         showErrorModal(
           message.error,
@@ -503,6 +530,7 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
+    lobbyConfig.gameStartInfo.listed,
   );
   let gameMap: TerrainMapData;
 
@@ -513,6 +541,7 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMap,
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
+      false, // Layer images loaded off the critical path after game start.
     );
   }
   // Kick off the font-atlas fetch so it overlaps with worker init; the
@@ -566,6 +595,17 @@ async function createClientGame(
     const graphicsListenerAbort = new AbortController();
 
     view.setShowPatterns(userSettings.territoryPatterns());
+
+    const mapLayerController = new MapLayerController(
+      view,
+      gameMap,
+      userSettings,
+      lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
+      mapLoader,
+      graphicsListenerAbort.signal,
+    );
+
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
@@ -643,6 +683,7 @@ async function createClientGame(
       eventBus,
       lobbyConfig.playerRole,
       view,
+      mapLayerController,
     );
 
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(

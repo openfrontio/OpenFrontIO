@@ -4,6 +4,7 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
+import { hasLinkedIdentity, isSteamPrimaryUser } from "./AccountIdentity";
 import {
   fetchPlayerById,
   getUserMe,
@@ -23,6 +24,7 @@ import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
+import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
@@ -126,14 +128,19 @@ export class AccountModal extends BaseModal {
   }
 
   private isLinkedAccount(): boolean {
-    const me = this.userMeResponse?.user;
     // The CrazyGames identity only counts once the backend token exchange
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      !!(me?.discord ?? me?.google ?? me?.email) ||
+      hasLinkedIdentity(this.userMeResponse?.user) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
+  }
+
+  // Steam is the primary (and only, in v1) identity for a Steam user — no
+  // linking UI (email/Google) is offered for them; see renderSettingsTab.
+  private isSteamPrimary(): boolean {
+    return isSteamPrimaryUser(this.userMeResponse?.user);
   }
 
   protected modalConfig() {
@@ -229,7 +236,9 @@ export class AccountModal extends BaseModal {
               </button>`
             : nothing}
         </div>
-        ${hasEmail ? nothing : this.renderEmailBinding()}
+        ${hasEmail || this.isSteamPrimary()
+          ? nothing
+          : this.renderEmailBinding()}
       </div>
     `;
   }
@@ -335,6 +344,11 @@ export class AccountModal extends BaseModal {
               <discord-user-header
                 .data=${this.userMeResponse?.user?.discord ?? null}
               ></discord-user-header>
+              ${this.userMeResponse?.user?.steam
+                ? html`<steam-user-header
+                    .data=${this.userMeResponse.user.steam}
+                  ></steam-user-header>`
+                : null}
               ${this.renderLoggedInAs()}
             </div>
           </div>
@@ -531,6 +545,15 @@ export class AccountModal extends BaseModal {
           </div>
           ${this.renderCurrency()} ${this.renderGoogleLink()}
           ${this.renderLogoutButton()}
+        </div>
+      `;
+    } else if (me?.steam) {
+      // Steam is the primary login and v1 does not support linking a second
+      // identity or unlinking Steam itself, so no Discord/Google CTA here —
+      // just the currency balance and (session) logout.
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     }

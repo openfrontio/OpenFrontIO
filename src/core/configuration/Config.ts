@@ -34,6 +34,9 @@ declare global {
       turnstileSiteKey?: string;
       jwtAudience?: string;
       instanceId?: string;
+      // Desktop-only: explicit game-server host for the WebSocket origin.
+      // Absent on the web build (client falls back to same-origin location).
+      serverHost?: string;
     };
   }
 }
@@ -116,6 +119,7 @@ export class Config {
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
+    public readonly listed: boolean = false,
   ) {}
 
   isReplay(): boolean {
@@ -905,8 +909,17 @@ export class Config {
     return 100;
   }
 
-  defaultNukeSpeed(): number {
-    return 10;
+  nukeSpeed(unitType: UnitType): number {
+    switch (unitType) {
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        return 10;
+      case UnitType.MIRV:
+        return 15;
+      case UnitType.MIRVWarhead:
+        return 22;
+    }
+    throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
   defaultNukeTargetableRange(): number {

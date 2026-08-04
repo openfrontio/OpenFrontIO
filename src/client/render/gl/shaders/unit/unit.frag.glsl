@@ -4,6 +4,13 @@ precision highp float;
 uniform sampler2D uPalette;
 uniform sampler2D uAtlas;
 uniform sampler2D uAffiliation;   // 256×2 RGBA8 — row 1 = unit affiliation
+uniform sampler2D uEffect;        // RGBA32F — shared effect palette, keyed by
+                                  //   ownerID. The warship block starts at row
+                                  //   WARSHIP_EFFECT_ROW_BASE; same layout as
+                                  //   structure.frag.glsl (row r = color r's rgb;
+                                  //   row 0.a = count, 1.a = styleId,
+                                  //   2.a = scalar0, 3.a = scalar1)
+uniform float uTime;              // seconds, for animated effect styles
 uniform float uTick;
 uniform float uFlickerSpeed;
 uniform vec3  uAngryColor;
@@ -40,6 +47,47 @@ const vec3 FLICKER_COLORS[4] = vec3[4](
   vec3(1.0, 1.0, 0.0),   // yellow
   vec3(1.0, 1.0, 1.0)    // white
 );
+
+// The owner's warship cosmetic color, if equipped. Reads the warship block of
+// the shared effect palette; the gradient/transition math mirrors
+// structure.frag.glsl so the same catalog attributes look identical on both.
+// Returns false when the owner has no warship effect (count 0).
+bool warshipEffectColor(int owner, out vec3 color) {
+  const int rowBase = WARSHIP_EFFECT_ROW_BASE;
+  int count = int(texelFetch(uEffect, ivec2(owner, rowBase), 0).a + 0.5);
+  if (count <= 0) return false;
+  if (count == 1) {
+    // Single color — flat recolor.
+    color = texelFetch(uEffect, ivec2(owner, rowBase), 0).rgb;
+  } else if (int(texelFetch(uEffect, ivec2(owner, rowBase + 1), 0).a + 0.5) == 1) {
+    // transition — one color at a time, cross-fading through the list.
+    // frequency = color changes per second.
+    float frequency = texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a;
+    float t = uTime * frequency;
+    int i = int(t) % count;
+    int j = (i + 1) % count;
+    vec3 a = texelFetch(uEffect, ivec2(owner, rowBase + i), 0).rgb;
+    vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
+    color = mix(a, b, fract(t));
+  } else {
+    // gradient — the palette spans the sprite's diagonal once (vCellUV is the
+    // sprite cell, 0..1), sliding one full cycle every
+    // colorSize · count / movementSpeed seconds — the same icon-space
+    // semantics as the structures effect.
+    float colorSize = max(texelFetch(uEffect, ivec2(owner, rowBase + 2), 0).a, 0.001);
+    float movementSpeed = texelFetch(uEffect, ivec2(owner, rowBase + 3), 0).a;
+    float dn = (vCellUV.x + vCellUV.y) * 0.5; // sprite diagonal, 0..1
+    float phase =
+      fract(dn - uTime * movementSpeed / (colorSize * float(count)));
+    float f = phase * float(count);
+    int i = int(f) % count;
+    int j = (i + 1) % count;
+    vec3 a = texelFetch(uEffect, ivec2(owner, rowBase + i), 0).rgb;
+    vec3 b = texelFetch(uEffect, ivec2(owner, rowBase + j), 0).rgb;
+    color = mix(a, b, fract(f));
+  }
+  return true;
+}
 
 void main() {
   // Untargetable nukes render translucent so players know SAMs can't hit them
@@ -87,6 +135,18 @@ void main() {
   float u = (vOwnerID + 0.5) / float(PALETTE_SIZE);
   vec3 territoryColor = texture(uPalette, vec2(u, 0.25)).rgb;
   vec3 borderColor    = texture(uPalette, vec2(u, 0.75)).rgb;
+
+  // warship cosmetic: recolor the warship's territory-color bands with the
+  // owner's effect (raw catalog colors, like trails). The border band keeps
+  // the player color so ownership stays readable, and combat signals win: the
+  // angry (attacking) override below replaces this with red, and the retreat
+  // blink still darkens the center band.
+  if (abs(vAtlasCol - float(WARSHIP_COL)) < 0.1) {
+    vec3 effectRGB;
+    if (warshipEffectColor(int(vOwnerID + 0.5), effectRGB)) {
+      territoryColor = effectRGB;
+    }
+  }
 
   // Flag states (uint8 passed as float via vertex attribute):
   //   0 = normal

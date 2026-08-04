@@ -106,7 +106,9 @@ else
     # KEY from the manifest is URL-encoded per segment (e.g. flags/C%C3%B4te.png).
     # Files on disk live at the *decoded* path, so decode KEY before reading the
     # file, then encode the whole decoded path as one URL segment for the POST.
-    if ! echo "$MISSING" | xargs -P 16 -I{} bash -euc '
+    # NUL-delimit the keys: xargs's default tokenizer treats quotes specially,
+    # so a key with an apostrophe (e.g. flags/Mi'"'"'kmaq.svg) aborts the batch.
+    if ! echo "$MISSING" | tr '\n' '\0' | xargs -0 -P 16 -I{} bash -euc '
         KEY="$1"
         # Validate KEY: only chars that encodeURIComponent leaves literal
         # (A-Z a-z 0-9 - _ . ! ~ * ( ) plus apostrophe), "/" between segments,

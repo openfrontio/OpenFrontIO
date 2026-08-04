@@ -100,6 +100,8 @@ export const GraphicsOverridesSchema = z
         falloffPower: z.number(),
       })
       .partial(),
+    /** Per-layer visibility toggles keyed by layer id. */
+    mapLayerVisibility: z.record(z.string(), z.boolean()),
   })
   .partial();
 

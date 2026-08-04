@@ -1,5 +1,5 @@
 {
-  "categories": ["arcade", "fictional"],
+  "categories": ["arcade", "new"],
   "id": "BranchingPaths",
   "map": {
     "height": 2148,
@@ -16,7 +16,7 @@
     "num_land_tiles": 514307,
     "width": 1240
   },
-  "multiplayer_frequency": 3,
+  "multiplayer_frequency": 7,
   "name": "Branching Paths",
   "nations": [
     {
@@ -115,6 +115,6 @@
       "strength": 1
     }
   ],
-  "special_team_count": 2,
+  "special_team_count": 3,
   "translation_key": "map.branchingpaths"
 }

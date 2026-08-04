@@ -42,8 +42,10 @@ function spiralStrandPath(phase: number): string {
  * share the same gradient/transition/spiral attribute shapes), filling its
  * container.
  *
- * - gradient / single color: a static swatch (flat color or left-to-right
- *   gradient — a multi-color list reads as a rainbow).
+ * - gradient: a left-to-right wrapped palette cycle that scrolls at the
+ *   in-game pace (one cycle per colorSize · count / movementSpeed seconds,
+ *   clamped watchable; movementSpeed 0 stays static). Single color: a flat
+ *   static swatch.
  * - transition: cross-fades through the colors over time, mirroring the trail
  *   (each color step lasts 1/frequency seconds, matching the shader).
  * - spiral: neon sine strands on a dark backdrop (the helix seen side-on)
@@ -118,6 +120,7 @@ export class TrailSwatch extends LitElement {
       </div>`;
     }
     let background: string;
+    let backgroundSize = "";
     if (colors.length === 0) {
       background = EMPTY_BG;
     } else if (this.trail?.type === "transition") {
@@ -126,11 +129,15 @@ export class TrailSwatch extends LitElement {
     } else if (colors.length === 1) {
       background = colors[0];
     } else {
-      background = `linear-gradient(90deg,${colors.join(",")})`;
+      // The palette cycle doubled + wrapped at background-size 200%: the
+      // visible half is one full wrapped cycle, and the scroll animation (see
+      // updated) can slide a whole cycle before looping seamlessly.
+      background = `linear-gradient(90deg,${[...colors, ...colors, colors[0]].join(",")})`;
+      backgroundSize = "background-size:200% 100%;";
     }
     return html`<div
       class="w-full h-full rounded-md"
-      style="background:${background};"
+      style="background:${background};${backgroundSize}"
     ></div>`;
   }
 
@@ -158,6 +165,32 @@ export class TrailSwatch extends LitElement {
           iterations: Infinity,
           easing: "linear",
         }),
+      );
+      return;
+    }
+
+    if (attrs?.type === "gradient") {
+      const colors = attrs.colors;
+      if (colors.length < 2 || attrs.movementSpeed === 0) return;
+
+      const fill = this.querySelector<HTMLElement>("div");
+      if (!fill) return;
+
+      // Slide one full palette cycle per loop (the doubled background in
+      // render makes the wrap seamless) at the in-game pace — one cycle per
+      // colorSize · count / movementSpeed seconds — clamped so extreme
+      // catalog values still visibly move. A positive movementSpeed scrolls
+      // the bands forward (rightward here), negative reverses.
+      const periodS =
+        (attrs.colorSize * colors.length) / Math.abs(attrs.movementSpeed);
+      const durS = Math.min(Math.max(periodS, 0.8), 6);
+      const [from, to] =
+        attrs.movementSpeed > 0 ? ["100% 0%", "0% 0%"] : ["0% 0%", "100% 0%"];
+      this.animations.push(
+        fill.animate(
+          [{ backgroundPosition: from }, { backgroundPosition: to }],
+          { duration: durS * 1000, iterations: Infinity, easing: "linear" },
+        ),
       );
       return;
     }

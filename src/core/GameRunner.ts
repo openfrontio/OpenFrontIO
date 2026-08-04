@@ -38,11 +38,12 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = new Config(gameStart.config, null, false);
+  const config = new Config(gameStart.config, null, false, gameStart.listed);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
     mapLoader,
+    false, // Worker never renders layers — skip image loading to save memory.
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
@@ -78,7 +79,12 @@ export async function createGameRunner(
 
   const gr = new GameRunner(
     game,
-    new Executor(game, gameStart.gameID, clientID),
+    new Executor(
+      game,
+      gameStart.gameID,
+      clientID,
+      gameStart.tribes?.map((t) => t.name),
+    ),
     callBack,
   );
   gr.init();
@@ -197,6 +203,9 @@ export class GameRunner {
     const packedMotionPlans = this.game.drainPackedMotionPlans();
     const packedPlayerUpdates = this.game.drainPackedPlayerUpdates();
     const packedAttackUpdates = this.game.drainPackedAttackUpdates();
+    const nukeImpactTiles = this.game.drainNukeImpacts();
+    const packedNukeImpacts =
+      nukeImpactTiles.length > 0 ? new Uint32Array(nukeImpactTiles) : undefined;
 
     this.callBack({
       tick: this.game.ticks(),
@@ -204,6 +213,7 @@ export class GameRunner {
       ...(packedMotionPlans ? { packedMotionPlans } : {}),
       ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
+      ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
       updates: updates,
       ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
       tickExecutionDuration: tickExecutionDuration,

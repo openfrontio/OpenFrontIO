@@ -10,6 +10,7 @@ import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameConfirm } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
+import { usernameText } from "./ui/UsernameText";
 
 type UserMePlayer = UserMeResponse["player"];
 
@@ -199,7 +200,7 @@ export class UsernamePanel extends LitElement {
         </h3>
         ${this.player.username
           ? html`<div class="text-white text-lg font-medium">
-              ${this.player.username}
+              ${usernameText(this.player.username)}
             </div>`
           : html`<div class="text-white/50 text-sm">
               ${translateText("account_modal.username_not_set")}

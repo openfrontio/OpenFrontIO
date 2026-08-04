@@ -209,7 +209,8 @@ export class LangSelector extends LitElement {
       "host-lobby-modal",
       "join-lobby-modal",
       "emoji-table",
-      "leader-board",
+      "player-stats",
+      "team-stats",
       "leaderboard-player-list",
       "leaderboard-clan-table",
       "build-menu",
@@ -232,7 +233,6 @@ export class LangSelector extends LitElement {
       "cosmetics-input",
       "fluent-slider",
       "news-modal",
-      "news-button",
       "account-modal",
       "game-stats-modal",
       "player-profile-modal",
@@ -242,8 +242,10 @@ export class LangSelector extends LitElement {
       "flag-input-modal",
       "flag-input",
       "effects-grid",
-      "matchmaking-button",
       "token-login",
+      "tribes-panel",
+      "steam-wishlist",
+      "steam-wishlist-button",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

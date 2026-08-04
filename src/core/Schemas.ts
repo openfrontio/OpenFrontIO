@@ -451,13 +451,17 @@ export const AttackIntentSchema = z.object({
 
 export const SpawnIntentSchema = z.object({
   type: z.literal("spawn"),
-  tile: z.number(),
+  // A TileRef indexes the typed-array terrain buffers, so it must be a
+  // non-negative integer. Fractional refs silently corrupt those lookups.
+  tile: z.number().int().nonnegative(),
 });
 
 export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
+  // Not .int(): troops are fractional throughout the sim (attackRatio *
+  // troops(), combat attrition), and the client sends the raw float.
   troops: z.number().nonnegative(),
-  dst: z.number(),
+  dst: z.number().int().nonnegative(),
 });
 
 export const AllianceRequestIntentSchema = z.object({
@@ -512,14 +516,14 @@ export const DonateTroopIntentSchema = z.object({
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  tile: z.number(),
+  tile: z.number().int().nonnegative(),
   rocketDirectionUp: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
-  unitId: z.number(),
+  unitId: z.number().int().nonnegative(),
   amount: z.number().int().min(1).max(50).optional(),
 });
 
@@ -530,18 +534,18 @@ export const CancelAttackIntentSchema = z.object({
 
 export const CancelBoatIntentSchema = z.object({
   type: z.literal("cancel_boat"),
-  unitID: z.number(),
+  unitID: z.number().int().nonnegative(),
 });
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
   unitIds: z.array(z.number().int()).nonempty(),
-  tile: z.number(),
+  tile: z.number().int().nonnegative(),
 });
 
 export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),
-  unitId: z.number(),
+  unitId: z.number().int().nonnegative(),
 });
 
 export const QuickChatIntentSchema = z.object({
@@ -719,12 +723,27 @@ export const PlayerSchema = z.object({
   teamIndex: z.number().int().nonnegative().optional(),
 });
 
+// A purchased bot tribe name in use this game (active names are globally
+// unique, so the name alone identifies the tribe). Loose to mirror infra's
+// analytics-ingest schema — a field the API adds later flows through to the
+// record without a game-side change, instead of being silently stripped.
+export const TribeSchema = z
+  .object({
+    name: SafeString.min(1).max(64),
+  })
+  .loose();
+export type Tribe = z.infer<typeof TribeSchema>;
+
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: z.number(),
   visibleAt: z.number().optional(),
+  listed: z.boolean().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
+  // Purchased bot tribe names in use this game (public games only). Rides
+  // the analytics record to infra at game end for owner appearance stats.
+  tribes: z.array(TribeSchema).max(100).optional(),
 });
 
 export const WinnerSchema = z
@@ -937,8 +956,11 @@ export type ClientAnalyticsRecord = z.infer<
 
 export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   gitCommit: GitCommitSchema,
-  subdomain: z.string(),
-  domain: z.string(),
+  // Absent on client-archived singleplayer records: those are stored by the
+  // API worker exactly as the client sent them, and no game server (whose
+  // identity these fields record) is involved.
+  subdomain: z.string().optional(),
+  domain: z.string().optional(),
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;

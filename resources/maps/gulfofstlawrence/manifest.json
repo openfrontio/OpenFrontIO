@@ -173,5 +173,6 @@
       }
     ]
   },
+  "themes": ["north_america"],
   "translation_key": "map.gulfofstlawrence"
 }

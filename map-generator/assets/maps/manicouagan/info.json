@@ -60,5 +60,6 @@
       "flag": "Quebec",
       "name": "Lamontagne"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

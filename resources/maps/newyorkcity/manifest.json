@@ -109,5 +109,6 @@
       "name": "Gravesend"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.newyorkcity"
 }

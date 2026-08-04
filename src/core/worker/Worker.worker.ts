@@ -119,6 +119,9 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
     if (gu.packedAttackUpdates) {
       transfers.push(gu.packedAttackUpdates.buffer);
     }
+    if (gu.packedNukeImpacts) {
+      transfers.push(gu.packedNukeImpacts.buffer);
+    }
   }
 
   ctx.postMessage(
