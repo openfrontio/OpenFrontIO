@@ -1260,8 +1260,10 @@
     "view": "View Profile"
   },
   "player_stats_table": {
+    "alliances": "Alliances",
     "arrived": "Arrived",
     "attack": "Attack",
+    "betrayals": "Betrayals",
     "building": "Building",
     "building_stats": "Building Statistics",
     "built": "Built",
@@ -1282,6 +1284,8 @@
     "ship_type": "Ship Type",
     "steal": "Steal",
     "trade": "Trade",
+    "trains": "Trains",
+    "trains_external": "Others' Trains",
     "unit": {
       "abomb": "Atom Bomb",
       "city": "City",

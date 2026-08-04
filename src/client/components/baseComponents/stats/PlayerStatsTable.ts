@@ -98,10 +98,13 @@ export class PlayerStatsTable extends LitElement {
                     ${translateText("player_stats_table.sent")}
                   </th>
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.destroyed")}
+                    ${translateText("player_stats_table.arrived")}
                   </th>
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.arrived")}
+                    ${translateText("player_stats_table.captured")}
+                  </th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
+                    ${translateText("player_stats_table.destroyed")}
                   </th>
                 </tr>
               </thead>
@@ -109,6 +112,7 @@ export class PlayerStatsTable extends LitElement {
                 ${boatUnits.map((key) => {
                   const sent = this.stats?.boats?.[key]?.[0] ?? 0n;
                   const arrived = this.stats?.boats?.[key]?.[1] ?? 0n;
+                  const captured = this.stats?.boats?.[key]?.[2] ?? 0n;
                   const destroyed = this.stats?.boats?.[key]?.[3] ?? 0n;
                   return html`
                     <tr class="hover:bg-white/5 transition-colors">
@@ -119,10 +123,13 @@ export class PlayerStatsTable extends LitElement {
                         ${renderNumber(sent)}
                       </td>
                       <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(destroyed)}
+                        ${renderNumber(arrived)}
                       </td>
                       <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(arrived)}
+                        ${renderNumber(captured)}
+                      </td>
+                      <td class="px-3 py-2 text-center text-white/60">
+                        ${renderNumber(destroyed)}
                       </td>
                     </tr>
                   `;
@@ -251,10 +258,19 @@ export class PlayerStatsTable extends LitElement {
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
                     ${translateText("player_stats_table.steal")}
                   </th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
+                    ${translateText("player_stats_table.trains")}
+                  </th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
+                    ${translateText("player_stats_table.trains_external")}
+                  </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
                 <tr class="hover:bg-white/5 transition-colors">
+                  <td class="px-3 py-2 text-center text-white/60">
+                    ${translateText("player_stats_table.count")}
+                  </td>
                   <td class="px-3 py-2 text-center text-white/60">
                     ${renderNumber(this.stats?.gold?.[0] ?? 0n)}
                   </td>
@@ -269,6 +285,36 @@ export class PlayerStatsTable extends LitElement {
                   </td>
                   <td class="px-3 py-2 text-center text-white/60">
                     ${renderNumber(this.stats?.gold?.[4] ?? 0n)}
+                  </td>
+                  <td class="px-3 py-2 text-center text-white/60">
+                    ${renderNumber(this.stats?.gold?.[5] ?? 0n)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            class="mt-4 overflow-x-auto rounded-lg border border-white/5 bg-black/20"
+          >
+            <table class="w-full text-sm text-gray-300">
+              <thead>
+                <tr class="bg-white/5">
+                  <th class="px-4 py-2 text-center font-semibold text-gray-400">
+                    ${translateText("player_stats_table.alliances")}
+                  </th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
+                    ${translateText("player_stats_table.betrayals")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                <tr class="hover:bg-white/5 transition-colors">
+                  <td class="px-4 py-2 text-center text-white/60">
+                    ${translateText("player_stats_table.count")}
+                  </td>
+                  <td class="px-3 py-2 text-center text-white/60">
+                    ${renderNumber(this.stats?.betrayals ?? 0n)}
                   </td>
                 </tr>
               </tbody>
