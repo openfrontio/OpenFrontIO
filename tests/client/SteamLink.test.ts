@@ -181,12 +181,18 @@ describe("resumePendingSteamLink", () => {
     expect(modal.openForCodeEntry).not.toHaveBeenCalled();
   });
 
-  it("is a no-op (returns false) when the modal element isn't present", () => {
+  it("consumes the stash and still returns true when the modal element isn't present", () => {
     stashPendingCodeEntry();
     // Main.ts guards with `this.steamLinkModal?.` — mirror that here: a
     // missing modal must not throw, and the stash is still consumed so a
     // later page load can't replay it.
-    expect(() => resumePendingSteamLink(undefined)).not.toThrow();
+    //
+    // TRUE, not false: the return value means "there was a stash, stop
+    // routing further this pass", not "a modal was opened". Main.ts
+    // early-returns on it, and that is still right here — the entry is gone,
+    // so falling through to other hash handling would act on a flow that no
+    // longer exists.
+    expect(resumePendingSteamLink(undefined)).toBe(true);
     expect(takePendingLink()).toBeNull();
   });
 });

@@ -270,14 +270,21 @@ async function postSteamLinkRedeem(
       return { ok: false, reason: "rate_limited", retryAfterSeconds };
     }
 
+    // Name the shared function and the payload kind, not redeemSteamLink:
+    // this runs for the fallback-code path too, and logging a code failure
+    // under the token function's name points anyone triaging it at the
+    // wrong flow.
     console.error(
-      "redeemSteamLink: request failed",
+      `postSteamLinkRedeem(${"code" in body ? "code" : "token"}): request failed`,
       response.status,
       response.statusText,
     );
     return { ok: false, reason: "failed" };
   } catch (e) {
-    console.error("redeemSteamLink: request failed", e);
+    console.error(
+      `postSteamLinkRedeem(${"code" in body ? "code" : "token"}): request failed`,
+      e,
+    );
     return { ok: false, reason: "failed" };
   }
 }

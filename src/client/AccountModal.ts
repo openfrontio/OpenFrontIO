@@ -400,7 +400,16 @@ export class AccountModal extends BaseModal {
   }
 
   private handleShowLinkGate(): void {
-    void desktopLinkGateBridge()?.showLinkGate();
+    // The bare `void` form swallowed a rejection into an unhandled promise.
+    // This is an IPC round trip to the Electron main process, so it can
+    // genuinely reject (no window, a main-process throw); catching keeps the
+    // failure visible in the console instead of surfacing as a button that
+    // silently does nothing.
+    desktopLinkGateBridge()
+      ?.showLinkGate()
+      .catch((err) => {
+        console.error("AccountModal: showLinkGate failed", err);
+      });
   }
 
   // CrazyGames "connected as" view: avatar + username from the SDK, plus
