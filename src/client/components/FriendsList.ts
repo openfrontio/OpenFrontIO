@@ -14,6 +14,26 @@ import "./PlayerName";
 
 const PAGE_LIMIT = 20;
 
+/**
+ * Accept a pasted profile share link (`…#modal=profile&publicID=abc12345`) and
+ * keep only the id, mirroring the private-lobby join box. Only strings that are
+ * actually URLs are touched: usernames render as `wonder #5005`, so a bare `#`
+ * must be left alone.
+ */
+export function extractPublicIdFromUrl(input: string): string {
+  if (!input.startsWith("http")) return input;
+  try {
+    const url = new URL(input);
+    const params = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const publicId = params.get("publicID");
+    if (publicId === null || publicId === "") return input;
+    return publicId;
+  } catch (error) {
+    console.warn("Failed to parse profile URL", error);
+    return input;
+  }
+}
+
 @customElement("friends-list")
 export class FriendsList extends LitElement {
   createRenderRoot() {
@@ -100,7 +120,9 @@ export class FriendsList extends LitElement {
     // usernameText) that survives a copy-paste — but resolve on the stored
     // `wonder.5005` form, so accept either. `\s` covers the nbsp. Public ids
     // never contain "#".
-    const target = this.addInput.trim().replace(/\s*#\s*/g, ".");
+    const target = extractPublicIdFromUrl(this.addInput.trim())
+      .trim()
+      .replace(/\s*#\s*/g, ".");
     if (!target) return;
     if (target === this.myPublicId) {
       showToast(translateText("friends.cannot_friend_self"), "red");
@@ -277,13 +299,15 @@ export class FriendsList extends LitElement {
             type="text"
             .value=${this.addInput}
             @input=${(e: Event) =>
-              (this.addInput = (e.target as HTMLInputElement).value)}
+              (this.addInput = extractPublicIdFromUrl(
+                (e.target as HTMLInputElement).value,
+              ))}
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter") void this.handleSend();
             }}
             class="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-mono text-sm"
             placeholder=${translateText("friends.public_id_placeholder")}
-            maxlength="25"
+            maxlength="200"
             ?disabled=${this.actionPending}
           />
           <button
