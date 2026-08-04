@@ -92,6 +92,7 @@ export class BuildUnitIntentEvent implements GameEvent {
     public readonly unit: UnitType,
     public readonly tile: TileRef,
     public readonly rocketDirectionUp?: boolean,
+    public readonly amount?: number,
   ) {}
 }
 
@@ -585,6 +586,7 @@ export class Transport {
       unit: event.unit,
       tile: event.tile,
       rocketDirectionUp: event.rocketDirectionUp,
+      amount: event.amount,
     });
   }
 

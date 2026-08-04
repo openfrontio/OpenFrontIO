@@ -168,12 +168,12 @@ export class MainRadialMenu implements Controller {
       });
   }
 
-  closeMenu() {
+  closeMenu(preserveBuildMenu: boolean = false) {
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
     }
 
-    if (this.buildMenu.isVisible) {
+    if (!preserveBuildMenu && this.buildMenu.isVisible) {
       this.buildMenu.hideMenu();
     }
 

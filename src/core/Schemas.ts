@@ -518,6 +518,7 @@ export const BuildUnitIntentSchema = z.object({
   unit: z.enum(UnitType),
   tile: z.number().int().nonnegative(),
   rocketDirectionUp: z.boolean().optional(),
+  amount: z.number().int().min(1).max(50).optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({

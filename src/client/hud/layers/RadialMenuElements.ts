@@ -21,7 +21,7 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
-import { SendUpgradeStructureIntentEvent } from "../../Transport";
+import { BuildUnitIntentEvent, SendUpgradeStructureIntentEvent } from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
@@ -48,7 +48,7 @@ export interface MenuElementParams {
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
   uiState?: UIState;
-  closeMenu: () => void;
+  closeMenu: (preserveBuildMenu?: boolean) => void;
 }
 
 export interface MenuElement {
@@ -456,9 +456,12 @@ function createMenuElements(
           const buildableUnit = params.playerActions.buildableUnits.find(
             (bu) => bu.type === item.unitType,
           );
+          if (!buildableUnit) {
+            return [];
+          }
+          const isStackableNuke = item.unitType === UnitType.AtomBomb && buildableUnit.canBuild !== false;
           if (
-            !buildableUnit ||
-            buildableUnit.canUpgrade === false ||
+            (buildableUnit.canUpgrade === false && !isStackableNuke) ||
             !params.buildMenu.canBuildOrUpgrade(item)
           ) {
             return [];
@@ -494,13 +497,24 @@ function createMenuElements(
               disabled: (p: MenuElementParams) =>
                 (p.game.myPlayer()?.gold() ?? 0n) < cost,
               action: (p: MenuElementParams) => {
-                p.eventBus.emit(
-                  new SendUpgradeStructureIntentEvent(
-                    buildableUnit.canUpgrade as number,
-                    buildableUnit.type,
-                    amount,
-                  ),
-                );
+                if (isStackableNuke) {
+                  p.eventBus.emit(
+                    new BuildUnitIntentEvent(
+                      buildableUnit.type,
+                      p.tile,
+                      p.uiState?.rocketDirectionUp,
+                      amount,
+                    ),
+                  );
+                } else {
+                  p.eventBus.emit(
+                    new SendUpgradeStructureIntentEvent(
+                      buildableUnit.canUpgrade as number,
+                      buildableUnit.type,
+                      amount,
+                    ),
+                  );
+                }
                 p.closeMenu();
               },
             };
@@ -511,11 +525,15 @@ function createMenuElements(
             (bu) => bu.type === item.unitType,
           );
           if (buildableUnit === undefined) {
+            params.closeMenu();
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.handleBuildClick(buildableUnit, params.tile);
-            params.closeMenu();
+            const expectsAmountPanel = params.buildMenu.handleBuildClick(
+              buildableUnit,
+              params.tile,
+            );
+            params.closeMenu(expectsAmountPanel);
           } else {
             params.closeMenu();
           }

@@ -472,8 +472,9 @@ export class BuildPreviewController implements Controller {
       radiusTileY = this.game.y(upgradeTargetTile);
     }
 
+    const isNuke = u.type === UnitType.AtomBomb;
     const multiplier =
-      u.canUpgrade !== false ? this.uiState.upgradeMultiplier || 1 : 1;
+      u.canUpgrade !== false || isNuke ? this.uiState.upgradeMultiplier || 1 : 1;
     const cost = u.cost * BigInt(multiplier);
     return {
       ghostType: u.type,
@@ -532,6 +533,7 @@ export class BuildPreviewController implements Controller {
       this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       const unitType = this.ghostUnit.buildableUnit.type;
+      const isNuke = unitType === UnitType.AtomBomb;
       const rocketDirectionUp =
         unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
           ? this.uiState.rocketDirectionUp
@@ -541,6 +543,7 @@ export class BuildPreviewController implements Controller {
           unitType,
           this.game.ref(tile.x, tile.y),
           rocketDirectionUp,
+          isNuke ? (this.uiState.upgradeMultiplier || 1) : undefined
         ),
       );
       if (!shouldPreserveGhostAfterBuild(unitType)) {

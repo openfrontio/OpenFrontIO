@@ -385,10 +385,14 @@ export class BuildMenu extends LitElement implements Controller {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public handleBuildClick(buildableUnit: BuildableUnit, tile: TileRef): void {
-    if (buildableUnit.canUpgrade !== false) {
+  public handleBuildClick(buildableUnit: BuildableUnit, tile: TileRef): boolean {
+    const isNuke = buildableUnit.type === UnitType.AtomBomb;
+    if (buildableUnit.canUpgrade !== false || (buildableUnit.canBuild && isNuke)) {
       this._selectedUpgradeUnitType = buildableUnit.type;
+      this.clickedTile = tile;
+      this._hidden = false;
       this.requestUpdate();
+      return true;
     } else if (buildableUnit.canBuild) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
@@ -399,7 +403,9 @@ export class BuildMenu extends LitElement implements Controller {
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );
       this.hideMenu();
+      return false;
     }
+    return false;
   }
 
   public confirmUpgrade(amount: number): void {
@@ -410,13 +416,20 @@ export class BuildMenu extends LitElement implements Controller {
     const bu = this.playerBuildables?.find(
       (u) => u.type === this._selectedUpgradeUnitType,
     );
-    if (!bu || bu.canUpgrade === false) {
+    if (!bu) {
       this.hideMenu();
       return;
     }
-    this.eventBus.emit(
-      new SendUpgradeStructureIntentEvent(bu.canUpgrade, bu.type, amount),
-    );
+    const isNuke = bu.type === UnitType.AtomBomb;
+    if (bu.canUpgrade !== false && !isNuke) {
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(bu.canUpgrade as number, bu.type, amount),
+      );
+    } else if (bu.canBuild && isNuke && this.clickedTile !== undefined) {
+      this.eventBus.emit(
+        new BuildUnitIntentEvent(bu.type, this.clickedTile, this.uiState.rocketDirectionUp, amount),
+      );
+    }
     this.hideMenu();
   }
 
