@@ -21,7 +21,10 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
-import { BuildUnitIntentEvent, SendUpgradeStructureIntentEvent } from "../../Transport";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
@@ -459,7 +462,9 @@ function createMenuElements(
           if (!buildableUnit) {
             return [];
           }
-          const isStackableNuke = item.unitType === UnitType.AtomBomb && buildableUnit.canBuild !== false;
+          const isStackableNuke =
+            item.unitType === UnitType.AtomBomb &&
+            buildableUnit.canBuild !== false;
           if (
             (buildableUnit.canUpgrade === false && !isStackableNuke) ||
             !params.buildMenu.canBuildOrUpgrade(item)
@@ -525,7 +530,6 @@ function createMenuElements(
             (bu) => bu.type === item.unitType,
           );
           if (buildableUnit === undefined) {
-            params.closeMenu();
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {

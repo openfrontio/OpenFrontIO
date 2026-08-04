@@ -385,9 +385,15 @@ export class BuildMenu extends LitElement implements Controller {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public handleBuildClick(buildableUnit: BuildableUnit, tile: TileRef): boolean {
+  public handleBuildClick(
+    buildableUnit: BuildableUnit,
+    tile: TileRef,
+  ): boolean {
     const isNuke = buildableUnit.type === UnitType.AtomBomb;
-    if (buildableUnit.canUpgrade !== false || (buildableUnit.canBuild && isNuke)) {
+    if (
+      buildableUnit.canUpgrade !== false ||
+      (buildableUnit.canBuild && isNuke)
+    ) {
       this._selectedUpgradeUnitType = buildableUnit.type;
       this.clickedTile = tile;
       this._hidden = false;
@@ -423,11 +429,20 @@ export class BuildMenu extends LitElement implements Controller {
     const isNuke = bu.type === UnitType.AtomBomb;
     if (bu.canUpgrade !== false && !isNuke) {
       this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(bu.canUpgrade as number, bu.type, amount),
+        new SendUpgradeStructureIntentEvent(
+          bu.canUpgrade as number,
+          bu.type,
+          amount,
+        ),
       );
     } else if (bu.canBuild && isNuke && this.clickedTile !== undefined) {
       this.eventBus.emit(
-        new BuildUnitIntentEvent(bu.type, this.clickedTile, this.uiState.rocketDirectionUp, amount),
+        new BuildUnitIntentEvent(
+          bu.type,
+          this.clickedTile,
+          this.uiState.rocketDirectionUp,
+          amount,
+        ),
       );
     }
     this.hideMenu();

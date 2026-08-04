@@ -474,7 +474,9 @@ export class BuildPreviewController implements Controller {
 
     const isNuke = u.type === UnitType.AtomBomb;
     const multiplier =
-      u.canUpgrade !== false || isNuke ? this.uiState.upgradeMultiplier || 1 : 1;
+      u.canUpgrade !== false || isNuke
+        ? this.uiState.upgradeMultiplier || 1
+        : 1;
     const cost = u.cost * BigInt(multiplier);
     return {
       ghostType: u.type,
@@ -543,7 +545,7 @@ export class BuildPreviewController implements Controller {
           unitType,
           this.game.ref(tile.x, tile.y),
           rocketDirectionUp,
-          isNuke ? (this.uiState.upgradeMultiplier || 1) : undefined
+          isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
         ),
       );
       if (!shouldPreserveGhostAfterBuild(unitType)) {

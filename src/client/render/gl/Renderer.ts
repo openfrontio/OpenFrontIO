@@ -10,8 +10,8 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
-import { translateText } from "../../Utils";
 import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
