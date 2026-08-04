@@ -1,9 +1,16 @@
-import liveStreamsFallback from "../../../resources/live-streams.json";
-import {
-  formatViewers,
-  watchUrl,
-} from "../../../src/client/components/StreamingNow";
-import { LiveStreamsSchema } from "../../../src/core/ApiSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatViewers } from "../../../src/client/components/StreamingNow";
+import { streamsFeed, watchUrl } from "../../../src/client/StreamsFeed";
+import type { StreamsFeed } from "../../../src/core/ApiSchemas";
+
+const getStreams = vi.fn<() => Promise<StreamsFeed>>();
+vi.mock("../../../src/client/Api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../src/client/Api")>()),
+  getStreams: () => getStreams(),
+}));
+
+// Every entry in the feed is a verified-live broadcast, so startedAt is always present.
+const startedAt = "2026-08-03T12:00:00Z";
 
 describe("StreamingNow", () => {
   describe("watchUrl", () => {
@@ -14,6 +21,7 @@ describe("StreamingNow", () => {
           channel: "zixer",
           displayName: "Zixer",
           viewers: 0,
+          startedAt,
         }),
       ).toBe("https://www.twitch.tv/zixer");
     });
@@ -25,6 +33,7 @@ describe("StreamingNow", () => {
           channel: "@ofm",
           displayName: "OFM",
           viewers: 0,
+          startedAt,
         }),
       ).toBe("https://www.youtube.com/@ofm");
     });
@@ -36,6 +45,7 @@ describe("StreamingNow", () => {
           channel: "zixer",
           displayName: "Zixer",
           viewers: 0,
+          startedAt,
           url: "https://example.com/live",
         }),
       ).toBe("https://example.com/live");
@@ -54,83 +64,99 @@ describe("StreamingNow", () => {
     });
   });
 
-  describe("LiveStreamsSchema", () => {
-    it("parses a valid config and applies defaults", () => {
-      const cfg = LiveStreamsSchema.parse({
-        enabled: true,
-        streams: [
-          { platform: "twitch", channel: "zixer", displayName: "Zixer" },
-        ],
-      });
-      expect(cfg.enabled).toBe(true);
-      expect(cfg.streams[0].viewers).toBe(0); // default
-    });
-
-    it("rejects a malformed stream entry (fails closed)", () => {
-      const parsed = LiveStreamsSchema.safeParse({
-        enabled: true,
-        streams: [{ platform: "kick", channel: "x", displayName: "X" }],
-      });
-      expect(parsed.success).toBe(false);
-    });
-
-    it("rejects a non-URL avatarUrl", () => {
-      const parsed = LiveStreamsSchema.safeParse({
-        enabled: true,
-        streams: [
+  // The panel used to own a 90s setInterval cleared only in disconnectedCallback — which
+  // never runs, because <play-page> is never removed from the DOM. These pin the
+  // replacement: it owns no timer, it renders only what the API verified, and it stops
+  // when the shared poller stops.
+  describe("panel behaviour", () => {
+    beforeEach(async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      getStreams.mockResolvedValue({
+        verifiedAt: new Date().toISOString(),
+        featured: [],
+        live: [
           {
             platform: "twitch",
-            channel: "x",
-            displayName: "X",
-            avatarUrl: "not a url",
+            channel: "bobthegamertwitch",
+            displayName: "Bob",
+            viewers: 14,
+            url: "https://twitch.tv/bobthegamertwitch",
+            startedAt,
+          },
+          {
+            platform: "youtube",
+            channel: "@enzo",
+            displayName: "Enzo",
+            viewers: 300,
+            url: "https://www.youtube.com/watch?v=vid1",
+            startedAt,
           },
         ],
       });
-      expect(parsed.success).toBe(false);
+      // The host is desktop-only; jsdom's matchMedia reports no match for everything.
+      vi.stubGlobal("matchMedia", () => ({ matches: true }));
+      await import("../../../src/client/components/StreamingNow");
     });
 
-    it("rejects channels with URL delimiters or whitespace", () => {
-      for (const channel of ["foo/bar", "x?y=1", "a b", "x#frag", ""]) {
-        const parsed = LiveStreamsSchema.safeParse({
-          enabled: true,
-          streams: [{ platform: "twitch", channel, displayName: "X" }],
-        });
-        expect(parsed.success).toBe(false);
-      }
+    afterEach(() => {
+      document.body.innerHTML = "";
+      streamsFeed.reset();
+      vi.useRealTimers();
+      vi.clearAllMocks();
+      vi.unstubAllGlobals();
     });
 
-    it("accepts normal Twitch logins and YouTube handles", () => {
-      for (const channel of [
-        "openfrontmasters",
-        "@OpenFront_Masters",
-        "a.b-c",
-      ]) {
-        const parsed = LiveStreamsSchema.safeParse({
-          enabled: true,
-          streams: [{ platform: "youtube", channel, displayName: "X" }],
-        });
-        expect(parsed.success).toBe(true);
-      }
+    const mount = async () => {
+      const el = document.createElement("streaming-now") as HTMLElement & {
+        updateComplete: Promise<boolean>;
+      };
+      document.body.appendChild(el);
+      await el.updateComplete;
+      await vi.waitFor(() => expect(getStreams).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      await el.updateComplete;
+      return el;
+    };
+
+    it("renders a card per verified-live stream, highest viewers first", async () => {
+      const el = await mount();
+      const names = [...el.querySelectorAll("a")].map(
+        (a) => a.getAttribute("href") ?? "",
+      );
+      expect(names).toEqual([
+        "https://www.youtube.com/watch?v=vid1", // 300 viewers
+        "https://twitch.tv/bobthegamertwitch", // 14
+      ]);
+      expect(el.style.display).not.toBe("none");
     });
 
-    it("rejects non-https url schemes (no javascript:/http:)", () => {
-      for (const url of ["javascript:alert(1)", "http://example.com"]) {
-        const parsed = LiveStreamsSchema.safeParse({
-          enabled: true,
-          streams: [
-            { platform: "twitch", channel: "x", displayName: "X", url },
-          ],
-        });
-        expect(parsed.success).toBe(false);
-      }
+    // Viewer counts flow through translateText, which is stubbed to return the bare key
+    // here, so the observable proof that YouTube carries a real count is the ordering
+    // above (300 ahead of 14) plus the entry rendering at all — it used to be a
+    // hardcoded 0 for every YouTube channel.
+    it("renders each streamer's display name", async () => {
+      const el = await mount();
+      expect(el.textContent).toContain("Enzo");
+      expect(el.textContent).toContain("Bob");
     });
-  });
 
-  describe("bundled fallback", () => {
-    it("is valid and ships disabled/empty", () => {
-      const cfg = LiveStreamsSchema.parse(liveStreamsFallback);
-      expect(cfg.enabled).toBe(false);
-      expect(cfg.streams).toEqual([]);
+    it("stays collapsed when nobody is live", async () => {
+      getStreams.mockResolvedValue({
+        verifiedAt: new Date().toISOString(),
+        featured: [],
+        live: [],
+      });
+      const el = await mount();
+      expect(el.style.display).toBe("none");
+      expect(el.querySelectorAll("a")).toHaveLength(0);
+    });
+
+    it("owns no timer: disconnecting stops all polling", async () => {
+      const el = await mount();
+      const before = getStreams.mock.calls.length;
+      el.remove();
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(getStreams.mock.calls.length).toBe(before);
     });
   });
 });

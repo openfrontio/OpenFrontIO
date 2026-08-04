@@ -22,7 +22,11 @@ export class TribeSpawner {
     // to avoid tribe IDs colliding with nation/human IDs from the same PRNG sequence.
     this.random = new PseudoRandom(simpleHash(gameID) + 2);
     this.tribeNameData = resolveTribeNameData(gs.config().gameConfig().gameMap);
-    this.nationTiles = new Set(nationCells.map((c) => gs.ref(c.x, c.y)));
+    this.nationTiles = new Set(
+      nationCells
+        .filter((c) => gs.isValidCoord(c.x, c.y))
+        .map((c) => gs.ref(c.x, c.y)),
+    );
   }
 
   spawnTribes(

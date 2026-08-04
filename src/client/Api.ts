@@ -1,21 +1,14 @@
-import featuredStreamFallback from "resources/featured-stream.json";
-import liveStreamsFallback from "resources/live-streams.json";
 import newsItemsFallback from "resources/news.json";
+import streamsFallback from "resources/streams.json";
 import { z } from "zod";
-import type {
-  FeaturedStreamConfig,
-  LiveStreamsConfig,
-  NewsItem,
-} from "../core/ApiSchemas";
+import type { NewsItem, StreamsFeed } from "../core/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
   ClaimRewardResponse,
   ClaimRewardResponseSchema,
-  FeaturedStreamSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
-  LiveStreamsSchema,
   NewsItemSchema,
   PlayerGameModeFilter,
   PlayerGameTypeFilter,
@@ -31,6 +24,7 @@ import {
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
+  StreamsFeedSchema,
   TribeLeaderboardResponse,
   TribeLeaderboardResponseSchema,
   TribeStatsResponse,
@@ -1107,8 +1101,8 @@ export async function getNews(): Promise<NewsItem[]> {
 
 // Fetch an API-served JSON config (news.json-style: served file + bundled fallback).
 // Any error, non-200, or invalid payload falls back, parsed through the same schema so
-// the fallback is validated too. The timeout guards recurring callers (StreamingNow
-// polls every 90s) from a fetch that never settles.
+// the fallback is validated too. The timeout guards recurring callers (StreamsFeed polls
+// every 60s) from a fetch that never settles.
 async function getServedConfig<T>(
   name: string,
   schema: z.ZodType<T>,
@@ -1135,20 +1129,11 @@ async function getServedConfig<T>(
   }
 }
 
-// Featured-stream config, served like news.json (API-hosted JSON + bundled fallback).
-export async function getFeaturedStream(): Promise<FeaturedStreamConfig> {
-  return getServedConfig(
-    "featured-stream.json",
-    FeaturedStreamSchema,
-    featuredStreamFallback,
-  );
-}
-
-// Live-stream list for the "Streaming Now" panel. Fails closed (bundled OFF config).
-export async function getLiveStreams(): Promise<LiveStreamsConfig> {
-  return getServedConfig(
-    "live-streams.json",
-    LiveStreamsSchema,
-    liveStreamsFallback,
-  );
+// The single verified-live feed behind both homepage streaming features (API-hosted JSON
+// + bundled fallback). Every entry has already been confirmed live server-side, so
+// callers render what this returns without probing Twitch or YouTube themselves.
+//
+// Fails closed: any error, non-200, or legacy payload lands on the bundled empty feed.
+export async function getStreams(): Promise<StreamsFeed> {
+  return getServedConfig("streams.json", StreamsFeedSchema, streamsFallback);
 }

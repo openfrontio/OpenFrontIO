@@ -8,7 +8,6 @@ import {
   toInt,
   within,
 } from "../Util";
-import { clearParabolaDirection } from "../pathfinding/PathFinder.Parabola";
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
@@ -1473,21 +1472,7 @@ export class PlayerImpl implements Player {
       (a, b) =>
         mg.manhattanDist(a.tile(), tile) - mg.manhattanDist(b.tile(), tile),
     );
-
-    if (nukeType === UnitType.MIRV) {
-      // MIRVs fly to a separation point high above the map and their
-      // warheads are exempt from impassable checks, so any silo works.
-      return readySilos[0]?.tile() ?? false;
-    }
-
-    // Closest silo whose trajectory (up or down curve) avoids impassable
-    // terrain. NukeExecution picks the actual curve direction.
-    for (const silo of readySilos) {
-      if (clearParabolaDirection(mg, silo.tile(), tile, true) !== null) {
-        return silo.tile();
-      }
-    }
-    return false;
+    return readySilos[0]?.tile() ?? false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
