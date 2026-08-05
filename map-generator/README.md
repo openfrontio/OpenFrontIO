@@ -12,7 +12,7 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
 1. Install go <https://go.dev/doc/install>
 2. Install a C compiler (required by the WebP dependency via CGO):
-   - **Windows:** Install [MSYS2](https://www.msys2.org/) and the `mingw-w64-gcc` package, or [TDM-GCC](https://jmeubank.github.io/tdm-gcc/). Make sure `gcc` is on your PATH.
+   - **Windows:** Install [MSYS2](https://www.msys2.org/), open the **UCRT64** terminal, and run `pacman -S mingw-w64-ucrt-x86_64-gcc`. Either use Go from within that terminal or add the UCRT64 `bin` directory (e.g. `C:\msys64\ucrt64\bin`) to your PATH so `gcc` is available. Alternatively, install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/).
    - **macOS:** `xcode-select --install`
    - **Linux:** `sudo apt install gcc` (Debian/Ubuntu) or equivalent.
 3. Go to map-generator folder: `cd map-generator`
