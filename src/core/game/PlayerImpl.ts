@@ -1377,28 +1377,35 @@ export class PlayerImpl implements Player {
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
+    sourceSiloId?: number,
   ): TileRef | false {
     if (!this.canBuildUnitType(unitType)) {
       return false;
     }
 
-    return this.canSpawnUnitType(unitType, targetTile, validTiles);
+    return this.canSpawnUnitType(
+      unitType,
+      targetTile,
+      validTiles,
+      sourceSiloId,
+    );
   }
 
   private canSpawnUnitType(
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null,
+    sourceSiloId?: number,
   ): TileRef | false {
     switch (unitType) {
       case UnitType.MIRV:
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
-        return this.nukeSpawn(targetTile, unitType);
+        return this.nukeSpawn(targetTile, unitType, sourceSiloId);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        return this.nukeSpawn(targetTile, unitType);
+        return this.nukeSpawn(targetTile, unitType, sourceSiloId);
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
@@ -1425,7 +1432,11 @@ export class PlayerImpl implements Player {
     }
   }
 
-  nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
+  nukeSpawn(
+    tile: TileRef,
+    nukeType: UnitType,
+    sourceSiloId?: number,
+  ): TileRef | false {
     const mg = this.mg;
     if (mg.isSpawnImmunityActive()) {
       return false;
@@ -1468,6 +1479,11 @@ export class PlayerImpl implements Player {
       (silo) =>
         silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
     );
+    if (sourceSiloId !== undefined) {
+      return (
+        readySilos.find((silo) => silo.id() === sourceSiloId)?.tile() ?? false
+      );
+    }
     readySilos.sort(
       (a, b) =>
         mg.manhattanDist(a.tile(), tile) - mg.manhattanDist(b.tile(), tile),

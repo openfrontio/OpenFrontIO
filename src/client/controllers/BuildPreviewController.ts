@@ -24,6 +24,7 @@ import {
   ConfirmGhostStructureEvent,
   MouseMoveEvent,
   MouseUpEvent,
+  ToggleStructureEvent,
 } from "../InputHandler";
 import { MapRenderer, buildNukeTrajectory } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
@@ -34,11 +35,48 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
+import { showToast, translateText } from "../Utils";
 import { GameView } from "../view";
+import type { UnitView } from "../view/UnitView";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+}
+
+export function isPlayerMissileType(unitType: UnitType | null): boolean {
+  return (
+    unitType === UnitType.AtomBomb ||
+    unitType === UnitType.HydrogenBomb ||
+    unitType === UnitType.MIRV
+  );
+}
+
+export function isReadyMissileSilo(
+  silo: Pick<UnitView, "isActive" | "isInCooldown" | "isUnderConstruction">,
+): boolean {
+  return silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction();
+}
+
+export function chooseMissileSilo<T extends Pick<UnitView, "id">>(
+  silos: readonly T[],
+  sourceSiloId: number | null,
+  distance: (silo: T) => number,
+): T | undefined {
+  if (sourceSiloId !== null) {
+    return silos.find((silo) => silo.id() === sourceSiloId);
+  }
+
+  let nearest: T | undefined;
+  let nearestDistance = Infinity;
+  for (const silo of silos) {
+    const siloDistance = distance(silo);
+    if (siloDistance < nearestDistance) {
+      nearest = silo;
+      nearestDistance = siloDistance;
+    }
+  }
+  return nearest;
 }
 
 // tSamIntercept value used to flag an untargetable (impassable) destination:
@@ -75,6 +113,7 @@ export class BuildPreviewController implements Controller {
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
+  private sourceSiloId: number | null = null;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
   // rendered icon follows the cursor at sub-tile precision so motion is
@@ -315,7 +354,8 @@ export class BuildPreviewController implements Controller {
 
   /**
    * For AtomBomb / HydrogenBomb ghosts, push the Bezier trajectory preview
-   * (closest player-owned silo → target, accounting for non-allied SAMs).
+   * (selected ready silo, or closest ready silo → target, accounting for
+   * non-allied SAMs).
    * Cleared whenever the ghost isn't a nuke, has no target, or the player
    * has no silos. Unlike the ghost icon, the trajectory also renders when
    * hovering impassable terrain (cursorLoop adds the blocked X there).
@@ -343,9 +383,7 @@ export class BuildPreviewController implements Controller {
     // originating from a silo the game wouldn't use.
     const silos = myPlayer
       .units(UnitType.MissileSilo)
-      .filter(
-        (u) => u.isActive() && !u.isInCooldown() && !u.isUnderConstruction(),
-      );
+      .filter(isReadyMissileSilo);
     if (silos.length === 0) {
       this.clearNukeTrajectory();
       return;
@@ -353,15 +391,17 @@ export class BuildPreviewController implements Controller {
 
     const dstX = this.game.x(tileRef);
     const dstY = this.game.y(tileRef);
-    silos.sort(
-      (a, b) =>
-        Math.abs(this.game.x(a.tile()) - dstX) +
-        Math.abs(this.game.y(a.tile()) - dstY) -
-        (Math.abs(this.game.x(b.tile()) - dstX) +
-          Math.abs(this.game.y(b.tile()) - dstY)),
+    const bestSilo = chooseMissileSilo(
+      silos,
+      this.sourceSiloId,
+      (silo) =>
+        Math.abs(this.game.x(silo.tile()) - dstX) +
+        Math.abs(this.game.y(silo.tile()) - dstY),
     );
-
-    const bestSilo = silos[0];
+    if (bestSilo === undefined) {
+      this.clearNukeTrajectory();
+      return;
+    }
     const directionUp = this.uiState.rocketDirectionUp;
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
@@ -501,6 +541,7 @@ export class BuildPreviewController implements Controller {
 
   private requestConfirmStructure(e: MouseUpEvent): void {
     if (!this.ghostUnit && !this.uiState.ghostStructure) return;
+    if (this.trySelectMissileSilo(e)) return;
     if (this.isGhostReadyForConfirm()) {
       this.createStructure(e);
     } else {
@@ -537,6 +578,9 @@ export class BuildPreviewController implements Controller {
           unitType,
           this.game.ref(tile.x, tile.y),
           rocketDirectionUp,
+          isPlayerMissileType(unitType)
+            ? (this.sourceSiloId ?? undefined)
+            : undefined,
         ),
       );
       if (!shouldPreserveGhostAfterBuild(unitType)) {
@@ -565,19 +609,54 @@ export class BuildPreviewController implements Controller {
         ghostRailPaths: [],
       },
     };
+    if (isPlayerMissileType(type)) {
+      this.eventBus.emit(new ToggleStructureEvent([UnitType.MissileSilo]));
+    }
   }
 
   private clearGhostStructure() {
+    const wasPlayerMissile = isPlayerMissileType(
+      this.ghostUnit?.buildableUnit.type ?? null,
+    );
     this.pendingConfirm = null;
     this.ghostUnit = null;
+    this.sourceSiloId = null;
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);
     this.clearNukeTrajectory();
+    if (wasPlayerMissile) {
+      this.eventBus.emit(new ToggleStructureEvent(null));
+    }
   }
 
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+  }
+
+  private trySelectMissileSilo(e: MouseUpEvent): boolean {
+    const type =
+      this.ghostUnit?.buildableUnit.type ?? this.uiState.ghostStructure;
+    if (!isPlayerMissileType(type)) return false;
+
+    const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return false;
+    const tileRef = this.game.ref(tile.x, tile.y);
+    const silo = this.game
+      .myPlayer()
+      ?.units(UnitType.MissileSilo)
+      .find((unit) => unit.tile() === tileRef);
+    if (silo === undefined) return false;
+
+    if (!isReadyMissileSilo(silo)) {
+      showToast(translateText("nuke_targeting.silo_unavailable"), "red", 1500);
+      return true;
+    }
+
+    this.sourceSiloId = silo.id();
+    this.lastGhostQueryAt = 0;
+    showToast(translateText("nuke_targeting.silo_selected"), "green", 1500);
+    return true;
   }
 
   private resolveGhostRangeLevel(

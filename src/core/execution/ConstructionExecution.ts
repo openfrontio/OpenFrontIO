@@ -22,6 +22,7 @@ export class ConstructionExecution implements Execution {
     private constructionType: UnitType,
     private tile: TileRef,
     private rocketDirectionUp?: boolean,
+    private sourceSiloId?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -113,11 +114,14 @@ export class ConstructionExecution implements Execution {
             -1,
             0,
             this.rocketDirectionUp,
+            this.sourceSiloId,
           ),
         );
         break;
       case UnitType.MIRV:
-        this.mg.addExecution(new MirvExecution(player, this.tile));
+        this.mg.addExecution(
+          new MirvExecution(player, this.tile, this.sourceSiloId),
+        );
         break;
       case UnitType.Warship:
         this.mg.addExecution(

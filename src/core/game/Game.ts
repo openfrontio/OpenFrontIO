@@ -613,6 +613,7 @@ export interface Player {
     type: UnitType,
     targetTile: TileRef,
     validTiles?: TileRef[] | null,
+    sourceSiloId?: number,
   ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,

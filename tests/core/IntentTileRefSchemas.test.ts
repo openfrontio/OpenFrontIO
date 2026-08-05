@@ -62,6 +62,26 @@ describe("intent schemas: tile refs are non-negative integers", () => {
 });
 
 describe("intent schemas: unit ids are non-negative integers", () => {
+  it("build_unit accepts an optional source silo id", () => {
+    const ok = {
+      type: "build_unit",
+      unit: "Atom Bomb",
+      tile: 10,
+      sourceSiloId: 3,
+    };
+    expect(BuildUnitIntentSchema.safeParse(ok).success).toBe(true);
+    expect(
+      BuildUnitIntentSchema.safeParse({ ...ok, sourceSiloId: undefined })
+        .success,
+    ).toBe(true);
+    expect(
+      BuildUnitIntentSchema.safeParse({ ...ok, sourceSiloId: 3.5 }).success,
+    ).toBe(false);
+    expect(
+      BuildUnitIntentSchema.safeParse({ ...ok, sourceSiloId: -1 }).success,
+    ).toBe(false);
+  });
+
   it("upgrade_structure", () => {
     const ok = { type: "upgrade_structure", unit: "City", unitId: 3 };
     expect(UpgradeStructureIntentSchema.safeParse(ok).success).toBe(true);

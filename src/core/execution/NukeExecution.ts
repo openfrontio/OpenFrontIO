@@ -35,6 +35,7 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    private sourceSiloId?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -183,7 +184,12 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(this.nukeType, this.dst);
+      const spawn = this.player.canBuild(
+        this.nukeType,
+        this.dst,
+        null,
+        this.sourceSiloId,
+      );
       if (spawn === false) {
         console.warn(`cannot build Nuke`);
         this.active = false;

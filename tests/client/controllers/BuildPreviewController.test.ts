@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
+  chooseMissileSilo,
+  isPlayerMissileType,
+  isReadyMissileSilo,
   samThreatensNukePreview,
   shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
@@ -31,6 +34,44 @@ describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm
       expect(shouldPreserveGhostAfterBuild(UnitType.Warship)).toBe(false);
       expect(shouldPreserveGhostAfterBuild(UnitType.MIRV)).toBe(false);
     });
+  });
+});
+
+describe("missile silo source selection", () => {
+  test("recognizes every player-aimed missile type", () => {
+    expect(isPlayerMissileType(UnitType.AtomBomb)).toBe(true);
+    expect(isPlayerMissileType(UnitType.HydrogenBomb)).toBe(true);
+    expect(isPlayerMissileType(UnitType.MIRV)).toBe(true);
+    expect(isPlayerMissileType(UnitType.MIRVWarhead)).toBe(false);
+    expect(isPlayerMissileType(UnitType.MissileSilo)).toBe(false);
+  });
+
+  test("only active, completed silos with capacity are selectable", () => {
+    const silo = (
+      active: boolean,
+      cooldown: boolean,
+      underConstruction: boolean,
+    ) => ({
+      isActive: () => active,
+      isInCooldown: () => cooldown,
+      isUnderConstruction: () => underConstruction,
+    });
+
+    expect(isReadyMissileSilo(silo(true, false, false))).toBe(true);
+    expect(isReadyMissileSilo(silo(false, false, false))).toBe(false);
+    expect(isReadyMissileSilo(silo(true, true, false))).toBe(false);
+    expect(isReadyMissileSilo(silo(true, false, true))).toBe(false);
+  });
+
+  test("explicit selection overrides the nearest-silo default", () => {
+    const silos = [
+      { id: () => 11, distance: 2 },
+      { id: () => 22, distance: 20 },
+    ];
+
+    expect(chooseMissileSilo(silos, null, (s) => s.distance)?.id()).toBe(11);
+    expect(chooseMissileSilo(silos, 22, (s) => s.distance)?.id()).toBe(22);
+    expect(chooseMissileSilo(silos, 99, (s) => s.distance)).toBeUndefined();
   });
 });
 

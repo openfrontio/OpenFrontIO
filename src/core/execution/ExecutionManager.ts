@@ -110,6 +110,7 @@ export class Executor {
           intent.unit,
           intent.tile,
           intent.rocketDirectionUp,
+          intent.sourceSiloId,
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);

@@ -1199,6 +1199,10 @@
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
   },
+  "nuke_targeting": {
+    "silo_selected": "Missile silo selected",
+    "silo_unavailable": "That missile silo is not ready"
+  },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",
     "collapse": "Collapse",

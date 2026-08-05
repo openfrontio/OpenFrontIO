@@ -44,6 +44,7 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
+    private sourceSiloId?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -70,7 +71,12 @@ export class MirvExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
+      const spawn = this.player.canBuild(
+        UnitType.MIRV,
+        this.dst,
+        null,
+        this.sourceSiloId,
+      );
       if (spawn === false) {
         console.warn(`cannot build MIRV`);
         this.active = false;

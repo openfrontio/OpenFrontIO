@@ -1,3 +1,4 @@
+import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
@@ -117,6 +118,76 @@ describe("MissileSilo", () => {
     // the silo is on cooldown, so it cannot launch another nuke
     attackerBuildsNuke(null, game.ref(7, 7));
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
+  });
+
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb])(
+    "selected silo launches a %s instead of the nearest silo",
+    (missileType) => {
+      attacker.buildUnit(UnitType.MissileSilo, game.ref(20, 20), {});
+      const [selectedSilo, nearestSilo] = attacker.units(UnitType.MissileSilo);
+      expect(selectedSilo.tile()).toBe(game.ref(1, 1));
+      expect(nearestSilo.tile()).toBe(game.ref(20, 20));
+
+      game.addExecution(
+        new ConstructionExecution(
+          attacker,
+          missileType,
+          game.ref(50, 50),
+          undefined,
+          selectedSilo.id(),
+        ),
+      );
+      executeTicks(game, 4);
+
+      expect(selectedSilo.isInCooldown()).toBe(true);
+      expect(nearestSilo.isInCooldown()).toBe(false);
+      expect(attacker.units(missileType)).toHaveLength(1);
+    },
+  );
+
+  test("invalid selected silo rejects the launch instead of falling back", () => {
+    const readySilo = attacker.units(UnitType.MissileSilo)[0];
+    game.addExecution(
+      new ConstructionExecution(
+        attacker,
+        UnitType.AtomBomb,
+        game.ref(50, 50),
+        undefined,
+        999_999,
+      ),
+    );
+    executeTicks(game, 4);
+
+    expect(readySilo.isInCooldown()).toBe(false);
+    expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
+  });
+
+  test("selected silo also launches a MIRV", () => {
+    attacker.buildUnit(UnitType.MissileSilo, game.ref(20, 20), {});
+    const [selectedSilo, nearestSilo] = attacker.units(UnitType.MissileSilo);
+    const targetInfo = new PlayerInfo(
+      "mirv_target_id",
+      PlayerType.Human,
+      null,
+      "mirv_target_id",
+    );
+    game.addPlayer(targetInfo);
+    game.player(targetInfo.id).conquer(game.ref(50, 50));
+
+    game.addExecution(
+      new ConstructionExecution(
+        attacker,
+        UnitType.MIRV,
+        game.ref(50, 50),
+        undefined,
+        selectedSilo.id(),
+      ),
+    );
+    executeTicks(game, 4);
+
+    expect(selectedSilo.isInCooldown()).toBe(true);
+    expect(nearestSilo.isInCooldown()).toBe(false);
+    expect(attacker.units(UnitType.MIRV)).toHaveLength(1);
   });
 
   test("missilesilo should have increased level after upgrade", async () => {
