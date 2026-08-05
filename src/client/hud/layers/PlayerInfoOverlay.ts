@@ -266,7 +266,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     hasBetrayal: boolean;
     hasAlliance: boolean;
     hasTeam: boolean;
-  }): string {
+  }): { fontSize: string; isAllianceWrapped: boolean } {
     const {
       nameLength,
       iconCount,
@@ -277,39 +277,77 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     } = params;
 
     // Approximate char-widths each element occupies at --text-lg.
-    const PRESSURE = {
-      //35 39.8 just player 41 for none, 43.3 for one, 46.7 for two, 50.9 for three
-      playerType: 6,
-      perIcon: 2.25,
-      icon: 1.25,
-      flag: 1.5,
-      betrayal: 4,
-      alliance: 5.5,
-      team: 2.5,
+    const DESKTOP_PRESSURE = {
+      playerType: 3.5,
+      perIcon: 2.0,
+      icon: 0.5,
+      flag: 3.5,
+      betrayal: 4.2,
+      alliance: 6.7,
+      allianceWrapped: 3.9,
+      team: 1.0,
     } as const;
 
-    const iconPressure =
+    const MOBILE_PRESSURE = {
+      playerType: 3.5,
+      perIcon: 2.2,
+      icon: 0.5,
+      flag: 4.2,
+      betrayal: 4.6,
+      alliance: 8.6,
+      allianceWrapped: 4.8,
+      team: 1.0,
+    } as const;
+
+    const width = window.innerWidth;
+    const isDesktop = width >= 1024;
+
+    const PRESSURE = isDesktop ? DESKTOP_PRESSURE : MOBILE_PRESSURE;
+
+    const basePressure =
       PRESSURE.playerType +
       iconCount * PRESSURE.perIcon +
       (iconCount ? PRESSURE.icon : 0) +
       (hasFlag ? PRESSURE.flag : 0) +
       (hasBetrayal ? PRESSURE.betrayal : 0) +
-      (hasAlliance ? PRESSURE.alliance : 0) +
       (hasTeam ? PRESSURE.team : 0);
 
-    const isDesktop = window.innerWidth >= 1024;
+    let capacity: number;
 
-    // How many chars fit at --text-lg.
-    const capacity = isDesktop ? 34 : 37;
-    const mobileFactor = isDesktop ? 1 : 1.29;
-    const scale = (capacity - iconPressure * mobileFactor) / nameLength;
-
-    //  lg breakpoint (1024px)
-    if (isDesktop) {
-      return `clamp(var(--text-lg) * .65, var(--text-lg) * ${scale.toFixed(3)}, var(--text-lg))`;
+    if (width < 640) {
+      // Below 640px, overlay 100% viewport width.
+      // space grows dynamically with width
+      capacity = 28.1 + (Math.max(360, width) - 360) * 0.119;
+    } else if (width < 768) {
+      // 640px - 767px: sm:w-[500px], troop col w-28
+      // space = 376px / 8.4px = 44.8 chars.
+      capacity = 44.8;
+    } else if (width < 1024) {
+      // 768px - 1023px: sm:w-[500px],  troop col md:w-36
+      // space = 344px / 8.4px = 41.0 chars.
+      capacity = 41.0;
     } else {
-      return `clamp(var(--text-sm) * .65, var(--text-sm) * ${scale.toFixed(3)}, var(--text-sm))`;
+      // >= 1024px: sm:w-[500px], font-size text-lg (18px, 10.8px/char).
+      // space = 336px / 10.8px = 31.1 chars.
+      capacity = 31.1;
     }
+
+    let isAllianceWrapped = false;
+    let alliancePressure = hasAlliance ? PRESSURE.alliance : 0;
+    let scale = (capacity - (basePressure + alliancePressure)) / nameLength;
+
+    // If alliance active and font scale < 0.85
+    // word-wrap alliance (icon & duration) to reduce width.
+    if (hasAlliance && scale < 0.85) {
+      isAllianceWrapped = true;
+      alliancePressure = PRESSURE.allianceWrapped;
+      scale = (capacity - (basePressure + alliancePressure)) / nameLength;
+    }
+
+    const textSize = isDesktop ? "lg" : "sm";
+    const fontSize = `clamp(var(--text-${textSize}) * .65, var(--text-${textSize}) * ${scale.toFixed(3)}, var(--text-${textSize}))`;
+
+    return { fontSize, isAllianceWrapped };
   }
 
   private renderPlayerInfo(player: PlayerView) {
@@ -328,19 +366,63 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       .reduce((a, b) => a + b, 0);
     const totalTroops = player.troops();
 
+    let playerType = "";
+    switch (player.type()) {
+      case PlayerType.Bot:
+        playerType = translateText("player_type.bot");
+        break;
+      case PlayerType.Nation:
+        playerType = translateText("player_type.nation");
+        break;
+      case PlayerType.Human:
+        playerType = translateText("player_type.player");
+        break;
+    }
+    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
+
+    const { fontSize, isAllianceWrapped } = this.getNameFontSize({
+      nameLength: player.displayName().length,
+      iconCount: playerIcons.length,
+      hasFlag: !!player.cosmetics.flag,
+      hasBetrayal: traitorTicks > 0,
+      hasAlliance: isAllied ?? false,
+      hasTeam: playerTeam !== "" && player.type() !== PlayerType.Bot,
+    });
+
     if (isAllied) {
       const alliance = myPlayer
         ?.alliances()
         .find((alliance) => alliance.other === player.id());
       if (alliance !== undefined) {
-        allianceHtml = html` <div
-          class="${traitorTicks === 0
-            ? "ml-auto"
-            : ""} flex items-center  mr-0 gap-1 text-sm font-bold leading-tight min-w-[17%]"
-        >
-          <img src=${allianceIcon} width="20" height="20" />
-          ${this.allianceExpirationText(alliance)}
-        </div>`;
+        allianceHtml = isAllianceWrapped
+          ? html`<div
+              class="${traitorTicks === 0
+                ? "ml-auto"
+                : ""} flex flex-col items-center gap-0 text-xs font-bold leading-none shrink-0"
+            >
+              <img
+                src=${allianceIcon}
+                width="14"
+                height="14"
+                class="shrink-0"
+              />
+              <span class="text-[10px] leading-tight"
+                >${this.allianceExpirationText(alliance)}</span
+              >
+            </div>`
+          : html`<div
+              class="${traitorTicks === 0
+                ? "ml-auto"
+                : ""} flex items-center mr-0 gap-1 text-xs font-bold leading-tight shrink-0"
+            >
+              <img
+                src=${allianceIcon}
+                width="18"
+                height="18"
+                class="shrink-0"
+              />
+              <span>${this.allianceExpirationText(alliance)}</span>
+            </div>`;
       }
     }
 
@@ -355,20 +437,6 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         ><span></span
       ></span>`;
     }
-
-    let playerType = "";
-    switch (player.type()) {
-      case PlayerType.Bot:
-        playerType = translateText("player_type.bot");
-        break;
-      case PlayerType.Nation:
-        playerType = translateText("player_type.nation");
-        break;
-      case PlayerType.Human:
-        playerType = translateText("player_type.player");
-        break;
-    }
-    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
       <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
@@ -413,7 +481,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           class="flex flex-col justify-between self-stretch w-[100%] flex-grow-1"
         >
           <div
-            class="flex items-center gap-1 md:gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
+            class="flex items-center gap-1 lg:gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
               isFriendly ?? false,
             )}"
           >
@@ -423,18 +491,10 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   src=${assetUrl(player.cosmetics.flag!)}
                 />`
               : html``}
-            <div class="shrink-10000 min-w-0">
+            <div class="shrink min-w-0">
               <span
                 class="font-mono inline-block leading-[1.2] wrap-anywhere"
-                style="font-size: ${this.getNameFontSize({
-                  nameLength: player.displayName().length,
-                  iconCount: playerIcons.length,
-                  hasFlag: !!player.cosmetics.flag,
-                  hasBetrayal: betrayalHtml !== null,
-                  hasAlliance: allianceHtml !== null,
-                  hasTeam:
-                    playerTeam !== "" && player.type() !== PlayerType.Bot,
-                })}"
+                style="font-size: ${fontSize}"
                 >${player.displayName()}</span
               >
             </div>
