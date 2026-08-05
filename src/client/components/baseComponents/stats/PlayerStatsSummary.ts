@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { PlayerStatsLeaf } from "../../../../core/ApiSchemas";
+import { assetUrl } from "../../../../core/AssetUrls";
 import { renderNumber, translateText } from "../../../Utils";
 
 type PlayerSummaryMetricKey =
@@ -54,8 +55,97 @@ const METRIC_LABELS: Record<PlayerSummaryMetricKey, string> = {
   othersTrainGold: "player_stats_tree.stats_others_train_gold_per_game",
 };
 
-// One hue per family row rather than per tile, so colour reinforces the
-// grouping instead of competing with it: units, naval, combat, gold.
+// Only the qualifier that tells a tile from its neighbours: the icon carries
+// the noun and the group heading carries the family. The full name stays as
+// the tile's hover title and its screen-reader name.
+const METRIC_SHORT_LABELS: Record<PlayerSummaryMetricKey, string> = {
+  cities: "player_stats_table.built",
+  ports: "player_stats_table.built",
+  factories: "player_stats_table.built",
+  defensePosts: "player_stats_table.built",
+  transports: "player_stats_tree.stats_transports_sent_short",
+  landings: "player_stats_tree.stats_transports_landed_short",
+  tradeArrived: "player_stats_tree.stats_trade_arrived_short",
+  tradeCaptured: "player_stats_tree.stats_trade_captured_short",
+  outgoing: "player_stats_tree.stats_outgoing_short",
+  incoming: "player_stats_table.incoming",
+  nukes: "player_stats_table.launched",
+  warships: "player_stats_table.built",
+  tradeGold: "player_stats_table.trade",
+  piracyGold: "player_stats_table.piracy",
+  trainGold: "player_stats_table.trains",
+  othersTrainGold: "player_stats_table.trains_external",
+};
+
+const METRIC_GROUPS = [
+  {
+    heading: "player_stats_tree.stats_group_buildings",
+    keys: ["cities", "ports", "factories", "defensePosts"],
+  },
+  {
+    heading: "player_stats_tree.stats_group_naval",
+    keys: ["transports", "landings", "tradeArrived", "tradeCaptured"],
+  },
+  {
+    heading: "player_stats_tree.stats_group_combat",
+    keys: ["outgoing", "incoming", "nukes", "warships"],
+  },
+  {
+    heading: "player_stats_tree.stats_group_gold",
+    keys: ["tradeGold", "piracyGold", "trainGold", "othersTrainGold"],
+  },
+] as const satisfies readonly {
+  heading: string;
+  keys: readonly PlayerSummaryMetricKey[];
+}[];
+
+const UNIT_ICONS = {
+  city: "images/CityIconWhite.svg",
+  port: "images/PortIcon.svg",
+  factory: "images/FactoryIconWhite.svg",
+  defensePost: "images/ShieldIconWhite.svg",
+  transport: "images/BoatIconWhite.svg",
+  tradeShip: "images/TradeShipIconWhite.svg",
+  troop: "images/SoldierIcon.svg",
+  nuke: "images/NukeIconWhite.svg",
+  warship: "images/DestroyerIconWhite.svg",
+  gold: "images/GoldCoinIcon.svg",
+} as const;
+
+type UnitIconName = keyof typeof UNIT_ICONS;
+
+const INVERTED_UNIT_ICONS: ReadonlySet<UnitIconName> = new Set(["troop"]);
+
+const UNIT_ICON_BOX = "ml-1 inline-block h-[1em] w-[1em] object-contain";
+const UNIT_ICON_SCALES: Partial<Record<UnitIconName, number>> = {
+  city: 1.1,
+  port: 1.11,
+  factory: 1.1,
+  warship: 1.1,
+  tradeShip: 0.5,
+  gold: 0.9,
+  nuke: 0.9,
+};
+
+const METRIC_ICONS: Record<PlayerSummaryMetricKey, UnitIconName> = {
+  cities: "city",
+  ports: "port",
+  factories: "factory",
+  defensePosts: "defensePost",
+  transports: "transport",
+  landings: "transport",
+  tradeArrived: "tradeShip",
+  tradeCaptured: "tradeShip",
+  outgoing: "troop",
+  incoming: "troop",
+  nukes: "nuke",
+  warships: "warship",
+  tradeGold: "gold",
+  piracyGold: "gold",
+  trainGold: "gold",
+  othersTrainGold: "gold",
+};
+
 const UNITS_TONE = "text-emerald-300 border-emerald-400/20";
 const NAVAL_TONE = "text-blue-300 border-blue-400/20";
 const COMBAT_TONE = "text-rose-300 border-rose-400/20";
@@ -222,9 +312,53 @@ export class PlayerStatsSummary extends LitElement {
     return this;
   }
 
+  private renderMetric(key: PlayerSummaryMetricKey, value: string) {
+    const shortLabel = METRIC_SHORT_LABELS[key];
+    const fullLabel = translateText(METRIC_LABELS[key]);
+    const icon = METRIC_ICONS[key];
+    const iconStyle = `transform:scale(${UNIT_ICON_SCALES[icon] ?? 1})${
+      INVERTED_UNIT_ICONS.has(icon) ? ";filter:invert(1)" : ""
+    }`;
+    return html`
+      <div
+        data-stat=${key}
+        title=${fullLabel}
+        class="min-w-0 rounded-xl border bg-white/5 px-3 py-3 text-center ${METRIC_TONES[
+          key
+        ]}"
+      >
+        <div
+          data-label
+          aria-hidden="true"
+          class="truncate text-[10px] font-bold uppercase tracking-wider text-blue-200/55"
+        >
+          ${translateText(shortLabel)}
+        </div>
+        <span class="sr-only">${fullLabel}</span>
+        <div
+          class="mt-1 truncate text-2xl font-black leading-none tabular-nums"
+        >
+          ${value}<img
+            data-unit
+            src=${assetUrl(UNIT_ICONS[icon])}
+            style=${iconStyle}
+            alt=""
+            aria-hidden="true"
+            class="${UNIT_ICON_BOX} align-[-0.1em]"
+          /><span data-per-game class="ml-1 text-xs font-semibold text-white/35"
+            >${translateText("player_stats_tree.stats_per_game_suffix")}</span
+          >
+        </div>
+      </div>
+    `;
+  }
+
   render() {
     if (!this.leaf) return html``;
     const summary = buildPlayerStatsSummary(this.leaf);
+    const valuesByKey = new Map(
+      summary.metrics.map((metric) => [metric.key, metric.value]),
+    );
     const recentGames =
       this.leaf.recent?.games ?? this.leaf.recentGames?.length ?? 0;
     const showRecentWinRate = this.leaf.total > 100n && recentGames > 0;
@@ -328,31 +462,19 @@ export class PlayerStatsSummary extends LitElement {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          ${summary.metrics.map(
-            (metric) => html`
-              <div
-                data-stat=${metric.key}
-                class="min-w-0 rounded-xl border bg-white/5 px-3 py-3 text-center ${METRIC_TONES[
-                  metric.key
-                ]}"
-              >
+        <div class="space-y-3">
+          ${METRIC_GROUPS.map(
+            (group) => html`
+              <div data-metric-group=${group.heading}>
                 <div
-                  class="truncate text-[10px] font-bold uppercase tracking-wider text-blue-200/55"
-                  title=${translateText(METRIC_LABELS[metric.key])}
+                  class="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/45"
                 >
-                  ${translateText(METRIC_LABELS[metric.key])}
+                  ${translateText(group.heading)}
                 </div>
-                <div
-                  class="mt-1 truncate text-2xl font-black leading-none tabular-nums"
-                >
-                  ${metric.value}<span
-                    data-per-game
-                    class="ml-1 text-xs font-semibold text-white/35"
-                    >${translateText(
-                      "player_stats_tree.stats_per_game_suffix",
-                    )}</span
-                  >
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  ${group.keys.map((key) =>
+                    this.renderMetric(key, valuesByKey.get(key) ?? "—"),
+                  )}
                 </div>
               </div>
             `,

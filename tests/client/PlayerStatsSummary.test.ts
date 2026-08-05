@@ -231,13 +231,120 @@ describe("PlayerStatsSummary", () => {
       ),
     ).toBe(true);
     expect(summary.querySelectorAll("[data-stat]")).toHaveLength(16);
-    // Every tile spells out the unit next to the number rather than in the
-    // label, so the value reads as "16 / game".
+    // Every tile marks the unit with the in-game icon next to the number
+    // rather than in the label, so the value reads as "16 <city> / game".
     const cities = summary.querySelector('[data-stat="cities"]');
     expect(cities?.querySelector("[data-per-game]")?.textContent).toBe(
       "player_stats_tree.stats_per_game_suffix",
     );
+    expect(cities?.querySelector("[data-unit]")?.getAttribute("src")).toBe(
+      "/images/CityIconWhite.svg",
+    );
+    // SoldierIcon is authored black, so it is flipped to sit on a dark tile.
+    // TroopIconWhite would be the obvious pick and is unusable in an <img>:
+    // half of it is fill="currentColor" with no colour to inherit.
+    const troopImg = summary.querySelector<HTMLImageElement>(
+      '[data-stat="outgoing"] [data-unit]',
+    );
+    expect(troopImg?.getAttribute("src")).toBe("/images/SoldierIcon.svg");
+    expect(troopImg?.style.filter).toBe("invert(1)");
+    expect(
+      summary.querySelector<HTMLImageElement>(
+        '[data-stat="cities"] [data-unit]',
+      )?.style.filter,
+    ).toBe("");
     expect(summary.querySelectorAll("[data-per-game]")).toHaveLength(16);
+    expect(summary.querySelectorAll("[data-unit]")).toHaveLength(16);
+    // Paired tiles count the same unit, so they share one icon.
+    expect(
+      summary
+        .querySelector('[data-stat="outgoing"] [data-unit]')
+        ?.getAttribute("src"),
+    ).toBe("/images/SoldierIcon.svg");
+    expect(
+      summary
+        .querySelector('[data-stat="incoming"] [data-unit]')
+        ?.getAttribute("src"),
+    ).toBe("/images/SoldierIcon.svg");
+    // The icon is decoration over a labelled number, not content of its own.
+    const unitIcon = summary.querySelector("[data-unit]");
+    expect(unitIcon?.getAttribute("aria-hidden")).toBe("true");
+    expect(unitIcon?.getAttribute("alt")).toBe("");
+
+    // Four family rows, each four tiles.
+    expect(
+      Array.from(summary.querySelectorAll("[data-metric-group]")).map((group) =>
+        group.getAttribute("data-metric-group"),
+      ),
+    ).toEqual([
+      "player_stats_tree.stats_group_buildings",
+      "player_stats_tree.stats_group_naval",
+      "player_stats_tree.stats_group_combat",
+      "player_stats_tree.stats_group_gold",
+    ]);
+    for (const group of summary.querySelectorAll("[data-metric-group]")) {
+      expect(group.querySelectorAll("[data-stat]")).toHaveLength(4);
+    }
+
+    // The heading names the family and the icon names the unit, so the
+    // visible label is only what tells a tile from its neighbours.
+    expect(
+      summary.querySelector('[data-stat="transports"] [data-label]')
+        ?.textContent,
+    ).toContain("player_stats_tree.stats_transports_sent_short");
+    expect(
+      summary.querySelector('[data-stat="landings"] [data-label]')?.textContent,
+    ).toContain("player_stats_tree.stats_transports_landed_short");
+
+    // Every building tile reads "Built" — the icon is what says which.
+    for (const stat of ["cities", "ports", "factories", "defensePosts"]) {
+      expect(
+        summary.querySelector(`[data-stat="${stat}"] [data-label]`)
+          ?.textContent,
+      ).toContain("player_stats_table.built");
+    }
+
+    // "Built" alone does not name a metric, so each tile also carries its full
+    // name for screen readers, and the visible short label is hidden from them
+    // rather than read out on top of it.
+    expect(
+      cities?.querySelector("[data-label]")?.getAttribute("aria-hidden"),
+    ).toBe("true");
+    expect(cities?.querySelector(".sr-only")?.textContent).toContain(
+      "player_stats_tree.stats_cities_per_game",
+    );
+
+    // Hovering any tile still spells the metric out in full.
+    expect(cities?.getAttribute("title")).toBe(
+      "player_stats_tree.stats_cities_per_game",
+    );
+
+    // One square box for every icon, scaled to fit, so layout never shifts
+    // with the icon's shape.
+    for (const icon of summary.querySelectorAll("[data-unit]")) {
+      expect(icon.className).toContain("h-[1em]");
+      expect(icon.className).toContain("w-[1em]");
+      expect(icon.className).toContain("object-contain");
+    }
+
+    // Assets pad their canvas by different amounts, so each is corrected to
+    // sit at the same visual weight. The factors themselves are tuned by eye
+    // and deliberately not asserted here — only that every icon carries one,
+    // and that an icon with no entry is left alone rather than defaulted to
+    // something arbitrary.
+    const scaleOf = (stat: string) =>
+      summary.querySelector<HTMLImageElement>(
+        `[data-stat="${stat}"] [data-unit]`,
+      )?.style.transform;
+    for (const icon of summary.querySelectorAll<HTMLImageElement>(
+      "[data-unit]",
+    )) {
+      expect(icon.style.transform).toMatch(/^scale\(\d*\.?\d+\)$/);
+    }
+    // Shield and transport are the two assets already meeting the box, so
+    // they must come through untouched.
+    expect(scaleOf("defensePosts")).toBe("scale(1)");
+    expect(scaleOf("transports")).toBe("scale(1)");
 
     const metricGrid =
       summary.querySelector("[data-stat]")?.parentElement?.classList;
