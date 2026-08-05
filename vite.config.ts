@@ -185,6 +185,18 @@ export default defineConfig(({ mode }) => {
     if (/^\/w\d+\/game\/[^/]+/.test(req.url)) {
       return "/";
     }
+    // Dev parity for nginx's `location = /link` (see nginx.conf): in
+    // production /link 302s to /#steam-link, but the dev server has no
+    // nginx in front of it. Serving index.html for /link is not quite the
+    // same thing -- the fragment is client-side only, so the app boots at
+    // /link with no #steam-link hash and shows the home page rather than
+    // the code-entry form. That is intentional and sufficient: the point
+    // of this line is that a developer following the desktop app's printed
+    // URL against a local server gets the app instead of a 404. Testing
+    // the code-entry form itself in dev is done via /#steam-link directly.
+    if (/^\/link\/?$/.test(req.url)) {
+      return "/";
+    }
     return undefined;
   };
 
