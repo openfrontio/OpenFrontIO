@@ -68,18 +68,40 @@ function steamLinkAliasRedirect(): Plugin {
   return {
     name: "steam-link-alias-redirect",
     configureServer(server) {
-      // Matches on `originalUrl`, not `url`, and that is load-bearing:
-      // Vite's SPA fallback runs BEFORE this middleware and has already
-      // rewritten `req.url` to "/index.html" by the time we see it, so a
-      // check against `req.url` silently never matches. `originalUrl` still
-      // holds the path the browser actually asked for. (Verified by logging
-      // both: a request to /link arrives here as url="/index.html",
-      // originalUrl="/link".) The rewrite only changes the URL -- nothing has
-      // been written to the response yet -- so redirecting here still works.
+      // Matches on `originalUrl`, not `url`, and that is load-bearing.
+      //
+      // Whatever the documented middleware ordering, the measured behaviour
+      // in this config is that by the time this handler runs `req.url` has
+      // already been rewritten to "/index.html", while `originalUrl` still
+      // holds what the browser asked for. Logging both showed a request to
+      // /link arriving here as url="/index.html", originalUrl="/link".
+      // Which middleware performs that rewrite was not established, so this
+      // deliberately does not claim one.
+      //
+      // The practical warning: switching this to `req.url` type-checks,
+      // lints, runs, and silently never matches -- the dev server just keeps
+      // serving the home page with a 200. Re-verify against a running server
+      // if you change it, and use a control path (e.g. /linkxyz) to prove a
+      // 200 is not coming from the SPA fallback.
       server.middlewares.use((req, res, next) => {
         const requested = (req as { originalUrl?: string }).originalUrl;
         if (!requested) return next();
-        const { pathname } = new URL(requested, "http://x");
+
+        // Decode before comparing, because nginx resolves percent-encoded
+        // bytes before exact `location =` matching but URL.pathname does
+        // not: "/link%2F" reaches production as /link/ and redirects, and
+        // would otherwise fall straight through here. The whole point of
+        // this plugin is that dev and production agree.
+        let pathname: string;
+        try {
+          pathname = decodeURIComponent(
+            new URL(requested, "http://x").pathname,
+          );
+        } catch {
+          // Malformed percent-encoding -- not our route; let Vite answer.
+          return next();
+        }
+
         // Exact matches only, mirroring nginx's `location =`. A prefix match
         // would swallow any future /link/* route.
         if (pathname !== "/link" && pathname !== "/link/") return next();
