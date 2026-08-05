@@ -88,6 +88,7 @@ describe("AccountModal — rendering", () => {
   afterEach(() => {
     document.body.removeChild(modal);
     vi.clearAllMocks();
+    delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
   });
 
   // Directly install a resolved userMeResponse and flip off the loading state,
@@ -162,5 +163,77 @@ describe("AccountModal — rendering", () => {
     // Still a logged-in view, not the login-options screen.
     expect(modal.querySelector("currency-display")).toBeTruthy();
     expect(text).toContain("account_modal.log_out");
+  });
+
+  // Desktop re-entry to the account-linking gate. The Electron preload exposes
+  // `window.openfrontDesktop.showLinkGate()` for exactly this purpose; it is
+  // absent entirely on plain web, which is the signal the action guards on.
+  describe("desktop link-gate action", () => {
+    function findLinkGateButton(): HTMLButtonElement | undefined {
+      return Array.from(modal.querySelectorAll("button")).find((b) =>
+        b.textContent?.includes("account_modal.link_existing_account"),
+      );
+    }
+
+    it("renders and calls showLinkGate() when the desktop bridge is present", async () => {
+      const showLinkGate = vi.fn(async () => undefined);
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        showLinkGate,
+      };
+
+      const userMe = makeUserMe({
+        discord: {
+          id: "1",
+          avatar: null,
+          username: "player",
+          global_name: null,
+          discriminator: "0",
+        },
+      });
+      await setLoggedInUser(userMe);
+
+      const button = findLinkGateButton();
+      expect(button).toBeTruthy();
+
+      button!.click();
+      expect(showLinkGate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not render when the desktop bridge is absent (plain web)", async () => {
+      const userMe = makeUserMe({
+        discord: {
+          id: "1",
+          avatar: null,
+          username: "player",
+          global_name: null,
+          discriminator: "0",
+        },
+      });
+      await setLoggedInUser(userMe);
+
+      expect(findLinkGateButton()).toBeUndefined();
+    });
+
+    // Pins the resolved ambiguity from the plan: guard on the function we
+    // actually call, not a sibling property. A bridge exposing `linkGate` but
+    // no callable `showLinkGate` must not render a dead button.
+    it("does not render when the bridge exists but showLinkGate is not a function", async () => {
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        linkGate: { open: vi.fn() },
+      };
+
+      const userMe = makeUserMe({
+        discord: {
+          id: "1",
+          avatar: null,
+          username: "player",
+          global_name: null,
+          discriminator: "0",
+        },
+      });
+      await setLoggedInUser(userMe);
+
+      expect(findLinkGateButton()).toBeUndefined();
+    });
   });
 });

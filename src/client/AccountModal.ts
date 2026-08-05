@@ -40,6 +40,26 @@ import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { playerProfileUrl } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
+// window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
+// there on purpose). We know the one function we need, so narrow it locally
+// rather than re-declaring the global (a second `declare global` with a
+// different type triggers TS2717) — mirrors SteamSDK.ts's steamBridge().
+//
+// Guard on `showLinkGate` specifically, the function actually invoked below —
+// not on a sibling property like `linkGate` (a separate namespace used by the
+// gate page itself) — so a rename of one can't silently leave this button
+// wired to nothing.
+function desktopLinkGateBridge():
+  | { showLinkGate: () => Promise<void> }
+  | undefined {
+  const desktop = window.openfrontDesktop as
+    | { showLinkGate?: unknown }
+    | undefined;
+  return typeof desktop?.showLinkGate === "function"
+    ? (desktop as { showLinkGate: () => Promise<void> })
+    : undefined;
+}
+
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   protected routerName = "account";
@@ -354,9 +374,42 @@ export class AccountModal extends BaseModal {
           </div>
         </div>
         ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()}
+        ${this.renderSubscriptionPanel()} ${this.renderDesktopLinkGateAction()}
       </div>
     `;
+  }
+
+  // Re-entry to the desktop shell's account-linking gate shown at first
+  // launch. Absent entirely on plain web (no window.openfrontDesktop there),
+  // present whenever the desktop bridge exposes a callable showLinkGate —
+  // see desktopLinkGateBridge() above for why the guard is scoped that way.
+  // Needed because the desktop app's menu bar will eventually be hidden and
+  // the game runs fullscreen borderless, so a dismissed or since-linked
+  // player needs another way back to that gate.
+  private renderDesktopLinkGateAction(): TemplateResult | typeof nothing {
+    if (!desktopLinkGateBridge()) return nothing;
+    return html`
+      <o-button
+        variant="secondary"
+        width="block"
+        size="md"
+        translationKey="account_modal.link_existing_account"
+        @click=${this.handleShowLinkGate}
+      ></o-button>
+    `;
+  }
+
+  private handleShowLinkGate(): void {
+    // The bare `void` form swallowed a rejection into an unhandled promise.
+    // This is an IPC round trip to the Electron main process, so it can
+    // genuinely reject (no window, a main-process throw); catching keeps the
+    // failure visible in the console instead of surfacing as a button that
+    // silently does nothing.
+    desktopLinkGateBridge()
+      ?.showLinkGate()
+      .catch((err) => {
+        console.error("AccountModal: showLinkGate failed", err);
+      });
   }
 
   // CrazyGames "connected as" view: avatar + username from the SDK, plus
