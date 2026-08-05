@@ -228,7 +228,7 @@ export class PlayerStatsSummary extends LitElement {
         key: "played",
         label: "player_stats_tree.stats_played",
         value: summary.played,
-        tone: "text-sky-200",
+        tone: "text-blue-300",
       },
       {
         key: "victories",
