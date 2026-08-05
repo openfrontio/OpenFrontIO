@@ -246,6 +246,17 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private mergeLeaves(leaves: PlayerStatsLeaf[]): PlayerStatsLeaf | null {
+    const merged = this.reduceLeaves(leaves);
+    if (merged === null) return null;
+    // A leaf's `recent` is a newest-100 window, and windows from different
+    // buckets cannot be added together — so it only survives an exact
+    // selection. Kept as a fallback for responses that carry per-leaf recent
+    // stats without the tree-level `stats.recent` aggregate.
+    const only = leaves.length === 1 ? leaves[0].recent : undefined;
+    return only === undefined ? merged : { ...merged, recent: only };
+  }
+
+  private reduceLeaves(leaves: PlayerStatsLeaf[]): PlayerStatsLeaf | null {
     return leaves.reduce<PlayerStatsLeaf | null>((merged, leaf) => {
       if (!merged) {
         return {

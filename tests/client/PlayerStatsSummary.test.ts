@@ -5,13 +5,7 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
     await importOriginal<typeof import("../../src/client/Utils")>();
   return {
     ...actual,
-    translateText: (
-      key: string,
-      args?: Record<string, string | number>,
-    ): string => {
-      if (key === "player_stats_tree.stats_record") {
-        return `${args?.wins}W / ${args?.losses}L`;
-      }
+    translateText: (key: string): string => {
       if (key === "player_stats_tree.stats_played") {
         return "Played";
       }
@@ -374,6 +368,27 @@ describe("PlayerStatsSummary", () => {
 
     const summary = tree.querySelector("player-stats-summary");
     expect(summary?.parentElement?.classList.contains("py-3")).toBe(true);
+  });
+
+  it("keeps a leaf's own recent stats when no tree-level aggregate exists", async () => {
+    // Older responses carry `recent` per leaf instead of the tree-level
+    // stats.recent aggregate; an exact selection still goes through
+    // mergeLeaves, which must not drop it.
+    const recentLeaf: PlayerStatsLeaf = {
+      ...leaf,
+      recent: { games: 40, wins: 30 },
+    };
+    const tree = new PlayerStatsTreeView();
+    tree.statsTree = {
+      Public: { "Free For All": { Medium: recentLeaf } },
+    };
+    document.body.append(tree);
+    await tree.updateComplete;
+
+    const summary = tree.querySelector(
+      "player-stats-summary",
+    ) as PlayerStatsSummary | null;
+    expect(summary?.leaf?.recent).toEqual({ games: 40, wins: 30 });
   });
 
   it("shows Humans vs Nations separately from ordinary Team games", async () => {

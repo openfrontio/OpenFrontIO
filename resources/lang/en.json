@@ -1332,8 +1332,8 @@
     "stats_train_gold_per_game": "Train Gold",
     "stats_transports_landed_per_game": "Transports Landed",
     "stats_transports_sent_per_game": "Transports Sent",
-    "stats_troops_incoming_per_game": "Troops Incoming",
-    "stats_troops_sent_per_game": "Troops Sent",
+    "stats_troops_incoming_per_game": "Incoming Troops",
+    "stats_troops_sent_per_game": "Total Attack Troops",
     "stats_victories": "Victories",
     "stats_warships_built_per_game": "Warships Built",
     "stats_win_rate": "Win Rate"

@@ -186,7 +186,7 @@ describe("PlayerStatsTable", () => {
     });
   });
 
-  it("shows nuke columns in launched/landed/hits order", async () => {
+  it("shows nuke columns in launched/landed/intercepted order", async () => {
     const table = await renderTable(stats);
 
     expect(
@@ -200,6 +200,19 @@ describe("PlayerStatsTable", () => {
       "player_stats_table.launched": "41",
       "player_stats_table.landed": "42",
       "player_stats_table.intercepted": "43",
+    });
+  });
+
+  it("zero-fills gold columns past the end of a short array", async () => {
+    const table = await renderTable({ gold: [11n, 22n] });
+
+    expect(columnsOf(table, "player_stats_table.gold_stats")).toEqual({
+      "player_stats_table.workers": "11",
+      "player_stats_table.war": "22",
+      "player_stats_table.trade": "0",
+      "player_stats_table.piracy": "0",
+      "player_stats_table.trains": "0",
+      "player_stats_table.trains_external": "0",
     });
   });
 

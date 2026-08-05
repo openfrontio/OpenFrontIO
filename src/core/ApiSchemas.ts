@@ -447,12 +447,7 @@ const RecentByDifficultySchema = z.object({
   [Difficulty.Impossible]: PlayerRecentStatsSchema.optional(),
 });
 
-const RecentGameTypeStatsSchema = z.object({
-  all: PlayerRecentStatsSchema,
-  [Difficulty.Easy]: PlayerRecentStatsSchema.optional(),
-  [Difficulty.Medium]: PlayerRecentStatsSchema.optional(),
-  [Difficulty.Hard]: PlayerRecentStatsSchema.optional(),
-  [Difficulty.Impossible]: PlayerRecentStatsSchema.optional(),
+const RecentGameTypeStatsSchema = RecentByDifficultySchema.extend({
   [GameMode.FFA]: RecentByDifficultySchema.optional(),
   [GameMode.Team]: RecentByDifficultySchema.optional(),
   [HumansVsNations]: RecentByDifficultySchema.optional(),

@@ -132,6 +132,22 @@ describe("PlayerStatsTreeSchema", () => {
     });
   });
 
+  test("rejects a recent aggregate above the 100-game window", () => {
+    expect(() =>
+      PlayerStatsTreeSchema.parse({
+        recent: { all: { games: 101, wins: 64 } },
+      }),
+    ).toThrow();
+  });
+
+  test("rejects a recent node missing its all aggregate", () => {
+    expect(() =>
+      PlayerStatsTreeSchema.parse({
+        recent: { all: { games: 100, wins: 64 }, Public: { Medium: {} } },
+      }),
+    ).toThrow();
+  });
+
   test("accepts Humans Vs Nations as a separate profile stats mode", () => {
     const result = PlayerStatsTreeSchema.parse({
       Public: {

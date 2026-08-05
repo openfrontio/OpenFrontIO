@@ -1,4 +1,4 @@
-import { LitElement, html, type TemplateResult } from "lit";
+import { LitElement, html, nothing, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   PlayerStats,
@@ -8,17 +8,26 @@ import {
 } from "../../../../core/StatsSchemas";
 import { renderNumber, translateText } from "../../../Utils";
 
-// Structures in display order, most-built first. Listed explicitly rather
-// than derived from `otherUnits`, which is ordered arbitrarily and includes
-// warships — those are not buildings and get their own section below.
-const buildingUnits = [
-  "city",
-  "port",
-  "fact",
-  "defp",
-  "silo",
-  "saml",
-] as const satisfies readonly (typeof otherUnits)[number][];
+// Display order for the buildings table. Declared as a Record rather than a
+// bare array so `satisfies` fails compilation when a structure is added to
+// `otherUnits` without being placed here — a standalone type-level assertion
+// would trip no-unused-vars. "wshp" is the one deliberate omission: warships
+// are not buildings and have their own section below.
+const BUILDING_ORDER = {
+  city: 1,
+  port: 2,
+  fact: 3,
+  defp: 4,
+  silo: 5,
+  saml: 6,
+} as const satisfies Record<
+  Exclude<(typeof otherUnits)[number], "wshp">,
+  number
+>;
+
+const buildingUnits = (
+  Object.keys(BUILDING_ORDER) as (keyof typeof BUILDING_ORDER)[]
+).sort((left, right) => BUILDING_ORDER[left] - BUILDING_ORDER[right]);
 
 type StatsRow = {
   /** Row label. Omitted when a section holds a single unnamed row. */
@@ -53,7 +62,7 @@ function statsSection(
           <thead>
             <tr class="bg-white/5">
               ${rowHeader === undefined
-                ? ""
+                ? nothing
                 : html`<th
                     class="px-4 py-2 text-left font-semibold text-gray-400"
                   >
@@ -73,7 +82,7 @@ function statsSection(
               (row) => html`
                 <tr class="hover:bg-white/5 transition-colors">
                   ${row.label === undefined
-                    ? ""
+                    ? nothing
                     : html`<td
                         class="px-4 py-2 text-left font-medium text-white/80"
                       >

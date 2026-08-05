@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { PlayerStatsLeaf } from "../../../../core/ApiSchemas";
 import { renderNumber, translateText } from "../../../Utils";
@@ -93,11 +93,16 @@ export function buildPlayerStatsSummary(
 ): PlayerStatsSummaryData {
   const games = leaf.total;
   const stats = leaf.stats;
+  // attacks[0] is incremented for every attack, including ones on unowned
+  // land — only attacks[1] is gated on the target being a player. So this is
+  // total troops committed to attacking, not troops aimed at other players.
+  // The two are therefore not comparable: incoming counts only what players
+  // aimed at this one, so the ratio between them means nothing.
   const outgoing = stats?.attacks?.[0] ?? 0n;
   const incoming = stats?.attacks?.[1] ?? 0n;
-  // Gold by source. Worker and war income are folded into the Gold Earned
-  // total above rather than broken out. Indices match GOLD_INDEX_* in
-  // StatsSchemas: trade, steal, train (own), train (other players').
+  // Gold by source. Worker and war income are not shown; the table below
+  // carries all six. Indices match GOLD_INDEX_* in StatsSchemas: trade,
+  // steal, train (own), train (other players').
   const tradeGold = stats?.gold?.[2] ?? 0n;
   const piracyGold = stats?.gold?.[3] ?? 0n;
   const trainGold = stats?.gold?.[4] ?? 0n;
@@ -291,7 +296,7 @@ export class PlayerStatsSummary extends LitElement {
                       </div>
                     </div>
                   `
-                : ""}
+                : nothing}
             </div>
             <div
               data-record-group
