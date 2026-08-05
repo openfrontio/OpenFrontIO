@@ -52,6 +52,44 @@ function serveProprietaryDir(
   };
 }
 
+// Dev-only stand-in for nginx's `location = /link` blocks (see nginx.conf).
+//
+// The desktop app's account-linking gate prints a short URL for the player to
+// type by hand when it cannot open their browser for them. In production
+// nginx 302s /link to /#steam-link, the client route that shows the code-entry
+// form. Without this middleware the dev server falls through to Vite's SPA
+// fallback and serves the home page instead -- a 200, so it does not look
+// broken, but the printed URL silently would not work locally.
+//
+// A redirect rather than serving index.html directly, so dev matches
+// production exactly and the desktop's siteUrlForAudience can emit one URL
+// shape for every environment.
+function steamLinkAliasRedirect(): Plugin {
+  return {
+    name: "steam-link-alias-redirect",
+    configureServer(server) {
+      // Matches on `originalUrl`, not `url`, and that is load-bearing:
+      // Vite's SPA fallback runs BEFORE this middleware and has already
+      // rewritten `req.url` to "/index.html" by the time we see it, so a
+      // check against `req.url` silently never matches. `originalUrl` still
+      // holds the path the browser actually asked for. (Verified by logging
+      // both: a request to /link arrives here as url="/index.html",
+      // originalUrl="/link".) The rewrite only changes the URL -- nothing has
+      // been written to the response yet -- so redirecting here still works.
+      server.middlewares.use((req, res, next) => {
+        const requested = (req as { originalUrl?: string }).originalUrl;
+        if (!requested) return next();
+        const { pathname } = new URL(requested, "http://x");
+        // Exact matches only, mirroring nginx's `location =`. A prefix match
+        // would swallow any future /link/* route.
+        if (pathname !== "/link" && pathname !== "/link/") return next();
+        res.writeHead(302, { Location: "/#steam-link" });
+        res.end();
+      });
+    },
+  };
+}
+
 // Dev-only stand-in for the nginx random-worker routing (the openfront_workers
 // upstream). Forwards these prefix-less POSTs to a randomly chosen worker port
 // so the worker can mint a self-owned id. Runs as direct middleware (before
@@ -210,6 +248,7 @@ export default defineConfig(({ mode }) => {
         ? [
             serveProprietaryDir(proprietaryDir, resourcesDir),
             randomWorkerCreateProxy(devNumWorkers),
+            steamLinkAliasRedirect(),
           ]
         : []),
       ...(isProduction
