@@ -16,6 +16,14 @@ const PENDING_LINK_KEY = "steam-link-pending";
 // a confirmation modal that errors -- which is worse than doing nothing,
 // because it teaches players to dismiss that dialog without reading it, and
 // that dialog is the security step of the whole flow.
+//
+// The server owns the authoritative value; this is a manually-kept copy, and
+// so is the desktop shell's own (its gate has a TICKET_TTL_MS with the same
+// 10 minutes). Changing the server's TTL means changing all three -- there is
+// no shared source to import across three separate deployables. Erring long
+// here is the safe direction: a stash that outlives its ticket resumes into a
+// clean error, whereas one that expires early silently drops a link the
+// player could still have completed.
 const PENDING_LINK_TTL_MS = 10 * 60 * 1000;
 
 // Pulls the opaque link token out of the URL hash the desktop shell opens the
