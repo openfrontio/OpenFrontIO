@@ -109,7 +109,11 @@ export class PlayerStatsTable extends LitElement {
     return this;
   }
 
-  @property({ type: Object }) stats: PlayerStats;
+  // PlayerStats is already `... | undefined`; the `| null` is for
+  // PlayerStatsTree, which binds `.stats=${leaf?.stats ?? null}`. Lit property
+  // bindings are not type-checked, so without this the declared type would not
+  // describe what the component actually receives.
+  @property({ type: Object }) stats?: PlayerStats | null;
 
   render() {
     const stats = this.stats;
