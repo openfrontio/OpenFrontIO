@@ -7,7 +7,7 @@ import type {
   ClanMemberStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
-import "../PlayerName";
+import { playerNameLink } from "../ui/PlayerNameLink";
 import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
@@ -376,10 +376,11 @@ export function renderMemberStats(
   `;
 }
 
+// `host` raises the `view-profile` event that opens the profile modal.
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
-  onViewProfile?: (publicId: string) => void,
+  host: HTMLElement,
 ): TemplateResult {
   const isMe = member.publicId === myPublicId;
   return html`
@@ -401,14 +402,7 @@ export function renderMemberRow(
         <div class="flex-1 min-w-0 flex flex-col">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <player-name
-                .username=${member.username}
-                .publicId=${member.publicId}
-                .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
-                .onNameClick=${onViewProfile
-                  ? () => onViewProfile(member.publicId)
-                  : null}
-              ></player-name>
+              ${playerNameLink(host, member.username, member.publicId)}
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span

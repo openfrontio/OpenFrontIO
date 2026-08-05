@@ -16,6 +16,7 @@ import {
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
+import { dispatchViewProfile } from "../ui/PlayerNameLink";
 import { verifiedBadge } from "../ui/VerifiedBadge";
 import { renderLoadingSpinner, showToast } from "./ClanShared";
 
@@ -205,16 +206,6 @@ export class ClanGameHistoryView extends LitElement {
     this.dispatchEvent(
       new CustomEvent<{ gameId: string }>("view-stats", {
         detail: { gameId },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  private viewProfile(publicId: string) {
-    this.dispatchEvent(
-      new CustomEvent<{ publicId: string }>("view-profile", {
-        detail: { publicId },
         bubbles: true,
         composed: true,
       }),
@@ -632,7 +623,7 @@ export class ClanGameHistoryView extends LitElement {
           type="button"
           class="font-bold text-blue-300 truncate hover:underline"
           title=${translateText("player_profile.view")}
-          @click=${() => this.viewProfile(p.publicId)}
+          @click=${() => dispatchViewProfile(this, p.publicId)}
         >
           ${p.username}
         </button>

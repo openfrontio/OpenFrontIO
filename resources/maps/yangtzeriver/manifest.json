@@ -1,0 +1,69 @@
+{
+  "categories": ["new", "asia"],
+  "id": "YangtzeRiver",
+  "map": {
+    "height": 2552,
+    "num_land_tiles": 1877550,
+    "width": 3840
+  },
+  "map16x": {
+    "height": 638,
+    "num_land_tiles": 113792,
+    "width": 960
+  },
+  "map4x": {
+    "height": 1276,
+    "num_land_tiles": 464270,
+    "width": 1920
+  },
+  "multiplayer_frequency": 3,
+  "name": "Yangtze River",
+  "nations": [
+    {
+      "coordinates": [3306, 1778],
+      "flag": "cn",
+      "name": "Shanghai"
+    },
+    {
+      "coordinates": [1926, 640],
+      "flag": "cn",
+      "name": "Taizhou"
+    },
+    {
+      "coordinates": [2695, 894],
+      "flag": "cn",
+      "name": "Nantong"
+    },
+    {
+      "coordinates": [2223, 1072],
+      "flag": "cn",
+      "name": "Changzhou"
+    },
+    {
+      "coordinates": [1040, 1054],
+      "flag": "cn",
+      "name": "Nanjing"
+    },
+    {
+      "coordinates": [86, 2200],
+      "flag": "cn",
+      "name": "Wuhu"
+    },
+    {
+      "coordinates": [1548, 872],
+      "flag": "cn",
+      "name": "Zhenjiang"
+    },
+    {
+      "coordinates": [749, 1529],
+      "flag": "cn",
+      "name": "Ma'anshan"
+    },
+    {
+      "coordinates": [3724, 2544],
+      "flag": "cn",
+      "name": "Daishan Island"
+    }
+  ],
+  "translation_key": "map.yangtzeriver"
+}
