@@ -39,6 +39,15 @@ HOST=$2
 VERSION_TAG=$3
 SUBDOMAIN=$4
 
+# Validate subdomain - it becomes a DNS label, a Docker container name, and part
+# of a path on the remote host, so reject anything outside [a-zA-Z0-9_-].
+case "$SUBDOMAIN" in
+    "" | *[!a-zA-Z0-9_-]*)
+        echo "Error: subdomain must be non-empty and contain only [a-zA-Z0-9_-], got: '$SUBDOMAIN'"
+        exit 1
+        ;;
+esac
+
 # Set subdomain - use the provided subdomain
 echo "Using subdomain: $SUBDOMAIN"
 

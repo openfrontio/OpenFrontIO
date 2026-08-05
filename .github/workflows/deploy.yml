@@ -32,7 +32,8 @@ on:
   # See https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore
   push:
     branches:
-      - "*"
+      # "**" rather than "*" so branches with a slash (fix/foo, feat/bar) match too
+      - "**"
 
   # Nightly build: rebuild and deploy main to nightly.openfront.dev
   # 07:00 UTC = 11:00 PM PST (midnight PDT during summer)
@@ -56,13 +57,22 @@ jobs:
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
-      SUBDOMAIN: ${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
+      # Sanitized into SUBDOMAIN by the first step below - do not use directly.
+      RAW_SUBDOMAIN: ${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
       - uses: actions/checkout@v7
       - name: 📝 Update job summary
-        env:
-          FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
         run: |
+          # A branch name can hold characters that are illegal in a DNS label, a
+          # Docker container name, and a file path (e.g. "fix/some-bug"), so strip
+          # everything outside [a-zA-Z0-9_-] before it reaches deploy.sh.
+          SUBDOMAIN="$(printf '%s' "$RAW_SUBDOMAIN" | tr -cd 'a-zA-Z0-9_-')"
+          if [ -z "$SUBDOMAIN" ]; then
+            echo "Error: subdomain is empty after sanitizing '$RAW_SUBDOMAIN'"
+            exit 1
+          fi
+          FQDN="$SUBDOMAIN.$DOMAIN"
+          echo "SUBDOMAIN=$SUBDOMAIN" >> $GITHUB_ENV
           echo "FQDN=$FQDN" >> $GITHUB_ENV
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           ### In progress :ship:
