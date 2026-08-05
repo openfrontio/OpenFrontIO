@@ -11,9 +11,13 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 ## Installation
 
 1. Install go <https://go.dev/doc/install>
-2. Go to map-generator folder: `cd map-generator`
-3. Install dependencies: `go mod download`
-4. Run the generator for all maps: `go run .`
+2. Install a C compiler (required by the WebP dependency via CGO):
+   - **Windows:** Install [MSYS2](https://www.msys2.org/) and the `mingw-w64-gcc` package, or [TDM-GCC](https://jmeubank.github.io/tdm-gcc/). Make sure `gcc` is on your PATH.
+   - **macOS:** `xcode-select --install`
+   - **Linux:** `sudo apt install gcc` (Debian/Ubuntu) or equivalent.
+3. Go to map-generator folder: `cd map-generator`
+4. Install dependencies: `go mod download`
+5. Run the generator for all maps: `go run .`
 
 ## Creating a new map
 
