@@ -89,7 +89,7 @@ function toRgb01(s: string): [number, number, number] | null {
 }
 
 /** Resolve a nuke-explosion cosmetic's catalog attributes into render params. */
-function attributesToExplosionParams(
+export function attributesToExplosionParams(
   attrs: NukeExplosionAttributes,
 ): NukeExplosionRenderParams {
   // The shader cycles through the whole palette; the instance layout carries
@@ -107,7 +107,9 @@ function attributesToExplosionParams(
   };
   return attrs.type === "sparkles"
     ? { ...base, type: "sparkles", density: attrs.density }
-    : { ...base, type: "shockwave" };
+    : attrs.type === "embers"
+      ? { ...base, type: "embers", density: attrs.density }
+      : { ...base, type: "shockwave" };
 }
 
 /**
