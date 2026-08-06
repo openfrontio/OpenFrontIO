@@ -27,7 +27,11 @@ import "./CosmeticsModal";
 import { CosmeticsModal } from "./CosmeticsModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { isDesktopShell } from "./DesktopShell";
+import {
+  composeVersionDisplay,
+  desktopVersion,
+  isDesktopShell,
+} from "./DesktopShell";
 import "./FeaturedStream";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
@@ -268,9 +272,13 @@ class Client {
     } else {
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+      const label = composeVersionDisplay(
+        displayVersion,
+        await desktopVersion(),
+      );
       versionElements.forEach((el) => {
         (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
-        el.textContent = displayVersion;
+        el.textContent = label;
       });
     }
 
