@@ -130,6 +130,12 @@ export function makePlayerUpdate(
     allies: [],
     embargoes: new Set(),
     isTraitor: false,
+    // Doomsday-clock state. Present here so the diffPlayerUpdate field-coverage
+    // walk in GameUpdateUtils.test.ts reaches these: a field missing from this
+    // stub is a field that walk cannot check.
+    inDoomsdayClock: false,
+    markedDoomsdayClockTick: -1,
+    isDecaying: false,
     targets: [],
     outgoingEmojis: [],
     outgoingAttacks: [],

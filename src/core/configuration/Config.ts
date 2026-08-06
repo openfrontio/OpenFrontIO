@@ -101,7 +101,26 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   drainStartPercent: 2, // starts bleeding at once (already beats troop income)
   drainMaxPercent: 5,
   drainRampSeconds: 90, // ramps LINEARLY to the max over this long
-  drainFloorPercent: 5, // drain stops here: crippled to 5% of max, never wiped
+  drainFloorPercent: 5, // drain settles here: crippled to 5% of max, never wiped
+  // The floor decays start -> drainFloorPercent over floorDecaySeconds, leaving
+  // one comeback window with a usable army. It must not be permanent: maxTroops is
+  // sublinear (~100k at one tile), so a fixed 40% is ~40k troops on a single tile.
+  floorStartPercent: 40,
+  floorDecaySeconds: 90,
+  // TERRITORY ROT — the finisher, since the drain never kills. rotDeathSeconds is
+  // a DEADLINE, not a rate: the territory is gone this long after the skull
+  // appeared, whatever it holds. 0 disables rot. Timeline:
+  //
+  //   0s    skull blinks, warn countdown
+  //   30s   skull steady, troops draining              (warnSeconds)
+  //   120s  floor at 5%, territory rotting, skull RED  (warn + floorDecay)
+  //   150s  nothing left, eliminated                   (rotDeathSeconds)
+  rotDeathSeconds: 150,
+  // Grainy opening: pinholes across this share of the territory before the holes
+  // grow together. Held to a third of the rot window, so shortening the window
+  // shortens this too: at 20s the speckle WAS the death rather than its opening.
+  rotGrainSeconds: 10,
+  rotSpecklePercent: 15,
   // Warships bleed on their OWN gentler start + a STEEP (convex) ramp to a much
   // higher ceiling. A ship caught when its side is first doomed lasts about as
   // long as troops (the low start + no income ≈ the troop net rate), but the rate
@@ -149,6 +168,11 @@ export class Config {
       drainMaxPercent: d.drainMaxPercent,
       drainRampSeconds: d.drainRampSeconds,
       drainFloorPercent: d.drainFloorPercent,
+      floorStartPercent: d.floorStartPercent,
+      floorDecaySeconds: d.floorDecaySeconds,
+      rotDeathSeconds: d.rotDeathSeconds,
+      rotGrainSeconds: d.rotGrainSeconds,
+      rotSpecklePercent: d.rotSpecklePercent,
       warshipDrainStartPercent: d.warshipDrainStartPercent,
       warshipDrainMaxPercent: d.warshipDrainMaxPercent,
       warshipDrainCurveExponent: d.warshipDrainCurveExponent,

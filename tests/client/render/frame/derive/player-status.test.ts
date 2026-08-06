@@ -35,6 +35,7 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     isTraitor: false,
     traitorRemainingTicks: 0,
     inDoomsdayClock: false,
+    isDecaying: false,
     markedDoomsdayClockTick: -1,
     betrayals: 0,
     hasSpawned: true,
@@ -363,5 +364,65 @@ describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
     });
     expect(status.get(2)?.allianceFraction).toBe(0.5);
     expect(status.get(2)?.allianceRemainingTicks).toBe(300);
+  });
+});
+
+describe("computePlayerStatus — doomsday clock phases", () => {
+  // Three phases drive three different skulls: blinking (warn), steady white
+  // (draining), steady RED (decaying). The last one comes straight from the sim.
+  const WARN = 300; // 30s
+
+  function phase(over: Partial<PlayerState>) {
+    const out = computePlayerStatus(
+      new Map([[1, ps({ smallID: 1, ...over })]]),
+      new Map(),
+      {
+        tick: 1000,
+        doomsdayClockWarnTicks: WARN,
+      },
+    );
+    return out.get(1)!;
+  }
+
+  it("is neither draining nor decaying while merely warning", () => {
+    const s = phase({
+      inDoomsdayClock: true,
+      markedDoomsdayClockTick: 1000 - 100,
+    });
+    expect(s.doomsdayClockDraining).toBe(false);
+    expect(s.doomsdayClockDecaying).toBe(false);
+  });
+
+  it("drains but does not decay once past the warn", () => {
+    const s = phase({
+      inDoomsdayClock: true,
+      markedDoomsdayClockTick: 1000 - 400,
+    });
+    expect(s.doomsdayClockDraining).toBe(true);
+    expect(s.doomsdayClockDecaying).toBe(false);
+  });
+
+  it("decays when the sim says territory is rotting", () => {
+    const s = phase({
+      inDoomsdayClock: true,
+      markedDoomsdayClockTick: 1000 - 400,
+      isDecaying: true,
+    });
+    expect(s.doomsdayClockDraining).toBe(true);
+    expect(s.doomsdayClockDecaying).toBe(true);
+  });
+
+  it("never decays a side that is not flagged at all", () => {
+    // Defensive: a stale isDecaying must not paint a skull on a recovered side.
+    // An unflagged player may get no status entry at all, which is equally fine —
+    // what matters is that nothing reports a decaying skull.
+    const out = computePlayerStatus(
+      new Map([
+        [1, ps({ smallID: 1, inDoomsdayClock: false, isDecaying: true })],
+      ]),
+      new Map(),
+      { tick: 1000, doomsdayClockWarnTicks: WARN },
+    );
+    expect(out.get(1)?.doomsdayClockDecaying ?? false).toBe(false);
   });
 });
