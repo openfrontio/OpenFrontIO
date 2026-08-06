@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   PlayerStats,
@@ -8,273 +8,200 @@ import {
 } from "../../../../core/StatsSchemas";
 import { renderNumber, translateText } from "../../../Utils";
 
+// Display order for the buildings table. Declared as a Record rather than a
+// bare array so `satisfies` fails compilation when a structure is added to
+// `otherUnits` without being placed here — a standalone type-level assertion
+// would trip no-unused-vars. "wshp" is the one deliberate omission: warships
+// are not buildings and have their own section below.
+const BUILDING_ORDER = {
+  city: 1,
+  port: 2,
+  fact: 3,
+  defp: 4,
+  silo: 5,
+  saml: 6,
+} as const satisfies Record<
+  Exclude<(typeof otherUnits)[number], "wshp">,
+  number
+>;
+
+const buildingUnits = (
+  Object.keys(BUILDING_ORDER) as (keyof typeof BUILDING_ORDER)[]
+).sort((left, right) => BUILDING_ORDER[left] - BUILDING_ORDER[right]);
+
+type StatsRow = {
+  /** Row label. Omitted when a section holds a single unnamed row. */
+  label?: string;
+  values: readonly bigint[];
+};
+
+/**
+ * One section: a heading, column headers, and rows.
+ *
+ * The leading label column exists only when a section has rows worth naming —
+ * six buildings, two ship types. A single-row section is named by its heading
+ * instead, rather than padding the row with a filler "Count" cell.
+ *
+ * That name column is left-aligned; every value column is centred.
+ */
+function statsSection(
+  heading: string,
+  columns: readonly string[],
+  rows: readonly StatsRow[],
+  rowHeader?: string,
+): TemplateResult {
+  return html`
+    <div class="w-full">
+      <div
+        class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"
+      >
+        ${translateText(heading)}
+      </div>
+      <div class="overflow-x-auto rounded-lg border border-white/5 bg-black/20">
+        <table class="w-full table-fixed text-sm text-gray-300">
+          <thead>
+            <tr class="bg-white/5">
+              ${rowHeader === undefined
+                ? nothing
+                : html`<th
+                    class="px-4 py-2 text-left font-semibold text-gray-400"
+                  >
+                    ${translateText(rowHeader)}
+                  </th>`}
+              ${columns.map(
+                (column) => html`
+                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
+                    ${translateText(column)}
+                  </th>
+                `,
+              )}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            ${rows.map(
+              (row) => html`
+                <tr class="hover:bg-white/5 transition-colors">
+                  ${row.label === undefined
+                    ? nothing
+                    : html`<td
+                        class="px-4 py-2 text-left font-medium text-white/80"
+                      >
+                        ${translateText(row.label)}
+                      </td>`}
+                  ${row.values.map(
+                    (value) => html`
+                      <td class="px-3 py-2 text-center text-white/60">
+                        ${renderNumber(value)}
+                      </td>
+                    `,
+                  )}
+                </tr>
+              `,
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+const UNIT_COLUMNS = [
+  "player_stats_table.built",
+  "player_stats_table.destroyed",
+  "player_stats_table.captured",
+  "player_stats_table.lost",
+] as const;
+
 @customElement("player-stats-table")
 export class PlayerStatsTable extends LitElement {
   createRenderRoot() {
     return this;
   }
 
-  @property({ type: Object }) stats: PlayerStats;
+  // PlayerStats is already `... | undefined`; the `| null` is for
+  // PlayerStatsTree, which binds `.stats=${leaf?.stats ?? null}`. Lit property
+  // bindings are not type-checked, so without this the declared type would not
+  // describe what the component actually receives.
+  @property({ type: Object }) stats?: PlayerStats | null;
 
   render() {
+    const stats = this.stats;
+    /** Reads one stat slot, defaulting a missing or short array to zero. */
+    const at = (values: readonly bigint[] | undefined, index: number): bigint =>
+      values?.[index] ?? 0n;
+    const slots = (values: readonly bigint[] | undefined, count: number) =>
+      Array.from({ length: count }, (unused, i) => at(values, i));
+
     return html`
       <div class="grid grid-cols-1 gap-6 w-full">
-        <div class="w-full">
-          <div
-            class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"
-          >
-            ${translateText("player_stats_table.building_stats")}
-          </div>
-          <div
-            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
-          >
-            <table class="w-full text-sm text-gray-300">
-              <thead>
-                <tr class="bg-white/5">
-                  <th class="px-4 py-2 font-semibold text-left text-gray-400">
-                    ${translateText("player_stats_table.building")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.built")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.destroyed")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.captured")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.lost")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${otherUnits.map((key) => {
-                  const built = this.stats?.units?.[key]?.[0] ?? 0n;
-                  const destroyed = this.stats?.units?.[key]?.[1] ?? 0n;
-                  const captured = this.stats?.units?.[key]?.[2] ?? 0n;
-                  const lost = this.stats?.units?.[key]?.[3] ?? 0n;
-                  return html`
-                    <tr class="hover:bg-white/5 transition-colors">
-                      <td class="px-4 py-2 text-left font-medium text-white/80">
-                        ${translateText(`player_stats_table.unit.${key}`)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(built)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(destroyed)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(captured)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(lost)}
-                      </td>
-                    </tr>
-                  `;
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="w-full">
-          <div
-            class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"
-          >
-            ${translateText("player_stats_table.ship_arrivals")}
-          </div>
-          <div
-            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
-          >
-            <table class="w-full text-sm text-gray-300">
-              <thead>
-                <tr class="bg-white/5">
-                  <th class="px-4 py-2 font-semibold text-left text-gray-400">
-                    ${translateText("player_stats_table.ship_type")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.sent")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.destroyed")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.arrived")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${boatUnits.map((key) => {
-                  const sent = this.stats?.boats?.[key]?.[0] ?? 0n;
-                  const arrived = this.stats?.boats?.[key]?.[1] ?? 0n;
-                  const destroyed = this.stats?.boats?.[key]?.[3] ?? 0n;
-                  return html`
-                    <tr class="hover:bg-white/5 transition-colors">
-                      <td class="px-4 py-2 text-left font-medium text-white/80">
-                        ${translateText(`player_stats_table.unit.${key}`)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(sent)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(destroyed)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(arrived)}
-                      </td>
-                    </tr>
-                  `;
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="w-full">
-          <div
-            class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"
-          >
-            ${translateText("player_stats_table.nuke_stats")}
-          </div>
-          <div
-            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
-          >
-            <table class="w-full text-sm text-gray-300">
-              <thead>
-                <tr class="bg-white/5">
-                  <th class="px-4 py-2 font-semibold text-left text-gray-400">
-                    ${translateText("player_stats_table.weapon")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.launched")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.landed")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.hits")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${bombUnits.map((bomb) => {
-                  const launched = this.stats?.bombs?.[bomb]?.[0] ?? 0n;
-                  const landed = this.stats?.bombs?.[bomb]?.[1] ?? 0n;
-                  const intercepted = this.stats?.bombs?.[bomb]?.[2] ?? 0n;
-                  return html`
-                    <tr class="hover:bg-white/5 transition-colors">
-                      <td class="px-4 py-2 text-left font-medium text-white/80">
-                        ${translateText(`player_stats_table.unit.${bomb}`)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(launched)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(landed)}
-                      </td>
-                      <td class="px-3 py-2 text-center text-white/60">
-                        ${renderNumber(intercepted)}
-                      </td>
-                    </tr>
-                  `;
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="w-full">
-          <div
-            class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"
-          >
-            ${translateText("player_stats_table.player_metrics")}
-          </div>
-          <div
-            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20 mb-4"
-          >
-            <table class="w-full text-sm text-gray-300">
-              <thead>
-                <tr class="bg-white/5">
-                  <th class="px-4 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.attack")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.sent")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.received")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.cancelled")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                <tr class="hover:bg-white/5 transition-colors">
-                  <td class="px-4 py-2 text-center text-white/60">
-                    ${translateText("player_stats_table.count")}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.attacks?.[0] ?? 0n)}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.attacks?.[1] ?? 0n)}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.attacks?.[2] ?? 0n)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div
-            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
-          >
-            <table class="w-full text-sm text-gray-300">
-              <thead>
-                <tr class="bg-white/5">
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.gold")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.workers")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.war")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.trade")}
-                  </th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-400">
-                    ${translateText("player_stats_table.steal")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                <tr class="hover:bg-white/5 transition-colors">
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.gold?.[0] ?? 0n)}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.gold?.[1] ?? 0n)}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.gold?.[2] ?? 0n)}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.gold?.[3] ?? 0n)}
-                  </td>
-                  <td class="px-3 py-2 text-center text-white/60">
-                    ${renderNumber(this.stats?.gold?.[4] ?? 0n)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        ${statsSection(
+          "player_stats_table.building_stats",
+          UNIT_COLUMNS,
+          buildingUnits.map((key) => ({
+            label: `player_stats_table.unit.${key}`,
+            values: slots(stats?.units?.[key], 4),
+          })),
+          "player_stats_table.building",
+        )}
+        ${statsSection("player_stats_table.warship_stats", UNIT_COLUMNS, [
+          { values: slots(stats?.units?.wshp, 4) },
+        ])}
+        ${statsSection(
+          "player_stats_table.ship_arrivals",
+          [
+            "player_stats_table.sent",
+            "player_stats_table.arrived",
+            "player_stats_table.captured",
+            "player_stats_table.destroyed",
+          ],
+          boatUnits.map((key) => ({
+            label: `player_stats_table.unit.${key}`,
+            values: slots(stats?.boats?.[key], 4),
+          })),
+          "player_stats_table.ship_type",
+        )}
+        <!-- Launched and Landed count missiles this player fired; Intercepted
+        counts incoming missiles their SAMs shot down (bombIntercept credits
+        the SAM owner), so the last column is defensive. -->
+        ${statsSection(
+          "player_stats_table.nuke_stats",
+          [
+            "player_stats_table.launched",
+            "player_stats_table.landed",
+            "player_stats_table.intercepted",
+          ],
+          bombUnits.map((key) => ({
+            label: `player_stats_table.unit.${key}`,
+            values: slots(stats?.bombs?.[key], 3),
+          })),
+          "player_stats_table.weapon",
+        )}
+        ${statsSection(
+          "player_stats_table.attack_stats",
+          [
+            "player_stats_table.sent",
+            "player_stats_table.incoming",
+            "player_stats_table.cancelled",
+          ],
+          [{ values: slots(stats?.attacks, 3) }],
+        )}
+        ${statsSection(
+          "player_stats_table.gold_stats",
+          [
+            "player_stats_table.workers",
+            "player_stats_table.war",
+            "player_stats_table.trade",
+            "player_stats_table.piracy",
+            "player_stats_table.trains",
+            "player_stats_table.trains_external",
+          ],
+          [{ values: slots(stats?.gold, 6) }],
+        )}
+        ${statsSection(
+          "player_stats_table.diplomacy_stats",
+          ["player_stats_table.betrayals"],
+          [{ values: [stats?.betrayals ?? 0n] }],
+        )}
       </div>
     `;
   }
