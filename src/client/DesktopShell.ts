@@ -17,13 +17,26 @@ export function isDesktopShell(): boolean {
 // SteamSDK.ts for why (TS2717).
 type VersionBridge = { version?: () => Promise<string> };
 
+// The version label is purely cosmetic and must never block client
+// initialisation. The bridge below is implemented in a different (private)
+// repository, so this public repo cannot enforce that its version() call
+// ever settles -- race it against a short timeout and fall back to null if
+// the timeout wins. 500ms is ample for an IPC round trip.
+const DESKTOP_VERSION_TIMEOUT_MS = 500;
+
 export async function desktopVersion(): Promise<string | null> {
   const desktop = window.openfrontDesktop as VersionBridge | undefined;
   if (!desktop?.version) return null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), DESKTOP_VERSION_TIMEOUT_MS);
+  });
   try {
-    return await desktop.version();
+    return await Promise.race([desktop.version(), timeout]);
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
