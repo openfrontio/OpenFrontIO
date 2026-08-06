@@ -32,12 +32,12 @@ interface ActiveShockwave {
   startMs: number;
   durationMs: number;
   maxRadius: number;
-  style: number; // 0 = classic ring (SAM + no-cosmetic nuke), 1 = EMP, 2 = sparkles
+  style: number; // 0 = classic ring (SAM + no-cosmetic nuke), 1 = EMP, 2 = sparkles, 3 = embers
   colors: readonly RGB[]; // 1..MAX_NUKE_EXPLOSION_COLORS palette, never empty
   speed: number; // crackle-animation multiplier (effect pace vs the default)
   transitionSpeed: number; // palette step rate (colors/s); 0 = static, <0 = reverse
   thickness: number; // ring band / avg sparkle size (world tiles); unused by classic
-  cell: number; // sparkles grid pitch (front-normalized); 0 for other styles
+  cell: number; // sparkles grid pitch; embers keep-fraction; 0 for other styles
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +180,11 @@ export class FxShockwavePass {
     if (params?.type === "sparkles") {
       const density = Math.min(Math.max(params.density, 2), 5000);
       cell = Math.sqrt((2 * Math.PI) / 3 / density);
+    } else if (params?.type === "embers") {
+      const density = Math.min(Math.max(params.density, 2), 5000);
+      // Embers reuse `cell` as the keep-fraction: the shader lights up that
+      // share of grid cells, so a higher density gives a denser scatter.
+      cell = Math.min(Math.max(density / 500, 0.04), 0.6);
     }
     this.active.push({
       x,
@@ -191,7 +196,13 @@ export class FxShockwavePass {
       maxRadius: params?.maxRadius ?? nukeRadius * fx.nukeShockwaveRadiusFactor,
       // Cosmetic type → its style; no cosmetic → classic ring (the original
       // nuke look).
-      style: params ? (params.type === "sparkles" ? 2 : 1) : 0,
+      style: params
+        ? params.type === "sparkles"
+          ? 2
+          : params.type === "embers"
+            ? 3
+            : 1
+        : 0,
       colors: params?.colors ?? [DEFAULT_NUKE_EXPLOSION_COLOR],
       speed,
       transitionSpeed: params?.transitionSpeed ?? 0,
