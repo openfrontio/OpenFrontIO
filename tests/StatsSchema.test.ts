@@ -1,4 +1,7 @@
-import { PlayerStatsLeafSchema } from "../src/core/ApiSchemas";
+import {
+  PlayerStatsLeafSchema,
+  PlayerStatsTreeSchema,
+} from "../src/core/ApiSchemas";
 import { PlayerStatsSchema } from "../src/core/StatsSchemas";
 
 function testPlayerSchema(
@@ -56,6 +59,24 @@ describe("StatsSchema", () => {
 });
 
 describe("PlayerStatsLeafSchema", () => {
+  test("parses optional legacy recent game IDs and outcomes", () => {
+    const result = PlayerStatsLeafSchema.parse({
+      wins: "1",
+      losses: "1",
+      total: "2",
+      stats: {},
+      recentGames: [
+        { gameId: "102", won: true },
+        { gameId: "101", won: false },
+      ],
+    });
+
+    expect(result.recentGames).toEqual([
+      { gameId: 102n, won: true },
+      { gameId: 101n, won: false },
+    ]);
+  });
+
   test("null stat values coerce to 0n", () => {
     const result = PlayerStatsLeafSchema.safeParse({
       wins: "0",
@@ -73,5 +94,74 @@ describe("PlayerStatsLeafSchema", () => {
       stats: {},
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("PlayerStatsTreeSchema", () => {
+  test("parses recent aggregates for every selectable filter level", () => {
+    const result = PlayerStatsTreeSchema.parse({
+      recent: {
+        all: { games: 100, wins: 64 },
+        Public: {
+          all: { games: 100, wins: 65 },
+          Medium: { games: 100, wins: 65 },
+          "Free For All": {
+            all: { games: 100, wins: 66 },
+            Medium: { games: 100, wins: 66 },
+          },
+        },
+        Ranked: {
+          all: { games: 100, wins: 67 },
+          "1v1": { games: 100, wins: 68 },
+        },
+      },
+    });
+
+    expect(result.recent?.all).toEqual({ games: 100, wins: 64 });
+    expect(result.recent?.Public?.Medium).toEqual({
+      games: 100,
+      wins: 65,
+    });
+    expect(result.recent?.Public?.["Free For All"]?.all).toEqual({
+      games: 100,
+      wins: 66,
+    });
+    expect(result.recent?.Ranked?.["1v1"]).toEqual({
+      games: 100,
+      wins: 68,
+    });
+  });
+
+  test("rejects a recent aggregate above the 100-game window", () => {
+    expect(() =>
+      PlayerStatsTreeSchema.parse({
+        recent: { all: { games: 101, wins: 64 } },
+      }),
+    ).toThrow();
+  });
+
+  test("rejects a recent node missing its all aggregate", () => {
+    expect(() =>
+      PlayerStatsTreeSchema.parse({
+        recent: { all: { games: 100, wins: 64 }, Public: { Medium: {} } },
+      }),
+    ).toThrow();
+  });
+
+  test("accepts Humans Vs Nations as a separate profile stats mode", () => {
+    const result = PlayerStatsTreeSchema.parse({
+      Public: {
+        "Humans Vs Nations": {
+          Hard: {
+            wins: "1",
+            losses: "2",
+            total: "3",
+            stats: {},
+          },
+        },
+      },
+    });
+
+    expect(result.Public?.["Humans Vs Nations"]?.Hard?.total).toBe(3n);
   });
 });
