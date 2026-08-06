@@ -114,11 +114,12 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   //   0s    skull blinks, warn countdown
   //   30s   skull steady, troops draining              (warnSeconds)
   //   120s  floor at 5%, territory rotting, skull RED  (warn + floorDecay)
-  //   180s  nothing left, eliminated                   (rotDeathSeconds)
-  rotDeathSeconds: 180,
+  //   150s  nothing left, eliminated                   (rotDeathSeconds)
+  rotDeathSeconds: 150,
   // Grainy opening: pinholes across this share of the territory before the holes
-  // grow together.
-  rotGrainSeconds: 20,
+  // grow together. Held to a third of the rot window, so shortening the window
+  // shortens this too: at 20s the speckle WAS the death rather than its opening.
+  rotGrainSeconds: 10,
   rotSpecklePercent: 15,
   // Warships bleed on their OWN gentler start + a STEEP (convex) ramp to a much
   // higher ceiling. A ship caught when its side is first doomed lasts about as

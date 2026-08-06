@@ -1306,7 +1306,7 @@ describe("DoomsdayClockExecution (territory rot, real simulation)", () => {
 // ---------------------------------------------------------------------------
 
 describe("doomsday clock: the shipped timeline", () => {
-  it("blinks for 30s, rots at 120s, and is gone at 180s", async () => {
+  it("blinks for 30s, rots at 120s, and is gone at 150s", async () => {
     const game = await setup(
       "plains",
       {
@@ -1333,13 +1333,14 @@ describe("doomsday clock: the shipped timeline", () => {
       doomsdayClockTroopFloor(1000, cfg.floorDecaySeconds - 1, cfg),
     ).toBeGreaterThan(Math.floor((1000 * cfg.drainFloorPercent) / 100));
 
-    // Everything is gone at the deadline, leaving 60s of visible rotting.
-    expect(cfg.rotDeathSeconds).toBe(180);
-    expect(
-      cfg.rotDeathSeconds - (cfg.warnSeconds + cfg.floorDecaySeconds),
-    ).toBe(60);
-    // The grainy opening has to fit inside that window with room to spread after.
-    expect(cfg.rotGrainSeconds).toBeLessThan(60);
+    // Everything is gone at the deadline, leaving 30s of visible rotting.
+    expect(cfg.rotDeathSeconds).toBe(150);
+    const rotWindow =
+      cfg.rotDeathSeconds - (cfg.warnSeconds + cfg.floorDecaySeconds);
+    expect(rotWindow).toBe(30);
+    // The grainy opening has to fit inside that window with room to spread after,
+    // so it stays a minority of it rather than merely shorter than it.
+    expect(cfg.rotGrainSeconds).toBeLessThan(rotWindow / 2);
   });
 });
 
