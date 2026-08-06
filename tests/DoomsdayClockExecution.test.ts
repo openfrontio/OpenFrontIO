@@ -4,6 +4,7 @@ import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
+  doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
   ROT_NOISE_SCALE,
@@ -1429,5 +1430,43 @@ describe("rot noise fields", () => {
     const p1 = lowest((x, y) => rotSpeckleNoise(x, y, 1));
     const p2 = lowest((x, y) => rotSpeckleNoise(x, y, 2));
     expect(p1).not.toEqual(p2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The rot quota is shared between the sim and the HUD readout, so the number a
+// player sees is the number being applied to them. Pinned here because a drift
+// between the two would be invisible until someone counted tiles on screen.
+// ---------------------------------------------------------------------------
+
+describe("doomsdayClockRotQuota", () => {
+  const cfg = { rotDeathSeconds: 150 };
+
+  it("is off when there is nothing to rot, or rot is disabled", () => {
+    expect(doomsdayClockRotQuota(0, 130, cfg)).toBe(0);
+    expect(doomsdayClockRotQuota(100, 130, { rotDeathSeconds: 0 })).toBe(0);
+  });
+
+  it("spreads the territory evenly over the time left, rounding up", () => {
+    // 30s of rot window left at the moment rot starts (150 - 120).
+    expect(doomsdayClockRotQuota(300, 120, cfg)).toBe(10);
+    expect(doomsdayClockRotQuota(301, 120, cfg)).toBe(11); // never rounds down
+  });
+
+  it("climbs as the deadline nears, so a stalled rot still finishes on time", () => {
+    const early = doomsdayClockRotQuota(300, 120, cfg);
+    const late = doomsdayClockRotQuota(300, 145, cfg);
+    expect(late).toBeGreaterThan(early);
+    // At and past the deadline the whole remainder goes in one second.
+    expect(doomsdayClockRotQuota(300, 150, cfg)).toBe(300);
+    expect(doomsdayClockRotQuota(300, 999, cfg)).toBe(300);
+  });
+
+  it("actually clears the territory by the deadline", () => {
+    let tiles = 1000;
+    for (let s = 120; s < cfg.rotDeathSeconds && tiles > 0; s++) {
+      tiles -= doomsdayClockRotQuota(tiles, s, cfg);
+    }
+    expect(tiles).toBeLessThanOrEqual(0);
   });
 });

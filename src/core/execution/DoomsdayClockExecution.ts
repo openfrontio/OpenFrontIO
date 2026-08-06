@@ -1,6 +1,7 @@
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
+  doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   ROT_NOISE_SCALE,
   rotFrontNoise,
@@ -229,8 +230,9 @@ export class DoomsdayClockExecution implements Execution {
       front: new Map<TileRef, number>(),
     };
 
-    const secondsLeft = Math.max(1, cfg.rotDeathSeconds - secondsUnder);
-    const evenQuota = Math.ceil(owned / secondsLeft);
+    // Shared with the HUD readout so the number on screen is the number the sim
+    // applies.
+    const evenQuota = doomsdayClockRotQuota(owned, secondsUnder, cfg);
 
     // Grainy opening, sized off the TERRITORY: a share of the quota would be one
     // or two holes a second on all but a huge empire. Runs ahead; quota absorbs it.

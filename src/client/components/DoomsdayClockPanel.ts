@@ -4,6 +4,7 @@ import { assetUrl } from "../../core/AssetUrls";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
+  doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
 } from "../../core/game/DoomsdayClock";
@@ -130,7 +131,12 @@ export class DoomsdayClockPanel extends LitElement {
     let statusClass = "";
     let detail = zoneDetail;
     if (live && draining && me && decaying) {
-      status = translateText("doomsday_clock.decaying");
+      // Rot is a deadline, not a rate, so the per-second loss climbs as the
+      // deadline nears. Same shared quota the sim applies, keyed on this player's
+      // own tiles (rot is per player, unlike the team share shown above).
+      status = translateText("doomsday_clock.decaying", {
+        rate: doomsdayClockRotQuota(me.numTilesOwned(), secondsUnder, sd),
+      });
       statusClass = "text-red-500 font-bold";
     } else if (live && draining && me) {
       // Drain is a % of max-troop capacity that stops at the floor; show the

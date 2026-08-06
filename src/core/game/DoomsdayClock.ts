@@ -341,3 +341,22 @@ export function doomsdayClockDrain(
   }
   return Math.max(1, Math.floor((maxTroops * pct) / 100));
 }
+
+/**
+ * Tiles rot takes per second: the deadline quota ceil(tilesLeft / secondsLeft).
+ * Self-correcting, so it holds the rotDeathSeconds deadline whatever the size and
+ * however late rot started. Shared so the HUD readout and the sim cannot drift.
+ *
+ * This is the steady quota. The grainy opening can briefly exceed it (it runs
+ * ahead and the quota absorbs it), so the readout understates the first few
+ * seconds rather than overstating the rest.
+ */
+export function doomsdayClockRotQuota(
+  tilesLeft: number,
+  secondsUnder: number,
+  cfg: { rotDeathSeconds: number },
+): number {
+  if (tilesLeft <= 0 || cfg.rotDeathSeconds <= 0) return 0;
+  const secondsLeft = Math.max(1, cfg.rotDeathSeconds - secondsUnder);
+  return Math.ceil(tilesLeft / secondsLeft);
+}
