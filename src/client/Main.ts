@@ -73,6 +73,7 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
+import "./components/BannedModal";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
