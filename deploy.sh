@@ -39,6 +39,20 @@ HOST=$2
 VERSION_TAG=$3
 SUBDOMAIN=$4
 
+# Validate subdomain - it becomes a DNS label in the Traefik Host() rule, a
+# Docker container name, and part of a path on the remote host, so hold it to the
+# RFC 1123 label rules: letters, digits and interior hyphens, 63 octets at most.
+case "$SUBDOMAIN" in
+    "" | *[!a-zA-Z0-9-]* | -* | *-)
+        echo "Error: subdomain must be a valid hostname label - letters, digits and interior hyphens only - got: '$SUBDOMAIN'"
+        exit 1
+        ;;
+esac
+if [ "${#SUBDOMAIN}" -gt 63 ]; then
+    echo "Error: subdomain must be at most 63 characters, got ${#SUBDOMAIN}: '$SUBDOMAIN'"
+    exit 1
+fi
+
 # Set subdomain - use the provided subdomain
 echo "Using subdomain: $SUBDOMAIN"
 

@@ -10,11 +10,19 @@ import {
 import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
+import {
+  noopMatchTelemetryEmitter,
+  type MatchTelemetryEmitter,
+} from "./telemetry/MatchTelemetry";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
-  constructor(private log: Logger) {
+  constructor(
+    private log: Logger,
+    private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
+    private readonly telemetryBuildHash: string = "DEV",
+  ) {
     setInterval(() => this.tick(), 1000);
   }
 
@@ -57,10 +65,6 @@ export class GameManager {
     return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
   }
 
-  wasAdmitted(gameID: GameID, persistentID: string): boolean {
-    return this.games.get(gameID)?.wasAdmitted(persistentID) ?? false;
-  }
-
   createGame(
     id: GameID,
     gameConfig: Partial<GameConfig> | undefined,
@@ -100,6 +104,8 @@ export class GameManager {
       startsAt,
       publicGameType,
       matchmakingTeams,
+      this.telemetry,
+      this.telemetryBuildHash,
     );
     this.games.set(id, game);
     return game;
@@ -132,7 +138,9 @@ export class GameManager {
         game.maybeAutoStartListed();
       }
       if (phase === GamePhase.Active) {
-        if (!game.hasStarted()) {
+        // A matchmade game missing a player at the start deadline is
+        // cancelled instead of started short-handed.
+        if (!game.hasStarted() && !game.cancelShortHandedMatch()) {
           // Prestart tells clients to start loading the game.
           game.prestart();
           // Start game on delay to allow time for clients to connect.

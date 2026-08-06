@@ -118,6 +118,7 @@ export function makePlayerUpdate(
     clientID: "client-a",
     name: "Alice",
     displayName: "Alice",
+    clanTag: null,
     id: "player-a",
     smallID: 1,
     playerType: PlayerType.Human,

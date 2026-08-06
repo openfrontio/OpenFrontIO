@@ -15,13 +15,11 @@ export class PrivilegeRefresher {
   private privilegeChecker: PrivilegeChecker | null = null;
   private failOpenPrivilegeChecker: PrivilegeChecker =
     new FailOpenPrivilegeChecker();
-  private cosmeticFlagUrls: Set<string> = new Set();
 
   private log: Logger;
 
   constructor(
     private cosmeticsEndpoint: string,
-    private profaneWordsEndpoint: string,
     private apiKey: string,
     private reservedClanTagsEndpoint: string,
     parentLog: Logger,
@@ -41,10 +39,6 @@ export class PrivilegeRefresher {
     return this.privilegeChecker ?? this.failOpenPrivilegeChecker;
   }
 
-  public getCosmeticFlagUrls(): Set<string> {
-    return this.cosmeticFlagUrls;
-  }
-
   private async loadPrivilegeChecker(): Promise<void> {
     this.log.info(`Loading privilege checker`);
     try {
@@ -60,13 +54,8 @@ export class PrivilegeRefresher {
         }
       };
 
-      const [
-        cosmeticsResponse,
-        profaneWordsResponse,
-        reservedClanTagsResponse,
-      ] = await Promise.all([
+      const [cosmeticsResponse, reservedClanTagsResponse] = await Promise.all([
         fetchWithTimeout(this.cosmeticsEndpoint),
-        fetchWithTimeout(this.profaneWordsEndpoint),
         fetchWithTimeout(this.reservedClanTagsEndpoint),
       ]);
 
@@ -103,30 +92,10 @@ export class PrivilegeRefresher {
         reservedClanTagsResult.data.map((tag) => tag.toUpperCase()),
       );
 
-      let bannedWords: string[] = [];
-      if (profaneWordsResponse && profaneWordsResponse.ok) {
-        try {
-          bannedWords = await profaneWordsResponse.json();
-          this.log.info(
-            `Loaded ${bannedWords.length} profane words from ${this.profaneWordsEndpoint}`,
-          );
-        } catch (error) {
-          this.log.warn(`Failed to parse profane words JSON, using empty list`);
-        }
-      } else {
-        this.log.warn(
-          `Failed to fetch profane words (status ${profaneWordsResponse?.status ?? "network error"}), using empty list`,
-        );
-      }
-
       this.privilegeChecker = new PrivilegeCheckerImpl(
         result.data,
         base64url.decode,
-        bannedWords,
         reservedClanTags,
-      );
-      this.cosmeticFlagUrls = new Set(
-        Object.values(result.data.flags).map((f) => f.url),
       );
       this.log.info(
         `Privilege checker loaded successfully (${reservedClanTags.size} reserved clan tags)`,

@@ -21,12 +21,17 @@ export class SpawnExecution implements Execution {
   private random: PseudoRandom;
   active: boolean = true;
   private mg: Game;
+  private queuedDuringSpawnPhase = false;
   private static readonly MAX_SPAWN_TRIES = 1_000;
 
   constructor(
     gameID: GameID,
     private playerInfo: PlayerInfo,
     public tile?: TileRef,
+    // True only for spawns built from a client's spawn intent. Internal
+    // callers (PlayerSpawner, NationExecution) are trusted and place players
+    // deliberately, including at the end of the spawn phase; a client may not.
+    private fromIntent: boolean = false,
   ) {
     this.random = new PseudoRandom(
       simpleHash(playerInfo.id) + simpleHash(gameID),
@@ -35,10 +40,20 @@ export class SpawnExecution implements Execution {
 
   init(mg: Game, ticks: number) {
     this.mg = mg;
+    this.queuedDuringSpawnPhase = mg.inSpawnPhase();
   }
 
   tick(ticks: number) {
     this.active = false;
+
+    // Security: `tile` arrives straight off a spawn intent. A fractional or
+    // out-of-range ref indexes past the terrain buffers, so downstream lookups
+    // read back undefined instead of failing. Reject it before relinquishing
+    // any territory, so a malformed intent is a clean no-op on every client.
+    if (this.tile !== undefined && !this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: invalid spawn tile ${this.tile}`);
+      return;
+    }
 
     let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
@@ -47,12 +62,15 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
-    // Security: a spawn intent may only place or relocate a player's starting
-    // territory during the spawn phase. Once the game is underway, an
-    // already-spawned player who sends a spawn intent is attempting to
-    // teleport — relinquishing their territory and re-conquering it elsewhere.
-    // Ignore it so the intent is a deterministic no-op on every client.
-    if (!this.mg.inSpawnPhase() && player.hasSpawned()) {
+    // Security: a client's spawn intent is only honoured if it was *issued*
+    // during the spawn phase. Gating on the phase at tick time is wrong in
+    // both directions — an intent sent on the final spawn-phase tick runs a
+    // tick later and would be rejected, while checking hasSpawned() instead
+    // lets a player who never picked drop into a live game at a tile of their
+    // choosing. init() still sees the phase for a last-tick pick but not for
+    // anything sent afterwards, and runs identically on every client, so a
+    // rejected intent is a deterministic no-op rather than a desync.
+    if (this.fromIntent && !this.queuedDuringSpawnPhase) {
       return;
     }
 

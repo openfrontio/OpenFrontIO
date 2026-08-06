@@ -125,12 +125,20 @@ void main() {
     float atlasW = uEmojiAtlasW;
     float atlasH = uEmojiAtlasH;
 
-    float emojiWorldSize = uFontBase * nameWorldScale * 1.0;
+    float emojiWorldSize = uFontBase * nameWorldScale * 1.1;
 
-    iconOrigin = vec2(
-      wx - emojiWorldSize * 0.5,
-      wy - uFontBase * nameWorldScale * uEmojiRowOffset
-    );
+    // Read precomputed active status icon count from pd8.z (set by CPU, avoids
+    // duplicating flag logic here and in status-icon.vert.glsl).
+    vec4 pd8 = texelFetch(uPlayerData, ivec2(8, playerIdx), 0);
+    int totalStatusActive = int(pd8.z);
+
+    // Place emoji as rightmost slot in the combined group, or centered if alone.
+    float gap = emojiWorldSize * 0.15;
+    int totalItems = totalStatusActive + 1;
+    float totalWidth = float(totalItems) * emojiWorldSize + float(totalItems - 1) * gap;
+    float emojiX = wx - totalWidth * 0.5 + float(totalStatusActive) * (emojiWorldSize + gap);
+
+    iconOrigin = vec2(emojiX, wy - uFontBase * nameWorldScale * uEmojiRowOffset);
     iconW = emojiWorldSize;
     iconH = emojiWorldSize;
 

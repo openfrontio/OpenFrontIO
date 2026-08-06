@@ -39,7 +39,8 @@ export class TestConfig extends Config {
     this._defaultNukeSpeed = speed;
   }
 
-  defaultNukeSpeed(): number {
+  // Flat speed for all nuke types so test tick counts stay predictable.
+  nukeSpeed(_: UnitType): number {
     return this._defaultNukeSpeed;
   }
 

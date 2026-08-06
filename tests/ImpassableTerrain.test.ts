@@ -2,7 +2,6 @@ import { encodeTerrainTile } from "../src/client/render/gl/utils/ColorUtils";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NationNukeBehavior } from "../src/core/execution/nation/NationNukeBehavior";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
@@ -238,18 +237,18 @@ describe("Impassable Terrain", () => {
 
   // ── Nukes: trajectory ─────────────────────────────────────────────────
 
-  test("nuke trajectory blocked by impassable terrain", () => {
+  test("nuke flies over impassable terrain and detonates", () => {
     player.conquer(game.ref(20, 100));
     player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
-    // Target is on the right side of the wall — trajectory must cross it.
+    // Target is on the right side of the wall — trajectory crosses it.
     const target = game.ref(150, 100);
     expect(game.isImpassable(target)).toBe(false);
 
     const nuke = new NukeExecution(UnitType.AtomBomb, player, target);
     game.addExecution(nuke);
-    executeTicks(game, 10);
-    // Should have been blocked.
-    expect(nuke.isActive()).toBe(false);
+    executeTicks(game, 30);
+    expect(nuke.getNuke()).not.toBeNull();
+    expect(nuke.getNuke()!.reachedTarget()).toBe(true);
   });
 
   test("nuke can launch when trajectory does not cross impassable terrain", () => {
@@ -266,6 +265,18 @@ describe("Impassable Terrain", () => {
     expect(nuke.isActive()).toBe(false);
   });
 
+  test("MIRV warhead flies over impassable terrain", () => {
+    player.conquer(game.ref(20, 100));
+    player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
+    // Target is on the right side of the wall — trajectory must cross it.
+    const target = game.ref(150, 100);
+    expect(game.isImpassable(target)).toBe(false);
+
+    const nuke = new NukeExecution(UnitType.MIRVWarhead, player, target);
+    game.addExecution(nuke);
+    executeTicks(game, 2);
+    expect(nuke.isActive()).toBe(true);
+  });
   // ── Water conversion guard ────────────────────────────────────────────
 
   test("setWater does not convert impassable tiles", () => {
@@ -381,75 +392,39 @@ describe("Impassable Terrain", () => {
     });
   });
 
-  // ── Nation AI: nuke trajectory over impassable terrain ───────────────
+  // ── Nukes: silo selection ─────────────────────────────────────────────
 
-  describe("NationNukeBehavior trajectory over impassable terrain", () => {
-    let nukePlayer: Player;
+  describe("silo selection with impassable terrain", () => {
+    function buildSilo(g: Game, p: Player, x: number, y: number) {
+      p.conquer(g.ref(x, y));
+      p.buildUnit(UnitType.MissileSilo, g.ref(x, y), {});
+    }
 
-    beforeEach(() => {
-      nukePlayer = game.player("player_id");
-      (game.config() as TestConfig).infiniteGold = () => true;
-      (game.config() as TestConfig).instantBuild = () => true;
-      (game.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
-        inner: 5,
-        outer: 5,
-      }));
-      (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(
-        () => 999,
+    test("closest silo is chosen even when the trajectory crosses impassable terrain", () => {
+      // 60 tiles from the target but on the other side of the wall.
+      buildSilo(game, player, 90, 100);
+      // 70 tiles from the target, same side.
+      buildSilo(game, player, 150, 30);
+
+      const target = game.ref(150, 100);
+      expect(player.canBuild(UnitType.AtomBomb, target)).toBe(
+        game.ref(90, 100),
       );
-      (game.config() as TestConfig).setDefaultNukeSpeed(50);
+
+      const nuke = new NukeExecution(UnitType.AtomBomb, player, target);
+      game.addExecution(nuke);
+      executeTicks(game, 30);
+      expect(nuke.getNuke()).not.toBeNull();
+      expect(nuke.getNuke()!.reachedTarget()).toBe(true);
     });
 
-    test("NationNukeBehavior skips nuke targets whose trajectory crosses impassable terrain", () => {
-      // Build a silo on the left side of the wall.
-      nukePlayer.conquer(game.ref(20, 100));
-      nukePlayer.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
-
-      // Enemy owns tiles on the RIGHT side of the wall — trajectory must
-      // cross the impassable wall.
-      const enemy = game.player("other_id");
-      enemy.conquer(game.ref(150, 100));
-
-      // Build a NationNukeBehavior and call maybeSendNuke.
-      const emojiBehavior = new NationEmojiBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
+    test("MIRV silo selection ignores impassable terrain", () => {
+      buildSilo(game, player, 20, 100);
+      // MIRV targets must be owned.
+      other.conquer(game.ref(150, 100));
+      expect(player.canBuild(UnitType.MIRV, game.ref(150, 100))).toBe(
+        game.ref(20, 100),
       );
-      const allianceBehavior = new NationAllianceBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        emojiBehavior,
-      );
-      const attackBehavior = new AiAttackBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        0.0,
-        0.0,
-        0.0,
-        allianceBehavior,
-        emojiBehavior,
-      );
-      const nukeBehavior = new NationNukeBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        attackBehavior,
-        emojiBehavior,
-      );
-
-      // Set the enemy as a hostile target so the nuke behavior considers them.
-      nukePlayer.updateRelation(enemy, -100);
-
-      // Run maybeSendNuke — it should NOT launch a nuke because the
-      // trajectory crosses impassable terrain.
-      nukeBehavior.maybeSendNuke();
-
-      // No nukes should have been launched.
-      const nukes = nukePlayer.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
-      expect(nukes.length).toBe(0);
     });
   });
 });

@@ -105,6 +105,7 @@ export {
   GameMapType,
   mapCategoryOrder,
   maps,
+  type CustomTribe,
   type GameMapName,
   type MapCategory,
   type MapInfo,
@@ -249,7 +250,9 @@ export interface UnitParamsMap {
 
   [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: Record<string, never>;
+  [UnitType.SAMMissile]: {
+    targetUnit: Unit;
+  };
 
   [UnitType.Port]: Record<string, never>;
 
@@ -290,6 +293,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 }
 
@@ -547,6 +551,7 @@ export interface Player {
   info(): PlayerInfo;
   name(): string;
   displayName(): string;
+  clanTag(): string | null;
   clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;
@@ -860,6 +865,12 @@ export interface Game extends GameMap {
 
   /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
   queueWaterConversion(tile: TileRef): void;
+
+  /** Queue a tile that was inside a nuke blast radius (for nukeable layer destruction). */
+  queueNukeImpact(tile: TileRef): void;
+
+  /** Drain all tiles from nuke impacts this tick. Called once per tick. */
+  drainNukeImpacts(): TileRef[];
 }
 
 export interface PlayerActions {

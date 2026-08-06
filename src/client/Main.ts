@@ -10,6 +10,7 @@ import {
   GameStartInfo,
   PublicGameInfo,
 } from "../core/Schemas";
+import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -26,6 +27,7 @@ import "./CosmeticsModal";
 import { CosmeticsModal } from "./CosmeticsModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { isDesktopShell } from "./DesktopShell";
 import "./FeaturedStream";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
@@ -35,7 +37,6 @@ import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GameStatsModal";
-import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
@@ -48,11 +49,19 @@ import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
+import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PlayerProfileModal";
 import { RewardsModal } from "./RewardsModal";
 import "./SinglePlayerModal";
+import {
+  isSteamLinkHash,
+  parseSteamLinkToken,
+  resumePendingSteamLink,
+} from "./SteamLink";
+import "./SteamLinkModal";
+import { SteamLinkModal } from "./SteamLinkModal";
 import { StoreModal } from "./Store";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -63,12 +72,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
-import {
-  getDiscordAvatarUrl,
-  incrementGamesPlayed,
-  isInIframe,
-  translateText,
-} from "./Utils";
+import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
 import "./components/BannedModal";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
@@ -87,105 +91,6 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
-
-function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
-  const button = document.getElementById("nav-account-button");
-  if (!button) return;
-
-  const avatarEl = document.getElementById("nav-account-avatar") as
-    | (HTMLImageElement & { _navToken?: symbol })
-    | null;
-  const personIconEl = document.getElementById(
-    "nav-account-person-icon",
-  ) as SVGElement | null;
-  const emailBadgeEl = document.getElementById(
-    "nav-account-email-badge",
-  ) as HTMLElement | null;
-  const signInTextEl = document.getElementById(
-    "nav-account-signin-text",
-  ) as HTMLSpanElement | null;
-
-  // Auth state is resolved, so the button no longer shows the loading spinner.
-  document
-    .getElementById("nav-account-loading-spinner")
-    ?.classList.add("hidden");
-
-  // Unique token for this update call
-  const navToken = Symbol();
-  if (avatarEl) avatarEl._navToken = navToken;
-
-  const showAvatar = (src: string, alt?: string) => {
-    if (avatarEl) {
-      avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
-      // If the avatar fails to load (bad URL / CDN issue / offline), fall back
-      // to the default sign-in UI instead of leaving a broken image.
-      avatarEl.onerror = () => {
-        if (avatarEl._navToken !== navToken) return;
-        avatarEl.onerror = null;
-        avatarEl.src = "https://cdn.discordapp.com/embed/avatars/0.png";
-      };
-      avatarEl.onload = () => {
-        // Only handle if this is the latest update
-        if (avatarEl._navToken !== navToken) return;
-        // Clear error handler after a successful load.
-        avatarEl.onerror = null;
-      };
-      avatarEl.src = src;
-      avatarEl.classList.remove("hidden");
-    }
-    personIconEl?.classList.add("hidden");
-    emailBadgeEl?.classList.add("hidden");
-    signInTextEl?.classList.add("hidden");
-    button?.classList.remove("border", "border-white/20");
-  };
-
-  const showSignIn = () => {
-    avatarEl?.classList.add("hidden");
-    personIconEl?.classList.remove("hidden");
-    emailBadgeEl?.classList.add("hidden");
-    signInTextEl?.classList.remove("hidden");
-    // Restore border when showing signin state
-    button?.classList.add("border", "border-white/20");
-  };
-
-  const showEmailLoggedIn = () => {
-    avatarEl?.classList.add("hidden");
-    personIconEl?.classList.remove("hidden");
-    emailBadgeEl?.classList.remove("hidden");
-    signInTextEl?.classList.add("hidden");
-    button?.classList.add("border", "border-white/20");
-  };
-
-  const discord =
-    userMeResponse !== false ? userMeResponse.user.discord : undefined;
-  if (discord && avatarEl) {
-    const avatarAlt = translateText("main.user_avatar_alt", {
-      username: discord.username,
-    });
-    const url = getDiscordAvatarUrl(discord);
-    if (url) {
-      showAvatar(url, avatarAlt);
-      return;
-    }
-  }
-
-  const email =
-    userMeResponse !== false ? userMeResponse.user.email : undefined;
-  if (email) {
-    showEmailLoggedIn();
-    return;
-  }
-
-  // Google logins have no avatar; show the same person/email badge as magic-link.
-  const google =
-    userMeResponse !== false ? userMeResponse.user.google : undefined;
-  if (google) {
-    showEmailLoggedIn();
-    return;
-  }
-
-  showSignIn();
-}
 
 declare global {
   interface Window {
@@ -241,8 +146,10 @@ declare global {
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
+    "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
+    "game-starting": CustomEvent;
     "update-game-config": CustomEvent;
   }
 }
@@ -275,6 +182,7 @@ class Client {
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
   private rewardsModal: RewardsModal;
+  private steamLinkModal: SteamLinkModal;
   private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
@@ -334,9 +242,12 @@ class Client {
     modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // Prefetch turnstile token so it is available when the user joins a lobby.
+    // Desktop (Steam) has no Turnstile script and is server-side exempt, so
+    // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
+    // script" after its load wait.
+    this.turnstileTokenPromise =
+      ClientEnv.instanceId() === "desktop" ? null : getTurnstileToken();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -408,6 +319,10 @@ class Client {
     document.addEventListener(
       "open-matchmaking",
       this.handleOpenMatchmaking.bind(this),
+    );
+    document.addEventListener(
+      "matchmaking-requeue",
+      this.handleMatchmakingRequeue.bind(this),
     );
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
@@ -498,6 +413,16 @@ class Client {
       console.warn("Rewards modal element not found");
     }
 
+    this.steamLinkModal = document.querySelector(
+      "steam-link-modal",
+    ) as SteamLinkModal;
+    if (
+      !this.steamLinkModal ||
+      !(this.steamLinkModal instanceof SteamLinkModal)
+    ) {
+      console.warn("Steam link modal element not found");
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (crazyGamesSDK.isOnCrazyGames()) {
         void updateCrazyGamesNavButton();
@@ -506,7 +431,8 @@ class Client {
       }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
-      window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
+      window.adsEnabled =
+        !isAdFree && !crazyGamesSDK.isOnCrazyGames() && !isDesktopShell();
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is
@@ -537,6 +463,19 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
+
+        // Resume a Steam-link flow that was interrupted by a login redirect
+        // (Discord/Google OAuth, magic link): the modal stashed either a
+        // token or a bare code-entry intent and sent the player to log in
+        // via #modal=account, so a login redirect commonly lands back there
+        // rather than on a clean "/" — this must NOT be gated on
+        // cleanHomepage below. Only resume once login is confirmed:
+        // resumePendingSteamLink() consumes the stash on read, so a
+        // speculative call while logged out would burn an entry that a
+        // *later* successful login should still get to resume.
+        if (resumePendingSteamLink(this.steamLinkModal)) {
+          return;
+        }
 
         // Popups below only on a clean homepage load, never over a deep link
         // (join URL, #modal=..., #purchase-completed, ...).
@@ -843,6 +782,29 @@ class Client {
       return;
     }
 
+    // The desktop Electron shell's account-linking gate opens the browser
+    // here (see SteamLink.ts for the full handoff). Checked against the raw
+    // hash, not decodedHash — parseSteamLinkToken's prefix match is exact
+    // and the token itself is opaque, so no decoding is needed or expected.
+    const steamLinkToken = parseSteamLinkToken(hash);
+    if (steamLinkToken) {
+      strip();
+      void this.steamLinkModal?.openWithToken(steamLinkToken);
+      return;
+    }
+
+    // Fallback: the gate's browser handoff itself can fail (wrong default
+    // browser, an odd Linux setup, Steam's overlay browser), in which case it
+    // shows an 8-character code instead and tells the player to enter it on
+    // the website. There's no token in that case, so parseSteamLinkToken
+    // above returns null — this is the bare `#steam-link` hash the code path
+    // lands on instead (see SteamLink.ts's isSteamLinkHash).
+    if (isSteamLinkHash(hash)) {
+      strip();
+      void this.steamLinkModal?.openForCodeEntry();
+      return;
+    }
+
     const pathMatch = window.location.pathname.match(
       /^\/(?:w\d+\/)?game\/([^/]+)/,
     );
@@ -936,6 +898,11 @@ class Client {
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
+    // Ensure the one-shot Steam name-seed has settled before reading
+    // getUsername(), mirroring how getClanCheck() runs in parallel with the
+    // handshake. whenSeeded() always resolves (falling back to the generated
+    // anon name on failure/timeout), so this can only delay, never block.
+    await this.usernameInput?.whenSeeded();
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs(),
@@ -944,7 +911,13 @@ class Client {
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
-      gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
+      gameStartInfo:
+        lobby.gameStartInfo ??
+        // Replays simulate from the archived record; re-apply the server's
+        // wire blanking or team games desync (see toWireGameStartInfo).
+        (lobby.gameRecord
+          ? toWireGameStartInfo(lobby.gameRecord.info)
+          : undefined),
       gameRecord: lobby.gameRecord,
     });
 
@@ -957,6 +930,9 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
+      // The game is actually starting now (lobby wait is over). Let listeners that stay up
+      // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
+      document.dispatchEvent(new CustomEvent("game-starting"));
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
       if (this.usernameInput) {
@@ -990,6 +966,7 @@ class Client {
         "account-button",
         "leaderboard-button",
         "token-login",
+        "steam-link-modal",
         "matchmaking-modal",
         "clan-modal",
         "lang-selector",
@@ -1102,6 +1079,25 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
+  // Puts the player back into the ranked queue. From a pre-start match
+  // cancellation the matchmaking modal is still open and rejoins in place,
+  // keeping its mode. From a finished game (WinModal passes the mode) the
+  // page needs the reload teardown, so navigate home with the requeue
+  // param and let consumeRequeueUrl() reopen the queue. A modeless
+  // dispatch with no open modal (the player closed it mid-wait) stays a
+  // no-op — don't force them back into a queue they left.
+  private handleMatchmakingRequeue(
+    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+  ) {
+    if (this.matchmakingModal?.requeue()) {
+      return;
+    }
+    if (event.detail?.mode !== undefined) {
+      window.location.href =
+        event.detail.mode === "2v2" ? "/?requeue=2v2" : "/?requeue";
+    }
+  }
+
   private handleOpenMatchmaking(
     event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
   ) {
@@ -1141,6 +1137,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
+      ClientEnv.instanceId() === "desktop" ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;

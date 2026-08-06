@@ -42,6 +42,9 @@ export class ClientEnv {
       jwtAudience: bc.jwtAudience,
       instanceId: bc.instanceId,
       gitCommit: bc.gitCommit,
+      // Optional: only the desktop app injects an explicit game-server host.
+      // Absent on the web build (falls back to same-origin window.location).
+      serverHost: bc.serverHost,
     };
     return ClientEnv.values;
   }
@@ -104,6 +107,48 @@ export class ClientEnv {
   static workerPath(gameID: GameID): string {
     return `w${ClientEnv.workerIndex(gameID)}`;
   }
+  // Explicit game-server host, injected by the desktop app (absent on web).
+  static serverHost(): string | undefined {
+    return ClientEnv.get().serverHost;
+  }
+  // Origin (scheme + host, no trailing slash) of the game server that hosts the
+  // public-lobby and in-game WebSockets. The lobby-list and game sockets append
+  // their own worker path (e.g. `/w0/lobbies`, `/w0`).
+  static serverWsBase(): string {
+    return deriveServerWsBase(
+      ClientEnv.serverHost(),
+      window.location.protocol,
+      window.location.host,
+    );
+  }
+}
+
+/**
+ * Resolve the game-server WebSocket origin.
+ *
+ * When an explicit `serverHost` is configured, target it over TLS (wss). Only
+ * the desktop app sets this: it loads the renderer from `app://openfront`,
+ * where `window.location.host` is just "openfront" (not a real server), and the
+ * game-server host is NOT derivable from the API audience — it is the bare
+ * audience host in prod (`openfront.io`) but a branch-variable subdomain on
+ * dev/staging (default `main.openfront.dev`, or `<branch>.openfront.dev`). So
+ * the host is injected explicitly rather than derived.
+ *
+ * When no `serverHost` is configured — the normal web build — the game server
+ * is same-origin as the document, so we keep the historical behaviour exactly:
+ * derive scheme + host from `window.location`. This leaves the web build
+ * byte-for-byte unchanged.
+ */
+export function deriveServerWsBase(
+  serverHost: string | undefined,
+  locationProtocol: string,
+  locationHost: string,
+): string {
+  if (serverHost) {
+    return `wss://${serverHost}`;
+  }
+  const wsProtocol = locationProtocol === "https:" ? "wss:" : "ws:";
+  return `${wsProtocol}//${locationHost}`;
 }
 /**
  * Values that flow from server → client via index.html. Set on the server from
@@ -117,4 +162,5 @@ export interface ClientEnvValues {
   jwtAudience: string;
   instanceId: string;
   gitCommit: string;
+  serverHost?: string;
 }

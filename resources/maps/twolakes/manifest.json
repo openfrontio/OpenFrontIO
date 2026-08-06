@@ -45,5 +45,6 @@
       "name": "Prespa"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.twolakes"
 }

@@ -10,6 +10,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import type { MapLayer } from "../../../core/game/TerrainMapLoader";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -38,6 +39,7 @@ import { FalloutBloomPass } from "./passes/FalloutBloomPass";
 import { FalloutLightPass } from "./passes/FalloutLightPass";
 import { FxPass } from "./passes/fx-pass";
 import { LightmapPass } from "./passes/LightmapPass";
+import { MapLayerPass } from "./passes/MapLayerPass";
 import { MoveIndicatorPass } from "./passes/MoveIndicatorPass";
 import { NamePass } from "./passes/name-pass";
 import { NightCompositePass } from "./passes/NightCompositePass";
@@ -146,6 +148,17 @@ export class GPURenderer {
   private spawnOverlayPass: SpawnOverlayPass;
   private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
+
+  // Map-layer passes keyed by layer id, drawn between terrain and territory.
+  private mapLayerPasses: Map<string, MapLayerPass> = new Map();
+  /** R8UI terrain-bytes texture shared by all layer passes. */
+  private terrainBytesTex: WebGLTexture | null = null;
+  /** Stored layer definitions for context-restore re-creation. */
+  private storedLayers: MapLayer[] = [];
+  /** Stored layer images for context-restore re-creation. */
+  private storedLayerImages: Map<string, ImageBitmap> = new Map();
+  /** Scratch buffer for per-tile terrain byte uploads (avoids allocations). */
+  private terrainDeltaScratch = new Uint8Array(1);
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
@@ -270,6 +283,17 @@ export class GPURenderer {
       },
     );
 
+    // --- Terrain bytes R8UI texture (shared by map-layer passes) ---
+    this.terrainBytesTex = createTexture2D(gl, {
+      width: mapW,
+      height: mapH,
+      internalFormat: gl.R8UI,
+      format: gl.RED_INTEGER,
+      type: gl.UNSIGNED_BYTE,
+      data: terrainBytes,
+      filter: gl.NEAREST,
+    });
+
     // --- Shared palette texture (RGBA32F, 4096×2) ---
     this.paletteData = paletteData;
     const palW = getPaletteSize();
@@ -285,8 +309,8 @@ export class GPURenderer {
 
     // Per-player effect texture: EFFECT_PALETTE_BLOCKS stacked blocks of
     // MAX_TRAIL_COLORS rows (block 0 = transportShipTrail, block 1 = nukeTrail,
-    // block 2 = structures). Starts zeroed (color count 0 everywhere = no
-    // effect → territory/player color).
+    // block 2 = structures, block 3 = warship). Starts zeroed (color count 0
+    // everywhere = no effect → territory/player color).
     const effectRows = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
     this.effectTex = createTexture2D(gl, {
       width: palW,
@@ -547,6 +571,7 @@ export class GPURenderer {
       gl,
       header,
       this.paletteTex,
+      this.effectTex,
       this.settings,
       config,
     );
@@ -929,6 +954,43 @@ export class GPURenderer {
     if (refs.length === 0) return;
     this.terrainPass.applyTerrainDelta(refs, terrainBytes);
     this.railroadPass.applyTerrainDelta(refs, terrainBytes);
+    // Update the shared R8UI terrain-bytes texture used by map-layer passes.
+    if (!this.terrainBytesTex) return;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.terrainBytesTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    // Full-map fast path: single texSubImage2D instead of per-tile uploads.
+    if (refs.length === this.mapW * this.mapH) {
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        this.mapW,
+        this.mapH,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        terrainBytes,
+      );
+      return;
+    }
+    for (let i = 0; i < refs.length; i++) {
+      const ref = refs[i];
+      const x = ref % this.mapW;
+      const y = Math.floor(ref / this.mapW);
+      this.terrainDeltaScratch[0] = terrainBytes[i];
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        x,
+        y,
+        1,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        this.terrainDeltaScratch,
+      );
+    }
   }
 
   /**
@@ -1249,6 +1311,10 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // Map layers sit between terrain and territory.
+    for (const layerPass of this.mapLayerPasses.values()) {
+      layerPass.draw(cam);
+    }
     if (pe.territory) this.territoryPass.draw(cam);
   }
 
@@ -1303,11 +1369,77 @@ export class GPURenderer {
   }
 
   // ---------------------------------------------------------------------------
+  // Map-layer management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create map-layer passes from the loaded layer data.  Called once at game
+   * start (and again after context restore).  Layers are drawn in array order
+   * between the terrain and territory passes.
+   */
+  setMapLayers(layers: MapLayer[], images: Map<string, ImageBitmap>): void {
+    // Dispose any previous layer passes.
+    for (const p of this.mapLayerPasses.values()) p.dispose();
+    this.mapLayerPasses.clear();
+    this.storedLayers = layers;
+    this.storedLayerImages = images;
+
+    if (!this.terrainBytesTex) return;
+    const gl = this.gl;
+
+    for (const layer of layers) {
+      const image = images.get(layer.id);
+      if (!image) {
+        console.warn(`[Renderer] Layer image "${layer.id}" not found`);
+        continue;
+      }
+      const placement: 0 | 1 = layer.placement === "water" ? 1 : 0;
+      const pass = new MapLayerPass(
+        gl,
+        this.terrainBytesTex,
+        image,
+        this.mapW,
+        this.mapH,
+        placement,
+        layer.nukeable ?? false,
+      );
+      this.mapLayerPasses.set(layer.id, pass);
+    }
+  }
+
+  /** Toggle visibility of a single layer (driven by graphics settings). */
+  setLayerVisible(layerId: string, visible: boolean): void {
+    this.mapLayerPasses.get(layerId)?.setVisible(visible);
+  }
+
+  /**
+   * Mark tiles as destroyed for a nukeable layer.  Called when a nuke
+   * detonates; batches all tile updates into a single GPU upload.
+   */
+  markLayerTilesDestroyed(layerId: string, tileIndices: number[]): void {
+    this.mapLayerPasses.get(layerId)?.markTilesDestroyed(tileIndices);
+  }
+
+  /**
+   * Bulk-destroy tiles for a nukeable layer (used when replaying or restoring
+   * state).
+   */
+  setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
+    this.mapLayerPasses.get(layerId)?.updateDestroyedMask(mask);
+  }
+
+  // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
 
   dispose(): void {
     this.stopLoop();
+    for (const p of this.mapLayerPasses.values()) p.dispose();
+    this.mapLayerPasses.clear();
+    if (this.terrainBytesTex) {
+      this.gl.deleteTexture(this.terrainBytesTex);
+      this.terrainBytesTex = null;
+    }
     this.terrainPass.dispose();
     this.territoryPass.dispose();
     this.trailPass.dispose();

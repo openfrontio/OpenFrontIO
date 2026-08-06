@@ -39,9 +39,23 @@ if [ "$2" != "falk2" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" 
     exit 1
 fi
 
-# Validate third argument (subdomain)
-if [ -z "$3" ]; then
-    echo "Error: Subdomain is required"
+# Validate third argument (subdomain). It becomes a DNS label and a Docker
+# container name downstream, so hold it to the RFC 1123 label rules here rather
+# than after the build has already run.
+case "$3" in
+    "")
+        echo "Error: Subdomain is required"
+        echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+        exit 1
+        ;;
+    *[!a-zA-Z0-9-]* | -* | *-)
+        echo "Error: Subdomain must be a valid hostname label - letters, digits and interior hyphens only - got: '$3'"
+        echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+        exit 1
+        ;;
+esac
+if [ "${#3}" -gt 63 ]; then
+    echo "Error: Subdomain must be at most 63 characters, got ${#3}: '$3'"
     echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
     exit 1
 fi

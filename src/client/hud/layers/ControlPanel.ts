@@ -20,8 +20,7 @@ import {
 } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
-const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
-const soldierIcon = assetUrl("images/SoldierIcon.svg");
+import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("control-panel")

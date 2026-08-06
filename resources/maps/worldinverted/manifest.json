@@ -955,17 +955,17 @@
   "id": "WorldInverted",
   "map": {
     "height": 1248,
-    "num_land_tiles": 1561762,
+    "num_land_tiles": 1561743,
     "width": 2500
   },
   "map16x": {
     "height": 312,
-    "num_land_tiles": 91870,
+    "num_land_tiles": 91866,
     "width": 625
   },
   "map4x": {
     "height": 624,
-    "num_land_tiles": 381499,
+    "num_land_tiles": 381490,
     "width": 1250
   },
   "multiplayer_frequency": 8,
@@ -1288,11 +1288,6 @@
       "coordinates": [1550, 1120],
       "flag": "",
       "name": "Ross"
-    },
-    {
-      "coordinates": [24, 1080],
-      "flag": "",
-      "name": "Weddell"
     },
     {
       "coordinates": [120, 1050],

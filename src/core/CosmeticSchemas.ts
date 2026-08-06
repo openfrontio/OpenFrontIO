@@ -11,8 +11,8 @@ export type Skin = z.infer<typeof SkinSchema>;
 export type Pack = z.infer<typeof PackSchema>;
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 // An effect cosmetic of any type — discriminated on effectType (today
-// transportShipTrail + nukeTrail + nukeExplosion + structures; gains a member
-// per effectType).
+// transportShipTrail + nukeTrail + nukeExplosion + structures + warship;
+// gains a member per effectType).
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = z.infer<typeof EffectTypeSchema>;
 // Shared by every trail effectType (transportShipTrail, nukeTrail, …).
@@ -24,6 +24,10 @@ export type NukeExplosionAttributes = z.infer<
 // Attributes of a structures effect (recolors structure icons, not a trail).
 export type StructuresEffectAttributes = z.infer<
   typeof StructuresEffectAttributesSchema
+>;
+// Attributes of a warship effect (recolors warship sprites, not a trail).
+export type WarshipEffectAttributes = z.infer<
+  typeof WarshipEffectAttributesSchema
 >;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
@@ -117,6 +121,7 @@ export const EFFECT_TYPES = [
   "nukeTrail",
   "nukeExplosion",
   "structures",
+  "warship",
 ] as const;
 export const EffectTypeSchema = z.enum(EFFECT_TYPES);
 
@@ -261,12 +266,29 @@ const StructuresEffectSchema = CosmeticSchema.extend({
   url: z.string().optional(),
 });
 
+// Warship-effect attributes: the same gradient/transition shapes and
+// icon-space semantics as the structures effect (the palette spans the sprite
+// once for "gradient"; "transition" cross-fades the whole sprite), so the
+// schema is shared rather than re-declared.
+export const WarshipEffectAttributesSchema = StructuresEffectAttributesSchema;
+
+// Recolors the owner's warships with gradient / transition styles. Unlike the
+// hover-gated structures effect, warships are few and mobile, so the effect
+// renders whenever the warship does; combat signals (the attacking-red
+// override, the retreat blink) take priority over the cosmetic.
+const WarshipEffectSchema = CosmeticSchema.extend({
+  effectType: z.literal("warship"),
+  attributes: WarshipEffectAttributesSchema,
+  url: z.string().optional(),
+});
+
 // Any catalog effect, discriminated on effectType. Add a member per effectType.
 export const EffectSchema = z.discriminatedUnion("effectType", [
   TransportShipTrailEffectSchema,
   NukeTrailEffectSchema,
   NukeExplosionEffectSchema,
   StructuresEffectSchema,
+  WarshipEffectSchema,
 ]);
 
 /**
@@ -290,7 +312,7 @@ export function isNukeExplosionEffect(
 
 /**
  * A player selects one effect per "slot". A slot is the effectType itself for
- * per-type effects (transportShipTrail, nukeTrail, structures) and the
+ * per-type effects (transportShipTrail, nukeTrail, structures, warship) and the
  * nukeType for nuke explosions (atom, hydro, mirvWarhead) — so a player can
  * equip a distinct explosion per bomb. Returns the effectType a slot resolves
  * to for catalog lookup, or undefined for an unknown/stale slot (e.g. a bare
@@ -376,6 +398,8 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   priceMonthly: z.number(),
   dailySoftCurrency: z.number(),
   dailyHardCurrency: z.number(),
+  // One-time plutonium grant on subscribing (advertised on the store tile).
+  hardCurrencySignupBonus: z.number(),
   // Whether this tier exempts subscribers from the free-ranked-play limits
   // (advertised on the store tile).
   unlimitedRanked: z.boolean(),
@@ -405,10 +429,21 @@ export const CosmeticsSchema = z.object({
       nukeTrail: lenientRecord(NukeTrailEffectSchema).optional(),
       nukeExplosion: lenientRecord(NukeExplosionEffectSchema).optional(),
       structures: lenientRecord(StructuresEffectSchema).optional(),
+      warship: lenientRecord(WarshipEffectSchema).optional(),
     })
     .optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
+  // Custom tribe name pricing (store Tribes tab) — served here so the client
+  // never hardcodes it. Optional: an older cosmetics.json parses, and the UI
+  // hides boost purchasing when absent.
+  tribeNames: z
+    .object({
+      priceHard: z.number(),
+      boostPriceHard: z.number(),
+      boostDurationDays: z.number(),
+    })
+    .optional(),
 });
 
 /**

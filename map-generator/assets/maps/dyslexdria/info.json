@@ -938,6 +938,226 @@
       "flag": "vu"
     },
     {
+      "flag": "de",
+      "name": "Germmmany"
+    },
+    {
+      "flag": "fr",
+      "name": "Franz"
+    },
+    {
+      "flag": "es",
+      "name": "Spane"
+    },
+    {
+      "flag": "it",
+      "name": "Itsaly"
+    },
+    {
+      "flag": "gb",
+      "name": "Great Brian"
+    },
+    {
+      "flag": "gr",
+      "name": "Grease"
+    },
+    {
+      "flag": "ro",
+      "name": "Roman"
+    },
+    {
+      "flag": "ua",
+      "name": "Hucrane"
+    },
+    {
+      "flag": "se",
+      "name": "Sweeten"
+    },
+    {
+      "flag": "no",
+      "name": "Nomway"
+    },
+    {
+      "flag": "fi",
+      "name": "Tinland"
+    },
+    {
+      "flag": "Russian SSR",
+      "name": "Ruszia"
+    },
+    {
+      "flag": "ge",
+      "name": "George"
+    },
+    {
+      "flag": "Second Republic of Iraq",
+      "name": "Irad"
+    },
+    {
+      "flag": "ae",
+      "name": "Untitled Estimates"
+    },
+    {
+      "flag": "Pahlavi Iran",
+      "name": "Iriz"
+    },
+    {
+      "flag": "pk",
+      "name": "Prankistan"
+    },
+    {
+      "flag": "af",
+      "name": "Afagainastan"
+    },
+    {
+      "flag": "kz",
+      "name": "Kazak-ak-ak-ak-ak"
+    },
+    {
+      "flag": "Zheleznogorsk",
+      "name": "Zheleznogorsk"
+    },
+    {
+      "flag": "in",
+      "name": "Ind Iana"
+    },
+    {
+      "flag": "is",
+      "name": "Iseland"
+    },
+    {
+      "flag": "bd",
+      "name": "Bangsandlash"
+    },
+    {
+      "flag": "cn",
+      "name": "Ch na"
+    },
+    {
+      "flag": "kp",
+      "name": "Best Korea"
+    },
+    {
+      "flag": "kr",
+      "name": "Bost Korea"
+    },
+    {
+      "flag": "jp",
+      "name": "Jaqan"
+    },
+    {
+      "flag": "mn",
+      "name": "Nomgolia"
+    },
+    {
+      "flag": "id",
+      "name": "Indonasia"
+    },
+    {
+      "flag": "vn",
+      "name": "Vitenam"
+    },
+    {
+      "name": "Cube",
+      "flag": "cu"
+    },
+    {
+      "flag": "pg",
+      "name": "Paqa No Guena"
+    },
+    {
+      "flag": "au",
+      "name": "Austrelia"
+    },
+    {
+      "flag": "nz",
+      "name": "News Zealand"
+    },
+    {
+      "flag": "an_pe",
+      "name": "Antamctica"
+    },
+    {
+      "flag": "ly",
+      "name": "Libyo"
+    },
+    {
+      "flag": "dz",
+      "name": "Albert"
+    },
+    {
+      "flag": "so",
+      "name": "Sloman"
+    },
+    {
+      "flag": "Mauritania",
+      "name": "Muritanian"
+    },
+    {
+      "flag": "ne",
+      "name": "Niqel"
+    },
+    {
+      "flag": "lr",
+      "name": "Libria"
+    },
+    {
+      "flag": "cf",
+      "name": "Middle Africa"
+    },
+    {
+      "flag": "za",
+      "name": "Bottom African State"
+    },
+    {
+      "flag": "mg",
+      "name": "Madalplascar"
+    },
+    {
+      "flag": "za",
+      "name": "Lower Bottom Left Africa"
+    },
+    {
+      "flag": "br",
+      "name": "Pretzel"
+    },
+    {
+      "flag": "ar",
+      "name": "Arge"
+    },
+    {
+      "flag": "cl",
+      "name": "Silly"
+    },
+    {
+      "flag": "ve",
+      "name": "Venezswell"
+    },
+    {
+      "flag": "ni",
+      "name": "Nickcargo"
+    },
+    {
+      "flag": "mx",
+      "name": "Mecheco"
+    },
+    {
+      "flag": "us",
+      "name": "UniteSdtates"
+    },
+    {
+      "flag": "Newfoundland",
+      "name": "Newland"
+    },
+    {
+      "flag": "ca",
+      "name": "Canttada"
+    },
+    {
+      "flag": "gl",
+      "name": "Greenman"
+    },
+    {
       "name": "Patrick Plays Badly",
       "flag": ""
     }

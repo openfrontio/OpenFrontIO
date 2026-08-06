@@ -404,6 +404,24 @@ describe("listed lobby host powers", () => {
     expect(game.handleIntent(kick, asHost).status).toBe(200);
   });
 
+  it("blocks host pause controls while listed", () => {
+    const game = makeGame("g-pause");
+    (game as any)._hasStarted = true;
+    game.setListed(true);
+
+    const pause = { type: "toggle_pause", paused: true } as any;
+    expect(game.handleIntent(pause, asHost)).toEqual({
+      status: 403,
+      error: "the host cannot pause a publicly listed game",
+    });
+    expect((game as any).isPaused).toBe(false);
+
+    // Unlisting restores the host's pause control.
+    game.setListed(false);
+    expect(game.handleIntent(pause, asHost).status).toBe(200);
+    expect((game as any).isPaused).toBe(true);
+  });
+
   it("lets admins kick in a listed lobby", () => {
     const game = makeGame("g-admin-kick");
     game.joinClient(makeClient("host", CREATOR, fakeWs()));

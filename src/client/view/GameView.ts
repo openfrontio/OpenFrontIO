@@ -84,6 +84,7 @@ export class GameView implements GameMap {
   private _teams = new Map<number, string>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
+  private nukeImpactTiles: TileRef[] = [];
   /**
    * Active units grouped by owner smallID, built lazily at most once per
    * tick. Keeps per-player unit queries (PlayerView.units) at O(own units)
@@ -158,6 +159,7 @@ export class GameView implements GameMap {
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
+
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
@@ -298,6 +300,10 @@ export class GameView implements GameMap {
       }
     }
 
+    // Nuke blast-radius tiles (for nukeable layer destruction).
+    const packedNukes = gu.packedNukeImpacts;
+    this.nukeImpactTiles = packedNukes ? Array.from(packedNukes) : [];
+
     if (gu.packedMotionPlans) {
       const records = unpackMotionPlans(gu.packedMotionPlans);
       this.applyMotionPlanRecords(records);
@@ -349,6 +355,7 @@ export class GameView implements GameMap {
       if (pu.clientID !== undefined && pu.clientID === this._myClientID) {
         pu.name = this._myUsername;
         pu.displayName = myDisplayName;
+        pu.clanTag = this._myClanTag;
       }
 
       if (pu.smallID !== undefined) {
@@ -938,6 +945,9 @@ export class GameView implements GameMap {
   recentlyUpdatedTerrainTiles(): TileRef[] {
     return this.updatedTerrainTiles;
   }
+  recentlyNukedTiles(): TileRef[] {
+    return this.nukeImpactTiles;
+  }
 
   nearbyUnits(
     tile: TileRef,
@@ -1167,6 +1177,10 @@ export class GameView implements GameMap {
   }
   numLandTiles(): number {
     return this._map.numLandTiles();
+  }
+  /** Map layers defined in the map's info.json, if any. */
+  layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {
+    return this._mapData.layers ?? [];
   }
   isValidCoord(x: number, y: number): boolean {
     return this._map.isValidCoord(x, y);

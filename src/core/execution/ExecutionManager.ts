@@ -37,6 +37,8 @@ export class Executor {
     private mg: Game,
     private gameID: GameID,
     private clientID: ClientID | undefined,
+    // Purchased bot tribe names drawn for this game (GameStartInfo.tribes).
+    private purchasedTribeNames: string[] = [],
   ) {
     // Add one to avoid id collisions with tribes.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
@@ -70,7 +72,14 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitIds, intent.tile);
       case "spawn":
-        return new SpawnExecution(this.gameID, player.info(), intent.tile);
+        // fromIntent: this one came off the wire, so it is subject to the
+        // spawn-phase gate that internal spawns are not.
+        return new SpawnExecution(
+          this.gameID,
+          player.info(),
+          intent.tile,
+          true,
+        );
       case "boat":
         return new TransportShipExecution(player, intent.dst, intent.troops);
       case "allianceRequest":
@@ -127,7 +136,14 @@ export class Executor {
   }
 
   spawnTribes(numTribes: number): SpawnExecution[] {
-    return new TribeSpawner(this.mg, this.gameID).spawnTribes(numTribes);
+    const nationCells = this.mg
+      .nations()
+      .map((n) => n.spawnCell)
+      .filter((c): c is NonNullable<typeof c> => c !== undefined);
+    return new TribeSpawner(this.mg, this.gameID, nationCells).spawnTribes(
+      numTribes,
+      this.purchasedTribeNames,
+    );
   }
 
   spawnPlayers(): SpawnExecution[] {

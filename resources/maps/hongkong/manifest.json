@@ -375,5 +375,6 @@
       "name": "Tai Mo Shan"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.hongkong"
 }

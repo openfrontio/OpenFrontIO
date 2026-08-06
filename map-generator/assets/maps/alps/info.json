@@ -6,44 +6,155 @@
   "multiplayer_frequency": 4,
   "nations": [
     {
-      "coordinates": [740, 620],
-      "name": "Savoy",
-      "flag": "fr"
-    },
-    {
-      "coordinates": [980, 580],
-      "name": "Switzerland",
+      "coordinates": [669, 356],
+      "name": "Bern",
       "flag": "ch"
     },
     {
-      "coordinates": [1220, 560],
+      "coordinates": [1108, 113],
+      "name": "Lucerne",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1388, 21],
+      "name": "Zürich",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1831, 61],
+      "name": "Liechtenstein",
+      "flag": "li"
+    },
+    {
+      "coordinates": [16, 695],
+      "name": "Geneva",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [268, 518],
+      "name": "Vaud",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [518, 876],
+      "name": "Matterhorn",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [832, 50],
+      "name": "Aargau",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1975, 356],
       "name": "Tyrol",
       "flag": "at"
     },
     {
-      "coordinates": [980, 820],
-      "name": "Lombardy",
-      "flag": "it"
+      "coordinates": [458, 82],
+      "name": "Jura",
+      "flag": "ch"
     },
     {
-      "coordinates": [1180, 820],
+      "coordinates": [126, 1340],
+      "name": "French Alps",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1572, 369],
+      "name": "St. Gallen",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [204, 1064],
+      "name": "Mont-Blanc",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1968, 1628],
       "name": "Veneto",
       "flag": "venice"
     },
     {
-      "coordinates": [1320, 690],
-      "name": "Bavaria",
-      "flag": "de"
+      "coordinates": [1122, 1694],
+      "name": "Piedmont",
+      "flag": "it"
     },
     {
-      "coordinates": [1450, 820],
-      "name": "Slovenia",
-      "flag": "si"
+      "coordinates": [1573, 1596],
+      "name": "Lombardy",
+      "flag": "it"
     },
     {
-      "coordinates": [1100, 650],
-      "name": "Liechtenstein",
-      "flag": "li"
+      "coordinates": [1388, 1325],
+      "name": "Milan",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1319, 1026],
+      "name": "Como",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1652, 1159],
+      "name": "Bergamo",
+      "flag": "it"
+    },
+    {
+      "coordinates": [758, 1514],
+      "name": "Turin",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1058, 1342],
+      "name": "Novara",
+      "flag": "it"
+    },
+    {
+      "coordinates": [571, 1240],
+      "name": "Valais",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [723, 770],
+      "name": "Zermatt",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1907, 807],
+      "name": "St. Moritz",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1023, 426],
+      "name": "Unterwalden",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1899, 538],
+      "name": "Davos",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1602, 680],
+      "name": "Graubünden",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1041, 854],
+      "name": "Ticino",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [182, 1716],
+      "name": "Provence",
+      "flag": "provence"
+    },
+    {
+      "coordinates": [67, 125],
+      "name": "Franche-Comté",
+      "flag": "fr"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

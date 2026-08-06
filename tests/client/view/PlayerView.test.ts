@@ -6,10 +6,15 @@
  * what the FrameBuilder relies on when populating PlayerState.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { PlayerView } from "../../../src/client/view/PlayerView";
-import { PlayerType } from "../../../src/core/game/Game";
+import {
+  AllPlayers,
+  EmojiMessage,
+  PlayerType,
+} from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
+import { UserSettings } from "../../../src/core/game/UserSettings";
 import {
   makeEmptyGu,
   makeGameView,
@@ -281,5 +286,103 @@ describe("PlayerView in a GameView context", () => {
 
     expect(game.player("me").isMe()).toBe(true);
     expect(game.player("other").isMe()).toBe(false);
+  });
+});
+
+describe("PlayerView emoji display setting (#4430)", () => {
+  // Emoji data lives on the shared PlayerView.state.outgoingEmojis field, read
+  // both by the WebGL name-pass (floating emoji over players) and the player
+  // overlay. Disabling emojis must empty it at construction and every tick.
+  function resetSettings() {
+    localStorage.clear();
+    // UserSettings keeps a static cache shared across instances; clear it so
+    // reads see the freshly-set localStorage.
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  function setEmojisEnabled(enabled: boolean) {
+    localStorage.setItem("settings.emojis", String(enabled));
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  const broadcastEmoji: EmojiMessage = {
+    message: "👍",
+    senderID: 1,
+    recipientID: AllPlayers,
+    createdAt: 0,
+  };
+
+  beforeEach(resetSettings);
+
+  it("keeps outgoing emojis in view state when the setting is on (default)", () => {
+    const p = makePlayerView({ data: { outgoingEmojis: [broadcastEmoji] } });
+    expect(p.state.outgoingEmojis).toHaveLength(1);
+    expect(p.outgoingEmojis()).toHaveLength(1);
+  });
+
+  it("strips outgoing emojis at construction when the setting is off", () => {
+    setEmojisEnabled(false);
+    const p = makePlayerView({ data: { outgoingEmojis: [broadcastEmoji] } });
+    expect(p.state.outgoingEmojis).toEqual([]);
+    expect(p.outgoingEmojis()).toEqual([]);
+  });
+
+  it("strips emojis arriving via applyUpdate when the setting is off", () => {
+    setEmojisEnabled(false);
+    const p = makePlayerView();
+    p.applyUpdate(makePlayerUpdate({ outgoingEmojis: [broadcastEmoji] }));
+    expect(p.state.outgoingEmojis).toEqual([]);
+  });
+});
+
+describe("PlayerView clan tag", () => {
+  function resetSettings() {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  function setAnonymousNames(enabled: boolean) {
+    localStorage.setItem("settings.anonymousNames", String(enabled));
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  beforeEach(resetSettings);
+
+  it("forwards the tag without brackets, alongside the merged displayName", () => {
+    const p = makePlayerView({
+      data: { name: "Alice", displayName: "[ABCDE] Alice", clanTag: "ABCDE" },
+    });
+    expect(p.clanTag()).toBe("ABCDE");
+    expect(p.name()).toBe("Alice");
+    expect(p.displayName()).toBe("[ABCDE] Alice");
+  });
+
+  it("is null when the update carries no tag", () => {
+    expect(makePlayerView().clanTag()).toBeNull();
+    expect(
+      makePlayerView({ data: { clanTag: undefined } }).clanTag(),
+    ).toBeNull();
+  });
+
+  it("is hidden under anonymous names, like displayName", () => {
+    const p = makePlayerView({
+      data: {
+        clientID: "someone-else",
+        name: "Alice",
+        displayName: "[ABCDE] Alice",
+        clanTag: "ABCDE",
+      },
+    });
+    setAnonymousNames(true);
+    expect(p.clanTag()).toBeNull();
+    expect(p.displayName()).not.toContain("ABCDE");
   });
 });

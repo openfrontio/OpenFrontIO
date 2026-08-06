@@ -4,6 +4,7 @@
   "translation_key": "map.caspiansea",
   "categories": ["asia", "new"],
   "multiplayer_frequency": 5,
+  "special_team_count": 2,
   "nations": [
     {
       "coordinates": [927, 426],
@@ -81,5 +82,6 @@
         "y": 0
       }
     ]
-  }
+  },
+  "themes": ["asia"]
 }

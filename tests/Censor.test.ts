@@ -65,13 +65,21 @@ describe("username.ts functions", () => {
       expect(res.error).toBe("username.account_invalid_chars");
     });
 
-    test("rejects spaces and unicode", () => {
-      expect(validateAccountUsername("bob smith").isValid).toBe(false);
+    test("rejects unicode", () => {
       expect(validateAccountUsername("Üser").isValid).toBe(false);
     });
 
     test("accepts letters, digits, underscore, and hyphen", () => {
       expect(validateAccountUsername("Good_Name-123").isValid).toBe(true);
+    });
+
+    test("accepts single interior spaces", () => {
+      expect(validateAccountUsername("bob smith").isValid).toBe(true);
+      expect(validateAccountUsername("a b c").isValid).toBe(true);
+    });
+
+    test("rejects consecutive spaces", () => {
+      expect(validateAccountUsername("bob  smith").isValid).toBe(false);
     });
 
     test("trims before validating length", () => {

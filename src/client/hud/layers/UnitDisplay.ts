@@ -1,6 +1,5 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
@@ -15,17 +14,19 @@ import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
-const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
-const cityIcon = assetUrl("images/CityIconWhite.svg");
-const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
-const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
-const mirvIcon = assetUrl("images/MIRVIcon.svg");
-const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
-const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
-const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
-const portIcon = assetUrl("images/PortIcon.svg");
-const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
-const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
+import {
+  atomBombIcon,
+  cityIcon,
+  defensePostIcon,
+  factoryIcon,
+  goldCoinIcon,
+  hydrogenBombIcon,
+  mirvIcon,
+  missileSiloIcon,
+  portIcon,
+  samLauncherIcon,
+  warshipIcon,
+} from "../HotbarIcons";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {

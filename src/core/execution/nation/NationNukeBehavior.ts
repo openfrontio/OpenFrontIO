@@ -147,12 +147,6 @@ export class NationNukeBehavior {
         continue;
       }
 
-      // On all difficulties, avoid trajectories that cross impassable terrain
-      // (the simulation aborts such launches — see NukeExecution).
-      if (this.isTrajectoryBlockedByImpassable(spawnTile, tile)) {
-        continue;
-      }
-
       const value = this.nukeTileScore(tile, silos, structures, nukeType);
       if (value > bestValue) {
         bestTile = tile;
@@ -555,7 +549,7 @@ export class NationNukeBehavior {
     targetTile: TileRef,
     excludedSamIds?: Set<number>,
   ): boolean {
-    const speed = this.game.config().defaultNukeSpeed();
+    const speed = this.game.config().nukeSpeed(UnitType.AtomBomb);
     const pathFinder = UniversalPathFinding.Parabola(this.game, {
       increment: speed,
       distanceBasedHeight: true, // Atom/Hydrogen bombs use distance-based height
@@ -630,29 +624,6 @@ export class NationNukeBehavior {
       }
     }
 
-    return false;
-  }
-
-  /**
-   * Check if the parabolic nuke trajectory from spawnTile to targetTile
-   * crosses any impassable terrain. Mirrors the check in NukeExecution that
-   * aborts such launches
-   */
-  private isTrajectoryBlockedByImpassable(
-    spawnTile: TileRef,
-    targetTile: TileRef,
-  ): boolean {
-    const pathFinder = UniversalPathFinding.Parabola(this.game, {
-      increment: this.game.config().defaultNukeSpeed(),
-      distanceBasedHeight: true,
-      directionUp: true,
-    });
-    const path = pathFinder.findPath(spawnTile, targetTile) ?? [];
-    for (const tile of path) {
-      if (this.game.isImpassable(tile)) {
-        return true;
-      }
-    }
     return false;
   }
 
@@ -859,7 +830,7 @@ export class NationNukeBehavior {
       // distance to target (via nukeSpawn). Our planning must mirror that order.
       // Silos with interceptable trajectories will still be picked first by
       // NukeExecution — their bombs launch but get intercepted, "wasting" slots.
-      const nukeSpeed = this.game.config().defaultNukeSpeed();
+      const nukeSpeed = this.game.config().nukeSpeed(UnitType.AtomBomb);
       const allAvailableSilos: {
         silo: Unit;
         slots: number;
@@ -884,10 +855,6 @@ export class NationNukeBehavior {
         });
         const trajectory = pathFinder.findPath(silo.tile(), targetTile) ?? [];
         if (trajectory.length === 0) continue;
-        // Skip silos whose trajectory crosses impassable terrain — the
-        // simulation would abort these launches (see NukeExecution).
-        if (this.isTrajectoryBlockedByImpassable(silo.tile(), targetTile))
-          continue;
         allAvailableSilos.push({
           silo,
           slots: availableSlots,
@@ -1077,8 +1044,7 @@ export class NationNukeBehavior {
 
     // First pass: find silos with an unblocked trajectory to the failed
     // target. Only these contribute slots to the overwhelm plan.
-    // "Unblocked" means not interceptable by non-covering enemy SAMs AND
-    // not crossing impassable terrain (the sim aborts those launches).
+    // "Unblocked" means not interceptable by non-covering enemy SAMs.
     const unblockedSilos: Unit[] = [];
     for (const silo of silos) {
       if (
@@ -1086,10 +1052,6 @@ export class NationNukeBehavior {
           silo.tile(),
           failedTarget.targetTile,
           failedTarget.coveringSamIds,
-        ) &&
-        !this.isTrajectoryBlockedByImpassable(
-          silo.tile(),
-          failedTarget.targetTile,
         )
       ) {
         unblockedSilos.push(silo);

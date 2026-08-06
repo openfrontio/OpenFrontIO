@@ -11,12 +11,21 @@
     "cancel_subscription_failed": "Zrušení předplatného se nezdařilo. Zkuste to prosím znovu nebo použijte možnost Spravovat.",
     "cancel_subscription_success": "Předplatné zrušeno. Přístup je zachován do konce fakturačního období.",
     "change_tier": "Změnit předplatné",
+    "claim": "Vyzvednout",
+    "claim_all": "Vyzvednout vše",
+    "claim_failed": "Odměnu se nepodařilo vyzvednout. Zkuste to znovu.",
     "clear_session": "Vymazat relaci",
     "connected_as": "Přihlášeno jako",
     "email_placeholder": "Zadejte svou e-mailovou adresu",
     "enter_email_address": "Zadejte prosím e-mailovou adresu",
     "failed_to_send_recovery_email": "Obnovovací e-mail se nepodařilo odeslat",
     "fetching_account": "Načítání informací o účtu...",
+    "games_clan_tag": "Klanový tag",
+    "games_result_incomplete": "Nedokončeno",
+    "games_type_private": "Soukromá",
+    "games_type_public": "Veřejná",
+    "games_type_singleplayer": "Pro jednoho hráče",
+    "games_username": "Uživatelské jméno",
     "get_magic_link": "Získat přihlašovací odkaz",
     "google_alt": "Google",
     "link_discord": "Propojit účet na Discordu",
@@ -30,15 +39,17 @@
     "linked_to_google_email": "Propojeno s Googlem ({email})",
     "log_out": "Odhlásit se",
     "manage_subscription": "Spravovat",
+    "marketing_desc": "Občasné novinky, události a aktualizace hry. Odběr můžete kdykoli zrušit.",
+    "marketing_no_email": "Přidejte ke svému účtu e-mailovou adresu, abyste mohli odebírat novinky.",
+    "marketing_title": "Novinky e-mailem",
     "no_games": "Zatím nebyly odehrány žádné hry.",
     "no_stats": "Zatím nejsou k dispozici žádné statistiky. Zahrajte si pár her a začněte je sledovat.",
-    "not_found": "Nenalezeno",
     "or": "nebo",
-    "public_player_id": "Veřejné ID hráče:",
     "reactivate_subscription": "Obnovit předplatné",
     "recovery_email_sent": "E-mail pro obnovení byl odeslán na {email}",
+    "reward_daily": "Denní odměna za předplatné",
+    "reward_signup_bonus": "Bonus za aktivaci předplatného",
     "sign_in_desc": "Přihlaste se, abyste si uložili statistiky a postup",
-    "stats_overview": "Přehled statistik",
     "sub_price_monthly": "{price}/měsíc",
     "sub_renews_on": "Obnoví se {date}",
     "sub_status_active": "Aktivní",
@@ -55,9 +66,32 @@
     "tab_account": "Účet",
     "tab_friends": "Přátelé",
     "tab_games": "Hry",
+    "tab_settings": "Nastavení",
     "tab_stats": "Statistiky",
     "title": "Účet",
-    "your_subscription": "Vaše předplatné"
+    "unclaimed_rewards": "Nevyzvednuté odměny",
+    "username_confirm_abandon": "Trvale se vzdáte rezervovaného jména \"{name} \".",
+    "username_confirm_body": "Nové jméno pak 30 dní nepůjde změnit.",
+    "username_confirm_button": "Změnit jméno",
+    "username_confirm_case_only": "Nové jméno se od současného liší pouze velikostí písmen — i tak se znovu spustí 30denní lhůta.",
+    "username_confirm_heading": "Změnit uživatelské jméno?",
+    "username_cooldown_until": "Uživatelské jméno můžete znovu změnit dne {date}.",
+    "username_error_cooldown": "Uživatelské jméno můžete znovu změnit za {days} dní.",
+    "username_error_failed": "Uživatelské jméno se nepodařilo změnit. Zkuste to znovu později.",
+    "username_error_profane": "Toto uživatelské jméno není povoleno.",
+    "username_error_taken": "Toto uživatelské jméno je už obsazené — zkuste jiné.",
+    "username_grace_warning": "Dne {date} přijdete o výhradní právo na jméno \"{name}\". Obnovte předplatné, abyste si ho zachovali.",
+    "username_not_set": "Získejte své uživatelské jméno — bude vás identifikovat ve všech vašich hrách.",
+    "username_placeholder": "Zadejte uživatelské jméno",
+    "username_save": "Uložit",
+    "username_temporary_notice": "Vaše jméno si zabral jiný hráč. Vyberte si nové — tato změna je zdarma.",
+    "username_temporary_prompt": "Vaše uživatelské jméno si zabral jiný hráč. Chcete si nyní vybrat nové? Změna je zdarma.",
+    "username_temporary_prompt_confirm": "Vyberte si jméno",
+    "username_title": "Uživatelské jméno",
+    "your_subscription": "Vaše předplatné",
+    "not_found": "Nenalezeno",
+    "public_player_id": "Veřejné ID:",
+    "stats_overview": "Přehled statistik"
   },
   "build_menu": {
     "desc": {
@@ -210,6 +244,8 @@
     "history_clan_players": "Hráči klanu",
     "history_clan_players_value": "{clanCount} / {total} celkem",
     "history_clan_winners": "Vítězní členové klanu",
+    "history_date_at": "{date} {time}",
+    "history_date_full": "{day} {month} {year}",
     "history_duration": "Doba trvání",
     "history_empty": "Zatím nebyly odehrány žádné hry.",
     "history_end_of_history": "Konec záznamů.",
@@ -325,8 +361,7 @@
     "title": "Klany",
     "transfer_leadership": "Předat vedení",
     "transfer_warning": "Tímto se vybraný člen stane novým vůdcem. Vy se stanete běžným členem. Tuto akci nelze vrátit zpět.",
-    "unban": "Zrušit ban",
-    "discord_url_placeholder": "https://discord.gg/..."
+    "unban": "Zrušit ban"
   },
   "common": {
     "available": "K dispozici",
@@ -377,6 +412,7 @@
   "cosmetics": {
     "adfree": "bez reklam navždy!",
     "artist_label": "Umělec:",
+    "button_title": "Vyberte si kosmetické doplňky!",
     "color_label": "Barva:",
     "common": "Běžný",
     "epic": "Epický",
@@ -384,9 +420,14 @@
     "hard": "Plutonium",
     "legendary": "Legendární",
     "per_day": "/den",
+    "public_lobbies": "Vytvářejte veřejné lobby",
     "rare": "Vzácné",
+    "search": "Hledat...",
     "soft": "Víčka",
-    "uncommon": "Neobvyklé"
+    "title": "Kosmetické doplňky",
+    "uncommon": "Neobvyklé",
+    "unlimited_ranked": "Neomezené hodnocené hry",
+    "usd_value": "Hodnota: {usd}"
   },
   "difficulty": {
     "difficulty": "Obtížnost národů",
@@ -398,8 +439,41 @@
   "discord_user_header": {
     "avatar_alt": "Profilový obrázek"
   },
+  "doomsday_clock": {
+    "collapsing": "Klesá o -{rate}/s",
+    "decay_in": "Začne klesat za {secs}s",
+    "final": "Konečná zóna: udržte {pct} %",
+    "growing": "Za {time} dosáhne {pct} %",
+    "hold": "Ovládejte alespoň {pct} % území",
+    "next_wave": "Za {time} se požadovaný podíl začne zvyšovat na {pct} %",
+    "stable": "Stabilní",
+    "title": "Hodiny soudného dne",
+    "unstable": "Nestabilní",
+    "you": "Vy: {pct} %",
+    "your_team": "{team}: {pct} %"
+  },
+  "doomsday_clock_speed": {
+    "fast": "Rychlá",
+    "normal": "Normální",
+    "slow": "Pomalá",
+    "veryfast": "Velmi rychlá"
+  },
+  "effects": {
+    "nukeType": {
+      "atom": "Atomová bomba",
+      "hydro": "Vodíková bomba",
+      "mirvWarhead": "MIRV"
+    },
+    "type": {
+      "nukeExplosion": "Jaderný výbuch",
+      "nukeTrail": "Stopa jaderné střely",
+      "structures": "Stavby",
+      "transportShipTrail": "Stopa přepravní lodě"
+    }
+  },
   "error_modal": {
     "connection_error": "Chyba spojení!",
+    "connection_refused": "Připojení odmítnuto: {reason}",
     "copied": "Zkopírováno!",
     "copy_clipboard": "Zkopírovat do schránky",
     "crashed": "Hra spadla!",
@@ -434,7 +508,6 @@
     "focus": "Zaměřit",
     "hydrogen_bomb_detonated": "{name} - vybuchla vodíková bomba",
     "ignore": "Ignorovat",
-    "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV hlavice zneškodněna} few {{count} MIRV hlavice zneškodněny} other {{count} MIRV hlavic zneškodněno}}",
     "missile_intercepted": "Zneškodněna střela: {unit}",
     "no_boats_available": "Nejsou k dispozici žádné lodě, max. {max}",
     "received_gold_from_captured_ship": "Získáno {gold} zlata ze zajaté lodě od {name}",
@@ -451,12 +524,13 @@
     "trade_ship_captured": "Vaše obchodní loď byla zajata hráčem {name}",
     "unit_destroyed": "Vaše {unit} byla zničena",
     "unit_voluntarily_deleted": "Jednotka dobrovolně odstraněna",
-    "wants_to_renew_alliance": "{name} s vámi chce obnovit spojenectví"
+    "wants_to_renew_alliance": "{name} s vámi chce obnovit spojenectví",
+    "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV hlavice zneškodněna} few {{count} MIRV hlavice zneškodněny} other {{count} MIRV hlavic zneškodněno}}"
   },
   "flag_input": {
     "button_title": "Vybrat vlajku!",
     "search_flag": "Hledat...",
-    "title": "Výběr vlajky"
+    "title": "Vlajka"
   },
   "friends": {
     "accept": "Přijmout",
@@ -476,7 +550,7 @@
     "no_friends": "Zatím nemáte žádné přátele.",
     "outgoing": "Odchozí",
     "pending_requests": "Čekající žádosti",
-    "public_id_placeholder": "Zadejte veřejné ID hráče",
+    "public_id_placeholder": "Zadejte uživatelské jméno nebo ID hráče",
     "remove": "Odebrat",
     "request_accepted": "Žádost o přátelství přijata",
     "request_auto_accepted": "Žádost o přátelství přijata - nyní jste přátelé",
@@ -500,34 +574,26 @@
     "duration": "Doba",
     "economy": "Ekonomika",
     "hydros": "Vodíkové bomby",
+    "load_failed": "Statistiky hry se nepodařilo načíst.",
     "loading_game_info": "Načítání statistik hry",
     "mirv": "MIRV",
     "naval_trade": "Obchodní lodě",
     "no_winner": "Tato hra skončila bez vítěze (nebo vyhrál národ)",
     "num_of_conquests_bots": "Zabité kmeny",
     "num_of_conquests_humans": "Zabití hráči",
+    "num_of_conquests_nations": "Dobyté národy",
     "pirate": "Pirát",
     "players": "Hráči",
+    "retry": "Zkusit znovu",
     "stolen_gold": "Ukradeno bitevními loděmi",
     "survival_time": "Doba přežití",
     "total_gold": "Celkem",
     "train_trade": "Vlak",
-    "war": "Válka",
-    "bombs": "Bomby",
-    "conquests": "Dobytí",
-    "title": "Informace o hře",
-    "trade": "Obchod"
+    "unknown_game_type": "Neznámý typ hry",
+    "war": "Válka"
   },
   "game_list": {
-    "details": "Podrobnosti",
-    "difficulty": "Obtížnost",
-    "game_id": "ID hry",
-    "map": "Mapa",
-    "mode": "Mód",
-    "ranking": "Hodnocení",
-    "recent_games": "Nedávné hry",
-    "replay": "Záznam",
-    "type": "Typ"
+    "stats": "Statistiky"
   },
   "game_mode": {
     "ffa": "Všichni proti všem",
@@ -576,6 +642,8 @@
     "name_cull_desc": "Skrýt jména menší než tato velikost",
     "name_cull_label": "Minimální velikost jména",
     "name_scale_label": "Velikost jmen",
+    "naval_hover_highlight_desc": "Při najetí na námořní jednotky zvýraznit jejich vlastníka.",
+    "naval_hover_highlight_label": "Zvýraznění vlastníka námořních jednotek",
     "nuke_color_desc": "Barva odstínu radioaktivního spadu, který po atomovce zůstane na území.",
     "nuke_color_label": "Barva spadu po atomovce",
     "ocean_color_desc": "Základní barva oceánu.",
@@ -590,7 +658,6 @@
     "reset_label": "Obnovit výchozí nastavení",
     "sand_color_desc": "Základní barva pobřeží.",
     "sand_color_label": "Barva pobřeží",
-    "section_accessibility": "Přístupnost",
     "section_effects": "Efekty",
     "section_lighting": "Osvětlení",
     "section_map": "Mapa",
@@ -603,7 +670,8 @@
     "territory_alpha_label": "Neprůhlednost vybarvení území",
     "territory_sat_desc": "Jak syté jsou barvy vybarvení území (nižší hodnota je ztlumí)",
     "territory_sat_label": "Sytost vybarvení území",
-    "title": "Nastavení grafiky"
+    "title": "Nastavení grafiky",
+    "section_accessibility": "Přístupnost"
   },
   "heads_up_message": {
     "catching_up": "Synchronizuji...",
@@ -661,7 +729,7 @@
     "build_silo": "Raketové silo",
     "build_silo_desc": "Umožňuje odpalování raket.",
     "build_warship": "Bitevní loď",
-    "build_warship_desc": "Hlídkuje v oblasti, zajímá nepřátelské obchodní lodě a ničí jejich čluny/přepravní lodě a bitevní lodě. Vypluje z nejbližšího přístavu a hlídkuje v oblasti, na kterou jste klikli po výběru této stavby. Bitevní lodě můžete ovládat tak, že na ně použijete akci Útok (viz akce Útok v klávesových zkratkách) a poté stejnou akcí označíte novou oblast, kam se mají přesunout.",
+    "build_warship_desc": "Hlídkuje v oblasti, zajímá nepřátelské obchodní lodě a ničí jejich čluny (transportní lodě) a bojové lodě. Vypluje z nejbližšího přístavu a hlídkuje v oblasti, kam jste při její stavbě poprvé klikli. Bojové lodě můžete ovládat tak, že na ně kliknete příkazem k útoku (viz akce Útok v části Klávesové zkratky) a poté stejným způsobem kliknete na novou oblast, kam se mají přesunout. Bojové lodě mohou získávat úrovně (nejvýše 3) zajímáním nepřátelských obchodních lodí a ničením jejich transportních a bojových lodí. S každou úrovní se zvyšuje poškození a odolnost bojové lodě.",
     "drag": "tažení",
     "exit_confirmation": "Jste si jistí, že chcete ukončit hru?",
     "game_id_tooltip": "ID hry",
@@ -724,12 +792,15 @@
   "host_modal": {
     "anonymous_players": "Anonymní hráči",
     "assigned_teams": "Přidělené týmy",
+    "auto_start_timer": "Čas do automatického spuštění hry",
     "bots": "Kmeny: ",
     "bots_disabled": "Vypnuto",
     "compact_map": "Kompaktní mapa",
     "crowded": "Násobitel přeplněnosti",
+    "custom_alliances": "Doba trvání spojenectví",
     "donate_gold": "Darovat zlato",
     "donate_troops": "Darovat jednotky",
+    "doomsday_clock": "Hodiny soudného dne",
     "empty_team": "Prázdný",
     "empty_teams": "Prázdné týmy",
     "enables_title": "Zakázat jednotky",
@@ -763,16 +834,20 @@
     "starting_gold": "Počáteční zlato (v milionech)",
     "starting_gold_placeholder": "5",
     "starting_in": "Hra začne za {time}. Kliknutím zrušíte",
+    "subscription_required_body": "Abyste mohli svou lobby zveřejnit, musíte mít předplatné.",
+    "subscription_required_title": "Je vyžadováno předplatné",
     "team_count": "Počet týmů",
     "teams_Duos": "Dvojice (týmy po 2)",
     "teams_Humans Vs Nations": "Lidé proti národům",
     "teams_Quads": "Čtveřice (týmy po 4)",
     "teams_Trios": "Trojice (týmy po 3)",
-    "title": "Vytvořit soukromou lobby",
+    "title": "Vytvořit lobby",
     "toggle_name_reveal": "Přepnout, zda tento hráč uvidí skutečná jména",
+    "view_subscriptions": "Zobrazit možnosti předplatného",
+    "visibility_private": "Soukromá",
+    "visibility_public": "Veřejná",
     "waiting": "Čeká se na hráče...",
-    "water_nukes": "Atomovky do vody",
-    "disable_alliances": "Zakázat spojenectví"
+    "water_nukes": "Atomovky do vody"
   },
   "ios_banner": {
     "got_it": "Rozumím",
@@ -801,10 +876,10 @@
     "owned": "Vlastněno",
     "player": "Hráč",
     "sams": "Protiraketové systémy",
-    "show_control": "Zobrazit ovládané území",
-    "show_units": "Zobrazit jednotky",
     "team": "Tým",
-    "warships": "Bitevní lodě"
+    "warships": "Bitevní lodě",
+    "show_control": "Zobrazit ovládané území",
+    "show_units": "Zobrazit jednotky"
   },
   "leaderboard_modal": {
     "clan": "Klan",
@@ -854,8 +929,7 @@
     "title": "OpenFront (ALPHA)",
     "troubleshooting": "Řešení problémů",
     "user_avatar_alt": "Profilový obrázek uživatele {username}",
-    "wiki": "Wiki",
-    "game_info": "Informace o hře"
+    "wiki": "Wiki"
   },
   "map": {
     "achiran": "Achiran",
@@ -873,15 +947,19 @@
     "baikalnukewars": "Bajkal (jaderné války)",
     "bajacalifornia": "Kalifornský poloostrov",
     "balkans": "Balkán",
+    "baltics": "Pobaltí",
     "beringsea": "Beringovo moře",
     "beringstrait": "Beringův průliv",
     "betweentwoseas": "Mezi dvěma moři",
     "blacksea": "Černé moře",
     "bosphorusstraits": "Bosporský průliv",
+    "branchingpaths": "Rozvětvené cesty",
     "britannia": "Británie",
     "britanniaclassic": "Británie (klasická)",
     "caribbean": "Karibik",
+    "caspiansea": "Kaspické moře",
     "caucasus": "Kavkaz",
+    "china": "Čína",
     "choppingblock": "Sekací špalek",
     "conakry": "Konakry",
     "danishstraits": "Dánské úžiny",
@@ -898,20 +976,24 @@
     "featured": "Doporučené",
     "fourislands": "Čtyři ostrovy",
     "gatewaytotheatlantic": "Brána do Atlantiku",
+    "germany": "Německo",
     "giantworldmap": "Velká mapa světa",
     "greatlakes": "Velká jezera",
+    "gulfofguinea": "Guinejský záliv",
     "gulfofstlawrence": "Záliv svatého Vavřince",
     "halkidiki": "Chalkidiki",
     "hawaii": "Havaj",
     "hongkong": "Hongkong",
     "iceland": "Island",
     "indiansubcontinent": "Indický subkontinent",
+    "irishsea": "Irské moře",
     "italia": "Itálie",
     "japan": "Japonsko",
     "juandefucastrait": "Průliv Juan de Fuca",
     "korea": "Korea",
     "labyrinth": "Labyrint",
     "lemnos": "Lemnos",
+    "levant": "Levanta",
     "lisbon": "Lisabon",
     "losangeles": "Los Angeles",
     "luna": "Luna",
@@ -924,6 +1006,7 @@
     "milkyway": "Mléčná dráha",
     "mississippiriver": "Řeka Mississippi",
     "montreal": "Montréal",
+    "morethanluck": "Víc než štěstí",
     "newyorkcity": "New York City",
     "niledelta": "Delta Nilu",
     "northamerica": "Severní Amerika",
@@ -934,7 +1017,9 @@
     "passage": "Průjezd",
     "pluto": "Pluto",
     "random": "Náhodná",
+    "russia": "Rusko",
     "sanfrancisco": "San Francisco",
+    "scandinavia": "Skandinávie",
     "sierpinski": "Sierpinski",
     "southamerica": "Jižní Amerika",
     "southeastasia": "Jihovýchodní Asie",
@@ -945,6 +1030,7 @@
     "svalmel": "Svalmel",
     "taiwanstrait": "Tchajwanský průliv",
     "thebox": "Čtverec",
+    "tierradelfuego": "Ohňová země",
     "titan": "Titan",
     "tourney1": "Turnaj pro 2 týmy",
     "tourney2": "Turnaj pro 3 týmy",
@@ -981,7 +1067,9 @@
     "world": "Svět"
   },
   "map_component": {
+    "collapse_all": "Sbalit vše",
     "error": "Chyba",
+    "expand_all": "Rozbalit vše",
     "favorite": "Přidat do oblíbených",
     "favorites_empty": "Kliknutím na hvězdičku u mapy ji přidáte do oblíbených",
     "loading": "Načítání...",
@@ -990,18 +1078,25 @@
     "search_results": "Výsledky hledání",
     "unfavorite": "Odebrat z oblíbených"
   },
-  "matchmaking_button": {
-    "description": "(ALPHA)",
-    "login_required": "Pro hodnocené hry se přihlaste!",
-    "must_login": "Pro hraní hodnocených her se musíte přihlásit.",
-    "play_ranked": "1v1 hodnocená hra"
+  "marketing_consent": {
+    "body": "Novinky a aktualizace e-mailem. Tuto volbu můžete kdykoli změnit ve svém účtu.",
+    "dismiss": "Zavřít",
+    "error": "Nastavení se nepodařilo uložit. Zkuste to znovu.",
+    "no": "Ne, děkuji",
+    "title": "Chcete dostávat novinky z OpenFrontu?",
+    "yes": "Ano, prosím"
   },
   "matchmaking_modal": {
     "connecting": "Připojuji se k serveru pro hledání hry...",
     "elo": "Vaše ELO: {elo}",
+    "limit_reached": "Došly vám bezplatné hodnocené hry.",
+    "limit_reached_info": "Bezplatné hry se obnovují každý den. S předplatným můžete hrát hodnocené hry bez omezení.",
+    "limit_upsell": "Získat neomezené hodnocené hraní",
     "no_elo": "Žádné ELO",
+    "replaced": "Do vyhledávání hry jste se připojili z jiné karty nebo okna.",
     "searching": "Vyhledávání hry...",
     "title": "1v1 hodnocená hra (ALPHA)",
+    "title_2v2": "Vyhledávání hodnocené hry 2v2 (ALPHA)",
     "waiting_for_game": "Čekání na spuštění hry..."
   },
   "mode_selector": {
@@ -1012,6 +1107,13 @@
     "teams_count": "Počet týmů: {teamCount}",
     "teams_of": "Týmy: {teamCount}, hráčů v týmu: {playersPerTeam}",
     "teams_title": "Týmy"
+  },
+  "new_lobby_prompt": {
+    "confirm": "Vytvořit novou lobby? Všichni hráči budou pozváni.",
+    "dismiss": "Zavřít",
+    "failed": "Novou lobby se nepodařilo vytvořit. Zkuste to znovu.",
+    "join": "Připojit se",
+    "message": "Hostitel založil novou lobby"
   },
   "news": {
     "title": "Novinky"
@@ -1077,6 +1179,13 @@
     "traitor": "Zrádce",
     "troops": "Jednotky"
   },
+  "player_profile": {
+    "loading": "Načítání profilu...",
+    "not_found": "Profil hráče nebyl nalezen",
+    "share": "Sdílet profil",
+    "title": "Profil hráče",
+    "view": "Zobrazit profil"
+  },
   "player_stats_table": {
     "arrived": "Dorazilo",
     "attack": "Útok",
@@ -1126,6 +1235,7 @@
     "public": "Veřejné",
     "ranked": "Hodnocené",
     "ranked_1v1": "1v1",
+    "ranked_2v2": "2v2",
     "solo": "Sólo",
     "stats_games_played": "Odehráno her",
     "stats_losses": "Prohry",
@@ -1145,10 +1255,18 @@
     "host_cheats": "Cheaty hostitele",
     "join_lobby": "Připojit se do lobby",
     "joined_waiting": "Připojeno do lobby. Čeká se, až správce hry spustí hru...",
+    "listing_failed": "Lobby se nepodařilo aktualizovat ve veřejném seznamu. Zkuste to znovu.",
+    "listing_full": "Seznam veřejných lobby je plný. Zkuste to znovu později.",
+    "listing_host_cheats_enabled": "Chcete-li svou lobby zveřejnit, vypněte cheaty hostitele.",
+    "listing_limit_reached": "Jednu lobby už ve veřejném seznamu máte.",
+    "listing_requires_subscription": "Ke zveřejnění lobby je potřeba aktivní předplatné.",
+    "listing_whitelist_enabled": "Chcete-li svou lobby zveřejnit, vypněte seznam povolených hráčů.",
+    "no_open_lobbies": "Momentálně nejsou otevřené žádné lobby",
     "not_found": "Lobby nebyla nalezena. Zkontrolujte ID a zkuste to znovu.",
+    "open_lobbies": "Otevřené lobby",
     "pvp_immunity": "Doba trvání PVP imunity",
     "starting_gold": "Počáteční zlato",
-    "title": "Připojit se do soukromého lobby",
+    "title": "Připojit se k lobby",
     "version_mismatch": "Tato hra byla vytvořena v jiné verzi. Nelze se připojit."
   },
   "public_game_modifier": {
@@ -1156,6 +1274,9 @@
     "crowded": "Přeplněno",
     "disable_alliances": "Spojenectví zakázána",
     "disable_alliances_label": "Spojenectví",
+    "doomsday_clock": "Hodiny soudného dne",
+    "doomsday_clock_label": "Hodiny soudného dne",
+    "doomsday_clock_with_speed": "Hodiny soudného dne: {speed}",
     "gold_multiplier": "Násobitel zlata: x{amount}",
     "hard_nations": "Těžké národy",
     "nukes_disabled": "Atomovky zakázány",
@@ -1202,6 +1323,9 @@
     "game_speed": "Rychlost hry",
     "replay_speed": "Rychlost přehrávání"
   },
+  "rewards_modal": {
+    "title": "Odměny"
+  },
   "select_lang": {
     "title": "Vybrat jazyk"
   },
@@ -1222,6 +1346,8 @@
     "bots": "Kmeny: ",
     "bots_disabled": "Vypnuto",
     "compact_map": "Kompaktní mapa",
+    "custom_alliances": "Doba trvání spojenectví",
+    "doomsday_clock": "Hodiny soudného dne",
     "enables_title": "Zakázat jednotky",
     "gold_multiplier": "Násobitel zlata",
     "gold_multiplier_placeholder": "2,0x",
@@ -1231,6 +1357,9 @@
     "max_timer": "Délka hry (minuty)",
     "max_timer_invalid": "Zadejte platnou délku hry (1–120 minut)",
     "max_timer_placeholder": "Min",
+    "medals_earned": "Medaile",
+    "medals_of_maps": "z {total} map",
+    "mins_placeholder": "min",
     "nations": "Národy: ",
     "nations_disabled": "Vypnuto",
     "options_changed_no_achievements": "Vlastní nastavení – úspěchy zakázány",
@@ -1241,35 +1370,44 @@
     "starting_gold": "Počáteční zlato (v milionech)",
     "starting_gold_placeholder": "5",
     "toggle_achievements": "Zapnout/vypnout úspěchy",
-    "water_nukes": "Atomovky do vody",
-    "disable_alliances": "Zakázat spojenectví"
+    "water_nukes": "Atomovky do vody"
   },
   "store": {
     "already_subscribed": "Předplatné už máte aktivní.",
     "change_tier_failed": "Předplatné se nepodařilo aktualizovat. Zkuste to prosím znovu.",
+    "change_tier_rate_limited": "Právě jste změnili tarif. Před další změnou počkejte jednu minutu.",
     "change_tier_success": "Předplatné změněno na {tier}.",
     "checkout_failed": "Nepodařilo se zahájit platbu.",
     "confirm_downgrade": "Přejít na nižší předplatné {tier}? Za nevyužitou část aktuálního předplatného získáte kredit na účet.",
+    "confirm_purchase_body": "Koupit {item} za {amount, number} {currency}?",
+    "confirm_purchase_title": "Potvrdit nákup",
     "confirm_upgrade": "Přejít na vyšší předplatné {tier}? Poměrný rozdíl v ceně vám bude naúčtován hned.",
+    "crowns": "Koruny",
     "currency_pack_purchase_success": "Nákup balíčku s měnou proběhl úspěšně!",
+    "custom_amount": "Vyberte množství",
+    "custom_currency_purchase_success": "Plutonium bylo úspěšně zakoupeno!",
+    "effects": "Efekty",
     "flags": "Vlajky",
+    "insufficient_currency_body": "Abyste mohli koupit {item}, potřebujete ještě {amount, number} {currency}.",
+    "insufficient_currency_title": "Nedostatek měny: {currency}",
     "login_required": "Pro nákup za herní měnu se musíte přihlásit.",
+    "no_crowns": "Žádné koruny nejsou momentálně v nabídce. Později se podívejte, zda nepřibyly nové položky.",
+    "no_effects": "Žádné efekty nejsou momentálně v nabídce. Později se podívejte, zda nepřibyly nové položky.",
     "no_flags": "Nejsou k dispozici žádné vlajky. Vraťte se později pro nové předměty.",
     "no_skins": "Nejsou k dispozici žádné skiny. Vraťte se později pro nové předměty.",
     "no_subscriptions": "Momentálně nejsou dostupná žádná předplatná. Zkuste se vrátit později.",
     "packs": "Balíčky",
     "patterns": "Skiny",
+    "plutonium_amount": "Množství plutonia",
     "price_per_month": "/měsíc",
+    "purchase_currency": "Koupit {currency}",
     "purchase_failed": "Nákup se nezdařil. Zkuste to prosím znovu.",
     "purchase_success": "Nákup proběhl úspěšně: {name}",
+    "subscribed": "Předplaceno",
     "subscription_purchase_success": "Předplatné aktivováno!",
     "subscriptions": "Předplatná",
     "switch_button": "Změnit",
-    "title": "Obchod",
-    "current_plan": "Aktuální předplatné",
-    "no_packs": "Nejsou k dispozici žádné balíčky. Vraťte se později pro nové předměty.",
-    "not_enough_currency": "Pro tento nákup nemáte dostatek herní měny.",
-    "subscribe_button": "Koupit předplatné"
+    "title": "Obchod"
   },
   "team_colors": {
     "blue": "Modrá",
@@ -1287,11 +1425,8 @@
     "pattern": {
       "default": "Výchozí"
     },
-    "select_skin": "Zvolte skin",
-    "selected": "vybráno",
-    "purchase": "Zakoupit",
-    "search": "Hledejte...",
-    "title": "Vzory"
+    "select_skin": "Vzhled",
+    "selected": "vybráno"
   },
   "token_login_modal": {
     "logging_in": "Přihlašování...",
@@ -1388,8 +1523,6 @@
     "camera_movement": "Pohyb kamery",
     "center_camera": "Vycentrovat kameru",
     "center_camera_desc": "Vycentrovat kameru na hráče",
-    "colorblind_desc": "Použít barvy území a hranic vhodné pro barvoslepé",
-    "colorblind_label": "Režim pro barvoslepé",
     "coordinate_grid_desc": "Přepne zobrazení alfanumerické mřížky",
     "coordinate_grid_label": "Mřížka souřadnic",
     "cursor_cost_label_desc": "Zobrazit štítek s cenou pod ikonou kurzoru stavění",
@@ -1411,12 +1544,16 @@
     "game_speed_up_desc": "Přepne na další rychlost hry (0,5, 1, 2, max.). Pouze ve hře pro jednoho hráče.",
     "go_to_player_desc": "Zapne / vypne přiblížení na hráče na začátku hry.",
     "go_to_player_label": "Přejít na hráče při spuštění hry",
+    "graphics_refresh_modifier": "Modifikační klávesa pro obnovení grafiky",
+    "graphics_refresh_modifier_desc": "Pro obnovení grafiky podržte tuto klávesu a stiskněte R.",
     "graphics_settings_desc": "Upravit vzhled mapy",
     "graphics_settings_label": "Nastavení grafiky",
     "ground_attack": "Pozemní útok",
     "ground_attack_desc": "Vyšle pozemní útok na políčko pod kurzorem.",
     "help_messages_desc": "Zobrazovat během hraní kontextové tipy a varování, například upozornění na limit armády a obecné rady ke hře.",
     "help_messages_label": "Nápověda",
+    "highlight_glow_strength_label": "Intenzita zvýraznění",
+    "highlight_small_players_desc": "Přidá kolem menších hráčů záři, aby je bylo snazší najít.",
     "keybind_conflict_error": "Klávesa {key} je již přirazena jiné akci.",
     "keybinds_hint": "Kliknutím na klávesu změníte její přiřazení. Můžete přiřadit jednu klávesu nebo kombinaci Shift + klávesa.",
     "left_click_desc": "Když je zapnuto, kliknutí levým tlačítkem otevře nabídku a tlačítko s mečem zaútočí. Když je vypnuto, kliknutí levým tlačítkem útočí přímo.",
@@ -1467,9 +1604,12 @@
     "zoom_in": "Přiblížit",
     "zoom_in_desc": "Přiblížit mapu",
     "zoom_out": "Oddálit",
-    "zoom_out_desc": "Oddálit mapu"
+    "zoom_out_desc": "Oddálit mapu",
+    "colorblind_desc": "Použít barvy území a hranic vhodné pro barvoslepé",
+    "colorblind_label": "Režim pro barvoslepé"
   },
   "username": {
+    "account_invalid_chars": "Uživatelské jméno smí obsahovat pouze písmena, číslice, podtržítka a spojovníky.",
     "enter_username": "Zadejte uživatelské jméno",
     "invalid_chars": "Uživatelské jméno může obsahovat pouze písmena, číslice, mezery a podtržítka.",
     "not_string": "Uživatelské jméno musí být text.",
@@ -1479,7 +1619,12 @@
     "tag_too_long": "Tag klanu nemůže přesáhnout 5 znaků.",
     "tag_too_short": "Tag klanu musí mít 2-5 alfanumerických znaků.",
     "too_long": "Uživatelské jméno nesmí mít více než {max} charakterů.",
-    "too_short": "Uživatelské jméno musí mít alespoň {min} charakterů."
+    "too_short": "Uživatelské jméno musí mít alespoň {min} charakterů.",
+    "verified_heading": "Ověřené jméno",
+    "verified_player": "Ověřený hráč",
+    "verified_sub_required": "Abyste mohli hrát pod svým ověřeným jménem, potřebujete aktivní předplatné.",
+    "verified_sub_required_confirm": "Zobrazit obchod",
+    "verified_toggle": "Ověřeno"
   },
   "win_modal": {
     "died": "Byli jste poraženi",
@@ -1489,15 +1634,22 @@
     "join_server": "Připojit se k serveru",
     "keep": "Pokračovat ve hře",
     "nation_won": "Národ {nation} vyhrál!",
+    "new_lobby": "Nová lobby",
     "other_team": "Tým {team} vyhrál!",
     "other_won": "{player} vítězí!",
     "requeue": "Hrát znovu",
     "spectate": "Sledovat",
     "support_openfront": "Podpořte OpenFront!",
     "territory_pattern": "Kupte si vzor území a hrajte bez reklam!",
-    "wishlist": "Přidat hru do seznamu přání na Steamu!",
     "you_won": "Vítězství!",
     "your_team": "Váš tým vyhrál!",
-    "youtube_tutorial": "Potřebujete pomoc?"
+    "youtube_tutorial": "Potřebujete pomoc?",
+    "wishlist": "Přidat hru do seznamu přání na Steamu!"
+  },
+  "matchmaking_button": {
+    "description": "(ALPHA)",
+    "login_required": "Pro hodnocené hry se přihlaste!",
+    "must_login": "Pro hraní hodnocených her se musíte přihlásit.",
+    "play_ranked": "1v1 hodnocená hra"
   }
 }

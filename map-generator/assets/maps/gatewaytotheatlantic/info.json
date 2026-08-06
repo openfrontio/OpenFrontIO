@@ -102,8 +102,8 @@
     },
     {
       "coordinates": [1374, 926],
-      "name": "Crown of Aragon",
-      "flag": "catalonia"
+      "name": "Kingdom of Aragon",
+      "flag": "Crown Of Aragon"
     },
     {
       "coordinates": [1695, 119],
@@ -140,5 +140,6 @@
       "name": "Holy Roman Empire",
       "flag": "Holy Roman Empire"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }
