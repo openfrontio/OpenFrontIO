@@ -48,9 +48,9 @@ const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
-const stopTradingIcon = assetUrl("images/StopIconWhite.png");
+const stopTradingIcon = assetUrl("images/StopIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
-const startTradingIcon = assetUrl("images/TradingIconWhite.png");
+const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
