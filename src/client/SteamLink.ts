@@ -11,6 +11,21 @@ const LINK_HASH = "#steam-link";
 
 const PENDING_LINK_KEY = "steam-link-pending";
 
+// Matches the link ticket's own server-side TTL. A stash older than this
+// belongs to a ticket that is already dead, so resuming it can only produce
+// a confirmation modal that errors -- which is worse than doing nothing,
+// because it teaches players to dismiss that dialog without reading it, and
+// that dialog is the security step of the whole flow.
+//
+// The server owns the authoritative value; this is a manually-kept copy, and
+// so is the desktop shell's own (its gate has a TICKET_TTL_MS with the same
+// 10 minutes). Changing the server's TTL means changing all three -- there is
+// no shared source to import across three separate deployables. Erring long
+// here is the safe direction: a stash that outlives its ticket resumes into a
+// clean error, whereas one that expires early silently drops a link the
+// player could still have completed.
+const PENDING_LINK_TTL_MS = 10 * 60 * 1000;
+
 // Pulls the opaque link token out of the URL hash the desktop shell opens the
 // browser at. Returns null for any hash that isn't the steam-link one
 // (including no token param), so callers can call this unconditionally on
@@ -77,7 +92,7 @@ export type PendingLink =
 export function stashPendingLink(token: string): void {
   localStorage.setItem(
     PENDING_LINK_KEY,
-    JSON.stringify({ kind: "token", token }),
+    JSON.stringify({ kind: "token", token, stashedAt: Date.now() }),
   );
 }
 
@@ -87,15 +102,19 @@ export function stashPendingLink(token: string): void {
 export function stashPendingCodeEntry(): void {
   localStorage.setItem(
     PENDING_LINK_KEY,
-    JSON.stringify({ kind: "code_entry" }),
+    JSON.stringify({ kind: "code_entry", stashedAt: Date.now() }),
   );
 }
 
 // Consumed on read: once taken, a stale/already-handled entry can't re-fire
-// on a later page load. Malformed/legacy storage (this used to hold a bare,
-// unquoted token string before the kind discriminator existed) degrades to
-// null rather than throwing — a leftover value from before this change must
-// not crash every subsequent page load for whoever still has one.
+// on a later page load. Also expires on read: an entry older than
+// PENDING_LINK_TTL_MS is discarded (still consumed, just returned as null)
+// rather than resumed, since its link ticket is already dead server-side by
+// then. Malformed/legacy storage (this used to hold a bare, unquoted token
+// string before the kind discriminator existed, and before that, no
+// timestamp at all) degrades to null rather than throwing — a leftover value
+// from before this change must not crash every subsequent page load for
+// whoever still has one.
 export function takePendingLink(): PendingLink | null {
   const raw = localStorage.getItem(PENDING_LINK_KEY);
   if (raw === null) return null;
@@ -104,7 +123,22 @@ export function takePendingLink(): PendingLink | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed === "object" && parsed !== null && "kind" in parsed) {
-      const candidate = parsed as { kind: unknown; token?: unknown };
+      const candidate = parsed as {
+        kind: unknown;
+        token?: unknown;
+        stashedAt?: unknown;
+      };
+
+      // A missing or non-numeric stashedAt means a pre-TTL entry (or a
+      // corrupted one). Its age cannot be established, so it is treated as
+      // expired rather than resumed -- see PENDING_LINK_TTL_MS.
+      if (
+        typeof candidate.stashedAt !== "number" ||
+        Date.now() - candidate.stashedAt > PENDING_LINK_TTL_MS
+      ) {
+        return null;
+      }
+
       if (candidate.kind === "token" && typeof candidate.token === "string") {
         return { kind: "token", token: candidate.token };
       }

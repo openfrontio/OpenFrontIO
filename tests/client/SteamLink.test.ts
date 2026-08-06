@@ -141,6 +141,66 @@ describe("pending link stash", () => {
     expect(() => takePendingLink()).not.toThrow();
     expect(takePendingLink()).toBeNull();
   });
+
+  it("discards a token stash older than the ticket TTL, and still consumes it", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-08-05T12:00:00Z"));
+      stashPendingLink("tok123");
+
+      // One millisecond past the ticket's own 10-minute life. The ticket is
+      // already dead server-side, so resuming would open a confirm modal
+      // that can only error.
+      vi.setSystemTime(new Date("2026-08-05T12:10:00.001Z"));
+      expect(takePendingLink()).toBeNull();
+
+      // Consumed even when rejected -- otherwise a stale entry is re-read
+      // and re-rejected on every page load forever.
+      vi.setSystemTime(new Date("2026-08-05T12:10:00.002Z"));
+      expect(localStorage.getItem("steam-link-pending")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("discards a code-entry stash older than the ticket TTL", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-08-05T12:00:00Z"));
+      stashPendingCodeEntry();
+      vi.setSystemTime(new Date("2026-08-05T12:10:00.001Z"));
+      expect(takePendingLink()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still resumes a stash inside the ticket TTL", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-08-05T12:00:00Z"));
+      stashPendingLink("tok123");
+
+      // Comfortably inside the window: an OAuth round trip through Google
+      // or Discord takes seconds to a couple of minutes, and must survive.
+      vi.setSystemTime(new Date("2026-08-05T12:09:59Z"));
+      expect(takePendingLink()).toEqual({ kind: "token", token: "tok123" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("discards a stash with no timestamp rather than guessing its age", () => {
+    // Written by the build that shipped before this change. Its real age is
+    // unknowable and the ticket it belongs to is almost certainly dead, so
+    // treat it as expired rather than resuming something that can only fail.
+    localStorage.setItem(
+      "steam-link-pending",
+      JSON.stringify({ kind: "token", token: "tok123" }),
+    );
+    expect(takePendingLink()).toBeNull();
+    expect(localStorage.getItem("steam-link-pending")).toBeNull();
+  });
 });
 
 describe("resumePendingSteamLink", () => {
