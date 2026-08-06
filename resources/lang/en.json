@@ -438,6 +438,7 @@
   "doomsday_clock": {
     "collapsing": "Collapsing -{rate}/s",
     "decay_in": "Decay in {secs}s",
+    "decaying": "Decaying -{rate} tiles/s",
     "final": "Final zone, hold {pct}%",
     "growing": "Will reach {pct}% in {time}",
     "hold": "Hold ≥ {pct}%",

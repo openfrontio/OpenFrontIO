@@ -70,6 +70,7 @@ export interface PlayerState {
   isTraitor: boolean;
   traitorRemainingTicks: number;
   inDoomsdayClock: boolean;
+  isDecaying: boolean;
   markedDoomsdayClockTick: number;
   betrayals: number;
   hasSpawned: boolean;
@@ -200,6 +201,7 @@ export interface PlayerStatusData {
   nukeTargetsMe: boolean;
   inDoomsdayClock: boolean;
   doomsdayClockDraining: boolean;
+  doomsdayClockDecaying: boolean;
   doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;
