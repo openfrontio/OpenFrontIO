@@ -43,6 +43,7 @@ export class MainRadialMenu implements Controller {
     private buildMenu: BuildMenu,
     private uiState: UIState,
     private playerPanel: PlayerPanel,
+    private playerRole: string | null = null,
   ) {
     const menuConfig: RadialMenuConfig = {
       centerButtonIcon: swordIcon,
@@ -83,6 +84,12 @@ export class MainRadialMenu implements Controller {
         return;
       }
       if (this.game.myPlayer() === null) {
+        // A spectator has no player, so there is no radial menu of actions.
+        // Moderators, however, can still open a target player's panel to
+        // access moderation (e.g. kicking) even without joining the match.
+        if (this.isModerator) {
+          this.openSpectatorModeration(worldCoords.x, worldCoords.y);
+        }
         return;
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
@@ -99,6 +106,23 @@ export class MainRadialMenu implements Controller {
           );
         });
     });
+  }
+
+  private get isModerator(): boolean {
+    return this.playerRole === "admin" || this.playerRole === "root";
+  }
+
+  // Open a target player's panel in moderation-only mode for a spectator
+  // moderator. Bypasses the radial menu (all of whose actions require a
+  // player) and goes straight to the panel, which restricts itself to
+  // moderation when the viewer has no player.
+  private openSpectatorModeration(worldX: number, worldY: number) {
+    const tile = this.game.ref(worldX, worldY);
+    const owner = this.game.owner(tile);
+    if (!owner.isPlayer()) {
+      return;
+    }
+    this.playerPanel.show(null, tile);
   }
 
   private async updatePlayerActions(

@@ -102,6 +102,36 @@ describe("PlayerPanel - kick player moderation", () => {
     expect(actionButton).toHaveBeenCalledTimes(1);
   });
 
+  test("renders moderation for a spectator admin (no player of their own)", () => {
+    const other = {
+      id: () => 2,
+      name: () => "Other",
+      displayName: () => "[TAG] Other",
+      type: () => PlayerType.Human,
+      clientID: () => "client-2",
+    } as unknown as PlayerView;
+
+    (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
+    // my === null (spectator), isAdmin === true → moderation is offered.
+    (panel as any).renderModeration(null, other, true);
+    expect(actionButton).toHaveBeenCalledTimes(1);
+  });
+
+  test("hides moderation for a spectator without the admin role", () => {
+    const other = {
+      id: () => 2,
+      name: () => "Other",
+      displayName: () => "[TAG] Other",
+      type: () => PlayerType.Human,
+      clientID: () => "client-2",
+    } as unknown as PlayerView;
+
+    (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
+    // my === null (spectator), isAdmin === false → nothing is offered.
+    (panel as any).renderModeration(null, other, false);
+    expect(actionButton).not.toHaveBeenCalled();
+  });
+
   test("opens moderation modal and hides after a kick", () => {
     const other = {
       id: () => 2,
@@ -224,5 +254,41 @@ describe("PlayerModerationModal - kick confirmation", () => {
       const modal = makeModal(false);
       expect((modal as any).canKick(creator, humanOther)).toBe(true);
     });
+
+    test("spectator admin (my === null) can kick a valid other player", () => {
+      const modal = makeModal(true);
+      expect((modal as any).canKick(null, humanOther)).toBe(true);
+    });
+
+    test("spectator without admin role (my === null) cannot kick", () => {
+      const modal = makeModal(false);
+      expect((modal as any).canKick(null, humanOther)).toBe(false);
+    });
+  });
+
+  test("spectator admin emits kick intent without a player of their own", async () => {
+    (showInGameConfirm as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+    const modal = new PlayerModerationModal();
+    const eventBus = { emit: vi.fn() };
+    const other = {
+      id: () => 2,
+      name: () => "Other",
+      displayName: () => "[TAG] Other",
+      type: () => PlayerType.Human,
+      clientID: () => "client-2",
+    } as unknown as PlayerView;
+
+    modal.eventBus = eventBus as any;
+    modal.myPlayer = null;
+    modal.isAdmin = true;
+    modal.target = other;
+
+    await (modal as any).handleKickClick({ stopPropagation: vi.fn() });
+
+    expect(eventBus.emit).toHaveBeenCalledTimes(1);
+    const event = eventBus.emit.mock.calls[0][0] as SendKickPlayerIntentEvent;
+    expect(event).toBeInstanceOf(SendKickPlayerIntentEvent);
+    expect(event.target).toBe("client-2");
   });
 });

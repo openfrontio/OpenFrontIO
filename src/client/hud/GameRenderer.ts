@@ -313,6 +313,7 @@ export function createRenderer(
       buildMenu,
       uiState,
       playerPanel,
+      playerRole,
     ),
     spawnTimer,
     immunityTimer,

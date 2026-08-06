@@ -165,7 +165,9 @@ export class PlayerPanel extends LitElement implements Controller {
     }
   }
 
-  public show(actions: PlayerActions, tile: TileRef) {
+  // actions is null for a spectator moderator (no player of their own to
+  // compute interactions from); the panel then renders in moderation-only mode.
+  public show(actions: PlayerActions | null, tile: TileRef) {
     this.actions = actions;
     this.tile = tile;
     this.moderationTarget = null;
@@ -463,11 +465,13 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderModeration(
-    my: PlayerView,
+    my: PlayerView | null,
     other: PlayerView,
     isAdmin: boolean,
   ) {
-    if (!my.isLobbyCreator() && !isAdmin) return html``;
+    // my is null for a spectator moderator; their authority is the admin role.
+    const authorized = my ? my.isLobbyCreator() || isAdmin : isAdmin;
+    if (!authorized) return html``;
     // The host of a publicly listed game cannot kick (server-enforced), so
     // don't offer the panel; admins keep it for moderation.
     if (this.gameListed && !isAdmin) return html``;
@@ -488,7 +492,7 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
-  private renderRelationPillIfNation(other: PlayerView, my: PlayerView) {
+  private renderRelationPillIfNation(other: PlayerView, my: PlayerView | null) {
     if (other.type() !== PlayerType.Nation) return html``;
     if (other.isTraitor()) return html``;
     if (my?.isAlliedWith && my.isAlliedWith(other)) return html``;
@@ -506,7 +510,7 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
-  private renderIdentityRow(other: PlayerView, my: PlayerView) {
+  private renderIdentityRow(other: PlayerView, my: PlayerView | null) {
     const flagCode = other.cosmetics.flag;
     const country =
       typeof flagCode === "string"
@@ -881,9 +885,13 @@ export class PlayerPanel extends LitElement implements Controller {
   render() {
     if (!this.isVisible) return html``;
 
-    const my = this.g.myPlayer();
-    if (!my) return html``;
     if (!this.tile) return html``;
+
+    // Spectator moderators have no player of their own (my === null). They
+    // still get the panel — restricted to moderation — when they hold the
+    // admin role; everyone else without a player sees nothing.
+    const my = this.g.myPlayer();
+    if (!my && !this.isAdminRole) return html``;
 
     const owner = this.g.owner(this.tile);
     if (!owner || !owner.isPlayer()) {
@@ -892,8 +900,8 @@ export class PlayerPanel extends LitElement implements Controller {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldNum = my.gold();
-    const myTroopsNum = Number(my.troops());
+    const myGoldNum = my ? my.gold() : 0;
+    const myTroopsNum = my ? Number(my.troops()) : 0;
 
     return html`
       <style>
@@ -963,7 +971,7 @@ export class PlayerPanel extends LitElement implements Controller {
                     <!-- Identity (flag, name, type, traitor, relation) -->
                     <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
 
-                    ${this.sendTarget
+                    ${this.sendTarget && my
                       ? html`
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
@@ -1009,10 +1017,13 @@ export class PlayerPanel extends LitElement implements Controller {
                     <!-- Rocket direction toggle -->
                     ${other === my ? this.renderRocketDirectionToggle() : ""}
 
-                    <ui-divider></ui-divider>
-
-                    <!-- Stats: betrayals / trading -->
-                    ${this.renderStats(other, my)}
+                    <!-- Stats: betrayals / trading (requires a viewing player) -->
+                    ${my
+                      ? html`<ui-divider></ui-divider> ${this.renderStats(
+                            other,
+                            my,
+                          )}`
+                      : ""}
 
                     <ui-divider></ui-divider>
 
@@ -1024,8 +1035,10 @@ export class PlayerPanel extends LitElement implements Controller {
 
                     <ui-divider></ui-divider>
 
-                    <!-- Actions -->
-                    ${this.renderActions(my, other)}
+                    <!-- Actions (spectator moderators only get moderation) -->
+                    ${my
+                      ? this.renderActions(my, other)
+                      : this.renderModeration(null, other, this.isAdminRole)}
                   </div>
                 </div>
               </div>

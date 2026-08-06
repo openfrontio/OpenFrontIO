@@ -44,9 +44,12 @@ export class PlayerModerationModal extends LitElement {
     }
   };
 
-  private canKick(my: PlayerView, other: PlayerView): boolean {
+  private canKick(my: PlayerView | null, other: PlayerView): boolean {
+    // A spectator moderator has no player of their own (my === null); their
+    // authority comes solely from the admin role, enforced again server-side.
+    const authorized = my ? my.isLobbyCreator() || this.isAdmin : this.isAdmin;
     return (
-      (my.isLobbyCreator() || this.isAdmin) &&
+      authorized &&
       other !== my &&
       other.type() === PlayerType.Human &&
       !!other.clientID()
@@ -60,7 +63,8 @@ export class PlayerModerationModal extends LitElement {
     const other = this.target;
     const eventBus = this.eventBus;
 
-    if (!my || !other) return;
+    // my may be null for a spectator moderator; only the target is required.
+    if (!other) return;
     if (!this.canKick(my, other) || this.alreadyKicked) return;
     if (!eventBus) return;
 
@@ -84,7 +88,7 @@ export class PlayerModerationModal extends LitElement {
 
     const my = this.myPlayer;
     const other = this.target;
-    if (!my || !other) return html``;
+    if (!other) return html``;
 
     const canKick = this.canKick(my, other);
     const alreadyKicked = this.alreadyKicked;
