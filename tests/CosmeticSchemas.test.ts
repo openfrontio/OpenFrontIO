@@ -540,6 +540,44 @@ describe("NukeExplosionAttributesSchema", () => {
   });
 });
 
+describe("NukeExplosionAttributesSchema embers", () => {
+  const base = {
+    nukeType: "atom" as const,
+    colors: ["#ffffff", "#ff8a28"],
+    size: 20,
+    speed: 5,
+    thickness: 1,
+    transitionSpeed: 0,
+  };
+
+  it("accepts a valid embers style", () => {
+    expect(
+      NukeExplosionAttributesSchema.safeParse({
+        ...base,
+        type: "embers",
+        density: 100,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects embers with a non-positive density", () => {
+    expect(
+      NukeExplosionAttributesSchema.safeParse({
+        ...base,
+        type: "embers",
+        density: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects embers missing density", () => {
+    expect(
+      NukeExplosionAttributesSchema.safeParse({ ...base, type: "embers" })
+        .success,
+    ).toBe(false);
+  });
+});
+
 describe("nukeExplosion in the cosmetics catalog", () => {
   it("parses the atom shockwave catalog entry", () => {
     const result = CosmeticsSchema.safeParse({

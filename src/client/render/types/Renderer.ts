@@ -164,7 +164,8 @@ interface NukeExplosionRenderParamsBase {
 
 export type NukeExplosionRenderParams =
   | (NukeExplosionRenderParamsBase & { type: "shockwave" })
-  | (NukeExplosionRenderParamsBase & { type: "sparkles"; density: number });
+  | (NukeExplosionRenderParamsBase & { type: "sparkles"; density: number })
+  | (NukeExplosionRenderParamsBase & { type: "embers"; density: number });
 
 /** Default nuke-explosion color (purple) when a cosmetic has no usable color. */
 export const DEFAULT_NUKE_EXPLOSION_COLOR: readonly [number, number, number] = [
