@@ -518,6 +518,10 @@ export interface Unit {
   isInCooldown(): boolean;
   missileTimerQueue(): number[];
 
+  // SAMs
+  needsSamRangeRecheck(): boolean | undefined;
+  setSamRangeRecheck(samRangeRecheck: boolean): void;
+
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships

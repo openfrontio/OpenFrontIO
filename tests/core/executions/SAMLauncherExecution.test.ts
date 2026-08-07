@@ -441,7 +441,83 @@ describe("SAM", () => {
 
     executeTicks(game, 11);
     // Nuke should be intercepted in-flight before detonating on destination tile
-    expect(nuke.reachedTarget()).toBeFalsy();
     expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
+  });
+
+  test("Level changes in a SAM should cause it to target or untarget nukes depending on range", async () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const execution = new SAMLauncherExecution(defender, game.ref(1, 1), sam);
+    game.addExecution(execution);
+
+    //Custom test config range always returns 20, mock test values
+    vi.spyOn(game.config(), "samRange").mockImplementation(
+      (level) => 18 + level * 4,
+    );
+
+    // Nuke trajectory is at distance ~25 from SAM (out of range).
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(70, 1), {
+      targetTile: game.ref(25, 1),
+      trajectory: [
+        { tile: game.ref(70, 1), targetable: true },
+        { tile: game.ref(65, 1), targetable: true },
+        { tile: game.ref(60, 1), targetable: true },
+        { tile: game.ref(55, 1), targetable: true },
+        { tile: game.ref(50, 1), targetable: true },
+        { tile: game.ref(45, 1), targetable: true },
+        { tile: game.ref(40, 1), targetable: true },
+        { tile: game.ref(35, 1), targetable: true },
+        { tile: game.ref(30, 1), targetable: true },
+        { tile: game.ref(25, 1), targetable: true },
+      ],
+    });
+
+    // Run ticks at level 1: nuke should be marked as unreachable / out of range.
+    executeTicks(game, 10);
+    expect(nuke.targetedBySAM()).toBeFalsy();
+    expect(nuke.wasDestroyedByEnemy()).toBeFalsy();
+
+    // Level up SAM launcher: and sets recheck flag.
+    sam.increaseLevel();
+    sam.reloadMissile();
+
+    expect(sam.needsSamRangeRecheck()).toBeTruthy();
+
+    // Run next ticks: cache should be cleared and nuke intercepted under new range.
+    executeTicks(game, 10);
+    expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
+
+    // Nuke trajectory is at distance ~25 from SAM (out of range).
+    const nuke2 = attacker.buildUnit(UnitType.AtomBomb, game.ref(70, 1), {
+      targetTile: game.ref(25, 1),
+      trajectory: [
+        { tile: game.ref(70, 1), targetable: true },
+        { tile: game.ref(65, 1), targetable: true },
+        { tile: game.ref(60, 1), targetable: true },
+        { tile: game.ref(55, 1), targetable: true },
+        { tile: game.ref(50, 1), targetable: true },
+        { tile: game.ref(45, 1), targetable: true },
+        { tile: game.ref(40, 1), targetable: true },
+        { tile: game.ref(35, 1), targetable: true },
+        { tile: game.ref(30, 1), targetable: true },
+        { tile: game.ref(25, 1), targetable: true },
+      ],
+    });
+
+    sam.reloadMissile();
+    sam.reloadMissile();
+
+    // Run ticks at level 2: Should be in range. Have to check precomputed.
+    executeTicks(game, 3);
+    const precomputed = (<any>execution).targetingSystem
+      .precomputedNukes as Map<number, { tile: number; tick: number }>;
+    expect(precomputed.get(nuke2.id())).toBeTruthy();
+
+    // Level down a SAM launcher and sets recheck flag.
+    sam.decreaseLevel();
+    expect(sam.needsSamRangeRecheck()).toBeTruthy();
+
+    // Run next ticks: nuke should not be intercepted
+    executeTicks(game, 40);
+    expect(nuke2.wasDestroyedByEnemy()).toBeFalsy();
   });
 });

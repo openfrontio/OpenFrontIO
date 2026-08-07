@@ -167,6 +167,12 @@ class SAMTargetingSystem {
   }
 
   public getValidTargets(ticks: number): Target[] {
+    // Clear the entire cache, we might be able to shoot other nukes further away too.
+    if (this.sam.needsSamRangeRecheck()) {
+      this.precomputedNukes.clear();
+      this.sam.setSamRangeRecheck(false);
+    }
+
     const samTile = this.sam.tile();
     const range = this.mg.config().samRange(this.sam.level());
     const rangeSquared = range * range;
