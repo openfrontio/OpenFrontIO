@@ -631,6 +631,9 @@
     "credits": "Credits",
     "title": "Game is Starting..."
   },
+  "game_timer": {
+    "one_minute_remaining": "One minute remaining!"
+  },
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",
     "advanced_label": "Advanced settings",
