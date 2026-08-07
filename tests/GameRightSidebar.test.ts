@@ -1,4 +1,5 @@
 import { GameRightSidebar } from "../src/client/hud/layers/GameRightSidebar";
+import { SendWinnerEvent } from "../src/client/Transport";
 import type { GameView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
 import { GameType } from "../src/core/game/Game";
@@ -14,6 +15,19 @@ interface TimerState {
   maxTimerValue: number | null;
   ticks: number;
 }
+
+interface Toast {
+  message: string;
+  color: string;
+  duration: number;
+}
+
+// The one-minute notice is handed to the heads-up toast layer, so the sidebar's
+// side effect is the "show-message" event rather than markup it owns.
+let toasts: Toast[] = [];
+const captureToast = (event: Event) => {
+  toasts.push((event as CustomEvent<Toast>).detail);
+};
 
 function createSidebar(overrides: Partial<TimerState> = {}) {
   const state: TimerState = {
@@ -56,77 +70,60 @@ function createSidebar(overrides: Partial<TimerState> = {}) {
     await sidebar.updateComplete;
   };
 
-  return { sidebar, state, setRemainingSeconds };
+  return { sidebar, state, eventBus, setRemainingSeconds };
 }
 
 describe("GameRightSidebar end timer warnings", () => {
-  afterEach(() => {
-    document.body.innerHTML = "";
-    vi.useRealTimers();
+  beforeEach(() => {
+    toasts = [];
+    window.addEventListener("show-message", captureToast);
   });
 
-  it("turns red and shows one centered alert at the one-minute mark", async () => {
+  afterEach(() => {
+    window.removeEventListener("show-message", captureToast);
+    document.body.innerHTML = "";
+  });
+
+  it("turns the timer red and fires one heads-up toast at the one-minute mark", async () => {
     const { sidebar, setRemainingSeconds } = createSidebar();
 
     await setRemainingSeconds(61);
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
+    expect(toasts).toHaveLength(0);
     expect(sidebar.querySelector("[data-game-timer]")?.className).toBe("");
 
     await setRemainingSeconds(60);
-    const alert = sidebar.querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain("game_timer.one_minute_remaining");
-    expect(alert?.className).toContain("top-1/2");
-    expect(alert?.className).toContain("left-1/2");
+    expect(toasts).toEqual([
+      {
+        message: "game_timer.one_minute_remaining",
+        color: "red",
+        duration: 4_000,
+      },
+    ]);
     expect(sidebar.querySelector("[data-game-timer]")?.className).toContain(
       "game-end-timer-last-minute",
     );
 
-    alert?.dispatchEvent(new Event("animationend"));
-    await sidebar.updateComplete;
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
-
+    // Every later tick is still inside the last minute; the notice fires once.
     await setRemainingSeconds(59);
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
+    await setRemainingSeconds(58);
+    expect(toasts).toHaveLength(1);
   });
 
-  it("dismisses the one-minute alert after four seconds", async () => {
-    vi.useFakeTimers();
-    const { sidebar, setRemainingSeconds } = createSidebar();
-
-    await setRemainingSeconds(60);
-    expect(sidebar.querySelector('[role="alert"]')).not.toBeNull();
-
-    await vi.advanceTimersByTimeAsync(4_000);
-    await sidebar.updateComplete;
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
-  });
-
-  it("clears an active warning across disconnect and reconnect", async () => {
-    vi.useFakeTimers();
-    const { sidebar, setRemainingSeconds } = createSidebar();
-
-    await setRemainingSeconds(60);
-    expect(sidebar.querySelector('[role="alert"]')).not.toBeNull();
-
-    sidebar.remove();
-    expect(vi.getTimerCount()).toBe(0);
-    document.body.appendChild(sidebar);
-    await sidebar.updateComplete;
-
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
-  });
-
-  it("dismisses an active warning when the timer reaches zero", async () => {
-    vi.useFakeTimers();
-    const { sidebar, setRemainingSeconds } = createSidebar();
-
-    await setRemainingSeconds(60);
-    expect(sidebar.querySelector('[role="alert"]')).not.toBeNull();
+  it("does not fire the toast once the timer has run out", async () => {
+    const { setRemainingSeconds } = createSidebar();
 
     await setRemainingSeconds(0);
 
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
-    expect(vi.getTimerCount()).toBe(0);
+    expect(toasts).toHaveLength(0);
+  });
+
+  it("does not fire the toast after a winner is declared", async () => {
+    const { eventBus, setRemainingSeconds } = createSidebar();
+
+    eventBus.emit(new SendWinnerEvent(undefined, {}));
+    await setRemainingSeconds(60);
+
+    expect(toasts).toHaveLength(0);
   });
 
   it("flashes the timer for the last 30 seconds", async () => {
@@ -179,7 +176,7 @@ describe("GameRightSidebar end timer warnings", () => {
     expect(sidebar.querySelector("aside")?.className).not.toContain(
       "game-end-timer-sidebar-flash",
     );
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
+    expect(toasts).toHaveLength(0);
 
     state.inSpawnPhase = false;
   });
@@ -198,6 +195,6 @@ describe("GameRightSidebar end timer warnings", () => {
     expect(sidebar.querySelector("aside")?.className).not.toContain(
       "game-end-timer-sidebar-flash",
     );
-    expect(sidebar.querySelector('[role="alert"]')).toBeNull();
+    expect(toasts).toHaveLength(0);
   });
 });

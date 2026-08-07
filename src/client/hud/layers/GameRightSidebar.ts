@@ -11,7 +11,7 @@ import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -54,16 +54,12 @@ export class GameRightSidebar extends LitElement implements Controller {
   @state()
   private timer: number = 0;
 
-  @state()
-  private showOneMinuteWarning: boolean = false;
-
   // CrazyGames provides its own fullscreen control in the game frame, so hide ours.
   private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
   private hasWinner = false;
   private isLobbyCreator = false;
   private isPrivateLobby = false;
   private hasShownOneMinuteWarning = false;
-  private oneMinuteWarningTimeout: number | null = null;
   // Guards the in-game "New lobby" button so a double click doesn't fire twice
   // before we navigate to the successor lobby.
   private newLobbyRequested = false;
@@ -88,11 +84,6 @@ export class GameRightSidebar extends LitElement implements Controller {
       this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
     this.hasShownOneMinuteWarning = false;
-    this.showOneMinuteWarning = false;
-    if (this.oneMinuteWarningTimeout !== null) {
-      window.clearTimeout(this.oneMinuteWarningTimeout);
-      this.oneMinuteWarningTimeout = null;
-    }
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -105,7 +96,6 @@ export class GameRightSidebar extends LitElement implements Controller {
 
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
-      this.dismissOneMinuteWarning();
       this.requestUpdate();
     });
 
@@ -136,7 +126,6 @@ export class GameRightSidebar extends LitElement implements Controller {
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
-    this.dismissOneMinuteWarning();
   }
 
   getTickIntervalMs() {
@@ -179,16 +168,15 @@ export class GameRightSidebar extends LitElement implements Controller {
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
-      if (this.timer === 0) {
-        this.dismissOneMinuteWarning();
-      } else {
-        this.maybeShowOneMinuteWarning();
-      }
+      this.maybeShowOneMinuteWarning();
     } else {
       this.timer = elapsedSeconds;
     }
   }
 
+  // Handing the notice to the heads-up toast layer means that layer owns the
+  // dismissal timer, so there's nothing for us to tear down on disconnect or
+  // when the game ends.
   private maybeShowOneMinuteWarning(): void {
     if (
       !this.hasWinner &&
@@ -198,22 +186,13 @@ export class GameRightSidebar extends LitElement implements Controller {
       !this.hasShownOneMinuteWarning
     ) {
       this.hasShownOneMinuteWarning = true;
-      this.showOneMinuteWarning = true;
-      this.oneMinuteWarningTimeout = window.setTimeout(
-        this.dismissOneMinuteWarning,
+      showToast(
+        translateText("game_timer.one_minute_remaining"),
+        "red",
         ONE_MINUTE_WARNING_DURATION_MS,
       );
-      this.requestUpdate();
     }
   }
-
-  private dismissOneMinuteWarning = (): void => {
-    this.showOneMinuteWarning = false;
-    if (this.oneMinuteWarningTimeout !== null) {
-      window.clearTimeout(this.oneMinuteWarningTimeout);
-      this.oneMinuteWarningTimeout = null;
-    }
-  };
 
   private updateParentOffset(): void {
     const offset =
@@ -357,21 +336,6 @@ export class GameRightSidebar extends LitElement implements Controller {
             background-color: rgb(185 28 28 / 0.96);
           }
         }
-        @keyframes game-end-timer-warning {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.9);
-          }
-          15%,
-          75% {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(1.05);
-          }
-        }
         .game-end-timer-last-minute {
           color: rgb(248 113 113);
         }
@@ -380,11 +344,6 @@ export class GameRightSidebar extends LitElement implements Controller {
         }
         .game-end-timer-sidebar-flash {
           animation: game-end-timer-sidebar-flash 1s ease-in-out infinite;
-        }
-        .game-end-timer-warning {
-          opacity: 1;
-          transform: translate(-50%, -50%);
-          animation: game-end-timer-warning 4s ease-out forwards;
         }
         @media (prefers-reduced-motion: reduce) {
           .game-end-timer-flash {
@@ -395,27 +354,8 @@ export class GameRightSidebar extends LitElement implements Controller {
             animation: none;
             background-color: rgb(185 28 28 / 0.96);
           }
-          .game-end-timer-warning {
-            animation: none;
-          }
         }
       </style>
-      ${this.showOneMinuteWarning
-        ? html`
-            <div
-              class="game-end-timer-warning fixed top-1/2 left-1/2 z-[1001]
-                     pointer-events-none rounded-xl border border-red-300/70
-                     bg-red-950/90 px-6 py-4 text-center text-xl font-bold
-                     text-white shadow-[0_0_30px_rgba(239,68,68,0.65)]
-                     backdrop-blur-sm lg:text-2xl"
-              role="alert"
-              aria-live="assertive"
-              @animationend=${this.dismissOneMinuteWarning}
-            >
-              ${translateText("game_timer.one_minute_remaining")}
-            </div>
-          `
-        : ""}
       <aside
         class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
