@@ -395,10 +395,30 @@ export class BuildMenu extends LitElement implements Controller {
       buildableUnit.canUpgrade !== false ||
       (buildableUnit.canBuild && isNuke)
     ) {
-      this._selectedUpgradeUnitType = buildableUnit.type;
-      this.clickedTile = tile;
-      this._hidden = false;
-      this.requestUpdate();
+      // With no executable amount past x1 there is nothing to choose —
+      // skip the amount panel and purchase immediately (mirrors the
+      // radial menu's empty-submenu fall-through).
+      const myPlayer = this.game?.myPlayer();
+      let maxAmount = maxBulkAmount(buildableUnit, myPlayer?.gold() ?? 0n);
+      if (isNuke) {
+        maxAmount = Math.min(maxAmount, myPlayer?.readyMissileCount() ?? 0);
+      }
+      if (maxAmount > 1) {
+        this._selectedUpgradeUnitType = buildableUnit.type;
+        this.clickedTile = tile;
+        this._hidden = false;
+        this.requestUpdate();
+        return;
+      }
+    }
+    if (buildableUnit.canUpgrade !== false) {
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          buildableUnit.canUpgrade,
+          buildableUnit.type,
+        ),
+      );
+      this.hideMenu();
     } else if (buildableUnit.canBuild) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
