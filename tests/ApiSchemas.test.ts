@@ -137,6 +137,43 @@ describe("PlayerProfileSchema", () => {
   });
 });
 
+describe("PlayerProfileSchema stats tree modes", () => {
+  const base = {
+    createdAt: "2024-01-15T12:00:00.000Z",
+  };
+  const leaf = { wins: "3", losses: "1", total: "4", stats: {} };
+
+  // Regression: the API buckets HvN games under a "Humans Vs Nations" key,
+  // which a z.enum(GameMode) record key rejected — failing the whole profile
+  // parse in production.
+  it("accepts Humans Vs Nations stat buckets", () => {
+    const result = PlayerProfileSchema.safeParse({
+      ...base,
+      stats: {
+        Public: {
+          "Free For All": { Medium: leaf },
+          "Humans Vs Nations": { Medium: leaf },
+        },
+        Private: { "Humans Vs Nations": { Medium: leaf } },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.stats.Public?.["Humans Vs Nations"]?.Medium?.wins).toBe(
+      3n,
+    );
+  });
+
+  it("rejects an unknown mode bucket", () => {
+    expect(
+      PlayerProfileSchema.safeParse({
+        ...base,
+        stats: { Public: { "Battle Royale": { Medium: leaf } } },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("PlayerProfileSchema clans", () => {
   const base = {
     createdAt: "2024-01-15T12:00:00.000Z",
