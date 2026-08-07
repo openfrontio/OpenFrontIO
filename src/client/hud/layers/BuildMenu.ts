@@ -6,7 +6,11 @@ import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
   BuildMenus,
+  bulkAmountOptions,
+  bulkCost,
   Gold,
+  maxBulkAmount,
+  NUKE_BULK_STEPS,
   PlayerBuildableUnitType,
   UnitType,
 } from "../../../core/game/Game";
@@ -385,10 +389,7 @@ export class BuildMenu extends LitElement implements Controller {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public handleBuildClick(
-    buildableUnit: BuildableUnit,
-    tile: TileRef,
-  ): boolean {
+  public handleBuildClick(buildableUnit: BuildableUnit, tile: TileRef): void {
     const isNuke = buildableUnit.type === UnitType.AtomBomb;
     if (
       buildableUnit.canUpgrade !== false ||
@@ -398,7 +399,6 @@ export class BuildMenu extends LitElement implements Controller {
       this.clickedTile = tile;
       this._hidden = false;
       this.requestUpdate();
-      return true;
     } else if (buildableUnit.canBuild) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
@@ -409,9 +409,7 @@ export class BuildMenu extends LitElement implements Controller {
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );
       this.hideMenu();
-      return false;
     }
-    return false;
   }
 
   public confirmUpgrade(amount: number): void {
@@ -454,8 +452,20 @@ export class BuildMenu extends LitElement implements Controller {
       (u) => u.type === this._selectedUpgradeUnitType,
     );
     if (!bu) return html``;
-    const baseCost = bu.cost;
-    const playerGold = this.game?.myPlayer()?.gold() ?? 0n;
+    const myPlayer = this.game?.myPlayer();
+    const playerGold = myPlayer?.gold() ?? 0n;
+    // Offer x1/x5/x10 plus the largest amount the player can actually
+    // execute right now — capped by gold, and for nukes by loaded silo
+    // tubes.
+    let maxAmount = maxBulkAmount(bu, playerGold);
+    const isNuke = bu.type === UnitType.AtomBomb;
+    if (isNuke) {
+      maxAmount = Math.min(maxAmount, myPlayer?.readyMissileCount() ?? 0);
+    }
+    const amounts = bulkAmountOptions(
+      maxAmount,
+      isNuke ? NUKE_BULK_STEPS : undefined,
+    );
 
     return html`
       <div
@@ -467,8 +477,8 @@ export class BuildMenu extends LitElement implements Controller {
         <div
           style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;"
         >
-          ${[1, 5, 10, 25, 50].map((amount) => {
-            const cost = baseCost * BigInt(amount);
+          ${amounts.map((amount) => {
+            const cost = bulkCost(bu, amount);
             const canAfford = playerGold >= cost;
             return html`
               <button

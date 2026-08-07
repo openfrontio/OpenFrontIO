@@ -7,6 +7,7 @@ import {
   rootMenuElement,
   Slot,
 } from "../../../src/client/hud/layers/RadialMenuElements";
+import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 import { GameView, PlayerView } from "../../../src/client/view";
 import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
@@ -114,19 +115,42 @@ describe("RadialMenuElements", () => {
       canBuildOrUpgrade: vi.fn(() => true),
       cost: vi.fn(() => 100),
       count: vi.fn(() => 5),
-      sendBuildOrUpgrade: vi.fn(),
-      handleBuildClick: vi.fn(),
     };
 
     mockPlayerActions = {
       buildableUnits: [
-        { type: UnitType.City, canBuild: true },
-        { type: UnitType.Factory, canBuild: true },
-        { type: UnitType.AtomBomb, canBuild: true },
-        { type: UnitType.Warship, canBuild: true },
-        { type: UnitType.HydrogenBomb, canBuild: true },
-        { type: UnitType.MIRV, canBuild: true },
-        { type: UnitType.TransportShip, canBuild: true },
+        { type: UnitType.City, canBuild: true, canUpgrade: false, cost: 100n },
+        {
+          type: UnitType.Factory,
+          canBuild: true,
+          canUpgrade: false,
+          cost: 100n,
+        },
+        {
+          type: UnitType.AtomBomb,
+          canBuild: true,
+          canUpgrade: false,
+          cost: 100n,
+        },
+        {
+          type: UnitType.Warship,
+          canBuild: true,
+          canUpgrade: false,
+          cost: 100n,
+        },
+        {
+          type: UnitType.HydrogenBomb,
+          canBuild: true,
+          canUpgrade: false,
+          cost: 100n,
+        },
+        { type: UnitType.MIRV, canBuild: true, canUpgrade: false, cost: 100n },
+        {
+          type: UnitType.TransportShip,
+          canBuild: true,
+          canUpgrade: false,
+          cost: 100n,
+        },
       ],
       canAttack: true,
       interaction: {
@@ -150,7 +174,7 @@ describe("RadialMenuElements", () => {
       playerActionHandler: {} as any,
       playerPanel: {} as any,
       chatIntegration: {} as any,
-      eventBus: {} as any,
+      eventBus: { emit: vi.fn() } as any,
       closeMenu: vi.fn(),
     };
   });
@@ -471,7 +495,9 @@ describe("RadialMenuElements", () => {
 
       if (cityElement!.action) {
         cityElement!.action(mockParams);
-        expect(mockBuildMenu.handleBuildClick).toHaveBeenCalled();
+        expect(mockParams.eventBus.emit).toHaveBeenCalledWith(
+          expect.any(BuildUnitIntentEvent),
+        );
         expect(mockParams.closeMenu).toHaveBeenCalled();
       }
     });
@@ -494,7 +520,9 @@ describe("RadialMenuElements", () => {
 
       if (atomBombElement!.action) {
         atomBombElement!.action(mockParams);
-        expect(mockBuildMenu.handleBuildClick).toHaveBeenCalled();
+        expect(mockParams.eventBus.emit).toHaveBeenCalledWith(
+          expect.any(BuildUnitIntentEvent),
+        );
         expect(mockParams.closeMenu).toHaveBeenCalled();
       }
     });
@@ -508,9 +536,142 @@ describe("RadialMenuElements", () => {
 
       if (cityElement!.action) {
         cityElement!.action(mockParams);
-        expect(mockBuildMenu.sendBuildOrUpgrade).not.toHaveBeenCalled();
+        expect(mockParams.eventBus.emit).not.toHaveBeenCalled();
         expect(mockParams.closeMenu).not.toHaveBeenCalled();
       }
+    });
+
+    it("offers x1 plus the largest affordable bulk amount", () => {
+      mockPlayerActions.buildableUnits = [
+        {
+          type: UnitType.City,
+          canBuild: true,
+          canUpgrade: 123,
+          cost: 100n,
+          upgradeCosts: [100n, 250n, 450n, 700n, 1000n],
+        },
+      ];
+
+      const subMenu = buildMenuElement.subMenu!(mockParams);
+      const cityElement = subMenu.find((item) => item.id === "build_City");
+
+      // Only x1 affordable: no submenu — the click upgrades x1 directly.
+      (mockGame as any).myPlayer = vi.fn(() => ({ gold: () => 249n }));
+      expect(cityElement!.subMenu!(mockParams)).toHaveLength(0);
+
+      // 999 covers four upgrades: always the fixed x1/x5/x10/xMax slots,
+      // with unexecutable steps disabled and the max slot at x4.
+      (mockGame as any).myPlayer = vi.fn(() => ({ gold: () => 999n }));
+      let options = cityElement!.subMenu!(mockParams);
+      expect(options.map((o) => o.id)).toEqual([
+        `upgrade_${UnitType.City}_1`,
+        `upgrade_${UnitType.City}_5`,
+        `upgrade_${UnitType.City}_10`,
+        `upgrade_${UnitType.City}_max`,
+      ]);
+      expect(options.map((o) => o.disabled(mockParams))).toEqual([
+        false,
+        true,
+        true,
+        false,
+      ]);
+      options[3].action!(mockParams);
+      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ amount: 4 }),
+      );
+
+      // The full x5 total: the x5 slot becomes executable.
+      (mockGame as any).myPlayer = vi.fn(() => ({ gold: () => 1000n }));
+      options = cityElement!.subMenu!(mockParams);
+      expect(options.map((o) => o.disabled(mockParams))).toEqual([
+        false,
+        false,
+        true,
+        false,
+      ]);
+    });
+
+    it("caps the nuke bulk amount at loaded silo tubes", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: vi.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+
+      const subMenu = attackMenuElement.subMenu!(mockParams);
+      const atomBombElement = subMenu.find(
+        (item) => item.id === "attack_Atom Bomb",
+      );
+
+      const slotIds = [
+        `upgrade_${UnitType.AtomBomb}_1`,
+        `upgrade_${UnitType.AtomBomb}_2`,
+        `upgrade_${UnitType.AtomBomb}_5`,
+        `upgrade_${UnitType.AtomBomb}_max`,
+      ];
+
+      // Gold for five bombs but only two loaded tubes (level-2 silo):
+      // fixed x1/x2/x5/xMax slots, x5 disabled, max fires 2.
+      (mockGame as any).myPlayer = vi.fn(() => ({
+        gold: () => 1_000_000n,
+        readyMissileCount: () => 2,
+      }));
+      let options = atomBombElement!.subMenu!(mockParams);
+      expect(options.map((o) => o.id)).toEqual(slotIds);
+      expect(options.map((o) => o.disabled(mockParams))).toEqual([
+        false,
+        false,
+        true,
+        false,
+      ]);
+      options[3].action!(mockParams);
+      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ amount: 2 }),
+      );
+
+      // Gold for three bombs and plenty of tubes: gold caps the max at 3.
+      (mockGame as any).myPlayer = vi.fn(() => ({
+        gold: () => 350n,
+        readyMissileCount: () => 10,
+      }));
+      options = atomBombElement!.subMenu!(mockParams);
+      expect(options.map((o) => o.id)).toEqual(slotIds);
+      expect(options.map((o) => o.disabled(mockParams))).toEqual([
+        false,
+        false,
+        true,
+        false,
+      ]);
+      options[3].action!(mockParams);
+      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ amount: 3 }),
+      );
+
+      // A single loaded tube: no submenu — the click launches one bomb.
+      (mockGame as any).myPlayer = vi.fn(() => ({
+        gold: () => 1_000_000n,
+        readyMissileCount: () => 1,
+      }));
+      expect(atomBombElement!.subMenu!(mockParams)).toHaveLength(0);
+
+      // Plenty of gold and 12 loaded tubes: every slot executable, max
+      // fires 12.
+      (mockGame as any).myPlayer = vi.fn(() => ({
+        gold: () => 1_000_000n,
+        readyMissileCount: () => 12,
+      }));
+      options = atomBombElement!.subMenu!(mockParams);
+      expect(options.map((o) => o.id)).toEqual(slotIds);
+      expect(options.map((o) => o.disabled(mockParams))).toEqual([
+        false,
+        false,
+        false,
+        false,
+      ]);
+      options[3].action!(mockParams);
+      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ amount: 12 }),
+      );
     });
   });
 

@@ -1011,10 +1011,8 @@ export class InputHandler {
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
-      const multipliers = [1, 5, 10, 25, 50];
-      const idx = multipliers.indexOf(this.uiState.upgradeMultiplier || 1);
       this.uiState.upgradeMultiplier =
-        multipliers[(idx + 1) % multipliers.length];
+        this.uiState.upgradeMultiplier === 1 ? 5 : 1;
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;

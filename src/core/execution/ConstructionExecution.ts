@@ -107,6 +107,7 @@ export class ConstructionExecution implements Execution {
       case UnitType.HydrogenBomb: {
         const count = this.amount ?? 1;
         for (let i = 0; i < count; i++) {
+          // NukeExecution staggers same-tick launches per silo itself.
           this.mg.addExecution(
             new NukeExecution(
               this.constructionType,
@@ -114,7 +115,7 @@ export class ConstructionExecution implements Execution {
               this.tile,
               null,
               -1,
-              Math.floor(i / 2),
+              0,
               this.rocketDirectionUp,
             ),
           );

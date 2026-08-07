@@ -14,6 +14,7 @@ import {
 } from "../../core/execution/Util";
 import {
   BuildableUnit,
+  bulkCost,
   PlayerBuildableUnitType,
   UnitType,
 } from "../../core/game/Game";
@@ -25,7 +26,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
-import { MapRenderer, buildNukeTrajectory } from "../render/gl";
+import { buildNukeTrajectory, MapRenderer } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
@@ -475,9 +476,15 @@ export class BuildPreviewController implements Controller {
     const isNuke = u.type === UnitType.AtomBomb;
     const multiplier =
       u.canUpgrade !== false || isNuke
-        ? this.uiState.upgradeMultiplier || 1
+        ? (this.uiState.upgradeMultiplier ?? 1)
         : 1;
-    const cost = u.cost * BigInt(multiplier);
+    const cost = bulkCost(u, multiplier);
+    // Drives the red cost label: gold short of the bulk total, or (for
+    // bombs) fewer loaded silo tubes than the selected amount.
+    let canAfford = myPlayer.gold() >= cost;
+    if (isNuke) {
+      canAfford &&= myPlayer.readyMissileCount() >= multiplier;
+    }
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
@@ -489,7 +496,7 @@ export class BuildPreviewController implements Controller {
       cost: Number(cost),
       multiplier: multiplier,
       showCost: this.userSettings.cursorCostLabel(),
-      canAfford: myPlayer.gold() >= cost,
+      canAfford,
       ghostRailPaths: u.ghostRailPaths,
       overlappingRailroads: u.overlappingRailroads,
       ownerID: myPlayer.smallID(),
