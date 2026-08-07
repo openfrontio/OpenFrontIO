@@ -171,14 +171,16 @@ void main() {
     borderColor.a = 1.0;
   }
 
-  // structures cosmetic: while the owner's territory is hovered, recolor the
-  // fill with their effect (raw catalog colors, like trails — no darken). The
-  // border keeps the player color so ownership stays readable. Skipped for
-  // alt view and construction gray.
+  // structures cosmetic: recolor the fill with the owner's effect (raw catalog
+  // colors, like trails — no darken) while their territory is hovered. The
+  // local player's own effect always shows — touch devices never hover, and
+  // buyers should see what they paid for. The border keeps the player color
+  // so ownership stays readable. Skipped for alt view and construction gray.
   bool effectActive = false;
   if (uAltView == 0 && vUnderConstruction < 0.5) {
     int effOwner = int(vOwnerID + 0.5);
-    if (effOwner == int(uHoverOwner + 0.5) && effOwner > 0) {
+    if ((effOwner == int(uHoverOwner + 0.5) ||
+         effOwner == int(uLocalPlayerID)) && effOwner > 0) {
       vec3 effectRGB;
       if (structuresEffectColor(effOwner, effectRGB)) {
         fillColor.rgb = effectRGB;
