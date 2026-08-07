@@ -215,6 +215,16 @@ export class UnitImpl implements Unit {
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
+      // Transports change hands when their owner is conquered, or when a
+      // disconnected teammate's fleet is inherited. Boats have no "lost"
+      // slot, so only the captor is credited.
+      //
+      // Trade ships are deliberately absent: they reach here too, but the
+      // warship that hunts one down records the capture itself, and counting
+      // it again would double every act of piracy.
+      case UnitType.TransportShip:
+        this.mg.stats().boatCapturedTroops(newOwner, this._owner);
+        break;
     }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
