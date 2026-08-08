@@ -1,0 +1,30 @@
+# Prevent Git's text/EOL handling from corrupting binary assets.
+#
+# The repo previously had no .gitattributes, so on a default Windows clone
+# (core.autocrlf=true, the Git for Windows installer default) checkout applied
+# LF->CRLF conversion to binary map data: every 0x0A byte gained a 0x0D prefix,
+# the file no longer matched width*height, and the game crashed on map load.
+# Marking these types `binary` (a macro for `-text -diff`) makes Git check them
+# out verbatim on every platform. (#4601)
+
+# Map terrain data
+*.bin binary
+
+# Images
+*.png binary
+*.webp binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Audio
+*.mp3 binary
+*.ogg binary
+*.wav binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
