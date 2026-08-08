@@ -142,7 +142,7 @@ export class MirvExecution implements Execution {
       // Compensate missed precomputing targets if remainingTicks started <15
       const extraAttempts = (10 - remainingTicks) * 50;
       this.finalizeDestinations(500 + extraAttempts);
-      this.spawnWarheadsWithWait();
+      this.spawnWarheadsWithWait(remainingTicks);
     }
 
     if (this.pathIndex < this.fullPath.length) {
@@ -175,9 +175,10 @@ export class MirvExecution implements Execution {
     );
   }
 
-  private spawnWarheadsWithWait(): void {
+  private spawnWarheadsWithWait(remainingTicks: number): void {
     if (this.nuke === null) return;
 
+    const waitBase = Math.max(0, remainingTicks);
     const warheadSpeed = this.mg.config().nukeSpeed(UnitType.MIRVWarhead);
     for (const [i, dst] of this.stagedTargets.entries()) {
       let speedOffset = 4;
@@ -193,7 +194,7 @@ export class MirvExecution implements Execution {
           this.separateDst,
           // order of extra speed assign does not matter, they all spawn at once.
           warheadSpeed + speedOffset,
-          10 + this.random.nextInt(0, 15),
+          waitBase + this.random.nextInt(0, 15),
         ),
       );
     }

@@ -1,3 +1,4 @@
+import { MirvExecution } from "src/core/execution/MIRVExecution";
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import {
   Game,
@@ -7,6 +8,13 @@ import {
   UnitType,
 } from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
+import { TestConfig } from "../util/TestConfig";
+
+class FastNukeTestConfig extends TestConfig {
+  nukeSpeed(_: UnitType): number {
+    return 15;
+  }
+}
 
 describe("Hydrogen Bomb and MIRV flows", () => {
   let game: Game;
@@ -217,5 +225,70 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     }
     // Warheads must have appeared before the MIRV separated.
     expect(foundWaiting).toBe(true);
+  });
+
+  test("Short-distance MIRV launch (< 10 Ticks flight) dynamically adjusts warhead waitTicks below 10", async () => {
+    // Uses FastNukeTestConfig (nukeSpeed = 50) so total parabolic flight is < 5 ticks.
+    // Verifies remainingTicks dynamically scales base waitTicks down to ~3 instead of hardcoded 10.
+    const fastGame = await setup(
+      "plains",
+      { infiniteGold: true, instantBuild: true },
+      [info],
+      __dirname,
+      FastNukeTestConfig,
+    );
+    const fastPlayer = fastGame.player(info.id);
+    fastPlayer.conquer(fastGame.ref(1, 1));
+
+    fastGame.addExecution(
+      new ConstructionExecution(
+        fastPlayer,
+        UnitType.MissileSilo,
+        fastGame.ref(1, 1),
+      ),
+    );
+    fastGame.executeNextTick();
+    fastGame.executeNextTick();
+    expect(fastPlayer.units(UnitType.MissileSilo)).toHaveLength(1);
+
+    // Bypass the 55-pixel minimumSpread overlapping check so all targets within range pass
+    const spy = vi
+      .spyOn(MirvExecution.prototype as any, "isOverlapping")
+      .mockReturnValue(false);
+
+    // Conquer a surrounding area for fastPlayer so generated targets belong to fastPlayer
+    for (let x = 0; x < 100; x++) {
+      for (let y = 0; y < 100; y++) {
+        fastPlayer.conquer(fastGame.ref(x, y));
+      }
+    }
+
+    const target = fastGame.ref(1, 1);
+    fastGame.addExecution(
+      new ConstructionExecution(fastPlayer, UnitType.MIRV, target),
+    );
+    //init ConstructionExe
+    fastGame.executeNextTick();
+    //tick ConstructionExe -> create and init MIRVExe
+    fastGame.executeNextTick();
+    // Tick MirvExe -> create MIRV Unit + move -> Create/init NukeExe warhead
+    fastGame.executeNextTick();
+    // NukeExe -> create Warheads, now detectable. MIRV moves.
+    fastGame.executeNextTick();
+    const warheads = fastPlayer.units(UnitType.MIRVWarhead);
+
+    // 1 tick until separation. WaitTicks must all be between 1-16
+    const minWaitTicks = Math.min(
+      ...warheads.map((w) => w.nukeState().waitTicks),
+    );
+    const maxWaitTicks = Math.max(
+      ...warheads.map((w) => w.nukeState().waitTicks),
+    );
+
+    // Since flight time is ~3 ticks (< 10), base waitTicks is ~3 (strictly < 10)
+    expect(minWaitTicks).toBeGreaterThan(0);
+    expect(minWaitTicks).toBeLessThan(4);
+    expect(maxWaitTicks - minWaitTicks).toBeLessThanOrEqual(15);
+    spy.mockRestore();
   });
 });
