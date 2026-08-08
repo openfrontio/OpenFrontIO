@@ -1,284 +1,501 @@
-# API Usage
+# OpenFront API
+
+This is the public HTTP API exposed by the OpenFront API worker. It documents
+endpoints intended for the game client, public websites, and player
+integrations. It is kept aligned with the route registry and endpoint schemas
+in the infra repository. The matchmaking WebSocket is internal to the game
+client and is not covered here.
+
+## API Usage
 
 > **Warning:** Rate limits are very strict. Join the [Discord](https://discord.gg/K9zernJB5z) to request higher rate limits.
 
-## Games
+## Base URLs
 
-### List Game Metadata
+Production:
 
-Get game IDs and basic metadata for games that started within a specified time range. Results are sorted by start time and paginated.
+    https://api.openfront.io
 
-**Constraints:**
+Development:
 
-- Maximum time range: 2 days
-- Maximum limit per request: 1000 games
+    https://api.openfront.dev
 
-**Endpoint:**
+All examples below are relative to one of these hosts. JSON responses use
+UTF-8 and the API sends CORS credentials when the request origin is allowed.
+The API exposes Content-Range and accepts these request headers:
 
-```
-GET https://api.openfront.io/public/games
-```
+- Content-Type
+- Authorization
+- x-persistent-id
+- Idempotency-Key
+- Content-Encoding
 
-**Query Parameters:**
+## Quick reference
 
-- `start` (required): ISO 8601 timestamp
-- `end` (required): ISO 8601 timestamp
-- `type` (optional): Game type, must be one of `[Private, Public, Singleplayer]`
-- `mode` (optional): Game mode, must be one of `[Free For All, Team]`
-- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1, 2v2]`
-- `playerTeams` (optional): Player team configuration (e.g. `Duos`)
-- `limit` (optional): Number of results (max 1000, default 50)
-- `offset` (optional): Pagination offset
+### Public endpoints
 
-**Example Request:**
+| Method | Path                              | Purpose                                    |
+| ------ | --------------------------------- | ------------------------------------------ |
+| GET    | /ping                             | Health check                               |
+| GET    | /public/games                     | Archived game summaries                    |
+| GET    | /public/game/:gameId              | Archived game record                       |
+| GET    | /game/:gameId                     | Legacy alias for the archived game record  |
+| GET    | /public/player/:publicId          | Public player profile                      |
+| GET    | /player/:publicId                 | Legacy alias for the public player profile |
+| GET    | /public/player/:publicId/sessions | Public player sessions                     |
+| GET    | /public/player/:publicId/games    | Public player game history                 |
+| GET    | /public/clans/leaderboard         | Rolling clan leaderboard                   |
+| GET    | /public/clan/:clanTag             | Clan statistics                            |
+| GET    | /public/clan/:clanTag/exists      | Clan existence check                       |
+| GET    | /public/clan/:clanTag/sessions    | Clan game sessions                         |
+| GET    | /public/tribe/:name               | Purchased tribe-name stats                 |
+| GET    | /leaderboard/public/ffa           | Public free-for-all leaderboard            |
+| GET    | /leaderboard/ranked               | Ranked 1v1 and 2v2 leaderboards            |
+| GET    | /leaderboard/tribes               | Custom tribe-name leaderboard              |
 
-```bash
-curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&type=Public&mode=Team&rankedType=unranked&limit=10&offset=5"
-```
+## Common conventions
 
-**Response:**
+### Authentication
 
-```json
-[
-  {
-    "game": "ABSgwin6",
-    "start": "2025-10-25T00:00:10.526Z",
-    "end": "2025-10-25T00:19:45.187Z",
-    "type": "Public",
-    "mode": "Team",
-    "difficulty": "Medium",
-    "numPlayers": 6,
-    "maxPlayers": 8,
-    "lobbyFillTime": 45000,
-    "playerTeams": "Duos",
-    "rankedType": "unranked"
-  }
-]
-```
+Send a short-lived player JWT as:
 
-The response includes a `Content-Range` header indicating pagination (e.g., `games 5-15/399`).
+    Authorization: Bearer <jwt>
 
----
+The API also sets an HttpOnly refresh-session cookie. Access tokens expire
+after about 15 minutes. Refresh sessions expire after 30 days of inactivity;
+successful refreshes renew the cookie and periodically rotate the session
+token. Browser clients should send credentials on cross-origin requests.
 
-### Get Game Info
+### Responses and errors
 
-Retrieve detailed information about a specific game.
+Successful JSON responses are normally 200. Other success statuses used by
+the API are:
 
-**Endpoint:**
+- 201 for a created resource
+- 202 when an operation is accepted for later processing
+- 204 when there is no response body
 
-```
-GET https://api.openfront.io/public/game/:gameId
-```
+Errors are JSON objects. Common shapes are:
 
-**Query Parameters:**
+    { "error": "Bad request", "message": "..." }
+    { "error": "Unauthorized", "message": "..." }
+    { "error": "Forbidden", "message": "..." }
+    { "error": "Not found", "message": "..." }
+    { "error": "Conflict", "message": "..." }
+    { "error": "Too many requests", "message": "..." }
 
-- `turns` (optional): Set to `false` to exclude turn data and reduce response size
+Some validation errors add fields such as code, reason, or details. A 429 may
+also include Retry-After.
 
-**Examples:**
+### Dates, identifiers, and pagination
 
-```bash
-# Full game data
-curl "https://api.openfront.io/public/game/ABSgwin6"
+Unless an endpoint says otherwise, timestamps are ISO 8601 strings. Where a
+path accepts a player reference rather than a literal public ID, it accepts a
+public ID, a full display name in base.disc form, or a bare premium name.
+Player references are limited to 25 characters.
 
-# Without turn data
-curl "https://api.openfront.io/public/game/ABSgwin6?turns=false"
-```
+Page-based endpoints use page numbers starting at 1. Cursor values are opaque:
+clients must not parse or manufacture them, and should retain the cursor
+alongside the filters that produced it.
 
-**Note:** Public player IDs are stripped from game records for privacy.
+## Public games and players
 
-## Players
+### GET /public/games
 
-### Get Player Info
+Lists archived games in ascending start-time order.
 
-Retrieve information and stats for a specific player.
+Required query parameters:
 
-**Endpoint:**
+- start: ISO 8601 lower bound
+- end: ISO 8601 upper bound
 
-```
-GET https://api.openfront.io/public/player/:playerId
-```
+The requested range may be at most two days. Optional filters:
 
-**Example:**
+- type: Singleplayer, Public, or Private
+- mode: Free For All or Team
+- rankedType: unranked, 1v1, or 2v2
+- playerTeams: exact non-empty player-team label, at most 20 characters (for
+  example Duos, Trios, Quads, Humans Vs Nations, 5v5, or 4v4v4)
+- limit: 1–1000, default 50
+- offset: non-negative integer, default 0
 
-```bash
-curl "https://api.openfront.io/public/player/HabCsQYR"
-```
+Each result contains:
 
-### Get Player Sessions
-
-Retrieve a list of games & client ids (session ids) for a specific player.
-
-**Endpoint:**
-
-```
-GET https://api.openfront.io/public/player/:playerId/sessions
-```
-
-**Example:**
-
-```bash
-curl "https://api.openfront.io/public/player/HabCsQYR/sessions"
-```
-
-### Get Player Games
-
-Retrieve a player's personal game history, newest first. Uses keyset (cursor)
-pagination rather than the `page`/`limit` scheme used elsewhere.
-
-**Endpoint:**
-
-```
-GET https://api.openfront.io/public/player/:playerId/games
-```
-
-**Query Parameters:**
-
-- `filter` (optional): Mode bucket, one of `[ffa, team, hvn, ranked]`. Omit for all modes.
-- `type` (optional): Game type, one of `[public, private, singleplayer]`. Omit for all types. `filter` and `type` are orthogonal and may be combined.
-- `cursor` (optional): Opaque continuation token. Pass the `nextCursor` value from the previous response verbatim to fetch the next page — do not construct or parse it.
-
-**Response:**
-
-```json
-{
-  "results": [
     {
-      "gameId": "abc123",
-      "start": "2026-05-17T21:04:00.000Z",
-      "durationSeconds": 1234,
-      "map": "World",
-      "mode": "Team",
+      "game": "game-id",
+      "start": "2026-01-01T12:00:00.000Z",
+      "end": "2026-01-01T12:20:00.000Z",
       "type": "Public",
+      "mode": "Team",
+      "difficulty": null,
+      "numPlayers": 10,
+      "maxPlayers": 20,
+      "lobbyFillTime": 15000,
       "playerTeams": "Duos",
-      "rankedType": "unranked",
-      "result": "victory",
-      "totalPlayers": 8,
-      "username": "alice",
-      "clanTag": "ABC"
+      "rankedType": "unranked"
     }
-  ],
-  "nextCursor": "opaque-token"
-}
-```
 
-- `result` is one of `[victory, defeat, incomplete]` (`incomplete` = no recorded winner).
-- `playerTeams`, `totalPlayers`, and `clanTag` may be `null`.
-- `nextCursor` is `null` when there are no more games.
-- `username`/`clanTag` reflect the identity the player used in that specific game.
+Values such as end, difficulty, player counts, lobbyFillTime,
+playerTeams, and rankedType may be null. lobbyFillTime is milliseconds from
+lobby visibility or creation until the game starts. The response includes:
 
-**Example:**
+    Content-Range: games <offset>-<exclusiveEnd>/<total>
 
-```bash
-curl "https://api.openfront.io/public/player/HabCsQYR/games?filter=team&type=public"
-```
+exclusiveEnd is offset plus the number of entries returned.
 
-## Clans
+### GET /public/game/:gameId
 
-### Clan Leaderboard
+### GET /game/:gameId
 
-Shows the top 100 clans by `weighted wins`.
+Returns the archived GameRecord for a game. The second path is a legacy alias.
+Pass turns=false to omit the potentially large turns array:
 
-**Endpoint:**
+    GET /public/game/<gameId>?turns=false
 
-```
-GET https://api.openfront.io/public/clans/leaderboard
-```
+The identifier may be an older eight-character ID or a newer encoded game ID.
+Unknown games return 404.
 
-Weighted wins have a half-life of 30 days to favor recent wins.
+### GET /public/player/:publicId
 
-Weighted wins are calculated using the following formula:
+### GET /player/:publicId
 
-```
-FUNCTION calculateScore(session: ClanSession, decay: NUMBER = 1) → NUMBER
-    // 1. Calculate average team size
-    avgTeamSize ← session.totalPlayerCount ÷ session.numTeams
+Returns a public player profile. The second path is a legacy alias. A profile
+contains:
 
-    // 2. Determine how much the clan contributed to their team
-    //    (clan players divided by average players per team)
-    clanMemberRatio ← session.clanPlayerCount ÷ avgTeamSize
+- publicId and createdAt
+- username, when one is set
+- the linked Discord user object when the player has made the profile public
+- aggregated stats, including wins, losses, and total games, in a tree keyed
+  by game type (Public or Private), then game mode (Free For All or Team),
+  then difficulty, plus a separate Ranked branch keyed by 1v1 and 2v2
+- current clan memberships with tag, name, role, joinedAt, and memberCount
 
-    // 3. Apply decay factor (e.g., for older sessions)
-    weightedValue ← clanMemberRatio × decay
+Team games played as Humans vs Nations are not broken out in this tree; they
+are counted under Team. To split them out, use the hvn filter on the game
+history endpoint below.
 
-    // 4. Calculate match difficulty based on number of teams
-    //    More teams → harder to win → higher reward for victory
-    //    Uses square root to avoid extreme scaling
-    difficulty ← MAX(1, √(session.numTeams - 1))
+Private Discord identity data is omitted for a private profile. The profile
+stats exclude singleplayer games entirely, so no Singleplayer branch is
+returned. The wins, losses, and total counters in each populated stats leaf
+are decimal strings to preserve integer precision. The path segment also
+accepts a base.disc display name or bare premium username and returns the
+canonical publicId. The sessions and games subroutes below require that canonical public
+ID rather than a username reference.
 
-    // 5. Return final score:
-    //    - Win:  reward is multiplied by difficulty
-    //    - Loss: penalty is divided by difficulty (less punishment in harder matches)
-    IF session.hasWon THEN
-        RETURN weightedValue × difficulty
-    ELSE
-        RETURN weightedValue ÷ difficulty
-    END IF
-END FUNCTION
-```
+### GET /public/player/:publicId/sessions
 
-### Clan stats
+Returns the player's recorded sessions as a JSON array. Each element has this
+shape:
 
-Displays comprehensive clan performance statistics for a specified clan over a chosen time range. If no time range is provided, it shows lifetime stats (starting from early November 2025).
+    {
+      "gameId": "game-id",
+      "gameStart": "2026-01-01T12:00:00.000Z",
+      "gameEnd": "2026-01-01T12:20:00.000Z",
+      "gameType": "Public",
+      "gameMode": "Team",
+      "gameRankedType": "unranked",
+      "clientId": "client-id",
+      "username": "Player",
+      "clanTag": "ABC",
+      "hasWon": true
+    }
 
-Key metrics include:
+Nullable session fields may be null. Session order is unspecified. A player
+with no sessions returns 404.
 
-- Total games, wins, losses, and win rate
-- Win/loss ratio and weighted win/loss ratio\* broken down by:
-  - Team type (e.g., 2 teams, 3 teams, duos, trios, etc)
-  - Number of teams in the game (2 teams, 5 teams, 20 teams, etc)
+### GET /public/player/:publicId/games
 
-**Note:** No decay is used, so weighted wins will be different from in the leaderboard.
+Returns a keyset-paginated public game history. The page size is fixed at 10.
 
-**Endpoint**
+Query parameters:
 
-```
-GET https://openfront.io/public/clan/:clanTag
-```
+- filter: ffa, team, hvn, or ranked
+- type: public, private, or singleplayer
+- cursor: opaque cursor from the previous response
 
-**Query Parameters:**
+The cursor is tied to filter and type; changing either while reusing a cursor
+returns 400. The response is:
 
-- `start` (optional): ISO 8601 timestamp
-- `end` (optional): ISO 8601 timestamp
+    {
+      "results": [
+        {
+          "gameId": "game-id",
+          "start": "2026-01-01T12:00:00.000Z",
+          "durationSeconds": 1200,
+          "map": "TestMap",
+          "mode": "Team",
+          "type": "Public",
+          "playerTeams": "Duos",
+          "rankedType": "unranked",
+          "result": "victory",
+          "totalPlayers": 10,
+          "username": "Player",
+          "clanTag": "ABC"
+        }
+      ],
+      "nextCursor": "eyJnYW1lSWQiOiIxMjM0NSJ9"
+    }
 
-**Example**
+nextCursor is a JSON string when another page exists and JSON null on the
+last page. Stop paginating when it is null; never send the literal string
+"null" back as a cursor.
 
-```bash
-curl https://api.openfront.io/public/clan/UN?start=2025-11-15T00:00:00Z &
-end=2025-11-18T23:59:59Z
-```
+result is victory, defeat, or incomplete. totalPlayers, playerTeams, and
+clanTag can be null. username and clanTag reflect the identity recorded in
+that game session. Results are ordered by descending session game ID, normally
+newest first. Unknown players return 404.
 
-### Clan Sessions
+## Public clans and leaderboards
 
-A clan session is created any time a player with that clan tag is in a public team game. If no start or end query parameter is provided, lifetime sessions (starting early November 2025) are shown.
+Clan tags are case-insensitive in lookup paths and are returned uppercase.
+Public clan statistics use only public, unranked Team games and exclude Humans
+vs Nations games.
 
-**Endpoint**
+### GET /public/clan/:clanTag/exists
 
-```
-GET https://api.openfront.io/public/clan/:clanTag/sessions
-```
+Returns a minimal existence check:
 
-**Query Parameters:**
+    { "exists": true }
 
-- `start` (optional): ISO 8601 timestamp
-- `end` (optional): ISO 8601 timestamp
-- `page` (optional): Page number, 1-200 (default: 1)
-- `limit` (optional): Results per page, 1-50 (default: 20)
+An existing clan returns 200. A missing clan returns 404.
 
-**Response:**
+### GET /public/clan/:clanTag
 
-```json
-{
-  "results": [ ... ],
-  "total": 150,
-  "page": 1,
-  "limit": 20
-}
-```
+Required query parameters:
 
-Results are ordered by game start time, newest first.
+- start: ISO 8601 interval start
+- end: ISO 8601 interval end
 
-**Example**
+The interval must be no longer than one day and end must not precede start.
+Both bounds are required; neither may be omitted.
 
-```bash
-curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-18T23:59:59Z&limit=10&page=1"
-```
+Response:
+
+    {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "clan": {
+        "clanTag": "ABC",
+        "games": 12,
+        "playerSessions": 45,
+        "wins": 8,
+        "losses": 4,
+        "weightedWins": 7.2,
+        "weightedLosses": 4.8,
+        "weightedWLRatio": 1.5,
+        "teamTypeWL": {
+          "2v2": {
+            "wl": [5, 2],
+            "weightedWL": [4.6, 2.4]
+          }
+        },
+        "teamCountWL": {
+          "2": {
+            "wl": [5, 2],
+            "weightedWL": [4.6, 2.4]
+          }
+        }
+      }
+    }
+
+teamTypeWL keys are player-team labels, such as 2v2. teamCountWL keys are
+team-count labels. Each wl and weightedWL value is [wins, losses]. The
+weighted values use the clan's team-size ratio and game difficulty; this
+endpoint does not apply the rolling leaderboard's time decay.
+
+A valid tag with no matching sessions, including an unregistered tag, returns
+200 with zero-valued statistics.
+
+### GET /public/clan/:clanTag/sessions
+
+Uses the same required start and end parameters and one-day maximum as the
+clan statistics endpoint. Optional pagination:
+
+- page: positive integer, default 1
+- limit: 1–50, default 10
+
+Response:
+
+    {
+      "results": [
+        {
+          "gameId": "game-id",
+          "clanTag": "ABC",
+          "clanPlayerCount": 4,
+          "hasWon": true,
+          "numTeams": 2,
+          "playerTeams": "2v2",
+          "totalPlayerCount": 10,
+          "gameStart": "2026-01-01T12:00:00.000Z",
+          "score": 2.1
+        }
+      ],
+      "total": 12,
+      "page": 1,
+      "limit": 10
+    }
+
+Sessions are newest first. score is positive for a win and negative for a
+loss. A session can include historical clan-member counts even when the
+player's current membership has changed. A valid tag with no matching
+sessions, including an unregistered tag, returns 200 with results: [] and
+total: 0.
+
+### GET /public/clans/leaderboard
+
+Returns the public clan leaderboard for a rolling 90-day window. The window
+uses a 30-day half-life for time decay. It contains public, unranked Team
+games and excludes Humans vs Nations games.
+
+The leaderboard normally requires at least 100 games per clan, while always
+retaining the top 10 clans so a new/low-volume leaderboard is useful. Results
+are sorted by weightedWins and the response is:
+
+    {
+      "start": "2025-12-01T00:00:00.000Z",
+      "end": "2026-03-01T00:00:00.000Z",
+      "clans": [
+        {
+          "clanTag": "ABC",
+          "games": 120,
+          "wins": 75,
+          "losses": 45,
+          "playerSessions": 500,
+          "weightedWins": 62.4,
+          "weightedLosses": 38.1,
+          "weightedWLRatio": 1.64
+        }
+      ]
+    }
+
+The response is cached for about one hour. The implementation also applies a
+historical cutoff of 2025-11-12 when calculating the rolling window.
+
+### GET /leaderboard/:type/:mode
+
+The legacy leaderboard route only accepts type=public and mode=ffa, so the
+canonical URL is /leaderboard/public/ffa. It covers public Free For All games,
+requires more than 20 games, excludes banned players, and returns at most 40
+entries.
+
+Each entry contains:
+
+    {
+      "wlr": 1.75,
+      "wins": 35,
+      "losses": 20,
+      "total": 55,
+      "public_id": "player-public-id",
+      "username": "Player",
+      "user": {
+        "id": "discord-id",
+        "username": "discord-name",
+        "global_name": "Display name"
+      }
+    }
+
+user may be null when there is no public linked Discord profile. username may
+be null when the player has not set an account username. This route is cached
+briefly (about one minute).
+
+### GET /leaderboard/ranked
+
+Query parameter:
+
+- page: 1 or 2, default 1
+
+Each page has up to 50 entries for both ranked ladders. The response has
+separate 1v1 and 2v2 arrays:
+
+    {
+      "1v1": [
+        {
+          "rank": 1,
+          "elo": 1500,
+          "peakElo": 1600,
+          "wins": 20,
+          "losses": 5,
+          "total": 25,
+          "public_id": "player-public-id",
+          "accountUsername": "Player",
+          "username": "Player"
+        }
+      ],
+      "2v2": []
+    }
+
+peakElo and accountUsername can be null. username is the display-name
+fallback used by clients. This leaderboard is cached for about one hour.
+
+### GET /leaderboard/tribes
+
+Query parameter:
+
+- page: 1 or 2, default 1
+
+This is a rolling 30-day leaderboard for purchased custom tribe names. The
+response is:
+
+    {
+      "windowDays": 30,
+      "start": "2026-01-01",
+      "end": "2026-01-31",
+      "tribes": [
+        {
+          "rank": 1,
+          "name": "Example Tribe",
+          "gamesAppeared": 42,
+          "playerReach": 1000,
+          "ownerPublicId": "player-public-id",
+          "ownerUsername": "Player",
+          "activeBoosts": 2
+        }
+      ]
+    }
+
+Each page contains up to 50 entries, and ranks are absolute across pages.
+Entries are sorted by playerReach descending, then gamesAppeared descending,
+then stable internal ID order. playerReach is the accumulated impression/reach
+metric, not a distinct-player count. ownerUsername can be null. This
+leaderboard is cached for about one hour.
+
+### GET /public/tribe/:name
+
+Looks up a purchased custom tribe name by its normalized name. Lookup is
+case- and whitespace-insensitive, and the response preserves the canonical
+display form.
+
+Only active names (`pending` or `live`) are visible. A name owned by an
+actively banned player, a rejected or revoked name, and an unknown name all
+return 404. A name that is empty after normalization returns 400.
+
+Response:
+
+    {
+      "name": "Cool Tribe",
+      "ownerPublicId": "abc123",
+      "ownerUsername": "Ada.4821",
+      "activeBoosts": 2,
+      "lifetime": {
+        "gamesAppeared": 107,
+        "playerReach": 10699
+      },
+      "window": {
+        "days": 30,
+        "start": "2026-07-02",
+        "end": "2026-08-01",
+        "gamesAppeared": 7,
+        "playerReach": 700
+      }
+    }
+
+`lifetime` contains all-time games-appeared and player-reach totals.
+`window` contains the same metrics for the rolling 30-day leaderboard window.
+`activeBoosts` counts only unexpired boosts. `ownerUsername` is null when the
+owner has not set an account username.
+
+## Health
+
+### GET /ping
+
+Returns 204 when the API worker is reachable.
