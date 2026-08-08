@@ -930,19 +930,6 @@ export function maxBulkAmount(bu: BuildableUnit, gold: Gold): number {
 export const NUKE_BULK_STEPS: readonly number[] = [2, 5];
 export const STRUCTURE_BULK_STEPS: readonly number[] = [5, 10];
 
-// The bulk amounts menus offer: x1, the fixed mid steps below `maxAmount`,
-// plus `maxAmount` itself (the most the player can execute right now).
-export function bulkAmountOptions(
-  maxAmount: number,
-  steps: readonly number[] = STRUCTURE_BULK_STEPS,
-): number[] {
-  const options = [1, ...steps.filter((n) => n < maxAmount)];
-  if (maxAmount > 1) {
-    options.push(maxAmount);
-  }
-  return options;
-}
-
 export interface PlayerProfile {
   relations: Record<number, Relation>;
   alliances: number[];
