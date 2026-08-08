@@ -550,8 +550,8 @@ export class Config {
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
-  ): (g: Game, p: Player) => bigint {
-    return (game: Game, player: Player) => {
+  ): (g: Game, p: Player, extraUnits?: number) => bigint {
+    return (game: Game, player: Player, extraUnits: number = 0) => {
       if (
         player.type() === PlayerType.Human &&
         this.hasInfiniteGoldFor(player)
@@ -564,7 +564,7 @@ export class Config {
           Math.min(player.unitsOwned(type), player.unitsConstructed(type)),
         0,
       );
-      return BigInt(costFn(numUnits));
+      return BigInt(costFn(numUnits + extraUnits));
     };
   }
 

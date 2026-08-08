@@ -67,6 +67,7 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
+        upgradeMultiplier: 1,
       },
       mockCanvas,
       eventBus,
@@ -1115,7 +1116,12 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
         inSpawnPhase: () => false,
         myPlayer: () => ({ isAlive: () => true }),
       } as unknown as GameView,
-      { attackRatio: 20, ghostStructure: null, rocketDirectionUp: true },
+      {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      },
       canvas,
       eventBus,
     );

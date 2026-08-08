@@ -103,13 +103,18 @@ export class Executor {
           intent.unit,
           intent.tile,
           intent.rocketDirectionUp,
+          intent.amount,
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
       }
 
       case "upgrade_structure":
-        return new UpgradeStructureExecution(player, intent.unitId);
+        return new UpgradeStructureExecution(
+          player,
+          intent.unitId,
+          intent.amount,
+        );
       case "delete_unit":
         return new DeleteUnitExecution(player, intent.unitId);
       case "quick_chat":

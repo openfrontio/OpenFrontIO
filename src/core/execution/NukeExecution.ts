@@ -192,6 +192,18 @@ export class NukeExecution implements Execution {
       // The launch tile can be overridden by the caller (e.g. MIRV warheads
       // launch from the MIRV separation point, not a silo).
       this.src ??= spawn;
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .find((silo) => silo.tile() === spawn);
+      // Stacked purchases launch several nukes on the same tick; delay each
+      // by the number of same-tick launches already claimed on this silo so
+      // missiles from one silo trail each other instead of overlapping,
+      // while separate silos still fire simultaneously.
+      if (silo !== undefined) {
+        this.waitTicks += silo
+          .missileTimerQueue()
+          .filter((t) => t === this.mg.ticks()).length;
+      }
       this.nuke = this.player.buildUnit(this.nukeType, this.src, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
@@ -227,9 +239,6 @@ export class NukeExecution implements Execution {
       }
 
       // after sending a nuke set the missilesilo on cooldown
-      const silo = this.player
-        .units(UnitType.MissileSilo)
-        .find((silo) => silo.tile() === spawn);
       if (silo) {
         silo.launch();
       }
