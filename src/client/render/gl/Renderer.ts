@@ -11,6 +11,7 @@
 
 import type { Config } from "../../../core/configuration/Config";
 import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -1048,6 +1049,12 @@ export class GPURenderer {
             cost: data.cost,
             canAfford: data.canAfford,
             canPlace: data.canBuild || data.canUpgrade,
+            topText:
+              data.multiplier && data.multiplier > 1
+                ? translateText("build_menu.upgrade_amount", {
+                    amount: data.multiplier.toString(),
+                  })
+                : undefined,
           }
         : null,
     );

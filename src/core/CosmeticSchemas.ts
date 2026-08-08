@@ -183,16 +183,18 @@ export const NUKE_EXPLOSION_TYPES = ["atom", "hydro", "mirvWarhead"] as const;
 export type NukeExplosionType = (typeof NUKE_EXPLOSION_TYPES)[number];
 
 // A nuke-explosion effect — a detonation FX, not a trail. `type` picks the
-// visual (an expanding "shockwave" ring, or a firework burst of twinkling
-// "sparkles") and `nukeType` the bomb; a value this client can't render is
+// visual (an expanding "shockwave" ring, a firework burst of twinkling
+// "sparkles", or "embers", a top-down pixel ember splash sharing the sparkles
+// fields) and `nukeType` the bomb; a value this client can't render is
 // dropped by lenientRecord instead of rendering wrong. Shared knobs:
 // `colors` is the palette; size (final effect width in tiles), speed (tiles/s
-// the width grows), thickness (ring band thickness — or average sparkle size,
-// glints vary ±50% around it — in tiles), and transitionSpeed (palette
-// colors/s) drive the animation. Sparkles also take density — roughly how
-// many sparkles the burst contains. size, thickness, and density must be
-// positive — a non-positive value hits undefined shader behavior, so the
-// entry is dropped like the enums; the renderer clamps speed and density.
+// the width grows), thickness (ring band thickness — or average sparkle/ember
+// size, glints vary ±50% around it — in tiles), and transitionSpeed (palette
+// colors/s) drive the animation. Sparkles and embers also take density —
+// roughly how many sparkles/embers the burst contains. size, thickness, and
+// density must be positive — a non-positive value hits undefined shader
+// behavior, so the entry is dropped like the enums; the renderer clamps speed
+// and density.
 export const NukeExplosionAttributesSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("shockwave"),
@@ -205,6 +207,16 @@ export const NukeExplosionAttributesSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("sparkles"),
+    nukeType: z.enum(NUKE_EXPLOSION_TYPES),
+    colors: z.array(z.string()),
+    size: z.number().positive(),
+    speed: z.number(),
+    thickness: z.number().positive(),
+    transitionSpeed: z.number(),
+    density: z.number().positive(),
+  }),
+  z.object({
+    type: z.literal("embers"),
     nukeType: z.enum(NUKE_EXPLOSION_TYPES),
     colors: z.array(z.string()),
     size: z.number().positive(),

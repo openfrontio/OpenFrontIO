@@ -22,6 +22,7 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
+  MAX_UPGRADE_AMOUNT,
   MutableAlliance,
   Player,
   PlayerBuildable,
@@ -59,6 +60,9 @@ import {
   canBuildTransportShip,
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
+
+// Rot re-stamps every second, so a little slack keeps the cue from strobing.
+const DECAY_CUE_GRACE_TICKS = 30;
 
 interface Target {
   tick: Tick;
@@ -108,6 +112,8 @@ export class PlayerImpl implements Player {
 
   markedTraitorTick = -1;
   markedDoomsdayClockTick = -1;
+  /** Tick territory rot last took land from this player (-1 = never). */
+  private rottedAtTick = -1;
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
@@ -334,6 +340,7 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
       inDoomsdayClock: this.inDoomsdayClock(),
+      isDecaying: this.isDecaying(),
       markedDoomsdayClockTick: this.markedDoomsdayClockTick,
       targets: targets,
       outgoingEmojis: outgoingEmojis,
@@ -779,6 +786,20 @@ export class PlayerImpl implements Player {
 
   clearDoomsdayClock(): void {
     this.markedDoomsdayClockTick = -1;
+    this.rottedAtTick = -1;
+  }
+
+  markRotted(): void {
+    this.rottedAtTick = this.mg.ticks();
+  }
+
+  // Territory actively rotting. Stamped by the execution rather than derived from
+  // troops vs the floor: that is a knife-edge equality (the drain lands exactly ON
+  // the floor) and the floor moves as rot shrinks the cap, so a client-side copy
+  // flickers.
+  isDecaying(): boolean {
+    if (!this.inDoomsdayClock() || this.rottedAtTick < 0) return false;
+    return this.mg.ticks() - this.rottedAtTick <= DECAY_CUE_GRACE_TICKS;
   }
 
   betrayals(): number {
@@ -1356,11 +1377,25 @@ export class PlayerImpl implements Player {
 
       const buildNew = canBuild !== false && canUpgrade === false;
 
+      // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
+      // and the constructed count, so step n costs the same as if the player
+      // already had n extra units — cost(mg, this, n).
+      let upgradeCosts: Gold[] | undefined;
+      if (canUpgrade !== false) {
+        upgradeCosts = new Array<Gold>(MAX_UPGRADE_AMOUNT);
+        let total = 0n;
+        for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
+          total += config.unitInfo(u).cost(mg, this, n);
+          upgradeCosts[n] = total;
+        }
+      }
+
       result[i] = {
         type: u,
         canBuild,
         canUpgrade,
         cost,
+        upgradeCosts,
         overlappingRailroads: buildNew
           ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],

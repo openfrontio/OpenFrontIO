@@ -14,6 +14,7 @@ import {
 } from "../../core/execution/Util";
 import {
   BuildableUnit,
+  bulkCost,
   PlayerBuildableUnitType,
   UnitType,
 } from "../../core/game/Game";
@@ -25,7 +26,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
-import { MapRenderer, buildNukeTrajectory } from "../render/gl";
+import { buildNukeTrajectory, MapRenderer } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
@@ -472,7 +473,18 @@ export class BuildPreviewController implements Controller {
       radiusTileY = this.game.y(upgradeTargetTile);
     }
 
-    const cost = u.cost;
+    const isNuke = u.type === UnitType.AtomBomb;
+    const multiplier =
+      u.canUpgrade !== false || isNuke
+        ? (this.uiState.upgradeMultiplier ?? 1)
+        : 1;
+    const cost = bulkCost(u, multiplier);
+    // Drives the red cost label: gold short of the bulk total, or (for
+    // bombs) fewer loaded silo tubes than the selected amount.
+    let canAfford = myPlayer.gold() >= cost;
+    if (isNuke) {
+      canAfford &&= myPlayer.readyMissileCount() >= multiplier;
+    }
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
@@ -482,8 +494,9 @@ export class BuildPreviewController implements Controller {
       canBuild: u.canBuild !== false,
       canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),
+      multiplier: multiplier,
       showCost: this.userSettings.cursorCostLabel(),
-      canAfford: myPlayer.gold() >= cost,
+      canAfford,
       ghostRailPaths: u.ghostRailPaths,
       overlappingRailroads: u.overlappingRailroads,
       ownerID: myPlayer.smallID(),
@@ -523,11 +536,13 @@ export class BuildPreviewController implements Controller {
         new SendUpgradeStructureIntentEvent(
           this.ghostUnit.buildableUnit.canUpgrade,
           this.ghostUnit.buildableUnit.type,
+          this.uiState.upgradeMultiplier || 1,
         ),
       );
       this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       const unitType = this.ghostUnit.buildableUnit.type;
+      const isNuke = unitType === UnitType.AtomBomb;
       const rocketDirectionUp =
         unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
           ? this.uiState.rocketDirectionUp
@@ -537,6 +552,7 @@ export class BuildPreviewController implements Controller {
           unitType,
           this.game.ref(tile.x, tile.y),
           rocketDirectionUp,
+          isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
         ),
       );
       if (!shouldPreserveGhostAfterBuild(unitType)) {

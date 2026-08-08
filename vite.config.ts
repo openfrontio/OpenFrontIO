@@ -52,6 +52,66 @@ function serveProprietaryDir(
   };
 }
 
+// Dev-only stand-in for nginx's `location = /link` blocks (see nginx.conf).
+//
+// The desktop app's account-linking gate prints a short URL for the player to
+// type by hand when it cannot open their browser for them. In production
+// nginx 302s /link to /#steam-link, the client route that shows the code-entry
+// form. Without this middleware the dev server falls through to Vite's SPA
+// fallback and serves the home page instead -- a 200, so it does not look
+// broken, but the printed URL silently would not work locally.
+//
+// A redirect rather than serving index.html directly, so dev matches
+// production exactly and the desktop's siteUrlForAudience can emit one URL
+// shape for every environment.
+function steamLinkAliasRedirect(): Plugin {
+  return {
+    name: "steam-link-alias-redirect",
+    configureServer(server) {
+      // Matches on `originalUrl`, not `url`, and that is load-bearing.
+      //
+      // Whatever the documented middleware ordering, the measured behaviour
+      // in this config is that by the time this handler runs `req.url` has
+      // already been rewritten to "/index.html", while `originalUrl` still
+      // holds what the browser asked for. Logging both showed a request to
+      // /link arriving here as url="/index.html", originalUrl="/link".
+      // Which middleware performs that rewrite was not established, so this
+      // deliberately does not claim one.
+      //
+      // The practical warning: switching this to `req.url` type-checks,
+      // lints, runs, and silently never matches -- the dev server just keeps
+      // serving the home page with a 200. Re-verify against a running server
+      // if you change it, and use a control path (e.g. /linkxyz) to prove a
+      // 200 is not coming from the SPA fallback.
+      server.middlewares.use((req, res, next) => {
+        const requested = (req as { originalUrl?: string }).originalUrl;
+        if (!requested) return next();
+
+        // Decode before comparing, because nginx resolves percent-encoded
+        // bytes before exact `location =` matching but URL.pathname does
+        // not: "/link%2F" reaches production as /link/ and redirects, and
+        // would otherwise fall straight through here. The whole point of
+        // this plugin is that dev and production agree.
+        let pathname: string;
+        try {
+          pathname = decodeURIComponent(
+            new URL(requested, "http://x").pathname,
+          );
+        } catch {
+          // Malformed percent-encoding -- not our route; let Vite answer.
+          return next();
+        }
+
+        // Exact matches only, mirroring nginx's `location =`. A prefix match
+        // would swallow any future /link/* route.
+        if (pathname !== "/link" && pathname !== "/link/") return next();
+        res.writeHead(302, { Location: "/#steam-link" });
+        res.end();
+      });
+    },
+  };
+}
+
 // Dev-only stand-in for the nginx random-worker routing (the openfront_workers
 // upstream). Forwards these prefix-less POSTs to a randomly chosen worker port
 // so the worker can mint a self-owned id. Runs as direct middleware (before
@@ -210,6 +270,7 @@ export default defineConfig(({ mode }) => {
         ? [
             serveProprietaryDir(proprietaryDir, resourcesDir),
             randomWorkerCreateProxy(devNumWorkers),
+            steamLinkAliasRedirect(),
           ]
         : []),
       ...(isProduction

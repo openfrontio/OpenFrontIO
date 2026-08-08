@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { ANON_ANIMALS, anonAnimalName } from "../core/AnonAnimals";
+import { ANON_WORDS, anonWordName } from "../core/AnonNames";
 import { isTemporaryUsername, UserMeResponse } from "../core/ApiSchemas";
 import { sanitizeClanTag } from "../core/Util";
 import {
@@ -530,18 +530,19 @@ export function isPlayingVerified(): boolean {
   return el?.isVerified() ?? false;
 }
 
-// A memorable anonymous username: "Anon" + animal (+ digit), the same handle
-// format the server-side anonymisation overlay uses (anonAnimalName). Client-side
-// fallback for players who never set a name — no roster here, so it draws a
-// random slot (best-effort-unique); the overlay is what guarantees uniqueness
-// in-game.
+// A memorable anonymous username: "Anon" + animal (+ digit). Draws from the same
+// word bank as the server-side anonymisation overlay, but keeps the "Anon" prefix
+// that the overlay drops — here it tells the player their name is a placeholder.
+// Client-side fallback for players who never set a name — no roster here, so it
+// draws a random slot (best-effort-unique); the overlay is what guarantees
+// uniqueness in-game.
 //
 // Rejection-sample a uniform slot in [0, bound) from the CSPRNG: drawing a raw
 // uint32 and taking `% bound` would be very slightly biased (the top partial
 // bucket), so we discard the unrepresentable tail first. The bias is cosmetically
 // irrelevant here, but this keeps the draw provably uniform.
 export function genAnonUsername(): string {
-  const bound = ANON_ANIMALS.length * 10;
+  const bound = ANON_WORDS.length * 10;
   const limit = Math.floor(0x1_0000_0000 / bound) * bound;
   const buf = new Uint32Array(1);
   let rand: number;
@@ -549,5 +550,8 @@ export function genAnonUsername(): string {
     crypto.getRandomValues(buf);
     rand = buf[0] ?? 0;
   } while (rand >= limit);
-  return anonAnimalName(rand % bound);
+  // The "Anon" prefix lives HERE, not in anonWordName: a signed-out player's
+  // handle should say it is a placeholder, whereas the in-game anonymisation
+  // setting makes everyone anonymous and gains nothing from repeating the word.
+  return `Anon${anonWordName(rand % bound)}`;
 }

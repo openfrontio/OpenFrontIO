@@ -214,7 +214,13 @@ export class GameImpl implements Game {
       ...this._humans,
       ...this._nations.map((n) => n.playerInfo),
     ];
-    const playerToTeam = assignTeams(allPlayers, this.playerTeams);
+    const pt = this._config.playerTeams();
+    const isDuosTriosQuads = pt === Duos || pt === Trios || pt === Quads;
+    const playerToTeam = assignTeams(
+      allPlayers,
+      this.playerTeams,
+      isDuosTriosQuads,
+    );
     for (const [playerInfo, team] of playerToTeam.entries()) {
       if (team === "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);

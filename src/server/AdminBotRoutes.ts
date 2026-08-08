@@ -76,12 +76,47 @@ export function registerAdminBotRoutes(opts: {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
     const config = parsed.data;
+    // Optional public listing (#4480). Read alongside the config, not from it:
+    // `listed` lives on GameServer precisely so it can't be smuggled through
+    // GameConfig, and the schema parse above strips it from `config` for us.
+    //
+    // Set at CREATE time rather than via a follow-up toggle because a bot never
+    // needs to withdraw a listing by hand — a lobby delists itself the moment it
+    // starts, fills or dies. The human toggle (POST /api/game/:id/listing) can't
+    // serve a bot: it authorizes via isCreator + subscription, and an admin-bot
+    // lobby is deliberately created with NO creatorPersistentID (below), so it has
+    // no owner to match and no account to bill.
+    const listedParsed = z
+      .object({ listed: z.boolean().optional() })
+      .safeParse(req.body ?? {});
+    if (!listedParsed.success) {
+      return res
+        .status(400)
+        .json({ error: z.prettifyError(listedParsed.error) });
+    }
+    const listed = listedParsed.data.listed === true;
     // Private only: reject Public and Singleplayer. An omitted gameType defaults
     // to Private in createGame, so it's allowed through.
     if (config.gameType !== undefined && config.gameType !== GameType.Private) {
       return res
         .status(400)
         .json({ error: "admin bot can only create private games" });
+    }
+
+    // Guard BEFORE minting a lobby, so an ineligible request doesn't leave an
+    // orphan behind. Both mirror the human endpoint's refusals: a whitelisted
+    // lobby would be advertised to everyone yet reject every joiner (and the
+    // whitelist is stripped from the broadcast, so browsers couldn't tell why),
+    // and host cheats give the host an edge over players recruited from the
+    // browser. The cluster-wide MAX_HOSTED_LOBBIES cap is left to the master,
+    // which already delists overflow as the authoritative backstop.
+    if (listed) {
+      if ((config.allowedPublicIds?.length ?? 0) > 0) {
+        return res.status(409).json({ error: "listing_whitelist_enabled" });
+      }
+      if (config.hostCheats !== undefined) {
+        return res.status(409).json({ error: "listing_host_cheats_enabled" });
+      }
     }
 
     const id = ServerEnv.generateGameIdForWorker(workerId);
@@ -94,7 +129,10 @@ export function registerAdminBotRoutes(opts: {
     if (game === null) {
       return res.status(409).json({ error: "Game ID already exists" });
     }
-    log.info(`admin bot created game ${id}`);
+    if (listed) {
+      game.setListed(true);
+    }
+    log.info(`admin bot created game ${id}`, { listed });
     res.json({
       ...game.gameInfo(),
       workerIndex: workerId,

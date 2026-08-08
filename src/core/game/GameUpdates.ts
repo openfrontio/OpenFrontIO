@@ -243,6 +243,7 @@ export interface PlayerUpdate {
   isTraitor?: boolean;
   traitorRemainingTicks?: number;
   inDoomsdayClock?: boolean;
+  isDecaying?: boolean;
   markedDoomsdayClockTick?: number;
   targets?: number[];
   outgoingEmojis?: EmojiMessage[];

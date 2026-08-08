@@ -85,6 +85,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
     inDoomsdayClock: pu.inDoomsdayClock ?? false,
+    isDecaying: pu.isDecaying ?? false,
     markedDoomsdayClockTick: pu.markedDoomsdayClockTick ?? -1,
     betrayals: pu.betrayals!,
     hasSpawned: pu.hasSpawned!,
@@ -420,6 +421,18 @@ export class PlayerView {
     return owned.filter((u) => types.includes(u.type()));
   }
 
+  /** Missiles launchable right now: each silo holds `level` tubes, minus
+   *  those still reloading. Caps how many nukes a bulk purchase can fire. */
+  readyMissileCount(): number {
+    return this.units(UnitType.MissileSilo).reduce(
+      (acc, silo) =>
+        silo.isUnderConstruction()
+          ? acc
+          : acc + Math.max(0, silo.level() - silo.missileTimerQueue().length),
+      0,
+    );
+  }
+
   nameLocation(): NameViewData | undefined {
     return this.nameData;
   }
@@ -616,6 +629,9 @@ export class PlayerView {
   }
   inDoomsdayClock(): boolean {
     return this.state.inDoomsdayClock;
+  }
+  isDecaying(): boolean {
+    return this.state.isDecaying;
   }
   doomsdayClockTicks(): number {
     return this.inDoomsdayClock()

@@ -1,3 +1,5 @@
+import { ConstructionExecution } from "../../../src/core/execution/ConstructionExecution";
+import { MissileSiloExecution } from "../../../src/core/execution/MissileSiloExecution";
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
@@ -363,5 +365,120 @@ describe("NukeExecution", () => {
     }
 
     expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+  });
+
+  test("stacked atom bombs launch staggered and fly on distinct tiles", () => {
+    const silo = player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    // A silo holds `level` concurrent missiles; raise to 3 so the whole stack launches.
+    silo.increaseLevel();
+    silo.increaseLevel();
+    // Each added level starts on reload cooldown — clear both so all tubes are ready.
+    silo.reloadMissile();
+    silo.reloadMissile();
+
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Construction completes and all three NukeExecutions build their nukes.
+    executeTicks(game, 3);
+    expect(player.units(UnitType.AtomBomb)).toHaveLength(3);
+
+    // Each bomb waits one tick longer than the previous, so once all are
+    // moving they trail each other along the same path on distinct tiles.
+    executeTicks(game, 4);
+    const tiles = player.units(UnitType.AtomBomb).map((n) => n.tile());
+    expect(tiles).toHaveLength(3);
+    expect(new Set(tiles).size).toBe(3);
+  });
+
+  test("stacked atom bombs across silos fire simultaneously, staggered within each silo", () => {
+    // At default speed the parabola's early points cluster on the launch
+    // tile, so a departed bomb is indistinguishable from a waiting one for
+    // several ticks. A high speed makes the first move leave the silo tile.
+    (game.config() as TestConfig).setDefaultNukeSpeed(20);
+
+    // Away from the map corner — a parabola launched from the corner has a
+    // degenerate first segment that stays on the launch tile.
+    const siloA = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    const siloB = player.buildUnit(UnitType.MissileSilo, game.ref(50, 54), {});
+    for (const silo of [siloA, siloB]) {
+      silo.increaseLevel();
+      silo.reloadMissile();
+    }
+
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        4,
+      ),
+    );
+
+    // Construction completes and each silo claims two of the four nukes.
+    executeTicks(game, 3);
+    const atSilo = () =>
+      player
+        .units(UnitType.AtomBomb)
+        .map((n) => n.tile())
+        .filter((t) => t === siloA.tile() || t === siloB.tile());
+    expect(player.units(UnitType.AtomBomb)).toHaveLength(4);
+    expect(atSilo()).toEqual(
+      expect.arrayContaining([siloA.tile(), siloB.tile()]),
+    );
+    expect(atSilo()).toHaveLength(4);
+
+    // One tick later the lead bomb of EACH silo has departed — silos fire
+    // simultaneously rather than the second silo waiting on the first.
+    executeTicks(game, 1);
+    const waiting = atSilo();
+    expect(waiting).toHaveLength(2);
+    expect(waiting).toContain(siloA.tile());
+    expect(waiting).toContain(siloB.tile());
+
+    // Next tick the followers depart too.
+    executeTicks(game, 1);
+    expect(atSilo()).toHaveLength(0);
+  });
+
+  test("stacked bombs beyond loaded silo tubes are dropped, not queued", () => {
+    const silo = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    // Reloading is driven by the silo's execution (normally added when the
+    // silo is built through ConstructionExecution).
+    game.addExecution(new MissileSiloExecution(silo));
+
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Track every distinct bomb ever launched (bombs disappear on detonation).
+    const seen = new Set<number>();
+    const collect = () => {
+      for (const n of player.units(UnitType.AtomBomb)) seen.add(n.id());
+    };
+
+    // One loaded tube: exactly one bomb launches, the excess is dropped.
+    executeTicks(game, 3);
+    collect();
+    expect(seen.size).toBe(1);
+
+    // Even after the tube reloads, no further bombs appear.
+    executeTicks(game, game.config().SiloCooldown() + 5);
+    collect();
+    expect(seen.size).toBe(1);
   });
 });

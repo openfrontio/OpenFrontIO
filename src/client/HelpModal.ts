@@ -826,7 +826,7 @@ export class HelpModal extends BaseModal {
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src=${assetUrl("images/StopIconWhite.png")}
+                        src=${assetUrl("images/StopIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                         loading="lazy"
                       />

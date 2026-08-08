@@ -2,7 +2,13 @@ import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMode, RankedType } from "./game/Game";
+import {
+  Difficulty,
+  GameMode,
+  GameType,
+  HumansVsNations,
+  RankedType,
+} from "./game/Game";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -150,6 +156,18 @@ export const UserMeResponseSchema = z.object({
     email: z.string().optional(),
     steam: SteamUserSchema.optional(),
   }),
+  // The caller's active account ban, shown to them (localized client-side), or
+  // null. `category` is a server enum but kept as a string here so an
+  // unrecognised value degrades gracefully. Optional so an older API that
+  // predates the field is treated as "no ban".
+  ban: z
+    .object({
+      category: z.string(),
+      reason: z.string().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+    })
+    .nullable()
+    .optional(),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
@@ -401,16 +419,69 @@ export const TribeStatsResponseSchema = z.object({
 });
 export type TribeStatsResponse = z.infer<typeof TribeStatsResponseSchema>;
 
+export const PlayerRecentStatsSchema = z.object({
+  games: z.number().int().min(0).max(100),
+  wins: z.number().int().min(0).max(100),
+});
+export type PlayerRecentStats = z.infer<typeof PlayerRecentStatsSchema>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,
   total: BigIntStringSchema,
   stats: PlayerStatsSchema,
+  recent: PlayerRecentStatsSchema.optional(),
+  // Temporary client-first rollout compatibility. The replacement infra
+  // response exposes only aggregate counts under stats.recent.
+  recentGames: z
+    .array(
+      z.object({
+        gameId: BigIntStringSchema,
+        won: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
+export const PlayerStatsGameModes = [
+  GameMode.FFA,
+  GameMode.Team,
+  HumansVsNations,
+] as const;
+export type PlayerStatsGameMode = (typeof PlayerStatsGameModes)[number];
+
+const RecentByDifficultySchema = z.object({
+  all: PlayerRecentStatsSchema,
+  [Difficulty.Easy]: PlayerRecentStatsSchema.optional(),
+  [Difficulty.Medium]: PlayerRecentStatsSchema.optional(),
+  [Difficulty.Hard]: PlayerRecentStatsSchema.optional(),
+  [Difficulty.Impossible]: PlayerRecentStatsSchema.optional(),
+});
+
+const RecentGameTypeStatsSchema = RecentByDifficultySchema.extend({
+  [GameMode.FFA]: RecentByDifficultySchema.optional(),
+  [GameMode.Team]: RecentByDifficultySchema.optional(),
+  [HumansVsNations]: RecentByDifficultySchema.optional(),
+});
+
+const RecentRankedStatsSchema = z.object({
+  all: PlayerRecentStatsSchema,
+  [RankedType.OneVOne]: PlayerRecentStatsSchema.optional(),
+  [RankedType.TwoVTwo]: PlayerRecentStatsSchema.optional(),
+});
+
+export const PlayerRecentStatsTreeSchema = z.object({
+  all: PlayerRecentStatsSchema,
+  [GameType.Singleplayer]: RecentGameTypeStatsSchema.optional(),
+  [GameType.Public]: RecentGameTypeStatsSchema.optional(),
+  [GameType.Private]: RecentGameTypeStatsSchema.optional(),
+  Ranked: RecentRankedStatsSchema.optional(),
+});
+export type PlayerRecentStatsTree = z.infer<typeof PlayerRecentStatsTreeSchema>;
+
 const GameModeStatsSchema = z.partialRecord(
-  z.enum(GameMode),
+  z.enum(PlayerStatsGameModes),
   z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
 );
 
@@ -419,6 +490,7 @@ export const PlayerStatsTreeSchema = z.object({
   Public: GameModeStatsSchema.optional(),
   Private: GameModeStatsSchema.optional(),
   Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
+  recent: PlayerRecentStatsTreeSchema.optional(),
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 

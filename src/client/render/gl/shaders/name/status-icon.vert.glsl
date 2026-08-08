@@ -42,6 +42,7 @@ flat out vec2 vFadedUV0;         // top-left UV of faded alliance cell
 flat out vec2 vFadedUV1;         // bottom-right UV of faded alliance cell
 flat out float vFlashAlpha;      // traitor flash opacity (1.0 = fully visible)
 flat out float vOutline;         // 1.0 = alliance icon, draw a dark outline
+flat out float vDecay;           // 1.0 = doomsday skull is DECAYING -> tint red
 out float vHoverAlpha;
 
 // Status flag float array — indexed by icon slot.
@@ -104,6 +105,8 @@ void main() {
 
   // A crown cosmetic skins the first-place crown (slot 0).
   vCrownLayer = (iconSlot == 0 && pd8.x >= 0.0) ? int(pd8.x) : -1;
+
+  vDecay = 0.0; // only the decaying doomsday skull raises this
 
   // Early out: dead player only (emoji no longer hides status icons)
   if (pd1.w <= 0.0) {
@@ -306,6 +309,8 @@ void main() {
     } else {
       vFlashAlpha = 1.0;
     }
+    // 3.0 = decaying: steady like draining, but tinted red.
+    if (statusFlag[8] > 2.5) vDecay = 1.0;
   }
 
   vDiscard = 0;
