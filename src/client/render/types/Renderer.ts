@@ -98,6 +98,7 @@ export interface UnitState {
   reachedTarget: boolean;
   retreating: boolean;
   targetable: boolean;
+  waitTicks: number;
   markedForDeletion: number | false; // -1 -> false, else tick
   health: number | null;
   underConstruction: boolean;

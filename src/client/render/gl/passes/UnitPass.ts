@@ -435,7 +435,7 @@ export class UnitPass {
     this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
-      if (!unit.isActive) continue;
+      if (!unit.isActive || unit.waitTicks > 0) continue;
 
       let atlasIdx = this.typeToAtlasCol.get(unit.unitType);
 

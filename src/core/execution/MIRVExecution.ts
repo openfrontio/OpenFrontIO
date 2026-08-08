@@ -33,6 +33,8 @@ export class MirvExecution implements Execution {
   private random: PseudoRandom;
 
   private pathFinder: ParabolaUniversalPathFinder;
+  private fullPath: TileRef[] = [];
+  private pathIndex = 0;
 
   private targetPlayer: Player | TerraNullius;
 
@@ -40,6 +42,9 @@ export class MirvExecution implements Execution {
   private spawnTile: TileRef;
 
   private speed: number = -1;
+
+  private stagedTargets: TileRef[] = [];
+  private warheadsSpawned = false;
 
   constructor(
     private player: Player,
@@ -54,6 +59,9 @@ export class MirvExecution implements Execution {
     this.pathFinder = UniversalPathFinding.Parabola(mg, {
       increment: this.speed,
     });
+    this.baseX = this.mg.x(this.dst);
+    this.baseY = this.mg.y(this.dst);
+    this.stagedTargets = [this.dst];
 
     // Betrayal on launch
     if (this.targetPlayer.isPlayer()) {
@@ -81,11 +89,23 @@ export class MirvExecution implements Execution {
         targetTile: this.dst,
       });
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
-      const x = Math.floor(
-        (this.mg.x(this.dst) + this.mg.x(this.nuke.tile())) / 2,
-      );
-      const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
+      const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
+      const y = Math.max(0, this.baseY - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
+
+      let result = this.pathFinder.next(
+        this.spawnTile,
+        this.separateDst,
+        this.speed,
+      );
+      while (result.status === PathStatus.NEXT) {
+        this.fullPath.push(result.node);
+        result = this.pathFinder.next(
+          this.spawnTile,
+          this.separateDst,
+          this.speed,
+        );
+      }
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
@@ -104,19 +124,72 @@ export class MirvExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.next(
-      this.spawnTile,
-      this.separateDst,
-      this.speed,
-    );
-    if (result.status === PathStatus.COMPLETE) {
+    const remainingTicks = this.fullPath.length - this.pathIndex;
+
+    // Stagger destination finding across ticks 20 down to 11 before separation
+    if (remainingTicks <= 20 && remainingTicks > 10) {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (this.stagedTargets.length >= this.warheadCount) break;
+
+        const target = this.tryGenerateTarget(this.stagedTargets);
+        if (target) this.stagedTargets.push(target);
+      }
+    }
+
+    // At <= 10 ticks before separation, re-validate tile ownership, finalize targets, sort, and instantiate NukeExecutions for SAM detection
+    if (remainingTicks <= 10 && !this.warheadsSpawned) {
+      this.warheadsSpawned = true;
+      // Compensate missed precomputing targets if remainingTicks started <15
+      const extraAttempts = (10 - remainingTicks) * 50;
+      this.finalizeDestinations(500 + extraAttempts);
+      this.spawnWarheadsWithWait();
+    }
+
+    if (this.pathIndex < this.fullPath.length) {
+      this.nuke.move(this.fullPath[this.pathIndex++]);
+    } else {
       this.separate();
       this.active = false;
       // Record stats
       this.mg.stats().bombLand(this.player, this.targetPlayer, UnitType.MIRV);
-      return;
-    } else if (result.status === PathStatus.NEXT) {
-      this.nuke.move(result.node);
+    }
+  }
+
+  private finalizeDestinations(additionalAttempts = 500): void {
+    // Re-check target tile ownership at tick 10
+    this.stagedTargets = this.stagedTargets.filter(
+      (tile) => tile === this.dst || this.mg.owner(tile) === this.targetPlayer,
+    );
+
+    // Top-up loop using specified attempt budget if targets were lost or not yet filled
+    for (let attempt = 0; attempt < additionalAttempts; attempt++) {
+      if (this.stagedTargets.length >= this.warheadCount) break;
+      const target = this.tryGenerateTarget(this.stagedTargets);
+      if (target) this.stagedTargets.push(target);
+    }
+
+    // Sort in place
+    this.stagedTargets.sort(
+      (a, b) =>
+        this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
+    );
+  }
+
+  private spawnWarheadsWithWait(): void {
+    if (this.nuke === null) return;
+
+    const warheadSpeed = this.mg.config().nukeSpeed(UnitType.MIRVWarhead);
+    for (const [i, dst] of this.stagedTargets.entries()) {
+      this.mg.addExecution(
+        new NukeExecution(
+          UnitType.MIRVWarhead,
+          this.player,
+          dst,
+          this.separateDst,
+          warheadSpeed + Math.floor((i / this.warheadCount) * 5),
+          10 + this.random.nextInt(0, 15),
+        ),
+      );
     }
   }
 
@@ -125,40 +198,7 @@ export class MirvExecution implements Execution {
       throw new Error("uninitialized");
     }
 
-    this.baseX = this.mg.x(this.dst);
-    this.baseY = this.mg.y(this.dst);
-
-    const destinations = this.selectDestinations();
-    const warheadSpeed = this.mg.config().nukeSpeed(UnitType.MIRVWarhead);
-    for (const [i, dst] of destinations.entries()) {
-      this.mg.addExecution(
-        new NukeExecution(
-          UnitType.MIRVWarhead,
-          this.player,
-          dst,
-          this.nuke.tile(),
-          warheadSpeed + Math.floor((i / this.warheadCount) * 5),
-          //   this.random.nextInt(5, 9),
-          this.random.nextInt(0, 15),
-        ),
-      );
-    }
     this.nuke.delete(false);
-  }
-
-  private selectDestinations(): TileRef[] {
-    const targets: TileRef[] = [this.dst];
-
-    for (let attempt = 0; attempt < 1000; attempt++) {
-      const target = this.tryGenerateTarget(targets);
-      if (target) targets.push(target);
-      if (targets.length >= this.warheadCount) break;
-    }
-
-    return targets.sort(
-      (a, b) =>
-        this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
-    );
   }
 
   private tryGenerateTarget(taken: TileRef[]): TileRef | undefined {

@@ -47,10 +47,16 @@ export function extractNukeTelegraphs(
   localPlayerID = 0,
   relationMatrix?: Uint8Array,
   relationSize = 0,
+  motionPlans?: ReadonlyMap<number, { startTick: number }>,
+  currentTick = 0,
 ): NukeTelegraphData[] {
   const telegraphs: NukeTelegraphData[] = [];
   for (const u of units.values()) {
     if (u.targetTile === null || !u.isActive) continue;
+
+    const plan = motionPlans?.get(u.id);
+    if (plan && plan.startTick > currentTick) continue;
+
     const mag = NUKE_MAGNITUDES[u.unitType];
     if (!mag) continue;
     telegraphs.push({
@@ -80,11 +86,17 @@ export function extractNukeTelegraphsFromIds(
   localPlayerID = 0,
   relationMatrix?: Uint8Array,
   relationSize = 0,
+  motionPlans?: ReadonlyMap<number, { startTick: number }>,
+  currentTick = 0,
 ): NukeTelegraphData[] {
   const telegraphs: NukeTelegraphData[] = [];
   for (const id of nukeIds) {
     const u = units.get(id);
     if (!u || u.targetTile === null || !u.isActive) continue;
+
+    const plan = motionPlans?.get(u.id);
+    if (plan && plan.startTick > currentTick) continue;
+
     const mag = NUKE_MAGNITUDES[u.unitType];
     if (!mag) continue;
     telegraphs.push({

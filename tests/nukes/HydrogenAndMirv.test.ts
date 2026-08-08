@@ -188,4 +188,34 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     const warheads = player.units(UnitType.MIRVWarhead).length;
     expect(mirvs > 0 || warheads > 0).toBe(true);
   });
+
+  test("MIRV warheads are pre-spawned with waitTicks > 0 while MIRV is still in flight", async () => {
+    // Verifies the pre-staging refactor: warheads are instantiated 10 ticks before
+    // separation and start with waitTicks > 0 so they don't visually glow at separateDst.
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.MissileSilo, game.ref(1, 1)),
+    );
+    game.executeNextTick();
+    game.executeNextTick();
+    expect(player.units(UnitType.MissileSilo)).toHaveLength(1);
+
+    const target = game.ref(1, 1);
+    game.addExecution(new ConstructionExecution(player, UnitType.MIRV, target));
+
+    let foundWaiting = false;
+    for (let i = 0; i < 300; i++) {
+      game.executeNextTick();
+      const warheads = player.units(UnitType.MIRVWarhead);
+      const mirvs = player.units(UnitType.MIRV);
+      // While the MIRV is still in flight AND warheads have already been created,
+      // every warhead must have waitTicks > 0 (still in its pre-flight hold).
+      if (warheads.length > 0 && mirvs.length > 0) {
+        expect(warheads.every((w) => w.nukeState().waitTicks > 0)).toBe(true);
+        foundWaiting = true;
+        break;
+      }
+    }
+    // Warheads must have appeared before the MIRV separated.
+    expect(foundWaiting).toBe(true);
+  });
 });
