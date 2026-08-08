@@ -186,7 +186,8 @@ export class MirvExecution implements Execution {
           this.player,
           dst,
           this.separateDst,
-          warheadSpeed + Math.floor((i / this.warheadCount) * 5),
+          // order of extra speed assign does not matter, they all spawn at once.
+          warheadSpeed + (i % 5),
           10 + this.random.nextInt(0, 15),
         ),
       );
