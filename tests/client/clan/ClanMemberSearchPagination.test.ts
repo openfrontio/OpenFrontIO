@@ -299,12 +299,13 @@ describe("clan member search pagination", () => {
       const view = create();
       await putOnPageFive(view);
 
-      const refined = deferred<ClanMembersResponse | false>();
+      const firstSearch = deferred<ClanMembersResponse | false>();
+      const secondSearch = deferred<ClanMembersResponse | false>();
       const { fetchClanMembers } = await import("../../../src/client/ClanApi");
       vi.mocked(fetchClanMembers).mockReset();
       vi.mocked(fetchClanMembers)
-        .mockResolvedValueOnce(memberResponse([]))
-        .mockReturnValueOnce(refined.promise);
+        .mockReturnValueOnce(firstSearch.promise)
+        .mockReturnValueOnce(secondSearch.promise);
 
       enterSearch(view, "missing-one");
       await vi.advanceTimersByTimeAsync(200);
@@ -313,7 +314,10 @@ describe("clan member search pagination", () => {
 
       enterSearch(view, "missing-two");
       await vi.advanceTimersByTimeAsync(200);
-      refined.resolve(memberResponse([]));
+      secondSearch.resolve(memberResponse([]));
+      await settle(view);
+
+      firstSearch.resolve(memberResponse([]));
       await settle(view);
 
       expect(memberSearchInput(view).value).toBe("missing-two");
