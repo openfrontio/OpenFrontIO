@@ -237,25 +237,35 @@ export class ClanDetailView extends LitElement {
     }
   }
 
-  private async loadMemberPage(page: number) {
+  private async loadMemberPage(page: number, search = this.memberSearch) {
     if (!this.selectedClan) return;
-    const res = await fetchClanMembers(
-      this.selectedClan.tag,
-      page,
-      this.membersPerPage,
-      this.memberSort,
-      this.memberOrder,
-    );
+    const res = search
+      ? await fetchClanMembers(
+          this.selectedClan.tag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+          search,
+        )
+      : await fetchClanMembers(
+          this.selectedClan.tag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+        );
+    if (search !== this.memberSearch) return;
     if (!res) return;
     if (res.results.length === 0 && page > 1) {
-      await this.loadMemberPage(1);
+      await this.loadMemberPage(1, search);
       return;
     }
     this.members = res.results;
     this.membersTotal = res.total;
     this.memberPage = page;
     this.pendingRequestCount = res.pendingRequests ?? 0;
-    if (this.selectedClan.memberCount !== res.total) {
+    if (!search && this.selectedClan.memberCount !== res.total) {
       this.selectedClan = { ...this.selectedClan, memberCount: res.total };
     }
   }
@@ -344,11 +354,12 @@ export class ClanDetailView extends LitElement {
   }
 
   private onSearchInput(e: Event) {
-    const val = (e.target as HTMLInputElement).value;
+    const search = (e.target as HTMLInputElement).value.trim();
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      this.memberSearch = val;
-      this.requestUpdate();
+      if (search === this.memberSearch) return;
+      this.memberSearch = search;
+      void this.loadMemberPage(1, search);
     }, 200);
   }
 

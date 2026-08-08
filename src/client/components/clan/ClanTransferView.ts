@@ -51,15 +51,25 @@ export class ClanTransferView extends LitElement {
     super.disconnectedCallback();
   }
 
-  private async loadMembers(page: number) {
-    if (page === 1) this.loading = true;
-    const res = await fetchClanMembers(this.clanTag, page, this.membersPerPage);
+  private async loadMembers(page: number, search = this.memberSearch) {
+    if (this.members.length === 0) this.loading = true;
+    const res = search
+      ? await fetchClanMembers(
+          this.clanTag,
+          page,
+          this.membersPerPage,
+          "default",
+          undefined,
+          search,
+        )
+      : await fetchClanMembers(this.clanTag, page, this.membersPerPage);
+    if (search !== this.memberSearch) return;
     if (!res) {
       this.loading = false;
       return;
     }
     if (res.results.length === 0 && page > 1) {
-      await this.loadMembers(1);
+      await this.loadMembers(1, search);
       return;
     }
     this.members = res.results;
@@ -98,10 +108,12 @@ export class ClanTransferView extends LitElement {
   }
 
   private onSearchInput(e: Event) {
+    const search = (e.target as HTMLInputElement).value.trim();
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      this.memberSearch = (e.target as HTMLInputElement).value;
-      this.requestUpdate();
+      if (search === this.memberSearch) return;
+      this.memberSearch = search;
+      void this.loadMembers(1, search);
     }, 200);
   }
 

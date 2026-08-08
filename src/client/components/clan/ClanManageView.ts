@@ -77,28 +77,42 @@ export class ClanManageView extends LitElement {
     super.disconnectedCallback();
   }
 
-  private async loadMembers(page: number) {
+  private async loadMembers(page: number, search = this.memberSearch) {
     if (this.members.length === 0) this.loading = true;
-    const res = await fetchClanMembers(
-      this.clanTag,
-      page,
-      this.membersPerPage,
-      this.memberSort,
-      this.memberOrder,
-    );
+    const res = search
+      ? await fetchClanMembers(
+          this.clanTag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+          search,
+        )
+      : await fetchClanMembers(
+          this.clanTag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+        );
+    if (search !== this.memberSearch) return;
     if (!res) {
       this.loading = false;
       return;
     }
     if (res.results.length === 0 && page > 1) {
-      await this.loadMembers(1);
+      await this.loadMembers(1, search);
       return;
     }
     this.members = res.results;
     this.membersTotal = res.total;
     this.memberPage = page;
     this.pendingRequestCount = res.pendingRequests ?? 0;
-    if (this.selectedClan && this.selectedClan.memberCount !== res.total) {
+    if (
+      !search &&
+      this.selectedClan &&
+      this.selectedClan.memberCount !== res.total
+    ) {
       this.dispatchEvent(
         new CustomEvent("clan-updated", {
           detail: { memberCount: res.total },
@@ -254,10 +268,12 @@ export class ClanManageView extends LitElement {
   }
 
   private onSearchInput(e: Event) {
+    const search = (e.target as HTMLInputElement).value.trim();
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      this.memberSearch = (e.target as HTMLInputElement).value;
-      this.requestUpdate();
+      if (search === this.memberSearch) return;
+      this.memberSearch = search;
+      void this.loadMembers(1, search);
     }, 200);
   }
 

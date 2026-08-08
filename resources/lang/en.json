@@ -332,7 +332,7 @@
     "role_officer": "Officer",
     "save_changes": "Save Changes",
     "saving": "Saving...",
-    "search_members_placeholder": "Filter current page by ID or role...",
+    "search_members_placeholder": "Search by exact ID, username, or role...",
     "search_placeholder": "Search by clan tag...",
     "search_requests_placeholder": "Search by player public ID...",
     "select_new_leader": "Select a new leader",
