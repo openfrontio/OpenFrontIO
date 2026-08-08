@@ -180,6 +180,11 @@ export class MirvExecution implements Execution {
 
     const warheadSpeed = this.mg.config().nukeSpeed(UnitType.MIRVWarhead);
     for (const [i, dst] of this.stagedTargets.entries()) {
+      let speedOffset = 4;
+      if (i < 70) speedOffset = 0;
+      else if (i < 140) speedOffset = 1;
+      else if (i < 210) speedOffset = 2;
+      else if (i < 280) speedOffset = 3;
       this.mg.addExecution(
         new NukeExecution(
           UnitType.MIRVWarhead,
@@ -187,7 +192,7 @@ export class MirvExecution implements Execution {
           dst,
           this.separateDst,
           // order of extra speed assign does not matter, they all spawn at once.
-          warheadSpeed + (i % 5),
+          warheadSpeed + speedOffset,
           10 + this.random.nextInt(0, 15),
         ),
       );
