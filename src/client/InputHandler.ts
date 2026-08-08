@@ -1007,7 +1007,16 @@ export class InputHandler {
   }
 
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
-    this.uiState.ghostStructure = ghostStructure;
+    if (
+      this.uiState.ghostStructure === ghostStructure &&
+      ghostStructure !== null
+    ) {
+      this.uiState.upgradeMultiplier =
+        this.uiState.upgradeMultiplier === 1 ? 5 : 1;
+    } else {
+      this.uiState.upgradeMultiplier = 1;
+      this.uiState.ghostStructure = ghostStructure;
+    }
   }
 
   /**
