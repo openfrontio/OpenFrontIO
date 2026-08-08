@@ -187,7 +187,7 @@ export class PointLightPass {
     this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
-      if (!unit.isActive) continue;
+      if (!unit.isActive || unit.waitTicks > 0) continue;
       const typeIdx = this.typeToIdx.get(unit.unitType);
       if (typeIdx === undefined) continue;
       const cfg = this.typeConfigs[typeIdx];

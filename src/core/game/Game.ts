@@ -44,6 +44,13 @@ export type TransportShipState = {
   troops: number;
 };
 
+export type NukeState = {
+  trajectory: TrajectoryTile[];
+  trajectoryIndex: number;
+  targetedBySam: boolean;
+  waitTicks: number;
+};
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -272,6 +279,15 @@ export interface UnitParamsMap {
     trajectory: TrajectoryTile[];
   };
 
+  [UnitType.MIRV]: {
+    targetTile?: number;
+  };
+
+  [UnitType.MIRVWarhead]: {
+    targetTile?: number;
+    trajectory: TrajectoryTile[];
+  };
+
   [UnitType.TradeShip]: {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
@@ -292,15 +308,6 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
-
-  [UnitType.MIRV]: {
-    targetTile?: number;
-  };
-
-  [UnitType.MIRVWarhead]: {
-    targetTile?: number;
-    trajectory: TrajectoryTile[];
-  };
 }
 
 // Type helper to get params type for a specific unit type
@@ -499,6 +506,9 @@ export interface Unit {
   updateWarshipState(update: Partial<WarshipState>): void;
   transportShipState(): TransportShipState;
   updateTransportShipState(update: Partial<TransportShipState>): void;
+  nukeState(): NukeState;
+  updateNukeState(update: Partial<NukeState>): void;
+
   health(): number;
   /** Effective max health, including any warship veterancy bonus. */
   maxHealth(): number;
