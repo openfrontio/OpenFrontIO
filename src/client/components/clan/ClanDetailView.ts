@@ -67,8 +67,9 @@ export class ClanDetailView extends LitElement {
   @state() private actionPending = false;
   @state() private allStatsExpanded = false;
   @state() private membersLoadInFlight = false;
-  private memberSearch = "";
+  @state() private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private memberLoadSeq = 0;
   private asyncGeneration = 0;
 
   connectedCallback() {
@@ -109,6 +110,7 @@ export class ClanDetailView extends LitElement {
 
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
+    this.memberLoadSeq++;
     super.disconnectedCallback();
   }
 
@@ -122,6 +124,7 @@ export class ClanDetailView extends LitElement {
 
   private async loadDetail() {
     const gen = ++this.asyncGeneration;
+    this.memberLoadSeq++;
     this.loading = true;
     this.myRole = null;
     this.pendingRequestCount = 0;
@@ -239,6 +242,7 @@ export class ClanDetailView extends LitElement {
 
   private async loadMemberPage(page: number, search = this.memberSearch) {
     if (!this.selectedClan) return;
+    const seq = ++this.memberLoadSeq;
     const res = search
       ? await fetchClanMembers(
           this.selectedClan.tag,
@@ -255,7 +259,7 @@ export class ClanDetailView extends LitElement {
           this.memberSort,
           this.memberOrder,
         );
-    if (search !== this.memberSearch) return;
+    if (seq !== this.memberLoadSeq || search !== this.memberSearch) return;
     if (!res) return;
     if (res.results.length === 0 && page > 1) {
       await this.loadMemberPage(1, search);
@@ -355,10 +359,11 @@ export class ClanDetailView extends LitElement {
 
   private onSearchInput(e: Event) {
     const search = (e.target as HTMLInputElement).value.trim();
+    if (search === this.memberSearch) return;
+    this.memberSearch = search;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      if (search === this.memberSearch) return;
-      this.memberSearch = search;
+      this.memberSearchDebounce = null;
       void this.loadMemberPage(1, search);
     }, 200);
   }
@@ -550,6 +555,7 @@ export class ClanDetailView extends LitElement {
         </div>
         ${renderMemberSearchInput(
           (e: Event) => this.onSearchInput(e),
+          this.memberSearch,
           undefined,
           renderMemberSortControl(
             this.memberSort,

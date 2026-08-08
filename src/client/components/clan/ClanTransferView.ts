@@ -38,8 +38,9 @@ export class ClanTransferView extends LitElement {
   @state() private loading = false;
   @state() private errorMsg = "";
   @state() private confirmAction: "transfer" | null = null;
-  private memberSearch = "";
+  @state() private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private memberLoadSeq = 0;
 
   connectedCallback() {
     super.connectedCallback();
@@ -48,10 +49,12 @@ export class ClanTransferView extends LitElement {
 
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
+    this.memberLoadSeq++;
     super.disconnectedCallback();
   }
 
   private async loadMembers(page: number, search = this.memberSearch) {
+    const seq = ++this.memberLoadSeq;
     if (this.members.length === 0) this.loading = true;
     const res = search
       ? await fetchClanMembers(
@@ -63,7 +66,7 @@ export class ClanTransferView extends LitElement {
           search,
         )
       : await fetchClanMembers(this.clanTag, page, this.membersPerPage);
-    if (search !== this.memberSearch) return;
+    if (seq !== this.memberLoadSeq || search !== this.memberSearch) return;
     if (!res) {
       this.loading = false;
       return;
@@ -109,10 +112,11 @@ export class ClanTransferView extends LitElement {
 
   private onSearchInput(e: Event) {
     const search = (e.target as HTMLInputElement).value.trim();
+    if (search === this.memberSearch) return;
+    this.memberSearch = search;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      if (search === this.memberSearch) return;
-      this.memberSearch = search;
+      this.memberSearchDebounce = null;
       void this.loadMembers(1, search);
     }, 200);
   }
@@ -162,7 +166,10 @@ export class ClanTransferView extends LitElement {
           </p>
         </div>
 
-        ${renderMemberSearchInput((e) => this.onSearchInput(e))}
+        ${renderMemberSearchInput(
+          (e) => this.onSearchInput(e),
+          this.memberSearch,
+        )}
 
         <div class="space-y-2">
           ${filterMembersBySearch(nonLeaders, this.memberSearch).map(

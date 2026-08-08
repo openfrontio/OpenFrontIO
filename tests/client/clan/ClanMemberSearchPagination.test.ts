@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ClanInfo,
   ClanMember,
+  ClanMembersResponse,
   ClanMemberStats,
 } from "../../../src/client/ClanApi";
 import {
@@ -22,6 +23,8 @@ import { ClanTransferView } from "../../../src/client/components/clan/ClanTransf
 
 const TARGET_ID = "d3G1QO8Z";
 const PAGE_MEMBER_ID = "page-five-member";
+const OLDER_RESULT_ID = `${TARGET_ID}-older`;
+const NEWER_RESULT_ID = `${TARGET_ID}-newer`;
 const ZERO_WL = { wins: 0, losses: 0 } as const;
 const ZERO_STATS: ClanMemberStats = {
   total: ZERO_WL,
@@ -64,6 +67,65 @@ type MemberView = HTMLElement & {
   updateComplete: Promise<boolean>;
 };
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+function memberResponse(
+  members: ClanMember[],
+  page = 1,
+  total = members.length,
+): ClanMembersResponse {
+  return {
+    results: members,
+    total,
+    page,
+    limit: 10,
+    pendingRequests: 0,
+  };
+}
+
+function createDetailView(): MemberView {
+  const view = new ClanDetailView();
+  view.clanTag = clan.tag;
+  view.cachedClan = clan;
+  view.cachedDetail = {
+    tag: clan.tag,
+    members: [member(PAGE_MEMBER_ID)],
+    membersTotal: 100,
+    pendingRequestCount: 0,
+  };
+  view.myClanRoles = new Map([[clan.tag, "leader"]]);
+  view.detailTab = "members";
+  return view;
+}
+
+function createManageView(): MemberView {
+  const view = new ClanManageView();
+  view.clanTag = clan.tag;
+  view.selectedClan = clan;
+  view.myPublicId = "leader-id";
+  view.myRole = "leader";
+  return view;
+}
+
+function createTransferView(): MemberView {
+  const view = new ClanTransferView();
+  view.clanTag = clan.tag;
+  view.selectedClan = clan;
+  return view;
+}
+
+const MEMBER_VIEW_CASES = [
+  { label: "members", create: createDetailView },
+  { label: "manage", create: createManageView },
+  { label: "transfer", create: createTransferView },
+];
+
 async function settle(view: MemberView) {
   for (let i = 0; i < 3; i++) {
     await Promise.resolve();
@@ -83,12 +145,9 @@ async function putOnPageFive(view: MemberView) {
 }
 
 async function searchForTarget(view: MemberView) {
-  const input = view.querySelector<HTMLInputElement>(
-    'input[placeholder="clan_modal.search_members_placeholder"]',
-  );
-  expect(input).not.toBeNull();
-  input!.value = TARGET_ID;
-  input!.dispatchEvent(new Event("input", { bubbles: true }));
+  const input = memberSearchInput(view);
+  input.value = TARGET_ID;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 
   await vi.advanceTimersByTimeAsync(200);
   await settle(view);
@@ -96,6 +155,28 @@ async function searchForTarget(view: MemberView) {
   expect(view.textContent).toContain(TARGET_ID);
   expect(view.textContent).not.toContain(PAGE_MEMBER_ID);
   expect(view.textContent).not.toContain("5 / 10");
+}
+
+function memberSearchInput(view: MemberView): HTMLInputElement {
+  const input = view.querySelector<HTMLInputElement>(
+    'input[placeholder="clan_modal.search_members_placeholder"]',
+  );
+  expect(input).not.toBeNull();
+  return input!;
+}
+
+function enterSearch(view: MemberView, search: string) {
+  const input = memberSearchInput(view);
+  input.value = search;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function nextPageButton(view: MemberView): HTMLButtonElement {
+  const button = Array.from(
+    view.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((candidate) => candidate.textContent?.trim() === ">");
+  expect(button).not.toBeUndefined();
+  return button!;
 }
 
 describe("clan member search pagination", () => {
@@ -177,4 +258,84 @@ describe("clan member search pagination", () => {
     await putOnPageFive(view);
     await searchForTarget(view);
   });
+
+  it.each(MEMBER_VIEW_CASES)(
+    "ignores stale same-search responses in the $label view",
+    async ({ create }) => {
+      const view = create();
+      await putOnPageFive(view);
+
+      const older = deferred<ClanMembersResponse | false>();
+      const newer = deferred<ClanMembersResponse | false>();
+      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      vi.mocked(fetchClanMembers).mockReset();
+      vi.mocked(fetchClanMembers)
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise);
+
+      enterSearch(view, TARGET_ID);
+      await vi.advanceTimersByTimeAsync(200);
+      nextPageButton(view).click();
+
+      newer.resolve(memberResponse([member(NEWER_RESULT_ID)], 6, 100));
+      await settle(view);
+      expect(view.textContent).toContain(NEWER_RESULT_ID);
+      expect(view.textContent).toContain("6 / 10");
+
+      older.resolve(memberResponse([member(OLDER_RESULT_ID)]));
+      await settle(view);
+      expect(view.textContent).toContain(NEWER_RESULT_ID);
+      expect(view.textContent).not.toContain(OLDER_RESULT_ID);
+      expect(view.textContent).toContain("6 / 10");
+    },
+  );
+
+  it.each([
+    { label: "manage", create: createManageView },
+    { label: "transfer", create: createTransferView },
+  ])(
+    "preserves a refined empty-result search in the $label view",
+    async ({ create }) => {
+      const view = create();
+      await putOnPageFive(view);
+
+      const refined = deferred<ClanMembersResponse | false>();
+      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      vi.mocked(fetchClanMembers).mockReset();
+      vi.mocked(fetchClanMembers)
+        .mockResolvedValueOnce(memberResponse([]))
+        .mockReturnValueOnce(refined.promise);
+
+      enterSearch(view, "missing-one");
+      await vi.advanceTimersByTimeAsync(200);
+      await settle(view);
+      expect(memberSearchInput(view).value).toBe("missing-one");
+
+      enterSearch(view, "missing-two");
+      await vi.advanceTimersByTimeAsync(200);
+      refined.resolve(memberResponse([]));
+      await settle(view);
+
+      expect(memberSearchInput(view).value).toBe("missing-two");
+    },
+  );
+
+  it.each(MEMBER_VIEW_CASES)(
+    "rerenders the filtered fallback when search fails in the $label view",
+    async ({ create }) => {
+      const view = create();
+      await putOnPageFive(view);
+
+      const { fetchClanMembers } = await import("../../../src/client/ClanApi");
+      vi.mocked(fetchClanMembers).mockReset();
+      vi.mocked(fetchClanMembers).mockResolvedValue(false);
+
+      enterSearch(view, "definitely-not-present");
+      await vi.advanceTimersByTimeAsync(200);
+      await settle(view);
+
+      expect(view.textContent).not.toContain(PAGE_MEMBER_ID);
+      expect(memberSearchInput(view).value).toBe("definitely-not-present");
+    },
+  );
 });
