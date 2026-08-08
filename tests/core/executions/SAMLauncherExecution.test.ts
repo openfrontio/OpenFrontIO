@@ -492,15 +492,21 @@ describe("SAM", () => {
     );
     game.addExecution(warheadExec);
 
+    //init + first tick of NukeExec
+    game.executeNextTick();
+    game.executeNextTick();
+
+    const warhead = warheadExec.getNuke()!;
+    expect(warhead).toBeTruthy();
+
     // Advance through the entire wait period.
     for (let i = 0; i < waitTicks; i++) {
       game.executeNextTick();
-      const warheads = attacker.units(UnitType.MIRVWarhead);
-      if (warheads.length === 0) break; // already intercepted/detonated — test inconclusive
-      if (warheads[0].nukeState().waitTicks > 0) {
+      if (warhead.nukeState().waitTicks > 0) {
         // SAM must not have consumed a missile slot while the warhead is still waiting.
         expect(sam.missileTimerQueue()).toHaveLength(0);
       }
     }
+    expect(warhead.nukeState().targetedBySam).toBe(true);
   });
 });

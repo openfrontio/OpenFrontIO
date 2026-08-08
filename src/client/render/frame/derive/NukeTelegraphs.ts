@@ -52,7 +52,7 @@ export function extractNukeTelegraphs(
 ): NukeTelegraphData[] {
   const telegraphs: NukeTelegraphData[] = [];
   for (const u of units.values()) {
-    if (u.targetTile === null || !u.isActive) continue;
+    if (u.targetTile === null || !u.isActive || u.waitTicks > 0) continue;
 
     const plan = motionPlans?.get(u.id);
     if (plan && plan.startTick > currentTick) continue;
@@ -92,7 +92,7 @@ export function extractNukeTelegraphsFromIds(
   const telegraphs: NukeTelegraphData[] = [];
   for (const id of nukeIds) {
     const u = units.get(id);
-    if (!u || u.targetTile === null || !u.isActive) continue;
+    if (!u || u.targetTile === null || !u.isActive || u.waitTicks > 0) continue;
 
     const plan = motionPlans?.get(u.id);
     if (plan && plan.startTick > currentTick) continue;
