@@ -795,9 +795,10 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // WebSocket is always updated. Identity updates — already screened by the
-  // caller (join_verify, or the local fallback censor) — are applied only
-  // before the game has started.
+  // WebSocket is always updated. Identity updates — already screened AND
+  // clan-tag-ownership-resolved by the caller (join_verify only censors; the
+  // Worker must run resolveClanTag first) — are applied only before the game
+  // has started.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
