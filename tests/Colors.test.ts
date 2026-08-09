@@ -5,6 +5,7 @@ import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
+import { generateCandidateColors } from "../src/client/theme/ColorGenerator";
 import {
   observerViews,
   parseObservers,
@@ -209,5 +210,31 @@ describe("ColorVision", () => {
     expect(views).toHaveLength(2);
     expect(views[0].toHex()).toBe("#ff0000");
     expect(views[1].toHex()).toBe("#a39000");
+  });
+});
+
+describe("ColorGenerator", () => {
+  test("produces a substantial candidate set", () => {
+    expect(generateCandidateColors().length).toBeGreaterThan(500);
+  });
+
+  test("contains no duplicate colours", () => {
+    const colors = generateCandidateColors();
+    const hexes = new Set(colors.map((c) => c.toHex()));
+    expect(hexes.size).toBe(colors.length);
+  });
+
+  test("is deterministic across calls", () => {
+    const a = generateCandidateColors().map((c) => c.toHex());
+    const b = generateCandidateColors().map((c) => c.toHex());
+    expect(a).toEqual(b);
+  });
+
+  test("avoids near-black and near-white fills", () => {
+    for (const color of generateCandidateColors()) {
+      const lightness = color.toLch().l;
+      expect(lightness).toBeGreaterThan(20);
+      expect(lightness).toBeLessThan(95);
+    }
   });
 });
