@@ -79,14 +79,13 @@ describe("Spawn execution", () => {
     game.executeNextTick();
     game.executeNextTick();
 
-    // On a very small map the relaxed-spawn fallback (allowing owned tiles)
-    // lets a second player spawn on top of the first. Not all 5 will make
-    // it — the map is still too small — but more than one can land.
-    const spawned = game
-      .allPlayers()
-      .filter((player) => player.spawnTile() !== undefined).length;
-    expect(spawned).toBeGreaterThanOrEqual(1);
-    expect(spawned).toBeLessThan(5);
+    // Should spawn fewer than requested when map is too small.
+    // Player 1 spawns with relaxed minDistance after 750 retries,
+    // but players 2-4 still fail (no unowned land tiles left).
+    expect(
+      game.allPlayers().filter((player) => player.spawnTile() !== undefined)
+        .length,
+    ).toBe(2);
   });
 
   test("Spawn on specific tile", async () => {
