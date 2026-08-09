@@ -220,7 +220,7 @@ export class ClanGameHistoryView extends LitElement {
     );
   }
 
-  private async copyGameLink(gameId: string) {
+  private copyGameLink(gameId: string) {
     const encodedGameId = encodeURIComponent(gameId);
     const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
 
