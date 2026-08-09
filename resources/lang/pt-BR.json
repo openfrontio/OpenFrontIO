@@ -358,8 +358,7 @@
     "title": "Clãs",
     "transfer_leadership": "Transferir liderança",
     "transfer_warning": "Isso vai fazer que o membro selecionado será promovido como o novo líder. Essa ação não pode ser desfeita.",
-    "unban": "Desbanir",
-    "history_game_id": "ID do Jogo"
+    "unban": "Desbanir"
   },
   "common": {
     "available": "Disponível",
@@ -377,7 +376,6 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Ativado",
-    "got_it": "Entendi",
     "map_default": "Mapa padrão",
     "month_apr": "Abril",
     "month_aug": "Agosto",
@@ -399,7 +397,8 @@
     "summary_keep": "Manter",
     "summary_send": "Enviar",
     "target_dead": "Alvo eliminado",
-    "target_dead_note": "Você não pode enviar recursos para um jogador eliminado."
+    "target_dead_note": "Você não pode enviar recursos para um jogador eliminado.",
+    "got_it": "Entendi"
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Você pode atacar jogadores desconectados mesmo se estiver aliado com eles.",
@@ -423,6 +422,7 @@
     "public_lobbies_info": "Hospedar lobbies personalizados que estão listados publicamente para que qualquer um entre.",
     "rare": "Raro",
     "search": "Procurar...",
+    "signup_bonus": "Bónus de registo",
     "soft": "Chapéus",
     "title": "Cosméticos",
     "uncommon": "Incomum",
@@ -1258,26 +1258,19 @@
   },
   "player_stats_table": {
     "arrived": "Chegou",
-    "attack": "Ataque",
     "building": "Construção",
     "building_stats": "Estatísticas das Construções",
     "built": "Construído",
     "cancelled": "Cancelado",
     "captured": "Capturado",
-    "count": "Contar",
     "destroyed": "Destruído",
-    "gold": "Ouro",
-    "hits": "Acertos",
     "landed": "Desembarcou",
     "launched": "Lançado",
     "lost": "Perdeu",
     "nuke_stats": "Estatísticas de Armas Nucleares",
-    "player_metrics": "Métricas do Jogador",
-    "received": "Recebido",
     "sent": "Enviado",
     "ship_arrivals": "Chegada de Navios",
     "ship_type": "Tipo do Navio",
-    "steal": "Roubar",
     "trade": "Troca",
     "unit": {
       "abomb": "Bomba Atômica",
@@ -1296,7 +1289,14 @@
     },
     "war": "Guerra",
     "weapon": "Arma",
-    "workers": "Trabalhadores"
+    "workers": "Trabalhadores",
+    "attack": "Ataque",
+    "count": "Contar",
+    "gold": "Ouro",
+    "hits": "Acertos",
+    "player_metrics": "Métricas do Jogador",
+    "received": "Recebido",
+    "steal": "Roubar"
   },
   "player_stats_tree": {
     "mode": "Modo",
@@ -1307,8 +1307,8 @@
     "ranked_1v1": "1v1",
     "ranked_2v2": "2v2",
     "solo": "Individual",
-    "stats_games_played": "Partidas Jogadas",
     "stats_losses": "Derrotas",
+    "stats_games_played": "Partidas Jogadas",
     "stats_wins": "Vitórias",
     "stats_wlr": "Taxa de Vitórias e Derrotas"
   },
@@ -1442,9 +1442,6 @@
     "toggle_achievements": "Ativar/desativar conquistas",
     "water_nukes": "Bombas aquáticas"
   },
-  "steam": {
-    "link_signpost": "Já tem uma conta existente do OpenFront? O link de conta está vindo em um update futuro."
-  },
   "steam_user_header": {
     "avatar_alt": "Avatar do Steam",
     "default_name": "Jogador da Steam"
@@ -1465,6 +1462,7 @@
     "confirm_purchase_body": "Compre {item} por {amount, number} {currency}?",
     "confirm_purchase_title": "Confirmar Compra",
     "confirm_upgrade": "Fazer um upgrade para {tier}? Será cobrado a diferença rateada agora.",
+    "cosmetics": "Cosméticos",
     "crowns": "Coroas",
     "currency_pack_purchase_success": "Compra de pacote de moedas bem-sucedida!",
     "custom_amount": "Escolha um valor",
@@ -1474,6 +1472,9 @@
     "insufficient_currency_body": "Você precisa {amount, number} mais {currency} para comprar {item}.",
     "insufficient_currency_title": "{currency} Insuficiente",
     "login_required": "Você deve estar logado para comprar com moeda.",
+    "merch": "Produtos",
+    "merch_blurb": "Obtenha os produtos da OpenFront enviado para a sua porta!",
+    "merch_visit_store": "Visitar Loja",
     "no_crowns": "Nenhuma coroa disponível. Volte mais tarde para novos itens.",
     "no_effects": "Nenhum efeito disponível. Volte mais tarde para novos itens.",
     "no_flags": "Nenhuma bandeira disponível. Volte mais tarde para novos itens.",
@@ -1508,6 +1509,16 @@
     "tribe_purchase_failed": "Compra não efetuada. Tente de novo.",
     "tribe_purchase_live": "\"{name}\" agora está ao vivo em jogos.",
     "tribe_rate_limited": "Você está comprando nomes muito rapidamente. Tente novamente em {seconds}s.",
+    "tribe_stats_boosted": "{multiplier} Impulsos",
+    "tribe_stats_button": "Estatísticas",
+    "tribe_stats_failed": "Não foi possível carregar as estatísticas. Tente novamente mais tarde.",
+    "tribe_stats_games": "Jogos",
+    "tribe_stats_lifetime": "Tempo de Vida",
+    "tribe_stats_owner": "Dono",
+    "tribe_stats_reach": "Alcance do Jogador",
+    "tribe_stats_reach_tooltip": "Apareceu em jogos com {count} jogadores",
+    "tribe_stats_window": "Últimos {days} dias ({start} – {end})",
+    "tribe_stats_window_short": "Últimos {days} dias",
     "tribe_status_active": "Ativo",
     "tribe_status_rejected": "Rejeitado",
     "tribes": "Tribos",
@@ -1759,5 +1770,8 @@
     "you_won": "Você Venceu!",
     "your_team": "Sua Equipe Venceu!",
     "youtube_tutorial": "Precisa de ajuda?"
+  },
+  "steam": {
+    "link_signpost": "Já tem uma conta existente do OpenFront? O link de conta está vindo em um update futuro."
   }
 }
