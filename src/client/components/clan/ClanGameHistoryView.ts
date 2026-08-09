@@ -10,9 +10,9 @@ import {
 import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import {
-  copyToClipboard,
   getMapName,
   renderDuration,
+  showToast,
   translateText,
 } from "../../Utils";
 import "../CopyButton";
@@ -24,7 +24,7 @@ import {
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
 import { dispatchViewProfile } from "../ui/PlayerNameLink";
 import { verifiedBadge } from "../ui/VerifiedBadge";
-import { renderLoadingSpinner, showToast } from "./ClanShared";
+import { renderLoadingSpinner } from "./ClanShared";
 
 const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
 const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
@@ -219,10 +219,16 @@ export class ClanGameHistoryView extends LitElement {
     );
   }
 
-  private copyGameLink(gameId: string) {
+  private async copyGameLink(gameId: string) {
     const encodedGameId = encodeURIComponent(gameId);
     const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
-    void copyToClipboard(url);
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("error_modal.failed_copy"), "red");
+    }
   }
 
   render() {

@@ -16,9 +16,9 @@ import { fetchPublicPlayerGames } from "../../../Api";
 import { ClientEnv } from "../../../ClientEnv";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import {
-  copyToClipboard,
   getMapName,
   renderDuration,
+  showToast,
   translateText,
 } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
@@ -264,10 +264,16 @@ export class PlayerGameHistoryView extends LitElement {
     );
   }
 
-  private copyGameLink(gameId: string) {
+  private async copyGameLink(gameId: string) {
     const encodedGameId = encodeURIComponent(gameId);
     const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
-    void copyToClipboard(url);
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("error_modal.failed_copy"), "red");
+    }
   }
 
   render() {
