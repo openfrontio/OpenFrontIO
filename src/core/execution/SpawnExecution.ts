@@ -23,6 +23,7 @@ export class SpawnExecution implements Execution {
   private mg: Game;
   private queuedDuringSpawnPhase = false;
   private static readonly MAX_SPAWN_TRIES = 1_000;
+  private static readonly RELAX_MIN_DIST_AT = 750;
 
   constructor(
     gameID: GameID,
@@ -147,24 +148,26 @@ export class SpawnExecution implements Execution {
         continue;
       }
 
-      const isOtherPlayerSpawnedNearby = this.mg
-        .allPlayers()
-        .filter((player) => player.id() !== this.playerInfo.id)
-        .some((player) => {
-          const spawnTile = player.spawnTile();
+      if (tries < SpawnExecution.RELAX_MIN_DIST_AT) {
+        const isOtherPlayerSpawnedNearby = this.mg
+          .allPlayers()
+          .filter((player) => player.id() !== this.playerInfo.id)
+          .some((player) => {
+            const spawnTile = player.spawnTile();
 
-          if (spawnTile === undefined) {
-            return false;
-          }
+            if (spawnTile === undefined) {
+              return false;
+            }
 
-          return (
-            this.mg.manhattanDist(spawnTile, center) <
-            this.mg.config().minDistanceBetweenPlayers()
-          );
-        });
+            return (
+              this.mg.manhattanDist(spawnTile, center) <
+              this.mg.config().minDistanceBetweenPlayers()
+            );
+          });
 
-      if (isOtherPlayerSpawnedNearby) {
-        continue;
+        if (isOtherPlayerSpawnedNearby) {
+          continue;
+        }
       }
 
       const tiles = getSpawnTiles(this.mg, center, true);
