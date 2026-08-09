@@ -148,7 +148,7 @@ export class SpawnExecution implements Execution {
         continue;
       }
 
-      if (tries < SpawnExecution.RELAX_MIN_DIST_AT) {
+      if (tries <= SpawnExecution.RELAX_MIN_DIST_AT) {
         const isOtherPlayerSpawnedNearby = this.mg
           .allPlayers()
           .filter((player) => player.id() !== this.playerInfo.id)
