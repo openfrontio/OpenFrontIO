@@ -238,3 +238,92 @@ describe("ColorGenerator", () => {
     }
   });
 });
+
+describe("ColorAllocator distinctness guarantees", () => {
+  const humanColors = defaultTheme.humanColors.map((c) => colord(c));
+  const fallbackPalette = defaultTheme.fallbackColors.map((c) => colord(c));
+  const observers = ["normal", "deutan", "protan"] as const;
+
+  const allocate = (count: number, floor: number) => {
+    const allocator = new ColorAllocator(humanColors, fallbackPalette, {
+      observers: [...observers],
+      distinctnessFloor: floor,
+    });
+    return Array.from({ length: count }, (_, i) =>
+      allocator.assignColor(`player_${i}`),
+    );
+  };
+
+  const worstSeparation = (colors: Colord[]) => {
+    let worst = Infinity;
+    for (let i = 0; i < colors.length; i++) {
+      for (let j = i + 1; j < colors.length; j++) {
+        for (const observer of observers) {
+          const d =
+            simulate(colors[i], observer).delta(simulate(colors[j], observer)) *
+            100;
+          if (d < worst) worst = d;
+        }
+      }
+    }
+    return worst;
+  };
+
+  test("never issues the same colour twice in a full lobby", () => {
+    // MAX_PLAYER_COUNT is 125 (src/server/MapPlaylist.ts) against a 63-colour
+    // pool, so a full public lobby exhausts the palette by design.
+    const colors = allocate(125, 5);
+    expect(new Set(colors.map((c) => c.toHex())).size).toBe(125);
+  });
+
+  test("honours the distinctness floor while candidates remain", () => {
+    expect(worstSeparation(allocate(48, 5))).toBeGreaterThanOrEqual(5);
+  });
+
+  test("generates no new colours for a 48-player game", () => {
+    // Everything up to this size comes from palette data shipped in the theme
+    // JSON, so lobbies of ordinary size keep the game's existing look — only
+    // which colour a given player receives changes.
+    const shipped = new Set([
+      ...defaultTheme.humanColors.map((c) => colord(c).toHex()),
+      ...defaultTheme.fallbackColors.map((c) => colord(c).toHex()),
+    ]);
+    for (const color of allocate(48, 5)) {
+      expect(shipped.has(color.toHex())).toBe(true);
+    }
+  });
+
+  test("separates a full lobby well past the just-noticeable threshold", () => {
+    // The shipped allocator scores 0.00 here — two players share a colour.
+    expect(worstSeparation(allocate(125, 5))).toBeGreaterThan(2.3);
+  });
+
+  test("is deterministic for the same id sequence", () => {
+    expect(allocate(40, 5).map((c) => c.toHex())).toEqual(
+      allocate(40, 5).map((c) => c.toHex()),
+    );
+  });
+
+  test("recycle policy reuses the palette instead of generating", () => {
+    const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
+    const allocator = new ColorAllocator(pool, [], {
+      onExhausted: "recycle",
+    });
+    const assigned = Array.from({ length: 6 }, (_, i) =>
+      allocator.assignColor(`bot_${i}`),
+    );
+    const palette = new Set(pool.map((c) => c.toHex()));
+    for (const color of assigned) {
+      expect(palette.has(color.toHex())).toBe(true);
+    }
+  });
+
+  test("generate policy leaves the palette once it is exhausted", () => {
+    const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
+    const allocator = new ColorAllocator(pool, [], {});
+    const assigned = Array.from({ length: 6 }, (_, i) =>
+      allocator.assignColor(`player_${i}`),
+    );
+    expect(new Set(assigned.map((c) => c.toHex())).size).toBe(6);
+  });
+});
