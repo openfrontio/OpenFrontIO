@@ -161,11 +161,6 @@ export class NationStructureBehavior {
       if (this.tryBuildDefensePost()) {
         return true;
       }
-      // If the attack threshold is met, block other structures even when
-      // placement failed (no tile found / can't afford).
-      if (this.defensePostNeeded()) {
-        return false;
-      }
     }
 
     if (this.isOnStructureCooldown()) {

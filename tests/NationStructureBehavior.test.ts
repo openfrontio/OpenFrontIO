@@ -519,6 +519,33 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
   });
 });
 
+describe("NationStructureBehavior.handleStructures", () => {
+  it("does not block economic structures when defense post placement fails", () => {
+    const game = {
+      config: () => ({
+        gameConfig: () => ({ difficulty: Difficulty.Hard }),
+        isUnitDisabled: () => false,
+        startingGold: () => 0n,
+      }),
+      unitInfo: () => ({ cost: () => 0n }),
+      ticks: () => 100,
+    };
+    const player = {
+      gold: () => 0n,
+      troops: () => 1000,
+      incomingAttacks: () => [{ troops: () => 1000, sourceTile: () => null, attacker: () => ({ id: () => "a" }) }],
+    };
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "tryBuildDefensePost").mockReturnValue(false);
+    const doHandleSpy = vi.spyOn(behavior as any, "doHandleStructures").mockReturnValue(true);
+
+    const result = behavior.handleStructures();
+    expect(result).toBe(true);
+    expect(doHandleSpy).toHaveBeenCalled();
+  });
+});
+
 // ── defensePostNeeded ────────────────────────────────────────────────────────
 
 describe("NationStructureBehavior.defensePostNeeded", () => {
