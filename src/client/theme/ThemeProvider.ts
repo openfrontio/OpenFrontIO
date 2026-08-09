@@ -9,7 +9,8 @@ import {
   ThemeSettings,
 } from "../render/gl/RenderSettings";
 import { PlayerView } from "../view";
-import { ColorAllocator } from "./ColorAllocator";
+import { ColorAllocator, ColorAllocatorOptions } from "./ColorAllocator";
+import { parseObservers } from "./ColorVision";
 
 /**
  * The color surface consumed by PlayerView and HUD components. Built from
@@ -95,9 +96,28 @@ export class SettingsTheme implements Theme {
     const nationColors = settings.nationColors.map(colord);
     const fallbackColors = settings.fallbackColors.map(colord);
 
-    this.humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-    this.botColorAllocator = new ColorAllocator(botColors, botColors);
-    this.nationColorAllocator = new ColorAllocator(nationColors, nationColors);
+    const distinctness: ColorAllocatorOptions = {
+      observers: parseObservers(settings.observers),
+      distinctnessFloor: settings.distinctnessFloor,
+    };
+
+    this.humanColorAllocator = new ColorAllocator(
+      humanColors,
+      fallbackColors,
+      distinctness,
+    );
+    // Bots deliberately share a small palette: a lobby carries hundreds of
+    // them, and giving each a maximally distinct colour would crowd out the
+    // human players it matters most to tell apart.
+    this.botColorAllocator = new ColorAllocator(botColors, [], {
+      ...distinctness,
+      onExhausted: "recycle",
+    });
+    this.nationColorAllocator = new ColorAllocator(
+      nationColors,
+      [],
+      distinctness,
+    );
     this.teamPalettes = buildTeamPalettes(settings);
 
     this._focusedBorderColor = colord(settings.focusedBorderColor);

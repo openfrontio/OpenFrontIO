@@ -13,7 +13,8 @@ import {
   simulate,
 } from "../src/client/theme/ColorVision";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
-import { ColoredTeams } from "../src/core/game/Game";
+import { PlayerView } from "../src/client/view";
+import { ColoredTeams, PlayerType } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -354,5 +355,40 @@ describe("theme colour settings", () => {
         expect(new Set(normalised).size).toBe(normalised.length);
       }
     }
+  });
+});
+
+describe("SettingsTheme allocator wiring", () => {
+  const playerStub = (id: string, type: PlayerType) =>
+    ({
+      id: () => id,
+      team: () => null,
+      type: () => type,
+    }) as unknown as PlayerView;
+
+  test("bots reuse their palette rather than generating new colours", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    const palette = new Set(
+      createThemeSettings("default").botColors.map((c) => colord(c).toHex()),
+    );
+    for (let i = 0; i < 120; i++) {
+      const color = theme.territoryColor(
+        playerStub(`bot_${i}`, PlayerType.Bot),
+      );
+      expect(palette.has(color.toHex())).toBe(true);
+    }
+  });
+
+  test("humans in a full lobby all receive different colours", () => {
+    const theme = new SettingsTheme(createThemeSettings("default"));
+    const seen = new Set<string>();
+    for (let i = 0; i < 125; i++) {
+      seen.add(
+        theme
+          .territoryColor(playerStub(`human_${i}`, PlayerType.Human))
+          .toHex(),
+      );
+    }
+    expect(seen.size).toBe(125);
   });
 });
