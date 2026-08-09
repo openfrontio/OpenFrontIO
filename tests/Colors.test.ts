@@ -5,6 +5,11 @@ import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
+import {
+  observerViews,
+  parseObservers,
+  simulate,
+} from "../src/client/theme/ColorVision";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
 import { ColoredTeams } from "../src/core/game/Game";
 
@@ -154,5 +159,55 @@ describe("selectDistinctColor", () => {
       { r: 0, g: 255, b: 0, a: 1 },
       { r: 0, g: 0, b: 255, a: 1 },
     ]).toContainEqual(rgb);
+  });
+});
+
+describe("ColorVision", () => {
+  test("normal vision returns the colour unchanged", () => {
+    expect(simulate(colord("#a3e635"), "normal").toHex()).toBe("#a3e635");
+  });
+
+  test("simulates dichromacy against published reference values", () => {
+    // Machado et al. (2009) severity-1.0 matrices applied to linear-light sRGB.
+    expect(simulate(colord("#ff0000"), "protan").toHex()).toBe("#6d5f00");
+    expect(simulate(colord("#ff0000"), "deutan").toHex()).toBe("#a39000");
+    expect(simulate(colord("#0000ff"), "tritan").toHex()).toBe("#006b96");
+  });
+
+  test("achromatic colours are unaffected by any deficiency", () => {
+    for (const observer of ["protan", "deutan", "tritan"] as const) {
+      expect(simulate(colord("#ffffff"), observer).toHex()).toBe("#ffffff");
+      expect(simulate(colord("#000000"), observer).toHex()).toBe("#000000");
+    }
+  });
+
+  test("collapses a pair the default palette treats as distinct", () => {
+    // #a3e635 and #fbbf24 are both in default-theme.json humanColors and are
+    // clearly different to normal vision, but converge under deuteranopia.
+    const a = colord("#a3e635");
+    const b = colord("#fbbf24");
+    expect(a.delta(b) * 100).toBeGreaterThan(20);
+    expect(
+      simulate(a, "deutan").delta(simulate(b, "deutan")) * 100,
+    ).toBeLessThan(5);
+  });
+
+  test("parseObservers narrows valid names", () => {
+    expect(parseObservers(["normal", "deutan"])).toEqual(["normal", "deutan"]);
+  });
+
+  test("parseObservers rejects an unknown name", () => {
+    expect(() => parseObservers(["normal", "deutran"])).toThrow(/deutran/);
+  });
+
+  test("parseObservers rejects an empty list", () => {
+    expect(() => parseObservers([])).toThrow();
+  });
+
+  test("observerViews returns one view per observer, in order", () => {
+    const views = observerViews(colord("#ff0000"), ["normal", "deutan"]);
+    expect(views).toHaveLength(2);
+    expect(views[0].toHex()).toBe("#ff0000");
+    expect(views[1].toHex()).toBe("#a39000");
   });
 });
