@@ -11,7 +11,7 @@ import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -25,6 +25,11 @@ const newLobbyIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
+
+const LAST_MINUTE_SECONDS = 60;
+const FLASH_TIMER_SECONDS = 30;
+const FLASH_SIDEBAR_SECONDS = 10;
+const ONE_MINUTE_WARNING_DURATION_MS = 4_000;
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Controller {
@@ -54,6 +59,7 @@ export class GameRightSidebar extends LitElement implements Controller {
   private hasWinner = false;
   private isLobbyCreator = false;
   private isPrivateLobby = false;
+  private hasShownOneMinuteWarning = false;
   // Guards the in-game "New lobby" button so a double click doesn't fire twice
   // before we navigate to the successor lobby.
   private newLobbyRequested = false;
@@ -77,6 +83,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     this.isPrivateLobby =
       this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
+    this.hasShownOneMinuteWarning = false;
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -161,8 +168,29 @@ export class GameRightSidebar extends LitElement implements Controller {
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
+      this.maybeShowOneMinuteWarning();
     } else {
       this.timer = elapsedSeconds;
+    }
+  }
+
+  // Handing the notice to the heads-up toast layer means that layer owns the
+  // dismissal timer, so there's nothing for us to tear down on disconnect or
+  // when the game ends.
+  private maybeShowOneMinuteWarning(): void {
+    if (
+      !this.hasWinner &&
+      !this.game.inSpawnPhase() &&
+      this.timer > 0 &&
+      this.timer <= LAST_MINUTE_SECONDS &&
+      !this.hasShownOneMinuteWarning
+    ) {
+      this.hasShownOneMinuteWarning = true;
+      showToast(
+        translateText("game_timer.one_minute_remaining"),
+        "red",
+        ONE_MINUTE_WARNING_DURATION_MS,
+      );
     }
   }
 
@@ -269,22 +297,75 @@ export class GameRightSidebar extends LitElement implements Controller {
   render() {
     if (this.game === undefined) return html``;
 
-    const timerColor =
-      this.game.config().gameConfig().maxTimerValue !== undefined &&
-      this.game.config().gameConfig().maxTimerValue !== null &&
-      this.timer < 60
-        ? "text-red-400"
+    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
+    const isEndTimerActive =
+      maxTimerValue !== undefined &&
+      maxTimerValue !== null &&
+      !this.game.inSpawnPhase() &&
+      !this.hasWinner &&
+      this.timer > 0;
+    const isLastMinute = isEndTimerActive && this.timer <= LAST_MINUTE_SECONDS;
+    const shouldFlashTimer =
+      isEndTimerActive && this.timer <= FLASH_TIMER_SECONDS;
+    const shouldFlashSidebar =
+      isEndTimerActive && this.timer <= FLASH_SIDEBAR_SECONDS;
+
+    const timerClass = shouldFlashTimer
+      ? "game-end-timer-flash"
+      : isLastMinute
+        ? "game-end-timer-last-minute"
         : "";
 
     return html`
+      <style>
+        @keyframes game-end-timer-text-flash {
+          0%,
+          100% {
+            color: rgb(248 113 113);
+          }
+          50% {
+            color: white;
+          }
+        }
+        @keyframes game-end-timer-sidebar-flash {
+          0%,
+          100% {
+            background-color: rgb(0 0 0 / 0.92);
+          }
+          50% {
+            background-color: rgb(185 28 28 / 0.96);
+          }
+        }
+        .game-end-timer-last-minute {
+          color: rgb(248 113 113);
+        }
+        .game-end-timer-flash {
+          animation: game-end-timer-text-flash 1s ease-in-out infinite;
+        }
+        .game-end-timer-sidebar-flash {
+          animation: game-end-timer-sidebar-flash 1s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .game-end-timer-flash {
+            animation: none;
+            color: white;
+          }
+          .game-end-timer-sidebar-flash {
+            animation: none;
+            background-color: rgb(185 28 28 / 0.96);
+          }
+        }
+      </style>
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <!-- In-game time -->
-        <div class=${timerColor}>${this.secondsToHms(this.timer)}</div>
+        <div data-game-timer class=${timerClass}>
+          ${this.secondsToHms(this.timer)}
+        </div>
 
         <!-- Buttons -->
         ${this.maybeRenderReplayButtons()}

@@ -65,6 +65,11 @@ export interface Stats {
     troops: number | bigint,
   ): void;
 
+  // Player takes ownership of target's transport ship, by conquering them or
+  // by inheriting from a disconnected teammate. Unlike a trade ship, which is
+  // captured by hunting it down, this one changes hands with its owner.
+  boatCapturedTroops(player: Player, target: Player): void;
+
   // Player launches bomb at target
   bombLaunch(
     player: Player,

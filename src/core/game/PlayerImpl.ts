@@ -22,6 +22,7 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
+  MAX_UPGRADE_AMOUNT,
   MutableAlliance,
   Player,
   PlayerBuildable,
@@ -1376,11 +1377,25 @@ export class PlayerImpl implements Player {
 
       const buildNew = canBuild !== false && canUpgrade === false;
 
+      // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
+      // and the constructed count, so step n costs the same as if the player
+      // already had n extra units — cost(mg, this, n).
+      let upgradeCosts: Gold[] | undefined;
+      if (canUpgrade !== false) {
+        upgradeCosts = new Array<Gold>(MAX_UPGRADE_AMOUNT);
+        let total = 0n;
+        for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
+          total += config.unitInfo(u).cost(mg, this, n);
+          upgradeCosts[n] = total;
+        }
+      }
+
       result[i] = {
         type: u,
         canBuild,
         canUpgrade,
         cost,
+        upgradeCosts,
         overlappingRailroads: buildNew
           ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],

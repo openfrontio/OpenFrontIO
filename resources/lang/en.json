@@ -121,6 +121,7 @@
       "warship": "Captures trade ships, destroys ships and boats"
     },
     "not_enough_money": "Not enough money",
+    "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
   },
   "chat": {
@@ -630,6 +631,9 @@
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
     "credits": "Credits",
     "title": "Game is Starting..."
+  },
+  "game_timer": {
+    "one_minute_remaining": "One minute remaining!"
   },
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",
@@ -1437,7 +1441,8 @@
   },
   "radial_menu": {
     "delete_unit_description": "Click to delete the nearest unit",
-    "delete_unit_title": "Delete Unit"
+    "delete_unit_title": "Delete Unit",
+    "upgrade_x": "Upgrade x{amount}"
   },
   "relation": {
     "default": "Default",

@@ -227,6 +227,10 @@ export class StatsImpl implements Stats {
     this._addBoat(player, "trans", BOAT_INDEX_DESTROY, 1);
   }
 
+  boatCapturedTroops(player: Player, target: Player): void {
+    this._addBoat(player, "trans", BOAT_INDEX_CAPTURE, 1);
+  }
+
   bombLaunch(
     player: Player,
     target: Player | TerraNullius,
