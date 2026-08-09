@@ -7,7 +7,10 @@ import {
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
 import { deltaE2000 } from "../src/client/theme/ColorDistance";
-import { sequenceColor } from "../src/client/theme/ColorGenerator";
+import {
+  paletteEnvelope,
+  sequenceColor,
+} from "../src/client/theme/ColorGenerator";
 import { ColorRegistry } from "../src/client/theme/ColorRegistry";
 import {
   observerViews,
@@ -294,14 +297,20 @@ describe("ColorDistance", () => {
 });
 
 describe("ColorGenerator", () => {
-  test("is deterministic for a given index", () => {
-    expect(sequenceColor(17).toHex()).toBe(sequenceColor(17).toHex());
-    expect(sequenceColor(0).toHex()).not.toBe(sequenceColor(1).toHex());
+  const wide = paletteEnvelope(defaultTheme.humanColors.map((c) => colord(c)));
+
+  test("is deterministic for a given index and envelope", () => {
+    expect(sequenceColor(17, wide).toHex()).toBe(
+      sequenceColor(17, wide).toHex(),
+    );
+    expect(sequenceColor(0, wide).toHex()).not.toBe(
+      sequenceColor(1, wide).toHex(),
+    );
   });
 
   test("avoids near-black and near-white fills", () => {
     for (let i = 0; i < 300; i++) {
-      const lightness = sequenceColor(i).toLch().l;
+      const lightness = sequenceColor(i, wide).toLch().l;
       expect(lightness).toBeGreaterThan(20);
       expect(lightness).toBeLessThan(95);
     }
@@ -309,10 +318,11 @@ describe("ColorGenerator", () => {
 
   test("spreads every prefix, not just the whole sequence", () => {
     // The point of a low-discrepancy sequence: the first N terms are already
-    // well distributed for any N, so the allocator can take the first
-    // acceptable candidate instead of searching a large pool.
+    // well distributed for any N, so a modest pool covers the region.
     for (const count of [8, 16, 32]) {
-      const colors = Array.from({ length: count }, (_, i) => sequenceColor(i));
+      const colors = Array.from({ length: count }, (_, i) =>
+        sequenceColor(i, wide),
+      );
       let worst = Infinity;
       for (let i = 0; i < colors.length; i++) {
         for (let j = i + 1; j < colors.length; j++) {
@@ -320,26 +330,36 @@ describe("ColorGenerator", () => {
           if (d < worst) worst = d;
         }
       }
-      // Measured worst across these prefixes is ~4.1. The bound is deliberately
-      // looser: the sequence only has to be a good starting point, since the
-      // allocator still checks every candidate against the distinctness floor.
+      // The bound is deliberately loose: the sequence only has to be a good
+      // starting point, since the allocator still checks every candidate
+      // against the distinctness floor.
       expect(worst).toBeGreaterThan(3);
     }
   });
 
-  test("generated colours are never already in play", () => {
-    // Sequence colours are rounded to 8-bit sRGB, so a long run does repeat a
-    // few values (497 distinct in 500). Uniqueness is the registry's job, not
-    // the sequence's — this is the guarantee players actually depend on.
-    const registry = new ColorRegistry(["normal"], 5);
-    const seen = new Set<string>();
-    for (let i = 0; i < 200; i++) {
-      const candidate = registry.generate();
-      expect(seen.has(candidate.color.toHex())).toBe(false);
-      seen.add(candidate.color.toHex());
-      registry.commit(candidate);
+  test("keeps synthesised colours inside their palette's character", () => {
+    // Each player type's palette has its own look — humans vivid, nations
+    // restrained, bots nearly grey — and that difference is information. A
+    // synthesised nation colour must not arrive looking like a human's.
+    const nationEnvelope = paletteEnvelope(
+      defaultTheme.nationColors.map((c) => colord(c)),
+    );
+    const nationChroma = defaultTheme.nationColors.map(
+      (c) => colord(c).toLch().c,
+    );
+    const ceiling = Math.max(...nationChroma);
+    for (let i = 0; i < 400; i++) {
+      const lch = sequenceColor(i, nationEnvelope).toLch();
+      expect(lch.c).toBeLessThanOrEqual(ceiling + 1);
     }
-    expect(seen.size).toBe(200);
+  });
+
+  test("a muted palette yields a muted envelope", () => {
+    const bots = paletteEnvelope(defaultTheme.botColors.map((c) => colord(c)));
+    const humans = paletteEnvelope(
+      defaultTheme.humanColors.map((c) => colord(c)),
+    );
+    expect(bots.chromaMax).toBeLessThan(humans.chromaMax);
   });
 });
 

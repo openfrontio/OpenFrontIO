@@ -3,8 +3,22 @@ import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import { PseudoRandom } from "../../core/PseudoRandom";
 import { simpleHash } from "../../core/Util";
+import {
+  ColorEnvelope,
+  paletteEnvelope,
+  sequenceColor,
+} from "./ColorGenerator";
 import { Candidate, ColorRegistry } from "./ColorRegistry";
 import { Observer } from "./ColorVision";
+
+/**
+ * How many synthesised colours to keep available at a time.
+ *
+ * Sized against the largest public lobby (125) plus nations, with room to
+ * discard crowded candidates. Scored once on creation and maintained
+ * incrementally afterwards, so widening this costs a scan per allocation.
+ */
+const GENERATED_POOL_SIZE = 2048;
 
 extend([lchPlugin]);
 extend([labPlugin]);
@@ -56,6 +70,13 @@ export class ColorAllocator {
   private readonly policy: AllocationPolicy;
   private readonly primary: Candidate[];
   private readonly fallback: Candidate[];
+  /**
+   * The LCH region this allocator's synthesised colours are drawn from, taken
+   * from its primary palette so they stay in character with it.
+   */
+  private readonly envelope: ColorEnvelope;
+  /** Synthesised colours, built on first need so ordinary lobbies never pay. */
+  private generated: Candidate[] | null = null;
   private assigned = new Map<string, Colord>();
 
   constructor(
@@ -70,6 +91,7 @@ export class ColorAllocator {
         options.distinctnessFloor ?? 0,
       );
     this.policy = options.policy ?? "distinct";
+    this.envelope = paletteEnvelope(colors);
     this.primary = colors.map((color) => this.registry.candidate(color));
     this.fallback = fallback.map((color) => this.registry.candidate(color));
     if (this.policy === "distinct") {
@@ -126,11 +148,53 @@ export class ColorAllocator {
     }
 
     const curated = bestUnused(this.primary) ?? bestUnused(this.fallback);
-    const generated = this.registry.generate();
+    const generated = this.generate();
     if (curated !== null && curated.nearest >= generated.nearest) {
       return curated;
     }
     return generated;
+  }
+
+  /**
+   * The roomiest synthesised colour available, drawn from this allocator's own
+   * envelope so it stays in character with its palette.
+   *
+   * The pool is built once, on first need, and registered with the registry so
+   * its scores are maintained incrementally — the same colour is never
+   * re-scored against the same neighbour twice.
+   */
+  private generate(): Candidate {
+    if (this.generated === null) {
+      this.generated = [];
+      for (let index = 0; index < GENERATED_POOL_SIZE; index++) {
+        this.generated.push(
+          this.registry.candidate(sequenceColor(index, this.envelope)),
+        );
+      }
+      this.registry.registerPool(this.generated);
+    }
+    let best: Candidate | null = null;
+    for (const candidate of this.generated) {
+      // Never hand back a colour already in play: that would put two players in
+      // the same colour, the defect this exists to prevent. Sequence colours
+      // round to 8-bit sRGB, so exact repeats are possible.
+      if (candidate.used || candidate.nearest <= 0) {
+        continue;
+      }
+      if (best === null || candidate.nearest > best.nearest) {
+        best = candidate;
+      }
+    }
+    if (best !== null) {
+      return best;
+    }
+    // Pool wholly used or wholly crowded — extend it and take the newcomer.
+    const grown = this.registry.candidate(
+      sequenceColor(this.generated.length, this.envelope),
+    );
+    grown.nearest = this.registry.distanceToInPlay(grown.labs);
+    this.generated.push(grown);
+    return grown;
   }
 
   /**
@@ -144,7 +208,7 @@ export class ColorAllocator {
         ? available
         : this.fallback.filter((candidate) => !candidate.used);
     if (source.length === 0) {
-      return this.registry.generate();
+      return this.generate();
     }
     const random = new PseudoRandom(simpleHash(id));
     return source[random.nextInt(0, source.length)];
