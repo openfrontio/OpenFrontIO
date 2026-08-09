@@ -55,32 +55,25 @@ class RailAdapter implements AStarAdapter {
 
     if (node >= this.width) {
       const n = node - this.width;
-      if (this.isTraversable(n, fromShoreline))
-        buffer[count++] = n;
+      if (this.isTraversable(n, fromShoreline)) buffer[count++] = n;
     }
     if (node < this._numNodes - this.width) {
       const n = node + this.width;
-      if (this.isTraversable(n, fromShoreline))
-        buffer[count++] = n;
+      if (this.isTraversable(n, fromShoreline)) buffer[count++] = n;
     }
     if (x !== 0) {
       const n = node - 1;
-      if (this.isTraversable(n, fromShoreline))
-        buffer[count++] = n;
+      if (this.isTraversable(n, fromShoreline)) buffer[count++] = n;
     }
     if (x !== this.width - 1) {
       const n = node + 1;
-      if (this.isTraversable(n, fromShoreline))
-        buffer[count++] = n;
+      if (this.isTraversable(n, fromShoreline)) buffer[count++] = n;
     }
 
     return count;
   }
 
-  private isTraversable(
-    to: number,
-    fromShoreline: boolean,
-  ): boolean {
+  private isTraversable(to: number, fromShoreline: boolean): boolean {
     const toWater = this.gameMap.isWater(to);
     if (!toWater) return true;
     return fromShoreline || this.gameMap.isShoreline(to);
