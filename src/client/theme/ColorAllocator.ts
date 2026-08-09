@@ -1,8 +1,9 @@
-import { Colord, extend } from "colord";
+import { Colord, extend, LabaColor } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import { PseudoRandom } from "../../core/PseudoRandom";
 import { simpleHash } from "../../core/Util";
+import { deltaE2000 } from "./ColorDistance";
 import { generateCandidateColors } from "./ColorGenerator";
 import { Observer, observerViews } from "./ColorVision";
 
@@ -32,7 +33,12 @@ export interface ColorAllocatorOptions {
 /** A candidate colour, its appearance per observer, and its cached score. */
 interface Candidate {
   color: Colord;
-  views: Colord[];
+  /**
+   * LAB coordinates of the colour as each observer sees it, converted once at
+   * construction. Allocation compares one colour against thousands of
+   * candidates, so converting per comparison would dominate the cost.
+   */
+  labs: LabaColor[];
   /**
    * Smallest distance to any already-assigned colour, across all observers.
    * Maintained incrementally so allocation costs O(candidates) rather than
@@ -92,10 +98,15 @@ export class ColorAllocator {
   private toCandidates(colors: Colord[]): Candidate[] {
     return colors.map((color) => ({
       color,
-      views: observerViews(color, this.observers),
+      labs: this.toLabs(color),
       nearest: Infinity,
       used: false,
     }));
+  }
+
+  /** LAB coordinates of `color` under each observer this allocator checks. */
+  private toLabs(color: Colord): LabaColor[] {
+    return observerViews(color, this.observers).map((view) => view.toLab());
   }
 
   private select(id: string): Candidate {
@@ -163,11 +174,11 @@ export class ColorAllocator {
     if (this.generated === null) {
       this.generated = this.toCandidates(generateCandidateColors());
       for (const color of this.assigned.values()) {
-        const views = observerViews(color, this.observers);
+        const labs = this.toLabs(color);
         for (const candidate of this.generated) {
           candidate.nearest = Math.min(
             candidate.nearest,
-            distance(candidate.views, views),
+            distance(candidate.labs, labs),
           );
         }
       }
@@ -188,7 +199,7 @@ export class ColorAllocator {
         }
         candidate.nearest = Math.min(
           candidate.nearest,
-          distance(candidate.views, assigned.views),
+          distance(candidate.labs, assigned.labs),
         );
       }
     }
@@ -211,12 +222,13 @@ function bestUnused(tier: Candidate[]): Candidate | null {
 
 /**
  * Worst-case ΔE2000 between two colours across every observer, on the 0–100
- * scale. colord's lab plugin `.delta()` is CIEDE2000 normalised to 0..1.
+ * scale. Both operands are already in LAB, so no colour conversion happens
+ * here — this runs once per candidate per allocation.
  */
-function distance(a: Colord[], b: Colord[]): number {
+function distance(a: LabaColor[], b: LabaColor[]): number {
   let worst = Infinity;
   for (let i = 0; i < a.length; i++) {
-    const d = a[i].delta(b[i]) * 100;
+    const d = deltaE2000(a[i], b[i]);
     if (d < worst) {
       worst = d;
     }

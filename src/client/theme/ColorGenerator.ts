@@ -30,6 +30,13 @@ const HUE_STEP = 6;
  *
  * The constants above yield 6125 candidates from 6600 sweep points.
  *
+ * Resolution is a deliberate trade. Coarsening the steps to ~1500 candidates
+ * makes allocation roughly four times cheaper, but costs real separation in
+ * the case this exists to serve: worst-case ΔE across observers drops from
+ * 3.9 to 3.4 for a 100-player colourblind-theme lobby. Separation wins —
+ * generation only runs for lobbies that have already exhausted the curated
+ * palettes, and the cost is one-off per player rather than per frame.
+ *
  * Deterministic: no RNG, and the iteration order is fixed.
  */
 export function generateCandidateColors(): Colord[] {

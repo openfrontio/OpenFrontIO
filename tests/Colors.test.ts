@@ -6,6 +6,7 @@ import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
+import { deltaE2000 } from "../src/client/theme/ColorDistance";
 import { generateCandidateColors } from "../src/client/theme/ColorGenerator";
 import {
   observerViews,
@@ -212,6 +213,82 @@ describe("ColorVision", () => {
     expect(views).toHaveLength(2);
     expect(views[0].toHex()).toBe("#ff0000");
     expect(views[1].toHex()).toBe("#a39000");
+  });
+});
+
+describe("ColorDistance", () => {
+  test("matches the published CIEDE2000 reference dataset", () => {
+    // Sharma, Wu & Dalal (2005), "The CIEDE2000 color-difference formula:
+    // implementation notes, supplementary test data, and mathematical
+    // observations". These pairs exercise the hue-wraparound and near-neutral
+    // branches that naive implementations get wrong.
+    const cases: [number[], number[], number][] = [
+      [[50, 2.6772, -79.7751], [50, 0, -82.7485], 2.0425],
+      [[50, 3.1571, -77.2803], [50, 0, -82.7485], 2.8615],
+      [[50, 2.8361, -74.02], [50, 0, -82.7485], 3.4412],
+      [[50, -1.3802, -84.2814], [50, 0, -82.7485], 1.0],
+      [[50, -0.9009, -85.5211], [50, 0, -82.7485], 1.0],
+      [[50, 0, 0], [50, -1, 2], 2.3669],
+      [[50, -1, 2], [50, 0, 0], 2.3669],
+      [[50, 2.49, -0.001], [50, -2.49, 0.0009], 7.1792],
+      [[50, 2.49, -0.001], [50, -2.49, 0.0011], 7.2195],
+      [[50, -0.001, 2.49], [50, 0.0009, -2.49], 4.8045],
+      [[50, 2.5, 0], [50, 0, -2.5], 4.3065],
+      [[50, 2.5, 0], [73, 25, -18], 27.1492],
+      [[50, 2.5, 0], [50, 3.1736, 0.5854], 1.0],
+      [[60.2574, -34.0099, 36.2677], [60.4626, -34.1751, 39.4387], 1.2644],
+      [[63.0109, -31.0961, -5.8663], [62.8187, -29.7946, -4.0864], 1.263],
+      [[22.7233, 20.0904, -46.694], [23.0331, 14.973, -42.5619], 2.0373],
+      [[2.0776, 0.0795, -1.135], [0.9033, -0.0636, -0.5514], 0.9082],
+    ];
+    for (const [first, second, expected] of cases) {
+      const value = deltaE2000(
+        { l: first[0], a: first[1], b: first[2], alpha: 1 },
+        { l: second[0], a: second[1], b: second[2], alpha: 1 },
+      );
+      expect(value).toBeCloseTo(expected, 3);
+    }
+  });
+
+  test("agrees with colord's delta on ordinary palette colours", () => {
+    // Sanity check that swapping the metric did not change the allocator's
+    // behaviour in the common case. colord rounds delta() to three decimals
+    // (0.1 once scaled to 0-100) and diverges from the reference formula on
+    // some near-neutral pairs, so this is a mean check, not a per-pair one.
+    const palette = defaultTheme.humanColors.map((c) => colord(c));
+    let total = 0;
+    let pairs = 0;
+    for (let i = 0; i < palette.length; i++) {
+      for (let j = i + 1; j < palette.length; j++) {
+        total += Math.abs(
+          deltaE2000(palette[i].toLab(), palette[j].toLab()) -
+            palette[i].delta(palette[j]) * 100,
+        );
+        pairs++;
+      }
+    }
+    expect(total / pairs).toBeLessThan(0.1);
+  });
+
+  test("is zero for identical colours and symmetric", () => {
+    const a = colord("#2962ff").toLab();
+    const b = colord("#eb3333").toLab();
+    expect(deltaE2000(a, a)).toBeCloseTo(0, 10);
+    expect(deltaE2000(a, b)).toBeCloseTo(deltaE2000(b, a), 10);
+  });
+
+  test("handles achromatic colours without dividing by zero", () => {
+    const black = colord("#000000").toLab();
+    const white = colord("#ffffff").toLab();
+    const grey = colord("#808080").toLab();
+    for (const value of [
+      deltaE2000(black, white),
+      deltaE2000(black, grey),
+      deltaE2000(grey, white),
+    ]) {
+      expect(Number.isFinite(value)).toBe(true);
+      expect(value).toBeGreaterThan(0);
+    }
   });
 });
 
