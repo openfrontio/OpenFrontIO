@@ -16,6 +16,7 @@ import { fetchPublicPlayerGames } from "../../../Api";
 import { ClientEnv } from "../../../ClientEnv";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import {
+  copyToClipboard,
   getMapName,
   renderDuration,
   showToast,
@@ -269,7 +270,7 @@ export class PlayerGameHistoryView extends LitElement {
     const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
 
     try {
-      await navigator.clipboard.writeText(url);
+      void copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
       showToast(translateText("error_modal.failed_copy"), "red");
