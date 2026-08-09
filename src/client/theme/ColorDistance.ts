@@ -15,15 +15,26 @@ import { LabaColor } from "colord";
  * disagrees with the reference formula by up to ~2.5 on some near-neutral
  * pairs, so this is also the more accurate of the two.
  */
+const DEG = 180 / Math.PI;
+const RAD = Math.PI / 180;
+/** 25^7, the constant the chroma-weighting terms are scaled against. */
+const POW_25_7 = 6103515625;
+
+/** `value ** 7` by multiplication — this runs millions of times per lobby. */
+function pow7(value: number): number {
+  const cube = value * value * value;
+  return cube * cube * value;
+}
+
 export function deltaE2000(first: LabaColor, second: LabaColor): number {
-  const rad = Math.PI / 180;
-  const deg = 180 / Math.PI;
+  const rad = RAD;
+  const deg = DEG;
 
   const c1 = Math.hypot(first.a, first.b);
   const c2 = Math.hypot(second.a, second.b);
   const meanC = (c1 + c2) / 2;
-  const meanC7 = meanC ** 7;
-  const g = 0.5 * (1 - Math.sqrt(meanC7 / (meanC7 + 25 ** 7)));
+  const meanC7 = pow7(meanC);
+  const g = 0.5 * (1 - Math.sqrt(meanC7 / (meanC7 + POW_25_7)));
 
   const a1 = first.a * (1 + g);
   const a2 = second.a * (1 + g);
@@ -65,15 +76,17 @@ export function deltaE2000(first: LabaColor, second: LabaColor): number {
     0.32 * Math.cos((3 * meanHp + 6) * rad) -
     0.2 * Math.cos((4 * meanHp - 63) * rad);
 
-  const meanCp7 = meanCp ** 7;
-  const sl =
-    1 + (0.015 * (meanL - 50) ** 2) / Math.sqrt(20 + (meanL - 50) ** 2);
+  const meanCp7 = pow7(meanCp);
+  const dl = meanL - 50;
+  const dl2 = dl * dl;
+  const hueOffset = (meanHp - 275) / 25;
+  const sl = 1 + (0.015 * dl2) / Math.sqrt(20 + dl2);
   const sc = 1 + 0.045 * meanCp;
   const sh = 1 + 0.015 * meanCp * t;
   const rt =
     -2 *
-    Math.sqrt(meanCp7 / (meanCp7 + 25 ** 7)) *
-    Math.sin(60 * Math.exp(-(((meanHp - 275) / 25) ** 2)) * rad);
+    Math.sqrt(meanCp7 / (meanCp7 + POW_25_7)) *
+    Math.sin(60 * Math.exp(-(hueOffset * hueOffset)) * rad);
 
   const lTerm = deltaL / sl;
   const cTerm = deltaC / sc;
