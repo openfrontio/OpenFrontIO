@@ -207,12 +207,18 @@ export class GameMapImpl implements GameMap {
 
   // Terrain getters (immutable)
   isLand(ref: TileRef): boolean {
-    return Boolean(this.terrain[ref] & (1 << GameMapImpl.IS_LAND_BIT));
+    return (
+      Boolean(this.terrain[ref] & (1 << GameMapImpl.IS_LAND_BIT)) &&
+      !(
+        (this.terrain[ref] & GameMapImpl.MAGNITUDE_MASK) ===
+        GameMapImpl.IMPASSABLE_MAGNITUDE
+      )
+    );
   }
 
   isImpassable(ref: TileRef): boolean {
     return (
-      this.isLand(ref) &&
+      Boolean(this.terrain[ref] & (1 << GameMapImpl.IS_LAND_BIT)) &&
       (this.terrain[ref] & GameMapImpl.MAGNITUDE_MASK) ===
         GameMapImpl.IMPASSABLE_MAGNITUDE
     );
@@ -313,7 +319,14 @@ export class GameMapImpl implements GameMap {
     const x = this.x(ref);
     const y = this.y(ref);
     return (
-      x === 0 || x === this.width() - 1 || y === 0 || y === this.height() - 1
+      x === 0 ||
+      x === this.width() - 1 ||
+      y === 0 ||
+      y === this.height() - 1 ||
+      this.isImpassable(this.ref(x + 1, y)) ||
+      this.isImpassable(this.ref(x - 1, y)) ||
+      this.isImpassable(this.ref(x, y + 1)) ||
+      this.isImpassable(this.ref(x, y - 1))
     );
   }
 
