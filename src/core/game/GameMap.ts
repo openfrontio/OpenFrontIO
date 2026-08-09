@@ -242,7 +242,10 @@ export class GameMapImpl implements GameMap {
   }
 
   isShoreline(ref: TileRef): boolean {
-    return Boolean(this.terrain[ref] & (1 << GameMapImpl.SHORELINE_BIT));
+    return (
+      Boolean(this.terrain[ref] & (1 << GameMapImpl.SHORELINE_BIT)) &&
+      !this.isImpassable(ref)
+    );
   }
 
   magnitude(ref: TileRef): number {
@@ -357,7 +360,7 @@ export class GameMapImpl implements GameMap {
 
   // Helper methods
   isWater(ref: TileRef): boolean {
-    return !this.isLand(ref);
+    return !this.isLand(ref) && !this.isImpassable(ref);
   }
 
   isShore(ref: TileRef): boolean {
@@ -373,12 +376,11 @@ export class GameMapImpl implements GameMap {
   terrainType(ref: TileRef): TerrainType {
     if (this.isLand(ref)) {
       const magnitude = this.magnitude(ref);
-      if (magnitude >= GameMapImpl.IMPASSABLE_MAGNITUDE)
-        return TerrainType.Impassable;
       if (magnitude < 10) return TerrainType.Plains;
       if (magnitude < 20) return TerrainType.Highland;
       return TerrainType.Mountain;
     }
+    if (this.isImpassable(ref)) return TerrainType.Impassable;
     return TerrainType.Ocean;
   }
 

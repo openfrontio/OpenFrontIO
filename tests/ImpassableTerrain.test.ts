@@ -136,8 +136,8 @@ describe("Impassable Terrain", () => {
     expect(game.terrainType(game.ref(WALL_X, 50))).toBe(TerrainType.Impassable);
   });
 
-  test("isLand returns true for impassable (solid for pathfinding)", () => {
-    expect(game.isLand(game.ref(WALL_X, 50))).toBe(true);
+  test("isLand returns false for impassable (can't pathfind trains through it)", () => {
+    expect(game.isLand(game.ref(WALL_X, 50))).toBe(false);
   });
 
   test("numLandTiles excludes impassable tiles", () => {
@@ -227,10 +227,10 @@ describe("Impassable Terrain", () => {
     game.addExecution(nuke);
     executeTicks(game, 30);
 
-    // Impassable tiles should still be land and impassable (not flooded).
+    // Impassable tiles should still not be land and impassable (not flooded).
     for (let y = 95; y <= 105; y++) {
       const t = game.ref(WALL_X, y);
-      expect(game.isLand(t)).toBe(true);
+      expect(game.isLand(t)).toBe(false);
       expect(game.isImpassable(t)).toBe(true);
     }
   });
@@ -283,7 +283,8 @@ describe("Impassable Terrain", () => {
     const t = game.ref(WALL_X, 50);
     expect(game.isImpassable(t)).toBe(true);
     game.map().setWater(t);
-    expect(game.isLand(t)).toBe(true);
+    expect(game.isLand(t)).toBe(false);
+    expect(game.isWater(t)).toBe(false);
     expect(game.isImpassable(t)).toBe(true);
   });
 
