@@ -22,6 +22,20 @@ export interface ThemeSettings {
   botColors: string[];
   /** Used when the primary palettes are exhausted. */
   fallbackColors: string[];
+  /**
+   * Vision models player colours must stay distinct under. Names come from the
+   * theme module's Observer type ("normal", "protan", "deutan", "tritan"); they
+   * are validated when the theme is built, so a typo fails loudly rather than
+   * silently disabling an accessibility check.
+   */
+  observers: string[];
+  /**
+   * Minimum ΔE2000 (0–100) a curated palette colour must reach against the
+   * colours already in play. Below this the allocator generates a colour
+   * instead. Raising it favours separation over the curated palette; lowering
+   * it favours the curated palette.
+   */
+  distinctnessFloor: number;
   /** Border = territory color darkened by this absolute amount. */
   borderDarken: number;
   /**

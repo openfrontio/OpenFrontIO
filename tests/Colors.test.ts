@@ -1,4 +1,5 @@
 import { colord, Colord } from "colord";
+import colorblindThemeJson from "../src/client/render/gl/colorblind-theme.json";
 import defaultTheme from "../src/client/render/gl/default-theme.json";
 import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
@@ -325,5 +326,33 @@ describe("ColorAllocator distinctness guarantees", () => {
       allocator.assignColor(`player_${i}`),
     );
     expect(new Set(assigned.map((c) => c.toHex())).size).toBe(6);
+  });
+});
+
+describe("theme colour settings", () => {
+  test("both themes declare observers and a distinctness floor", () => {
+    for (const theme of [defaultTheme, colorblindThemeJson]) {
+      expect(parseObservers(theme.observers)).toEqual(theme.observers);
+      expect(theme.distinctnessFloor).toBeGreaterThan(0);
+    }
+  });
+
+  test("the colorblind theme checks tritanopia and the default theme does not", () => {
+    expect(colorblindThemeJson.observers).toContain("tritan");
+    expect(defaultTheme.observers).not.toContain("tritan");
+  });
+
+  test("no palette contains a duplicate colour", () => {
+    for (const theme of [defaultTheme, colorblindThemeJson]) {
+      for (const palette of [
+        theme.humanColors,
+        theme.nationColors,
+        theme.botColors,
+        theme.fallbackColors,
+      ]) {
+        const normalised = palette.map((c) => colord(c).toHex());
+        expect(new Set(normalised).size).toBe(normalised.length);
+      }
+    }
   });
 });
