@@ -81,7 +81,7 @@
     "username_error_failed": "Nem sikerült megváltoztatni a felhasználónevedet. Kérjük, próbáld meg később.",
     "username_error_profane": "Ez a felhasználónév nem engedélyezett.",
     "username_error_taken": "Ez a felhasználónév foglalt – próbálj meg egy másikat.",
-    "username_grace_warning": "{dátum}-án elveszíti a(z) \"{name}\" feletti kizárólagos jogot. Iratkozzon fel újra a megtartásához.",
+    "username_grace_warning": "{date}-án elveszíti a(z) \"{name}\" feletti kizárólagos jogot. Iratkozzon fel újra a megtartásához.",
     "username_not_set": "Igényeld a felhasználónevedet – ez azonosít téged az összes játékban.",
     "username_placeholder": "Adj meg egy felhasználónevet",
     "username_save": "Mentés",
