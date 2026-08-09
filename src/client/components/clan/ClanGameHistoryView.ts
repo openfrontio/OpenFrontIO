@@ -220,12 +220,12 @@ export class ClanGameHistoryView extends LitElement {
     );
   }
 
-  private copyGameLink(gameId: string) {
+  private async copyGameLink(gameId: string) {
     const encodedGameId = encodeURIComponent(gameId);
     const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
 
     try {
-      void copyToClipboard(url);
+      await void copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
       showToast(translateText("error_modal.failed_copy"), "red");
