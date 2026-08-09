@@ -1180,6 +1180,13 @@
     "teams_of": "{teamCount} teams of {playersPerTeam}",
     "teams_title": "Teams"
   },
+  "multi_tab": {
+    "detected": "Multiple open game tabs detected.",
+    "explanation": "To ensure fair play, only one active game tab is permitted at a time.",
+    "please_wait": "Please wait",
+    "seconds": "seconds",
+    "warning": "Vigilant Mode Warning"
+  },
   "new_lobby_prompt": {
     "confirm": "Start a new lobby? All players will be invited to join.",
     "dismiss": "Dismiss",
