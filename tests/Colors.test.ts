@@ -7,7 +7,8 @@ import {
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
 import { deltaE2000 } from "../src/client/theme/ColorDistance";
-import { generateCandidateColors } from "../src/client/theme/ColorGenerator";
+import { sequenceColor } from "../src/client/theme/ColorGenerator";
+import { ColorRegistry } from "../src/client/theme/ColorRegistry";
 import {
   observerViews,
   parseObservers,
@@ -293,28 +294,52 @@ describe("ColorDistance", () => {
 });
 
 describe("ColorGenerator", () => {
-  test("produces a substantial candidate set", () => {
-    expect(generateCandidateColors().length).toBeGreaterThan(500);
-  });
-
-  test("contains no duplicate colours", () => {
-    const colors = generateCandidateColors();
-    const hexes = new Set(colors.map((c) => c.toHex()));
-    expect(hexes.size).toBe(colors.length);
-  });
-
-  test("is deterministic across calls", () => {
-    const a = generateCandidateColors().map((c) => c.toHex());
-    const b = generateCandidateColors().map((c) => c.toHex());
-    expect(a).toEqual(b);
+  test("is deterministic for a given index", () => {
+    expect(sequenceColor(17).toHex()).toBe(sequenceColor(17).toHex());
+    expect(sequenceColor(0).toHex()).not.toBe(sequenceColor(1).toHex());
   });
 
   test("avoids near-black and near-white fills", () => {
-    for (const color of generateCandidateColors()) {
-      const lightness = color.toLch().l;
+    for (let i = 0; i < 300; i++) {
+      const lightness = sequenceColor(i).toLch().l;
       expect(lightness).toBeGreaterThan(20);
       expect(lightness).toBeLessThan(95);
     }
+  });
+
+  test("spreads every prefix, not just the whole sequence", () => {
+    // The point of a low-discrepancy sequence: the first N terms are already
+    // well distributed for any N, so the allocator can take the first
+    // acceptable candidate instead of searching a large pool.
+    for (const count of [8, 16, 32]) {
+      const colors = Array.from({ length: count }, (_, i) => sequenceColor(i));
+      let worst = Infinity;
+      for (let i = 0; i < colors.length; i++) {
+        for (let j = i + 1; j < colors.length; j++) {
+          const d = deltaE2000(colors[i].toLab(), colors[j].toLab());
+          if (d < worst) worst = d;
+        }
+      }
+      // Measured worst across these prefixes is ~4.1. The bound is deliberately
+      // looser: the sequence only has to be a good starting point, since the
+      // allocator still checks every candidate against the distinctness floor.
+      expect(worst).toBeGreaterThan(3);
+    }
+  });
+
+  test("generated colours are never already in play", () => {
+    // Sequence colours are rounded to 8-bit sRGB, so a long run does repeat a
+    // few values (497 distinct in 500). Uniqueness is the registry's job, not
+    // the sequence's — this is the guarantee players actually depend on.
+    const registry = new ColorRegistry(["normal"], 5);
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const candidate = registry.generate();
+      expect(seen.has(candidate.color.toHex())).toBe(false);
+      seen.add(candidate.color.toHex());
+      registry.commit(candidate);
+    }
+    expect(seen.size).toBe(200);
   });
 });
 
@@ -383,27 +408,89 @@ describe("ColorAllocator distinctness guarantees", () => {
     );
   });
 
-  test("recycle policy reuses the palette instead of generating", () => {
+  test("shared policy stays inside the palette", () => {
     const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
-    const allocator = new ColorAllocator(pool, [], {
-      onExhausted: "recycle",
-    });
-    const assigned = Array.from({ length: 6 }, (_, i) =>
-      allocator.assignColor(`bot_${i}`),
-    );
+    const allocator = new ColorAllocator(pool, [], { policy: "shared" });
     const palette = new Set(pool.map((c) => c.toHex()));
-    for (const color of assigned) {
-      expect(palette.has(color.toHex())).toBe(true);
+    for (let i = 0; i < 20; i++) {
+      expect(palette.has(allocator.assignColor(`bot_${i}`).toHex())).toBe(true);
     }
   });
 
-  test("generate policy leaves the palette once it is exhausted", () => {
+  test("distinct policy leaves the palette once it is exhausted", () => {
     const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
     const allocator = new ColorAllocator(pool, [], {});
     const assigned = Array.from({ length: 6 }, (_, i) =>
       allocator.assignColor(`player_${i}`),
     );
     expect(new Set(assigned.map((c) => c.toHex())).size).toBe(6);
+  });
+});
+
+describe("cross-pool distinctness", () => {
+  const observers = ["normal", "deutan", "protan"] as const;
+  const separation = (a: Colord, b: Colord) => {
+    let worst = Infinity;
+    for (const observer of observers) {
+      const d = deltaE2000(
+        simulate(a, observer).toLab(),
+        simulate(b, observer).toLab(),
+      );
+      if (d < worst) worst = d;
+    }
+    return worst;
+  };
+
+  test("a shared registry keeps humans and nations apart", () => {
+    // Without a shared registry these pools allocate blind to each other, and
+    // a nation can land within 0.61 of a human — far below the ~2.3
+    // just-noticeable threshold. On the map they are indistinguishable.
+    const registry = new ColorRegistry([...observers], 5);
+    const humans = new ColorAllocator(
+      defaultTheme.humanColors.map((c) => colord(c)),
+      defaultTheme.fallbackColors.map((c) => colord(c)),
+      { registry },
+    );
+    const nations = new ColorAllocator(
+      defaultTheme.nationColors.map((c) => colord(c)),
+      [],
+      { registry },
+    );
+
+    const humanColors = Array.from({ length: 8 }, (_, i) =>
+      humans.assignColor(`human_${i}`),
+    );
+    const nationColors = Array.from({ length: 72 }, (_, i) =>
+      nations.assignColor(`nation_${i}`),
+    );
+
+    let worst = Infinity;
+    for (const human of humanColors) {
+      for (const nation of nationColors) {
+        const d = separation(human, nation);
+        if (d < worst) worst = d;
+      }
+    }
+    expect(worst).toBeGreaterThan(2.3);
+  });
+
+  test("a shared registry never issues one colour to two players", () => {
+    const registry = new ColorRegistry([...observers], 5);
+    const humans = new ColorAllocator(
+      defaultTheme.humanColors.map((c) => colord(c)),
+      defaultTheme.fallbackColors.map((c) => colord(c)),
+      { registry },
+    );
+    const nations = new ColorAllocator(
+      defaultTheme.nationColors.map((c) => colord(c)),
+      [],
+      { registry },
+    );
+    const all = [
+      ...Array.from({ length: 8 }, (_, i) => humans.assignColor(`h${i}`)),
+      ...Array.from({ length: 72 }, (_, i) => nations.assignColor(`n${i}`)),
+    ];
+    expect(new Set(all.map((c) => c.toHex())).size).toBe(80);
   });
 });
 

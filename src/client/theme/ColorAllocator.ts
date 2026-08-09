@@ -1,71 +1,61 @@
-import { Colord, extend, LabaColor } from "colord";
+import { Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import { PseudoRandom } from "../../core/PseudoRandom";
 import { simpleHash } from "../../core/Util";
-import { deltaE2000 } from "./ColorDistance";
-import { generateCandidateColors } from "./ColorGenerator";
-import { Observer, observerViews } from "./ColorVision";
+import { Candidate, ColorRegistry } from "./ColorRegistry";
+import { Observer } from "./ColorVision";
 
 extend([lchPlugin]);
 extend([labPlugin]);
 
-/** What to do once every candidate colour has been handed out. */
-export type ExhaustionPolicy = "generate" | "recycle";
+/** How a pool of players competes for colours. */
+export type AllocationPolicy = "distinct" | "shared";
 
 export interface ColorAllocatorOptions {
   /**
    * Vision models a colour must stay distinct under. A candidate is scored by
-   * its *worst* separation across all of them. Defaults to normal vision only,
-   * which reproduces the previous behaviour.
+   * its *worst* separation across all of them. Defaults to normal vision only.
+   * Ignored when `registry` is supplied — the registry owns these.
    */
   observers?: Observer[];
   /**
-   * Minimum ΔE2000 (0–100) a curated colour must reach before the allocator
-   * stops trusting the curated palettes and synthesises a colour instead.
-   * 0 keeps the curated palettes in use until they are exhausted.
+   * Minimum ΔE2000 (0–100) a palette colour must reach before the allocator
+   * stops trusting the palettes and synthesises one instead. Ignored when
+   * `registry` is supplied.
    */
   distinctnessFloor?: number;
-  /** Behaviour once every candidate is used. Defaults to "generate". */
-  onExhausted?: ExhaustionPolicy;
-}
-
-/** A candidate colour, its appearance per observer, and its cached score. */
-interface Candidate {
-  color: Colord;
   /**
-   * LAB coordinates of the colour as each observer sees it, converted once at
-   * construction. Allocation compares one colour against thousands of
-   * candidates, so converting per comparison would dominate the cost.
+   * `"distinct"` (default) gives every id its own colour, competing with every
+   * other allocator sharing the registry. `"shared"` hands out colours by
+   * stable hash without reserving them — for pools where hundreds of players
+   * are expected to share a small palette by design.
    */
-  labs: LabaColor[];
+  policy?: AllocationPolicy;
   /**
-   * Smallest distance to any already-assigned colour, across all observers.
-   * Maintained incrementally so allocation costs O(candidates) rather than
-   * O(candidates * assigned).
+   * Distinctness state shared with other allocators. Supply one registry to
+   * every allocator in a game so their colours cannot collide. Omitted, the
+   * allocator gets a private registry and competes with nobody.
    */
-  nearest: number;
-  used: boolean;
+  registry?: ColorRegistry;
 }
 
 /**
- * Assigns a stable, visually distinct colour to each id.
+ * Assigns a stable colour to each id.
  *
- * Candidates are drawn from the theme's primary palette first, then its
- * fallback palette, and finally — only if neither can supply a colour that
- * clears `distinctnessFloor` — from colours generated on the fly. A colour is
- * never handed out twice unless `onExhausted` is "recycle".
+ * Colours come from the primary palette first, then the fallback palette, and
+ * finally — only when neither holds one far enough from the colours already in
+ * play — from a colour synthesised by the registry. Assignments are stable for
+ * the allocator's lifetime.
  *
  * Theme-agnostic: it knows nothing about teams or palettes. A theme supplies
  * the pools and owns any team-colour logic.
  */
 export class ColorAllocator {
-  private readonly observers: Observer[];
-  private readonly distinctnessFloor: number;
-  private readonly onExhausted: ExhaustionPolicy;
-  /** Curated tiers in preference order: primary palette, then fallback. */
-  private readonly curated: Candidate[][];
-  private generated: Candidate[] | null = null;
+  private readonly registry: ColorRegistry;
+  private readonly policy: AllocationPolicy;
+  private readonly primary: Candidate[];
+  private readonly fallback: Candidate[];
   private assigned = new Map<string, Colord>();
 
   constructor(
@@ -73,10 +63,23 @@ export class ColorAllocator {
     fallback: Colord[],
     options: ColorAllocatorOptions = {},
   ) {
-    this.observers = options.observers ?? ["normal"];
-    this.distinctnessFloor = options.distinctnessFloor ?? 0;
-    this.onExhausted = options.onExhausted ?? "generate";
-    this.curated = [this.toCandidates(colors), this.toCandidates(fallback)];
+    this.registry =
+      options.registry ??
+      new ColorRegistry(
+        options.observers ?? ["normal"],
+        options.distinctnessFloor ?? 0,
+      );
+    this.policy = options.policy ?? "distinct";
+    this.primary = colors.map((color) => this.registry.candidate(color));
+    this.fallback = fallback.map((color) => this.registry.candidate(color));
+    if (this.policy === "distinct") {
+      this.registry.registerPool(this.primary);
+      this.registry.registerPool(this.fallback);
+    } else {
+      // Nothing reserves these, but they will be on the map, so everyone else
+      // has to keep away from them.
+      this.registry.reserve(colors);
+    }
   }
 
   /**
@@ -88,128 +91,70 @@ export class ColorAllocator {
     if (existing !== undefined) {
       return existing;
     }
+    const color = this.policy === "shared" ? this.share(id) : this.allocate(id);
+    this.assigned.set(id, color);
+    return color;
+  }
+
+  /**
+   * Stable hash into the primary palette, reserving nothing. Hundreds of bots
+   * sharing a handful of colours is intended: giving each one a colour of its
+   * own would crowd out the players it matters most to tell apart, and cost
+   * far more than it is worth.
+   */
+  private share(id: string): Colord {
+    return this.primary[simpleHash(id) % this.primary.length].color;
+  }
+
+  private allocate(id: string): Colord {
     const candidate = this.select(id);
-    candidate.used = true;
-    this.assigned.set(id, candidate.color);
-    this.updateNearest(candidate);
+    this.registry.commit(candidate);
     return candidate.color;
   }
 
-  private toCandidates(colors: Colord[]): Candidate[] {
-    return colors.map((color) => ({
-      color,
-      labs: this.toLabs(color),
-      nearest: Infinity,
-      used: false,
-    }));
-  }
-
-  /** LAB coordinates of `color` under each observer this allocator checks. */
-  private toLabs(color: Colord): LabaColor[] {
-    return observerViews(color, this.observers).map((view) => view.toLab());
-  }
-
   private select(id: string): Candidate {
-    if (this.assigned.size === 0) {
+    if (this.registry.size === 0) {
       return this.seed(id);
     }
 
-    // Prefer curated colours, in tier order, whenever one is good enough.
-    for (const tier of this.curated) {
-      const best = bestUnused(tier);
-      if (best !== null && best.nearest >= this.distinctnessFloor) {
+    // Prefer palette colours, primary before fallback, while one is good enough.
+    for (const pool of [this.primary, this.fallback]) {
+      const best = bestUnused(pool);
+      if (best !== null && best.nearest >= this.registry.distinctnessFloor) {
         return best;
       }
     }
 
-    const curatedBest =
-      bestUnused(this.curated[0]) ?? bestUnused(this.curated[1]);
-
-    if (this.onExhausted === "recycle") {
-      if (curatedBest !== null) {
-        return curatedBest;
-      }
-      // Every curated colour is spoken for. Reopen the primary palette and
-      // continue: hundreds of bots sharing a small palette is intended.
-      for (const candidate of this.curated[0]) {
-        candidate.used = false;
-      }
-      return bestUnused(this.curated[0])!;
+    const curated = bestUnused(this.primary) ?? bestUnused(this.fallback);
+    const generated = this.registry.generate();
+    if (curated !== null && curated.nearest >= generated.nearest) {
+      return curated;
     }
-
-    const generatedBest = bestUnused(this.materialiseGenerated());
-    if (curatedBest === null) {
-      return generatedBest!;
-    }
-    if (generatedBest === null) {
-      return curatedBest;
-    }
-    return generatedBest.nearest >= curatedBest.nearest
-      ? generatedBest
-      : curatedBest;
+    return generated;
   }
 
   /**
    * First colour of a game: chosen pseudo-randomly from the primary palette so
-   * that a given id lands on the same colour every time, as before.
+   * a given id lands on the same colour every time.
    */
   private seed(id: string): Candidate {
-    const primary = this.curated[0].filter((candidate) => !candidate.used);
-    const fallback = this.curated[1].filter((candidate) => !candidate.used);
-    const available =
-      primary.length > 0
-        ? primary
-        : fallback.length > 0
-          ? fallback
-          : this.materialiseGenerated().filter((candidate) => !candidate.used);
+    const available = this.primary.filter((candidate) => !candidate.used);
+    const source =
+      available.length > 0
+        ? available
+        : this.fallback.filter((candidate) => !candidate.used);
+    if (source.length === 0) {
+      return this.registry.generate();
+    }
     const random = new PseudoRandom(simpleHash(id));
-    return available[random.nextInt(0, available.length)];
-  }
-
-  /**
-   * Build the generated candidate set on first use, scoring it against
-   * everything already assigned so it enters the pool fairly.
-   */
-  private materialiseGenerated(): Candidate[] {
-    if (this.generated === null) {
-      this.generated = this.toCandidates(generateCandidateColors());
-      for (const color of this.assigned.values()) {
-        const labs = this.toLabs(color);
-        for (const candidate of this.generated) {
-          candidate.nearest = Math.min(
-            candidate.nearest,
-            distance(candidate.labs, labs),
-          );
-        }
-      }
-    }
-    return this.generated;
-  }
-
-  /** Fold a newly assigned colour into every candidate's cached score. */
-  private updateNearest(assigned: Candidate): void {
-    const tiers: Candidate[][] = [...this.curated];
-    if (this.generated !== null) {
-      tiers.push(this.generated);
-    }
-    for (const tier of tiers) {
-      for (const candidate of tier) {
-        if (candidate.used) {
-          continue;
-        }
-        candidate.nearest = Math.min(
-          candidate.nearest,
-          distance(candidate.labs, assigned.labs),
-        );
-      }
-    }
+    return source[random.nextInt(0, source.length)];
   }
 }
 
-/** Highest-scoring unused candidate in a tier, or null if none remain. */
-function bestUnused(tier: Candidate[]): Candidate | null {
+/** Highest-scoring unused candidate in a pool, or null if none remain. */
+function bestUnused(pool: Candidate[]): Candidate | null {
   let best: Candidate | null = null;
-  for (const candidate of tier) {
+  for (const candidate of pool) {
     if (candidate.used) {
       continue;
     }
@@ -218,22 +163,6 @@ function bestUnused(tier: Candidate[]): Candidate | null {
     }
   }
   return best;
-}
-
-/**
- * Worst-case ΔE2000 between two colours across every observer, on the 0–100
- * scale. Both operands are already in LAB, so no colour conversion happens
- * here — this runs once per candidate per allocation.
- */
-function distance(a: LabaColor[], b: LabaColor[]): number {
-  let worst = Infinity;
-  for (let i = 0; i < a.length; i++) {
-    const d = deltaE2000(a[i], b[i]);
-    if (d < worst) {
-      worst = d;
-    }
-  }
-  return worst;
 }
 
 /**
