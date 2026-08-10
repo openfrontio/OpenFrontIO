@@ -114,7 +114,7 @@
     "jose": "^6.2.3",
     "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
-    "nanoid": "^5.1.11",
+    "nanoid": "^5.1.16",
     "node-html-parser": "^7.1.0",
     "obscenity": "^0.4.6",
     "ts-node": "^10.9.2",
