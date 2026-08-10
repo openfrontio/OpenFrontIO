@@ -159,17 +159,17 @@
   "id": "LasVegasStrip",
   "map": {
     "height": 4428,
-    "num_land_tiles": 2051559,
+    "num_land_tiles": 2048698,
     "width": 2036
   },
   "map16x": {
     "height": 1107,
-    "num_land_tiles": 118863,
+    "num_land_tiles": 118765,
     "width": 509
   },
   "map4x": {
     "height": 2214,
-    "num_land_tiles": 499136,
+    "num_land_tiles": 498671,
     "width": 1018
   },
   "multiplayer_frequency": 3,
