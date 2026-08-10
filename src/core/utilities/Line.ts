@@ -50,7 +50,7 @@ export class DistanceBasedBezierCurve {
 
   /**
    * Precompute curve points using Single-Pass In-Order Recursive De Casteljau Subdivision.
-   * Removed floating point math
+   * Uses IEEE 754 exact-rounded Math.floor(Math.sqrt(...)) for deterministic integer distance accumulation.
    */
   computeAllPoints(pixelSpacing: number): void {
     this.cachedPoints = [];
@@ -87,7 +87,7 @@ export class DistanceBasedBezierCurve {
       st,
     );
 
-    // Ensure  endpointis included if not already P3
+    // Ensure endpoint is included if not already P3
     const lastPt = {
       x: (p3x + 128) >> 8,
       y: (p3y + 128) >> 8,
@@ -131,7 +131,7 @@ export class DistanceBasedBezierCurve {
       st.lastX = ax;
       st.lastY = ay;
 
-      if (st.accumDist >= stepThreshold) {
+      while (st.accumDist >= stepThreshold) {
         this.cachedPoints.push({
           x: (ax + 128) >> 8,
           y: (ay + 128) >> 8,

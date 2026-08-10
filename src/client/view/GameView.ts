@@ -495,6 +495,7 @@ export class GameView implements GameMap {
         if (hasMotionPlan) {
           unit.state.pos = oldPos;
           unit.state.lastPos = oldLastPos;
+          unit.lastPos.pop();
         }
       } else {
         unit = new UnitView(this, update);
