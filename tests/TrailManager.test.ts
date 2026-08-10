@@ -31,6 +31,7 @@ function makeUnit(
     reachedTarget: false,
     retreating: false,
     targetable: true,
+    waitTicks: 0,
     markedForDeletion: false,
     health: null,
     underConstruction: false,

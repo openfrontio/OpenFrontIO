@@ -630,6 +630,8 @@ export class GameView implements GameMap {
       // carried over on the frame from the last rebuild.
       f.relationMatrix,
       f.relationSize,
+      this.unitMotionPlans,
+      gu.tick,
     );
     f.attackRings = this._myPlayer
       ? extractAttackRings(

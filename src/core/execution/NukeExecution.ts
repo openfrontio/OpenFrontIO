@@ -212,6 +212,7 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+      this.nuke.updateNukeState({ waitTicks: this.waitTicks });
       this.recordMotionPlan(ticks);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
         this.maybeBreakAlliances();
@@ -256,7 +257,7 @@ export class NukeExecution implements Execution {
     }
 
     if (this.waitTicks > 0) {
-      this.waitTicks--;
+      this.nuke.updateNukeState({ waitTicks: --this.waitTicks });
       return;
     }
 
