@@ -428,11 +428,13 @@ export class UnitPass {
   }
 
   updateUnits(units: Map<number, UnitState>, tick: number): void {
-    this.frameTick = tick;
+    if (tick !== this.frameTick) {
+      this.frameTick = tick;
+      this.lastUnitsUpdateMs = performance.now();
+    }
     this.groundCount = 0;
     this.missileCount = 0;
     this.smoothSegs.length = 0;
-    this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
       if (!unit.isActive) continue;

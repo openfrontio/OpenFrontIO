@@ -488,7 +488,14 @@ export class GameView implements GameMap {
         ) {
           this._structuresDirty = true;
         }
+        const hasMotionPlan = this.unitMotionPlans.has(update.id);
+        const oldPos = unit.state.pos;
+        const oldLastPos = unit.state.lastPos;
         unit.update(update);
+        if (hasMotionPlan) {
+          unit.state.pos = oldPos;
+          unit.state.lastPos = oldLastPos;
+        }
       } else {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);

@@ -878,7 +878,7 @@ export class GPURenderer {
   updateUnits(units: Map<number, UnitState>, gameTick: number): void {
     this.lastUnits = units;
     this.frameTick++;
-    this.unitPass.updateUnits(units, this.frameTick);
+    this.unitPass.updateUnits(units, gameTick);
     this.barPass.updateBars(units, this.lastStructures, gameTick);
     this.pointLightPass.updateLights(units);
     this.heatManager.decayHeat();
