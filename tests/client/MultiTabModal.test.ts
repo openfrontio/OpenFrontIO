@@ -2,7 +2,14 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 
-const EN_JSON = path.join(__dirname, "..", "..", "resources", "lang", "en.json");
+const EN_JSON = path.join(
+  __dirname,
+  "..",
+  "..",
+  "resources",
+  "lang",
+  "en.json",
+);
 
 describe("multi_tab translations", () => {
   it("includes all multi_tab modal translation keys in en.json", () => {
