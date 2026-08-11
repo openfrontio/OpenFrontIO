@@ -16,13 +16,18 @@ import {
   UserSettings,
 } from "../../core/game/UserSettings";
 import {
-  purchaseCosmetic,
   resolveCosmetics,
   ResolvedCosmetic,
   translateCosmetic,
 } from "../Cosmetics";
 import { translateText } from "../Utils";
-import "./CosmeticButton";
+import "./CosmeticCard";
+
+export interface EffectSlotSelection {
+  effectType: EffectType;
+  slot: string;
+  resolved: ResolvedCosmetic | null;
+}
 
 // "Default" (none) tile — selecting it clears the effect for that effectType.
 function noneTile(effectType: EffectType): ResolvedCosmetic {
@@ -60,6 +65,11 @@ export class EffectsGrid extends LitElement {
   @property({ type: String }) effectType: EffectType | null = null;
   // Render an internal tab bar (one tab per effectType), one type at a time.
   @property({ type: Boolean }) tabbed = false;
+  @property({ attribute: false })
+  onActiveSlotChange?: (selection: EffectSlotSelection) => void;
+  @property({ attribute: false })
+  onPurchaseFocus?: (resolved: ResolvedCosmetic) => void;
+  @property({ type: String }) focusedKey: string | null = null;
   @state() private activeType: EffectType = EFFECT_TYPES[0];
   // Active nuke-explosion sub-tab (atom / hydro / mirv); only shown for the
   // nukeExplosion effectType, which groups its effects by nukeType.
@@ -93,6 +103,45 @@ export class EffectsGrid extends LitElement {
     this.userSettings.setSelectedEffectName(slot, name ?? undefined);
     // Stay rendered; the change event re-renders this grid and the home button.
     this.requestUpdate();
+  }
+
+  private activeSlot(): string {
+    return this.activeType === "nukeExplosion"
+      ? this.activeNukeType
+      : this.activeType;
+  }
+
+  private emitActiveSlot() {
+    const slot = this.activeSlot();
+    const selectedName = this.userSettings.getSelectedEffectName(slot);
+    const resolved = selectedName
+      ? (resolveCosmetics(
+          this.cosmetics,
+          this.userMeResponse,
+          this.affiliateCode,
+        ).find(
+          (item) =>
+            item.type === "effect" &&
+            item.effectType === this.activeType &&
+            (item.cosmetic as Effect | null)?.name === selectedName &&
+            this.slotForTile(this.activeType, item) === slot,
+        ) ?? null)
+      : null;
+    this.onActiveSlotChange?.({
+      effectType: this.activeType,
+      slot,
+      resolved,
+    });
+  }
+
+  private selectEffectType(type: EffectType) {
+    this.activeType = type;
+    this.emitActiveSlot();
+  }
+
+  private selectNukeType(type: NukeExplosionType) {
+    this.activeNukeType = type;
+    this.emitActiveSlot();
   }
 
   // The selection slot for a tile: for nuke explosions the effect's own nukeType
@@ -135,21 +184,22 @@ export class EffectsGrid extends LitElement {
 
   private renderTile(slot: string, r: ResolvedCosmetic): TemplateResult {
     if (this.mode === "purchase") {
-      return html`<cosmetic-button
+      return html`<cosmetic-card
         .resolved=${r}
-        .onPurchase=${purchaseCosmetic}
-      ></cosmetic-button>`;
+        state=${r.key === this.focusedKey ? "focused" : "idle"}
+        .onActivate=${() => this.onPurchaseFocus?.(r)}
+      ></cosmetic-card>`;
     }
     const name = (r.cosmetic as Effect | null)?.name ?? null;
     const selected = this.userSettings.getSelectedEffectName(slot);
     const isSelected =
       (name === null && selected === null) ||
       (name !== null && selected === name);
-    return html`<cosmetic-button
+    return html`<cosmetic-card
       .resolved=${r}
-      .selected=${isSelected}
-      .onSelect=${() => this.select(slot, name)}
-    ></cosmetic-button>`;
+      state=${isSelected ? "equipped" : "idle"}
+      .onActivate=${() => this.select(slot, name)}
+    ></cosmetic-card>`;
   }
 
   // The nukeType attribute of a nukeExplosion effect, else null (trail effects
@@ -170,7 +220,7 @@ export class EffectsGrid extends LitElement {
             class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors ${active
               ? "bg-blue-600 text-white"
               : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"}"
-            @click=${() => (this.activeNukeType = nt)}
+            @click=${() => this.selectNukeType(nt)}
           >
             ${translateText(`effects.nukeType.${nt}`)}
           </button>`;
@@ -192,7 +242,7 @@ export class EffectsGrid extends LitElement {
             class="-mb-px min-w-0 border-b-2 px-2 py-3 text-sm font-black uppercase tracking-wider transition-colors ${active
               ? "border-blue-500 text-blue-400"
               : "border-transparent text-white/50 hover:text-white/80"}"
-            @click=${() => (this.activeType = type)}
+            @click=${() => this.selectEffectType(type)}
           >
             ${translateText(`effects.type.${type}`)}
           </button>`;

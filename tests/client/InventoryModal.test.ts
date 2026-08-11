@@ -6,6 +6,7 @@ import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import type { CosmeticButton } from "../../src/client/components/CosmeticButton";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import {
@@ -118,6 +119,15 @@ function tile(modal: InventoryModal, key: string): CosmeticButton | undefined {
   );
 }
 
+function effectCard(
+  modal: InventoryModal,
+  key: string,
+): CosmeticCard | undefined {
+  return [
+    ...modal.querySelectorAll<CosmeticCard>("effects-grid cosmetic-card"),
+  ].find((card) => card.resolved.key === key);
+}
+
 async function showTab(
   modal: InventoryModal,
   tab: "skins" | "flags" | "crowns" | "effects",
@@ -207,13 +217,13 @@ describe("InventoryModal", () => {
     expect(settings.getSelectedCrownName()).toBeNull();
 
     await showTab(modal, "effects");
-    const owned = tile(modal, "effect:transportShipTrail:owned_wake")!;
-    owned.onSelect!(owned.resolved);
+    const owned = effectCard(modal, "effect:transportShipTrail:owned_wake")!;
+    owned.onActivate!(owned.resolved);
     expect(settings.getSelectedEffectName("transportShipTrail")).toBe(
       "owned_wake",
     );
-    const none = tile(modal, "effect:none:transportShipTrail")!;
-    none.onSelect!(none.resolved);
+    const none = effectCard(modal, "effect:none:transportShipTrail")!;
+    none.onActivate!(none.resolved);
     expect(settings.getSelectedEffectName("transportShipTrail")).toBeNull();
   });
 
@@ -331,7 +341,7 @@ describe("InventoryModal", () => {
     expect(modal.querySelector('[data-inventory-empty="crowns"]')).toBeTruthy();
 
     await showTab(modal, "effects");
-    expect(tile(modal, "effect:none:transportShipTrail")).toBeDefined();
+    expect(effectCard(modal, "effect:none:transportShipTrail")).toBeDefined();
     expect(
       modal.querySelector('[data-inventory-empty="effects"]'),
     ).toBeTruthy();
