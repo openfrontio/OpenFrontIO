@@ -42,8 +42,16 @@ on:
 
 permissions: {}
 
+# GitHub keeps only ONE pending run per concurrency group - each new run
+# cancels the previously pending one, even across branches. With a single
+# shared group, a feature-branch push could evict a queued main deploy and
+# main.openfront.dev silently stayed stale until the next merge. So scope the
+# group to the deploy target instead: per branch for pushes, a dedicated group
+# for the nightly, per host for manual dispatches. Runs for different targets
+# may then overlap on the staging host; deploy.sh serializes the host-side
+# update with flock, so only the CI-side image builds actually run in parallel.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || github.event_name == 'schedule' && 'staging-nightly' || format('staging-{0}', github.ref_name) }}
   cancel-in-progress: false
 
 jobs:
@@ -65,21 +73,27 @@ jobs:
         run: |
           # A branch name can hold characters that are illegal in a DNS label, a
           # Docker container name, and a file path (e.g. "fix/some-bug"), so
-          # normalize it to an RFC 1123 label first: underscores become hyphens to
-          # keep the name readable, anything else outside [a-zA-Z0-9-] is dropped,
-          # and the result is capped at the 63-octet label limit with no edge hyphens.
-          LABEL="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_' '-' | tr -cd 'a-zA-Z0-9-')"
+          # normalize it to an RFC 1123 label first: underscores and slashes
+          # become hyphens to keep the name readable (fix/some-bug ->
+          # fix-some-bug), anything else outside [a-zA-Z0-9-] is dropped, and the
+          # result is capped at the 63-octet label limit with no edge hyphens.
+          READABLE="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_/' '--')"
+          LABEL="$(printf '%s' "$READABLE" | tr -cd 'a-zA-Z0-9-')"
           LABEL="$(printf '%s' "${LABEL:0:63}" | sed 's/^-*//; s/-*$//')"
           if [ -z "$LABEL" ]; then
             echo "Error: subdomain is empty after sanitizing '$RAW_SUBDOMAIN'"
             exit 1
           fi
-          # Normalizing is many-to-one - fix/foo and fixfoo both yield "fixfoo" - so
-          # whenever it altered the name, append a digest of the original to keep
-          # distinct branches on distinct hosts. Names that pass through untouched
-          # (main, nightly, a hand-typed prod subdomain) keep their exact spelling,
-          # which update.sh relies on for its `SUBDOMAIN = main` restart check.
-          if [ "$LABEL" != "$RAW_SUBDOMAIN" ]; then
+          # The hyphen mapping above is deliberately canonical: fix/foo and
+          # fix-foo share a subdomain. But dropping or trimming characters is
+          # lossy in ways that aren't obvious from the branch name (feat/héllo
+          # and feat/hllo would collide), so whenever sanitizing went beyond
+          # the hyphen mapping, append a digest of the original to keep such
+          # branches on distinct hosts. Names that pass through untouched
+          # (main, nightly, a hand-typed prod subdomain) keep their exact
+          # spelling, which update.sh relies on for its `SUBDOMAIN = main`
+          # restart check.
+          if [ "$LABEL" != "$READABLE" ]; then
             HASH="$(printf '%s' "$RAW_SUBDOMAIN" | sha256sum | cut -c1-6)"
             LABEL="$(printf '%s' "${LABEL:0:56}" | sed 's/-*$//')-${HASH}"
           fi

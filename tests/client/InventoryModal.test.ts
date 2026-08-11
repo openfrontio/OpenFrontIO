@@ -313,6 +313,11 @@ describe("InventoryModal", () => {
       "crowns",
       "effects",
     ]);
+    expect(
+      modal
+        .querySelector("o-modal")
+        ?.shadowRoot?.querySelector('[role="tablist"]'),
+    ).toBeNull();
   });
 
   it("keeps loadout, card, and swatch synchronized", async () => {

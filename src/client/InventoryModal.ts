@@ -107,6 +107,7 @@ export class InventoryModal extends BaseModal {
 
   protected modalConfig() {
     return {
+      hideTabs: true,
       tabs: [
         { key: "skins", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },

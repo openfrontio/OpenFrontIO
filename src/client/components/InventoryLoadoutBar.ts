@@ -74,7 +74,7 @@ export class InventoryLoadoutBar extends LitElement {
     >
       <h2 class="sr-only">${translateText("inventory.loadout")}</h2>
       <div class="overflow-x-auto overflow-y-visible px-3 py-2">
-        <div class="flex min-w-max gap-3">
+        <div class="mx-auto flex w-max min-w-max gap-3">
           ${this.entries.map((entry) => {
             const isActive = entry.category === this.activeCategory;
             const ariaSummary =
@@ -96,13 +96,6 @@ export class InventoryLoadoutBar extends LitElement {
               ${this.renderPreviews(entry)}
               <span class="text-sm font-bold">${entry.label}</span>
               <span class="text-xs text-white/60">${entry.summary}</span>
-              ${isActive
-                ? html`<span
-                    data-loadout-equipped
-                    class="text-[10px] font-black uppercase tracking-wide text-emerald-300"
-                    >${translateText("inventory.equipped")}</span
-                  >`
-                : nothing}
             </button>`;
           })}
         </div>

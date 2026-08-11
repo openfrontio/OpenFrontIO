@@ -65,6 +65,7 @@ describe("InventoryLoadoutBar", () => {
     await bar.updateComplete;
 
     expect(bar.querySelectorAll("[data-loadout-category]")).toHaveLength(4);
+    expect(bar.querySelector(".mx-auto.w-max.min-w-max")).toBeTruthy();
     expect(
       bar
         .querySelector('[data-loadout-category="skins"]')

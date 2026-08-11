@@ -146,6 +146,44 @@ else
     echo "✅ Uploaded $MISSING_COUNT asset(s) to R2."
 fi
 
+# Publish a fully-rendered app shell as index-<short-commit>.html next to the
+# hashed assets, so games archived from this build can still be replayed after
+# this deployment is torn down (#4934). Old clients find it via the same short
+# prefix of the record's gitCommit (see src/client/VersionedReplay.ts).
+# Rendered inside the image with the same env file the live container gets, so
+# the baked BOOTSTRAP_CONFIG matches what the server would have served.
+FULL_COMMIT="$(tr -d '[:space:]' < "$STATIC_DIR/commit.txt" 2> /dev/null || true)"
+if [[ ! "$FULL_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "⚠️ Skipping versioned index upload: commit.txt is not a full SHA ('$FULL_COMMIT')"
+else
+    INDEX_KEY="index-${FULL_COMMIT:0:7}.html"
+    echo "Rendering $INDEX_KEY..."
+    if ! docker run --rm --env-file "$ENV_FILE" --entrypoint npx \
+        "${GHCR_IMAGE}" tsx src/server/RenderStaticIndex.ts \
+        > "$EXTRACT_DIR/$INDEX_KEY"; then
+        echo "❌ Failed to render $INDEX_KEY"
+        exit 1
+    fi
+    # Guard against uploading an empty or non-shell document (e.g. a renderer
+    # crash that still exited 0 upstream of the redirect).
+    if ! grep -q "BOOTSTRAP_CONFIG" "$EXTRACT_DIR/$INDEX_KEY"; then
+        echo "❌ Rendered $INDEX_KEY looks wrong (no BOOTSTRAP_CONFIG)"
+        exit 1
+    fi
+    if ! curl -fsS \
+        --retry 5 --retry-all-errors --retry-delay 2 \
+        --connect-timeout 10 --max-time 120 \
+        -X PUT \
+        "$R2_ENDPOINT/game_assets/upload/$INDEX_KEY" \
+        -H "X-API-Key: $API_KEY" \
+        -H "Content-Type: application/octet-stream" \
+        --data-binary "@$EXTRACT_DIR/$INDEX_KEY" > /dev/null; then
+        echo "❌ Failed to upload $INDEX_KEY"
+        exit 1
+    fi
+    echo "✅ Uploaded $INDEX_KEY."
+fi
+
 echo "Checking for existing container..."
 # Use docker ps with filter for exact name match
 RUNNING_CONTAINER="$(docker ps --filter "name=^${CONTAINER_NAME}$" -q)"
