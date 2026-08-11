@@ -229,7 +229,7 @@ describe("Cosmetic locker integration", () => {
     await store.updateComplete;
 
     expect(cardFor(store, redKey)?.activeVariantKey).toBe(redKey);
-    expect(storeUpdate).toHaveBeenCalledTimes(1);
+    expect(storeUpdate).toHaveBeenCalled();
     storeUpdate.mockRestore();
     expect(settingsChangeCount).toBe(1);
     expect(

@@ -1,13 +1,27 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeCosmeticPurchaseReturn } from "../../src/client/Cosmetics";
 import { FLAG_KEY, PATTERN_KEY } from "../../src/core/game/UserSettings";
 
 describe("completeCosmeticPurchaseReturn", () => {
+  let languageFixture: HTMLElement;
+
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem(PATTERN_KEY, "pattern:old");
     localStorage.setItem(FLAG_KEY, "country:us");
+    languageFixture = document.createElement("lang-selector");
+    const translations = {
+      "store.purchase_success": "Localized purchase: {name}",
+    };
+    Object.assign(languageFixture, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(languageFixture);
   });
+
+  afterEach(() => languageFixture.remove());
 
   it("reports a completed purchase without changing the loadout", () => {
     const actions = {
@@ -20,7 +34,7 @@ describe("completeCosmeticPurchaseReturn", () => {
     completeCosmeticPurchaseReturn("pattern:new", null, actions);
 
     expect(actions.alertAndStrip).toHaveBeenCalledWith(
-      "purchase succeeded: pattern:new",
+      "Localized purchase: pattern:new",
     );
     expect(actions.refreshStore).toHaveBeenCalledOnce();
     expect(localStorage.getItem(PATTERN_KEY)).toBe("pattern:old");

@@ -50,7 +50,7 @@ describe("CustomCurrencyCard", () => {
     rangeInput.value = "2001";
     rangeInput.dispatchEvent(new Event("input"));
     await card!.updateComplete;
-    expect(rangeInput.value).toBe("2000");
+    expect(numberInput.value).toBe("2000");
   });
 
   it("starts custom checkout through its standalone PurchaseButton", async () => {

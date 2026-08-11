@@ -80,6 +80,7 @@ export class EffectsGrid extends LitElement {
   @state() private activeNukeType: NukeExplosionType = NUKE_EXPLOSION_TYPES[0];
 
   private userSettings = new UserSettings();
+  private renderedItems: ResolvedCosmetic[] = [];
   private _onChange = () => this.requestUpdate();
 
   connectedCallback() {
@@ -115,15 +116,19 @@ export class EffectsGrid extends LitElement {
       : this.activeType;
   }
 
-  private emitActiveSlot() {
+  private resolvedItems(): ResolvedCosmetic[] {
+    return resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    );
+  }
+
+  private emitActiveSlot(all: ResolvedCosmetic[] = this.resolvedItems()) {
     const slot = this.activeSlot();
     const selectedName = this.userSettings.getSelectedEffectName(slot);
     const resolved = selectedName
-      ? (resolveCosmetics(
-          this.cosmetics,
-          this.userMeResponse,
-          this.affiliateCode,
-        ).find(
+      ? (all.find(
           (item) =>
             item.type === "effect" &&
             item.effectType === this.activeType &&
@@ -140,14 +145,16 @@ export class EffectsGrid extends LitElement {
 
   private selectEffectType(type: EffectType) {
     this.activeType = type;
-    this.emitActiveSlot();
-    this.emitVisiblePurchaseItems();
+    const all = this.resolvedItems();
+    this.emitActiveSlot(all);
+    this.emitVisiblePurchaseItems(all);
   }
 
   private selectNukeType(type: NukeExplosionType) {
     this.activeNukeType = type;
-    this.emitActiveSlot();
-    this.emitVisiblePurchaseItems();
+    const all = this.resolvedItems();
+    this.emitActiveSlot(all);
+    this.emitVisiblePurchaseItems(all);
   }
 
   // The selection slot for a tile: for nuke explosions the effect's own nukeType
@@ -188,12 +195,7 @@ export class EffectsGrid extends LitElement {
     return this.search.trim() ? owned : [noneTile(effectType), ...owned];
   }
 
-  private visiblePurchaseItems(): ResolvedCosmetic[] {
-    const all = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    );
+  private visiblePurchaseItems(all: ResolvedCosmetic[]): ResolvedCosmetic[] {
     const activeType = this.tabbed ? this.activeType : this.effectType;
     const types: readonly EffectType[] = activeType
       ? [activeType]
@@ -206,9 +208,11 @@ export class EffectsGrid extends LitElement {
     });
   }
 
-  private emitVisiblePurchaseItems(): void {
+  private emitVisiblePurchaseItems(all?: ResolvedCosmetic[]): void {
     if (this.mode !== "purchase") return;
-    this.onVisiblePurchaseItemsChange?.(this.visiblePurchaseItems());
+    this.onVisiblePurchaseItemsChange?.(
+      this.visiblePurchaseItems(all ?? this.resolvedItems()),
+    );
   }
 
   protected updated(changed: PropertyValues<this>): void {
@@ -221,7 +225,7 @@ export class EffectsGrid extends LitElement {
       changed.has("effectType") ||
       changed.has("tabbed")
     ) {
-      this.emitVisiblePurchaseItems();
+      this.emitVisiblePurchaseItems(this.renderedItems);
     }
   }
 
@@ -298,11 +302,8 @@ export class EffectsGrid extends LitElement {
   }
 
   render() {
-    const all = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    );
+    const all = this.resolvedItems();
+    this.renderedItems = all;
     // The active single type: the tab's selection (tabbed) or the effectType
     // prop; null = all types stacked with sub-headers.
     const activeType = this.tabbed ? this.activeType : this.effectType;

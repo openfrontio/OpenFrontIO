@@ -4,6 +4,7 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
+import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { RankedType } from "../../../../src/core/game/Game";
@@ -171,6 +172,11 @@ describe("WinModal pattern promotion", () => {
     expect(promotions).toHaveLength(3);
     expect(modal.querySelectorAll("cosmetic-card")).toHaveLength(3);
     expect(modal.querySelectorAll("purchase-button")).toHaveLength(3);
+    for (const button of modal.querySelectorAll<PurchaseButton>(
+      "purchase-button",
+    )) {
+      expect(button.rarity).toBe("rare");
+    }
     for (const card of modal.querySelectorAll("cosmetic-card")) {
       expect(card.querySelector("[data-cosmetic-main]")?.tagName).toBe("DIV");
       expect(card.querySelectorAll("button")).toHaveLength(0);

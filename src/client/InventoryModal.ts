@@ -83,7 +83,7 @@ export class InventoryModal extends BaseModal {
     | undefined;
   private readonly noFlagTile: ResolvedCosmetic = {
     type: "flag",
-    cosmetic: countryFlag("None", "xx"),
+    cosmetic: countryFlag(translateText("common.none"), "xx"),
     colorPalette: null,
     relationship: "owned",
     key: "country:xx",
@@ -664,7 +664,7 @@ export class InventoryModal extends BaseModal {
 
   private selectCosmetic(resolved: ResolvedCosmetic) {
     if (resolved.type === "pattern") {
-      this.selectPattern(resolvedToPlayerPattern(resolved));
+      this.selectPattern(resolvedToPlayerPattern(resolved), resolved);
     } else if (resolved.type === "skin") {
       this.selectSkin((resolved.cosmetic as Skin | null)?.name ?? null);
     }
@@ -684,7 +684,10 @@ export class InventoryModal extends BaseModal {
     this.userSettings.setFlag(flag);
   }
 
-  private selectPattern(pattern: PlayerPattern | null) {
+  private selectPattern(
+    pattern: PlayerPattern | null,
+    resolved: ResolvedCosmetic,
+  ) {
     if (pattern === null) {
       this.userSettings.setSelectedPatternName(undefined);
     } else {
@@ -694,24 +697,16 @@ export class InventoryModal extends BaseModal {
           : `${pattern.name}:${pattern.colorPalette.name}`;
       this.userSettings.setSelectedPatternName(`pattern:${name}`);
     }
-    this.showSkinSelectedPopup(pattern);
+    this.showSkinSelectedPopup(resolved);
   }
 
-  private showSkinSelectedPopup(pattern: PlayerPattern | null) {
-    let skinName = translateText("territory_patterns.pattern.default");
-    if (pattern?.name) {
-      skinName = pattern.name
-        .split("_")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-      if (pattern.colorPalette && pattern.colorPalette.name) {
-        skinName += ` (${pattern.colorPalette.name})`;
-      }
-    }
+  private showSkinSelectedPopup(resolved: ResolvedCosmetic) {
     window.dispatchEvent(
       new CustomEvent("show-message", {
         detail: {
-          message: `${skinName} ${translateText("territory_patterns.selected")}`,
+          message: translateText("inventory.selected_cosmetic", {
+            name: cosmeticDisplayName(resolved),
+          }),
           duration: 2000,
         },
       }),

@@ -394,7 +394,7 @@ export class StoreModal extends BaseModal {
     // The custom-amount card is always purchasable (priced inline server-side,
     // no catalog entry), and follows the fixed packs at the end of the grid.
     return this.renderBrowser(this.visibleGroups, {
-      emptyTranslationKey: "store.no_skins",
+      emptyTranslationKey: "store.no_packs",
       trailingContent: html`<custom-currency-card></custom-currency-card>`,
     });
   }
@@ -442,7 +442,7 @@ export class StoreModal extends BaseModal {
 
   private renderAffiliateGrid(): TemplateResult {
     return this.renderBrowser(this.visibleGroups, {
-      emptyTranslationKey: "store.no_skins",
+      emptyTranslationKey: "store.no_affiliate_items",
     });
   }
 

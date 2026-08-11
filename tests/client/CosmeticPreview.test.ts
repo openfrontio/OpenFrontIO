@@ -14,6 +14,7 @@ const translations = {
   "flags.us": "United States",
   "crowns.golden": "Golden Crown",
   "effects.blue_wake": "Blue Wake",
+  "packs.plutonium": "Localized Plutonium Pack",
   "subscriptions.gold": "Gold Membership",
 };
 
@@ -176,7 +177,7 @@ describe("CosmeticPreview", () => {
       [resolved.flag, "flag", "United States", "common"],
       [resolved.crown, "crown", "Golden Crown", "epic"],
       [resolved.effect, "effect", "Blue Wake", "legendary"],
-      [resolved.pack, "pack", "1,000 Plutonium", "rare"],
+      [resolved.pack, "pack", "Localized Plutonium Pack", "rare"],
       [resolved.subscription, "subscription", "Gold Membership", "legendary"],
     ] as const;
 
@@ -188,6 +189,9 @@ describe("CosmeticPreview", () => {
       ).toBeTruthy();
       expect(cosmeticDisplayName(preview!.resolved)).toBe(displayName);
       expect(cosmeticRarity(preview!.resolved)).toBe(rarity);
+      if (type === "skin" || type === "flag" || type === "crown") {
+        expect(preview!.querySelector("img")?.alt).toBe(displayName);
+      }
       preview!.remove();
       preview = undefined;
     }

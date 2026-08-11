@@ -47,13 +47,27 @@ function entriesForAllCategories(): readonly InventoryLoadoutEntry[] {
 
 describe("InventoryLoadoutBar", () => {
   let bar: InventoryLoadoutBar | undefined;
+  let languageFixture: HTMLElement | undefined;
 
   afterEach(() => {
     bar?.remove();
+    languageFixture?.remove();
     bar = undefined;
+    languageFixture = undefined;
   });
 
   it("renders exactly four category controls and reports navigation", async () => {
+    languageFixture = document.createElement("lang-selector");
+    const translations = {
+      "inventory.loadout": "Your loadout",
+      "inventory.loadout_category_label": "{category}: {summary}",
+    };
+    Object.assign(languageFixture, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(languageFixture);
     const onCategorySelect = vi.fn();
     bar = document.createElement(
       "inventory-loadout-bar",
@@ -71,6 +85,11 @@ describe("InventoryLoadoutBar", () => {
         .querySelector('[data-loadout-category="skins"]')
         ?.getAttribute("aria-pressed"),
     ).toBe("true");
+    expect(
+      bar
+        .querySelector('[data-loadout-category="skins"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("Skin: Aurora equipped");
     bar
       .querySelector<HTMLButtonElement>('[data-loadout-category="effects"]')!
       .click();

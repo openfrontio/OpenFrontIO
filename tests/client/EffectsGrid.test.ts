@@ -266,6 +266,28 @@ describe("EffectsGrid", () => {
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
+  it("reports visible purchases when the nuke sub-tab changes", async () => {
+    const onVisiblePurchaseItemsChange = vi.fn();
+    grid = await createGrid();
+    grid.mode = "purchase";
+    grid.tabbed = true;
+    grid.onVisiblePurchaseItemsChange = onVisiblePurchaseItemsChange;
+    grid.requestUpdate();
+    await grid.updateComplete;
+
+    clickEffectType(grid, "nukeExplosion");
+    await grid.updateComplete;
+    clickNukeType(grid, "hydro");
+    await grid.updateComplete;
+
+    expect(onVisiblePurchaseItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ key: "effect:nukeExplosion:locked_hydro" }),
+      expect.objectContaining({
+        key: "effect:nukeExplosion:locked_hydro_alt",
+      }),
+    ]);
+  });
+
   it("marks only the Store-focused effect as focused", async () => {
     grid = await createGrid();
     grid.mode = "purchase";

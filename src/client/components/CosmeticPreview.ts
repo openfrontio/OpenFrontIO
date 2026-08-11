@@ -14,6 +14,7 @@ import { PlayerPattern } from "../../core/Schemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
+import { cosmeticDisplayName } from "./CosmeticPresentation";
 import "./EffectPreview";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
@@ -62,7 +63,7 @@ export class CosmeticPreview extends LitElement {
       }
       return html`<img
         src=${cosmetic.url}
-        alt=${cosmetic.name}
+        alt=${cosmeticDisplayName(this.resolved)}
         class="w-full h-full object-contain pointer-events-none"
         draggable="false"
         loading="lazy"
@@ -99,7 +100,7 @@ export class CosmeticPreview extends LitElement {
       }
       return html`<img
         src=${cosmetic.url}
-        alt=${cosmetic.name}
+        alt=${cosmeticDisplayName(this.resolved)}
         class="w-full h-full object-contain pointer-events-none"
         draggable="false"
         loading="lazy"
@@ -195,7 +196,7 @@ export class CosmeticPreview extends LitElement {
     const flag = this.resolved.cosmetic as Flag;
     return html`<img
       src=${flag.url}
-      alt=${flag.name}
+      alt=${cosmeticDisplayName(this.resolved)}
       class="w-full h-full object-contain pointer-events-none"
       draggable="false"
       loading="lazy"

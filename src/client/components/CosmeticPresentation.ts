@@ -1,4 +1,3 @@
-import { Pack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 
@@ -17,7 +16,7 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
     return translateCosmetic("territory_patterns.pattern", cosmetic.name);
   }
   if (resolved.type === "pack") {
-    return (cosmetic as Pack).displayName;
+    return translateText("packs." + cosmetic.name);
   }
   if (resolved.type === "subscription") {
     return translateCosmetic("subscriptions", cosmetic.name);

@@ -95,7 +95,9 @@ export function completeCosmeticPurchaseReturn(
     actions.openTokenLogin(loginToken);
     return;
   }
-  actions.alertAndStrip(`purchase succeeded: ${cosmeticName}`);
+  actions.alertAndStrip(
+    translateText("store.purchase_success", { name: cosmeticName }),
+  );
   actions.refreshStore();
 }
 

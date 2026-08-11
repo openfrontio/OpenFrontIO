@@ -266,12 +266,16 @@ describe("InventoryModal", () => {
     languageFixture = document.createElement("lang-selector");
     const translations = {
       "inventory.equipped": "Equipped",
+      "inventory.loadout_category_label": "{category}: {summary}",
       "inventory.retry": "Retry",
-      "inventory.showing_effects": "{count} effects equipped",
+      "inventory.showing_effects": "Effects equipped: {count}",
+      "inventory.selected_cosmetic": "Selected {name}",
+      "common.none": "No flag",
       "store.patterns": "Skins",
       "store.flags": "Flags",
       "store.crowns": "Crowns",
       "store.effects": "Effects",
+      "territory_patterns.pattern.stripes": "Localized Stripes",
     };
     Object.assign(languageFixture, {
       translations,
@@ -333,6 +337,20 @@ describe("InventoryModal", () => {
     expect(card(modal, "pattern:stripes:blue")?.state).toBe("equipped");
   });
 
+  it("uses the localized cosmetic name in the selection message", async () => {
+    const onMessage = vi.fn();
+    window.addEventListener("show-message", onMessage);
+    try {
+      await showTab(modal, "skins");
+      await activateVariant(modal, "pattern:stripes:blue");
+
+      const event = onMessage.mock.lastCall?.[0] as CustomEvent;
+      expect(event.detail.message).toBe("Selected Localized Stripes");
+    } finally {
+      window.removeEventListener("show-message", onMessage);
+    }
+  });
+
   it("equips owned cards and clears each non-effect category", async () => {
     await showTab(modal, "skins");
     expect(card(modal, "pattern:default")).toBeDefined();
@@ -348,6 +366,9 @@ describe("InventoryModal", () => {
     expect(card(modal, "flag:owned_flag")).toBeDefined();
     expect(card(modal, "flag:locked_flag")).toBeUndefined();
     expect(card(modal, "country:xx")).toBeDefined();
+    expect(card(modal, "country:xx")?.querySelector("img")?.alt).toBe(
+      "No flag",
+    );
     expect(card(modal, "country:us")).toBeDefined();
     expect(card(modal, "country:German Empire")).toBeUndefined();
     await activateCard(modal, "flag:owned_flag");
@@ -476,7 +497,7 @@ describe("InventoryModal", () => {
       (candidate) => candidate.category === "effects",
     )!;
     expect(entry.items).toHaveLength(7);
-    expect(entry.summary).toBe("7 effects equipped");
+    expect(entry.summary).toBe("Effects equipped: 7");
   });
 
   it("reacts to all settings keys changed outside Inventory", async () => {

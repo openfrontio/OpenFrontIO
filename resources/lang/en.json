@@ -896,11 +896,13 @@
     "load_failed": "Couldn't load your inventory. Please reload and try again.",
     "loading": "Loading inventory…",
     "loadout": "Your loadout",
+    "loadout_category_label": "{category}: {summary}",
     "no_owned_crowns": "You don't own any crowns yet.",
     "no_owned_effects": "You don't own any effects yet.",
     "no_owned_skins": "You don't own any skins yet.",
     "retry": "Retry",
-    "showing_effects": "{count} effects equipped",
+    "selected_cosmetic": "Selected {name}",
+    "showing_effects": "Effects equipped: {count}",
     "title": "Inventory"
   },
   "ios_banner": {
@@ -1231,6 +1233,9 @@
     "tournament": "TOURNAMENT",
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
+  },
+  "packs": {
+    "plutonium": "1,000 Plutonium"
   },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",
@@ -1565,9 +1570,11 @@
     "merch": "Merch",
     "merch_blurb": "Get OpenFront merch shipped to your door!",
     "merch_visit_store": "Visit Store",
+    "no_affiliate_items": "No affiliate items available. Check back later for new items.",
     "no_crowns": "No crowns available. Check back later for new items.",
     "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
     "no_tribes": "You haven't bought any tribe names yet.",
@@ -1640,8 +1647,7 @@
     "pattern": {
       "default": "Default"
     },
-    "select_skin": "Skin",
-    "selected": "selected"
+    "select_skin": "Skin"
   },
   "token_login_modal": {
     "logging_in": "Logging in...",
