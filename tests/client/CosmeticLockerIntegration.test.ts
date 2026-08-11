@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import { userAuth } from "../../src/client/Auth";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
@@ -43,6 +42,7 @@ const catalog = {
       rarity: "rare",
       affiliateCode: null,
       colorPalettes: [
+        { name: "yellow", isArchived: false },
         { name: "red", isArchived: false },
         { name: "blue", isArchived: false },
         { name: "green", isArchived: false },
@@ -50,6 +50,11 @@ const catalog = {
     },
   },
   colorPalettes: {
+    yellow: {
+      name: "yellow",
+      primaryColor: "#eab308",
+      secondaryColor: "#713f12",
+    },
     red: {
       name: "red",
       primaryColor: "#ef4444",
@@ -87,8 +92,10 @@ const userFixture = {
   },
 } as unknown as UserMeResponse;
 
+const yellowKey = "pattern:stripes:yellow";
 const redKey = "pattern:stripes:red";
 const blueKey = "pattern:stripes:blue";
+const greenKey = "pattern:stripes:green";
 
 function cardFor(
   root: InventoryModal | StoreModal,
@@ -105,23 +112,6 @@ function detailFor(root: InventoryModal | StoreModal): CosmeticDetailPanel {
   return root.querySelector("cosmetic-detail-panel") as CosmeticDetailPanel;
 }
 
-async function activateInventoryVariant(
-  inventory: InventoryModal,
-  key: string,
-): Promise<ResolvedCosmetic> {
-  const cosmeticCard = cardFor(inventory, key)!;
-  const variant = cosmeticCard.variants.find((item) => item.key === key)!;
-  cosmeticCard.onVariantActivate!(variant);
-  await inventory.updateComplete;
-  return variant;
-}
-
-async function inspectStoreItem(store: StoreModal, key: string) {
-  const cosmeticCard = cardFor(store, key)!;
-  cosmeticCard.onActivate!(cosmeticCard.resolved);
-  await store.updateComplete;
-}
-
 function expectNoNestedInteractiveControls(root: ParentNode): void {
   const interactive = "button, a, input, select, textarea, [role='button']";
   for (const control of root.querySelectorAll(interactive)) {
@@ -133,6 +123,7 @@ describe("Cosmetic locker integration", () => {
   let inventory: InventoryModal;
   let store: StoreModal;
   let languageFixture: HTMLElement;
+  let settingsChangeListener: EventListener | undefined;
 
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
@@ -198,6 +189,13 @@ describe("Cosmetic locker integration", () => {
   });
 
   afterEach(() => {
+    if (settingsChangeListener) {
+      window.removeEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
+        settingsChangeListener,
+      );
+      settingsChangeListener = undefined;
+    }
     inventory.remove();
     store.remove();
     languageFixture.remove();
@@ -206,29 +204,55 @@ describe("Cosmetic locker integration", () => {
   });
 
   it("separates Store inspection from Inventory equip state", async () => {
+    const settingsEvent = `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`;
+    let settingsChangeCount = 0;
+    settingsChangeListener = () => settingsChangeCount++;
+    window.addEventListener(settingsEvent, settingsChangeListener);
+
     inventory.open({ tab: "skins" });
     await inventory.updateComplete;
 
-    const blue = await activateInventoryVariant(inventory, blueKey);
-    expect(blue.key).toBe(blueKey);
+    cardFor(inventory, blueKey)!
+      .querySelector<HTMLButtonElement>(`[data-variant-key="${blueKey}"]`)!
+      .click();
+    await inventory.updateComplete;
+
+    expect(settingsChangeCount).toBe(1);
     expect(
       new UserSettings().getSelectedPatternName(catalog)?.colorPalette?.name,
     ).toBe("blue");
+    expect(detailFor(inventory).resolved?.key).toBe(blueKey);
 
     store.open({ tab: "cosmetics" });
-    await vi.waitFor(() => expect(detailFor(store).resolved).not.toBeNull());
-    await inspectStoreItem(store, redKey);
+    await vi.waitFor(() =>
+      expect(detailFor(store).resolved?.key).toBe(yellowKey),
+    );
+    const storeUpdate = vi.spyOn(store, "requestUpdate");
+    cardFor(store, redKey)!
+      .querySelector<HTMLButtonElement>(`[data-variant-key="${redKey}"]`)!
+      .click();
+    await store.updateComplete;
 
     expect(detailFor(store).resolved?.key).toBe(redKey);
+    expect(storeUpdate).toHaveBeenCalledTimes(1);
+    storeUpdate.mockRestore();
+    expect(settingsChangeCount).toBe(1);
     expect(
       new UserSettings().getSelectedPatternName(catalog)?.colorPalette?.name,
     ).toBe("blue");
+  });
 
-    window.dispatchEvent(
-      new CustomEvent(`${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`),
-    );
+  it("resynchronizes Inventory to a distinct external settings variant", async () => {
+    const settingsEvent = `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`;
+    new UserSettings().setSelectedPatternName(blueKey);
+    inventory.open({ tab: "skins" });
     await inventory.updateComplete;
     expect(detailFor(inventory).resolved?.key).toBe(blueKey);
+
+    new UserSettings().setSelectedPatternName(greenKey);
+    window.dispatchEvent(new CustomEvent(settingsEvent));
+    await inventory.updateComplete;
+    expect(detailFor(inventory).resolved?.key).toBe(greenKey);
   });
 
   it("keeps accessible controls and phone layout markers across both surfaces", async () => {
@@ -298,7 +322,14 @@ describe("Cosmetic locker integration", () => {
     expect(window.location.hash).toBe("#modal=inventory&tab=crowns");
 
     store.open({ tab: "cosmetics" });
-    await vi.waitFor(() => expect(detailFor(store).resolved?.key).toBe(redKey));
+    await vi.waitFor(() =>
+      expect(detailFor(store).resolved?.key).toBe(yellowKey),
+    );
+    cardFor(store, redKey)!
+      .querySelector<HTMLButtonElement>(`[data-variant-key="${redKey}"]`)!
+      .click();
+    await store.updateComplete;
+    expect(detailFor(store).resolved?.key).toBe(redKey);
     const crownsTab = [
       ...store.querySelectorAll<HTMLButtonElement>("button"),
     ].find((candidate) => candidate.textContent?.trim() === "Crowns")!;
