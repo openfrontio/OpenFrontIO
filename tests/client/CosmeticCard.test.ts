@@ -103,6 +103,20 @@ describe("CosmeticCard", () => {
     expect(onActivate).toHaveBeenCalledWith(blue);
   });
 
+  it("falls back to resolved when the active variant key is missing", async () => {
+    const onActivate = vi.fn();
+    await createCard();
+    card!.resolved = red;
+    card!.variants = [red, blue];
+    card!.activeVariantKey = "pattern:stripes:missing";
+    card!.onActivate = onActivate;
+    await card!.updateComplete;
+
+    card!.querySelector<HTMLButtonElement>("[data-cosmetic-main]")!.click();
+
+    expect(onActivate).toHaveBeenCalledWith(red);
+  });
+
   it("activates a swatch without activating the parent item", async () => {
     const onActivate = vi.fn();
     const onVariantActivate = vi.fn();
@@ -144,5 +158,22 @@ describe("CosmeticCard", () => {
     await card!.updateComplete;
 
     expect(card!.querySelectorAll("[data-variant-key]")).toHaveLength(0);
+  });
+
+  it("uses neutral rarity accents and visible focus styles", async () => {
+    await createCard();
+    card!.variants = [red, blue];
+    await card!.updateComplete;
+
+    const shell = card!.querySelector<HTMLElement>("[data-cosmetic-rarity]")!;
+    const main = card!.querySelector<HTMLButtonElement>(
+      "[data-cosmetic-main]",
+    )!;
+    const swatch =
+      card!.querySelector<HTMLButtonElement>("[data-variant-key]")!;
+
+    expect(shell.className).not.toMatch(/emerald|sky|blue/);
+    expect(main.className).toMatch(/focus-visible:/);
+    expect(swatch.className).toMatch(/focus-visible:/);
   });
 });

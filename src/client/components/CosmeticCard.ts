@@ -47,11 +47,11 @@ export class CosmeticCard extends LitElement {
   private rarityClass(rarity: string): string {
     switch (rarity) {
       case "uncommon":
-        return "border-emerald-400/70";
+        return "border-zinc-300/70";
       case "rare":
-        return "border-sky-400/70";
+        return "border-violet-300/70";
       case "epic":
-        return "border-purple-400/70";
+        return "border-fuchsia-300/70";
       case "legendary":
         return "border-amber-400/70";
       default:
@@ -83,7 +83,7 @@ export class CosmeticCard extends LitElement {
           title=${label}
           aria-label=${label}
           aria-current=${isActive ? "true" : nothing}
-          class="w-5 h-5 shrink-0 rounded-full p-0 m-0 appearance-none cursor-pointer outline-none transition-transform duration-150 hover:scale-110 ${isActive
+          class="w-5 h-5 shrink-0 rounded-full p-0 m-0 appearance-none cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 transition-transform duration-150 hover:scale-110 ${isActive
             ? "scale-110 ring-2 ring-white"
             : ""}"
           style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%);"
@@ -119,7 +119,7 @@ export class CosmeticCard extends LitElement {
         aria-label=${displayName}
         aria-pressed=${isEquipped ? "true" : nothing}
         aria-current=${isFocused ? "true" : nothing}
-        class="group relative flex flex-col items-center gap-2 w-full rounded-xl p-3 cursor-pointer outline-none"
+        class="group relative flex flex-col items-center gap-2 w-full rounded-xl p-3 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
         @click=${() => this.onActivate?.(active)}
       >
         <div
