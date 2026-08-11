@@ -4,9 +4,9 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
-import { RankedType } from "../../../../src/core/game/Game";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { RankedType } from "../../../../src/core/game/Game";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {
@@ -28,7 +28,9 @@ vi.mock("../../../../src/client/Api", () => ({
 }));
 
 vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../../src/client/Cosmetics")>()),
+  ...(await importOriginal<
+    typeof import("../../../../src/client/Cosmetics")
+  >()),
   fetchCosmetics: vi.fn(async () => null),
   resolveCosmetics: vi.fn(() => []),
 }));
