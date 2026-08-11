@@ -16,7 +16,14 @@ export interface Candidate {
   used: boolean;
 }
 
-/** Worst-case ΔE2000 between two colours across every observer. */
+/**
+ * Worst-case ΔE2000 between two colours across every observer.
+ *
+ * Both arrays must come from the same observer list, in the same order — they
+ * are compared index by index. "Worst" here means the *smallest* separation,
+ * which is the right reading for a distinctness metric: a pair is only as
+ * distinguishable as the observer who can least tell them apart.
+ */
 export function distance(first: LabaColor[], second: LabaColor[]): number {
   let worst = Infinity;
   for (let i = 0; i < first.length; i++) {
@@ -79,21 +86,26 @@ export class ColorRegistry {
     }
   }
 
-  /** Put a colour into play and refresh every tracked pool against it. */
-  commit(candidate: Candidate): void {
-    candidate.used = true;
-    this.inPlay.push(candidate);
+  /** Lower every tracked pool's score against one colour now in play. */
+  private refreshPools(against: Candidate): void {
     for (const pool of this.pools) {
       for (const other of pool) {
         if (other.used) {
           continue;
         }
-        const value = distance(other.labs, candidate.labs);
+        const value = distance(other.labs, against.labs);
         if (value < other.nearest) {
           other.nearest = value;
         }
       }
     }
+  }
+
+  /** Put a colour into play and refresh every tracked pool against it. */
+  commit(candidate: Candidate): void {
+    candidate.used = true;
+    this.inPlay.push(candidate);
+    this.refreshPools(candidate);
   }
 
   /**
@@ -131,17 +143,7 @@ export class ColorRegistry {
       this.inPlay.push(reserved);
       // Refresh pools here too, so reserving works whatever order the
       // allocators happen to be constructed in.
-      for (const pool of this.pools) {
-        for (const other of pool) {
-          if (other.used) {
-            continue;
-          }
-          const value = distance(other.labs, reserved.labs);
-          if (value < other.nearest) {
-            other.nearest = value;
-          }
-        }
-      }
+      this.refreshPools(reserved);
     }
   }
 }

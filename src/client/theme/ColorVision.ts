@@ -18,7 +18,20 @@ const OBSERVER_NAMES: readonly string[] = [
  * Simulation of Color Vision Deficiency", severity 1.0. Row-major 3x3, applied
  * to linear-light RGB — not to gamma-encoded sRGB.
  */
-const CVD_MATRICES: Record<Exclude<Observer, "normal">, readonly number[]> = {
+/** Row-major 3x3. Fixed length so a dropped coefficient fails to compile. */
+type Matrix3x3 = readonly [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+
+const CVD_MATRICES: Record<Exclude<Observer, "normal">, Matrix3x3> = {
   protan: [
     0.152286, 1.052583, -0.204868, 0.114503, 0.786281, 0.099216, -0.003882,
     -0.048116, 1.051998,

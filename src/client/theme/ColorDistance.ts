@@ -1,5 +1,16 @@
 import { LabaColor } from "colord";
 
+const DEG = 180 / Math.PI;
+const RAD = Math.PI / 180;
+/** 25^7, the constant the chroma-weighting terms are scaled against. */
+const POW_25_7 = 6103515625;
+
+/** `value ** 7` by multiplication — this runs millions of times per lobby. */
+function pow7(value: number): number {
+  const cube = value * value * value;
+  return cube * cube * value;
+}
+
 /**
  * CIEDE2000 colour difference between two LAB colours, on the usual 0–100
  * scale.
@@ -15,17 +26,6 @@ import { LabaColor } from "colord";
  * disagrees with the reference formula by up to ~2.5 on some near-neutral
  * pairs, so this is also the more accurate of the two.
  */
-const DEG = 180 / Math.PI;
-const RAD = Math.PI / 180;
-/** 25^7, the constant the chroma-weighting terms are scaled against. */
-const POW_25_7 = 6103515625;
-
-/** `value ** 7` by multiplication — this runs millions of times per lobby. */
-function pow7(value: number): number {
-  const cube = value * value * value;
-  return cube * cube * value;
-}
-
 export function deltaE2000(first: LabaColor, second: LabaColor): number {
   const rad = RAD;
   const deg = DEG;

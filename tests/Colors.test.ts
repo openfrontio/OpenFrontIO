@@ -1,6 +1,7 @@
 import { colord, Colord } from "colord";
 import colorblindThemeJson from "../src/client/render/gl/colorblind-theme.json";
 import defaultTheme from "../src/client/render/gl/default-theme.json";
+import { PALETTE_NAMES } from "../src/client/render/gl/GraphicsOverrides";
 import { createThemeSettings } from "../src/client/render/gl/RenderSettings";
 import {
   ColorAllocator,
@@ -428,6 +429,28 @@ describe("ColorAllocator distinctness guarantees", () => {
     );
   });
 
+  test("never settles for less separation than a palette could give", () => {
+    // Five near-identical reds, one distant blue in the fallback, and a floor
+    // neither palette can reach — so the allocator drops through to "take the
+    // roomiest available". Whatever it picks must be at least as far from the
+    // first colour as the fallback would have been; choosing the primary's best
+    // just because the primary is non-empty would fail this.
+    const primary = ["#ff0000", "#fb0202", "#f70404", "#f30606", "#ef0808"].map(
+      (c) => colord(c),
+    );
+    const fallback = [colord("#0000ff")];
+    const allocator = new ColorAllocator(primary, fallback, {
+      observers: ["normal"],
+      distinctnessFloor: 95,
+    });
+    const first = allocator.assignColor("player_0");
+    const second = allocator.assignColor("player_1");
+    const fallbackWouldGive = deltaE2000(first.toLab(), fallback[0].toLab());
+    expect(deltaE2000(first.toLab(), second.toLab())).toBeGreaterThanOrEqual(
+      fallbackWouldGive,
+    );
+  });
+
   test("shared policy stays inside the palette", () => {
     const pool = [colord("#ff0000"), colord("#00ff00"), colord("#0000ff")];
     const allocator = new ColorAllocator(pool, [], { policy: "shared" });
@@ -550,29 +573,31 @@ describe("SettingsTheme allocator wiring", () => {
       type: () => type,
     }) as unknown as PlayerView;
 
-  test("bots reuse their palette rather than generating new colours", () => {
-    const theme = new SettingsTheme(createThemeSettings("default"));
-    const palette = new Set(
-      createThemeSettings("default").botColors.map((c) => colord(c).toHex()),
-    );
-    for (let i = 0; i < 120; i++) {
-      const color = theme.territoryColor(
-        playerStub(`bot_${i}`, PlayerType.Bot),
+  for (const name of PALETTE_NAMES) {
+    test(`${name}: bots reuse their palette rather than generating new colours`, () => {
+      const theme = new SettingsTheme(createThemeSettings(name));
+      const palette = new Set(
+        createThemeSettings(name).botColors.map((c) => colord(c).toHex()),
       );
-      expect(palette.has(color.toHex())).toBe(true);
-    }
-  });
+      for (let i = 0; i < 120; i++) {
+        const color = theme.territoryColor(
+          playerStub(`bot_${i}`, PlayerType.Bot),
+        );
+        expect(palette.has(color.toHex())).toBe(true);
+      }
+    });
 
-  test("humans in a full lobby all receive different colours", () => {
-    const theme = new SettingsTheme(createThemeSettings("default"));
-    const seen = new Set<string>();
-    for (let i = 0; i < 125; i++) {
-      seen.add(
-        theme
-          .territoryColor(playerStub(`human_${i}`, PlayerType.Human))
-          .toHex(),
-      );
-    }
-    expect(seen.size).toBe(125);
-  });
+    test(`${name}: humans in a full lobby all receive different colours`, () => {
+      const theme = new SettingsTheme(createThemeSettings(name));
+      const seen = new Set<string>();
+      for (let i = 0; i < 125; i++) {
+        seen.add(
+          theme
+            .territoryColor(playerStub(`human_${i}`, PlayerType.Human))
+            .toHex(),
+        );
+      }
+      expect(seen.size).toBe(125);
+    });
+  }
 });

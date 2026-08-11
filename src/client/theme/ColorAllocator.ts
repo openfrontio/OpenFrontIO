@@ -20,8 +20,7 @@ import { Observer } from "./ColorVision";
  */
 const GENERATED_POOL_SIZE = 2048;
 
-extend([lchPlugin]);
-extend([labPlugin]);
+extend([lchPlugin, labPlugin]);
 
 /** How a pool of players competes for colours. */
 export type AllocationPolicy = "distinct" | "shared";
@@ -147,7 +146,14 @@ export class ColorAllocator {
       }
     }
 
-    const curated = bestUnused(this.primary) ?? bestUnused(this.fallback);
+    // Nothing clears the floor, so take the roomiest colour available. Both
+    // palettes have to be weighed here: picking the primary's best whenever the
+    // primary still holds anything would ignore a better fallback colour and
+    // could synthesise one that is no improvement on it.
+    const curated = roomiest(
+      bestUnused(this.primary),
+      bestUnused(this.fallback),
+    );
     const generated = this.generate();
     if (curated !== null && curated.nearest >= generated.nearest) {
       return curated;
@@ -213,6 +219,20 @@ export class ColorAllocator {
     const random = new PseudoRandom(simpleHash(id));
     return source[random.nextInt(0, source.length)];
   }
+}
+
+/** Whichever candidate sits furthest from the colours already in play. */
+function roomiest(
+  first: Candidate | null,
+  second: Candidate | null,
+): Candidate | null {
+  if (first === null) {
+    return second;
+  }
+  if (second === null) {
+    return first;
+  }
+  return first.nearest >= second.nearest ? first : second;
 }
 
 /** Highest-scoring unused candidate in a pool, or null if none remain. */
