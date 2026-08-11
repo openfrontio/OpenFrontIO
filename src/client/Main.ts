@@ -77,7 +77,7 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
-import { isVersionedReplayPage } from "./VersionedReplay";
+import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
@@ -251,12 +251,12 @@ class Client {
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
     // script" after its load wait. Also skip on the versioned replay shells:
-    // the CDN origin is not on the Turnstile site key's domain allowlist, so
-    // rendering the widget there alerts and rejects — and replays never send
-    // a token anyway (see getTurnstileToken below).
+    // the replay host may not be on the Turnstile site key's domain allowlist,
+    // so rendering the widget there alerts and rejects — and replays never
+    // send a token anyway (see getTurnstileToken below).
     this.turnstileTokenPromise =
       ClientEnv.instanceId() === "desktop" ||
-      isVersionedReplayPage(window.location.pathname)
+      isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
 
@@ -820,15 +820,17 @@ class Client {
       return;
     }
 
-    // #join=<gameId>: hash-based equivalent of the /game/<id> path below, used
-    // by the versioned replay shells on the CDN, where there is no path
-    // routing (see VersionedReplay.ts).
-    const joinMatch = decodedHash.match(/^#join=(.*)$/);
-    if (joinMatch && GAME_ID_REGEX.test(joinMatch[1])) {
-      window.showPage?.("page-join-lobby");
-      this.joinModal.open({ lobbyId: joinMatch[1] });
-      console.log(`joining lobby ${joinMatch[1]} from hash`);
-      return;
+    // On a versioned replay shell the pathname IS the game id: the worker
+    // serves the record's matching build at replay.<domain>/<gameId> (see
+    // VersionedReplay.ts).
+    if (isReplayShellHost(window.location.hostname)) {
+      const replayGameId = window.location.pathname.slice(1);
+      if (GAME_ID_REGEX.test(replayGameId)) {
+        window.showPage?.("page-join-lobby");
+        this.joinModal.open({ lobbyId: replayGameId });
+        console.log(`joining replay ${replayGameId}`);
+        return;
+      }
     }
 
     const pathMatch = window.location.pathname.match(
@@ -1041,18 +1043,12 @@ class Client {
       document.body.classList.add("in-game");
 
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-      if (isVersionedReplayPage(window.location.pathname)) {
-        // Keep the versioned shell pathname: /game/<id> and the #refresh
-        // trampoline only exist on the game-server origin, so rewriting here
-        // would leave a URL that 404s on the CDN when reloaded or shared.
-        // #join= is the shell's own join URL shape (see VersionedReplay.ts).
-        history.pushState(
-          null,
-          "",
-          lobbyIdHidden
-            ? window.location.pathname
-            : `${window.location.pathname}#join=${lobby.gameID}`,
-        );
+      if (isReplayShellHost(window.location.hostname)) {
+        // Keep the canonical replay URL (replay.<domain>/<gameId>): the
+        // /game/<id> shape and the #refresh trampoline only exist on the
+        // game-server origin, so rewriting here would leave a URL that 404s
+        // when reloaded or shared (see VersionedReplay.ts).
+        history.pushState(null, "", window.location.pathname);
       } else {
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
@@ -1075,14 +1071,12 @@ class Client {
   private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     let targetUrl: string;
-    if (isVersionedReplayPage(window.location.pathname)) {
-      // Keep the versioned shell pathname: /game/<id> only exists on the
-      // game-server origin, so rewriting here would leave a URL that 404s on
-      // the CDN when reloaded or shared. #join= is the shell's own join URL
-      // shape (see VersionedReplay.ts).
-      targetUrl = lobbyIdHidden
-        ? window.location.pathname
-        : `${window.location.pathname}#join=${lobbyId}`;
+    if (isReplayShellHost(window.location.hostname)) {
+      // Keep the canonical replay URL (replay.<domain>/<gameId>): the
+      // /game/<id> shape only exists on the game-server origin, so rewriting
+      // here would leave a URL that 404s when reloaded or shared (see
+      // VersionedReplay.ts).
+      targetUrl = window.location.pathname;
     } else if (lobbyIdHidden) {
       targetUrl = "/streamer-mode";
     } else {

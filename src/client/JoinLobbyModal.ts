@@ -33,7 +33,7 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { normaliseMapKey } from "./Utils";
-import { isVersionedReplayPage, versionedReplayUrl } from "./VersionedReplay";
+import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
@@ -1154,7 +1154,7 @@ export class JoinLobbyModal extends BaseModal {
         `Git commit hash mismatch for game ${safeLobbyId}`,
         archiveData.details,
       );
-      if (await this.redirectToVersionedShell(parsed.data.gitCommit, lobbyId)) {
+      if (await this.redirectToVersionedShell(lobbyId)) {
         return "redirected";
       }
       return "version_mismatch";
@@ -1177,28 +1177,21 @@ export class JoinLobbyModal extends BaseModal {
     return "success";
   }
 
-  // The record was produced by a different build. A matching versioned shell
-  // (index-<short-commit>.html, uploaded by update.sh on every deploy) may
-  // exist on the CDN; if so, navigate there and let that build replay the game
-  // (#4934). The probe requires text/html because shells uploaded before the
-  // API stored HTML with a real content type would download instead of render.
-  private async redirectToVersionedShell(
-    recordCommit: string,
-    lobbyId: string,
-  ): Promise<boolean> {
-    if (isVersionedReplayPage(window.location.pathname)) {
+  // The record was produced by a different build. replay.<domain>/<gameId>
+  // serves the matching versioned shell (uploaded by update.sh on every
+  // deploy); if it exists, navigate there and let that build replay the game
+  // (#4934). The probe requires text/html so a misrouted host that answers
+  // 200 with something else can't strand the player on a broken page.
+  private async redirectToVersionedShell(lobbyId: string): Promise<boolean> {
+    if (isReplayShellHost(window.location.hostname)) {
       return false;
     }
-    const url = versionedReplayUrl(
-      ClientEnv.jwtAudience(),
-      recordCommit,
-      lobbyId,
-    );
+    const url = versionedReplayUrl(ClientEnv.jwtAudience(), lobbyId);
     if (url === null) {
       return false;
     }
     try {
-      const probe = await fetch(url.split("#")[0], { method: "HEAD" });
+      const probe = await fetch(url, { method: "HEAD" });
       if (!probe.ok) {
         return false;
       }
