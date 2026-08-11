@@ -13,9 +13,17 @@ import {
 import { assetUrl } from "../../../../core/AssetUrls";
 import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
+import { ClientEnv } from "../../../ClientEnv";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
-import { getMapName, renderDuration, translateText } from "../../../Utils";
+import {
+  copyToClipboard,
+  getMapName,
+  renderDuration,
+  showToast,
+  translateText,
+} from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
+import "../../CopyButton";
 import {
   formatAbsoluteTime,
   formatDayHeader,
@@ -25,6 +33,7 @@ import { formatGameType } from "./GameTypeLabels";
 
 const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
 const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
+const linkIcon = assetUrl("images/LinkIconWhite.svg");
 
 type TypeKey = PlayerGameTypeFilter | "all";
 type ModeKey = PlayerGameModeFilter | "all";
@@ -254,6 +263,18 @@ export class PlayerGameHistoryView extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private async copyGameLink(gameId: string) {
+    const encodedGameId = encodeURIComponent(gameId);
+    const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+
+    try {
+      await void copyToClipboard(url);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("error_modal.failed_copy"), "red");
+    }
   }
 
   render() {
@@ -486,6 +507,24 @@ export class PlayerGameHistoryView extends LitElement {
                 height="18"
               />
               <span class="sr-only">${translateText("game_list.stats")}</span>
+            </button>
+            <button
+              type="button"
+              title=${translateText("common.click_to_copy")}
+              aria-label=${translateText("common.click_to_copy")}
+              @click=${() => this.copyGameLink(game.gameId)}
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              <img
+                src=${linkIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("common.click_to_copy")}</span
+              >
             </button>
             <button
               type="button"

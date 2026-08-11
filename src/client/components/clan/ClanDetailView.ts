@@ -67,8 +67,9 @@ export class ClanDetailView extends LitElement {
   @state() private actionPending = false;
   @state() private allStatsExpanded = false;
   @state() private membersLoadInFlight = false;
-  private memberSearch = "";
+  @state() private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private memberLoadSeq = 0;
   private asyncGeneration = 0;
 
   connectedCallback() {
@@ -109,6 +110,7 @@ export class ClanDetailView extends LitElement {
 
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
+    this.memberLoadSeq++;
     super.disconnectedCallback();
   }
 
@@ -122,6 +124,7 @@ export class ClanDetailView extends LitElement {
 
   private async loadDetail() {
     const gen = ++this.asyncGeneration;
+    this.memberLoadSeq++;
     this.loading = true;
     this.myRole = null;
     this.pendingRequestCount = 0;
@@ -237,25 +240,36 @@ export class ClanDetailView extends LitElement {
     }
   }
 
-  private async loadMemberPage(page: number) {
+  private async loadMemberPage(page: number, search = this.memberSearch) {
     if (!this.selectedClan) return;
-    const res = await fetchClanMembers(
-      this.selectedClan.tag,
-      page,
-      this.membersPerPage,
-      this.memberSort,
-      this.memberOrder,
-    );
+    const seq = ++this.memberLoadSeq;
+    const res = search
+      ? await fetchClanMembers(
+          this.selectedClan.tag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+          search,
+        )
+      : await fetchClanMembers(
+          this.selectedClan.tag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+        );
+    if (seq !== this.memberLoadSeq || search !== this.memberSearch) return;
     if (!res) return;
     if (res.results.length === 0 && page > 1) {
-      await this.loadMemberPage(1);
+      await this.loadMemberPage(1, search);
       return;
     }
     this.members = res.results;
     this.membersTotal = res.total;
     this.memberPage = page;
     this.pendingRequestCount = res.pendingRequests ?? 0;
-    if (this.selectedClan.memberCount !== res.total) {
+    if (!search && this.selectedClan.memberCount !== res.total) {
       this.selectedClan = { ...this.selectedClan, memberCount: res.total };
     }
   }
@@ -344,11 +358,13 @@ export class ClanDetailView extends LitElement {
   }
 
   private onSearchInput(e: Event) {
-    const val = (e.target as HTMLInputElement).value;
+    const search = (e.target as HTMLInputElement).value.trim();
+    if (search === this.memberSearch) return;
+    this.memberSearch = search;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      this.memberSearch = val;
-      this.requestUpdate();
+      this.memberSearchDebounce = null;
+      void this.loadMemberPage(1, search);
     }, 200);
   }
 
@@ -539,6 +555,7 @@ export class ClanDetailView extends LitElement {
         </div>
         ${renderMemberSearchInput(
           (e: Event) => this.onSearchInput(e),
+          this.memberSearch,
           undefined,
           renderMemberSortControl(
             this.memberSort,
@@ -548,17 +565,7 @@ export class ClanDetailView extends LitElement {
           ),
         )}
         <div class="space-y-2">
-          ${filtered.map((m) =>
-            renderMemberRow(m, this.myPublicId, (publicId) =>
-              this.dispatchEvent(
-                new CustomEvent("view-profile", {
-                  detail: { publicId },
-                  bubbles: true,
-                  composed: true,
-                }),
-              ),
-            ),
-          )}
+          ${filtered.map((m) => renderMemberRow(m, this.myPublicId, this))}
         </div>
         ${renderMemberPagination(
           this.memberPage,

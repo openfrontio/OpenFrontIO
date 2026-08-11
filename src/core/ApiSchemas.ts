@@ -2,7 +2,13 @@ import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMode, RankedType } from "./game/Game";
+import {
+  Difficulty,
+  GameMode,
+  GameType,
+  HumansVsNations,
+  RankedType,
+} from "./game/Game";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -150,6 +156,18 @@ export const UserMeResponseSchema = z.object({
     email: z.string().optional(),
     steam: SteamUserSchema.optional(),
   }),
+  // The caller's active account ban, shown to them (localized client-side), or
+  // null. `category` is a server enum but kept as a string here so an
+  // unrecognised value degrades gracefully. Optional so an older API that
+  // predates the field is treated as "no ban".
+  ban: z
+    .object({
+      category: z.string(),
+      reason: z.string().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+    })
+    .nullable()
+    .optional(),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
@@ -401,16 +419,69 @@ export const TribeStatsResponseSchema = z.object({
 });
 export type TribeStatsResponse = z.infer<typeof TribeStatsResponseSchema>;
 
+export const PlayerRecentStatsSchema = z.object({
+  games: z.number().int().min(0).max(100),
+  wins: z.number().int().min(0).max(100),
+});
+export type PlayerRecentStats = z.infer<typeof PlayerRecentStatsSchema>;
+
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
   losses: BigIntStringSchema,
   total: BigIntStringSchema,
   stats: PlayerStatsSchema,
+  recent: PlayerRecentStatsSchema.optional(),
+  // Temporary client-first rollout compatibility. The replacement infra
+  // response exposes only aggregate counts under stats.recent.
+  recentGames: z
+    .array(
+      z.object({
+        gameId: BigIntStringSchema,
+        won: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
+export const PlayerStatsGameModes = [
+  GameMode.FFA,
+  GameMode.Team,
+  HumansVsNations,
+] as const;
+export type PlayerStatsGameMode = (typeof PlayerStatsGameModes)[number];
+
+const RecentByDifficultySchema = z.object({
+  all: PlayerRecentStatsSchema,
+  [Difficulty.Easy]: PlayerRecentStatsSchema.optional(),
+  [Difficulty.Medium]: PlayerRecentStatsSchema.optional(),
+  [Difficulty.Hard]: PlayerRecentStatsSchema.optional(),
+  [Difficulty.Impossible]: PlayerRecentStatsSchema.optional(),
+});
+
+const RecentGameTypeStatsSchema = RecentByDifficultySchema.extend({
+  [GameMode.FFA]: RecentByDifficultySchema.optional(),
+  [GameMode.Team]: RecentByDifficultySchema.optional(),
+  [HumansVsNations]: RecentByDifficultySchema.optional(),
+});
+
+const RecentRankedStatsSchema = z.object({
+  all: PlayerRecentStatsSchema,
+  [RankedType.OneVOne]: PlayerRecentStatsSchema.optional(),
+  [RankedType.TwoVTwo]: PlayerRecentStatsSchema.optional(),
+});
+
+export const PlayerRecentStatsTreeSchema = z.object({
+  all: PlayerRecentStatsSchema,
+  [GameType.Singleplayer]: RecentGameTypeStatsSchema.optional(),
+  [GameType.Public]: RecentGameTypeStatsSchema.optional(),
+  [GameType.Private]: RecentGameTypeStatsSchema.optional(),
+  Ranked: RecentRankedStatsSchema.optional(),
+});
+export type PlayerRecentStatsTree = z.infer<typeof PlayerRecentStatsTreeSchema>;
+
 const GameModeStatsSchema = z.partialRecord(
-  z.enum(GameMode),
+  z.enum(PlayerStatsGameModes),
   z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
 );
 
@@ -419,6 +490,7 @@ export const PlayerStatsTreeSchema = z.object({
   Public: GameModeStatsSchema.optional(),
   Private: GameModeStatsSchema.optional(),
   Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
+  recent: PlayerRecentStatsTreeSchema.optional(),
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
@@ -596,10 +668,15 @@ export type NewsItem = z.infer<typeof NewsItemSchema>;
 // entry closed rather than rendering it).
 const HttpsUrlSchema = z.url({ protocol: /^https$/ });
 
-// One live stream in the homepage "Streaming Now" panel. Filled by a backend job (Twitch
-// Helix for auto-discovery; YouTube curated) and served like news.json. `channel` is the
-// login/handle used to derive the watch URL when `url` is absent; image/link fields are
-// validated so a malformed entry fails the config closed (see getLiveStreams).
+// One verified-live stream in the homepage streaming features. Produced only by the
+// API's cron (Twitch Helix; YouTube RSS + videos.list) and served by GET /streams.json.
+// `channel` is the login/handle used to derive the watch URL when `url` is absent;
+// image/link fields are validated so a malformed entry fails the feed closed.
+//
+// `startedAt` is required on purpose. It can only come from a live lookup, so a payload
+// built from static config cannot satisfy this schema — which means an API still serving
+// the older {enabled, channels} shape fails validation and falls back to "show nothing",
+// rather than being mistaken for a current one. Liveness is never decided on the client.
 export const LiveStreamSchema = z.object({
   platform: z.enum(["twitch", "youtube"]),
   // Login/handle as it appears in the watch URL (twitch.tv/<login>, youtube.com/@handle).
@@ -615,35 +692,20 @@ export const LiveStreamSchema = z.object({
   viewers: z.number().int().nonnegative().default(0),
   avatarUrl: HttpsUrlSchema.optional(),
   url: HttpsUrlSchema.optional(),
+  startedAt: z.iso.datetime(),
 });
 export type LiveStream = z.infer<typeof LiveStreamSchema>;
 
-// Config for the homepage "Streaming Now" panel, served like news.json (API-hosted JSON
-// with a bundled fallback). `enabled` is the on/off toggle; `streams` is the live list.
-// Disabled or empty = panel hidden.
-export const LiveStreamsSchema = z.object({
-  enabled: z.boolean().default(false),
-  streams: z.array(LiveStreamSchema).default([]),
+// The single served feed (GET /streams.json). `featured` is the embed candidate list in
+// admin priority order; `live` is the "Streaming Now" list sorted by viewers.
+//
+// There is no `enabled` flag: an empty array means "show nothing". An overloaded toggle
+// is exactly what made the old payload ambiguous — it meant "configured" in one API
+// version and "live" in the next, with an identical shape. `verifiedAt` is when the API
+// built the feed, so the client can refuse one the edge served long after the cron died.
+export const StreamsFeedSchema = z.object({
+  verifiedAt: z.iso.datetime(),
+  featured: z.array(LiveStreamSchema).default([]),
+  live: z.array(LiveStreamSchema).default([]),
 });
-export type LiveStreamsConfig = z.infer<typeof LiveStreamsSchema>;
-
-// Config for the homepage featured-stream panel, served like news.json (a JSON the API
-// hosts, with a bundled fallback). `enabled` is the on/off signal; `channels` is the
-// Twitch channel logins to show (first one that is live wins). Invalid/garbage logins are
-// dropped individually (trimmed, matched to the Twitch login format) rather than failing
-// the whole config closed — one bad entry must not silently disable the feature for every
-// client; the valid channels still flow through.
-const TWITCH_LOGIN = /^[a-zA-Z0-9_]{3,25}$/;
-export const FeaturedStreamSchema = z.object({
-  enabled: z.boolean().default(false),
-  channels: z
-    .array(z.unknown())
-    .default([])
-    .transform((cs) =>
-      cs
-        .filter((c): c is string => typeof c === "string")
-        .map((c) => c.trim())
-        .filter((c) => TWITCH_LOGIN.test(c)),
-    ),
-});
-export type FeaturedStreamConfig = z.infer<typeof FeaturedStreamSchema>;
+export type StreamsFeed = z.infer<typeof StreamsFeedSchema>;

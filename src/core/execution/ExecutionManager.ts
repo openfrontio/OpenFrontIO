@@ -72,7 +72,14 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitIds, intent.tile);
       case "spawn":
-        return new SpawnExecution(this.gameID, player.info(), intent.tile);
+        // fromIntent: this one came off the wire, so it is subject to the
+        // spawn-phase gate that internal spawns are not.
+        return new SpawnExecution(
+          this.gameID,
+          player.info(),
+          intent.tile,
+          true,
+        );
       case "boat":
         return new TransportShipExecution(player, intent.dst, intent.troops);
       case "allianceRequest":
@@ -103,13 +110,18 @@ export class Executor {
           intent.unit,
           intent.tile,
           intent.rocketDirectionUp,
+          intent.amount,
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
       }
 
       case "upgrade_structure":
-        return new UpgradeStructureExecution(player, intent.unitId);
+        return new UpgradeStructureExecution(
+          player,
+          intent.unitId,
+          intent.amount,
+        );
       case "delete_unit":
         return new DeleteUnitExecution(player, intent.unitId);
       case "quick_chat":

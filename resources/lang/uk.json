@@ -358,8 +358,7 @@
     "title": "Клани",
     "transfer_leadership": "Передати лідерство",
     "transfer_warning": "Обраний учасник стане новим лідером. Ви станете звичайним учасником. Цю дію неможливо скасувати.",
-    "unban": "Розблокувати",
-    "history_game_id": "ID гри"
+    "unban": "Розблокувати"
   },
   "common": {
     "available": "Доступно",
@@ -377,7 +376,6 @@
     "duration_minute_short": " хв",
     "duration_second_short": " с",
     "enabled": "Увімкнено",
-    "got_it": "Зрозуміло",
     "map_default": "Типово для мапи",
     "month_apr": "Квітень",
     "month_aug": "Серпень",
@@ -399,7 +397,8 @@
     "summary_keep": "Залишок",
     "summary_send": "Переказ",
     "target_dead": "Ціль знищено",
-    "target_dead_note": "Неможливо надіслати ресурси полеглому гравцю."
+    "target_dead_note": "Неможливо надіслати ресурси полеглому гравцю.",
+    "got_it": "Зрозуміло"
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Ви можете атакувати гравців, які від’єдналися, навіть якщо ви союзники з ними.",
@@ -411,7 +410,7 @@
   "cosmetics": {
     "adfree": "довічно без реклами!",
     "artist_label": "Художник:",
-    "button_title": "Обери косметику!",
+    "button_title": "Виберіть прикраси!",
     "color_label": "Колір:",
     "common": "Звичайний",
     "epic": "Епічний",
@@ -423,8 +422,9 @@
     "public_lobbies_info": "Створюйте власні лобі, які доступні всім.",
     "rare": "Рідкісний",
     "search": "Пошук...",
+    "signup_bonus": "Вітальний бонус",
     "soft": "Кришечки",
-    "title": "Косметика",
+    "title": "Прикраси",
     "uncommon": "Незвичайний",
     "unlimited_ranked": "Безлімітний рейтинговий підбір",
     "unlimited_ranked_info": "Необмежена кількість рейтингових матчів.",
@@ -472,7 +472,7 @@
       "nukeTrail": "Сліди бомб",
       "structures": "Споруди",
       "transportShipTrail": "Сліди суден",
-      "warship": "Військовий корабель"
+      "warship": "Військові кораблі"
     }
   },
   "error_modal": {
@@ -842,7 +842,7 @@
     "gold_multiplier_placeholder": "2,0х",
     "hard_nations": "Важкі нації",
     "host_badge": "Хост",
-    "host_cheats": "Чіти хоста",
+    "host_cheats": "Чити хоста",
     "infinite_gold": "Безмежне золото",
     "infinite_troops": "Безмежні війська",
     "instant_build": "Миттєве будівництво",
@@ -941,8 +941,8 @@
     "ratio": "Коефіцієнт",
     "refresh_time": "Оновлюється щогодини",
     "title": "Таблиця лідерів",
-    "tribes_boost": "Бусти",
-    "tribes_boost_tooltip": "Назви з бустом частіше з’являються в іграх інших гравців",
+    "tribes_boost": "Підйоми",
+    "tribes_boost_tooltip": "Назви з підйомом частіше з’являються в іграх інших гравців",
     "tribes_boost_value": "{multiplier}×",
     "tribes_boost_value_tooltip": "З’являється в іграх інших гравців у {multiplier}× частіше",
     "tribes_games_tooltip": "Появи в іграх: {count}",
@@ -1003,7 +1003,7 @@
     "bajacalifornia": "Нижня Каліфорнія",
     "balkans": "Балкани",
     "balkhash": "Балхаш",
-    "baltics": "Прибалтика",
+    "baltics": "Країни Балтії",
     "beringsea": "Берингове море",
     "beringstrait": "Берингова протока",
     "betweentwoseas": "Поміж двох морів",
@@ -1258,26 +1258,19 @@
   },
   "player_stats_table": {
     "arrived": "Прибуло",
-    "attack": "Атаки",
     "building": "Будівля",
     "building_stats": "Статистика будівництва",
     "built": "Побудовано",
     "cancelled": "Скасовано",
     "captured": "Захоплено",
-    "count": "Кількість",
     "destroyed": "Знищено",
-    "gold": "Золото",
-    "hits": "Удари",
     "landed": "Приземлено",
     "launched": "Запущено",
     "lost": "Втрачено",
     "nuke_stats": "Статистика бомбардувань",
-    "player_metrics": "Статистика гравця",
-    "received": "Отримано",
     "sent": "Відправлено",
     "ship_arrivals": "Прибуття кораблів",
     "ship_type": "Тип корабля",
-    "steal": "Украдено",
     "trade": "Торгівля",
     "unit": {
       "abomb": "Атомна бомба",
@@ -1296,7 +1289,14 @@
     },
     "war": "Війни",
     "weapon": "Зброя",
-    "workers": "Робітники"
+    "workers": "Робітники",
+    "attack": "Атаки",
+    "count": "Кількість",
+    "gold": "Золото",
+    "hits": "Удари",
+    "player_metrics": "Статистика гравця",
+    "received": "Отримано",
+    "steal": "Украдено"
   },
   "player_stats_tree": {
     "mode": "Режим",
@@ -1307,8 +1307,8 @@
     "ranked_1v1": "1 на 1",
     "ranked_2v2": "2 на 2",
     "solo": "Соло",
-    "stats_games_played": "Зіграні ігри",
     "stats_losses": "Невдачі",
+    "stats_games_played": "Зіграні ігри",
     "stats_wins": "Перемоги",
     "stats_wlr": "Коефіцієнт П:Н"
   },
@@ -1322,12 +1322,12 @@
     "enter_id": "Введіть ID лобі",
     "error": "Сталася помилка. Спробуйте ще раз або зверніться до служби підтримки.",
     "game_length": "Тривалість гри",
-    "host_cheats": "Чіти хоста",
+    "host_cheats": "Чити хоста",
     "join_lobby": "Приєднатися до лобі",
     "joined_waiting": "Лобі приєднано! Очікуємо, доки хост почне гру...",
     "listing_failed": "Не вдалось оновити список лобі. Спробуйте ще раз.",
     "listing_full": "Список публічних лобі заповнений. Спробуйте ще раз пізніше.",
-    "listing_host_cheats_enabled": "Вимкніть чіти хоста, щоб зробити своє лобі публічним.",
+    "listing_host_cheats_enabled": "Вимкніть чити хоста, щоб зробити своє лобі публічним.",
     "listing_limit_reached": "У вас уже є публічне лобі.",
     "listing_requires_subscription": "Для відкриття публічного лобі необхідна активна підписка.",
     "listing_whitelist_enabled": "Вимкніть білий список, щоб зробити своє лобі публічним.",
@@ -1442,9 +1442,6 @@
     "toggle_achievements": "Перемикання досягнень",
     "water_nukes": "Водяні бомби"
   },
-  "steam": {
-    "link_signpost": "Уже маєте акаунт OpenFront? Прив’язування акаунтів з’явиться у майбутніх оновленнях."
-  },
   "steam_user_header": {
     "avatar_alt": "Steam-аватар",
     "default_name": "Steam-гравець"
@@ -1465,6 +1462,7 @@
     "confirm_purchase_body": "Купити «{item}» за {amount, number} {currency}?",
     "confirm_purchase_title": "Підтвердити покупку",
     "confirm_upgrade": "Покращити до {tier}? З вас буде стягнуто вирахувану різницю.",
+    "cosmetics": "Прикраси",
     "crowns": "Корони",
     "currency_pack_purchase_success": "Набір валюти успішно придбано!",
     "custom_amount": "Виберіть суму",
@@ -1474,6 +1472,9 @@
     "insufficient_currency_body": "Потрібно ще {amount, number} {currency}, щоб купити «{item}».",
     "insufficient_currency_title": "Недостатньо {currency}",
     "login_required": "Ви повинні увійти, щоб здійснити покупку за допомогою валюти.",
+    "merch": "Мерч",
+    "merch_blurb": "Замовте мерч від OpenFront прямо до своїх дверей!",
+    "merch_visit_store": "Відвідати крамницю",
     "no_crowns": "Немає доступних корон. Повертайтеся пізніше за новими товарами.",
     "no_effects": "Немає доступних ефектів. Повертайтеся пізніше за новими товарами.",
     "no_flags": "Немає доступних прапорів. Повертайтеся пізніше за новими товарами.",
@@ -1493,21 +1494,31 @@
     "subscriptions": "Підписки",
     "switch_button": "Змінити",
     "title": "Крамниця",
-    "tribe_boost_button": "Буст",
-    "tribe_boost_confirm": "Застосувати буст на «{name}» за {price} плутонію? Протягом {days} дн воно частіше з’являтиметься в іграх інших гравців.",
-    "tribe_boost_count": "1 буст",
-    "tribe_boost_count_plural": "{count} бустів",
-    "tribe_boost_failed": "Буст не вдався. Спробуйте ще раз.",
-    "tribe_boost_gone": "Ця назва більше не активна, тому на ній не можна застосувати буст.",
-    "tribe_boost_heading": "Буст назви племені",
-    "tribe_boost_next_expiry": "наступний буст спливає {date}",
-    "tribe_boost_success": "Застосовано буст на «{name}».",
+    "tribe_boost_button": "Підйом",
+    "tribe_boost_confirm": "Застосувати підйом на «{name}» за {price} плутонію? Протягом {days} дн воно частіше з’являтиметься в іграх інших гравців.",
+    "tribe_boost_count": "1 підйом",
+    "tribe_boost_count_plural": "{count} підйоми",
+    "tribe_boost_failed": "Не вдалося застосувати підйом. Спробуйте ще раз.",
+    "tribe_boost_gone": "Ця назва більше не активна, тому на ній не можна застосувати підйом.",
+    "tribe_boost_heading": "Підйом назви племені",
+    "tribe_boost_next_expiry": "наступний підйом спливає {date}",
+    "tribe_boost_success": "Застосовано підйом на «{name}».",
     "tribe_duplicate": "Назва вже зайнята.",
     "tribe_name_placeholder": "Введіть назву племені",
     "tribe_name_required": "Спочатку введіть назву.",
     "tribe_purchase_failed": "Покупка не вдалася. Спробуйте ще раз.",
     "tribe_purchase_live": "«{name}» тепер з’являється в іграх.",
     "tribe_rate_limited": "Ви купуєте назви занадто швидко. Спробуйте знову через {seconds} с.",
+    "tribe_stats_boosted": "Підйом: {multiplier}×",
+    "tribe_stats_button": "Статистика",
+    "tribe_stats_failed": "Не вдалося завантажити статистику. Спробуйте ще раз.",
+    "tribe_stats_games": "Ігри",
+    "tribe_stats_lifetime": "За весь час",
+    "tribe_stats_owner": "Власник",
+    "tribe_stats_reach": "Охоплення гравців",
+    "tribe_stats_reach_tooltip": "З’являлися в іграх з {count} гравцями",
+    "tribe_stats_window": "Останні {days} днів ({start} – {end})",
+    "tribe_stats_window_short": "Останні {days} днів",
     "tribe_status_active": "Активно",
     "tribe_status_rejected": "Відхилено",
     "tribes": "Племена",
@@ -1723,7 +1734,7 @@
     "zoom_out_desc": "Зменшити масштаб мапи"
   },
   "username": {
-    "account_invalid_chars": "Імʼя гравця може містити лише латинські літери, цифри, знаки підкреслення та дефіси.",
+    "account_invalid_chars": "Імʼя гравця може містити лише латинські літери, цифри, знаки підкреслення, дефіси та одинарні пробіли між словами.",
     "enter_username": "Введіть своє імʼя гравця",
     "invalid_chars": "Імʼя гравця може містити тільки латинські літери, цифри, пробіли та підкреслення.",
     "not_string": "Імʼя гравця має бути рядком.",
@@ -1759,5 +1770,8 @@
     "you_won": "Ви перемогли!",
     "your_team": "Ваша команда перемогла!",
     "youtube_tutorial": "Потрібна допомога?"
+  },
+  "steam": {
+    "link_signpost": "Уже маєте акаунт OpenFront? Прив’язування акаунтів з’явиться у майбутніх оновленнях."
   }
 }

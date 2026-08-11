@@ -3,7 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { UserSettings } from "../../core/game/UserSettings";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
-import { copyToClipboard, translateText } from "../Utils";
+import { copyToClipboard, showToast, translateText } from "../Utils";
 
 @customElement("copy-button")
 export class CopyButton extends LitElement {
@@ -24,7 +24,6 @@ export class CopyButton extends LitElement {
   showCopyIcon = true;
   @property({ type: Boolean }) compact = false;
 
-  @state() private copySuccess = false;
   @state() private lobbyIdVisible = true;
 
   private userSettings: UserSettings = new UserSettings();
@@ -39,10 +38,6 @@ export class CopyButton extends LitElement {
   ) {
     if (changedProperties.has("lobbyId")) {
       this.lobbyIdVisible = this.userSettings.lobbyIdVisibility();
-      this.copySuccess = false;
-    }
-    if (changedProperties.has("copyText")) {
-      this.copySuccess = false;
     }
     if (
       changedProperties.has("showVisibilityToggle") ||
@@ -90,11 +85,13 @@ export class CopyButton extends LitElement {
       alert("Error copying game id");
       return;
     }
-    await copyToClipboard(
-      text,
-      () => (this.copySuccess = true),
-      () => (this.copySuccess = false),
-    );
+
+    try {
+      await copyToClipboard(text);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("error_modal.failed_copy"), "red");
+    }
   }
 
   private canCopy() {
@@ -107,11 +104,7 @@ export class CopyButton extends LitElement {
     const rawLabel =
       this.displayContent ??
       (this.displayText || this.lobbyId || this.copyText);
-    const label = this.copySuccess
-      ? translateText("common.copied")
-      : allowMask && !this.lobbyIdVisible
-        ? this.maskLabel
-        : rawLabel;
+    const label = allowMask && !this.lobbyIdVisible ? this.maskLabel : rawLabel;
     const disabledClass = canCopy ? "" : "opacity-60 cursor-not-allowed";
     const toggleDisabled = !this.lobbyId;
     const toggleClass = toggleDisabled ? "opacity-60 cursor-not-allowed" : "";

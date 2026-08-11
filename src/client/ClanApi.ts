@@ -194,6 +194,7 @@ export async function fetchClanMembers(
   limit = 20,
   sort: ClanMemberSort = "default",
   order?: ClanMemberOrder,
+  search?: string,
 ): Promise<ClanMembersResponse | false> {
   try {
     const params = new URLSearchParams();
@@ -201,6 +202,8 @@ export async function fetchClanMembers(
     params.set("limit", String(limit));
     if (sort !== "default") params.set("sort", sort);
     if (order) params.set("order", order);
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) params.set("search", normalizedSearch);
     const res = await clanFetch(
       `/clans/${encodeURIComponent(tag)}/members?${params}`,
     );

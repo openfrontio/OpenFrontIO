@@ -2,7 +2,6 @@ import { encodeTerrainTile } from "../src/client/render/gl/utils/ColorUtils";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NationNukeBehavior } from "../src/core/execution/nation/NationNukeBehavior";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
@@ -44,20 +43,13 @@ function buildTerrain(
   height: number,
   wallX: number,
   wallWidth: number,
-  wallYMin = 0,
-  wallYMax = height,
 ): { data: Uint8Array; numLandTiles: number } {
   const data = new Uint8Array(width * height);
   let numLandTiles = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
-      if (
-        x >= wallX &&
-        x < wallX + wallWidth &&
-        y >= wallYMin &&
-        y < wallYMax
-      ) {
+      if (x >= wallX && x < wallX + wallWidth) {
         data[idx] = IMPASSABLE;
         // Impassable tiles are NOT counted as land tiles.
       } else {
@@ -69,30 +61,11 @@ function buildTerrain(
   return { data, numLandTiles };
 }
 
-async function setupImpassableGame(
-  humans: PlayerInfo[] = [],
-  opts?: { wallYMin?: number; wallYMax?: number },
-): Promise<Game> {
+async function setupImpassableGame(humans: PlayerInfo[] = []): Promise<Game> {
   vi.spyOn(console, "debug").mockImplementation(() => {});
 
-  const wallYMin = opts?.wallYMin ?? 0;
-  const wallYMax = opts?.wallYMax ?? MAP_H;
-  const full = buildTerrain(
-    MAP_W,
-    MAP_H,
-    WALL_X,
-    WALL_WIDTH,
-    wallYMin,
-    wallYMax,
-  );
-  const mini = buildTerrain(
-    MINI_W,
-    MINI_H,
-    Math.floor(WALL_X / 2),
-    1,
-    Math.floor(wallYMin / 2),
-    Math.ceil(wallYMax / 2),
-  );
+  const full = buildTerrain(MAP_W, MAP_H, WALL_X, WALL_WIDTH);
+  const mini = buildTerrain(MINI_W, MINI_H, Math.floor(WALL_X / 2), 1);
 
   const gameMap = await genTerrainFromBin(
     { width: MAP_W, height: MAP_H, num_land_tiles: full.numLandTiles },
@@ -264,18 +237,18 @@ describe("Impassable Terrain", () => {
 
   // ── Nukes: trajectory ─────────────────────────────────────────────────
 
-  test("nuke trajectory blocked by impassable terrain", () => {
+  test("nuke flies over impassable terrain and detonates", () => {
     player.conquer(game.ref(20, 100));
     player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
-    // Target is on the right side of the wall — trajectory must cross it.
+    // Target is on the right side of the wall — trajectory crosses it.
     const target = game.ref(150, 100);
     expect(game.isImpassable(target)).toBe(false);
 
     const nuke = new NukeExecution(UnitType.AtomBomb, player, target);
     game.addExecution(nuke);
-    executeTicks(game, 10);
-    // Should have been blocked.
-    expect(nuke.isActive()).toBe(false);
+    executeTicks(game, 30);
+    expect(nuke.getNuke()).not.toBeNull();
+    expect(nuke.getNuke()!.reachedTarget()).toBe(true);
   });
 
   test("nuke can launch when trajectory does not cross impassable terrain", () => {
@@ -292,7 +265,7 @@ describe("Impassable Terrain", () => {
     expect(nuke.isActive()).toBe(false);
   });
 
-  test("MIRV warhead not blocked by impassable terrain", () => {
+  test("MIRV warhead flies over impassable terrain", () => {
     player.conquer(game.ref(20, 100));
     player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
     // Target is on the right side of the wall — trajectory must cross it.
@@ -419,184 +392,39 @@ describe("Impassable Terrain", () => {
     });
   });
 
-  // ── Nation AI: nuke trajectory over impassable terrain ───────────────
+  // ── Nukes: silo selection ─────────────────────────────────────────────
 
-  describe("NationNukeBehavior trajectory over impassable terrain", () => {
-    let nukePlayer: Player;
-
-    beforeEach(() => {
-      nukePlayer = game.player("player_id");
-      (game.config() as TestConfig).infiniteGold = () => true;
-      (game.config() as TestConfig).instantBuild = () => true;
-      (game.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
-        inner: 5,
-        outer: 5,
-      }));
-      (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(
-        () => 999,
-      );
-      (game.config() as TestConfig).setDefaultNukeSpeed(50);
-    });
-
-    test("NationNukeBehavior skips nuke targets whose trajectory crosses impassable terrain", () => {
-      // Build a silo on the left side of the wall.
-      nukePlayer.conquer(game.ref(20, 100));
-      nukePlayer.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
-
-      // Enemy owns tiles on the RIGHT side of the wall — trajectory must
-      // cross the impassable wall.
-      const enemy = game.player("other_id");
-      enemy.conquer(game.ref(150, 100));
-
-      // Build a NationNukeBehavior and call maybeSendNuke.
-      const emojiBehavior = new NationEmojiBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-      );
-      const allianceBehavior = new NationAllianceBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        emojiBehavior,
-      );
-      const attackBehavior = new AiAttackBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        0.0,
-        0.0,
-        0.0,
-        allianceBehavior,
-        emojiBehavior,
-      );
-      const nukeBehavior = new NationNukeBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        attackBehavior,
-        emojiBehavior,
-      );
-
-      // Set the enemy as a hostile target so the nuke behavior considers them.
-      nukePlayer.updateRelation(enemy, -100);
-
-      // Run maybeSendNuke — it should NOT launch a nuke because the
-      // trajectory crosses impassable terrain.
-      nukeBehavior.maybeSendNuke();
-
-      // No nukes should have been launched.
-      const nukes = nukePlayer.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
-      expect(nukes.length).toBe(0);
-    });
-  });
-
-  // ── Nukes: silo selection & curve direction ───────────────────────────
-
-  describe("silo selection and curve direction around impassable terrain", () => {
-    async function setupSiloGame(opts?: {
-      wallYMin?: number;
-      wallYMax?: number;
-    }): Promise<{ g: Game; p: Player; o: Player }> {
-      const g = await setupImpassableGame(
-        [
-          new PlayerInfo("player", PlayerType.Human, "c1", "player_id"),
-          new PlayerInfo("other", PlayerType.Human, "c2", "other_id"),
-        ],
-        opts,
-      );
-      (g.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
-        inner: 5,
-        outer: 5,
-      }));
-      (g.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(() => 999);
-      (g.config() as TestConfig).setDefaultNukeSpeed(50);
-      return { g, p: g.player("player_id"), o: g.player("other_id") };
-    }
-
+  describe("silo selection with impassable terrain", () => {
     function buildSilo(g: Game, p: Player, x: number, y: number) {
       p.conquer(g.ref(x, y));
       p.buildUnit(UnitType.MissileSilo, g.ref(x, y), {});
     }
 
-    test("closest silo with blocked trajectory is skipped for a farther clear silo", async () => {
-      const { g, p } = await setupSiloGame();
-      // 60 tiles from the target but on the other side of the wall —
-      // both curves are blocked.
-      buildSilo(g, p, 90, 100);
-      // 70 tiles from the target, same side — clear.
-      buildSilo(g, p, 150, 30);
+    test("closest silo is chosen even when the trajectory crosses impassable terrain", () => {
+      // 60 tiles from the target but on the other side of the wall.
+      buildSilo(game, player, 90, 100);
+      // 70 tiles from the target, same side.
+      buildSilo(game, player, 150, 30);
 
-      const target = g.ref(150, 100);
-      expect(p.canBuild(UnitType.AtomBomb, target)).toBe(g.ref(150, 30));
-
-      const nuke = new NukeExecution(UnitType.AtomBomb, p, target);
-      g.addExecution(nuke);
-      executeTicks(g, 30);
-      expect(nuke.getNuke()).not.toBeNull();
-      expect(nuke.getNuke()!.reachedTarget()).toBe(true);
-    });
-
-    test("up curve blocked by impassable terrain flips to the down curve", async () => {
-      // Wall only spans y < 150: the up curve (arcing toward y=0) crosses
-      // it, the down curve passes underneath.
-      const { g, p } = await setupSiloGame({ wallYMax: 150 });
-      buildSilo(g, p, 50, 150);
-      const target = g.ref(150, 150);
-      expect(p.canBuild(UnitType.AtomBomb, target)).toBe(g.ref(50, 150));
-
-      // Requests the up curve (default).
-      const nuke = new NukeExecution(UnitType.AtomBomb, p, target);
-      g.addExecution(nuke);
-      executeTicks(g, 30);
-      expect(nuke.getNuke()).not.toBeNull();
-      expect(nuke.getNuke()!.reachedTarget()).toBe(true);
-    });
-
-    test("down curve blocked by impassable terrain flips to the up curve", async () => {
-      // Wall only spans y >= 50: the down curve (arcing toward y=199)
-      // crosses it, the up curve passes above.
-      const { g, p } = await setupSiloGame({ wallYMin: 50 });
-      buildSilo(g, p, 50, 30);
-      const target = g.ref(150, 30);
-      expect(p.canBuild(UnitType.AtomBomb, target)).toBe(g.ref(50, 30));
-
-      // Requests the down curve.
-      const nuke = new NukeExecution(
-        UnitType.AtomBomb,
-        p,
-        target,
-        null,
-        -1,
-        0,
-        false,
+      const target = game.ref(150, 100);
+      expect(player.canBuild(UnitType.AtomBomb, target)).toBe(
+        game.ref(90, 100),
       );
-      g.addExecution(nuke);
-      executeTicks(g, 30);
+
+      const nuke = new NukeExecution(UnitType.AtomBomb, player, target);
+      game.addExecution(nuke);
+      executeTicks(game, 30);
       expect(nuke.getNuke()).not.toBeNull();
       expect(nuke.getNuke()!.reachedTarget()).toBe(true);
     });
 
-    test("canBuild returns false when both curves from every silo are blocked", async () => {
-      const { g, p } = await setupSiloGame();
-      buildSilo(g, p, 20, 100);
-      const target = g.ref(150, 100);
-      expect(p.canBuild(UnitType.AtomBomb, target)).toBe(false);
-
-      const nuke = new NukeExecution(UnitType.AtomBomb, p, target);
-      g.addExecution(nuke);
-      executeTicks(g, 5);
-      expect(nuke.isActive()).toBe(false);
-      expect(nuke.getNuke()).toBeNull();
-    });
-
-    test("MIRV silo selection ignores impassable trajectories", async () => {
-      const { g, p, o } = await setupSiloGame();
-      buildSilo(g, p, 20, 100);
-      // MIRV targets must be owned; the warheads are exempt from
-      // impassable checks, so the blocked silo is still chosen.
-      o.conquer(g.ref(150, 100));
-      expect(p.canBuild(UnitType.MIRV, g.ref(150, 100))).toBe(g.ref(20, 100));
+    test("MIRV silo selection ignores impassable terrain", () => {
+      buildSilo(game, player, 20, 100);
+      // MIRV targets must be owned.
+      other.conquer(game.ref(150, 100));
+      expect(player.canBuild(UnitType.MIRV, game.ref(150, 100))).toBe(
+        game.ref(20, 100),
+      );
     });
   });
 });

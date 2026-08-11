@@ -4,6 +4,8 @@ import { assetUrl } from "../../core/AssetUrls";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
+  doomsdayClockRotQuota,
+  doomsdayClockTroopFloor,
   doomsdayClockWaveState,
 } from "../../core/game/DoomsdayClock";
 import { GameMode, PlayerType, Team } from "../../core/game/Game";
@@ -15,7 +17,8 @@ const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
 
 /**
  * The Doomsday Clock readout: a self-contained panel showing the rising bar, the
- * side's share vs the threshold, the stage (Stable/Unstable/Collapsing) and the
+ * side's share vs the threshold, the stage (Stable/Unstable/Collapsing/Decaying)
+ * and the
  * wave countdown. Embedded by game-right-sidebar so it stacks (centered) under
  * the game timer; it hides only when the mode is off or after a winner. A
  * spectator, replay viewer, or eliminated / not-spawned player still sees the
@@ -96,6 +99,8 @@ export class DoomsdayClockPanel extends LitElement {
     const flagged = me?.inDoomsdayClock() ?? false;
     const secondsUnder = Math.floor((me?.doomsdayClockTicks() ?? 0) / 10);
     const draining = flagged && secondsUnder >= sd.warnSeconds;
+    // From the sim, not re-derived here — see PlayerImpl.isDecaying.
+    const decaying = draining && (me?.isDecaying() ?? false);
     // Safe but within 10% (relative) of the bar: e.g. at 9% when the bar is 10%,
     // or 0.9% when it's 1%. About to be caught, so it blinks red too.
     const nearDanger =
@@ -125,17 +130,24 @@ export class DoomsdayClockPanel extends LitElement {
     let status = "";
     let statusClass = "";
     let detail = zoneDetail;
-    if (live && draining && me) {
-      // Drain is a % of max-troop capacity that stops at the floor
-      // (drainFloorPercent of max); show the actual per-second loss, i.e. only
-      // what sits above the floor (renderTroops handles the /10 display unit).
+    if (live && draining && me && decaying) {
+      // Rot is a deadline, not a rate, so the per-second loss climbs as the
+      // deadline nears. Same shared quota the sim applies, keyed on this player's
+      // own tiles (rot is per player, unlike the team share shown above).
+      status = translateText("doomsday_clock.decaying", {
+        rate: doomsdayClockRotQuota(me.numTilesOwned(), secondsUnder, sd),
+      });
+      statusClass = "text-red-500 font-bold";
+    } else if (live && draining && me) {
+      // Drain is a % of max-troop capacity that stops at the floor; show the
+      // actual per-second loss, i.e. only what sits above the floor (renderTroops
+      // handles the /10 display unit). The floor comes from the shared helper, not
+      // a local formula, because it decays — the readout would otherwise overstate
+      // the loss for the whole comeback window.
       const maxTroops = this.game.config().maxTroops(me);
-      const floor = Math.floor((maxTroops * sd.drainFloorPercent) / 100);
-      const chunk = doomsdayClockDrain(
-        maxTroops,
-        secondsUnder - sd.warnSeconds,
-        sd,
-      );
+      const secondsPastWarn = secondsUnder - sd.warnSeconds;
+      const floor = doomsdayClockTroopFloor(maxTroops, secondsPastWarn, sd);
+      const chunk = doomsdayClockDrain(maxTroops, secondsPastWarn, sd);
       status = translateText("doomsday_clock.collapsing", {
         rate: renderTroops(Math.max(0, Math.min(me.troops() - floor, chunk))),
       });

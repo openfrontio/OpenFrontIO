@@ -11,6 +11,7 @@
 
 import type { Config } from "../../../core/configuration/Config";
 import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -877,7 +878,8 @@ export class GPURenderer {
   updateUnits(units: Map<number, UnitState>, gameTick: number): void {
     this.lastUnits = units;
     this.frameTick++;
-    this.unitPass.updateUnits(units, this.frameTick);
+    this.unitPass.setFrameTick(this.frameTick);
+    this.unitPass.updateUnits(units, gameTick);
     this.barPass.updateBars(units, this.lastStructures, gameTick);
     this.pointLightPass.updateLights(units);
     this.heatManager.decayHeat();
@@ -1048,6 +1050,12 @@ export class GPURenderer {
             cost: data.cost,
             canAfford: data.canAfford,
             canPlace: data.canBuild || data.canUpgrade,
+            topText:
+              data.multiplier && data.multiplier > 1
+                ? translateText("build_menu.upgrade_amount", {
+                    amount: data.multiplier.toString(),
+                  })
+                : undefined,
           }
         : null,
     );

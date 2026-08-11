@@ -372,6 +372,7 @@ export class LobbyTeamView extends LitElement {
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
+      this.teamCount,
       this.effectiveNationCount,
     );
     const buckets = new Map<Team, ClientInfo[]>();

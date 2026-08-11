@@ -382,6 +382,7 @@ export class NamePass {
             nukeTargetsMe: false,
             inDoomsdayClock: false,
             doomsdayClockDraining: false,
+            doomsdayClockDecaying: false,
             doomsdayClockWarnProgress: 0,
             traitorRemainingTicks: 0,
             allianceFraction: 0,
@@ -516,6 +517,7 @@ export class NamePass {
       const disconnected = sd?.disconnected ?? false;
       const inDoomsdayClock = sd?.inDoomsdayClock ?? false;
       const doomsdayClockDraining = sd?.doomsdayClockDraining ?? false;
+      const doomsdayClockDecaying = sd?.doomsdayClockDecaying ?? false;
       const doomsdayClockWarnProgress = sd?.doomsdayClockWarnProgress ?? 0;
       const alliance = sd?.alliance ?? false;
       const allianceReq = sd?.allianceReq ?? false;
@@ -533,6 +535,7 @@ export class NamePass {
         disconnected !== slot.disconnected ||
         inDoomsdayClock !== slot.inDoomsdayClock ||
         doomsdayClockDraining !== slot.doomsdayClockDraining ||
+        doomsdayClockDecaying !== slot.doomsdayClockDecaying ||
         doomsdayClockWarnProgress !== slot.doomsdayClockWarnProgress ||
         alliance !== slot.alliance ||
         allianceReq !== slot.allianceReq ||
@@ -549,6 +552,7 @@ export class NamePass {
         slot.disconnected = disconnected;
         slot.inDoomsdayClock = inDoomsdayClock;
         slot.doomsdayClockDraining = doomsdayClockDraining;
+        slot.doomsdayClockDecaying = doomsdayClockDecaying;
         slot.doomsdayClockWarnProgress = doomsdayClockWarnProgress;
         slot.alliance = alliance;
         slot.allianceReq = allianceReq;
@@ -636,18 +640,21 @@ export class NamePass {
     d[off + 15] = slot.nameHalfWidth;
 
     // Column 4: flagLayerIdx, emojiAtlasIdx, smallID, doomsdayClock state
-    // (0 none, 1.0-1.49 danger -> blinking skull, 2 draining -> steady skull).
+    // (0 none, 1.0-1.49 danger -> blinking skull, 2 draining -> steady skull,
+    // 3 decaying -> steady RED skull, i.e. territory is rotting away).
     // The warn-countdown progress (0->1) is packed into the danger value's
     // fraction so the shader can blink faster as drain nears; it stays < 1.5 so
     // the draining threshold is untouched.
     d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
     d[off + 18] = slot.static.smallID;
-    d[off + 19] = slot.doomsdayClockDraining
-      ? 2.0
-      : slot.inDoomsdayClock
-        ? 1.0 + slot.doomsdayClockWarnProgress * 0.49
-        : 0.0;
+    d[off + 19] = slot.doomsdayClockDecaying
+      ? 3.0
+      : slot.doomsdayClockDraining
+        ? 2.0
+        : slot.inDoomsdayClock
+          ? 1.0 + slot.doomsdayClockWarnProgress * 0.49
+          : 0.0;
 
     // Column 5: crown, traitor, disconnected, alliance
     d[off + 20] = slot.crown ? 1.0 : 0.0;

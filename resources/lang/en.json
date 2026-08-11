@@ -23,6 +23,7 @@
     "get_magic_link": "Get Magic Link",
     "google_alt": "Google",
     "link_discord": "Link Discord Account",
+    "link_existing_account": "Link an existing account",
     "link_google": "Link Google Account",
     "link_google_already_linked": "That Google account is already linked to another player.",
     "link_google_error": "Couldn't link your Google account. Please make sure you're signed in and try again.",
@@ -85,6 +86,27 @@
     "username_title": "Username",
     "your_subscription": "Your Subscription"
   },
+  "ban_notice": {
+    "appeal": "If you believe this is a mistake, contact us on Discord.",
+    "category": {
+      "cheating": "Cheating or unauthorised software",
+      "child_safety": "Child-safety violation",
+      "disruptive_play": "Disruptive play, griefing or spam",
+      "exploiting": "Exploiting bugs",
+      "harassment": "Harassment, threats or abuse",
+      "hate_speech": "Hate speech or discrimination",
+      "inappropriate_content": "Inappropriate or explicit content",
+      "multi_accounting": "Multi-accounting / ban evasion",
+      "offensive_identifier": "Offensive username, clan tag or flag",
+      "other": "Terms of Service violation",
+      "rank_manipulation": "Rank or rating manipulation",
+      "teaming": "Teaming or collusion"
+    },
+    "permanent": "This ban is permanent.",
+    "reason": "Reason: {reason}",
+    "title": "Your account is banned",
+    "until": "Banned until {date}."
+  },
   "build_menu": {
     "desc": {
       "atom_bomb": "Small explosion",
@@ -99,6 +121,7 @@
       "warship": "Captures trade ships, destroys ships and boats"
     },
     "not_enough_money": "Not enough money",
+    "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
   },
   "chat": {
@@ -309,7 +332,7 @@
     "role_officer": "Officer",
     "save_changes": "Save Changes",
     "saving": "Saving...",
-    "search_members_placeholder": "Filter current page by ID or role...",
+    "search_members_placeholder": "Search by exact ID, username, or role...",
     "search_placeholder": "Search by clan tag...",
     "search_requests_placeholder": "Search by player public ID...",
     "select_new_leader": "Select a new leader",
@@ -438,6 +461,7 @@
   "doomsday_clock": {
     "collapsing": "Collapsing -{rate}/s",
     "decay_in": "Decay in {secs}s",
+    "decaying": "Decaying -{rate} tiles/s",
     "final": "Final zone, hold {pct}%",
     "growing": "Will reach {pct}% in {time}",
     "hold": "Hold ≥ {pct}%",
@@ -525,6 +549,7 @@
   },
   "featured_stream": {
     "expand": "Expand",
+    "hide_today": "Hide for today",
     "live": "LIVE",
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
@@ -599,12 +624,16 @@
   },
   "game_mode": {
     "ffa": "Free for All",
+    "hvn": "Humans vs Nations",
     "teams": "Teams"
   },
   "game_starting_modal": {
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
     "credits": "Credits",
     "title": "Game is Starting..."
+  },
+  "game_timer": {
+    "one_minute_remaining": "One minute remaining!"
   },
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",
@@ -1107,6 +1136,7 @@
     "warshipwarship": "Warship Warship",
     "world": "World",
     "worldinverted": "World Inverted",
+    "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
     "yenisei": "Yenisei"
   },
@@ -1172,10 +1202,18 @@
     "coming_soon": "Coming Soon",
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",
+    "ranked_pairing_note": "In team modes, clanmates and friends in the queue are placed on the same team where possible. Friends are paired first, then clanmates. If your ratings are too far apart you'll be matched separately to keep games fair.",
     "ranked_title": "Ranked",
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",
     "teams_title": "Teams"
+  },
+  "multi_tab": {
+    "detected": "Multiple open game tabs detected.",
+    "explanation": "To ensure fair play, only one active game tab is permitted at a time.",
+    "please_wait": "Please wait",
+    "seconds": "seconds",
+    "warning": "Vigilant Mode Warning"
   },
   "new_lobby_prompt": {
     "confirm": "Start a new lobby? All players will be invited to join.",
@@ -1258,27 +1296,29 @@
   },
   "player_stats_table": {
     "arrived": "Arrived",
-    "attack": "Attack",
+    "attack_stats": "Attack Statistics",
+    "betrayals": "Betrayals",
     "building": "Building",
     "building_stats": "Building Statistics",
     "built": "Built",
     "cancelled": "Cancelled",
     "captured": "Captured",
-    "count": "Count",
     "destroyed": "Destroyed",
-    "gold": "Gold",
-    "hits": "Hits",
+    "diplomacy_stats": "Diplomacy",
+    "gold_stats": "Gold Statistics",
+    "incoming": "Incoming",
+    "intercepted": "Intercepted",
     "landed": "Landed",
     "launched": "Launched",
     "lost": "Lost",
     "nuke_stats": "Nuke Statistics",
-    "player_metrics": "Player Metrics",
-    "received": "Received",
+    "piracy": "Piracy",
     "sent": "Sent",
     "ship_arrivals": "Ship Arrivals",
     "ship_type": "Ship Type",
-    "steal": "Steal",
     "trade": "Trade",
+    "trains": "Trains",
+    "trains_external": "Others' Trains",
     "unit": {
       "abomb": "Atom Bomb",
       "city": "City",
@@ -1295,10 +1335,12 @@
       "wshp": "Warship"
     },
     "war": "War",
+    "warship_stats": "Warship Statistics",
     "weapon": "Weapon",
     "workers": "Workers"
   },
   "player_stats_tree": {
+    "all": "All",
     "mode": "Mode",
     "no_stats": "No stats recorded for this selection.",
     "private": "Private",
@@ -1307,10 +1349,38 @@
     "ranked_1v1": "1v1",
     "ranked_2v2": "2v2",
     "solo": "Solo",
-    "stats_games_played": "Games Played",
+    "stats_cities_per_game": "Cities Built",
+    "stats_defense_posts_per_game": "Defense Posts Built",
+    "stats_factories_per_game": "Factories Built",
+    "stats_group_buildings": "Buildings",
+    "stats_group_combat": "Combat",
+    "stats_group_gold": "Gold Earned",
+    "stats_group_naval": "Naval",
+    "stats_last_100": "Last 100",
     "stats_losses": "Losses",
-    "stats_wins": "Wins",
-    "stats_wlr": "Win:Loss Ratio"
+    "stats_nukes_launched_per_game": "Nukes Launched",
+    "stats_others_train_gold_per_game": "Others' Train Gold",
+    "stats_outgoing_short": "Outgoing",
+    "stats_per_game_suffix": "/ game",
+    "stats_piracy_gold_per_game": "Piracy Gold",
+    "stats_played": "Played",
+    "stats_ports_per_game": "Ports Built",
+    "stats_summary": "Performance summary",
+    "stats_trade_arrived_per_game": "Trade Ships Arrived",
+    "stats_trade_arrived_short": "Trade Arrived",
+    "stats_trade_captured_per_game": "Trade Ships Captured",
+    "stats_trade_captured_short": "Trade Captured",
+    "stats_trade_gold_per_game": "Trade Gold",
+    "stats_train_gold_per_game": "Train Gold",
+    "stats_transports_landed_per_game": "Transports Landed",
+    "stats_transports_landed_short": "Transport Landed",
+    "stats_transports_sent_per_game": "Transports Sent",
+    "stats_transports_sent_short": "Transport Sent",
+    "stats_troops_incoming_per_game": "Incoming Attack",
+    "stats_troops_sent_per_game": "Outgoing Attack",
+    "stats_victories": "Victories",
+    "stats_warships_built_per_game": "Warships Built",
+    "stats_win_rate": "Win Rate"
   },
   "player_type": {
     "bot": "Tribe",
@@ -1379,7 +1449,8 @@
   },
   "radial_menu": {
     "delete_unit_description": "Click to delete the nearest unit",
-    "delete_unit_title": "Delete Unit"
+    "delete_unit_title": "Delete Unit",
+    "upgrade_x": "Upgrade x{amount}"
   },
   "relation": {
     "default": "Default",
@@ -1441,6 +1512,27 @@
     "starting_gold_placeholder": "5",
     "toggle_achievements": "Toggle achievements",
     "water_nukes": "Water nukes"
+  },
+  "steam_link_modal": {
+    "code_placeholder": "XXXX-XXXX",
+    "code_prompt": "Enter the code shown on your Steam desktop app.",
+    "code_submit": "Continue",
+    "confirm": "Link Account",
+    "confirm_prompt": "Link Steam {persona} with account {username}?",
+    "confirm_prompt_no_persona": "Link your Steam account with account {username}?",
+    "invalid_code": "That doesn't look like a valid code. Check it and try again.",
+    "linking": "Linking…",
+    "load_error": "Couldn't load your account details. Please try again from Steam.",
+    "load_error_code": "Couldn't load your account details. Please try again.",
+    "loading_placeholder": "…",
+    "reason_account_already_has_steam": "Your account is already linked to a different Steam account.",
+    "reason_expired": "This link has expired. Please try again from Steam.",
+    "reason_failed": "Something went wrong. Please try again.",
+    "reason_rate_limited": "Too many attempts. Please wait {seconds, plural, =0 {a moment} one {# second} other {# seconds}} and try again.",
+    "reason_steam_has_progress": "This Steam account already has its own progress and can't be merged.",
+    "reason_steam_linked_elsewhere": "This Steam account is already linked to a different OpenFront account.",
+    "success": "Your Steam account is now linked.",
+    "title": "Link Steam Account"
   },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",

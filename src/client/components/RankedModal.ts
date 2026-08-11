@@ -134,6 +134,9 @@ export class RankedModal extends BaseModal {
             "",
           )}
         </div>
+        <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
+          ${translateText("mode_selector.ranked_pairing_note")}
+        </p>
       </div>
     `;
   }

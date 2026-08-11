@@ -237,8 +237,10 @@ export class UnitPass {
   private effectTex: WebGLTexture;
   private atlasTex: WebGLTexture;
 
-  /** Frame tick received from renderer — drives tick-based effects */
+  /** Render frame counter received from renderer — drives uTick shader uniform and flicker effects */
   private frameTick = 0;
+  /** Last game engine tick received for smoothing calculation resets */
+  private lastGameTick = -1;
   /** Wall-clock start, for uTime (seconds) — matches StructurePass so the
    *  warship effect animates at the same pace as the structures effect. */
   private startTime = performance.now();
@@ -427,15 +429,21 @@ export class UnitPass {
     this.missileCount++;
   }
 
-  updateUnits(units: Map<number, UnitState>, tick: number): void {
-    this.frameTick = tick;
+  setFrameTick(frameTick: number): void {
+    this.frameTick = frameTick;
+  }
+
+  updateUnits(units: Map<number, UnitState>, gameTick: number): void {
+    if (gameTick !== this.lastGameTick) {
+      this.lastGameTick = gameTick;
+      this.lastUnitsUpdateMs = performance.now();
+    }
     this.groundCount = 0;
     this.missileCount = 0;
     this.smoothSegs.length = 0;
-    this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
-      if (!unit.isActive) continue;
+      if (!unit.isActive || unit.waitTicks > 0) continue;
 
       let atlasIdx = this.typeToAtlasCol.get(unit.unitType);
 

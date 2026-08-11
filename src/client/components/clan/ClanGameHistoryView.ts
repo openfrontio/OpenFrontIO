@@ -9,18 +9,27 @@ import {
 } from "../../ClanApi";
 import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
-import { getMapName, renderDuration, translateText } from "../../Utils";
+import {
+  copyToClipboard,
+  getMapName,
+  renderDuration,
+  showToast,
+  translateText,
+} from "../../Utils";
+import "../CopyButton";
 import {
   formatAbsoluteTime,
   formatDayHeader,
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
+import { dispatchViewProfile } from "../ui/PlayerNameLink";
 import { verifiedBadge } from "../ui/VerifiedBadge";
-import { renderLoadingSpinner, showToast } from "./ClanShared";
+import { renderLoadingSpinner } from "./ClanShared";
 
 const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
 const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
+const linkIcon = assetUrl("images/LinkIconWhite.svg");
 
 type FilterKey = ClanGameFilter | "all";
 
@@ -211,14 +220,16 @@ export class ClanGameHistoryView extends LitElement {
     );
   }
 
-  private viewProfile(publicId: string) {
-    this.dispatchEvent(
-      new CustomEvent<{ publicId: string }>("view-profile", {
-        detail: { publicId },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+  private async copyGameLink(gameId: string) {
+    const encodedGameId = encodeURIComponent(gameId);
+    const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+
+    try {
+      await void copyToClipboard(url);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("error_modal.failed_copy"), "red");
+    }
   }
 
   render() {
@@ -458,6 +469,24 @@ export class ClanGameHistoryView extends LitElement {
             </button>
             <button
               type="button"
+              title=${translateText("common.click_to_copy")}
+              aria-label=${translateText("common.click_to_copy")}
+              @click=${() => this.copyGameLink(game.gameId)}
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              <img
+                src=${linkIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("common.click_to_copy")}</span
+              >
+            </button>
+            <button
+              type="button"
               title=${translateText("clan_modal.history_watch_replay")}
               aria-label=${translateText("clan_modal.history_watch_replay")}
               @click=${() => this.watchReplay(game.gameId)}
@@ -632,7 +661,7 @@ export class ClanGameHistoryView extends LitElement {
           type="button"
           class="font-bold text-blue-300 truncate hover:underline"
           title=${translateText("player_profile.view")}
-          @click=${() => this.viewProfile(p.publicId)}
+          @click=${() => dispatchViewProfile(this, p.publicId)}
         >
           ${p.username}
         </button>

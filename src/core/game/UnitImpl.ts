@@ -2,6 +2,7 @@ import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
+  NukeState,
   Player,
   Tick,
   TrainType,
@@ -26,7 +27,7 @@ export class UnitImpl implements Unit {
   private _lastTile: TileRef;
   private _transportShipState: TransportShipState | undefined = undefined;
   private _warshipState: WarshipState | undefined = undefined;
-  private _targetedBySAM = false;
+  private _nukeState: NukeState | undefined = undefined;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
   private _destroyer: Player | undefined = undefined;
@@ -42,8 +43,6 @@ export class UnitImpl implements Unit {
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
   // Nuke only
-  private _trajectoryIndex: number = 0;
-  private _trajectory: TrajectoryTile[];
   private _deletionAt: number | null = null;
 
   constructor(
@@ -58,7 +57,14 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
-    this._trajectory = "trajectory" in params ? (params.trajectory ?? []) : [];
+    if ("trajectory" in params || "waitTicks" in params) {
+      this._nukeState = {
+        trajectory: params.trajectory ?? [],
+        waitTicks: 0,
+        trajectoryIndex: 0,
+        targetedBySam: false,
+      };
+    }
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
     this._lastSetSafeFromPirates =
       "lastSetSafeFromPirates" in params
@@ -141,6 +147,8 @@ export class UnitImpl implements Unit {
         this._transportShipState !== undefined
           ? this.transportShipState()
           : undefined,
+      nukeState:
+        this._nukeState !== undefined ? { ...this._nukeState } : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -214,6 +222,16 @@ export class UnitImpl implements Unit {
       case UnitType.Factory:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
+        break;
+      // Transports change hands when their owner is conquered, or when a
+      // disconnected teammate's fleet is inherited. Boats have no "lost"
+      // slot, so only the captor is credited.
+      //
+      // Trade ships are deliberately absent: they reach here too, but the
+      // warship that hunts one down records the capture itself, and counting
+      // it again would double every act of piracy.
+      case UnitType.TransportShip:
+        this.mg.stats().boatCapturedTroops(newOwner, this._owner);
         break;
     }
     this._lastOwner = this._owner;
@@ -434,6 +452,33 @@ export class UnitImpl implements Unit {
     }
   }
 
+  nukeState(): NukeState {
+    if (this._nukeState === undefined) {
+      throw new Error("nukeState called on non-nuke unit");
+    }
+    return this._nukeState;
+  }
+
+  updateNukeState(update: Partial<NukeState>): void {
+    if (this._nukeState === undefined) {
+      throw new Error("updateNukeState called on non-nuke unit");
+    }
+    const merged = { ...this._nukeState, ...update };
+    if (
+      merged.targetedBySam === this._nukeState.targetedBySam &&
+      merged.trajectoryIndex === this._nukeState.trajectoryIndex &&
+      merged.waitTicks === this._nukeState.waitTicks
+    )
+      return;
+    this._nukeState = {
+      targetedBySam: merged.targetedBySam,
+      trajectoryIndex: merged.trajectoryIndex,
+      waitTicks: merged.waitTicks,
+      trajectory: this._nukeState.trajectory,
+    };
+    this.mg.addUpdate(this.toUpdate());
+  }
+
   isUnderConstruction(): boolean {
     return this._underConstruction;
   }
@@ -484,16 +529,19 @@ export class UnitImpl implements Unit {
   }
 
   setTrajectoryIndex(i: number): void {
-    const max = this._trajectory.length - 1;
-    this._trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
+    if (this._nukeState === undefined) {
+      throw new Error("setTrajectoryIndex called on non-nuke unit");
+    }
+    const max = this.trajectory().length - 1;
+    this._nukeState.trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
   }
 
   trajectoryIndex(): number {
-    return this._trajectoryIndex;
+    return this._nukeState?.trajectoryIndex ?? 0;
   }
 
   trajectory(): TrajectoryTile[] {
-    return this._trajectory;
+    return this._nukeState?.trajectory ?? [];
   }
 
   setTargetUnit(target: Unit | undefined): void {
@@ -505,11 +553,11 @@ export class UnitImpl implements Unit {
   }
 
   setTargetedBySAM(targeted: boolean): void {
-    this._targetedBySAM = targeted;
+    this._nukeState!.targetedBySam = targeted;
   }
 
   targetedBySAM(): boolean {
-    return this._targetedBySAM;
+    return this._nukeState!.targetedBySam;
   }
 
   setReachedTarget(): void {

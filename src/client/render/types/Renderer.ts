@@ -70,6 +70,7 @@ export interface PlayerState {
   isTraitor: boolean;
   traitorRemainingTicks: number;
   inDoomsdayClock: boolean;
+  isDecaying: boolean;
   markedDoomsdayClockTick: number;
   betrayals: number;
   hasSpawned: boolean;
@@ -97,6 +98,7 @@ export interface UnitState {
   reachedTarget: boolean;
   retreating: boolean;
   targetable: boolean;
+  waitTicks: number;
   markedForDeletion: number | false; // -1 -> false, else tick
   health: number | null;
   underConstruction: boolean;
@@ -164,7 +166,8 @@ interface NukeExplosionRenderParamsBase {
 
 export type NukeExplosionRenderParams =
   | (NukeExplosionRenderParamsBase & { type: "shockwave" })
-  | (NukeExplosionRenderParamsBase & { type: "sparkles"; density: number });
+  | (NukeExplosionRenderParamsBase & { type: "sparkles"; density: number })
+  | (NukeExplosionRenderParamsBase & { type: "embers"; density: number });
 
 /** Default nuke-explosion color (purple) when a cosmetic has no usable color. */
 export const DEFAULT_NUKE_EXPLOSION_COLOR: readonly [number, number, number] = [
@@ -200,6 +203,7 @@ export interface PlayerStatusData {
   nukeTargetsMe: boolean;
   inDoomsdayClock: boolean;
   doomsdayClockDraining: boolean;
+  doomsdayClockDecaying: boolean;
   doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;
@@ -216,6 +220,7 @@ export interface GhostPreviewData {
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
+  multiplier?: number; // Upgrade multiplier (e.g., 5 for x5)
   /** Whether to render the cost label under the ghost (user setting). */
   showCost: boolean;
   /** True if the player has enough gold to afford this build (drives label color). */

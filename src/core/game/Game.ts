@@ -44,6 +44,13 @@ export type TransportShipState = {
   troops: number;
 };
 
+export type NukeState = {
+  trajectory: TrajectoryTile[];
+  trajectoryIndex: number;
+  targetedBySam: boolean;
+  waitTicks: number;
+};
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -153,8 +160,14 @@ export interface PublicGameModifiers {
   isDoomsdayClock?: boolean;
 }
 
+// Largest bulk-purchase amount an intent may carry (mirrored by the intent
+// schemas' max). Also the length of BuildableUnit.upgradeCosts.
+export const MAX_UPGRADE_AMOUNT = 50;
+
 export interface UnitInfo {
-  cost: (game: Game, player: Player) => Gold;
+  // extraUnits shifts the cost curve as if the player already had that many
+  // additional units/levels — used to price the later steps of a bulk upgrade.
+  cost: (game: Game, player: Player, extraUnits?: number) => Gold;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
@@ -266,6 +279,15 @@ export interface UnitParamsMap {
     trajectory: TrajectoryTile[];
   };
 
+  [UnitType.MIRV]: {
+    targetTile?: number;
+  };
+
+  [UnitType.MIRVWarhead]: {
+    targetTile?: number;
+    trajectory: TrajectoryTile[];
+  };
+
   [UnitType.TradeShip]: {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
@@ -286,15 +308,6 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
-
-  [UnitType.MIRV]: {
-    targetTile?: number;
-  };
-
-  [UnitType.MIRVWarhead]: {
-    targetTile?: number;
-    trajectory: TrajectoryTile[];
-  };
 }
 
 // Type helper to get params type for a specific unit type
@@ -493,6 +506,9 @@ export interface Unit {
   updateWarshipState(update: Partial<WarshipState>): void;
   transportShipState(): TransportShipState;
   updateTransportShipState(update: Partial<TransportShipState>): void;
+  nukeState(): NukeState;
+  updateNukeState(update: Partial<NukeState>): void;
+
   health(): number;
   /** Effective max health, including any warship veterancy bonus. */
   maxHealth(): number;
@@ -565,6 +581,9 @@ export interface Player {
   markTraitor(): void;
   // Doomsday Clock (anti-stall): marked when below the rising territory bar.
   inDoomsdayClock(): boolean;
+  /** Territory is actively rotting away (the final doomsday phase). */
+  isDecaying(): boolean;
+  markRotted(): void;
   doomsdayClockTicks(): number;
   enterDoomsdayClock(): void;
   clearDoomsdayClock(): void;
@@ -887,9 +906,42 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
+  // Cumulative cost of upgrading 1..MAX_UPGRADE_AMOUNT times (upgrade costs
+  // escalate per level, so a bulk total is NOT cost * amount). Only set when
+  // canUpgrade is not false.
+  upgradeCosts?: Gold[];
   overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }
+
+// Total price of buying `amount` of a buildable in one intent. Upgrades use
+// the escalating totals from core; flat-cost units (nukes) scale linearly.
+export function bulkCost(bu: BuildableUnit, amount: number): Gold {
+  return bu.upgradeCosts?.[amount - 1] ?? bu.cost * BigInt(amount);
+}
+
+// Largest amount (up to MAX_UPGRADE_AMOUNT) whose bulk total fits in `gold`.
+// 0 when not even a single purchase is affordable.
+export function maxBulkAmount(bu: BuildableUnit, gold: Gold): number {
+  let max = 0;
+  for (let n = 1; n <= MAX_UPGRADE_AMOUNT; n++) {
+    // Never price upgrades past the shipped totals — beyond the array,
+    // bulkCost would silently fall back to linear pricing.
+    if (bu.upgradeCosts !== undefined && n > bu.upgradeCosts.length) {
+      break;
+    }
+    if (bulkCost(bu, n) > gold) {
+      break;
+    }
+    max = n;
+  }
+  return max;
+}
+
+// Fixed mid-ladder steps for the bulk menus. Bombs come in smaller batches
+// than structure upgrades — x2 is the standard play against a single SAM.
+export const NUKE_BULK_STEPS: readonly number[] = [2, 5];
+export const STRUCTURE_BULK_STEPS: readonly number[] = [5, 10];
 
 export interface PlayerProfile {
   relations: Record<number, Relation>;

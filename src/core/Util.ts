@@ -1,14 +1,16 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import { Cell, PlayerType, Unit } from "./game/Game";
+import { Cell, GameType, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import { TileSet } from "./game/TileSet";
 import {
   GameConfig,
   GameID,
   GameRecord,
+  GameStartInfo,
   PartialGameRecord,
   PlayerRecord,
+  Tribe,
   Turn,
   Winner,
 } from "./Schemas";
@@ -251,6 +253,37 @@ export function onlyImages(html: string) {
   });
 }
 
+// Replays rebuild GameStartInfo from the archived record, which keeps
+// players' real clanTag and friends (analytics reads them). Live clients
+// never simulated with those: the server blanks clanTag when clan tags are
+// disabled, and clanTag + friends when names are anonymized — identically
+// for every client, because both feed deterministic team assignment
+// (TeamAssignment.ts). Mirrors GameServer.start() (wireGameStartInfo) and
+// startInfoFor(); replays must apply the same blanking before simulating,
+// or team games with either setting diverge from the recorded hashes.
+// Singleplayer records were simulated (and archived) with the real values —
+// no server, no blanking — so they replay as-is.
+export function toWireGameStartInfo(info: GameStartInfo): GameStartInfo {
+  const config = info.config;
+  if (config.gameType === GameType.Singleplayer) {
+    return info;
+  }
+  const blankClanTags =
+    (config.disableClanTags ?? false) || (config.anonymizeNames ?? false);
+  const blankFriends = config.anonymizeNames ?? false;
+  if (!blankClanTags && !blankFriends) {
+    return info;
+  }
+  return {
+    ...info,
+    players: info.players.map((p) => ({
+      ...p,
+      clanTag: blankClanTags ? null : p.clanTag,
+      friends: blankFriends ? undefined : p.friends,
+    })),
+  };
+}
+
 export function createPartialGameRecord(
   gameID: GameID,
   config: GameConfig,
@@ -264,6 +297,10 @@ export function createPartialGameRecord(
   lobbyCreatedAt?: number,
   // Time the lobby became visible to players (ms).
   visibleAt?: number,
+  // Purchased bot tribe names in use this game (public games only). Infra
+  // ingest reads them from the record for owner appearance stats, and
+  // replays rebuild GameStartInfo from the record so the same names spawn.
+  tribes?: Tribe[],
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -291,6 +328,7 @@ export function createPartialGameRecord(
       duration,
       num_turns,
       winner,
+      tribes,
     },
     version: "v0.0.2",
     turns,

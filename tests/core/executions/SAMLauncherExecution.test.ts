@@ -444,4 +444,69 @@ describe("SAM", () => {
     expect(nuke.reachedTarget()).toBeFalsy();
     expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
   });
+
+  test("SAM reloads all expired missile slots in a single tick when fully in cooldown", async () => {
+    // Verifies the while-loop fix: previously only one slot reloaded per tick,
+    // leaving the SAM stuck in cooldown for extra ticks if multiple slots expired simultaneously.
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    sam.increaseLevel();
+    sam.increaseLevel();
+    sam.reloadMissile();
+    sam.reloadMissile();
+    expect(sam.level()).toBe(3);
+    expect(sam.isInCooldown()).toBeFalsy();
+
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    // Fill all 3 slots at the same game tick so all cooldowns expire simultaneously.
+    sam.launch();
+    sam.launch();
+    sam.launch();
+    expect(sam.isInCooldown()).toBeTruthy();
+    expect(sam.missileTimerQueue()).toHaveLength(3);
+
+    // Advance past the cooldown duration. All three timers share the same start tick
+    // so they all expire on the same tick — the while-loop must drain all of them.
+    executeTicks(game, game.config().SAMCooldown() + 1);
+
+    expect(sam.missileTimerQueue()).toHaveLength(0);
+    expect(sam.isInCooldown()).toBeFalsy();
+  });
+
+  test("SAM does not fire at a MIRV warhead while its waitTicks are still counting down", async () => {
+    // Verifies the waitTicks fix: SAM interception timing now accounts for the
+    // warhead's wait period, so it doesn't schedule a shot before the warhead moves.
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    // Spawn a warhead directly on top of the SAM tile with a long wait before it flies.
+    // Without the waitTicks fix the SAM would try to fire immediately (tick 0).
+    const waitTicks = 20;
+    const warheadExec = new NukeExecution(
+      UnitType.MIRVWarhead,
+      attacker,
+      game.ref(3, 1), // target outside SAM range
+      game.ref(1, 1), // separateDst: right on the SAM
+      game.config().nukeSpeed(UnitType.MIRVWarhead),
+      waitTicks,
+    );
+    game.addExecution(warheadExec);
+
+    //init + first tick of NukeExec
+    game.executeNextTick();
+    game.executeNextTick();
+
+    const warhead = warheadExec.getNuke()!;
+    expect(warhead).toBeTruthy();
+
+    // Advance through the entire wait period.
+    for (let i = 0; i < waitTicks; i++) {
+      game.executeNextTick();
+      if (warhead.nukeState().waitTicks > 0) {
+        // SAM must not have consumed a missile slot while the warhead is still waiting.
+        expect(sam.missileTimerQueue()).toHaveLength(0);
+      }
+    }
+    expect(warhead.nukeState().targetedBySam).toBe(true);
+  });
 });

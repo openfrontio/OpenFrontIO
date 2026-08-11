@@ -297,6 +297,7 @@ export async function copyToClipboard(
     }
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
+    throw err;
   }
 }
 

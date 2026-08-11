@@ -25,15 +25,23 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --ignore-unknown --write .",
     "format:map-generator": "cd map-generator && go fmt .",
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
+    "lint": "npm run lint:oxlint && npm run lint:eslint",
+    "lint:fix": "npm run lint:oxlint:fix && npm run lint:eslint:fix",
+    "lint:oxlint": "oxlint",
+    "lint:oxlint:fix": "oxlint --fix",
+    "lint:github": "oxlint --format=github && eslint --format gha",
+    "lint:eslint": "eslint",
+    "lint:eslint:fix": "eslint --fix",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
     "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {
+    "**/*.{js,mjs,cjs,ts,jsx,tsx}": [
+      "oxlint --fix",
+      "eslint --fix"
+    ],
     "**/*": [
-      "eslint --fix",
       "prettier --ignore-unknown --write"
     ]
   },
@@ -69,6 +77,8 @@
     "lit": "^3.3.2",
     "marked": "^18.0.5",
     "mrmime": "^2.0.1",
+    "oxlint": "^1.75.0",
+    "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-sh": "^0.18.1",
@@ -93,7 +103,7 @@
     "@types/compression": "^1.8.1",
     "colord": "^2.9.3",
     "compression": "^1.8.1",
-    "dompurify": "^3.4.12",
+    "dompurify": "^3.4.13",
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",
     "express": "^5.2.1",
@@ -104,7 +114,7 @@
     "jose": "^6.2.3",
     "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
-    "nanoid": "^5.1.11",
+    "nanoid": "^5.1.16",
     "node-html-parser": "^7.1.0",
     "obscenity": "^0.4.6",
     "ts-node": "^10.9.2",

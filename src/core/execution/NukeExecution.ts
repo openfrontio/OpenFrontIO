@@ -12,10 +12,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
-import {
-  clearParabolaDirection,
-  ParabolaUniversalPathFinder,
-} from "../pathfinding/PathFinder.Parabola";
+import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
@@ -195,34 +192,27 @@ export class NukeExecution implements Execution {
       // The launch tile can be overridden by the caller (e.g. MIRV warheads
       // launch from the MIRV separation point, not a silo).
       this.src ??= spawn;
-      // Nuke trajectories cannot pass over impassable terrain unless they are MIRV warheads, just as they
-      // cannot exceed the map border. Fly the requested curve direction if
-      // it is clear, otherwise the opposite one; if both curves cross
-      // impassable terrain, abort the launch.
-      if (this.nukeType !== UnitType.MIRVWarhead) {
-        const direction = clearParabolaDirection(
-          this.mg,
-          this.src,
-          this.dst,
-          this.rocketDirectionUp,
-        );
-        if (direction === null) {
-          console.warn(`nuke trajectory crosses impassable terrain`);
-          this.active = false;
-          return;
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .find((silo) => silo.tile() === spawn);
+      // Stacked purchases launch several nukes across ticks; delay each missile
+      // so launches from the same silo trail each other instead of overlapping,
+      // need to check the entire queue because even if nukes have waitticks,
+      // the silo queue will be filled with the same tick.
+      if (silo !== undefined) {
+        let lastDep = 0;
+        for (const launchTick of silo.missileTimerQueue()) {
+          lastDep = Math.max(launchTick + 1, lastDep + 1);
         }
-        if (direction !== this.rocketDirectionUp) {
-          this.rocketDirectionUp = direction;
-          this.pathFinder = UniversalPathFinding.Parabola(this.mg, {
-            increment: this.speed,
-            directionUp: direction,
-          });
+        if (lastDep > this.mg.ticks()) {
+          this.waitTicks += lastDep - this.mg.ticks();
         }
       }
       this.nuke = this.player.buildUnit(this.nukeType, this.src, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+      this.nuke.updateNukeState({ waitTicks: this.waitTicks });
       this.recordMotionPlan(ticks);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
         this.maybeBreakAlliances();
@@ -254,9 +244,6 @@ export class NukeExecution implements Execution {
       }
 
       // after sending a nuke set the missilesilo on cooldown
-      const silo = this.player
-        .units(UnitType.MissileSilo)
-        .find((silo) => silo.tile() === spawn);
       if (silo) {
         silo.launch();
       }
@@ -270,7 +257,7 @@ export class NukeExecution implements Execution {
     }
 
     if (this.waitTicks > 0) {
-      this.waitTicks--;
+      this.nuke.updateNukeState({ waitTicks: --this.waitTicks });
       return;
     }
 
