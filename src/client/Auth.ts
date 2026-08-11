@@ -101,14 +101,28 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
   } finally {
     __jwt = null;
     localStorage.removeItem(PERSISTENT_ID_KEY);
-    new UserSettings().clearFlag();
-    new UserSettings().setSelectedPatternName(undefined);
+    // Switch cosmetics back to the logged-out scope. The player's own
+    // selections stay stored under their publicId and are restored on the
+    // next login (#4955).
+    UserSettings.setPlayerId(null);
   }
 }
 
 export async function isLoggedIn(): Promise<boolean> {
   const userAuthResult = await userAuth();
   return userAuthResult !== false;
+}
+
+// True when the in-memory session still belongs to the given JWT subject.
+// Lets callers of authenticated endpoints discard a response that arrived
+// after a logout or session change invalidated the request's session.
+export function isSessionActive(sub: string): boolean {
+  if (__jwt === null) return false;
+  try {
+    return decodeJwt(__jwt).sub === sub;
+  } catch {
+    return false;
+  }
 }
 
 export async function userAuth(
