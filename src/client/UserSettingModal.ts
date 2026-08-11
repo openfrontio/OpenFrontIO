@@ -73,6 +73,12 @@ export class UserSettingModal extends BaseModal {
     this.userKeybinds = validated;
   }
 
+  private unbindAllKeybinds() {
+    this.userSettings.unbindAllKeybinds(Platform.isMac);
+    this.loadKeybindsFromStorage();
+    this.requestUpdate();
+  }
+
   private handleKeybindChange(
     e: CustomEvent<{
       action: string;
@@ -365,6 +371,13 @@ export class UserSettingModal extends BaseModal {
         </svg>
         ${translateText("user_setting.keybinds_hint")}
       </div>
+
+      <button
+        class="text-xs font-bold uppercase tracking-wider bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 px-4 py-2 rounded text-white/70 hover:text-red-200 transition-colors mt-3"
+        @click=${this.unbindAllKeybinds}
+      >
+        ${translateText("user_setting.unbind_all")}
+      </button>
 
       <h2
         class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"

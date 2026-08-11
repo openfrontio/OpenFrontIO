@@ -1,5 +1,6 @@
 import {
   EFFECTS_KEY,
+  getDefaultKeybinds,
   PLAYER_STATS_COLUMNS_KEY,
   TEAM_STATS_COLUMNS_KEY,
   UserSettings,
@@ -137,5 +138,28 @@ describe("UserSettings stats columns", () => {
     expect(s.statsColumns("player")).toEqual(["gold"]);
     expect(s.statsColumns("team")).toEqual(["warships"]);
     expect(localStorage.getItem(TEAM_STATS_COLUMNS_KEY)).toBe('["warships"]');
+  });
+});
+
+describe("UserSettings unbindAllKeybinds (#4309)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  });
+
+  it("sets every default keybind action to Null so nothing stays bound", () => {
+    const s = new UserSettings();
+    s.unbindAllKeybinds(false);
+
+    const parsed = s.parsedUserKeybinds();
+    const defaults = getDefaultKeybinds(false);
+    expect(Object.keys(defaults).length).toBeGreaterThan(0);
+    for (const action of Object.keys(defaults)) {
+      expect(parsed[action]).toBe("Null");
+    }
+    // keybinds() drops "Null" entries, so no action resolves to a key.
+    expect(Object.keys(s.keybinds(false))).toHaveLength(0);
   });
 });
