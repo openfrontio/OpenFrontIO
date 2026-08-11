@@ -335,10 +335,37 @@ export class GameServer {
   // Whether `viewer` should see `target`'s real identity: when names aren't
   // anonymized, when looking at themselves, or when the host granted the
   // viewer reveal access (nameReveals).
+  // Teammates in a matchmade game. Anonymizing a player from their own team
+  // makes the team unplayable — you cannot coordinate with someone you cannot
+  // identify — so a pinned team sees itself, exactly as a player already sees
+  // themselves. Only PINNED teams: those are assigned server-side, so the server
+  // knows them here. A team game that groups by clanTag/friends is resolved on
+  // the clients, and the server has no answer to give.
+  //
+  // Safe for the same reason `target === viewer` is: this only widens `username`
+  // and `cosmetics`, neither of which the simulation reads (Player.hash excludes
+  // names). The fields that DO feed assignTeams — clanTag and friends — are
+  // blanked identically for every viewer and are untouched here.
+  private sameMatchmadeTeam(
+    viewer: ClientID | undefined,
+    target: ClientID,
+  ): boolean {
+    if (viewer === undefined) return false;
+    const viewerClient = this.allClients.get(viewer);
+    const targetClient = this.allClients.get(target);
+    if (viewerClient === undefined || targetClient === undefined) return false;
+    const viewerTeam = this.matchmakingTeamIndex(viewerClient);
+    return (
+      viewerTeam !== undefined &&
+      viewerTeam === this.matchmakingTeamIndex(targetClient)
+    );
+  }
+
   private seesReal(viewer: ClientID | undefined, target: ClientID): boolean {
     return (
       !this.gameConfig.anonymizeNames ||
       target === viewer ||
+      this.sameMatchmadeTeam(viewer, target) ||
       this.viewerSeesAllNames(viewer)
     );
   }
