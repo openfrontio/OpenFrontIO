@@ -29,24 +29,12 @@ export interface EffectSlotSelection {
   resolved: ResolvedCosmetic | null;
 }
 
-// "Default" (none) tile — selecting it clears the effect for that effectType.
-function noneTile(effectType: EffectType): ResolvedCosmetic {
-  return {
-    type: "effect",
-    cosmetic: null,
-    colorPalette: null,
-    relationship: "owned",
-    key: `effect:none:${effectType}`,
-    effectType,
-  };
-}
-
 /**
  * Renders effect cosmetics grouped by effectType, one sub-header per type.
  * Shared by the home selection modal and the Store's Effects tab.
  *
- * - mode="select": owned effects + a Default tile per type; clicking persists
- *   the selection to UserSettings and re-renders.
+ * - mode="select": owned effects; clicking persists the selection to
+ *   UserSettings and the Unequip action clears the active slot.
  * - mode="purchase": purchasable effects per type with the buy flow.
  * - effectType (optional): render only that one effectType and drop the
  *   sub-header (an outer tab already labels it). Unset = all types stacked.
@@ -111,9 +99,10 @@ export class EffectsGrid extends LitElement {
   }
 
   private activeSlot(): string {
-    return this.activeType === "nukeExplosion"
-      ? this.activeNukeType
-      : this.activeType;
+    const type = this.tabbed
+      ? this.activeType
+      : (this.effectType ?? this.activeType);
+    return type === "nukeExplosion" ? this.activeNukeType : type;
   }
 
   private resolvedItems(): ResolvedCosmetic[] {
@@ -157,9 +146,8 @@ export class EffectsGrid extends LitElement {
     this.emitVisiblePurchaseItems(all);
   }
 
-  // The selection slot for a tile: for nuke explosions the effect's own nukeType
-  // (one selection per bomb type; the Default tile has none, so use the active
-  // sub-tab), else the effectType itself.
+  // The selection slot for a tile: for nuke explosions the effect's own
+  // nukeType (one selection per bomb type), else the effectType itself.
   private slotForTile(effectType: EffectType, r: ResolvedCosmetic): string {
     if (effectType !== "nukeExplosion") return effectType;
     return this.nukeTypeOf(r) ?? this.activeNukeType;
@@ -190,9 +178,7 @@ export class EffectsGrid extends LitElement {
     if (this.mode === "purchase") {
       return ofType.filter((r) => r.relationship === "purchasable");
     }
-    const owned = ofType.filter((r) => r.relationship === "owned");
-    // The Default tile has no name to match — hide it while searching.
-    return this.search.trim() ? owned : [noneTile(effectType), ...owned];
+    return ofType.filter((r) => r.relationship === "owned");
   }
 
   private visiblePurchaseItems(all: ResolvedCosmetic[]): ResolvedCosmetic[] {
@@ -231,14 +217,14 @@ export class EffectsGrid extends LitElement {
 
   private renderTile(slot: string, r: ResolvedCosmetic): TemplateResult {
     if (this.mode === "purchase") {
-      return html`<div data-store-product class="flex min-w-0 flex-col gap-2">
-        <cosmetic-card
-          .resolved=${r}
-          state=${r.key === this.focusedKey ? "focused" : "idle"}
-          .onActivate=${() => this.onPurchaseFocus?.(r)}
-        ></cosmetic-card>
-        ${this.renderPurchaseAction?.(r) ?? nothing}
-      </div>`;
+      return html`<cosmetic-card
+        data-store-product
+        class="block h-full min-w-0"
+        .resolved=${r}
+        state=${r.key === this.focusedKey ? "focused" : "idle"}
+        .onActivate=${() => this.onPurchaseFocus?.(r)}
+        .actionContent=${this.renderPurchaseAction?.(r) ?? nothing}
+      ></cosmetic-card>`;
     }
     const name = (r.cosmetic as Effect | null)?.name ?? null;
     const selected = this.userSettings.getSelectedEffectName(slot);
@@ -301,6 +287,23 @@ export class EffectsGrid extends LitElement {
     `;
   }
 
+  private renderUnequip(): TemplateResult | typeof nothing {
+    if (this.mode !== "select") return nothing;
+    const slot = this.activeSlot();
+    const selected = this.userSettings.getSelectedEffectName(slot);
+    return html`<div class="flex justify-end px-4 pt-3">
+      <button
+        type="button"
+        data-effects-unequip
+        ?disabled=${selected === null}
+        class="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        @click=${() => this.select(slot, null)}
+      >
+        ${translateText("inventory.unequip")}
+      </button>
+    </div>`;
+  }
+
   render() {
     const all = this.resolvedItems();
     this.renderedItems = all;
@@ -311,17 +314,15 @@ export class EffectsGrid extends LitElement {
       ? [activeType]
       : EFFECT_TYPES;
     // nukeExplosion is split into per-nukeType sub-tabs: items are always
-    // filtered to the active nukeType (keep the Default tile) so the Default
-    // tile's slot matches what's on screen. The sub-tab bar renders at the top
-    // when nukeExplosion is the single active type, else inside its section.
+    // filtered to the active nukeType. The sub-tab bar renders at the top when
+    // nukeExplosion is the single active type, else inside its section.
     const showNukeTabs = activeType === "nukeExplosion";
     const sections = types
       .map((type) => {
         let items = this.itemsForType(all, type);
         if (type === "nukeExplosion") {
           items = items.filter(
-            (r) =>
-              r.cosmetic === null || this.nukeTypeOf(r) === this.activeNukeType,
+            (r) => this.nukeTypeOf(r) === this.activeNukeType,
           );
         }
         return { type, items };
@@ -371,8 +372,9 @@ export class EffectsGrid extends LitElement {
     }
 
     const nukeTabs = showNukeTabs ? this.renderNukeTypeTabBar() : nothing;
+    const unequip = this.renderUnequip();
     return this.tabbed
-      ? html`${this.renderTabBar()}${nukeTabs}${panel}`
-      : html`${nukeTabs}${panel}`;
+      ? html`${this.renderTabBar()}${nukeTabs}${unequip}${panel}`
+      : html`${nukeTabs}${unequip}${panel}`;
   }
 }

@@ -230,6 +230,7 @@ export class LangSelector extends LitElement {
       "inventory-modal",
       "store-modal",
       "cosmetic-card",
+      "cosmetic-info",
       "cosmetic-preview",
       "inventory-loadout-bar",
       "purchase-button",

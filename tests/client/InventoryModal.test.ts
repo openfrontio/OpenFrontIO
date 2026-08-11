@@ -270,6 +270,7 @@ describe("InventoryModal", () => {
       "inventory.retry": "Retry",
       "inventory.showing_effects": "Effects equipped: {count}",
       "inventory.selected_cosmetic": "Selected {name}",
+      "inventory.unequip": "Unequip",
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
       "main.store": "Store",
@@ -378,35 +379,32 @@ describe("InventoryModal", () => {
 
   it("equips owned cards and clears each non-effect category", async () => {
     await showTab(modal, "skins");
-    expect(card(modal, "pattern:default")).toBeDefined();
+    expect(card(modal, "pattern:default")).toBeUndefined();
     expect(card(modal, "skin:owned_skin")).toBeDefined();
     expect(card(modal, "skin:locked_skin")).toBeUndefined();
     await activateCard(modal, "skin:owned_skin");
     expect(new UserSettings().getSelectedSkinName()).toBe("owned_skin");
-    await activateCard(modal, "pattern:default");
+    modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!.click();
     expect(new UserSettings().getSelectedSkinName()).toBeNull();
     expect(modal.isConnected).toBe(true);
 
     await showTab(modal, "flags");
     expect(card(modal, "flag:owned_flag")).toBeDefined();
     expect(card(modal, "flag:locked_flag")).toBeUndefined();
-    expect(card(modal, "country:xx")).toBeDefined();
-    expect(card(modal, "country:xx")?.querySelector("img")?.alt).toBe(
-      "No flag",
-    );
+    expect(card(modal, "country:xx")).toBeUndefined();
     expect(card(modal, "country:us")).toBeDefined();
     expect(card(modal, "country:German Empire")).toBeUndefined();
     await activateCard(modal, "flag:owned_flag");
     expect(new UserSettings().getFlag()).toBe("flag:owned_flag");
     await activateCard(modal, "country:us");
     expect(new UserSettings().getFlag()).toBe("country:us");
-    await activateCard(modal, "country:xx");
+    modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!.click();
     expect(new UserSettings().getFlag()).toBeNull();
 
     await showTab(modal, "crowns");
     await activateCard(modal, "crown:owned_crown");
     expect(new UserSettings().getSelectedCrownName()).toBe("owned_crown");
-    await activateCard(modal, "crown:none");
+    modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!.click();
     expect(new UserSettings().getSelectedCrownName()).toBeNull();
   }, 30_000);
 
@@ -426,7 +424,7 @@ describe("InventoryModal", () => {
     }
   });
 
-  it("clears every effect slot through its Default card", async () => {
+  it("clears every effect slot through its Unequip action", async () => {
     const settings = new UserSettings();
     const slots = [
       ["transportShipTrail", "transportShipTrail", "owned_wake"],
@@ -450,12 +448,8 @@ describe("InventoryModal", () => {
       expect(card(modal, `effect:${effectType}:${selectedName}`)?.state).toBe(
         "equipped",
       );
-      const none = [
-        ...grid.querySelectorAll<CosmeticCard>("cosmetic-card"),
-      ].find(
-        (candidate) => candidate.resolved.key === `effect:none:${effectType}`,
-      )!;
-      none.onActivate!(none.resolved);
+      expect(card(modal, `effect:none:${effectType}`)).toBeUndefined();
+      grid.querySelector<HTMLButtonElement>("[data-effects-unequip]")!.click();
       expect(settings.getSelectedEffectName(slot)).toBeNull();
     }
   });
@@ -760,7 +754,7 @@ describe("InventoryModal", () => {
     expect(localStorage.getItem(EFFECTS_KEY)).toBe(saved.effects);
   });
 
-  it("shows guest defaults and country flags without inferring catalog ownership", async () => {
+  it("shows guest country flags without inferring catalog ownership", async () => {
     Object.assign(modal as unknown as Record<string, unknown>, {
       cosmetics: null,
       userMeResponse: false,
@@ -778,16 +772,16 @@ describe("InventoryModal", () => {
         (modal as unknown as { ownershipState: string }).ownershipState,
       ).toBe("guest");
     });
-    expect(card(modal, "pattern:default")).toBeDefined();
+    expect(card(modal, "pattern:default")).toBeUndefined();
     expect(card(modal, "skin:owned_skin")).toBeUndefined();
     await showTab(modal, "flags");
-    expect(card(modal, "country:xx")).toBeDefined();
+    expect(card(modal, "country:xx")).toBeUndefined();
     expect(card(modal, "country:us")).toBeDefined();
     expect(card(modal, "flag:owned_flag")).toBeUndefined();
     expect(vi.mocked(getUserMe)).not.toHaveBeenCalled();
   }, 30_000);
 
-  it("shows localized empty states while retaining Default and None tiles", async () => {
+  it("shows localized empty states with disabled Unequip actions", async () => {
     Object.assign(modal as unknown as Record<string, unknown>, {
       cosmetics: emptyCatalog,
       userMeResponse: false,
@@ -798,15 +792,23 @@ describe("InventoryModal", () => {
     modal.requestUpdate();
 
     await showTab(modal, "skins");
-    expect(card(modal, "pattern:default")).toBeDefined();
+    expect(card(modal, "pattern:default")).toBeUndefined();
     expect(modal.querySelector('[data-inventory-empty="skins"]')).toBeTruthy();
+    expect(
+      modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")
+        ?.disabled,
+    ).toBe(true);
 
     await showTab(modal, "crowns");
-    expect(card(modal, "crown:none")).toBeDefined();
+    expect(card(modal, "crown:none")).toBeUndefined();
     expect(modal.querySelector('[data-inventory-empty="crowns"]')).toBeTruthy();
 
     await showTab(modal, "effects");
-    expect(card(modal, "effect:none:transportShipTrail")).toBeDefined();
+    expect(card(modal, "effect:none:transportShipTrail")).toBeUndefined();
+    expect(
+      modal.querySelector<HTMLButtonElement>("[data-effects-unequip]")
+        ?.disabled,
+    ).toBe(true);
     expect(
       modal.querySelector('[data-inventory-empty="effects"]'),
     ).toBeTruthy();

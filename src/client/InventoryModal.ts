@@ -6,9 +6,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import {
   Cosmetics,
-  Crown,
   Effect,
-  EffectType,
   Flag,
   isNukeExplosionEffect,
   Skin,
@@ -81,13 +79,6 @@ export class InventoryModal extends BaseModal {
         items: ResolvedCosmetic[];
       }
     | undefined;
-  private readonly noFlagTile: ResolvedCosmetic = {
-    type: "flag",
-    cosmetic: countryFlag(translateText("common.none"), "xx"),
-    colorPalette: null,
-    relationship: "owned",
-    key: "country:xx",
-  };
   private readonly countryFlagTiles = Countries.filter(
     (country) => country.code !== "xx" && country.restricted !== true,
   ).map<ResolvedCosmetic>((country) => ({
@@ -97,14 +88,6 @@ export class InventoryModal extends BaseModal {
     relationship: "owned",
     key: `country:${country.code}`,
   }));
-  private readonly noCrownTile: ResolvedCosmetic = {
-    type: "crown",
-    cosmetic: null,
-    colorPalette: null,
-    relationship: "owned",
-    key: "crown:none",
-  };
-
   protected modalConfig() {
     return {
       hideTabs: true,
@@ -294,9 +277,7 @@ export class InventoryModal extends BaseModal {
       );
     }
     const pattern = this.userSettings.getSelectedPatternName(this.cosmetics);
-    if (pattern === null) {
-      return items.find((item) => item.key === "pattern:default") ?? null;
-    }
+    if (pattern === null) return null;
     return (
       items.find(
         (item) =>
@@ -310,7 +291,7 @@ export class InventoryModal extends BaseModal {
 
   private equippedFlag(): ResolvedCosmetic | null {
     const selectedFlag = this.userSettings.getFlag();
-    if (selectedFlag === null) return this.noFlagTile;
+    if (selectedFlag === null) return null;
     return (
       this.resolvedItems().find(
         (item) => item.type === "flag" && item.key === selectedFlag,
@@ -322,7 +303,7 @@ export class InventoryModal extends BaseModal {
 
   private equippedCrown(): ResolvedCosmetic | null {
     const selectedCrown = this.userSettings.getSelectedCrownName();
-    if (selectedCrown === null) return this.noCrownTile;
+    if (selectedCrown === null) return null;
     return (
       this.resolvedItems().find(
         (item) =>
@@ -336,17 +317,6 @@ export class InventoryModal extends BaseModal {
     const effect = item.cosmetic as Effect;
     if (isNukeExplosionEffect(effect)) return effect.attributes.nukeType;
     return item.effectType ?? null;
-  }
-
-  private noneEffectTile(effectType: EffectType): ResolvedCosmetic {
-    return {
-      type: "effect",
-      cosmetic: null,
-      colorPalette: null,
-      relationship: "owned",
-      key: `effect:none:${effectType}`,
-      effectType,
-    };
   }
 
   private equippedEffects(): ResolvedCosmetic[] {
@@ -416,9 +386,8 @@ export class InventoryModal extends BaseModal {
       (r) =>
         (r.type === "pattern" || r.type === "skin") &&
         r.relationship === "owned" &&
-        (r.cosmetic === null
-          ? !this.search
-          : this.includedInSearch(r.cosmetic.name)),
+        r.cosmetic !== null &&
+        this.includedInSearch(r.cosmetic.name),
     );
 
     return html`
@@ -450,7 +419,7 @@ export class InventoryModal extends BaseModal {
     `;
   }
 
-  /** Owned crowns + a Default (none) tile; selecting persists to UserSettings. */
+  /** Owned crowns; selecting persists to UserSettings. */
   private renderCrownGrid(): TemplateResult {
     const items = this.resolvedItems().filter(
       (r) =>
@@ -459,9 +428,6 @@ export class InventoryModal extends BaseModal {
         r.cosmetic !== null &&
         this.includedInSearch(r.cosmetic.name),
     );
-
-    // The Default tile has no name to match — hide it while searching.
-    const tiles = this.search ? items : [this.noCrownTile, ...items];
 
     const equippedKey = this.equippedCrown()?.key;
     return html`
@@ -472,8 +438,8 @@ export class InventoryModal extends BaseModal {
         data-inventory-grid="crowns"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
-        ${tiles.map((r) => {
-          const name = (r.cosmetic as Crown | null)?.name ?? null;
+        ${items.map((r) => {
+          const name = r.cosmetic!.name;
           return html`
             <cosmetic-card
               .resolved=${r}
@@ -496,7 +462,6 @@ export class InventoryModal extends BaseModal {
         this.includedInSearch(r.cosmetic.name),
     );
 
-    const noFlag = this.search ? null : this.noFlagTile;
     const countryFlags = this.countryFlagTiles.filter(
       (resolved) =>
         this.includedInSearch(resolved.cosmetic!.name) ||
@@ -508,7 +473,7 @@ export class InventoryModal extends BaseModal {
         data-inventory-grid="flags"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
-        ${[...(noFlag ? [noFlag] : []), ...cosmeticFlags, ...countryFlags].map(
+        ${[...cosmeticFlags, ...countryFlags].map(
           (resolved) => html`
             <cosmetic-card
               .resolved=${resolved}
@@ -519,6 +484,36 @@ export class InventoryModal extends BaseModal {
         )}
       </div>
     `;
+  }
+
+  private renderUnequip(
+    category: Exclude<InventoryCategory, "effects">,
+  ): TemplateResult {
+    const equipped =
+      category === "skins"
+        ? this.equippedSkin()
+        : category === "flags"
+          ? this.equippedFlag()
+          : this.equippedCrown();
+    return html`<div class="flex justify-end px-3 pt-3">
+      <button
+        type="button"
+        data-inventory-unequip
+        ?disabled=${equipped === null}
+        class="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        @click=${() => {
+          if (category === "skins") {
+            this.userSettings.setSelectedPatternName(undefined);
+          } else if (category === "flags") {
+            this.userSettings.clearFlag(true);
+          } else {
+            this.userSettings.setSelectedCrownName(undefined);
+          }
+        }}
+      >
+        ${translateText("inventory.unequip")}
+      </button>
+    </div>`;
   }
 
   protected renderHeaderSlot() {
@@ -611,9 +606,9 @@ export class InventoryModal extends BaseModal {
     }
     let grid: TemplateResult;
     if (tab === "flags") {
-      grid = this.renderFlagGrid();
+      grid = html`${this.renderUnequip("flags")}${this.renderFlagGrid()}`;
     } else if (tab === "crowns") {
-      grid = this.renderCrownGrid();
+      grid = html`${this.renderUnequip("crowns")}${this.renderCrownGrid()}`;
     } else if (tab === "effects") {
       grid = html`<div data-inventory-grid="effects" class="min-w-0">
         ${this.hasOwnedCatalogItem(["effect"])
@@ -628,7 +623,7 @@ export class InventoryModal extends BaseModal {
         ></effects-grid>
       </div>`;
     } else {
-      grid = this.renderSkinGrid();
+      grid = html`${this.renderUnequip("skins")}${this.renderSkinGrid()}`;
     }
     const category = tab as InventoryCategory;
     return html`

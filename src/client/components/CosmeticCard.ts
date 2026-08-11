@@ -1,7 +1,8 @@
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
+import "./CosmeticInfo";
 import { cosmeticDisplayName, cosmeticRarity } from "./CosmeticPresentation";
 import "./CosmeticPreview";
 
@@ -33,6 +34,9 @@ export class CosmeticCard extends LitElement {
   @property({ attribute: false })
   onVariantActivate?: (resolved: ResolvedCosmetic) => void;
 
+  @property({ attribute: false })
+  actionContent: TemplateResult | typeof nothing = nothing;
+
   private get activeResolved(): ResolvedCosmetic {
     return (
       this.variants.find((item) => item.key === this.activeVariantKey) ??
@@ -60,6 +64,21 @@ export class CosmeticCard extends LitElement {
         return "border-amber-400/70";
       default:
         return "border-white/20";
+    }
+  }
+
+  private rarityHoverClass(rarity: string): string {
+    switch (rarity) {
+      case "uncommon":
+        return "hover:shadow-[0_14px_30px_rgba(74,222,128,0.22)]";
+      case "rare":
+        return "hover:shadow-[0_14px_30px_rgba(96,165,250,0.28)]";
+      case "epic":
+        return "hover:shadow-[0_14px_34px_rgba(232,121,249,0.32)]";
+      case "legendary":
+        return "hover:shadow-[0_16px_38px_rgba(251,191,36,0.38)]";
+      default:
+        return "hover:shadow-[0_12px_26px_rgba(255,255,255,0.14)]";
     }
   }
 
@@ -119,7 +138,17 @@ export class CosmeticCard extends LitElement {
       isEquipped
         ? "ring-2 ring-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.45)]"
         : ""
-    }`;
+    } ${this.rarityHoverClass(rarity)}`;
+    const priced = active.cosmetic as {
+      artist?: string;
+      product?: unknown;
+      priceHard?: number;
+    } | null;
+    const usdValue =
+      (priced?.product === null || priced?.product === undefined) &&
+      priced?.priceHard !== undefined
+        ? priced.priceHard / 20
+        : undefined;
     const content = html`
       <div
         class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
@@ -134,9 +163,10 @@ export class CosmeticCard extends LitElement {
     `;
 
     return html`<div
+      data-cosmetic-shell
       data-cosmetic-state=${this.state}
       data-cosmetic-rarity=${rarity}
-      class="relative flex flex-col items-center rounded-xl border ${shellClass} ${focusClass}"
+      class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass} ${focusClass}"
     >
       ${this.interactive
         ? html`<button
@@ -159,11 +189,24 @@ export class CosmeticCard extends LitElement {
       ${isEquipped
         ? html`<span
             data-cosmetic-equipped="true"
-            class="absolute top-2 right-2 rounded-full bg-emerald-500 px-3 py-1 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
+            class="absolute left-2 top-2 rounded-full bg-emerald-500 px-3 py-1 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
             >✓ ${translateText("inventory.equipped")}</span
           >`
         : nothing}
+      ${this.interactive && active.cosmetic !== null
+        ? html`<cosmetic-info
+            .artist=${priced?.artist}
+            .rarity=${rarity}
+            .colorPalette=${active.colorPalette?.name}
+            .usdValue=${usdValue}
+          ></cosmetic-info>`
+        : nothing}
       ${this.renderSwatches()}
+      ${this.actionContent !== nothing
+        ? html`<div data-cosmetic-action class="mt-auto w-full px-3 pb-3 pt-2">
+            ${this.actionContent}
+          </div>`
+        : nothing}
     </div>`;
   }
 }

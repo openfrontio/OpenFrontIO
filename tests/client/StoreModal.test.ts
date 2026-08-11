@@ -486,6 +486,9 @@ describe("StoreModal cosmetic browser", () => {
     expect(modal.querySelector("[data-store-browser]")).toBeTruthy();
     expect(modal.querySelector("[data-store-grid]")).toBeTruthy();
     expect(card(modal, pack.key)?.state).toBe("focused");
+    expect(purchaseButton(modal, pack.key).closest("cosmetic-card")).toBe(
+      card(modal, pack.key),
+    );
 
     await purchaseButton(modal, pack.key).onPurchaseDollar!();
 
@@ -525,6 +528,7 @@ describe("StoreModal cosmetic browser", () => {
     await vi.waitFor(() =>
       expect(card(modal, affiliatePattern.key)?.state).toBe("focused"),
     );
+    await card(modal, affiliatePattern.key)!.updateComplete;
 
     expect(modal.querySelector(`[data-cosmetic-key="${red.key}"]`)).toBeNull();
     expect(

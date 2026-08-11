@@ -1,10 +1,15 @@
+import { html } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 
 const translations = {
+  "cosmetics.artist_label": "Artist:",
+  "cosmetics.rare": "Rare",
+  "cosmetics.usd_value": "Value: {usd}",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
+  "territory_patterns.color_palette.red": "Crimson",
 };
 
 const red: ResolvedCosmetic = {
@@ -149,6 +154,33 @@ describe("CosmeticCard", () => {
     expect(card!.querySelector('[data-cosmetic-rarity="rare"]')).toBeTruthy();
     expect(card!.querySelectorAll("button button")).toHaveLength(0);
     expect(card!.querySelectorAll("[data-variant-key]")).toHaveLength(2);
+  });
+
+  it("keeps metadata and purchase content inside the animated card", async () => {
+    installTranslations();
+    await createCard();
+    card!.resolved = {
+      ...red,
+      cosmetic: {
+        ...red.cosmetic!,
+        artist: "Test Artist",
+        priceHard: 100,
+      } as never,
+    };
+    card!.actionContent = html`<button data-test-purchase>Buy</button>`;
+    await card!.updateComplete;
+
+    const shell = card!.querySelector<HTMLElement>("[data-cosmetic-shell]")!;
+    expect(shell.className).toMatch(/hover:-translate-y-1/);
+    expect(card!.querySelector("[data-cosmetic-info]")?.textContent).toContain(
+      "Artist: Test Artist",
+    );
+    expect(card!.querySelector("[data-cosmetic-info]")?.textContent).toContain(
+      "Value: $5.00",
+    );
+    expect(
+      card!.querySelector("[data-test-purchase]")?.closest("cosmetic-card"),
+    ).toBe(card);
   });
 
   it("does not render swatches when controlled off", async () => {

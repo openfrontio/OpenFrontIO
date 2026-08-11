@@ -424,6 +424,8 @@
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
   },
   "cosmetics": {
+    "artist_label": "Artist:",
+    "color_label": "Color:",
     "common": "Common",
     "epic": "Epic",
     "free": "+{numFree} BONUS!",
@@ -437,6 +439,7 @@
     "soft": "Caps",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
+    "usd_value": "Value: {usd}",
     "verified_name": "Verified username"
   },
   "difficulty": {
@@ -903,7 +906,8 @@
     "retry": "Retry",
     "selected_cosmetic": "Selected {name}",
     "showing_effects": "Effects equipped: {count}",
-    "title": "Inventory"
+    "title": "Inventory",
+    "unequip": "Unequip"
   },
   "ios_banner": {
     "got_it": "Got it",

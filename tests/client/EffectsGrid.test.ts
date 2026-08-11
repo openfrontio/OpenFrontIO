@@ -222,7 +222,7 @@ describe("EffectsGrid", () => {
     );
   });
 
-  it("marks the stored effect equipped and clears its exact slot with Default", async () => {
+  it("marks the stored effect equipped and clears its exact slot with Unequip", async () => {
     const settings = new UserSettings();
     settings.setSelectedEffectName("hydro", "owned_hydro");
     grid = await createGrid();
@@ -238,10 +238,9 @@ describe("EffectsGrid", () => {
     expect(effectCard(grid, "effect:nukeExplosion:owned_hydro")?.state).toBe(
       "equipped",
     );
-    expect(effectCard(grid, "effect:none:nukeExplosion")?.state).toBe("idle");
+    expect(effectCard(grid, "effect:none:nukeExplosion")).toBeUndefined();
 
-    const defaultCard = effectCard(grid, "effect:none:nukeExplosion")!;
-    defaultCard.onActivate!(defaultCard.resolved);
+    grid.querySelector<HTMLButtonElement>("[data-effects-unequip]")!.click();
     expect(settings.getSelectedEffectName("hydro")).toBeNull();
   });
 

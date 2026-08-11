@@ -209,25 +209,27 @@ export class StoreModal extends BaseModal {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
       const active = focused ?? group[0];
-      return html`<div data-store-product class="flex min-w-0 flex-col gap-2">
-        <cosmetic-card
-          data-cosmetic-key=${group[0].key}
-          .resolved=${group[0]}
-          .variants=${group.length > 1 ? group : []}
-          .activeVariantKey=${active.key}
-          state=${focused ? "focused" : "idle"}
-          .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
-          .onVariantActivate=${(resolved: ResolvedCosmetic) =>
-            this.inspect(resolved)}
-        ></cosmetic-card>
-        ${active.type === "subscription" && active.relationship === "owned"
+      const action =
+        active.type === "subscription" && active.relationship === "owned"
           ? html`<span
               data-store-status
               class="rounded-lg bg-white/5 px-3 py-2 text-center text-sm font-bold text-white/70"
               >${translateText("store.subscribed")}</span
             >`
-          : this.renderPurchaseAction(active, userHasSubscription)}
-      </div>`;
+          : this.renderPurchaseAction(active, userHasSubscription);
+      return html`<cosmetic-card
+        data-store-product
+        data-cosmetic-key=${group[0].key}
+        class="block h-full min-w-0"
+        .resolved=${group[0]}
+        .variants=${group.length > 1 ? group : []}
+        .activeVariantKey=${active.key}
+        .actionContent=${action}
+        state=${focused ? "focused" : "idle"}
+        .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
+        .onVariantActivate=${(resolved: ResolvedCosmetic) =>
+          this.inspect(resolved)}
+      ></cosmetic-card>`;
     })}`;
   }
 
