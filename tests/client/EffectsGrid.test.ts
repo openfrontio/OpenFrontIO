@@ -9,7 +9,7 @@ import {
   NUKE_EXPLOSION_TYPES,
   type Cosmetics,
 } from "../../src/core/CosmeticSchemas";
-import { UserSettings } from "../../src/core/game/UserSettings";
+import { EFFECTS_KEY, UserSettings } from "../../src/core/game/UserSettings";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
@@ -263,6 +263,7 @@ describe("EffectsGrid", () => {
     locked.onActivate!(locked.resolved);
     expect(onPurchaseFocus).toHaveBeenCalledWith(locked.resolved);
     expect(purchaseCosmetic).not.toHaveBeenCalled();
+    expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
   it("marks only the Store-focused effect as focused", async () => {

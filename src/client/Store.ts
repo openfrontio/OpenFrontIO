@@ -2,14 +2,17 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+import { Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
+import "./components/CosmeticCard";
+import "./components/CosmeticDetailPanel";
+import { cosmeticDisplayName } from "./components/CosmeticPresentation";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
+import "./components/PurchaseButton";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -17,6 +20,7 @@ import {
   groupCosmeticVariants,
   purchaseCosmetic,
   resolveCosmetics,
+  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -38,6 +42,8 @@ export class StoreModal extends BaseModal {
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+  private inspected: ResolvedCosmetic | null = null;
+  private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -69,7 +75,8 @@ export class StoreModal extends BaseModal {
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
-    this.refresh();
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    await this.refresh();
   }
 
   private renderHeader(): TemplateResult {
@@ -93,132 +100,175 @@ export class StoreModal extends BaseModal {
     });
   }
 
-  private renderPatternGrid(): TemplateResult {
-    const items = resolveCosmetics(
+  private resolvedPurchasables(): ResolvedCosmetic[] {
+    return resolveCosmetics(
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
-    ).filter(
-      (r) =>
-        (r.type === "pattern" || r.type === "skin") &&
-        r.relationship !== "blocked" &&
-        r.relationship !== "owned",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_skins")}
-      </div>`;
-    }
-
-    // Collapse colour-palette variants of the same pattern into one tile; the
-    // variants become clickable colour swatches on the cosmetic-button.
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${groupCosmeticVariants(items).map(
-          (group) => html`
-            <cosmetic-button
-              .resolved=${group[0]}
-              .variants=${group}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    ).filter((resolved) => resolved.relationship === "purchasable");
   }
 
-  private renderFlagGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        r.type === "flag" &&
-        r.relationship !== "blocked" &&
-        r.relationship !== "owned",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_flags")}
-      </div>`;
+  private cosmeticsGroups(
+    tab: CosmeticsSubTab,
+  ): readonly (readonly ResolvedCosmetic[])[] {
+    const items = this.resolvedPurchasables();
+    if (tab === "flags") {
+      return items
+        .filter((resolved) => resolved.type === "flag")
+        .map((r) => [r]);
     }
-
-    const selectedFlag = new UserSettings().getFlag() ?? "";
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .selected=${selectedFlag === r.key}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    if (tab === "crowns") {
+      return items
+        .filter((resolved) => resolved.type === "crown")
+        .map((r) => [r]);
+    }
+    return groupCosmeticVariants(
+      items.filter(
+        (resolved) => resolved.type === "pattern" || resolved.type === "skin",
+      ),
+    );
   }
 
-  private renderCrownGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        r.type === "crown" &&
-        r.relationship !== "blocked" &&
-        r.relationship !== "owned",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_crowns")}
-      </div>`;
+  private groupsForTab(tab: string): readonly (readonly ResolvedCosmetic[])[] {
+    if (this.affiliateCode) return [];
+    if (tab === "cosmetics") {
+      return this.cosmeticsGroups(this.cosmeticsSubTab);
     }
+    if (tab === "effects") {
+      return this.resolvedPurchasables()
+        .filter((resolved) => resolved.type === "effect")
+        .map((resolved) => [resolved]);
+    }
+    return [];
+  }
 
-    const selectedCrown = new UserSettings().getSelectedCrownName() ?? "";
-    return html`
+  private inspect(resolved: ResolvedCosmetic): void {
+    this.inspected = resolved;
+    this.requestUpdate();
+  }
+
+  private reconcileInspection(
+    groups: readonly (readonly ResolvedCosmetic[])[],
+  ): void {
+    const visible = groups.flat();
+    const current = visible.find((item) => item.key === this.inspected?.key);
+    this.inspected = current ?? groups[0]?.[0] ?? null;
+  }
+
+  private selectVisible(
+    groups: readonly (readonly ResolvedCosmetic[])[],
+  ): void {
+    this.visibleGroups = groups;
+    this.reconcileInspection(groups);
+  }
+
+  protected onTabEnter(key: string): void {
+    this.selectVisible(this.groupsForTab(key));
+    this.requestUpdate();
+  }
+
+  private setCosmeticsSubTab(tab: CosmeticsSubTab): void {
+    this.cosmeticsSubTab = tab;
+    this.selectVisible(this.cosmeticsGroups(tab));
+    this.requestUpdate();
+  }
+
+  private renderCosmeticCards(): TemplateResult {
+    return html`${this.visibleGroups.map((group) => {
+      const focused = group.find((item) => item.key === this.inspected?.key);
+      const active = focused ?? group[0];
+      return html`<cosmetic-card
+        .resolved=${group[0]}
+        .variants=${group.length > 1 ? group : []}
+        .activeVariantKey=${active.key}
+        state=${focused ? "focused" : "idle"}
+        .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
+        .onVariantActivate=${(resolved: ResolvedCosmetic) =>
+          this.inspect(resolved)}
+      ></cosmetic-card>`;
+    })}`;
+  }
+
+  private renderPurchaseAction(): TemplateResult {
+    const resolved = this.inspected!;
+    const priced = resolved.cosmetic as {
+      product?: Product | null;
+      priceHard?: number;
+      priceSoft?: number;
+      rarity?: string;
+    } | null;
+    const product = priced?.product ?? null;
+    const priceHard = priced?.priceHard;
+    const priceSoft = priced?.priceSoft;
+    const purchase = async (method: "dollar" | "hard" | "soft") => {
+      if (!this.inspected) return;
+      return purchaseCosmetic(this.inspected, method);
+    };
+    return html`<purchase-button
+      .product=${product}
+      .priceHard=${priceHard ?? null}
+      .priceSoft=${priceSoft ?? null}
+      .rarity=${priced?.rarity ?? "common"}
+      .itemName=${cosmeticDisplayName(resolved)}
+      .onPurchaseDollar=${product ? () => purchase("dollar") : undefined}
+      .onPurchaseHard=${priceHard !== undefined
+        ? () => purchase("hard")
+        : undefined}
+      .onPurchaseSoft=${priceSoft !== undefined
+        ? () => purchase("soft")
+        : undefined}
+    ></purchase-button>`;
+  }
+
+  private renderInspectedDetail(): TemplateResult {
+    const group =
+      this.visibleGroups.find((candidate) =>
+        candidate.some((item) => item.key === this.inspected?.key),
+      ) ?? [];
+    return html`<cosmetic-detail-panel
+      context="store"
+      .resolved=${this.inspected}
+      .variants=${group.length > 1 ? group : []}
+      .activeVariantKey=${this.inspected?.key ?? null}
+      .onVariantActivate=${(variant: ResolvedCosmetic) => this.inspect(variant)}
+      .actionContent=${this.inspected ? this.renderPurchaseAction() : html``}
+    ></cosmetic-detail-panel>`;
+  }
+
+  private renderBrowser(cards: TemplateResult): TemplateResult {
+    return html`<div
+      data-store-browser
+      class="grid grid-cols-1 gap-4 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]"
+    >
       <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+        data-store-grid
+        class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
       >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .selected=${`crown:${selectedCrown}` === r.key}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
+        ${cards}
       </div>
-    `;
+      <aside class="order-first lg:order-none lg:sticky lg:top-0 lg:self-start">
+        ${this.renderInspectedDetail()}
+      </aside>
+    </div>`;
   }
 
   // Skins / Flags / Crowns grouped under one top-level tab; a sub-tab bar
   // (styled like effects-grid's) picks which grid shows.
   private renderCosmeticsPanel(): TemplateResult {
-    let grid: TemplateResult;
-    if (this.cosmeticsSubTab === "flags") {
-      grid = this.renderFlagGrid();
-    } else if (this.cosmeticsSubTab === "crowns") {
-      grid = this.renderCrownGrid();
-    } else {
-      grid = this.renderPatternGrid();
-    }
+    const emptyKey =
+      this.cosmeticsSubTab === "flags"
+        ? "store.no_flags"
+        : this.cosmeticsSubTab === "crowns"
+          ? "store.no_crowns"
+          : "store.no_skins";
+    const cards =
+      this.visibleGroups.length === 0
+        ? html`<div
+            class="col-span-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
+          >
+            ${translateText(emptyKey)}
+          </div>`
+        : this.renderCosmeticCards();
     return html`
       <div
         class="flex items-center justify-center gap-6 border-b border-white/10 px-4"
@@ -229,16 +279,13 @@ export class StoreModal extends BaseModal {
             class="-mb-px border-b-2 px-2 py-3 text-sm font-black uppercase tracking-wider transition-colors ${active
               ? "border-blue-500 text-blue-400"
               : "border-transparent text-white/50 hover:text-white/80"}"
-            @click=${() => {
-              this.cosmeticsSubTab = tab;
-              this.requestUpdate();
-            }}
+            @click=${() => this.setCosmeticsSubTab(tab)}
           >
             ${translateText(`store.${tab}`)}
           </button>`;
         })}
       </div>
-      ${grid}
+      ${this.renderBrowser(cards)}
     `;
   }
 
@@ -281,13 +328,18 @@ export class StoreModal extends BaseModal {
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
-    return html`<effects-grid
-      mode="purchase"
-      tabbed
-      .cosmetics=${this.cosmetics}
-      .userMeResponse=${this.userMeResponse}
-      .affiliateCode=${this.affiliateCode}
-    ></effects-grid>`;
+    return this.renderBrowser(
+      html`<effects-grid
+        class="col-span-full"
+        mode="purchase"
+        tabbed
+        .cosmetics=${this.cosmetics}
+        .userMeResponse=${this.userMeResponse}
+        .affiliateCode=${this.affiliateCode}
+        .focusedKey=${this.inspected?.key ?? null}
+        .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+      ></effects-grid>`,
+    );
   }
 
   private renderPackGrid(): TemplateResult {
@@ -433,11 +485,13 @@ export class StoreModal extends BaseModal {
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
     this.cosmetics ??= await fetchCosmetics();
+    this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
   }
 
   protected onClose(): void {
     this.affiliateCode = null;
+    this.selectVisible(this.groupsForTab(this.activeTab));
   }
 
   public async refresh() {
