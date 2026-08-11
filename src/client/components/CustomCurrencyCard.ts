@@ -2,7 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { createCustomCurrencyCheckout } from "../Api";
 import { translateText } from "../Utils";
-import "./CosmeticContainer";
 import "./PlutoniumIcon";
 import "./PurchaseButton";
 
@@ -49,13 +48,14 @@ export class CustomCurrencyCard extends LitElement {
   render() {
     const price = `$${this.priceDollars}`;
     return html`
-      <cosmetic-container
-        class="flex flex-col items-center justify-between gap-2 p-3 w-48 h-full"
-        .rarity=${"common"}
-        .name=${translateText("store.custom_amount")}
+      <article
+        data-custom-currency-card
+        data-cosmetic-rarity="common"
+        class="relative flex flex-col items-center rounded-xl border border-white/20 p-3 focus-within:ring-2 focus-within:ring-blue-400 focus-within:ring-offset-2 focus-within:ring-offset-slate-950"
       >
         <div
-          class="relative flex flex-col items-center justify-center gap-1 w-full aspect-square bg-white/5 rounded-lg p-2 border border-white/10 overflow-hidden"
+          data-custom-currency-preview
+          class="relative flex w-full aspect-square items-center justify-center gap-1 overflow-hidden rounded-lg bg-white/5 p-2"
         >
           <plutonium-icon .size=${64}></plutonium-icon>
           <label for="custom-plutonium-amount" class="sr-only"
@@ -87,11 +87,17 @@ export class CustomCurrencyCard extends LitElement {
           />
         </div>
 
+        <span
+          data-custom-currency-name
+          class="w-full truncate pt-2 text-center text-sm font-bold text-white"
+          >${translateText("store.custom_amount")}</span
+        >
+
         <purchase-button
           .dollarPrice=${price}
           .onPurchaseDollar=${this.buy}
         ></purchase-button>
-      </cosmetic-container>
+      </article>
     `;
   }
 }

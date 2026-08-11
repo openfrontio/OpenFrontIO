@@ -137,6 +137,72 @@ const wake = trail("wake");
 const atom = explosion("atom_burst", "atom");
 const hydro = explosion("hydro_burst", "hydro");
 
+const pack: ResolvedCosmetic = {
+  type: "pack",
+  cosmetic: {
+    name: "plutonium",
+    displayName: "1,000 Plutonium",
+    currency: "hard",
+    amount: 1000,
+    bonusAmount: 100,
+    product: { productId: "pack", priceId: "pack-price", price: "$5" },
+    rarity: "rare",
+    affiliateCode: null,
+  } as never,
+  colorPalette: null,
+  relationship: "purchasable",
+  key: "pack:plutonium",
+};
+
+const goldSubscription: ResolvedCosmetic = {
+  type: "subscription",
+  cosmetic: {
+    name: "gold",
+    description: "Gold membership",
+    priceMonthly: 5,
+    dailySoftCurrency: 0,
+    dailyHardCurrency: 10,
+    hardCurrencySignupBonus: 100,
+    unlimitedRanked: true,
+    canCreatePublicLobbies: true,
+    product: { productId: "gold", priceId: "gold-price", price: "$5" },
+    rarity: "legendary",
+    affiliateCode: null,
+  } as never,
+  colorPalette: null,
+  relationship: "owned",
+  key: "subscription:gold",
+};
+
+const platinumSubscription: ResolvedCosmetic = {
+  ...goldSubscription,
+  cosmetic: {
+    ...(goldSubscription.cosmetic as object),
+    name: "platinum",
+    product: {
+      productId: "platinum",
+      priceId: "platinum-price",
+      price: "$10",
+    },
+  } as never,
+  relationship: "purchasable",
+  key: "subscription:platinum",
+};
+
+const affiliatePattern: ResolvedCosmetic = {
+  ...red,
+  cosmetic: {
+    ...pattern,
+    affiliateCode: "creator",
+    product: {
+      productId: "affiliate-pattern",
+      priceId: "affiliate-pattern-price",
+      price: "$3",
+    },
+  } as never,
+  key: "pattern:affiliate:red",
+};
+
 let resolvedCatalog: ResolvedCosmetic[];
 let store: StoreModal | undefined;
 
@@ -207,6 +273,16 @@ async function openEffectsStore() {
   return { store, grid };
 }
 
+async function openStoreOnTab(tab: "packs" | "subscriptions") {
+  store = document.createElement("store-modal") as StoreModal;
+  store.inline = true;
+  document.body.appendChild(store);
+  await store.updateComplete;
+  store.open({ tab });
+  await vi.waitFor(() => expect(detail(store!).resolved).not.toBeNull());
+  return store;
+}
+
 describe("StoreModal cosmetic browser", () => {
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
@@ -219,7 +295,14 @@ describe("StoreModal cosmetic browser", () => {
     vi.mocked(fetchCosmetics).mockReset();
     vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
     vi.mocked(resolveCosmetics).mockReset();
-    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+    vi.mocked(resolveCosmetics).mockImplementation(
+      (_cosmetics, _userMeResponse, affiliateCode) =>
+        affiliateCode
+          ? resolvedCatalog.filter(
+              (item) => item.cosmetic?.affiliateCode === affiliateCode,
+            )
+          : resolvedCatalog,
+    );
     vi.mocked(purchaseCosmetic).mockReset();
     vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
   });
@@ -351,5 +434,65 @@ describe("StoreModal cosmetic browser", () => {
     expect(detail(modal).resolved?.key).toBe(hydro.key);
     expect(hydroCard.state).toBe("focused");
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
+  });
+
+  it("uses the browser shell and exact resolved pack purchase", async () => {
+    resolvedCatalog = [pack];
+    const modal = await openStoreOnTab("packs");
+
+    expect(modal.querySelector("[data-store-browser]")).toBeTruthy();
+    expect(modal.querySelector("[data-store-grid]")).toBeTruthy();
+    expect(detail(modal).resolved?.key).toBe(pack.key);
+
+    await (detail(modal).querySelector("purchase-button") as PurchaseButton)
+      .onPurchaseDollar!();
+
+    expect(purchaseCosmetic).toHaveBeenCalledWith(pack, "dollar");
+  });
+
+  it("shows subscription status and a switch action for another tier", async () => {
+    resolvedCatalog = [goldSubscription, platinumSubscription];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({
+      player: { subscription: { tier: "gold" } },
+    } as never);
+    await modal.updateComplete;
+
+    expect(detail(modal).resolved?.key).toBe(goldSubscription.key);
+    expect(
+      detail(modal).querySelector("[data-detail-status]")?.textContent,
+    ).toContain("store.subscribed");
+
+    await focusCard(modal, platinumSubscription.key);
+    const purchaseButton = modal.querySelector(
+      "purchase-button",
+    ) as PurchaseButton;
+    expect(purchaseButton.dollarLabelKey).toBe("store.switch_button");
+
+    await purchaseButton.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      platinumSubscription,
+      "dollar",
+    );
+  });
+
+  it("does not leave an inspected non-affiliate item in affiliate mode", async () => {
+    resolvedCatalog = [red, affiliatePattern];
+    const modal = await openStoreOnCosmetic("patterns");
+    await focusCard(modal, red.key);
+
+    modal.open({ affiliateCode: "creator" });
+    await vi.waitFor(() =>
+      expect(detail(modal).resolved?.key).toBe(affiliatePattern.key),
+    );
+
+    expect(modal.querySelector(`[data-cosmetic-key="${red.key}"]`)).toBeNull();
+    expect(
+      modal.querySelector(`[data-cosmetic-key="${affiliatePattern.key}"]`),
+    ).toBeTruthy();
+
+    await (modal.querySelector("purchase-button") as PurchaseButton)
+      .onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "dollar");
   });
 });

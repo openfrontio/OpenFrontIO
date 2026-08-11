@@ -35,6 +35,12 @@ type StoreTab =
 const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
+interface StoreBrowserOptions {
+  emptyTranslationKey: string;
+  userHasSubscription?: boolean;
+  trailingContent?: TemplateResult;
+}
+
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
   protected routerName = "store";
@@ -130,13 +136,38 @@ export class StoreModal extends BaseModal {
   }
 
   private groupsForTab(tab: string): readonly (readonly ResolvedCosmetic[])[] {
-    if (this.affiliateCode) return [];
+    if (this.affiliateCode) {
+      return groupCosmeticVariants(
+        this.resolvedPurchasables().filter(
+          (resolved) => resolved.cosmetic?.affiliateCode === this.affiliateCode,
+        ),
+      );
+    }
     if (tab === "cosmetics") {
       return this.cosmeticsGroups(this.cosmeticsSubTab);
     }
     if (tab === "effects") {
       return this.resolvedPurchasables()
         .filter((resolved) => resolved.type === "effect")
+        .map((resolved) => [resolved]);
+    }
+    if (tab === "packs") {
+      return this.resolvedPurchasables()
+        .filter((resolved) => resolved.type === "pack")
+        .map((resolved) => [resolved]);
+    }
+    if (tab === "subscriptions") {
+      return resolveCosmetics(
+        this.cosmetics,
+        this.userMeResponse,
+        this.affiliateCode,
+      )
+        .filter(
+          (resolved) =>
+            resolved.type === "subscription" &&
+            (resolved.relationship === "purchasable" ||
+              resolved.relationship === "owned"),
+        )
         .map((resolved) => [resolved]);
     }
     return [];
@@ -173,11 +204,14 @@ export class StoreModal extends BaseModal {
     this.requestUpdate();
   }
 
-  private renderCosmeticCards(): TemplateResult {
-    return html`${this.visibleGroups.map((group) => {
+  private renderCosmeticCards(
+    groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
+  ): TemplateResult {
+    return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
       const active = focused ?? group[0];
       return html`<cosmetic-card
+        data-cosmetic-key=${group[0].key}
         .resolved=${group[0]}
         .variants=${group.length > 1 ? group : []}
         .activeVariantKey=${active.key}
@@ -189,7 +223,7 @@ export class StoreModal extends BaseModal {
     })}`;
   }
 
-  private renderPurchaseAction(): TemplateResult {
+  private renderPurchaseAction(userHasSubscription: boolean): TemplateResult {
     const resolved = this.inspected!;
     const priced = resolved.cosmetic as {
       product?: Product | null;
@@ -197,9 +231,10 @@ export class StoreModal extends BaseModal {
       priceSoft?: number;
       rarity?: string;
     } | null;
-    const product = priced?.product ?? null;
-    const priceHard = priced?.priceHard;
-    const priceSoft = priced?.priceSoft;
+    const isPurchasable = resolved.relationship === "purchasable";
+    const product = isPurchasable ? (priced?.product ?? null) : null;
+    const priceHard = isPurchasable ? priced?.priceHard : undefined;
+    const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method);
     return html`<purchase-button
@@ -208,6 +243,12 @@ export class StoreModal extends BaseModal {
       .priceSoft=${priceSoft ?? null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticDisplayName(resolved)}
+      .dollarLabelKey=${resolved.type === "subscription" && userHasSubscription
+        ? "store.switch_button"
+        : ""}
+      .priceSuffix=${resolved.type === "subscription"
+        ? translateText("store.price_per_month")
+        : ""}
       .onPurchaseDollar=${product ? () => purchase("dollar") : undefined}
       .onPurchaseHard=${priceHard !== undefined
         ? () => purchase("hard")
@@ -218,7 +259,10 @@ export class StoreModal extends BaseModal {
     ></purchase-button>`;
   }
 
-  private renderInspectedDetail(): TemplateResult {
+  private renderInspectedDetail(
+    userHasSubscription = this.userMeResponse !== false &&
+      this.userMeResponse.player.subscription !== null,
+  ): TemplateResult {
     const group =
       this.visibleGroups.find((candidate) =>
         candidate.some((item) => item.key === this.inspected?.key),
@@ -228,12 +272,21 @@ export class StoreModal extends BaseModal {
       .resolved=${this.inspected}
       .variants=${group.length > 1 ? group : []}
       .activeVariantKey=${this.inspected?.key ?? null}
+      .statusText=${this.inspected?.type === "subscription" &&
+      this.inspected.relationship === "owned"
+        ? translateText("store.subscribed")
+        : ""}
       .onVariantActivate=${(variant: ResolvedCosmetic) => this.inspect(variant)}
-      .actionContent=${this.inspected ? this.renderPurchaseAction() : html``}
+      .actionContent=${this.inspected
+        ? this.renderPurchaseAction(userHasSubscription)
+        : html``}
     ></cosmetic-detail-panel>`;
   }
 
-  private renderBrowser(cards: TemplateResult): TemplateResult {
+  private renderBrowserLayout(
+    cards: TemplateResult,
+    userHasSubscription?: boolean,
+  ): TemplateResult {
     return html`<div
       data-store-browser
       class="grid grid-cols-1 gap-4 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]"
@@ -245,9 +298,29 @@ export class StoreModal extends BaseModal {
         ${cards}
       </div>
       <aside class="order-first lg:order-none lg:sticky lg:top-0 lg:self-start">
-        ${this.renderInspectedDetail()}
+        ${this.renderInspectedDetail(userHasSubscription)}
       </aside>
     </div>`;
+  }
+
+  private renderBrowser(
+    groups: readonly (readonly ResolvedCosmetic[])[],
+    options: StoreBrowserOptions,
+  ): TemplateResult {
+    const cards =
+      groups.length === 0
+        ? options.trailingContent
+          ? html``
+          : html`<div
+              class="col-span-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
+            >
+              ${translateText(options.emptyTranslationKey)}
+            </div>`
+        : this.renderCosmeticCards(groups);
+    return this.renderBrowserLayout(
+      html`${cards}${options.trailingContent ?? ""}`,
+      options.userHasSubscription,
+    );
   }
 
   // Skins / Flags / Crowns grouped under one top-level tab; a sub-tab bar
@@ -259,14 +332,6 @@ export class StoreModal extends BaseModal {
         : this.cosmeticsSubTab === "crowns"
           ? "store.no_crowns"
           : "store.no_skins";
-    const cards =
-      this.visibleGroups.length === 0
-        ? html`<div
-            class="col-span-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
-          >
-            ${translateText(emptyKey)}
-          </div>`
-        : this.renderCosmeticCards();
     return html`
       <div
         class="flex items-center justify-center gap-6 border-b border-white/10 px-4"
@@ -283,7 +348,9 @@ export class StoreModal extends BaseModal {
           </button>`;
         })}
       </div>
-      ${this.renderBrowser(cards)}
+      ${this.renderBrowser(this.visibleGroups, {
+        emptyTranslationKey: emptyKey,
+      })}
     `;
   }
 
@@ -326,7 +393,7 @@ export class StoreModal extends BaseModal {
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
-    return this.renderBrowser(
+    return this.renderBrowserLayout(
       html`<effects-grid
         class="col-span-full"
         mode="purchase"
@@ -341,69 +408,22 @@ export class StoreModal extends BaseModal {
   }
 
   private renderPackGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter((r) => r.type === "pack" && r.relationship === "purchasable");
-
     // The custom-amount card is always purchasable (priced inline server-side,
     // no catalog entry), and follows the fixed packs at the end of the grid.
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-        <custom-currency-card></custom-currency-card>
-      </div>
-    `;
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_skins",
+      trailingContent: html`<custom-currency-card></custom-currency-card>`,
+    });
   }
 
   private renderSubscriptionGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        r.type === "subscription" &&
-        (r.relationship === "purchasable" || r.relationship === "owned"),
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_subscriptions")}
-      </div>`;
-    }
-
     const userHasSubscription =
       this.userMeResponse !== false &&
       this.userMeResponse.player.subscription !== null;
-
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .onPurchase=${purchaseCosmetic}
-              .userHasSubscription=${userHasSubscription}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_subscriptions",
+      userHasSubscription,
+    });
   }
 
   protected renderHeaderSlot() {
@@ -438,44 +458,9 @@ export class StoreModal extends BaseModal {
   }
 
   private renderAffiliateGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        (r.type === "pattern" ||
-          r.type === "skin" ||
-          r.type === "flag" ||
-          r.type === "crown" ||
-          r.type === "effect" ||
-          r.type === "pack") &&
-        r.relationship === "purchasable",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_skins")}
-      </div>`;
-    }
-
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${groupCosmeticVariants(items).map(
-          (group) => html`
-            <cosmetic-button
-              .resolved=${group[0]}
-              .variants=${group}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_skins",
+    });
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
