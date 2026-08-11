@@ -65,10 +65,11 @@ jobs:
         run: |
           # A branch name can hold characters that are illegal in a DNS label, a
           # Docker container name, and a file path (e.g. "fix/some-bug"), so
-          # normalize it to an RFC 1123 label first: underscores become hyphens to
-          # keep the name readable, anything else outside [a-zA-Z0-9-] is dropped,
-          # and the result is capped at the 63-octet label limit with no edge hyphens.
-          LABEL="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_' '-' | tr -cd 'a-zA-Z0-9-')"
+          # normalize it to an RFC 1123 label first: underscores and slashes
+          # become hyphens to keep the name readable (fix/some-bug ->
+          # fix-some-bug), anything else outside [a-zA-Z0-9-] is dropped, and the
+          # result is capped at the 63-octet label limit with no edge hyphens.
+          LABEL="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_/' '--' | tr -cd 'a-zA-Z0-9-')"
           LABEL="$(printf '%s' "${LABEL:0:63}" | sed 's/^-*//; s/-*$//')"
           if [ -z "$LABEL" ]; then
             echo "Error: subdomain is empty after sanitizing '$RAW_SUBDOMAIN'"
