@@ -42,8 +42,16 @@ on:
 
 permissions: {}
 
+# GitHub keeps only ONE pending run per concurrency group - each new run
+# cancels the previously pending one, even across branches. With a single
+# shared group, a feature-branch push could evict a queued main deploy and
+# main.openfront.dev silently stayed stale until the next merge. So scope the
+# group to the deploy target instead: per branch for pushes, a dedicated group
+# for the nightly, per host for manual dispatches. Runs for different targets
+# may then overlap on the staging host; deploy.sh serializes the host-side
+# update with flock, so only the CI-side image builds actually run in parallel.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || github.event_name == 'schedule' && 'staging-nightly' || format('staging-{0}', github.ref_name) }}
   cancel-in-progress: false
 
 jobs:
