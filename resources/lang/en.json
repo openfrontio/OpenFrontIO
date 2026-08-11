@@ -901,11 +901,14 @@
     "water_nukes": "Water nukes"
   },
   "inventory": {
+    "equipped": "Equipped",
     "load_failed": "Couldn't load your inventory. Please reload and try again.",
     "loading": "Loading inventory…",
+    "loadout": "Your loadout",
     "no_owned_crowns": "You don't own any crowns yet.",
     "no_owned_effects": "You don't own any effects yet.",
     "no_owned_skins": "You don't own any skins yet.",
+    "showing_effects": "{count} effects equipped",
     "title": "Inventory"
   },
   "ios_banner": {
