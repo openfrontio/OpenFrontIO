@@ -196,19 +196,28 @@ describe("CosmeticCard", () => {
     expect(swatch.className).toMatch(/focus-visible:/);
   });
 
-  it("uses a strong green equipped shell and prominent badge", async () => {
+  it("layers green equipped state over the rarity accent", async () => {
     installTranslations();
     await createCard();
     card!.state = "equipped";
     await card!.updateComplete;
 
-    const shell = card!.querySelector<HTMLElement>("[data-cosmetic-rarity]")!;
+    let shell = card!.querySelector<HTMLElement>("[data-cosmetic-rarity]")!;
     const badge = card!.querySelector<HTMLElement>(
       "[data-cosmetic-equipped='true']",
     )!;
-    expect(shell.className).toMatch(/border-emerald/);
+    expect(shell.classList).toContain("border-violet-300/70");
+    expect(shell.className).toMatch(/ring-emerald/);
+    expect(shell.className).not.toMatch(/ring-blue/);
     expect(shell.className).toMatch(/shadow-\[/);
     expect(badge.className).toMatch(/bg-emerald/);
     expect(badge.className).toMatch(/shadow/);
+
+    card!.state = "focused";
+    await card!.updateComplete;
+    shell = card!.querySelector<HTMLElement>("[data-cosmetic-rarity]")!;
+    expect(shell.classList).toContain("border-violet-300/70");
+    expect(shell.className).toMatch(/ring-blue/);
+    expect(shell.className).not.toMatch(/ring-emerald/);
   });
 });

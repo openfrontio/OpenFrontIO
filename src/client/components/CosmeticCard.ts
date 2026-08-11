@@ -115,9 +115,11 @@ export class CosmeticCard extends LitElement {
     const focusClass = isFocused
       ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-950"
       : "";
-    const shellClass = isEquipped
-      ? "border-emerald-400 ring-2 ring-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.45)]"
-      : this.rarityClass(rarity);
+    const shellClass = `${this.rarityClass(rarity)} ${
+      isEquipped
+        ? "ring-2 ring-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.45)]"
+        : ""
+    }`;
     const content = html`
       <div
         class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
