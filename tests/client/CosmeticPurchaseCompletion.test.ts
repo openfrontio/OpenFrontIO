@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { FLAG_KEY, PATTERN_KEY } from "../../src/core/game/UserSettings";
 import { completeCosmeticPurchaseReturn } from "../../src/client/Cosmetics";
+import { FLAG_KEY, PATTERN_KEY } from "../../src/core/game/UserSettings";
 
 describe("completeCosmeticPurchaseReturn", () => {
   beforeEach(() => {

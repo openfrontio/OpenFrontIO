@@ -1,5 +1,5 @@
-import type { LitElement } from "lit";
 import fs from "fs";
+import type { LitElement } from "lit";
 import path from "path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DesktopNavBar } from "../../src/client/components/DesktopNavBar";

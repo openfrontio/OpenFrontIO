@@ -1,12 +1,12 @@
 import type { LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
+import "../../src/client/InventoryModal";
+import type { InventoryModal } from "../../src/client/InventoryModal";
+import type { CosmeticButton } from "../../src/client/components/CosmeticButton";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import { UserSettings } from "../../src/core/game/UserSettings";
-import "../../src/client/InventoryModal";
-import type { InventoryModal } from "../../src/client/InventoryModal";
-import { fetchCosmetics } from "../../src/client/Cosmetics";
-import type { CosmeticButton } from "../../src/client/components/CosmeticButton";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
@@ -199,7 +199,9 @@ describe("InventoryModal", () => {
     modal.requestUpdate();
     await modal.updateComplete;
 
-    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: ownedUser }));
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: ownedUser }),
+    );
 
     await vi.waitFor(() => {
       expect(tile(modal, "skin:owned_skin")).toBeDefined();

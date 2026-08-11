@@ -12,8 +12,8 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { BaseModal } from "./components/BaseModal";
 import { getUserMe } from "./Api";
+import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
@@ -73,9 +73,7 @@ export class InventoryModal extends BaseModal {
   };
 
   private _onUserMe = (event: Event) => {
-    void this.onUserMe(
-      (event as CustomEvent<UserMeResponse | false>).detail,
-    );
+    void this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
   };
 
   connectedCallback() {
