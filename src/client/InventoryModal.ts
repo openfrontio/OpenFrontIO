@@ -1,8 +1,10 @@
 import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import Countries from "resources/countries.json" with { type: "json" };
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics, Crown, Skin } from "../core/CosmeticSchemas";
+import { assetUrl } from "../core/AssetUrls";
+import { Cosmetics, Crown, Flag, Skin } from "../core/CosmeticSchemas";
 import {
   CROWN_KEY,
   PATTERN_KEY,
@@ -25,19 +27,29 @@ import {
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
+function countryFlag(name: string, code: string): Flag {
+  return {
+    name,
+    url: assetUrl(`/flags/${code}.svg`),
+    product: null,
+    rarity: "common",
+    affiliateCode: null,
+  };
+}
+
 /**
- * One modal for every non-flag cosmetic: a Skins tab (patterns + image skins),
- * a Crowns tab, and an Effects tab (all effect types via the tabbed
- * effects-grid). Opened from the lobby's "Cosmetics" button.
+ * The player's owned cosmetics, grouped into equip categories.
  */
-@customElement("cosmetics-modal")
-export class CosmeticsModal extends BaseModal {
-  protected routerName = "cosmetics";
+@customElement("inventory-modal")
+export class InventoryModal extends BaseModal {
+  protected routerName = "inventory";
 
   @state() private selectedPattern: PlayerPattern | null = null;
   @state() private selectedColor: string | null = null;
   @state() private selectedSkinName: string | null = null;
   @state() private search = "";
+  @state() private isLoading = true;
+  @state() private loadFailed = false;
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -47,6 +59,7 @@ export class CosmeticsModal extends BaseModal {
     return {
       tabs: [
         { key: "skins", label: translateText("store.patterns") },
+        { key: "flags", label: translateText("store.flags") },
         { key: "crowns", label: translateText("store.crowns") },
         { key: "effects", label: translateText("store.effects") },
       ],
@@ -95,11 +108,19 @@ export class CosmeticsModal extends BaseModal {
     this.selectedSkinName = cosmetics.skin?.name ?? null;
   }
 
-  async onUserMe(userMeResponse: UserMeResponse | false) {
-    this.userMeResponse = userMeResponse;
+  private async loadCatalog(): Promise<void> {
+    this.isLoading = true;
+    this.loadFailed = false;
     this.cosmetics = await fetchCosmetics();
+    this.loadFailed = this.cosmetics === null;
+    this.isLoading = false;
     await this.updateFromSettings();
     this.refresh();
+  }
+
+  async onUserMe(userMeResponse: UserMeResponse | false) {
+    this.userMeResponse = userMeResponse;
+    await this.loadCatalog();
   }
 
   private includedInSearch(name: string): boolean {
@@ -203,13 +224,68 @@ export class CosmeticsModal extends BaseModal {
     `;
   }
 
+  private renderFlagGrid(): TemplateResult {
+    const selectedFlag = this.userSettings.getFlag() ?? "";
+    const cosmeticFlags = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      null,
+    ).filter(
+      (r) =>
+        r.type === "flag" &&
+        r.relationship === "owned" &&
+        r.cosmetic !== null &&
+        this.includedInSearch(r.cosmetic.name),
+    );
+
+    const noFlag: ResolvedCosmetic | null = this.search
+      ? null
+      : {
+          type: "flag",
+          cosmetic: countryFlag("None", "xx"),
+          colorPalette: null,
+          relationship: "owned",
+          key: "country:xx",
+        };
+    const countryFlags = Countries.filter(
+      (country) =>
+        country.code !== "xx" &&
+        country.restricted !== true &&
+        (this.includedInSearch(country.name) ||
+          this.includedInSearch(country.code)),
+    ).map<ResolvedCosmetic>((country) => ({
+      type: "flag",
+      cosmetic: countryFlag(country.name, country.code),
+      colorPalette: null,
+      relationship: "owned",
+      key: `country:${country.code}`,
+    }));
+
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${[...(noFlag ? [noFlag] : []), ...cosmeticFlags, ...countryFlags].map(
+          (resolved) => html`
+            <cosmetic-button
+              .resolved=${resolved}
+              .selected=${selectedFlag === resolved.key ||
+              (resolved.key === "country:xx" && selectedFlag === "")}
+              .onSelect=${() => this.selectFlag(resolved.key)}
+            ></cosmetic-button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   protected renderHeaderSlot() {
     return html`
       <div
         class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
       >
         ${modalHeader({
-          title: translateText("cosmetics.title"),
+          title: translateText("inventory.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
           rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
@@ -232,8 +308,26 @@ export class CosmeticsModal extends BaseModal {
   }
 
   protected renderBody(tab: string) {
+    if (this.isLoading) {
+      return html`<div
+        data-inventory-state="loading"
+        class="p-8 text-center text-white/60"
+      >
+        ${translateText("inventory.loading")}
+      </div>`;
+    }
+    if (this.loadFailed) {
+      return html`<div
+        data-inventory-state="error"
+        class="p-8 text-center text-red-300"
+      >
+        ${translateText("inventory.load_failed")}
+      </div>`;
+    }
     let grid: TemplateResult;
-    if (tab === "crowns") {
+    if (tab === "flags") {
+      grid = this.renderFlagGrid();
+    } else if (tab === "crowns") {
       grid = this.renderCrownGrid();
     } else if (tab === "effects") {
       grid = html`<effects-grid
@@ -264,7 +358,12 @@ export class CosmeticsModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
-    await this.refresh();
+    if (this.cosmetics === null && !this.loadFailed) {
+      await this.loadCatalog();
+      return;
+    }
+    await this.updateFromSettings();
+    this.refresh();
   }
 
   protected onClose(): void {
@@ -292,6 +391,11 @@ export class CosmeticsModal extends BaseModal {
   private selectCrown(crownName: string | null) {
     this.userSettings.setSelectedCrownName(crownName ?? undefined);
     // Stay open — the tile highlight moves to the new selection.
+    this.refresh();
+  }
+
+  private selectFlag(flag: string) {
+    this.userSettings.setFlag(flag);
     this.refresh();
   }
 

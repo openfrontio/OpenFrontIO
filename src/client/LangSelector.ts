@@ -227,7 +227,7 @@ export class LangSelector extends LitElement {
       "user-setting",
       "o-modal",
       "o-button",
-      "cosmetics-modal",
+      "inventory-modal",
       "store-modal",
       "custom-currency-card",
       "cosmetics-input",

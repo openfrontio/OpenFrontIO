@@ -448,6 +448,11 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "inventory": {
+    "load_failed": "Couldn't load your inventory. Please reload and try again.",
+    "loading": "Loading inventory…",
+    "title": "Inventory"
+  },
   "difficulty": {
     "difficulty": "Nation difficulty",
     "easy": "Easy",
@@ -996,6 +1001,7 @@
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
     "help": "Help",
+    "inventory": "Inventory",
     "join": "Join Lobby",
     "leaderboard": "Leaderboard",
     "login_discord": "Login with Discord",

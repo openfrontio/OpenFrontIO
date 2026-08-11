@@ -26,8 +26,7 @@ import {
   getPlayerCosmeticsRefs,
 } from "./Cosmetics";
 import "./CosmeticsInput";
-import "./CosmeticsModal";
-import { CosmeticsModal } from "./CosmeticsModal";
+import "./InventoryModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -246,7 +245,10 @@ class Client {
       tag: "troubleshooting-modal",
       pageId: "page-troubleshooting",
     });
-    modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
+    modalRouter.register("inventory", {
+      tag: "inventory-modal",
+      pageId: "page-inventory",
+    });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
     // Prefetch turnstile token so it is available when the user joins a lobby.
@@ -369,20 +371,6 @@ class Client {
     if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
       console.warn("Store modal element not found");
     }
-
-    const cosmeticsModal = document.getElementById(
-      "cosmetics-modal",
-    ) as CosmeticsModal;
-    if (!cosmeticsModal || !(cosmeticsModal instanceof CosmeticsModal)) {
-      console.warn("Cosmetics modal element not found");
-    }
-
-    // Attach listener to any cosmetics-input component
-    document.querySelectorAll("cosmetics-input").forEach((cosmeticsInput) => {
-      cosmeticsInput.addEventListener("cosmetics-input-click", () => {
-        cosmeticsModal.open();
-      });
-    });
 
     if (isInIframe()) {
       const mobileCosmetics = document.getElementById("cosmetics-input-mobile");
@@ -953,7 +941,7 @@ class Client {
         "help-modal",
         "user-setting",
         "troubleshooting-modal",
-        "cosmetics-modal",
+        "inventory-modal",
         "store-modal",
         "language-modal",
         "news-modal",
