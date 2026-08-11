@@ -122,6 +122,45 @@ describe("LocalServer archiving", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("retries at endGame with keepalive when the win-time upload failed", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
+    const server = makeServer(false);
+    server.start();
+
+    server.onMessage(winnerMsg);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // Let the failed attempt settle so it is no longer in flight.
+    await new Promise((r) => setTimeout(r, 0));
+
+    server.endGame();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    const [, init] = fetchMock.mock.calls[1];
+    expect(init.keepalive).toBe(true);
+    expect(archivedRecord(fetchMock.mock.calls[1]).info.winner).toEqual([
+      "player",
+      CLIENT_ID,
+    ]);
+  });
+
+  it("does not start a second upload while one is in flight", async () => {
+    let resolveFetch!: (response: Response) => void;
+    fetchMock.mockImplementationOnce(
+      () => new Promise<Response>((r) => (resolveFetch = r)),
+    );
+    const server = makeServer(false);
+    server.start();
+
+    server.onMessage(winnerMsg);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // Exit while the win-time upload is still pending.
+    server.endGame();
+    resolveFetch(new Response(null, { status: 200 }));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("still archives at endGame when the game had no winner", async () => {
     const server = makeServer(false);
     server.start();

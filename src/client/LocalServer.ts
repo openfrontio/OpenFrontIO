@@ -58,7 +58,10 @@ export class LocalServer {
   private clientID: ClientID | undefined;
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
+  // Set only once an upload got a 2xx, so endGame() retries failed or
+  // skipped win-time uploads during teardown.
   private archived = false;
+  private archiveInFlight = false;
 
   private turnsExecuted = 0;
   private turnStartTime = 0;
@@ -283,7 +286,7 @@ export class LocalServer {
   }
 
   private archiveGameRecord(unloading: boolean) {
-    if (this.archived) {
+    if (this.archived || this.archiveInFlight) {
       return;
     }
     const players: PlayerRecord[] = [
@@ -316,7 +319,6 @@ export class LocalServer {
       return;
     }
 
-    this.archived = true;
     this.archiveGame(result.data, unloading);
   }
 
@@ -324,6 +326,7 @@ export class LocalServer {
     record: PartialGameRecord,
     unloading: boolean,
   ): Promise<void> {
+    this.archiveInFlight = true;
     try {
       const authHeader = await getAuthHeader();
       if (authHeader === "") {
@@ -353,13 +356,17 @@ export class LocalServer {
           keepalive: unloading,
         },
       );
-      if (!response.ok) {
+      if (response.ok) {
+        this.archived = true;
+      } else {
         console.error(
           `Failed to archive singleplayer game: ${response.status}`,
         );
       }
     } catch (error) {
       console.error("Failed to archive singleplayer game:", error);
+    } finally {
+      this.archiveInFlight = false;
     }
   }
 }
