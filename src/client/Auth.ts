@@ -113,6 +113,18 @@ export async function isLoggedIn(): Promise<boolean> {
   return userAuthResult !== false;
 }
 
+// True when the in-memory session still belongs to the given JWT subject.
+// Lets callers of authenticated endpoints discard a response that arrived
+// after a logout or session change invalidated the request's session.
+export function isSessionActive(sub: string): boolean {
+  if (__jwt === null) return false;
+  try {
+    return decodeJwt(__jwt).sub === sub;
+  } catch {
+    return false;
+  }
+}
+
 export async function userAuth(
   shouldRefresh: boolean = true,
 ): Promise<UserAuth> {
