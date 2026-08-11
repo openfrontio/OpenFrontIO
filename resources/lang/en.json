@@ -424,29 +424,15 @@
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
   },
   "cosmetics": {
-    "adfree": "ad-free for life!",
-    "artist_label": "Artist:",
-    "button_title": "Pick your cosmetics!",
-    "color_label": "Color:",
-    "common": "Common",
-    "epic": "Epic",
     "free": "+{numFree} BONUS!",
     "hard": "Plutonium",
-    "legendary": "Legendary",
     "per_day": "/day",
     "public_lobbies": "Public lobbies",
-    "public_lobbies_info": "Host custom lobbies that are publicly listed for anyone to join.",
-    "rare": "Rare",
     "search": "Search...",
     "signup_bonus": "Signup bonus",
     "soft": "Caps",
-    "title": "Cosmetics",
-    "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
-    "unlimited_ranked_info": "No limit on how many ranked games you can play.",
-    "usd_value": "Value: {usd}",
-    "verified_name": "Verified username",
-    "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
+    "verified_name": "Verified username"
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
