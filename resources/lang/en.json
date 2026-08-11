@@ -908,6 +908,7 @@
     "no_owned_crowns": "You don't own any crowns yet.",
     "no_owned_effects": "You don't own any effects yet.",
     "no_owned_skins": "You don't own any skins yet.",
+    "retry": "Retry",
     "showing_effects": "{count} effects equipped",
     "title": "Inventory"
   },

@@ -5,10 +5,18 @@ import { userAuth } from "../../src/client/Auth";
 import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
-import type { CosmeticButton } from "../../src/client/components/CosmeticButton";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { CosmeticDetailPanel } from "../../src/client/components/CosmeticDetailPanel";
+import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import type { Cosmetics } from "../../src/core/CosmeticSchemas";
+import {
+  EFFECT_TYPES,
+  NUKE_EXPLOSION_TYPES,
+  type Cosmetics,
+  type EffectType,
+  type NukeExplosionType,
+} from "../../src/core/CosmeticSchemas";
 import {
   CROWN_KEY,
   EFFECTS_KEY,
@@ -38,8 +46,57 @@ const common = {
   affiliateCode: null,
 } as const;
 
+const trail = (name: string, effectType: string, color: string) => ({
+  ...common,
+  name,
+  effectType,
+  attributes: {
+    type: "gradient",
+    colors: [color],
+    colorSize: 1,
+    movementSpeed: 1,
+  },
+});
+
+const explosion = (name: string, nukeType: string, color: string) => ({
+  ...common,
+  name,
+  effectType: "nukeExplosion",
+  attributes: {
+    type: "shockwave",
+    nukeType,
+    colors: [color],
+    size: 1,
+    speed: 1,
+    thickness: 1,
+    transitionSpeed: 1,
+  },
+});
+
 const catalog = {
-  patterns: {},
+  patterns: {
+    stripes: {
+      ...common,
+      name: "stripes",
+      pattern: "AAAAAA",
+      colorPalettes: [
+        { name: "red", isArchived: false },
+        { name: "blue", isArchived: false },
+      ],
+    },
+  },
+  colorPalettes: {
+    red: {
+      name: "red",
+      primaryColor: "#ef4444",
+      secondaryColor: "#7f1d1d",
+    },
+    blue: {
+      name: "blue",
+      primaryColor: "#3b82f6",
+      secondaryColor: "#1e3a8a",
+    },
+  },
   flags: {
     owned_flag: { ...common, name: "owned_flag", url: "/flags/owned.svg" },
     locked_flag: { ...common, name: "locked_flag", url: "/flags/locked.svg" },
@@ -58,17 +115,8 @@ const catalog = {
   },
   effects: {
     transportShipTrail: {
-      owned_wake: {
-        ...common,
-        name: "owned_wake",
-        effectType: "transportShipTrail",
-        attributes: {
-          type: "gradient",
-          colors: ["#ffffff"],
-          colorSize: 1,
-          movementSpeed: 1,
-        },
-      },
+      owned_wake: trail("owned_wake", "transportShipTrail", "#ffffff"),
+      owned_wake_alt: trail("owned_wake_alt", "transportShipTrail", "#00ffff"),
       locked_wake: {
         ...common,
         name: "locked_wake",
@@ -80,6 +128,20 @@ const catalog = {
           movementSpeed: 1,
         },
       },
+    },
+    nukeTrail: {
+      owned_nuke_trail: trail("owned_nuke_trail", "nukeTrail", "#ff0000"),
+    },
+    nukeExplosion: {
+      owned_atom: explosion("owned_atom", "atom", "#f97316"),
+      owned_hydro: explosion("owned_hydro", "hydro", "#22d3ee"),
+      owned_mirv: explosion("owned_mirv", "mirvWarhead", "#d946ef"),
+    },
+    structures: {
+      owned_structures: trail("owned_structures", "structures", "#84cc16"),
+    },
+    warship: {
+      owned_warship: trail("owned_warship", "warship", "#6366f1"),
     },
   },
 } as unknown as Cosmetics;
@@ -96,10 +158,20 @@ const ownedUser = {
     subscription: null,
     currency: { soft: 0, hard: 0 },
     flares: [
+      "pattern:stripes",
+      "pattern:stripes:red",
+      "pattern:stripes:blue",
       "skin:owned_skin",
       "flag:owned_flag",
       "crown:owned_crown",
       "effect:owned_wake",
+      "effect:owned_wake_alt",
+      "effect:owned_nuke_trail",
+      "effect:owned_atom",
+      "effect:owned_hydro",
+      "effect:owned_mirv",
+      "effect:owned_structures",
+      "effect:owned_warship",
     ],
   },
 } as unknown as UserMeResponse;
@@ -113,19 +185,56 @@ const emptyCatalog = {
   effects: {},
 } as unknown as Cosmetics;
 
-function tile(modal: InventoryModal, key: string): CosmeticButton | undefined {
-  return [...modal.querySelectorAll<CosmeticButton>("cosmetic-button")].find(
-    (button) => button.resolved.key === key,
+function card(modal: InventoryModal, key: string): CosmeticCard | undefined {
+  return [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].find(
+    (candidate) =>
+      candidate.resolved.key === key ||
+      candidate.variants.some((variant) => variant.key === key),
   );
 }
 
-function effectCard(
+function showcase(modal: InventoryModal): CosmeticDetailPanel {
+  return modal.querySelector("cosmetic-detail-panel") as CosmeticDetailPanel;
+}
+
+function loadout(modal: InventoryModal): InventoryLoadoutBar {
+  return modal.querySelector("inventory-loadout-bar") as InventoryLoadoutBar;
+}
+
+async function activateCard(modal: InventoryModal, key: string) {
+  const cosmeticCard = card(modal, key)!;
+  cosmeticCard.onActivate!(
+    cosmeticCard.variants.find((variant) => variant.key === key) ??
+      cosmeticCard.resolved,
+  );
+  await modal.updateComplete;
+}
+
+async function activateVariant(modal: InventoryModal, key: string) {
+  const cosmeticCard = card(modal, key)!;
+  const variant = cosmeticCard.variants.find((item) => item.key === key)!;
+  cosmeticCard.onVariantActivate!(variant);
+  await modal.updateComplete;
+}
+
+async function showEffectSlot(
   modal: InventoryModal,
-  key: string,
-): CosmeticCard | undefined {
-  return [
-    ...modal.querySelectorAll<CosmeticCard>("effects-grid cosmetic-card"),
-  ].find((card) => card.resolved.key === key);
+  effectType: EffectType,
+  nukeType?: NukeExplosionType,
+) {
+  const grid = modal.querySelector("effects-grid") as EffectsGrid;
+  grid
+    .querySelectorAll<HTMLButtonElement>("button[class*='-mb-px']")
+    [EFFECT_TYPES.indexOf(effectType)]!.click();
+  await grid.updateComplete;
+  if (nukeType) {
+    grid
+      .querySelectorAll<HTMLButtonElement>("button[class*='rounded-full']")
+      [NUKE_EXPLOSION_TYPES.indexOf(nukeType)]!.click();
+    await grid.updateComplete;
+  }
+  await modal.updateComplete;
+  return grid;
 }
 
 async function showTab(
@@ -140,9 +249,33 @@ async function showTab(
 
 describe("InventoryModal", () => {
   let modal: InventoryModal;
+  let languageFixture: HTMLElement;
+
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
   beforeEach(async () => {
     localStorage.clear();
+    const settings = new UserSettings();
+    settings.removeCached(PATTERN_KEY);
+    settings.removeCached(FLAG_KEY);
+    settings.removeCached(CROWN_KEY);
+    settings.removeCached(EFFECTS_KEY);
+    languageFixture = document.createElement("lang-selector");
+    const translations = {
+      "inventory.equipped": "Equipped",
+      "inventory.retry": "Retry",
+      "inventory.showing_effects": "{count} effects equipped",
+      "store.patterns": "Skins",
+      "store.flags": "Flags",
+      "store.crowns": "Crowns",
+      "store.effects": "Effects",
+    };
+    Object.assign(languageFixture, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(languageFixture);
     vi.mocked(fetchCosmetics).mockReset();
     vi.mocked(getUserMe).mockReset();
     vi.mocked(userAuth).mockReset();
@@ -162,7 +295,10 @@ describe("InventoryModal", () => {
     await modal.updateComplete;
   });
 
-  afterEach(() => modal.remove());
+  afterEach(() => {
+    modal.remove();
+    languageFixture.remove();
+  });
 
   it("has the four equip categories", () => {
     const config = (
@@ -176,55 +312,216 @@ describe("InventoryModal", () => {
     ]);
   });
 
-  it("shows owned skins plus Default and equips without closing", async () => {
+  it("keeps loadout, showcase, card, and swatch synchronized", async () => {
+    new UserSettings().setSelectedPatternName("pattern:stripes:red");
     await showTab(modal, "skins");
-    expect(tile(modal, "pattern:default")).toBeDefined();
-    expect(tile(modal, "skin:owned_skin")).toBeDefined();
-    expect(tile(modal, "skin:locked_skin")).toBeUndefined();
-    tile(modal, "skin:owned_skin")!.onSelect!(
-      tile(modal, "skin:owned_skin")!.resolved,
-    );
-    expect(new UserSettings().getSelectedSkinName()).toBe("owned_skin");
-    tile(modal, "pattern:default")!.onSelect!(
-      tile(modal, "pattern:default")!.resolved,
-    );
-    expect(new UserSettings().getSelectedSkinName()).toBeNull();
-    expect(modal.isConnected).toBe(true);
+
+    expect(modal.querySelector('[data-loadout-category="skins"]')).toBeTruthy();
+    expect(
+      modal.querySelector('[data-detail-context="inventory"]')?.textContent,
+    ).toContain("Equipped");
+    expect(card(modal, "pattern:stripes:red")?.state).toBe("equipped");
+
+    await activateVariant(modal, "pattern:stripes:blue");
+
+    expect(localStorage.getItem(PATTERN_KEY)).toBe("pattern:stripes:blue");
+    expect(card(modal, "pattern:stripes:blue")?.state).toBe("equipped");
+    expect(showcase(modal).resolved?.key).toBe("pattern:stripes:blue");
   });
 
-  it("shows owned cosmetic flags and unrestricted country flags", async () => {
-    await showTab(modal, "flags");
-    expect(tile(modal, "flag:owned_flag")).toBeDefined();
-    expect(tile(modal, "flag:locked_flag")).toBeUndefined();
-    expect(tile(modal, "country:xx")).toBeDefined();
-    expect(tile(modal, "country:us")).toBeDefined();
-    expect(tile(modal, "country:German Empire")).toBeUndefined();
-    tile(modal, "country:us")!.onSelect!(tile(modal, "country:us")!.resolved);
-    expect(new UserSettings().getFlag()).toBe("country:us");
-    tile(modal, "country:xx")!.onSelect!(tile(modal, "country:xx")!.resolved);
-    expect(new UserSettings().getFlag()).toBeNull();
-  }, 30_000);
+  it("equips owned cards and clears each non-effect category", async () => {
+    await showTab(modal, "skins");
+    expect(card(modal, "pattern:default")).toBeDefined();
+    expect(card(modal, "skin:owned_skin")).toBeDefined();
+    expect(card(modal, "skin:locked_skin")).toBeUndefined();
+    await activateCard(modal, "skin:owned_skin");
+    expect(new UserSettings().getSelectedSkinName()).toBe("owned_skin");
+    await activateCard(modal, "pattern:default");
+    expect(new UserSettings().getSelectedSkinName()).toBeNull();
+    expect(modal.isConnected).toBe(true);
 
-  it("equips and clears crowns and effects through their tiles", async () => {
-    const settings = new UserSettings();
+    await showTab(modal, "flags");
+    expect(card(modal, "flag:owned_flag")).toBeDefined();
+    expect(card(modal, "flag:locked_flag")).toBeUndefined();
+    expect(card(modal, "country:xx")).toBeDefined();
+    expect(card(modal, "country:us")).toBeDefined();
+    expect(card(modal, "country:German Empire")).toBeUndefined();
+    await activateCard(modal, "flag:owned_flag");
+    expect(new UserSettings().getFlag()).toBe("flag:owned_flag");
+    await activateCard(modal, "country:us");
+    expect(new UserSettings().getFlag()).toBe("country:us");
+    await activateCard(modal, "country:xx");
+    expect(new UserSettings().getFlag()).toBeNull();
 
     await showTab(modal, "crowns");
-    tile(modal, "crown:owned_crown")!.onSelect!(
-      tile(modal, "crown:owned_crown")!.resolved,
-    );
-    expect(settings.getSelectedCrownName()).toBe("owned_crown");
-    tile(modal, "crown:none")!.onSelect!(tile(modal, "crown:none")!.resolved);
-    expect(settings.getSelectedCrownName()).toBeNull();
+    await activateCard(modal, "crown:owned_crown");
+    expect(new UserSettings().getSelectedCrownName()).toBe("owned_crown");
+    await activateCard(modal, "crown:none");
+    expect(new UserSettings().getSelectedCrownName()).toBeNull();
+  }, 30_000);
+
+  it("navigates all four loadout categories", async () => {
+    for (const category of ["skins", "flags", "crowns", "effects"] as const) {
+      loadout(modal)
+        .querySelector<HTMLButtonElement>(
+          `[data-loadout-category="${category}"]`,
+        )!
+        .click();
+      await modal.updateComplete;
+      expect(
+        loadout(modal)
+          .querySelector(`[data-loadout-category="${category}"]`)
+          ?.getAttribute("aria-pressed"),
+      ).toBe("true");
+    }
+  });
+
+  it("clears every effect slot through its Default card", async () => {
+    const settings = new UserSettings();
+    const slots = [
+      ["transportShipTrail", "transportShipTrail", "owned_wake"],
+      ["nukeTrail", "nukeTrail", "owned_nuke_trail"],
+      ["nukeExplosion", "atom", "owned_atom"],
+      ["nukeExplosion", "hydro", "owned_hydro"],
+      ["nukeExplosion", "mirvWarhead", "owned_mirv"],
+      ["structures", "structures", "owned_structures"],
+      ["warship", "warship", "owned_warship"],
+    ] as const;
 
     await showTab(modal, "effects");
-    const owned = effectCard(modal, "effect:transportShipTrail:owned_wake")!;
-    owned.onActivate!(owned.resolved);
-    expect(settings.getSelectedEffectName("transportShipTrail")).toBe(
-      "owned_wake",
+    for (const [effectType, slot, selectedName] of slots) {
+      settings.setSelectedEffectName(slot, selectedName);
+      await modal.updateComplete;
+      const grid = await showEffectSlot(
+        modal,
+        effectType,
+        effectType === "nukeExplosion" ? slot : undefined,
+      );
+      expect(showcase(modal).resolved?.key).toBe(
+        `effect:${effectType}:${selectedName}`,
+      );
+      const none = [
+        ...grid.querySelectorAll<CosmeticCard>("cosmetic-card"),
+      ].find(
+        (candidate) => candidate.resolved.key === `effect:none:${effectType}`,
+      )!;
+      none.onActivate!(none.resolved);
+      expect(settings.getSelectedEffectName(slot)).toBeNull();
+    }
+  });
+
+  it("summarizes all equipped effect slots in one loadout category", async () => {
+    const settings = new UserSettings();
+    settings.setSelectedEffectName("transportShipTrail", "owned_wake");
+    settings.setSelectedEffectName("nukeTrail", "owned_nuke_trail");
+    settings.setSelectedEffectName("atom", "owned_atom");
+    settings.setSelectedEffectName("hydro", "owned_hydro");
+    settings.setSelectedEffectName("mirvWarhead", "owned_mirv");
+    settings.setSelectedEffectName("structures", "owned_structures");
+    settings.setSelectedEffectName("warship", "owned_warship");
+    await modal.updateComplete;
+
+    const entry = loadout(modal).entries.find(
+      (candidate) => candidate.category === "effects",
+    )!;
+    expect(entry.items).toHaveLength(7);
+    expect(entry.summary).toBe("7 effects equipped");
+  });
+
+  it("reacts to all settings keys changed outside Inventory", async () => {
+    const settings = new UserSettings();
+
+    await showTab(modal, "skins");
+    settings.setSelectedPatternName("pattern:stripes:blue");
+    await modal.updateComplete;
+    expect(showcase(modal).resolved?.key).toBe("pattern:stripes:blue");
+
+    await showTab(modal, "flags");
+    settings.setFlag("flag:owned_flag");
+    await modal.updateComplete;
+    expect(showcase(modal).resolved?.key).toBe("flag:owned_flag");
+    settings.setFlag("us");
+    await modal.updateComplete;
+    expect(localStorage.getItem(FLAG_KEY)).toBe("country:us");
+    expect(showcase(modal).resolved?.key).toBe("country:us");
+
+    await showTab(modal, "crowns");
+    settings.setSelectedCrownName("owned_crown");
+    await modal.updateComplete;
+    expect(showcase(modal).resolved?.key).toBe("crown:owned_crown");
+
+    await showTab(modal, "effects");
+    settings.setSelectedEffectName("transportShipTrail", "owned_wake_alt");
+    await modal.updateComplete;
+    expect(showcase(modal).resolved?.key).toBe(
+      "effect:transportShipTrail:owned_wake_alt",
     );
-    const none = effectCard(modal, "effect:none:transportShipTrail")!;
-    none.onActivate!(none.resolved);
-    expect(settings.getSelectedEffectName("transportShipTrail")).toBeNull();
+  });
+
+  it("renders stable loading skeletons and responsive locker markers", async () => {
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      ownershipState: "loading",
+      isLoading: true,
+    });
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    for (const region of ["loadout", "showcase", "grid"]) {
+      expect(
+        modal.querySelector(`[data-inventory-skeleton="${region}"]`),
+      ).toBeTruthy();
+    }
+
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      ownershipState: "loaded",
+      isLoading: false,
+    });
+    modal.requestUpdate();
+    await modal.updateComplete;
+    expect(loadout(modal).querySelector(".overflow-x-auto")).toBeTruthy();
+    expect(modal.querySelector("[data-inventory-grid]")?.classList).toContain(
+      "grid-cols-2",
+    );
+  });
+
+  it("retries a failed load without changing the saved loadout", async () => {
+    const settings = new UserSettings();
+    settings.setSelectedPatternName("pattern:stripes:red");
+    settings.setFlag("flag:owned_flag");
+    settings.setSelectedCrownName("owned_crown");
+    settings.setSelectedEffectName("transportShipTrail", "owned_wake");
+    const saved = {
+      pattern: localStorage.getItem(PATTERN_KEY),
+      flag: localStorage.getItem(FLAG_KEY),
+      crown: localStorage.getItem(CROWN_KEY),
+      effects: localStorage.getItem(EFFECTS_KEY),
+    };
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      cosmetics: null,
+      ownershipState: "error",
+      isLoading: false,
+      loadFailed: true,
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(catalog);
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    const retry = modal.querySelector<HTMLButtonElement>(
+      "[data-inventory-retry]",
+    )!;
+    expect(retry.textContent).toContain("Retry");
+    retry.click();
+    expect(retry.disabled).toBe(true);
+    retry.click();
+
+    await vi.waitFor(() => {
+      expect(modal.querySelector('[data-inventory-state="error"]')).toBeNull();
+    });
+    expect(fetchCosmetics).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(PATTERN_KEY)).toBe(saved.pattern);
+    expect(localStorage.getItem(FLAG_KEY)).toBe(saved.flag);
+    expect(localStorage.getItem(CROWN_KEY)).toBe(saved.crown);
+    expect(localStorage.getItem(EFFECTS_KEY)).toBe(saved.effects);
   });
 
   it("shows a non-destructive failure state", async () => {
@@ -239,7 +536,7 @@ describe("InventoryModal", () => {
     await modal.updateComplete;
 
     expect(modal.querySelector('[data-inventory-state="error"]')).toBeTruthy();
-    expect(modal.querySelector("cosmetic-button")).toBeNull();
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
     expect(settings.getSelectedCrownName()).toBe("owned_crown");
   });
 
@@ -260,8 +557,8 @@ describe("InventoryModal", () => {
     );
 
     await vi.waitFor(() => {
-      expect(tile(modal, "skin:owned_skin")).toBeDefined();
-      expect(tile(modal, "skin:locked_skin")).toBeUndefined();
+      expect(card(modal, "skin:owned_skin")).toBeDefined();
+      expect(card(modal, "skin:locked_skin")).toBeUndefined();
     });
   });
 
@@ -313,12 +610,12 @@ describe("InventoryModal", () => {
         (modal as unknown as { ownershipState: string }).ownershipState,
       ).toBe("guest");
     });
-    expect(tile(modal, "pattern:default")).toBeDefined();
-    expect(tile(modal, "skin:owned_skin")).toBeUndefined();
+    expect(card(modal, "pattern:default")).toBeDefined();
+    expect(card(modal, "skin:owned_skin")).toBeUndefined();
     await showTab(modal, "flags");
-    expect(tile(modal, "country:xx")).toBeDefined();
-    expect(tile(modal, "country:us")).toBeDefined();
-    expect(tile(modal, "flag:owned_flag")).toBeUndefined();
+    expect(card(modal, "country:xx")).toBeDefined();
+    expect(card(modal, "country:us")).toBeDefined();
+    expect(card(modal, "flag:owned_flag")).toBeUndefined();
     expect(vi.mocked(getUserMe)).not.toHaveBeenCalled();
   }, 30_000);
 
@@ -333,21 +630,21 @@ describe("InventoryModal", () => {
     modal.requestUpdate();
 
     await showTab(modal, "skins");
-    expect(tile(modal, "pattern:default")).toBeDefined();
+    expect(card(modal, "pattern:default")).toBeDefined();
     expect(modal.querySelector('[data-inventory-empty="skins"]')).toBeTruthy();
 
     await showTab(modal, "crowns");
-    expect(tile(modal, "crown:none")).toBeDefined();
+    expect(card(modal, "crown:none")).toBeDefined();
     expect(modal.querySelector('[data-inventory-empty="crowns"]')).toBeTruthy();
 
     await showTab(modal, "effects");
-    expect(effectCard(modal, "effect:none:transportShipTrail")).toBeDefined();
+    expect(card(modal, "effect:none:transportShipTrail")).toBeDefined();
     expect(
       modal.querySelector('[data-inventory-empty="effects"]'),
     ).toBeTruthy();
 
     await showTab(modal, "flags");
-    expect(tile(modal, "country:us")).toBeDefined();
+    expect(card(modal, "country:us")).toBeDefined();
     expect(modal.querySelector('[data-inventory-empty="flags"]')).toBeNull();
   }, 30_000);
 });
