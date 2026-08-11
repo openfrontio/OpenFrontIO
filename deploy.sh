@@ -109,7 +109,13 @@ fi
 UPDATE_SCRIPT="./update.sh" # Path to your update script
 REMOTE_USER="openfront"
 REMOTE_UPDATE_PATH="/home/$REMOTE_USER"
-REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh" # Where to place the script on server
+# Randomize the remote script name so concurrent deployments (different
+# branches share the staging host) don't overwrite each other's copy while
+# one of them is executing it.
+REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront-${SUBDOMAIN}-${RANDOM}.sh"
+# Lock serializing the host-side update (container swap, docker prune) across
+# concurrent deployments to the same host.
+REMOTE_LOCK_FILE="$REMOTE_UPDATE_PATH/update-openfront.lock"
 
 # Check if update script exists
 if [ ! -f "$UPDATE_SCRIPT" ]; then
@@ -164,7 +170,8 @@ OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
 OTEL_AUTH_HEADER=$OTEL_AUTH_HEADER
 EOL
 chmod 600 $ENV_FILE && \
-$REMOTE_UPDATE_SCRIPT $ENV_FILE"
+flock -w 900 $REMOTE_LOCK_FILE $REMOTE_UPDATE_SCRIPT $ENV_FILE && \
+rm -f $REMOTE_UPDATE_SCRIPT"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to execute update script on server."
