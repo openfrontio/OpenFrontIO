@@ -58,6 +58,10 @@ export class LocalServer {
   private clientID: ClientID | undefined;
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
+  // Set only once an upload got a 2xx, so endGame() retries failed or
+  // skipped win-time uploads during teardown.
+  private archived = false;
+  private archiveInFlight = false;
 
   private turnsExecuted = 0;
   private turnStartTime = 0;
@@ -231,6 +235,12 @@ export class LocalServer {
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
       this.allPlayersStats = clientMsg.allPlayersStats;
+      if (!this.isReplay) {
+        // Archive as soon as the game is decided: endGame() only runs during
+        // page teardown, where the auth refresh and upload race document
+        // destruction and can silently lose the record (#4931).
+        this.archiveGameRecord(false);
+      }
     }
   }
 
@@ -270,6 +280,15 @@ export class LocalServer {
     if (this.isReplay) {
       return;
     }
+    // Fallback for games that end without a winner (e.g. quitting early);
+    // decided games were already archived at win time.
+    this.archiveGameRecord(true);
+  }
+
+  private archiveGameRecord(unloading: boolean) {
+    if (this.archived || this.archiveInFlight) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
@@ -300,10 +319,14 @@ export class LocalServer {
       return;
     }
 
-    this.archiveGame(result.data);
+    this.archiveGame(result.data, unloading);
   }
 
-  private async archiveGame(record: PartialGameRecord): Promise<void> {
+  private async archiveGame(
+    record: PartialGameRecord,
+    unloading: boolean,
+  ): Promise<void> {
+    this.archiveInFlight = true;
     try {
       const authHeader = await getAuthHeader();
       if (authHeader === "") {
@@ -318,18 +341,32 @@ export class LocalServer {
         replacer,
       );
       const compressedData = await compress(jsonString);
-      await fetch(`${getApiBase()}/archive_singleplayer_game`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Encoding": "gzip",
-          Authorization: authHeader,
+      const response = await fetch(
+        `${getApiBase()}/archive_singleplayer_game`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Encoding": "gzip",
+            Authorization: authHeader,
+          },
+          body: compressedData,
+          // keepalive lets the request outlive page teardown but caps the body
+          // at 64 KiB, so only set it when the page is actually unloading.
+          keepalive: unloading,
         },
-        body: compressedData,
-        keepalive: true, // Ensures request completes even if page unloads
-      });
+      );
+      if (response.ok) {
+        this.archived = true;
+      } else {
+        console.error(
+          `Failed to archive singleplayer game: ${response.status}`,
+        );
+      }
     } catch (error) {
       console.error("Failed to archive singleplayer game:", error);
+    } finally {
+      this.archiveInFlight = false;
     }
   }
 }
