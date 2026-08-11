@@ -42,11 +42,13 @@
 ### Task 1: Stop checkout returns from auto-equipping cosmetics
 
 **Files:**
+
 - Modify: `src/client/Cosmetics.ts:66-80`
 - Modify: `src/client/Main.ts:746-774`
 - Test: `tests/client/CosmeticPurchaseCompletion.test.ts`
 
 **Interfaces:**
+
 - Consumes: the parsed cosmetic name and optional login token from `Client.handleUrl()`.
 - Produces: `completeCosmeticPurchaseReturn(cosmeticName: string, loginToken: string | null, actions: CosmeticPurchaseReturnActions): void`.
 
@@ -56,10 +58,7 @@ Create `tests/client/CosmeticPurchaseCompletion.test.ts` with action spies and s
 
 ```ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  FLAG_KEY,
-  PATTERN_KEY,
-} from "../../src/core/game/UserSettings";
+import { FLAG_KEY, PATTERN_KEY } from "../../src/core/game/UserSettings";
 import { completeCosmeticPurchaseReturn } from "../../src/client/Cosmetics";
 
 describe("completeCosmeticPurchaseReturn", () => {
@@ -147,16 +146,12 @@ export function completeCosmeticPurchaseReturn(
 Import it in `Main.ts` and replace the `setCosmetic` closure, `beforeunload` listener, and direct setting calls with:
 
 ```ts
-completeCosmeticPurchaseReturn(
-  cosmeticName,
-  params.get("login-token"),
-  {
-    strip,
-    alertAndStrip,
-    openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
-    refreshStore: () => this.storeModal.refresh(),
-  },
-);
+completeCosmeticPurchaseReturn(cosmeticName, params.get("login-token"), {
+  strip,
+  alertAndStrip,
+  openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
+  refreshStore: () => this.storeModal.refresh(),
+});
 return;
 ```
 
@@ -185,14 +180,19 @@ git commit -m "fix(cosmetics): stop auto-equipping purchases"
 ### Task 2: Turn the owned-cosmetics modal into Inventory
 
 **Files:**
+
 - Create: `src/client/InventoryModal.ts`
 - Delete: `src/client/CosmeticsModal.ts`
+- Modify: `src/client/Main.ts:25-27,197-248,370-381,962-974`
+- Modify: `src/client/LangSelector.ts:206-250`
+- Modify: `index.html:291-300`
 - Modify: `resources/lang/en.json:426-450,990-1015`
 - Test: `tests/client/InventoryModal.test.ts`
 
 **Interfaces:**
+
 - Consumes: `fetchCosmetics(): Promise<Cosmetics | null>`, `resolveCosmetics(...)`, `groupCosmeticVariants(...)`, the document `userMeResponse` event, `Countries`, and the existing `UserSettings` selection methods.
-- Produces: custom element `<inventory-modal>`, class `InventoryModal`, route name `inventory`, and tabs `skins | flags | crowns | effects`.
+- Produces: custom element `<inventory-modal>`, class `InventoryModal`, route name `inventory`, page id `page-inventory`, and tabs `skins | flags | crowns | effects`.
 
 - [ ] **Step 1: Write failing Inventory rendering and equip tests**
 
@@ -221,7 +221,11 @@ const catalog = {
   },
   crowns: {
     owned_crown: { ...common, name: "owned_crown", url: "/crowns/owned.svg" },
-    locked_crown: { ...common, name: "locked_crown", url: "/crowns/locked.svg" },
+    locked_crown: {
+      ...common,
+      name: "locked_crown",
+      url: "/crowns/locked.svg",
+    },
   },
   skins: {
     owned_skin: { ...common, name: "owned_skin", url: "/skins/owned.png" },
@@ -444,7 +448,36 @@ protected async onOpen(): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: Move flag construction and selection into Inventory**
+- [ ] **Step 4: Replace the old Cosmetics route and mounted element**
+
+Replace the old imports in `Main.ts` with:
+
+```ts
+import "./InventoryModal";
+```
+
+Replace the `cosmetics` registration with:
+
+```ts
+modalRouter.register("inventory", {
+  tag: "inventory-modal",
+  pageId: "page-inventory",
+});
+```
+
+Remove the obsolete `CosmeticsModal` lookup and `cosmetics-input-click` listener. Replace `cosmetics-modal` with `inventory-modal` in modal shutdown lists and `LangSelector`.
+
+Replace only the old `<cosmetics-modal>` element in `index.html`; leave `<flag-input-modal>` for Task 3:
+
+```html
+<inventory-modal
+  id="page-inventory"
+  inline
+  class="hidden w-full h-full page-content relative z-50"
+></inventory-modal>
+```
+
+- [ ] **Step 5: Move flag construction and selection into Inventory**
 
 Import `Countries`, `assetUrl`, and `Flag`. Add the same country flag adapter used by the old picker:
 
@@ -468,7 +501,7 @@ Implement `renderFlagGrid()` with this exact ordering and filtering:
 
 Each tile is a `ResolvedCosmetic` with `relationship: "owned"`; selection calls `this.userSettings.setFlag(key)` and `this.refresh()` without closing Inventory. Add `tab === "flags"` to `renderBody`.
 
-- [ ] **Step 5: Add loading, failure, and Store navigation states**
+- [ ] **Step 6: Add loading, failure, and Store navigation states**
 
 At the start of `renderBody`, return localized non-interactive states before rendering category tiles:
 
@@ -503,7 +536,7 @@ Keep the existing Store button above the active grid and keep search scoped to t
 
 Add `"inventory": "Inventory"` under `main`. Other languages use the existing English fallback until translated.
 
-- [ ] **Step 6: Run Inventory tests and typecheck**
+- [ ] **Step 7: Run Inventory tests and typecheck**
 
 Run:
 
@@ -514,10 +547,10 @@ npx tsc --noEmit
 
 Expected: all tests and typecheck PASS.
 
-- [ ] **Step 7: Commit the Inventory surface**
+- [ ] **Step 8: Commit the Inventory surface**
 
 ```bash
-git add src/client/InventoryModal.ts src/client/CosmeticsModal.ts resources/lang/en.json tests/client/InventoryModal.test.ts
+git add index.html resources/lang/en.json src/client/InventoryModal.ts src/client/CosmeticsModal.ts src/client/Main.ts src/client/LangSelector.ts tests/client/InventoryModal.test.ts
 git commit -m "feat(inventory): add owned cosmetic selector"
 ```
 
@@ -526,10 +559,11 @@ git commit -m "feat(inventory): add owned cosmetic selector"
 ### Task 3: Add Inventory navigation and remove lobby selectors
 
 **Files:**
+
 - Modify: `src/client/components/DesktopNavBar.ts:96-121`
 - Modify: `src/client/components/MobileNavBar.ts:112-140`
 - Modify: `src/client/components/PlayPage.ts:119-153`
-- Modify: `src/client/Main.ts:17-40,197-248,285-389,962-974`
+- Modify: `src/client/Main.ts:17-40,197-248,285-369,962-974`
 - Modify: `src/client/LangSelector.ts:206-250`
 - Modify: `index.html:240-300`
 - Delete: `src/client/CosmeticsInput.ts`
@@ -538,7 +572,8 @@ git commit -m "feat(inventory): add owned cosmetic selector"
 - Test: `tests/client/InventoryNavigation.test.ts`
 
 **Interfaces:**
-- Consumes: `<inventory-modal>`, `window.showPage`, `ModalRouter`, and the existing `.nav-menu-item[data-page]` delegation.
+
+- Consumes: the routed `<inventory-modal>`, `window.showPage`, `ModalRouter`, and the existing `.nav-menu-item[data-page]` delegation.
 - Produces: page id `page-inventory`, hash route `#modal=inventory&tab=<category>`, and desktop/mobile nav entries labeled by `main.inventory`.
 
 - [ ] **Step 1: Write failing navigation and lobby-removal tests**
@@ -567,11 +602,15 @@ describe("Inventory navigation", () => {
     const desktop = await mount(new DesktopNavBar());
     const mobile = await mount(new MobileNavBar());
     expect(
-      desktop.querySelector('[data-page="page-inventory"][data-i18n="main.inventory"]'),
+      desktop.querySelector(
+        '[data-page="page-inventory"][data-i18n="main.inventory"]',
+      ),
     ).toBeTruthy();
     expect(mobile.querySelector('[data-page="page-inventory"]')).toBeTruthy();
     expect(
-      mobile.querySelector('[data-page="page-inventory"] [data-i18n="main.inventory"], [data-page="page-inventory"][data-i18n="main.inventory"]'),
+      mobile.querySelector(
+        '[data-page="page-inventory"] [data-i18n="main.inventory"], [data-page="page-inventory"][data-i18n="main.inventory"]',
+      ),
     ).toBeTruthy();
   });
 
@@ -583,7 +622,10 @@ describe("Inventory navigation", () => {
   });
 
   it("declares only the routed Inventory page in index.html", () => {
-    const source = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf8");
+    const source = fs.readFileSync(
+      path.join(process.cwd(), "index.html"),
+      "utf8",
+    );
     expect(source).toContain('<inventory-modal\n          id="page-inventory"');
     expect(source).not.toContain("<cosmetics-modal");
     expect(source).not.toContain("<flag-input-modal");
@@ -617,25 +659,11 @@ Place Inventory immediately after Store in each navigation component. Desktop us
 
 Mobile uses its existing full-width nav button classes with `data-page="page-inventory"` and `data-i18n="main.inventory"`. Do not add `no-crazygames`; Inventory must remain reachable for country-flag selection.
 
-- [ ] **Step 4: Register and mount the routed Inventory page**
+- [ ] **Step 4: Remove the remaining flag-picker wiring**
 
-Replace the old imports in `Main.ts` with:
+Remove the `flag-input` and `flag-input-modal` imports, `Client.flagInput`, `flag-input` lookup, `flag-input-click` listeners, and `modalRouter.register("flag-input", ...)` from `Main.ts`. Remove `flag-input-modal` and `flag-input` from `LangSelector` and modal shutdown lists.
 
-```ts
-import "./InventoryModal";
-import { InventoryModal } from "./InventoryModal";
-```
-
-Register the page:
-
-```ts
-modalRouter.register("inventory", {
-  tag: "inventory-modal",
-  pageId: "page-inventory",
-});
-```
-
-Replace both old inline elements in `index.html` with:
+Delete only the old flag picker element from `index.html`; keep the Inventory element created in Task 2:
 
 ```html
 <inventory-modal
@@ -644,8 +672,6 @@ Replace both old inline elements in `index.html` with:
   class="hidden w-full h-full page-content relative z-50"
 ></inventory-modal>
 ```
-
-Update modal shutdown lists and `LangSelector` to use `inventory-modal`. Remove registration, lookup, and click-listener code for `cosmetics-modal`, `flag-input-modal`, `cosmetics-input`, and `flag-input`.
 
 - [ ] **Step 5: Remove the lobby controls and obsolete source files**
 
@@ -685,9 +711,11 @@ git commit -m "feat(inventory): add navigation entry"
 ### Task 4: Verify the complete Inventory flow
 
 **Files:**
+
 - Modify only if a verification failure identifies a task-scoped defect in files listed above.
 
 **Interfaces:**
+
 - Consumes: the completed Inventory page, navigation, checkout behavior, and existing client build.
 - Produces: evidence that the accepted flow works without unrelated changes.
 
