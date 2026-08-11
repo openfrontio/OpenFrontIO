@@ -9,7 +9,7 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
-import { assetUrl, getCdnBase } from "../core/AssetUrls";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -1189,7 +1189,11 @@ export class JoinLobbyModal extends BaseModal {
     if (isVersionedReplayPage(window.location.pathname)) {
       return false;
     }
-    const url = versionedReplayUrl(getCdnBase(), recordCommit, lobbyId);
+    const url = versionedReplayUrl(
+      ClientEnv.jwtAudience(),
+      recordCommit,
+      lobbyId,
+    );
     if (url === null) {
       return false;
     }

@@ -1,10 +1,10 @@
 // Versioned app shells let archived games from older builds be replayed after
 // their deployment is gone (#4934). Every deploy uploads a fully-rendered
-// index-<short-commit>.html next to the hashed assets on the CDN (see
-// update.sh); when a replay's record was produced by a different build, the
-// client navigates to the matching shell, whose baked gitCommit satisfies the
-// version check and whose bundle simulates the game with the rules it was
-// played under.
+// index-<short-commit>.html next to the hashed assets in the public bucket
+// (see update.sh), and the API worker serves it on replay.<domain>; when a
+// replay's record was produced by a different build, the client navigates to
+// the matching shell, whose baked gitCommit satisfies the version check and
+// whose bundle simulates the game with the rules it was played under.
 
 import { GameID } from "../core/Schemas";
 
@@ -12,18 +12,19 @@ import { GameID } from "../core/Schemas";
 const SHORT_COMMIT_LENGTH = 7;
 
 // URL of the versioned shell for a game record, with the game id in the hash
-// (#join=<id>, handled in Main.ts) because static CDN hosting has no path
-// routing. Null when no shell can exist: no CDN configured (dev), or the
-// record's commit is not a full SHA (e.g. "DEV").
+// (#join=<id>, handled in Main.ts) because static shell hosting has no path
+// routing. The replay host derives from the JWT audience exactly like
+// getApiBase() derives api.<audience>. Null when no shell can exist: dev
+// (localhost audience), or the record's commit is not a full SHA (e.g. "DEV").
 export function versionedReplayUrl(
-  cdnBase: string,
+  audience: string,
   recordCommit: string,
   gameID: GameID,
 ): string | null {
-  if (cdnBase === "") return null;
+  if (audience === "" || audience === "localhost") return null;
   if (!/^[0-9a-f]{40}$/.test(recordCommit)) return null;
   const shortCommit = recordCommit.slice(0, SHORT_COMMIT_LENGTH);
-  return `${cdnBase.replace(/\/+$/, "")}/index-${shortCommit}.html#join=${gameID}`;
+  return `https://replay.${audience}/index-${shortCommit}.html#join=${gameID}`;
 }
 
 // True when the current document is itself a versioned shell. Used to stop a
