@@ -66,6 +66,7 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
+import { isReplayShellHost } from "./VersionedReplay";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
@@ -236,9 +237,15 @@ class Client {
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
-    // script" after its load wait.
+    // script" after its load wait. Also skip on the versioned replay shells:
+    // the replay host may not be on the Turnstile site key's domain allowlist,
+    // so rendering the widget there alerts and rejects — and replays never
+    // send a token anyway (see getTurnstileToken below).
     this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ? null : getTurnstileToken();
+      ClientEnv.instanceId() === "desktop" ||
+      isReplayShellHost(window.location.hostname)
+        ? null
+        : getTurnstileToken();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -750,6 +757,19 @@ class Client {
       return;
     }
 
+    // On a versioned replay shell the pathname IS the game id: the worker
+    // serves the record's matching build at replay.<domain>/<gameId> (see
+    // VersionedReplay.ts).
+    if (isReplayShellHost(window.location.hostname)) {
+      const replayGameId = window.location.pathname.slice(1);
+      if (GAME_ID_REGEX.test(replayGameId)) {
+        window.showPage?.("page-join-lobby");
+        this.joinModal.open({ lobbyId: replayGameId });
+        console.log(`joining replay ${replayGameId}`);
+        return;
+      }
+    }
+
     const pathMatch = window.location.pathname.match(
       /^\/(?:w\d+\/)?game\/([^/]+)/,
     );
@@ -958,18 +978,26 @@ class Client {
       crazyGamesSDK.gameplayStart();
       document.body.classList.add("in-game");
 
-      // Ensure there's a homepage entry in history before adding the lobby entry
-      if (window.location.hash === "" || window.location.hash === "#") {
-        history.replaceState(null, "", window.location.origin + "#refresh");
-      }
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-      history.pushState(
-        null,
-        "",
-        lobbyIdHidden
-          ? "/streamer-mode"
-          : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
-      );
+      if (isReplayShellHost(window.location.hostname)) {
+        // Keep the canonical replay URL (replay.<domain>/<gameId>): the
+        // /game/<id> shape and the #refresh trampoline only exist on the
+        // game-server origin, so rewriting here would leave a URL that 404s
+        // when reloaded or shared (see VersionedReplay.ts).
+        history.pushState(null, "", window.location.pathname);
+      } else {
+        // Ensure there's a homepage entry in history before adding the lobby entry
+        if (window.location.hash === "" || window.location.hash === "#") {
+          history.replaceState(null, "", window.location.origin + "#refresh");
+        }
+        history.pushState(
+          null,
+          "",
+          lobbyIdHidden
+            ? "/streamer-mode"
+            : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+        );
+      }
 
       // Store current URL for popstate confirmation
       this.currentUrl = window.location.href;
@@ -978,9 +1006,18 @@ class Client {
 
   private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-    const targetUrl = lobbyIdHidden
-      ? "/streamer-mode"
-      : `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+    let targetUrl: string;
+    if (isReplayShellHost(window.location.hostname)) {
+      // Keep the canonical replay URL (replay.<domain>/<gameId>): the
+      // /game/<id> shape only exists on the game-server origin, so rewriting
+      // here would leave a URL that 404s when reloaded or shared (see
+      // VersionedReplay.ts).
+      targetUrl = window.location.pathname;
+    } else if (lobbyIdHidden) {
+      targetUrl = "/streamer-mode";
+    } else {
+      targetUrl = `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+    }
     const currentUrl = window.location.pathname;
 
     if (currentUrl !== targetUrl) {
@@ -1082,7 +1119,11 @@ class Client {
     if (
       ClientEnv.env() === GameEnv.Dev ||
       ClientEnv.instanceId() === "desktop" ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
+      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer ||
+      // Replays simulate locally from the archived record; there is no
+      // server to verify a token (and on the CDN replay shells Turnstile
+      // cannot load at all).
+      lobby.gameRecord !== undefined
     ) {
       return null;
     }

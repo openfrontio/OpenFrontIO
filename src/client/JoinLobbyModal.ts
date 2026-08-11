@@ -33,6 +33,7 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { normaliseMapKey } from "./Utils";
+import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
@@ -418,6 +419,9 @@ export class JoinLobbyModal extends BaseModal {
       // Active lobby not found, check if it's an archived game
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
+          return;
+        case "redirected":
+          // Navigating to the versioned replay shell; leave state as-is.
           return;
         case "not_found":
           this.resetTrackingState();
@@ -1056,6 +1060,9 @@ export class JoinLobbyModal extends BaseModal {
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
           return;
+        case "redirected":
+          // Navigating to the versioned replay shell; leave state as-is.
+          return;
         case "not_found":
           this.resetTrackingState();
           this.showMessage(translateText("private_lobby.not_found"), "red");
@@ -1136,7 +1143,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private async checkArchivedGame(
     lobbyId: string,
-  ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
+  ): Promise<
+    "success" | "redirected" | "not_found" | "version_mismatch" | "error"
+  > {
     const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
       method: "GET",
       headers: {
@@ -1164,6 +1173,9 @@ export class JoinLobbyModal extends BaseModal {
         `Git commit hash mismatch for game ${safeLobbyId}`,
         archiveData.details,
       );
+      if (await this.redirectToVersionedShell(lobbyId)) {
+        return "redirected";
+      }
       return "version_mismatch";
     }
 
@@ -1182,5 +1194,34 @@ export class JoinLobbyModal extends BaseModal {
       }),
     );
     return "success";
+  }
+
+  // The record was produced by a different build. replay.<domain>/<gameId>
+  // serves the matching versioned shell (uploaded by update.sh on every
+  // deploy); if it exists, navigate there and let that build replay the game
+  // (#4934). The probe requires text/html so a misrouted host that answers
+  // 200 with something else can't strand the player on a broken page.
+  private async redirectToVersionedShell(lobbyId: string): Promise<boolean> {
+    if (isReplayShellHost(window.location.hostname)) {
+      return false;
+    }
+    const url = versionedReplayUrl(ClientEnv.jwtAudience(), lobbyId);
+    if (url === null) {
+      return false;
+    }
+    try {
+      const probe = await fetch(url, { method: "HEAD" });
+      if (!probe.ok) {
+        return false;
+      }
+      const contentType = probe.headers.get("content-type") ?? "";
+      if (!contentType.includes("text/html")) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    window.location.href = url;
+    return true;
   }
 }
