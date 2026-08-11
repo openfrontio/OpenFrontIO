@@ -271,6 +271,8 @@ describe("InventoryModal", () => {
       "inventory.showing_effects": "Effects equipped: {count}",
       "inventory.selected_cosmetic": "Selected {name}",
       "common.none": "No flag",
+      "common.not_logged_in": "Not logged in",
+      "main.store": "Store",
       "store.patterns": "Skins",
       "store.flags": "Flags",
       "store.crowns": "Crowns",
@@ -322,6 +324,29 @@ describe("InventoryModal", () => {
         .querySelector("o-modal")
         ?.shadowRoot?.querySelector('[role="tablist"]'),
     ).toBeNull();
+  });
+
+  it("keeps the auth-aware action in the modal header", async () => {
+    let action = modal.querySelector<HTMLElement>(
+      "[data-inventory-header-action]",
+    )!;
+    await (action as LitElement).updateComplete;
+    expect(action.closest('[slot="header"]')).toBeTruthy();
+    expect(action.textContent?.trim()).toBe("Store");
+
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      userMeResponse: false,
+      ownershipState: "guest",
+    });
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    action = modal.querySelector<HTMLElement>(
+      "[data-inventory-header-action]",
+    )!;
+    await (action as LitElement).updateComplete;
+    expect(action.closest('[slot="header"]')).toBeTruthy();
+    expect(action.textContent?.trim()).toBe("Not logged in");
   });
 
   it("keeps loadout, card, and swatch synchronized", async () => {

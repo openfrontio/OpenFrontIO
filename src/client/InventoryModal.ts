@@ -24,6 +24,7 @@ import {
 import { PlayerPattern } from "../core/Schemas";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticDisplayName } from "./components/CosmeticPresentation";
@@ -33,7 +34,6 @@ import type {
   InventoryCategory,
   InventoryLoadoutEntry,
 } from "./components/InventoryLoadoutBar";
-import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
@@ -522,6 +522,7 @@ export class InventoryModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const isLoggedIn = this.userMeResponse !== false;
     return html`
       <div
         class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
@@ -530,7 +531,23 @@ export class InventoryModal extends BaseModal {
           title: translateText("inventory.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
-          rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+          rightContent: html`<o-button
+            data-inventory-header-action
+            class="no-crazygames"
+            variant=${isLoggedIn ? "primary" : "danger"}
+            size="sm"
+            .translationKey=${isLoggedIn
+              ? "main.store"
+              : "common.not_logged_in"}
+            @click=${() => {
+              if (isLoggedIn) {
+                this.close();
+                window.showPage?.("page-item-store");
+              } else {
+                window.showPage?.("page-account");
+              }
+            }}
+          ></o-button>`,
         })}
 
         <div class="md:flex items-center gap-2 justify-center mt-4">
@@ -622,18 +639,6 @@ export class InventoryModal extends BaseModal {
           this.setActiveTab(selected)}
       ></inventory-loadout-bar>
       <div class="px-3 pb-3">${grid}</div>
-      <div class="flex shrink-0 justify-center pb-3">
-        <o-button
-          class="no-crazygames"
-          variant="primary"
-          size="sm"
-          translationKey="main.store"
-          @click=${() => {
-            this.close();
-            window.showPage?.("page-item-store");
-          }}
-        ></o-button>
-      </div>
     `;
   }
 
