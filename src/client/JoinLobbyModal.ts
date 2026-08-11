@@ -9,7 +9,7 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
-import { assetUrl } from "../core/AssetUrls";
+import { assetUrl, getCdnBase } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -33,6 +33,7 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { normaliseMapKey } from "./Utils";
+import { isVersionedReplayPage, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
@@ -399,6 +400,9 @@ export class JoinLobbyModal extends BaseModal {
       // Active lobby not found, check if it's an archived game
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
+          return;
+        case "redirected":
+          // Navigating to the versioned replay shell; leave state as-is.
           return;
         case "not_found":
           this.resetTrackingState();
@@ -1037,6 +1041,9 @@ export class JoinLobbyModal extends BaseModal {
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
           return;
+        case "redirected":
+          // Navigating to the versioned replay shell; leave state as-is.
+          return;
         case "not_found":
           this.resetTrackingState();
           this.showMessage(translateText("private_lobby.not_found"), "red");
@@ -1117,7 +1124,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private async checkArchivedGame(
     lobbyId: string,
-  ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
+  ): Promise<
+    "success" | "redirected" | "not_found" | "version_mismatch" | "error"
+  > {
     const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
       method: "GET",
       headers: {
@@ -1145,6 +1154,9 @@ export class JoinLobbyModal extends BaseModal {
         `Git commit hash mismatch for game ${safeLobbyId}`,
         archiveData.details,
       );
+      if (await this.redirectToVersionedShell(parsed.data.gitCommit, lobbyId)) {
+        return "redirected";
+      }
       return "version_mismatch";
     }
 
@@ -1163,5 +1175,37 @@ export class JoinLobbyModal extends BaseModal {
       }),
     );
     return "success";
+  }
+
+  // The record was produced by a different build. A matching versioned shell
+  // (index-<short-commit>.html, uploaded by update.sh on every deploy) may
+  // exist on the CDN; if so, navigate there and let that build replay the game
+  // (#4934). The probe requires text/html because shells uploaded before the
+  // API stored HTML with a real content type would download instead of render.
+  private async redirectToVersionedShell(
+    recordCommit: string,
+    lobbyId: string,
+  ): Promise<boolean> {
+    if (isVersionedReplayPage(window.location.pathname)) {
+      return false;
+    }
+    const url = versionedReplayUrl(getCdnBase(), recordCommit, lobbyId);
+    if (url === null) {
+      return false;
+    }
+    try {
+      const probe = await fetch(url.split("#")[0], { method: "HEAD" });
+      if (!probe.ok) {
+        return false;
+      }
+      const contentType = probe.headers.get("content-type") ?? "";
+      if (!contentType.includes("text/html")) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    window.location.href = url;
+    return true;
   }
 }

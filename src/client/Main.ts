@@ -77,6 +77,7 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
+import { isVersionedReplayPage } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
@@ -249,9 +250,15 @@ class Client {
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
-    // script" after its load wait.
+    // script" after its load wait. Also skip on the versioned replay shells:
+    // the CDN origin is not on the Turnstile site key's domain allowlist, so
+    // rendering the widget there alerts and rejects — and replays never send
+    // a token anyway (see getTurnstileToken below).
     this.turnstileTokenPromise =
-      ClientEnv.instanceId() === "desktop" ? null : getTurnstileToken();
+      ClientEnv.instanceId() === "desktop" ||
+      isVersionedReplayPage(window.location.pathname)
+        ? null
+        : getTurnstileToken();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -813,6 +820,17 @@ class Client {
       return;
     }
 
+    // #join=<gameId>: hash-based equivalent of the /game/<id> path below, used
+    // by the versioned replay shells on the CDN, where there is no path
+    // routing (see VersionedReplay.ts).
+    const joinMatch = decodedHash.match(/^#join=(.*)$/);
+    if (joinMatch && GAME_ID_REGEX.test(joinMatch[1])) {
+      window.showPage?.("page-join-lobby");
+      this.joinModal.open({ lobbyId: joinMatch[1] });
+      console.log(`joining lobby ${joinMatch[1]} from hash`);
+      return;
+    }
+
     const pathMatch = window.location.pathname.match(
       /^\/(?:w\d+\/)?game\/([^/]+)/,
     );
@@ -1146,7 +1164,11 @@ class Client {
     if (
       ClientEnv.env() === GameEnv.Dev ||
       ClientEnv.instanceId() === "desktop" ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
+      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer ||
+      // Replays simulate locally from the archived record; there is no
+      // server to verify a token (and on the CDN replay shells Turnstile
+      // cannot load at all).
+      lobby.gameRecord !== undefined
     ) {
       return null;
     }
