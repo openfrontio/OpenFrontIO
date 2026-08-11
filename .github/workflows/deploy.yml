@@ -77,18 +77,23 @@ jobs:
           # become hyphens to keep the name readable (fix/some-bug ->
           # fix-some-bug), anything else outside [a-zA-Z0-9-] is dropped, and the
           # result is capped at the 63-octet label limit with no edge hyphens.
-          LABEL="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_/' '--' | tr -cd 'a-zA-Z0-9-')"
+          READABLE="$(printf '%s' "$RAW_SUBDOMAIN" | tr '_/' '--')"
+          LABEL="$(printf '%s' "$READABLE" | tr -cd 'a-zA-Z0-9-')"
           LABEL="$(printf '%s' "${LABEL:0:63}" | sed 's/^-*//; s/-*$//')"
           if [ -z "$LABEL" ]; then
             echo "Error: subdomain is empty after sanitizing '$RAW_SUBDOMAIN'"
             exit 1
           fi
-          # Normalizing is many-to-one - fix/foo and fixfoo both yield "fixfoo" - so
-          # whenever it altered the name, append a digest of the original to keep
-          # distinct branches on distinct hosts. Names that pass through untouched
-          # (main, nightly, a hand-typed prod subdomain) keep their exact spelling,
-          # which update.sh relies on for its `SUBDOMAIN = main` restart check.
-          if [ "$LABEL" != "$RAW_SUBDOMAIN" ]; then
+          # The hyphen mapping above is deliberately canonical: fix/foo and
+          # fix-foo share a subdomain. But dropping or trimming characters is
+          # lossy in ways that aren't obvious from the branch name (feat/héllo
+          # and feat/hllo would collide), so whenever sanitizing went beyond
+          # the hyphen mapping, append a digest of the original to keep such
+          # branches on distinct hosts. Names that pass through untouched
+          # (main, nightly, a hand-typed prod subdomain) keep their exact
+          # spelling, which update.sh relies on for its `SUBDOMAIN = main`
+          # restart check.
+          if [ "$LABEL" != "$READABLE" ]; then
             HASH="$(printf '%s' "$RAW_SUBDOMAIN" | sha256sum | cut -c1-6)"
             LABEL="$(printf '%s' "${LABEL:0:56}" | sed 's/-*$//')-${HASH}"
           fi
