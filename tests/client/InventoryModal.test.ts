@@ -185,6 +185,14 @@ const emptyCatalog = {
   effects: {},
 } as unknown as Cosmetics;
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 function card(modal: InventoryModal, key: string): CosmeticCard | undefined {
   return [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].find(
     (candidate) =>
@@ -410,6 +418,56 @@ describe("InventoryModal", () => {
     }
   });
 
+  it("equips an owned Effects card in every exact slot", async () => {
+    const settings = new UserSettings();
+    const slots = [
+      ["transportShipTrail", "transportShipTrail", "owned_wake"],
+      ["nukeTrail", "nukeTrail", "owned_nuke_trail"],
+      ["nukeExplosion", "atom", "owned_atom"],
+      ["nukeExplosion", "hydro", "owned_hydro"],
+      ["nukeExplosion", "mirvWarhead", "owned_mirv"],
+      ["structures", "structures", "owned_structures"],
+      ["warship", "warship", "owned_warship"],
+    ] as const;
+
+    await showTab(modal, "effects");
+    for (const [effectType, slot, selectedName] of slots) {
+      await showEffectSlot(
+        modal,
+        effectType,
+        effectType === "nukeExplosion" ? slot : undefined,
+      );
+      await activateCard(modal, `effect:${effectType}:${selectedName}`);
+
+      expect(settings.getSelectedEffectName(slot)).toBe(selectedName);
+      expect(showcase(modal).resolved?.key).toBe(
+        `effect:${effectType}:${selectedName}`,
+      );
+    }
+  });
+
+  it("resynchronizes the Effects showcase when the grid remounts", async () => {
+    const settings = new UserSettings();
+    settings.setSelectedEffectName("transportShipTrail", "owned_wake");
+    settings.setSelectedEffectName("hydro", "owned_hydro");
+
+    await showTab(modal, "effects");
+    await showEffectSlot(modal, "nukeExplosion", "hydro");
+    expect(showcase(modal).resolved?.key).toBe(
+      "effect:nukeExplosion:owned_hydro",
+    );
+
+    await showTab(modal, "flags");
+    await showTab(modal, "effects");
+
+    expect(showcase(modal).resolved?.key).toBe(
+      "effect:transportShipTrail:owned_wake",
+    );
+    expect(card(modal, "effect:transportShipTrail:owned_wake")?.state).toBe(
+      "equipped",
+    );
+  });
+
   it("summarizes all equipped effect slots in one loadout category", async () => {
     const settings = new UserSettings();
     settings.setSelectedEffectName("transportShipTrail", "owned_wake");
@@ -514,14 +572,42 @@ describe("InventoryModal", () => {
     expect(retry.disabled).toBe(true);
     retry.click();
 
-    await vi.waitFor(() => {
-      expect(modal.querySelector('[data-inventory-state="error"]')).toBeNull();
-    });
+    await vi.waitFor(() =>
+      expect(modal.querySelector("inventory-loadout-bar")).toBeTruthy(),
+    );
+    expect(modal.querySelector("[data-inventory-state]")).toBeNull();
+    expect(
+      (modal as unknown as { ownershipState: string }).ownershipState,
+    ).toBe("loaded");
+    expect((modal as unknown as { isLoading: boolean }).isLoading).toBe(false);
     expect(fetchCosmetics).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(PATTERN_KEY)).toBe(saved.pattern);
     expect(localStorage.getItem(FLAG_KEY)).toBe(saved.flag);
     expect(localStorage.getItem(CROWN_KEY)).toBe(saved.crown);
     expect(localStorage.getItem(EFFECTS_KEY)).toBe(saved.effects);
+  });
+
+  it("restores an enabled Retry button after a failed retry", async () => {
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      cosmetics: null,
+      ownershipState: "error",
+      isLoading: false,
+      loadFailed: true,
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    modal.querySelector<HTMLButtonElement>("[data-inventory-retry]")!.click();
+
+    await vi.waitFor(() => {
+      const retry = modal.querySelector<HTMLButtonElement>(
+        "[data-inventory-retry]",
+      );
+      expect(retry).toBeTruthy();
+      expect(retry?.disabled).toBe(false);
+    });
+    expect((modal as unknown as { isLoading: boolean }).isLoading).toBe(false);
   });
 
   it("shows a non-destructive failure state", async () => {
@@ -560,6 +646,49 @@ describe("InventoryModal", () => {
       expect(card(modal, "skin:owned_skin")).toBeDefined();
       expect(card(modal, "skin:locked_skin")).toBeUndefined();
     });
+  });
+
+  it("keeps newer signed-in ownership while the initial load is in flight", async () => {
+    const catalogRequest = deferred<Cosmetics | null>();
+    const authRequest = deferred<false>();
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      cosmetics: null,
+      userMeResponse: false,
+      ownershipState: "loading",
+      isLoading: false,
+      loadFailed: false,
+    });
+    vi.mocked(fetchCosmetics).mockReturnValue(catalogRequest.promise);
+    vi.mocked(userAuth).mockReturnValue(authRequest.promise);
+
+    modal.open();
+    await vi.waitFor(() => expect(userAuth).toHaveBeenCalledTimes(1));
+    const signedInLoad = modal.onUserMe(ownedUser);
+    catalogRequest.resolve(catalog);
+    await signedInLoad;
+    await modal.updateComplete;
+
+    const stateBeforeStaleAuthSettles = {
+      isLoading: (modal as unknown as { isLoading: boolean }).isLoading,
+      hasOwnedSkin: card(modal, "skin:owned_skin") !== undefined,
+    };
+    authRequest.resolve(false);
+    await Promise.resolve();
+    await modal.updateComplete;
+
+    expect(fetchCosmetics).toHaveBeenCalledTimes(1);
+    expect(stateBeforeStaleAuthSettles).toEqual({
+      isLoading: false,
+      hasOwnedSkin: true,
+    });
+    expect(
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse,
+    ).toBe(ownedUser);
+    expect(
+      (modal as unknown as { ownershipState: string }).ownershipState,
+    ).toBe("loaded");
+    expect(card(modal, "skin:owned_skin")).toBeDefined();
   });
 
   it("preserves the complete saved loadout when authenticated ownership refresh fails", async () => {

@@ -74,7 +74,9 @@ export class InventoryModal extends BaseModal {
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
   private userMeResponse: UserMeResponse | false = false;
-  private inventoryLoad: Promise<void> | null = null;
+  private catalogLoad: Promise<Cosmetics | null> | null = null;
+  private inventoryLoadId = 0;
+  private ownershipLoadId = 0;
   private resolvedCache:
     | {
         cosmetics: Cosmetics | null;
@@ -169,61 +171,82 @@ export class InventoryModal extends BaseModal {
     this.requestUpdate();
   }
 
+  protected onTabEnter(key: string): void {
+    if (key === "effects") this.activeEffectSlot = null;
+  }
+
   private async loadOwnership(
     userMeResponse?: UserMeResponse | false,
   ): Promise<void> {
+    const loadId = ++this.ownershipLoadId;
     if (userMeResponse !== undefined && userMeResponse !== false) {
       this.userMeResponse = userMeResponse;
       this.ownershipState = "loaded";
       return;
     }
 
-    const auth = await userAuth();
-    if (auth === false) {
-      this.userMeResponse = false;
-      this.ownershipState = "guest";
-      return;
-    }
+    try {
+      const auth = await userAuth();
+      if (loadId !== this.ownershipLoadId) return;
+      if (auth === false) {
+        this.userMeResponse = false;
+        this.ownershipState = "guest";
+        return;
+      }
 
-    const response = userMeResponse === false ? false : await getUserMe();
-    if (response === false) {
+      const response = userMeResponse === false ? false : await getUserMe();
+      if (loadId !== this.ownershipLoadId) return;
+      if (response === false) {
+        this.userMeResponse = false;
+        this.ownershipState = "error";
+        return;
+      }
+
+      this.userMeResponse = response;
+      this.ownershipState = "loaded";
+    } catch {
+      if (loadId !== this.ownershipLoadId) return;
       this.userMeResponse = false;
       this.ownershipState = "error";
-      return;
     }
-
-    this.userMeResponse = response;
-    this.ownershipState = "loaded";
   }
 
-  private loadInventory(
+  private loadCatalog(): Promise<Cosmetics | null> {
+    if (this.catalogLoad !== null) return this.catalogLoad;
+    const request = fetchCosmetics();
+    const guarded = request.finally(() => {
+      if (this.catalogLoad === guarded) this.catalogLoad = null;
+    });
+    this.catalogLoad = guarded;
+    return guarded;
+  }
+
+  private async loadInventory(
     userMeResponse?: UserMeResponse | false,
   ): Promise<void> {
-    if (this.inventoryLoad !== null) return this.inventoryLoad;
-
-    this.inventoryLoad = (async () => {
-      this.isLoading = true;
-      this.loadFailed = false;
-      this.ownershipState = "loading";
-      try {
-        const [cosmetics] = await Promise.all([
-          fetchCosmetics(),
-          this.loadOwnership(userMeResponse),
-        ]);
-        this.cosmetics = cosmetics;
-        this.loadFailed = cosmetics === null;
-      } catch {
-        this.cosmetics = null;
-        this.loadFailed = true;
-        this.ownershipState = "error";
-      } finally {
+    const loadId = ++this.inventoryLoadId;
+    this.isLoading = true;
+    this.loadFailed = false;
+    this.ownershipState = "loading";
+    try {
+      const [cosmetics] = await Promise.all([
+        this.loadCatalog(),
+        this.loadOwnership(userMeResponse),
+      ]);
+      if (loadId !== this.inventoryLoadId) return;
+      this.cosmetics = cosmetics;
+      this.loadFailed = cosmetics === null;
+    } catch {
+      if (loadId !== this.inventoryLoadId) return;
+      this.cosmetics = null;
+      this.loadFailed = true;
+      if (this.ownershipState === "loading") this.ownershipState = "error";
+    } finally {
+      if (loadId === this.inventoryLoadId) {
         this.isLoading = false;
         this.updateFromSettings();
       }
-    })().finally(() => {
-      this.inventoryLoad = null;
-    });
-    return this.inventoryLoad;
+    }
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
