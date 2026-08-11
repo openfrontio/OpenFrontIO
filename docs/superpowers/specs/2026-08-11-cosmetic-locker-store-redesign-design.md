@@ -128,10 +128,10 @@ equipable.
 ### Initial and Changing Selection
 
 When a Store category has purchasable items, its first visible item becomes the
-initial inspected item. Search or category changes keep the current inspection
-only when that item remains visible; otherwise the first visible item becomes
-active. An empty result shows the existing localized empty state and no stale
-detail panel.
+initial inspected item. Category, catalog, or affiliate-mode changes keep the
+current inspection only when that item remains visible; otherwise the first
+visible item becomes active. An empty category shows the existing localized
+empty state and no stale detail panel.
 
 ## Shared Component Architecture
 
@@ -187,7 +187,7 @@ read-only.
 ### Store
 
 1. Store resolves its existing purchasable items.
-2. Category/search state produces a visible item list.
+2. Category, catalog, and affiliate state produce a visible item list.
 3. Store owns one inspected `ResolvedCosmetic` from that list.
 4. Card selection replaces the inspected item.
 5. Detail-panel swatches replace it with the matching resolved colour variant.
@@ -222,7 +222,8 @@ On narrow screens:
 - showcase and Store detail panel stack above their grids;
 - cosmetic grids use two columns at phone widths and expand as space permits;
 - all controls remain usable without hover; and
-- sticky behavior must not obscure category tabs, search, or checkout controls.
+- sticky behavior must not obscure category tabs, Inventory search, or Store
+  checkout controls.
 
 ## Accessibility and Localization
 
@@ -251,8 +252,8 @@ On narrow screens:
   choice, localized empty copy, and Store path.
 - Flags remain populated by standard country flags even when no cosmetic flags
   are owned.
-- Store search/category results with no items show an empty state and clear the
-  inspected detail content.
+- Store categories with no items show an empty state and clear the inspected
+  detail content.
 
 ## Verification
 
@@ -272,7 +273,8 @@ Automated coverage must prove:
 - packs and subscriptions continue to render and purchase correctly;
 - the win-modal pattern promotion retains its three-item direct-purchase flow;
 - ownership/catalog failures remain non-destructive and Retry can recover;
-- category search and empty states cannot leave a stale Store detail item;
+- category, catalog, affiliate, and empty states cannot leave a stale Store
+  detail item;
 - desktop and mobile DOM structure supports the specified layout and accessible
   interactions; and
 - existing Inventory routing and Store checkout tests remain green.
