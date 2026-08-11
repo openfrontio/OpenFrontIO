@@ -7,12 +7,14 @@ import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics, Crown, Flag, Skin } from "../core/CosmeticSchemas";
 import {
   CROWN_KEY,
+  FLAG_KEY,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
 import "./components/EffectsGrid";
@@ -20,13 +22,14 @@ import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
-  getPlayerCosmetics,
   groupCosmeticVariants,
   resolveCosmetics,
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
+
+type OwnershipState = "loading" | "guest" | "loaded" | "error";
 
 function countryFlag(name: string, code: string): Flag {
   return {
@@ -46,11 +49,11 @@ export class InventoryModal extends BaseModal {
   protected routerName = "inventory";
 
   @state() private selectedPattern: PlayerPattern | null = null;
-  @state() private selectedColor: string | null = null;
   @state() private selectedSkinName: string | null = null;
   @state() private search = "";
   @state() private isLoading = true;
   @state() private loadFailed = false;
+  @state() private ownershipState: OwnershipState = "loading";
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -102,26 +105,59 @@ export class InventoryModal extends BaseModal {
     );
   }
 
-  private async updateFromSettings() {
-    const cosmetics = await getPlayerCosmetics();
-    this.selectedPattern = cosmetics.pattern ?? null;
-    this.selectedColor = cosmetics.color?.color ?? null;
-    this.selectedSkinName = cosmetics.skin?.name ?? null;
+  private updateFromSettings(): void {
+    this.selectedPattern = this.userSettings.getSelectedPatternName(
+      this.cosmetics,
+    );
+    this.selectedSkinName = this.userSettings.getSelectedSkinName();
   }
 
-  private async loadCatalog(): Promise<void> {
+  private async loadOwnership(
+    userMeResponse?: UserMeResponse | false,
+  ): Promise<void> {
+    if (userMeResponse !== undefined && userMeResponse !== false) {
+      this.userMeResponse = userMeResponse;
+      this.ownershipState = "loaded";
+      return;
+    }
+
+    const auth = await userAuth();
+    if (auth === false) {
+      this.userMeResponse = false;
+      this.ownershipState = "guest";
+      return;
+    }
+
+    const response = userMeResponse === false ? false : await getUserMe();
+    if (response === false) {
+      this.userMeResponse = false;
+      this.ownershipState = "error";
+      return;
+    }
+
+    this.userMeResponse = response;
+    this.ownershipState = "loaded";
+  }
+
+  private async loadInventory(
+    userMeResponse?: UserMeResponse | false,
+  ): Promise<void> {
     this.isLoading = true;
     this.loadFailed = false;
-    this.cosmetics = await fetchCosmetics();
+    this.ownershipState = "loading";
+    const [cosmetics] = await Promise.all([
+      fetchCosmetics(),
+      this.loadOwnership(userMeResponse),
+    ]);
+    this.cosmetics = cosmetics;
     this.loadFailed = this.cosmetics === null;
     this.isLoading = false;
-    await this.updateFromSettings();
+    this.updateFromSettings();
     this.refresh();
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
-    this.userMeResponse = userMeResponse;
-    await this.loadCatalog();
+    await this.loadInventory(userMeResponse);
   }
 
   private includedInSearch(name: string): boolean {
@@ -131,6 +167,26 @@ export class InventoryModal extends BaseModal {
 
   private handleSearch(event: Event) {
     this.search = (event.target as HTMLInputElement).value;
+  }
+
+  private hasOwnedCatalogItem(
+    types: readonly ResolvedCosmetic["type"][],
+  ): boolean {
+    return resolveCosmetics(this.cosmetics, this.userMeResponse, null).some(
+      (resolved) =>
+        types.includes(resolved.type) &&
+        resolved.cosmetic !== null &&
+        resolved.relationship === "owned",
+    );
+  }
+
+  private renderEmptyState(category: "skins" | "crowns" | "effects") {
+    return html`<p
+      data-inventory-empty=${category}
+      class="px-4 pt-4 text-center text-sm font-medium text-white/60"
+    >
+      ${translateText(`inventory.no_owned_${category}`)}
+    </p>`;
   }
 
   /** Combined patterns + skins grid. To the user they're the same: "skins". */
@@ -149,6 +205,9 @@ export class InventoryModal extends BaseModal {
     );
 
     return html`
+      ${this.hasOwnedCatalogItem(["pattern", "skin"])
+        ? null
+        : this.renderEmptyState("skins")}
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
@@ -205,6 +264,9 @@ export class InventoryModal extends BaseModal {
 
     const selectedCrown = this.userSettings.getSelectedCrownName();
     return html`
+      ${this.hasOwnedCatalogItem(["crown"])
+        ? null
+        : this.renderEmptyState("crowns")}
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
@@ -226,7 +288,13 @@ export class InventoryModal extends BaseModal {
   }
 
   private renderFlagGrid(): TemplateResult {
-    const selectedFlag = this.userSettings.getFlag() ?? "";
+    const storedFlag = localStorage.getItem(FLAG_KEY) ?? "";
+    const selectedFlag =
+      storedFlag === "" ||
+      storedFlag.startsWith("flag:") ||
+      storedFlag.startsWith("country:")
+        ? storedFlag
+        : `country:${storedFlag}`;
     const cosmeticFlags = resolveCosmetics(
       this.cosmetics,
       this.userMeResponse,
@@ -309,7 +377,7 @@ export class InventoryModal extends BaseModal {
   }
 
   protected renderBody(tab: string) {
-    if (this.isLoading) {
+    if (this.isLoading || this.ownershipState === "loading") {
       return html`<div
         data-inventory-state="loading"
         class="p-8 text-center text-white/60"
@@ -317,7 +385,7 @@ export class InventoryModal extends BaseModal {
         ${translateText("inventory.loading")}
       </div>`;
     }
-    if (this.loadFailed) {
+    if (this.loadFailed || this.ownershipState === "error") {
       return html`<div
         data-inventory-state="error"
         class="p-8 text-center text-red-300"
@@ -331,13 +399,18 @@ export class InventoryModal extends BaseModal {
     } else if (tab === "crowns") {
       grid = this.renderCrownGrid();
     } else if (tab === "effects") {
-      grid = html`<effects-grid
-        mode="select"
-        tabbed
-        .cosmetics=${this.cosmetics}
-        .userMeResponse=${this.userMeResponse}
-        .search=${this.search}
-      ></effects-grid>`;
+      grid = html`
+        ${this.hasOwnedCatalogItem(["effect"])
+          ? null
+          : this.renderEmptyState("effects")}
+        <effects-grid
+          mode="select"
+          tabbed
+          .cosmetics=${this.cosmetics}
+          .userMeResponse=${this.userMeResponse}
+          .search=${this.search}
+        ></effects-grid>
+      `;
     } else {
       grid = this.renderSkinGrid();
     }
@@ -358,15 +431,25 @@ export class InventoryModal extends BaseModal {
     `;
   }
 
+  public open(args?: Record<string, unknown>): void {
+    const tabs = this.modalConfig().tabs ?? [];
+    const requestedTab =
+      typeof args?.tab === "string" && tabs.some((tab) => tab.key === args.tab)
+        ? args.tab
+        : null;
+    const tab = requestedTab ?? (this.activeTab || tabs[0]?.key);
+    super.open({ ...args, ...(tab ? { tab } : {}) });
+  }
+
   protected async onOpen(): Promise<void> {
-    if (this.userMeResponse === false) {
-      this.userMeResponse = await getUserMe();
-    }
-    if (this.cosmetics === null && !this.loadFailed) {
-      await this.loadCatalog();
+    if (
+      this.ownershipState === "loading" ||
+      (this.cosmetics === null && !this.loadFailed)
+    ) {
+      await this.loadInventory();
       return;
     }
-    await this.updateFromSettings();
+    this.updateFromSettings();
     this.refresh();
   }
 
@@ -404,7 +487,6 @@ export class InventoryModal extends BaseModal {
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
-    this.selectedColor = null;
     if (pattern === null) {
       this.userSettings.setSelectedPatternName(undefined);
     } else {

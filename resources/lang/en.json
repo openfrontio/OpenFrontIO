@@ -451,6 +451,9 @@
   "inventory": {
     "load_failed": "Couldn't load your inventory. Please reload and try again.",
     "loading": "Loading inventory…",
+    "no_owned_crowns": "You don't own any crowns yet.",
+    "no_owned_effects": "You don't own any effects yet.",
+    "no_owned_skins": "You don't own any skins yet.",
     "title": "Inventory"
   },
   "difficulty": {
