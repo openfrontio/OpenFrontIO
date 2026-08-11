@@ -117,10 +117,11 @@ export class DoomsdayClockExecution implements Execution {
     const ffa = mg.config().gameConfig().gameMode === GameMode.FFA;
     const sides = this.sides(contenders, ffa);
 
-    // A winner is already inevitable (one side left): idle. Before the first
-    // wave the bar is 0, so nobody is flagged anyway.
-    if (sides.length < 2) {
+    // Winner is already set/inevitable (one side left): idle.
+    // Before the first wave the bar is 0, nobody is flagged anyway.
+    if (mg.getWinner() !== null || sides.length < 2) {
       for (const p of contenders) p.clearDoomsdayClock();
+      this.active = false;
       return;
     }
 
