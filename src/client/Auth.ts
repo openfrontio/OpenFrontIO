@@ -101,8 +101,10 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
   } finally {
     __jwt = null;
     localStorage.removeItem(PERSISTENT_ID_KEY);
-    new UserSettings().clearFlag();
-    new UserSettings().setSelectedPatternName(undefined);
+    // Switch cosmetics back to the logged-out scope. The player's own
+    // selections stay stored under their publicId and are restored on the
+    // next login (#4955).
+    UserSettings.setPlayerId(null);
   }
 }
 

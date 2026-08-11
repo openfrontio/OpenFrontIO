@@ -37,6 +37,7 @@ import {
   ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
+import { UserSettings } from "../core/game/UserSettings";
 import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
 
@@ -195,6 +196,9 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         console.error("Invalid response", error);
         return false;
       }
+      // Activate this player's cosmetic selections (and adopt any made while
+      // logged out) before the profile is handed to callers.
+      UserSettings.setPlayerId(result.data.player.publicId);
       return result.data;
     } catch (e) {
       return false;
