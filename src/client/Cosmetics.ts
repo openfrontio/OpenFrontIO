@@ -78,6 +78,27 @@ export interface InsufficientCurrency {
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
 export type PurchaseResult = InsufficientCurrency | void;
 
+export interface CosmeticPurchaseReturnActions {
+  strip(): void;
+  alertAndStrip(message: string): void;
+  openTokenLogin(token: string): void;
+  refreshStore(): void;
+}
+
+export function completeCosmeticPurchaseReturn(
+  cosmeticName: string,
+  loginToken: string | null,
+  actions: CosmeticPurchaseReturnActions,
+): void {
+  if (loginToken) {
+    actions.strip();
+    actions.openTokenLogin(loginToken);
+    return;
+  }
+  actions.alertAndStrip(`purchase succeeded: ${cosmeticName}`);
+  actions.refreshStore();
+}
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,

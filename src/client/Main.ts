@@ -21,7 +21,10 @@ import { getUserMe, invalidateUserMe } from "./Api";
 import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import {
+  completeCosmeticPurchaseReturn,
+  getPlayerCosmeticsRefs,
+} from "./Cosmetics";
 import "./CosmeticsInput";
 import "./CosmeticsModal";
 import { CosmeticsModal } from "./CosmeticsModal";
@@ -750,28 +753,12 @@ class Client {
         return;
       }
 
-      const setCosmetic = () => {
-        if (cosmeticName.startsWith("pattern:")) {
-          this.userSettings.setSelectedPatternName(cosmeticName);
-        } else if (cosmeticName.startsWith("flag:")) {
-          this.userSettings.setFlag(cosmeticName);
-        }
-      };
-      const token = params.get("login-token");
-
-      if (token) {
-        strip();
-        window.addEventListener("beforeunload", () => {
-          // The page reloads after token login, so we need to save the pattern name
-          // in case it is unset during reload.
-          setCosmetic();
-        });
-        this.tokenLoginModal.openWithToken(token);
-      } else {
-        alertAndStrip(`purchase succeeded: ${cosmeticName}`);
-        setCosmetic();
-        this.storeModal.refresh();
-      }
+      completeCosmeticPurchaseReturn(cosmeticName, params.get("login-token"), {
+        strip,
+        alertAndStrip,
+        openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
+        refreshStore: () => this.storeModal.refresh(),
+      });
       return;
     }
 
