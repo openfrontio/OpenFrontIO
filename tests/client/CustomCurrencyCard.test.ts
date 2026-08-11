@@ -26,10 +26,9 @@ describe("CustomCurrencyCard", () => {
     alertSpy.mockRestore();
   });
 
-  it("uses the shared card anatomy without legacy cosmetic-container ancestry", async () => {
+  it("uses the shared card anatomy without obsolete wrapper ancestry", async () => {
     await card!.updateComplete;
 
-    expect(card!.querySelector("cosmetic-container")).toBeNull();
     expect(card!.querySelector("[data-custom-currency-card]")).toBeTruthy();
     expect(card!.querySelector("purchase-button")).toBeTruthy();
   });

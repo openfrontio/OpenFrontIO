@@ -10,7 +10,9 @@ import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { getUserMe } from "../../Api";
-import "../../components/CosmeticButton";
+import "../../components/CosmeticCard";
+import { cosmeticDisplayName } from "../../components/CosmeticPresentation";
+import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
 import {
@@ -190,11 +192,19 @@ export class WinModal extends LitElement implements Controller {
     this.patternContent = html`
       <div class="flex gap-4 flex-nowrap justify-start items-start">
         ${selected.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
+          (resolved) => html`
+            <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
+              <cosmetic-card .resolved=${resolved}></cosmetic-card>
+              <purchase-button
+                .product=${resolved.cosmetic?.product ?? null}
+                .priceHard=${resolved.cosmetic?.priceHard ?? null}
+                .priceSoft=${resolved.cosmetic?.priceSoft ?? null}
+                .itemName=${cosmeticDisplayName(resolved)}
+                .onPurchaseDollar=${() => purchaseCosmetic(resolved, "dollar")}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}
+              ></purchase-button>
+            </div>
           `,
         )}
       </div>

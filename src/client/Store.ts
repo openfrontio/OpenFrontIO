@@ -4,7 +4,6 @@ import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CosmeticButton";
 import "./components/CosmeticCard";
 import "./components/CosmeticDetailPanel";
 import { cosmeticDisplayName } from "./components/CosmeticPresentation";
