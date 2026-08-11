@@ -1,11 +1,17 @@
 import type { LitElement } from "lit";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
 import type { CosmeticButton } from "../../src/client/components/CosmeticButton";
+
+vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
+  fetchCosmetics: vi.fn(),
+}));
 
 const common = {
   product: null,
@@ -100,6 +106,7 @@ describe("InventoryModal", () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    vi.mocked(fetchCosmetics).mockReset();
     modal = document.createElement("inventory-modal") as InventoryModal;
     modal.setAttribute("inline", "");
     document.body.appendChild(modal);
@@ -179,5 +186,24 @@ describe("InventoryModal", () => {
     expect(modal.querySelector('[data-inventory-state="error"]')).toBeTruthy();
     expect(modal.querySelector("cosmetic-button")).toBeNull();
     expect(settings.getSelectedCrownName()).toBe("owned_crown");
+  });
+
+  it("updates owned cosmetics from the signed-in document event", async () => {
+    Object.assign(modal as unknown as Record<string, unknown>, {
+      cosmetics: catalog as Cosmetics,
+      userMeResponse: false,
+      isLoading: false,
+      loadFailed: false,
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(catalog);
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: ownedUser }));
+
+    await vi.waitFor(() => {
+      expect(tile(modal, "skin:owned_skin")).toBeDefined();
+      expect(tile(modal, "skin:locked_skin")).toBeUndefined();
+    });
   });
 });

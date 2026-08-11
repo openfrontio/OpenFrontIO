@@ -13,6 +13,7 @@ import {
 } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { BaseModal } from "./components/BaseModal";
+import { getUserMe } from "./Api";
 import "./components/CosmeticButton";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
@@ -71,14 +72,15 @@ export class InventoryModal extends BaseModal {
     this.refresh();
   };
 
+  private _onUserMe = (event: Event) => {
+    void this.onUserMe(
+      (event as CustomEvent<UserMeResponse | false>).detail,
+    );
+  };
+
   connectedCallback() {
     super.connectedCallback();
-    document.addEventListener(
-      "userMeResponse",
-      (event: CustomEvent<UserMeResponse | false>) => {
-        this.onUserMe(event.detail);
-      },
-    );
+    document.addEventListener("userMeResponse", this._onUserMe);
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onCosmeticSelected,
@@ -91,6 +93,7 @@ export class InventoryModal extends BaseModal {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    document.removeEventListener("userMeResponse", this._onUserMe);
     window.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onCosmeticSelected,
@@ -358,6 +361,9 @@ export class InventoryModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
+    if (this.userMeResponse === false) {
+      this.userMeResponse = await getUserMe();
+    }
     if (this.cosmetics === null && !this.loadFailed) {
       await this.loadCatalog();
       return;
