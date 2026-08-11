@@ -160,6 +160,25 @@ describe("CosmeticCard", () => {
     expect(card!.querySelectorAll("[data-variant-key]")).toHaveLength(0);
   });
 
+  it("gives swatches touch-sized buttons with explicit selection state", async () => {
+    await createCard();
+    card!.variants = [red, blue];
+    card!.activeVariantKey = blue.key;
+    await card!.updateComplete;
+
+    const swatches = [
+      ...card!.querySelectorAll<HTMLButtonElement>("[data-variant-key]"),
+    ];
+    expect(swatches).toHaveLength(2);
+    for (const swatch of swatches) {
+      expect(swatch.classList).toContain("h-11");
+      expect(swatch.classList).toContain("w-11");
+      expect(swatch.querySelector("[data-cosmetic-swatch-dot]")).toBeTruthy();
+    }
+    expect(swatches[0].getAttribute("aria-pressed")).toBe("false");
+    expect(swatches[1].getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("uses neutral rarity accents and visible focus styles", async () => {
     await createCard();
     card!.variants = [red, blue];
@@ -175,5 +194,21 @@ describe("CosmeticCard", () => {
     expect(shell.className).not.toMatch(/emerald|sky|blue/);
     expect(main.className).toMatch(/focus-visible:/);
     expect(swatch.className).toMatch(/focus-visible:/);
+  });
+
+  it("uses a strong green equipped shell and prominent badge", async () => {
+    installTranslations();
+    await createCard();
+    card!.state = "equipped";
+    await card!.updateComplete;
+
+    const shell = card!.querySelector<HTMLElement>("[data-cosmetic-rarity]")!;
+    const badge = card!.querySelector<HTMLElement>(
+      "[data-cosmetic-equipped='true']",
+    )!;
+    expect(shell.className).toMatch(/border-emerald/);
+    expect(shell.className).toMatch(/shadow-\[/);
+    expect(badge.className).toMatch(/bg-emerald/);
+    expect(badge.className).toMatch(/shadow/);
   });
 });

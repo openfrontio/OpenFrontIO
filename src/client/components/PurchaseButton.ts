@@ -26,7 +26,7 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       left: -60%;
       width: 40%;
       height: 100%;
-      background: linear-gradient(90deg, transparent 0%, rgba(134,239,172,0.5) 50%, transparent 100%);
+      background: linear-gradient(90deg, transparent 0%, rgba(147,197,253,0.5) 50%, transparent 100%);
       transform: skewX(-15deg);
       opacity: 0;
     }
@@ -34,16 +34,16 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       animation: purchase-streak 0.7s ease-in-out;
     }
     .purchase-btn-wrap:hover .purchase-sparkle-btn {
-      background: rgb(34,197,94);
-      border-color: rgb(74,222,128);
+      background: rgb(37,99,235);
+      border-color: rgb(96,165,250);
       color: white;
-      box-shadow: 0 0 20px rgba(74,222,128,0.6);
+      box-shadow: 0 0 20px rgba(96,165,250,0.6);
     }
     .purchase-btn-wrap:hover .purchase-sparkle-btn-hard {
-      background: rgb(22,163,74);
-      border-color: rgb(74,222,128);
+      background: rgb(29,78,216);
+      border-color: rgb(96,165,250);
       color: white;
-      box-shadow: 0 0 20px rgba(74,222,128,0.6);
+      box-shadow: 0 0 20px rgba(96,165,250,0.6);
     }
     .purchase-btn-wrap:hover .purchase-sparkle-btn-soft {
       background: rgb(180,83,9);
@@ -52,19 +52,19 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       box-shadow: 0 0 20px rgba(217,119,6,0.6);
     }
     @keyframes purchase-pulse {
-      0%   { box-shadow: 0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(34,197,94,0.3); }
-      50%  { box-shadow: 0 0 25px rgba(74,222,128,0.9), 0 0 50px rgba(34,197,94,0.5); }
-      100% { box-shadow: 0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(34,197,94,0.3); }
+      0%   { box-shadow: 0 0 15px rgba(96,165,250,0.6), 0 0 30px rgba(37,99,235,0.3); }
+      50%  { box-shadow: 0 0 25px rgba(96,165,250,0.9), 0 0 50px rgba(37,99,235,0.5); }
+      100% { box-shadow: 0 0 15px rgba(96,165,250,0.6), 0 0 30px rgba(37,99,235,0.3); }
     }
     .purchase-sparkle-btn:hover {
-      background: rgb(22,163,74) !important;
-      border-color: rgb(74,222,128) !important;
+      background: rgb(29,78,216) !important;
+      border-color: rgb(96,165,250) !important;
       color: white !important;
       animation: purchase-pulse 1.2s ease-in-out infinite !important;
     }
     .purchase-sparkle-btn-hard:hover {
-      background: rgb(22,163,74) !important;
-      border-color: rgb(74,222,128) !important;
+      background: rgb(29,78,216) !important;
+      border-color: rgb(96,165,250) !important;
       color: white !important;
       animation: purchase-pulse 1.2s ease-in-out infinite !important;
     }
@@ -102,8 +102,8 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       width: 3px;
       height: 3px;
       border-radius: 50%;
-      background: rgba(74,222,128,0.9);
-      box-shadow: 0 0 4px rgba(74,222,128,0.8);
+      background: rgba(96,165,250,0.9);
+      box-shadow: 0 0 4px rgba(96,165,250,0.8);
       opacity: 0;
       display: none;
     }
@@ -127,8 +127,8 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: rgba(74,222,128,1);
-      box-shadow: 0 0 6px rgba(74,222,128,0.9), 0 0 2px rgba(255,255,255,0.5);
+      background: rgba(96,165,250,1);
+      box-shadow: 0 0 6px rgba(96,165,250,0.9), 0 0 2px rgba(255,255,255,0.5);
       opacity: 0;
       display: none;
     }
@@ -193,7 +193,7 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       width: 40px;
       height: 40px;
       border: 4px solid rgba(255,255,255,0.2);
-      border-top-color: rgb(74,222,128);
+      border-top-color: rgb(96,165,250);
       border-radius: 50%;
       animation: cosmetic-spin 0.8s linear infinite;
     }
@@ -277,9 +277,14 @@ export class PurchaseButton extends LitElement {
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
     if (!handler || this.busy) return;
     this.busy = true;
-    void Promise.resolve(handler())
+    void Promise.resolve()
+      .then(() => handler())
       .then((result) => {
         if (result) this.insufficient = result;
+      })
+      .catch((error: unknown) => {
+        console.error("Purchase callback failed", error);
+        alert(translateText("store.purchase_failed"));
       })
       .finally(() => (this.busy = false));
   }
@@ -294,8 +299,8 @@ export class PurchaseButton extends LitElement {
 
     return html`
       <button
-        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
-         hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
+        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
+         hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
@@ -310,8 +315,8 @@ export class PurchaseButton extends LitElement {
   private renderHardButton() {
     return html`
       <button
-        class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
-         hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
+        class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+         hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => {
           e.stopPropagation();

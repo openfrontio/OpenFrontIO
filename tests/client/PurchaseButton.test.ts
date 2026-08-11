@@ -8,6 +8,8 @@ describe("PurchaseButton", () => {
   afterEach(() => {
     button?.remove();
     button = undefined;
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("shows busy state and suppresses duplicate standalone dollar purchases", async () => {
@@ -51,5 +53,68 @@ describe("PurchaseButton", () => {
       button.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!
         .disabled,
     ).toBe(false);
+  });
+
+  it("uses blue purchase controls instead of equipped-state green", async () => {
+    button = document.createElement("purchase-button") as PurchaseButton;
+    button.dollarPrice = "$5";
+    button.priceHard = 100;
+    button.onPurchaseDollar = vi.fn(async () => undefined);
+    button.onPurchaseHard = vi.fn(async () => undefined);
+    document.body.appendChild(button);
+    await button.updateComplete;
+
+    for (const selector of [
+      ".purchase-sparkle-btn",
+      ".purchase-sparkle-btn-hard",
+    ]) {
+      const purchase = button.querySelector<HTMLButtonElement>(selector)!;
+      expect(purchase.className).toMatch(/blue/);
+      expect(purchase.className).not.toMatch(/green|emerald/);
+    }
+  });
+
+  it("clears busy state and reports a synchronous purchase throw", async () => {
+    const alertMock = vi.fn();
+    vi.stubGlobal("alert", alertMock);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    button = document.createElement("purchase-button") as PurchaseButton;
+    button.dollarPrice = "$5";
+    button.onPurchaseDollar = () => {
+      throw new Error("sync purchase failure");
+    };
+    document.body.appendChild(button);
+    await button.updateComplete;
+
+    button.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+
+    await vi.waitFor(() =>
+      expect(alertMock).toHaveBeenCalledWith("store.purchase_failed"),
+    );
+    expect(
+      button.querySelector(".purchase-btn-wrap")?.getAttribute("aria-busy"),
+    ).toBeNull();
+  });
+
+  it("clears busy state and handles a rejected purchase callback", async () => {
+    const alertMock = vi.fn();
+    vi.stubGlobal("alert", alertMock);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    button = document.createElement("purchase-button") as PurchaseButton;
+    button.dollarPrice = "$5";
+    button.onPurchaseDollar = async () => {
+      throw new Error("rejected purchase failure");
+    };
+    document.body.appendChild(button);
+    await button.updateComplete;
+
+    button.querySelector<HTMLButtonElement>(".purchase-sparkle-btn")!.click();
+
+    await vi.waitFor(() =>
+      expect(alertMock).toHaveBeenCalledWith("store.purchase_failed"),
+    );
+    expect(
+      button.querySelector(".purchase-btn-wrap")?.getAttribute("aria-busy"),
+    ).toBeNull();
   });
 });

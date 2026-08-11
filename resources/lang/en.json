@@ -424,13 +424,18 @@
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
   },
   "cosmetics": {
+    "common": "Common",
+    "epic": "Epic",
     "free": "+{numFree} BONUS!",
     "hard": "Plutonium",
+    "legendary": "Legendary",
     "per_day": "/day",
     "public_lobbies": "Public lobbies",
+    "rare": "Rare",
     "search": "Search...",
     "signup_bonus": "Signup bonus",
     "soft": "Caps",
+    "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
     "verified_name": "Verified username"
   },

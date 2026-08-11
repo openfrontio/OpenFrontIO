@@ -251,7 +251,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
-  __cosmetics = (async () => {
+  const request = (async () => {
     try {
       const response = await fetch(`${getApiBase()}/cosmetics.json`);
       if (!response.ok) {
@@ -275,7 +275,13 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       return null;
     }
   })();
-  return __cosmetics;
+  __cosmetics = request;
+  void request.then((result) => {
+    if (result === null && __cosmetics === request) {
+      __cosmetics = null;
+    }
+  });
+  return request;
 }
 
 export async function resolveFlagUrl(

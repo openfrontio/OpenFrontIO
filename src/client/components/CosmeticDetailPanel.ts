@@ -1,7 +1,10 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
-import { cosmeticDisplayName, cosmeticRarity } from "./CosmeticPresentation";
+import {
+  cosmeticDisplayName,
+  cosmeticRarityLabel,
+} from "./CosmeticPresentation";
 import "./CosmeticPreview";
 
 @customElement("cosmetic-detail-panel")
@@ -51,13 +54,17 @@ export class CosmeticDetailPanel extends LitElement {
           type="button"
           data-detail-variant=${variant.key}
           aria-label=${label}
-          aria-current=${isActive ? "true" : nothing}
-          class="w-7 h-7 rounded-full p-0 appearance-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${isActive
-            ? "ring-2 ring-white"
-            : ""}"
-          style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%);"
+          aria-pressed=${isActive ? "true" : "false"}
+          class="flex h-11 w-11 items-center justify-center rounded-full p-0 appearance-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
           @click=${() => this.onVariantActivate?.(variant)}
-        ></button>`;
+        >
+          <span
+            data-detail-swatch-dot
+            aria-hidden="true"
+            class="h-7 w-7 rounded-full ${isActive ? "ring-2 ring-white" : ""}"
+            style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%);"
+          ></span>
+        </button>`;
       })}
     </div>`;
   }
@@ -92,7 +99,7 @@ export class CosmeticDetailPanel extends LitElement {
           data-detail-rarity
           class="text-sm uppercase tracking-wide text-white/60"
         >
-          ${cosmeticRarity(resolved)}
+          ${cosmeticRarityLabel(resolved)}
         </span>
         ${artist
           ? html`<span data-detail-artist class="text-sm text-white/70"
@@ -111,7 +118,13 @@ export class CosmeticDetailPanel extends LitElement {
         role="status"
         class="min-h-5 text-sm text-white/80"
       >
-        ${this.statusText}
+        ${this.context === "inventory" && this.statusText
+          ? html`<span
+              data-detail-equipped
+              class="inline-flex items-center rounded-full bg-emerald-500 px-3 py-1 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
+              >✓ ${this.statusText}</span
+            >`
+          : this.statusText}
       </div>
       ${this.actionContent}
     </section>`;

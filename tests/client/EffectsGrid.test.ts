@@ -286,4 +286,24 @@ describe("EffectsGrid", () => {
       effectCard(grid, "effect:nukeExplosion:locked_hydro_alt")?.state,
     ).toBe("idle");
   });
+
+  it("uses a two-column phone grid with responsive expansion", async () => {
+    grid = await createGrid();
+    grid.mode = "purchase";
+    grid.tabbed = true;
+    grid.requestUpdate();
+    await grid.updateComplete;
+    clickEffectType(grid, "nukeExplosion");
+    await grid.updateComplete;
+    clickNukeType(grid, "hydro");
+    await grid.updateComplete;
+
+    const items = grid.querySelector<HTMLElement>("[data-effects-items]")!;
+    expect(items).toBeTruthy();
+    expect(items.classList).toContain("grid");
+    expect(items.classList).toContain("grid-cols-2");
+    expect(items.classList).toContain("sm:grid-cols-3");
+    expect(items.classList).toContain("lg:grid-cols-4");
+    expect(items.className).not.toMatch(/\bflex\b|flex-wrap/);
+  });
 });

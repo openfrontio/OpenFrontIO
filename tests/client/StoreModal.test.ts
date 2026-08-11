@@ -136,6 +136,7 @@ function explosion(name: string, nukeType: "atom" | "hydro") {
 const wake = trail("wake");
 const atom = explosion("atom_burst", "atom");
 const hydro = explosion("hydro_burst", "hydro");
+const hydroAlt = explosion("hydro_burst_alt", "hydro");
 
 const pack: ResolvedCosmetic = {
   type: "pack",
@@ -291,7 +292,7 @@ describe("StoreModal cosmetic browser", () => {
     const settings = new UserSettings();
     settings.removeCached(PATTERN_KEY);
     settings.removeCached(EFFECTS_KEY);
-    resolvedCatalog = [red, blue, green, flag, wake, atom, hydro];
+    resolvedCatalog = [red, blue, green, flag, wake, atom, hydro, hydroAlt];
     vi.mocked(fetchCosmetics).mockReset();
     vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
     vi.mocked(resolveCosmetics).mockReset();
@@ -434,6 +435,39 @@ describe("StoreModal cosmetic browser", () => {
     expect(detail(modal).resolved?.key).toBe(hydro.key);
     expect(hydroCard.state).toBe("focused");
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
+  });
+
+  it("reconciles inspected effects immediately when subtype tabs change", async () => {
+    const { store: modal, grid } = await openEffectsStore();
+    expect(detail(modal).resolved?.key).toBe(wake.key);
+
+    grid
+      .querySelectorAll<HTMLButtonElement>("button[class*='-mb-px']")[2]!
+      .click();
+    await grid.updateComplete;
+    await modal.updateComplete;
+    expect(detail(modal).resolved?.key).toBe(atom.key);
+
+    const nukeTabs = () =>
+      grid.querySelectorAll<HTMLButtonElement>("button[class*='rounded-full']");
+    nukeTabs()[1]!.click();
+    await grid.updateComplete;
+    await modal.updateComplete;
+    expect(detail(modal).resolved?.key).toBe(hydro.key);
+
+    const alternate = card(modal, hydroAlt.key)!;
+    alternate.onActivate!(alternate.resolved);
+    await modal.updateComplete;
+    nukeTabs()[1]!.click();
+    await grid.updateComplete;
+    await modal.updateComplete;
+    expect(detail(modal).resolved?.key).toBe(hydroAlt.key);
+
+    nukeTabs()[2]!.click();
+    await grid.updateComplete;
+    await modal.updateComplete;
+    expect(detail(modal).resolved).toBeNull();
+    expect(modal.querySelector("[data-detail-context]")).toBeNull();
   });
 
   it("uses the browser shell and exact resolved pack purchase", async () => {

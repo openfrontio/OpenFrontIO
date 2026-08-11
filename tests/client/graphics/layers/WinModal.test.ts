@@ -156,14 +156,14 @@ describe("WinModal pattern promotion", () => {
     vi.mocked(resolveCosmetics).mockReturnValue(purchasablePatterns);
 
     modal = document.createElement("win-modal") as WinModal;
-    document.body.appendChild(modal);
-    await modal.updateComplete;
-
-    await modal.loadPatternContent();
     Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
       rand: 0.75,
       isWin: true,
     });
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+
+    await modal.loadPatternContent();
     modal.requestUpdate();
     await modal.updateComplete;
 
@@ -171,6 +171,10 @@ describe("WinModal pattern promotion", () => {
     expect(promotions).toHaveLength(3);
     expect(modal.querySelectorAll("cosmetic-card")).toHaveLength(3);
     expect(modal.querySelectorAll("purchase-button")).toHaveLength(3);
+    for (const card of modal.querySelectorAll("cosmetic-card")) {
+      expect(card.querySelector("[data-cosmetic-main]")?.tagName).toBe("DIV");
+      expect(card.querySelectorAll("button")).toHaveLength(0);
+    }
     const legacyButtonTag = ["cosmetic", "button"].join("-");
     const legacyContainerTag = ["cosmetic", "container"].join("-");
     expect(modal.querySelectorAll(legacyButtonTag)).toHaveLength(0);

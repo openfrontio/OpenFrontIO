@@ -107,6 +107,10 @@ describe("CosmeticDetailPanel", () => {
     expect(panel.querySelector("[data-detail-status]")?.textContent).toContain(
       "Equipped",
     );
+    const badge = panel.querySelector<HTMLElement>("[data-detail-equipped]")!;
+    expect(badge).toBeTruthy();
+    expect(badge.className).toMatch(/bg-emerald/);
+    expect(badge.className).toMatch(/font-black/);
   });
 
   it("clears stale detail content when no cosmetic is resolved", async () => {
@@ -121,5 +125,26 @@ describe("CosmeticDetailPanel", () => {
 
     expect(panel.querySelector("[data-detail-context]")).toBeNull();
     expect(panel.querySelector("[data-test-action]")).toBeNull();
+  });
+
+  it("gives detail swatches touch-sized buttons with explicit selection state", async () => {
+    panel = createPanel();
+    panel.resolved = red;
+    panel.variants = [red, blue];
+    panel.activeVariantKey = red.key;
+    document.body.appendChild(panel);
+    await panel.updateComplete;
+
+    const swatches = [
+      ...panel.querySelectorAll<HTMLButtonElement>("[data-detail-variant]"),
+    ];
+    expect(swatches).toHaveLength(2);
+    for (const swatch of swatches) {
+      expect(swatch.classList).toContain("h-11");
+      expect(swatch.classList).toContain("w-11");
+      expect(swatch.querySelector("[data-detail-swatch-dot]")).toBeTruthy();
+    }
+    expect(swatches[0].getAttribute("aria-pressed")).toBe("true");
+    expect(swatches[1].getAttribute("aria-pressed")).toBe("false");
   });
 });

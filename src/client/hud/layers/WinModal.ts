@@ -194,7 +194,10 @@ export class WinModal extends LitElement implements Controller {
         ${selected.map(
           (resolved) => html`
             <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
-              <cosmetic-card .resolved=${resolved}></cosmetic-card>
+              <cosmetic-card
+                .resolved=${resolved}
+                .interactive=${false}
+              ></cosmetic-card>
               <purchase-button
                 .product=${resolved.cosmetic?.product ?? null}
                 .priceHard=${resolved.cosmetic?.priceHard ?? null}

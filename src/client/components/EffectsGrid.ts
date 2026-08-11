@@ -1,4 +1,4 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import {
@@ -69,6 +69,8 @@ export class EffectsGrid extends LitElement {
   onActiveSlotChange?: (selection: EffectSlotSelection) => void;
   @property({ attribute: false })
   onPurchaseFocus?: (resolved: ResolvedCosmetic) => void;
+  @property({ attribute: false })
+  onVisiblePurchaseItemsChange?: (items: readonly ResolvedCosmetic[]) => void;
   @property({ type: String }) focusedKey: string | null = null;
   @state() private activeType: EffectType = EFFECT_TYPES[0];
   // Active nuke-explosion sub-tab (atom / hydro / mirv); only shown for the
@@ -137,11 +139,13 @@ export class EffectsGrid extends LitElement {
   private selectEffectType(type: EffectType) {
     this.activeType = type;
     this.emitActiveSlot();
+    this.emitVisiblePurchaseItems();
   }
 
   private selectNukeType(type: NukeExplosionType) {
     this.activeNukeType = type;
     this.emitActiveSlot();
+    this.emitVisiblePurchaseItems();
   }
 
   // The selection slot for a tile: for nuke explosions the effect's own nukeType
@@ -180,6 +184,43 @@ export class EffectsGrid extends LitElement {
     const owned = ofType.filter((r) => r.relationship === "owned");
     // The Default tile has no name to match — hide it while searching.
     return this.search.trim() ? owned : [noneTile(effectType), ...owned];
+  }
+
+  private visiblePurchaseItems(): ResolvedCosmetic[] {
+    const all = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    );
+    const activeType = this.tabbed ? this.activeType : this.effectType;
+    const types: readonly EffectType[] = activeType
+      ? [activeType]
+      : EFFECT_TYPES;
+    return types.flatMap((type) => {
+      const items = this.itemsForType(all, type);
+      return type === "nukeExplosion"
+        ? items.filter((item) => this.nukeTypeOf(item) === this.activeNukeType)
+        : items;
+    });
+  }
+
+  private emitVisiblePurchaseItems(): void {
+    if (this.mode !== "purchase") return;
+    this.onVisiblePurchaseItemsChange?.(this.visiblePurchaseItems());
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    if (
+      changed.has("cosmetics") ||
+      changed.has("userMeResponse") ||
+      changed.has("affiliateCode") ||
+      changed.has("mode") ||
+      changed.has("search") ||
+      changed.has("effectType") ||
+      changed.has("tabbed")
+    ) {
+      this.emitVisiblePurchaseItems();
+    }
   }
 
   private renderTile(slot: string, r: ResolvedCosmetic): TemplateResult {
@@ -309,7 +350,8 @@ export class EffectsGrid extends LitElement {
                   ? this.renderNukeTypeTabBar()
                   : nothing}
                 <div
-                  class="flex flex-wrap gap-4 justify-center items-stretch content-start"
+                  data-effects-items
+                  class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 >
                   ${s.items.map((r) =>
                     this.renderTile(this.slotForTile(s.type, r), r),

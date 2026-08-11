@@ -402,6 +402,12 @@ export class StoreModal extends BaseModal {
         .affiliateCode=${this.affiliateCode}
         .focusedKey=${this.inspected?.key ?? null}
         .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+        .onVisiblePurchaseItemsChange=${(
+          items: readonly ResolvedCosmetic[],
+        ) => {
+          this.selectVisible(items.map((item) => [item]));
+          this.requestUpdate();
+        }}
       ></effects-grid>`,
     );
   }
