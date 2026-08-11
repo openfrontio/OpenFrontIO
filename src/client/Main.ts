@@ -25,7 +25,6 @@ import {
   completeCosmeticPurchaseReturn,
   getPlayerCosmeticsRefs,
 } from "./Cosmetics";
-import "./CosmeticsInput";
 import "./InventoryModal";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -35,10 +34,6 @@ import {
   isDesktopShell,
 } from "./DesktopShell";
 import "./FeaturedStream";
-import "./FlagInput";
-import { FlagInput } from "./FlagInput";
-import "./FlagInputModal";
-import { FlagInputModal } from "./FlagInputModal";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
@@ -78,7 +73,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
+import { incrementGamesPlayed, translateText } from "./Utils";
 import "./components/BannedModal";
 import "./components/MarketingConsentToast";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
@@ -178,7 +173,6 @@ class Client {
   private currentUrl: string | null = null;
 
   private usernameInput: UsernameInput | null = null;
-  private flagInput: FlagInput | null = null;
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinLobbyModal;
@@ -249,8 +243,6 @@ class Client {
       tag: "inventory-modal",
       pageId: "page-inventory",
     });
-    modalRouter.register("flag-input", { tag: "flag-input-modal" });
-
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
@@ -292,11 +284,6 @@ class Client {
     ) as LangSelector;
     if (!langSelector) {
       console.warn("Lang selector element not found");
-    }
-
-    this.flagInput = document.querySelector("flag-input") as FlagInput;
-    if (!this.flagInput) {
-      console.warn("Flag input element not found");
     }
 
     this.usernameInput = document.querySelector(
@@ -351,30 +338,9 @@ class Client {
       });
     }
 
-    const flagInputModal = document.querySelector(
-      "flag-input-modal",
-    ) as FlagInputModal;
-    if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
-      console.warn("Flag input modal element not found");
-    }
-
-    // Attach listener to any flag-input component (desktop or potentially others)
-    document.querySelectorAll("flag-input").forEach((flagInput) => {
-      flagInput.addEventListener("flag-input-click", () => {
-        if (flagInputModal && flagInputModal instanceof FlagInputModal) {
-          flagInputModal.open();
-        }
-      });
-    });
-
     this.storeModal = document.getElementById("page-item-store") as StoreModal;
     if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
       console.warn("Store modal element not found");
-    }
-
-    if (isInIframe()) {
-      const mobileCosmetics = document.getElementById("cosmetics-input-mobile");
-      if (mobileCosmetics) mobileCosmetics.style.display = "none";
     }
 
     this.storeModal.refresh();
@@ -945,7 +911,6 @@ class Client {
         "store-modal",
         "language-modal",
         "news-modal",
-        "flag-input-modal",
         "account-button",
         "leaderboard-button",
         "token-login",
