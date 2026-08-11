@@ -1040,18 +1040,32 @@ class Client {
       crazyGamesSDK.gameplayStart();
       document.body.classList.add("in-game");
 
-      // Ensure there's a homepage entry in history before adding the lobby entry
-      if (window.location.hash === "" || window.location.hash === "#") {
-        history.replaceState(null, "", window.location.origin + "#refresh");
-      }
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-      history.pushState(
-        null,
-        "",
-        lobbyIdHidden
-          ? "/streamer-mode"
-          : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
-      );
+      if (isVersionedReplayPage(window.location.pathname)) {
+        // Keep the versioned shell pathname: /game/<id> and the #refresh
+        // trampoline only exist on the game-server origin, so rewriting here
+        // would leave a URL that 404s on the CDN when reloaded or shared.
+        // #join= is the shell's own join URL shape (see VersionedReplay.ts).
+        history.pushState(
+          null,
+          "",
+          lobbyIdHidden
+            ? window.location.pathname
+            : `${window.location.pathname}#join=${lobby.gameID}`,
+        );
+      } else {
+        // Ensure there's a homepage entry in history before adding the lobby entry
+        if (window.location.hash === "" || window.location.hash === "#") {
+          history.replaceState(null, "", window.location.origin + "#refresh");
+        }
+        history.pushState(
+          null,
+          "",
+          lobbyIdHidden
+            ? "/streamer-mode"
+            : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+        );
+      }
 
       // Store current URL for popstate confirmation
       this.currentUrl = window.location.href;
@@ -1060,9 +1074,20 @@ class Client {
 
   private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-    const targetUrl = lobbyIdHidden
-      ? "/streamer-mode"
-      : `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+    let targetUrl: string;
+    if (isVersionedReplayPage(window.location.pathname)) {
+      // Keep the versioned shell pathname: /game/<id> only exists on the
+      // game-server origin, so rewriting here would leave a URL that 404s on
+      // the CDN when reloaded or shared. #join= is the shell's own join URL
+      // shape (see VersionedReplay.ts).
+      targetUrl = lobbyIdHidden
+        ? window.location.pathname
+        : `${window.location.pathname}#join=${lobbyId}`;
+    } else if (lobbyIdHidden) {
+      targetUrl = "/streamer-mode";
+    } else {
+      targetUrl = `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
+    }
     const currentUrl = window.location.pathname;
 
     if (currentUrl !== targetUrl) {
