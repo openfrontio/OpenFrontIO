@@ -448,14 +448,6 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
-  "inventory": {
-    "load_failed": "Couldn't load your inventory. Please reload and try again.",
-    "loading": "Loading inventory…",
-    "no_owned_crowns": "You don't own any crowns yet.",
-    "no_owned_effects": "You don't own any effects yet.",
-    "no_owned_skins": "You don't own any skins yet.",
-    "title": "Inventory"
-  },
   "difficulty": {
     "difficulty": "Nation difficulty",
     "easy": "Easy",
@@ -561,11 +553,6 @@
     "live": "LIVE",
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
-  },
-  "flag_input": {
-    "button_title": "Pick a flag!",
-    "search_flag": "Search...",
-    "title": "Flag"
   },
   "friends": {
     "accept": "Accept",
@@ -912,6 +899,14 @@
     "visibility_public": "Public",
     "waiting": "Waiting for players...",
     "water_nukes": "Water nukes"
+  },
+  "inventory": {
+    "load_failed": "Couldn't load your inventory. Please reload and try again.",
+    "loading": "Loading inventory…",
+    "no_owned_crowns": "You don't own any crowns yet.",
+    "no_owned_effects": "You don't own any effects yet.",
+    "no_owned_skins": "You don't own any skins yet.",
+    "title": "Inventory"
   },
   "ios_banner": {
     "got_it": "Got it",
