@@ -243,8 +243,13 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** Which currency purchase is awaiting confirmation, if any. */
-  @state() private confirmingCurrency: "hard" | "soft" | null = null;
+  /** Currency purchase snapshot awaiting confirmation, if any. */
+  @state() private confirmingPurchase: {
+    method: "hard" | "soft";
+    amount: number;
+    itemName: string;
+    handler: () => Promise<PurchaseResult>;
+  } | null = null;
   @state() private busy = false;
 
   createRenderRoot() {
@@ -261,7 +266,12 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    this.confirmingCurrency = method;
+    this.confirmingPurchase = {
+      method,
+      amount: (method === "hard" ? this.priceHard : this.priceSoft) ?? 0,
+      itemName: this.itemName,
+      handler,
+    };
   }
 
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
@@ -368,31 +378,25 @@ export class PurchaseButton extends LitElement {
             </div>`
           : nothing}
       </div>
-      ${this.confirmingCurrency
+      ${this.confirmingPurchase
         ? html`<confirm-dialog
             .heading=${translateText("store.confirm_purchase_title")}
             .message=${translateText("store.confirm_purchase_body", {
-              item: this.itemName,
-              amount:
-                (this.confirmingCurrency === "hard"
-                  ? this.priceHard
-                  : this.priceSoft) ?? 0,
+              item: this.confirmingPurchase.itemName,
+              amount: this.confirmingPurchase.amount,
               currency: translateText(
-                this.confirmingCurrency === "hard"
+                this.confirmingPurchase.method === "hard"
                   ? "cosmetics.hard"
                   : "cosmetics.soft",
               ),
             })}
             variant="warning"
             @confirm=${() => {
-              const handler =
-                this.confirmingCurrency === "hard"
-                  ? this.onPurchaseHard
-                  : this.onPurchaseSoft;
-              this.confirmingCurrency = null;
-              this.executePurchase(handler);
+              const pending = this.confirmingPurchase;
+              this.confirmingPurchase = null;
+              this.executePurchase(pending?.handler);
             }}
-            @cancel=${() => (this.confirmingCurrency = null)}
+            @cancel=${() => (this.confirmingPurchase = null)}
           ></confirm-dialog>`
         : nothing}
       <insufficient-currency-dialog

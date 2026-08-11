@@ -200,10 +200,8 @@ export class StoreModal extends BaseModal {
     const product = priced?.product ?? null;
     const priceHard = priced?.priceHard;
     const priceSoft = priced?.priceSoft;
-    const purchase = async (method: "dollar" | "hard" | "soft") => {
-      if (!this.inspected) return;
-      return purchaseCosmetic(this.inspected, method);
-    };
+    const purchase = (method: "dollar" | "hard" | "soft") =>
+      purchaseCosmetic(resolved, method);
     return html`<purchase-button
       .product=${product}
       .priceHard=${priceHard ?? null}

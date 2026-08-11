@@ -48,6 +48,7 @@ const red: ResolvedCosmetic = {
 
 const blue: ResolvedCosmetic = {
   ...red,
+  cosmetic: { ...pattern, priceHard: 240 } as never,
   colorPalette: {
     name: "blue",
     primaryColor: "#3b82f6",
@@ -240,6 +241,37 @@ describe("StoreModal cosmetic browser", () => {
     await vi.waitFor(() =>
       expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard"),
     );
+    expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+  });
+
+  it("confirms the exact variant and price that initiated checkout", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    const purchaseButton = modal.querySelector(
+      "purchase-button",
+    ) as PurchaseButton;
+    expect(purchaseButton.priceHard).toBe(120);
+    purchaseButton.requestCurrencyPurchase("hard");
+    await purchaseButton.updateComplete;
+
+    await activateDetailVariant(modal, blue.key);
+    const pendingButton = modal.querySelector(
+      "purchase-button",
+    ) as PurchaseButton;
+    pendingButton
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+
+    await vi.waitFor(() =>
+      expect(purchaseCosmetic).toHaveBeenCalledWith(red, "hard"),
+    );
+    expect(
+      (
+        vi.mocked(purchaseCosmetic).mock.calls[0]![0].cosmetic as {
+          priceHard: number;
+        }
+      ).priceHard,
+    ).toBe(120);
+    expect(purchaseCosmetic).not.toHaveBeenCalledWith(blue, "hard");
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 
