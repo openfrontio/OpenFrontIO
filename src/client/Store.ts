@@ -5,7 +5,6 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import "./components/CosmeticDetailPanel";
 import { cosmeticDisplayName } from "./components/CosmeticPresentation";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
@@ -205,25 +204,37 @@ export class StoreModal extends BaseModal {
 
   private renderCosmeticCards(
     groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
+    userHasSubscription = false,
   ): TemplateResult {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
       const active = focused ?? group[0];
-      return html`<cosmetic-card
-        data-cosmetic-key=${group[0].key}
-        .resolved=${group[0]}
-        .variants=${group.length > 1 ? group : []}
-        .activeVariantKey=${active.key}
-        state=${focused ? "focused" : "idle"}
-        .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
-        .onVariantActivate=${(resolved: ResolvedCosmetic) =>
-          this.inspect(resolved)}
-      ></cosmetic-card>`;
+      return html`<div data-store-product class="flex min-w-0 flex-col gap-2">
+        <cosmetic-card
+          data-cosmetic-key=${group[0].key}
+          .resolved=${group[0]}
+          .variants=${group.length > 1 ? group : []}
+          .activeVariantKey=${active.key}
+          state=${focused ? "focused" : "idle"}
+          .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
+          .onVariantActivate=${(resolved: ResolvedCosmetic) =>
+            this.inspect(resolved)}
+        ></cosmetic-card>
+        ${active.type === "subscription" && active.relationship === "owned"
+          ? html`<span
+              data-store-status
+              class="rounded-lg bg-white/5 px-3 py-2 text-center text-sm font-bold text-white/70"
+              >${translateText("store.subscribed")}</span
+            >`
+          : this.renderPurchaseAction(active, userHasSubscription)}
+      </div>`;
     })}`;
   }
 
-  private renderPurchaseAction(userHasSubscription: boolean): TemplateResult {
-    const resolved = this.inspected!;
+  private renderPurchaseAction(
+    resolved: ResolvedCosmetic,
+    userHasSubscription: boolean,
+  ): TemplateResult {
     const priced = resolved.cosmetic as {
       product?: Product | null;
       priceHard?: number;
@@ -258,47 +269,14 @@ export class StoreModal extends BaseModal {
     ></purchase-button>`;
   }
 
-  private renderInspectedDetail(
-    userHasSubscription = this.userMeResponse !== false &&
-      this.userMeResponse.player.subscription !== null,
-  ): TemplateResult {
-    const group =
-      this.visibleGroups.find((candidate) =>
-        candidate.some((item) => item.key === this.inspected?.key),
-      ) ?? [];
-    return html`<cosmetic-detail-panel
-      context="store"
-      .resolved=${this.inspected}
-      .variants=${group.length > 1 ? group : []}
-      .activeVariantKey=${this.inspected?.key ?? null}
-      .statusText=${this.inspected?.type === "subscription" &&
-      this.inspected.relationship === "owned"
-        ? translateText("store.subscribed")
-        : ""}
-      .onVariantActivate=${(variant: ResolvedCosmetic) => this.inspect(variant)}
-      .actionContent=${this.inspected
-        ? this.renderPurchaseAction(userHasSubscription)
-        : html``}
-    ></cosmetic-detail-panel>`;
-  }
-
-  private renderBrowserLayout(
-    cards: TemplateResult,
-    userHasSubscription?: boolean,
-  ): TemplateResult {
-    return html`<div
-      data-store-browser
-      class="grid grid-cols-1 gap-4 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]"
-    >
+  private renderBrowserLayout(cards: TemplateResult): TemplateResult {
+    return html`<div data-store-browser class="grid grid-cols-1 gap-4 p-3">
       <div
         data-store-grid
         class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
       >
         ${cards}
       </div>
-      <aside class="order-first lg:order-none lg:sticky lg:top-0 lg:self-start">
-        ${this.renderInspectedDetail(userHasSubscription)}
-      </aside>
     </div>`;
   }
 
@@ -315,10 +293,9 @@ export class StoreModal extends BaseModal {
             >
               ${translateText(options.emptyTranslationKey)}
             </div>`
-        : this.renderCosmeticCards(groups);
+        : this.renderCosmeticCards(groups, options.userHasSubscription);
     return this.renderBrowserLayout(
       html`${cards}${options.trailingContent ?? ""}`,
-      options.userHasSubscription,
     );
   }
 
@@ -392,9 +369,8 @@ export class StoreModal extends BaseModal {
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
-    return this.renderBrowserLayout(
-      html`<effects-grid
-        class="col-span-full"
+    return html`<div data-store-browser class="grid grid-cols-1 gap-4 p-3">
+      <effects-grid
         mode="purchase"
         tabbed
         .cosmetics=${this.cosmetics}
@@ -402,14 +378,16 @@ export class StoreModal extends BaseModal {
         .affiliateCode=${this.affiliateCode}
         .focusedKey=${this.inspected?.key ?? null}
         .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+        .renderPurchaseAction=${(item: ResolvedCosmetic) =>
+          this.renderPurchaseAction(item, false)}
         .onVisiblePurchaseItemsChange=${(
           items: readonly ResolvedCosmetic[],
         ) => {
           this.selectVisible(items.map((item) => [item]));
           this.requestUpdate();
         }}
-      ></effects-grid>`,
-    );
+      ></effects-grid>
+    </div>`;
   }
 
   private renderPackGrid(): TemplateResult {

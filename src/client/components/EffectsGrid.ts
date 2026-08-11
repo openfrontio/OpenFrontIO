@@ -71,6 +71,8 @@ export class EffectsGrid extends LitElement {
   onPurchaseFocus?: (resolved: ResolvedCosmetic) => void;
   @property({ attribute: false })
   onVisiblePurchaseItemsChange?: (items: readonly ResolvedCosmetic[]) => void;
+  @property({ attribute: false })
+  renderPurchaseAction?: (resolved: ResolvedCosmetic) => TemplateResult;
   @property({ type: String }) focusedKey: string | null = null;
   @state() private activeType: EffectType = EFFECT_TYPES[0];
   // Active nuke-explosion sub-tab (atom / hydro / mirv); only shown for the
@@ -225,11 +227,14 @@ export class EffectsGrid extends LitElement {
 
   private renderTile(slot: string, r: ResolvedCosmetic): TemplateResult {
     if (this.mode === "purchase") {
-      return html`<cosmetic-card
-        .resolved=${r}
-        state=${r.key === this.focusedKey ? "focused" : "idle"}
-        .onActivate=${() => this.onPurchaseFocus?.(r)}
-      ></cosmetic-card>`;
+      return html`<div data-store-product class="flex min-w-0 flex-col gap-2">
+        <cosmetic-card
+          .resolved=${r}
+          state=${r.key === this.focusedKey ? "focused" : "idle"}
+          .onActivate=${() => this.onPurchaseFocus?.(r)}
+        ></cosmetic-card>
+        ${this.renderPurchaseAction?.(r) ?? nothing}
+      </div>`;
     }
     const name = (r.cosmetic as Effect | null)?.name ?? null;
     const selected = this.userSettings.getSelectedEffectName(slot);

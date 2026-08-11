@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the Store-style Inventory grid with a game locker that clearly shows the equipped loadout, while redesigning Store around the same shared card, preview, and detail system without changing ownership or purchase rules.
+**Goal:** Replace the Store-style Inventory grid with a game locker that clearly shows the equipped loadout, while redesigning Store around the same shared card and preview system without changing ownership or purchase rules.
 
 **Architecture:** Extract the current cosmetic preview and metadata behavior into stateless presentation primitives, then make Inventory and Store own their distinct state machines. Inventory maps `UserSettings` to equipped cards and writes only on explicit equip actions; Store owns an inspected purchase variant and never writes equipped settings. `EffectsGrid` remains the owner of effect/nuke sub-slots but delegates visual rendering to the shared primitives.
 
@@ -12,14 +12,13 @@
 
 - Inventory keeps exactly four top-level categories: Skins, Flags, Crowns, and Effects.
 - The global loadout bar keeps one consolidated Effects entry; individual effect and nuke slots remain inside Effects.
-- The Inventory showcase always reflects an equipped setting, never a hover-only preview.
 - Inventory card and colour-swatch activation equip immediately and stay in the modal.
 - Only explicit Inventory equip/clear actions may write `UserSettings`; loading, searching, rendering, tab changes, retry, and ownership refresh are read-only.
 - Store focus and colour selection are purchase-preview state only. Store selection and successful checkout must not write `UserSettings` or auto-equip.
 - Preserve the existing catalog, ownership, pricing, currency, checkout, affiliate, subscription, country-flag, and effect-slot rules.
 - Do not add backend endpoints, schemas, dependencies, presets, favorites, sorting, filters, 3D previews, or new cosmetic types.
 - Blue communicates navigation/Store focus; green communicates equipped state only; rarity styling cannot substitute for either state.
-- Phone layouts must work without hover and use a two-column cosmetic grid, stacked showcase/detail panel, and horizontally scrollable loadout bar.
+- Phone layouts must work without hover and use a two-column cosmetic grid and horizontally scrollable loadout bar.
 - New visible copy must be localized in `resources/lang/en.json`, remain alphabetically sorted, and pass the translation integrity tests.
 
 ## File Structure
@@ -27,14 +26,13 @@
 ### New shared presentation files
 
 - `src/client/components/CosmeticPreview.ts` — render-only preview for every `ResolvedCosmetic` type.
-- `src/client/components/CosmeticPresentation.ts` — translated display-name and metadata helpers shared by cards and detail panels.
+- `src/client/components/CosmeticPresentation.ts` — translated display-name and metadata helpers shared by cards and previews.
 - `src/client/components/CosmeticCard.ts` — controlled compact card with idle/focused/equipped state and controlled variants.
-- `src/client/components/CosmeticDetailPanel.ts` — large preview/metadata/status surface with controlled variants and caller-supplied action content.
 - `src/client/components/InventoryLoadoutBar.ts` — four-category equipped summary and category navigation.
 
 ### Existing owners to modify
 
-- `src/client/InventoryModal.ts` — equipped-loadout projection, showcase, immediate equip, retry, and locker layout.
+- `src/client/InventoryModal.ts` — equipped-loadout projection, immediate equip, retry, and locker layout.
 - `src/client/Store.ts` — inspected-item state, grid/detail layout, variant purchase selection, and special-product panels.
 - `src/client/components/EffectsGrid.ts` — shared cards plus active effect-slot and Store-focus callbacks.
 - `src/client/components/PurchaseButton.ts` — self-contained busy state, no dependency on `cosmetic-container` ancestry.
@@ -285,86 +283,30 @@ git add src/client/components/CosmeticCard.ts tests/client/CosmeticCard.test.ts
 git commit -m "feat(cosmetics): add locker cards"
 ```
 
-### Task 3: Build the detail panel and decouple purchase busy state
+### Task 3: Decouple purchase busy state
 
 **Files:**
 
-- Create: `src/client/components/CosmeticDetailPanel.ts`
-- Create: `tests/client/CosmeticDetailPanel.test.ts`
 - Create: `tests/client/PurchaseButton.test.ts`
 - Modify: `src/client/components/PurchaseButton.ts`
-- Consume: `src/client/components/CosmeticPreview.ts`
-- Consume: `src/client/components/CosmeticPresentation.ts`
 
 **Interfaces:**
 
-- Produces: `context: "inventory" | "store"`
-- Produces: `resolved: ResolvedCosmetic | null`
-- Produces: `variants: readonly ResolvedCosmetic[]`
-- Produces: `activeVariantKey: string | null`
-- Produces: `statusText: string`
-- Produces: `onVariantActivate?: (resolved: ResolvedCosmetic) => void`
-- Produces: `actionContent: TemplateResult | typeof nothing`
 - Preserves: all `PurchaseButton` price, confirmation, and insufficient-currency callbacks.
 
-- [ ] **Step 1: Write failing detail-panel tests**
-
-```ts
-it("shows the inspected Store variant and delegates swatches", async () => {
-  const onVariantActivate = vi.fn();
-  panel.context = "store";
-  panel.resolved = red;
-  panel.variants = [red, blue];
-  panel.activeVariantKey = red.key;
-  panel.onVariantActivate = onVariantActivate;
-  panel.actionContent = html`<button data-test-action>Buy</button>`;
-  document.body.appendChild(panel);
-  await panel.updateComplete;
-
-  panel
-    .querySelector<HTMLButtonElement>(`[data-detail-variant="${blue.key}"]`)!
-    .click();
-  expect(onVariantActivate).toHaveBeenCalledWith(blue);
-  expect(panel.querySelector("[data-test-action]")).toBeTruthy();
-});
-```
-
-Add an Inventory-context assertion for the Equipped status and a `resolved = null` assertion that removes stale detail content.
-
-- [ ] **Step 2: Write a failing standalone purchase-busy test**
+- [ ] **Step 1: Write a failing standalone purchase-busy test**
 
 Create a deferred purchase promise, mount `<purchase-button>` without `cosmetic-container`, click its dollar button, and assert `aria-busy="true"`, a spinner, and duplicate-click suppression until the promise resolves.
 
-- [ ] **Step 3: Run both test files and verify RED**
+- [ ] **Step 2: Run the purchase-button tests and verify RED**
 
 ```bash
-npx vitest run tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts
+npx vitest run tests/client/PurchaseButton.test.ts
 ```
 
-Expected: detail module missing and standalone purchase button lacks rendered busy state.
+Expected: the standalone purchase button lacks rendered busy state.
 
-- [ ] **Step 4: Implement the detail panel**
-
-```ts
-@customElement("cosmetic-detail-panel")
-export class CosmeticDetailPanel extends LitElement {
-  @property({ type: String }) context: "inventory" | "store" = "inventory";
-  @property({ attribute: false }) resolved: ResolvedCosmetic | null = null;
-  @property({ attribute: false }) variants: readonly ResolvedCosmetic[] = [];
-  @property({ type: String }) activeVariantKey: string | null = null;
-  @property({ type: String }) statusText = "";
-  @property({ attribute: false }) onVariantActivate?: (
-    value: ResolvedCosmetic,
-  ) => void;
-  @property({ attribute: false }) actionContent:
-    | TemplateResult
-    | typeof nothing = nothing;
-}
-```
-
-Render large preview, display name, rarity, artist, active colourway, controlled swatches, status region, and `actionContent`. Mark the shell with `data-detail-context` and return `nothing` when `resolved` is null.
-
-- [ ] **Step 5: Make PurchaseButton own its busy indicator**
+- [ ] **Step 3: Make PurchaseButton own its busy indicator**
 
 Replace `closest("cosmetic-container")` overlay mutation with component state:
 
@@ -387,20 +329,20 @@ Replace every `cosmetic-container:hover` selector in the injected purchase CSS
 with equivalent hover classes scoped to `.purchase-btn-wrap`; Task 9 must be able
 to delete `CosmeticContainer` without changing purchase feedback.
 
-- [ ] **Step 6: Verify detail and purchase behavior**
+- [ ] **Step 4: Verify purchase behavior**
 
 ```bash
-npx vitest run tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts
+npx vitest run tests/client/PurchaseButton.test.ts
 npx tsc --noEmit
 ```
 
-Expected: both files PASS and TypeScript exits 0.
+Expected: the test file passes and TypeScript exits 0.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/client/components/CosmeticDetailPanel.ts src/client/components/PurchaseButton.ts tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts
-git commit -m "feat(cosmetics): add item detail panel"
+git add src/client/components/PurchaseButton.ts tests/client/PurchaseButton.test.ts
+git commit -m "fix(store): decouple purchase busy state"
 ```
 
 ### Task 4: Add the four-slot Inventory loadout bar
@@ -603,15 +545,12 @@ git commit -m "refactor(effects): expose locker slot state"
 - Modify: `tests/client/InventoryModal.test.ts`
 - Modify: `resources/lang/en.json`
 - Consume: `src/client/components/CosmeticCard.ts`
-- Consume: `src/client/components/CosmeticDetailPanel.ts`
 - Consume: `src/client/components/InventoryLoadoutBar.ts`
 - Consume: `src/client/components/EffectsGrid.ts`
 
 **Interfaces:**
 
 - Consumes: `InventoryCategory`, `InventoryLoadoutEntry`, and `EffectSlotSelection` from Tasks 4–5.
-- Produces internally: `activeEffectSlot: EffectSlotSelection | null`
-- Produces internally: `equippedForCategory(category: InventoryCategory): ResolvedCosmetic | null`
 - Produces internally: `loadoutEntries(): InventoryLoadoutEntry[]`
 - Preserves: `open({tab})`, search, owned filtering, country flags, read-only load failure, and current route behavior.
 
@@ -620,21 +559,17 @@ git commit -m "refactor(effects): expose locker slot state"
 Add a real pattern with red/blue palettes to the catalog fixture. Add tests that assert:
 
 ```ts
-it("keeps loadout, showcase, card, and swatch synchronized", async () => {
+it("keeps loadout, card, and swatch synchronized", async () => {
   new UserSettings().setSelectedPatternName("pattern:stripes:red");
   await showTab(modal, "skins");
 
   expect(modal.querySelector('[data-loadout-category="skins"]')).toBeTruthy();
-  expect(
-    modal.querySelector('[data-detail-context="inventory"]')?.textContent,
-  ).toContain("Equipped");
   expect(card(modal, "pattern:stripes:red").state).toBe("equipped");
 
   activateVariant(modal, "pattern:stripes:blue");
 
   expect(localStorage.getItem(PATTERN_KEY)).toBe("pattern:stripes:blue");
   expect(card(modal, "pattern:stripes:blue").state).toBe("equipped");
-  expect(showcase(modal).resolved?.key).toBe("pattern:stripes:blue");
 });
 ```
 
@@ -642,7 +577,7 @@ Add tests for all four loadout buttons, Default/None clearing, cosmetic/country 
 
 - [ ] **Step 2: Write failing retry/skeleton/responsive structure tests**
 
-Assert the loading DOM has `data-inventory-skeleton="loadout|showcase|grid"`; the error DOM contains a localized Retry button; retry calls the guarded loader without changing `PATTERN_KEY`, `FLAG_KEY`, `CROWN_KEY`, or `EFFECTS_KEY`; and the loadout/grid carry horizontal-scroll/two-column markers used by the responsive classes.
+Assert the loading DOM has `data-inventory-skeleton="loadout|grid"`; the error DOM contains a localized Retry button; retry calls the guarded loader without changing `PATTERN_KEY`, `FLAG_KEY`, `CROWN_KEY`, or `EFFECTS_KEY`; and the loadout/grid carry horizontal-scroll/two-column markers used by the responsive classes.
 
 - [ ] **Step 3: Run Inventory tests and verify RED**
 
@@ -650,7 +585,7 @@ Assert the loading DOM has `data-inventory-skeleton="loadout|showcase|grid"`; th
 npx vitest run tests/client/InventoryModal.test.ts
 ```
 
-Expected: FAIL because the locker, showcase, direct swatch equip, and retry controls are absent.
+Expected: FAIL because the locker, direct swatch equip, and retry controls are absent.
 
 - [ ] **Step 4: Project equipped settings into resolved items**
 
@@ -686,7 +621,7 @@ private equippedSkin(): ResolvedCosmetic | null {
 
 Normalize legacy country flag storage through `UserSettings.getFlag()`. Resolve crowns by cosmetic name and effects by effect slot/name. Represent Default/None with the same resolved default tiles rendered in the grid. Never call ownership-validating/mutating loadout helpers during this projection.
 
-- [ ] **Step 5: Render the loadout, showcase, and shared-card grids**
+- [ ] **Step 5: Render the loadout and shared-card grids**
 
 Render in this order:
 
@@ -698,11 +633,6 @@ return html`
     .onCategorySelect=${(category: InventoryCategory) =>
       this.setActiveTab(category)}
   ></inventory-loadout-bar>
-  <cosmetic-detail-panel
-    context="inventory"
-    .resolved=${this.equippedForCategory(tab as InventoryCategory)}
-    .statusText=${translateText("inventory.equipped")}
-  ></cosmetic-detail-panel>
   ${grid}
 `;
 ```
@@ -712,9 +642,9 @@ Replace the transitional test helpers from Task 5 with a single
 `CosmeticCard`-typed helper and exercise every category through `onActivate` or
 `onVariantActivate`.
 
-- [ ] **Step 6: Synchronize every settings key and Effects showcase slot**
+- [ ] **Step 6: Synchronize every settings key**
 
-Listen to `PATTERN_KEY`, `FLAG_KEY`, `CROWN_KEY`, and `EFFECTS_KEY`. On each event, call only `updateFromSettings()`/`requestUpdate()`. Wire `EffectsGrid.onActiveSlotChange` to `activeEffectSlot`, and use that exact slot's resolved selection in the showcase.
+Listen to `PATTERN_KEY`, `FLAG_KEY`, `CROWN_KEY`, and `EFFECTS_KEY`. On each event, call only `updateFromSettings()`/`requestUpdate()` so equipped cards and the loadout remain current.
 
 - [ ] **Step 7: Add stable loading skeletons and a guarded Retry**
 
@@ -746,7 +676,6 @@ git commit -m "feat(inventory): build cosmetic locker"
 - Modify: `src/client/components/EffectsGrid.ts`
 - Modify: `tests/client/EffectsGrid.test.ts`
 - Consume: `src/client/components/CosmeticCard.ts`
-- Consume: `src/client/components/CosmeticDetailPanel.ts`
 - Consume: `src/client/components/PurchaseButton.ts`
 
 **Interfaces:**
@@ -779,11 +708,11 @@ it("inspects the first visible item and purchases the selected variant", async (
 
 Add tests that focused uses blue rather than equipped green, a category/catalog
 change retains a still-visible inspected item, an invisible inspected item falls
-back to the first visible group, and an empty category clears the detail panel.
+back to the first visible group, and an empty category clears purchase controls.
 
 - [ ] **Step 2: Write failing Store Effects tests**
 
-Open the Effects tab, activate an effect and nuke subtype through `EffectsGrid`, and assert the Store detail panel receives the focused effect while no `UserSettings` effect key changes.
+Open the Effects tab, activate an effect and nuke subtype through `EffectsGrid`, and assert the matching tile is focused while no `UserSettings` effect key changes.
 
 - [ ] **Step 3: Run Store/Effects tests and verify RED**
 
@@ -816,32 +745,26 @@ Override `onTabEnter(key)` for Store top-level tabs and route cosmetics sub-tab
 clicks through `setCosmeticsSubTab(tab)`; both handlers compute the next visible
 groups and call `reconcileInspection()` before requesting an update.
 
-- [ ] **Step 5: Render the desktop/mobile browse-detail shell**
+- [ ] **Step 5: Render the desktop/mobile product grid**
 
 Use one semantic layout marker and responsive classes:
 
 ```ts
-return html`<div
-  data-store-browser
-  class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]"
->
+return html`<div data-store-browser class="grid grid-cols-1 gap-4">
   <div
     data-store-grid
     class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
   >
     ${cards}
   </div>
-  <aside class="order-first lg:order-none lg:sticky lg:top-0 lg:self-start">
-    ${this.renderInspectedDetail()}
-  </aside>
 </div>`;
 ```
 
-Cards set `state="focused"`, emit `inspect()`, and use controlled swatches. Detail swatches call `inspect(variant)`. Render `PurchaseButton` as `actionContent` with callbacks that close over exactly `this.inspected` and forward each payment method to `purchaseCosmetic`.
+Cards set `state="focused"`, emit `inspect()`, and use controlled swatches. Render each `PurchaseButton` beside its card with callbacks that close over the tile's exact resolved variant and forward each payment method to `purchaseCosmetic`.
 
-- [ ] **Step 6: Move Effects purchase focus into the Store detail panel**
+- [ ] **Step 6: Move Effects purchase focus and actions into product tiles**
 
-Pass `focusedKey=${this.inspected?.key ?? null}` and `.onPurchaseFocus=${(item) => this.inspect(item)}`. Remove `purchaseCosmetic` from EffectsGrid purchase-mode rendering.
+Pass `focusedKey=${this.inspected?.key ?? null}`, `.onPurchaseFocus=${(item) => this.inspect(item)}`, and a tile-local purchase-action renderer. Keep `purchaseCosmetic` owned by Store.
 
 - [ ] **Step 7: Verify Store cosmetics/effects and checkout regression**
 
@@ -870,7 +793,7 @@ git commit -m "feat(store): add cosmetic detail browser"
 
 **Interfaces:**
 
-- Consumes: Store `inspect`, `reconcileInspection`, shared card/detail panel, and standalone `PurchaseButton` from Tasks 2–7.
+- Consumes: Store `inspect`, `reconcileInspection`, shared cards, and standalone `PurchaseButton` from Tasks 2–7.
 - Preserves: subscription Switch/current-tier semantics, direct dollar checkout, hard/soft confirmation, affiliate filtering, and custom amount bounds `20..2000` at 20 plutonium per dollar.
 
 - [ ] **Step 1: Write failing special-product Store tests**
@@ -998,7 +921,7 @@ Expected: no results. If a result is an intentionally retained prose comment, re
 - [ ] **Step 5: Verify migrated consumers together**
 
 ```bash
-npx vitest run tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryModal.test.ts tests/client/EffectsGrid.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/graphics/layers/WinModal.test.ts
+npx vitest run tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryModal.test.ts tests/client/EffectsGrid.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/graphics/layers/WinModal.test.ts
 npx tsc --noEmit
 ```
 
@@ -1063,7 +986,7 @@ Expected: all tests PASS.
 - [ ] **Step 3: Run formatting and diff hygiene**
 
 ```bash
-npx prettier --write src/client/components/CosmeticPreview.ts src/client/components/CosmeticPresentation.ts src/client/components/CosmeticCard.ts src/client/components/CosmeticDetailPanel.ts src/client/components/InventoryLoadoutBar.ts src/client/components/EffectsGrid.ts src/client/components/PurchaseButton.ts src/client/components/CustomCurrencyCard.ts src/client/InventoryModal.ts src/client/Store.ts src/client/hud/layers/WinModal.ts tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryLoadoutBar.test.ts tests/client/EffectsGrid.test.ts tests/client/InventoryModal.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/CosmeticLockerIntegration.test.ts tests/client/graphics/layers/WinModal.test.ts resources/lang/en.json
+npx prettier --write src/client/components/CosmeticPreview.ts src/client/components/CosmeticPresentation.ts src/client/components/CosmeticCard.ts src/client/components/InventoryLoadoutBar.ts src/client/components/EffectsGrid.ts src/client/components/PurchaseButton.ts src/client/components/CustomCurrencyCard.ts src/client/InventoryModal.ts src/client/Store.ts src/client/hud/layers/WinModal.ts tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryLoadoutBar.test.ts tests/client/EffectsGrid.test.ts tests/client/InventoryModal.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/CosmeticLockerIntegration.test.ts tests/client/graphics/layers/WinModal.test.ts resources/lang/en.json
 git diff --check
 ```
 
@@ -1072,8 +995,8 @@ Expected: Prettier completes and `git diff --check` is silent.
 - [ ] **Step 4: Run static and production gates**
 
 ```bash
-npx oxlint src/client/components/CosmeticPreview.ts src/client/components/CosmeticPresentation.ts src/client/components/CosmeticCard.ts src/client/components/CosmeticDetailPanel.ts src/client/components/InventoryLoadoutBar.ts src/client/components/EffectsGrid.ts src/client/components/PurchaseButton.ts src/client/components/CustomCurrencyCard.ts src/client/InventoryModal.ts src/client/Store.ts src/client/hud/layers/WinModal.ts tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryLoadoutBar.test.ts tests/client/EffectsGrid.test.ts tests/client/InventoryModal.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/CosmeticLockerIntegration.test.ts tests/client/graphics/layers/WinModal.test.ts
-npx eslint src/client/components/CosmeticPreview.ts src/client/components/CosmeticPresentation.ts src/client/components/CosmeticCard.ts src/client/components/CosmeticDetailPanel.ts src/client/components/InventoryLoadoutBar.ts src/client/components/EffectsGrid.ts src/client/components/PurchaseButton.ts src/client/components/CustomCurrencyCard.ts src/client/InventoryModal.ts src/client/Store.ts src/client/hud/layers/WinModal.ts tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/CosmeticDetailPanel.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryLoadoutBar.test.ts tests/client/EffectsGrid.test.ts tests/client/InventoryModal.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/CosmeticLockerIntegration.test.ts tests/client/graphics/layers/WinModal.test.ts
+npx oxlint src/client/components/CosmeticPreview.ts src/client/components/CosmeticPresentation.ts src/client/components/CosmeticCard.ts src/client/components/InventoryLoadoutBar.ts src/client/components/EffectsGrid.ts src/client/components/PurchaseButton.ts src/client/components/CustomCurrencyCard.ts src/client/InventoryModal.ts src/client/Store.ts src/client/hud/layers/WinModal.ts tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryLoadoutBar.test.ts tests/client/EffectsGrid.test.ts tests/client/InventoryModal.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/CosmeticLockerIntegration.test.ts tests/client/graphics/layers/WinModal.test.ts
+npx eslint src/client/components/CosmeticPreview.ts src/client/components/CosmeticPresentation.ts src/client/components/CosmeticCard.ts src/client/components/InventoryLoadoutBar.ts src/client/components/EffectsGrid.ts src/client/components/PurchaseButton.ts src/client/components/CustomCurrencyCard.ts src/client/InventoryModal.ts src/client/Store.ts src/client/hud/layers/WinModal.ts tests/client/CosmeticPreview.test.ts tests/client/CosmeticCard.test.ts tests/client/PurchaseButton.test.ts tests/client/InventoryLoadoutBar.test.ts tests/client/EffectsGrid.test.ts tests/client/InventoryModal.test.ts tests/client/StoreModal.test.ts tests/client/CustomCurrencyCard.test.ts tests/client/CosmeticLockerIntegration.test.ts tests/client/graphics/layers/WinModal.test.ts
 npm run build-prod
 ```
 
@@ -1092,9 +1015,9 @@ Expected: both client/core and server Vitest runs pass with zero failures. The r
 Start the feature worktree with a catalog-capable environment. Verify at desktop and phone width:
 
 1. Inventory loadout scroll/focus and category navigation.
-2. Equipped showcase, card, badge, and colour swatch remain synchronized.
+2. Equipped card, badge, loadout, and colour swatch remain synchronized.
 3. Colour swatch equips immediately with one activation.
-4. Each Effects sub-slot changes the showcase and exact stored setting.
+4. Each Effects sub-slot changes the exact stored setting and equipped card.
 5. Store grid/detail selection and colour preview never change equipped settings.
 6. Purchase controls receive the inspected variant up to the checkout boundary.
 7. Keyboard focus is visible and Enter/Space work on cards and swatches.

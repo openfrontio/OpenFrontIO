@@ -6,7 +6,6 @@ import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { CosmeticDetailPanel } from "../../src/client/components/CosmeticDetailPanel";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
@@ -201,10 +200,6 @@ function card(modal: InventoryModal, key: string): CosmeticCard | undefined {
   );
 }
 
-function showcase(modal: InventoryModal): CosmeticDetailPanel {
-  return modal.querySelector("cosmetic-detail-panel") as CosmeticDetailPanel;
-}
-
 function loadout(modal: InventoryModal): InventoryLoadoutBar {
   return modal.querySelector("inventory-loadout-bar") as InventoryLoadoutBar;
 }
@@ -320,21 +315,17 @@ describe("InventoryModal", () => {
     ]);
   });
 
-  it("keeps loadout, showcase, card, and swatch synchronized", async () => {
+  it("keeps loadout, card, and swatch synchronized", async () => {
     new UserSettings().setSelectedPatternName("pattern:stripes:red");
     await showTab(modal, "skins");
 
     expect(modal.querySelector('[data-loadout-category="skins"]')).toBeTruthy();
-    expect(
-      modal.querySelector('[data-detail-context="inventory"]')?.textContent,
-    ).toContain("Equipped");
     expect(card(modal, "pattern:stripes:red")?.state).toBe("equipped");
 
     await activateVariant(modal, "pattern:stripes:blue");
 
     expect(localStorage.getItem(PATTERN_KEY)).toBe("pattern:stripes:blue");
     expect(card(modal, "pattern:stripes:blue")?.state).toBe("equipped");
-    expect(showcase(modal).resolved?.key).toBe("pattern:stripes:blue");
   });
 
   it("equips owned cards and clears each non-effect category", async () => {
@@ -405,8 +396,8 @@ describe("InventoryModal", () => {
         effectType,
         effectType === "nukeExplosion" ? slot : undefined,
       );
-      expect(showcase(modal).resolved?.key).toBe(
-        `effect:${effectType}:${selectedName}`,
+      expect(card(modal, `effect:${effectType}:${selectedName}`)?.state).toBe(
+        "equipped",
       );
       const none = [
         ...grid.querySelectorAll<CosmeticCard>("cosmetic-card"),
@@ -440,29 +431,26 @@ describe("InventoryModal", () => {
       await activateCard(modal, `effect:${effectType}:${selectedName}`);
 
       expect(settings.getSelectedEffectName(slot)).toBe(selectedName);
-      expect(showcase(modal).resolved?.key).toBe(
-        `effect:${effectType}:${selectedName}`,
+      expect(card(modal, `effect:${effectType}:${selectedName}`)?.state).toBe(
+        "equipped",
       );
     }
   });
 
-  it("resynchronizes the Effects showcase when the grid remounts", async () => {
+  it("resynchronizes equipped Effects cards when the grid remounts", async () => {
     const settings = new UserSettings();
     settings.setSelectedEffectName("transportShipTrail", "owned_wake");
     settings.setSelectedEffectName("hydro", "owned_hydro");
 
     await showTab(modal, "effects");
     await showEffectSlot(modal, "nukeExplosion", "hydro");
-    expect(showcase(modal).resolved?.key).toBe(
-      "effect:nukeExplosion:owned_hydro",
+    expect(card(modal, "effect:nukeExplosion:owned_hydro")?.state).toBe(
+      "equipped",
     );
 
     await showTab(modal, "flags");
     await showTab(modal, "effects");
 
-    expect(showcase(modal).resolved?.key).toBe(
-      "effect:transportShipTrail:owned_wake",
-    );
     expect(card(modal, "effect:transportShipTrail:owned_wake")?.state).toBe(
       "equipped",
     );
@@ -492,27 +480,27 @@ describe("InventoryModal", () => {
     await showTab(modal, "skins");
     settings.setSelectedPatternName("pattern:stripes:blue");
     await modal.updateComplete;
-    expect(showcase(modal).resolved?.key).toBe("pattern:stripes:blue");
+    expect(card(modal, "pattern:stripes:blue")?.state).toBe("equipped");
 
     await showTab(modal, "flags");
     settings.setFlag("flag:owned_flag");
     await modal.updateComplete;
-    expect(showcase(modal).resolved?.key).toBe("flag:owned_flag");
+    expect(card(modal, "flag:owned_flag")?.state).toBe("equipped");
     settings.setFlag("us");
     await modal.updateComplete;
     expect(localStorage.getItem(FLAG_KEY)).toBe("country:us");
-    expect(showcase(modal).resolved?.key).toBe("country:us");
+    expect(card(modal, "country:us")?.state).toBe("equipped");
 
     await showTab(modal, "crowns");
     settings.setSelectedCrownName("owned_crown");
     await modal.updateComplete;
-    expect(showcase(modal).resolved?.key).toBe("crown:owned_crown");
+    expect(card(modal, "crown:owned_crown")?.state).toBe("equipped");
 
     await showTab(modal, "effects");
     settings.setSelectedEffectName("transportShipTrail", "owned_wake_alt");
     await modal.updateComplete;
-    expect(showcase(modal).resolved?.key).toBe(
-      "effect:transportShipTrail:owned_wake_alt",
+    expect(card(modal, "effect:transportShipTrail:owned_wake_alt")?.state).toBe(
+      "equipped",
     );
   });
 
@@ -524,7 +512,7 @@ describe("InventoryModal", () => {
     modal.requestUpdate();
     await modal.updateComplete;
 
-    for (const region of ["loadout", "showcase", "grid"]) {
+    for (const region of ["loadout", "grid"]) {
       expect(
         modal.querySelector(`[data-inventory-skeleton="${region}"]`),
       ).toBeTruthy();

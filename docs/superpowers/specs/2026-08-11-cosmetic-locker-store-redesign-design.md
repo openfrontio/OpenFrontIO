@@ -14,17 +14,15 @@ presentation.
 
 ## Product Decisions
 
-- Inventory uses a hybrid locker layout: an always-visible loadout bar, a large
-  showcase for the active category, and a compact owned-item grid.
+- Inventory uses a compact locker layout: an always-visible loadout bar and an
+  owned-item grid.
 - The loadout bar has four entries: Skin, Flag, Crown, and one consolidated
   Effects entry.
-- The showcase always describes what is equipped. Hovering or focusing another
-  item does not replace the showcase with a temporary preview.
 - Clicking an owned card equips it immediately.
 - Clicking a pattern colour swatch equips that exact colour variant immediately;
   it does not require a second click on the card.
-- Store receives the same visual redesign. It uses a browse-and-inspect layout:
-  item grid plus a selected-item detail panel.
+- Store receives the same visual redesign. Purchase controls live directly with
+  each item tile, including effect subtype grids.
 - Store selection is only a purchase preview. Neither selecting a Store card nor
   completing checkout equips the cosmetic.
 
@@ -52,26 +50,6 @@ Effects remains one top-level loadout card so the bar stays compact. Opening it
 reveals the existing effect-type and nuke-type sub-tabs rather than expanding
 every effect slot into the global loadout bar.
 
-### Equipped Showcase
-
-Below the loadout bar, the active category has a large showcase containing:
-
-- the equipped item's visual preview;
-- translated cosmetic name;
-- rarity when applicable;
-- selected colourway when applicable; and
-- a prominent localized Equipped badge.
-
-For Skins, Flags, and Crowns, the showcase represents the category's single
-equip slot. For Effects, the active effect-type sub-tab determines which slot is
-shown. Within nuke explosions, the active atom, hydro, or MIRV sub-tab determines
-the exact slot shown. A cleared slot displays its localized Default or None
-state.
-
-The showcase is not a hover preview. It changes only when the equipped setting
-changes or when the user moves to a category or effect slot with a different
-equipped item.
-
 ### Owned-Item Grid
 
 Owned cosmetics use compact locker cards with consistent dimensions and a large
@@ -87,7 +65,7 @@ The equipped item is unmistakable through all of these signals:
 
 Clicking a card equips its current variant immediately. Clicking a colour swatch
 stops the parent-card click, equips that resolved variant directly, and updates
-the card, showcase, and loadout bar in the same render cycle. Default and None
+the card and loadout bar in the same render cycle. Default and None
 cards clear the corresponding slot immediately.
 
 Country flags remain available to every user. Account cosmetics remain gated by
@@ -100,30 +78,21 @@ Store retains its existing categories, ownership and purchasability rules,
 currency/payment methods, subscription handling, and checkout integration. Its
 presentation changes to the shared cosmetic browsing system.
 
-### Browse and Inspect
+### Browse and Purchase
 
-On desktop, Store places the cosmetic grid beside a sticky selected-item detail
-panel. Clicking a card focuses it and gives it a blue outline. Focused is a Store
-browsing state and must never reuse the green equipped treatment.
+Store uses a responsive cosmetic grid. Each tile contains its card and its own
+price/payment controls. Clicking a card focuses it and gives it a blue outline.
+Focused is a Store browsing state and must never reuse the green equipped
+treatment.
 
-The detail panel contains:
-
-- large visual preview;
-- translated name;
-- rarity and artist metadata when available;
-- colour choices when the product has variants;
-- price and payment-method controls; and
-- the purchase action.
-
-Choosing a colour updates the inspected and purchasable variant in the detail
-panel. It does not write `UserSettings`. Checkout receives the exact variant
-displayed by the panel. A successful purchase follows the current return/reload
-flow and makes the item available in Inventory without equipping it.
+Choosing a colour updates the tile's purchasable variant. It does not write
+`UserSettings`. Checkout receives the exact variant displayed by that tile. A
+successful purchase follows the current return/reload flow and makes the item
+available in Inventory without equipping it.
 
 Store continues to show product types such as packs and subscriptions that do
-not map to an Inventory equip slot. The shared card and detail primitives accept
-type-specific metadata and actions rather than assuming every item is
-equipable.
+not map to an Inventory equip slot. Shared cards accept type-specific actions
+rather than assuming every item is equipable.
 
 ### Initial and Changing Selection
 
@@ -131,7 +100,7 @@ When a Store category has purchasable items, its first visible item becomes the
 initial inspected item. Category, catalog, or affiliate-mode changes keep the
 current inspection only when that item remains visible; otherwise the first
 visible item becomes active. An empty category shows the existing localized
-empty state and no stale detail panel.
+empty state and no stale purchase controls.
 
 ## Shared Component Architecture
 
@@ -144,8 +113,6 @@ overloaded surface with smaller shared components:
 - `CosmeticCard` renders the compact browse/equip card, rarity treatment, name,
   focus/equipped state, and optional colour swatches. It emits resolved-item and
   resolved-variant actions supplied by its parent.
-- `CosmeticDetailPanel` renders the large preview, metadata, colour variants,
-  status/action region, and Store purchase controls through explicit inputs.
 - `InventoryLoadoutBar` maps equipped settings to the four category cards and
   emits category navigation.
 
@@ -154,8 +121,8 @@ writes. `Store` owns its inspected item and purchase variant in memory. Neither
 shared presentation component reads or writes `UserSettings` directly.
 
 `EffectsGrid` retains effect-type and nuke-type ownership because those controls
-encode real equip slots. It renders the new shared cards and reports its active
-slot to Inventory so the showcase stays synchronized.
+encode real equip slots. It renders the shared cards and, in Store mode, renders
+each effect's purchase action with its tile.
 
 The win modal's post-game pattern promotion is also an existing
 `CosmeticButton` consumer. It migrates to the compact `CosmeticCard` with a
@@ -174,11 +141,9 @@ code move into the new primitives rather than being copied.
 1. Inventory loads catalog and ownership data through the existing guarded flow.
 2. `resolveCosmetics` remains the source of ownership and display-ready variants.
 3. `UserSettings` is read into an explicit equipped-loadout view model.
-4. The active category and effect sub-slot select which equipped entry the
-   showcase renders.
-5. Card, swatch, Default, and None actions write the exact relevant setting.
-6. Existing settings-change events refresh loadout bar, showcase, grid badge,
-   and active swatch together.
+4. Card, swatch, Default, and None actions write the exact relevant setting.
+5. Existing settings-change events refresh the loadout bar, grid badge, and
+   active swatch together.
 
 Only explicit user equip actions may write settings. Loading, rendering,
 searching, tab changes, ownership refreshes, and error handling remain
@@ -190,8 +155,9 @@ read-only.
 2. Category, catalog, and affiliate state produce a visible item list.
 3. Store owns one inspected `ResolvedCosmetic` from that list.
 4. Card selection replaces the inspected item.
-5. Detail-panel swatches replace it with the matching resolved colour variant.
-6. Purchase receives the inspected resolved variant and existing payment method.
+5. Card swatches replace it with the matching resolved colour variant.
+6. The tile-local purchase control receives the inspected resolved variant and
+   existing payment method.
 7. Purchase completion does not write equipped settings.
 
 ## Visual System
@@ -212,14 +178,13 @@ it does not copy Fortnite branding or assets.
 
 ## Responsive Behavior
 
-Desktop Inventory stacks loadout bar, showcase, and owned grid. Desktop Store
-uses grid plus sticky detail panel.
+Desktop Inventory stacks the loadout bar and owned grid. Desktop Store uses the
+same grid-first tile layout.
 
 On narrow screens:
 
 - the loadout bar scrolls horizontally without shrinking cards below a usable
   touch target;
-- showcase and Store detail panel stack above their grids;
 - cosmetic grids use two columns at phone widths and expand as space permits;
 - all controls remain usable without hover; and
 - sticky behavior must not obscure category tabs, Inventory search, or Store
@@ -242,8 +207,8 @@ On narrow screens:
 
 ## Loading, Empty, and Failure States
 
-- Catalog and ownership loading show stable skeletons for the loadout, showcase,
-  and grid regions.
+- Catalog and ownership loading show stable skeletons for the loadout and grid
+  regions.
 - Catalog or authenticated ownership failure preserves the complete stored
   loadout, performs no settings cleanup, and shows localized error and Retry
   controls.
@@ -252,8 +217,8 @@ On narrow screens:
   choice, localized empty copy, and Store path.
 - Flags remain populated by standard country flags even when no cosmetic flags
   are owned.
-- Store categories with no items show an empty state and clear the inspected
-  detail content.
+- Store categories with no items show an empty state and clear stale purchase
+  controls.
 
 ## Verification
 
@@ -263,18 +228,18 @@ Automated coverage must prove:
 - a pattern card click equips its active variant;
 - a pattern colour-swatch click immediately equips the exact variant without a
   parent-card click;
-- loadout bar, showcase, selected card, and active swatch stay synchronized with
+- loadout bar, selected card, and active swatch stay synchronized with
   `UserSettings` changes;
 - Default/None clears patterns/skins, flags, crowns, and each effect slot;
-- the consolidated Effects loadout navigates to Effects while the active effect
-  sub-tab controls the showcase slot;
+- the consolidated Effects loadout navigates to Effects while the effect and
+  nuke sub-tabs select the visible slot grid;
 - Store card and swatch selection change only the inspected purchase variant;
 - Store purchase uses that variant and never equips it;
 - packs and subscriptions continue to render and purchase correctly;
 - the win-modal pattern promotion retains its three-item direct-purchase flow;
 - ownership/catalog failures remain non-destructive and Retry can recover;
-- category, catalog, affiliate, and empty states cannot leave a stale Store
-  detail item;
+- category, catalog, affiliate, and empty states cannot leave stale Store
+  purchase controls;
 - desktop and mobile DOM structure supports the specified layout and accessible
   interactions; and
 - existing Inventory routing and Store checkout tests remain green.

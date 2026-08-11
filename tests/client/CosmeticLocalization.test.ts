@@ -4,9 +4,10 @@ import "../../src/client/LangSelector";
 import type { LangSelector } from "../../src/client/LangSelector";
 import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import "../../src/client/components/CosmeticDetailPanel";
-import type { CosmeticDetailPanel } from "../../src/client/components/CosmeticDetailPanel";
-import { cosmeticDisplayName } from "../../src/client/components/CosmeticPresentation";
+import {
+  cosmeticDisplayName,
+  cosmeticRarityLabel,
+} from "../../src/client/components/CosmeticPresentation";
 
 const rarePattern: ResolvedCosmetic = {
   type: "pattern",
@@ -54,7 +55,6 @@ const defaultEffect: ResolvedCosmetic = {
 describe("cosmetic presentation localization", () => {
   let selector: LangSelector | undefined;
   let card: CosmeticCard | undefined;
-  let detail: CosmeticDetailPanel | undefined;
 
   beforeEach(() => {
     localStorage.setItem("lang", "en");
@@ -76,10 +76,8 @@ describe("cosmetic presentation localization", () => {
   });
 
   afterEach(() => {
-    detail?.remove();
     card?.remove();
     selector?.remove();
-    detail = undefined;
     card = undefined;
     selector = undefined;
     localStorage.clear();
@@ -96,19 +94,12 @@ describe("cosmetic presentation localization", () => {
     card.state = "equipped";
     document.body.appendChild(card);
 
-    detail = document.createElement(
-      "cosmetic-detail-panel",
-    ) as CosmeticDetailPanel;
-    detail.resolved = rarePattern;
-    document.body.appendChild(detail);
-    await Promise.all([card.updateComplete, detail.updateComplete]);
+    await card.updateComplete;
 
     expect(
       card.querySelector("[data-cosmetic-equipped]")?.textContent,
     ).toContain("Equipped");
-    expect(detail.querySelector("[data-detail-rarity]")?.textContent).toContain(
-      "Rare",
-    );
+    expect(cosmeticRarityLabel(rarePattern)).toContain("Rare");
 
     window.dispatchEvent(
       new CustomEvent("language-selected", { detail: { lang: "fr" } }),
@@ -120,9 +111,7 @@ describe("cosmetic presentation localization", () => {
         card!.querySelector("[data-cosmetic-equipped]")?.textContent,
       ).toContain("Équipé"),
     );
-    expect(detail.querySelector("[data-detail-rarity]")?.textContent).toContain(
-      "Rare FR",
-    );
+    expect(cosmeticRarityLabel(rarePattern)).toContain("Rare FR");
     expect(cosmeticDisplayName(noCrown)).toBe("Aucun");
     expect(cosmeticDisplayName(noFlag)).toBe("Aucun");
     expect(cosmeticDisplayName(defaultEffect)).toBe("Par défaut");

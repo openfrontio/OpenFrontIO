@@ -8,7 +8,6 @@ import { modalRouter } from "../../src/client/ModalRouter";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { CosmeticDetailPanel } from "../../src/client/components/CosmeticDetailPanel";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import {
@@ -106,10 +105,6 @@ function cardFor(
       candidate.resolved.key === key ||
       candidate.variants.some((variant) => variant.key === key),
   );
-}
-
-function detailFor(root: InventoryModal | StoreModal): CosmeticDetailPanel {
-  return root.querySelector("cosmetic-detail-panel") as CosmeticDetailPanel;
 }
 
 function expectNoNestedInteractiveControls(root: ParentNode): void {
@@ -221,11 +216,11 @@ describe("Cosmetic locker integration", () => {
     expect(
       new UserSettings().getSelectedPatternName(catalog)?.colorPalette?.name,
     ).toBe("blue");
-    expect(detailFor(inventory).resolved?.key).toBe(blueKey);
+    expect(cardFor(inventory, blueKey)?.state).toBe("equipped");
 
     store.open({ tab: "cosmetics" });
     await vi.waitFor(() =>
-      expect(detailFor(store).resolved?.key).toBe(yellowKey),
+      expect(cardFor(store, yellowKey)?.activeVariantKey).toBe(yellowKey),
     );
     const storeUpdate = vi.spyOn(store, "requestUpdate");
     cardFor(store, redKey)!
@@ -233,7 +228,7 @@ describe("Cosmetic locker integration", () => {
       .click();
     await store.updateComplete;
 
-    expect(detailFor(store).resolved?.key).toBe(redKey);
+    expect(cardFor(store, redKey)?.activeVariantKey).toBe(redKey);
     expect(storeUpdate).toHaveBeenCalledTimes(1);
     storeUpdate.mockRestore();
     expect(settingsChangeCount).toBe(1);
@@ -247,18 +242,18 @@ describe("Cosmetic locker integration", () => {
     new UserSettings().setSelectedPatternName(blueKey);
     inventory.open({ tab: "skins" });
     await inventory.updateComplete;
-    expect(detailFor(inventory).resolved?.key).toBe(blueKey);
+    expect(cardFor(inventory, blueKey)?.state).toBe("equipped");
 
     new UserSettings().setSelectedPatternName(greenKey);
     window.dispatchEvent(new CustomEvent(settingsEvent));
     await inventory.updateComplete;
-    expect(detailFor(inventory).resolved?.key).toBe(greenKey);
+    expect(cardFor(inventory, greenKey)?.state).toBe("equipped");
   });
 
   it("keeps accessible controls and phone layout markers across both surfaces", async () => {
     inventory.open({ tab: "skins" });
     store.open({ tab: "cosmetics" });
-    await vi.waitFor(() => expect(detailFor(store).resolved).not.toBeNull());
+    await vi.waitFor(() => expect(cardFor(store, yellowKey)).toBeDefined());
     await inventory.updateComplete;
 
     expectNoNestedInteractiveControls(inventory);
@@ -298,12 +293,10 @@ describe("Cosmetic locker integration", () => {
     expect(store.querySelector("[data-store-browser]")?.classList).toContain(
       "grid-cols-1",
     );
-    expect(
-      store.querySelector("[data-store-browser] aside")?.classList,
-    ).toContain("order-first");
+    expect(store.querySelector("[data-store-browser] aside")).toBeNull();
   });
 
-  it("preserves the Inventory route tab and clears empty Store detail", async () => {
+  it("preserves the Inventory route tab and clears empty Store products", async () => {
     inventory.open({ tab: "skins" });
     await inventory.updateComplete;
     expect(window.location.hash).toBe("#modal=inventory&tab=skins");
@@ -323,20 +316,20 @@ describe("Cosmetic locker integration", () => {
 
     store.open({ tab: "cosmetics" });
     await vi.waitFor(() =>
-      expect(detailFor(store).resolved?.key).toBe(yellowKey),
+      expect(cardFor(store, yellowKey)?.activeVariantKey).toBe(yellowKey),
     );
     cardFor(store, redKey)!
       .querySelector<HTMLButtonElement>(`[data-variant-key="${redKey}"]`)!
       .click();
     await store.updateComplete;
-    expect(detailFor(store).resolved?.key).toBe(redKey);
+    expect(cardFor(store, redKey)?.activeVariantKey).toBe(redKey);
     const crownsTab = [
       ...store.querySelectorAll<HTMLButtonElement>("button"),
     ].find((candidate) => candidate.textContent?.trim() === "Crowns")!;
     crownsTab.click();
     await store.updateComplete;
 
-    expect(detailFor(store).resolved).toBeNull();
-    expect(store.querySelector("[data-detail-context]")).toBeNull();
+    expect(store.querySelector("[data-store-product]")).toBeNull();
+    expect(store.querySelector("purchase-button")).toBeNull();
   });
 });

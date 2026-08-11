@@ -26,10 +26,8 @@ import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import "./components/CosmeticDetailPanel";
 import { cosmeticDisplayName } from "./components/CosmeticPresentation";
 import "./components/EffectsGrid";
-import type { EffectSlotSelection } from "./components/EffectsGrid";
 import "./components/InventoryLoadoutBar";
 import type {
   InventoryCategory,
@@ -69,7 +67,6 @@ export class InventoryModal extends BaseModal {
   @state() private isLoading = false;
   @state() private loadFailed = false;
   @state() private ownershipState: OwnershipState = "loading";
-  @state() private activeEffectSlot: EffectSlotSelection | null = null;
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -169,10 +166,6 @@ export class InventoryModal extends BaseModal {
 
   private updateFromSettings(): void {
     this.requestUpdate();
-  }
-
-  protected onTabEnter(key: string): void {
-    if (key === "effects") this.activeEffectSlot = null;
   }
 
   private async loadOwnership(
@@ -355,23 +348,6 @@ export class InventoryModal extends BaseModal {
     };
   }
 
-  private equippedEffect(
-    effectType: EffectType,
-    slot: string,
-  ): ResolvedCosmetic | null {
-    const selectedName = this.userSettings.getSelectedEffectName(slot);
-    if (selectedName === null) return this.noneEffectTile(effectType);
-    return (
-      this.resolvedItems().find(
-        (item) =>
-          item.type === "effect" &&
-          item.effectType === effectType &&
-          item.cosmetic?.name === selectedName &&
-          this.effectSlotFor(item) === slot,
-      ) ?? null
-    );
-  }
-
   private equippedEffects(): ResolvedCosmetic[] {
     const selected = this.userSettings.getSelectedEffects();
     return this.resolvedItems().filter(
@@ -381,18 +357,6 @@ export class InventoryModal extends BaseModal {
         this.effectSlotFor(item) !== null &&
         selected[this.effectSlotFor(item)!] === item.cosmetic.name,
     );
-  }
-
-  private equippedForCategory(
-    category: InventoryCategory,
-  ): ResolvedCosmetic | null {
-    if (category === "skins") return this.equippedSkin();
-    if (category === "flags") return this.equippedFlag();
-    if (category === "crowns") return this.equippedCrown();
-    const selection = this.activeEffectSlot;
-    return selection
-      ? this.equippedEffect(selection.effectType, selection.slot)
-      : this.equippedEffect("transportShipTrail", "transportShipTrail");
   }
 
   private loadoutEntries(): InventoryLoadoutEntry[] {
@@ -593,10 +557,6 @@ export class InventoryModal extends BaseModal {
           class="mx-3 my-2 h-28 animate-pulse rounded-xl bg-white/5"
         ></div>
         <div
-          data-inventory-skeleton="showcase"
-          class="mx-3 my-3 h-64 animate-pulse rounded-xl bg-white/5"
-        ></div>
-        <div
           data-inventory-skeleton="grid"
           class="mx-3 grid grid-cols-2 gap-3 sm:grid-cols-3"
         >
@@ -647,9 +607,6 @@ export class InventoryModal extends BaseModal {
           .cosmetics=${this.cosmetics}
           .userMeResponse=${this.userMeResponse}
           .search=${this.search}
-          .onActiveSlotChange=${(selection: EffectSlotSelection) => {
-            this.activeEffectSlot = selection;
-          }}
         ></effects-grid>
       </div>`;
     } else {
@@ -663,13 +620,6 @@ export class InventoryModal extends BaseModal {
         .onCategorySelect=${(selected: InventoryCategory) =>
           this.setActiveTab(selected)}
       ></inventory-loadout-bar>
-      <div class="px-3 pb-3">
-        <cosmetic-detail-panel
-          context="inventory"
-          .resolved=${this.equippedForCategory(category)}
-          .statusText=${translateText("inventory.equipped")}
-        ></cosmetic-detail-panel>
-      </div>
       <div class="px-3 pb-3">${grid}</div>
       <div class="flex shrink-0 justify-center pb-3">
         <o-button
