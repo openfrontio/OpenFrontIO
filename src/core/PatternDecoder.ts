@@ -54,7 +54,7 @@ export class PatternDecoder {
   // closes a Schemas -> CosmeticSchemas -> PatternDecoder cycle, which matters
   // now that CosmeticSchemas reads MAX_PATTERN_DATA_LENGTH at module scope.
   constructor(
-    pattern: { patternData: string },
+    pattern: { patternData: string; [key: string]: unknown },
     base64urlDecode: (input: string) => Uint8Array,
   ) {
     ({
