@@ -944,6 +944,9 @@ class Client {
         "steam-link-modal",
         "matchmaking-modal",
         "clan-modal",
+        "account-settings-modal",
+        "change-username-modal",
+        "subscription-modal",
         "lang-selector",
         "homepage-promos",
       ].forEach((tag) => {

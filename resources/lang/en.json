@@ -70,7 +70,6 @@
     "tab_clans": "Clans",
     "tab_friends": "Friends",
     "tab_games": "Games",
-    "tab_settings": "Settings",
     "tab_stats": "Stats",
     "title": "Account",
     "unclaimed_rewards": "Unclaimed Rewards",
@@ -91,8 +90,7 @@
     "username_temporary_notice": "Your name was taken by another player. Pick a new one — this rename is free.",
     "username_temporary_prompt": "Your username was taken by another player. Choose a new one now? The rename is free.",
     "username_temporary_prompt_confirm": "Choose a name",
-    "username_title": "Username",
-    "your_subscription": "Your Subscription"
+    "username_title": "Username"
   },
   "account_settings_modal": {
     "title": "Account Settings"

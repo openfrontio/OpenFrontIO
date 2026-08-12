@@ -3,7 +3,6 @@ import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { Cosmetics } from "../core/CosmeticSchemas";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
@@ -14,8 +13,6 @@ import {
   reauthAfterCrazyGamesChange,
   sendMagicLink,
 } from "./Auth";
-import "./components/AccountSettingsPanel";
-import type { AccountSettingsPanel } from "./components/AccountSettingsPanel";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -29,12 +26,10 @@ import "./components/Difficulties";
 import "./components/FriendsList";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
-import "./components/SubscriptionPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
-import "./components/UsernamePanel";
-import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { consumeGoogleLinkResult } from "./GoogleLinkResult";
 import { playerProfileUrl } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
@@ -74,7 +69,6 @@ export class AccountModal extends BaseModal {
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
   private restoreGamesScrollAfterOpen = false;
-  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -164,7 +158,6 @@ export class AccountModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "friends", label: translateText("account_modal.tab_friends") },
-        { key: "settings", label: translateText("account_modal.tab_settings") },
       ],
     };
   }
@@ -197,20 +190,9 @@ export class AccountModal extends BaseModal {
         return this.renderGamesTab();
       case "friends":
         return this.renderFriendsTab();
-      case "settings":
-        return this.renderSettingsTab();
       default:
         return this.renderAccountTab();
     }
-  }
-
-  private renderSettingsTab(): TemplateResult {
-    return html`
-      <account-settings-panel
-        .player=${this.userMeResponse?.player ?? null}
-        .user=${this.userMeResponse?.user ?? null}
-      ></account-settings-panel>
-    `;
   }
 
   // Email input + "get magic link" button used by the sign-in form.
@@ -279,8 +261,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()} ${this.renderDesktopLinkGateAction()}
+        ${this.renderRewardsPanel()} ${this.renderDesktopLinkGateAction()}
       </div>
     `;
   }
@@ -343,8 +324,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()}
       </div>
     `;
   }
@@ -422,14 +402,6 @@ export class AccountModal extends BaseModal {
     `;
   }
 
-  // Account-username management (custom-usernames). Hidden when the API
-  // doesn't return the username fields yet (older backend).
-  private renderUsernamePanel(): TemplateResult | "" {
-    const player = this.userMeResponse?.player;
-    if (!player || player.usernameStatus === undefined) return "";
-    return html`<username-panel .player=${player}></username-panel>`;
-  }
-
   private renderRewardsPanel(): TemplateResult | "" {
     const rewards = this.userMeResponse?.player?.rewards ?? [];
     if (rewards.length === 0) return "";
@@ -451,16 +423,6 @@ export class AccountModal extends BaseModal {
     }
     this.requestUpdate();
   };
-
-  private renderSubscriptionPanel(): TemplateResult | "" {
-    const sub = this.userMeResponse?.player?.subscription;
-    if (!sub) return "";
-    const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
-    return html`<subscription-panel
-      .sub=${sub}
-      .cosmetic=${cosmetic}
-    ></subscription-panel>`;
-  }
 
   private renderCurrency(): TemplateResult {
     const currency = this.userMeResponse?.player?.currency;
@@ -737,61 +699,19 @@ export class AccountModal extends BaseModal {
 
   private handleLinkGoogle = async (): Promise<void> => {
     // On success linkGoogle navigates to Google; the result comes back as a
-    // `link=...` router arg handled in handleLinkResult. A false return means we
-    // couldn't start it.
+    // `link=...` router arg handled by consumeGoogleLinkResult. A false return
+    // means we couldn't start it.
     const started = await linkGoogle();
     if (!started) {
       alert(translateText("account_modal.link_google_failed"));
     }
   };
 
-  // The Google link callback returns us to #modal=account&link=<result>, so the
-  // router reopens this modal with a `link` arg. Surface the outcome, then strip
-  // the one-shot param from the URL so a refresh/re-open doesn't replay it.
-  private handleLinkResult(args?: Record<string, unknown>): void {
-    const link = typeof args?.link === "string" ? args.link : undefined;
-    if (link === undefined) return;
-
-    // replaceState doesn't fire hashchange, so removing the param won't re-route.
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    params.delete("link");
-    const rest = params.toString();
-    history.replaceState(
-      null,
-      "",
-      rest ? `#${rest}` : window.location.pathname + window.location.search,
-    );
-
-    // Defer so the modal paints before the (blocking) alert. "cancel" needs no
-    // feedback — the user chose to back out.
-    if (link === "google") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_success")),
-        0,
-      );
-    } else if (link === "already_linked") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_already_linked")),
-        0,
-      );
-    } else if (link === "error") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_error")),
-        0,
-      );
-    }
-  }
-
   protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
-    this.handleLinkResult(args);
+    consumeGoogleLinkResult(args);
 
     this.refreshCrazyGamesUser();
-
-    void fetchCosmetics().then((cosmetics) => {
-      this.cosmetics = cosmetics;
-      this.requestUpdate();
-    });
 
     void getUserMe()
       .then((userMe) => {
@@ -811,11 +731,6 @@ export class AccountModal extends BaseModal {
   }
 
   protected onClose(): void {
-    // The panel's delete dialog portals to document.body, so it would outlive
-    // the (merely hidden) modal if left open.
-    this.querySelector<AccountSettingsPanel>(
-      "account-settings-panel",
-    )?.closeDialogs();
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );

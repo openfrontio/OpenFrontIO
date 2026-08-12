@@ -33,11 +33,22 @@ function navAccountInstances(): NavAccountElements[] {
   }));
 }
 
+// Last resolved auth state. Auth resolves once, early, but triggers can be
+// created later (a re-rendered play page, a menu that reconnects), so they need
+// something to read instead of a dispatch they missed.
+let lastUserMeResponse: UserMeResponse | false | null = null;
+
+/** The last resolved /users/@me response, or null before auth resolves. */
+export function latestUserMeResponse(): UserMeResponse | false | null {
+  return lastUserMeResponse;
+}
+
 // Renders the persistent account triggers from the resolved /users/@me
 // response: a linked identity shows its avatar/badge, everything else shows the
 // signed-out prompt. Extracted from Main.ts so the identity precedence — which
 // now includes Steam — is unit-testable in jsdom.
 export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
+  lastUserMeResponse = userMeResponse;
   const instances = navAccountInstances();
   if (instances.length === 0) return;
 

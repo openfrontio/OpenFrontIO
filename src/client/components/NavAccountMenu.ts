@@ -1,10 +1,15 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { showInGameConfirm } from "../InGameModal";
+import {
+  latestUserMeResponse,
+  updateAccountNavButton,
+} from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
 import { translateText } from "../Utils";
 
@@ -51,6 +56,17 @@ export class NavAccountMenu extends LitElement {
     document.addEventListener("click", this.handleDocumentClick);
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("showPage", this.closeMenu);
+
+    // Auth resolves once, early. A menu created after that (a re-rendered play
+    // page, a reconnected element) would otherwise sit on its initial
+    // signed-out state forever, so seed from the cached response instead.
+    const cached = latestUserMeResponse();
+    if (cached !== null) {
+      this.userMeResponse = cached;
+      // The trigger's avatar/badge state is imperative, so re-apply it to this
+      // instance's freshly-rendered markup too.
+      void this.updateComplete.then(() => updateAccountNavButton(cached));
+    }
   }
 
   disconnectedCallback() {
@@ -249,6 +265,70 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 
+  // Avatar / spinner / person icon / email badge, shared by both triggers.
+  // `ids` is populated for the desktop instance only — NavAccountButton and
+  // CrazyGamesAccountButton drive that one by id — while the data-account-*
+  // hooks are what both instances are updated through.
+  private renderIdentityIcons(opts: {
+    ids: boolean;
+    iconClass: string;
+    badgeClass: string;
+  }): TemplateResult {
+    const id = (name: string) => (opts.ids ? name : undefined);
+    return html`
+      <img
+        id=${ifDefined(id("nav-account-avatar"))}
+        data-account-avatar
+        class="hidden w-8 h-8 rounded-full object-cover"
+        alt=""
+        data-i18n-alt="main.discord_avatar_alt"
+        referrerpolicy="no-referrer"
+      />
+      <span
+        id=${ifDefined(id("nav-account-loading-spinner"))}
+        data-account-spinner
+        class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+        aria-hidden="true"
+      ></span>
+      <svg
+        id=${ifDefined(id("nav-account-person-icon"))}
+        data-account-person-icon
+        class="hidden ${opts.iconClass}"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M20 21a8 8 0 0 0-16 0" />
+        <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+      </svg>
+      <span
+        id=${ifDefined(id("nav-account-email-badge"))}
+        data-account-email-badge
+        class="hidden ${opts.badgeClass} w-4 h-4 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center"
+        aria-hidden="true"
+      >
+        <svg
+          class="w-2.5 h-2.5 text-white/80"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 6h16v12H4z" />
+          <path d="m4 7 8 6 8-6" />
+        </svg>
+      </span>
+    `;
+  }
+
   // Desktop nav pill. Ids are load-bearing: NavAccountButton and
   // CrazyGamesAccountButton drive this instance by id.
   private renderDesktopTrigger(): TemplateResult {
@@ -265,56 +345,11 @@ export class NavAccountMenu extends LitElement {
         data-i18n-aria-label="main.account"
         data-i18n-title="main.account"
       >
-        <img
-          id="nav-account-avatar"
-          data-account-avatar
-          class="hidden w-8 h-8 rounded-full object-cover"
-          alt=""
-          data-i18n-alt="main.discord_avatar_alt"
-          referrerpolicy="no-referrer"
-        />
-        <span
-          id="nav-account-loading-spinner"
-          data-account-spinner
-          class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
-          aria-hidden="true"
-        ></span>
-        <svg
-          id="nav-account-person-icon"
-          data-account-person-icon
-          class="hidden w-5 h-5"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M20 21a8 8 0 0 0-16 0" />
-          <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
-        </svg>
-        <span
-          id="nav-account-email-badge"
-          data-account-email-badge
-          class="hidden absolute bottom-1 right-1 w-4 h-4 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <svg
-            class="w-2.5 h-2.5 text-white/80"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M4 6h16v12H4z" />
-            <path d="m4 7 8 6 8-6" />
-          </svg>
-        </span>
+        ${this.renderIdentityIcons({
+          ids: true,
+          iconClass: "w-5 h-5",
+          badgeClass: "absolute bottom-1 right-1",
+        })}
         <span
           id="nav-account-signin-text"
           data-account-signin-text
@@ -341,52 +376,11 @@ export class NavAccountMenu extends LitElement {
         data-i18n-title="main.account"
       >
         <span class="relative flex items-center justify-center w-8 h-8">
-          <img
-            data-account-avatar
-            class="hidden w-8 h-8 rounded-full object-cover"
-            alt=""
-            data-i18n-alt="main.discord_avatar_alt"
-            referrerpolicy="no-referrer"
-          />
-          <span
-            data-account-spinner
-            class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
-            aria-hidden="true"
-          ></span>
-          <svg
-            data-account-person-icon
-            class="hidden w-7 h-7"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M20 21a8 8 0 0 0-16 0" />
-            <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
-          </svg>
-          <span
-            data-account-email-badge
-            class="hidden absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <svg
-              class="w-2.5 h-2.5 text-white/80"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M4 6h16v12H4z" />
-              <path d="m4 7 8 6 8-6" />
-            </svg>
-          </span>
+          ${this.renderIdentityIcons({
+            ids: false,
+            iconClass: "w-7 h-7",
+            badgeClass: "absolute -bottom-0.5 -right-0.5",
+          })}
         </span>
         <!-- The sign-in label is desktop-only; on the top bar the icon alone is
              the affordance, so keep the element (the shared updater toggles it)

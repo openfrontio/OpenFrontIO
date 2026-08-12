@@ -1,74 +1,38 @@
 import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getUserMe } from "./Api";
 import "./components/AccountSettingsPanel";
 import type { AccountSettingsPanel } from "./components/AccountSettingsPanel";
-import { BaseModal } from "./components/BaseModal";
-import { modalHeader } from "./components/ui/ModalHeader";
-import { signedOutNotice } from "./components/ui/SignedOutNotice";
-import { translateText } from "./Utils";
+import { consumeGoogleLinkResult } from "./GoogleLinkResult";
+import { ProfileMenuModal } from "./ProfileMenuModal";
 
 /**
  * Standalone account settings, opened from the nav profile menu
- * (`#modal=account-settings`). Shares <account-settings-panel> with the account
- * modal's settings tab, so both entry points show the same controls.
+ * (`#modal=account-settings`). Hosts <account-settings-panel> — marketing
+ * consent, the bind-an-email flow and account deletion.
  */
 @customElement("account-settings-modal")
-export class AccountSettingsModal extends BaseModal {
+export class AccountSettingsModal extends ProfileMenuModal {
   protected routerName = "account-settings";
+  protected titleKey = "account_settings_modal.title";
 
-  @state() private userMeResponse: UserMeResponse | false = false;
-  @state() private isLoadingUser = false;
-
-  protected modalConfig() {
-    return { maxWidth: "620px" };
-  }
-
-  protected renderHeaderSlot() {
-    return modalHeader({
-      title: translateText("account_settings_modal.title"),
-      onBack: () => this.close(),
-      ariaLabel: translateText("common.back"),
-    });
-  }
-
-  protected renderBody(): TemplateResult {
-    if (this.isLoadingUser) {
-      return this.renderLoadingSpinner(
-        translateText("account_modal.fetching_account"),
-      );
-    }
-    if (this.userMeResponse === false) {
-      return signedOutNotice(() => {
-        this.close();
-        window.showPage?.("page-account");
-      });
-    }
+  protected renderSignedIn(userMe: UserMeResponse): TemplateResult {
     return html`
       <div class="custom-scrollbar mr-1">
         <div class="p-6">
           <account-settings-panel
-            .player=${this.userMeResponse.player}
-            .user=${this.userMeResponse.user}
+            .player=${userMe.player}
+            .user=${userMe.user}
           ></account-settings-panel>
         </div>
       </div>
     `;
   }
 
-  protected onOpen(): void {
-    this.isLoadingUser = true;
-    void getUserMe()
-      .then((userMe) => {
-        this.userMeResponse = userMe ?? false;
-      })
-      .catch((err) => {
-        console.warn("AccountSettingsModal: failed to fetch user", err);
-      })
-      .finally(() => {
-        this.isLoadingUser = false;
-      });
+  protected onOpenExtra(args?: Record<string, unknown>): void {
+    // The panel starts the Google link flow, and linkGoogle() returns to
+    // whatever URL started it — so the `link=<result>` arg comes back here.
+    consumeGoogleLinkResult(args);
   }
 
   protected onClose(): void {

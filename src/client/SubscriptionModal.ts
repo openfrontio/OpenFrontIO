@@ -2,12 +2,9 @@ import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { getUserMe } from "./Api";
-import { BaseModal } from "./components/BaseModal";
 import "./components/SubscriptionPanel";
-import { modalHeader } from "./components/ui/ModalHeader";
-import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import { fetchCosmetics } from "./Cosmetics";
+import { ProfileMenuModal } from "./ProfileMenuModal";
 import { translateText } from "./Utils";
 
 /**
@@ -17,38 +14,14 @@ import { translateText } from "./Utils";
  * pointing at the store's subscriptions tab.
  */
 @customElement("subscription-modal")
-export class SubscriptionModal extends BaseModal {
+export class SubscriptionModal extends ProfileMenuModal {
   protected routerName = "subscription";
+  protected titleKey = "subscription_modal.title";
 
-  @state() private userMeResponse: UserMeResponse | false = false;
-  @state() private isLoadingUser = false;
   @state() private cosmetics: Cosmetics | null = null;
 
-  protected modalConfig() {
-    return { maxWidth: "620px" };
-  }
-
-  protected renderHeaderSlot() {
-    return modalHeader({
-      title: translateText("subscription_modal.title"),
-      onBack: () => this.close(),
-      ariaLabel: translateText("common.back"),
-    });
-  }
-
-  protected renderBody(): TemplateResult {
-    if (this.isLoadingUser) {
-      return this.renderLoadingSpinner(
-        translateText("account_modal.fetching_account"),
-      );
-    }
-    if (this.userMeResponse === false) {
-      return signedOutNotice(() => {
-        this.close();
-        window.showPage?.("page-account");
-      });
-    }
-    const sub = this.userMeResponse.player.subscription;
+  protected renderSignedIn(userMe: UserMeResponse): TemplateResult {
+    const sub = userMe.player.subscription;
     if (!sub) {
       return html`
         <div class="p-6">
@@ -77,26 +50,16 @@ export class SubscriptionModal extends BaseModal {
           <subscription-panel
             .sub=${sub}
             .cosmetic=${this.cosmetics?.subscriptions?.[sub.tier] ?? null}
+            @request-close=${() => this.close()}
           ></subscription-panel>
         </div>
       </div>
     `;
   }
 
-  protected onOpen(): void {
-    this.isLoadingUser = true;
+  protected onOpenExtra(): void {
     void fetchCosmetics().then((cosmetics) => {
       this.cosmetics = cosmetics;
     });
-    void getUserMe()
-      .then((userMe) => {
-        this.userMeResponse = userMe ?? false;
-      })
-      .catch((err) => {
-        console.warn("SubscriptionModal: failed to fetch user", err);
-      })
-      .finally(() => {
-        this.isLoadingUser = false;
-      });
   }
 }

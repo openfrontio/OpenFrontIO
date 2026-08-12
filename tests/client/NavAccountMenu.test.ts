@@ -18,6 +18,7 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
+import { updateAccountNavButton } from "../../src/client/NavAccountButton";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function userMe(subscribed = false): UserMeResponse {
@@ -140,6 +141,24 @@ describe("nav-account-menu", () => {
     await click(el.querySelector('[data-menu-item="log-out"]')!);
     await new Promise((r) => setTimeout(r, 0));
     expect(logOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("seeds itself from the cached auth state when created late", async () => {
+    // Auth resolves once, early. A menu mounted afterwards never sees the
+    // userMeResponse event, so it has to read the cached response instead.
+    updateAccountNavButton(userMe());
+
+    const late = document.createElement("nav-account-menu") as NavAccountMenu;
+    document.body.appendChild(late);
+    await late.updateComplete;
+    await late.updateComplete;
+
+    late
+      .querySelector("[data-account-trigger]")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await late.updateComplete;
+    expect(late.querySelector('[role="menu"]')).not.toBeNull();
+    late.remove();
   });
 
   it("closes when a click lands outside the menu", async () => {

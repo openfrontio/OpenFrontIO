@@ -4,6 +4,13 @@ import { assetUrl } from "../../core/AssetUrls";
 import "./NavAccountMenu";
 import { NavNotificationsController } from "./NavNotificationsController";
 
+// Icon-only nav buttons (bell, "?"): same footprint and hover treatment, so
+// they read as one cluster next to the profile control.
+const ICON_BUTTON =
+  "nav-menu-item flex items-center justify-center w-10 h-10 rounded-full " +
+  "text-white/70 hover:text-malibu-blue cursor-pointer transition-colors " +
+  "[&.active]:text-malibu-blue";
+
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
   private _notifications = new NavNotificationsController(this);
@@ -51,7 +58,7 @@ export class DesktopNavBar extends LitElement {
 
     return html`
       <nav
-        class="hidden lg:flex w-full bg-zinc-900/90 backdrop-blur-md items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
+        class="hidden lg:flex w-full bg-zinc-900/90 backdrop-blur-md items-center justify-center gap-8 py-4 shrink-0 z-[45000] relative"
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8">
@@ -111,30 +118,12 @@ export class DesktopNavBar extends LitElement {
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
-        <div class="relative">
-          <button
-            class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
-            data-page="page-help"
-            data-i18n="main.help"
-            @click=${this._notifications.onHelpClick}
-          ></button>
-          ${this._notifications.showHelpDot()
-            ? html`
-                <span
-                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
-                ></span>
-                <span
-                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
-                ></span>
-              `
-            : ""}
-        </div>
         <!-- News, now a bell beside the profile control. -->
         <div class="relative">
           <button
-            class="nav-menu-item ${currentPage === "page-news"
+            class="${ICON_BUTTON} ${currentPage === "page-news"
               ? "active"
-              : ""} flex items-center justify-center w-10 h-10 rounded-full text-white/70 hover:text-malibu-blue cursor-pointer transition-colors [&.active]:text-malibu-blue"
+              : ""}"
             data-page="page-news"
             data-i18n-aria-label="main.news"
             data-i18n-title="main.news"
@@ -162,6 +151,44 @@ export class DesktopNavBar extends LitElement {
                 ></span>
                 <span
                   class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
+        <!-- Help, as a "?" matching the bell. -->
+        <div class="relative">
+          <button
+            class="${ICON_BUTTON} ${currentPage === "page-help"
+              ? "active"
+              : ""}"
+            data-page="page-help"
+            data-i18n-aria-label="main.help"
+            data-i18n-title="main.help"
+            @click=${this._notifications.onHelpClick}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="w-6 h-6 pointer-events-none"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.2 9.2a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 4" />
+              <line x1="12" y1="17.5" x2="12.01" y2="17.5" />
+            </svg>
+          </button>
+          ${this._notifications.showHelpDot()
+            ? html`
+                <span
+                  class="absolute top-0 right-0 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute top-0 right-0 w-2 h-2 bg-yellow-400 rounded-full"
                 ></span>
               `
             : ""}

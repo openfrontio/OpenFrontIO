@@ -1,50 +1,22 @@
 import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getUserMe } from "./Api";
-import { BaseModal } from "./components/BaseModal";
-import { modalHeader } from "./components/ui/ModalHeader";
-import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import "./components/UsernamePanel";
+import { ProfileMenuModal } from "./ProfileMenuModal";
 import { translateText } from "./Utils";
 
 /**
  * Standalone account-username management, opened from the nav profile menu
- * (`#modal=change-username`). Renders the same <username-panel> as the account
- * modal, so the cooldown/claim rules live in one place.
+ * (`#modal=change-username`). Renders the same <username-panel> the account
+ * modal used to, so the cooldown/claim rules live in one place.
  */
 @customElement("change-username-modal")
-export class ChangeUsernameModal extends BaseModal {
+export class ChangeUsernameModal extends ProfileMenuModal {
   protected routerName = "change-username";
+  protected titleKey = "change_username_modal.title";
 
-  @state() private userMeResponse: UserMeResponse | false = false;
-  @state() private isLoadingUser = false;
-
-  protected modalConfig() {
-    return { maxWidth: "620px" };
-  }
-
-  protected renderHeaderSlot() {
-    return modalHeader({
-      title: translateText("change_username_modal.title"),
-      onBack: () => this.close(),
-      ariaLabel: translateText("common.back"),
-    });
-  }
-
-  protected renderBody(): TemplateResult {
-    if (this.isLoadingUser) {
-      return this.renderLoadingSpinner(
-        translateText("account_modal.fetching_account"),
-      );
-    }
-    if (this.userMeResponse === false) {
-      return signedOutNotice(() => {
-        this.close();
-        window.showPage?.("page-account");
-      });
-    }
-    const player = this.userMeResponse.player;
+  protected renderSignedIn(userMe: UserMeResponse): TemplateResult {
+    const player = userMe.player;
     // Older backends don't return the username fields; the panel renders
     // nothing for them, so say why instead of showing an empty modal.
     if (player.usernameStatus === undefined) {
@@ -67,19 +39,5 @@ export class ChangeUsernameModal extends BaseModal {
         </div>
       </div>
     `;
-  }
-
-  protected onOpen(): void {
-    this.isLoadingUser = true;
-    void getUserMe()
-      .then((userMe) => {
-        this.userMeResponse = userMe ?? false;
-      })
-      .catch((err) => {
-        console.warn("ChangeUsernameModal: failed to fetch user", err);
-      })
-      .finally(() => {
-        this.isLoadingUser = false;
-      });
   }
 }
