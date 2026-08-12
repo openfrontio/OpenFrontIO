@@ -1,5 +1,7 @@
 import { NationExecution } from "../../src/core/execution/NationExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
+import { Executor } from "../../src/core/execution/ExecutionManager";
+import { GameRunner } from "../../src/core/GameRunner";
 import { Cell, Nation, PlayerInfo, PlayerType } from "../../src/core/game/Game";
 import { GameConfig, GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
@@ -101,5 +103,33 @@ describe("Nation spawn ordering with random spawn", () => {
 
     expect(game.player(nations[0].info.id).hasSpawned()).toBe(true);
     expect(game.player(nations[0].info.id).isAlive()).toBe(true);
+  });
+});
+
+describe("GameRunner playerActions interaction payload", () => {
+  test("forwards player alliance cooldown remaining through playerActions", async () => {
+    const game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("player", PlayerType.Human, null, "player_id"),
+      new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+    ]);
+
+    const player = game.player("player_id");
+    const other = game.player("other_id");
+    player.conquer(game.ref(0, 0));
+    other.conquer(game.ref(50, 50));
+
+    const runner = new GameRunner(
+      game,
+      new Executor(game, gameID, undefined, []),
+      () => {},
+    );
+
+    const expected = player.allianceRequestCooldownRemaining(other);
+    const actions = runner.playerActions(player.id(), 50, 50);
+
+    expect(actions.interaction).toBeDefined();
+    expect(actions.interaction?.allianceRequestCooldownRemaining).toBe(
+      expected,
+    );
   });
 });
