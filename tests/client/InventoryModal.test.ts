@@ -270,6 +270,7 @@ describe("InventoryModal", () => {
       "inventory.retry": "Retry",
       "inventory.showing_effects": "Effects equipped: {count}",
       "inventory.selected_cosmetic": "Selected {name}",
+      "inventory.selected_cosmetic_variant": "{name} ({variant})",
       "inventory.unequip": "Unequip",
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
@@ -279,6 +280,10 @@ describe("InventoryModal", () => {
       "store.crowns": "Crowns",
       "store.effects": "Effects",
       "territory_patterns.pattern.stripes": "Localized Stripes",
+      "territory_patterns.color_palette.blue": "Ocean Blue",
+      "flags.owned_flag": "Localized Flag",
+      "crowns.owned_crown": "Localized Crown",
+      "effects.owned_wake": "Localized Wake",
     };
     Object.assign(languageFixture, {
       translations,
@@ -370,8 +375,34 @@ describe("InventoryModal", () => {
       await showTab(modal, "skins");
       await activateVariant(modal, "pattern:stripes:blue");
 
+      // Every palette of a pattern shares one name, so the colour has to be
+      // in the message for it to say which tile was picked.
       const event = onMessage.mock.lastCall?.[0] as CustomEvent;
-      expect(event.detail.message).toBe("Selected Localized Stripes");
+      expect(event.detail.message).toBe(
+        "Selected Localized Stripes (Ocean Blue)",
+      );
+    } finally {
+      window.removeEventListener("show-message", onMessage);
+    }
+  });
+
+  it("announces flag, crown and skin selections too", async () => {
+    const onMessage = vi.fn();
+    const lastMessage = () =>
+      (onMessage.mock.lastCall?.[0] as CustomEvent).detail.message;
+    window.addEventListener("show-message", onMessage);
+    try {
+      await showTab(modal, "skins");
+      await activateCard(modal, "skin:owned_skin");
+      expect(lastMessage()).toBe("Selected Owned Skin");
+
+      await showTab(modal, "flags");
+      await activateCard(modal, "flag:owned_flag");
+      expect(lastMessage()).toBe("Selected Localized Flag");
+
+      await showTab(modal, "crowns");
+      await activateCard(modal, "crown:owned_crown");
+      expect(lastMessage()).toBe("Selected Localized Crown");
     } finally {
       window.removeEventListener("show-message", onMessage);
     }

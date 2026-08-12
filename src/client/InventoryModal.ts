@@ -25,7 +25,10 @@ import { userAuth } from "./Auth";
 import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import { cosmeticDisplayName } from "./components/CosmeticPresentation";
+import {
+  cosmeticDisplayName,
+  cosmeticSelectionLabel,
+} from "./components/CosmeticPresentation";
 import "./components/EffectsGrid";
 import "./components/InventoryLoadoutBar";
 import type {
@@ -439,12 +442,11 @@ export class InventoryModal extends BaseModal {
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
         ${items.map((r) => {
-          const name = r.cosmetic!.name;
           return html`
             <cosmetic-card
               .resolved=${r}
               state=${r.key === equippedKey ? "equipped" : "idle"}
-              .onActivate=${() => this.selectCrown(name)}
+              .onActivate=${() => this.selectCrown(r)}
             ></cosmetic-card>
           `;
         })}
@@ -478,7 +480,7 @@ export class InventoryModal extends BaseModal {
             <cosmetic-card
               .resolved=${resolved}
               state=${equippedKey === resolved.key ? "equipped" : "idle"}
-              .onActivate=${() => this.selectFlag(resolved.key)}
+              .onActivate=${() => this.selectFlag(resolved)}
             ></cosmetic-card>
           `,
         )}
@@ -666,6 +668,7 @@ export class InventoryModal extends BaseModal {
       this.selectPattern(resolvedToPlayerPattern(resolved), resolved);
     } else if (resolved.type === "skin") {
       this.selectSkin((resolved.cosmetic as Skin | null)?.name ?? null);
+      this.showSelectedPopup(resolved);
     }
   }
 
@@ -675,12 +678,16 @@ export class InventoryModal extends BaseModal {
     );
   }
 
-  private selectCrown(crownName: string | null) {
-    this.userSettings.setSelectedCrownName(crownName ?? undefined);
+  private selectCrown(resolved: ResolvedCosmetic) {
+    this.userSettings.setSelectedCrownName(
+      resolved.cosmetic?.name ?? undefined,
+    );
+    this.showSelectedPopup(resolved);
   }
 
-  private selectFlag(flag: string) {
-    this.userSettings.setFlag(flag);
+  private selectFlag(resolved: ResolvedCosmetic) {
+    this.userSettings.setFlag(resolved.key);
+    this.showSelectedPopup(resolved);
   }
 
   private selectPattern(
@@ -696,15 +703,15 @@ export class InventoryModal extends BaseModal {
           : `${pattern.name}:${pattern.colorPalette.name}`;
       this.userSettings.setSelectedPatternName(`pattern:${name}`);
     }
-    this.showSkinSelectedPopup(resolved);
+    this.showSelectedPopup(resolved);
   }
 
-  private showSkinSelectedPopup(resolved: ResolvedCosmetic) {
+  private showSelectedPopup(resolved: ResolvedCosmetic) {
     window.dispatchEvent(
       new CustomEvent("show-message", {
         detail: {
           message: translateText("inventory.selected_cosmetic", {
-            name: cosmeticDisplayName(resolved),
+            name: cosmeticSelectionLabel(resolved),
           }),
           duration: 2000,
         },

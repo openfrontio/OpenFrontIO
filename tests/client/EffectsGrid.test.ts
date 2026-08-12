@@ -173,13 +173,30 @@ async function createGrid(): Promise<EffectsGrid> {
 
 describe("EffectsGrid", () => {
   let grid: EffectsGrid | undefined;
+  let languageFixture: HTMLElement | undefined;
 
   afterEach(() => {
     grid?.remove();
     grid = undefined;
+    languageFixture?.remove();
+    languageFixture = undefined;
     localStorage.clear();
     vi.mocked(purchaseCosmetic).mockReset();
   });
+
+  function installTranslations() {
+    const translations = {
+      "inventory.selected_cosmetic": "Selected {name}",
+      "effects.owned_wake": "Localized Wake",
+    };
+    languageFixture = document.createElement("lang-selector");
+    Object.assign(languageFixture, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(languageFixture);
+  }
 
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
@@ -267,6 +284,33 @@ describe("EffectsGrid", () => {
 
     grid.querySelector<HTMLButtonElement>("[data-effects-unequip]")!.click();
     expect(settings.getSelectedEffectName("hydro")).toBeNull();
+  });
+
+  it("announces an equipped effect but stays quiet on Unequip", async () => {
+    installTranslations();
+    const onMessage = vi.fn();
+    window.addEventListener("show-message", onMessage);
+    try {
+      grid = await createGrid();
+      grid.effectType = "transportShipTrail";
+      grid.requestUpdate();
+      await grid.updateComplete;
+
+      const card = effectCard(grid, "effect:transportShipTrail:owned_wake")!;
+      await card.updateComplete;
+      card.querySelector<HTMLButtonElement>("[data-cosmetic-main]")!.click();
+
+      expect((onMessage.mock.lastCall?.[0] as CustomEvent).detail.message).toBe(
+        "Selected Localized Wake",
+      );
+
+      // Unequip picks nothing, so it has nothing to announce.
+      onMessage.mockClear();
+      grid.querySelector<HTMLButtonElement>("[data-effects-unequip]")!.click();
+      expect(onMessage).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("show-message", onMessage);
+    }
   });
 
   it("does not render an unscoped Unequip action in the all-types view", async () => {

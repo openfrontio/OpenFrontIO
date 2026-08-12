@@ -909,6 +909,7 @@
     "no_owned_skins": "You don't own any skins yet.",
     "retry": "Retry",
     "selected_cosmetic": "Selected {name}",
+    "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Effects equipped: {count}",
     "title": "Inventory",
     "unequip": "Unequip"

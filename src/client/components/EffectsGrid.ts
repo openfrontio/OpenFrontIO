@@ -22,6 +22,7 @@ import {
 } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticCard";
+import { cosmeticSelectionLabel } from "./CosmeticPresentation";
 
 export interface EffectSlotSelection {
   effectType: EffectType;
@@ -92,8 +93,25 @@ export class EffectsGrid extends LitElement {
   }
 
   // slot = effectType for trails, or the active nukeType for nuke explosions.
-  private select(slot: string, name: string | null) {
+  private select(
+    slot: string,
+    name: string | null,
+    selected?: ResolvedCosmetic,
+  ) {
     this.userSettings.setSelectedEffectName(slot, name ?? undefined);
+    // Unequip passes no cosmetic: nothing was selected, so say nothing.
+    if (selected !== undefined) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("inventory.selected_cosmetic", {
+              name: cosmeticSelectionLabel(selected),
+            }),
+            duration: 2000,
+          },
+        }),
+      );
+    }
     // Stay rendered; the change event re-renders this grid and the home button.
     this.requestUpdate();
   }
@@ -237,7 +255,7 @@ export class EffectsGrid extends LitElement {
     return html`<cosmetic-card
       .resolved=${r}
       state=${isSelected ? "equipped" : "idle"}
-      .onActivate=${() => this.select(slot, name)}
+      .onActivate=${() => this.select(slot, name, r)}
     ></cosmetic-card>`;
   }
 

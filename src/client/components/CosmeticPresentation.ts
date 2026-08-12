@@ -31,6 +31,24 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
   return translateCosmetic("flags", cosmetic.name);
 }
 
+/**
+ * The item's name, qualified by its colour when it has one — a pattern is only
+ * identifiable as "Ocean Stripes (Crimson)", since every palette of it shares
+ * the one name.
+ */
+export function cosmeticSelectionLabel(resolved: ResolvedCosmetic): string {
+  const name = cosmeticDisplayName(resolved);
+  const palette = resolved.colorPalette;
+  if (palette === null || resolved.cosmetic === null) return name;
+  return translateText("inventory.selected_cosmetic_variant", {
+    name,
+    variant: translateCosmetic(
+      "territory_patterns.color_palette",
+      palette.name,
+    ),
+  });
+}
+
 export function cosmeticRarity(resolved: ResolvedCosmetic): string {
   return resolved.cosmetic?.rarity ?? "common";
 }
