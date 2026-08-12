@@ -170,14 +170,9 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
     cosmetic-card:hover [data-cosmetic-sparkle="2"] { animation: cosmetic-card-sparkle-2 1.7s ease-in-out infinite 0.7s; }
     cosmetic-card:hover [data-cosmetic-sparkle="3"] { animation: cosmetic-card-sparkle-3 2s ease-in-out infinite 0.1s; }
 
-    @media (prefers-reduced-motion: reduce) {
-      cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="legendary"],
-      cosmetic-card:hover [data-cosmetic-border-sweep]::after,
-      cosmetic-card:hover [data-cosmetic-shimmer]::after,
-      cosmetic-card:hover [data-cosmetic-sparkle] {
-        animation: none;
-      }
-    }
+    /* No prefers-reduced-motion opt-out: these animations are the legendary
+       treatment, and suppressing them left the card with a frozen gold wash
+       and invisible (opacity: 0) sparkles rather than a calmer effect. */
   `;
   document.head.appendChild(style);
 }
