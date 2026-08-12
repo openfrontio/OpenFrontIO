@@ -1264,27 +1264,28 @@ export class RadialMenu implements Controller {
     const stateChanged = stateKey !== prevState;
 
     if (!cooldownChanged && !stateChanged) {
-      icon.attr("data-cooldown-active", cooldownActive ? "true" : "false");
-
-      const cx = parseFloat(icon.attr("data-cx") || "0");
-      const cy = parseFloat(icon.attr("data-cy") || "0");
-
-      if (stateKey) {
-        icon.attr("data-prev-state", stateKey);
-        // State unchanged, skip re-render to preserve animations
-      } else {
-        this.renderAllyExtendIcon(
-          icon.node()! as SVGGElement,
-          cx,
-          cy,
-          this.config.iconSize,
-          disabled,
-          this.params,
-          item.icon,
-          true,
-        );
-      }
+      return;
     }
+
+    icon.attr("data-cooldown-active", cooldownActive ? "true" : "false");
+
+    const cx = parseFloat(icon.attr("data-cx") || "0");
+    const cy = parseFloat(icon.attr("data-cy") || "0");
+
+    if (stateKey) {
+      icon.attr("data-prev-state", stateKey);
+      // State unchanged, skip re-render to preserve animations
+    }
+    this.renderAllyExtendIcon(
+      icon.node()! as SVGGElement,
+      cx,
+      cy,
+      this.config.iconSize,
+      disabled,
+      this.params,
+      item.icon,
+      true,
+    );
   }
 
   private maybeUpdateTimerGradient(
