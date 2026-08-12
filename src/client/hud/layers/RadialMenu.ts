@@ -687,15 +687,17 @@ export class RadialMenu implements Controller {
             .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
 
           getSvgAspectRatio(d.data.icon!).then((aspect) => {
-            if (!aspect || aspect === 1) return;
-
             let width = this.config.iconSize;
             let height = this.config.iconSize;
-            const biggerLength = Math.round(width * aspect);
-            if (aspect > 1) {
-              width = biggerLength;
-            } else {
-              height = biggerLength;
+
+            if (aspect !== null && aspect !== 1) {
+              const biggerLength = Math.round(width * aspect);
+
+              if (aspect > 1) {
+                width = biggerLength;
+              } else {
+                height = biggerLength;
+              }
             }
 
             imgSel
