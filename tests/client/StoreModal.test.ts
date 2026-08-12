@@ -370,7 +370,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 
-  it("uses blue focus instead of the equipped green state", async () => {
+  it("keeps inspection separate from the equipped green state", async () => {
     localStorage.setItem(PATTERN_KEY, green.key);
     const modal = await openStoreOnCosmetic("patterns");
 
