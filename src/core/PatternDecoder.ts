@@ -32,9 +32,8 @@ export const MAX_PATTERN_DIMENSION = 128;
  * before it reaches the decoder.
  */
 const MAX_PATTERN_BYTES =
-  HEADER_BYTES_V1 +
-  Math.ceil((MAX_PATTERN_DIMENSION * MAX_PATTERN_DIMENSION) / 8);
-export const MAX_PATTERN_DATA_LENGTH = Math.ceil((MAX_PATTERN_BYTES * 4) / 3);
+  HEADER_BYTES_V1 + ((MAX_PATTERN_DIMENSION * MAX_PATTERN_DIMENSION + 7) >> 3);
+export const MAX_PATTERN_DATA_LENGTH = ((MAX_PATTERN_BYTES * 4 + 2) / 3) | 0;
 
 /**
  * Bytes reserved per player in the renderer's pattern-data texture (one row
@@ -42,9 +41,8 @@ export const MAX_PATTERN_DATA_LENGTH = Math.ceil((MAX_PATTERN_BYTES * 4) / 3);
  * that fills the buffer and the GPU side that allocates the texture can't
  * drift from the format's limit.
  */
-export const PATTERN_ROW_BYTES = Math.ceil(
-  (MAX_PATTERN_DIMENSION * MAX_PATTERN_DIMENSION) / 8,
-);
+export const PATTERN_ROW_BYTES =
+  (MAX_PATTERN_DIMENSION * MAX_PATTERN_DIMENSION + 7) >> 3;
 
 export class PatternDecoder {
   private bytes: Uint8Array;
