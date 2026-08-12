@@ -13,7 +13,9 @@ import { createProgram } from "../utils/GlUtils";
 import fragSrc from "../shaders/crosshair/crosshair.frag.glsl?raw";
 import vertSrc from "../shaders/crosshair/crosshair.vert.glsl?raw";
 
-import statusAtlasUrl from "resources/atlases/status-atlas.png";
+import { assetUrl } from "src/core/AssetUrls";
+
+const statusAtlasUrl = assetUrl("atlases/status-atlas.png");
 
 /** Half-size of the crosshair quad in screen pixels. */
 const CROSSHAIR_PX = 20;
