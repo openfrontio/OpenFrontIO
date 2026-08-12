@@ -253,6 +253,9 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // E2E tests boot the real server on fixed ports and have their own
+      // config (vitest.e2e.config.ts); run them via `npm run test:e2e`.
+      exclude: ["**/node_modules/**", "**/dist/**", "tests/e2e/**"],
     },
     root: "./",
     base: "/",

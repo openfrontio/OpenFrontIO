@@ -47,6 +47,16 @@ const playlist = new MapPlaylist();
 export async function startWorker() {
   log.info(`Worker starting...`);
 
+  // Exit when the IPC channel to the master closes. Node's cluster workers
+  // already die with the master; Bun's do not — an orphaned worker would
+  // keep its port bound (SO_REUSEPORT) and serve stale state next to the
+  // restarted server's workers. Explicit exit makes the lifecycle identical
+  // on both runtimes.
+  process.on("disconnect", () => {
+    log.info("IPC channel to master closed, shutting down worker");
+    process.exit(0);
+  });
+
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 

@@ -127,7 +127,13 @@ export class WorkerLobbyService {
   }
 
   private sendToMaster(msg: WorkerReady | WorkerLobbyList) {
-    process.send?.(msg);
+    // On Node a closed IPC channel makes process.send return false; on Bun
+    // it throws instead. Treat both as "master is gone, drop the message".
+    try {
+      process.send?.(msg);
+    } catch (error) {
+      this.log.warn(`Failed to send IPC message to master: ${error}`);
+    }
   }
 
   private sendMyLobbiesToMaster() {

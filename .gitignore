@@ -22,6 +22,7 @@ src/assets/
 *debug*.txt
 eslint_out.txt
 tests/perf/output/
+tests/load/results/
 
 # Locally built Go binary (gen-maps uses `go run .`)
 map-generator/map-generator
