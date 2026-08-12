@@ -77,6 +77,18 @@ describe("nav-account-menu", () => {
     expect(trigger().getAttribute("data-page")).toBe("page-account");
   });
 
+  it("stays off for an anonymous session with no linked identity", async () => {
+    // /users/@me resolves for guests too, so a bare response must not count as
+    // signed in — that's what put the chevron on the signed-out pill.
+    fireUserMe({
+      user: {},
+      player: { publicId: "p" },
+    } as unknown as UserMeResponse);
+    await el.updateComplete;
+    await click(trigger());
+    expect(menu()).toBeNull();
+  });
+
   it("toggles the menu for a signed-in user", async () => {
     fireUserMe(userMe());
     await el.updateComplete;
@@ -92,6 +104,7 @@ describe("nav-account-menu", () => {
     await el.updateComplete;
     await click(trigger());
     expect(itemKeys()).toEqual([
+      "view-account",
       "account-settings",
       "game-settings",
       "change-username",

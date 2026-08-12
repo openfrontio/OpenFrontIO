@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
+import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { showInGameConfirm } from "../InGameModal";
@@ -70,10 +71,16 @@ export class NavAccountMenu extends LitElement {
     if (!this.hasMenu()) this.menuOpen = false;
   };
 
-  // CrazyGames owns its own account UI (including sign-out), so the menu stays
-  // off there and the trigger keeps its existing behaviour.
+  // An anonymous session still resolves to a UserMeResponse, so "signed in"
+  // means a linked identity — the same test the trigger's avatar/sign-in state
+  // uses. CrazyGames owns its own account UI (including sign-out), so the menu
+  // stays off there and the trigger keeps its existing behaviour.
   private hasMenu(): boolean {
-    return this.userMeResponse !== false && !crazyGamesSDK.isOnCrazyGames();
+    return (
+      this.userMeResponse !== false &&
+      hasLinkedIdentity(this.userMeResponse.user) &&
+      !crazyGamesSDK.isOnCrazyGames()
+    );
   }
 
   private closeMenu = () => {
@@ -108,6 +115,14 @@ export class NavAccountMenu extends LitElement {
       this.userMeResponse.player.subscription !== null;
 
     const items: MenuItem[] = [
+      {
+        key: "view-account",
+        labelKey: "nav_account_menu.view_account",
+        icon: iconUser,
+        onSelect: () => {
+          window.showPage?.("page-account");
+        },
+      },
       {
         key: "account-settings",
         labelKey: "nav_account_menu.account_settings",
@@ -382,6 +397,21 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 }
+
+const iconUser = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <path d="M20 21a8 8 0 0 0-16 0" />
+  <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+</svg>`;
 
 const iconGear = html`<svg
   xmlns="http://www.w3.org/2000/svg"
