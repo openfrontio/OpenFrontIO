@@ -694,7 +694,8 @@ export class RadialMenu implements Controller {
               .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
               .attr("font-size", "20px")
               .attr("font-weight", "bold")
-              .attr("x", arc.centroid(d)[0] - this.config.iconSize / 4)
+              .attr("text-anchor", "middle")
+              .attr("x", arc.centroid(d)[0])
               .attr("y", arc.centroid(d)[1] + this.config.iconSize / 2 + 7);
           }
         }
@@ -1314,11 +1315,11 @@ export class RadialMenu implements Controller {
     const otherAgreed = interaction?.allianceInfo?.otherAgreedToExtend ?? false;
 
     const ns = "http://www.w3.org/2000/svg";
-    const smallSize = iconSize;
+    const smallSize = iconSize * 0.8;
     const iconUrl = icon ?? "";
 
     getSvgAspectRatio(iconUrl).then((ratio) => {
-      const width = smallSize;
+      const width = smallSize * (ratio ?? 1);
       const gap = 2;
       const totalWidth = width * 2 + gap;
 
