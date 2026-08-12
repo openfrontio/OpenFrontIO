@@ -243,9 +243,12 @@ export class StoreModal extends BaseModal {
       const active = focused ?? group[0];
       const action =
         active.type === "subscription" && active.relationship === "owned"
-          ? html`<span
+          ? // Same box as a purchase button (w-full, min-h-11, text-base) so the
+            // owned tier reads as a peer of the other tiers' switch action
+            // instead of a small tag tucked to one side of the card.
+            html`<span
               data-store-status
-              class="rounded-lg bg-white/5 px-3 py-2 text-center text-sm font-bold text-white/70"
+              class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2 py-1.5 text-base font-bold text-emerald-300"
               >${translateText("store.subscribed")}</span
             >`
           : this.renderPurchaseAction(active, userHasSubscription);
@@ -435,11 +438,11 @@ export class StoreModal extends BaseModal {
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
       trailingContent: html`<custom-currency-card
-        class="block w-48 shrink-0"
+        class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
       ></custom-currency-card>`,
       gridClass:
-        "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
-      cardClass: "block w-48 shrink-0",
+        "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
+      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });
@@ -453,8 +456,8 @@ export class StoreModal extends BaseModal {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
       gridClass:
-        "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
-      cardClass: "block w-48 shrink-0",
+        "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
+      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });

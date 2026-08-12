@@ -45,7 +45,13 @@ export class CosmeticPreview extends LitElement {
       data-cosmetic-preview=${this.resolved.cosmetic === null
         ? "default"
         : this.resolved.type}
-      class=${this.size === "detail" ? "h-full w-full" : "aspect-square w-full"}
+      class=${this.size === "detail"
+        ? "h-full w-full"
+        : // A subscription paints a wrapping list of perks, not artwork: a square
+          // box cuts the last perk off once cards are phone-width.
+          this.resolved.type === "subscription"
+          ? "w-full"
+          : "aspect-square w-full"}
     >
       ${this.renderResolvedPreview()}
     </div>`;

@@ -388,9 +388,14 @@ export class CosmeticCard extends LitElement {
       priced?.priceHard !== undefined
         ? priced.priceHard / 20
         : undefined;
+    // A subscription lists its perks as text, which wraps to more lines than a
+    // square box holds once cards are phone-width — let it take the height it
+    // needs rather than clipping the last perk.
+    const previewShape =
+      active.type === "subscription" ? "h-auto" : "aspect-square";
     const content = html`
       <div
-        class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
+        class="w-full ${previewShape} flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
       >
         <cosmetic-preview .resolved=${active} size="card"></cosmetic-preview>
       </div>
@@ -458,7 +463,7 @@ export class CosmeticCard extends LitElement {
       ${isEquipped
         ? html`<span
             data-cosmetic-equipped="true"
-            class="absolute left-2 top-2 rounded-full bg-emerald-500 px-3 py-1 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
+            class="absolute left-2 top-2 z-[4] rounded-full bg-emerald-500 px-3 py-1 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
             >✓ ${translateText("inventory.equipped")}</span
           >`
         : nothing}

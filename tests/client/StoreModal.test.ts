@@ -518,7 +518,10 @@ describe("StoreModal cosmetic browser", () => {
       card(modal, pack.key),
       modal.querySelector("custom-currency-card"),
     ]) {
-      expect(el?.className).toMatch(/w-48/);
+      // Half-width (minus the gap) below sm so phones fit two per row, as the
+      // cosmetics and effects grids already do; a fixed w-48 from sm up.
+      expect(el?.className).toContain("w-[calc(50%-0.5rem)]");
+      expect(el?.className).toContain("sm:w-48");
       expect(el?.className).not.toMatch(/h-full/);
     }
     expect(card(modal, pack.key)?.state).toBe("focused");
@@ -577,15 +580,23 @@ describe("StoreModal cosmetic browser", () => {
     expect(grid.className).toMatch(/flex-wrap/);
     expect(grid.className).toMatch(/justify-center/);
     expect(grid.className).toMatch(/p-8/);
-    expect(card(modal, goldSubscription.key)?.className).toMatch(/w-48/);
+    expect(card(modal, goldSubscription.key)?.className).toContain(
+      "w-[calc(50%-0.5rem)]",
+    );
+    expect(card(modal, goldSubscription.key)?.className).toContain("sm:w-48");
     // h-full resolves against the whole wrapping flex container, so a card
     // would grow to the height of every row stacked — the phone layout.
     expect(card(modal, goldSubscription.key)?.className).not.toMatch(/h-full/);
 
-    expect(
-      product(modal, goldSubscription.key)?.querySelector("[data-store-status]")
-        ?.textContent,
-    ).toContain("store.subscribed");
+    const status = product(modal, goldSubscription.key)?.querySelector(
+      "[data-store-status]",
+    );
+    expect(status?.textContent).toContain("store.subscribed");
+    // Same box as the other tiers' switch button, not a small tag off to one
+    // side: full width, a button's height and a button's type size.
+    expect(status?.className).toContain("w-full");
+    expect(status?.className).toContain("min-h-11");
+    expect(status?.className).toContain("text-base");
 
     await focusCard(modal, platinumSubscription.key);
     const switchButton = purchaseButton(modal, platinumSubscription.key);

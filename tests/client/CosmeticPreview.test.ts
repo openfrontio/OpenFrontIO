@@ -270,4 +270,17 @@ describe("CosmeticPreview", () => {
     );
     expect(previewBox.textContent).toContain("+250 BONUS!");
   });
+
+  it("lets a subscription preview grow past a square", async () => {
+    installTranslations();
+    await render(resolved.subscription);
+
+    // Perks wrap to more lines than a square box holds at phone card widths,
+    // and the card clips overflow — so this preview must size to its content.
+    const box = preview!.querySelector(
+      '[data-cosmetic-preview="subscription"]',
+    )!;
+    expect(box.className).toContain("w-full");
+    expect(box.className).not.toContain("aspect-square");
+  });
 });

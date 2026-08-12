@@ -381,4 +381,34 @@ describe("CosmeticCard", () => {
     expect(shell.className).not.toMatch(/ring-blue/);
     expect(shell.className).not.toMatch(/ring-emerald/);
   });
+
+  it("stacks the equipped badge above the card body and its overlays", async () => {
+    installTranslations();
+    await createCard();
+    card!.state = "equipped";
+    await card!.updateComplete;
+
+    const badge = card!.querySelector<HTMLElement>(
+      "[data-cosmetic-equipped='true']",
+    )!;
+    const badgeZ = Number(/\bz-\[(\d+)\]/.exec(badge.className)?.[1]);
+    const styles = document.getElementById(
+      "cosmetic-card-styles",
+    )!.textContent!;
+    const ruleZ = (selector: string) =>
+      Number(
+        new RegExp(`\\[${selector}\\][^{]*\\{[^}]*z-index:\\s*(\\d+)`).exec(
+          styles,
+        )?.[1],
+      );
+
+    // The badge is positioned but has no z-index of its own by default, so the
+    // body (z-index: 3) and the shimmer overlay (2) both paint over it — the
+    // preview swallows the badge. It must outrank both.
+    expect(badgeZ).toBeGreaterThan(ruleZ("data-cosmetic-main"));
+    expect(badgeZ).toBeGreaterThan(ruleZ("data-cosmetic-shimmer"));
+    // ...but stay under the legendary sparkles, which sit at the card corners
+    // where the badge is and are meant to read as the topmost layer.
+    expect(badgeZ).toBeLessThan(ruleZ("data-cosmetic-sparkle"));
+  });
 });
