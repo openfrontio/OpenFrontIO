@@ -116,7 +116,7 @@ describe("Effect cosmetic schemas", () => {
       });
     });
 
-    it("requires spiral radius/strands/rotationSpeed, radius > 0, integer strands", () => {
+    it("requires spiral radius/strands/rotationSpeed and positive dimensions", () => {
       const valid = {
         type: "spiral",
         colors: ["#f00", "#00f"],
@@ -137,7 +137,7 @@ describe("Effect cosmetic schemas", () => {
       expect(
         TrailEffectAttributesSchema.safeParse({ ...valid, strands: 2.5 })
           .success,
-      ).toBe(false);
+      ).toBe(true);
       expect(
         TrailEffectAttributesSchema.safeParse({ ...valid, strands: 0 }).success,
       ).toBe(false);

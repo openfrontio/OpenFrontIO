@@ -221,6 +221,61 @@ export function invalidateUserMe() {
   __userMe = null;
 }
 
+export type DeleteAccountResult =
+  | { ok: true }
+  // 401: missing/unknown/expired refresh token — already logged out, and the
+  // server cleared the cookie.
+  | { ok: false; code: "logged_out" }
+  // 403: refused by policy. `message` is the server's player-facing reason
+  // (root player / banned account), shown as-is.
+  | { ok: false; code: "forbidden"; message?: string }
+  // 409: the player authored content other players depend on — deletion needs
+  // support. The body's message is for support, not end users.
+  | { ok: false; code: "blocked" }
+  // Anything else, including 429 rate limiting: the client shows a
+  // "contact support" failure.
+  | { ok: false; code: "failed" };
+
+// DELETE /users/@me — deletes the account immediately and irreversibly. The
+// HttpOnly refresh cookie is the credential (same as /auth/logout), so no
+// Authorization header. On 204 every session on every device is invalidated
+// and the cookie is cleared — callers drop local auth state themselves and
+// must NOT call /auth/logout afterwards.
+export async function deleteAccount(): Promise<DeleteAccountResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (response.status === 401) {
+      return { ok: false, code: "logged_out" };
+    }
+    if (response.status === 403) {
+      const body = await response.json().catch(() => null);
+      return {
+        ok: false,
+        code: "forbidden",
+        message: typeof body?.message === "string" ? body.message : undefined,
+      };
+    }
+    if (response.status === 409) {
+      return { ok: false, code: "blocked" };
+    }
+    if (!response.ok) {
+      console.error(
+        "deleteAccount: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("deleteAccount: request failed", e);
+    return { ok: false, code: "failed" };
+  }
+}
+
 // POST /marketing/consent — record the player's marketing-email choice
 // (client-driven consent). Called by the consent toast and account settings.
 // Invalidates the cached /users/@me so the new decision is reflected on the

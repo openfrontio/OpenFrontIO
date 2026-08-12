@@ -2,7 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { createCustomCurrencyCheckout } from "../Api";
 import { translateText } from "../Utils";
-import "./CosmeticContainer";
 import "./PlutoniumIcon";
 import "./PurchaseButton";
 
@@ -49,49 +48,66 @@ export class CustomCurrencyCard extends LitElement {
   render() {
     const price = `$${this.priceDollars}`;
     return html`
-      <cosmetic-container
-        class="flex flex-col items-center justify-between gap-2 p-3 w-48 h-full"
-        .rarity=${"common"}
-        .name=${translateText("store.custom_amount")}
+      <article
+        data-custom-currency-card
+        data-cosmetic-shell
+        data-cosmetic-rarity="common"
+        style="background:linear-gradient(to top, rgba(80,80,80,0.55) 0%, rgba(15,15,20,0.85) 100%);border-color:rgba(255,255,255,0.15)"
+        class="relative flex h-full w-48 flex-col items-center overflow-visible rounded-xl border border-white/20 transition-all duration-200 ease-out hover:-translate-y-1 hover:z-10 hover:shadow-[0_0_10px_rgba(255,255,255,0.5)]"
       >
         <div
-          class="relative flex flex-col items-center justify-center gap-1 w-full aspect-square bg-white/5 rounded-lg p-2 border border-white/10 overflow-hidden"
+          data-cosmetic-main
+          class="group relative flex w-full flex-col items-center gap-2 rounded-xl p-3"
         >
-          <plutonium-icon .size=${64}></plutonium-icon>
-          <label for="custom-plutonium-amount" class="sr-only"
-            >${translateText("store.plutonium_amount")}</label
+          <div
+            data-custom-currency-preview
+            class="relative flex w-full aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-lg border border-white/10 bg-white/5 p-2"
           >
-          <input
-            id="custom-plutonium-amount"
-            type="number"
-            class="custom-plutonium-input w-24 text-center bg-black/30 border border-green-500/30 rounded px-1 py-0.5 text-lg font-black text-green-400 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400/40"
-            aria-label=${translateText("store.plutonium_amount")}
-            min=${MIN_PLUTONIUM}
-            max=${MAX_PLUTONIUM}
-            step="1"
-            .value=${String(this.amount)}
-            @change=${this.onInputChange}
-          />
-          <span class="text-[10px] font-bold text-white/50 uppercase"
-            >${translateText("cosmetics.hard")}</span
+            <plutonium-icon .size=${64}></plutonium-icon>
+            <label for="custom-plutonium-amount" class="sr-only"
+              >${translateText("store.plutonium_amount")}</label
+            >
+            <input
+              id="custom-plutonium-amount"
+              type="number"
+              class="custom-plutonium-input w-24 text-center bg-black/30 border border-green-500/30 rounded px-1 py-0.5 text-lg font-black text-green-400 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400/40"
+              aria-label=${translateText("store.plutonium_amount")}
+              min=${MIN_PLUTONIUM}
+              max=${MAX_PLUTONIUM}
+              step="1"
+              .value=${String(this.amount)}
+              @change=${this.onInputChange}
+            />
+            <span class="text-[10px] font-bold text-white/50 uppercase"
+              >${translateText("cosmetics.hard")}</span
+            >
+            <input
+              type="range"
+              class="w-[90%] accent-green-500 cursor-pointer"
+              aria-label=${translateText("store.plutonium_amount")}
+              min=${MIN_PLUTONIUM}
+              max=${MAX_PLUTONIUM}
+              step="1"
+              .value=${String(this.amount)}
+              @input=${this.onSlider}
+            />
+          </div>
+
+          <span
+            data-custom-currency-name
+            class="w-full whitespace-normal break-words text-center text-sm font-bold leading-tight text-white"
+            >${translateText("store.custom_amount")}</span
           >
-          <input
-            type="range"
-            class="w-[90%] accent-green-500 cursor-pointer"
-            aria-label=${translateText("store.plutonium_amount")}
-            min=${MIN_PLUTONIUM}
-            max=${MAX_PLUTONIUM}
-            step="1"
-            .value=${String(this.amount)}
-            @input=${this.onSlider}
-          />
         </div>
 
-        <purchase-button
-          .dollarPrice=${price}
-          .onPurchaseDollar=${this.buy}
-        ></purchase-button>
-      </cosmetic-container>
+        <div data-cosmetic-action class="mt-auto w-full px-3 pb-3 pt-2">
+          <purchase-button
+            class="block w-full"
+            .dollarPrice=${price}
+            .onPurchaseDollar=${this.buy}
+          ></purchase-button>
+        </div>
+      </article>
     `;
   }
 }

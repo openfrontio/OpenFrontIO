@@ -6,12 +6,14 @@ import { assetUrl } from "../core/AssetUrls";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { hasLinkedIdentity, isSteamPrimaryUser } from "./AccountIdentity";
 import {
+  deleteAccount,
   fetchPlayerById,
   getUserMe,
   invalidateUserMe,
   setMarketingConsent,
 } from "./Api";
 import {
+  clearLocalSession,
   discordLogin,
   googleLogin,
   linkGoogle,
@@ -28,6 +30,7 @@ import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
+import "./components/DeleteAccountDialog";
 import "./components/Difficulties";
 import "./components/FriendsList";
 import "./components/RewardsPanel";
@@ -37,7 +40,9 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { showInGameAlert } from "./InGameModal";
 import { playerProfileUrl } from "./PlayerProfileModal";
+import { steamSDK } from "./SteamSDK";
 import { translateText } from "./Utils";
 
 // window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
@@ -70,6 +75,8 @@ export class AccountModal extends BaseModal {
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
   @state() private consentBusy: boolean = false;
+  @state() private deleteDialogOpen: boolean = false;
+  @state() private deleteBusy: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -213,15 +220,22 @@ export class AccountModal extends BaseModal {
     }
   }
 
+  private renderSettingsTab(): TemplateResult {
+    return html`
+      <div class="flex flex-col gap-6">
+        ${this.renderMarketingCard()} ${this.renderDeleteAccountCard()}
+      </div>
+    `;
+  }
+
   // Persistent marketing-consent control (client-driven consent). Mirrors the
   // post-login toast: a player can turn email updates on/off any time here, or
   // — when there's no verified email on the account — is told to link one.
-  private renderSettingsTab(): TemplateResult {
+  private renderMarketingCard(): TemplateResult | typeof nothing {
     const consent = this.userMeResponse?.player?.marketingConsent;
-    // The API didn't return consent state (older backend). The tab is always
-    // shown, but with nothing to configure it stays empty rather than showing
-    // a misleading "link an email" prompt.
-    if (!consent) return html``;
+    // The API didn't return consent state (older backend). Nothing to
+    // configure, so no card rather than a misleading "link an email" prompt.
+    if (!consent) return nothing;
     const hasEmail = consent.hasEmail;
     const on = consent.consented === "approved";
     return html`
@@ -306,6 +320,78 @@ export class AccountModal extends BaseModal {
       ></o-button>
     `;
   }
+
+  // Self-service account deletion (DELETE /users/@me). The API deletes
+  // immediately on a valid request, so the button opens a hard confirm (typed
+  // confirmation). Hidden on CrazyGames and Steam: the endpoint's credential
+  // is the refresh cookie, which isn't usable there (cross-site — see
+  // Auth.ts), so the request could never succeed.
+  private renderDeleteAccountCard(): TemplateResult | typeof nothing {
+    if (crazyGamesSDK.isOnCrazyGames() || steamSDK.isOnSteam()) return nothing;
+    return html`
+      <div class="bg-white/5 rounded-xl border border-red-500/30 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="text-white font-medium">
+              ${translateText("account_modal.delete_account_title")}
+            </div>
+            <div class="text-white/50 text-sm mt-1">
+              ${translateText("account_modal.delete_account_desc")}
+            </div>
+          </div>
+          <o-button
+            variant="danger"
+            size="sm"
+            translationKey="account_modal.delete_account_button"
+            .disable=${this.deleteBusy}
+            @click=${() => {
+              this.deleteDialogOpen = true;
+            }}
+          ></o-button>
+        </div>
+      </div>
+      ${this.deleteDialogOpen
+        ? html`<delete-account-dialog
+            @confirm=${this.handleDeleteAccount}
+            @cancel=${() => {
+              this.deleteDialogOpen = false;
+            }}
+          ></delete-account-dialog>`
+        : nothing}
+    `;
+  }
+
+  private handleDeleteAccount = async (): Promise<void> => {
+    this.deleteDialogOpen = false;
+    if (this.deleteBusy) return;
+
+    this.deleteBusy = true;
+    const result = await deleteAccount();
+    this.deleteBusy = false;
+
+    if (result.ok || result.code === "logged_out") {
+      // 204: deleted — every session is revoked and the refresh cookie is
+      // cleared. 401: the session was already gone and the cookie is cleared
+      // too. Either way only local state is left to drop; calling
+      // /auth/logout here would be wrong (the credential no longer exists).
+      clearLocalSession();
+      this.close();
+      window.location.reload();
+      return;
+    }
+    if (result.code === "forbidden" && result.message !== undefined) {
+      // Server's player-facing refusal (root player / banned account).
+      await showInGameAlert(result.message);
+    } else if (result.code === "blocked") {
+      await showInGameAlert(
+        translateText("account_modal.delete_account_blocked"),
+      );
+    } else {
+      await showInGameAlert(
+        translateText("account_modal.delete_account_failed"),
+      );
+    }
+  };
 
   private async setConsent(consented: boolean): Promise<void> {
     const consent = this.userMeResponse?.player?.marketingConsent;
@@ -932,6 +1018,9 @@ export class AccountModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // The delete dialog portals to document.body, so it would outlive the
+    // (merely hidden) modal if left open.
+    this.deleteDialogOpen = false;
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );
