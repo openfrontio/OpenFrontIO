@@ -2,31 +2,73 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { getDiscordAvatarUrl, translateText } from "./Utils";
 
-// Renders the persistent top-nav account button from the resolved /users/@me
+// Every account trigger rendered by <nav-account-menu> (the desktop nav pill
+// and the mobile top-bar icon) exposes the same data-* hooks, so one update
+// call keeps both in sync.
+interface NavAccountElements {
+  trigger: HTMLElement;
+  avatar: (HTMLImageElement & { _navToken?: symbol }) | null;
+  personIcon: HTMLElement | null;
+  emailBadge: HTMLElement | null;
+  signInText: HTMLElement | null;
+}
+
+function navAccountInstances(): NavAccountElements[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>("[data-account-trigger]"),
+  ).map((trigger) => ({
+    trigger,
+    avatar: trigger.querySelector<HTMLImageElement & { _navToken?: symbol }>(
+      "[data-account-avatar]",
+    ),
+    personIcon: trigger.querySelector<HTMLElement>(
+      "[data-account-person-icon]",
+    ),
+    emailBadge: trigger.querySelector<HTMLElement>(
+      "[data-account-email-badge]",
+    ),
+    signInText: trigger.querySelector<HTMLElement>(
+      "[data-account-signin-text]",
+    ),
+  }));
+}
+
+// Renders the persistent account triggers from the resolved /users/@me
 // response: a linked identity shows its avatar/badge, everything else shows the
 // signed-out prompt. Extracted from Main.ts so the identity precedence — which
 // now includes Steam — is unit-testable in jsdom.
 export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
-  const button = document.getElementById("nav-account-button");
-  if (!button) return;
+  const instances = navAccountInstances();
+  if (instances.length === 0) return;
 
-  const avatarEl = document.getElementById("nav-account-avatar") as
-    | (HTMLImageElement & { _navToken?: symbol })
-    | null;
-  const personIconEl = document.getElementById(
-    "nav-account-person-icon",
-  ) as SVGElement | null;
-  const emailBadgeEl = document.getElementById(
-    "nav-account-email-badge",
-  ) as HTMLElement | null;
-  const signInTextEl = document.getElementById(
-    "nav-account-signin-text",
-  ) as HTMLSpanElement | null;
-
-  // Auth state is resolved, so the button no longer shows the loading spinner.
+  // Auth state is resolved, so the triggers no longer show the loading spinner.
   document
-    .getElementById("nav-account-loading-spinner")
-    ?.classList.add("hidden");
+    .querySelectorAll("[data-account-spinner]")
+    .forEach((el) => el.classList.add("hidden"));
+
+  for (const nav of instances) {
+    updateInstance(nav, userMeResponse);
+  }
+}
+
+function updateInstance(
+  nav: NavAccountElements,
+  userMeResponse: UserMeResponse | false,
+) {
+  const { trigger, avatar: avatarEl, personIcon: personIconEl } = nav;
+  const emailBadgeEl = nav.emailBadge;
+  const signInTextEl = nav.signInText;
+
+  // The border only belongs on triggers that opt in (the desktop pill); the
+  // mobile icon has no pill outline.
+  const setBordered = (bordered: boolean) => {
+    if (!trigger.hasAttribute("data-account-border")) return;
+    if (bordered) {
+      trigger.classList.add("border", "border-white/20");
+    } else {
+      trigger.classList.remove("border", "border-white/20");
+    }
+  };
 
   // Unique token for this update call
   const navToken = Symbol();
@@ -40,7 +82,7 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     personIconEl?.classList.remove("hidden");
     emailBadgeEl?.classList.add("hidden");
     signInTextEl?.classList.add("hidden");
-    button?.classList.add("border", "border-white/20");
+    setBordered(true);
   };
 
   const showAvatar = (src: string, alt?: string) => {
@@ -66,7 +108,7 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     personIconEl?.classList.add("hidden");
     emailBadgeEl?.classList.add("hidden");
     signInTextEl?.classList.add("hidden");
-    button?.classList.remove("border", "border-white/20");
+    setBordered(false);
   };
 
   const showSignIn = () => {
@@ -75,7 +117,7 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     emailBadgeEl?.classList.add("hidden");
     signInTextEl?.classList.remove("hidden");
     // Restore border when showing signin state
-    button?.classList.add("border", "border-white/20");
+    setBordered(true);
   };
 
   const showEmailLoggedIn = () => {
@@ -83,7 +125,7 @@ export function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     personIconEl?.classList.remove("hidden");
     emailBadgeEl?.classList.remove("hidden");
     signInTextEl?.classList.add("hidden");
-    button?.classList.add("border", "border-white/20");
+    setBordered(true);
   };
 
   const discord =

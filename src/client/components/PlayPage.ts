@@ -3,6 +3,7 @@ import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import "./CosmeticBackground";
+import "./NavAccountMenu";
 import "./NewsBox";
 import "./SteamWishlist";
 import "./StreamingNow";
@@ -97,10 +98,10 @@ export class PlayPage extends LitElement {
                   </button>
                 `
               : html`
-                  <div
-                    aria-hidden="true"
-                    class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
-                  ></div>
+                  <nav-account-menu
+                    variant="mobile"
+                    class="col-start-3 justify-self-end shrink-0"
+                  ></nav-account-menu>
                 `}
           </div>
         </div>

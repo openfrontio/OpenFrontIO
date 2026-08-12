@@ -15,10 +15,12 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
+import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import {
@@ -64,6 +66,7 @@ import {
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import { StoreModal } from "./Store";
+import "./SubscriptionModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
@@ -214,6 +217,10 @@ class Client {
       tag: "account-modal",
       pageId: "page-account",
     });
+    // Profile-menu modals: popup style, so no pageId.
+    modalRouter.register("account-settings", { tag: "account-settings-modal" });
+    modalRouter.register("change-username", { tag: "change-username-modal" });
+    modalRouter.register("subscription", { tag: "subscription-modal" });
     modalRouter.register("stats", {
       tag: "game-stats-modal",
       pageId: "page-stats",

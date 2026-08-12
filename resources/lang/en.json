@@ -41,7 +41,6 @@
     "linked_account": "Logged in as {account_name}",
     "linked_to_google": "Linked to Google",
     "linked_to_google_email": "Linked to Google ({email})",
-    "log_out": "Log Out",
     "manage_subscription": "Manage",
     "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
     "marketing_no_email": "Link an email to your account to subscribe to updates.",
@@ -95,6 +94,9 @@
     "username_title": "Username",
     "your_subscription": "Your Subscription"
   },
+  "account_settings_modal": {
+    "title": "Account Settings"
+  },
   "ban_notice": {
     "appeal": "If you believe this is a mistake, contact us on Discord.",
     "category": {
@@ -132,6 +134,10 @@
     "not_enough_money": "Not enough money",
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
+  },
+  "change_username_modal": {
+    "title": "Change Username",
+    "unavailable": "Username management isn't available on this account yet."
   },
   "chat": {
     "attack": {
@@ -1233,6 +1239,15 @@
     "seconds": "seconds",
     "warning": "Vigilant Mode Warning"
   },
+  "nav_account_menu": {
+    "account_settings": "Account settings",
+    "change_subscription": "Change subscription",
+    "change_username": "Change username",
+    "game_settings": "Game settings",
+    "log_out": "Log out",
+    "log_out_confirm": "Log out of this account?",
+    "title": "Account menu"
+  },
   "new_lobby_prompt": {
     "confirm": "Start a new lobby? All players will be invited to join.",
     "dismiss": "Dismiss",
@@ -1645,6 +1660,11 @@
     "title": "Streaming Now",
     "viewers": "{count} watching",
     "watch": "Watch {name}"
+  },
+  "subscription_modal": {
+    "browse": "Browse Subscriptions",
+    "none": "You don't have an active subscription.",
+    "title": "Your Subscription"
   },
   "team_colors": {
     "blue": "Blue",

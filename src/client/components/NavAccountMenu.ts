@@ -1,0 +1,471 @@
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { UserMeResponse } from "../../core/ApiSchemas";
+import { logOut } from "../Auth";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { showInGameConfirm } from "../InGameModal";
+import { closeMobileSidebar } from "../Navigation";
+import { translateText } from "../Utils";
+
+type MenuItem = {
+  key: string;
+  labelKey: string;
+  icon: TemplateResult;
+  onSelect: () => void;
+  danger?: boolean;
+};
+
+/**
+ * The nav profile control: the account avatar/sign-in trigger plus, once signed
+ * in, a chevron that opens the account menu (settings, game settings, username,
+ * subscription, log out).
+ *
+ * The trigger keeps `nav-menu-item[data-page="page-account"]`, so the signed-out
+ * state still falls through to Navigation's delegated router and opens the
+ * account modal. Signed in, the click is intercepted here and toggles the menu
+ * instead.
+ *
+ * `variant="desktop"` also carries the legacy element ids the imperative
+ * updaters (NavAccountButton, CrazyGamesAccountButton) drive; every instance
+ * additionally exposes `data-account-*` hooks so both trigger layouts stay in
+ * sync from one update call.
+ */
+@customElement("nav-account-menu")
+export class NavAccountMenu extends LitElement {
+  @property({ type: String }) variant: "desktop" | "mobile" = "desktop";
+
+  @state() private menuOpen = false;
+  @state() private userMeResponse: UserMeResponse | false = false;
+
+  createRenderRoot() {
+    return this;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
+    document.addEventListener("click", this.handleDocumentClick);
+    window.addEventListener("keydown", this.handleKeyDown);
+    window.addEventListener("showPage", this.closeMenu);
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
+    document.removeEventListener("click", this.handleDocumentClick);
+    window.removeEventListener("keydown", this.handleKeyDown);
+    window.removeEventListener("showPage", this.closeMenu);
+    super.disconnectedCallback();
+  }
+
+  private handleUserMeResponse = (
+    event: CustomEvent<UserMeResponse | false>,
+  ) => {
+    this.userMeResponse = event.detail;
+    if (!this.hasMenu()) this.menuOpen = false;
+  };
+
+  // CrazyGames owns its own account UI (including sign-out), so the menu stays
+  // off there and the trigger keeps its existing behaviour.
+  private hasMenu(): boolean {
+    return this.userMeResponse !== false && !crazyGamesSDK.isOnCrazyGames();
+  }
+
+  private closeMenu = () => {
+    this.menuOpen = false;
+  };
+
+  private handleDocumentClick = (e: MouseEvent) => {
+    if (!this.menuOpen) return;
+    if (e.composedPath().includes(this)) return;
+    this.menuOpen = false;
+  };
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape" && this.menuOpen) {
+      this.menuOpen = false;
+    }
+  };
+
+  private handleTriggerClick = (e: MouseEvent) => {
+    if (!this.hasMenu()) return; // signed out: let the data-page router open the account modal
+    // Stop the delegated nav router (and, on mobile, the top bar's own
+    // handlers) from acting on this click.
+    e.preventDefault();
+    e.stopPropagation();
+    this.menuOpen = !this.menuOpen;
+  };
+
+  private items(): MenuItem[] {
+    const subscribed =
+      this.userMeResponse !== false &&
+      this.userMeResponse.player.subscription !== undefined &&
+      this.userMeResponse.player.subscription !== null;
+
+    const items: MenuItem[] = [
+      {
+        key: "account-settings",
+        labelKey: "nav_account_menu.account_settings",
+        icon: iconGear,
+        onSelect: () => this.openModal("account-settings"),
+      },
+      {
+        key: "game-settings",
+        labelKey: "nav_account_menu.game_settings",
+        icon: iconSliders,
+        onSelect: () => {
+          window.showPage?.("page-settings");
+        },
+      },
+      {
+        key: "change-username",
+        labelKey: "nav_account_menu.change_username",
+        icon: iconTag,
+        onSelect: () => this.openModal("change-username"),
+      },
+    ];
+
+    if (subscribed) {
+      items.push({
+        key: "subscription",
+        labelKey: "nav_account_menu.change_subscription",
+        icon: iconCard,
+        onSelect: () => this.openModal("subscription"),
+      });
+    }
+
+    items.push({
+      key: "log-out",
+      labelKey: "nav_account_menu.log_out",
+      icon: iconLogOut,
+      onSelect: () => void this.handleLogOut(),
+      danger: true,
+    });
+
+    return items;
+  }
+
+  // The profile-menu modals are popup (non-inline) modals registered with the
+  // router, so the hash is what opens them.
+  private openModal(name: string): void {
+    window.location.hash = `modal=${name}`;
+  }
+
+  private async handleLogOut(): Promise<void> {
+    const confirmed = await showInGameConfirm(
+      translateText("nav_account_menu.log_out_confirm"),
+      {
+        heading: translateText("nav_account_menu.log_out"),
+        confirmText: translateText("nav_account_menu.log_out"),
+      },
+    );
+    if (!confirmed) return;
+    await logOut();
+    // Reload so every consumer of the session starts from a signed-out state.
+    window.location.reload();
+  }
+
+  private selectItem(item: MenuItem): void {
+    this.menuOpen = false;
+    closeMobileSidebar();
+    item.onSelect();
+  }
+
+  render(): TemplateResult {
+    return html`
+      <div class="relative" data-account-nav>
+        ${this.variant === "mobile"
+          ? this.renderMobileTrigger()
+          : this.renderDesktopTrigger()}
+        ${this.menuOpen ? this.renderMenu() : nothing}
+      </div>
+    `;
+  }
+
+  private renderMenu(): TemplateResult {
+    return html`
+      <div
+        role="menu"
+        aria-label=${translateText("nav_account_menu.title")}
+        class="absolute right-0 top-full mt-2 w-60 z-[41000] rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-md shadow-xl overflow-hidden py-1"
+      >
+        ${this.items().map(
+          (item) => html`
+            <button
+              role="menuitem"
+              data-menu-item=${item.key}
+              @click=${() => this.selectItem(item)}
+              class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium normal-case tracking-normal cursor-pointer transition-colors ${item.danger
+                ? "text-red-400 hover:bg-red-500/10 border-t border-white/10"
+                : "text-white/80 hover:bg-white/10 hover:text-white"}"
+            >
+              <span class="w-4 h-4 shrink-0">${item.icon}</span>
+              <span>${translateText(item.labelKey)}</span>
+            </button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  private renderChevron(): TemplateResult | typeof nothing {
+    if (!this.hasMenu()) return nothing;
+    return html`
+      <svg
+        class="w-3 h-3 shrink-0 transition-transform ${this.menuOpen
+          ? "rotate-180"
+          : ""}"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    `;
+  }
+
+  // Desktop nav pill. Ids are load-bearing: NavAccountButton and
+  // CrazyGamesAccountButton drive this instance by id.
+  private renderDesktopTrigger(): TemplateResult {
+    return html`
+      <button
+        id="nav-account-button"
+        data-account-trigger
+        data-account-border
+        aria-haspopup="menu"
+        aria-expanded=${this.menuOpen ? "true" : "false"}
+        @click=${this.handleTriggerClick}
+        class="nav-menu-item relative h-10 rounded-full flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
+        data-page="page-account"
+        data-i18n-aria-label="main.account"
+        data-i18n-title="main.account"
+      >
+        <img
+          id="nav-account-avatar"
+          data-account-avatar
+          class="hidden w-8 h-8 rounded-full object-cover"
+          alt=""
+          data-i18n-alt="main.discord_avatar_alt"
+          referrerpolicy="no-referrer"
+        />
+        <span
+          id="nav-account-loading-spinner"
+          data-account-spinner
+          class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+          aria-hidden="true"
+        ></span>
+        <svg
+          id="nav-account-person-icon"
+          data-account-person-icon
+          class="hidden w-5 h-5"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M20 21a8 8 0 0 0-16 0" />
+          <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+        </svg>
+        <span
+          id="nav-account-email-badge"
+          data-account-email-badge
+          class="hidden absolute bottom-1 right-1 w-4 h-4 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <svg
+            class="w-2.5 h-2.5 text-white/80"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 6h16v12H4z" />
+            <path d="m4 7 8 6 8-6" />
+          </svg>
+        </span>
+        <span
+          id="nav-account-signin-text"
+          data-account-signin-text
+          class="hidden text-xs font-bold tracking-widest"
+          data-i18n="main.sign_in"
+        >
+        </span>
+        ${this.renderChevron()}
+      </button>
+    `;
+  }
+
+  // Mobile top-bar trigger: avatar or person icon only, plus the chevron.
+  private renderMobileTrigger(): TemplateResult {
+    return html`
+      <button
+        data-account-trigger
+        aria-haspopup="menu"
+        aria-expanded=${this.menuOpen ? "true" : "false"}
+        @click=${this.handleTriggerClick}
+        class="nav-menu-item h-10 flex items-center justify-center gap-1 pl-1 pr-1.5 rounded-full text-white/90 cursor-pointer transition-colors"
+        data-page="page-account"
+        data-i18n-aria-label="main.account"
+        data-i18n-title="main.account"
+      >
+        <span class="relative flex items-center justify-center w-8 h-8">
+          <img
+            data-account-avatar
+            class="hidden w-8 h-8 rounded-full object-cover"
+            alt=""
+            data-i18n-alt="main.discord_avatar_alt"
+            referrerpolicy="no-referrer"
+          />
+          <span
+            data-account-spinner
+            class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+            aria-hidden="true"
+          ></span>
+          <svg
+            data-account-person-icon
+            class="hidden w-7 h-7"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 21a8 8 0 0 0-16 0" />
+            <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+          </svg>
+          <span
+            data-account-email-badge
+            class="hidden absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center"
+            aria-hidden="true"
+          >
+            <svg
+              class="w-2.5 h-2.5 text-white/80"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 6h16v12H4z" />
+              <path d="m4 7 8 6 8-6" />
+            </svg>
+          </span>
+        </span>
+        <!-- The sign-in label is desktop-only; on the top bar the icon alone is
+             the affordance, so keep the element (the shared updater toggles it)
+             but never show text. -->
+        <span data-account-signin-text class="hidden"></span>
+        ${this.renderChevron()}
+      </button>
+    `;
+  }
+}
+
+const iconGear = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <circle cx="12" cy="12" r="3" />
+  <path
+    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+  />
+</svg>`;
+
+const iconSliders = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <line x1="4" y1="21" x2="4" y2="14" />
+  <line x1="4" y1="10" x2="4" y2="3" />
+  <line x1="12" y1="21" x2="12" y2="12" />
+  <line x1="12" y1="8" x2="12" y2="3" />
+  <line x1="20" y1="21" x2="20" y2="16" />
+  <line x1="20" y1="12" x2="20" y2="3" />
+  <line x1="1" y1="14" x2="7" y2="14" />
+  <line x1="9" y1="8" x2="15" y2="8" />
+  <line x1="17" y1="16" x2="23" y2="16" />
+</svg>`;
+
+const iconTag = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <path
+    d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"
+  />
+  <line x1="7" y1="7" x2="7.01" y2="7" />
+</svg>`;
+
+const iconCard = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <rect x="2" y="5" width="20" height="14" rx="2" />
+  <line x1="2" y1="10" x2="22" y2="10" />
+</svg>`;
+
+const iconLogOut = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+  <polyline points="16 17 21 12 16 7" />
+  <line x1="21" y1="12" x2="9" y2="12" />
+</svg>`;
