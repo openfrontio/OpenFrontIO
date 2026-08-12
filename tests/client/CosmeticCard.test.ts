@@ -267,14 +267,49 @@ describe("CosmeticCard", () => {
 
     const styles = document.getElementById("cosmetic-card-styles")?.textContent;
     expect(styles).toContain("@keyframes cosmetic-card-border-sweep");
-    // The ring must be a masked band with a rotating conic gradient inside it.
-    // Rotating the ring element itself swings a tilted rectangle well outside
-    // the card, where the store's scroll container clips it away.
-    expect(styles).toContain("mask-composite: exclude");
+    // A conic gradient spinning about the card centre, clipped to the card box
+    // and painted behind the legendary face (which moves to a ::before layer)
+    // so it glows through the card instead of swinging outside it.
     expect(styles).toContain("conic-gradient");
-    expect(styles).toContain("transform-origin: center");
+    expect(styles).toContain("inset: -100%");
+    expect(styles).toContain(
+      '[data-cosmetic-shell][data-cosmetic-rarity="legendary"]::before',
+    );
+    expect(styles).toMatch(
+      /\[data-cosmetic-border-sweep\] \{[^}]*z-index: -1;[^}]*overflow: hidden;/,
+    );
     expect(styles).toContain(
       "cosmetic-card:hover [data-cosmetic-border-sweep]::after {\n      animation: cosmetic-card-border-sweep",
+    );
+  });
+
+  it("dims the page only while a legendary card is hovered", async () => {
+    await createCard();
+    card!.resolved = {
+      ...red,
+      cosmetic: { ...red.cosmetic!, rarity: "legendary" } as never,
+    };
+    await card!.updateComplete;
+
+    card!.dispatchEvent(new MouseEvent("mouseenter"));
+    const backdrop = document.querySelector<HTMLElement>(
+      "[data-cosmetic-backdrop]",
+    )!;
+    expect(backdrop.style.background).toBe("rgba(0, 0, 0, 0.6)");
+
+    card!.dispatchEvent(new MouseEvent("mouseleave"));
+    expect(backdrop.style.background).toBe("rgba(0, 0, 0, 0)");
+  });
+
+  it("does not dim the page for non-legendary cards", async () => {
+    await createCard();
+    card!.dispatchEvent(new MouseEvent("mouseenter"));
+
+    const backdrop = document.querySelector<HTMLElement>(
+      "[data-cosmetic-backdrop]",
+    );
+    expect(backdrop?.style.background ?? "rgba(0, 0, 0, 0)").toBe(
+      "rgba(0, 0, 0, 0)",
     );
   });
 

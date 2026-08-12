@@ -57,9 +57,22 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       background: linear-gradient(to top, rgba(90,20,160,0.75) 0%, rgba(15,15,20,0.85) 100%);
       border-color: rgba(192,132,252,0.6);
     }
+    /* Legendary paints its gradient on a ::before layer instead of the shell
+       itself, so the rotating sweep (a z-index:-1 child) sits behind the
+       translucent card face and shows through it, as on the old card. */
     [data-cosmetic-shell][data-cosmetic-rarity="legendary"] {
-      background: linear-gradient(to top, rgba(180,80,0,0.75) 0%, rgba(15,15,20,0.85) 100%);
+      background: transparent;
       border-color: rgba(251,146,60,0.65);
+      isolation: isolate;
+    }
+    [data-cosmetic-shell][data-cosmetic-rarity="legendary"]::before {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: inherit;
+      background: linear-gradient(to top, rgba(180,80,0,0.75) 0%, rgba(15,15,20,0.85) 100%);
     }
 
     cosmetic-card:hover { position: relative; z-index: 10; }
@@ -116,49 +129,41 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       animation: cosmetic-card-shimmer 0.8s ease-in-out;
     }
 
-    /* A ring hugging the card edge: the element is masked down to its 3px
-       padding band, and a rotating conic gradient inside it reads as an arc
-       travelling around the border. Rotating the ring element itself would
-       swing a tilted rectangle far outside the card instead. */
+    /* A gold conic gradient spinning about the card's centre, clipped to the
+       card's rounded box and painted behind the translucent legendary face:
+       it glows through the card and bleeds 2px past its border. */
     [data-cosmetic-border-sweep] {
       pointer-events: none;
       position: absolute;
-      inset: -3px;
-      z-index: 2;
+      inset: -2px;
+      z-index: -1;
       display: block;
-      box-sizing: border-box;
-      padding: 3px;
-      border-radius: 0.9rem;
+      border-radius: 0.85rem;
       overflow: hidden;
-      background: rgba(255,200,80,0.25);
       opacity: 0;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
     }
     [data-cosmetic-border-sweep]::after {
       content: "";
       position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 260%;
-      aspect-ratio: 1;
-      translate: -50% -50%;
+      inset: -100%;
       transform-origin: center;
       will-change: transform;
       background: conic-gradient(
-        rgba(255,235,160,1) 0deg,
-        rgba(255,200,80,0.8) 30deg,
-        rgba(255,200,80,0) 90deg,
-        rgba(255,200,80,0) 360deg
+        from 0deg,
+        transparent 0deg,
+        rgba(255,200,80,0) 60deg,
+        rgba(255,200,80,0.9) 120deg,
+        rgba(255,200,80,1) 180deg,
+        rgba(255,200,80,0.9) 240deg,
+        rgba(255,200,80,0) 300deg,
+        transparent 360deg
       );
     }
     cosmetic-card:hover [data-cosmetic-border-sweep] {
       opacity: 1;
     }
     cosmetic-card:hover [data-cosmetic-border-sweep]::after {
-      animation: cosmetic-card-border-sweep 2.4s linear infinite;
+      animation: cosmetic-card-border-sweep 8s linear infinite;
     }
 
     [data-cosmetic-sparkle] {
@@ -230,6 +235,50 @@ export class CosmeticCard extends LitElement {
   createRenderRoot() {
     return this;
   }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.addEventListener("mouseenter", this.onHoverStart);
+    this.addEventListener("mouseleave", this.onHoverEnd);
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener("mouseenter", this.onHoverStart);
+    this.removeEventListener("mouseleave", this.onHoverEnd);
+    this.onHoverEnd();
+    super.disconnectedCallback();
+  }
+
+  /** Page-wide dim behind a hovered legendary card, shared by all cards. */
+  private static backdrop: HTMLDivElement | null = null;
+
+  private static ensureBackdrop(): HTMLDivElement {
+    CosmeticCard.backdrop ??= (() => {
+      const el = document.createElement("div");
+      el.dataset.cosmeticBackdrop = "";
+      el.style.cssText = `
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0);
+        z-index: 9;
+        transition: background 0.3s ease;
+      `;
+      document.body.appendChild(el);
+      return el;
+    })();
+    return CosmeticCard.backdrop;
+  }
+
+  private onHoverStart = () => {
+    if (cosmeticRarity(this.activeResolved) !== "legendary") return;
+    CosmeticCard.ensureBackdrop().style.background = "rgba(0,0,0,0.6)";
+  };
+
+  private onHoverEnd = () => {
+    if (CosmeticCard.backdrop === null) return;
+    CosmeticCard.backdrop.style.background = "rgba(0,0,0,0)";
+  };
 
   updated() {
     this.dataset.cosmeticState = this.state;
