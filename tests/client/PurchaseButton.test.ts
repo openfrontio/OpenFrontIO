@@ -117,4 +117,31 @@ describe("PurchaseButton", () => {
       button.querySelector(".purchase-btn-wrap")?.getAttribute("aria-busy"),
     ).toBeNull();
   });
+
+  it("triggers card-level hover styling from any cosmetic shell", async () => {
+    button = document.createElement("purchase-button") as PurchaseButton;
+    button.dollarPrice = "$5";
+    button.onPurchaseDollar = async () => undefined;
+    document.body.appendChild(button);
+    await button.updateComplete;
+
+    const css =
+      document.getElementById("purchase-button-styles")?.textContent ?? "";
+
+    // Hover styling must key off the shared shell attribute so cards that are
+    // not <cosmetic-card> (e.g. the custom plutonium card) behave identically.
+    expect(css).not.toMatch(/cosmetic-card:hover \.purchase-btn-wrap/);
+    for (const target of [
+      ".purchase-sparkle-streak",
+      ".purchase-sparkle-btn",
+      ".purchase-sparkle-btn-hard",
+      ".purchase-sparkle-btn-soft",
+      ".purchase-ember",
+      ".purchase-burst",
+    ]) {
+      expect(css).toContain(
+        `[data-cosmetic-shell]:hover .purchase-btn-wrap ${target}`,
+      );
+    }
+  });
 });
