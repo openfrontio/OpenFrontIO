@@ -1,3 +1,4 @@
+import { MirvExecution } from "src/core/execution/MIRVExecution";
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import {
   Game,
@@ -7,6 +8,13 @@ import {
   UnitType,
 } from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
+import { TestConfig } from "../util/TestConfig";
+
+class FastNukeTestConfig extends TestConfig {
+  nukeSpeed(_: UnitType): number {
+    return 15;
+  }
+}
 
 describe("Hydrogen Bomb and MIRV flows", () => {
   let game: Game;
@@ -187,5 +195,100 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     const mirvs = player.units(UnitType.MIRV).length;
     const warheads = player.units(UnitType.MIRVWarhead).length;
     expect(mirvs > 0 || warheads > 0).toBe(true);
+  });
+
+  test("MIRV warheads are pre-spawned with waitTicks > 0 while MIRV is still in flight", async () => {
+    // Verifies the pre-staging refactor: warheads are instantiated 10 ticks before
+    // separation and start with waitTicks > 0 so they don't visually glow at separateDst.
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.MissileSilo, game.ref(1, 1)),
+    );
+    game.executeNextTick();
+    game.executeNextTick();
+    expect(player.units(UnitType.MissileSilo)).toHaveLength(1);
+
+    const target = game.ref(1, 1);
+    game.addExecution(new ConstructionExecution(player, UnitType.MIRV, target));
+
+    let foundWaiting = false;
+    for (let i = 0; i < 300; i++) {
+      game.executeNextTick();
+      const warheads = player.units(UnitType.MIRVWarhead);
+      const mirvs = player.units(UnitType.MIRV);
+      // While the MIRV is still in flight AND warheads have already been created,
+      // every warhead must have waitTicks > 0 (still in its pre-flight hold).
+      if (warheads.length > 0 && mirvs.length > 0) {
+        expect(warheads.every((w) => w.nukeState().waitTicks > 0)).toBe(true);
+        foundWaiting = true;
+        break;
+      }
+    }
+    // Warheads must have appeared before the MIRV separated.
+    expect(foundWaiting).toBe(true);
+  });
+
+  test("Short-distance MIRV launch (< 10 Ticks flight) dynamically adjusts warhead waitTicks below 10", async () => {
+    // Uses FastNukeTestConfig (nukeSpeed = 50) so total parabolic flight is < 5 ticks.
+    // Verifies remainingTicks dynamically scales base waitTicks down to ~3 instead of hardcoded 10.
+    const fastGame = await setup(
+      "plains",
+      { infiniteGold: true, instantBuild: true },
+      [info],
+      __dirname,
+      FastNukeTestConfig,
+    );
+    const fastPlayer = fastGame.player(info.id);
+    fastPlayer.conquer(fastGame.ref(1, 1));
+
+    fastGame.addExecution(
+      new ConstructionExecution(
+        fastPlayer,
+        UnitType.MissileSilo,
+        fastGame.ref(1, 1),
+      ),
+    );
+    fastGame.executeNextTick();
+    fastGame.executeNextTick();
+    expect(fastPlayer.units(UnitType.MissileSilo)).toHaveLength(1);
+
+    // Bypass the 55-pixel minimumSpread overlapping check so all targets within range pass
+    const spy = vi
+      .spyOn(MirvExecution.prototype as any, "isOverlapping")
+      .mockReturnValue(false);
+
+    // Conquer a surrounding area for fastPlayer so generated targets belong to fastPlayer
+    for (let x = 0; x < 100; x++) {
+      for (let y = 0; y < 100; y++) {
+        fastPlayer.conquer(fastGame.ref(x, y));
+      }
+    }
+
+    const target = fastGame.ref(1, 1);
+    fastGame.addExecution(
+      new ConstructionExecution(fastPlayer, UnitType.MIRV, target),
+    );
+    //init ConstructionExe
+    fastGame.executeNextTick();
+    //tick ConstructionExe -> create and init MIRVExe
+    fastGame.executeNextTick();
+    // Tick MirvExe -> create MIRV Unit + move -> Create/init NukeExe warhead
+    fastGame.executeNextTick();
+    // NukeExe -> create Warheads, now detectable. MIRV moves.
+    fastGame.executeNextTick();
+    const warheads = fastPlayer.units(UnitType.MIRVWarhead);
+
+    // 1 tick until separation. WaitTicks must all be between 1-16
+    const minWaitTicks = Math.min(
+      ...warheads.map((w) => w.nukeState().waitTicks),
+    );
+    const maxWaitTicks = Math.max(
+      ...warheads.map((w) => w.nukeState().waitTicks),
+    );
+
+    // Since flight time is ~3 ticks (< 10), base waitTicks is ~3 (strictly < 10)
+    expect(minWaitTicks).toBeGreaterThan(0);
+    expect(minWaitTicks).toBeLessThan(4);
+    expect(maxWaitTicks - minWaitTicks).toBeLessThanOrEqual(15);
+    spy.mockRestore();
   });
 });

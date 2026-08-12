@@ -358,8 +358,7 @@
     "title": "Кланы",
     "transfer_leadership": "Передать лидерство",
     "transfer_warning": "Выбранный участник станет новым лидером. Вы станете обычным участником. Это действие невозможно отменить.",
-    "unban": "Разблокировать",
-    "history_game_id": "ID игры"
+    "unban": "Разблокировать"
   },
   "common": {
     "available": "Доступно",
@@ -377,7 +376,6 @@
     "duration_minute_short": " мин",
     "duration_second_short": " с",
     "enabled": "Включено",
-    "got_it": "Понятно",
     "map_default": "Стандартно для карты",
     "month_apr": "Апрель",
     "month_aug": "Август",
@@ -399,7 +397,8 @@
     "summary_keep": "Остаток",
     "summary_send": "Перевод",
     "target_dead": "Цель устранена",
-    "target_dead_note": "Невозможно отправить ресурсы устранённому игроку."
+    "target_dead_note": "Невозможно отправить ресурсы устранённому игроку.",
+    "got_it": "Понятно"
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Вы можете атаковать отсоединившихся игроков, даже если вы с ними союзники.",
@@ -423,6 +422,7 @@
     "public_lobbies_info": "Создавайте пользовательские лобби, которые будут доступными для всех.",
     "rare": "Редкий",
     "search": "Поиск...",
+    "signup_bonus": "Бонус за регистрацию",
     "soft": "Крышки",
     "title": "Косметика",
     "uncommon": "Необычный",
@@ -472,7 +472,7 @@
       "nukeTrail": "Следы бомб",
       "structures": "Постройки",
       "transportShipTrail": "Следы суден",
-      "warship": "Военный корабль"
+      "warship": "Военные корабли"
     }
   },
   "error_modal": {
@@ -941,8 +941,8 @@
     "ratio": "Соотношение",
     "refresh_time": "Обновляется каждый час",
     "title": "Таблица лидеров",
-    "tribes_boost": "Бусты",
-    "tribes_boost_tooltip": "Названия с бустом чаще появляются в играх других игроков",
+    "tribes_boost": "Подъёмы",
+    "tribes_boost_tooltip": "Названия с подъёмом чаще появляются в играх других игроков",
     "tribes_boost_value": "{multiplier}×",
     "tribes_boost_value_tooltip": "Появляется в играх других игроков в {multiplier}× чаще",
     "tribes_games_tooltip": "Появления в матчах: {count}",
@@ -1258,26 +1258,19 @@
   },
   "player_stats_table": {
     "arrived": "Прибыло",
-    "attack": "Атака",
     "building": "Сооружение",
     "building_stats": "Статистика строительства",
     "built": "Построено",
     "cancelled": "Отменено",
     "captured": "Захвачено",
-    "count": "Количество",
     "destroyed": "Уничтожено",
-    "gold": "Золото",
-    "hits": "Удары",
     "landed": "Приземлено",
     "launched": "Запущено",
     "lost": "Утеряно",
     "nuke_stats": "Статистика бомбардирования",
-    "player_metrics": "Статистика игрока",
-    "received": "Получено",
     "sent": "Отправлено",
     "ship_arrivals": "Прибытия кораблей",
     "ship_type": "Тип корабля",
-    "steal": "Украдено",
     "trade": "Торговля",
     "unit": {
       "abomb": "Ядерная бомба",
@@ -1296,7 +1289,14 @@
     },
     "war": "Войны",
     "weapon": "Оружие",
-    "workers": "Рабочие"
+    "workers": "Рабочие",
+    "attack": "Атака",
+    "count": "Количество",
+    "gold": "Золото",
+    "hits": "Удары",
+    "player_metrics": "Статистика игрока",
+    "received": "Получено",
+    "steal": "Украдено"
   },
   "player_stats_tree": {
     "mode": "Режим",
@@ -1307,8 +1307,8 @@
     "ranked_1v1": "1 на 1",
     "ranked_2v2": "2 на 2",
     "solo": "Соло",
-    "stats_games_played": "Игр сыграно",
     "stats_losses": "Поражения",
+    "stats_games_played": "Игр сыграно",
     "stats_wins": "Победы",
     "stats_wlr": "Соотношение побед:поражений"
   },
@@ -1442,9 +1442,6 @@
     "toggle_achievements": "Переключение достижений",
     "water_nukes": "Водные бомбы"
   },
-  "steam": {
-    "link_signpost": "Уже есть аккаунт OpenFront? Привязка аккаунта появится в будущих обновлениях."
-  },
   "steam_user_header": {
     "avatar_alt": "Аватар Steam",
     "default_name": "Игрок Steam"
@@ -1465,6 +1462,7 @@
     "confirm_purchase_body": "Купить «{item}» за {amount, number} {currency}?",
     "confirm_purchase_title": "Подтвердите покупку",
     "confirm_upgrade": "Улучшить до {tier}? Вам придётся оплатить посчитанную разницу.",
+    "cosmetics": "Косметика",
     "crowns": "Короны",
     "currency_pack_purchase_success": "Набор валюты успешно приобретён!",
     "custom_amount": "Выберите сумму",
@@ -1474,6 +1472,9 @@
     "insufficient_currency_body": "Нужно ещё {amount, number} {currency}, чтобы купить «{item}».",
     "insufficient_currency_title": "Недостаточно {currency}",
     "login_required": "Вы должны войти, чтобы совершать покупки за валюту.",
+    "merch": "Мерч",
+    "merch_blurb": "Закажи мерч OpenFront прямо к своей двери!",
+    "merch_visit_store": "Посетить магазин",
     "no_crowns": "Нет доступных корон. Возвращайтесь позже за новыми товарами.",
     "no_effects": "Нет доступных эффектов. Возвращайтесь позже за новыми товарами.",
     "no_flags": "Нет доступных флагов. Возвращайтесь позже за новыми товарами.",
@@ -1493,21 +1494,31 @@
     "subscriptions": "Подписки",
     "switch_button": "Изменить",
     "title": "Магазин",
-    "tribe_boost_button": "Буст",
-    "tribe_boost_confirm": "Применить буст к «{name}» за {price} плутония? В течение следующих {days} дн. оно будет чаще появляться в играх других игроков.",
-    "tribe_boost_count": "1 буст",
-    "tribe_boost_count_plural": "{count} бустов",
-    "tribe_boost_failed": "Не удалось применить буст. Попробуйте ещё раз.",
-    "tribe_boost_gone": "Это название больше не активно, поэтому к нему нельзя применить буст.",
-    "tribe_boost_heading": "Буст названия племени",
-    "tribe_boost_next_expiry": "следующий буст истекает {date}",
-    "tribe_boost_success": "Применён буст к «{name}».",
+    "tribe_boost_button": "Подъём",
+    "tribe_boost_confirm": "Применить подъём к «{name}» за {price} плутония? В течение следующих {days} дн. Оно будет чаще появляться в играх других игроков.",
+    "tribe_boost_count": "1 подъём",
+    "tribe_boost_count_plural": "{count} подъёмов",
+    "tribe_boost_failed": "Не удалось применить подъём. Попробуйте ещё раз.",
+    "tribe_boost_gone": "Это название больше не активно, поэтому к нему нельзя применить подъём.",
+    "tribe_boost_heading": "Подъём названия племени",
+    "tribe_boost_next_expiry": "следующий подъём истекает {date}",
+    "tribe_boost_success": "Применён подъём к «{name}».",
     "tribe_duplicate": "Название уже занято.",
     "tribe_name_placeholder": "Введите название племени",
     "tribe_name_required": "Сначала введите название.",
     "tribe_purchase_failed": "Покупка не удалась. Попробуйте ещё раз.",
     "tribe_purchase_live": "«{name}» теперь появляется в играх.",
     "tribe_rate_limited": "Вы покупаете названия слишком быстро. Попробуйте еще раз через {seconds} с.",
+    "tribe_stats_boosted": "Подъём: {multiplier}×",
+    "tribe_stats_button": "Статистика",
+    "tribe_stats_failed": "Не удалось загрузить статистику. Попробуйте позже.",
+    "tribe_stats_games": "Игры",
+    "tribe_stats_lifetime": "За всё время",
+    "tribe_stats_owner": "Владелец",
+    "tribe_stats_reach": "Охват игроков",
+    "tribe_stats_reach_tooltip": "Появлялись в играх с {count} игроками",
+    "tribe_stats_window": "За последние {days} дней ({start} – {end})",
+    "tribe_stats_window_short": "За последние {days} дней",
     "tribe_status_active": "Активно",
     "tribe_status_rejected": "Отклонено",
     "tribes": "Племена",
@@ -1723,7 +1734,7 @@
     "zoom_out_desc": "Отдалить карту"
   },
   "username": {
-    "account_invalid_chars": "Имя игрока может содержать только латинские буквы, цифры, подчёркивания и дефисы.",
+    "account_invalid_chars": "Имя игрока может содержать только латинские буквы, цифры, подчёркивания, дефисы и единичные пробелы между словами.",
     "enter_username": "Введите своё имя игрока",
     "invalid_chars": "Имя игрока может содержать только латинские буквы, цифры, пробелы и подчёркивания.",
     "not_string": "Имя игрока должно быть строкой.",
@@ -1759,5 +1770,8 @@
     "you_won": "Вы победили!",
     "your_team": "Ваша команда победила!",
     "youtube_tutorial": "Нужна помощь?"
+  },
+  "steam": {
+    "link_signpost": "Уже есть аккаунт OpenFront? Привязка аккаунта появится в будущих обновлениях."
   }
 }

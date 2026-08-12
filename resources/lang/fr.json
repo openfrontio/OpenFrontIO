@@ -1,7 +1,7 @@
 {
   "lang": {
     "en": "French",
-    "lang_code": "FR",
+    "lang_code": "fr",
     "native": "Français",
     "svg": "fr"
   },
@@ -358,8 +358,7 @@
     "title": "Clans",
     "transfer_leadership": "Transférer le commandement",
     "transfer_warning": "Cela donnera le commandement du clan au membre sélectionné. Vous deviendrez un membre ordinaire. Cette action ne peut pas être annulée.",
-    "unban": "Pardonner",
-    "history_game_id": "ID de la partie"
+    "unban": "Pardonner"
   },
   "common": {
     "available": "Disponible",
@@ -377,7 +376,6 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Activé",
-    "got_it": "J'ai compris",
     "map_default": "Carte par défaut",
     "month_apr": "Avril",
     "month_aug": "Août",
@@ -399,7 +397,8 @@
     "summary_keep": "Conserver",
     "summary_send": "Envoyer",
     "target_dead": "Cible éliminée",
-    "target_dead_note": "Vous ne pouvez pas envoyer de ressources à un joueur éliminé."
+    "target_dead_note": "Vous ne pouvez pas envoyer de ressources à un joueur éliminé.",
+    "got_it": "J'ai compris"
   },
   "control_panel": {
     "allied_afk_neighbor_info": "Vous pouvez attaquer les joueurs déconnectés même lorsque vous êtes en alliance avec eux.",
@@ -423,6 +422,7 @@
     "public_lobbies_info": "Hébergez des salons personnalisés publics que tout le monde peut rejoindre.",
     "rare": "Rare",
     "search": "Rechercher...",
+    "signup_bonus": "Bonus d'inscription",
     "soft": "Capsule",
     "title": "Cosmétiques",
     "uncommon": "Peu commun",
@@ -512,7 +512,7 @@
     "focus": "Focaliser",
     "hydrogen_bomb_detonated": "{name} - Bombe hydrogène explosée",
     "ignore": "Ignorer",
-    "missile_intercepted": "Le missile a intercepté {unit}",
+    "missile_intercepted": "Votre SAM a intercepté {unit}",
     "no_boats_available": "Aucun bateau disponible, max {max}",
     "received_gold_from_captured_ship": "{gold} ors reçu pour la capture d'un navire de {name}",
     "received_gold_from_conquest": "{name} éliminé, {gold} d'or reçu",
@@ -1258,26 +1258,19 @@
   },
   "player_stats_table": {
     "arrived": "Arrivés",
-    "attack": "Attaque",
     "building": "Bâtiment",
     "building_stats": "Statistiques de construction",
     "built": "Construit",
     "cancelled": "Annulé",
     "captured": "Capturé",
-    "count": "Compte",
     "destroyed": "Détruit",
-    "gold": "Or",
-    "hits": "Coups",
     "landed": "Atterris",
     "launched": "Lancés",
     "lost": "Perdu",
     "nuke_stats": "Statistiques de bombes",
-    "player_metrics": "Statistiques du joueur",
-    "received": "Reçu",
     "sent": "Envoyés",
     "ship_arrivals": "Arrivées de navire",
     "ship_type": "Type de navire",
-    "steal": "Voler",
     "trade": "Commercer",
     "unit": {
       "abomb": "Bombe atomique",
@@ -1296,7 +1289,14 @@
     },
     "war": "Guerre",
     "weapon": "Arme",
-    "workers": "Ouvriers"
+    "workers": "Ouvriers",
+    "attack": "Attaque",
+    "count": "Compte",
+    "gold": "Or",
+    "hits": "Coups",
+    "player_metrics": "Statistiques du joueur",
+    "received": "Reçu",
+    "steal": "Voler"
   },
   "player_stats_tree": {
     "mode": "Mode",
@@ -1307,8 +1307,8 @@
     "ranked_1v1": "1v1",
     "ranked_2v2": "2v2",
     "solo": "Solo",
-    "stats_games_played": "Parties jouées",
     "stats_losses": "Défaites",
+    "stats_games_played": "Parties jouées",
     "stats_wins": "Victoires",
     "stats_wlr": "Ratio Victoires:Défaites"
   },
@@ -1442,9 +1442,6 @@
     "toggle_achievements": "Activer / Désactiver les succès",
     "water_nukes": "Bombes à eau"
   },
-  "steam": {
-    "link_signpost": "Avez-vous déjà un compte OpenFront existant ? La liaison de compte arrive dans une mise à jour future."
-  },
   "steam_user_header": {
     "avatar_alt": "Avatar Steam",
     "default_name": "Joueur Steam"
@@ -1465,6 +1462,7 @@
     "confirm_purchase_body": "Acheter {item} pour {amount, number} {currency} ?",
     "confirm_purchase_title": "Confirmer l'achat",
     "confirm_upgrade": "Promouvoir à {tier} ? Vous serez maintenant débité de la différence au prorata.",
+    "cosmetics": "Cosmétiques",
     "crowns": "Couronnes",
     "currency_pack_purchase_success": "Achat du pack de monnaie réussi !",
     "custom_amount": "Choisissez la quantité",
@@ -1474,6 +1472,9 @@
     "insufficient_currency_body": "Vous avez besoin de {amount, number} plus {currency} pour acheter {item}.",
     "insufficient_currency_title": "Pas assez de {currency}",
     "login_required": "Vous devez être connecté·e pour acheter avec de la monnaie.",
+    "merch": "Produits dérivés",
+    "merch_blurb": "Faites-vous livrer les produits OpenFront directement chez vous !",
+    "merch_visit_store": "Visiter la Boutique",
     "no_crowns": "Pas de couronnes disponibles. Revenez plus tard pour de nouveaux items.",
     "no_effects": "Pas d'effets disponibles. Revenez plus tard pour de nouveaux items.",
     "no_flags": "Aucun drapeau disponible. Revenez plus tard.",
@@ -1508,6 +1509,16 @@
     "tribe_purchase_failed": "Échec de l’achat. Veuillez réessayer.",
     "tribe_purchase_live": "« {name} » apparaîtra désormais dans les parties.",
     "tribe_rate_limited": "Vous achetez des noms trop rapidement. Réessayez dans {seconds} s.",
+    "tribe_stats_boosted": "{multiplier} mises en avant",
+    "tribe_stats_button": "Statistiques",
+    "tribe_stats_failed": "Impossible de charger les statistiques. Veuillez réessayer plus tard.",
+    "tribe_stats_games": "Parties",
+    "tribe_stats_lifetime": "Depuis toujours",
+    "tribe_stats_owner": "Propriétaire",
+    "tribe_stats_reach": "Joueurs touchés",
+    "tribe_stats_reach_tooltip": "Apparu dans des parties regroupant {count} joueurs",
+    "tribe_stats_window": "{days} derniers jours ({start} – {end})",
+    "tribe_stats_window_short": "{days} derniers jours",
     "tribe_status_active": "Actif",
     "tribe_status_rejected": "Refusé",
     "tribes": "Tribus",
@@ -1723,7 +1734,7 @@
     "zoom_out_desc": "Dézoom de la carte"
   },
   "username": {
-    "account_invalid_chars": "Les pseudonymes peuvent contenir des lettres, chiffres et tirets.",
+    "account_invalid_chars": "Les pseudonymes peuvent uniquement contenir des lettres, chiffres, tirets et espaces.",
     "enter_username": "Entrez votre nom d'utilisateur",
     "invalid_chars": "Le pseudonyme peut seulement contenir des lettres, chiffres, espaces et underscores.",
     "not_string": "Le nom d'utilisateur doit être une chaîne de caractères.",
@@ -1759,5 +1770,8 @@
     "you_won": "Vous avez gagné !",
     "your_team": "Votre équipe a gagné !",
     "youtube_tutorial": "Besoin d'aide ?"
+  },
+  "steam": {
+    "link_signpost": "Avez-vous déjà un compte OpenFront existant ? La liaison de compte arrive dans une mise à jour future."
   }
 }

@@ -114,6 +114,7 @@ export class ClanBansView extends LitElement {
         </div>
         ${renderMemberSearchInput(
           (e) => this.onSearchInput(e),
+          this.memberSearch,
           "clan_modal.search_members_placeholder",
         )}
         ${filtered.length === 0

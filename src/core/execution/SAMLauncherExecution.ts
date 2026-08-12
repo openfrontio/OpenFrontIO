@@ -77,7 +77,7 @@ class SAMTargetingSystem {
   ): InterceptionTile | undefined {
     const trajectory = unit.trajectory();
     const currentIndex = unit.trajectoryIndex();
-
+    const waitTicks = unit.nukeState().waitTicks ?? 0;
     // NukeExecution happens before SAMMissileExecution. It cannot intercept the final tick.
     const maxInterceptionIndex = trajectory.length - 2;
     for (let i = currentIndex; i <= maxInterceptionIndex; i++) {
@@ -87,7 +87,7 @@ class SAMTargetingSystem {
         this.mg.euclideanDistSquared(samTile, trajectoryTile.tile) <=
           rangeSquared
       ) {
-        const nukeTickToReach = i - currentIndex;
+        const nukeTickToReach = i - currentIndex + waitTicks;
         const samTickToReach = this.tickToReach(samTile, trajectoryTile.tile);
         const tickBeforeShooting = nukeTickToReach - samTickToReach;
         if (tickBeforeShooting >= 0) {
@@ -106,7 +106,7 @@ class SAMTargetingSystem {
     ) {
       const targetInFlightTile = trajectory[maxInterceptionIndex];
       if (targetInFlightTile && targetInFlightTile.targetable) {
-        const nukeTickToReach = maxInterceptionIndex - currentIndex;
+        const nukeTickToReach = maxInterceptionIndex - currentIndex + waitTicks;
         const samTickToReach = this.tickToReach(
           samTile,
           targetInFlightTile.tile,
@@ -306,14 +306,15 @@ export class SAMLauncherExecution implements Execution {
       this.player = this.sam.owner();
     }
 
-    const frontTime = this.sam.missileTimerQueue()[0];
-    if (frontTime !== undefined) {
+    while (this.sam.missileTimerQueue().length > 0) {
+      const frontTime = this.sam.missileTimerQueue()[0];
       const cooldown =
         this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
 
-      if (cooldown <= 0) {
-        this.sam.reloadMissile();
+      if (cooldown > 0) {
+        break;
       }
+      this.sam.reloadMissile();
     }
     if (this.sam.isInCooldown()) {
       return;
