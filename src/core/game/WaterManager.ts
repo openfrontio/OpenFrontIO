@@ -475,6 +475,22 @@ export class WaterManager {
     // from all coastlines (including the new crater edges).
     if (convertedMiniTiles.size > 0) {
       const miniW = this.miniMap.width();
+      const miniH = this.miniMap.height();
+
+      // Allocation-free cardinal-neighbor helper for all minimap BFSes.
+      // Writes up to 4 neighbors into `out` and returns the count.
+      const pushMiniNeighbors = (tile: TileRef, out: TileRef[]): number => {
+        const x = tile % miniW;
+        const y = (tile - x) / miniW;
+        let count = 0;
+        if (y > 0) out[count++] = (tile - miniW) as TileRef;
+        if (y < miniH - 1) out[count++] = (tile + miniW) as TileRef;
+        if (x > 0) out[count++] = (tile - 1) as TileRef;
+        if (x < miniW - 1) out[count++] = (tile + 1) as TileRef;
+        return count;
+      };
+
+      const miniNb: TileRef[] = new Array(4);
 
       // 4b-i. Propagate ocean bit to converted minimap tiles.
       // Uses BFS so that chains of converted tiles that connect to
@@ -482,20 +498,14 @@ export class WaterManager {
       // chain touches existing ocean.
       const miniOceanQueue: TileRef[] = [];
       for (const mt of convertedMiniTiles) {
-        const mx = this.miniMap.x(mt);
-        const my = this.miniMap.y(mt);
+        const nc = pushMiniNeighbors(mt, miniNb);
         let nearOcean = false;
-        if (my > 0 && this.miniMap.isOcean(mt - miniW)) nearOcean = true;
-        if (
-          !nearOcean &&
-          my < this.miniMap.height() - 1 &&
-          this.miniMap.isOcean(mt + miniW)
-        )
-          nearOcean = true;
-        if (!nearOcean && mx > 0 && this.miniMap.isOcean(mt - 1))
-          nearOcean = true;
-        if (!nearOcean && mx < miniW - 1 && this.miniMap.isOcean(mt + 1))
-          nearOcean = true;
+        for (let i = 0; i < nc; i++) {
+          if (this.miniMap.isOcean(miniNb[i])) {
+            nearOcean = true;
+            break;
+          }
+        }
         if (nearOcean) {
           this.miniMap.setOcean(mt);
           miniOceanQueue.push(mt);
@@ -504,31 +514,9 @@ export class WaterManager {
       let moHead = 0;
       while (moHead < miniOceanQueue.length) {
         const tile = miniOceanQueue[moHead++];
-        const tx = tile % miniW;
-        const ty = (tile - tx) / miniW;
-        if (ty > 0) {
-          const n = (tile - miniW) as TileRef;
-          if (this.miniMap.isWater(n) && !this.miniMap.isOcean(n)) {
-            this.miniMap.setOcean(n);
-            miniOceanQueue.push(n);
-          }
-        }
-        if (ty < this.miniMap.height() - 1) {
-          const n = (tile + miniW) as TileRef;
-          if (this.miniMap.isWater(n) && !this.miniMap.isOcean(n)) {
-            this.miniMap.setOcean(n);
-            miniOceanQueue.push(n);
-          }
-        }
-        if (tx > 0) {
-          const n = (tile - 1) as TileRef;
-          if (this.miniMap.isWater(n) && !this.miniMap.isOcean(n)) {
-            this.miniMap.setOcean(n);
-            miniOceanQueue.push(n);
-          }
-        }
-        if (tx < miniW - 1) {
-          const n = (tile + 1) as TileRef;
+        const nc = pushMiniNeighbors(tile, miniNb);
+        for (let i = 0; i < nc; i++) {
+          const n = miniNb[i];
           if (this.miniMap.isWater(n) && !this.miniMap.isOcean(n)) {
             this.miniMap.setOcean(n);
             miniOceanQueue.push(n);
@@ -563,7 +551,8 @@ export class WaterManager {
       const miniDistArr = this._miniDistArr;
 
       // Crater bounding box on the full map, mapped to minimap coords.
-      const MINI_MAX_MAG = 31;
+      // MINI_MAX_MAG_DIST = max hops from coast = max_magnitude (31) × 2.
+      const MINI_MAX_MAG_DIST = 62;
       let mcMinX = w,
         mcMaxX = 0,
         mcMinY = h,
@@ -582,25 +571,26 @@ export class WaterManager {
       const mcMiniMaxY = Math.floor(mcMaxY / 2);
 
       // Dirty box: minimap tiles whose magnitude may need updating.
-      const mdMinX = Math.max(0, mcMiniMinX - MINI_MAX_MAG);
-      const mdMaxX = Math.min(miniW - 1, mcMiniMaxX + MINI_MAX_MAG);
-      const mdMinY = Math.max(0, mcMiniMinY - MINI_MAX_MAG);
+      const mdMinX = Math.max(0, mcMiniMinX - MINI_MAX_MAG_DIST);
+      const mdMaxX = Math.min(miniW - 1, mcMiniMaxX + MINI_MAX_MAG_DIST);
+      const mdMinY = Math.max(0, mcMiniMinY - MINI_MAX_MAG_DIST);
       const mdMaxY = Math.min(
         this.miniMap.height() - 1,
-        mcMiniMaxY + MINI_MAX_MAG,
+        mcMiniMaxY + MINI_MAX_MAG_DIST,
       );
       // Seed box: coastlines here are seeded; BFS is clipped here.
-      const msMinX = Math.max(0, mcMiniMinX - MINI_MAX_MAG * 2);
-      const msMaxX = Math.min(miniW - 1, mcMiniMaxX + MINI_MAX_MAG * 2);
-      const msMinY = Math.max(0, mcMiniMinY - MINI_MAX_MAG * 2);
+      const msMinX = Math.max(0, mcMiniMinX - MINI_MAX_MAG_DIST * 2);
+      const msMaxX = Math.min(miniW - 1, mcMiniMaxX + MINI_MAX_MAG_DIST * 2);
+      const msMinY = Math.max(0, mcMiniMinY - MINI_MAX_MAG_DIST * 2);
       const msMaxY = Math.min(
         this.miniMap.height() - 1,
-        mcMiniMaxY + MINI_MAX_MAG * 2,
+        mcMiniMaxY + MINI_MAX_MAG_DIST * 2,
       );
 
       // Seed from minimap coastline water tiles inside the seed box.
       // Coastline = water tile adjacent to at least one land tile.
       const miniMagQueue: TileRef[] = [];
+
       for (let by = msMinY; by <= msMaxY; by++) {
         const rowStart = by * miniW;
         for (let bx = msMinX; bx <= msMaxX; bx++) {
@@ -608,17 +598,13 @@ export class WaterManager {
           if (!this.miniMap.isWater(tile) || miniStampArr[tile] === miniStamp)
             continue;
           let isCoast = false;
-          if (by > 0 && this.miniMap.isLand(tile - miniW)) isCoast = true;
-          if (
-            !isCoast &&
-            by < this.miniMap.height() - 1 &&
-            this.miniMap.isLand(tile + miniW)
-          )
-            isCoast = true;
-          if (!isCoast && bx > 0 && this.miniMap.isLand(tile - 1))
-            isCoast = true;
-          if (!isCoast && bx < miniW - 1 && this.miniMap.isLand(tile + 1))
-            isCoast = true;
+          const nc = pushMiniNeighbors(tile, miniNb);
+          for (let i = 0; i < nc; i++) {
+            if (this.miniMap.isLand(miniNb[i])) {
+              isCoast = true;
+              break;
+            }
+          }
           if (isCoast) {
             miniStampArr[tile] = miniStamp;
             miniDistArr[tile] = 0;
@@ -631,49 +617,19 @@ export class WaterManager {
       let mmHead = 0;
       while (mmHead < miniMagQueue.length) {
         const tile = miniMagQueue[mmHead++];
-        const dist = miniDistArr[tile];
-        const nextDist = dist + 1;
-        const tx = tile % miniW;
-        const ty = (tile - tx) / miniW;
-        if (ty > 0) {
-          const n = (tile - miniW) as TileRef;
-          if (this.miniMap.isWater(n) && miniStampArr[n] !== miniStamp) {
-            if (ty - 1 >= msMinY) {
-              miniStampArr[n] = miniStamp;
-              miniDistArr[n] = nextDist;
-              miniMagQueue.push(n);
-            }
-          }
-        }
-        if (ty < this.miniMap.height() - 1) {
-          const n = (tile + miniW) as TileRef;
-          if (this.miniMap.isWater(n) && miniStampArr[n] !== miniStamp) {
-            if (ty + 1 <= msMaxY) {
-              miniStampArr[n] = miniStamp;
-              miniDistArr[n] = nextDist;
-              miniMagQueue.push(n);
-            }
-          }
-        }
-        if (tx > 0) {
-          const n = (tile - 1) as TileRef;
-          if (this.miniMap.isWater(n) && miniStampArr[n] !== miniStamp) {
-            if (tx - 1 >= msMinX) {
-              miniStampArr[n] = miniStamp;
-              miniDistArr[n] = nextDist;
-              miniMagQueue.push(n);
-            }
-          }
-        }
-        if (tx < miniW - 1) {
-          const n = (tile + 1) as TileRef;
-          if (this.miniMap.isWater(n) && miniStampArr[n] !== miniStamp) {
-            if (tx + 1 <= msMaxX) {
-              miniStampArr[n] = miniStamp;
-              miniDistArr[n] = nextDist;
-              miniMagQueue.push(n);
-            }
-          }
+        const nextDist = miniDistArr[tile] + 1;
+        const nc = pushMiniNeighbors(tile, miniNb);
+        for (let i = 0; i < nc; i++) {
+          const n = miniNb[i];
+          if (!this.miniMap.isWater(n) || miniStampArr[n] === miniStamp)
+            continue;
+          const nx = n % miniW;
+          const ny = (n - nx) / miniW;
+          if (nx < msMinX || nx > msMaxX || ny < msMinY || ny > msMaxY)
+            continue;
+          miniStampArr[n] = miniStamp;
+          miniDistArr[n] = nextDist;
+          miniMagQueue.push(n);
         }
       }
 
@@ -688,7 +644,7 @@ export class WaterManager {
           if (miniStampArr[tile] === miniStamp) {
             newMag = Math.min(Math.ceil(miniDistArr[tile] / 2), 31);
           } else {
-            // Unreached: nearest coast is >MINI_MAX_MAG*2 away → deep water
+            // Unreached: nearest coast is >MINI_MAX_MAG_DIST*2 away → deep water
             newMag = 31;
           }
           if (oldMag !== newMag) {

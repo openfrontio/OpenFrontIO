@@ -138,7 +138,6 @@ describe("Water Nukes", () => {
     });
 
     test("minimap tiles get correct magnitude after water nuke", async () => {
-      // Need nav mesh to verify minimap pathfinding-relevant state
       const navGame = await setup(
         "plains",
         {
@@ -161,44 +160,37 @@ describe("Water Nukes", () => {
 
       const miniMap = navGame.miniMap();
       const fullMap = navGame.map();
-      const tx = fullMap.x(target);
-      const ty = fullMap.y(target);
-      const mt = miniMap.ref(Math.floor(tx / 2), Math.floor(ty / 2));
+      const mt = miniMap.ref(
+        Math.floor(fullMap.x(target) / 2),
+        Math.floor(fullMap.y(target) / 2),
+      );
 
-      // The minimap tile at the nuke center should be water
-      if (miniMap.isWater(mt)) {
-        // Magnitude must be in valid range — the BFS must have run.
-        // For a small nuke the tile is at the coastline so magnitude 0
-        // is the correct expected value (not a stale value from the
-        // terrain file).
-        const mag = miniMap.magnitude(mt);
-        expect(mag).toBeGreaterThanOrEqual(0);
-        expect(mag).toBeLessThanOrEqual(31);
+      // The minimap tile at the nuke center should be water after the nuke.
+      expect(miniMap.isWater(mt)).toBe(true);
 
-        // If the tile is NOT adjacent to land it must have magnitude > 0.
-        const mw = miniMap.width();
-        let adjacentToLand = false;
-        if (miniMap.y(mt) > 0 && miniMap.isLand(mt - mw)) adjacentToLand = true;
-        if (
-          !adjacentToLand &&
-          miniMap.y(mt) < miniMap.height() - 1 &&
-          miniMap.isLand(mt + mw)
-        )
-          adjacentToLand = true;
-        if (!adjacentToLand && miniMap.x(mt) > 0 && miniMap.isLand(mt - 1))
-          adjacentToLand = true;
-        if (!adjacentToLand && miniMap.x(mt) < mw - 1 && miniMap.isLand(mt + 1))
-          adjacentToLand = true;
-        if (!adjacentToLand) {
-          // Interior water tile — should not be treated as shore
-          expect(mag).toBeGreaterThan(0);
-        }
+      // Magnitude must be in valid range (0-31) — the BFS ran.
+      const mag = miniMap.magnitude(mt);
+      expect(mag).toBeGreaterThanOrEqual(0);
+      expect(mag).toBeLessThanOrEqual(31);
+
+      // An interior water tile (not adjacent to any land) must have
+      // magnitude > 0 — it should not be treated as shoreline.
+      const mw = miniMap.width();
+      const my = miniMap.y(mt);
+      const mx = miniMap.x(mt);
+      const adjacentToLand =
+        (my > 0 && miniMap.isLand(mt - mw)) ||
+        (my < miniMap.height() - 1 && miniMap.isLand(mt + mw)) ||
+        (mx > 0 && miniMap.isLand(mt - 1)) ||
+        (mx < mw - 1 && miniMap.isLand(mt + 1));
+      if (!adjacentToLand) {
+        expect(mag).toBeGreaterThan(0);
       }
     });
 
     test("minimap ocean bit propagates to nuked water near ocean", async () => {
       const navGame = await setup(
-        "plains",
+        "ocean_and_land",
         {
           infiniteGold: true,
           instantBuild: true,
@@ -211,62 +203,61 @@ describe("Water Nukes", () => {
       player2.conquer(navGame.ref(1, 1));
       constructionExecution(navGame, player2, 1, 1, UnitType.MissileSilo);
 
-      // Find an ocean tile on the minimap, then nuke nearby land
       const miniMap = navGame.miniMap();
       const fullMap = navGame.map();
 
-      // Scan for a minimap ocean tile to find where ocean is
-      let oceanMiniX = -1;
-      let oceanMiniY = -1;
-      for (let y = 0; y < miniMap.height() && oceanMiniX < 0; y++) {
-        for (let x = 0; x < miniMap.width() && oceanMiniX < 0; x++) {
-          if (miniMap.isOcean(miniMap.ref(x, y))) {
-            oceanMiniX = x;
-            oceanMiniY = y;
-          }
-        }
-      }
-
-      if (oceanMiniX >= 0) {
-        // Find land next to the ocean on the full map
-        // Nuke at an offset from the ocean tile that's on land
-        const landX = oceanMiniX * 2 + 4; // 4 full-map tiles from ocean edge
-        const landY = oceanMiniY * 2;
-        if (fullMap.isValidCoord(landX, landY)) {
-          const nukeTarget = fullMap.ref(landX, landY);
-          if (fullMap.isLand(nukeTarget)) {
-            navGame.addExecution(
-              new NukeExecution(UnitType.AtomBomb, player2, nukeTarget, null),
-            );
-            for (let i = 0; i < 80; i++) navGame.executeNextTick();
-
-            // Check if the converted minimap tile got the ocean bit
-            const nukeMiniX = Math.floor(landX / 2);
-            const nukeMiniY = Math.floor(landY / 2);
-            if (miniMap.isValidCoord(nukeMiniX, nukeMiniY)) {
-              const nukeMini = miniMap.ref(nukeMiniX, nukeMiniY);
-              if (miniMap.isWater(nukeMini)) {
-                // If this tile is adjacent to ocean on the minimap,
-                // it should have the ocean bit set
-                let adjacentToOcean = false;
-                if (
-                  nukeMiniY > 0 &&
-                  miniMap.isOcean(nukeMini - miniMap.width())
-                )
-                  adjacentToOcean = true;
-                if (
-                  !adjacentToOcean &&
-                  nukeMiniX > 0 &&
-                  miniMap.isOcean(nukeMini - 1)
-                )
-                  adjacentToOcean = true;
-                if (adjacentToOcean) {
-                  expect(miniMap.isOcean(nukeMini)).toBe(true);
-                }
-              }
+      // Find a minimap ocean tile that has an adjacent land tile (coastline).
+      let oceanMt: TileRef | null = null;
+      let landMt: TileRef | null = null;
+      const mw = miniMap.width();
+      for (let y = 1; y < miniMap.height() - 1 && oceanMt === null; y++) {
+        for (let x = 1; x < mw - 1; x++) {
+          const t = miniMap.ref(x, y);
+          if (!miniMap.isOcean(t)) continue;
+          // Check cardinal neighbors for land
+          for (const n of [t - mw, t + mw, t - 1, t + 1]) {
+            if (miniMap.isLand(n)) {
+              oceanMt = t;
+              landMt = n;
+              break;
             }
           }
+          if (oceanMt) break;
         }
+      }
+      expect(oceanMt).not.toBeNull();
+      expect(landMt).not.toBeNull();
+
+      // Nuke the land tile adjacent to ocean on the full map.
+      const landMiniX = miniMap.x(landMt!);
+      const landMiniY = miniMap.y(landMt!);
+      const landX = landMiniX * 2 + 1;
+      const landY = landMiniY * 2 + 1;
+      expect(fullMap.isValidCoord(landX, landY)).toBe(true);
+      const nukeTarget = fullMap.ref(landX, landY);
+      expect(fullMap.isLand(nukeTarget)).toBe(true);
+
+      navGame.addExecution(
+        new NukeExecution(UnitType.AtomBomb, player2, nukeTarget, null),
+      );
+      for (let i = 0; i < 80; i++) navGame.executeNextTick();
+
+      // The nuke should have converted the minimap tile to water.
+      const nukeMiniX = Math.floor(landX / 2);
+      const nukeMiniY = Math.floor(landY / 2);
+      expect(miniMap.isValidCoord(nukeMiniX, nukeMiniY)).toBe(true);
+      const nukeMini = miniMap.ref(nukeMiniX, nukeMiniY);
+      expect(miniMap.isWater(nukeMini)).toBe(true);
+
+      // If the converted tile is adjacent to ocean on the minimap,
+      // the ocean bit should have been propagated.
+      const nmy = miniMap.y(nukeMini);
+      const nmx = miniMap.x(nukeMini);
+      const adjacentToOcean =
+        (nmy > 0 && miniMap.isOcean(nukeMini - mw)) ||
+        (nmx > 0 && miniMap.isOcean(nukeMini - 1));
+      if (adjacentToOcean) {
+        expect(miniMap.isOcean(nukeMini)).toBe(true);
       }
     });
   });
