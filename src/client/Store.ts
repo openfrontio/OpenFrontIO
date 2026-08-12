@@ -435,11 +435,11 @@ export class StoreModal extends BaseModal {
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
       trailingContent: html`<custom-currency-card
-        class="block h-full w-48 shrink-0"
+        class="block w-48 shrink-0"
       ></custom-currency-card>`,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
-      cardClass: "block h-full w-48 shrink-0",
+      cardClass: "block w-48 shrink-0",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });
@@ -454,7 +454,7 @@ export class StoreModal extends BaseModal {
       userHasSubscription,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
-      cardClass: "block h-full w-48 shrink-0",
+      cardClass: "block w-48 shrink-0",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });

@@ -514,6 +514,13 @@ describe("StoreModal cosmetic browser", () => {
     expect(modal.querySelector("[data-store-grid]")?.className).toMatch(
       /flex-wrap/,
     );
+    for (const el of [
+      card(modal, pack.key),
+      modal.querySelector("custom-currency-card"),
+    ]) {
+      expect(el?.className).toMatch(/w-48/);
+      expect(el?.className).not.toMatch(/h-full/);
+    }
     expect(card(modal, pack.key)?.state).toBe("focused");
     expect(purchaseButton(modal, pack.key).closest("cosmetic-card")).toBe(
       card(modal, pack.key),
@@ -571,6 +578,9 @@ describe("StoreModal cosmetic browser", () => {
     expect(grid.className).toMatch(/justify-center/);
     expect(grid.className).toMatch(/p-8/);
     expect(card(modal, goldSubscription.key)?.className).toMatch(/w-48/);
+    // h-full resolves against the whole wrapping flex container, so a card
+    // would grow to the height of every row stacked — the phone layout.
+    expect(card(modal, goldSubscription.key)?.className).not.toMatch(/h-full/);
 
     expect(
       product(modal, goldSubscription.key)?.querySelector("[data-store-status]")
