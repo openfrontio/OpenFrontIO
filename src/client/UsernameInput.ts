@@ -388,13 +388,14 @@ export class UsernameInput extends LitElement {
 
   render() {
     return html`
-      <!-- Centred rather than stretched: on a wide play page (no live
+      <!-- Capped rather than stretched: on a wide play page (no live
            streamers, so the identity strip spans the whole column) a
-           full-bleed name field is a lot of empty box. The fields keep a
-           readable cap and the slack splits either side of the group. -->
-      <div
-        class="flex items-center justify-center w-full h-full gap-1.5 sm:gap-2"
-      >
+           full-bleed name field is a lot of empty box. The slack collects
+           at the end instead of splitting either side of the group —
+           centring would re-centre the whole row whenever the trailing
+           control changes width, which it does between the "Use verified"
+           and "Change" states, visibly nudging the name sideways. -->
+      <div class="flex items-center w-full h-full gap-1.5 sm:gap-2">
         ${this.renderClanControl()} ${this.renderNameControl()}
       </div>
       ${this.validationError
@@ -580,7 +581,7 @@ export class UsernameInput extends LitElement {
     if (this.verifiedActive) {
       return html`
         <div
-          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-malibu-blue/70 bg-malibu-blue/15 px-2 sm:px-2.5"
+          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-malibu-blue/70 bg-malibu-blue/15 px-2 sm:px-3"
           title=${translateText("username.verified_active_hint")}
         >
           <!-- Check trails the name, as it does everywhere else a verified
@@ -607,9 +608,11 @@ export class UsernameInput extends LitElement {
           <span class="hidden sm:inline"
             >${translateText("username.verified_use_custom_short")}</span
           >
+          <!-- Matches the verified badge's box on the "Use verified" button
+               so swapping between the two states can't resize the row. -->
           <svg
             viewBox="0 0 24 24"
-            class="sm:hidden w-4 h-4"
+            class="sm:hidden w-5 h-5"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
