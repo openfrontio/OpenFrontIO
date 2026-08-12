@@ -218,6 +218,20 @@ describe("CosmeticCard", () => {
     expect(card!.querySelectorAll("[data-cosmetic-sparkle]")).toHaveLength(4);
   });
 
+  it("keeps the legendary hover border as a visible rotating ring", async () => {
+    await createCard();
+    card!.resolved = {
+      ...red,
+      cosmetic: { ...red.cosmetic!, rarity: "legendary" } as never,
+    };
+    await card!.updateComplete;
+
+    const styles = document.getElementById("cosmetic-card-styles")?.textContent;
+    expect(styles).toContain("@keyframes cosmetic-card-border-sweep");
+    expect(styles).toContain("mask-composite: exclude");
+    expect(styles).toContain("transform-origin: center");
+  });
+
   it("does not render swatches when controlled off", async () => {
     await createCard();
     card!.variants = [red, blue];
