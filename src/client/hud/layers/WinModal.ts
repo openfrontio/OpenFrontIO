@@ -11,7 +11,7 @@ import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
-import { cosmeticDisplayName } from "../../components/CosmeticPresentation";
+import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
@@ -203,7 +203,7 @@ export class WinModal extends LitElement implements Controller {
                 .priceHard=${resolved.cosmetic?.priceHard ?? null}
                 .priceSoft=${resolved.cosmetic?.priceSoft ?? null}
                 .rarity=${resolved.cosmetic?.rarity ?? "common"}
-                .itemName=${cosmeticDisplayName(resolved)}
+                .itemName=${cosmeticSelectionLabel(resolved)}
                 .onPurchaseDollar=${() => purchaseCosmetic(resolved, "dollar")}
                 .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
                 .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}

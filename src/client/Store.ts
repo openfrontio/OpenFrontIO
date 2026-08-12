@@ -5,7 +5,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import { cosmeticDisplayName } from "./components/CosmeticPresentation";
+import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
@@ -295,7 +295,7 @@ export class StoreModal extends BaseModal {
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
       .rarity=${priced?.rarity ?? "common"}
-      .itemName=${cosmeticDisplayName(resolved)}
+      .itemName=${cosmeticSelectionLabel(resolved)}
       .dollarLabelKey=${resolved.type === "subscription" && userHasSubscription
         ? "store.switch_button"
         : ""}

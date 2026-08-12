@@ -370,6 +370,31 @@ describe("StoreModal cosmetic browser", () => {
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 
+  it("names the colour in the purchase confirmation", async () => {
+    const translations = {
+      "inventory.selected_cosmetic_variant": "{name} ({variant})",
+      "territory_patterns.pattern.stripes": "Ocean Stripes",
+      "territory_patterns.color_palette.red": "Crimson",
+    };
+    const languageFixture = document.createElement("lang-selector");
+    Object.assign(languageFixture, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(languageFixture);
+    try {
+      const modal = await openStoreOnCosmetic("patterns");
+      // Every palette of a pattern shares one name, so the confirmation has to
+      // say which colour is about to be charged for.
+      expect(purchaseButton(modal, red.key).itemName).toBe(
+        "Ocean Stripes (Crimson)",
+      );
+    } finally {
+      languageFixture.remove();
+    }
+  });
+
   it("keeps inspection separate from the equipped green state", async () => {
     localStorage.setItem(PATTERN_KEY, green.key);
     const modal = await openStoreOnCosmetic("patterns");

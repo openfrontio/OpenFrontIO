@@ -209,6 +209,16 @@ export async function purchaseCosmetic(
     } else {
       itemName = translateCosmetic("territory_patterns.pattern", c.name);
     }
+    // Every palette of a pattern shares one name, so say which colour is short.
+    if (resolved.colorPalette !== null) {
+      itemName = translateText("inventory.selected_cosmetic_variant", {
+        name: itemName,
+        variant: translateCosmetic(
+          "territory_patterns.color_palette",
+          resolved.colorPalette.name,
+        ),
+      });
+    }
     return {
       currency: currencyName,
       shortfall: price - balance,
