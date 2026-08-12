@@ -226,7 +226,7 @@ export class NavAccountMenu extends LitElement {
       <div
         role="menu"
         aria-label=${translateText("nav_account_menu.title")}
-        class="absolute right-0 top-full mt-2 w-60 z-[41000] rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-md shadow-xl overflow-hidden"
+        class="absolute right-0 top-full mt-2 w-60 z-[41000] rounded-xl border border-white/10 bg-zinc-900 shadow-xl overflow-hidden"
       >
         ${this.items().map(
           (item) => html`
