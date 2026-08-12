@@ -1,6 +1,6 @@
 import { base64url } from "jose";
 import { z } from "zod/v4";
-import { decodePatternData } from "./PatternDecoder";
+import { decodePatternData, MAX_PATTERN_DATA_LENGTH } from "./PatternDecoder";
 import { PlayerPattern } from "./Schemas";
 
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
@@ -47,7 +47,7 @@ export const CosmeticNameSchema = z
 
 export const PatternDataSchema = z
   .string()
-  .max(1403)
+  .max(MAX_PATTERN_DATA_LENGTH)
   .base64url()
   .refine(
     (val) => {

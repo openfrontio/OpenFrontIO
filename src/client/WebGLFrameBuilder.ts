@@ -12,7 +12,7 @@ import {
   TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
-import { decodePatternData } from "../core/PatternDecoder";
+import { decodePatternData, PATTERN_ROW_BYTES } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
 import { getCachedCosmetics } from "./Cosmetics";
 import { uploadFrameData } from "./render/frame/Upload";
@@ -164,7 +164,7 @@ export class WebGLFrameBuilder {
       PALETTE_SIZE * MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS * 4,
     );
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
-    this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
+    this.patternData = new Uint8Array(PALETTE_SIZE * PATTERN_ROW_BYTES);
   }
 
   /** Drop internal caches to force a full re-upload of state on the next update(). */
@@ -459,7 +459,16 @@ export class WebGLFrameBuilder {
           this.patternMeta[metaOff + 2] = decoded.height;
           this.patternMeta[metaOff + 3] = decoded.scale;
 
-          this.patternData.set(decoded.bytes.slice(3), smallID * 1024);
+          const patternBytes = decoded.bytes.slice(decoded.headerBytes);
+          if (patternBytes.length > PATTERN_ROW_BYTES) {
+            console.warn(
+              "Pattern too large for row buffer",
+              decoded.width,
+              decoded.height,
+            );
+          } else {
+            this.patternData.set(patternBytes, smallID * PATTERN_ROW_BYTES);
+          }
         } catch (e) {
           console.warn("Failed to decode territory pattern", e);
         }
