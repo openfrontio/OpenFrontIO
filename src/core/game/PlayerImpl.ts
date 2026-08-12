@@ -737,12 +737,11 @@ export class PlayerImpl implements Player {
   }
 
   allianceRequestCooldownRemaining(other: Player): number {
-
     if (this.isFriendly(other)) {
       return 0;
     }
 
-        const recent = this.pastOutgoingAllianceRequests
+    const recent = this.pastOutgoingAllianceRequests
       .filter((ar) => ar.recipient() === other)
       .sort((a, b) => b.createdAt() - a.createdAt());
 
@@ -752,7 +751,10 @@ export class PlayerImpl implements Player {
 
     const delta = this.mg.ticks() - recent[0].createdAt();
 
-    return Math.max((this.mg.config().allianceRequestCooldown() - delta) / 10, 0);
+    return Math.max(
+      (this.mg.config().allianceRequestCooldown() - delta) / 10,
+      0,
+    );
   }
 
   breakAlliance(alliance: MutableAlliance): void {
