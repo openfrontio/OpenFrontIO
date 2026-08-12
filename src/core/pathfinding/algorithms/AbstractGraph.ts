@@ -234,13 +234,20 @@ export class AbstractGraphBuilder {
     private readonly clusterSize: number = AbstractGraphBuilder.CLUSTER_SIZE,
     private readonly oldGraph?: AbstractGraph,
     private readonly dirtyMiniTiles?: Set<TileRef>,
+    // An already-initialized ConnectedComponents kept up to date by the
+    // caller (see WaterManager). Skips the full-map flood fill per build.
+    private readonly sharedWaterComponents?: ConnectedComponents,
+    // Reusable map-sized BFS scratch (stateless between searches).  Avoids
+    // reallocating ~20MB of typed arrays on every water-graph rebuild.
+    sharedTileBFS?: BFSGrid,
   ) {
     this.width = map.width();
     this.height = map.height();
     this.clustersX = Math.ceil(this.width / clusterSize);
     this.clustersY = Math.ceil(this.height / clusterSize);
-    this.tileBFS = new BFSGrid(this.width * this.height);
-    this.waterComponents = new ConnectedComponents(map);
+    this.tileBFS = sharedTileBFS ?? new BFSGrid(this.width * this.height);
+    this.waterComponents =
+      sharedWaterComponents ?? new ConnectedComponents(map);
   }
 
   build(): AbstractGraph {
@@ -252,8 +259,10 @@ export class AbstractGraphBuilder {
       this.clustersY,
     );
 
-    // Initialize water components
-    this.waterComponents.initialize();
+    // Initialize water components (shared ones are maintained by the caller)
+    if (!this.sharedWaterComponents) {
+      this.waterComponents.initialize();
+    }
 
     // Compute partial rebuild info (which clusters can skip BFS)
     if (this.oldGraph && this.dirtyMiniTiles && this.dirtyMiniTiles.size > 0) {
