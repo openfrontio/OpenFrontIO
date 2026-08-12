@@ -424,6 +424,7 @@
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
   },
   "cosmetics": {
+    "adfree": "ad-free for life!",
     "artist_label": "Artist:",
     "color_label": "Color:",
     "common": "Common",
@@ -435,6 +436,7 @@
     "legendary": "Legendary",
     "per_day": "/day",
     "public_lobbies": "Public lobbies",
+    "public_lobbies_info": "Host custom lobbies that are publicly listed for anyone to join.",
     "rare": "Rare",
     "search": "Search...",
     "signup_bonus": "Signup bonus",
@@ -442,7 +444,8 @@
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
     "usd_value": "Value: {usd}",
-    "verified_name": "Verified username"
+    "verified_name": "Verified username",
+    "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
@@ -1239,19 +1242,6 @@
     "tournament": "TOURNAMENT",
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
-  },
-  "packs": {
-    "armageddon": "Armageddon",
-    "beginner": "Beginner Pack",
-    "bundle": "Hero bundle",
-    "critical_mass": "Critical Mass",
-    "fallout": "Fallout",
-    "hero_pack": "Hero",
-    "isotope": "Isotope",
-    "meltdown": "Meltdown",
-    "nuclear_cache": "Nuclear Cache",
-    "plutonium": "1,000 Plutonium",
-    "reactor": "Reactor"
   },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",

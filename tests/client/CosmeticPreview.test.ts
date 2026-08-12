@@ -15,8 +15,6 @@ const translations = {
   "flags.us": "United States",
   "crowns.golden": "Golden Crown",
   "effects.blue_wake": "Blue Wake",
-  "packs.plutonium": "Localized Plutonium Pack",
-  "packs.hero_pack": "Localized Hero Pack",
   "subscriptions.gold": "Gold Membership",
 };
 
@@ -197,7 +195,7 @@ describe("CosmeticPreview", () => {
       [resolved.flag, "flag", "United States", "common"],
       [resolved.crown, "crown", "Golden Crown", "epic"],
       [resolved.effect, "effect", "Blue Wake", "legendary"],
-      [resolved.pack, "pack", "Localized Plutonium Pack", "rare"],
+      [resolved.pack, "pack", "1,000 Plutonium", "rare"],
       [resolved.subscription, "subscription", "Gold Membership", "legendary"],
     ] as const;
 
@@ -243,7 +241,7 @@ describe("CosmeticPreview", () => {
     );
   });
 
-  it("uses the localized pack key instead of exposing the raw identifier", async () => {
+  it("uses the server-provided pack display name", async () => {
     installTranslations();
     const heroPack = {
       ...resolved.pack,
@@ -253,7 +251,7 @@ describe("CosmeticPreview", () => {
       },
       key: "pack:hero_pack",
     } as ResolvedCosmetic;
-    expect(cosmeticDisplayName(heroPack)).toBe("Localized Hero Pack");
+    expect(cosmeticDisplayName(heroPack)).toBe("1,000 Plutonium");
   });
 
   it("keeps pack icons and bonus ribbons inside the card preview", async () => {

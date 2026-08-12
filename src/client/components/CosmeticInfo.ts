@@ -40,10 +40,10 @@ export class CosmeticInfo extends LitElement {
     >
       <button
         type="button"
-        aria-label=${translateText("cosmetics.info_label")}
+        aria-label="Show cosmetic details"
         class="flex h-7 w-7 cursor-help items-center justify-center rounded-full bg-black/55 text-xs font-black text-white/80 ring-1 ring-white/20 transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
       >
-        ${translateText("cosmetics.info_symbol")}
+        ?
       </button>
       <div
         role="tooltip"

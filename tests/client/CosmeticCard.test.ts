@@ -6,8 +6,6 @@ import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 
 const translations = {
   "cosmetics.artist_label": "Artist:",
-  "cosmetics.info_label": "Show cosmetic details",
-  "cosmetics.info_symbol": "?",
   "cosmetics.rare": "Rare",
   "cosmetics.usd_value": "Value: {usd}",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
