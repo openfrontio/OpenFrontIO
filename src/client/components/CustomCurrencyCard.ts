@@ -50,7 +50,9 @@ export class CustomCurrencyCard extends LitElement {
     return html`
       <article
         data-custom-currency-card
+        data-cosmetic-shell
         data-cosmetic-rarity="common"
+        style="background:linear-gradient(to top, rgba(80,80,80,0.55) 0%, rgba(15,15,20,0.85) 100%);border-color:rgba(255,255,255,0.15)"
         class="relative flex h-full w-48 flex-col items-center justify-between gap-2 rounded-xl border border-white/20 p-3 transition-all duration-200 hover:-translate-y-px hover:shadow-[0_12px_26px_rgba(255,255,255,0.14)]"
       >
         <div
@@ -89,7 +91,7 @@ export class CustomCurrencyCard extends LitElement {
 
         <span
           data-custom-currency-name
-          class="w-full truncate pt-2 text-center text-sm font-bold text-white"
+          class="w-full whitespace-normal break-words pt-2 text-center text-sm font-bold leading-tight text-white"
           >${translateText("store.custom_amount")}</span
         >
 

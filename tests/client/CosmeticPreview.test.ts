@@ -8,6 +8,7 @@ import "../../src/client/components/CosmeticPreview";
 import type { CosmeticPreview } from "../../src/client/components/CosmeticPreview";
 
 const translations = {
+  "cosmetics.free": "+{numFree} BONUS!",
   "territory_patterns.pattern.default": "Default",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
   "territory_patterns.pattern.forest": "Forest Skin",
@@ -15,6 +16,7 @@ const translations = {
   "crowns.golden": "Golden Crown",
   "effects.blue_wake": "Blue Wake",
   "packs.plutonium": "Localized Plutonium Pack",
+  "packs.hero_pack": "Localized Hero Pack",
   "subscriptions.gold": "Gold Membership",
 };
 
@@ -88,6 +90,24 @@ const resolved = {
     colorPalette: null,
     relationship: "owned",
     key: "effect:transportShipTrail:blue_wake",
+  },
+  transitionEffect: {
+    type: "effect",
+    cosmetic: {
+      name: "nuke_patriotic_transition",
+      effectType: "nukeTrail",
+      attributes: {
+        type: "transition",
+        colors: ["#ff0000", "#ffffff", "#0400ff"],
+        frequency: 5,
+      },
+      product: null,
+      rarity: "rare",
+    },
+    colorPalette: null,
+    relationship: "owned",
+    key: "effect:nukeTrail:nuke_patriotic_transition",
+    effectType: "nukeTrail",
   },
   pack: {
     type: "pack",
@@ -206,5 +226,50 @@ describe("CosmeticPreview", () => {
     ).toBeTruthy();
     expect(cosmeticDisplayName(preview!.resolved)).toBe("Default");
     expect(cosmeticRarity(preview!.resolved)).toBe("common");
+  });
+
+  it("keeps trail transitions visible in a block-sized preview host", async () => {
+    installTranslations();
+    Element.prototype.animate ??= (() => ({
+      cancel: () => {},
+    })) as unknown as typeof Element.prototype.animate;
+    await render(resolved.transitionEffect as ResolvedCosmetic);
+
+    const trail = preview!.querySelector("trail-swatch")!;
+    expect(preview!.classList).toContain("block");
+    expect(trail.classList).toContain("block");
+    expect(trail.querySelector("div")?.getAttribute("style")).toContain(
+      "#ff0000",
+    );
+  });
+
+  it("uses the localized pack key instead of exposing the raw identifier", async () => {
+    installTranslations();
+    const heroPack = {
+      ...resolved.pack,
+      cosmetic: {
+        ...resolved.pack.cosmetic!,
+        name: "hero_pack",
+      },
+      key: "pack:hero_pack",
+    } as ResolvedCosmetic;
+    expect(cosmeticDisplayName(heroPack)).toBe("Localized Hero Pack");
+  });
+
+  it("keeps pack icons and bonus ribbons inside the card preview", async () => {
+    installTranslations();
+    await render({
+      ...resolved.pack,
+      cosmetic: { ...resolved.pack.cosmetic!, bonusAmount: 250 },
+    });
+
+    const previewBox = preview!.querySelector(
+      '[data-cosmetic-preview="pack"] > div',
+    )!;
+    expect(previewBox.className).not.toContain("pb-1");
+    expect(previewBox.querySelector("plutonium-icon")?.classList).toContain(
+      "shrink-0",
+    );
+    expect(previewBox.textContent).toContain("+250 BONUS!");
   });
 });

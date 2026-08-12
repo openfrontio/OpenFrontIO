@@ -309,13 +309,13 @@ export class CosmeticCard extends LitElement {
         : undefined;
     const content = html`
       <div
-        class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
+        class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-visible"
       >
         <cosmetic-preview .resolved=${active} size="card"></cosmetic-preview>
       </div>
       <span
         data-cosmetic-name
-        class="w-full truncate text-center text-sm font-bold text-white"
+        class="w-full whitespace-normal break-words text-center text-sm font-bold leading-tight text-white"
         >${displayName}</span
       >
     `;

@@ -16,7 +16,11 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
     return translateCosmetic("territory_patterns.pattern", cosmetic.name);
   }
   if (resolved.type === "pack") {
-    return translateText("packs." + cosmetic.name);
+    const translationKey = `packs.${cosmetic.name}`;
+    const translated = translateText(translationKey);
+    return translated === translationKey
+      ? translateCosmetic("packs", cosmetic.name)
+      : translated;
   }
   if (resolved.type === "subscription") {
     return translateCosmetic("subscriptions", cosmetic.name);

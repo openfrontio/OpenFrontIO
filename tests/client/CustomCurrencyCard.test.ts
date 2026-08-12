@@ -35,6 +35,14 @@ describe("CustomCurrencyCard", () => {
       card!.querySelector("[data-custom-currency-card]")?.className,
     ).toMatch(/w-48/);
     expect(
+      card!.querySelector<HTMLElement>("[data-custom-currency-card]")?.dataset
+        .cosmeticShell,
+    ).toBe("");
+    expect(
+      card!.querySelector<HTMLElement>("[data-custom-currency-card]")?.style
+        .background,
+    ).toContain("linear-gradient");
+    expect(
       card!.querySelector("[data-custom-currency-preview]")?.className,
     ).toMatch(/flex-col/);
   });

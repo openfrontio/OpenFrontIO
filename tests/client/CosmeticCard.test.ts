@@ -159,12 +159,32 @@ describe("CosmeticCard", () => {
     await card!.updateComplete;
 
     expect(card!.querySelector("cosmetic-preview")).toBeTruthy();
+    expect(card!.querySelector("cosmetic-preview")?.classList).toContain(
+      "block",
+    );
     expect(card!.querySelector("[data-cosmetic-name]")?.textContent).toContain(
       "Ocean Stripes",
     );
     expect(card!.querySelector('[data-cosmetic-rarity="rare"]')).toBeTruthy();
     expect(card!.querySelectorAll("button button")).toHaveLength(0);
     expect(card!.querySelectorAll("[data-variant-key]")).toHaveLength(2);
+  });
+
+  it("does not ellipsize long cosmetic names", async () => {
+    installTranslations();
+    await createCard();
+    card!.resolved = {
+      ...red,
+      cosmetic: {
+        ...red.cosmetic!,
+        name: "a_very_long_cosmetic_name",
+      } as never,
+    };
+    await card!.updateComplete;
+
+    const name = card!.querySelector<HTMLElement>("[data-cosmetic-name]")!;
+    expect(name.classList).not.toContain("truncate");
+    expect(name.classList).toContain("break-words");
   });
 
   it("keeps metadata and purchase content inside the animated card", async () => {

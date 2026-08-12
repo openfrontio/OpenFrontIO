@@ -1241,7 +1241,17 @@
     "warning": "WARNING"
   },
   "packs": {
-    "plutonium": "1,000 Plutonium"
+    "armageddon": "Armageddon",
+    "beginner": "Beginner Pack",
+    "bundle": "Hero bundle",
+    "critical_mass": "Critical Mass",
+    "fallout": "Fallout",
+    "hero_pack": "Hero",
+    "isotope": "Isotope",
+    "meltdown": "Meltdown",
+    "nuclear_cache": "Nuclear Cache",
+    "plutonium": "1,000 Plutonium",
+    "reactor": "Reactor"
   },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",

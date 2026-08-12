@@ -31,6 +31,15 @@ export class CosmeticPreview extends LitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    // CosmeticPreview is used inside flex/grid cards and also in the compact
+    // inventory loadout. Make the light-DOM host participate in those layouts
+    // so previews with no intrinsic size (trail/structure effects) still get a
+    // real box to paint into.
+    this.classList.add("block", "h-full", "w-full");
+  }
+
   render() {
     return html`<div
       data-cosmetic-preview=${this.resolved.cosmetic === null
@@ -112,23 +121,20 @@ export class CosmeticPreview extends LitElement {
       const isHard = pack.currency === "hard";
       const icon = isHard
         ? html`<plutonium-icon
-            class="flex-1 flex items-center"
-            .size=${100}
+            class="block shrink-0"
+            .size=${80}
           ></plutonium-icon>`
-        : html`<cap-icon
-            class="flex-1 flex items-center"
-            .size=${100}
-          ></cap-icon>`;
+        : html`<cap-icon class="block shrink-0" .size=${80}></cap-icon>`;
       const colorClass = isHard ? "text-green-400" : "text-amber-700";
       const currencyKey = isHard ? "cosmetics.hard" : "cosmetics.soft";
       return html`<div
-        class="relative flex flex-col items-center justify-end h-full w-full text-center gap-1 pb-1"
+        class="relative flex h-full w-full flex-col items-center justify-center gap-0.5 overflow-visible text-center"
       >
         ${icon}
-        <span class="text-lg font-black ${colorClass}"
+        <span class="text-lg font-black leading-none ${colorClass}"
           >${pack.amount.toLocaleString()}</span
         >
-        <span class="text-[10px] font-bold text-white/50 uppercase"
+        <span class="text-[10px] font-bold leading-none text-white/50 uppercase"
           >${translateText(currencyKey)}</span
         >
         ${pack.bonusAmount > 0
