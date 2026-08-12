@@ -393,18 +393,34 @@ export class CosmeticCard extends LitElement {
     // needs rather than clipping the last perk.
     const previewShape =
       active.type === "subscription" ? "h-auto" : "aspect-square";
+    // The name leads the card, so the equipped badge hangs over the artwork
+    // below it rather than over the text. The artwork clips inside its own box
+    // so the info tooltip can still overflow the card.
     const content = html`
-      <div
-        class="w-full ${previewShape} flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
-      >
-        <cosmetic-preview .resolved=${active} size="card"></cosmetic-preview>
+      <div class="relative w-full ${previewShape}">
+        <div
+          class="flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 p-2"
+        >
+          <cosmetic-preview .resolved=${active} size="card"></cosmetic-preview>
+        </div>
+        ${isEquipped
+          ? html`<span
+              data-cosmetic-equipped="true"
+              class="absolute bottom-1 left-1 z-[4] rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
+              >✓ ${translateText("inventory.equipped")}</span
+            >`
+          : nothing}
       </div>
-      <span
-        data-cosmetic-name
-        class="w-full whitespace-normal break-words text-center text-sm font-bold leading-tight text-white"
-        >${displayName}</span
-      >
     `;
+    const name = html`<span
+      data-cosmetic-name
+      class="w-full whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
+        .interactive
+        ? "cursor-pointer"
+        : ""}"
+      @click=${() => this.interactive && this.onActivate?.(active)}
+      >${displayName}</span
+    >`;
 
     return html`<div
       data-cosmetic-shell
@@ -442,41 +458,40 @@ export class CosmeticCard extends LitElement {
               >✦</span
             >`
         : nothing}
-      ${this.interactive
-        ? html`<button
-            type="button"
-            data-cosmetic-main
-            aria-label=${displayName}
-            aria-pressed=${isEquipped ? "true" : nothing}
-            aria-current=${isFocused ? "true" : nothing}
-            class="group relative flex flex-col items-center gap-2 w-full rounded-xl p-3 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
-            @click=${() => this.onActivate?.(active)}
-          >
-            ${content}
-          </button>`
-        : html`<div
-            data-cosmetic-main
-            class="group relative flex w-full flex-col items-center gap-2 rounded-xl p-3"
-          >
-            ${content}
-          </div>`}
-      ${isEquipped
-        ? html`<span
-            data-cosmetic-equipped="true"
-            class="absolute left-2 top-2 z-[4] rounded-full bg-emerald-500 px-3 py-1 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
-            >✓ ${translateText("inventory.equipped")}</span
-          >`
-        : nothing}
-      ${this.interactive && active.cosmetic !== null
-        ? html`<cosmetic-info
-            .artist=${priced?.artist}
-            .rarity=${rarity}
-            .colorPalette=${active.colorPalette?.name}
-            .showAdFree=${active.relationship === "purchasable"}
-            .usdValue=${usdValue}
-            .perks=${this.subscriptionPerks()}
-          ></cosmetic-info>`
-        : nothing}
+      ${name}
+      <!-- The info bubble anchors to this wrapper, not the whole card, so it
+           lands on the artwork's corner instead of over the name — and stays
+           outside the card's own button, which may not nest a control. -->
+      <div class="relative w-full">
+        ${this.interactive
+          ? html`<button
+              type="button"
+              data-cosmetic-main
+              aria-label=${displayName}
+              aria-pressed=${isEquipped ? "true" : nothing}
+              aria-current=${isFocused ? "true" : nothing}
+              class="group relative flex flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
+              @click=${() => this.onActivate?.(active)}
+            >
+              ${content}
+            </button>`
+          : html`<div
+              data-cosmetic-main
+              class="group relative flex w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
+            >
+              ${content}
+            </div>`}
+        ${this.interactive && active.cosmetic !== null
+          ? html`<cosmetic-info
+              .artist=${priced?.artist}
+              .rarity=${rarity}
+              .colorPalette=${active.colorPalette?.name}
+              .showAdFree=${active.relationship === "purchasable"}
+              .usdValue=${usdValue}
+              .perks=${this.subscriptionPerks()}
+            ></cosmetic-info>`
+          : nothing}
+      </div>
       ${this.renderSwatches()}
       ${this.actionContent !== nothing
         ? html`<div data-cosmetic-action class="mt-auto w-full px-3 pb-3 pt-2">

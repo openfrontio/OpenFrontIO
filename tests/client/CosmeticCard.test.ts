@@ -171,6 +171,42 @@ describe("CosmeticCard", () => {
     expect(card!.querySelectorAll("[data-variant-key]")).toHaveLength(2);
   });
 
+  it("puts the name above the preview and keeps it clickable", async () => {
+    const onActivate = vi.fn();
+    installTranslations();
+    await createCard();
+    card!.onActivate = onActivate;
+    await card!.updateComplete;
+
+    const name = card!.querySelector<HTMLElement>("[data-cosmetic-name]")!;
+    const preview = card!.querySelector("cosmetic-preview")!;
+    expect(name.compareDocumentPosition(preview)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    // The name sits outside the card's button now, so it needs its own handler
+    // to stay part of the click target.
+    expect(name.closest("[data-cosmetic-main]")).toBeNull();
+    name.click();
+    expect(onActivate).toHaveBeenCalledWith(red);
+  });
+
+  it("anchors the info bubble to the preview, below the name", async () => {
+    installTranslations();
+    await createCard();
+    card!.resolved = { ...red, cosmetic: { ...red.cosmetic!, artist: "A" } };
+    await card!.updateComplete;
+
+    const info = card!.querySelector("cosmetic-info")!;
+    const main = card!.querySelector("[data-cosmetic-main]")!;
+    const name = card!.querySelector("[data-cosmetic-name]")!;
+
+    // Positioned against a wrapper that starts below the name, so `top-2` lands
+    // on the artwork's corner rather than over the title.
+    expect(info.parentElement).toBe(main.parentElement);
+    expect(info.parentElement!.className).toContain("relative");
+    expect(info.parentElement!.contains(name)).toBe(false);
+  });
+
   it("does not ellipsize long cosmetic names", async () => {
     installTranslations();
     await createCard();
@@ -210,14 +246,11 @@ describe("CosmeticCard", () => {
     expect(card!.querySelector("[data-cosmetic-info]")?.textContent).toContain(
       "Value: $5.00",
     );
-    expect(
-      card!
-        .querySelector("[data-cosmetic-info] button")
-        ?.getAttribute("aria-label"),
-    ).toBe("Show cosmetic details");
-    expect(
-      card!.querySelector("[data-cosmetic-info] button")?.textContent?.trim(),
-    ).toBe("?");
+    const info = card!.querySelector("[data-cosmetic-info] button")!;
+    expect(info.getAttribute("aria-label")).toBe("Show cosmetic details");
+    expect(info.textContent?.trim()).toBe("?");
+    // The info control sits beside the card's button, never inside it.
+    expect(card!.querySelectorAll("button button")).toHaveLength(0);
     expect(
       card!.querySelector("[data-test-purchase]")?.closest("cosmetic-card"),
     ).toBe(card);
