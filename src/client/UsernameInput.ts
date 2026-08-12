@@ -14,6 +14,7 @@ import {
 } from "../core/validations/username";
 import { getUserMe } from "./Api";
 import { checkClanTagOwnership } from "./ClanApi";
+import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { showInGameConfirm } from "./InGameModal";
 import { steamSDK } from "./SteamSDK";
@@ -417,11 +418,17 @@ export class UsernameInput extends LitElement {
     const tag = this.clanTag;
     const invalid = this.clanTagOwnershipError !== "";
     return html`
-      <div class="no-crazygames relative shrink-0 h-full max-h-[44px]">
+      <!-- Escape is bound here rather than on the menu: the trigger keeps
+           focus when the menu opens, and it is the menu's sibling, so a
+           menu-level handler would never see the key. -->
+      <div
+        class="no-crazygames relative shrink-0 h-full max-h-[44px]"
+        @keydown=${this.handleClanMenuKeydown}
+      >
         <button
           type="button"
           id="clan-tag-button"
-          class="flex h-full w-auto min-w-[4.75rem] max-w-[9.5rem] sm:min-w-[6rem] items-center justify-between gap-1 rounded-lg border px-2 transition-colors cursor-pointer ${invalid
+          class="flex h-full w-[8.25rem] sm:w-[9rem] items-center justify-between gap-1 rounded-lg border px-2 transition-colors cursor-pointer ${invalid
             ? "border-red-400/70 bg-red-500/10"
             : this.clanMenuOpen
               ? "border-white/40 bg-black/40"
@@ -475,7 +482,6 @@ export class UsernameInput extends LitElement {
         role="dialog"
         aria-labelledby="clan-tag-button"
         class="absolute left-0 top-full z-50 mt-1.5 w-[17rem] max-w-[80vw] rounded-xl border border-white/15 bg-surface/95 p-1.5 shadow-xl backdrop-blur-md"
-        @keydown=${this.handleClanMenuKeydown}
       >
         ${clans.length > 0
           ? html`
@@ -577,7 +583,7 @@ export class UsernameInput extends LitElement {
           class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-2 rounded-lg border border-blue-400/60 bg-blue-500/15 px-2 sm:px-2.5"
           title=${translateText("username.verified_active_hint")}
         >
-          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-blue-400")}
+          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6")}
           <span
             class="min-w-0 flex-1 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
             >${this.verifiedName() ?? ""}</span
@@ -636,11 +642,11 @@ export class UsernameInput extends LitElement {
         @click=${this.handleVerifiedToggle}
       >
         ${verifiedBadge(
-          `w-5 h-5 shrink-0 transition-colors ${
-            eligible
-              ? "text-blue-400"
-              : "text-white/25 group-hover:text-white/45"
-          }`,
+          "w-5 h-5 transition-colors",
+          eligible
+            ? "text-blue-400"
+            : "text-white/25 group-hover:text-white/45",
+          null,
         )}
         <span
           class="hidden sm:inline text-sm font-medium whitespace-nowrap transition-colors ${eligible
@@ -790,22 +796,6 @@ export class UsernameInput extends LitElement {
       this._isValid && this.clanTagOwnershipError !== "username.tag_not_member"
     );
   }
-}
-
-// The blue check mark shared by the verified chip and the verified toggle, so
-// the "on" and "off" states are visibly the same control.
-function verifiedBadge(className: string) {
-  return html`<svg viewBox="0 0 24 24" class=${className} aria-hidden="true">
-    <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
-    <path
-      d="M7.5 12.5l3 3 6-6.5"
-      stroke="white"
-      stroke-width="2.2"
-      fill="none"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    ></path>
-  </svg>`;
 }
 
 // Whether the player is currently playing under their verified account name.

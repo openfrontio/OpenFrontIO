@@ -24,7 +24,11 @@ vi.mock("../src/client/SteamSDK", () => ({
 vi.mock("../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => false),
 }));
-vi.mock("../src/client/Utils", () => ({
+// Partial: only translateText is stubbed (echoing keys so assertions read as
+// i18n keys). The rest of Utils stays real, so an unrelated import added to
+// this graph later doesn't fail on a missing export.
+vi.mock("../src/client/Utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/Utils")>()),
   translateText: (key: string) => key,
 }));
 
@@ -162,6 +166,23 @@ describe("UsernameInput clan tag picker", () => {
       new PointerEvent("pointerdown", { bubbles: true, composed: true }),
     );
     await el.updateComplete;
+    expect(q(el, "#clan-tag-menu")).toBeNull();
+  });
+
+  it("closes on Escape while the trigger still holds focus", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+
+    // Opening leaves focus on the button, which is the menu's sibling — the
+    // key never reaches a menu-level handler.
+    const button = q(el, "#clan-tag-button")!;
+    button.click();
+    await el.updateComplete;
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await el.updateComplete;
+
     expect(q(el, "#clan-tag-menu")).toBeNull();
   });
 
