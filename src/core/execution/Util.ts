@@ -111,7 +111,7 @@ function getFreshAlliances(
 
   for (const alliance of alliances) {
     if (
-      !alliance.missileProtectionUsed() &&
+      !alliance.missileProtectionUsed(launcher) &&
       currentTick - alliance.createdAt() <= protectionDurationTicks
     ) {
       result.set(alliance.other(launcher).smallID(), alliance);
@@ -125,6 +125,7 @@ function checkAreaNukeProtection(
   targetTile: TileRef,
   magnitude: NukeMagnitude,
   freshAlliancesMap: Map<number, MutableAlliance>,
+  launcher: Player,
 ): boolean {
   const freshAllySmallIds = new Set(freshAlliancesMap.keys());
   const threshold = game.config().nukeAllianceBreakThreshold();
@@ -140,7 +141,7 @@ function checkAreaNukeProtection(
 
   if (freshAlliancesMap.size === 1) {
     const singleAlliance = freshAlliancesMap.values().next().value;
-    singleAlliance?.setMissileProtectionUsed();
+    singleAlliance?.setMissileProtectionUsed(launcher);
     return true;
   }
 
@@ -154,7 +155,7 @@ function checkAreaNukeProtection(
         threshold,
       })
     ) {
-      alliance.setMissileProtectionUsed();
+      alliance.setMissileProtectionUsed(launcher);
     }
   }
   return true;
@@ -164,6 +165,7 @@ function checkDirectTargetProtection(
   game: Game,
   targetTile: TileRef,
   freshAlliancesMap: Map<number, MutableAlliance>,
+  launcher: Player,
 ): boolean {
   const targetPlayer = game.owner(targetTile);
   if (!targetPlayer.isPlayer()) return false;
@@ -171,7 +173,7 @@ function checkDirectTargetProtection(
   const alliance = freshAlliancesMap.get(targetPlayer.smallID());
   if (!alliance) return false;
 
-  alliance.setMissileProtectionUsed();
+  alliance.setMissileProtectionUsed(launcher);
   return true;
 }
 
@@ -193,8 +195,19 @@ export function checkAndTriggerNukeAllianceProtection(
 
   const isBlocked =
     magnitude !== null
-      ? checkAreaNukeProtection(game, targetTile, magnitude, freshAlliancesMap)
-      : checkDirectTargetProtection(game, targetTile, freshAlliancesMap);
+      ? checkAreaNukeProtection(
+          game,
+          targetTile,
+          magnitude,
+          freshAlliancesMap,
+          launcher,
+        )
+      : checkDirectTargetProtection(
+          game,
+          targetTile,
+          freshAlliancesMap,
+          launcher,
+        );
 
   if (!isBlocked) return false;
 

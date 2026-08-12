@@ -78,7 +78,7 @@ describe("Nuke & MIRV Alliance Protection", () => {
 
     const alliance = p1.allianceWith(p2);
     expect(alliance).not.toBeNull();
-    expect(alliance?.missileProtectionUsed()).toBe(false);
+    expect(alliance?.missileProtectionUsed(p1)).toBe(false);
 
     // Target a tile owned by p2 (city tile at 5, 5)
     const targetTile = game.ref(5, 5);
@@ -91,7 +91,7 @@ describe("Nuke & MIRV Alliance Protection", () => {
 
     // Should be blocked: exec1 inactive, protection used, alliance intact
     expect(exec1.isActive()).toBe(false);
-    expect(alliance?.missileProtectionUsed()).toBe(true);
+    expect(alliance?.missileProtectionUsed(p1)).toBe(true);
     expect(p1.allianceWith(p2)).not.toBeNull();
 
     // Second launch attempt: AtomBomb (protection already used)
@@ -103,6 +103,41 @@ describe("Nuke & MIRV Alliance Protection", () => {
     // Should proceed: exec2 active, nuke unit spawned, alliance broken
     expect(exec2.isActive()).toBe(true);
     expect(p1.allianceWith(p2)).toBeNull();
+  });
+
+  it("grants independent 1-time protection for both players in the alliance", async () => {
+    const { game, p1, p2 } = await setupTestGame();
+
+    // Alliance created at tick 0
+    const req = new AllianceRequestImpl(p1, p2, game.ticks(), game);
+    game.acceptAllianceRequest(req);
+
+    const alliance = p1.allianceWith(p2);
+    expect(alliance?.missileProtectionUsed(p1)).toBe(false);
+    expect(alliance?.missileProtectionUsed(p2)).toBe(false);
+
+    // Player 1 launches at Player 2 -> blocked for p1
+    const targetTileP2 = game.ref(5, 5);
+    const execP1 = new NukeExecution(UnitType.AtomBomb, p1, targetTileP2);
+    game.addExecution(execP1);
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(execP1.isActive()).toBe(false);
+    expect(alliance?.missileProtectionUsed(p1)).toBe(true);
+    expect(alliance?.missileProtectionUsed(p2)).toBe(false);
+    expect(p1.allianceWith(p2)).not.toBeNull();
+
+    // Now Player 2 launches at Player 1 -> should ALSO be blocked for p2 on 1st attempt
+    const targetTileP1 = game.ref(1, 1);
+    const execP2 = new NukeExecution(UnitType.AtomBomb, p2, targetTileP1);
+    game.addExecution(execP2);
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(execP2.isActive()).toBe(false);
+    expect(alliance?.missileProtectionUsed(p2)).toBe(true);
+    expect(p1.allianceWith(p2)).not.toBeNull();
   });
 
   it("blocks MIRV launch targeting direct fresh ally on first attempt and allows on second attempt", async () => {
@@ -122,7 +157,7 @@ describe("Nuke & MIRV Alliance Protection", () => {
 
     // Should be blocked: mirv1 inactive, protection used, alliance intact
     expect(mirv1.isActive()).toBe(false);
-    expect(alliance?.missileProtectionUsed()).toBe(true);
+    expect(alliance?.missileProtectionUsed(p1)).toBe(true);
     expect(p1.allianceWith(p2)).not.toBeNull();
 
     // Second MIRV launch attempt directly targeting p2
@@ -208,7 +243,7 @@ describe("Nuke & MIRV Alliance Protection", () => {
 
     // Blocked based purely on tile count threshold (9.0 weight > 5 threshold)
     expect(exec1.isActive()).toBe(false);
-    expect(alliance?.missileProtectionUsed()).toBe(true);
+    expect(alliance?.missileProtectionUsed(p1)).toBe(true);
     expect(p1.allianceWith(p2)).not.toBeNull();
 
     // Launch attempt 2: AtomBomb targeting same neutral tile

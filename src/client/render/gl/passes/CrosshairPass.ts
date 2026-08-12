@@ -63,6 +63,7 @@ export class CrosshairPass {
     this.uHasAtlas = gl.getUniformLocation(this.program, "uHasAtlas")!;
 
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       if (!this.gl) return;
       const tex = gl.createTexture();
@@ -174,6 +175,10 @@ export class CrosshairPass {
 
   dispose(): void {
     const gl = this.gl;
+    if (this.statusAtlasTex) {
+      gl.deleteTexture(this.statusAtlasTex);
+      this.statusAtlasTex = null;
+    }
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
   }

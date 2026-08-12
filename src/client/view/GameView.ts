@@ -704,7 +704,7 @@ export class GameView implements GameMap {
     }
     for (const nb of gu.updates[GameUpdateType.NukeLaunchBlockedEvent] ?? []) {
       const mySmallID = this._myPlayer?.smallID();
-      if (mySmallID === undefined || nb.launcherID === mySmallID) {
+      if (nb.launcherID === mySmallID) {
         ev.nukeBlockedEvents.push({ tile: nb.targetTile });
       }
     }
