@@ -220,10 +220,13 @@ export class NavAccountMenu extends LitElement {
 
   private renderMenu(): TemplateResult {
     return html`
+      <!-- No vertical padding on the panel: items run edge to edge so a hovered
+           row (the red Log out especially) fills the corner instead of leaving
+           a dead strip under it. overflow-hidden clips them to the radius. -->
       <div
         role="menu"
         aria-label=${translateText("nav_account_menu.title")}
-        class="absolute right-0 top-full mt-2 w-60 z-[41000] rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-md shadow-xl overflow-hidden py-1"
+        class="absolute right-0 top-full mt-2 w-60 z-[41000] rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-md shadow-xl overflow-hidden"
       >
         ${this.items().map(
           (item) => html`
