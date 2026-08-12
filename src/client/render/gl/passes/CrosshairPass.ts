@@ -35,6 +35,7 @@ export class CrosshairPass {
   private uHasAtlas: WebGLUniformLocation;
 
   private statusAtlasTex: WebGLTexture | null = null;
+  private disposed = false;
 
   private active = false;
   private centerX = 0;
@@ -65,7 +66,7 @@ export class CrosshairPass {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      if (!this.gl) return;
+      if (!this.gl || this.disposed) return;
       const tex = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texParameteri(
@@ -174,6 +175,7 @@ export class CrosshairPass {
   }
 
   dispose(): void {
+    this.disposed = true;
     const gl = this.gl;
     if (this.statusAtlasTex) {
       gl.deleteTexture(this.statusAtlasTex);
