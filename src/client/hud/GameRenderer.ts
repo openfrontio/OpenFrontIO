@@ -40,6 +40,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { TrainerOverlay } from "./layers/TrainerOverlay";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
 import { loadAllSprites } from "./SpriteLoader";
@@ -255,6 +256,17 @@ export function createRenderer(
   performanceOverlay.eventBus = eventBus;
   performanceOverlay.userSettings = userSettings;
 
+  const trainerOverlay = document.querySelector(
+    "trainer-overlay",
+  ) as TrainerOverlay;
+  if (!(trainerOverlay instanceof TrainerOverlay)) {
+    console.error("trainer overlay not found");
+  }
+  trainerOverlay.game = game;
+  trainerOverlay.eventBus = eventBus;
+  trainerOverlay.uiState = uiState;
+  trainerOverlay.transform = transformHandler;
+
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -333,6 +345,7 @@ export function createRenderer(
     inGamePromo,
     alertFrame,
     performanceOverlay,
+    trainerOverlay,
   ];
 
   return new GameRenderer(
