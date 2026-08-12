@@ -37,6 +37,9 @@ interface StoreBrowserOptions {
   emptyTranslationKey: string;
   userHasSubscription?: boolean;
   trailingContent?: TemplateResult;
+  gridClass?: string;
+  cardClass?: string;
+  emptyClass?: string;
 }
 
 @customElement("store-modal")
@@ -205,6 +208,7 @@ export class StoreModal extends BaseModal {
   private renderCosmeticCards(
     groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
     userHasSubscription = false,
+    cardClass = "block h-full min-w-0",
   ): TemplateResult {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
@@ -220,9 +224,13 @@ export class StoreModal extends BaseModal {
       return html`<cosmetic-card
         data-store-product
         data-cosmetic-key=${group[0].key}
-        class="block h-full min-w-0"
+        class=${cardClass}
         .resolved=${group[0]}
-        .variants=${group.length > 1 ? group : []}
+        .variants=${group.length > 1 ||
+        group[0].type === "pattern" ||
+        group[0].type === "skin"
+          ? group
+          : []}
         .activeVariantKey=${active.key}
         .actionContent=${action}
         state=${focused ? "focused" : "idle"}
@@ -271,14 +279,12 @@ export class StoreModal extends BaseModal {
     ></purchase-button>`;
   }
 
-  private renderBrowserLayout(cards: TemplateResult): TemplateResult {
+  private renderBrowserLayout(
+    cards: TemplateResult,
+    gridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4",
+  ): TemplateResult {
     return html`<div data-store-browser class="grid grid-cols-1 gap-4 p-3">
-      <div
-        data-store-grid
-        class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
-      >
-        ${cards}
-      </div>
+      <div data-store-grid class=${gridClass}>${cards}</div>
     </div>`;
   }
 
@@ -291,13 +297,18 @@ export class StoreModal extends BaseModal {
         ? options.trailingContent
           ? html``
           : html`<div
-              class="col-span-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
+              class=${`${options.emptyClass ?? "col-span-full"} py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40`}
             >
               ${translateText(options.emptyTranslationKey)}
             </div>`
-        : this.renderCosmeticCards(groups, options.userHasSubscription);
+        : this.renderCosmeticCards(
+            groups,
+            options.userHasSubscription,
+            options.cardClass,
+          );
     return this.renderBrowserLayout(
       html`${cards}${options.trailingContent ?? ""}`,
+      options.gridClass,
     );
   }
 
@@ -398,6 +409,11 @@ export class StoreModal extends BaseModal {
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
       trailingContent: html`<custom-currency-card></custom-currency-card>`,
+      gridClass:
+        "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
+      cardClass: "block h-full w-48 shrink-0",
+      emptyClass:
+        "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });
   }
 

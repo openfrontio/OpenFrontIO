@@ -405,7 +405,7 @@ export class InventoryModal extends BaseModal {
           return html`
             <cosmetic-card
               .resolved=${active}
-              .variants=${group.length > 1 ? group : []}
+              .variants=${group}
               .activeVariantKey=${active.key}
               state=${equippedVariant ? "equipped" : "idle"}
               .onActivate=${(variant: ResolvedCosmetic) =>

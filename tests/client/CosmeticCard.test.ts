@@ -143,6 +143,15 @@ describe("CosmeticCard", () => {
     expect(onActivate).not.toHaveBeenCalled();
   });
 
+  it("renders a color swatch for a single palette variant", async () => {
+    await createCard();
+    card!.variants = [red];
+    card!.activeVariantKey = red.key;
+    await card!.updateComplete;
+
+    expect(card!.querySelectorAll("[data-variant-key]")).toHaveLength(1);
+  });
+
   it("keeps main and swatch buttons as siblings and renders presentation", async () => {
     installTranslations();
     await createCard();
@@ -229,8 +238,8 @@ describe("CosmeticCard", () => {
     ];
     expect(swatches).toHaveLength(2);
     for (const swatch of swatches) {
-      expect(swatch.classList).toContain("h-11");
-      expect(swatch.classList).toContain("w-11");
+      expect(swatch.classList).toContain("h-8");
+      expect(swatch.classList).toContain("w-8");
       expect(swatch.querySelector("[data-cosmetic-swatch-dot]")).toBeTruthy();
     }
     expect(swatches[0].getAttribute("aria-pressed")).toBe("false");
@@ -250,8 +259,10 @@ describe("CosmeticCard", () => {
       card!.querySelector<HTMLButtonElement>("[data-variant-key]")!;
 
     expect(shell.className).not.toMatch(/emerald|sky|blue/);
-    expect(main.className).toMatch(/focus-visible:/);
-    expect(swatch.className).toMatch(/focus-visible:/);
+    expect(main.className).toMatch(/focus-visible:ring-white/);
+    expect(swatch.className).toMatch(/focus-visible:ring-white/);
+    expect(main.className).not.toMatch(/ring-blue/);
+    expect(swatch.className).not.toMatch(/ring-blue/);
   });
 
   it("layers green equipped state over the rarity accent", async () => {
@@ -275,7 +286,7 @@ describe("CosmeticCard", () => {
     await card!.updateComplete;
     shell = card!.querySelector<HTMLElement>("[data-cosmetic-rarity]")!;
     expect(shell.classList).toContain("border-violet-300/70");
-    expect(shell.className).toMatch(/ring-blue/);
+    expect(shell.className).not.toMatch(/ring-blue/);
     expect(shell.className).not.toMatch(/ring-emerald/);
   });
 });

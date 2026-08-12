@@ -31,6 +31,12 @@ describe("CustomCurrencyCard", () => {
 
     expect(card!.querySelector("[data-custom-currency-card]")).toBeTruthy();
     expect(card!.querySelector("purchase-button")).toBeTruthy();
+    expect(
+      card!.querySelector("[data-custom-currency-card]")?.className,
+    ).toMatch(/w-48/);
+    expect(
+      card!.querySelector("[data-custom-currency-preview]")?.className,
+    ).toMatch(/flex-col/);
   });
 
   it("clamps number and range amounts to the supported bounds", async () => {

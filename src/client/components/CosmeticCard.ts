@@ -242,16 +242,19 @@ export class CosmeticCard extends LitElement {
   }
 
   private renderSwatches() {
-    if (!this.interactive || !this.showSwatches || this.variants.length === 0) {
+    const variants = this.variants.filter(
+      (variant) => variant.colorPalette !== null,
+    );
+    if (!this.interactive || !this.showSwatches || variants.length === 0) {
       return nothing;
     }
 
     const activeKey = this.activeResolved.key;
     return html`<div
       data-cosmetic-swatches
-      class="flex flex-wrap items-center justify-center gap-1.5 w-full px-1 pt-2"
+      class="flex flex-wrap items-center justify-center gap-1 w-full pt-2"
     >
-      ${this.variants.map((variant) => {
+      ${variants.map((variant) => {
         const palette = variant.colorPalette;
         const primary = palette?.primaryColor ?? "#ffffff";
         const secondary = palette?.secondaryColor ?? "#000000";
@@ -265,7 +268,7 @@ export class CosmeticCard extends LitElement {
           title=${label}
           aria-label=${label}
           aria-pressed=${isActive ? "true" : "false"}
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 m-0 appearance-none cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 transition-transform duration-150 hover:scale-110"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full p-0 m-0 appearance-none cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1 transition-transform duration-150 hover:scale-110"
           @click=${(event: Event) => {
             event.stopPropagation();
             this.onVariantActivate?.(variant);
@@ -290,9 +293,6 @@ export class CosmeticCard extends LitElement {
     const displayName = cosmeticDisplayName(active);
     const isFocused = this.state === "focused";
     const isEquipped = this.state === "equipped";
-    const focusClass = isFocused
-      ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-950"
-      : "";
     const shellClass = `${this.rarityClass(rarity)} ${
       isEquipped
         ? "ring-2 ring-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.45)]"
@@ -325,7 +325,7 @@ export class CosmeticCard extends LitElement {
       data-cosmetic-shell
       data-cosmetic-state=${this.state}
       data-cosmetic-rarity=${rarity}
-      class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass} ${focusClass}"
+      class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass}"
     >
       ${rarity === "epic" || rarity === "legendary"
         ? html`<span data-cosmetic-shimmer aria-hidden="true"></span>`
@@ -364,7 +364,7 @@ export class CosmeticCard extends LitElement {
             aria-label=${displayName}
             aria-pressed=${isEquipped ? "true" : nothing}
             aria-current=${isFocused ? "true" : nothing}
-            class="group relative flex flex-col items-center gap-2 w-full rounded-xl p-3 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+            class="group relative flex flex-col items-center gap-2 w-full rounded-xl p-3 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
             @click=${() => this.onActivate?.(active)}
           >
             ${content}

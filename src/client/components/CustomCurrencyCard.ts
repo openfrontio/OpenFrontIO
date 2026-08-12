@@ -51,11 +51,11 @@ export class CustomCurrencyCard extends LitElement {
       <article
         data-custom-currency-card
         data-cosmetic-rarity="common"
-        class="relative flex flex-col items-center rounded-xl border border-white/20 p-3 focus-within:ring-2 focus-within:ring-blue-400 focus-within:ring-offset-2 focus-within:ring-offset-slate-950"
+        class="relative flex h-full w-48 flex-col items-center justify-between gap-2 rounded-xl border border-white/20 p-3 transition-all duration-200 hover:-translate-y-px hover:shadow-[0_12px_26px_rgba(255,255,255,0.14)]"
       >
         <div
           data-custom-currency-preview
-          class="relative flex w-full aspect-square items-center justify-center gap-1 overflow-hidden rounded-lg bg-white/5 p-2"
+          class="relative flex w-full aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-lg border border-white/10 bg-white/5 p-2"
         >
           <plutonium-icon .size=${64}></plutonium-icon>
           <label for="custom-plutonium-amount" class="sr-only"
