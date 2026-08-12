@@ -238,6 +238,20 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   itemName: string = "";
 
+  /**
+   * Keep an empty line where this payment method's button would go. Set by
+   * grids where sibling cards do offer the method, so the same currency lands
+   * on the same line across the row.
+   */
+  @property({ type: Boolean })
+  reserveDollar = false;
+
+  @property({ type: Boolean })
+  reserveHard = false;
+
+  @property({ type: Boolean })
+  reserveSoft = false;
+
   @property({ type: Function })
   onPurchaseDollar?: () => Promise<PurchaseResult>;
 
@@ -305,7 +319,7 @@ export class PurchaseButton extends LitElement {
 
     return html`
       <button
-        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
+        class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
          hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
@@ -321,7 +335,7 @@ export class PurchaseButton extends LitElement {
   private renderHardButton() {
     return html`
       <button
-        class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+        class="purchase-sparkle-btn-hard relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => {
@@ -338,7 +352,7 @@ export class PurchaseButton extends LitElement {
   private renderSoftButton() {
     return html`
       <button
-        class="purchase-sparkle-btn-soft relative overflow-hidden w-full px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+        class="purchase-sparkle-btn-soft relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-amber-700 hover:border-amber-600 hover:text-white hover:shadow-[0_0_20px_rgba(217,119,6,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => {
@@ -350,6 +364,15 @@ export class PurchaseButton extends LitElement {
         ${this.priceSoft!.toLocaleString()}
       </button>
     `;
+  }
+
+  /** Invisible stand-in with a real button's height, holding a line open. */
+  private renderReservedLine() {
+    return html`<span
+      aria-hidden="true"
+      class="invisible block w-full min-h-11 px-2 py-1.5 border rounded-lg text-base font-bold"
+      >0</span
+    >`;
   }
 
   render() {
@@ -379,9 +402,21 @@ export class PurchaseButton extends LitElement {
               )}`
           : null}
         <div class="flex flex-col gap-1 w-full">
-          ${hasDollar ? this.renderDollarButton() : null}
-          ${hasHard ? this.renderHardButton() : null}
-          ${hasSoft ? this.renderSoftButton() : null}
+          ${hasDollar
+            ? this.renderDollarButton()
+            : this.reserveDollar
+              ? this.renderReservedLine()
+              : null}
+          ${hasHard
+            ? this.renderHardButton()
+            : this.reserveHard
+              ? this.renderReservedLine()
+              : null}
+          ${hasSoft
+            ? this.renderSoftButton()
+            : this.reserveSoft
+              ? this.renderReservedLine()
+              : null}
         </div>
         ${this.busy
           ? html`<div class="cosmetic-loading-overlay">

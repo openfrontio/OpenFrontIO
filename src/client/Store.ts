@@ -241,6 +241,34 @@ export class StoreModal extends BaseModal {
     })}`;
   }
 
+  /**
+   * Which payment methods appear anywhere in the visible grid. Every card
+   * reserves a line for each of them, so a dollar button always sits on the
+   * same row as its neighbours' dollar buttons instead of sliding up into an
+   * unused currency line.
+   */
+  private visiblePurchaseSlots(): {
+    dollar: boolean;
+    hard: boolean;
+    soft: boolean;
+  } {
+    const slots = { dollar: false, hard: false, soft: false };
+    for (const group of this.visibleGroups) {
+      for (const item of group) {
+        if (item.relationship !== "purchasable") continue;
+        const priced = item.cosmetic as {
+          product?: Product | null;
+          priceHard?: number;
+          priceSoft?: number;
+        } | null;
+        if (priced?.product) slots.dollar = true;
+        if (priced?.priceHard !== undefined) slots.hard = true;
+        if (priced?.priceSoft !== undefined) slots.soft = true;
+      }
+    }
+    return slots;
+  }
+
   private renderPurchaseAction(
     resolved: ResolvedCosmetic,
     userHasSubscription: boolean,
@@ -257,7 +285,11 @@ export class StoreModal extends BaseModal {
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method);
+    const slots = this.visiblePurchaseSlots();
     return html`<purchase-button
+      .reserveDollar=${slots.dollar}
+      .reserveHard=${slots.hard}
+      .reserveSoft=${slots.soft}
       .product=${product}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}

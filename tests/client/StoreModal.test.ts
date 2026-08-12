@@ -524,6 +524,40 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(pack, "dollar");
   });
 
+  it("keeps each currency on its own line across mixed-payment cards", async () => {
+    const hardPack: ResolvedCosmetic = {
+      ...pack,
+      cosmetic: {
+        ...(pack.cosmetic as object),
+        name: "hard-only",
+        displayName: "500 Plutonium",
+        product: null,
+        priceHard: 500,
+      } as never,
+      key: "pack:hard-only",
+    };
+    resolvedCatalog = [pack, hardPack];
+    const modal = await openStoreOnTab("packs");
+
+    const lines = (key: string) =>
+      [
+        ...purchaseButton(modal, key).querySelectorAll(
+          ".flex.flex-col > button, .flex.flex-col > span",
+        ),
+      ].map((el) =>
+        el.tagName === "SPAN"
+          ? "reserved"
+          : el.className.includes("-hard")
+            ? "hard"
+            : "dollar",
+      );
+
+    // The dollar-only pack holds the plutonium line open and vice versa, so
+    // both cards put the same currency at the same height.
+    expect(lines(pack.key)).toEqual(["dollar", "reserved"]);
+    expect(lines(hardPack.key)).toEqual(["reserved", "hard"]);
+  });
+
   it("shows subscription status and a switch action for another tier", async () => {
     resolvedCatalog = [goldSubscription, platinumSubscription];
     const modal = await openStoreOnTab("subscriptions");
