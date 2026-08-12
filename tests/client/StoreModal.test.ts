@@ -406,6 +406,28 @@ describe("StoreModal cosmetic browser", () => {
     expect(card(modal, flag.key)?.state).toBe("focused");
   });
 
+  it("styles cosmetic sub-tabs like the modal's own tab bar", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    const subTab = [
+      ...modal.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((candidate) => candidate.textContent?.trim() === "store.crowns")!;
+
+    // Same typography as the o-modal tab bar (px-4 py-3 text-sm font-bold),
+    // so the nested bar does not read as heavier or taller than its parent.
+    for (const token of [
+      "px-4",
+      "py-3",
+      "text-sm",
+      "font-bold",
+      "uppercase",
+      "tracking-wider",
+      "whitespace-nowrap",
+    ]) {
+      expect(subTab.classList.contains(token)).toBe(true);
+    }
+    expect(subTab.classList.contains("font-black")).toBe(false);
+  });
+
   it("clears product tiles for an empty cosmetic category", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     const crownsTab = [

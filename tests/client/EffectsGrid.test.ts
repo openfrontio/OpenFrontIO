@@ -222,6 +222,31 @@ describe("EffectsGrid", () => {
     );
   });
 
+  it("styles the effect-type tab bar like the store's own tab bar", async () => {
+    grid = await createGrid();
+    grid.tabbed = true;
+    grid.requestUpdate();
+    await grid.updateComplete;
+
+    const tab = grid.querySelector<HTMLButtonElement>(
+      "button[class*='-mb-px']",
+    )!;
+    // Matches the o-modal tab bar (px-4 py-3 text-sm font-bold) and stays on
+    // one line, so the nested bar is neither bolder nor taller than its parent.
+    for (const token of [
+      "px-4",
+      "py-3",
+      "text-sm",
+      "font-bold",
+      "uppercase",
+      "tracking-wider",
+      "whitespace-nowrap",
+    ]) {
+      expect(tab.classList.contains(token)).toBe(true);
+    }
+    expect(tab.classList.contains("font-black")).toBe(false);
+  });
+
   it("marks the stored effect equipped and clears its exact slot with Unequip", async () => {
     const settings = new UserSettings();
     settings.setSelectedEffectName("hydro", "owned_hydro");

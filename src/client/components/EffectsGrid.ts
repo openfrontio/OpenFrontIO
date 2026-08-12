@@ -278,9 +278,9 @@ export class EffectsGrid extends LitElement {
         ${EFFECT_TYPES.map((type) => {
           const active = this.activeType === type;
           return html`<button
-            class="-mb-px min-w-0 border-b-2 px-2 py-3 text-sm font-black uppercase tracking-wider transition-colors ${active
-              ? "border-blue-500 text-blue-400"
-              : "border-transparent text-white/50 hover:text-white/80"}"
+            class="-mb-px min-w-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
+              ? "border-malibu-blue text-aquarius"
+              : "border-transparent text-white/40 hover:text-white/70"}"
             @click=${() => this.selectEffectType(type)}
           >
             ${translateText(`effects.type.${type}`)}

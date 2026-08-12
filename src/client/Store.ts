@@ -328,9 +328,9 @@ export class StoreModal extends BaseModal {
         ${COSMETICS_SUB_TABS.map((tab) => {
           const active = this.cosmeticsSubTab === tab;
           return html`<button
-            class="-mb-px border-b-2 px-2 py-3 text-sm font-black uppercase tracking-wider transition-colors ${active
-              ? "border-blue-500 text-blue-400"
-              : "border-transparent text-white/50 hover:text-white/80"}"
+            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
+              ? "border-malibu-blue text-aquarius"
+              : "border-transparent text-white/40 hover:text-white/70"}"
             @click=${() => this.setCosmeticsSubTab(tab)}
           >
             ${translateText(`store.${tab}`)}

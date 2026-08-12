@@ -267,10 +267,14 @@ describe("CosmeticCard", () => {
 
     const styles = document.getElementById("cosmetic-card-styles")?.textContent;
     expect(styles).toContain("@keyframes cosmetic-card-border-sweep");
-    expect(styles).toContain("border-top-color: rgba(255,220,100,1)");
+    // The ring must be a masked band with a rotating conic gradient inside it.
+    // Rotating the ring element itself swings a tilted rectangle well outside
+    // the card, where the store's scroll container clips it away.
+    expect(styles).toContain("mask-composite: exclude");
+    expect(styles).toContain("conic-gradient");
     expect(styles).toContain("transform-origin: center");
     expect(styles).toContain(
-      "cosmetic-card:hover [data-cosmetic-border-sweep]",
+      "cosmetic-card:hover [data-cosmetic-border-sweep]::after {\n      animation: cosmetic-card-border-sweep",
     );
   });
 

@@ -116,23 +116,49 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       animation: cosmetic-card-shimmer 0.8s ease-in-out;
     }
 
+    /* A ring hugging the card edge: the element is masked down to its 3px
+       padding band, and a rotating conic gradient inside it reads as an arc
+       travelling around the border. Rotating the ring element itself would
+       swing a tilted rectangle far outside the card instead. */
     [data-cosmetic-border-sweep] {
       pointer-events: none;
       position: absolute;
       inset: -3px;
       z-index: 2;
       display: block;
-      border: 3px solid rgba(255,200,80,0.25);
-      border-top-color: rgba(255,220,100,1);
-      border-right-color: rgba(255,200,80,0.8);
+      box-sizing: border-box;
+      padding: 3px;
       border-radius: 0.9rem;
+      overflow: hidden;
+      background: rgba(255,200,80,0.25);
       opacity: 0;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+    }
+    [data-cosmetic-border-sweep]::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 260%;
+      aspect-ratio: 1;
+      translate: -50% -50%;
       transform-origin: center;
       will-change: transform;
+      background: conic-gradient(
+        rgba(255,235,160,1) 0deg,
+        rgba(255,200,80,0.8) 30deg,
+        rgba(255,200,80,0) 90deg,
+        rgba(255,200,80,0) 360deg
+      );
     }
     cosmetic-card:hover [data-cosmetic-border-sweep] {
       opacity: 1;
-      animation: cosmetic-card-border-sweep 8s linear infinite;
+    }
+    cosmetic-card:hover [data-cosmetic-border-sweep]::after {
+      animation: cosmetic-card-border-sweep 2.4s linear infinite;
     }
 
     [data-cosmetic-sparkle] {
@@ -153,7 +179,7 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
 
     @media (prefers-reduced-motion: reduce) {
       cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="legendary"],
-      cosmetic-card:hover [data-cosmetic-border-sweep],
+      cosmetic-card:hover [data-cosmetic-border-sweep]::after,
       cosmetic-card:hover [data-cosmetic-shimmer]::after,
       cosmetic-card:hover [data-cosmetic-sparkle] {
         animation: none;
