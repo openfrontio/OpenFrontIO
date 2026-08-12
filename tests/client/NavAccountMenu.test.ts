@@ -57,9 +57,10 @@ describe("nav-account-menu", () => {
 
   const trigger = () =>
     el.querySelector<HTMLButtonElement>("[data-account-trigger]")!;
-  const menu = () => el.querySelector('[role="menu"]');
+  // The panel is portalled to document.body (see NavAccountMenu.updated).
+  const menu = () => document.querySelector('[role="menu"]');
   const itemKeys = () =>
-    Array.from(el.querySelectorAll("[data-menu-item]")).map((n) =>
+    Array.from(document.querySelectorAll("[data-menu-item]")).map((n) =>
       n.getAttribute("data-menu-item"),
     );
 
@@ -133,12 +134,12 @@ describe("nav-account-menu", () => {
     await click(trigger());
 
     showInGameConfirm.mockResolvedValueOnce(false);
-    await click(el.querySelector('[data-menu-item="log-out"]')!);
+    await click(document.querySelector('[data-menu-item="log-out"]')!);
     await new Promise((r) => setTimeout(r, 0));
     expect(logOut).not.toHaveBeenCalled();
 
     await click(trigger());
-    await click(el.querySelector('[data-menu-item="log-out"]')!);
+    await click(document.querySelector('[data-menu-item="log-out"]')!);
     await new Promise((r) => setTimeout(r, 0));
     expect(logOut).toHaveBeenCalledTimes(1);
   });
@@ -157,8 +158,24 @@ describe("nav-account-menu", () => {
       .querySelector("[data-account-trigger]")!
       .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await late.updateComplete;
-    expect(late.querySelector('[role="menu"]')).not.toBeNull();
+    expect(menu()).not.toBeNull();
     late.remove();
+  });
+
+  it("portals the panel to the body and takes it down again", async () => {
+    // Rendered inside the nav it would inherit the nav's stacking context —
+    // which put it under open modals, and the nav over the toasts.
+    fireUserMe(userMe());
+    await el.updateComplete;
+    await click(trigger());
+
+    const panel = menu()!;
+    expect(panel).not.toBeNull();
+    expect(el.contains(panel)).toBe(false);
+    expect(panel.closest("body")).not.toBeNull();
+
+    await click(trigger());
+    expect(menu()).toBeNull();
   });
 
   it("closes when a click lands outside the menu", async () => {

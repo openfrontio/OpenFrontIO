@@ -1,4 +1,4 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
+import { html, LitElement, nothing, render, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
@@ -43,6 +43,11 @@ export class NavAccountMenu extends LitElement {
   @state() private menuOpen = false;
   @state() private userMeResponse: UserMeResponse | false = false;
 
+  // The panel is rendered into document.body, not into the nav: the nav bar
+  // owns a stacking context, so anything inside it can be painted under the
+  // page's overlays (modals) or paint over ones that should win (toasts).
+  private panel: HTMLDivElement | null = null;
+
   createRenderRoot() {
     return this;
   }
@@ -56,6 +61,9 @@ export class NavAccountMenu extends LitElement {
     document.addEventListener("click", this.handleDocumentClick);
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("showPage", this.closeMenu);
+    // The panel is positioned from the trigger's box, so a resize would leave
+    // it stranded — close instead of tracking.
+    window.addEventListener("resize", this.closeMenu);
 
     // Auth resolves once, early. A menu created after that (a re-rendered play
     // page, a reconnected element) would otherwise sit on its initial
@@ -77,7 +85,36 @@ export class NavAccountMenu extends LitElement {
     document.removeEventListener("click", this.handleDocumentClick);
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("showPage", this.closeMenu);
+    window.removeEventListener("resize", this.closeMenu);
+    this.removePanel();
     super.disconnectedCallback();
+  }
+
+  protected updated(): void {
+    if (!this.menuOpen) {
+      this.removePanel();
+      return;
+    }
+    const trigger = this.querySelector<HTMLElement>("[data-account-trigger]");
+    if (!trigger) return;
+
+    if (this.panel === null) {
+      this.panel = document.createElement("div");
+      this.panel.style.position = "fixed";
+      this.panel.style.zIndex = "41000";
+      document.body.appendChild(this.panel);
+    }
+    const rect = trigger.getBoundingClientRect();
+    this.panel.style.top = `${rect.bottom + 8}px`;
+    this.panel.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+    render(this.renderMenu(), this.panel);
+  }
+
+  private removePanel(): void {
+    if (this.panel === null) return;
+    render(nothing, this.panel);
+    this.panel.remove();
+    this.panel = null;
   }
 
   private handleUserMeResponse = (
@@ -105,7 +142,9 @@ export class NavAccountMenu extends LitElement {
 
   private handleDocumentClick = (e: MouseEvent) => {
     if (!this.menuOpen) return;
-    if (e.composedPath().includes(this)) return;
+    const path = e.composedPath();
+    if (path.includes(this)) return;
+    if (this.panel !== null && path.includes(this.panel)) return;
     this.menuOpen = false;
   };
 
@@ -213,7 +252,6 @@ export class NavAccountMenu extends LitElement {
         ${this.variant === "mobile"
           ? this.renderMobileTrigger()
           : this.renderDesktopTrigger()}
-        ${this.menuOpen ? this.renderMenu() : nothing}
       </div>
     `;
   }
@@ -226,7 +264,7 @@ export class NavAccountMenu extends LitElement {
       <div
         role="menu"
         aria-label=${translateText("nav_account_menu.title")}
-        class="absolute right-0 top-full mt-2 w-60 z-[41000] rounded-xl border border-white/10 bg-zinc-900 shadow-xl overflow-hidden"
+        class="w-60 rounded-xl border border-white/10 bg-zinc-900 shadow-xl overflow-hidden"
       >
         ${this.items().map(
           (item) => html`
