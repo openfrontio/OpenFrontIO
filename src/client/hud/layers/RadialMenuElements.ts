@@ -96,7 +96,7 @@ export const COLORS = {
   boat: "#2a82c9",
   disabled: "#94a3b8",
   ally: "#4ade80",
-  alianceTimeLeft: "#0891b2",
+  allianceTimeLeft: "#0891b2",
   breakAlly: "#dc2626",
   breakAllyNoDebuff: "#d97706",
   delete: "#ef4444",

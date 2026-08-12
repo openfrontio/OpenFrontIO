@@ -7,6 +7,7 @@ import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import {
   CenterButtonElement,
+  COLORS,
   MenuElement,
   MenuElementParams,
   TooltipKey,
@@ -330,7 +331,6 @@ export class RadialMenu implements Controller {
       .append("path")
       .attr("class", "menu-item-path")
       .attr("d", arc)
-      .attr("alliance", true)
       .attr("fill", (d) => {
         const disabled = this.params === null || d.data.disabled(this.params);
 
@@ -340,7 +340,7 @@ export class RadialMenu implements Controller {
             ?.allianceRequestCooldownRemaining ?? 0) > 0;
 
         const color = isAllianceCooldown
-          ? "#0891b2"
+          ? COLORS.allianceTimeLeft
           : disabled
             ? this.config.disabledColor
             : (resolveColor(d.data, this.params) ?? "#1e3a5f");
@@ -442,7 +442,7 @@ export class RadialMenu implements Controller {
           (this.params?.playerActions?.interaction
             ?.allianceRequestCooldownRemaining ?? 0) > 0;
         const color = isAllianceCooldown
-          ? "#0891b2"
+          ? COLORS.allianceTimeLeft
           : this.params === null || d.data.disabled(this.params)
             ? this.config.disabledColor
             : (resolveColor(d.data, this.params) ?? "#1e3a5f");
@@ -521,7 +521,7 @@ export class RadialMenu implements Controller {
         (this.params?.playerActions?.interaction
           ?.allianceRequestCooldownRemaining ?? 0) > 0;
       const color = isAllianceCooldown
-        ? "#0891b2"
+        ? COLORS.allianceTimeLeft
         : disabled
           ? this.config.disabledColor
           : (resolveColor(d.data, this.params) ?? "#333333");
@@ -638,6 +638,11 @@ export class RadialMenu implements Controller {
           d.data.id === "ally_request" &&
           (this.params?.playerActions?.interaction
             ?.allianceRequestCooldownRemaining ?? 0) > 0;
+
+        content.attr(
+          "data-cooldown-active",
+          isAllianceCooldown ? "true" : "false",
+        );
 
         if (d.data.renderType && this.params) {
           const stateKey = this.getStateKeyByType(
@@ -1171,7 +1176,7 @@ export class RadialMenu implements Controller {
             ?.allianceRequestCooldownRemaining ?? 0) > 0;
         const disabled = this.isItemDisabled(item);
         const color = isAllianceCooldown
-          ? "#0891b2"
+          ? COLORS.allianceTimeLeft
           : disabled
             ? this.config.disabledColor
             : (resolveColor(item, this.params) ?? "#333333");
@@ -1248,28 +1253,37 @@ export class RadialMenu implements Controller {
     );
     const prevState = icon.attr("data-prev-state");
 
-    if (stateKey && stateKey === prevState) {
-      // State unchanged, skip re-render to preserve animations
-    } else {
+    const cooldownActive =
+      (this.params?.playerActions?.interaction
+        ?.allianceRequestCooldownRemaining ?? 0) > 0;
+
+    const previousCooldownActive = icon.attr("data-cooldown-active") === "true";
+
+    const cooldownChanged = cooldownActive !== previousCooldownActive;
+
+    const stateChanged = stateKey !== prevState;
+
+    if (!cooldownChanged && !stateChanged) {
+      icon.attr("data-cooldown-active", cooldownActive ? "true" : "false");
+
       const cx = parseFloat(icon.attr("data-cx") || "0");
       const cy = parseFloat(icon.attr("data-cy") || "0");
 
       if (stateKey) {
         icon.attr("data-prev-state", stateKey);
+        // State unchanged, skip re-render to preserve animations
       } else {
-        icon.selectAll("*").remove();
+        this.renderAllyExtendIcon(
+          icon.node()! as SVGGElement,
+          cx,
+          cy,
+          this.config.iconSize,
+          disabled,
+          this.params,
+          item.icon,
+          true,
+        );
       }
-
-      this.renderAllyExtendIcon(
-        icon.node()! as SVGGElement,
-        cx,
-        cy,
-        this.config.iconSize,
-        disabled,
-        this.params,
-        item.icon,
-        true,
-      );
     }
   }
 
