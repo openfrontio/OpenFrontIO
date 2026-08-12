@@ -647,7 +647,9 @@ export class UsernameInput extends LitElement {
       >
         ${verifiedBadge(
           "w-5 h-5 transition-colors",
-          eligible ? "text-aquarius" : "text-white/25 group-hover:text-white/45",
+          eligible
+            ? "text-aquarius"
+            : "text-white/25 group-hover:text-white/45",
           null,
         )}
         <span
