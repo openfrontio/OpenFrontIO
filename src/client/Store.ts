@@ -87,15 +87,25 @@ export class StoreModal extends BaseModal {
 
   disconnectedCallback() {
     this.rowObserver?.disconnect();
+    if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
+    this.alignFrame = null;
     super.disconnectedCallback();
   }
 
   protected updated(changed: PropertyValues) {
     super.updated(changed);
+    // The cards are nested components, so their purchase buttons only exist
+    // (and only have positions) after their own updates commit — a frame later.
     alignPurchaseRows(this);
+    if (typeof requestAnimationFrame === "undefined") return;
+    this.alignFrame ??= requestAnimationFrame(() => {
+      this.alignFrame = null;
+      alignPurchaseRows(this);
+    });
   }
 
   private rowObserver: ResizeObserver | null = null;
+  private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
