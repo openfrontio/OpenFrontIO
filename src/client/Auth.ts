@@ -99,13 +99,20 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     console.error("Logout failed", e);
     return false;
   } finally {
-    __jwt = null;
-    localStorage.removeItem(PERSISTENT_ID_KEY);
-    // Switch cosmetics back to the logged-out scope. The player's own
-    // selections stay stored under their publicId and are restored on the
-    // next login (#4955).
-    UserSettings.setPlayerId(null);
+    clearLocalSession();
   }
+}
+
+// Drop all client-side auth state without calling the API. Used after account
+// deletion (DELETE /users/@me), where the server has already revoked every
+// session and cleared the refresh cookie, so /auth/logout must not be called.
+export function clearLocalSession(): void {
+  __jwt = null;
+  localStorage.removeItem(PERSISTENT_ID_KEY);
+  // Switch cosmetics back to the logged-out scope. The player's own
+  // selections stay stored under their publicId and are restored on the
+  // next login (#4955).
+  UserSettings.setPlayerId(null);
 }
 
 export async function isLoggedIn(): Promise<boolean> {
