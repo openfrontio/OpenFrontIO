@@ -26,45 +26,49 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       left: -60%;
       width: 40%;
       height: 100%;
-      background: linear-gradient(90deg, transparent 0%, rgba(134,239,172,0.5) 50%, transparent 100%);
+      background: linear-gradient(90deg, transparent 0%, rgba(147,197,253,0.5) 50%, transparent 100%);
       transform: skewX(-15deg);
       opacity: 0;
     }
-    cosmetic-container:hover .purchase-sparkle-streak {
+    .purchase-btn-wrap:hover .purchase-sparkle-streak,
+    [data-cosmetic-shell]:hover .purchase-btn-wrap .purchase-sparkle-streak {
       animation: purchase-streak 0.7s ease-in-out;
     }
-    cosmetic-container:hover .purchase-sparkle-btn {
-      background: rgb(34,197,94);
-      border-color: rgb(74,222,128);
+    .purchase-btn-wrap:hover .purchase-sparkle-btn,
+    [data-cosmetic-shell]:hover .purchase-btn-wrap .purchase-sparkle-btn {
+      background: rgb(37,99,235);
+      border-color: rgb(96,165,250);
       color: white;
-      box-shadow: 0 0 20px rgba(74,222,128,0.6);
+      box-shadow: 0 0 20px rgba(96,165,250,0.6);
     }
-    cosmetic-container:hover .purchase-sparkle-btn-hard {
-      background: rgb(22,163,74);
-      border-color: rgb(74,222,128);
+    .purchase-btn-wrap:hover .purchase-sparkle-btn-hard,
+    [data-cosmetic-shell]:hover .purchase-btn-wrap .purchase-sparkle-btn-hard {
+      background: rgb(29,78,216);
+      border-color: rgb(96,165,250);
       color: white;
-      box-shadow: 0 0 20px rgba(74,222,128,0.6);
+      box-shadow: 0 0 20px rgba(96,165,250,0.6);
     }
-    cosmetic-container:hover .purchase-sparkle-btn-soft {
+    .purchase-btn-wrap:hover .purchase-sparkle-btn-soft,
+    [data-cosmetic-shell]:hover .purchase-btn-wrap .purchase-sparkle-btn-soft {
       background: rgb(180,83,9);
       border-color: rgb(217,119,6);
       color: white;
       box-shadow: 0 0 20px rgba(217,119,6,0.6);
     }
     @keyframes purchase-pulse {
-      0%   { box-shadow: 0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(34,197,94,0.3); }
-      50%  { box-shadow: 0 0 25px rgba(74,222,128,0.9), 0 0 50px rgba(34,197,94,0.5); }
-      100% { box-shadow: 0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(34,197,94,0.3); }
+      0%   { box-shadow: 0 0 15px rgba(96,165,250,0.6), 0 0 30px rgba(37,99,235,0.3); }
+      50%  { box-shadow: 0 0 25px rgba(96,165,250,0.9), 0 0 50px rgba(37,99,235,0.5); }
+      100% { box-shadow: 0 0 15px rgba(96,165,250,0.6), 0 0 30px rgba(37,99,235,0.3); }
     }
     .purchase-sparkle-btn:hover {
-      background: rgb(22,163,74) !important;
-      border-color: rgb(74,222,128) !important;
+      background: rgb(29,78,216) !important;
+      border-color: rgb(96,165,250) !important;
       color: white !important;
       animation: purchase-pulse 1.2s ease-in-out infinite !important;
     }
     .purchase-sparkle-btn-hard:hover {
-      background: rgb(22,163,74) !important;
-      border-color: rgb(74,222,128) !important;
+      background: rgb(29,78,216) !important;
+      border-color: rgb(96,165,250) !important;
       color: white !important;
       animation: purchase-pulse 1.2s ease-in-out infinite !important;
     }
@@ -98,12 +102,12 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-ember {
       pointer-events: none;
       position: absolute;
-      top: 0;
+      top: var(--purchase-particle-top, 0px);
       width: 3px;
       height: 3px;
       border-radius: 50%;
-      background: rgba(74,222,128,0.9);
-      box-shadow: 0 0 4px rgba(74,222,128,0.8);
+      background: rgba(96,165,250,0.9);
+      box-shadow: 0 0 4px rgba(96,165,250,0.8);
       opacity: 0;
       display: none;
     }
@@ -111,7 +115,8 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-ember-1 { left: 40%; animation: purchase-ember-1 1.5s ease-out infinite 0.25s; }
     .purchase-ember-2 { left: 60%; animation: purchase-ember-2 1.3s ease-out infinite 0.5s; }
     .purchase-ember-3 { left: 80%; animation: purchase-ember-3 1.6s ease-out infinite 0.15s; }
-    cosmetic-container:hover .purchase-ember {
+    .purchase-btn-wrap:hover .purchase-ember,
+    [data-cosmetic-shell]:hover .purchase-btn-wrap .purchase-ember {
       display: block;
     }
     @keyframes purchase-burst-a { 0% { transform: translateY(0) translateX(0) scale(1.2); opacity:1; } 100% { transform: translateY(-70px) translateX(14px) scale(0); opacity:0; } }
@@ -123,12 +128,12 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-burst {
       pointer-events: none;
       position: absolute;
-      top: 0;
+      top: var(--purchase-particle-top, 0px);
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: rgba(74,222,128,1);
-      box-shadow: 0 0 6px rgba(74,222,128,0.9), 0 0 2px rgba(255,255,255,0.5);
+      background: rgba(96,165,250,1);
+      box-shadow: 0 0 6px rgba(96,165,250,0.9), 0 0 2px rgba(255,255,255,0.5);
       opacity: 0;
       display: none;
     }
@@ -172,8 +177,31 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-burst-37 { left: 58%; animation: purchase-burst-c 1.09s ease-out infinite 0.69s; }
     .purchase-burst-38 { left: 74%; animation: purchase-burst-b 0.87s ease-out infinite 0.46s; }
     .purchase-burst-39 { left: 90%; animation: purchase-burst-e 1.01s ease-out infinite 0.13s; }
-    .purchase-btn-wrap:hover .purchase-burst {
+    .purchase-btn-wrap:hover .purchase-burst,
+    [data-cosmetic-shell]:hover .purchase-btn-wrap .purchase-burst {
       display: block;
+    }
+    @keyframes cosmetic-spin {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .cosmetic-loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.6);
+      border-radius: 0.75rem;
+      z-index: 20;
+    }
+    .cosmetic-loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top-color: rgb(96,165,250);
+      border-radius: 50%;
+      animation: cosmetic-spin 0.8s linear infinite;
     }
   `;
   document.head.appendChild(style);
@@ -210,6 +238,20 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   itemName: string = "";
 
+  /**
+   * Keep an empty line where this payment method's button would go. Set by
+   * grids where sibling cards do offer the method, so the same currency lands
+   * on the same line across the row.
+   */
+  @property({ type: Boolean })
+  reserveDollar = false;
+
+  @property({ type: Boolean })
+  reserveHard = false;
+
+  @property({ type: Boolean })
+  reserveSoft = false;
+
   @property({ type: Function })
   onPurchaseDollar?: () => Promise<PurchaseResult>;
 
@@ -221,12 +263,29 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** Which currency purchase is awaiting confirmation, if any. */
-  @state() private confirmingCurrency: "hard" | "soft" | null = null;
-  private busy = false;
+  /** Currency purchase snapshot awaiting confirmation, if any. */
+  @state() private confirmingPurchase: {
+    method: "hard" | "soft";
+    amount: number;
+    itemName: string;
+    handler: () => Promise<PurchaseResult>;
+  } | null = null;
+  @state() private busy = false;
 
   createRenderRoot() {
     return this;
+  }
+
+  get offersDollar(): boolean {
+    return Boolean((this.product ?? this.dollarPrice) && this.onPurchaseDollar);
+  }
+
+  get offersHard(): boolean {
+    return this.priceHard !== null && this.onPurchaseHard !== undefined;
+  }
+
+  get offersSoft(): boolean {
+    return this.priceSoft !== null && this.onPurchaseSoft !== undefined;
   }
 
   private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
@@ -239,27 +298,27 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    this.confirmingCurrency = method;
+    this.confirmingPurchase = {
+      method,
+      amount: (method === "hard" ? this.priceHard : this.priceSoft) ?? 0,
+      itemName: this.itemName,
+      handler,
+    };
   }
 
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
     if (!handler || this.busy) return;
     this.busy = true;
-    const container = this.closest("cosmetic-container") as HTMLElement | null;
-    if (container && !container.querySelector(".cosmetic-loading-overlay")) {
-      const overlay = document.createElement("div");
-      overlay.className = "cosmetic-loading-overlay";
-      overlay.innerHTML = `<div class="cosmetic-loading-spinner"></div>`;
-      container.appendChild(overlay);
-    }
-    Promise.resolve(handler())
+    void Promise.resolve()
+      .then(() => handler())
       .then((result) => {
         if (result) this.insufficient = result;
       })
-      .finally(() => {
-        this.busy = false;
-        container?.querySelector(".cosmetic-loading-overlay")?.remove();
-      });
+      .catch((error: unknown) => {
+        console.error("Purchase callback failed", error);
+        alert(translateText("store.purchase_failed"));
+      })
+      .finally(() => (this.busy = false));
   }
 
   showInsufficient(result: InsufficientCurrency) {
@@ -272,8 +331,9 @@ export class PurchaseButton extends LitElement {
 
     return html`
       <button
-        class="purchase-sparkle-btn relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200
-         hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
+        class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
+         hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
+        ?disabled=${this.busy}
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
         <span class="purchase-sparkle-streak"></span>
@@ -287,8 +347,9 @@ export class PurchaseButton extends LitElement {
   private renderHardButton() {
     return html`
       <button
-        class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
-         hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
+        class="purchase-sparkle-btn-hard relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+         hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
+        ?disabled=${this.busy}
         @click=${(e: Event) => {
           e.stopPropagation();
           this.requestCurrencyPurchase("hard");
@@ -303,8 +364,9 @@ export class PurchaseButton extends LitElement {
   private renderSoftButton() {
     return html`
       <button
-        class="purchase-sparkle-btn-soft relative overflow-hidden w-full px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+        class="purchase-sparkle-btn-soft relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-amber-700 hover:border-amber-600 hover:text-white hover:shadow-[0_0_20px_rgba(217,119,6,0.6)]"
+        ?disabled=${this.busy}
         @click=${(e: Event) => {
           e.stopPropagation();
           this.requestCurrencyPurchase("soft");
@@ -316,16 +378,35 @@ export class PurchaseButton extends LitElement {
     `;
   }
 
+  /** Invisible stand-in with a real button's height, holding a line open. */
+  private renderReservedLine() {
+    return html`<span
+      aria-hidden="true"
+      class="invisible block w-full min-h-11 px-2 py-1.5 border rounded-lg text-base font-bold"
+      >0</span
+    >`;
+  }
+
   render() {
-    const hasDollar =
-      (this.product ?? this.dollarPrice) && this.onPurchaseDollar;
-    const hasHard = this.priceHard !== null && this.onPurchaseHard;
-    const hasSoft = this.priceSoft !== null && this.onPurchaseSoft;
+    const hasDollar = this.offersDollar;
+    const hasHard = this.offersHard;
+    const hasSoft = this.offersSoft;
 
     if (!hasDollar && !hasHard && !hasSoft) return nothing;
 
+    // Reserved lines above the topmost real button push the rising particles
+    // down with it, so they never sparkle over an empty line. Each line is
+    // min-h-11 (2.75rem) plus the column's gap-1 (0.25rem).
+    const leadingReserved =
+      (!hasDollar && this.reserveDollar ? 1 : 0) +
+      (!hasDollar && !hasHard && this.reserveHard ? 1 : 0);
+
     return html`
-      <div class="no-crazygames w-full mt-2 relative purchase-btn-wrap">
+      <div
+        class="no-crazygames w-full mt-2 relative purchase-btn-wrap"
+        style="--purchase-particle-top: ${leadingReserved * 3}rem"
+        aria-busy=${this.busy ? "true" : nothing}
+      >
         ${this.rarity !== "common"
           ? html`<span class="purchase-ember purchase-ember-0"></span>
               <span class="purchase-ember purchase-ember-1"></span>
@@ -340,36 +421,47 @@ export class PurchaseButton extends LitElement {
               )}`
           : null}
         <div class="flex flex-col gap-1 w-full">
-          ${hasDollar ? this.renderDollarButton() : null}
-          ${hasHard ? this.renderHardButton() : null}
-          ${hasSoft ? this.renderSoftButton() : null}
+          ${hasDollar
+            ? this.renderDollarButton()
+            : this.reserveDollar
+              ? this.renderReservedLine()
+              : null}
+          ${hasHard
+            ? this.renderHardButton()
+            : this.reserveHard
+              ? this.renderReservedLine()
+              : null}
+          ${hasSoft
+            ? this.renderSoftButton()
+            : this.reserveSoft
+              ? this.renderReservedLine()
+              : null}
         </div>
+        ${this.busy
+          ? html`<div class="cosmetic-loading-overlay">
+              <div class="cosmetic-loading-spinner"></div>
+            </div>`
+          : nothing}
       </div>
-      ${this.confirmingCurrency
+      ${this.confirmingPurchase
         ? html`<confirm-dialog
             .heading=${translateText("store.confirm_purchase_title")}
             .message=${translateText("store.confirm_purchase_body", {
-              item: this.itemName,
-              amount:
-                (this.confirmingCurrency === "hard"
-                  ? this.priceHard
-                  : this.priceSoft) ?? 0,
+              item: this.confirmingPurchase.itemName,
+              amount: this.confirmingPurchase.amount,
               currency: translateText(
-                this.confirmingCurrency === "hard"
+                this.confirmingPurchase.method === "hard"
                   ? "cosmetics.hard"
                   : "cosmetics.soft",
               ),
             })}
             variant="warning"
             @confirm=${() => {
-              const handler =
-                this.confirmingCurrency === "hard"
-                  ? this.onPurchaseHard
-                  : this.onPurchaseSoft;
-              this.confirmingCurrency = null;
-              this.executePurchase(handler);
+              const pending = this.confirmingPurchase;
+              this.confirmingPurchase = null;
+              this.executePurchase(pending?.handler);
             }}
-            @cancel=${() => (this.confirmingCurrency = null)}
+            @cancel=${() => (this.confirmingPurchase = null)}
           ></confirm-dialog>`
         : nothing}
       <insufficient-currency-dialog
@@ -377,5 +469,37 @@ export class PurchaseButton extends LitElement {
         @close=${() => (this.insufficient = null)}
       ></insufficient-currency-dialog>
     `;
+  }
+}
+
+/**
+ * Line up payment buttons by currency within each visual row: every card in a
+ * row reserves a line for the methods its row-mates offer, and only those — a
+ * row with no caps price keeps no caps line. Rows are read from laid-out card
+ * positions (offsetTop, so a hovered card's scale doesn't move it), so callers
+ * must run this after render and on resize.
+ */
+export function alignPurchaseRows(root: ParentNode): void {
+  const rows = new Map<number, PurchaseButton[]>();
+  for (const button of root.querySelectorAll<PurchaseButton>(
+    "purchase-button",
+  )) {
+    const card =
+      button.closest<HTMLElement>("cosmetic-card, custom-currency-card") ??
+      button;
+    const row = rows.get(card.offsetTop);
+    if (row) row.push(button);
+    else rows.set(card.offsetTop, [button]);
+  }
+
+  for (const row of rows.values()) {
+    const dollar = row.some((button) => button.offersDollar);
+    const hard = row.some((button) => button.offersHard);
+    const soft = row.some((button) => button.offersSoft);
+    for (const button of row) {
+      button.reserveDollar = dollar;
+      button.reserveHard = hard;
+      button.reserveSoft = soft;
+    }
   }
 }
