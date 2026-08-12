@@ -21,10 +21,10 @@ import { getUserMe, invalidateUserMe } from "./Api";
 import { reauthAfterCrazyGamesChange, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs } from "./Cosmetics";
-import "./CosmeticsInput";
-import "./CosmeticsModal";
-import { CosmeticsModal } from "./CosmeticsModal";
+import {
+  completeCosmeticPurchaseReturn,
+  getPlayerCosmeticsRefs,
+} from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -33,10 +33,6 @@ import {
   isDesktopShell,
 } from "./DesktopShell";
 import "./FeaturedStream";
-import "./FlagInput";
-import { FlagInput } from "./FlagInput";
-import "./FlagInputModal";
-import { FlagInputModal } from "./FlagInputModal";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
@@ -45,6 +41,7 @@ import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameConfirm } from "./InGameModal";
+import "./InventoryModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
@@ -76,7 +73,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
+import { incrementGamesPlayed, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/MarketingConsentToast";
@@ -177,7 +174,6 @@ class Client {
   private currentUrl: string | null = null;
 
   private usernameInput: UsernameInput | null = null;
-  private flagInput: FlagInput | null = null;
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinLobbyModal;
@@ -244,9 +240,10 @@ class Client {
       tag: "troubleshooting-modal",
       pageId: "page-troubleshooting",
     });
-    modalRouter.register("cosmetics", { tag: "cosmetics-modal" });
-    modalRouter.register("flag-input", { tag: "flag-input-modal" });
-
+    modalRouter.register("inventory", {
+      tag: "inventory-modal",
+      pageId: "page-inventory",
+    });
     // Prefetch turnstile token so it is available when the user joins a lobby.
     // Desktop (Steam) has no Turnstile script and is server-side exempt, so
     // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
@@ -294,11 +291,6 @@ class Client {
     ) as LangSelector;
     if (!langSelector) {
       console.warn("Lang selector element not found");
-    }
-
-    this.flagInput = document.querySelector("flag-input") as FlagInput;
-    if (!this.flagInput) {
-      console.warn("Flag input element not found");
     }
 
     this.usernameInput = document.querySelector(
@@ -353,44 +345,9 @@ class Client {
       });
     }
 
-    const flagInputModal = document.querySelector(
-      "flag-input-modal",
-    ) as FlagInputModal;
-    if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
-      console.warn("Flag input modal element not found");
-    }
-
-    // Attach listener to any flag-input component (desktop or potentially others)
-    document.querySelectorAll("flag-input").forEach((flagInput) => {
-      flagInput.addEventListener("flag-input-click", () => {
-        if (flagInputModal && flagInputModal instanceof FlagInputModal) {
-          flagInputModal.open();
-        }
-      });
-    });
-
     this.storeModal = document.getElementById("page-item-store") as StoreModal;
     if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
       console.warn("Store modal element not found");
-    }
-
-    const cosmeticsModal = document.getElementById(
-      "cosmetics-modal",
-    ) as CosmeticsModal;
-    if (!cosmeticsModal || !(cosmeticsModal instanceof CosmeticsModal)) {
-      console.warn("Cosmetics modal element not found");
-    }
-
-    // Attach listener to any cosmetics-input component
-    document.querySelectorAll("cosmetics-input").forEach((cosmeticsInput) => {
-      cosmeticsInput.addEventListener("cosmetics-input-click", () => {
-        cosmeticsModal.open();
-      });
-    });
-
-    if (isInIframe()) {
-      const mobileCosmetics = document.getElementById("cosmetics-input-mobile");
-      if (mobileCosmetics) mobileCosmetics.style.display = "none";
     }
 
     this.storeModal.refresh();
@@ -757,28 +714,12 @@ class Client {
         return;
       }
 
-      const setCosmetic = () => {
-        if (cosmeticName.startsWith("pattern:")) {
-          this.userSettings.setSelectedPatternName(cosmeticName);
-        } else if (cosmeticName.startsWith("flag:")) {
-          this.userSettings.setFlag(cosmeticName);
-        }
-      };
-      const token = params.get("login-token");
-
-      if (token) {
-        strip();
-        window.addEventListener("beforeunload", () => {
-          // The page reloads after token login, so we need to save the pattern name
-          // in case it is unset during reload.
-          setCosmetic();
-        });
-        this.tokenLoginModal.openWithToken(token);
-      } else {
-        alertAndStrip(`purchase succeeded: ${cosmeticName}`);
-        setCosmetic();
-        this.storeModal.refresh();
-      }
+      completeCosmeticPurchaseReturn(cosmeticName, params.get("login-token"), {
+        strip,
+        alertAndStrip,
+        openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
+        refreshStore: () => this.storeModal.refresh(),
+      });
       return;
     }
 
@@ -986,11 +927,10 @@ class Client {
         "help-modal",
         "user-setting",
         "troubleshooting-modal",
-        "cosmetics-modal",
+        "inventory-modal",
         "store-modal",
         "language-modal",
         "news-modal",
-        "flag-input-modal",
         "account-button",
         "leaderboard-button",
         "token-login",

@@ -145,7 +145,7 @@ export type TrailEffectType = (typeof TRAIL_EFFECT_TYPES)[number];
 //    onto the map — strands emerge from the unit, flare to full width, and
 //    spin with depth shading (facing segments bright, receding ones dark).
 //    `radius` = helix amplitude in tiles; `strands` = number of strands (the
-//    renderer clamps to 8); `rotationSpeed` = how fast the vortex spins, in
+//    renderer rounds and clamps to [1, 8]); `rotationSpeed` = how fast the vortex spins, in
 //    radians per second; the palette wraps once around the vortex
 //    circumference. radius must be positive (the geometry degenerates
 //    otherwise), so a non-positive value drops the entry like the enums. The
@@ -171,7 +171,7 @@ export const TrailEffectAttributesSchema = z.discriminatedUnion("type", [
     type: z.literal("spiral"),
     colors: z.array(z.string()),
     radius: z.number().positive(),
-    strands: z.number().int().positive(),
+    strands: z.number().positive(),
     rotationSpeed: z.number(),
   }),
 ]);

@@ -114,6 +114,13 @@ export class DesktopNavBar extends LitElement {
             : ""}
         </div>
         <button
+          class="nav-menu-item ${currentPage === "page-inventory"
+            ? "active"
+            : ""} text-white/70 hover:text-malibu-blue font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue"
+          data-page="page-inventory"
+          data-i18n="main.inventory"
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
           data-page="page-settings"
           data-i18n="main.settings"
