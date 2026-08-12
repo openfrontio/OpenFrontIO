@@ -120,19 +120,20 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       position: absolute;
       inset: -2px;
       z-index: 0;
+      overflow: hidden;
       border-radius: 0.85rem;
       opacity: 0;
+    }
+    [data-cosmetic-border-sweep]::after {
+      content: "";
+      position: absolute;
+      inset: -100%;
       background: conic-gradient(from 0deg, transparent 0deg, rgba(255,200,80,0) 60deg, rgba(255,200,80,0.9) 120deg, rgba(255,200,80,1) 180deg, rgba(255,200,80,0.9) 240deg, rgba(255,200,80,0) 300deg, transparent 360deg);
-      padding: 2px;
-      transform-origin: center;
-      will-change: transform;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
     }
     cosmetic-card:hover [data-cosmetic-border-sweep] {
       opacity: 1;
+    }
+    cosmetic-card:hover [data-cosmetic-border-sweep]::after {
       animation: cosmetic-card-border-sweep 8s linear infinite;
     }
 
@@ -154,7 +155,7 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
 
     @media (prefers-reduced-motion: reduce) {
       cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="legendary"],
-      cosmetic-card:hover [data-cosmetic-border-sweep],
+      cosmetic-card:hover [data-cosmetic-border-sweep]::after,
       cosmetic-card:hover [data-cosmetic-shimmer]::after,
       cosmetic-card:hover [data-cosmetic-sparkle] {
         animation: none;
@@ -309,7 +310,7 @@ export class CosmeticCard extends LitElement {
         : undefined;
     const content = html`
       <div
-        class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-visible"
+        class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 overflow-hidden"
       >
         <cosmetic-preview .resolved=${active} size="card"></cosmetic-preview>
       </div>

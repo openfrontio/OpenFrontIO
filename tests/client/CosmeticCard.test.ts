@@ -248,8 +248,11 @@ describe("CosmeticCard", () => {
 
     const styles = document.getElementById("cosmetic-card-styles")?.textContent;
     expect(styles).toContain("@keyframes cosmetic-card-border-sweep");
-    expect(styles).toContain("mask-composite: exclude");
-    expect(styles).toContain("transform-origin: center");
+    expect(styles).toContain("[data-cosmetic-border-sweep]::after");
+    expect(styles).toContain("overflow: hidden");
+    expect(styles).toContain(
+      "cosmetic-card:hover [data-cosmetic-border-sweep]::after",
+    );
   });
 
   it("does not render swatches when controlled off", async () => {

@@ -424,6 +424,11 @@ export class StoreModal extends BaseModal {
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
+      gridClass:
+        "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
+      cardClass: "block h-full w-48 shrink-0",
+      emptyClass:
+        "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });
   }
 

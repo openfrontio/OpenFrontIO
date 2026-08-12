@@ -509,6 +509,12 @@ describe("StoreModal cosmetic browser", () => {
     } as never);
     await modal.updateComplete;
 
+    const grid = modal.querySelector<HTMLElement>("[data-store-grid]")!;
+    expect(grid.className).toMatch(/flex-wrap/);
+    expect(grid.className).toMatch(/justify-center/);
+    expect(grid.className).toMatch(/p-8/);
+    expect(card(modal, goldSubscription.key)?.className).toMatch(/w-48/);
+
     expect(
       product(modal, goldSubscription.key)?.querySelector("[data-store-status]")
         ?.textContent,
