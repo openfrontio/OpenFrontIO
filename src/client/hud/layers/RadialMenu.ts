@@ -330,12 +330,21 @@ export class RadialMenu implements Controller {
       .append("path")
       .attr("class", "menu-item-path")
       .attr("d", arc)
+      .attr("alliance", true)
       .attr("fill", (d) => {
         const disabled = this.params === null || d.data.disabled(this.params);
-        const color = disabled
+
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+          (this.params?.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0;
+
+        const color = isAllianceCooldown
+          ? "#0891b2"
+          : disabled
           ? this.config.disabledColor
           : (resolveColor(d.data, this.params) ?? "#1e3a5f");
-        const opacity = disabled ? 0.4 : 0.82;
+
+        const opacity = isAllianceCooldown ? 0.82 : disabled ? 0.4 : 0.82;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
@@ -349,9 +358,14 @@ export class RadialMenu implements Controller {
           ? "not-allowed"
           : "pointer",
       )
-      .style("opacity", (d) =>
-        this.params === null || d.data.disabled(this.params) ? 0.5 : 1,
-      )
+      
+      .style("opacity", (d) => {
+        const disabled = this.params === null || d.data.disabled(this.params);
+        const isAllianceCooldown = d.data.id === "ally_request" && (this.params?.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0;
+        //to remove the fade down change 0.85 to 1
+        return isAllianceCooldown ? 0.85 : disabled ? 0.5 : 1;
+  })
+
       .style(
         "transition",
         `filter ${this.config.menuTransitionDuration / 2}ms, fill ${this.config.menuTransitionDuration / 2}ms`,
@@ -419,11 +433,17 @@ export class RadialMenu implements Controller {
       ) {
         path.attr("filter", "url(#glow)");
 
-        const color =
-          this.params === null || d.data.disabled(this.params)
-            ? this.config.disabledColor
-            : (resolveColor(d.data, this.params) ?? "#1e3a5f");
-        path.attr("fill", color);
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+          (this.params?.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0;
+        const color = isAllianceCooldown
+          ? "#0891b2"
+          : this.params === null || d.data.disabled(this.params)
+          ? this.config.disabledColor
+          : (resolveColor(d.data, this.params) ?? "#1e3a5f");
+
+        const opacity = isAllianceCooldown ? 0.82 : this.params === null || d.data.disabled(this.params) ? 0.4 : 0.82;
+        path.attr("fill", d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color);
       }
     });
 
@@ -484,10 +504,13 @@ export class RadialMenu implements Controller {
       )
         return;
       path.style("filter", null);
-      const color = disabled
+      const isAllianceCooldown =
+        d.data.id === "ally_request" &&
+        (this.params?.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0;
+      const color = isAllianceCooldown? "#0891b2": disabled
         ? this.config.disabledColor
         : (resolveColor(d.data, this.params) ?? "#333333");
-      const opacity = disabled ? 0.4 : 0.82;
+       const opacity = isAllianceCooldown ? 0.82 : disabled ? 0.4 : 0.82;
 
       if (d.data.timerFraction) {
         path.attr("fill", `url(#timer-gradient-${d.data.id})`);
@@ -596,6 +619,9 @@ export class RadialMenu implements Controller {
         const contentId = d.data.id;
         const content = d3.select(`g[data-id="${contentId}"]`);
         const disabled = this.isItemDisabled(d.data);
+        const isAllianceCooldown =
+          d.data.id === "ally_request" &&
+           (this.params?.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0;
 
         if (d.data.renderType && this.params) {
           const stateKey = this.getStateKeyByType(
@@ -627,7 +653,7 @@ export class RadialMenu implements Controller {
             .attr("fill", "white")
             .attr("font-size", d.data.fontSize ?? "12px")
             .attr("font-family", "Arial, sans-serif")
-            .style("opacity", disabled ? 0.5 : 1)
+            .style("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
             .text(d.data.text);
         } else {
           const imgSel = content
@@ -637,7 +663,7 @@ export class RadialMenu implements Controller {
             .attr("height", this.config.iconSize)
             .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
             .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2)
-            .attr("opacity", disabled ? 0.5 : 1);
+            .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
 
           getSvgAspectRatio(d.data.icon!).then((aspect) => {
             if (!aspect || aspect === 1) return;
@@ -655,7 +681,7 @@ export class RadialMenu implements Controller {
               .attr("width", width)
               .attr("height", height)
               .attr("x", arc.centroid(d)[0] - width / 2)
-              .attr("y", arc.centroid(d)[1] - height / 2);
+              .attr("y", isAllianceCooldown ? 42 : arc.centroid(d)[1] - height / 2);
           });
 
           if (this.params && d.data.cooldown?.(this.params)) {
@@ -663,10 +689,10 @@ export class RadialMenu implements Controller {
             content
               .append("text")
               .attr("class", `cooldown-text`)
-              .text(cooldown + "s")
+              .text(String(cooldown))
               .attr("fill", "white")
-              .attr("opacity", disabled ? 0.5 : 1)
-              .attr("font-size", "14px")
+              .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
+              .attr("font-size", "20px")
               .attr("font-weight", "bold")
               .attr("x", arc.centroid(d)[0] - this.config.iconSize / 4)
               .attr("y", arc.centroid(d)[1] + this.config.iconSize / 2 + 7);
@@ -1119,12 +1145,12 @@ export class RadialMenu implements Controller {
     this.menuPaths.forEach((path, itemId) => {
       const item = this.findMenuItem(itemId);
       if (item) {
+        const isAllianceCooldown = item.id === "ally_request" && (this.params?.playerActions?.interaction?.allianceRequestCooldownRemaining ?? 0) > 0;
         const disabled = this.isItemDisabled(item);
-        const color = disabled
+        const color = isAllianceCooldown ? "#0891b2" : disabled
           ? this.config.disabledColor
           : (resolveColor(item, this.params) ?? "#333333");
-        const opacity = disabled ? 0.4 : 0.82;
-
+        const opacity = isAllianceCooldown ? 0.82 : disabled ? 0.4 : 0.82;
         // Update path appearance (skip fill for timer items — gradient handles it)
         if (!item.timerFraction) {
           path.attr(
@@ -1132,7 +1158,7 @@ export class RadialMenu implements Controller {
             d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
           );
         }
-        path.style("opacity", disabled ? 0.5 : 1);
+        path.style("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
         path.style("cursor", disabled ? "not-allowed" : "pointer");
 
         // Update icon/text appearance using the same logic as renderIconsAndText
@@ -1144,13 +1170,13 @@ export class RadialMenu implements Controller {
             // Update text opacity
             const textElement = icon.select("text");
             if (!textElement.empty()) {
-              textElement.style("opacity", disabled ? 0.5 : 1);
+              textElement.style("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
             }
 
             // Update image opacity
             const imageElement = icon.select("image");
             if (!imageElement.empty()) {
-              imageElement.attr("opacity", disabled ? 0.5 : 1);
+              imageElement.attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1);
             }
 
             // Update cooldown text if applicable
@@ -1160,7 +1186,7 @@ export class RadialMenu implements Controller {
               if (cooldown <= 0) {
                 cooldownElement.remove();
               } else {
-                cooldownElement.text(cooldown + "s");
+                cooldownElement.text(cooldown);
               }
             }
           }
@@ -1288,11 +1314,11 @@ export class RadialMenu implements Controller {
     const otherAgreed = interaction?.allianceInfo?.otherAgreedToExtend ?? false;
 
     const ns = "http://www.w3.org/2000/svg";
-    const smallSize = iconSize * 0.8;
+    const smallSize = iconSize;
     const iconUrl = icon ?? "";
 
     getSvgAspectRatio(iconUrl).then((ratio) => {
-      const width = smallSize * (ratio ?? 1);
+      const width = smallSize;
       const gap = 2;
       const totalWidth = width * 2 + gap;
 

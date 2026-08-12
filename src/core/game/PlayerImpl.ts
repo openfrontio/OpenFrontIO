@@ -736,6 +736,25 @@ export class PlayerImpl implements Player {
     return delta >= this.mg.config().allianceRequestCooldown();
   }
 
+  allianceRequestCooldownRemaining(other: Player): number {
+
+    if (this.isFriendly(other)) {
+      return 0;
+    }
+
+        const recent = this.pastOutgoingAllianceRequests
+      .filter((ar) => ar.recipient() === other)
+      .sort((a, b) => b.createdAt() - a.createdAt());
+
+    if (recent.length === 0) {
+      return 0;
+    }
+
+    const delta = this.mg.ticks() - recent[0].createdAt();
+
+    return Math.max((this.mg.config().allianceRequestCooldown() - delta) / 10, 0);
+  }
+
   breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
   }
