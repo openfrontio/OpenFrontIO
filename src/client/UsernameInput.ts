@@ -580,7 +580,7 @@ export class UsernameInput extends LitElement {
     if (this.verifiedActive) {
       return html`
         <div
-          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-blue-400/60 bg-blue-500/15 px-2 sm:px-2.5"
+          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-malibu-blue/70 bg-malibu-blue/15 px-2 sm:px-2.5"
           title=${translateText("username.verified_active_hint")}
         >
           <!-- Check trails the name, as it does everywhere else a verified
@@ -591,9 +591,9 @@ export class UsernameInput extends LitElement {
             class="min-w-0 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
             >${this.verifiedName() ?? ""}</span
           >
-          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6")}
+          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
           <span
-            class="hidden md:inline ml-auto shrink-0 rounded bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-200"
+            class="hidden md:inline ml-auto shrink-0 rounded bg-malibu-blue/35 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
             >${translateText("username.verified_toggle")}</span
           >
         </div>
@@ -639,7 +639,7 @@ export class UsernameInput extends LitElement {
       <button
         type="button"
         class="no-crazygames group flex shrink-0 h-full max-h-[44px] items-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${eligible
-          ? "border-blue-400/40 bg-blue-500/10 hover:border-blue-400/70 hover:bg-blue-500/20"
+          ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
           : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35"}"
         title=${translateText("username.verified_use_hint")}
         aria-pressed="false"
@@ -647,14 +647,12 @@ export class UsernameInput extends LitElement {
       >
         ${verifiedBadge(
           "w-5 h-5 transition-colors",
-          eligible
-            ? "text-blue-400"
-            : "text-white/25 group-hover:text-white/45",
+          eligible ? "text-aquarius" : "text-white/25 group-hover:text-white/45",
           null,
         )}
         <span
           class="hidden sm:inline text-sm font-medium whitespace-nowrap transition-colors ${eligible
-            ? "text-blue-200"
+            ? "text-white"
             : "text-white/60 group-hover:text-white/90"}"
           >${translateText("username.verified_use")}</span
         >
