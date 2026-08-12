@@ -31,7 +31,7 @@ export class SpawnTimer extends LitElement implements Controller {
     this.style.top = "0";
     this.style.left = "0";
     this.style.width = "100%";
-    this.style.height = "7px";
+    this.style.height = "9px";
     this.style.zIndex = "1000";
     this.style.pointerEvents = "none";
     return this;
@@ -118,7 +118,7 @@ export class SpawnTimer extends LitElement implements Controller {
           const color = this.colors[i] || "rgba(0, 0, 0, 0.5)";
           return html`
             <div
-              class="h-full transition-all duration-100 ease-in-out w-(--width) bg-(--bg)"
+              class="h-full transition-all duration-100 ease-in-out w-(--width) bg-(--bg) border-b-3 border-r-2 border-black"
               style="--width: ${ratio * 100}%; --bg: ${color};"
             ></div>
           `;

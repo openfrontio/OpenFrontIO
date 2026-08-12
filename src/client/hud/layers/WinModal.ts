@@ -320,6 +320,7 @@ export class WinModal extends LitElement implements Controller {
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
+        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         this._title = translateText("win_modal.nation_won", {
           nation: wu.winner[1],
         });

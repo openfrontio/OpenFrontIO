@@ -194,11 +194,18 @@ class FakePlayer {
 class FakeGame {
   now = 0;
   gameMode: GameMode = GameMode.FFA;
+  winnerPlayer: FakePlayer | null = null;
   constructor(
     public land: number,
     public sd: SDConfig,
     public ps: FakePlayer[],
   ) {}
+  getWinner(): FakePlayer | null {
+    return this.winnerPlayer;
+  }
+  winner(): FakePlayer | null {
+    return this.winnerPlayer;
+  }
   ticks(): number {
     return this.now;
   }
@@ -362,6 +369,18 @@ describe("DoomsdayClockExecution (logic)", () => {
     runAt(exec, game, WAVE_TICK + 30);
     expect(a.troops()).toBe(1000); // never drained
     expect(b.troops()).toBeLessThan(1000); // bled
+  });
+
+  it("halts execution and clears doomsday clock flags once a game winner is set", () => {
+    const { game, a, b } = twoPlayerGame(150, 100);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(b.inDoomsdayClock()).toBe(true);
+
+    game.winnerPlayer = a;
+    runAt(exec, game, WAVE_TICK + 10);
+    expect(a.inDoomsdayClock()).toBe(false);
+    expect(b.inDoomsdayClock()).toBe(false);
   });
 
   it("applies to nations like players and excludes map bots", () => {

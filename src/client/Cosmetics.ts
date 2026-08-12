@@ -636,6 +636,10 @@ export function resolvedToPlayerPattern(
 
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
+  // Resolve the profile first: getUserMe activates the per-player cosmetics
+  // scope (UserSettings.setPlayerId), which must happen before selections are
+  // read below.
+  await getUserMe();
   const cosmetics = await fetchCosmetics();
   let pattern: PlayerPattern | null =
     userSettings.getSelectedPatternName(cosmetics);

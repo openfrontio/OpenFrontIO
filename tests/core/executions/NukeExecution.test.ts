@@ -481,4 +481,46 @@ describe("NukeExecution", () => {
     collect();
     expect(seen.size).toBe(1);
   });
+
+  test("stacked atom bombs launched across successive ticks stagger continuously without overlapping", () => {
+    (game.config() as TestConfig).setDefaultNukeSpeed(20);
+
+    const silo = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    for (let i = 0; i < 9; i++) {
+      silo.increaseLevel();
+      silo.reloadMissile();
+    }
+
+    // Click 1: launch 3 nukes at current tick
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Advance 1 tick, then Click 2: launch 3 more nukes at next tick
+    executeTicks(game, 1);
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Give all 6 nukes time to depart the silo
+    executeTicks(game, 7);
+
+    // Every launched nuke should occupy a distinct tile (no 2 nukes overlapping on same tile)
+    const nukes = player.units(UnitType.AtomBomb);
+    expect(nukes).toHaveLength(6);
+    const tiles = nukes.map((n) => n.tile());
+    expect(new Set(tiles).size).toBe(6);
+  });
 });

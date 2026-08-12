@@ -152,6 +152,7 @@ export function renderServerPagination(
 
 export function renderMemberSearchInput(
   onInput: (e: Event) => void,
+  value: string,
   placeholderKey = "clan_modal.search_members_placeholder",
   trailing?: TemplateResult,
 ): TemplateResult {
@@ -159,6 +160,7 @@ export function renderMemberSearchInput(
     <div class="relative w-full sm:flex-1 sm:min-w-0">
       <input
         type="text"
+        .value=${value}
         @input=${onInput}
         class="w-full h-10 pl-10 pr-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
         placeholder="${translateText(placeholderKey)}"
