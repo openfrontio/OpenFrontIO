@@ -30,22 +30,26 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       transform: skewX(-15deg);
       opacity: 0;
     }
-    .purchase-btn-wrap:hover .purchase-sparkle-streak {
+    .purchase-btn-wrap:hover .purchase-sparkle-streak,
+    cosmetic-card:hover .purchase-btn-wrap .purchase-sparkle-streak {
       animation: purchase-streak 0.7s ease-in-out;
     }
-    .purchase-btn-wrap:hover .purchase-sparkle-btn {
+    .purchase-btn-wrap:hover .purchase-sparkle-btn,
+    cosmetic-card:hover .purchase-btn-wrap .purchase-sparkle-btn {
       background: rgb(37,99,235);
       border-color: rgb(96,165,250);
       color: white;
       box-shadow: 0 0 20px rgba(96,165,250,0.6);
     }
-    .purchase-btn-wrap:hover .purchase-sparkle-btn-hard {
+    .purchase-btn-wrap:hover .purchase-sparkle-btn-hard,
+    cosmetic-card:hover .purchase-btn-wrap .purchase-sparkle-btn-hard {
       background: rgb(29,78,216);
       border-color: rgb(96,165,250);
       color: white;
       box-shadow: 0 0 20px rgba(96,165,250,0.6);
     }
-    .purchase-btn-wrap:hover .purchase-sparkle-btn-soft {
+    .purchase-btn-wrap:hover .purchase-sparkle-btn-soft,
+    cosmetic-card:hover .purchase-btn-wrap .purchase-sparkle-btn-soft {
       background: rgb(180,83,9);
       border-color: rgb(217,119,6);
       color: white;
@@ -111,7 +115,8 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-ember-1 { left: 40%; animation: purchase-ember-1 1.5s ease-out infinite 0.25s; }
     .purchase-ember-2 { left: 60%; animation: purchase-ember-2 1.3s ease-out infinite 0.5s; }
     .purchase-ember-3 { left: 80%; animation: purchase-ember-3 1.6s ease-out infinite 0.15s; }
-    .purchase-btn-wrap:hover .purchase-ember {
+    .purchase-btn-wrap:hover .purchase-ember,
+    cosmetic-card:hover .purchase-btn-wrap .purchase-ember {
       display: block;
     }
     @keyframes purchase-burst-a { 0% { transform: translateY(0) translateX(0) scale(1.2); opacity:1; } 100% { transform: translateY(-70px) translateX(14px) scale(0); opacity:0; } }
@@ -172,7 +177,8 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-burst-37 { left: 58%; animation: purchase-burst-c 1.09s ease-out infinite 0.69s; }
     .purchase-burst-38 { left: 74%; animation: purchase-burst-b 0.87s ease-out infinite 0.46s; }
     .purchase-burst-39 { left: 90%; animation: purchase-burst-e 1.01s ease-out infinite 0.13s; }
-    .purchase-btn-wrap:hover .purchase-burst {
+    .purchase-btn-wrap:hover .purchase-burst,
+    cosmetic-card:hover .purchase-btn-wrap .purchase-burst {
       display: block;
     }
     @keyframes cosmetic-spin {

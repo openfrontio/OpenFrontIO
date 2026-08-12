@@ -98,10 +98,12 @@ export class EffectsGrid extends LitElement {
     this.requestUpdate();
   }
 
+  private effectiveEffectType(): EffectType {
+    return this.tabbed ? this.activeType : (this.effectType ?? this.activeType);
+  }
+
   private activeSlot(): string {
-    const type = this.tabbed
-      ? this.activeType
-      : (this.effectType ?? this.activeType);
+    const type = this.effectiveEffectType();
     return type === "nukeExplosion" ? this.activeNukeType : type;
   }
 
@@ -114,19 +116,20 @@ export class EffectsGrid extends LitElement {
   }
 
   private emitActiveSlot(all: ResolvedCosmetic[] = this.resolvedItems()) {
+    const effectType = this.effectiveEffectType();
     const slot = this.activeSlot();
     const selectedName = this.userSettings.getSelectedEffectName(slot);
     const resolved = selectedName
       ? (all.find(
           (item) =>
             item.type === "effect" &&
-            item.effectType === this.activeType &&
+            item.effectType === effectType &&
             (item.cosmetic as Effect | null)?.name === selectedName &&
-            this.slotForTile(this.activeType, item) === slot,
+            this.slotForTile(effectType, item) === slot,
         ) ?? null)
       : null;
     this.onActiveSlotChange?.({
-      effectType: this.activeType,
+      effectType,
       slot,
       resolved,
     });
@@ -288,7 +291,9 @@ export class EffectsGrid extends LitElement {
   }
 
   private renderUnequip(): TemplateResult | typeof nothing {
-    if (this.mode !== "select") return nothing;
+    if (this.mode !== "select" || (!this.tabbed && this.effectType === null)) {
+      return nothing;
+    }
     const slot = this.activeSlot();
     const selected = this.userSettings.getSelectedEffectName(slot);
     return html`<div class="flex justify-end px-4 pt-3">

@@ -6,6 +6,8 @@ import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 
 const translations = {
   "cosmetics.artist_label": "Artist:",
+  "cosmetics.info_label": "Show cosmetic details",
+  "cosmetics.info_symbol": "?",
   "cosmetics.rare": "Rare",
   "cosmetics.usd_value": "Value: {usd}",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
@@ -179,8 +181,32 @@ describe("CosmeticCard", () => {
       "Value: $5.00",
     );
     expect(
+      card!
+        .querySelector("[data-cosmetic-info] button")
+        ?.getAttribute("aria-label"),
+    ).toBe("Show cosmetic details");
+    expect(
+      card!.querySelector("[data-cosmetic-info] button")?.textContent?.trim(),
+    ).toBe("?");
+    expect(
       card!.querySelector("[data-test-purchase]")?.closest("cosmetic-card"),
     ).toBe(card);
+  });
+
+  it("adds rarity hover effects only where the rarity needs them", async () => {
+    await createCard();
+    expect(card!.querySelector("[data-cosmetic-shimmer]")).toBeNull();
+    expect(card!.querySelector("[data-cosmetic-sparkle]")).toBeNull();
+
+    card!.resolved = {
+      ...red,
+      cosmetic: { ...red.cosmetic!, rarity: "legendary" } as never,
+    };
+    await card!.updateComplete;
+
+    expect(card!.querySelector("[data-cosmetic-shimmer]")).toBeTruthy();
+    expect(card!.querySelector("[data-cosmetic-border-sweep]")).toBeTruthy();
+    expect(card!.querySelectorAll("[data-cosmetic-sparkle]")).toHaveLength(4);
   });
 
   it("does not render swatches when controlled off", async () => {

@@ -6,6 +6,165 @@ import "./CosmeticInfo";
 import { cosmeticDisplayName, cosmeticRarity } from "./CosmeticPresentation";
 import "./CosmeticPreview";
 
+const COSMETIC_CARD_STYLE_ID = "cosmetic-card-styles";
+if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
+  const style = document.createElement("style");
+  style.id = COSMETIC_CARD_STYLE_ID;
+  style.textContent = `
+    @keyframes cosmetic-card-legendary-pulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(251,146,60,0.8), 0 0 30px rgba(251,146,60,0.4); }
+      50% { box-shadow: 0 0 25px rgba(251,146,60,0.9), 0 0 45px rgba(251,146,60,0.5); }
+    }
+    @keyframes cosmetic-card-shimmer {
+      0% { left: -60%; }
+      100% { left: 160%; }
+    }
+    @keyframes cosmetic-card-border-sweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes cosmetic-card-sparkle-0 {
+      0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+      40%, 60% { opacity: 1; transform: scale(1.2) rotate(20deg); }
+    }
+    @keyframes cosmetic-card-sparkle-1 {
+      0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+      30%, 55% { opacity: 1; transform: scale(1.1) rotate(-15deg); }
+    }
+    @keyframes cosmetic-card-sparkle-2 {
+      0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+      45%, 65% { opacity: 1; transform: scale(1.3) rotate(10deg); }
+    }
+    @keyframes cosmetic-card-sparkle-3 {
+      0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+      35%, 58% { opacity: 1; transform: scale(1) rotate(-20deg); }
+    }
+
+    [data-cosmetic-shell][data-cosmetic-rarity="common"] {
+      background: linear-gradient(to top, rgba(80,80,80,0.55) 0%, rgba(15,15,20,0.85) 100%);
+      border-color: rgba(255,255,255,0.15);
+    }
+    [data-cosmetic-shell][data-cosmetic-rarity="uncommon"] {
+      background: linear-gradient(to top, rgba(30,100,30,0.65) 0%, rgba(15,15,20,0.85) 100%);
+      border-color: rgba(74,222,128,0.45);
+    }
+    [data-cosmetic-shell][data-cosmetic-rarity="rare"] {
+      background: linear-gradient(to top, rgba(20,60,160,0.7) 0%, rgba(15,15,20,0.85) 100%);
+      border-color: rgba(96,165,250,0.5);
+    }
+    [data-cosmetic-shell][data-cosmetic-rarity="epic"] {
+      background: linear-gradient(to top, rgba(90,20,160,0.75) 0%, rgba(15,15,20,0.85) 100%);
+      border-color: rgba(192,132,252,0.6);
+    }
+    [data-cosmetic-shell][data-cosmetic-rarity="legendary"] {
+      background: linear-gradient(to top, rgba(180,80,0,0.75) 0%, rgba(15,15,20,0.85) 100%);
+      border-color: rgba(251,146,60,0.65);
+    }
+
+    cosmetic-card:hover { position: relative; z-index: 10; }
+    cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="common"] {
+      transform: translateY(-4px);
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+    cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="uncommon"] {
+      transform: translateY(-4px);
+      box-shadow: 0 0 12px rgba(74,222,128,0.6);
+    }
+    cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="rare"] {
+      transform: translateY(-4px);
+      box-shadow: 0 0 14px rgba(96,165,250,0.7);
+    }
+    cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="epic"] {
+      transform: translateY(-4px);
+      box-shadow: 0 0 14px rgba(192,132,252,0.85);
+    }
+    cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="legendary"] {
+      transform: translateY(-6px) scale(1.12);
+      animation: cosmetic-card-legendary-pulse 1.4s ease-in-out infinite;
+    }
+
+    [data-cosmetic-main], [data-cosmetic-action] {
+      position: relative;
+      z-index: 1;
+    }
+    [data-cosmetic-shimmer] {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      overflow: hidden;
+      border-radius: 0.75rem;
+      opacity: 0;
+    }
+    [data-cosmetic-shimmer]::after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(192,132,252,0.45) 50%, transparent 100%);
+      transform: skewX(-15deg);
+    }
+    [data-cosmetic-rarity="legendary"] [data-cosmetic-shimmer]::after {
+      background: linear-gradient(90deg, transparent 0%, rgba(255,200,80,0.5) 50%, transparent 100%);
+    }
+    cosmetic-card:hover [data-cosmetic-shimmer] { opacity: 1; }
+    cosmetic-card:hover [data-cosmetic-shimmer]::after {
+      animation: cosmetic-card-shimmer 0.8s ease-in-out;
+    }
+
+    [data-cosmetic-border-sweep] {
+      pointer-events: none;
+      position: absolute;
+      inset: -2px;
+      z-index: 0;
+      overflow: hidden;
+      border-radius: 0.85rem;
+      opacity: 0;
+    }
+    [data-cosmetic-border-sweep]::after {
+      content: "";
+      position: absolute;
+      inset: -100%;
+      background: conic-gradient(from 0deg, transparent 0deg, rgba(255,200,80,0) 60deg, rgba(255,200,80,0.9) 120deg, rgba(255,200,80,1) 180deg, rgba(255,200,80,0.9) 240deg, rgba(255,200,80,0) 300deg, transparent 360deg);
+    }
+    cosmetic-card:hover [data-cosmetic-border-sweep] {
+      opacity: 1;
+    }
+    cosmetic-card:hover [data-cosmetic-border-sweep]::after {
+      animation: cosmetic-card-border-sweep 8s linear infinite;
+    }
+
+    [data-cosmetic-sparkle] {
+      pointer-events: none;
+      position: absolute;
+      z-index: 11;
+      display: block;
+      color: rgba(255,220,100,0.9);
+      font-size: 10px;
+      line-height: 1;
+      opacity: 0;
+      text-shadow: 0 0 6px rgba(255,200,60,1);
+    }
+    cosmetic-card:hover [data-cosmetic-sparkle="0"] { animation: cosmetic-card-sparkle-0 1.6s ease-in-out infinite; }
+    cosmetic-card:hover [data-cosmetic-sparkle="1"] { animation: cosmetic-card-sparkle-1 1.9s ease-in-out infinite 0.3s; }
+    cosmetic-card:hover [data-cosmetic-sparkle="2"] { animation: cosmetic-card-sparkle-2 1.7s ease-in-out infinite 0.7s; }
+    cosmetic-card:hover [data-cosmetic-sparkle="3"] { animation: cosmetic-card-sparkle-3 2s ease-in-out infinite 0.1s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="legendary"],
+      cosmetic-card:hover [data-cosmetic-border-sweep]::after,
+      cosmetic-card:hover [data-cosmetic-shimmer]::after,
+      cosmetic-card:hover [data-cosmetic-sparkle] {
+        animation: none;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export type CosmeticCardState = "idle" | "focused" | "equipped";
 
 @customElement("cosmetic-card")
@@ -168,6 +327,36 @@ export class CosmeticCard extends LitElement {
       data-cosmetic-rarity=${rarity}
       class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass} ${focusClass}"
     >
+      ${rarity === "epic" || rarity === "legendary"
+        ? html`<span data-cosmetic-shimmer aria-hidden="true"></span>`
+        : nothing}
+      ${rarity === "legendary"
+        ? html`<span data-cosmetic-border-sweep aria-hidden="true"></span>
+            <span
+              data-cosmetic-sparkle="0"
+              aria-hidden="true"
+              style="top: 4px; left: 4px"
+              >✦</span
+            >
+            <span
+              data-cosmetic-sparkle="1"
+              aria-hidden="true"
+              style="top: 4px; right: 4px"
+              >✦</span
+            >
+            <span
+              data-cosmetic-sparkle="2"
+              aria-hidden="true"
+              style="bottom: 4px; left: 4px"
+              >✦</span
+            >
+            <span
+              data-cosmetic-sparkle="3"
+              aria-hidden="true"
+              style="bottom: 4px; right: 4px"
+              >✦</span
+            >`
+        : nothing}
       ${this.interactive
         ? html`<button
             type="button"

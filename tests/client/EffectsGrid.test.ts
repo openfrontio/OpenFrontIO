@@ -244,6 +244,24 @@ describe("EffectsGrid", () => {
     expect(settings.getSelectedEffectName("hydro")).toBeNull();
   });
 
+  it("does not render an unscoped Unequip action in the all-types view", async () => {
+    grid = await createGrid();
+    expect(grid.querySelector("[data-effects-unequip]")).toBeNull();
+
+    const onActiveSlotChange = vi.fn();
+    grid.effectType = "nukeExplosion";
+    grid.onActiveSlotChange = onActiveSlotChange;
+    grid.requestUpdate();
+    await grid.updateComplete;
+
+    clickNukeType(grid, "hydro");
+    await grid.updateComplete;
+    expect(onActiveSlotChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ effectType: "nukeExplosion", slot: "hydro" }),
+    );
+    expect(grid.querySelector("[data-effects-unequip]")).toBeTruthy();
+  });
+
   it("focuses purchases without initiating a purchase", async () => {
     const onPurchaseFocus = vi.fn();
     grid = await createGrid();
