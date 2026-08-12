@@ -1,4 +1,4 @@
-import type { TemplateResult } from "lit";
+import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
@@ -11,6 +11,7 @@ import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
 import "./components/PurchaseButton";
+import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -77,7 +78,24 @@ export class StoreModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
+    // Rows re-wrap on resize, so which currencies share a row changes with it.
+    if (typeof ResizeObserver !== "undefined") {
+      this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));
+      this.rowObserver.observe(this);
+    }
   }
+
+  disconnectedCallback() {
+    this.rowObserver?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  protected updated(changed: PropertyValues) {
+    super.updated(changed);
+    alignPurchaseRows(this);
+  }
+
+  private rowObserver: ResizeObserver | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
@@ -241,34 +259,6 @@ export class StoreModal extends BaseModal {
     })}`;
   }
 
-  /**
-   * Which payment methods appear anywhere in the visible grid. Every card
-   * reserves a line for each of them, so a dollar button always sits on the
-   * same row as its neighbours' dollar buttons instead of sliding up into an
-   * unused currency line.
-   */
-  private visiblePurchaseSlots(): {
-    dollar: boolean;
-    hard: boolean;
-    soft: boolean;
-  } {
-    const slots = { dollar: false, hard: false, soft: false };
-    for (const group of this.visibleGroups) {
-      for (const item of group) {
-        if (item.relationship !== "purchasable") continue;
-        const priced = item.cosmetic as {
-          product?: Product | null;
-          priceHard?: number;
-          priceSoft?: number;
-        } | null;
-        if (priced?.product) slots.dollar = true;
-        if (priced?.priceHard !== undefined) slots.hard = true;
-        if (priced?.priceSoft !== undefined) slots.soft = true;
-      }
-    }
-    return slots;
-  }
-
   private renderPurchaseAction(
     resolved: ResolvedCosmetic,
     userHasSubscription: boolean,
@@ -285,11 +275,9 @@ export class StoreModal extends BaseModal {
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method);
-    const slots = this.visiblePurchaseSlots();
+    // Reserved currency lines are assigned per visual row by
+    // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
-      .reserveDollar=${slots.dollar}
-      .reserveHard=${slots.hard}
-      .reserveSoft=${slots.soft}
       .product=${product}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}

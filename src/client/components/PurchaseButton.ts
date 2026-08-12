@@ -102,7 +102,7 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-ember {
       pointer-events: none;
       position: absolute;
-      top: 0;
+      top: var(--purchase-particle-top, 0px);
       width: 3px;
       height: 3px;
       border-radius: 50%;
@@ -128,7 +128,7 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
     .purchase-burst {
       pointer-events: none;
       position: absolute;
-      top: 0;
+      top: var(--purchase-particle-top, 0px);
       width: 4px;
       height: 4px;
       border-radius: 50%;
@@ -276,6 +276,18 @@ export class PurchaseButton extends LitElement {
     return this;
   }
 
+  get offersDollar(): boolean {
+    return Boolean((this.product ?? this.dollarPrice) && this.onPurchaseDollar);
+  }
+
+  get offersHard(): boolean {
+    return this.priceHard !== null && this.onPurchaseHard !== undefined;
+  }
+
+  get offersSoft(): boolean {
+    return this.priceSoft !== null && this.onPurchaseSoft !== undefined;
+  }
+
   private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
     this.executePurchase(handler);
@@ -376,16 +388,23 @@ export class PurchaseButton extends LitElement {
   }
 
   render() {
-    const hasDollar =
-      (this.product ?? this.dollarPrice) && this.onPurchaseDollar;
-    const hasHard = this.priceHard !== null && this.onPurchaseHard;
-    const hasSoft = this.priceSoft !== null && this.onPurchaseSoft;
+    const hasDollar = this.offersDollar;
+    const hasHard = this.offersHard;
+    const hasSoft = this.offersSoft;
 
     if (!hasDollar && !hasHard && !hasSoft) return nothing;
+
+    // Reserved lines above the topmost real button push the rising particles
+    // down with it, so they never sparkle over an empty line. Each line is
+    // min-h-11 (2.75rem) plus the column's gap-1 (0.25rem).
+    const leadingReserved =
+      (!hasDollar && this.reserveDollar ? 1 : 0) +
+      (!hasDollar && !hasHard && this.reserveHard ? 1 : 0);
 
     return html`
       <div
         class="no-crazygames w-full mt-2 relative purchase-btn-wrap"
+        style="--purchase-particle-top: ${leadingReserved * 3}rem"
         aria-busy=${this.busy ? "true" : nothing}
       >
         ${this.rarity !== "common"
@@ -450,5 +469,37 @@ export class PurchaseButton extends LitElement {
         @close=${() => (this.insufficient = null)}
       ></insufficient-currency-dialog>
     `;
+  }
+}
+
+/**
+ * Line up payment buttons by currency within each visual row: every card in a
+ * row reserves a line for the methods its row-mates offer, and only those — a
+ * row with no caps price keeps no caps line. Rows are read from laid-out card
+ * positions (offsetTop, so a hovered card's scale doesn't move it), so callers
+ * must run this after render and on resize.
+ */
+export function alignPurchaseRows(root: ParentNode): void {
+  const rows = new Map<number, PurchaseButton[]>();
+  for (const button of root.querySelectorAll<PurchaseButton>(
+    "purchase-button",
+  )) {
+    const card =
+      button.closest<HTMLElement>("cosmetic-card, custom-currency-card") ??
+      button;
+    const row = rows.get(card.offsetTop);
+    if (row) row.push(button);
+    else rows.set(card.offsetTop, [button]);
+  }
+
+  for (const row of rows.values()) {
+    const dollar = row.some((button) => button.offersDollar);
+    const hard = row.some((button) => button.offersHard);
+    const soft = row.some((button) => button.offersSoft);
+    for (const button of row) {
+      button.reserveDollar = dollar;
+      button.reserveHard = hard;
+      button.reserveSoft = soft;
+    }
   }
 }

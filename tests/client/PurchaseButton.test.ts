@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import "../../src/client/components/PurchaseButton";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
+import { alignPurchaseRows } from "../../src/client/components/PurchaseButton";
 
 describe("PurchaseButton", () => {
   let button: PurchaseButton | undefined;
@@ -143,5 +143,80 @@ describe("PurchaseButton", () => {
         `[data-cosmetic-shell]:hover .purchase-btn-wrap ${target}`,
       );
     }
+  });
+
+  it("starts the rising particles at the first real button, not a held line", async () => {
+    button = document.createElement("purchase-button") as PurchaseButton;
+    button.rarity = "epic";
+    button.priceHard = 99;
+    button.onPurchaseHard = async () => undefined;
+    button.reserveDollar = true;
+    document.body.appendChild(button);
+    await button.updateComplete;
+
+    const wrap = () =>
+      button!.querySelector<HTMLElement>(".purchase-btn-wrap")!;
+    // One held line above (min-h-11 plus the column's gap-1) = 3rem.
+    expect(wrap().style.getPropertyValue("--purchase-particle-top")).toBe(
+      "3rem",
+    );
+    expect(
+      document.getElementById("purchase-button-styles")?.textContent,
+    ).toContain("top: var(--purchase-particle-top, 0px)");
+
+    button.reserveDollar = false;
+    await button.updateComplete;
+    expect(wrap().style.getPropertyValue("--purchase-particle-top")).toBe(
+      "0rem",
+    );
+  });
+
+  describe("alignPurchaseRows", () => {
+    const make = (offsetTop: number, kind: "dollar" | "hard" | "soft") => {
+      const el = document.createElement("purchase-button") as PurchaseButton;
+      if (kind === "dollar") {
+        el.dollarPrice = "$5";
+        el.onPurchaseDollar = async () => undefined;
+      } else if (kind === "hard") {
+        el.priceHard = 99;
+        el.onPurchaseHard = async () => undefined;
+      } else {
+        el.priceSoft = 50;
+        el.onPurchaseSoft = async () => undefined;
+      }
+      Object.defineProperty(el, "offsetTop", { value: offsetTop });
+      return el;
+    };
+
+    it("reserves only the currencies present in each row", async () => {
+      const root = document.createElement("div");
+      const [rowOneDollar, rowOneHard, rowTwoHard] = [
+        make(0, "dollar"),
+        make(0, "hard"),
+        make(200, "hard"),
+      ];
+      root.append(rowOneDollar, rowOneHard, rowTwoHard);
+      document.body.appendChild(root);
+      await Promise.all(
+        [rowOneDollar, rowOneHard, rowTwoHard].map((el) => el.updateComplete),
+      );
+
+      alignPurchaseRows(root);
+      await Promise.all(
+        [rowOneDollar, rowOneHard, rowTwoHard].map((el) => el.updateComplete),
+      );
+
+      // Row one mixes dollars and plutonium, so both cards keep both lines.
+      expect(rowOneDollar.reserveHard).toBe(true);
+      expect(rowOneHard.reserveDollar).toBe(true);
+      // Row two is plutonium-only: no dollar line, and no caps line anywhere.
+      expect(rowTwoHard.reserveDollar).toBe(false);
+      expect(rowTwoHard.reserveHard).toBe(true);
+      expect(rowOneDollar.reserveSoft).toBe(false);
+      expect(rowTwoHard.reserveSoft).toBe(false);
+      expect(rowTwoHard.querySelectorAll(".flex.flex-col > *")).toHaveLength(1);
+
+      root.remove();
+    });
   });
 });
