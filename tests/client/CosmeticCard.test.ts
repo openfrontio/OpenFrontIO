@@ -5,9 +5,12 @@ import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 
 const translations = {
+  "cosmetics.adfree": "ad-free for life!",
   "cosmetics.artist_label": "Artist:",
   "cosmetics.rare": "Rare",
   "cosmetics.usd_value": "Value: {usd}",
+  "cosmetics.verified_name": "Verified username",
+  "cosmetics.verified_name_info": "Reserved username",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
   "territory_patterns.color_palette.red": "Crimson",
 };
@@ -220,6 +223,24 @@ describe("CosmeticCard", () => {
     ).toBe(card);
   });
 
+  it("shows the ad-free entitlement for purchasable cosmetics", async () => {
+    installTranslations();
+    await createCard();
+    card!.resolved = {
+      ...red,
+      relationship: "purchasable",
+      cosmetic: {
+        ...red.cosmetic!,
+        product: { productId: "pattern", priceId: "pattern", price: "$5" },
+      } as never,
+    };
+    await card!.updateComplete;
+
+    expect(card!.querySelector("[data-cosmetic-info]")?.textContent).toContain(
+      "ad-free for life!",
+    );
+  });
+
   it("adds rarity hover effects only where the rarity needs them", async () => {
     await createCard();
     expect(card!.querySelector("[data-cosmetic-shimmer]")).toBeNull();
@@ -246,10 +267,10 @@ describe("CosmeticCard", () => {
 
     const styles = document.getElementById("cosmetic-card-styles")?.textContent;
     expect(styles).toContain("@keyframes cosmetic-card-border-sweep");
-    expect(styles).toContain("[data-cosmetic-border-sweep]::after");
-    expect(styles).toContain("overflow: hidden");
+    expect(styles).toContain("border-top-color: rgba(255,220,100,1)");
+    expect(styles).toContain("transform-origin: center");
     expect(styles).toContain(
-      "cosmetic-card:hover [data-cosmetic-border-sweep]::after",
+      "cosmetic-card:hover [data-cosmetic-border-sweep]",
     );
   });
 

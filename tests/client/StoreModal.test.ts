@@ -421,6 +421,7 @@ describe("StoreModal cosmetic browser", () => {
 
   it("focuses effect and nuke-subtype purchases without changing effect settings", async () => {
     const { store: modal, grid } = await openEffectsStore();
+    expect(grid.parentElement?.hasAttribute("data-store-browser")).toBe(false);
     expect(card(modal, wake.key)?.state).toBe("focused");
 
     const wakeCard = card(modal, wake.key)!;

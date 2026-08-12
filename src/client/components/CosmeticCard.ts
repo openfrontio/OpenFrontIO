@@ -1,5 +1,6 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { Subscription } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
@@ -85,7 +86,7 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
 
     [data-cosmetic-main], [data-cosmetic-action] {
       position: relative;
-      z-index: 1;
+      z-index: 3;
     }
     [data-cosmetic-shimmer] {
       pointer-events: none;
@@ -118,22 +119,19 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
     [data-cosmetic-border-sweep] {
       pointer-events: none;
       position: absolute;
-      inset: -2px;
-      z-index: 0;
-      overflow: hidden;
-      border-radius: 0.85rem;
+      inset: -3px;
+      z-index: 2;
+      display: block;
+      border: 3px solid rgba(255,200,80,0.25);
+      border-top-color: rgba(255,220,100,1);
+      border-right-color: rgba(255,200,80,0.8);
+      border-radius: 0.9rem;
       opacity: 0;
-    }
-    [data-cosmetic-border-sweep]::after {
-      content: "";
-      position: absolute;
-      inset: -100%;
-      background: conic-gradient(from 0deg, transparent 0deg, rgba(255,200,80,0) 60deg, rgba(255,200,80,0.9) 120deg, rgba(255,200,80,1) 180deg, rgba(255,200,80,0.9) 240deg, rgba(255,200,80,0) 300deg, transparent 360deg);
+      transform-origin: center;
+      will-change: transform;
     }
     cosmetic-card:hover [data-cosmetic-border-sweep] {
       opacity: 1;
-    }
-    cosmetic-card:hover [data-cosmetic-border-sweep]::after {
       animation: cosmetic-card-border-sweep 8s linear infinite;
     }
 
@@ -155,7 +153,7 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
 
     @media (prefers-reduced-motion: reduce) {
       cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-rarity="legendary"],
-      cosmetic-card:hover [data-cosmetic-border-sweep]::after,
+      cosmetic-card:hover [data-cosmetic-border-sweep],
       cosmetic-card:hover [data-cosmetic-shimmer]::after,
       cosmetic-card:hover [data-cosmetic-sparkle] {
         animation: none;
@@ -287,6 +285,30 @@ export class CosmeticCard extends LitElement {
     </div>`;
   }
 
+  private subscriptionPerks(): Array<{ label: string; info: string }> {
+    if (this.activeResolved.type !== "subscription") return [];
+    const subscription = this.activeResolved.cosmetic as Subscription;
+    const perks = [
+      {
+        label: translateText("cosmetics.verified_name"),
+        info: translateText("cosmetics.verified_name_info"),
+      },
+    ];
+    if (subscription.unlimitedRanked) {
+      perks.push({
+        label: translateText("cosmetics.unlimited_ranked"),
+        info: translateText("cosmetics.unlimited_ranked_info"),
+      });
+    }
+    if (subscription.canCreatePublicLobbies) {
+      perks.push({
+        label: translateText("cosmetics.public_lobbies"),
+        info: translateText("cosmetics.public_lobbies_info"),
+      });
+    }
+    return perks;
+  }
+
   render() {
     const active = this.activeResolved;
     const rarity = cosmeticRarity(active);
@@ -387,7 +409,9 @@ export class CosmeticCard extends LitElement {
             .artist=${priced?.artist}
             .rarity=${rarity}
             .colorPalette=${active.colorPalette?.name}
+            .showAdFree=${active.relationship === "purchasable"}
             .usdValue=${usdValue}
+            .perks=${this.subscriptionPerks()}
           ></cosmetic-info>`
         : nothing}
       ${this.renderSwatches()}

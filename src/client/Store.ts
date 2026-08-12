@@ -382,25 +382,21 @@ export class StoreModal extends BaseModal {
   private renderEffectGrid(): TemplateResult {
     // A sub-tab per effectType (Boat Trail / Nuke Trail); each tab opens that
     // type's grid. Tabs are always present, even when a type has nothing to buy.
-    return html`<div data-store-browser class="grid grid-cols-1 gap-4 p-3">
-      <effects-grid
-        mode="purchase"
-        tabbed
-        .cosmetics=${this.cosmetics}
-        .userMeResponse=${this.userMeResponse}
-        .affiliateCode=${this.affiliateCode}
-        .focusedKey=${this.inspected?.key ?? null}
-        .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
-        .renderPurchaseAction=${(item: ResolvedCosmetic) =>
-          this.renderPurchaseAction(item, false)}
-        .onVisiblePurchaseItemsChange=${(
-          items: readonly ResolvedCosmetic[],
-        ) => {
-          this.selectVisible(items.map((item) => [item]));
-          this.requestUpdate();
-        }}
-      ></effects-grid>
-    </div>`;
+    return html`<effects-grid
+      mode="purchase"
+      tabbed
+      .cosmetics=${this.cosmetics}
+      .userMeResponse=${this.userMeResponse}
+      .affiliateCode=${this.affiliateCode}
+      .focusedKey=${this.inspected?.key ?? null}
+      .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+      .renderPurchaseAction=${(item: ResolvedCosmetic) =>
+        this.renderPurchaseAction(item, false)}
+      .onVisiblePurchaseItemsChange=${(items: readonly ResolvedCosmetic[]) => {
+        this.selectVisible(items.map((item) => [item]));
+        this.requestUpdate();
+      }}
+    ></effects-grid>`;
   }
 
   private renderPackGrid(): TemplateResult {
@@ -408,7 +404,9 @@ export class StoreModal extends BaseModal {
     // no catalog entry), and follows the fixed packs at the end of the grid.
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
-      trailingContent: html`<custom-currency-card></custom-currency-card>`,
+      trailingContent: html`<custom-currency-card
+        class="block h-full w-48 shrink-0"
+      ></custom-currency-card>`,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-8",
       cardClass: "block h-full w-48 shrink-0",

@@ -443,6 +443,7 @@
     "soft": "Caps",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
+    "unlimited_ranked_info": "No limit on how many ranked games you can play.",
     "usd_value": "Value: {usd}",
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."

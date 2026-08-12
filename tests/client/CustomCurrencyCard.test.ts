@@ -45,6 +45,19 @@ describe("CustomCurrencyCard", () => {
     expect(
       card!.querySelector("[data-custom-currency-preview]")?.className,
     ).toMatch(/flex-col/);
+    expect(
+      card!.querySelector("[data-custom-currency-name]")?.className,
+    ).not.toMatch(/pt-2/);
+    expect(card!.querySelector("[data-cosmetic-main]")).toBeTruthy();
+    expect(card!.querySelector("[data-cosmetic-action]")?.className).toMatch(
+      /w-full/,
+    );
+    expect(
+      card!.querySelector<HTMLElement>("[data-cosmetic-shell]")?.className,
+    ).toMatch(/hover:-translate-y-1/);
+    expect(
+      card!.querySelector<HTMLElement>("[data-cosmetic-shell]")?.className,
+    ).toMatch(/hover:shadow-\[0_0_10px/);
   });
 
   it("clamps number and range amounts to the supported bounds", async () => {

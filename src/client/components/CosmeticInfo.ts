@@ -16,7 +16,9 @@ export class CosmeticInfo extends LitElement {
   @property({ type: String }) artist?: string;
   @property({ type: String }) rarity?: string;
   @property({ type: String }) colorPalette?: string;
+  @property({ type: Boolean }) showAdFree = false;
   @property({ type: Number }) usdValue?: number;
+  @property({ type: Array }) perks: Array<{ label: string; info: string }> = [];
 
   createRenderRoot() {
     return this;
@@ -27,7 +29,9 @@ export class CosmeticInfo extends LitElement {
       !this.artist &&
       !this.rarity &&
       !this.colorPalette &&
-      this.usdValue === undefined
+      !this.showAdFree &&
+      this.usdValue === undefined &&
+      this.perks.length === 0
     ) {
       return nothing;
     }
@@ -54,6 +58,11 @@ export class CosmeticInfo extends LitElement {
               ${translateText(`cosmetics.${this.rarity}`)}
             </div>`
           : nothing}
+        ${this.showAdFree
+          ? html`<div class="font-bold text-green-400">
+              ${translateText("cosmetics.adfree")}
+            </div>`
+          : nothing}
         ${this.usdValue !== undefined
           ? html`<div>
               ${translateText("cosmetics.usd_value", {
@@ -61,6 +70,13 @@ export class CosmeticInfo extends LitElement {
               })}
             </div>`
           : nothing}
+        ${this.perks.map(
+          (perk) =>
+            html`<div class="w-56 whitespace-normal">
+              <span class="font-bold text-purple-300">${perk.label}:</span>
+              <span class="text-white/80">${perk.info}</span>
+            </div>`,
+        )}
         ${this.colorPalette
           ? html`<div>
               ${translateText("cosmetics.color_label")}
