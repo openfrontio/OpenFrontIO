@@ -1042,20 +1042,25 @@ export class GPURenderer {
     this.railroadPass.updateGhostPreview(data);
     this.rangeCirclePass.updateGhostPreview(data);
     this.crosshairPass.updateGhostPreview(data);
+    // The multiplier badge (x5) rides on the cost label but must show even
+    // when there is no cost line — e.g. infinite gold (cost 0) or the
+    // cursor-cost-label setting turned off.
+    const topText =
+      data?.multiplier && data.multiplier > 1
+        ? translateText("build_menu.upgrade_amount", {
+            amount: data.multiplier.toString(),
+          })
+        : undefined;
+    const showCost = data !== null && data.showCost && data.cost > 0;
     this.worldTextPass.setGhostCostLabel(
-      data && data.showCost && data.cost > 0
+      data && (showCost || topText !== undefined)
         ? {
             tileX: data.tileX,
             tileY: data.tileY,
-            cost: data.cost,
+            cost: showCost ? data.cost : 0,
             canAfford: data.canAfford,
             canPlace: data.canBuild || data.canUpgrade,
-            topText:
-              data.multiplier && data.multiplier > 1
-                ? translateText("build_menu.upgrade_amount", {
-                    amount: data.multiplier.toString(),
-                  })
-                : undefined,
+            topText,
           }
         : null,
     );
