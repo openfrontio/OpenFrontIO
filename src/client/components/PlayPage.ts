@@ -4,6 +4,7 @@ import { assetUrl } from "../../core/AssetUrls";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import "./CosmeticBackground";
 import "./NavAccountMenu";
+import "./NavUtilityIcons";
 import "./NewsBox";
 import "./SteamWishlist";
 import "./StreamingNow";
@@ -98,10 +99,12 @@ export class PlayPage extends LitElement {
                   </button>
                 `
               : html`
-                  <nav-account-menu
-                    variant="mobile"
-                    class="col-start-3 justify-self-end shrink-0"
-                  ></nav-account-menu>
+                  <div
+                    class="col-start-3 justify-self-end shrink-0 flex items-center gap-0.5"
+                  >
+                    <nav-utility-icons size="mobile"></nav-utility-icons>
+                    <nav-account-menu variant="mobile"></nav-account-menu>
+                  </div>
                 `}
           </div>
         </div>
