@@ -805,13 +805,23 @@ describe("InventoryModal", () => {
 
     await showTab(modal, "effects");
     expect(card(modal, "effect:none:transportShipTrail")).toBeUndefined();
+    const unequip = modal.querySelector<HTMLButtonElement>(
+      "[data-effects-unequip]",
+    )!;
+    expect(unequip.disabled).toBe(true);
+    // The notice names the open sub-tab's type and sits below that tab bar and
+    // the Unequip control, matching the other categories.
+    const empty = modal.querySelector<HTMLElement>(
+      '[data-effects-empty="transportShipTrail"]',
+    )!;
+    expect(empty).toBeTruthy();
+    expect(empty.textContent?.trim()).toBe(
+      "inventory.no_owned_effects_of_type",
+    );
     expect(
-      modal.querySelector<HTMLButtonElement>("[data-effects-unequip]")
-        ?.disabled,
-    ).toBe(true);
-    expect(
-      modal.querySelector('[data-inventory-empty="effects"]'),
+      unequip.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(modal.querySelector('[data-inventory-empty="effects"]')).toBeNull();
 
     await showTab(modal, "flags");
     expect(card(modal, "country:us")).toBeDefined();

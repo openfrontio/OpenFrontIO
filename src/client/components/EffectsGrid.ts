@@ -336,15 +336,25 @@ export class EffectsGrid extends LitElement {
 
     let panel: TemplateResult;
     if (sections.length === 0) {
-      // A single-type view keeps its (empty) panel — the tab stays present and
-      // just shows nothing. Only the all-types view shows the "no effects" notice.
-      panel = activeType
-        ? html`<div class="p-4"></div>`
-        : html`<div
-            class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-          >
-            ${translateText("store.no_effects")}
-          </div>`;
+      // A single-type view names the type it is empty of ("…any Boat Trail
+      // effects yet"), below this grid's own tab bar and Unequip control.
+      panel =
+        activeType && this.mode === "select"
+          ? html`<p
+              data-effects-empty=${activeType}
+              class="px-4 pt-4 pb-8 text-center text-sm font-medium text-white/60"
+            >
+              ${translateText("inventory.no_owned_effects_of_type", {
+                type: translateText(`effects.type.${activeType}`),
+              })}
+            </p>`
+          : activeType
+            ? html`<div class="p-4"></div>`
+            : html`<div
+                class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+              >
+                ${translateText("store.no_effects")}
+              </div>`;
     } else {
       panel = html`
         <div class="flex flex-col gap-4 p-4">

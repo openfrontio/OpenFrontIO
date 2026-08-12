@@ -371,7 +371,7 @@ export class InventoryModal extends BaseModal {
     ];
   }
 
-  private renderEmptyState(category: "skins" | "crowns" | "effects") {
+  private renderEmptyState(category: "skins" | "crowns") {
     return html`<p
       data-inventory-empty=${category}
       class="px-4 pt-4 text-center text-sm font-medium text-white/60"
@@ -610,10 +610,9 @@ export class InventoryModal extends BaseModal {
     } else if (tab === "crowns") {
       grid = html`${this.renderUnequip("crowns")}${this.renderCrownGrid()}`;
     } else if (tab === "effects") {
+      // effects-grid raises its own per-type empty notice below its tab bar,
+      // so there is nothing to say above it here.
       grid = html`<div data-inventory-grid="effects" class="min-w-0">
-        ${this.hasOwnedCatalogItem(["effect"])
-          ? null
-          : this.renderEmptyState("effects")}
         <effects-grid
           mode="select"
           tabbed
