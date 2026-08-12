@@ -23,6 +23,11 @@ export class WaterManager {
   private _waterStampArr: Uint16Array | null = null;
   private _waterStamp: number = 0;
 
+  // Separate stamp arrays for minimap magnitude BFS (runs after full-map BFS)
+  private _miniDistArr: Uint16Array | null = null;
+  private _miniStampArr: Uint16Array | null = null;
+  private _miniStamp: number = 0;
+
   constructor(
     private map: GameMap,
     private miniMap: GameMap,
@@ -458,6 +463,194 @@ export class WaterManager {
       if (waterCount >= Math.min(3, totalCount)) {
         this.miniMap.setWater(miniTile);
         convertedMiniTiles.add(miniTile);
+      }
+    }
+
+    // ── 4b. Fix minimap ocean + magnitude for converted tiles ────
+    // setWater() zeros the terrain byte (magnitude = 0, ocean = 0).
+    // This makes the pathfinder treat nuked water as "too close to
+    // shore" (3× cost penalty via getMagnitudePenalty) and prevents
+    // LOS smoothing through the crater.  Propagate ocean bits from
+    // existing neighbours and recompute minimap magnitudes via BFS
+    // from all coastlines (including the new crater edges).
+    if (convertedMiniTiles.size > 0) {
+      const miniW = this.miniMap.width();
+      const miniH = this.miniMap.height();
+
+      // Allocation-free cardinal-neighbor helper for all minimap BFSes.
+      // Writes up to 4 neighbors into `out` and returns the count.
+      const pushMiniNeighbors = (tile: TileRef, out: TileRef[]): number => {
+        const x = tile % miniW;
+        const y = (tile - x) / miniW;
+        let count = 0;
+        if (y > 0) out[count++] = (tile - miniW) as TileRef;
+        if (y < miniH - 1) out[count++] = (tile + miniW) as TileRef;
+        if (x > 0) out[count++] = (tile - 1) as TileRef;
+        if (x < miniW - 1) out[count++] = (tile + 1) as TileRef;
+        return count;
+      };
+
+      const miniNb: TileRef[] = new Array(4);
+
+      // 4b-i. Propagate ocean bit to converted minimap tiles.
+      // Uses BFS so that chains of converted tiles that connect to
+      // the ocean all get marked, even if only the first tile in the
+      // chain touches existing ocean.
+      const miniOceanQueue: TileRef[] = [];
+      for (const mt of convertedMiniTiles) {
+        const nc = pushMiniNeighbors(mt, miniNb);
+        let nearOcean = false;
+        for (let i = 0; i < nc; i++) {
+          if (this.miniMap.isOcean(miniNb[i])) {
+            nearOcean = true;
+            break;
+          }
+        }
+        if (nearOcean) {
+          this.miniMap.setOcean(mt);
+          miniOceanQueue.push(mt);
+        }
+      }
+      let moHead = 0;
+      while (moHead < miniOceanQueue.length) {
+        const tile = miniOceanQueue[moHead++];
+        const nc = pushMiniNeighbors(tile, miniNb);
+        for (let i = 0; i < nc; i++) {
+          const n = miniNb[i];
+          if (this.miniMap.isWater(n) && !this.miniMap.isOcean(n)) {
+            this.miniMap.setOcean(n);
+            miniOceanQueue.push(n);
+          }
+        }
+      }
+
+      // 4b-ii. Recompute minimap magnitude via BFS from coastlines.
+      //
+      // The previous approach (sampling full-map magnitudes) was wrong:
+      // existing minimap water tiles at the edge of the crater retain
+      // stale pre-computed magnitudes from the terrain file.  When a
+      // nuke creates a new coastline nearby, these tiles should have
+      // LOWER magnitude (closer to the new coast).  Only a BFS on the
+      // minimap can correctly recompute them.
+      //
+      // Mirrors the full-map magnitude BFS (step 2) but runs on the
+      // minimap.  Uses separate stamp/dist arrays to avoid conflicts.
+      const miniTotal = miniW * this.miniMap.height();
+      if (!this._miniDistArr || this._miniDistArr.length !== miniTotal) {
+        this._miniDistArr = new Uint16Array(miniTotal);
+        this._miniStampArr = new Uint16Array(miniTotal);
+        this._miniStamp = 0;
+      }
+      this._miniStamp++;
+      if (this._miniStamp >= 0xffff) {
+        this._miniStampArr!.fill(0);
+        this._miniStamp = 1;
+      }
+      const miniStamp = this._miniStamp;
+      const miniStampArr = this._miniStampArr!;
+      const miniDistArr = this._miniDistArr;
+
+      // Crater bounding box on the full map, mapped to minimap coords.
+      // MINI_MAX_MAG_DIST = max hops from coast = max_magnitude (31) × 2.
+      const MINI_MAX_MAG_DIST = 62;
+      let mcMinX = w,
+        mcMaxX = 0,
+        mcMinY = h,
+        mcMaxY = 0;
+      for (const tile of converted) {
+        const tx = tile % w;
+        const ty = (tile - tx) / w;
+        if (tx < mcMinX) mcMinX = tx;
+        if (tx > mcMaxX) mcMaxX = tx;
+        if (ty < mcMinY) mcMinY = ty;
+        if (ty > mcMaxY) mcMaxY = ty;
+      }
+      const mcMiniMinX = Math.floor(mcMinX / 2);
+      const mcMiniMaxX = Math.floor(mcMaxX / 2);
+      const mcMiniMinY = Math.floor(mcMinY / 2);
+      const mcMiniMaxY = Math.floor(mcMaxY / 2);
+
+      // Dirty box: minimap tiles whose magnitude may need updating.
+      const mdMinX = Math.max(0, mcMiniMinX - MINI_MAX_MAG_DIST);
+      const mdMaxX = Math.min(miniW - 1, mcMiniMaxX + MINI_MAX_MAG_DIST);
+      const mdMinY = Math.max(0, mcMiniMinY - MINI_MAX_MAG_DIST);
+      const mdMaxY = Math.min(
+        this.miniMap.height() - 1,
+        mcMiniMaxY + MINI_MAX_MAG_DIST,
+      );
+      // Seed box: coastlines here are seeded; BFS is clipped here.
+      const msMinX = Math.max(0, mcMiniMinX - MINI_MAX_MAG_DIST * 2);
+      const msMaxX = Math.min(miniW - 1, mcMiniMaxX + MINI_MAX_MAG_DIST * 2);
+      const msMinY = Math.max(0, mcMiniMinY - MINI_MAX_MAG_DIST * 2);
+      const msMaxY = Math.min(
+        this.miniMap.height() - 1,
+        mcMiniMaxY + MINI_MAX_MAG_DIST * 2,
+      );
+
+      // Seed from minimap coastline water tiles inside the seed box.
+      // Coastline = water tile adjacent to at least one land tile.
+      const miniMagQueue: TileRef[] = [];
+
+      for (let by = msMinY; by <= msMaxY; by++) {
+        const rowStart = by * miniW;
+        for (let bx = msMinX; bx <= msMaxX; bx++) {
+          const tile = (rowStart + bx) as TileRef;
+          if (!this.miniMap.isWater(tile) || miniStampArr[tile] === miniStamp)
+            continue;
+          let isCoast = false;
+          const nc = pushMiniNeighbors(tile, miniNb);
+          for (let i = 0; i < nc; i++) {
+            if (this.miniMap.isLand(miniNb[i])) {
+              isCoast = true;
+              break;
+            }
+          }
+          if (isCoast) {
+            miniStampArr[tile] = miniStamp;
+            miniDistArr[tile] = 0;
+            miniMagQueue.push(tile);
+          }
+        }
+      }
+
+      // BFS outward through water, clipped to seed box.
+      let mmHead = 0;
+      while (mmHead < miniMagQueue.length) {
+        const tile = miniMagQueue[mmHead++];
+        const nextDist = miniDistArr[tile] + 1;
+        const nc = pushMiniNeighbors(tile, miniNb);
+        for (let i = 0; i < nc; i++) {
+          const n = miniNb[i];
+          if (!this.miniMap.isWater(n) || miniStampArr[n] === miniStamp)
+            continue;
+          const nx = n % miniW;
+          const ny = (n - nx) / miniW;
+          if (nx < msMinX || nx > msMaxX || ny < msMinY || ny > msMaxY)
+            continue;
+          miniStampArr[n] = miniStamp;
+          miniDistArr[n] = nextDist;
+          miniMagQueue.push(n);
+        }
+      }
+
+      // Update magnitudes for ALL minimap water tiles in the dirty box.
+      for (let dy = mdMinY; dy <= mdMaxY; dy++) {
+        const rowStart = dy * miniW;
+        for (let dx = mdMinX; dx <= mdMaxX; dx++) {
+          const tile = (rowStart + dx) as TileRef;
+          if (!this.miniMap.isWater(tile)) continue;
+          const oldMag = this.miniMap.magnitude(tile);
+          let newMag: number;
+          if (miniStampArr[tile] === miniStamp) {
+            newMag = Math.min(Math.ceil(miniDistArr[tile] / 2), 31);
+          } else {
+            // Unreached: nearest coast is >MINI_MAX_MAG_DIST*2 away → deep water
+            newMag = 31;
+          }
+          if (oldMag !== newMag) {
+            this.miniMap.setMagnitude(tile, newMag);
+          }
+        }
       }
     }
 
