@@ -57,22 +57,9 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       background: linear-gradient(to top, rgba(90,20,160,0.75) 0%, rgba(15,15,20,0.85) 100%);
       border-color: rgba(192,132,252,0.6);
     }
-    /* Legendary paints its gradient on a ::before layer instead of the shell
-       itself, so the rotating sweep (a z-index:-1 child) sits behind the
-       translucent card face and shows through it, as on the old card. */
     [data-cosmetic-shell][data-cosmetic-rarity="legendary"] {
-      background: transparent;
-      border-color: rgba(251,146,60,0.65);
-      isolation: isolate;
-    }
-    [data-cosmetic-shell][data-cosmetic-rarity="legendary"]::before {
-      content: "";
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      border-radius: inherit;
       background: linear-gradient(to top, rgba(180,80,0,0.75) 0%, rgba(15,15,20,0.85) 100%);
+      border-color: rgba(251,146,60,0.65);
     }
 
     cosmetic-card:hover { position: relative; z-index: 10; }
@@ -130,8 +117,9 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
     }
 
     /* A gold conic gradient spinning about the card's centre, clipped to the
-       card's rounded box and painted behind the translucent legendary face:
-       it glows through the card and bleeds 2px past its border. */
+       card's rounded box. z-index:-1 puts it above the shell's own background
+       but below the card content, so it reads as a full-card overlay sweeping
+       around behind the preview and name. */
     [data-cosmetic-border-sweep] {
       pointer-events: none;
       position: absolute;

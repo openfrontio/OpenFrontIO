@@ -268,13 +268,10 @@ describe("CosmeticCard", () => {
     const styles = document.getElementById("cosmetic-card-styles")?.textContent;
     expect(styles).toContain("@keyframes cosmetic-card-border-sweep");
     // A conic gradient spinning about the card centre, clipped to the card box
-    // and painted behind the legendary face (which moves to a ::before layer)
-    // so it glows through the card instead of swinging outside it.
+    // and sitting at z-index:-1 — above the shell background, below the card
+    // content — so it sweeps across the whole card face.
     expect(styles).toContain("conic-gradient");
     expect(styles).toContain("inset: -100%");
-    expect(styles).toContain(
-      '[data-cosmetic-shell][data-cosmetic-rarity="legendary"]::before',
-    );
     expect(styles).toMatch(
       /\[data-cosmetic-border-sweep\] \{[^}]*z-index: -1;[^}]*overflow: hidden;/,
     );
