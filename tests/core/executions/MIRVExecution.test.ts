@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../../../src/core/game/Game";
 import { setup } from "../../util/Setup";
+import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";
 
 let game: Game;
@@ -23,6 +24,12 @@ describe("MIRVExecution", () => {
         new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
         new PlayerInfo("other", PlayerType.Human, "client_id2", "other_id"),
       ],
+      undefined,
+      class extends TestConfig {
+        override allianceMissileProtectionDuration(): number {
+          return 0;
+        }
+      },
     );
 
     player = game.player("player_id");

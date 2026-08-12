@@ -21,6 +21,7 @@ import type {
   DeadUnitFx,
   GhostPreviewData,
   NameEntry,
+  NukeBlockedFx,
   NukeTelegraphData,
   NukeTrajectoryData,
   PlayerState,
@@ -223,6 +224,9 @@ export class MapRenderer {
   }
   applyBonusEvents(events: BonusEvent[]): void {
     this.renderer?.applyBonusEvents(events);
+  }
+  applyNukeBlockedEvents(events: NukeBlockedFx[]): void {
+    this.renderer?.applyNukeBlockedEvents(events);
   }
   applyRailroadDust(tileRefs: number[]): void {
     this.renderer?.applyRailroadDust(tileRefs);

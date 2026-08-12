@@ -26,13 +26,21 @@ describe("NukeExecution", () => {
         new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
         new PlayerInfo("other", PlayerType.Human, "client_id2", "other_id"),
       ],
-    );
+      undefined,
+      class extends TestConfig {
+        override allianceMissileProtectionDuration(): number {
+          return 0;
+        }
 
-    (game.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
-      inner: 10,
-      outer: 10,
-    }));
-    (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(() => 5);
+        override nukeMagnitudes(): { inner: number; outer: number } {
+          return { inner: 10, outer: 10 };
+        }
+
+        override nukeAllianceBreakThreshold(): number {
+          return 5;
+        }
+      },
+    );
 
     player = game.player("player_id");
     otherPlayer = game.player("other_id");

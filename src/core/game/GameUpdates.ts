@@ -104,6 +104,7 @@ export enum GameUpdateType {
   SpawnPhaseEnd,
   GamePaused,
   DonateEvent,
+  NukeLaunchBlockedEvent,
 }
 
 export type GameUpdate =
@@ -129,7 +130,14 @@ export type GameUpdate =
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
   | GamePausedUpdate
-  | DonateEventUpdate;
+  | DonateEventUpdate
+  | NukeLaunchBlockedUpdate;
+
+export interface NukeLaunchBlockedUpdate {
+  type: GameUpdateType.NukeLaunchBlockedEvent;
+  launcherID: number;
+  targetTile: TileRef;
+}
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;

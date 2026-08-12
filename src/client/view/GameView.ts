@@ -199,6 +199,7 @@ export class GameView implements GameMap {
         deadUnits: [],
         conquestEvents: [],
         bonusEvents: [],
+        nukeBlockedEvents: [],
       },
       changedTiles: null,
       railroadDirty: false,
@@ -666,6 +667,7 @@ export class GameView implements GameMap {
     ev.deadUnits.length = 0;
     ev.conquestEvents.length = 0;
     ev.bonusEvents.length = 0;
+    ev.nukeBlockedEvents.length = 0;
 
     for (const u of gu.updates[GameUpdateType.Unit] ?? []) {
       if (u.isActive) continue;
@@ -699,6 +701,12 @@ export class GameView implements GameMap {
         gold: Number(b.gold),
         troops: b.troops,
       });
+    }
+    for (const nb of gu.updates[GameUpdateType.NukeLaunchBlockedEvent] ?? []) {
+      const mySmallID = this._myPlayer?.smallID();
+      if (mySmallID === undefined || nb.launcherID === mySmallID) {
+        ev.nukeBlockedEvents.push({ tile: nb.targetTile });
+      }
     }
   }
 
