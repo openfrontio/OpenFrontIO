@@ -421,7 +421,7 @@ export class UsernameInput extends LitElement {
         <button
           type="button"
           id="clan-tag-button"
-          class="flex h-full w-auto min-w-[4.75rem] max-w-[7.5rem] sm:min-w-[6rem] items-center justify-between gap-1 rounded-lg border px-2 transition-colors cursor-pointer ${invalid
+          class="flex h-full w-auto min-w-[4.75rem] max-w-[9.5rem] sm:min-w-[6rem] items-center justify-between gap-1 rounded-lg border px-2 transition-colors cursor-pointer ${invalid
             ? "border-red-400/70 bg-red-500/10"
             : this.clanMenuOpen
               ? "border-white/40 bg-black/40"
