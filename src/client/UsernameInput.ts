@@ -580,16 +580,20 @@ export class UsernameInput extends LitElement {
     if (this.verifiedActive) {
       return html`
         <div
-          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-2 rounded-lg border border-blue-400/60 bg-blue-500/15 px-2 sm:px-2.5"
+          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-blue-400/60 bg-blue-500/15 px-2 sm:px-2.5"
           title=${translateText("username.verified_active_hint")}
         >
-          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6")}
+          <!-- Check trails the name, as it does everywhere else a verified
+               name is rendered (PlayerName, lobby lists, profile modal). The
+               name shrinks rather than growing, so the mark keeps hugging it
+               instead of drifting to the far edge. -->
           <span
-            class="min-w-0 flex-1 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+            class="min-w-0 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
             >${this.verifiedName() ?? ""}</span
           >
+          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6")}
           <span
-            class="hidden md:inline shrink-0 rounded bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-200"
+            class="hidden md:inline ml-auto shrink-0 rounded bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-200"
             >${translateText("username.verified_toggle")}</span
           >
         </div>
