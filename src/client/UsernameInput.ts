@@ -34,14 +34,15 @@ const useVerifiedNameKey: string = "useVerifiedName";
 // the name jumping when the toggle is used — keep them in lockstep here rather
 // than in two class strings that have already drifted twice.
 const NAME_BOX =
-  "min-w-0 flex-1 h-full max-h-[44px] rounded-lg border px-2 sm:px-3";
-// The leading matches the field's content box (the 40/44px box less its 1px
-// borders), so the line box fills it exactly and no half-leading is left for
-// the browser to round. An <input> centres its editor box from font metrics
-// while a span centres a line box; with some system fonts those land a pixel
-// apart, which made the name hop when verified was toggled.
+  "min-w-0 flex-1 h-full max-h-[44px] rounded-lg bg-transparent px-2 sm:px-3";
+// The leading matches the field's content box — the full 40/44px box, since
+// neither state draws a border — so the line box fills it exactly and no
+// half-leading is left for the browser to round. An <input> centres its editor
+// box from font metrics while a span centres a line box; with some system
+// fonts those land a pixel apart, which made the name hop when verified was
+// toggled.
 const NAME_TEXT =
-  "text-xl/[38px] sm:text-2xl/[42px] font-medium tracking-wider " +
+  "text-xl/[40px] sm:text-2xl/[44px] font-medium tracking-wider " +
   "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
 
 @customElement("username-input")
@@ -442,11 +443,11 @@ export class UsernameInput extends LitElement {
         <button
           type="button"
           id="clan-tag-button"
-          class="flex h-full w-[8.25rem] sm:w-[9rem] items-center justify-between gap-1 rounded-lg border px-2 transition-colors cursor-pointer ${invalid
-            ? "border-red-400/70 bg-red-500/10"
+          class="flex h-full w-[8.25rem] sm:w-[9rem] items-center justify-between gap-1 rounded-lg bg-transparent px-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
+            ? "ring-2 ring-red-400/70"
             : this.clanMenuOpen
-              ? "border-white/40 bg-black/40"
-              : "border-white/15 bg-black/25 hover:border-white/30 hover:bg-black/40"}"
+              ? "bg-white/10"
+              : "hover:bg-white/5"}"
           aria-haspopup="dialog"
           aria-expanded=${this.clanMenuOpen ? "true" : "false"}
           aria-busy=${this.clanCheckPending ? "true" : "false"}
@@ -623,7 +624,7 @@ export class UsernameInput extends LitElement {
   private renderVerifiedChip() {
     return html`
       <div
-        class="flex items-center gap-1.5 border-malibu-blue/70 bg-malibu-blue/15 ${NAME_BOX}"
+        class="flex items-center gap-1.5 ${NAME_BOX}"
         title=${translateText("username.verified_active_hint")}
       >
         <!-- Check trails the name, as it does everywhere else a verified name
@@ -634,8 +635,11 @@ export class UsernameInput extends LitElement {
           >${this.verifiedName() ?? ""}</span
         >
         ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
+        <!-- Kept beside the mark, not pushed to the field's far edge: the
+             field is full-width and transparent, so a pill floating out on
+             the right reads as unrelated to the name. -->
         <span
-          class="hidden md:inline ml-auto shrink-0 rounded bg-malibu-blue/35 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+          class="hidden md:inline shrink-0 rounded bg-malibu-blue/35 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
           >${translateText("username.verified_toggle")}</span
         >
       </div>
@@ -683,7 +687,7 @@ export class UsernameInput extends LitElement {
         minlength="${MIN_USERNAME_LENGTH}"
         maxlength="${MAX_USERNAME_LENGTH}"
         aria-label=${translateText("username.enter_username")}
-        class="border-white/15 bg-black/25 text-left text-white placeholder-white/40 transition-colors hover:border-white/30 focus:border-malibu-blue/60 focus:outline-none focus:ring-0 text-ellipsis ${NAME_BOX} ${NAME_TEXT}"
+        class="text-left text-white placeholder-white/50 transition-colors text-ellipsis hover:bg-white/5 focus:bg-white/5 focus:outline-none focus:ring-2 focus:ring-malibu-blue/60 ${NAME_BOX} ${NAME_TEXT}"
       />
     `;
   }
