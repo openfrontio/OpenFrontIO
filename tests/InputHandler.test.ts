@@ -290,6 +290,77 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Left-click menu with ghost structure (#4789)", () => {
+    test("should emit MouseUpEvent and not ContextMenuEvent when placing a ghost structure with left-click menu enabled", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => true;
+      inputHandler["uiState"].ghostStructure = UnitType.City;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+
+    test("should emit MouseUpEvent and not ContextMenuEvent when placing a warship with left-click menu enabled", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => true;
+      inputHandler["uiState"].ghostStructure = UnitType.Warship;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+
+    test("should still emit ContextMenuEvent on left click release when no ghost structure is active", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => true;
+      expect(inputHandler["uiState"].ghostStructure).toBeNull();
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ContextMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+  });
+
   describe("Pointer Event Handling", () => {
     test("should handle pointer events with different pointer IDs", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
