@@ -289,11 +289,16 @@ export class NavAccountMenu extends LitElement {
     return html`
       <!-- No vertical padding on the panel: items run edge to edge so a hovered
            row (the red Log out especially) fills the corner instead of leaving
-           a dead strip under it. overflow-hidden clips them to the radius. -->
+           a dead strip under it. overflow-hidden clips them to the radius.
+
+           Width grows to the longest label (translations run longer than the
+           English) up to a cap, past which labels wrap instead of pushing the
+           panel off-screen — the cap also tracks the viewport for narrow
+           phones. -->
       <div
         role="menu"
         aria-label=${translateText("nav_account_menu.title")}
-        class="w-60 rounded-xl border border-white/10 bg-zinc-900 shadow-xl overflow-hidden"
+        class="w-max min-w-60 max-w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-white/10 bg-zinc-900 shadow-xl overflow-hidden"
       >
         ${this.items().map(
           (item) => html`
@@ -306,7 +311,9 @@ export class NavAccountMenu extends LitElement {
                 : "text-white/80 hover:bg-white/10 hover:text-white"}"
             >
               <span class="w-4 h-4 shrink-0">${item.icon}</span>
-              <span>${translateText(item.labelKey)}</span>
+              <span class="min-w-0 break-words"
+                >${translateText(item.labelKey)}</span
+              >
             </button>
           `,
         )}
