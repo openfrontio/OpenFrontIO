@@ -10,15 +10,21 @@ const log = logger.child({ comp: "polling" });
  * @param task The async function to execute.
  * @param intervalMs The delay in milliseconds before the next execution.
  */
-export function startPolling(task: () => Promise<void>, intervalMs: number) {
+export function startPolling(task: () => Promise<void>, intervalMs: number): () => void {
+  let stopped = false, timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   const runLoop = () => {
     task()
       .catch((error) => {
         log.error("Error in polling loop:", error);
       })
       .finally(() => {
-        setTimeout(runLoop, intervalMs);
+        if (stopped) return;
+        timeoutHandle = setTimeout(runLoop, intervalMs);
       });
   };
   runLoop();
+  return () => {
+    stopped = true;
+    clearTimeout(timeoutHandle);
+  };
 }

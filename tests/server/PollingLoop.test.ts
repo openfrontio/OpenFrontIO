@@ -74,4 +74,14 @@ describe("PollingLoop", () => {
     // Second call
     expect(taskCallCount).toBe(2);
   });
+
+
+  it("should stop scheduling future executions once stopped", async () => {
+    let count = 0;
+    const stop = startPolling(async () => { count++; }, 100);
+    stop(); stop();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(count).toBe(1);
+  });
 });
+
