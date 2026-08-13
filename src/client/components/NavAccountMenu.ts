@@ -11,7 +11,8 @@ import {
   updateAccountNavButton,
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
-import { translateText } from "../Utils";
+import { playerProfileUrl } from "../PlayerProfileUrl";
+import { copyToClipboard, showToast, translateText } from "../Utils";
 
 type MenuItem = {
   key: string;
@@ -169,7 +170,25 @@ export class NavAccountMenu extends LitElement {
       this.userMeResponse.player.subscription !== undefined &&
       this.userMeResponse.player.subscription !== null;
 
-    const items: MenuItem[] = [
+    const publicId =
+      this.userMeResponse !== false
+        ? (this.userMeResponse.player.publicId ?? "")
+        : "";
+
+    const items: MenuItem[] = [];
+
+    // Nothing to share without a publicId (older backend, or a session whose
+    // player record hasn't resolved).
+    if (publicId) {
+      items.push({
+        key: "copy-profile-url",
+        labelKey: "nav_account_menu.copy_profile_url",
+        icon: iconShare,
+        onSelect: () => void this.copyProfileUrl(publicId),
+      });
+    }
+
+    items.push(
       {
         key: "view-account",
         labelKey: "nav_account_menu.view_account",
@@ -198,7 +217,7 @@ export class NavAccountMenu extends LitElement {
         icon: iconTag,
         onSelect: () => this.openModal("change-username"),
       },
-    ];
+    );
 
     if (subscribed) {
       items.push({
@@ -218,6 +237,16 @@ export class NavAccountMenu extends LitElement {
     });
 
     return items;
+  }
+
+  // Same copy + toast the account modal's share button gives.
+  private async copyProfileUrl(publicId: string): Promise<void> {
+    try {
+      await copyToClipboard(playerProfileUrl(publicId));
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("error_modal.failed_copy"), "red");
+    }
   }
 
   // The profile-menu modals are popup (non-inline) modals registered with the
@@ -432,6 +461,24 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 }
+
+const iconShare = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <circle cx="18" cy="5" r="3" />
+  <circle cx="6" cy="12" r="3" />
+  <circle cx="18" cy="19" r="3" />
+  <line x1="8.6" y1="10.5" x2="15.4" y2="6.5" />
+  <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
+</svg>`;
 
 const iconUser = html`<svg
   xmlns="http://www.w3.org/2000/svg"

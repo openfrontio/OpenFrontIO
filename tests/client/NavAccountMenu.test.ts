@@ -1,9 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { logOut, isOnCrazyGames, showInGameConfirm } = vi.hoisted(() => ({
+const {
+  logOut,
+  isOnCrazyGames,
+  showInGameConfirm,
+  copyToClipboard,
+  showToast,
+} = vi.hoisted(() => ({
   logOut: vi.fn(async () => {}),
   isOnCrazyGames: vi.fn(() => false),
   showInGameConfirm: vi.fn(async () => true),
+  copyToClipboard: vi.fn(async () => {}),
+  showToast: vi.fn(),
 }));
 vi.mock("../../src/client/Auth", () => ({ logOut }));
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
@@ -15,17 +23,19 @@ vi.mock("../../src/client/Navigation", () => ({
 }));
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string) => key,
+  copyToClipboard,
+  showToast,
 }));
 
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
-function userMe(subscribed = false): UserMeResponse {
+function userMe(subscribed = false, publicId = "p"): UserMeResponse {
   return {
     user: { email: "player@example.com" },
     player: {
-      publicId: "p",
+      publicId,
       ...(subscribed ? { subscription: { tier: "plutonium" } } : {}),
     },
   } as unknown as UserMeResponse;
@@ -106,6 +116,7 @@ describe("nav-account-menu", () => {
     await el.updateComplete;
     await click(trigger());
     expect(itemKeys()).toEqual([
+      "copy-profile-url",
       "view-account",
       "account-settings",
       "game-settings",
@@ -118,6 +129,26 @@ describe("nav-account-menu", () => {
     fireUserMe(userMe(true));
     await el.updateComplete;
     expect(itemKeys()).toContain("subscription");
+  });
+
+  it("copies the profile URL and toasts, and hides without a publicId", async () => {
+    fireUserMe(userMe());
+    await el.updateComplete;
+    await click(trigger());
+    await click(document.querySelector('[data-menu-item="copy-profile-url"]')!);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(copyToClipboard).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(copyToClipboard).mock.calls[0][0]).toContain(
+      "modal=profile&publicID=p",
+    );
+    expect(showToast).toHaveBeenCalledWith("common.copied", "green");
+
+    // No publicId (older backend / unresolved player) — nothing to share.
+    fireUserMe(userMe(false, ""));
+    await el.updateComplete;
+    await click(trigger());
+    expect(itemKeys()).not.toContain("copy-profile-url");
   });
 
   it("stays off on CrazyGames, which owns its own account UI", async () => {

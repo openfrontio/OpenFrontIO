@@ -77,7 +77,8 @@ export class AccountSettingsPanel extends LitElement {
     const on = consent.consented === "approved";
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <div class="flex items-start justify-between gap-4">
+        <!-- Centred against the title+description block, like the delete card. -->
+        <div class="flex items-center justify-between gap-4">
           <div class="flex-1">
             <div class="text-white font-medium">
               ${translateText("account_modal.marketing_title")}
