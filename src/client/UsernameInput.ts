@@ -390,12 +390,14 @@ export class UsernameInput extends LitElement {
     return html`
       <!-- Capped rather than stretched: on a wide play page (no live
            streamers, so the identity strip spans the whole column) a
-           full-bleed name field is a lot of empty box. The slack collects
-           at the end instead of splitting either side of the group —
-           centring would re-centre the whole row whenever the trailing
-           control changes width, which it does between the "Use verified"
-           and "Change" states, visibly nudging the name sideways. -->
-      <div class="flex items-center w-full h-full gap-1.5 sm:gap-2">
+           full-bleed name field is a lot of empty box. The slack splits
+           either side of the group so it reads as padding rather than a
+           gap hanging off one end. Safe to centre only because the
+           trailing slot keeps a constant width across both states — see
+           renderNameControl. -->
+      <div
+        class="flex items-center justify-center w-full h-full gap-1.5 sm:gap-2"
+      >
         ${this.renderClanControl()} ${this.renderNameControl()}
       </div>
       ${this.validationError
@@ -578,56 +580,90 @@ export class UsernameInput extends LitElement {
   // Name field. Verified play swaps the free-text input for a badge-led chip so
   // the state reads as "this is my account name", not "the input broke".
   private renderNameControl() {
-    if (this.verifiedActive) {
-      return html`
+    return html`
+      ${this.verifiedActive
+        ? this.renderVerifiedChip()
+        : this.renderNameInput()}
+      <!-- Both trailing buttons share one grid cell, so the slot is always as
+           wide as the wider of the two and switching states can't resize the
+           row — "Use verified" is a good deal wider than "Change", and in
+           some languages far wider still. The inactive one is
+           visibility:hidden, which also drops it from the tab order and the
+           accessibility tree. -->
+      <div class="no-crazygames grid shrink-0 h-full max-h-[44px]">
         <div
-          class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-malibu-blue/70 bg-malibu-blue/15 px-2 sm:px-3"
-          title=${translateText("username.verified_active_hint")}
+          class="col-start-1 row-start-1 h-full ${this.verifiedActive
+            ? ""
+            : "invisible"}"
         >
-          <!-- Check trails the name, as it does everywhere else a verified
+          ${this.renderUseCustomButton()}
+        </div>
+        <div
+          class="col-start-1 row-start-1 h-full ${this.verifiedActive
+            ? "invisible"
+            : ""}"
+        >
+          ${this.renderUseVerifiedButton()}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderVerifiedChip() {
+    return html`
+      <div
+        class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-malibu-blue/70 bg-malibu-blue/15 px-2 sm:px-3"
+        title=${translateText("username.verified_active_hint")}
+      >
+        <!-- Check trails the name, as it does everywhere else a verified
                name is rendered (PlayerName, lobby lists, profile modal). The
                name shrinks rather than growing, so the mark keeps hugging it
                instead of drifting to the far edge. -->
-          <span
-            class="min-w-0 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
-            >${this.verifiedName() ?? ""}</span
-          >
-          ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
-          <span
-            class="hidden md:inline ml-auto shrink-0 rounded bg-malibu-blue/35 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
-            >${translateText("username.verified_toggle")}</span
-          >
-        </div>
-        <button
-          type="button"
-          class="no-crazygames shrink-0 rounded-lg border border-white/15 bg-black/25 px-2 h-full max-h-[44px] text-sm font-medium text-white/70 transition-colors hover:border-white/30 hover:bg-black/40 hover:text-white cursor-pointer"
-          title=${translateText("username.verified_use_custom")}
-          aria-label=${translateText("username.verified_use_custom")}
-          @click=${this.handleVerifiedToggle}
+        <span
+          class="min-w-0 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+          >${this.verifiedName() ?? ""}</span
         >
-          <span class="hidden sm:inline"
-            >${translateText("username.verified_use_custom_short")}</span
-          >
-          <!-- Matches the verified badge's box on the "Use verified" button
-               so swapping between the two states can't resize the row. -->
-          <svg
-            viewBox="0 0 24 24"
-            class="sm:hidden w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 20h9"></path>
-            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-          </svg>
-        </button>
-      `;
-    }
+        ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
+        <span
+          class="hidden md:inline ml-auto shrink-0 rounded bg-malibu-blue/35 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+          >${translateText("username.verified_toggle")}</span
+        >
+      </div>
+    `;
+  }
 
-    const eligible = this.verifiedName() !== null;
+  private renderUseCustomButton() {
+    return html`
+      <button
+        type="button"
+        class="flex h-full w-full items-center justify-center rounded-lg border border-white/15 bg-black/25 px-2 text-sm font-medium text-white/70 transition-colors hover:border-white/30 hover:bg-black/40 hover:text-white cursor-pointer"
+        title=${translateText("username.verified_use_custom")}
+        aria-label=${translateText("username.verified_use_custom")}
+        @click=${this.handleVerifiedToggle}
+      >
+        <span class="hidden sm:inline"
+          >${translateText("username.verified_use_custom_short")}</span
+        >
+        <!-- Matches the verified badge's box on the "Use verified" button
+               so swapping between the two states can't resize the row. -->
+        <svg
+          viewBox="0 0 24 24"
+          class="sm:hidden w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+        </svg>
+      </button>
+    `;
+  }
+
+  private renderNameInput() {
     return html`
       <input
         type="text"
@@ -639,9 +675,15 @@ export class UsernameInput extends LitElement {
         aria-label=${translateText("username.enter_username")}
         class="min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] rounded-lg border border-white/15 bg-black/25 px-2 sm:px-3 text-xl sm:text-2xl font-medium tracking-wider text-left text-white placeholder-white/40 transition-colors hover:border-white/30 focus:border-malibu-blue/60 focus:outline-none focus:ring-0 text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
       />
+    `;
+  }
+
+  private renderUseVerifiedButton() {
+    const eligible = this.verifiedName() !== null;
+    return html`
       <button
         type="button"
-        class="no-crazygames group flex shrink-0 h-full max-h-[44px] items-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${eligible
+        class="group flex h-full w-full items-center justify-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${eligible
           ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
           : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35"}"
         title=${translateText("username.verified_use_hint")}
