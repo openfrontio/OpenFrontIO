@@ -11,7 +11,7 @@ import {
   updateAccountNavButton,
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
-import { playerProfileUrl } from "../PlayerProfileUrl";
+import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
 type MenuItem = {

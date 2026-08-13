@@ -10,7 +10,7 @@ const {
   logOut: vi.fn(async () => {}),
   isOnCrazyGames: vi.fn(() => false),
   showInGameConfirm: vi.fn(async () => true),
-  copyToClipboard: vi.fn(async () => {}),
+  copyToClipboard: vi.fn(async (_text: string) => {}),
   showToast: vi.fn(),
 }));
 vi.mock("../../src/client/Auth", () => ({ logOut }));

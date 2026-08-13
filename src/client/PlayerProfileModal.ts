@@ -16,7 +16,7 @@ import "./components/PlayerName";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
-import { playerProfileUrl } from "./PlayerProfileUrl";
+import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
 
 export { playerProfileUrl };

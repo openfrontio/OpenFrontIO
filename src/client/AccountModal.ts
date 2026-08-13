@@ -30,7 +30,7 @@ import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { consumeGoogleLinkResult } from "./GoogleLinkResult";
-import { playerProfileUrl } from "./PlayerProfileUrl";
+import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
 
 // window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
