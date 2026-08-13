@@ -184,8 +184,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return "";
-    return entry.key || "";
+    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
+    return entry.key || formatKeyForDisplay(entry.value || "");
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
