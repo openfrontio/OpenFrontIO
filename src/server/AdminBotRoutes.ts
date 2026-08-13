@@ -14,8 +14,8 @@ import {
   GameConfigSchema,
   ID,
   IntentSchema,
-  LOBBY_LABEL_MAX,
   LobbyAccentSchema,
+  LobbyLabelSchema,
 } from "../core/Schemas";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
@@ -102,7 +102,7 @@ export function registerAdminBotRoutes(opts: {
       .object({
         listed: z.boolean().optional(),
         featured: z.boolean().optional(),
-        label: z.string().max(LOBBY_LABEL_MAX).optional(),
+        label: LobbyLabelSchema.optional(),
         accent: LobbyAccentSchema.optional(),
       })
       .safeParse(req.body ?? {});

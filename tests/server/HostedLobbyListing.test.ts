@@ -12,6 +12,7 @@ import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LOBBY_LABEL_MAX,
+  LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
   sanitizeLobbyLabel,
 } from "../../src/core/Schemas";
@@ -945,6 +946,27 @@ describe("featured lobbies", () => {
     // A bidi override renders following text right-to-left, which is how a
     // label gets to claim it is something it is not.
     expect(sanitizeLobbyLabel("🏆 OFM\u202E evil\u0000")).toBe("🏆 OFM evil");
+  });
+
+  it("strips U+061C but keeps the ZWJ that emoji sequences need", () => {
+    // ARABIC LETTER MARK is zero-width and bidi-active, so it goes. U+200D is
+    // what joins 👨‍👩‍👧 into one glyph, so it must stay.
+    expect(sanitizeLobbyLabel("OFM\u061C Scrims")).toBe("OFM Scrims");
+    expect(sanitizeLobbyLabel("\u{1F468}\u200D\u{1F469}\u200D\u{1F467}")).toBe(
+      "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}",
+    );
+  });
+
+  it("accepts a label of exactly LOBBY_LABEL_MAX emoji", () => {
+    // 48 emoji is 96 UTF-16 code units: a z.string().max() cap would reject a
+    // label the sanitiser considers perfectly legal.
+    const label = "\u{1F3C6}".repeat(LOBBY_LABEL_MAX);
+    expect(LobbyLabelSchema.safeParse(label).success).toBe(true);
+    expect(Array.from(sanitizeLobbyLabel(label))).toHaveLength(LOBBY_LABEL_MAX);
+    expect(
+      LobbyLabelSchema.safeParse("\u{1F3C6}".repeat(LOBBY_LABEL_MAX + 1))
+        .success,
+    ).toBe(false);
   });
 
   it("collapses whitespace and caps length", () => {

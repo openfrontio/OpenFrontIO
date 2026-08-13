@@ -197,6 +197,15 @@ export const FEATURED_LOBBY_AUTO_START_MS = 10 * 60 * 1000;
 // cannot crowd out the rest of the list.
 export const LOBBY_LABEL_MAX = 48;
 
+// Labels are capped by CODE POINT, matching sanitizeLobbyLabel. z.string().max()
+// counts UTF-16 code units, so it would reject a legal 48-emoji label (96 units)
+// before the sanitiser ever saw it.
+export const LobbyLabelSchema = z
+  .string()
+  .refine((v) => Array.from(v).length <= LOBBY_LABEL_MAX, {
+    message: `label must be at most ${LOBBY_LABEL_MAX} characters`,
+  });
+
 // Accent applied to a featured lobby's row. A closed set, not free-form CSS:
 // arbitrary styling in a shared list lets one lobby make every other row
 // unreadable.
@@ -221,6 +230,9 @@ export function sanitizeLobbyLabel(raw: string): string {
     if (cp >= 0x202a && cp <= 0x202e) continue;
     if (cp >= 0x2066 && cp <= 0x2069) continue;
     if (cp === 0x200e || cp === 0x200f) continue;
+    if (cp === 0x061c) continue; // ARABIC LETTER MARK — zero-width, bidi-active
+    // NB: U+200D ZERO WIDTH JOINER is deliberately KEPT — emoji sequences like
+    // 👨‍👩‍👧 are built from it, and stripping it would break them apart.
     kept.push(ch);
   }
   return kept
@@ -272,7 +284,7 @@ export const GameInfoSchema = z.object({
   autoStartAt: z.number().optional(),
   // Featured lobbies only (admin bot). Echoed back so the creating bot can
   // confirm the request took effect, the same way it checks `listed`.
-  label: z.string().max(LOBBY_LABEL_MAX).optional(),
+  label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
 });
@@ -289,7 +301,7 @@ export const PublicGameInfoSchema = z.object({
   publicGameType: PublicGameTypeSchema,
   // Featured lobbies only. Both optional so a client on an older build simply
   // renders the map name as it does today.
-  label: z.string().max(LOBBY_LABEL_MAX).optional(),
+  label: LobbyLabelSchema.optional(),
   accent: LobbyAccentSchema.optional(),
   featured: z.boolean().optional(),
 });
