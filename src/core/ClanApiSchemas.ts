@@ -32,6 +32,36 @@ export type ClanLeaderboardResponse = z.infer<
   typeof ClanLeaderboardResponseSchema
 >;
 
+// Aggregate for one clan over a bounded time window, as served by the public
+// (unauthenticated) GET /public/clan/:tag?start=&end= endpoint. The window is
+// capped at one day server-side, so this is what the clan overview's "past 24
+// hours" card reads. Only public Team games (unranked, excluding HvN) are
+// counted — the same bucket the clan leaderboard uses. The per-team-type and
+// per-team-count breakdowns the endpoint also returns are intentionally not
+// modelled here; Zod strips them.
+export const ClanWindowStatsSchema = z.object({
+  clanTag: RequiredClanTagSchema,
+  games: z.number(),
+  // Sum of participating clan members across those games, so a single game
+  // with four members on the roster counts four sessions.
+  playerSessions: z.number(),
+  wins: z.number(),
+  losses: z.number(),
+  weightedWins: z.number(),
+  weightedLosses: z.number(),
+  weightedWLRatio: z.number(),
+});
+export type ClanWindowStats = z.infer<typeof ClanWindowStatsSchema>;
+
+export const ClanWindowStatsResponseSchema = z.object({
+  start: z.iso.datetime(),
+  end: z.iso.datetime(),
+  clan: ClanWindowStatsSchema,
+});
+export type ClanWindowStatsResponse = z.infer<
+  typeof ClanWindowStatsResponseSchema
+>;
+
 export const ClanInfoSchema = z.object({
   name: z.string().max(35),
   tag: RequiredClanTagSchema,

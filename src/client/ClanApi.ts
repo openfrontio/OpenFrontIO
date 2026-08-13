@@ -15,6 +15,8 @@ import {
   ClanMembersResponseSchema,
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
+  type ClanWindowStatsResponse,
+  ClanWindowStatsResponseSchema,
   DiscordInviteResponseSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
@@ -22,6 +24,8 @@ import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
 
 const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
+const CLAN_RECENT_STATS_FETCH_TIMEOUT_MS = 5000;
+const CLAN_RECENT_STATS_WINDOW_MS = 24 * 60 * 60 * 1000;
 export type {
   ClanBan,
   ClanBansResponse,
@@ -39,6 +43,8 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
+  ClanWindowStats,
+  ClanWindowStatsResponse,
 } from "../core/ClanApiSchemas";
 
 async function clanFetch(
@@ -145,6 +151,38 @@ export async function fetchClanExists(tag: string): Promise<boolean | null> {
     return null;
   } catch {
     return null;
+  }
+}
+
+// Rolling 24-hour aggregate for one clan from the public (no-auth) endpoint.
+// The API rejects windows longer than one day, so `start` is exactly 24h
+// before `end`. Returns false on any failure — the overview card is
+// supplementary and simply stays hidden.
+export async function fetchClanRecentStats(
+  tag: string,
+): Promise<ClanWindowStatsResponse | false> {
+  try {
+    const end = new Date();
+    const start = new Date(end.getTime() - CLAN_RECENT_STATS_WINDOW_MS);
+    const params = new URLSearchParams({
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+    // Uppercased to the canonical form so it matches the server's route.
+    const path = `/public/clan/${encodeURIComponent(tag.toUpperCase())}?${params}`;
+    const res = await fetch(`${getApiBase()}${path}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(CLAN_RECENT_STATS_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return false;
+    const parsed = ClanWindowStatsResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("fetchClanRecentStats: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
   }
 }
 

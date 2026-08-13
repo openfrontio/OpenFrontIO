@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { invalidateUserMe } from "../../Api";
 import {
@@ -7,8 +7,10 @@ import {
   type ClanMember,
   type ClanMemberOrder,
   type ClanMemberSort,
+  type ClanWindowStats,
   fetchClanDetail,
   fetchClanMembers,
+  fetchClanRecentStats,
   fetchDiscordInvite,
   joinClan,
   leaveClan,
@@ -26,6 +28,7 @@ import {
   renderMemberSearchInput,
   renderMemberSortControl,
   renderStat,
+  renderWLBarRow,
   showToast,
 } from "./ClanShared";
 import { ClanStatsBreakdown } from "./ClanStatsBreakdown";
@@ -55,6 +58,8 @@ export class ClanDetailView extends LitElement {
   @property({ type: Object }) cachedClan: ClanInfo | null = null;
   @state() private selectedClan: ClanInfo | null = null;
   @state() private discordMeta: ClanDiscord | null = null;
+  @state() private recentStats: ClanWindowStats | null = null;
+  @state() private recentStatsLoading = false;
   @state() private myRole: ClanRole | null = null;
   @state() private members: ClanMember[] = [];
   @state() private membersTotal = 0;
@@ -97,6 +102,9 @@ export class ClanDetailView extends LitElement {
         this.asyncGeneration,
       );
     }
+    // Deliberately not part of `cachedDetail` — a rolling 24h window goes
+    // stale, so it is refetched on every mount (like the Discord metadata).
+    void this.loadRecentStats(this.clanTag, this.asyncGeneration);
   }
 
   // Fetches live Discord invite metadata (server name, icon, counts) for the
@@ -106,6 +114,18 @@ export class ClanDetailView extends LitElement {
     const meta = await fetchDiscordInvite(url);
     if (gen !== this.asyncGeneration || this.clanTag !== tag) return;
     this.discordMeta = meta;
+  }
+
+  // Fetches the clan's rolling 24-hour aggregate for the Overview card from
+  // the public endpoint. Floating; guarded by asyncGeneration + tag like
+  // loadDiscordMeta. A failure leaves `recentStats` null, which hides the card.
+  private async loadRecentStats(tag: string, gen: number) {
+    this.recentStats = null;
+    this.recentStatsLoading = true;
+    const res = await fetchClanRecentStats(tag);
+    if (gen !== this.asyncGeneration || this.clanTag !== tag) return;
+    this.recentStatsLoading = false;
+    this.recentStats = res === false ? null : res.clan;
   }
 
   disconnectedCallback() {
@@ -129,6 +149,9 @@ export class ClanDetailView extends LitElement {
     this.myRole = null;
     this.pendingRequestCount = 0;
     this.memberSearch = "";
+    // Independent of the clan detail fetch, so start it in parallel rather
+    // than adding its RTT to the visible loading time.
+    void this.loadRecentStats(this.clanTag, gen);
 
     // When the user lands directly on the Members tab (deep link / cached
     // activeTab), fire both fetches in parallel — otherwise sequencing
@@ -436,6 +459,7 @@ export class ClanDetailView extends LitElement {
               <div class="grid grid-cols-2 gap-4">
                 ${this.renderStatTiles(clan)}
               </div>
+              ${this.renderRecentStatsCard()}
             </div>
             <div class="sm:col-span-2">
               ${this.renderDiscordCard(clan.discordUrl)}
@@ -450,7 +474,7 @@ export class ClanDetailView extends LitElement {
       <div class="space-y-6">
         ${this.renderDescriptionCard(clan)}
         <div class="grid grid-cols-2 gap-3">${this.renderStatTiles(clan)}</div>
-        ${actions}
+        ${this.renderRecentStatsCard()} ${actions}
       </div>
     `;
   }
@@ -603,6 +627,111 @@ export class ClanDetailView extends LitElement {
           ? translateText("clan_modal.open")
           : translateText("clan_modal.invite_only"),
       )}
+    `;
+  }
+
+  // Rolling 24-hour activity for the Overview tab. The card is omitted (rather
+  // than showing an error) when the public endpoint is unavailable — it's
+  // supplementary, and the rest of the overview stands on its own.
+  private renderRecentStatsCard(): TemplateResult | string {
+    if (this.recentStatsLoading) {
+      return html`
+        <div class="bg-white/5 rounded-xl border border-white/10 p-5">
+          <div class="animate-pulse space-y-3">
+            <div class="h-3 w-32 bg-white/10 rounded"></div>
+            <div class="h-5 bg-white/10 rounded-md"></div>
+            <div class="h-10 bg-white/10 rounded-lg"></div>
+          </div>
+        </div>
+      `;
+    }
+    const stats = this.recentStats;
+    if (stats === null) return "";
+
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <h3
+            class="text-sm font-bold text-white/60 uppercase tracking-wider"
+            title=${translateText("clan_modal.recent_24h_note")}
+          >
+            ${translateText("clan_modal.recent_24h_title")}
+          </h3>
+          ${stats.games > 0
+            ? html`<span
+                class="text-[10px] font-bold text-white/40 uppercase tracking-wider tabular-nums shrink-0"
+              >
+                ${translateText("clan_modal.recent_24h_games", {
+                  count: stats.games,
+                })}
+              </span>`
+            : ""}
+        </div>
+        ${stats.games === 0
+          ? html`<p class="text-white/40 text-sm">
+              ${translateText("clan_modal.recent_24h_empty")}
+            </p>`
+          : html`
+              ${renderWLBarRow(
+                translateText("clan_modal.stats_total"),
+                stats.wins,
+                stats.losses,
+              )}
+              <div class="grid grid-cols-3 gap-2">
+                ${this.renderRecentMetric(
+                  translateText("leaderboard_modal.win_score"),
+                  stats.weightedWins.toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  }),
+                  translateText("leaderboard_modal.win_score_tooltip"),
+                  "text-green-400/90",
+                )}
+                ${this.renderRecentMetric(
+                  translateText("leaderboard_modal.loss_score"),
+                  stats.weightedLosses.toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  }),
+                  translateText("leaderboard_modal.loss_score_tooltip"),
+                  "text-red-400/90",
+                )}
+                ${this.renderRecentMetric(
+                  translateText("leaderboard_modal.ratio"),
+                  stats.weightedWLRatio.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  }),
+                  translateText("clan_modal.recent_24h_ratio_tooltip"),
+                  stats.weightedWLRatio >= 1
+                    ? "text-green-400"
+                    : "text-red-400",
+                )}
+              </div>
+            `}
+      </div>
+    `;
+  }
+
+  private renderRecentMetric(
+    label: string,
+    value: string,
+    tooltip: string,
+    valueClass: string,
+  ): TemplateResult {
+    return html`
+      <div
+        class="bg-white/5 rounded-lg border border-white/10 px-2 py-2 text-center"
+        title=${tooltip}
+      >
+        <!-- Wraps rather than truncates: this card also renders in the narrow
+             left column of the Discord two-column layout. -->
+        <div
+          class="text-[10px] font-bold text-white/40 uppercase tracking-wider leading-tight mb-0.5"
+        >
+          ${label}
+        </div>
+        <div class="font-mono font-bold text-sm tabular-nums ${valueClass}">
+          ${value}
+        </div>
+      </div>
     `;
   }
 
