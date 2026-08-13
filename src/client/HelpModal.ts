@@ -439,7 +439,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.shiftKey)}
+                        ${this.renderKey(keybinds.boxSelectWarships)}
                         <span class="text-white/40 font-bold">+</span>
                         <span class="text-white/50 text-xs"
                           >${translateText("help_modal.drag")}</span
