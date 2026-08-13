@@ -29,6 +29,21 @@ const usernameKey: string = "username";
 const clanTagKey: string = "clanTag";
 const useVerifiedNameKey: string = "useVerifiedName";
 
+// Shared by the free-text input and the verified chip. They sit in the same
+// slot and swap places, so any difference in box or text metrics shows up as
+// the name jumping when the toggle is used — keep them in lockstep here rather
+// than in two class strings that have already drifted twice.
+const NAME_BOX =
+  "min-w-0 flex-1 h-full max-h-[44px] rounded-lg border px-2 sm:px-3";
+// The leading matches the field's content box (the 40/44px box less its 1px
+// borders), so the line box fills it exactly and no half-leading is left for
+// the browser to round. An <input> centres its editor box from font metrics
+// while a span centres a line box; with some system fonts those land a pixel
+// apart, which made the name hop when verified was toggled.
+const NAME_TEXT =
+  "text-xl/[38px] sm:text-2xl/[42px] font-medium tracking-wider " +
+  "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
+
 @customElement("username-input")
 export class UsernameInput extends LitElement {
   @state() private baseUsername: string = "";
@@ -388,16 +403,12 @@ export class UsernameInput extends LitElement {
 
   render() {
     return html`
-      <!-- Capped rather than stretched: on a wide play page (no live
-           streamers, so the identity strip spans the whole column) a
-           full-bleed name field is a lot of empty box. The slack splits
-           either side of the group so it reads as padding rather than a
-           gap hanging off one end. Safe to centre only because the
-           trailing slot keeps a constant width across both states — see
-           renderNameControl. -->
-      <div
-        class="flex items-center justify-center w-full h-full gap-1.5 sm:gap-2"
-      >
+      <!-- The name field takes whatever the tag picker and the trailing button
+           leave, so the row always fills the strip — widest on a play page
+           with no live-streamer panel beside it, narrower when there is one.
+           Its width is still identical in both verified states because the
+           trailing slot is a fixed size; see renderNameControl. -->
+      <div class="flex items-center w-full h-full gap-1.5 sm:gap-2">
         ${this.renderClanControl()} ${this.renderNameControl()}
       </div>
       ${this.validationError
@@ -612,22 +623,14 @@ export class UsernameInput extends LitElement {
   private renderVerifiedChip() {
     return html`
       <div
-        class="flex min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] items-center gap-1.5 rounded-lg border border-malibu-blue/70 bg-malibu-blue/15 px-2 sm:px-3"
+        class="flex items-center gap-1.5 border-malibu-blue/70 bg-malibu-blue/15 ${NAME_BOX}"
         title=${translateText("username.verified_active_hint")}
       >
-        <!-- Check trails the name, as it does everywhere else a verified
-             name is rendered (PlayerName, lobby lists, profile modal). The
-             name shrinks rather than growing, so the mark keeps hugging it
-             instead of drifting to the far edge.
-
-             The leading matches the field's content box (the 40/44px box less
-             its 1px borders) here and on the input, so the line box fills it
-             exactly and no half-leading is left for the browser to round. An
-             <input> centres its editor box from font metrics while a span
-             centres a line box; with some system fonts those land a pixel
-             apart, which made the name hop when verified was toggled. -->
-        <span
-          class="min-w-0 truncate text-xl/[38px] sm:text-2xl/[42px] font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+        <!-- Check trails the name, as it does everywhere else a verified name
+             is rendered (PlayerName, lobby lists, profile modal). The name
+             shrinks rather than growing, so the mark keeps hugging it instead
+             of drifting to the far edge. -->
+        <span class="min-w-0 truncate text-white ${NAME_TEXT}"
           >${this.verifiedName() ?? ""}</span
         >
         ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
@@ -680,7 +683,7 @@ export class UsernameInput extends LitElement {
         minlength="${MIN_USERNAME_LENGTH}"
         maxlength="${MAX_USERNAME_LENGTH}"
         aria-label=${translateText("username.enter_username")}
-        class="min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] rounded-lg border border-white/15 bg-black/25 px-2 sm:px-3 text-xl/[38px] sm:text-2xl/[42px] font-medium tracking-wider text-left text-white placeholder-white/40 transition-colors hover:border-white/30 focus:border-malibu-blue/60 focus:outline-none focus:ring-0 text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+        class="border-white/15 bg-black/25 text-left text-white placeholder-white/40 transition-colors hover:border-white/30 focus:border-malibu-blue/60 focus:outline-none focus:ring-0 text-ellipsis ${NAME_BOX} ${NAME_TEXT}"
       />
     `;
   }
