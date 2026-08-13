@@ -87,7 +87,7 @@
     "username_grace_warning": "You'll lose the exclusive right to \"{name}\" on {date}. Resubscribe to keep it.",
     "username_locked_until": "Locked until {date}",
     "username_new_label": "New name",
-    "username_not_set": "Claim your username, used as an identifier across all your games.",
+    "username_not_set": "Claim your username, used as an identifier on your profile and in every game.",
     "username_placeholder": "Enter a username",
     "username_save": "Save",
     "username_temporary_notice": "Your name was taken by another player. Pick a new one — this rename is free.",
