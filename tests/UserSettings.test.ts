@@ -7,6 +7,7 @@ import {
   TEAM_STATS_COLUMNS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
+  getDefaultKeybinds,
 } from "../src/core/game/UserSettings";
 
 // UserSettings keeps a static in-memory cache and the active player id; reset
@@ -257,5 +258,20 @@ describe("UserSettings per-player cosmetics (#4955)", () => {
     s.setAttackRatio(0.5);
     UserSettings.setPlayerId(null);
     expect(s.attackRatio()).toBe(0.5);
+  });
+});
+
+describe("getDefaultKeybinds", () => {
+  it("returns all essential keybindings for Windows/Linux", () => {
+    const keybinds = getDefaultKeybinds(false);
+    expect(keybinds.boxSelectWarships).toBe("ShiftLeft");
+    expect(keybinds.resetGfx).toBe("KeyR");
+    expect(keybinds.selectAllWarships).toBe("KeyF");
+    expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+  });
+
+  it("handles Mac-specific modifier keys correctly", () => {
+    const macKeybinds = getDefaultKeybinds(true);
+    expect(macKeybinds.buildMenuModifier).toBe("MetaLeft");
   });
 });
