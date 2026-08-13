@@ -160,8 +160,10 @@ export class PlayerPanel extends LitElement implements Controller {
           this.allianceExpirySeconds = null;
           this.allianceExpiryText = null;
         }
-        this.requestUpdate();
       }
+      // Keep repainting while the panel is visible so live values (e.g. the
+      // alliance countdowns) keep updating even after the local player dies.
+      this.requestUpdate();
     }
   }
 
