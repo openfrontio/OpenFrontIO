@@ -464,8 +464,8 @@ class Client {
         // The server renamed this subscriber to TEMPORARY#### because their
         // bare name was exclusively taken while they were unentitled; the
         // rename is free (cooldown cleared). Prompt for a real name; takes
-        // priority over the rewards popup — the account modal shows the
-        // rewards panel anyway.
+        // priority over the rewards popup, which waits for the next load
+        // rather than stacking a second overlay on the rename form.
         const { usernameStatus, usernameBase } = userMeResponse.player;
         if (
           cleanHomepage &&
@@ -483,7 +483,7 @@ class Client {
             },
           );
           if (goRename) {
-            window.location.hash = "modal=account";
+            window.location.hash = "modal=change-username";
           }
           return;
         }
