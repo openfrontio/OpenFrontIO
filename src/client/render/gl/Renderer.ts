@@ -11,6 +11,7 @@
 
 import type { Config } from "../../../core/configuration/Config";
 import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import { PATTERN_ROW_BYTES } from "../../../core/PatternDecoder";
 import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
@@ -334,12 +335,12 @@ export class GPURenderer {
     });
 
     this.patternDataTex = createTexture2D(gl, {
-      width: 1024,
+      width: PATTERN_ROW_BYTES,
       height: palW,
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: new Uint8Array(palW * 1024),
+      data: new Uint8Array(palW * PATTERN_ROW_BYTES),
       filter: gl.NEAREST,
     });
 
@@ -788,7 +789,7 @@ export class GPURenderer {
       0,
       0,
       0,
-      1024,
+      PATTERN_ROW_BYTES,
       palW,
       gl.RED_INTEGER,
       gl.UNSIGNED_BYTE,
