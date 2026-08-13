@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import "./CosmeticBackground";
 import "./NavAccountMenu";
 import "./NavUtilityIcons";
@@ -66,47 +65,14 @@ export class PlayPage extends LitElement {
               />
             </div>
 
-            <!-- Right slot: the bell and "?" either way, then the account
-                 control. On CrazyGames that's their own button (kept by id, so
-                 CrazyGamesAccountButton can drive its avatar / sign-in prompt);
-                 everywhere else it's the profile menu. -->
+            <!-- Right slot: bell, help and the profile control. The menu is
+                 the account affordance on every platform now — on CrazyGames
+                 its "Sign in" item hands off to their SDK prompt. -->
             <div
               class="col-start-3 justify-self-end shrink-0 flex items-center gap-0.5"
             >
               <nav-utility-icons size="mobile"></nav-utility-icons>
-              ${crazyGamesSDK.isOnCrazyGames()
-                ? html`
-                    <button
-                      id="crazygames-account-btn"
-                      data-page="page-account"
-                      class="nav-menu-item h-10 shrink-0 flex items-center justify-center rounded-full overflow-hidden text-white/90 cursor-pointer"
-                      data-i18n-aria-label="main.account"
-                      data-i18n-title="main.account"
-                    >
-                      <img
-                        id="crazygames-account-avatar"
-                        class="hidden w-8 h-8 rounded-full object-cover"
-                        alt=""
-                        referrerpolicy="no-referrer"
-                      />
-                      <svg
-                        id="crazygames-account-icon"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                        class="w-7 h-7"
-                      >
-                        <path d="M20 21a8 8 0 0 0-16 0" />
-                        <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
-                      </svg>
-                    </button>
-                  `
-                : html`<nav-account-menu variant="mobile"></nav-account-menu>`}
+              <nav-account-menu variant="mobile"></nav-account-menu>
             </div>
           </div>
         </div>

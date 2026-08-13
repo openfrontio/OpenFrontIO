@@ -6,7 +6,11 @@ const {
   showInGameConfirm,
   copyToClipboard,
   showToast,
+  getUserProfile,
+  showAuthPrompt,
 } = vi.hoisted(() => ({
+  getUserProfile: vi.fn(async () => null as { username: string } | null),
+  showAuthPrompt: vi.fn(async () => null),
   logOut: vi.fn(async () => {}),
   isOnCrazyGames: vi.fn(() => false),
   showInGameConfirm: vi.fn(async () => true),
@@ -15,7 +19,7 @@ const {
 }));
 vi.mock("../../src/client/Auth", () => ({ logOut }));
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: { isOnCrazyGames },
+  crazyGamesSDK: { isOnCrazyGames, getUserProfile, showAuthPrompt },
 }));
 vi.mock("../../src/client/InGameModal", () => ({ showInGameConfirm }));
 vi.mock("../../src/client/Navigation", () => ({
@@ -63,6 +67,8 @@ describe("nav-account-menu", () => {
     el.remove();
     vi.clearAllMocks();
     isOnCrazyGames.mockReturnValue(false);
+    getUserProfile.mockResolvedValue(null);
+    window.showPage = undefined;
   });
 
   const trigger = () =>
@@ -79,26 +85,29 @@ describe("nav-account-menu", () => {
     await el.updateComplete;
   }
 
-  it("shows no chevron and does not open a menu while signed out", async () => {
+  it("offers sign-in and settings while signed out", async () => {
+    // The menu is the only nav route to the settings page now, so it has to
+    // open for guests too.
     fireUserMe(false);
     await el.updateComplete;
-    expect(trigger().querySelector("svg.rotate-180")).toBeNull();
     await click(trigger());
-    // Signed out the click must fall through to the data-page router instead.
-    expect(menu()).toBeNull();
-    expect(trigger().getAttribute("data-page")).toBe("page-account");
+    expect(itemKeys()).toEqual(["sign-in", "game-settings"]);
+
+    const showPage = vi.fn();
+    window.showPage = showPage;
+    await click(document.querySelector('[data-menu-item="sign-in"]')!);
+    expect(showPage).toHaveBeenCalledWith("page-account");
   });
 
-  it("stays off for an anonymous session with no linked identity", async () => {
-    // /users/@me resolves for guests too, so a bare response must not count as
-    // signed in — that's what put the chevron on the signed-out pill.
+  it("treats an anonymous session as signed out", async () => {
+    // /users/@me resolves for guests too, so a bare response is not a login.
     fireUserMe({
       user: {},
       player: { publicId: "p" },
     } as unknown as UserMeResponse);
     await el.updateComplete;
     await click(trigger());
-    expect(menu()).toBeNull();
+    expect(itemKeys()).toEqual(["sign-in", "game-settings"]);
   });
 
   it("toggles the menu for a signed-in user", async () => {
@@ -151,12 +160,28 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).not.toContain("copy-profile-url");
   });
 
-  it("stays off on CrazyGames, which owns its own account UI", async () => {
+  it("keeps the menu on CrazyGames, minus the log-out they own", async () => {
     isOnCrazyGames.mockReturnValue(true);
+    getUserProfile.mockResolvedValue({ username: "cg-player" });
     fireUserMe(userMe());
     await el.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    await el.updateComplete;
     await click(trigger());
-    expect(menu()).toBeNull();
+
+    // Their username/subscription management still needs reaching…
+    expect(itemKeys()).toContain("change-username");
+    // …but signing out happens on CrazyGames, not through /auth/logout.
+    expect(itemKeys()).not.toContain("log-out");
+  });
+
+  it("hands CrazyGames guests to the SDK sign-in prompt", async () => {
+    isOnCrazyGames.mockReturnValue(true);
+    fireUserMe(false);
+    await el.updateComplete;
+    await click(trigger());
+    await click(document.querySelector('[data-menu-item="sign-in"]')!);
+    expect(showAuthPrompt).toHaveBeenCalledTimes(1);
   });
 
   it("logs out only after the confirmation is accepted", async () => {

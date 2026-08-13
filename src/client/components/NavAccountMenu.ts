@@ -4,7 +4,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { crazyGamesSDK, type CrazyGamesUser } from "../CrazyGamesSDK";
 import { showInGameConfirm } from "../InGameModal";
 import {
   latestUserMeResponse,
@@ -43,6 +43,8 @@ export class NavAccountMenu extends LitElement {
 
   @state() private menuOpen = false;
   @state() private userMeResponse: UserMeResponse | false = false;
+  // CrazyGames identities come from the SDK, not our user object.
+  @state() private crazyGamesUser: CrazyGamesUser | null = null;
 
   // The panel is rendered into document.body, not into the nav: the nav bar
   // owns a stacking context, so anything inside it can be painted under the
@@ -69,6 +71,8 @@ export class NavAccountMenu extends LitElement {
     // Auth resolves once, early. A menu created after that (a re-rendered play
     // page, a reconnected element) would otherwise sit on its initial
     // signed-out state forever, so seed from the cached response instead.
+    this.refreshCrazyGamesUser();
+
     const cached = latestUserMeResponse();
     if (cached !== null) {
       this.userMeResponse = cached;
@@ -122,18 +126,28 @@ export class NavAccountMenu extends LitElement {
     event: CustomEvent<UserMeResponse | false>,
   ) => {
     this.userMeResponse = event.detail;
-    if (!this.hasMenu()) this.menuOpen = false;
+    // A CrazyGames sign-in surfaces as a userMeResponse, so re-read the SDK
+    // profile alongside it.
+    this.refreshCrazyGamesUser();
   };
 
-  // An anonymous session still resolves to a UserMeResponse, so "signed in"
-  // means a linked identity — the same test the trigger's avatar/sign-in state
-  // uses. CrazyGames owns its own account UI (including sign-out), so the menu
-  // stays off there and the trigger keeps its existing behaviour.
-  private hasMenu(): boolean {
+  private refreshCrazyGamesUser(): void {
+    if (!crazyGamesSDK.isOnCrazyGames()) return;
+    void crazyGamesSDK.getUserProfile().then((user) => {
+      this.crazyGamesUser = user;
+    });
+  }
+
+  /**
+   * Signed in for menu purposes. An anonymous session still resolves to a
+   * UserMeResponse, so a linked identity is what counts — plus, on CrazyGames,
+   * an SDK profile whose token exchange produced a session.
+   */
+  private isSignedIn(): boolean {
+    if (this.userMeResponse === false) return false;
     return (
-      this.userMeResponse !== false &&
-      hasLinkedIdentity(this.userMeResponse.user) &&
-      !crazyGamesSDK.isOnCrazyGames()
+      hasLinkedIdentity(this.userMeResponse.user) ||
+      this.crazyGamesUser !== null
     );
   }
 
@@ -156,24 +170,43 @@ export class NavAccountMenu extends LitElement {
   };
 
   private handleTriggerClick = (e: MouseEvent) => {
-    if (!this.hasMenu()) return; // signed out: let the data-page router open the account modal
-    // Stop the delegated nav router (and, on mobile, the top bar's own
-    // handlers) from acting on this click.
+    // The menu is the account affordance in every state, so the delegated nav
+    // router never gets this click — the "View account" / "Sign in" items open
+    // the modal instead.
     e.preventDefault();
     e.stopPropagation();
     this.menuOpen = !this.menuOpen;
   };
 
   private items(): MenuItem[] {
-    const subscribed =
-      this.userMeResponse !== false &&
-      this.userMeResponse.player.subscription !== undefined &&
-      this.userMeResponse.player.subscription !== null;
+    const gameSettings: MenuItem = {
+      key: "game-settings",
+      labelKey: "nav_account_menu.game_settings",
+      icon: iconSliders,
+      onSelect: () => {
+        window.showPage?.("page-settings");
+      },
+    };
 
-    const publicId =
-      this.userMeResponse !== false
-        ? (this.userMeResponse.player.publicId ?? "")
-        : "";
+    // Signed out the menu is still the way to the settings page — it's the
+    // only nav entry point now — plus the sign-in route for this platform.
+    if (!this.isSignedIn()) {
+      return [
+        {
+          key: "sign-in",
+          labelKey: "main.sign_in",
+          icon: iconUser,
+          onSelect: () => this.signIn(),
+        },
+        gameSettings,
+      ];
+    }
+
+    const player =
+      this.userMeResponse === false ? null : this.userMeResponse.player;
+    const subscribed =
+      player?.subscription !== undefined && player?.subscription !== null;
+    const publicId = player?.publicId ?? "";
 
     const items: MenuItem[] = [];
 
@@ -203,14 +236,7 @@ export class NavAccountMenu extends LitElement {
         icon: iconGear,
         onSelect: () => this.openModal("account-settings"),
       },
-      {
-        key: "game-settings",
-        labelKey: "nav_account_menu.game_settings",
-        icon: iconSliders,
-        onSelect: () => {
-          window.showPage?.("page-settings");
-        },
-      },
+      gameSettings,
       {
         key: "change-username",
         labelKey: "nav_account_menu.change_username",
@@ -228,15 +254,29 @@ export class NavAccountMenu extends LitElement {
       });
     }
 
-    items.push({
-      key: "log-out",
-      labelKey: "nav_account_menu.log_out",
-      icon: iconLogOut,
-      onSelect: () => void this.handleLogOut(),
-      danger: true,
-    });
+    // CrazyGames owns its own sessions: signing out happens on their site, and
+    // our /auth/logout wouldn't end theirs.
+    if (!crazyGamesSDK.isOnCrazyGames()) {
+      items.push({
+        key: "log-out",
+        labelKey: "nav_account_menu.log_out",
+        icon: iconLogOut,
+        onSelect: () => void this.handleLogOut(),
+        danger: true,
+      });
+    }
 
     return items;
+  }
+
+  // CrazyGames players sign in through the SDK prompt; everyone else through
+  // the account modal's login options.
+  private signIn(): void {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      void crazyGamesSDK.showAuthPrompt();
+      return;
+    }
+    window.showPage?.("page-account");
   }
 
   // Same copy + toast the account modal's share button gives.
@@ -321,8 +361,7 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 
-  private renderChevron(): TemplateResult | typeof nothing {
-    if (!this.hasMenu()) return nothing;
+  private renderChevron(): TemplateResult {
     return html`
       <svg
         class="w-3 h-3 shrink-0 transition-transform ${this.menuOpen

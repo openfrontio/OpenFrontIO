@@ -6,9 +6,9 @@ const { isOnCrazyGames } = vi.hoisted(() => ({
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {
     isOnCrazyGames,
-    // <username-input> mounts with the page and asks the SDK for a name.
     getUsername: vi.fn(async () => null),
     getUserProfile: vi.fn(async () => null),
+    showAuthPrompt: vi.fn(async () => null),
     addAuthListener: vi.fn(),
   },
 }));
@@ -66,18 +66,11 @@ describe("play-page mobile top bar", () => {
       await mount();
     });
 
-    it("keeps CrazyGames' own account button, still driveable by id", () => {
+    it("renders the same controls — the menu covers their sign-in too", () => {
       // News and Help left the hamburger, so the icons have to be here for
-      // CrazyGames players too — and the account button keeps the id
-      // CrazyGamesAccountButton looks up.
-      expect(rightSlot()).toEqual(["nav-utility-icons", "button"]);
-      const button = el.querySelector("#crazygames-account-btn");
-      expect(button).not.toBeNull();
-      expect(
-        button!.querySelector("#crazygames-account-avatar"),
-      ).not.toBeNull();
-      expect(button!.querySelector("#crazygames-account-icon")).not.toBeNull();
-      expect(el.querySelector("nav-account-menu")).toBeNull();
+      // CrazyGames players; the profile menu's own "Sign in" item hands off to
+      // their SDK prompt, so no platform-specific button is needed.
+      expect(rightSlot()).toEqual(["nav-utility-icons", "nav-account-menu"]);
     });
   });
 });
