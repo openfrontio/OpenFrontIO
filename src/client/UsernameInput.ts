@@ -616,11 +616,18 @@ export class UsernameInput extends LitElement {
         title=${translateText("username.verified_active_hint")}
       >
         <!-- Check trails the name, as it does everywhere else a verified
-               name is rendered (PlayerName, lobby lists, profile modal). The
-               name shrinks rather than growing, so the mark keeps hugging it
-               instead of drifting to the far edge. -->
+             name is rendered (PlayerName, lobby lists, profile modal). The
+             name shrinks rather than growing, so the mark keeps hugging it
+             instead of drifting to the far edge.
+
+             The leading matches the field's content box (the 40/44px box less
+             its 1px borders) here and on the input, so the line box fills it
+             exactly and no half-leading is left for the browser to round. An
+             <input> centres its editor box from font metrics while a span
+             centres a line box; with some system fonts those land a pixel
+             apart, which made the name hop when verified was toggled. -->
         <span
-          class="min-w-0 truncate text-xl sm:text-2xl font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+          class="min-w-0 truncate text-xl/[38px] sm:text-2xl/[42px] font-medium tracking-wider text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
           >${this.verifiedName() ?? ""}</span
         >
         ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
@@ -673,7 +680,7 @@ export class UsernameInput extends LitElement {
         minlength="${MIN_USERNAME_LENGTH}"
         maxlength="${MAX_USERNAME_LENGTH}"
         aria-label=${translateText("username.enter_username")}
-        class="min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] rounded-lg border border-white/15 bg-black/25 px-2 sm:px-3 text-xl sm:text-2xl font-medium tracking-wider text-left text-white placeholder-white/40 transition-colors hover:border-white/30 focus:border-malibu-blue/60 focus:outline-none focus:ring-0 text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+        class="min-w-0 flex-1 max-w-[24rem] h-full max-h-[44px] rounded-lg border border-white/15 bg-black/25 px-2 sm:px-3 text-xl/[38px] sm:text-2xl/[42px] font-medium tracking-wider text-left text-white placeholder-white/40 transition-colors hover:border-white/30 focus:border-malibu-blue/60 focus:outline-none focus:ring-0 text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
       />
     `;
   }
