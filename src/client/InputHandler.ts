@@ -600,12 +600,26 @@ export class InputHandler {
 
       if (e.code === "Escape") {
         e.preventDefault();
-        this.eventBus.emit(new CloseViewEvent());
-        this.setGhostStructure(null);
-        if (this.selectionBoxActive || this.multiSelectionActive) {
+        let closedUI = false;
+
+        if (this.uiState.ghostStructure !== null) {
+          this.setGhostStructure(null);
+          closedUI = true;
+        }
+
+        if (this.selectionBoxActive) {
           this.selectionBoxActive = false;
-          this.multiSelectionActive = false;
           this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+          closedUI = true;
+        }
+
+        this.eventBus.emit(new CloseViewEvent());
+
+        if (
+          !closedUI &&
+          (this.unitSelectionActive || this.multiSelectionActive)
+        ) {
+          this.eventBus.emit(new UnitSelectionEvent(null, false));
         }
       }
 

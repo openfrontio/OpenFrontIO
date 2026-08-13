@@ -1165,4 +1165,61 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
     // ...and the context menu must NOT open.
     expect(emitted.some((e) => e instanceof ContextMenuEvent)).toBe(false);
   });
+
+  it("emits UnitSelectionEvent(null, false) on Escape when warships are selected", () => {
+    eventBus.emit(
+      new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+    );
+    const emit = vi.spyOn(eventBus, "emit");
+
+    const escEvent = new KeyboardEvent("keydown", { code: "Escape" });
+    window.dispatchEvent(escEvent);
+
+    const emitted = emit.mock.calls.map((c: unknown[]) => c[0]);
+    const deselect = emitted.find(
+      (e): e is UnitSelectionEvent =>
+        e instanceof UnitSelectionEvent && !e.isSelected,
+    );
+    expect(deselect).toBeDefined();
+    expect(deselect!.unit).toBeNull();
+  });
+
+  it("does NOT deselect warships on Escape if ghost structure is active", () => {
+    eventBus.emit(
+      new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+    );
+    inputHandler["uiState"].ghostStructure = 1 as any;
+    const emit = vi.spyOn(eventBus, "emit");
+
+    const escEvent = new KeyboardEvent("keydown", { code: "Escape" });
+    window.dispatchEvent(escEvent);
+
+    const emitted = emit.mock.calls.map((c: unknown[]) => c[0]);
+    const deselect = emitted.find(
+      (e): e is UnitSelectionEvent =>
+        e instanceof UnitSelectionEvent && !e.isSelected,
+    );
+    expect(deselect).toBeUndefined();
+  });
+
+  it("does NOT deselect warships on Escape if selectionBoxActive is true", () => {
+    eventBus.emit(
+      new UnitSelectionEvent({ id: () => 1 } as unknown as UnitView, true),
+    );
+    inputHandler["selectionBoxActive"] = true;
+    const emit = vi.spyOn(eventBus, "emit");
+
+    const escEvent = new KeyboardEvent("keydown", { code: "Escape" });
+    window.dispatchEvent(escEvent);
+
+    const emitted = emit.mock.calls.map((c: unknown[]) => c[0]);
+    const deselect = emitted.find(
+      (e): e is UnitSelectionEvent =>
+        e instanceof UnitSelectionEvent && !e.isSelected,
+    );
+    expect(deselect).toBeUndefined();
+    expect(
+      emitted.some((e) => e instanceof WarshipSelectionBoxCancelEvent),
+    ).toBe(true);
+  });
 });
