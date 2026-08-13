@@ -164,7 +164,9 @@ export class AccountSettingsPanel extends LitElement {
     if (crazyGamesSDK.isOnCrazyGames() || steamSDK.isOnSteam()) return nothing;
     return html`
       <div class="bg-white/5 rounded-xl border border-red-500/30 p-6">
-        <div class="flex items-start justify-between gap-4">
+        <!-- The button is one line against a two-line block, so centre it
+             rather than pinning it to the first line. -->
+        <div class="flex items-center justify-between gap-4">
           <div class="flex-1">
             <div class="text-white font-medium">
               ${translateText("account_modal.delete_account_title")}
