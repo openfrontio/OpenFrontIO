@@ -67,20 +67,8 @@ export async function updateCrazyGamesNavButton() {
     if (desktopButton) desktopButton.onclick = promptSignIn;
   }
 
-  // Mobile hamburger menu item: text only. Same data-i18n handling as above.
-  const mobileButton = document.getElementById(
-    "mobile-nav-account-button",
-  ) as HTMLButtonElement | null;
-  if (mobileButton) {
-    if (profile) {
-      mobileButton.removeAttribute("data-i18n");
-      mobileButton.textContent = profile.username;
-    } else {
-      mobileButton.setAttribute("data-i18n", "main.sign_in");
-      mobileButton.textContent = signInText;
-    }
-    mobileButton.onclick = profile ? null : promptSignIn;
-  }
+  // The mobile hamburger no longer carries an account item — on narrow layouts
+  // the top bar's own button (below) is the account entry point.
 
   // Homepage top bar (narrow layout): avatar or person icon only.
   const topBarButton = document.getElementById(
