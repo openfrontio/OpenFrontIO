@@ -275,19 +275,32 @@ export class WarshipSelectionController implements Controller {
     this.eventBus.emit(new UnitSelectionEvent(null, true, selected));
   }
 
-  private onSelectAllWarships() {
+  private getAllWarships(): UnitView[] {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer) return;
-
-    const allWarships = this.game
+    if (!myPlayer) return [];
+    return this.game
       .units(UnitType.Warship)
       .filter((u) => u.isActive() && u.owner() === myPlayer);
+  }
+
+  public selectedAllWarships(): boolean {
+    const allWarships = this.getAllWarships();
+    return (
+      allWarships.length > 0 &&
+      this.multiSelectedWarships.length === allWarships.length
+    );
+  }
+
+  private onSelectAllWarships() {
+    const allWarships = this.getAllWarships();
     if (allWarships.length === 0) return;
 
     if (this.selectedUnit) {
       this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
     }
-    this.eventBus.emit(new UnitSelectionEvent(null, true, allWarships));
+    this.eventBus.emit(
+      new UnitSelectionEvent(null, !this.selectedAllWarships(), allWarships),
+    );
   }
 
   /**
