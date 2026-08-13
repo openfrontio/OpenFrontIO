@@ -37,7 +37,14 @@ import {
   ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
-import { getAuthHeader, getPlayToken, logOut, userAuth } from "./Auth";
+import { UserSettings } from "../core/game/UserSettings";
+import {
+  getAuthHeader,
+  getPlayToken,
+  isSessionActive,
+  logOut,
+  userAuth,
+} from "./Auth";
 import { ClientEnv } from "./ClientEnv";
 
 export async function fetchPlayerById(
@@ -175,7 +182,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     try {
       const userAuthResult = await userAuth();
       if (!userAuthResult) return false;
-      const { jwt } = userAuthResult;
+      const { jwt, claims } = userAuthResult;
 
       // Get the user object
       const response = await fetch(getApiBase() + "/users/@me", {
@@ -195,6 +202,13 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         console.error("Invalid response", error);
         return false;
       }
+      // Activate this player's cosmetic selections (and adopt any made while
+      // logged out) before the profile is handed to callers — but not if the
+      // session changed (logout, account switch) while the request was in
+      // flight: a stale response must not reactivate the old player's scope.
+      if (isSessionActive(claims.sub)) {
+        UserSettings.setPlayerId(result.data.player.publicId);
+      }
       return result.data;
     } catch (e) {
       return false;
@@ -205,6 +219,61 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
 
 export function invalidateUserMe() {
   __userMe = null;
+}
+
+export type DeleteAccountResult =
+  | { ok: true }
+  // 401: missing/unknown/expired refresh token — already logged out, and the
+  // server cleared the cookie.
+  | { ok: false; code: "logged_out" }
+  // 403: refused by policy. `message` is the server's player-facing reason
+  // (root player / banned account), shown as-is.
+  | { ok: false; code: "forbidden"; message?: string }
+  // 409: the player authored content other players depend on — deletion needs
+  // support. The body's message is for support, not end users.
+  | { ok: false; code: "blocked" }
+  // Anything else, including 429 rate limiting: the client shows a
+  // "contact support" failure.
+  | { ok: false; code: "failed" };
+
+// DELETE /users/@me — deletes the account immediately and irreversibly. The
+// HttpOnly refresh cookie is the credential (same as /auth/logout), so no
+// Authorization header. On 204 every session on every device is invalidated
+// and the cookie is cleared — callers drop local auth state themselves and
+// must NOT call /auth/logout afterwards.
+export async function deleteAccount(): Promise<DeleteAccountResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (response.status === 401) {
+      return { ok: false, code: "logged_out" };
+    }
+    if (response.status === 403) {
+      const body = await response.json().catch(() => null);
+      return {
+        ok: false,
+        code: "forbidden",
+        message: typeof body?.message === "string" ? body.message : undefined,
+      };
+    }
+    if (response.status === 409) {
+      return { ok: false, code: "blocked" };
+    }
+    if (!response.ok) {
+      console.error(
+        "deleteAccount: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("deleteAccount: request failed", e);
+    return { ok: false, code: "failed" };
+  }
 }
 
 // POST /marketing/consent — record the player's marketing-email choice

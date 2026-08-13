@@ -10,6 +10,15 @@
     "claim_failed": "Failed to claim reward. Please try again.",
     "clear_session": "Clear Session",
     "connected_as": "Connected as",
+    "delete_account_blocked": "Your account can't be deleted automatically. Please contact support.",
+    "delete_account_button": "Delete Account",
+    "delete_account_confirm_button": "Permanently Delete",
+    "delete_account_confirm_word": "DELETE",
+    "delete_account_desc": "Permanently delete your account and all of its data.",
+    "delete_account_failed": "Delete failed, please contact support at support@openfront.io",
+    "delete_account_title": "Delete account",
+    "delete_account_type_to_confirm": "Type \"{word}\" to confirm",
+    "delete_account_warning": "Your account will be deleted immediately and permanently. There is no grace period and no way to recover it. You will be logged out on all devices.",
     "email_placeholder": "Enter your email address",
     "enter_email_address": "Please enter an email address",
     "failed_to_send_recovery_email": "Failed to send recovery email",
@@ -426,7 +435,6 @@
   "cosmetics": {
     "adfree": "ad-free for life!",
     "artist_label": "Artist:",
-    "button_title": "Pick your cosmetics!",
     "color_label": "Color:",
     "common": "Common",
     "epic": "Epic",
@@ -440,7 +448,6 @@
     "search": "Search...",
     "signup_bonus": "Signup bonus",
     "soft": "Caps",
-    "title": "Cosmetics",
     "uncommon": "Uncommon",
     "unlimited_ranked": "Unlimited ranked",
     "unlimited_ranked_info": "No limit on how many ranked games you can play.",
@@ -553,11 +560,6 @@
     "live": "LIVE",
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
-  },
-  "flag_input": {
-    "button_title": "Pick a flag!",
-    "search_flag": "Search...",
-    "title": "Flag"
   },
   "friends": {
     "accept": "Accept",
@@ -905,6 +907,22 @@
     "waiting": "Waiting for players...",
     "water_nukes": "Water nukes"
   },
+  "inventory": {
+    "equipped": "Equipped",
+    "load_failed": "Couldn't load your inventory. Please reload and try again.",
+    "loading": "Loading inventory…",
+    "loadout": "Your loadout",
+    "loadout_category_label": "{category}: {summary}",
+    "no_owned_crowns": "You don't own any crowns yet.",
+    "no_owned_effects_of_type": "You don't own any {type} effects yet.",
+    "no_owned_skins": "You don't own any skins yet.",
+    "retry": "Retry",
+    "selected_cosmetic": "Selected {name}",
+    "selected_cosmetic_variant": "{name} ({variant})",
+    "showing_effects": "Effects equipped: {count}",
+    "title": "Inventory",
+    "unequip": "Unequip"
+  },
   "ios_banner": {
     "got_it": "Got it",
     "how": "How",
@@ -996,6 +1014,7 @@
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
     "help": "Help",
+    "inventory": "Inventory",
     "join": "Join Lobby",
     "leaderboard": "Leaderboard",
     "login_discord": "Login with Discord",
@@ -1566,9 +1585,11 @@
     "merch": "Merch",
     "merch_blurb": "Get OpenFront merch shipped to your door!",
     "merch_visit_store": "Visit Store",
+    "no_affiliate_items": "No affiliate items available. Check back later for new items.",
     "no_crowns": "No crowns available. Check back later for new items.",
     "no_effects": "No effects available. Check back later for new items.",
     "no_flags": "No flags available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_subscriptions": "No subscriptions available. Check back later for new items.",
     "no_tribes": "You haven't bought any tribe names yet.",
@@ -1641,8 +1662,7 @@
     "pattern": {
       "default": "Default"
     },
-    "select_skin": "Skin",
-    "selected": "selected"
+    "select_skin": "Skin"
   },
   "token_login_modal": {
     "logging_in": "Logging in...",

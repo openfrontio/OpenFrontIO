@@ -358,7 +358,8 @@ export class WorldTextPass {
     this.ghostCostLabel = {
       x: label.tileX,
       y: label.tileY,
-      text: renderNumber(label.cost),
+      // cost 0 means "no cost line" (multiplier-badge-only label).
+      text: label.cost > 0 ? renderNumber(label.cost) : "",
       topText: label.topText,
       colorR: r,
       colorG: g,
@@ -520,30 +521,32 @@ export class WorldTextPass {
         }
       }
 
-      layoutString(
-        label.text,
-        this.glyph,
-        this.kernTable,
-        this.charCodes,
-        this.cursors,
-      );
-      const len = Math.min(label.text.length, MAX_CHARS);
-      for (let i = 0; i < len; i++) {
-        if (this.charCodes[i] === 0) continue;
-        if (count >= this.maxInstances) this.growBuffer();
+      if (label.text) {
+        layoutString(
+          label.text,
+          this.glyph,
+          this.kernTable,
+          this.charCodes,
+          this.cursors,
+        );
+        const len = Math.min(label.text.length, MAX_CHARS);
+        for (let i = 0; i < len; i++) {
+          if (this.charCodes[i] === 0) continue;
+          if (count >= this.maxInstances) this.growBuffer();
 
-        const off = count * FLOATS_PER_INSTANCE;
-        this.instanceData[off + 0] = label.x;
-        this.instanceData[off + 1] = ghostY;
-        this.instanceData[off + 2] = this.cursors[i];
-        this.instanceData[off + 3] = this.charCodes[i];
-        this.instanceData[off + 4] = 1;
-        this.instanceData[off + 5] = label.colorR;
-        this.instanceData[off + 6] = label.colorG;
-        this.instanceData[off + 7] = label.colorB;
-        this.instanceData[off + 8] = ghostScale;
-        this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
-        count++;
+          const off = count * FLOATS_PER_INSTANCE;
+          this.instanceData[off + 0] = label.x;
+          this.instanceData[off + 1] = ghostY;
+          this.instanceData[off + 2] = this.cursors[i];
+          this.instanceData[off + 3] = this.charCodes[i];
+          this.instanceData[off + 4] = 1;
+          this.instanceData[off + 5] = label.colorR;
+          this.instanceData[off + 6] = label.colorG;
+          this.instanceData[off + 7] = label.colorB;
+          this.instanceData[off + 8] = ghostScale;
+          this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
+          count++;
+        }
       }
     }
 

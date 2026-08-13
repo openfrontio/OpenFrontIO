@@ -77,8 +77,59 @@ const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
   team: TEAM_STATS_COLUMNS_KEY,
 };
 
+/**
+ * Cosmetic selections are stored per player: while logged in, the storage key
+ * is suffixed with the player's publicId so selections survive logout and are
+ * restored on the next login (#4955). Logged out, the bare key is used.
+ */
+const PER_PLAYER_KEYS: readonly string[] = [
+  PATTERN_KEY,
+  FLAG_KEY,
+  CROWN_KEY,
+  EFFECTS_KEY,
+];
+
 export class UserSettings {
   private static cache = new Map<string, string | null>();
+  /** publicId of the logged-in player, or null when logged out. */
+  private static playerId: string | null = null;
+
+  /**
+   * Sets which player's cosmetic selections are active. Called with the
+   * player's publicId when /users/@me resolves, and with null on logout.
+   *
+   * Selections made while logged out — including values written by builds
+   * that predate per-player keying — are moved into the player's scope,
+   * overwriting the stored ones (the most recent selection wins), so existing
+   * users keep their cosmetics.
+   */
+  static setPlayerId(playerId: string | null): void {
+    if (UserSettings.playerId === playerId) return;
+    UserSettings.playerId = playerId;
+    const settings = new UserSettings();
+    if (playerId !== null) {
+      for (const key of PER_PLAYER_KEYS) {
+        const bare = localStorage.getItem(key);
+        if (bare === null) continue;
+        const scopedKey = `${key}:${playerId}`;
+        localStorage.setItem(scopedKey, bare);
+        UserSettings.cache.set(scopedKey, bare);
+        localStorage.removeItem(key);
+        UserSettings.cache.set(key, null);
+      }
+    }
+    // The active selections changed with the identity; let listeners re-read.
+    for (const key of PER_PLAYER_KEYS) {
+      settings.emitChange(key, settings.getCached(key));
+    }
+  }
+
+  private storageKey(key: string): string {
+    if (UserSettings.playerId !== null && PER_PLAYER_KEYS.includes(key)) {
+      return `${key}:${UserSettings.playerId}`;
+    }
+    return key;
+  }
 
   private emitChange(key: string, value: any): void {
     try {
@@ -95,23 +146,28 @@ export class UserSettings {
   }
 
   private getCached(key: string): string | null {
-    if (!UserSettings.cache.has(key)) {
-      UserSettings.cache.set(key, localStorage.getItem(key));
+    const storageKey = this.storageKey(key);
+    if (!UserSettings.cache.has(storageKey)) {
+      UserSettings.cache.set(storageKey, localStorage.getItem(storageKey));
     }
-    return UserSettings.cache.get(key) ?? null;
+    return UserSettings.cache.get(storageKey) ?? null;
   }
 
+  // Change events always use the base key — listeners subscribe with the
+  // exported key constants, not the per-player storage key.
   private setCached(key: string, value: string, emitChange: boolean = true) {
-    localStorage.setItem(key, value);
-    UserSettings.cache.set(key, value);
+    const storageKey = this.storageKey(key);
+    localStorage.setItem(storageKey, value);
+    UserSettings.cache.set(storageKey, value);
     if (emitChange) {
       this.emitChange(key, value);
     }
   }
 
   public removeCached(key: string, emitChange: boolean = true) {
-    localStorage.removeItem(key);
-    UserSettings.cache.set(key, null);
+    const storageKey = this.storageKey(key);
+    localStorage.removeItem(storageKey);
+    UserSettings.cache.set(storageKey, null);
     if (emitChange) {
       this.emitChange(key, null);
     }

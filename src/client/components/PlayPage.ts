@@ -120,35 +120,20 @@ export class PlayPage extends LitElement {
           <div class="flex flex-col gap-2 min-w-0">
             <news-box></news-box>
 
-            <!-- Identity row: flag + tag/username + skin in one line. Flag sits before the
-                 tag (where it shows in-game), skin at the end; both preview the current
-                 selection. Replaces the old separate SELECT SKIN / SELECT FLAG buttons. -->
+            <!-- Identity row: username over the currently selected cosmetic background. -->
             <div
               class="relative bg-surface border-y border-white/10 overflow-visible flex items-center sm:min-h-[60px] sm:flex-1 sm:z-20 sm:border-y-0 sm:rounded-xl"
             >
-              <!-- Selected skin/pattern fills the bubble like the player's territory in
-                   game (the skin button updates it), shown as a frame around the controls. -->
+              <!-- Selected skin/pattern fills the bubble like the player's territory in game. -->
               <cosmetic-background
                 class="absolute inset-0 z-0 overflow-hidden sm:rounded-xl pointer-events-none"
               ></cosmetic-background>
-              <!-- Controls share one surface bubble so it reads as a single clean bar
-                   (buttons blend at rest and only highlight on hover). -->
               <div
-                class="relative z-10 flex h-full w-full min-w-0 items-center gap-2 bg-surface/80 p-1 sm:rounded-xl"
+                class="relative z-10 flex h-full w-full min-w-0 items-center bg-surface/80 p-1 sm:rounded-xl"
               >
-                <flag-input
-                  show-select-label
-                  class="shrink-0 h-full max-h-[52px] aspect-square"
-                ></flag-input>
                 <username-input
                   class="flex-1 min-w-0 h-10 sm:h-[50px]"
                 ></username-input>
-                <!-- Raised 3D shadow so the skin pops off the bar and is easy to spot. -->
-                <cosmetics-input
-                  id="cosmetics-input-mobile"
-                  show-select-label
-                  class="no-crazygames shrink-0 h-full max-h-[52px] aspect-square rounded-lg [box-shadow:0_3px_6px_#00000099,0_1px_2px_#000000cc]"
-                ></cosmetics-input>
               </div>
             </div>
           </div>

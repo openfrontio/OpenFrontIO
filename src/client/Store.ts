@@ -1,15 +1,17 @@
-import type { TemplateResult } from "lit";
+import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+import { Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CosmeticButton";
+import "./components/CosmeticCard";
+import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
 import "./components/NotLoggedInWarning";
+import "./components/PurchaseButton";
+import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -17,6 +19,7 @@ import {
   groupCosmeticVariants,
   purchaseCosmetic,
   resolveCosmetics,
+  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -31,6 +34,15 @@ type StoreTab =
 const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
+interface StoreBrowserOptions {
+  emptyTranslationKey: string;
+  userHasSubscription?: boolean;
+  trailingContent?: TemplateResult;
+  gridClass?: string;
+  cardClass?: string;
+  emptyClass?: string;
+}
+
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
   protected routerName = "store";
@@ -38,6 +50,8 @@ export class StoreModal extends BaseModal {
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+  private inspected: ResolvedCosmetic | null = null;
+  private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -64,12 +78,40 @@ export class StoreModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
+    // Rows re-wrap on resize, so which currencies share a row changes with it.
+    if (typeof ResizeObserver !== "undefined") {
+      this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));
+      this.rowObserver.observe(this);
+    }
   }
+
+  disconnectedCallback() {
+    this.rowObserver?.disconnect();
+    if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
+    this.alignFrame = null;
+    super.disconnectedCallback();
+  }
+
+  protected updated(changed: PropertyValues) {
+    super.updated(changed);
+    // The cards are nested components, so their purchase buttons only exist
+    // (and only have positions) after their own updates commit — a frame later.
+    alignPurchaseRows(this);
+    if (typeof requestAnimationFrame === "undefined") return;
+    this.alignFrame ??= requestAnimationFrame(() => {
+      this.alignFrame = null;
+      alignPurchaseRows(this);
+    });
+  }
+
+  private rowObserver: ResizeObserver | null = null;
+  private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
-    this.refresh();
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    await this.refresh();
   }
 
   private renderHeader(): TemplateResult {
@@ -93,132 +135,225 @@ export class StoreModal extends BaseModal {
     });
   }
 
-  private renderPatternGrid(): TemplateResult {
-    const items = resolveCosmetics(
+  private resolvedPurchasables(): ResolvedCosmetic[] {
+    return resolveCosmetics(
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
-    ).filter(
-      (r) =>
-        (r.type === "pattern" || r.type === "skin") &&
-        r.relationship !== "blocked" &&
-        r.relationship !== "owned",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_skins")}
-      </div>`;
-    }
-
-    // Collapse colour-palette variants of the same pattern into one tile; the
-    // variants become clickable colour swatches on the cosmetic-button.
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${groupCosmeticVariants(items).map(
-          (group) => html`
-            <cosmetic-button
-              .resolved=${group[0]}
-              .variants=${group}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    ).filter((resolved) => resolved.relationship === "purchasable");
   }
 
-  private renderFlagGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        r.type === "flag" &&
-        r.relationship !== "blocked" &&
-        r.relationship !== "owned",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_flags")}
-      </div>`;
+  private cosmeticsGroups(
+    tab: CosmeticsSubTab,
+  ): readonly (readonly ResolvedCosmetic[])[] {
+    const items = this.resolvedPurchasables();
+    if (tab === "flags") {
+      return items
+        .filter((resolved) => resolved.type === "flag")
+        .map((r) => [r]);
     }
-
-    const selectedFlag = new UserSettings().getFlag() ?? "";
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .selected=${selectedFlag === r.key}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    if (tab === "crowns") {
+      return items
+        .filter((resolved) => resolved.type === "crown")
+        .map((r) => [r]);
+    }
+    return groupCosmeticVariants(
+      items.filter(
+        (resolved) => resolved.type === "pattern" || resolved.type === "skin",
+      ),
+    );
   }
 
-  private renderCrownGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        r.type === "crown" &&
-        r.relationship !== "blocked" &&
-        r.relationship !== "owned",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_crowns")}
-      </div>`;
+  private groupsForTab(tab: string): readonly (readonly ResolvedCosmetic[])[] {
+    if (this.affiliateCode) {
+      return groupCosmeticVariants(
+        this.resolvedPurchasables().filter(
+          (resolved) => resolved.cosmetic?.affiliateCode === this.affiliateCode,
+        ),
+      );
     }
+    if (tab === "cosmetics") {
+      return this.cosmeticsGroups(this.cosmeticsSubTab);
+    }
+    if (tab === "effects") {
+      return this.resolvedPurchasables()
+        .filter((resolved) => resolved.type === "effect")
+        .map((resolved) => [resolved]);
+    }
+    if (tab === "packs") {
+      return this.resolvedPurchasables()
+        .filter((resolved) => resolved.type === "pack")
+        .map((resolved) => [resolved]);
+    }
+    if (tab === "subscriptions") {
+      return resolveCosmetics(
+        this.cosmetics,
+        this.userMeResponse,
+        this.affiliateCode,
+      )
+        .filter(
+          (resolved) =>
+            resolved.type === "subscription" &&
+            (resolved.relationship === "purchasable" ||
+              resolved.relationship === "owned"),
+        )
+        .map((resolved) => [resolved]);
+    }
+    return [];
+  }
 
-    const selectedCrown = new UserSettings().getSelectedCrownName() ?? "";
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .selected=${`crown:${selectedCrown}` === r.key}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+  private inspect(resolved: ResolvedCosmetic): void {
+    this.inspected = resolved;
+    this.requestUpdate();
+  }
+
+  private reconcileInspection(
+    groups: readonly (readonly ResolvedCosmetic[])[],
+  ): void {
+    const visible = groups.flat();
+    const current = visible.find((item) => item.key === this.inspected?.key);
+    this.inspected = current ?? groups[0]?.[0] ?? null;
+  }
+
+  private selectVisible(
+    groups: readonly (readonly ResolvedCosmetic[])[],
+  ): void {
+    this.visibleGroups = groups;
+    this.reconcileInspection(groups);
+  }
+
+  protected onTabEnter(key: string): void {
+    this.selectVisible(this.groupsForTab(key));
+    this.requestUpdate();
+  }
+
+  private setCosmeticsSubTab(tab: CosmeticsSubTab): void {
+    this.cosmeticsSubTab = tab;
+    this.selectVisible(this.cosmeticsGroups(tab));
+    this.requestUpdate();
+  }
+
+  private renderCosmeticCards(
+    groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
+    userHasSubscription = false,
+    cardClass = "block h-full min-w-0",
+  ): TemplateResult {
+    return html`${groups.map((group) => {
+      const focused = group.find((item) => item.key === this.inspected?.key);
+      const active = focused ?? group[0];
+      const action =
+        active.type === "subscription" && active.relationship === "owned"
+          ? // Same box as a purchase button (w-full, min-h-11, text-base) so the
+            // owned tier reads as a peer of the other tiers' switch action
+            // instead of a small tag tucked to one side of the card.
+            html`<span
+              data-store-status
+              class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2 py-1.5 text-base font-bold text-emerald-300"
+              >${translateText("store.subscribed")}</span
+            >`
+          : this.renderPurchaseAction(active, userHasSubscription);
+      return html`<cosmetic-card
+        data-store-product
+        data-cosmetic-key=${group[0].key}
+        class=${cardClass}
+        .resolved=${group[0]}
+        .variants=${group.length > 1 ||
+        group[0].type === "pattern" ||
+        group[0].type === "skin"
+          ? group
+          : []}
+        .activeVariantKey=${active.key}
+        .actionContent=${action}
+        state=${focused ? "focused" : "idle"}
+        .onActivate=${(resolved: ResolvedCosmetic) => this.inspect(resolved)}
+        .onVariantActivate=${(resolved: ResolvedCosmetic) =>
+          this.inspect(resolved)}
+      ></cosmetic-card>`;
+    })}`;
+  }
+
+  private renderPurchaseAction(
+    resolved: ResolvedCosmetic,
+    userHasSubscription: boolean,
+  ): TemplateResult {
+    const priced = resolved.cosmetic as {
+      product?: Product | null;
+      priceHard?: number;
+      priceSoft?: number;
+      rarity?: string;
+    } | null;
+    const isPurchasable = resolved.relationship === "purchasable";
+    const product = isPurchasable ? (priced?.product ?? null) : null;
+    const priceHard = isPurchasable ? priced?.priceHard : undefined;
+    const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
+    const purchase = (method: "dollar" | "hard" | "soft") =>
+      purchaseCosmetic(resolved, method);
+    // Reserved currency lines are assigned per visual row by
+    // alignPurchaseRows() once the grid has laid out.
+    return html`<purchase-button
+      .product=${product}
+      .priceHard=${priceHard ?? null}
+      .priceSoft=${priceSoft ?? null}
+      .rarity=${priced?.rarity ?? "common"}
+      .itemName=${cosmeticSelectionLabel(resolved)}
+      .dollarLabelKey=${resolved.type === "subscription" && userHasSubscription
+        ? "store.switch_button"
+        : ""}
+      .priceSuffix=${resolved.type === "subscription"
+        ? translateText("store.price_per_month")
+        : ""}
+      .onPurchaseDollar=${product ? () => purchase("dollar") : undefined}
+      .onPurchaseHard=${priceHard !== undefined
+        ? () => purchase("hard")
+        : undefined}
+      .onPurchaseSoft=${priceSoft !== undefined
+        ? () => purchase("soft")
+        : undefined}
+    ></purchase-button>`;
+  }
+
+  private renderBrowserLayout(
+    cards: TemplateResult,
+    gridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4",
+  ): TemplateResult {
+    return html`<div data-store-browser class="grid grid-cols-1 gap-4 p-3">
+      <div data-store-grid class=${gridClass}>${cards}</div>
+    </div>`;
+  }
+
+  private renderBrowser(
+    groups: readonly (readonly ResolvedCosmetic[])[],
+    options: StoreBrowserOptions,
+  ): TemplateResult {
+    const cards =
+      groups.length === 0
+        ? options.trailingContent
+          ? html``
+          : html`<div
+              class=${`${options.emptyClass ?? "col-span-full"} py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40`}
+            >
+              ${translateText(options.emptyTranslationKey)}
+            </div>`
+        : this.renderCosmeticCards(
+            groups,
+            options.userHasSubscription,
+            options.cardClass,
+          );
+    return this.renderBrowserLayout(
+      html`${cards}${options.trailingContent ?? ""}`,
+      options.gridClass,
+    );
   }
 
   // Skins / Flags / Crowns grouped under one top-level tab; a sub-tab bar
   // (styled like effects-grid's) picks which grid shows.
   private renderCosmeticsPanel(): TemplateResult {
-    let grid: TemplateResult;
-    if (this.cosmeticsSubTab === "flags") {
-      grid = this.renderFlagGrid();
-    } else if (this.cosmeticsSubTab === "crowns") {
-      grid = this.renderCrownGrid();
-    } else {
-      grid = this.renderPatternGrid();
-    }
+    const emptyKey =
+      this.cosmeticsSubTab === "flags"
+        ? "store.no_flags"
+        : this.cosmeticsSubTab === "crowns"
+          ? "store.no_crowns"
+          : "store.no_skins";
     return html`
       <div
         class="flex items-center justify-center gap-6 border-b border-white/10 px-4"
@@ -226,19 +361,18 @@ export class StoreModal extends BaseModal {
         ${COSMETICS_SUB_TABS.map((tab) => {
           const active = this.cosmeticsSubTab === tab;
           return html`<button
-            class="-mb-px border-b-2 px-2 py-3 text-sm font-black uppercase tracking-wider transition-colors ${active
-              ? "border-blue-500 text-blue-400"
-              : "border-transparent text-white/50 hover:text-white/80"}"
-            @click=${() => {
-              this.cosmeticsSubTab = tab;
-              this.requestUpdate();
-            }}
+            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
+              ? "border-malibu-blue text-aquarius"
+              : "border-transparent text-white/40 hover:text-white/70"}"
+            @click=${() => this.setCosmeticsSubTab(tab)}
           >
             ${translateText(`store.${tab}`)}
           </button>`;
         })}
       </div>
-      ${grid}
+      ${this.renderBrowser(this.visibleGroups, {
+        emptyTranslationKey: emptyKey,
+      })}
     `;
   }
 
@@ -287,73 +421,46 @@ export class StoreModal extends BaseModal {
       .cosmetics=${this.cosmetics}
       .userMeResponse=${this.userMeResponse}
       .affiliateCode=${this.affiliateCode}
+      .focusedKey=${this.inspected?.key ?? null}
+      .onPurchaseFocus=${(item: ResolvedCosmetic) => this.inspect(item)}
+      .renderPurchaseAction=${(item: ResolvedCosmetic) =>
+        this.renderPurchaseAction(item, false)}
+      .onVisiblePurchaseItemsChange=${(items: readonly ResolvedCosmetic[]) => {
+        this.selectVisible(items.map((item) => [item]));
+        this.requestUpdate();
+      }}
     ></effects-grid>`;
   }
 
   private renderPackGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter((r) => r.type === "pack" && r.relationship === "purchasable");
-
     // The custom-amount card is always purchasable (priced inline server-side,
     // no catalog entry), and follows the fixed packs at the end of the grid.
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-        <custom-currency-card></custom-currency-card>
-      </div>
-    `;
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_packs",
+      trailingContent: html`<custom-currency-card
+        class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
+      ></custom-currency-card>`,
+      gridClass:
+        "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
+      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      emptyClass:
+        "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
+    });
   }
 
   private renderSubscriptionGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        r.type === "subscription" &&
-        (r.relationship === "purchasable" || r.relationship === "owned"),
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_subscriptions")}
-      </div>`;
-    }
-
     const userHasSubscription =
       this.userMeResponse !== false &&
       this.userMeResponse.player.subscription !== null;
-
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${items.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .onPurchase=${purchaseCosmetic}
-              .userHasSubscription=${userHasSubscription}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_subscriptions",
+      userHasSubscription,
+      gridClass:
+        "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
+      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      emptyClass:
+        "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
+    });
   }
 
   protected renderHeaderSlot() {
@@ -388,44 +495,9 @@ export class StoreModal extends BaseModal {
   }
 
   private renderAffiliateGrid(): TemplateResult {
-    const items = resolveCosmetics(
-      this.cosmetics,
-      this.userMeResponse,
-      this.affiliateCode,
-    ).filter(
-      (r) =>
-        (r.type === "pattern" ||
-          r.type === "skin" ||
-          r.type === "flag" ||
-          r.type === "crown" ||
-          r.type === "effect" ||
-          r.type === "pack") &&
-        r.relationship === "purchasable",
-    );
-
-    if (items.length === 0) {
-      return html`<div
-        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-      >
-        ${translateText("store.no_skins")}
-      </div>`;
-    }
-
-    return html`
-      <div
-        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
-      >
-        ${groupCosmeticVariants(items).map(
-          (group) => html`
-            <cosmetic-button
-              .resolved=${group[0]}
-              .variants=${group}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
-          `,
-        )}
-      </div>
-    `;
+    return this.renderBrowser(this.visibleGroups, {
+      emptyTranslationKey: "store.no_affiliate_items",
+    });
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
@@ -433,11 +505,13 @@ export class StoreModal extends BaseModal {
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
     this.cosmetics ??= await fetchCosmetics();
+    this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
   }
 
   protected onClose(): void {
     this.affiliateCode = null;
+    this.selectVisible(this.groupsForTab(this.activeTab));
   }
 
   public async refresh() {

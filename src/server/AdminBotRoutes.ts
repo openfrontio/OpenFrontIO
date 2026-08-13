@@ -8,7 +8,7 @@ import type {
 } from "express";
 import type { Logger } from "winston";
 import { z } from "zod";
-import { GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/Game";
 import {
   ADMIN_BOT_CLIENT_ID,
   GameConfigSchema,
@@ -17,6 +17,11 @@ import {
 } from "../core/Schemas";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
+
+// Team-pinning caps. A lobby tops out well below these; they exist so a bad
+// request can't allocate unbounded work, matching allowedPublicIds' own cap.
+const MAX_TEAMS = 200;
+const MAX_TEAM_MEMBERS = 50;
 
 function timingSafeEqualStr(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -95,6 +100,48 @@ export function registerAdminBotRoutes(opts: {
         .json({ error: z.prettifyError(listedParsed.error) });
     }
     const listed = listedParsed.data.listed === true;
+
+    // Optional team pinning. Read alongside the config for the same reason as
+    // `listed`: it is not a GameConfig field, so the parse above strips it and it
+    // can never be smuggled in through update_game_config after the fact.
+    //
+    // Entries are publicIds. assignTeams honours a pinned slot unconditionally —
+    // before and regardless of clan/friend grouping — so this is how a tournament
+    // bot says who plays with whom instead of letting the balancer decide.
+    const teamsParsed = z
+      .object({
+        teams: z
+          .array(z.array(z.string()).max(MAX_TEAM_MEMBERS))
+          .max(MAX_TEAMS)
+          .optional(),
+      })
+      .safeParse(req.body ?? {});
+    if (!teamsParsed.success) {
+      return res
+        .status(400)
+        .json({ error: z.prettifyError(teamsParsed.error) });
+    }
+    const teams = teamsParsed.data.teams;
+    if (teams !== undefined) {
+      // FFA never runs assignTeams, so a pin there would be silently inert.
+      // Refuse rather than accept a request that cannot do what it asks.
+      if (config.gameMode !== GameMode.Team) {
+        return res.status(400).json({ error: "teams require gameMode Team" });
+      }
+      // A publicId in two teams has no single answer (findIndex takes the first),
+      // so the caller would get a team it did not ask for.
+      const seen = new Set<string>();
+      for (const team of teams) {
+        for (const publicId of team) {
+          if (seen.has(publicId)) {
+            return res
+              .status(400)
+              .json({ error: `publicId in more than one team: ${publicId}` });
+          }
+          seen.add(publicId);
+        }
+      }
+    }
     // Private only: reject Public and Singleplayer. An omitted gameType defaults
     // to Private in createGame, so it's allowed through.
     if (config.gameType !== undefined && config.gameType !== GameType.Private) {
@@ -125,7 +172,14 @@ export function registerAdminBotRoutes(opts: {
       return res.status(500).json({ error: "Could not allocate game id" });
     }
 
-    const game = gm.createGame(id, config, undefined);
+    const game = gm.createGame(
+      id,
+      config,
+      undefined,
+      undefined,
+      undefined,
+      teams,
+    );
     if (game === null) {
       return res.status(409).json({ error: "Game ID already exists" });
     }

@@ -3,7 +3,7 @@
   "name": "Sol",
   "translation_key": "map.sol",
   "categories": ["cosmic", "new"],
-  "multiplayer_frequency": 10,
+  "multiplayer_frequency": 20,
   "nations": [
     {
       "coordinates": [2419, 1241],
@@ -93,6 +93,11 @@
     {
       "coordinates": [272, 1412],
       "name": "Pluto",
+      "flag": "pluto"
+    },
+    {
+      "coordinates": [157, 1513],
+      "name": "Charon",
       "flag": "pluto"
     },
     {
@@ -216,19 +221,49 @@
       "flag": "uranus"
     },
     {
-      "coordinates": [2393, 2412],
-      "name": "Jupiter Trojans",
-      "flag": "jupiter"
-    },
-    {
-      "coordinates": [2331, 90],
-      "name": "Hilda Asteroids",
-      "flag": "jupiter"
-    },
-    {
       "coordinates": [3476, 143],
       "name": "Neptune Trojans",
       "flag": "neptune"
+    },
+    {
+      "coordinates": [809, 1173],
+      "name": "Pioneer 10",
+      "flag": "us"
+    },
+    {
+      "coordinates": [3474, 1313],
+      "name": "Pioneer 11",
+      "flag": "us"
+    },
+    {
+      "coordinates": [3871, 1029],
+      "name": "Voyager 2",
+      "flag": "us"
+    },
+    {
+      "coordinates": [826, 1509],
+      "name": "Voyager 1",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1961, 1625],
+      "name": "Venera 9",
+      "flag": "ussr"
+    },
+    {
+      "coordinates": [2467, 1787],
+      "name": "Mars Reconnaissance Orbiter",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2566, 1111],
+      "name": "BepiColombo",
+      "flag": "eu"
+    },
+    {
+      "coordinates": [2042, 869],
+      "name": "Sputnik 1",
+      "flag": "ussr"
     },
     {
       "coordinates": [1277, 2430],
@@ -236,5 +271,195 @@
       "flag": "uranus"
     }
   ],
-  "themes": ["space"]
+  "themes": ["space"],
+  "custom_tribes": [
+    {
+      "coordinates": [237, 727],
+      "name": "Actaea"
+    },
+    {
+      "coordinates": [352, 1554],
+      "name": "Hydra"
+    },
+    {
+      "coordinates": [446, 1408],
+      "name": "Kerberos"
+    },
+    {
+      "coordinates": [324, 1284],
+      "name": "Nix"
+    },
+    {
+      "coordinates": [186, 1319],
+      "name": "Styx"
+    },
+    {
+      "coordinates": [498, 2453],
+      "name": "Weywot"
+    },
+    {
+      "coordinates": [1475, 185],
+      "name": "153 Hilda"
+    },
+    {
+      "coordinates": [1564, 92],
+      "name": "190 Ismene"
+    },
+    {
+      "coordinates": [1647, 165],
+      "name": "334 Chicago"
+    },
+    {
+      "coordinates": [1741, 79],
+      "name": "361 Bononia"
+    },
+    {
+      "coordinates": [1759, 178],
+      "name": "499 Venusia"
+    },
+    {
+      "coordinates": [1868, 57],
+      "name": "748 Simeïsa"
+    },
+    {
+      "coordinates": [1959, 78],
+      "name": "958 Asplinda"
+    },
+    {
+      "coordinates": [2074, 9],
+      "name": "1038 Tuckia"
+    },
+    {
+      "coordinates": [2139, 50],
+      "name": "1144 Oda"
+    },
+    {
+      "coordinates": [2146, 158],
+      "name": "1162 Larissa"
+    },
+    {
+      "coordinates": [2325, 81],
+      "name": "1180 Rita"
+    },
+    {
+      "coordinates": [2437, 23],
+      "name": "1202 Marina"
+    },
+    {
+      "coordinates": [2473, 106],
+      "name": "1212 Francette"
+    },
+    {
+      "coordinates": [2636, 86],
+      "name": "1256 Normannia"
+    },
+    {
+      "coordinates": [2678, 13],
+      "name": "1268 Libya"
+    },
+    {
+      "coordinates": [2720, 172],
+      "name": "1269 Rollandia"
+    },
+    {
+      "coordinates": [2852, 169],
+      "name": "1345 Potomac"
+    },
+    {
+      "coordinates": [2922, 275],
+      "name": "1439 Vogtia"
+    },
+    {
+      "coordinates": [1469, 2264],
+      "name": "617 Patroclus"
+    },
+    {
+      "coordinates": [1626, 2329],
+      "name": "884 Priamus"
+    },
+    {
+      "coordinates": [1569, 2404],
+      "name": "1172 Äneas"
+    },
+    {
+      "coordinates": [1743, 2341],
+      "name": "1173 Anchises"
+    },
+    {
+      "coordinates": [1786, 2505],
+      "name": "1208 Troilus"
+    },
+    {
+      "coordinates": [1829, 2424],
+      "name": "1867 Deiphobus"
+    },
+    {
+      "coordinates": [2001, 2459],
+      "name": "1870 Glaukos"
+    },
+    {
+      "coordinates": [2042, 2386],
+      "name": "1871 Astyanax"
+    },
+    {
+      "coordinates": [2157, 2469],
+      "name": "1872 Helenos"
+    },
+    {
+      "coordinates": [2324, 2483],
+      "name": "1873 Agenor"
+    },
+    {
+      "coordinates": [2387, 2404],
+      "name": "2207 Antenor"
+    },
+    {
+      "coordinates": [2496, 2434],
+      "name": "2223 Sarpedon"
+    },
+    {
+      "coordinates": [2683, 2382],
+      "name": "2241 Alcathous"
+    },
+    {
+      "coordinates": [2689, 2499],
+      "name": "2357 Phereclos"
+    },
+    {
+      "coordinates": [2805, 2444],
+      "name": "2363 Cebriones"
+    },
+    {
+      "coordinates": [2938, 2335],
+      "name": "2594 Acamas"
+    },
+    {
+      "coordinates": [3038, 2294],
+      "name": "2674 Pandarus"
+    },
+    {
+      "coordinates": [3986, 201],
+      "name": "Vanth"
+    },
+    {
+      "coordinates": [4207, 1511],
+      "name": "Dysnomia"
+    },
+    {
+      "coordinates": [3879, 2327],
+      "name": "Namaka"
+    },
+    {
+      "coordinates": [3923, 2498],
+      "name": "Hiʻiaka"
+    },
+    {
+      "coordinates": [2077, 1917],
+      "name": "Phobos"
+    },
+    {
+      "coordinates": [2296, 1714],
+      "name": "Deimos"
+    }
+  ]
 }
