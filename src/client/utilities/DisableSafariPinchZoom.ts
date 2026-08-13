@@ -34,3 +34,67 @@ export function installSafariPinchZoomBlocker(
     target.addEventListener(type, block);
   }
 }
+
+/** Two taps this close together in time and space form a double-tap. */
+const DOUBLE_TAP_WINDOW_MS = 350;
+const DOUBLE_TAP_RADIUS_PX = 30;
+
+const INTERACTIVE_TARGET_SELECTOR =
+  "a[href], button, input, label, select, summary, textarea, [contenteditable], [role='button']";
+
+function tapsInteractiveElement(e: Event): boolean {
+  return e
+    .composedPath()
+    .some(
+      (el) => el instanceof Element && el.matches(INTERACTIVE_TARGET_SELECTOR),
+    );
+}
+
+/**
+ * Blocks the page-level double-tap "smart zoom" gesture on Safari / WebKit.
+ *
+ * Like pinch zoom, double-tap zoom ignores `user-scalable=no` on iOS.
+ * `touch-action: manipulation` (set on `html`/`body` in index.html) is the
+ * declarative fix, but WebKit still zooms in some cases when the double-tap
+ * lands on HUD chrome, leaving the page stuck at a zoom level the game's own
+ * controls cannot undo. As a fallback, cancel the `touchend` that completes
+ * a double-tap — the event whose default action triggers the zoom.
+ *
+ * Cancelling `touchend` also suppresses the synthesized `click` for that
+ * tap, so the guard skips taps on interactive elements: rapid taps on
+ * buttons keep clicking, and WebKit does not smart-zoom clickable targets
+ * anyway. Map input is unaffected either way — the canvas overlay sets
+ * `touch-action: none` and is driven by pointer events (see
+ * {@link ../InputHandler}), which still fire for cancelled touches.
+ *
+ * @param target - The EventTarget to attach the listener to. Defaults to
+ *   `document`.
+ *
+ * @see https://github.com/openfrontio/OpenFrontIO/issues/4609
+ */
+export function installDoubleTapZoomBlocker(
+  target: EventTarget = document,
+): void {
+  let lastTapTime = Number.NEGATIVE_INFINITY;
+  let lastTapX = 0;
+  let lastTapY = 0;
+
+  target.addEventListener(
+    "touchend",
+    (e) => {
+      const touch = (e as TouchEvent).changedTouches?.[0];
+      const x = touch?.clientX ?? 0;
+      const y = touch?.clientY ?? 0;
+      const isDoubleTap =
+        e.timeStamp - lastTapTime <= DOUBLE_TAP_WINDOW_MS &&
+        Math.hypot(x - lastTapX, y - lastTapY) <= DOUBLE_TAP_RADIUS_PX;
+      lastTapTime = e.timeStamp;
+      lastTapX = x;
+      lastTapY = y;
+      if (isDoubleTap && e.cancelable && !tapsInteractiveElement(e)) {
+        e.preventDefault();
+      }
+    },
+    { passive: false },
+  );
+}

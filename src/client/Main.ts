@@ -77,7 +77,10 @@ import { incrementGamesPlayed, translateText } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 import "./components/BannedModal";
 import "./components/MarketingConsentToast";
-import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
+import {
+  installDoubleTapZoomBlocker,
+  installSafariPinchZoomBlocker,
+} from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -1172,6 +1175,10 @@ const bootstrap = () => {
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
   // on iOS and can softlock the HUD. See issue #2330.
   installSafariPinchZoomBlocker();
+
+  // Same for double-tap "smart zoom", which `touch-action: manipulation`
+  // alone does not reliably stop on iOS. See issue #4609.
+  installDoubleTapZoomBlocker();
 
   initLayout();
   new Client().initialize();
