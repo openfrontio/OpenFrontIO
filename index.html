@@ -45,11 +45,13 @@
         left: 15px !important;
       }
 
-      /* Ensure full viewport height on iOS */
-      html,
-      body {
+      /* Ensure full viewport height on iOS; body grows with content so the
+         document scrolls (see styles.css) */
+      html {
         height: 100%;
         height: -webkit-fill-available;
+      }
+      body {
         min-height: 100%;
         min-height: -webkit-fill-available;
       }
@@ -156,7 +158,7 @@
   </head>
 
   <body
-    class="h-full select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
@@ -195,10 +197,10 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 min-w-0 relative transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
-      <!-- Desktop Top Bar -->
-      <desktop-nav-bar></desktop-nav-bar>
+      <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls) -->
+      <desktop-nav-bar class="sticky top-0 z-[60]"></desktop-nav-bar>
 
       <div
         id="turnstile-container"
