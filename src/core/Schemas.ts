@@ -185,6 +185,53 @@ export const MAX_HOSTED_LOBBIES = 10;
 // deadline; relisting starts a fresh one.
 export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 
+// Featured lobbies get a longer window. A scheduled event announced ahead of
+// time needs the listing to still be up when its audience arrives, and unlike a
+// subscriber sitting on a listing the host is an authenticated admin bot. Only
+// create_game can set it, so the ordinary deadline still governs every
+// player-hosted lobby.
+export const FEATURED_LOBBY_AUTO_START_MS = 10 * 60 * 1000;
+
+// Longest label a featured lobby may show in the browser. Long enough for
+// "Europe — Official OpenFront Masters Scrims", short enough that one row
+// cannot crowd out the rest of the list.
+export const LOBBY_LABEL_MAX = 48;
+
+// Accent applied to a featured lobby's row. A closed set, not free-form CSS:
+// arbitrary styling in a shared list lets one lobby make every other row
+// unreadable.
+export const LobbyAccentSchema = z.enum(["gold", "blue", "green", "red"]);
+export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
+
+// A label is host-supplied text on the front page of the game, so it is
+// sanitised before it can reach anyone: control characters and bidi overrides
+// stripped (they let text render as something entirely different), whitespace
+// collapsed, then length-capped. Rendered as TEXT, never markup — emoji work
+// because they are ordinary codepoints.
+export function sanitizeLobbyLabel(raw: string): string {
+  const kept: string[] = [];
+  // Iterated by CODE POINT, not code unit: an emoji is a surrogate pair, and
+  // slicing one in half is how a label turns into a replacement glyph.
+  for (const ch of raw) {
+    const cp = ch.codePointAt(0)!;
+    if (cp < 0x20 || cp === 0x7f) continue; // C0 controls and DEL
+    if (cp >= 0x80 && cp <= 0x9f) continue; // C1 controls
+    // Bidi overrides, isolates and marks: they make following text render in
+    // another direction, which is how a label claims to be something it isn't.
+    if (cp >= 0x202a && cp <= 0x202e) continue;
+    if (cp >= 0x2066 && cp <= 0x2069) continue;
+    if (cp === 0x200e || cp === 0x200f) continue;
+    kept.push(ch);
+  }
+  return kept
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/(?:)/u)
+    .slice(0, LOBBY_LABEL_MAX)
+    .join("");
+}
+
 export const UsernameSchema = z
   .string()
   .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
@@ -223,6 +270,11 @@ export const GameInfoSchema = z.object({
   // Listed lobbies only: server timestamp when the lobby starts
   // automatically (hosts can't sit on a public listing indefinitely).
   autoStartAt: z.number().optional(),
+  // Featured lobbies only (admin bot). Echoed back so the creating bot can
+  // confirm the request took effect, the same way it checks `listed`.
+  label: z.string().max(LOBBY_LABEL_MAX).optional(),
+  accent: LobbyAccentSchema.optional(),
+  featured: z.boolean().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -235,6 +287,11 @@ export const PublicGameInfoSchema = z.object({
   startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
+  // Featured lobbies only. Both optional so a client on an older build simply
+  // renders the map name as it does today.
+  label: z.string().max(LOBBY_LABEL_MAX).optional(),
+  accent: LobbyAccentSchema.optional(),
+  featured: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({

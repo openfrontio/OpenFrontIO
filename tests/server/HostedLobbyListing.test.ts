@@ -9,8 +9,11 @@ import {
   GameType,
 } from "../../src/core/game/Game";
 import {
+  FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
+  LOBBY_LABEL_MAX,
   MAX_HOSTED_LOBBIES,
+  sanitizeLobbyLabel,
 } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
@@ -904,5 +907,81 @@ describe("WorkerLobbyService hosted lobbies", () => {
     ]);
 
     expect(game.isListed()).toBe(false);
+  });
+});
+
+describe("featured lobbies", () => {
+  beforeEach(() => {
+    // The deadline assertions compare absolute timestamps, so time must not
+    // advance mid-test (the same reason the listing suite fakes timers).
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("is not featured by default and carries no label", () => {
+    const game = makeGame();
+    expect(game.isFeatured()).toBe(false);
+    expect(game.lobbyLabel()).toBeUndefined();
+  });
+
+  it("extends the auto-start deadline to the featured window", () => {
+    const game = makeGame();
+    game.setListed(true);
+    expect(game.autoStartAt()).toBe(Date.now() + HOSTED_LOBBY_AUTO_START_MS);
+    game.setFeatured({ label: "Europe — OFM Scrims" });
+    expect(game.autoStartAt()).toBe(Date.now() + FEATURED_LOBBY_AUTO_START_MS);
+  });
+
+  it("has no deadline at all while unlisted", () => {
+    const game = makeGame();
+    game.setFeatured({ label: "Europe — OFM Scrims" });
+    expect(game.autoStartAt()).toBeUndefined();
+  });
+
+  it("keeps emoji but strips control characters and bidi overrides", () => {
+    // A bidi override renders following text right-to-left, which is how a
+    // label gets to claim it is something it is not.
+    expect(sanitizeLobbyLabel("🏆 OFM\u202E evil\u0000")).toBe("🏆 OFM evil");
+  });
+
+  it("collapses whitespace and caps length", () => {
+    expect(sanitizeLobbyLabel("  a\n\n  b  ")).toBe("a b");
+    expect(sanitizeLobbyLabel("x".repeat(200))).toHaveLength(LOBBY_LABEL_MAX);
+  });
+
+  it("stores a sanitised label, never the raw one", () => {
+    const game = makeGame();
+    game.setFeatured({ label: "  OFM\u0007  Scrims  ", accent: "gold" });
+    expect(game.lobbyLabel()).toBe("OFM Scrims");
+    expect(game.lobbyAccent()).toBe("gold");
+  });
+
+  it("drops a label that sanitises away to nothing", () => {
+    const game = makeGame();
+    game.setFeatured({ label: "\u0000\u202E   " });
+    expect(game.lobbyLabel()).toBeUndefined();
+    expect(game.isFeatured()).toBe(true);
+  });
+
+  it("cannot be featured through update_game_config", () => {
+    const game = makeGame();
+    const result = game.handleIntent(
+      {
+        type: "update_game_config",
+        config: { featured: true, label: "Official Event" },
+      } as any,
+      {
+        clientID: "c1",
+        isLobbyCreator: true,
+        isAdmin: false,
+        isAdminBot: false,
+      },
+    );
+    expect(result.status).toBe(200);
+    expect(game.isFeatured()).toBe(false);
+    expect(game.lobbyLabel()).toBeUndefined();
   });
 });
