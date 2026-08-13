@@ -658,6 +658,18 @@ export class PlayerPanel extends LitElement implements Controller {
       nameCollator.compare(a.displayName(), b.displayName()),
     );
 
+    // Map ally PlayerID → expiry tick so each ally shows its own remaining time.
+    const expiryByAlly = new Map<string, number>();
+    for (const alliance of other.alliances()) {
+      expiryByAlly.set(alliance.other, alliance.expiresAt);
+    }
+    const remainingSecondsFor = (ally: PlayerView): number | null => {
+      const expiresAt = expiryByAlly.get(ally.id());
+      if (expiresAt === undefined) return null;
+      const remainingTicks = expiresAt - this.g.ticks();
+      return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+    };
+
     return html`
       <div class="select-none">
         <div class="flex items-center justify-between mb-2">
@@ -691,18 +703,26 @@ export class PlayerPanel extends LitElement implements Controller {
               ? html`<li class="text-zinc-400 text-[14px] px-1">
                   ${translateText("common.none")}
                 </li>`
-              : alliesSorted.map(
-                  (p) =>
-                    html`<li
-                      class="max-w-full inline-flex items-center gap-1.5
-                             rounded-md border border-white/10 bg-white/5
-                             px-2.5 py-1 text-[14px] text-zinc-100
-                             hover:bg-white/8 active:scale-[0.99] transition"
-                      title=${p.displayName()}
-                    >
-                      <span class="truncate">${p.displayName()}</span>
-                    </li>`,
-                )}
+              : alliesSorted.map((p) => {
+                  const remainingSeconds = remainingSecondsFor(p);
+                  return html`<li
+                    class="max-w-full inline-flex items-center gap-1.5
+                           rounded-md border border-white/10 bg-white/5
+                           px-2.5 py-1 text-[14px] text-zinc-100
+                           hover:bg-white/8 active:scale-[0.99] transition"
+                    title=${p.displayName()}
+                  >
+                    <span class="truncate">${p.displayName()}</span>
+                    ${remainingSeconds !== null
+                      ? html`<span
+                          class="text-[11px] font-semibold leading-none tabular-nums ${this.getExpiryColorClass(
+                            remainingSeconds,
+                          )}"
+                          >${renderDuration(remainingSeconds)}</span
+                        >`
+                      : ""}
+                  </li>`;
+                })}
           </ul>
         </div>
       </div>
