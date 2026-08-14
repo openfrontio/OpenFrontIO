@@ -33,19 +33,22 @@ describe("free-form username length", () => {
     );
   });
 
-  it("keeps the wire schema tolerant of the names it used to accept", () => {
-    // The server validates joins against this schema. Tightening it would
-    // refuse a client that hasn't picked up the lower cap yet, so the cap is
-    // enforced in validateUsername instead.
-    const legacy = "a".repeat(MAX_USERNAME_LENGTH + 5);
-    expect(UsernameSchema.safeParse(legacy).success).toBe(true);
-    expect(validateUsername(legacy).isValid).toBe(false);
-  });
-
-  it("rejects a long name before its other problems", () => {
-    // Length is checked first, so an over-long name reports length rather
-    // than tripping the character rule.
-    const result = validateUsername("!".repeat(MAX_USERNAME_LENGTH + 1));
-    expect(result.isValid).toBe(false);
+  it("carries the same bound on the wire schema", () => {
+    // UsernameSchema duplicates the bounds because it can't import them
+    // (validations/username.ts imports the schema). The server validates
+    // every join against it, so the two drifting apart would let a name
+    // through the form that the server then refuses.
+    expect(
+      UsernameSchema.safeParse("a".repeat(MAX_USERNAME_LENGTH)).success,
+    ).toBe(true);
+    expect(
+      UsernameSchema.safeParse("a".repeat(MAX_USERNAME_LENGTH + 1)).success,
+    ).toBe(false);
+    expect(
+      UsernameSchema.safeParse("a".repeat(MIN_USERNAME_LENGTH)).success,
+    ).toBe(true);
+    expect(
+      UsernameSchema.safeParse("a".repeat(MIN_USERNAME_LENGTH - 1)).success,
+    ).toBe(false);
   });
 });

@@ -12,7 +12,7 @@ import {
   validateClanTag,
   validateUsername,
 } from "../core/validations/username";
-import { getUserMe } from "./Api";
+import { getUserMe, invalidateUserMe } from "./Api";
 import { checkClanTagOwnership } from "./ClanApi";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -137,7 +137,13 @@ export class UsernameInput extends LitElement {
     // server rejecting it does (see Matchmaking). Disbanding counts: a leader
     // who dissolves their clan is no longer a member of anything.
     if (CLAN_REMOVED_EVENTS.includes(e.type) && tag) this.clearClanTag(tag);
-    void this.refreshUserMe().then(() => {
+    // The clan flows invalidate the cache themselves before announcing, so
+    // this doesn't need to force one.
+    this.refreshMembership();
+  };
+
+  private refreshMembership(opts: { fresh?: boolean } = {}) {
+    void this.refreshUserMe(opts).then(() => {
       // Re-run the ownership check against the new membership. The player can
       // reach the clan modal from the "not a member" error itself, so joining
       // is the common way out of it — without this the error keeps play
@@ -145,19 +151,35 @@ export class UsernameInput extends LitElement {
       // dropped anyway, until the tag is edited or reselected by hand.
       if (this.clanTag) this.startClanCheck();
     });
-  };
+  }
 
-  private async refreshUserMe(): Promise<void> {
-    this.userMe = await getUserMe();
-    this.applyVerifiedPreference();
+  private refreshUserMe(opts: { fresh?: boolean } = {}): Promise<void> {
+    // Membership also changes server-side — kicked by another member, or a
+    // pending request approved — and nothing invalidates this tab's cached
+    // profile when it does. Without dropping the cache first, the "refresh"
+    // just re-reads the snapshot taken at page load, and the ownership check
+    // reads that same cache, so a clan the player is no longer in still
+    // passes until the server drops the tag at join.
+    if (opts.fresh) invalidateUserMe();
+    return getUserMe().then((me) => {
+      // A transient failure — network error, non-200 — also resolves to
+      // false, and getUserMe caches it. Treating that as a sign-out here
+      // would turn verified play off and empty the picker for the rest of
+      // the session, with no way to recover, so a background refresh only
+      // ever replaces the snapshot with a better one. A real sign-out
+      // arrives as an explicit userMeResponse event.
+      if (me === false) return;
+      this.userMe = me;
+      this.applyVerifiedPreference();
+    });
   }
 
   private toggleClanMenu = () => {
     this.clanMenuOpen = !this.clanMenuOpen;
     if (this.clanMenuOpen) {
-      // Cheap unless something invalidated the cache — covers any membership
-      // change that didn't reach the listener above.
-      void this.refreshUserMe();
+      // Uncached: the player is asking to see their clans, and a server-side
+      // change never reaches the listener above.
+      this.refreshMembership({ fresh: true });
       // Seed the free-text field only when the current tag isn't one of the
       // player's clans — the list already represents those. It is tracked
       // separately from clanTag so typing a tag that happens to match a clan
@@ -507,7 +529,7 @@ export class UsernameInput extends LitElement {
         <button
           type="button"
           id="clan-tag-button"
-          class="flex h-full w-[8rem] items-center justify-between gap-1 rounded-lg bg-transparent px-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
+          class="flex h-full w-[7.25rem] items-center justify-between gap-0.5 rounded-lg bg-transparent px-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
             ? "ring-2 ring-red-400/70"
             : this.clanMenuOpen
               ? "bg-white/10"
@@ -521,7 +543,7 @@ export class UsernameInput extends LitElement {
           @click=${this.toggleClanMenu}
         >
           <span
-            class="min-w-0 flex-1 truncate text-base font-semibold uppercase tracking-wider text-left ${tag
+            class="min-w-0 flex-1 truncate text-base font-semibold uppercase text-left ${tag
               ? "text-white"
               : "text-white/45"}"
             >${tag || translateText("username.tag")}</span
@@ -534,7 +556,7 @@ export class UsernameInput extends LitElement {
             : html`<svg
                 viewBox="0 0 20 20"
                 fill="currentColor"
-                class="w-3.5 h-3.5 shrink-0 text-white/45"
+                class="w-3 h-3 shrink-0 text-white/45"
                 aria-hidden="true"
               >
                 <path

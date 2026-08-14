@@ -7,7 +7,11 @@ import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
 // component's own behaviour — tag selection, verified-name swapping — rather
 // than the network.
 const getUserMe = vi.fn(async (): Promise<UserMeResponse | false> => false);
-vi.mock("../src/client/Api", () => ({ getUserMe: () => getUserMe() }));
+const invalidateUserMe = vi.fn();
+vi.mock("../src/client/Api", () => ({
+  getUserMe: () => getUserMe(),
+  invalidateUserMe: () => invalidateUserMe(),
+}));
 const checkClanTagOwnership = vi.fn(
   async (
     tag: string,
@@ -85,6 +89,7 @@ beforeEach(() => {
   document.body.innerHTML = "";
   getUserMe.mockReset();
   getUserMe.mockResolvedValue(false);
+  invalidateUserMe.mockReset();
   checkClanTagOwnership.mockReset();
   checkClanTagOwnership.mockImplementation(async (tag: string) => ({
     tag,
@@ -307,6 +312,68 @@ describe("UsernameInput clan tag picker", () => {
 
     expect(el.canPlay()).toBe(true);
     await expect(el.getClanCheck()).resolves.toBe("OF");
+  });
+
+  it("keeps the account snapshot when a refresh fails", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    expect(el.isVerified()).toBe(true);
+
+    // A network error or non-200 also resolves to false — and is cached, so
+    // treating it as a sign-out would strand the player for the session.
+    getUserMe.mockResolvedValue(false);
+    document.dispatchEvent(
+      new CustomEvent("clan-joined", {
+        detail: { tag: "OF" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await settle();
+    await el.updateComplete;
+
+    expect(el.isVerified()).toBe(true);
+    expect(el.getUsername()).toBe("RyanTheGreat");
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+    await el.updateComplete;
+    expect(el.textContent).toContain("OpenFront Official");
+  });
+
+  it("still clears account state on an explicit sign-out", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    localStorage.setItem("username", "MyCoolName");
+    const el = await mount();
+    await signIn(el, premiumUser());
+    expect(el.isVerified()).toBe(true);
+
+    // Distinct from a failed refresh: this one is authoritative.
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: false }),
+    );
+    await el.updateComplete;
+
+    expect(el.isVerified()).toBe(false);
+    expect(el.getUsername()).toBe("MyCoolName");
+  });
+
+  it("bypasses the cached profile when the picker is opened", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+
+    // Being kicked, or having a join request approved, changes membership
+    // server-side without invalidating this tab's cache.
+    getUserMe.mockResolvedValue(
+      premiumUser([{ tag: "NEW", name: "Newcomers" }]),
+    );
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+    await el.updateComplete;
+
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(el.textContent).toContain("Newcomers");
+    expect(el.textContent).not.toContain("OpenFront Official");
   });
 
   it("leaves an unrelated clan's tag alone", async () => {

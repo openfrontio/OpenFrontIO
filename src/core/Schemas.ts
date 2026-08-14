@@ -207,11 +207,14 @@ export const LobbyLabelSchema = z
 export const LobbyAccentSchema = z.enum(["gold", "blue", "green", "red"]);
 export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
 
+// Bounds duplicate MIN/MAX_USERNAME_LENGTH, which can't be imported here:
+// validations/username.ts imports this schema, so the dependency only runs
+// one way. Keep them in step — UsernameValidation.test.ts asserts it.
 export const UsernameSchema = z
   .string()
   .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
   .min(3)
-  .max(27);
+  .max(20);
 
 export const ClanTagSchema = z
   .string()

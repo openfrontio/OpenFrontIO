@@ -4,10 +4,9 @@ import { ClanTagSchema, UsernameSchema } from "../Schemas";
 
 export const MIN_USERNAME_LENGTH = 3;
 // Matches MAX_ACCOUNT_USERNAME_LENGTH so a free-form name can't outgrow the
-// verified name it sits beside. Deliberately below UsernameSchema's own limit:
-// the wire schema stays tolerant of the longer names it accepted before, so a
-// client running an older build — or a name already stored — is never refused
-// a join. Enforcement lives in validateUsername and the input's maxlength.
+// verified name it sits beside. UsernameSchema carries the same bound for the
+// wire; a name already stored under the previous, longer limit is trimmed to
+// fit rather than rejected (see clampUsername in UsernameInput).
 export const MAX_USERNAME_LENGTH = 20;
 export const MIN_CLAN_TAG_LENGTH = 2;
 export const MAX_CLAN_TAG_LENGTH = 5;
@@ -31,15 +30,6 @@ export function validateUsername(username: string): {
   isValid: boolean;
   error?: string;
 } {
-  // Checked ahead of the schema, which still permits the longer names this
-  // cap replaced (see MAX_USERNAME_LENGTH).
-  if (typeof username === "string" && username.length > MAX_USERNAME_LENGTH) {
-    return {
-      isValid: false,
-      error: translateText("username.too_long", { max: MAX_USERNAME_LENGTH }),
-    };
-  }
-
   const parsed = UsernameSchema.safeParse(username);
 
   if (!parsed.success) {
