@@ -21,6 +21,14 @@ export class ConnectedComponents {
   private componentIds: Uint8Array | Uint16Array | null = null;
   private _componentSizes: number[] = [];
 
+  // Incremental update state (see addWaterTiles): water tiles are only
+  // ever ADDED to the map (land→water via water nukes), so components can
+  // only grow or merge — never split.  Merges are tracked with a
+  // union-find alias table instead of relabeling tiles.
+  private parents: number[] = [];
+  private maxId = 0;
+  private landMarker: number = LAND_MARKER;
+
   constructor(
     private readonly map: GameMap,
     private readonly accessTerrainDirectly: boolean = true,
@@ -67,7 +75,108 @@ export class ConnectedComponents {
 
     this.componentIds = ids;
     this.queue = null;
+
+    // Set up union-find state for incremental updates
+    this.landMarker =
+      ids instanceof Uint16Array ? LAND_MARKER_WIDE : LAND_MARKER;
+    this.maxId = nextId;
+    this.parents = new Array(nextId + 1);
+    for (let i = 0; i <= nextId; i++) this.parents[i] = i;
+
     DebugSpan.end();
+  }
+
+  /**
+   * Incrementally add newly converted water tiles (land→water).
+   *
+   * Because water is only ever added, a new water tile either joins an
+   * adjacent component, merges several adjacent components (bridging),
+   * or starts a new component (isolated crater).  Merges are recorded in
+   * a union-find alias table, so no tiles need relabeling and the cost
+   * is O(tiles added) instead of a full-map flood fill.
+   *
+   * Tiles must already be water in the map. No-op before initialize().
+   */
+  addWaterTiles(tiles: Iterable<TileRef>): void {
+    if (!this.componentIds) return;
+
+    for (const tile of tiles) {
+      let ids = this.componentIds;
+      if (ids[tile] !== this.landMarker) continue; // already labeled water
+
+      // Collect distinct component roots among cardinal water neighbors
+      const x = tile % this.width;
+      let r0 = 0;
+      let r1 = 0;
+      let r2 = 0;
+      let r3 = 0;
+      if (tile >= this.width) r0 = this.rootAt(tile - this.width);
+      if (tile < this.lastRowStart) r1 = this.rootAt(tile + this.width);
+      if (x > 0) r2 = this.rootAt(tile - 1);
+      if (x < this.width - 1) r3 = this.rootAt(tile + 1);
+
+      // Canonical id: smallest non-zero root (deterministic)
+      let canon = 0;
+      for (const r of [r0, r1, r2, r3]) {
+        if (r !== 0 && (canon === 0 || r < canon)) canon = r;
+      }
+
+      if (canon === 0) {
+        // Isolated new water: allocate a fresh component id
+        const id = this.allocComponentId();
+        ids = this.componentIds; // may have been upgraded to Uint16Array
+        ids[tile] = id;
+        this._componentSizes[id] = 1;
+        continue;
+      }
+
+      ids[tile] = canon;
+      this._componentSizes[canon] = (this._componentSizes[canon] ?? 0) + 1;
+
+      // Union any other adjacent components into the canonical one
+      for (const r of [r0, r1, r2, r3]) {
+        if (r !== 0 && r !== canon && this.parents[r] !== canon) {
+          this.parents[r] = canon;
+          this._componentSizes[canon] =
+            (this._componentSizes[canon] ?? 0) + (this._componentSizes[r] ?? 0);
+          this._componentSizes[r] = 0;
+        }
+      }
+    }
+  }
+
+  /** Component root of the water tile at index, or 0 if land/unlabeled. */
+  private rootAt(index: number): number {
+    const id = this.componentIds![index];
+    if (id === 0 || id === this.landMarker) return 0;
+    return this.find(id);
+  }
+
+  private find(id: number): number {
+    const parents = this.parents;
+    let root = id;
+    while (parents[root] !== root) root = parents[root];
+    // Path compression (pure optimization — resolved roots are identical)
+    let cur = id;
+    while (parents[cur] !== root) {
+      const next = parents[cur];
+      parents[cur] = root;
+      cur = next;
+    }
+    return root;
+  }
+
+  private allocComponentId(): number {
+    // Saturate at the last usable id (0xFFFF is the land marker after
+    // Uint16Array promotion).  Unreachable in practice.
+    if (this.maxId >= 0xfffe) return this.maxId;
+    const id = ++this.maxId;
+    if (id >= 253 && this.componentIds instanceof Uint8Array) {
+      this.componentIds = this.upgradeToUint16Array(this.componentIds);
+      this.landMarker = LAND_MARKER_WIDE;
+    }
+    this.parents[id] = id;
+    return id;
   }
 
   /**
@@ -205,11 +314,14 @@ export class ConnectedComponents {
 
   getComponentId(tile: TileRef): number {
     if (!this.componentIds) return 0;
-    return this.componentIds[tile] ?? 0;
+    const id = this.componentIds[tile] ?? 0;
+    if (id === 0 || id === this.landMarker) return id;
+    return this.find(id);
   }
 
   /** Returns the number of water tiles in the given component, or 0 if unknown. */
   getComponentSize(componentId: number): number {
-    return this._componentSizes[componentId] ?? 0;
+    if (componentId <= 0 || componentId > this.maxId) return 0;
+    return this._componentSizes[this.find(componentId)] ?? 0;
   }
 }
