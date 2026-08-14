@@ -13,6 +13,7 @@ import {
   validateUsername,
 } from "../core/validations/username";
 import { getUserMe, invalidateUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import { checkClanTagOwnership } from "./ClanApi";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -29,34 +30,26 @@ const usernameKey: string = "username";
 const clanTagKey: string = "clanTag";
 const useVerifiedNameKey: string = "useVerifiedName";
 
-// Membership changes announced by the clan modal. Each fires after the modal
-// has invalidated the cached /users/@me, but none of them dispatch a fresh
-// userMeResponse, so this component has to pick the change up itself.
+// Announced by the clan modal, which invalidates /users/@me but dispatches no
+// fresh userMeResponse.
 const CLAN_REMOVED_EVENTS = ["clan-left", "clan-disbanded"];
 const CLAN_MEMBERSHIP_EVENTS = ["clan-joined", ...CLAN_REMOVED_EVENTS];
 
-// Names arriving from storage or a platform SDK can predate — or simply
-// ignore — the length cap. Trim rather than reject: an over-long name would
-// fail validation and block play through no action of the player's.
+// Trim rather than reject: a name stored before the cap would otherwise fail
+// validation and block play.
 function clampUsername(name: string): string {
   return name.length > MAX_USERNAME_LENGTH
     ? name.slice(0, MAX_USERNAME_LENGTH).trim()
     : name;
 }
 
-// Shared by the free-text input and the verified chip. They sit in the same
-// slot and swap places, so any difference in box or text metrics shows up as
-// the name jumping when the toggle is used — keep them in lockstep here rather
-// than in two class strings that have already drifted twice.
+// Shared by the input and the verified chip, which swap places: any drift in
+// box or text metrics shows up as the name jumping on toggle.
 const NAME_BOX =
   "min-w-0 flex-1 h-full max-h-[44px] rounded-lg bg-transparent px-2 sm:px-3";
-// `line-height: normal` rather than Tailwind's default ratio, because that is
-// what an <input> uses for its own editor box: the typed name lives in an
-// input and the verified name in a span, and the two only land on the same
-// pixel when both size their line box from the font's metrics. Sweeping font
-// and size over 51 combinations, the span drifted a whole pixel from the input
-// in 21 of them at a fixed 44px leading and 24 at 1.2, against 1 at `normal` —
-// which is the hop that showed up when toggling verified.
+// `line-height: normal` because that is what an <input> uses for its editor
+// box; the span only lands on the same pixel when it sizes from font metrics
+// too. Any fixed leading drifts a pixel under some fonts.
 const NAME_TEXT =
   "text-xl/[normal] sm:text-2xl/[normal] font-medium tracking-wider " +
   "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
@@ -93,6 +86,11 @@ export class UsernameInput extends LitElement {
   private clanCheckGen = 0;
   private clanCheck: Promise<string | null> = Promise.resolve(null);
 
+  // Same guard for the profile: an uncached picker refresh and a clan-event
+  // refresh can overlap, and the older one settling last would reinstate the
+  // membership the newer one just corrected.
+  private userMeGen = 0;
+
   // Resolves once the one-shot Steam name-seed has settled (or immediately for
   // non-Steam players). The join flow awaits this before reading getUsername()
   // so a fast join can't start the game under the generated anon name before
@@ -125,51 +123,47 @@ export class UsernameInput extends LitElement {
     return this.userMe.player.clans ?? [];
   }
 
-  // Clan membership changes behind this component: the clan modal is a
-  // separate page, and joining or leaving there invalidates the cached
-  // /users/@me and announces itself, but no fresh userMeResponse is
-  // dispatched. Without this the picker keeps listing the clans the player
-  // had at page load — new ones missing, left ones still selectable until the
-  // server-side ownership check rejects them mid-join.
+  // Without this the picker keeps listing whatever clans the player had at
+  // page load.
   private handleClanMembershipChange = (e: Event) => {
     const tag = (e as CustomEvent<{ tag?: string }>).detail?.tag;
-    // Losing the clan whose tag is selected drops the tag, the same way the
-    // server rejecting it does (see Matchmaking). Disbanding counts: a leader
-    // who dissolves their clan is no longer a member of anything.
+    // Same as a server-side rejection (see Matchmaking). Disbanding counts.
     if (CLAN_REMOVED_EVENTS.includes(e.type) && tag) this.clearClanTag(tag);
-    // The clan flows invalidate the cache themselves before announcing, so
-    // this doesn't need to force one.
+    // The clan flows invalidate the cache before announcing.
     this.refreshMembership();
   };
 
   private refreshMembership(opts: { fresh?: boolean } = {}) {
     void this.refreshUserMe(opts).then(() => {
-      // Re-run the ownership check against the new membership. The player can
-      // reach the clan modal from the "not a member" error itself, so joining
-      // is the common way out of it — without this the error keeps play
-      // disabled, and clanCheck keeps resolving to null so the tag would be
-      // dropped anyway, until the tag is edited or reselected by hand.
+      // The "not a member" error links into the clan modal, so joining is the
+      // usual way out of it — but the error and clanCheck both stick until
+      // the check re-runs.
       if (this.clanTag) this.startClanCheck();
     });
   }
 
   private refreshUserMe(opts: { fresh?: boolean } = {}): Promise<void> {
-    // Membership also changes server-side — kicked by another member, or a
-    // pending request approved — and nothing invalidates this tab's cached
-    // profile when it does. Without dropping the cache first, the "refresh"
-    // just re-reads the snapshot taken at page load, and the ownership check
-    // reads that same cache, so a clan the player is no longer in still
-    // passes until the server drops the tag at join.
+    // Membership also changes server-side (kicked, or a request approved)
+    // without invalidating this tab's cache, so a plain refresh would re-read
+    // the page-load snapshot.
     if (opts.fresh) invalidateUserMe();
-    return getUserMe().then((me) => {
-      // A transient failure — network error, non-200 — also resolves to
-      // false, and getUserMe caches it. Treating that as a sign-out here
-      // would turn verified play off and empty the picker for the rest of
-      // the session, with no way to recover, so a background refresh only
-      // ever replaces the snapshot with a better one. A real sign-out
-      // arrives as an explicit userMeResponse event.
-      if (me === false) return;
-      this.userMe = me;
+    const gen = ++this.userMeGen;
+    return getUserMe().then(async (me) => {
+      if (gen !== this.userMeGen) return;
+      if (me !== false) {
+        this.userMe = me;
+        this.applyVerifiedPreference();
+        return;
+      }
+      if (this.userMe === null || this.userMe === false) return;
+      // getUserMe answers `false` for a transient failure and for an expired
+      // session alike, and caches either. Only the second should drop the
+      // snapshot — but a 401 logs out without dispatching userMeResponse, so
+      // ask the local session which happened. No network: `false` here means
+      // getUserMe's logOut() already cleared the JWT.
+      const session = await userAuth(false);
+      if (gen !== this.userMeGen || session !== false) return;
+      this.userMe = false;
       this.applyVerifiedPreference();
     });
   }
@@ -177,13 +171,9 @@ export class UsernameInput extends LitElement {
   private toggleClanMenu = () => {
     this.clanMenuOpen = !this.clanMenuOpen;
     if (this.clanMenuOpen) {
-      // Uncached: the player is asking to see their clans, and a server-side
-      // change never reaches the listener above.
       this.refreshMembership({ fresh: true });
-      // Seed the free-text field only when the current tag isn't one of the
-      // player's clans — the list already represents those. It is tracked
-      // separately from clanTag so typing a tag that happens to match a clan
-      // doesn't blank the field mid-keystroke.
+      // Tracked separately from clanTag so typing a tag that matches a listed
+      // clan doesn't blank the field mid-keystroke.
       const active = this.clanTag.toUpperCase();
       this.clanDraft = this.myClans().some(
         (c) => c.tag.toUpperCase() === active,
@@ -193,9 +183,8 @@ export class UsernameInput extends LitElement {
     }
   };
 
-  // Any click that isn't inside this component closes the picker. Registered
-  // for the lifetime of the element (cheap) rather than toggled with the menu,
-  // so there's no window where a stray listener outlives the component.
+  // Bound for the element's lifetime rather than with the menu, so no stray
+  // listener can outlive it.
   private handleDocumentPointerDown = (e: Event) => {
     if (!this.clanMenuOpen) return;
     if (e.composedPath().includes(this)) return;
@@ -208,9 +197,8 @@ export class UsernameInput extends LitElement {
     this.querySelector<HTMLElement>("#clan-tag-button")?.focus();
   }
 
-  // Pick one of the player's own clans (or clear the tag). Tags come from the
-  // API already valid, so this skips the sanitising the free-text path needs —
-  // but still runs the ownership check so getClanCheck() stays authoritative.
+  // API tags are already valid, so no sanitising — but the ownership check
+  // still runs, keeping getClanCheck() authoritative.
   private selectClan(tag: string | null) {
     this.clanTag = tag ?? "";
     this.clanDraft = "";
@@ -372,10 +360,8 @@ export class UsernameInput extends LitElement {
     for (const type of CLAN_MEMBERSHIP_EVENTS) {
       document.addEventListener(type, this.handleClanMembershipChange);
     }
-    // The userMeResponse event can fire before this element connects (it is
-    // dispatched once, right after auth resolves), which would leave the clan
-    // picker and the verified toggle empty. getUserMe() is cached, so this is
-    // a read of the same response rather than a second request.
+    // userMeResponse is dispatched once and can fire before this connects.
+    // Cached, so this re-reads that response rather than refetching.
     void getUserMe().then((me) => {
       if (this.userMe !== null) return;
       this.userMe = me;
@@ -423,9 +409,8 @@ export class UsernameInput extends LitElement {
           // brackets) or exceed the length limit; strip brackets, trim, and only
           // accept the persona if it validates — otherwise keep the generated
           // name so the player can always start a game.
-          // Not clamped, unlike the stored and CrazyGames names: a persona
-          // far over the cap is rejected outright rather than truncated to a
-          // stub, keeping the generated anon name instead.
+          // Not clamped, unlike stored and CrazyGames names: a wildly long
+          // persona is rejected rather than truncated to a stub.
           const candidate = user?.name?.replace(/[[\]]/g, "").trim();
           if (candidate && validateUsername(candidate).isValid) {
             this.baseUsername = candidate;
@@ -490,11 +475,8 @@ export class UsernameInput extends LitElement {
 
   render() {
     return html`
-      <!-- The name field takes whatever the tag picker and the trailing button
-           leave, so the row always fills the strip — widest on a play page
-           with no live-streamer panel beside it, narrower when there is one.
-           Its width is still identical in both verified states because the
-           trailing slot is a fixed size; see renderNameControl. -->
+      <!-- The name field takes whatever the tag picker and trailing button
+           leave, so the row always fills the strip. -->
       <div class="flex items-center w-full h-full gap-1.5 sm:gap-2">
         ${this.renderClanControl()} ${this.renderNameControl()}
       </div>
@@ -511,17 +493,14 @@ export class UsernameInput extends LitElement {
     `;
   }
 
-  // Clan tag picker. Members pick from their own clans instead of guessing a
-  // tag and waiting for the ownership check to reject it; the menu still
-  // carries a free-text field for everyone else (signed out, or a clan they
-  // have not joined yet).
+  // Members pick from their own clans rather than guessing a tag and waiting
+  // to be rejected; the free-text field covers everyone else.
   private renderClanControl() {
     const tag = this.clanTag;
     const invalid = this.clanTagOwnershipError !== "";
     return html`
-      <!-- Escape is bound here rather than on the menu: the trigger keeps
-           focus when the menu opens, and it is the menu's sibling, so a
-           menu-level handler would never see the key. -->
+      <!-- Escape is bound here, not on the menu: the trigger keeps focus and
+           is the menu's sibling, so a menu-level handler never sees it. -->
       <div
         class="no-crazygames relative shrink-0 h-full max-h-[44px]"
         @keydown=${this.handleClanMenuKeydown}
@@ -682,12 +661,9 @@ export class UsernameInput extends LitElement {
       ${this.verifiedActive
         ? this.renderVerifiedChip()
         : this.renderNameInput()}
-      <!-- The two trailing buttons are different widths, so switching states
-           resizes the name field. That used to matter — it moved the name
-           sideways — but the field is transparent now, left-aligned, and
-           everything in it hugs the leading edge, so only an invisible right
-           edge moves. Rendering just the active button is worth more than
-           reserving a slot sized for the wider one. -->
+      <!-- The buttons differ in width, so this resizes the name field — which
+           is transparent and left-aligned, so only its invisible right edge
+           moves. -->
       <div class="no-crazygames shrink-0 h-full max-h-[44px]">
         ${this.verifiedActive
           ? this.renderUseCustomButton()
@@ -702,10 +678,8 @@ export class UsernameInput extends LitElement {
         class="flex items-center gap-1.5 ${NAME_BOX}"
         title=${translateText("username.verified_active_hint")}
       >
-        <!-- Check trails the name, as it does everywhere else a verified name
-             is rendered (PlayerName, lobby lists, profile modal). The name
-             shrinks rather than growing, so the mark keeps hugging it instead
-             of drifting to the far edge. -->
+        <!-- Check trails the name, as everywhere else it is rendered. The name
+             shrinks rather than grows, so the mark keeps hugging it. -->
         <span class="min-w-0 truncate text-white ${NAME_TEXT}"
           >${this.verifiedName() ?? ""}</span
         >
@@ -723,9 +697,8 @@ export class UsernameInput extends LitElement {
         aria-label=${translateText("username.verified_use_custom")}
         @click=${this.handleVerifiedToggle}
       >
-        <!-- Icon only: the name beside it already says what is being changed,
-             and the label is carried by title/aria-label. Sized to the
-             verified badge on the other button so the two read as a pair. -->
+        <!-- Icon only; the label lives in title/aria-label. Sized to the
+             verified badge so the two buttons read as a pair. -->
         <svg
           viewBox="0 0 24 24"
           class="w-5 h-5"

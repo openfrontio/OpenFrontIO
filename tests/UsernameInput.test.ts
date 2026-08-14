@@ -23,6 +23,11 @@ const checkClanTagOwnership = vi.fn(
 vi.mock("../src/client/ClanApi", () => ({
   checkClanTagOwnership: (tag: string) => checkClanTagOwnership(tag),
 }));
+// Stands in for the local session. `false` means getUserMe's 401 handling
+// already logged out; anything else means the session survived, so a failed
+// refresh was transient.
+const userAuth = vi.fn(async (): Promise<unknown> => ({ jwt: "j" }));
+vi.mock("../src/client/Auth", () => ({ userAuth: () => userAuth() }));
 vi.mock("../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {
     isOnCrazyGames: () => false,
@@ -90,6 +95,8 @@ beforeEach(() => {
   getUserMe.mockReset();
   getUserMe.mockResolvedValue(false);
   invalidateUserMe.mockReset();
+  userAuth.mockReset();
+  userAuth.mockResolvedValue({ jwt: "j" });
   checkClanTagOwnership.mockReset();
   checkClanTagOwnership.mockImplementation(async (tag: string) => ({
     tag,
@@ -339,6 +346,71 @@ describe("UsernameInput clan tag picker", () => {
     await settle();
     await el.updateComplete;
     expect(el.textContent).toContain("OpenFront Official");
+  });
+
+  it("clears account state when the refresh finds the session gone", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    localStorage.setItem("username", "MyCoolName");
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    expect(el.isVerified()).toBe(true);
+
+    // A 401 makes getUserMe log out and return false, but it dispatches no
+    // userMeResponse — the cleared session is the only signal.
+    getUserMe.mockResolvedValue(false);
+    userAuth.mockResolvedValue(false);
+    document.dispatchEvent(
+      new CustomEvent("clan-joined", {
+        detail: { tag: "OF" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await settle();
+    await settle();
+    await el.updateComplete;
+
+    expect(el.isVerified()).toBe(false);
+    expect(el.getUsername()).toBe("MyCoolName");
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+    await el.updateComplete;
+    expect(el.textContent).not.toContain("OpenFront Official");
+  });
+
+  it("ignores an overlapping refresh that settles late", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OLD", name: "Old Clan" }]));
+
+    // The picker's uncached refresh is slow; a clan join lands while it is
+    // still in flight. The stale response must not reinstate the old list.
+    let releaseSlow: (v: UserMeResponse) => void = () => {};
+    getUserMe.mockReturnValueOnce(
+      new Promise<UserMeResponse>((r) => (releaseSlow = r)),
+    );
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+
+    getUserMe.mockResolvedValue(
+      premiumUser([{ tag: "NEW", name: "Newcomers" }]),
+    );
+    document.dispatchEvent(
+      new CustomEvent("clan-joined", {
+        detail: { tag: "NEW" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await settle();
+    await el.updateComplete;
+    expect(el.textContent).toContain("Newcomers");
+
+    releaseSlow(premiumUser([{ tag: "OLD", name: "Old Clan" }]));
+    await settle();
+    await el.updateComplete;
+
+    expect(el.textContent).toContain("Newcomers");
+    expect(el.textContent).not.toContain("Old Clan");
   });
 
   it("still clears account state on an explicit sign-out", async () => {
