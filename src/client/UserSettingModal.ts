@@ -110,7 +110,7 @@ export class UserSettingModal extends BaseModal {
       ({ actions: [a1, a2], keyPrefix }) =>
         ((action === a1 && activeKeybinds[a2] === value) ||
           (action === a2 && activeKeybinds[a1] === value)) &&
-        value.startsWith(keyPrefix),
+        (value === `${keyPrefix}Left` || value === `${keyPrefix}Right`),
     );
 
     if (
@@ -932,7 +932,6 @@ export class UserSettingModal extends BaseModal {
             : translateText("user_setting.off")}
         @change=${this.sliderNukeAllianceSafetyDuration}
       ></setting-slider>
-
 
       ${this.showEasterEggSettings
         ? html`

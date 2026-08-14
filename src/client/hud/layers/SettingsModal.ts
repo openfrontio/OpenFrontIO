@@ -470,12 +470,7 @@ export class SettingsModal extends LitElement implements Controller {
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
             >
-              <img
-                src=${nukeIcon}
-                alt="nukeAllianceSafety"
-                width="20"
-                height="20"
-              />
+              <img src=${nukeIcon} alt="" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.nuke_alliance_safety_label")}

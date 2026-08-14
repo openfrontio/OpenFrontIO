@@ -73,7 +73,7 @@ export class BuildPreviewController implements Controller {
   /** Current ghost (null when no build type is active). */
   private ghostUnit: { buildableUnit: BuildableUnit } | null = null;
   private readonly connectedAllySmallIds: Set<number> = new Set();
-  private readonly usedSafetyAllies: Set<string> = new Set();
+  private readonly usedSafetyAllies: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
@@ -544,7 +544,7 @@ export class BuildPreviewController implements Controller {
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       const unitType = this.ghostUnit.buildableUnit.type;
       const targetTile = this.game.ref(tile.x, tile.y);
-      
+
       if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
         return;
       }
@@ -588,13 +588,13 @@ export class BuildPreviewController implements Controller {
     if (!alliances?.length) return false;
 
     const currentTick = this.game.ticks();
-    const freshAllies = new Map<number, string>();
+    const freshAllies = new Map<number, number>();
     for (const a of alliances) {
       if (
-        !this.usedSafetyAllies.has(a.other) &&
+        !this.usedSafetyAllies.has(a.id) &&
         currentTick - a.createdAt <= duration
       ) {
-        freshAllies.set(this.game.player(a.other).smallID(), a.other);
+        freshAllies.set(this.game.player(a.other).smallID(), a.id);
       }
     }
     if (freshAllies.size === 0) return false;
@@ -611,9 +611,9 @@ export class BuildPreviewController implements Controller {
 
     let blocked = false;
     for (const smallId of broken) {
-      const playerId = freshAllies.get(smallId);
-      if (playerId !== undefined) {
-        this.usedSafetyAllies.add(playerId);
+      const allianceId = freshAllies.get(smallId);
+      if (allianceId !== undefined) {
+        this.usedSafetyAllies.add(allianceId);
         blocked = true;
       }
     }

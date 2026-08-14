@@ -259,6 +259,17 @@ describe("UserSettings per-player cosmetics (#4955)", () => {
     UserSettings.setPlayerId(null);
     expect(s.attackRatio()).toBe(0.5);
   });
+
+  it("returns default nukeAllianceSafetyDuration of 5 and persists updates", () => {
+    const s = new UserSettings();
+    expect(s.nukeAllianceSafetyDuration()).toBe(5);
+
+    s.setNukeAllianceSafetyDuration(15);
+    expect(s.nukeAllianceSafetyDuration()).toBe(15);
+
+    const s2 = new UserSettings();
+    expect(s2.nukeAllianceSafetyDuration()).toBe(15);
+  });
 });
 
 describe("getDefaultKeybinds", () => {
