@@ -9,13 +9,13 @@ import {
   vi,
 } from "vitest";
 
-const copyToClipboardMock = vi.hoisted(() =>
-  vi.fn(async (_text: string, onSuccess?: () => void) => onSuccess?.()),
-);
+const copyToClipboardMock = vi.hoisted(() => vi.fn(async () => true));
+const showToastMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   copyToClipboard: copyToClipboardMock,
+  showToast: showToastMock,
 }));
 
 vi.mock("../../src/client/components/baseComponents/stats/GameInfoView", () => {
@@ -49,7 +49,9 @@ describe("public game stats route", () => {
   });
 
   beforeEach(async () => {
-    copyToClipboardMock.mockClear();
+    copyToClipboardMock.mockReset();
+    copyToClipboardMock.mockResolvedValue(true);
+    showToastMock.mockClear();
     vi.stubGlobal("localStorage", { getItem: vi.fn(() => null) });
     history.replaceState(null, "", "/");
     modalRouter.register("stats", {
@@ -106,14 +108,12 @@ describe("public game stats route", () => {
     );
     copyActions[0].click();
     await vi.waitFor(() =>
-      expect(copyToClipboardMock).toHaveBeenCalledWith(
-        "public-game",
-        expect.any(Function),
-        expect.any(Function),
-      ),
+      expect(copyToClipboardMock).toHaveBeenCalledWith("public-game"),
     );
     await copyButton.updateComplete;
-    expect(copyButton.textContent).toContain("common.copied");
+    expect(copyButton.textContent).toContain("public-game");
+    expect(copyButton.textContent).not.toContain("common.copied");
+    expect(showToastMock).toHaveBeenCalledWith("common.copied", "green");
 
     expect(document.querySelector("account-modal")).toBeNull();
     expect(window.location.hash).toBe("#modal=stats&gameID=public-game");
@@ -125,5 +125,29 @@ describe("public game stats route", () => {
 
     expect(modal.isOpen()).toBe(false);
     expect(window.location.hash).toBe("");
+  });
+
+  it("shows an error toast and keeps the game ID when copying fails", async () => {
+    copyToClipboardMock.mockResolvedValueOnce(false);
+    history.replaceState(null, "", "/#modal=stats&gameID=public-game");
+
+    expect(modalRouter.routeFromHash()).toBe(true);
+    await vi.waitFor(async () => {
+      await modal.updateComplete;
+      expect(modal.querySelector("copy-button")).not.toBeNull();
+    });
+
+    const copyButton = modal.querySelector<CopyButton>("copy-button")!;
+    await copyButton.updateComplete;
+    copyButton.querySelector("button")!.click();
+
+    await vi.waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith(
+        "error_modal.failed_copy",
+        "red",
+      ),
+    );
+    expect(copyButton.textContent).toContain("public-game");
+    expect(copyButton.textContent).not.toContain("common.copied");
   });
 });

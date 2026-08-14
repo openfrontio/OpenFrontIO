@@ -286,7 +286,7 @@ export async function copyToClipboard(
   onSuccess?: () => void,
   onReset?: () => void,
   timeout = 2000,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     if (onSuccess) onSuccess();
@@ -295,8 +295,10 @@ export async function copyToClipboard(
         onReset();
       }, timeout);
     }
+    return true;
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
+    return false;
   }
 }
 
