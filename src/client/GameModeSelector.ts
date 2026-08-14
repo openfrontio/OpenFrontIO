@@ -326,20 +326,6 @@ export class GameModeSelector extends LitElement {
     }
 
     const mapName = getMapName(lobby.gameConfig?.gameMap);
-    // A featured lobby names itself; the map drops to the subtitle so nothing is
-    // lost. Interpolated by lit as TEXT, never markup — emoji render because
-    // they are ordinary codepoints, and the accent comes from a closed set so a
-    // label can never restyle the rest of the list.
-    const featuredLabel = lobby.featured ? lobby.label : undefined;
-    const accentClass =
-      featuredLabel === undefined
-        ? ""
-        : {
-            gold: "text-amber-300",
-            blue: "text-sky-300",
-            green: "text-emerald-300",
-            red: "text-rose-300",
-          }[lobby.accent ?? "gold"];
 
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
@@ -418,21 +404,15 @@ export class GameModeSelector extends LitElement {
               ></path>
             </svg>
           </span>
-          ${featuredLabel
+          ${mapName
             ? html`<p
-                class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight ${accentClass}"
+                class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight"
               >
-                ${featuredLabel}
+                ${mapName}
               </p>`
-            : mapName
-              ? html`<p
-                  class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight"
-                >
-                  ${mapName}
-                </p>`
-              : ""}
+            : ""}
           <h3 class="text-xs text-white/70 uppercase tracking-wider text-left">
-            ${featuredLabel && mapName ? mapName : titleContent}
+            ${titleContent}
           </h3>
         </div>
       </button>

@@ -11,11 +11,10 @@ import {
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
-  LOBBY_LABEL_MAX,
   LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
-  sanitizeLobbyLabel,
 } from "../../src/core/Schemas";
+import { LOBBY_LABEL_MAX, sanitizeLobbyLabel } from "../../src/core/Util";
 import { Client } from "../../src/server/Client";
 import { GameManager } from "../../src/server/GameManager";
 import {
@@ -610,6 +609,39 @@ describe("MasterLobbyService hosted lobbies", () => {
     expect(broadcasts[1].delistGameIDs).toEqual([`g${MAX_HOSTED_LOBBIES}`]);
   });
 
+  it("keeps a featured lobby listed when the cap overflows", () => {
+    // Delisting is permanent — the worker clears listedAt — so an announced
+    // event that loses the cap never comes back and its audience arrives to
+    // nothing. The featured lobby here sorts LAST by gameID, so without
+    // priority it is exactly the one the overflow would drop.
+    const { service, workers } = createService();
+    const ordinary = Array.from({ length: MAX_HOSTED_LOBBIES }, (_, i) =>
+      hostedLobby(`g${String(i).padStart(2, "0")}`, `creator-${i}`),
+    );
+    const featured = hostedLobby("zzz", "creator-adminbot", {
+      featured: true,
+      label: "Europe — OFM Scrims",
+    });
+    workers[0].emit("message", {
+      type: "lobbyList",
+      lobbies: [...ordinary, featured],
+    });
+
+    (service as any).broadcastLobbies();
+    (service as any).broadcastLobbies();
+
+    const broadcasts = sentMessages(workers[0]).filter(
+      (m) => m.type === "lobbiesBroadcast",
+    );
+    const hosted = broadcasts[0].publicGames.games.hosted;
+    expect(hosted).toHaveLength(MAX_HOSTED_LOBBIES);
+    expect(hosted[0].gameID).toBe("zzz");
+    // An ordinary lobby takes the overflow instead.
+    expect(broadcasts[1].delistGameIDs).toEqual([
+      `g${String(MAX_HOSTED_LOBBIES - 1).padStart(2, "0")}`,
+    ]);
+  });
+
   it("does not delist when the duplicate disappears after one broadcast", () => {
     const { service, workers } = createService();
     workers[0].emit("message", {
@@ -972,6 +1004,16 @@ describe("featured lobbies", () => {
   it("collapses whitespace and caps length", () => {
     expect(sanitizeLobbyLabel("  a\n\n  b  ")).toBe("a b");
     expect(sanitizeLobbyLabel("x".repeat(200))).toHaveLength(LOBBY_LABEL_MAX);
+  });
+
+  it("turns a line break into a space instead of eating it", () => {
+    // Newline and tab are C0 controls, but they are also word separators:
+    // dropping them the way the other controls are dropped welds the words
+    // together. Note the words here are NOT flanked by spaces — a stray space
+    // either side would hide the bug behind the collapse step.
+    expect(sanitizeLobbyLabel("Europe\nOFM Scrims")).toBe("Europe OFM Scrims");
+    expect(sanitizeLobbyLabel("Europe\tOFM")).toBe("Europe OFM");
+    expect(sanitizeLobbyLabel("Europe\r\n\r\nOFM")).toBe("Europe OFM");
   });
 
   it("stores a sanitised label, never the raw one", () => {

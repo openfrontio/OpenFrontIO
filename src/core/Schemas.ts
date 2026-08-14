@@ -23,7 +23,7 @@ import {
   UnitType,
 } from "./game/Game";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { flattenedEmojiTable } from "./Util";
+import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
 export type GameID = string;
 export type ClientID = string;
@@ -192,11 +192,6 @@ export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 // player-hosted lobby.
 export const FEATURED_LOBBY_AUTO_START_MS = 10 * 60 * 1000;
 
-// Longest label a featured lobby may show in the browser. Long enough for
-// "Europe — Official OpenFront Masters Scrims", short enough that one row
-// cannot crowd out the rest of the list.
-export const LOBBY_LABEL_MAX = 48;
-
 // Labels are capped by CODE POINT, matching sanitizeLobbyLabel. z.string().max()
 // counts UTF-16 code units, so it would reject a legal 48-emoji label (96 units)
 // before the sanitiser ever saw it.
@@ -211,38 +206,6 @@ export const LobbyLabelSchema = z
 // unreadable.
 export const LobbyAccentSchema = z.enum(["gold", "blue", "green", "red"]);
 export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
-
-// A label is host-supplied text on the front page of the game, so it is
-// sanitised before it can reach anyone: control characters and bidi overrides
-// stripped (they let text render as something entirely different), whitespace
-// collapsed, then length-capped. Rendered as TEXT, never markup — emoji work
-// because they are ordinary codepoints.
-export function sanitizeLobbyLabel(raw: string): string {
-  const kept: string[] = [];
-  // Iterated by CODE POINT, not code unit: an emoji is a surrogate pair, and
-  // slicing one in half is how a label turns into a replacement glyph.
-  for (const ch of raw) {
-    const cp = ch.codePointAt(0)!;
-    if (cp < 0x20 || cp === 0x7f) continue; // C0 controls and DEL
-    if (cp >= 0x80 && cp <= 0x9f) continue; // C1 controls
-    // Bidi overrides, isolates and marks: they make following text render in
-    // another direction, which is how a label claims to be something it isn't.
-    if (cp >= 0x202a && cp <= 0x202e) continue;
-    if (cp >= 0x2066 && cp <= 0x2069) continue;
-    if (cp === 0x200e || cp === 0x200f) continue;
-    if (cp === 0x061c) continue; // ARABIC LETTER MARK — zero-width, bidi-active
-    // NB: U+200D ZERO WIDTH JOINER is deliberately KEPT — emoji sequences like
-    // 👨‍👩‍👧 are built from it, and stripping it would break them apart.
-    kept.push(ch);
-  }
-  return kept
-    .join("")
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/(?:)/u)
-    .slice(0, LOBBY_LABEL_MAX)
-    .join("");
-}
 
 export const UsernameSchema = z
   .string()
