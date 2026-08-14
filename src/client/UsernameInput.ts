@@ -29,6 +29,21 @@ const usernameKey: string = "username";
 const clanTagKey: string = "clanTag";
 const useVerifiedNameKey: string = "useVerifiedName";
 
+// Membership changes announced by the clan modal. Each fires after the modal
+// has invalidated the cached /users/@me, but none of them dispatch a fresh
+// userMeResponse, so this component has to pick the change up itself.
+const CLAN_REMOVED_EVENTS = ["clan-left", "clan-disbanded"];
+const CLAN_MEMBERSHIP_EVENTS = ["clan-joined", ...CLAN_REMOVED_EVENTS];
+
+// Names arriving from storage or a platform SDK can predate — or simply
+// ignore — the length cap. Trim rather than reject: an over-long name would
+// fail validation and block play through no action of the player's.
+function clampUsername(name: string): string {
+  return name.length > MAX_USERNAME_LENGTH
+    ? name.slice(0, MAX_USERNAME_LENGTH).trim()
+    : name;
+}
+
 // Shared by the free-text input and the verified chip. They sit in the same
 // slot and swap places, so any difference in box or text metrics shows up as
 // the name jumping when the toggle is used — keep them in lockstep here rather
@@ -118,10 +133,18 @@ export class UsernameInput extends LitElement {
   // server-side ownership check rejects them mid-join.
   private handleClanMembershipChange = (e: Event) => {
     const tag = (e as CustomEvent<{ tag?: string }>).detail?.tag;
-    // Leaving the clan whose tag is selected drops the tag, the same way the
-    // server rejecting it does (see Matchmaking).
-    if (e.type === "clan-left" && tag) this.clearClanTag(tag);
-    void this.refreshUserMe();
+    // Losing the clan whose tag is selected drops the tag, the same way the
+    // server rejecting it does (see Matchmaking). Disbanding counts: a leader
+    // who dissolves their clan is no longer a member of anything.
+    if (CLAN_REMOVED_EVENTS.includes(e.type) && tag) this.clearClanTag(tag);
+    void this.refreshUserMe().then(() => {
+      // Re-run the ownership check against the new membership. The player can
+      // reach the clan modal from the "not a member" error itself, so joining
+      // is the common way out of it — without this the error keeps play
+      // disabled, and clanCheck keeps resolving to null so the tag would be
+      // dropped anyway, until the tag is edited or reselected by hand.
+      if (this.clanTag) this.startClanCheck();
+    });
   };
 
   private async refreshUserMe(): Promise<void> {
@@ -324,8 +347,9 @@ export class UsernameInput extends LitElement {
     document.addEventListener("pointerdown", this.handleDocumentPointerDown, {
       capture: true,
     });
-    document.addEventListener("clan-joined", this.handleClanMembershipChange);
-    document.addEventListener("clan-left", this.handleClanMembershipChange);
+    for (const type of CLAN_MEMBERSHIP_EVENTS) {
+      document.addEventListener(type, this.handleClanMembershipChange);
+    }
     // The userMeResponse event can fire before this element connects (it is
     // dispatched once, right after auth resolves), which would leave the clan
     // picker and the verified toggle empty. getUserMe() is cached, so this is
@@ -347,13 +371,13 @@ export class UsernameInput extends LitElement {
     // refreshes the page on logout, so there is no logout event to handle.
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
-        this.baseUsername = username;
+        this.baseUsername = clampUsername(username);
         this.validateAndStore();
       }
     });
     crazyGamesSDK.addAuthListener((user) => {
       if (user) {
-        this.baseUsername = user.username;
+        this.baseUsername = clampUsername(user.username);
         this.validateAndStore();
       }
     });
@@ -377,6 +401,9 @@ export class UsernameInput extends LitElement {
           // brackets) or exceed the length limit; strip brackets, trim, and only
           // accept the persona if it validates — otherwise keep the generated
           // name so the player can always start a game.
+          // Not clamped, unlike the stored and CrazyGames names: a persona
+          // far over the cap is rejected outright rather than truncated to a
+          // stub, keeping the generated anon name instead.
           const candidate = user?.name?.replace(/[[\]]/g, "").trim();
           if (candidate && validateUsername(candidate).isValid) {
             this.baseUsername = candidate;
@@ -397,11 +424,9 @@ export class UsernameInput extends LitElement {
         capture: true,
       },
     );
-    document.removeEventListener(
-      "clan-joined",
-      this.handleClanMembershipChange,
-    );
-    document.removeEventListener("clan-left", this.handleClanMembershipChange);
+    for (const type of CLAN_MEMBERSHIP_EVENTS) {
+      document.removeEventListener(type, this.handleClanMembershipChange);
+    }
     this.clanMenuOpen = false;
     super.disconnectedCallback();
   }
@@ -432,7 +457,7 @@ export class UsernameInput extends LitElement {
       : localStorage.getItem(usernameKey);
     if (storedUsername) {
       this.clanTag = localStorage.getItem(clanTagKey) ?? "";
-      this.baseUsername = storedUsername;
+      this.baseUsername = clampUsername(storedUsername);
       this.validateAndStore();
       this.startClanCheck();
     } else {
@@ -482,7 +507,7 @@ export class UsernameInput extends LitElement {
         <button
           type="button"
           id="clan-tag-button"
-          class="flex h-full w-[8.25rem] sm:w-[9rem] items-center justify-between gap-1 rounded-lg bg-transparent px-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
+          class="flex h-full w-[8rem] items-center justify-between gap-1 rounded-lg bg-transparent px-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
             ? "ring-2 ring-red-400/70"
             : this.clanMenuOpen
               ? "bg-white/10"
@@ -496,7 +521,7 @@ export class UsernameInput extends LitElement {
           @click=${this.toggleClanMenu}
         >
           <span
-            class="min-w-0 flex-1 truncate text-base sm:text-lg font-semibold uppercase tracking-wider text-left ${tag
+            class="min-w-0 flex-1 truncate text-base font-semibold uppercase tracking-wider text-left ${tag
               ? "text-white"
               : "text-white/45"}"
             >${tag || translateText("username.tag")}</span

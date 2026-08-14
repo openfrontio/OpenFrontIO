@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../src/core/ApiSchemas";
+import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
 
 // The identity bar pulls in the whole client bootstrap (auth, Steam,
 // CrazyGames, the clan API). Stub the boundaries so the test exercises the
@@ -7,8 +8,16 @@ import type { UserMeResponse } from "../src/core/ApiSchemas";
 // than the network.
 const getUserMe = vi.fn(async (): Promise<UserMeResponse | false> => false);
 vi.mock("../src/client/Api", () => ({ getUserMe: () => getUserMe() }));
+const checkClanTagOwnership = vi.fn(
+  async (
+    tag: string,
+  ): Promise<{ tag: string | null; error: string | null }> => ({
+    tag,
+    error: null,
+  }),
+);
 vi.mock("../src/client/ClanApi", () => ({
-  checkClanTagOwnership: vi.fn(async (tag: string) => ({ tag, error: null })),
+  checkClanTagOwnership: (tag: string) => checkClanTagOwnership(tag),
 }));
 vi.mock("../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {
@@ -76,7 +85,15 @@ beforeEach(() => {
   document.body.innerHTML = "";
   getUserMe.mockReset();
   getUserMe.mockResolvedValue(false);
+  checkClanTagOwnership.mockReset();
+  checkClanTagOwnership.mockImplementation(async (tag: string) => ({
+    tag,
+    error: null,
+  }));
 });
+
+// Lets a handler's `await getUserMe()` continuation run before asserting.
+const settle = () => new Promise((r) => setTimeout(r, 0));
 
 describe("UsernameInput clan tag picker", () => {
   it("shows the tag placeholder and no menu until opened", async () => {
@@ -223,6 +240,75 @@ describe("UsernameInput clan tag picker", () => {
     expect(el.getClanTag()).toBeNull();
   });
 
+  it("drops the selected tag when that clan is disbanded", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    q(el, "#clan-tag-button")!.click();
+    await el.updateComplete;
+    (
+      el.querySelector("#clan-tag-menu .max-h-56 button") as HTMLElement
+    ).click();
+    await el.updateComplete;
+    expect(el.getClanTag()).toBe("OF");
+
+    // A leader dissolving their own clan emits clan-disbanded, not clan-left.
+    getUserMe.mockResolvedValue(premiumUser());
+    document.dispatchEvent(
+      new CustomEvent("clan-disbanded", {
+        detail: { tag: "OF" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await settle();
+    await el.updateComplete;
+
+    expect(el.getClanTag()).toBeNull();
+  });
+
+  it("re-enables play after joining the clan whose tag was rejected", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser());
+
+    // Typing a real clan the player isn't in blocks play and drops the tag.
+    checkClanTagOwnership.mockResolvedValue({
+      tag: null,
+      error: "username.tag_not_member",
+    });
+    q(el, "#clan-tag-button")!.click();
+    await el.updateComplete;
+    const manual = q<HTMLInputElement>(el, "#clan-tag-manual")!;
+    manual.value = "OF";
+    manual.dispatchEvent(new Event("input"));
+    await settle();
+    await el.updateComplete;
+    expect(el.canPlay()).toBe(false);
+    await expect(el.getClanCheck()).resolves.toBeNull();
+
+    // The error links into the clan modal, so joining is the usual way out of
+    // it — the check has to be re-run against the new membership.
+    getUserMe.mockResolvedValue(
+      premiumUser([{ tag: "OF", name: "OpenFront Official" }]),
+    );
+    checkClanTagOwnership.mockImplementation(async (tag: string) => ({
+      tag,
+      error: null,
+    }));
+    document.dispatchEvent(
+      new CustomEvent("clan-joined", {
+        detail: { tag: "OF" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await settle();
+    await settle();
+    await el.updateComplete;
+
+    expect(el.canPlay()).toBe(true);
+    await expect(el.getClanCheck()).resolves.toBe("OF");
+  });
+
   it("leaves an unrelated clan's tag alone", async () => {
     const el = await mount();
     await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
@@ -316,6 +402,26 @@ describe("UsernameInput clan tag picker", () => {
     );
     await el.updateComplete;
     expect(q(el, "#clan-tag-menu")).not.toBeNull();
+  });
+});
+
+describe("UsernameInput name length", () => {
+  it("trims a stored name that predates the cap instead of blocking play", async () => {
+    const long = "a".repeat(MAX_USERNAME_LENGTH + 7);
+    localStorage.setItem("username", long);
+
+    const el = await mount();
+
+    expect(el.getUsername()).toBe("a".repeat(MAX_USERNAME_LENGTH));
+    expect(el.canPlay()).toBe(true);
+  });
+
+  it("caps what can be typed into the field", async () => {
+    const el = await mount();
+    expect(
+      q<HTMLInputElement>(el, 'input[aria-label="username.enter_username"]')!
+        .maxLength,
+    ).toBe(MAX_USERNAME_LENGTH);
   });
 });
 
