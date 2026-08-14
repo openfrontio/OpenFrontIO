@@ -343,7 +343,10 @@ describe("UsernameInput verified name", () => {
       null,
     );
     expect(el.textContent).toContain("RyanTheGreat");
-    expect(el.textContent).toContain("username.verified_toggle");
+    // The check mark alone carries the state; it is the labelled element.
+    expect(
+      el.querySelector('svg[aria-label="username.verified_player"]'),
+    ).not.toBeNull();
     expect(q(el, CHANGE)).not.toBeNull();
     expect(q(el, TOGGLE)).toBeNull();
   });

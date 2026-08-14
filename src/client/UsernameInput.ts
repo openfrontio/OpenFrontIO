@@ -663,13 +663,6 @@ export class UsernameInput extends LitElement {
           >${this.verifiedName() ?? ""}</span
         >
         ${verifiedBadge("w-5 h-5 sm:w-6 sm:h-6", "text-aquarius")}
-        <!-- Kept beside the mark, not pushed to the field's far edge: the
-             field is full-width and transparent, so a pill floating out on
-             the right reads as unrelated to the name. -->
-        <span
-          class="hidden md:inline shrink-0 rounded bg-malibu-blue/35 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
-          >${translateText("username.verified_toggle")}</span
-        >
       </div>
     `;
   }
