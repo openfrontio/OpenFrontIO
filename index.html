@@ -53,6 +53,13 @@
         min-height: 100%;
         min-height: -webkit-fill-available;
       }
+
+      /* Disable iOS double-tap "smart zoom" on the page; the game has its
+         own map zoom. Panning/scrolling stays allowed. See issue #4609. */
+      html,
+      body {
+        touch-action: manipulation;
+      }
     </style>
 
     <!-- SEO -->

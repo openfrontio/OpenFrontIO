@@ -333,13 +333,49 @@ export class GameServer {
   }
 
   // Whether `viewer` should see `target`'s real identity: when names aren't
-  // anonymized, when looking at themselves, or when the host granted the
-  // viewer reveal access (nameReveals).
-  private seesReal(viewer: ClientID | undefined, target: ClientID): boolean {
+  // Teammates in a matchmade game. Anonymizing a player from their own team makes
+  // the team unplayable — you cannot coordinate with someone you cannot identify —
+  // so a pinned team sees itself, exactly as a player already sees themselves.
+  // Only PINNED teams: those are assigned server-side, so the server knows them
+  // here. A team game that groups by clanTag/friends is resolved on the clients,
+  // and the server has no answer to give.
+  private sameMatchmadeTeam(
+    viewer: ClientID | undefined,
+    target: ClientID,
+  ): boolean {
+    if (viewer === undefined) return false;
+    const viewerClient = this.allClients.get(viewer);
+    const targetClient = this.allClients.get(target);
+    if (viewerClient === undefined || targetClient === undefined) return false;
+    const viewerTeam = this.matchmakingTeamIndex(viewerClient);
+    return (
+      viewerTeam !== undefined &&
+      viewerTeam === this.matchmakingTeamIndex(targetClient)
+    );
+  }
+
+  // The reveal reasons that predate teammate visibility: names are not
+  // anonymized at all, the viewer is looking at themselves, or the host granted
+  // reveal access (nameReveals). Split out because these carry the FULL identity,
+  // while a teammate reveal is deliberately narrower — see gameInfo.
+  private seesRealBeyondTeam(
+    viewer: ClientID | undefined,
+    target: ClientID,
+  ): boolean {
     return (
       !this.gameConfig.anonymizeNames ||
       target === viewer ||
       this.viewerSeesAllNames(viewer)
+    );
+  }
+
+  // Whether the viewer should see the target's real identity: names aren't
+  // anonymized, when looking at themselves, when on the same pinned team, or when
+  // the host granted the viewer reveal access (nameReveals).
+  private seesReal(viewer: ClientID | undefined, target: ClientID): boolean {
+    return (
+      this.seesRealBeyondTeam(viewer, target) ||
+      this.sameMatchmadeTeam(viewer, target)
     );
   }
 
@@ -1564,21 +1600,31 @@ export class GameServer {
     const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
-      clients: this.activeClients.map((c) =>
-        this.seesReal(viewer, c.clientID)
-          ? {
-              username: c.username,
-              clanTag: hideClanTags ? null : (c.clanTag ?? null),
-              clientID: c.clientID,
-              friends: friendsFor(c),
-              verified: c.cosmetics?.verified,
-            }
-          : {
-              username: this.anonName(viewer, c.clientID),
-              clanTag: null,
-              clientID: c.clientID,
-            },
-      ),
+      clients: this.activeClients.map((c) => {
+        if (!this.seesReal(viewer, c.clientID)) {
+          return {
+            username: this.anonName(viewer, c.clientID),
+            clanTag: null,
+            clientID: c.clientID,
+          };
+        }
+        // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
+        // teammate's clanTag and friends would hand out more than the identity
+        // needed to coordinate: `friends` in particular names a THIRD party —
+        // the viewer would learn their teammate is friends with a specific
+        // still-anonymized opponent, which the host never granted. The wider
+        // reveals (self, or host-granted nameReveals) keep the full payload.
+        const teammateOnly =
+          this.gameConfig.anonymizeNames &&
+          !this.seesRealBeyondTeam(viewer, c.clientID);
+        return {
+          username: c.username,
+          clanTag: teammateOnly || hideClanTags ? null : (c.clanTag ?? null),
+          clientID: c.clientID,
+          friends: teammateOnly ? undefined : friendsFor(c),
+          verified: c.cosmetics?.verified,
+        };
+      }),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
