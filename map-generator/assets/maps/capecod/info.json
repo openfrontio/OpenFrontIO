@@ -1,0 +1,99 @@
+{
+  "id": "Capecod",
+  "name": "Capecod",
+  "translation_key": "map.capecod",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 4,
+  "nations": [
+    {
+      "coordinates": [440, 162],
+      "name": "Plymouth",
+      "flag": "us"
+    },
+    {
+      "coordinates": [316, 527],
+      "name": "New Bedford",
+      "flag": "us"
+    },
+    {
+      "coordinates": [514, 722],
+      "name": "Falmouth",
+      "flag": "us"
+    },
+    {
+      "coordinates": [499, 944],
+      "name": "Martha's Vineyard",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1311, 1103],
+      "name": "Nantucket",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1104, 32],
+      "name": "Provincetown",
+      "flag": "us"
+    },
+    {
+      "coordinates": [174, 147],
+      "name": "Bridgewater",
+      "flag": "us"
+    },
+    {
+      "coordinates": [90, 44],
+      "name": "Brockton",
+      "flag": "us"
+    },
+    {
+      "coordinates": [459, 431],
+      "name": "Wareham",
+      "flag": "us"
+    },
+    {
+      "coordinates": [569, 503],
+      "name": "Bourne",
+      "flag": "us"
+    },
+    {
+      "coordinates": [689, 451],
+      "name": "Sandwich",
+      "flag": "us"
+    },
+    {
+      "coordinates": [717, 606],
+      "name": "Mashpee",
+      "flag": "us"
+    },
+    {
+      "coordinates": [968, 563],
+      "name": "Barnstable",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1099, 480],
+      "name": "Dennis",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1422, 545],
+      "name": "Chatham",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1412, 345],
+      "name": "Orleans",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1413, 245],
+      "name": "Eastham",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1343, 154],
+      "name": "Wellfleet",
+      "flag": "us"
+    }
+  ]
+}
