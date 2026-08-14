@@ -71,10 +71,6 @@ const q = <T extends HTMLElement>(el: UsernameInputEl, sel: string) =>
 const TOGGLE = 'button[aria-pressed="false"]';
 const CHANGE = 'button[aria-label="username.verified_use_custom"]';
 
-// The grid cell wrapping a trailing button — it carries the invisible class.
-const slotClasses = (el: UsernameInputEl, sel: string) =>
-  q(el, sel)!.parentElement!.className;
-
 beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = "";
@@ -329,11 +325,10 @@ describe("UsernameInput verified name", () => {
     await signIn(el, premiumUser());
 
     expect(el.isVerified()).toBe(false);
-    // Both trailing buttons are always rendered so the slot keeps a constant
-    // width; only one is visible at a time (visibility:hidden also takes the
-    // other out of the tab order).
-    expect(slotClasses(el, TOGGLE)).not.toContain("invisible");
-    expect(slotClasses(el, CHANGE)).toContain("invisible");
+    // Only the active trailing button exists, so neither can be tabbed to or
+    // read out while it doesn't apply.
+    expect(q(el, TOGGLE)).not.toBeNull();
+    expect(q(el, CHANGE)).toBeNull();
   });
 
   it("swaps the input for a labelled chip when playing verified", async () => {
@@ -349,8 +344,8 @@ describe("UsernameInput verified name", () => {
     );
     expect(el.textContent).toContain("RyanTheGreat");
     expect(el.textContent).toContain("username.verified_toggle");
-    expect(slotClasses(el, CHANGE)).not.toContain("invisible");
-    expect(slotClasses(el, TOGGLE)).toContain("invisible");
+    expect(q(el, CHANGE)).not.toBeNull();
+    expect(q(el, TOGGLE)).toBeNull();
   });
 
   it("restores the stored custom name when switching back", async () => {

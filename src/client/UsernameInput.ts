@@ -635,27 +635,16 @@ export class UsernameInput extends LitElement {
       ${this.verifiedActive
         ? this.renderVerifiedChip()
         : this.renderNameInput()}
-      <!-- Both trailing buttons share one grid cell, so the slot is always as
-           wide as the wider of the two and switching states can't resize the
-           row — "Use verified" is a good deal wider than "Change", and in
-           some languages far wider still. The inactive one is
-           visibility:hidden, which also drops it from the tab order and the
-           accessibility tree. -->
-      <div class="no-crazygames grid shrink-0 h-full max-h-[44px]">
-        <div
-          class="col-start-1 row-start-1 h-full ${this.verifiedActive
-            ? ""
-            : "invisible"}"
-        >
-          ${this.renderUseCustomButton()}
-        </div>
-        <div
-          class="col-start-1 row-start-1 h-full ${this.verifiedActive
-            ? "invisible"
-            : ""}"
-        >
-          ${this.renderUseVerifiedButton()}
-        </div>
+      <!-- The two trailing buttons are different widths, so switching states
+           resizes the name field. That used to matter — it moved the name
+           sideways — but the field is transparent now, left-aligned, and
+           everything in it hugs the leading edge, so only an invisible right
+           edge moves. Rendering just the active button is worth more than
+           reserving a slot sized for the wider one. -->
+      <div class="no-crazygames shrink-0 h-full max-h-[44px]">
+        ${this.verifiedActive
+          ? this.renderUseCustomButton()
+          : this.renderUseVerifiedButton()}
       </div>
     `;
   }
@@ -689,19 +678,17 @@ export class UsernameInput extends LitElement {
     return html`
       <button
         type="button"
-        class="flex h-full w-full items-center justify-center rounded-lg border border-white/15 bg-black/25 px-2 text-sm font-medium text-white/70 transition-colors hover:border-white/30 hover:bg-black/40 hover:text-white cursor-pointer"
+        class="flex h-full aspect-square items-center justify-center rounded-lg border border-white/15 bg-black/25 text-white/70 transition-colors hover:border-white/30 hover:bg-black/40 hover:text-white cursor-pointer"
         title=${translateText("username.verified_use_custom")}
         aria-label=${translateText("username.verified_use_custom")}
         @click=${this.handleVerifiedToggle}
       >
-        <span class="hidden sm:inline"
-          >${translateText("username.verified_use_custom_short")}</span
-        >
-        <!-- Matches the verified badge's box on the "Use verified" button
-               so swapping between the two states can't resize the row. -->
+        <!-- Icon only: the name beside it already says what is being changed,
+             and the label is carried by title/aria-label. Sized to the
+             verified badge on the other button so the two read as a pair. -->
         <svg
           viewBox="0 0 24 24"
-          class="sm:hidden w-5 h-5"
+          class="w-5 h-5"
           fill="none"
           stroke="currentColor"
           stroke-width="2"

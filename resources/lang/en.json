@@ -1870,7 +1870,6 @@
     "verified_toggle": "Verified",
     "verified_use": "Use verified",
     "verified_use_custom": "Switch back to a custom name",
-    "verified_use_custom_short": "Change",
     "verified_use_hint": "Play under your verified account name"
   },
   "win_modal": {
