@@ -5,9 +5,8 @@ import type { UserMeResponse } from "../src/core/ApiSchemas";
 // CrazyGames, the clan API). Stub the boundaries so the test exercises the
 // component's own behaviour — tag selection, verified-name swapping — rather
 // than the network.
-vi.mock("../src/client/Api", () => ({
-  getUserMe: vi.fn(async () => false),
-}));
+const getUserMe = vi.fn(async (): Promise<UserMeResponse | false> => false);
+vi.mock("../src/client/Api", () => ({ getUserMe: () => getUserMe() }));
 vi.mock("../src/client/ClanApi", () => ({
   checkClanTagOwnership: vi.fn(async (tag: string) => ({ tag, error: null })),
 }));
@@ -79,6 +78,8 @@ const slotClasses = (el: UsernameInputEl, sel: string) =>
 beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = "";
+  getUserMe.mockReset();
+  getUserMe.mockResolvedValue(false);
 });
 
 describe("UsernameInput clan tag picker", () => {
@@ -174,6 +175,121 @@ describe("UsernameInput clan tag picker", () => {
     );
     await el.updateComplete;
     expect(q(el, "#clan-tag-menu")).toBeNull();
+  });
+
+  it("picks up a clan joined in the clan modal", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser());
+    q(el, "#clan-tag-button")!.click();
+    await el.updateComplete;
+    expect(el.textContent).toContain("username.clan_none_joined");
+
+    // The clan modal invalidates the /users/@me cache and announces the join;
+    // no fresh userMeResponse is dispatched, so the component must refetch.
+    getUserMe.mockResolvedValue(
+      premiumUser([{ tag: "NEW", name: "Newcomers" }]),
+    );
+    document.dispatchEvent(
+      new CustomEvent("clan-joined", {
+        detail: { tag: "NEW" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    await el.updateComplete;
+
+    expect(el.textContent).toContain("Newcomers");
+  });
+
+  it("drops the selected tag when that clan is left", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    q(el, "#clan-tag-button")!.click();
+    await el.updateComplete;
+    (
+      el.querySelector("#clan-tag-menu .max-h-56 button") as HTMLElement
+    ).click();
+    await el.updateComplete;
+    expect(el.getClanTag()).toBe("OF");
+
+    getUserMe.mockResolvedValue(premiumUser());
+    document.dispatchEvent(
+      new CustomEvent("clan-left", {
+        detail: { tag: "OF" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    await el.updateComplete;
+
+    expect(el.getClanTag()).toBeNull();
+  });
+
+  it("leaves an unrelated clan's tag alone", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    q(el, "#clan-tag-button")!.click();
+    await el.updateComplete;
+    (
+      el.querySelector("#clan-tag-menu .max-h-56 button") as HTMLElement
+    ).click();
+    await el.updateComplete;
+
+    document.dispatchEvent(
+      new CustomEvent("clan-left", {
+        detail: { tag: "WOLF" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    await el.updateComplete;
+
+    expect(el.getClanTag()).toBe("OF");
+  });
+
+  it("opens the clan modal on its browse tab from Browse clans", async () => {
+    // Registered, not just created: the component waits on whenDefined, the
+    // same way the existing join-modal path does.
+    const opened: unknown[] = [];
+    if (!customElements.get("clan-modal")) {
+      customElements.define(
+        "clan-modal",
+        class extends HTMLElement {
+          open(args: unknown) {
+            opened.push(args);
+          }
+        },
+      );
+    }
+    const modal = document.createElement("clan-modal") as HTMLElement & {
+      open: (args: unknown) => void;
+    };
+    // The registered class pushes to whichever `opened` array the current run
+    // closed over, so re-point it for this instance.
+    modal.open = (args) => opened.push(args);
+    document.body.appendChild(modal);
+    const pages: string[] = [];
+    (window as unknown as { showPage?: (p: string) => void }).showPage = (p) =>
+      pages.push(p);
+
+    const el = await mount();
+    await signIn(el, premiumUser());
+    q(el, "#clan-tag-button")!.click();
+    await el.updateComplete;
+    const browse = [...el.querySelectorAll("#clan-tag-menu button")].find((b) =>
+      b.textContent?.includes("username.clan_browse"),
+    ) as HTMLElement;
+    browse.click();
+    await customElements.whenDefined("clan-modal").catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(pages).toContain("page-clan");
+    // Without the tab the modal lands on its default my-clans view, which is
+    // not what the action is labelled.
+    expect(opened).toEqual([{ tab: "browse" }]);
   });
 
   it("closes on Escape while the trigger still holds focus", async () => {

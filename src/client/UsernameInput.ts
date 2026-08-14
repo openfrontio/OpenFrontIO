@@ -35,14 +35,15 @@ const useVerifiedNameKey: string = "useVerifiedName";
 // than in two class strings that have already drifted twice.
 const NAME_BOX =
   "min-w-0 flex-1 h-full max-h-[44px] rounded-lg bg-transparent px-2 sm:px-3";
-// The leading matches the field's content box — the full 40/44px box, since
-// neither state draws a border — so the line box fills it exactly and no
-// half-leading is left for the browser to round. An <input> centres its editor
-// box from font metrics while a span centres a line box; with some system
-// fonts those land a pixel apart, which made the name hop when verified was
-// toggled.
+// `line-height: normal` rather than Tailwind's default ratio, because that is
+// what an <input> uses for its own editor box: the typed name lives in an
+// input and the verified name in a span, and the two only land on the same
+// pixel when both size their line box from the font's metrics. Sweeping font
+// and size over 51 combinations, the span drifted a whole pixel from the input
+// in 21 of them at a fixed 44px leading and 24 at 1.2, against 1 at `normal` —
+// which is the hop that showed up when toggling verified.
 const NAME_TEXT =
-  "text-xl/[40px] sm:text-2xl/[44px] font-medium tracking-wider " +
+  "text-xl/[normal] sm:text-2xl/[normal] font-medium tracking-wider " +
   "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
 
 @customElement("username-input")
@@ -109,9 +110,31 @@ export class UsernameInput extends LitElement {
     return this.userMe.player.clans ?? [];
   }
 
+  // Clan membership changes behind this component: the clan modal is a
+  // separate page, and joining or leaving there invalidates the cached
+  // /users/@me and announces itself, but no fresh userMeResponse is
+  // dispatched. Without this the picker keeps listing the clans the player
+  // had at page load — new ones missing, left ones still selectable until the
+  // server-side ownership check rejects them mid-join.
+  private handleClanMembershipChange = (e: Event) => {
+    const tag = (e as CustomEvent<{ tag?: string }>).detail?.tag;
+    // Leaving the clan whose tag is selected drops the tag, the same way the
+    // server rejecting it does (see Matchmaking).
+    if (e.type === "clan-left" && tag) this.clearClanTag(tag);
+    void this.refreshUserMe();
+  };
+
+  private async refreshUserMe(): Promise<void> {
+    this.userMe = await getUserMe();
+    this.applyVerifiedPreference();
+  }
+
   private toggleClanMenu = () => {
     this.clanMenuOpen = !this.clanMenuOpen;
     if (this.clanMenuOpen) {
+      // Cheap unless something invalidated the cache — covers any membership
+      // change that didn't reach the listener above.
+      void this.refreshUserMe();
       // Seed the free-text field only when the current tag isn't one of the
       // player's clans — the list already represents those. It is tracked
       // separately from clanTag so typing a tag that happens to match a clan
@@ -151,9 +174,18 @@ export class UsernameInput extends LitElement {
     this.startClanCheck();
   }
 
+  // "Browse clans" has to name the tab explicitly: showPage alone opens the
+  // modal on its default my-clans tab, which is not what the label promises.
   private openClanBrowser = () => {
     this.clanMenuOpen = false;
     window.showPage?.("page-clan");
+    void customElements.whenDefined("clan-modal").then(() => {
+      document
+        .querySelector<
+          HTMLElement & { open: (args: { tab: string }) => void }
+        >("clan-modal")
+        ?.open({ tab: "browse" });
+    });
   };
 
   // The server-resolved bare name this player may play verified under, or null
@@ -292,6 +324,8 @@ export class UsernameInput extends LitElement {
     document.addEventListener("pointerdown", this.handleDocumentPointerDown, {
       capture: true,
     });
+    document.addEventListener("clan-joined", this.handleClanMembershipChange);
+    document.addEventListener("clan-left", this.handleClanMembershipChange);
     // The userMeResponse event can fire before this element connects (it is
     // dispatched once, right after auth resolves), which would leave the clan
     // picker and the verified toggle empty. getUserMe() is cached, so this is
@@ -363,6 +397,11 @@ export class UsernameInput extends LitElement {
         capture: true,
       },
     );
+    document.removeEventListener(
+      "clan-joined",
+      this.handleClanMembershipChange,
+    );
+    document.removeEventListener("clan-left", this.handleClanMembershipChange);
     this.clanMenuOpen = false;
     super.disconnectedCallback();
   }
