@@ -20,7 +20,6 @@ import type {
   DeadUnitFx,
   GhostPreviewData,
   NameEntry,
-  NukeBlockedFx,
   NukeTelegraphData,
   NukeTrajectoryData,
   PlayerState,
@@ -1034,12 +1033,8 @@ export class GPURenderer {
     if (filtered.length > 0) this.worldTextPass.applyBonusEvents(filtered);
   }
 
-  applyNukeBlockedEvents(events: NukeBlockedFx[]): void {
-    for (const e of events) {
-      const x = (e.tile % this.mapW) + 0.5;
-      const y = Math.floor(e.tile / this.mapW) + 0.5;
-      this.crosshairPass.triggerBlockedFlash(x, y);
-    }
+  triggerBlockedFlash(tileX: number, tileY: number): void {
+    this.crosshairPass.triggerBlockedFlash(tileX, tileY);
   }
 
   updateAttackRings(rings: AttackRingInput[]): void {

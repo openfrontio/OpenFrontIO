@@ -410,7 +410,6 @@ export interface Alliance {
   createdAt(): Tick;
   expiresAt(): Tick;
   other(player: Player): Player;
-  missileProtectionUsed(player: Player): boolean;
 }
 
 export interface MutableAlliance extends Alliance {
@@ -423,7 +422,6 @@ export interface MutableAlliance extends Alliance {
   onlyOneAgreedToExtend(): boolean;
 
   agreedToExtend(player: Player): boolean;
-  setMissileProtectionUsed(player: Player): void;
 }
 
 export class PlayerInfo {

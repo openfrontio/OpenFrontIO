@@ -5,7 +5,6 @@ import type {
   DeadUnitFx,
   FrameData,
   NameEntry,
-  NukeBlockedFx,
   NukeTelegraphData,
   PlayerState,
   PlayerStatusData,
@@ -39,7 +38,6 @@ export interface FrameUploadTarget {
   applyDeadUnits(deadUnits: DeadUnitFx[]): void;
   applyConquestEvents(events: ConquestFx[]): void;
   applyBonusEvents(events: BonusEvent[]): void;
-  applyNukeBlockedEvents(events: NukeBlockedFx[]): void;
   updateAttackRings(rings: AttackRingInput[]): void;
   updateNukeTelegraphs(data: NukeTelegraphData[]): void;
   updateNames(
@@ -107,9 +105,6 @@ export function uploadFrameData(
   }
   if (frame.events.bonusEvents.length > 0) {
     view.applyBonusEvents(frame.events.bonusEvents);
-  }
-  if (frame.events.nukeBlockedEvents.length > 0) {
-    view.applyNukeBlockedEvents(frame.events.nukeBlockedEvents);
   }
 
   // --- Attack rings + nuke telegraphs ---

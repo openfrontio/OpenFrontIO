@@ -306,6 +306,14 @@ export class UserSettings {
     this.setBool("settings.goToPlayer", !this.goToPlayer());
   }
 
+  nukeAllianceSafetyDuration(): number {
+    return this.getFloat("settings.nukeAllianceSafetyDuration", 5);
+  }
+
+  setNukeAllianceSafetyDuration(duration: number) {
+    this.setFloat("settings.nukeAllianceSafetyDuration", duration);
+  }
+
   // For development only. Used for testing patterns, set in the console manually.
   getDevOnlyPattern(): PlayerPattern | undefined {
     const data = localStorage.getItem("dev-pattern") ?? undefined;

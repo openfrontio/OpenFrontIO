@@ -28,7 +28,7 @@ export type {
 export type { FrameData } from "./FrameData";
 
 // Frame events — per-frame ephemeral events (rendering FX)
-export type { BonusEvent, FrameEvents, NukeBlockedFx } from "./FrameEvents";
+export type { BonusEvent, FrameEvents } from "./FrameEvents";
 
 // Unit type string constants and derived sets
 export {

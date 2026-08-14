@@ -16,10 +16,7 @@ import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola"
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
-import {
-  checkAndTriggerNukeAllianceProtection,
-  listNukeBreakAlliance,
-} from "./Util";
+import { listNukeBreakAlliance } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -42,19 +39,6 @@ export class NukeExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (this.nukeType !== UnitType.MIRVWarhead) {
-      const isProtected = checkAndTriggerNukeAllianceProtection(
-        this.mg,
-        this.player,
-        this.dst,
-        this.mg.config().nukeMagnitudes(this.nukeType),
-        this.mg.config().allianceMissileProtectionDuration(),
-      );
-      if (isProtected) {
-        this.active = false;
-        return;
-      }
-    }
     if (this.speed === -1) {
       this.speed = this.mg.config().nukeSpeed(this.nukeType);
     }
@@ -198,9 +182,6 @@ export class NukeExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (!this.active) {
-      return;
-    }
     if (this.nuke === null) {
       const spawn = this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {

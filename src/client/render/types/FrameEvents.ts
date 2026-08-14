@@ -10,10 +10,6 @@ export interface BonusEvent {
   troops: number;
 }
 
-export interface NukeBlockedFx {
-  tile: number;
-}
-
 // ── FrameEvents ─────────────────────────────────────────────────────────
 
 /**
@@ -27,5 +23,4 @@ export interface FrameEvents {
   readonly deadUnits: DeadUnitFx[];
   readonly conquestEvents: ConquestFx[];
   readonly bonusEvents: BonusEvent[];
-  readonly nukeBlockedEvents: NukeBlockedFx[];
 }

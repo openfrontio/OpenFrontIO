@@ -88,22 +88,4 @@ export class AllianceImpl implements MutableAlliance {
   expiresAt(): Tick {
     return this.expiresAt_;
   }
-
-  private missileProtectionUsedRequestor_: boolean = false;
-  private missileProtectionUsedRecipient_: boolean = false;
-
-  missileProtectionUsed(player: Player): boolean {
-    if (this.requestor_ === player) {
-      return this.missileProtectionUsedRequestor_;
-    }
-    return this.missileProtectionUsedRecipient_;
-  }
-
-  setMissileProtectionUsed(player: Player): void {
-    if (this.requestor_ === player) {
-      this.missileProtectionUsedRequestor_ = true;
-    } else {
-      this.missileProtectionUsedRecipient_ = true;
-    }
-  }
 }

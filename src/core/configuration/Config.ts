@@ -261,10 +261,6 @@ export class Config {
       (this._gameConfig.disableAlliances ?? false)
     );
   }
-
-  allianceMissileProtectionDuration(): number {
-    return 5;
-  }
   waterNukes(): boolean {
     return this._gameConfig.waterNukes ?? false;
   }

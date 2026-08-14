@@ -1,8 +1,7 @@
 import { GameView } from "../../client/view";
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, MutableAlliance, Player, Structures } from "../game/Game";
+import { Game, Player, Structures } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
-import { GameUpdateType } from "../game/GameUpdates";
 
 export interface NukeBlastParams {
   gm: GameMap;
@@ -92,131 +91,6 @@ export function wouldNukeBreakAlliance(
   );
 
   return result;
-}
-
-/**
- * Checks if launching a nuke at targetTile would impact any ally whose alliance
- * was created <= protectionDurationTicks ago AND has not yet used its one-time protection.
- * If so, marks `setMissileProtectionUsed()` on all such impacted fresh alliances and returns true.
- */
-function getFreshAlliances(
-  launcher: Player,
-  currentTick: number,
-  protectionDurationTicks: number,
-): Map<number, MutableAlliance> {
-  const result = new Map<number, MutableAlliance>();
-  if (protectionDurationTicks <= 0) return result;
-  const alliances = launcher.alliances();
-  if (alliances.length === 0) return result;
-
-  for (const alliance of alliances) {
-    if (
-      !alliance.missileProtectionUsed(launcher) &&
-      currentTick - alliance.createdAt() <= protectionDurationTicks
-    ) {
-      result.set(alliance.other(launcher).smallID(), alliance);
-    }
-  }
-  return result;
-}
-
-function checkAreaNukeProtection(
-  game: Game,
-  targetTile: TileRef,
-  magnitude: NukeMagnitude,
-  freshAlliancesMap: Map<number, MutableAlliance>,
-  launcher: Player,
-): boolean {
-  const freshAllySmallIds = new Set(freshAlliancesMap.keys());
-  const threshold = game.config().nukeAllianceBreakThreshold();
-
-  const wouldBreak = wouldNukeBreakAlliance({
-    game,
-    targetTile,
-    magnitude,
-    allySmallIds: freshAllySmallIds,
-    threshold,
-  });
-  if (!wouldBreak) return false;
-
-  if (freshAlliancesMap.size === 1) {
-    const singleAlliance = freshAlliancesMap.values().next().value;
-    singleAlliance?.setMissileProtectionUsed(launcher);
-    return true;
-  }
-
-  for (const [allySmallId, alliance] of freshAlliancesMap) {
-    if (
-      wouldNukeBreakAlliance({
-        game,
-        targetTile,
-        magnitude,
-        allySmallIds: new Set([allySmallId]),
-        threshold,
-      })
-    ) {
-      alliance.setMissileProtectionUsed(launcher);
-    }
-  }
-  return true;
-}
-
-function checkDirectTargetProtection(
-  game: Game,
-  targetTile: TileRef,
-  freshAlliancesMap: Map<number, MutableAlliance>,
-  launcher: Player,
-): boolean {
-  const targetPlayer = game.owner(targetTile);
-  if (!targetPlayer.isPlayer()) return false;
-
-  const alliance = freshAlliancesMap.get(targetPlayer.smallID());
-  if (!alliance) return false;
-
-  alliance.setMissileProtectionUsed(launcher);
-  return true;
-}
-
-export function checkAndTriggerNukeAllianceProtection(
-  game: Game,
-  launcher: Player,
-  targetTile: TileRef,
-  magnitude: NukeMagnitude | null,
-  protectionDurationTicks: number = game
-    .config()
-    .allianceMissileProtectionDuration(),
-): boolean {
-  const freshAlliancesMap = getFreshAlliances(
-    launcher,
-    game.ticks(),
-    protectionDurationTicks,
-  );
-  if (freshAlliancesMap.size === 0) return false;
-
-  const isBlocked =
-    magnitude !== null
-      ? checkAreaNukeProtection(
-          game,
-          targetTile,
-          magnitude,
-          freshAlliancesMap,
-          launcher,
-        )
-      : checkDirectTargetProtection(
-          game,
-          targetTile,
-          freshAlliancesMap,
-          launcher,
-        );
-
-  if (!isBlocked) return false;
-
-  game.addUpdate({
-    type: GameUpdateType.NukeLaunchBlockedEvent,
-    launcherID: launcher.smallID(),
-    targetTile,
-  });
-  return true;
 }
 
 // Same as wouldNukeBreakAlliance(), but takes time to find every player

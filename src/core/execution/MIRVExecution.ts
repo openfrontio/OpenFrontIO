@@ -14,7 +14,6 @@ import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
-import { checkAndTriggerNukeAllianceProtection } from "./Util";
 
 export class MirvExecution implements Execution {
   private active = true;
@@ -53,21 +52,16 @@ export class MirvExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.targetPlayer = this.mg.owner(this.dst);
-
-    // Alliance launch protection check
-    if (
-      checkAndTriggerNukeAllianceProtection(
-        this.mg,
-        this.player,
-        this.dst,
-        null,
-      )
-    ) {
-      this.active = false;
-      return;
-    }
+    this.speed = this.mg.config().nukeSpeed(UnitType.MIRV);
+    this.pathFinder = UniversalPathFinding.Parabola(mg, {
+      increment: this.speed,
+    });
+    this.baseX = this.mg.x(this.dst);
+    this.baseY = this.mg.y(this.dst);
+    this.stagedTargets = [this.dst];
 
     // Betrayal on launch
     if (this.targetPlayer.isPlayer()) {
@@ -80,21 +74,9 @@ export class MirvExecution implements Execution {
         this.player.updateRelation(this.targetPlayer, -100);
       }
     }
-
-    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
-    this.speed = this.mg.config().nukeSpeed(UnitType.MIRV);
-    this.pathFinder = UniversalPathFinding.Parabola(mg, {
-      increment: this.speed,
-    });
-    this.baseX = this.mg.x(this.dst);
-    this.baseY = this.mg.y(this.dst);
-    this.stagedTargets = [this.dst];
   }
 
   tick(ticks: number): void {
-    if (!this.active) {
-      return;
-    }
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
