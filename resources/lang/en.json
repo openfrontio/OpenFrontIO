@@ -1531,6 +1531,9 @@
     "toggle_achievements": "Toggle achievements",
     "water_nukes": "Water nukes"
   },
+  "spawn_timer": {
+    "team_percent_tooltip": "{team}: {percent}"
+  },
   "steam_link_modal": {
     "code_placeholder": "XXXX-XXXX",
     "code_prompt": "Enter the code shown on your Steam desktop app.",
