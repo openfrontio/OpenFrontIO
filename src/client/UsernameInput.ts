@@ -121,8 +121,8 @@ export class UsernameInput extends LitElement {
     const status = player?.usernameStatus;
     if (status === "premium" || status === "indefinite") {
       // Subscribed but no usable name yet (never set, or TEMPORARY####):
-      // send them to the account modal to pick one.
-      window.location.hash = "modal=account";
+      // send them straight to the username form.
+      window.location.hash = "modal=change-username";
       return;
     }
     const goStore = await showInGameConfirm(

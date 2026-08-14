@@ -3,17 +3,9 @@ import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { Cosmetics } from "../core/CosmeticSchemas";
-import { hasLinkedIdentity, isSteamPrimaryUser } from "./AccountIdentity";
+import { hasLinkedIdentity } from "./AccountIdentity";
+import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
-  deleteAccount,
-  fetchPlayerById,
-  getUserMe,
-  invalidateUserMe,
-  setMarketingConsent,
-} from "./Api";
-import {
-  clearLocalSession,
   discordLogin,
   googleLogin,
   linkGoogle,
@@ -30,19 +22,15 @@ import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
-import "./components/DeleteAccountDialog";
 import "./components/Difficulties";
 import "./components/FriendsList";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
-import "./components/SubscriptionPanel";
+import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
-import "./components/UsernamePanel";
-import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
-import { showInGameAlert } from "./InGameModal";
-import { playerProfileUrl } from "./PlayerProfileModal";
-import { steamSDK } from "./SteamSDK";
+import { consumeGoogleLinkResult } from "./GoogleLinkResult";
+import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
 
 // window.openfrontDesktop is declared `unknown` by DesktopShell.ts (kept loose
@@ -74,9 +62,6 @@ export class AccountModal extends BaseModal {
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
-  @state() private consentBusy: boolean = false;
-  @state() private deleteDialogOpen: boolean = false;
-  @state() private deleteBusy: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -84,7 +69,6 @@ export class AccountModal extends BaseModal {
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
   private restoreGamesScrollAfterOpen = false;
-  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -164,12 +148,6 @@ export class AccountModal extends BaseModal {
     );
   }
 
-  // Steam is the primary (and only, in v1) identity for a Steam user — no
-  // linking UI (email/Google) is offered for them; see renderSettingsTab.
-  private isSteamPrimary(): boolean {
-    return isSteamPrimaryUser(this.userMeResponse?.user);
-  }
-
   protected modalConfig() {
     if (this.isLoadingUser || !this.isLinkedAccount()) {
       return {};
@@ -180,7 +158,6 @@ export class AccountModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "friends", label: translateText("account_modal.tab_friends") },
-        { key: "settings", label: translateText("account_modal.tab_settings") },
       ],
     };
   }
@@ -213,95 +190,12 @@ export class AccountModal extends BaseModal {
         return this.renderGamesTab();
       case "friends":
         return this.renderFriendsTab();
-      case "settings":
-        return this.renderSettingsTab();
       default:
         return this.renderAccountTab();
     }
   }
 
-  private renderSettingsTab(): TemplateResult {
-    return html`
-      <div class="flex flex-col gap-6">
-        ${this.renderMarketingCard()} ${this.renderDeleteAccountCard()}
-      </div>
-    `;
-  }
-
-  // Persistent marketing-consent control (client-driven consent). Mirrors the
-  // post-login toast: a player can turn email updates on/off any time here, or
-  // — when there's no verified email on the account — is told to link one.
-  private renderMarketingCard(): TemplateResult | typeof nothing {
-    const consent = this.userMeResponse?.player?.marketingConsent;
-    // The API didn't return consent state (older backend). Nothing to
-    // configure, so no card rather than a misleading "link an email" prompt.
-    if (!consent) return nothing;
-    const hasEmail = consent.hasEmail;
-    const on = consent.consented === "approved";
-    return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1">
-            <div class="text-white font-medium">
-              ${translateText("account_modal.marketing_title")}
-            </div>
-            <div class="text-white/50 text-sm mt-1">
-              ${hasEmail
-                ? translateText("account_modal.marketing_desc")
-                : translateText("account_modal.marketing_no_email")}
-            </div>
-          </div>
-          ${hasEmail
-            ? html`<button
-                role="switch"
-                aria-checked=${on ? "true" : "false"}
-                aria-label=${translateText("account_modal.marketing_title")}
-                ?disabled=${this.consentBusy}
-                @click=${() => this.setConsent(!on)}
-                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${on
-                  ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
-                  : "bg-white/15"}"
-              >
-                <span
-                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${on
-                    ? "translate-x-6"
-                    : "translate-x-1"}"
-                ></span>
-              </button>`
-            : nothing}
-        </div>
-        ${hasEmail || this.isSteamPrimary()
-          ? nothing
-          : this.renderEmailBinding()}
-      </div>
-    `;
-  }
-
-  // No verified email on the account yet. Offer both ways to attach one:
-  // a magic link to a plain email (the backend associates a not-yet-registered
-  // email with the current session — the "new-association" path), or linking a
-  // Google account. Reuses the login form's email field/handlers.
-  private renderEmailBinding(): TemplateResult {
-    return html`
-      <div class="mt-4 space-y-3">
-        ${this.renderEmailField()}
-        <div class="flex items-center gap-4 py-1">
-          <div class="h-px bg-white/10 flex-1"></div>
-          <span
-            class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
-          >
-            ${translateText("account_modal.or")}
-          </span>
-          <div class="h-px bg-white/10 flex-1"></div>
-        </div>
-        ${this.renderLinkGoogleButton()}
-      </div>
-    `;
-  }
-
-  // Shared email input + "get magic link" button, used by both the sign-in form
-  // and the Account Settings bind-an-email state so their styling and handlers
-  // stay in sync.
+  // Email input + "get magic link" button used by the sign-in form.
   private renderEmailField(): TemplateResult {
     return html`
       <input
@@ -319,98 +213,6 @@ export class AccountModal extends BaseModal {
         @click=${this.handleSubmit}
       ></o-button>
     `;
-  }
-
-  // Self-service account deletion (DELETE /users/@me). The API deletes
-  // immediately on a valid request, so the button opens a hard confirm (typed
-  // confirmation). Hidden on CrazyGames and Steam: the endpoint's credential
-  // is the refresh cookie, which isn't usable there (cross-site — see
-  // Auth.ts), so the request could never succeed.
-  private renderDeleteAccountCard(): TemplateResult | typeof nothing {
-    if (crazyGamesSDK.isOnCrazyGames() || steamSDK.isOnSteam()) return nothing;
-    return html`
-      <div class="bg-white/5 rounded-xl border border-red-500/30 p-6">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1">
-            <div class="text-white font-medium">
-              ${translateText("account_modal.delete_account_title")}
-            </div>
-            <div class="text-white/50 text-sm mt-1">
-              ${translateText("account_modal.delete_account_desc")}
-            </div>
-          </div>
-          <o-button
-            variant="danger"
-            size="sm"
-            translationKey="account_modal.delete_account_button"
-            .disable=${this.deleteBusy}
-            @click=${() => {
-              this.deleteDialogOpen = true;
-            }}
-          ></o-button>
-        </div>
-      </div>
-      ${this.deleteDialogOpen
-        ? html`<delete-account-dialog
-            @confirm=${this.handleDeleteAccount}
-            @cancel=${() => {
-              this.deleteDialogOpen = false;
-            }}
-          ></delete-account-dialog>`
-        : nothing}
-    `;
-  }
-
-  private handleDeleteAccount = async (): Promise<void> => {
-    this.deleteDialogOpen = false;
-    if (this.deleteBusy) return;
-
-    this.deleteBusy = true;
-    const result = await deleteAccount();
-    this.deleteBusy = false;
-
-    if (result.ok || result.code === "logged_out") {
-      // 204: deleted — every session is revoked and the refresh cookie is
-      // cleared. 401: the session was already gone and the cookie is cleared
-      // too. Either way only local state is left to drop; calling
-      // /auth/logout here would be wrong (the credential no longer exists).
-      clearLocalSession();
-      this.close();
-      window.location.reload();
-      return;
-    }
-    if (result.code === "forbidden" && result.message !== undefined) {
-      // Server's player-facing refusal (root player / banned account).
-      await showInGameAlert(result.message);
-    } else if (result.code === "blocked") {
-      await showInGameAlert(
-        translateText("account_modal.delete_account_blocked"),
-      );
-    } else {
-      await showInGameAlert(
-        translateText("account_modal.delete_account_failed"),
-      );
-    }
-  };
-
-  private async setConsent(consented: boolean): Promise<void> {
-    const consent = this.userMeResponse?.player?.marketingConsent;
-    if (!consent || this.consentBusy) return;
-    const previous = consent.consented;
-    const next = consented ? "approved" : "denied";
-    if (previous === next) return;
-
-    // Optimistic: reflect the new state immediately, revert if the request fails.
-    this.consentBusy = true;
-    consent.consented = next;
-    this.requestUpdate();
-
-    const ok = await setMarketingConsent(consented);
-    if (!ok) {
-      consent.consented = previous;
-    }
-    this.consentBusy = false;
-    this.requestUpdate();
   }
 
   private renderFriendsTab(): TemplateResult {
@@ -459,8 +261,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()} ${this.renderDesktopLinkGateAction()}
+        ${this.renderRewardsPanel()} ${this.renderDesktopLinkGateAction()}
       </div>
     `;
   }
@@ -523,8 +324,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()}
       </div>
     `;
   }
@@ -602,14 +402,6 @@ export class AccountModal extends BaseModal {
     `;
   }
 
-  // Account-username management (custom-usernames). Hidden when the API
-  // doesn't return the username fields yet (older backend).
-  private renderUsernamePanel(): TemplateResult | "" {
-    const player = this.userMeResponse?.player;
-    if (!player || player.usernameStatus === undefined) return "";
-    return html`<username-panel .player=${player}></username-panel>`;
-  }
-
   private renderRewardsPanel(): TemplateResult | "" {
     const rewards = this.userMeResponse?.player?.rewards ?? [];
     if (rewards.length === 0) return "";
@@ -632,16 +424,6 @@ export class AccountModal extends BaseModal {
     this.requestUpdate();
   };
 
-  private renderSubscriptionPanel(): TemplateResult | "" {
-    const sub = this.userMeResponse?.player?.subscription;
-    if (!sub) return "";
-    const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
-    return html`<subscription-panel
-      .sub=${sub}
-      .cosmetic=${cosmetic}
-    ></subscription-panel>`;
-  }
-
   private renderCurrency(): TemplateResult {
     const currency = this.userMeResponse?.player?.currency;
     if (!currency) return html``;
@@ -660,7 +442,6 @@ export class AccountModal extends BaseModal {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
           ${this.renderCurrency()} ${this.renderGoogleLink()}
-          ${this.renderLogoutButton()}
         </div>
       `;
     } else if (me?.google) {
@@ -671,7 +452,7 @@ export class AccountModal extends BaseModal {
               account_name: me.google.email,
             })}
           </div>
-          ${this.renderCurrency()} ${this.renderLogoutButton()}
+          ${this.renderCurrency()}
         </div>
       `;
     } else if (me?.email) {
@@ -683,7 +464,6 @@ export class AccountModal extends BaseModal {
             })}
           </div>
           ${this.renderCurrency()} ${this.renderGoogleLink()}
-          ${this.renderLogoutButton()}
         </div>
       `;
     } else if (me?.steam) {
@@ -692,7 +472,7 @@ export class AccountModal extends BaseModal {
       // just the currency balance and (session) logout.
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
-          ${this.renderCurrency()} ${this.renderLogoutButton()}
+          ${this.renderCurrency()}
         </div>
       `;
     }
@@ -727,21 +507,7 @@ export class AccountModal extends BaseModal {
   // Google to their existing account (we never auto-merge by email).
   private renderLinkGoogleButton(): TemplateResult {
     if (this.userMeResponse?.user?.google) return html``;
-    return html`
-      <button
-        @click=${this.handleLinkGoogle}
-        class="w-full px-6 py-3 text-[#1f1f1f] bg-white hover:bg-[#f7f8f8] border border-[#dadce0] rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
-      >
-        <img
-          src=${assetUrl("images/GoogleLogo.svg")}
-          alt=${translateText("account_modal.google_alt")}
-          class="w-5 h-5"
-        />
-        <span class="font-bold tracking-wide"
-          >${translateText("account_modal.link_google")}</span
-        >
-      </button>
-    `;
+    return googleLinkButton(this.handleLinkGoogle);
   }
 
   private async viewGame(gameId: string): Promise<void> {
@@ -792,17 +558,6 @@ export class AccountModal extends BaseModal {
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
-  }
-
-  private renderLogoutButton(): TemplateResult {
-    return html`
-      <o-button
-        variant="danger"
-        size="md"
-        translationKey="account_modal.log_out"
-        @click=${this.handleLogout}
-      ></o-button>
-    `;
   }
 
   private renderLoginOptions() {
@@ -942,63 +697,21 @@ export class AccountModal extends BaseModal {
     googleLogin();
   }
 
-  private async handleLinkGoogle(): Promise<void> {
+  private handleLinkGoogle = async (): Promise<void> => {
     // On success linkGoogle navigates to Google; the result comes back as a
-    // `link=...` router arg handled in handleLinkResult. A false return means we
-    // couldn't start it.
+    // `link=...` router arg handled by consumeGoogleLinkResult. A false return
+    // means we couldn't start it.
     const started = await linkGoogle();
     if (!started) {
       alert(translateText("account_modal.link_google_failed"));
     }
-  }
-
-  // The Google link callback returns us to #modal=account&link=<result>, so the
-  // router reopens this modal with a `link` arg. Surface the outcome, then strip
-  // the one-shot param from the URL so a refresh/re-open doesn't replay it.
-  private handleLinkResult(args?: Record<string, unknown>): void {
-    const link = typeof args?.link === "string" ? args.link : undefined;
-    if (link === undefined) return;
-
-    // replaceState doesn't fire hashchange, so removing the param won't re-route.
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    params.delete("link");
-    const rest = params.toString();
-    history.replaceState(
-      null,
-      "",
-      rest ? `#${rest}` : window.location.pathname + window.location.search,
-    );
-
-    // Defer so the modal paints before the (blocking) alert. "cancel" needs no
-    // feedback — the user chose to back out.
-    if (link === "google") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_success")),
-        0,
-      );
-    } else if (link === "already_linked") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_already_linked")),
-        0,
-      );
-    } else if (link === "error") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_error")),
-        0,
-      );
-    }
-  }
+  };
 
   protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
-    this.handleLinkResult(args);
+    consumeGoogleLinkResult(args);
 
     this.refreshCrazyGamesUser();
-
-    void fetchCosmetics().then((cosmetics) => {
-      this.cosmetics = cosmetics;
-      this.requestUpdate();
-    });
 
     void getUserMe()
       .then((userMe) => {
@@ -1018,9 +731,6 @@ export class AccountModal extends BaseModal {
   }
 
   protected onClose(): void {
-    // The delete dialog portals to document.body, so it would outlive the
-    // (merely hidden) modal if left open.
-    this.deleteDialogOpen = false;
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );

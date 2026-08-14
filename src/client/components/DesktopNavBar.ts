@@ -1,7 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import "./NavAccountMenu";
 import { NavNotificationsController } from "./NavNotificationsController";
+import "./NavUtilityIcons";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
@@ -73,26 +75,6 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.play"
         ></button>
         <!-- Desktop Navigation Menu Items -->
-        <div class="relative">
-          <button
-            class="nav-menu-item ${currentPage === "page-news"
-              ? "active"
-              : ""} text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
-            data-page="page-news"
-            data-i18n="main.news"
-            @click=${this._notifications.onNewsClick}
-          ></button>
-          ${this._notifications.showNewsDot()
-            ? html`
-                <span
-                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
-                ></span>
-                <span
-                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
-                ></span>
-              `
-            : ""}
-        </div>
         <div class="relative no-crazygames">
           <button
             class="nav-menu-item ${currentPage === "page-item-store"
@@ -122,11 +104,6 @@ export class DesktopNavBar extends LitElement {
         ></button>
         <button
           class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
-          data-page="page-settings"
-          data-i18n="main.settings"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
           data-page="page-leaderboard"
           data-i18n="main.leaderboard"
         ></button>
@@ -135,85 +112,13 @@ export class DesktopNavBar extends LitElement {
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
-        <div class="relative">
-          <button
-            class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
-            data-page="page-help"
-            data-i18n="main.help"
-            @click=${this._notifications.onHelpClick}
-          ></button>
-          ${this._notifications.showHelpDot()
-            ? html`
-                <span
-                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
-                ></span>
-                <span
-                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
-                ></span>
-              `
-            : ""}
+        <!-- Utility cluster: bell, help and the profile control are account
+             /notification affordances, not page links, so they sit tight
+             together behind a divider instead of in the nav item list. -->
+        <div class="flex items-center gap-1 pl-5 ml-1 border-l border-white/10">
+          <nav-utility-icons size="desktop"></nav-utility-icons>
+          <nav-account-menu variant="desktop"></nav-account-menu>
         </div>
-        <button
-          id="nav-account-button"
-          class="nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
-          data-page="page-account"
-          data-i18n-aria-label="main.account"
-          data-i18n-title="main.account"
-        >
-          <img
-            id="nav-account-avatar"
-            class="hidden w-8 h-8 rounded-full object-cover"
-            alt=""
-            data-i18n-alt="main.discord_avatar_alt"
-            referrerpolicy="no-referrer"
-          />
-          <span
-            id="nav-account-loading-spinner"
-            class="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
-            aria-hidden="true"
-          ></span>
-          <svg
-            id="nav-account-person-icon"
-            class="hidden w-5 h-5"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M20 21a8 8 0 0 0-16 0" />
-            <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
-          </svg>
-          <span
-            id="nav-account-email-badge"
-            class="hidden absolute bottom-1 right-1 w-4 h-4 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <svg
-              class="w-2.5 h-2.5 text-white/80"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M4 4h16v16H4z" opacity="0" />
-              <path d="M4 6h16v12H4z" />
-              <path d="m4 7 8 6 8-6" />
-            </svg>
-          </span>
-          <span
-            id="nav-account-signin-text"
-            class="hidden text-xs font-bold tracking-widest"
-            data-i18n="main.sign_in"
-          >
-          </span>
-        </button>
       </nav>
     `;
   }

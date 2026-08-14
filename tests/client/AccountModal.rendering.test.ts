@@ -127,9 +127,10 @@ describe("AccountModal — rendering", () => {
     // No Google-link CTA either — Steam is primary in v1, no linking UI.
     expect(text).not.toContain("account_modal.link_google");
 
-    // Currency + logout ARE rendered for the Steam branch of renderLoggedInAs().
+    // Currency IS rendered for the Steam branch of renderLoggedInAs(); logging
+    // out moved to the nav profile menu, so no log-out control here.
     expect(modal.querySelector("currency-display")).toBeTruthy();
-    expect(text).toContain("account_modal.log_out");
+    expect(text).not.toContain("nav_account_menu.log_out");
   });
 
   // The complement of the test above, and it earns its keep twice over:
@@ -162,7 +163,8 @@ describe("AccountModal — rendering", () => {
 
     // Still a logged-in view, not the login-options screen.
     expect(modal.querySelector("currency-display")).toBeTruthy();
-    expect(text).toContain("account_modal.log_out");
+    // Logging out lives in the nav profile menu now.
+    expect(text).not.toContain("nav_account_menu.log_out");
   });
 
   // Desktop re-entry to the account-linking gate. The Electron preload exposes
