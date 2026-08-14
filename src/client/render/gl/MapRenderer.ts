@@ -27,6 +27,7 @@ import type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
+  TerrainRect,
   UnitState,
 } from "../types";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
@@ -227,9 +228,13 @@ export class MapRenderer {
   applyRailroadDust(tileRefs: number[]): void {
     this.renderer?.applyRailroadDust(tileRefs);
   }
-  /** Refresh terrain texels whose underlying terrain byte changed (water nukes). */
-  applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
-    this.renderer?.applyTerrainDelta(refs, terrainBytes);
+  /**
+   * Refresh terrain texels whose underlying terrain byte changed (water
+   * nukes). Each rect's bytes are stored row-major, concatenated in `bytes`
+   * in rect order.
+   */
+  applyTerrainRects(rects: readonly TerrainRect[], bytes: Uint8Array): void {
+    this.renderer?.applyTerrainRects(rects, bytes);
   }
 
   /** Rebuild the terrain texture from current settings (e.g. ocean color). */

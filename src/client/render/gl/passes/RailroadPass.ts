@@ -16,7 +16,7 @@
  *   RGBA32F paletteTex        → player color lookup
  */
 
-import type { GhostPreviewData } from "../../types";
+import type { GhostPreviewData, TerrainRect } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import railroadFragSrc from "../shaders/railroad/railroad.frag.glsl?raw";
@@ -129,8 +129,6 @@ export class RailroadPass {
 
   private localPlayerID = 0;
   private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
-  /** Scratch buffer for per-tile terrain byte uploads (avoids allocations). */
-  private terrainDeltaScratch = new Uint8Array(1);
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -239,46 +237,31 @@ export class RailroadPass {
   }
 
   /**
-   * Sub-upload terrain bytes for tiles that changed (water-nuke conversions).
-   * Keeps the R8UI water-detection texture in sync with the simulation.
-   * `bytes[i]` is the new terrain byte for `refs[i]` (parallel arrays).
+   * Sub-upload terrain bytes for regions that changed (water-nuke
+   * conversions). Keeps the R8UI water-detection texture in sync with the
+   * simulation. Each rect's bytes are stored row-major, concatenated in
+   * `bytes` in rect order; one texSubImage2D per rect.
    */
-  applyTerrainDelta(refs: readonly number[], bytes: Uint8Array): void {
-    if (refs.length === 0) return;
+  applyTerrainRects(rects: readonly TerrainRect[], bytes: Uint8Array): void {
+    if (rects.length === 0) return;
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.terrainTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    // Full-map fast path: single texSubImage2D instead of per-tile uploads.
-    if (refs.length === this.mapW * this.mapH) {
+    let offset = 0;
+    for (const r of rects) {
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
-        0,
-        0,
-        this.mapW,
-        this.mapH,
+        r.x,
+        r.y,
+        r.w,
+        r.h,
         gl.RED_INTEGER,
         gl.UNSIGNED_BYTE,
         bytes,
+        offset,
       );
-      return;
-    }
-    for (let i = 0; i < refs.length; i++) {
-      const ref = refs[i];
-      const x = ref % this.mapW;
-      const y = (ref - x) / this.mapW;
-      this.terrainDeltaScratch[0] = bytes[i];
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        x,
-        y,
-        1,
-        1,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        this.terrainDeltaScratch,
-      );
+      offset += r.w * r.h;
     }
   }
 

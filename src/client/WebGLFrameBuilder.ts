@@ -12,9 +12,10 @@ import {
   TRAIL_EFFECT_TYPES,
   type TrailEffectAttributes,
 } from "../core/CosmeticSchemas";
-import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
+import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
+import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
@@ -155,8 +156,6 @@ export class WebGLFrameBuilder {
   // unit colors, and SAM-radius perspective work. Push it once the local
   // player's update arrives (may take several ticks during join).
   private localPlayerSmallID = 0;
-  // Scratch buffer for terrain-delta uploads (parallel to the refs list).
-  private terrainDeltaBytes: Uint8Array = new Uint8Array(0);
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -279,18 +278,19 @@ export class WebGLFrameBuilder {
    * Water-nuke conversions (land → water) mutate the underlying terrain.
    * Forward this tick's terrain-changed refs to the renderer so it can
    * re-upload those texels in both the RGBA color texture and the R8UI
-   * water-detection texture used by railroads/bridges.
+   * water-detection texture used by railroads/bridges. Refs are batched into
+   * per-row spans — a massive bomb changes tens of thousands of tiles, and
+   * per-tile 1×1 uploads cost hundreds of ms of GL driver time.
    */
   private syncTerrainDeltas(gameView: GameView): void {
     const refs = gameView.recentlyUpdatedTerrainTiles();
     if (refs.length === 0) return;
-    if (this.terrainDeltaBytes.length < refs.length) {
-      this.terrainDeltaBytes = new Uint8Array(refs.length);
-    }
-    for (let i = 0; i < refs.length; i++) {
-      this.terrainDeltaBytes[i] = gameView.terrainByte(refs[i]);
-    }
-    this.view.applyTerrainDelta(refs, this.terrainDeltaBytes);
+    const { rects, bytes } = buildTerrainRowSpans(
+      refs,
+      gameView.width(),
+      (ref) => gameView.terrainByte(ref),
+    );
+    this.view.applyTerrainRects(rects, bytes);
   }
 
   /**
