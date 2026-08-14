@@ -155,7 +155,9 @@ export class SpawnTimer extends LitElement implements Controller {
     }
 
     // Keep the tooltip fully on-screen: it sits centered over its segment, but
-    // clamps toward the nearer edge so it never overflows the screen.
+    // clamps toward the nearer edge so it never overflows the screen. The
+    // element is kept to a bounded width (max-width) so the 64px clamp always
+    // covers half its width, even for long translated or raw team names.
     const clampedLeft = `clamp(64px, ${center}%, calc(100% - 64px))`;
 
     // Fall back to the raw team name when it has no team_colors key (e.g.
@@ -166,8 +168,8 @@ export class SpawnTimer extends LitElement implements Controller {
 
     return html`
       <div
-        class="absolute top-3.5 -translate-x-1/2 z-999 px-2 py-1 rounded bg-black/85 text-white text-xs whitespace-nowrap pointer-events-none"
-        style="left: ${clampedLeft}"
+        class="absolute top-3.5 -translate-x-1/2 z-999 px-2 py-1 rounded bg-black/85 text-white text-xs text-center break-words pointer-events-none"
+        style="left: ${clampedLeft}; max-width: 128px"
       >
         ${translateText("spawn_timer.team_percent_tooltip", {
           team: teamName,
