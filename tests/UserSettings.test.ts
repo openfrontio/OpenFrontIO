@@ -270,6 +270,43 @@ describe("UserSettings per-player cosmetics (#4955)", () => {
     const s2 = new UserSettings();
     expect(s2.nukeAllianceSafetyDuration()).toBe(15);
   });
+
+  it("clamps values to 0..30 in setNukeAllianceSafetyDuration", () => {
+    const s = new UserSettings();
+    s.setNukeAllianceSafetyDuration(-5);
+    expect(s.nukeAllianceSafetyDuration()).toBe(0);
+
+    s.setNukeAllianceSafetyDuration(45);
+    expect(s.nukeAllianceSafetyDuration()).toBe(30);
+
+    s.setNukeAllianceSafetyDuration(12.6);
+    expect(s.nukeAllianceSafetyDuration()).toBe(13);
+  });
+
+  it("falls back to default 5 for malformed or out-of-range persisted values", () => {
+    const s = new UserSettings();
+    const invalidValues = [
+      "Infinity",
+      "-Infinity",
+      "NaN",
+      "invalid",
+      "5.5",
+      "-1",
+      "31",
+      "100",
+      "",
+    ];
+
+    for (const invalid of invalidValues) {
+      localStorage.setItem("settings.nukeAllianceSafetyDuration", invalid);
+      const statics = UserSettings as unknown as {
+        cache: Map<string, string | null>;
+      };
+      statics.cache.clear();
+
+      expect(s.nukeAllianceSafetyDuration()).toBe(5);
+    }
+  });
 });
 
 describe("getDefaultKeybinds", () => {
