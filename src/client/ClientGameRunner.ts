@@ -491,13 +491,14 @@ function mountWebGLFrameLoop(
 
     // Full upload of terrain, territory & trail state
     const mapSize = mapWidth * mapHeight;
-    const allRefs = new Array(mapSize);
     const allTerrain = new Uint8Array(mapSize);
     for (let i = 0; i < mapSize; i++) {
-      allRefs[i] = i;
       allTerrain[i] = gameView.terrainByte(i);
     }
-    view.applyTerrainDelta(allRefs, allTerrain);
+    view.applyTerrainRects(
+      [{ x: 0, y: 0, w: mapWidth, h: mapHeight }],
+      allTerrain,
+    );
 
     const frameData = gameView.frameData();
     view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);

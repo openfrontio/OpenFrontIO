@@ -255,6 +255,19 @@ export interface NukeTrajectoryData {
   tSamIntercept: number;
 }
 
+/**
+ * A rectangular region of terrain texels to re-upload, with its bytes stored
+ * row-major in a shared buffer (rects are concatenated in array order).
+ * Water-nuke deltas use one-row rects (h = 1); a full re-upload (context
+ * restore) is a single map-sized rect.
+ */
+export interface TerrainRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** Input data for attack ring visualization. */
 export interface AttackRingInput {
   x: number;
