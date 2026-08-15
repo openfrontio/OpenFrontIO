@@ -103,13 +103,13 @@ export function attributesToExplosionParams(
     colors: colors.length > 0 ? colors : [DEFAULT_NUKE_EXPLOSION_COLOR],
     maxRadius: attrs.size / 2,
     speed: attrs.speed,
-    thickness: attrs.thickness,
-    transitionSpeed: attrs.transitionSpeed,
+    thickness: attrs.thickness ?? 4.0,
+    transitionSpeed: attrs.transitionSpeed ?? 0,
   };
   return attrs.type === "sparkles"
-    ? { ...base, type: "sparkles", density: attrs.density }
+    ? { ...base, type: "sparkles", density: attrs.density ?? 50 }
     : attrs.type === "embers"
-      ? { ...base, type: "embers", density: attrs.density }
+      ? { ...base, type: "embers", density: attrs.density ?? 50 }
       : { ...base, type: "shockwave" };
 }
 
