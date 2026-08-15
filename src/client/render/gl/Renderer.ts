@@ -273,6 +273,8 @@ export class GPURenderer {
       mapW,
       mapH,
       {
+        backgroundColor:
+          hexToRgb(this.settings.terrain.backgroundColor) ?? undefined,
         oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
         sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
         plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
@@ -987,6 +989,8 @@ export class GPURenderer {
    */
   rebuildTerrain(): void {
     this.terrainPass.setTerrainColors({
+      backgroundColor:
+        hexToRgb(this.settings.terrain.backgroundColor) ?? undefined,
       oceanColor: hexToRgb(this.settings.terrain.oceanColor) ?? undefined,
       sandColor: hexToRgb(this.settings.terrain.sandColor) ?? undefined,
       plainsColor: hexToRgb(this.settings.terrain.plainsColor) ?? undefined,
@@ -1303,7 +1307,10 @@ export class GPURenderer {
   private drawBaseLayer(cam: Float32Array): void {
     const gl = this.gl;
     const pe = this.settings.passEnabled;
-    gl.clearColor(60 / 255, 60 / 255, 60 / 255, 1.0);
+    const [bgR, bgG, bgB] = hexToRgb(this.settings.terrain.backgroundColor) ?? [
+      60, 60, 60,
+    ];
+    gl.clearColor(bgR / 255, bgG / 255, bgB / 255, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
     if (pe.terrain) this.terrainPass.draw(cam);

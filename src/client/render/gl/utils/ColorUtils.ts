@@ -60,6 +60,14 @@ const DEEP_WATER_BASE: readonly [number, number, number] = hexToRgb(
 )!;
 
 /**
+ * Default map background color, from `terrain.backgroundColor` in
+ * render-settings.json; used as a fallback when no override is supplied.
+ */
+const BACKGROUND_BASE: readonly [number, number, number] = hexToRgb(
+  renderDefaults.terrain.backgroundColor,
+)!;
+
+/**
  * Compute a static RGBA8 texture from raw terrain bytes.
  * The single source of truth for terrain colors.
  *
@@ -76,6 +84,7 @@ const DEEP_WATER_BASE: readonly [number, number, number] = hexToRgb(
  */
 /** Encode one terrain byte → RGBA, writing into `out[offset..offset+3]`. */
 export interface TerrainColorOverrides {
+  backgroundColor?: readonly [number, number, number];
   oceanColor?: readonly [number, number, number];
   sandColor?: readonly [number, number, number];
   plainsColor?: readonly [number, number, number];
@@ -89,6 +98,7 @@ export function encodeTerrainTile(
   offset: number,
   colors?: TerrainColorOverrides,
 ): void {
+  const backgroundColor = colors?.backgroundColor;
   const oceanColor = colors?.oceanColor;
   const sandColor = colors?.sandColor;
   const plainsColor = colors?.plainsColor;
@@ -108,12 +118,12 @@ export function encodeTerrainTile(
     plains: plainsColor ?? [190, 220, 138],
     highland: highlandColor ?? [200, 183, 138],
     mountain: mountainColor ?? [230, 230, 230],
-    peak: [60, 60, 60],
+    peak: backgroundColor ?? BACKGROUND_BASE,
   };
 
   // Impassable terrain: render as the map background colour so it blends
   // with the area outside the map quad. Must match the clear colour in
-  // Renderer.ts drawBaseLayer(): gl.clearColor(60/255, 60/255, 60/255).
+  // Renderer.ts drawBaseLayer() (settings.terrain.backgroundColor).
   if (isLand && magnitude === 31) {
     [r, g, b] = terrainColors.peak;
   } else if (isLand && isShoreline) {

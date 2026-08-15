@@ -507,6 +507,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private currentBackgroundColor(): string {
+    return (
+      this.userSettings.graphicsOverrides().terrain?.backgroundColor ??
+      renderDefaults.terrain.backgroundColor
+    );
+  }
+
   private currentOceanColor(): string {
     return (
       this.userSettings.graphicsOverrides().terrain?.oceanColor ??
@@ -540,6 +547,13 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
       this.userSettings.graphicsOverrides().terrain?.mountainColor ??
       renderDefaults.terrain.mountainColor
     );
+  }
+
+  private onBackgroundColorChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value.trim();
+    const match = HEX_COLOR_RE.exec(value);
+    if (!match) return; // ignore partial/invalid hex while typing
+    this.patchTerrain({ backgroundColor: `#${match[1].toLowerCase()}` });
   }
 
   private onOceanColorChange(event: Event) {
@@ -960,6 +974,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const coordinateGridOpacity = this.currentCoordinateGridOpacity();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
+    const backgroundColor = this.currentBackgroundColor();
     const oceanColor = this.currentOceanColor();
     const sandColor = this.currentSandColor();
     const plainsColor = this.currentPlainsColor();
@@ -1528,6 +1543,33 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
         class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
       >
         ${translateText("graphics_setting.section_terrain")}
+      </div>
+
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+      >
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("graphics_setting.background_color_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("graphics_setting.background_color_desc")}
+          </div>
+        </div>
+        <input
+          type="text"
+          .value=${backgroundColor}
+          placeholder=${renderDefaults.terrain.backgroundColor}
+          spellcheck="false"
+          @change=${this.onBackgroundColorChange}
+          class="w-24 px-2 py-1 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white font-mono"
+        />
+        <input
+          type="color"
+          .value=${backgroundColor}
+          @input=${this.onBackgroundColorChange}
+          class="w-10 h-8 bg-transparent border border-slate-500 rounded-sm cursor-pointer"
+        />
       </div>
 
       <div
