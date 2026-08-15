@@ -77,6 +77,7 @@ export class FxShockwavePass {
   private uRingWidth: WebGLUniformLocation;
   private uTime: WebGLUniformLocation;
   private vao: WebGLVertexArrayObject;
+  private quadVbo: WebGLBuffer;
   private instanceBuf: DynamicInstanceBuffer;
   private shockwaveCount = 0;
 
@@ -97,8 +98,8 @@ export class FxShockwavePass {
     gl.bindVertexArray(this.vao);
 
     // Unit quad at location 0 (stride 8, non-instanced)
-    const quadVbo = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, quadVbo);
+    this.quadVbo = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVbo);
     gl.bufferData(gl.ARRAY_BUFFER, QUAD_VERTS, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
@@ -325,5 +326,6 @@ export class FxShockwavePass {
     gl.deleteProgram(this.program);
     this.instanceBuf.dispose();
     gl.deleteVertexArray(this.vao);
+    gl.deleteBuffer(this.quadVbo);
   }
 }
