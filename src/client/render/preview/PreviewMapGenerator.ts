@@ -91,6 +91,14 @@ function buildCoastalBaseplate(
   }
 }
 
+export const PREVIEW_ISLAND_RADIUS = 215;
+export const PREVIEW_ISLAND_WOBBLE = {
+  freq1: 4.0,
+  amp1: 5.0,
+  freq2: 6.0,
+  amp2: 3.0,
+} as const;
+
 function buildContinentalArchipelago(
   terrain: Uint8Array,
   tileState: Uint16Array,
@@ -99,7 +107,8 @@ function buildContinentalArchipelago(
 ): void {
   const cx = w / 2;
   const cy = h / 2;
-  const maxR = 215; // 430-tile diameter expansive continent
+  const maxR = PREVIEW_ISLAND_RADIUS;
+  const { freq1, amp1, freq2, amp2 } = PREVIEW_ISLAND_WOBBLE;
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -110,7 +119,8 @@ function buildContinentalArchipelago(
 
       // Subtle, smooth natural curvature (minimal irregular wobbles)
       const angle = Math.atan2(dy, dx);
-      const wobble = Math.sin(angle * 4.0) * 5.0 + Math.cos(angle * 6.0) * 3.0;
+      const wobble =
+        Math.sin(angle * freq1) * amp1 + Math.cos(angle * freq2) * amp2;
       const effectiveR = maxR + wobble;
 
       if (dist < effectiveR - 5) {

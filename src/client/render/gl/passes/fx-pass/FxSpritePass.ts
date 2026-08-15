@@ -281,12 +281,15 @@ export class FxSpritePass {
   // Atlas loading
   // -------------------------------------------------------------------------
 
+  private isDisposed = false;
+
   private async loadAtlas(): Promise<void> {
     try {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.src = fxAtlasUrl;
       await img.decode();
+      if (this.isDisposed) return;
       const gl = this.gl;
 
       gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
@@ -539,6 +542,7 @@ export class FxSpritePass {
   }
 
   dispose(): void {
+    this.isDisposed = true;
     const gl = this.gl;
     gl.deleteProgram(this.program);
     this.instanceBuf.dispose();

@@ -74,17 +74,11 @@ export class StoreModal extends BaseModal {
 
   connectedCallback() {
     super.connectedCallback();
-    document.addEventListener(
-      "userMeResponse",
-      (event: CustomEvent<UserMeResponse | false>) => {
-        this.onUserMe(event.detail);
-      },
+    document.addEventListener("userMeResponse", this.onUserMeEvent);
+    this.addEventListener(
+      "open-cosmetic-preview",
+      this.onOpenCosmeticPreview,
     );
-    this.addEventListener("open-cosmetic-preview", (event: Event) => {
-      const customEvent = event as CustomEvent<ResolvedCosmetic>;
-      this.previewingCosmetic = customEvent.detail;
-      this.requestUpdate();
-    });
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {
       this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));
@@ -93,6 +87,11 @@ export class StoreModal extends BaseModal {
   }
 
   disconnectedCallback() {
+    document.removeEventListener("userMeResponse", this.onUserMeEvent);
+    this.removeEventListener(
+      "open-cosmetic-preview",
+      this.onOpenCosmeticPreview,
+    );
     this.rowObserver?.disconnect();
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
@@ -110,6 +109,17 @@ export class StoreModal extends BaseModal {
       alignPurchaseRows(this);
     });
   }
+
+  private onUserMeEvent = (event: Event) => {
+    const customEvent = event as CustomEvent<UserMeResponse | false>;
+    this.onUserMe(customEvent.detail);
+  };
+
+  private onOpenCosmeticPreview = (event: Event) => {
+    const customEvent = event as CustomEvent<ResolvedCosmetic>;
+    this.previewingCosmetic = customEvent.detail;
+    this.requestUpdate();
+  };
 
   private rowObserver: ResizeObserver | null = null;
   private alignFrame: number | null = null;

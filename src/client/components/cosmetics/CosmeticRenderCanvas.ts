@@ -1,12 +1,13 @@
 import { base64url } from "jose";
 import { html, LitElement, nothing, PropertyValues } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   Effect,
   isNukeExplosionEffect,
   NukeExplosionAttributes,
   Pattern,
   Skin,
+  StructuresEffectAttributes,
   TrailEffectAttributes,
 } from "../../../core/CosmeticSchemas";
 import { decodePatternData } from "../../../core/PatternDecoder";
@@ -30,7 +31,7 @@ import { attributesToExplosionParams } from "../../WebGLFrameBuilder";
  * CosmeticRenderCanvas — Lit component hosting the live WebGL2 preview viewport.
  *
  * Capabilities:
- * - Manages WebGL context lifecycle and ResizeObserver canvas synchronization.
+ * - Manages WebGL context lifecycle and continuous rendering loop.
  * - Smooth pointer drag panning (with button click filtering) and scroll wheel zoom.
  * - On-screen D-Pad, Reset Center button, keyboard WASD/Arrow navigation.
  * - Interactive single / 5-nuke salvo mode toggle for atom bomb explosions.
@@ -46,10 +47,12 @@ export class CosmeticRenderCanvas extends LitElement {
   @property({ attribute: false })
   salvoEnabled = false;
 
+  @state()
+  private hasError = false;
+
   private renderer: CosmeticPreviewRenderer | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private rafId: number | null = null;
-  private resizeObs: ResizeObserver | null = null;
 
   private autoZoomStartTime: number | null = null;
   private isAutoZooming = false;
@@ -71,9 +74,9 @@ export class CosmeticRenderCanvas extends LitElement {
       this.renderer = new CosmeticPreviewRenderer(this.canvas);
       this.applyCosmetic();
       this.startLoop();
-      this.setupResizeObserver();
     } catch (e) {
       console.error("Failed to init cosmetic preview renderer:", e);
+      this.hasError = true;
     }
   }
 
@@ -99,23 +102,9 @@ export class CosmeticRenderCanvas extends LitElement {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
-    this.resizeObs?.disconnect();
-    this.resizeObs = null;
     this.renderer?.dispose();
     this.renderer = null;
     super.disconnectedCallback();
-  }
-
-  private setupResizeObserver(): void {
-    if (typeof ResizeObserver === "undefined" || !this.canvas) return;
-    this.resizeObs = new ResizeObserver(() => {
-      if (!this.canvas || !this.renderer) return;
-      const rect = this.canvas.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        this.renderer.render(performance.now());
-      }
-    });
-    this.resizeObs.observe(this.canvas);
   }
 
   private startLoop(): void {
@@ -142,11 +131,7 @@ export class CosmeticRenderCanvas extends LitElement {
   private applyCosmetic(): void {
     if (!this.renderer || !this.resolved) return;
     const config = this.buildPreviewConfig(this.resolved);
-    if (
-      config.mode === "SKIN" &&
-      this.customColors &&
-      this.customColors.length > 0
-    ) {
+    if (this.customColors && this.customColors.length > 0) {
       config.effectColors = this.customColors;
     }
     config.salvoMode = this.salvoEnabled;
@@ -244,15 +229,18 @@ export class CosmeticRenderCanvas extends LitElement {
     this.renderer?.zoomBy(0.8);
   };
 
-  private handlePan =
-    (dx: number, dy: number) =>
-    (e: MouseEvent): void => {
-      e.stopPropagation();
-      e.preventDefault();
-      this.isAutoZooming = false;
-      const zoom = this.renderer?.zoom ?? 1.0;
-      this.renderer?.pan((dx * 40) / zoom, (dy * 40) / zoom);
-    };
+  private panUp = (e: MouseEvent): void => this.pan(0, -1, e);
+  private panDown = (e: MouseEvent): void => this.pan(0, 1, e);
+  private panLeft = (e: MouseEvent): void => this.pan(-1, 0, e);
+  private panRight = (e: MouseEvent): void => this.pan(1, 0, e);
+
+  private pan(dx: number, dy: number, e: MouseEvent): void {
+    e.stopPropagation();
+    e.preventDefault();
+    this.isAutoZooming = false;
+    const zoom = this.renderer?.zoom ?? 1.0;
+    this.renderer?.pan((dx * 40) / zoom, (dy * 40) / zoom);
+  }
 
   private handleResetCenter = (e: MouseEvent): void => {
     e.stopPropagation();
@@ -265,7 +253,6 @@ export class CosmeticRenderCanvas extends LitElement {
     e.stopPropagation();
     e.preventDefault();
     this.salvoEnabled = !this.salvoEnabled;
-    this.renderer?.setSalvoMode(this.salvoEnabled);
   };
 
   private handleKeyDown = (e: KeyboardEvent): void => {
@@ -318,15 +305,27 @@ export class CosmeticRenderCanvas extends LitElement {
     return { mode: "NUKE_MISSILE_TRAIL" };
   }
 
+  private extractDynamicAttributes(
+    attrs: TrailEffectAttributes | StructuresEffectAttributes,
+  ) {
+    return {
+      movementSpeed:
+        attrs.type === "gradient" ? attrs.movementSpeed : undefined,
+      frequency: attrs.type === "transition" ? attrs.frequency : undefined,
+      colorSize: attrs.type === "gradient" ? attrs.colorSize : undefined,
+    };
+  }
+
   private buildEffectConfig(
     effect: Effect | null,
     key: string,
   ): CosmeticPreviewConfig {
     if (!effect) return { mode: "NUKE_MISSILE_TRAIL" };
 
-    const isMirv =
+    const isMirv = Boolean(
       key.toLowerCase().includes("mirv") ||
-      (effect.name && effect.name.toLowerCase().includes("mirv"));
+        (effect.name && effect.name.toLowerCase().includes("mirv")),
+    );
 
     if (effect.effectType === "nukeTrail") {
       const attrs = effect.attributes as TrailEffectAttributes;
@@ -337,10 +336,7 @@ export class CosmeticRenderCanvas extends LitElement {
         spiralRadius: isSpiral ? attrs.radius : 3,
         spiralStrands: isSpiral ? attrs.strands : 2,
         spiralSpeed: isSpiral ? attrs.rotationSpeed : 6,
-        movementSpeed:
-          attrs.type === "gradient" ? attrs.movementSpeed : undefined,
-        frequency: attrs.type === "transition" ? attrs.frequency : undefined,
-        colorSize: attrs.type === "gradient" ? attrs.colorSize : undefined,
+        ...this.extractDynamicAttributes(attrs),
       };
     }
     if (effect.effectType === "transportShipTrail") {
@@ -349,10 +345,7 @@ export class CosmeticRenderCanvas extends LitElement {
         mode: "WARSHIP_BOAT_TRAIL",
         cosmeticUnitType: UT_TRANSPORT,
         effectColors: attrs.colors,
-        movementSpeed:
-          attrs.type === "gradient" ? attrs.movementSpeed : undefined,
-        frequency: attrs.type === "transition" ? attrs.frequency : undefined,
-        colorSize: attrs.type === "gradient" ? attrs.colorSize : undefined,
+        ...this.extractDynamicAttributes(attrs),
       };
     }
     if (effect.effectType === "warship") {
@@ -361,23 +354,17 @@ export class CosmeticRenderCanvas extends LitElement {
         mode: "WARSHIP_BOAT_TRAIL",
         cosmeticUnitType: UT_WARSHIP,
         effectColors: attrs.colors,
-        movementSpeed:
-          attrs.type === "gradient" ? attrs.movementSpeed : undefined,
-        frequency: attrs.type === "transition" ? attrs.frequency : undefined,
-        colorSize: attrs.type === "gradient" ? attrs.colorSize : undefined,
+        ...this.extractDynamicAttributes(attrs),
       };
     }
     if (effect.effectType === "structures") {
-      const attrs = effect.attributes;
+      const attrs = effect.attributes as StructuresEffectAttributes;
       return {
         mode: "BUILDING",
         cosmeticUnitType: UT_CITY,
         structureLevel: 2,
         effectColors: attrs.colors,
-        movementSpeed:
-          attrs.type === "gradient" ? attrs.movementSpeed : undefined,
-        frequency: attrs.type === "transition" ? attrs.frequency : undefined,
-        colorSize: attrs.type === "gradient" ? attrs.colorSize : undefined,
+        ...this.extractDynamicAttributes(attrs),
       };
     }
     if (isNukeExplosionEffect(effect)) {
@@ -412,9 +399,17 @@ export class CosmeticRenderCanvas extends LitElement {
   }
 
   render() {
+    if (this.hasError) {
+      return html`<div
+        class="relative flex h-full min-h-[340px] w-full items-center justify-center rounded-xl bg-zinc-950 p-6 text-center text-sm font-semibold text-white/70 border border-white/10"
+      >
+        ${translateText("store.preview_error")}
+      </div>`;
+    }
+
     return html`<div
       data-cosmetic-render-host
-      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-950 border border-white/10 select-none cursor-grab active:cursor-grabbing focus:outline-none"
+      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-950 border border-white/10 select-none cursor-grab active:cursor-grabbing focus:outline-hidden"
       tabindex="0"
       @pointerdown=${this.handlePointerDown}
       @pointermove=${this.handlePointerMove}
@@ -466,7 +461,7 @@ export class CosmeticRenderCanvas extends LitElement {
             type="button"
             aria-label=${translateText("user_setting.move_up")}
             title=${translateText("user_setting.move_up")}
-            @click=${this.handlePan(0, -1)}
+            @click=${this.panUp}
             class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
           >
             <svg
@@ -489,7 +484,7 @@ export class CosmeticRenderCanvas extends LitElement {
             type="button"
             aria-label=${translateText("user_setting.move_left")}
             title=${translateText("user_setting.move_left")}
-            @click=${this.handlePan(-1, 0)}
+            @click=${this.panLeft}
             class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
           >
             <svg
@@ -519,7 +514,7 @@ export class CosmeticRenderCanvas extends LitElement {
             type="button"
             aria-label=${translateText("user_setting.move_right")}
             title=${translateText("user_setting.move_right")}
-            @click=${this.handlePan(1, 0)}
+            @click=${this.panRight}
             class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
           >
             <svg
@@ -542,7 +537,7 @@ export class CosmeticRenderCanvas extends LitElement {
             type="button"
             aria-label=${translateText("user_setting.move_down")}
             title=${translateText("user_setting.move_down")}
-            @click=${this.handlePan(0, 1)}
+            @click=${this.panDown}
             class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer"
           >
             <svg
@@ -562,51 +557,27 @@ export class CosmeticRenderCanvas extends LitElement {
           <div></div>
         </div>
 
-        <!-- Zoom In / Zoom Out -->
+        <!-- Zoom Controls (+ / -) -->
         <div
-          class="flex gap-1.5 p-1 rounded-xl bg-zinc-900/90 backdrop-blur-md border border-white/20 shadow-xl"
+          class="flex flex-col gap-1 p-1 rounded-xl bg-zinc-900/90 backdrop-blur-md border border-white/20 shadow-xl"
         >
           <button
             type="button"
             aria-label=${translateText("user_setting.zoom_in")}
             title=${translateText("user_setting.zoom_in")}
             @click=${this.handleZoomIn}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white font-bold transition active:scale-90 cursor-pointer"
+            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer text-sm font-bold"
           >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M12 4v16m8-8H4"
-              ></path>
-            </svg>
+            +
           </button>
           <button
             type="button"
             aria-label=${translateText("user_setting.zoom_out")}
             title=${translateText("user_setting.zoom_out")}
             @click=${this.handleZoomOut}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white font-bold transition active:scale-90 cursor-pointer"
+            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 hover:bg-white/15 text-white/90 transition active:scale-90 cursor-pointer text-sm font-bold"
           >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M20 12H4"
-              ></path>
-            </svg>
+            −
           </button>
         </div>
       </div>
