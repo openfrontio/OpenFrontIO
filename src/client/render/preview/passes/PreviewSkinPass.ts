@@ -10,6 +10,8 @@ import {
   PREVIEW_ISLAND_WOBBLE,
 } from "../PreviewMapGenerator";
 
+export const PREVIEW_SKIN_STAMP_SIZE = 320.0;
+
 const vertSrc = `#version 300 es
 layout(location = 0) in vec2 aPos;
 
@@ -74,19 +76,18 @@ void main() {
       // 85% saturation and 60% default opacity
       fragColor = vec4(col, tex.a * 0.60 * borderAlpha);
     } else {
-      // Centered skin stamp with proportional world tile size
-      float stampSize = uSkinStampSize > 0.0 ? uSkinStampSize : 260.0;
+      // Centered skin stamp matching in-game spawn territory fallback
+      float stampSize = uSkinStampSize > 0.0 ? uSkinStampSize : ${PREVIEW_SKIN_STAMP_SIZE.toFixed(1)};
       vec2 skinUV = (vWorldPos - uCenter) / stampSize + vec2(0.5);
-      if (skinUV.x >= 0.0 && skinUV.x <= 1.0 && skinUV.y >= 0.0 && skinUV.y <= 1.0) {
-        vec4 tex = texture(uSkinTex, skinUV);
-        vec3 skinCol = (uIsTeamMode == 1) ? uPrimaryColor * tex.rgb : tex.rgb;
-        vec3 col = mix(uPrimaryColor, skinCol, tex.a);
-        col = applySaturation(col, 0.85);
-        fragColor = vec4(col, 0.60 * borderAlpha);
-      } else {
-        vec3 col = applySaturation(uPrimaryColor, 0.85);
-        fragColor = vec4(col, 0.60 * borderAlpha);
-      }
+      bool inBounds =
+        skinUV.x >= 0.0 && skinUV.x <= 1.0 &&
+        skinUV.y >= 0.0 && skinUV.y <= 1.0;
+      vec4 tex = inBounds ? texture(uSkinTex, skinUV) : vec4(0.0);
+      float skinAlpha = inBounds ? tex.a : 0.0;
+      vec3 skinCol = (uIsTeamMode == 1) ? uPrimaryColor * tex.rgb : tex.rgb;
+      vec3 col = mix(uPrimaryColor, skinCol, skinAlpha);
+      col = applySaturation(col, 0.85);
+      fragColor = vec4(col, 0.60 * borderAlpha);
     }
   } else {
     vec3 col = applySaturation(uPrimaryColor, 0.85);
@@ -117,7 +118,7 @@ export class PreviewSkinPass {
   private isDisposed = false;
   private loadToken = 0;
   private patternTileSize: [number, number] = [32, 32];
-  private skinStampSize = 260.0;
+  private skinStampSize = PREVIEW_SKIN_STAMP_SIZE;
   private primaryColor: [number, number, number] = [0.2, 0.6, 0.95];
 
   constructor(
@@ -167,7 +168,7 @@ export class PreviewSkinPass {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      this.skinStampSize = 260.0;
+      this.skinStampSize = PREVIEW_SKIN_STAMP_SIZE;
       this.hasSkin = true;
       this.isPattern = false;
     };
