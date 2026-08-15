@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UsernameSchema } from "../src/core/Schemas";
 import {
+  AccountUsernameSchema,
   MAX_ACCOUNT_USERNAME_LENGTH,
   MAX_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
@@ -33,22 +34,36 @@ describe("free-form username length", () => {
     );
   });
 
-  it("carries the same bound on the wire schema", () => {
-    // UsernameSchema duplicates the bounds because it can't import them
-    // (validations/username.ts imports the schema). The server validates
-    // every join against it, so the two drifting apart would let a name
-    // through the form that the server then refuses.
-    expect(
-      UsernameSchema.safeParse("a".repeat(MAX_USERNAME_LENGTH)).success,
-    ).toBe(true);
-    expect(
-      UsernameSchema.safeParse("a".repeat(MAX_USERNAME_LENGTH + 1)).success,
-    ).toBe(false);
-    expect(
-      UsernameSchema.safeParse("a".repeat(MIN_USERNAME_LENGTH)).success,
-    ).toBe(true);
-    expect(
-      UsernameSchema.safeParse("a".repeat(MIN_USERNAME_LENGTH - 1)).success,
-    ).toBe(false);
+  it("leaves the wire schema able to read older records", () => {
+    // UsernameSchema backs PlayerSchema, so it parses names already written
+    // into archived GameRecords. Narrowing it doesn't rewrite them, it makes
+    // them unparseable — which dead-ends replay links (JoinLobbyModal parses
+    // before the gitCommit check that would fall back to the versioned shell)
+    // and share previews. The form cap is enforced separately.
+    const legacy = "a".repeat(MAX_USERNAME_LENGTH + 5);
+    expect(UsernameSchema.safeParse(legacy).success).toBe(true);
+    expect(validateUsername(legacy).isValid).toBe(false);
+  });
+});
+
+describe("account names on the wire", () => {
+  // Verified play submits the account name and skips free-form validation, so
+  // anything AccountUsernameSchema accepts has to survive UsernameSchema or
+  // the join is closed with 1002 after the UI has enabled Play.
+  const names = [
+    "cool-guy",
+    "cool_guy",
+    "Cool Guy",
+    "cool-guy-2",
+    "a-b_c d",
+    "abc",
+    "a".repeat(MAX_ACCOUNT_USERNAME_LENGTH),
+  ];
+
+  it.each(names)("accepts the account name %s", (name) => {
+    expect(AccountUsernameSchema.safeParse(name).success).toBe(true);
+    expect(UsernameSchema.safeParse(name).success).toBe(true);
+    // The server-rendered display name carries a .dddd discriminator.
+    expect(UsernameSchema.safeParse(`${name}.1234`).success).toBe(true);
   });
 });

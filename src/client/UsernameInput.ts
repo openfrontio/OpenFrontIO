@@ -13,7 +13,6 @@ import {
   validateUsername,
 } from "../core/validations/username";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { userAuth } from "./Auth";
 import { checkClanTagOwnership } from "./ClanApi";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -148,22 +147,14 @@ export class UsernameInput extends LitElement {
     // the page-load snapshot.
     if (opts.fresh) invalidateUserMe();
     const gen = ++this.userMeGen;
-    return getUserMe().then(async (me) => {
+    return getUserMe().then((me) => {
       if (gen !== this.userMeGen) return;
-      if (me !== false) {
-        this.userMe = me;
-        this.applyVerifiedPreference();
-        return;
-      }
-      if (this.userMe === null || this.userMe === false) return;
-      // getUserMe answers `false` for a transient failure and for an expired
-      // session alike, and caches either. Only the second should drop the
-      // snapshot — but a 401 logs out without dispatching userMeResponse, so
-      // ask the local session which happened. No network: `false` here means
-      // getUserMe's logOut() already cleared the JWT.
-      const session = await userAuth(false);
-      if (gen !== this.userMeGen || session !== false) return;
-      this.userMe = false;
+      // `false` here is a transient failure — a network error or non-200,
+      // cached either way — so keep the snapshot rather than silently
+      // dropping the player to their free-form name. An expired session is
+      // not this: getUserMe dispatches userMeResponse when it logs out.
+      if (me === false) return;
+      this.userMe = me;
       this.applyVerifiedPreference();
     });
   }

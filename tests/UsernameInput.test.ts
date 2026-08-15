@@ -23,11 +23,6 @@ const checkClanTagOwnership = vi.fn(
 vi.mock("../src/client/ClanApi", () => ({
   checkClanTagOwnership: (tag: string) => checkClanTagOwnership(tag),
 }));
-// Stands in for the local session. `false` means getUserMe's 401 handling
-// already logged out; anything else means the session survived, so a failed
-// refresh was transient.
-const userAuth = vi.fn(async (): Promise<unknown> => ({ jwt: "j" }));
-vi.mock("../src/client/Auth", () => ({ userAuth: () => userAuth() }));
 vi.mock("../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {
     isOnCrazyGames: () => false,
@@ -95,8 +90,6 @@ beforeEach(() => {
   getUserMe.mockReset();
   getUserMe.mockResolvedValue(false);
   invalidateUserMe.mockReset();
-  userAuth.mockReset();
-  userAuth.mockResolvedValue({ jwt: "j" });
   checkClanTagOwnership.mockReset();
   checkClanTagOwnership.mockImplementation(async (tag: string) => ({
     tag,
@@ -170,13 +163,21 @@ describe("UsernameInput clan tag picker", () => {
     q(el, "#clan-tag-button")!.click();
     await el.updateComplete;
 
-    const manual = q<HTMLInputElement>(el, "#clan-tag-manual")!;
-    manual.value = "OF";
-    manual.dispatchEvent(new Event("input"));
-    await el.updateComplete;
+    // Typed a character at a time: the bug needed the bound value to *change*
+    // between renders, so "O" (not a clan, binds "O") then "OF" (a clan, used
+    // to bind "") is what made Lit write the field back to empty. Setting the
+    // final value in one go leaves the binding at "" throughout and passes
+    // either way.
+    const type = async (value: string) => {
+      const input = q<HTMLInputElement>(el, "#clan-tag-manual")!;
+      input.value = value;
+      input.dispatchEvent(new Event("input"));
+      await el.updateComplete;
+    };
+    await type("O");
+    expect(q<HTMLInputElement>(el, "#clan-tag-manual")!.value).toBe("O");
+    await type("OF");
 
-    // The field is seeded from a separate draft, so a tag that happens to
-    // match one of the listed clans must not blank it mid-keystroke.
     expect(q<HTMLInputElement>(el, "#clan-tag-manual")!.value).toBe("OF");
     expect(el.getClanTag()).toBe("OF");
   });
@@ -346,36 +347,6 @@ describe("UsernameInput clan tag picker", () => {
     await settle();
     await el.updateComplete;
     expect(el.textContent).toContain("OpenFront Official");
-  });
-
-  it("clears account state when the refresh finds the session gone", async () => {
-    localStorage.setItem("useVerifiedName", "true");
-    localStorage.setItem("username", "MyCoolName");
-    const el = await mount();
-    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
-    expect(el.isVerified()).toBe(true);
-
-    // A 401 makes getUserMe log out and return false, but it dispatches no
-    // userMeResponse — the cleared session is the only signal.
-    getUserMe.mockResolvedValue(false);
-    userAuth.mockResolvedValue(false);
-    document.dispatchEvent(
-      new CustomEvent("clan-joined", {
-        detail: { tag: "OF" },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    await settle();
-    await settle();
-    await el.updateComplete;
-
-    expect(el.isVerified()).toBe(false);
-    expect(el.getUsername()).toBe("MyCoolName");
-    q(el, "#clan-tag-button")!.click();
-    await settle();
-    await el.updateComplete;
-    expect(el.textContent).not.toContain("OpenFront Official");
   });
 
   it("ignores an overlapping refresh that settles late", async () => {
