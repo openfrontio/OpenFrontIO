@@ -343,7 +343,7 @@ export class JoinLobbyModal extends BaseModal {
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
-                  // Some labels (e.g. host_modal.bots) already end with ": ".
+                  // Some labels (e.g. game_settings.bots) already end with ": ".
                   const label = s.label.replace(/[:\s]+$/, "");
                   return html`<span
                     class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
@@ -605,22 +605,22 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.infiniteTroops)
       items.push({
-        label: translateText("host_modal.infinite_troops"),
+        label: translateText("game_settings.infinite_troops"),
         value: enabled,
       });
     if (c.infiniteGold)
       items.push({
-        label: translateText("host_modal.infinite_gold"),
+        label: translateText("game_settings.infinite_gold"),
         value: enabled,
       });
     if (c.instantBuild)
       items.push({
-        label: translateText("host_modal.instant_build"),
+        label: translateText("game_settings.instant_build"),
         value: enabled,
       });
     if (c.randomSpawn)
       items.push({
-        label: translateText("host_modal.random_spawn"),
+        label: translateText("game_settings.random_spawn"),
         value: enabled,
       });
     if (c.maxTimerValue)
@@ -644,7 +644,7 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.goldMultiplier)
       items.push({
-        label: translateText("host_modal.gold_multiplier"),
+        label: translateText("game_settings.gold_multiplier"),
         value: `x${c.goldMultiplier}`,
       });
     if (c.customAllianceDuration === 0 || c.disableAlliances)
@@ -693,14 +693,14 @@ export class JoinLobbyModal extends BaseModal {
       c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
     if (isCompact)
       items.push({
-        label: translateText("host_modal.compact_map"),
+        label: translateText("game_settings.compact_map"),
         value: enabled,
       });
     {
       const defaultBots = isCompact ? 100 : 400;
       if (c.bots !== defaultBots)
         items.push({
-          label: translateText("host_modal.bots"),
+          label: translateText("game_settings.bots"),
           value: String(c.bots),
         });
     }
@@ -710,13 +710,13 @@ export class JoinLobbyModal extends BaseModal {
         : nationCount;
       if (typeof c.nations === "number" && c.nations !== defaultNations)
         items.push({
-          label: translateText("host_modal.nations"),
+          label: translateText("game_settings.nations"),
           value: String(c.nations),
         });
     }
     if (c.nations === "disabled" && !(c.gameType === GameType.Public && isTeam))
       items.push({
-        label: translateText("host_modal.nations"),
+        label: translateText("game_settings.nations"),
         value: disabled,
       });
     return items;
@@ -829,7 +829,7 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.infinite_gold")}
+          ${translateText("game_settings.infinite_gold")}
         </span>`,
       );
     if (hc.infiniteTroops)
@@ -837,7 +837,7 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.infinite_troops")}
+          ${translateText("game_settings.infinite_troops")}
         </span>`,
       );
     if (hc.goldMultiplier)
@@ -845,7 +845,8 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.gold_multiplier")}: x${hc.goldMultiplier}
+          ${translateText("game_settings.gold_multiplier")}:
+          x${hc.goldMultiplier}
         </span>`,
       );
     if (hc.startingGold)

@@ -409,9 +409,7 @@ export class SteamLinkModal extends BaseModal {
     // expected to actually render; there is deliberately no "unknown
     // account" placeholder text, since a shared-machine confirm screen that
     // can't name the account defeats the point of asking at all.
-    const account = ready
-      ? (this.username ?? "")
-      : translateText("steam_link_modal.loading_placeholder");
+    const account = ready ? (this.username ?? "") : "…";
 
     // Once ready, a null personaName means there is genuinely no Steam name
     // to show — always true for the code path (no ticket lookup exists for
@@ -426,9 +424,7 @@ export class SteamLinkModal extends BaseModal {
             username: account,
           })
         : translateText("steam_link_modal.confirm_prompt", {
-            persona: ready
-              ? (this.personaName as string)
-              : translateText("steam_link_modal.loading_placeholder"),
+            persona: ready ? (this.personaName as string) : "…",
             username: account,
           });
 
