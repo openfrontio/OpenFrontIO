@@ -9,7 +9,7 @@ import (
 	"image/png"
 	"math"
 
-	"github.com/chai2010/webp"
+	"github.com/gen2brain/webp"
 )
 
 const (
@@ -246,12 +246,16 @@ func convertToWebP(thumb ThumbData) ([]byte, error) {
 	copy(img.Pix, thumb.Data)
 
 	// Encode as WebP with quality 45 (equivalent to the JavaScript version)
-	webpData, err := webp.EncodeRGBA(img, 45)
+	var webpData bytes.Buffer
+	err := webp.Encode(&webpData, img, webp.Options{
+		Quality: 45,
+		Method:  4,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode WebP: %w", err)
 	}
 
-	return webpData, nil
+	return webpData.Bytes(), nil
 }
 
 // createMiniMap downscales the terrain grid by half.
@@ -333,11 +337,11 @@ func processShore(ctx context.Context, terrain [][]Terrain) []Coord {
 				}
 			} else if tile.Type == Water {
 				// Water tile adjacent to land is shoreline
-					for _, c := range buf[:n] {
-						if terrain[c.X][c.Y].Type == Land {
-							tile.Shoreline = true
-							shorelineWaters = append(shorelineWaters, Coord{X: x, Y: y})
-							break
+				for _, c := range buf[:n] {
+					if terrain[c.X][c.Y].Type == Land {
+						tile.Shoreline = true
+						shorelineWaters = append(shorelineWaters, Coord{X: x, Y: y})
+						break
 					}
 				}
 			}
