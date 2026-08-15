@@ -84,9 +84,13 @@ export class CosmeticRenderCanvas extends LitElement {
     super.updated(changedProps);
     if (changedProps.has("resolved") && this.renderer) {
       this.applyCosmetic();
-    }
-    if (changedProps.has("customColors") && this.renderer) {
-      this.renderer.setPreviewColors(this.customColors ?? []);
+    } else if (changedProps.has("customColors") && this.renderer) {
+      if (this.customColors && this.customColors.length > 0) {
+        this.renderer.setPreviewColors(this.customColors);
+      } else if (this.resolved) {
+        const defaultConfig = this.buildPreviewConfig(this.resolved);
+        this.renderer.setPreviewColors(defaultConfig.effectColors ?? []);
+      }
     }
     if (changedProps.has("salvoEnabled") && this.renderer) {
       this.renderer.setSalvoMode(this.salvoEnabled);
