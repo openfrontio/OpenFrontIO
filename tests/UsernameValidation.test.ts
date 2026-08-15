@@ -46,6 +46,22 @@ describe("free-form username length", () => {
   });
 });
 
+describe("free-form username charset", () => {
+  it("still refuses characters the form's own message excludes", () => {
+    // The wire schema carries hyphens so account names stay representable;
+    // that must not reach the name a player types for themselves, whose error
+    // message names letters, numbers, spaces and underscores.
+    expect(validateUsername("foo-bar").isValid).toBe(false);
+    expect(UsernameSchema.safeParse("foo-bar").success).toBe(true);
+  });
+
+  it("accepts what the message does name", () => {
+    for (const name of ["foo bar", "foo_bar", "Foo1", "füÜ.bar"]) {
+      expect(validateUsername(name).isValid).toBe(true);
+    }
+  });
+});
+
 describe("account names on the wire", () => {
   // Verified play submits the account name and skips free-form validation, so
   // anything AccountUsernameSchema accepts has to survive UsernameSchema or

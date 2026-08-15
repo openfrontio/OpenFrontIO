@@ -15,6 +15,13 @@ export const MAX_CLAN_TAG_LENGTH = 5;
 export const MIN_ACCOUNT_USERNAME_LENGTH = 3;
 export const MAX_ACCOUNT_USERNAME_LENGTH = 20;
 
+// Characters a player may type for themselves. Narrower than UsernameSchema,
+// which additionally carries hyphens so that account names — issued under the
+// separate AccountUsernameSchema rules — stay representable on the wire.
+// Widening the wire schema for those must not quietly widen this form, whose
+// error message names exactly these characters.
+const FREE_FORM_USERNAME_PATTERN = /^[a-zA-Z0-9_ üÜ.]+$/u;
+
 // Mirrors the API's account-username rules (infra src/api/lib/Usernames.ts)
 // for instant form feedback; profanity and uniqueness stay server-side. No
 // dots (the dot separates base from suffix) and no unicode. Single spaces
@@ -70,6 +77,12 @@ export function validateUsername(username: string): {
     else {
       return { isValid: false, error: translateText("username.invalid_chars") };
     }
+  }
+
+  // The schema's own charset is deliberately wider (see the pattern above), so
+  // the form's rule is applied separately rather than inherited from it.
+  if (!FREE_FORM_USERNAME_PATTERN.test(username)) {
+    return { isValid: false, error: translateText("username.invalid_chars") };
   }
 
   // All checks passed
