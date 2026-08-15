@@ -306,6 +306,21 @@ export class UserSettings {
     this.setBool("settings.goToPlayer", !this.goToPlayer());
   }
 
+  nukeAllianceSafetyDuration(): number {
+    const raw = this.getCached("settings.nukeAllianceSafetyDuration");
+    if (raw === null || raw.trim() === "") return 5;
+    const val = Number(raw);
+    if (!Number.isInteger(val) || val < 0 || val > 30) {
+      return 5;
+    }
+    return val;
+  }
+
+  setNukeAllianceSafetyDuration(duration: number) {
+    const val = Math.max(0, Math.min(30, Math.round(duration)));
+    this.setCached("settings.nukeAllianceSafetyDuration", val.toString());
+  }
+
   // For development only. Used for testing patterns, set in the console manually.
   getDevOnlyPattern(): PlayerPattern | undefined {
     const data = localStorage.getItem("dev-pattern") ?? undefined;

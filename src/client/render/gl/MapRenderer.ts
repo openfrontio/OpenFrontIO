@@ -225,6 +225,9 @@ export class MapRenderer {
   applyBonusEvents(events: BonusEvent[]): void {
     this.renderer?.applyBonusEvents(events);
   }
+  triggerBlockedFlash(tileX: number, tileY: number): void {
+    this.renderer?.triggerBlockedFlash(tileX, tileY);
+  }
   applyRailroadDust(tileRefs: number[]): void {
     this.renderer?.applyRailroadDust(tileRefs);
   }

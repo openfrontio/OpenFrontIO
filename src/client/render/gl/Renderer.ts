@@ -1022,6 +1022,10 @@ export class GPURenderer {
     if (filtered.length > 0) this.worldTextPass.applyBonusEvents(filtered);
   }
 
+  triggerBlockedFlash(tileX: number, tileY: number): void {
+    this.crosshairPass.triggerBlockedFlash(tileX, tileY);
+  }
+
   updateAttackRings(rings: AttackRingInput[]): void {
     this.fxPass.updateAttackRings(rings);
   }

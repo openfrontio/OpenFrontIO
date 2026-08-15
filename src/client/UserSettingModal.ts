@@ -110,7 +110,7 @@ export class UserSettingModal extends BaseModal {
       ({ actions: [a1, a2], keyPrefix }) =>
         ((action === a1 && activeKeybinds[a2] === value) ||
           (action === a2 && activeKeybinds[a1] === value)) &&
-        value.startsWith(keyPrefix),
+        (value === `${keyPrefix}Left` || value === `${keyPrefix}Right`),
     );
 
     if (
@@ -293,6 +293,11 @@ export class UserSettingModal extends BaseModal {
       return;
     }
     this.userSettings.setAttackRatioIncrement(Math.round(value));
+    this.requestUpdate();
+  }
+
+  private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
+    this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
     this.requestUpdate();
   }
 
@@ -911,6 +916,22 @@ export class UserSettingModal extends BaseModal {
         .value=${String(this.userSettings.attackRatioIncrement())}
         @change=${this.changeAttackRatioIncrement}
       ></setting-select>
+
+      <setting-slider
+        label="${translateText("user_setting.nuke_alliance_safety_label")}"
+        description="${translateText("user_setting.nuke_alliance_safety_desc")}"
+        min="0"
+        max="30"
+        .value=${this.userSettings.nukeAllianceSafetyDuration()}
+        .formatValue=${(val: number) =>
+          val > 0
+            ? translateText("user_setting.nuke_alliance_safety_duration", {
+                count: val,
+                seconds: (val / 10).toFixed(1),
+              })
+            : translateText("user_setting.off")}
+        @change=${this.sliderNukeAllianceSafetyDuration}
+      ></setting-slider>
 
       ${this.showEasterEggSettings
         ? html`
