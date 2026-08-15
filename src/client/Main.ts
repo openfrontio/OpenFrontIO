@@ -156,6 +156,7 @@ declare global {
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
+    "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
     "game-starting": CustomEvent;
     "update-game-config": CustomEvent;
@@ -498,6 +499,13 @@ class Client {
         }
       }
     };
+
+    // A session dropped in the background — an expired refresh token, a 401 on
+    // any endpoint — clears itself deep inside Auth, where none of the above
+    // is reachable. Routing it through onUserMe means the nav button, its
+    // cached profile and window.adsEnabled all follow, rather than only the
+    // components listening for userMeResponse.
+    document.addEventListener("session-cleared", () => void onUserMe(false));
 
     if ((await userAuth()) === false) {
       // Not logged in

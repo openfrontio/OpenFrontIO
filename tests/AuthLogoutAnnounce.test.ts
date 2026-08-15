@@ -16,13 +16,16 @@ vi.mock("../src/client/CrazyGamesSDK", () => ({
 const { clearLocalSession, userAuth } = await import("../src/client/Auth");
 const { ClientEnv } = await import("../src/client/ClientEnv");
 
+// Deliberately not userMeResponse: account state lives partly outside that
+// event (the nav button's cached profile, window.adsEnabled), so Main answers
+// this by running its no-session path, which broadcasts userMeResponse itself.
 function listen(): { seen: unknown[]; stop: () => void } {
   const seen: unknown[] = [];
-  const listener = (e: Event) => seen.push((e as CustomEvent).detail);
-  document.addEventListener("userMeResponse", listener);
+  const listener = (e: Event) => seen.push(e.type);
+  document.addEventListener("session-cleared", listener);
   return {
     seen,
-    stop: () => document.removeEventListener("userMeResponse", listener),
+    stop: () => document.removeEventListener("session-cleared", listener),
   };
 }
 
@@ -69,7 +72,7 @@ describe("clearLocalSession", () => {
     clearLocalSession();
     stop();
 
-    expect(seen).toEqual([false]);
+    expect(seen).toEqual(["session-cleared"]);
   });
 
   it("stays quiet when there was no session to clear", () => {

@@ -340,6 +340,16 @@ export class UsernameInput extends LitElement {
       this.clanCheck = Promise.resolve(null);
       return;
     }
+    // Membership already in hand answers this. checkClanTagOwnership would
+    // otherwise re-read getUserMe, which after a failed refresh holds a cached
+    // false — it would take the player for a member of nothing and reject the
+    // very clan they just picked from their own list. The server re-checks the
+    // tag at join either way (see Matchmaking).
+    if (this.myClans().some((c) => c.tag.toUpperCase() === tag.toUpperCase())) {
+      this.clanCheckPending = false;
+      this.clanCheck = Promise.resolve(tag);
+      return;
+    }
     this.clanCheckPending = true;
     this.clanCheck = checkClanTagOwnership(tag).then((res) => {
       if (gen === this.clanCheckGen) {

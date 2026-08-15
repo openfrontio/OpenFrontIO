@@ -381,6 +381,34 @@ describe("UsernameInput clan tag picker", () => {
     expect(el.getClanTag()).toBe("OF");
   });
 
+  it("selects a listed clan without asking the API", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+    await el.updateComplete;
+
+    // The profile refresh fails while the picker is open, so getUserMe now
+    // caches false — but the rows on screen came from the retained snapshot,
+    // and picking one has to honour it. Asking the API would reject the
+    // player's own clan.
+    getUserMe.mockResolvedValue(false);
+    checkClanTagOwnership.mockResolvedValue({
+      tag: null,
+      error: "username.tag_not_member",
+    });
+    (
+      el.querySelector("#clan-tag-menu .max-h-56 button") as HTMLElement
+    ).click();
+    await settle();
+    await el.updateComplete;
+
+    expect(checkClanTagOwnership).not.toHaveBeenCalled();
+    expect(el.canPlay()).toBe(true);
+    expect(el.getClanTag()).toBe("OF");
+    await expect(el.getClanCheck()).resolves.toBe("OF");
+  });
+
   it("ignores an overlapping refresh that settles late", async () => {
     const el = await mount();
     await signIn(el, premiumUser([{ tag: "OLD", name: "Old Clan" }]));

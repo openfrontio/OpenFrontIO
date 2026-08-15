@@ -111,15 +111,14 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
 // transient network error looks like. Dispatched from clearLocalSession so it
 // covers all of them — an expired refresh token, a JWT issued for another
 // origin, a 401 on any endpoint — rather than the one branch that prompted it.
-// Idempotent: the payload is the same `false` Main dispatches when auth
-// resolves to no session.
+//
+// Distinct from userMeResponse, which Main dispatches: account state lives
+// partly outside that event (the nav button's imperative avatar and its cached
+// profile, window.adsEnabled), so Main answers this by running the same
+// no-session path it runs at startup, which broadcasts userMeResponse itself.
 function announceLoggedOut(): void {
   document.dispatchEvent(
-    new CustomEvent("userMeResponse", {
-      detail: false,
-      bubbles: true,
-      cancelable: true,
-    }),
+    new CustomEvent("session-cleared", { bubbles: true, cancelable: true }),
   );
 }
 
