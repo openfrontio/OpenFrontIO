@@ -324,7 +324,7 @@ export class CosmeticRenderCanvas extends LitElement {
 
     const isMirv = Boolean(
       key.toLowerCase().includes("mirv") ||
-        (effect.name && effect.name.toLowerCase().includes("mirv")),
+      (effect.name && effect.name.toLowerCase().includes("mirv")),
     );
 
     if (effect.effectType === "nukeTrail") {

@@ -265,6 +265,7 @@ export class PreviewSkinPass {
   setPatternColors(
     colors?: readonly (readonly [number, number, number])[],
   ): void {
+    this.loadToken++;
     this.hasSkin = false;
     this.isPattern = false;
     this.isTeamMode = false;

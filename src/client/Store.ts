@@ -75,10 +75,7 @@ export class StoreModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeEvent);
-    this.addEventListener(
-      "open-cosmetic-preview",
-      this.onOpenCosmeticPreview,
-    );
+    this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {
       this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));

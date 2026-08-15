@@ -25,11 +25,11 @@ import { userAuth } from "./Auth";
 import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
-import "./components/CosmeticPreviewModal";
 import {
   cosmeticDisplayName,
   cosmeticSelectionLabel,
 } from "./components/CosmeticPresentation";
+import "./components/CosmeticPreviewModal";
 import "./components/EffectsGrid";
 import "./components/InventoryLoadoutBar";
 import type {
@@ -119,10 +119,7 @@ export class InventoryModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
-    this.addEventListener(
-      "open-cosmetic-preview",
-      this.onOpenCosmeticPreview,
-    );
+    this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onCosmeticSelected,

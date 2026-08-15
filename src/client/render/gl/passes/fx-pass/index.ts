@@ -23,8 +23,8 @@ import {
 } from "./FxShockwavePass";
 import { FxSpritePass, NUKE_EXPLOSION_RADII } from "./FxSpritePass";
 
-export { calculateExplosionDurationMs };
 export type { AttackRingInput } from "../../../types";
+export { calculateExplosionDurationMs };
 
 export class FxPass {
   private spritePass: FxSpritePass;
