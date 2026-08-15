@@ -157,6 +157,19 @@ export class MasterLobbyService {
       return true;
     });
 
+    // Featured lobbies keep their place when the list overflows. They are
+    // announced events with a published start time, and delisting is permanent
+    // — the worker clears listedAt, so an event lobby that loses the cap never
+    // comes back and its audience arrives to nothing. Only an admin bot can set
+    // featured, and the per-creator dedup above already caps each host at one
+    // listing, so this cannot be used to crowd the list. Stable within each
+    // group: the sort above still decides order among featured and among the
+    // rest.
+    result.hosted = [
+      ...result.hosted.filter((l) => l.featured),
+      ...result.hosted.filter((l) => !l.featured),
+    ];
+
     // Cluster-wide cap to prevent listing spam. Workers reject listings past
     // the cap too, but their view lags by a broadcast round-trip; overflow
     // (deterministically the sort losers) is delisted like dedup losers.

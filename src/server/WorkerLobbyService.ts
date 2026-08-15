@@ -160,6 +160,11 @@ export class WorkerLobbyService {
         gameConfig: gi.gameConfig && publicLobbyGameConfig(gi.gameConfig),
         publicGameType: "hosted",
         creatorID: g.hashedCreatorID(),
+        // Already sanitised on the way in (GameServer.setFeatured), so nothing
+        // unsanitised can reach a browser even if another producer appears.
+        label: g.lobbyLabel(),
+        accent: g.lobbyAccent(),
+        featured: g.isFeatured() ? true : undefined,
       } satisfies InternalGameInfo;
     });
     this.sendToMaster({

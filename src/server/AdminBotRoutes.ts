@@ -14,6 +14,8 @@ import {
   GameConfigSchema,
   ID,
   IntentSchema,
+  LobbyAccentSchema,
+  LobbyLabelSchema,
 } from "../core/Schemas";
 import type { GameManager } from "./GameManager";
 import { ServerEnv } from "./ServerEnv";
@@ -91,8 +93,18 @@ export function registerAdminBotRoutes(opts: {
     // serve a bot: it authorizes via isCreator + subscription, and an admin-bot
     // lobby is deliberately created with NO creatorPersistentID (below), so it has
     // no owner to match and no account to bill.
+    //
+    // `featured` rides alongside for the same reason. It lengthens the listing
+    // deadline and gives the row a label of the host's choosing, which is only
+    // safe because this endpoint is authenticated: an ordinary subscriber must
+    // not be able to name their lobby "Official Event" or hold a listing open.
     const listedParsed = z
-      .object({ listed: z.boolean().optional() })
+      .object({
+        listed: z.boolean().optional(),
+        featured: z.boolean().optional(),
+        label: LobbyLabelSchema.optional(),
+        accent: LobbyAccentSchema.optional(),
+      })
       .safeParse(req.body ?? {});
     if (!listedParsed.success) {
       return res
@@ -100,6 +112,7 @@ export function registerAdminBotRoutes(opts: {
         .json({ error: z.prettifyError(listedParsed.error) });
     }
     const listed = listedParsed.data.listed === true;
+    const featured = listedParsed.data.featured === true;
 
     // Optional team pinning. Read alongside the config for the same reason as
     // `listed`: it is not a GameConfig field, so the parse above strips it and it
@@ -165,6 +178,12 @@ export function registerAdminBotRoutes(opts: {
         return res.status(409).json({ error: "listing_host_cheats_enabled" });
       }
     }
+    // Featuring only means anything for a listed lobby: it governs the listing
+    // deadline and the browser row. Refuse rather than silently ignore, so a
+    // caller that forgot `listed` finds out.
+    if (featured && !listed) {
+      return res.status(400).json({ error: "featured_requires_listed" });
+    }
 
     const id = ServerEnv.generateGameIdForWorker(workerId);
     if (id === null) {
@@ -186,7 +205,15 @@ export function registerAdminBotRoutes(opts: {
     if (listed) {
       game.setListed(true);
     }
-    log.info(`admin bot created game ${id}`, { listed });
+    // After setListed: the deadline is measured from the listing, and featuring
+    // is what decides how long that deadline is.
+    if (featured) {
+      game.setFeatured({
+        label: listedParsed.data.label,
+        accent: listedParsed.data.accent,
+      });
+    }
+    log.info(`admin bot created game ${id}`, { listed, featured });
     res.json({
       ...game.gameInfo(),
       workerIndex: workerId,
