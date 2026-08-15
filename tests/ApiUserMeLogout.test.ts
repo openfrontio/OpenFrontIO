@@ -62,6 +62,26 @@ describe("getUserMe on an expired session", () => {
     });
   });
 
+  it("drops the cached profile when the session is cleared", async () => {
+    // getUserMe answers from its cache before checking authentication, so a
+    // profile fetched under the old session would otherwise still be handed
+    // out after a background logout.
+    respondWith(200);
+    const calls = () =>
+      (globalThis.fetch as unknown as { mock: { calls: [] } }).mock.calls
+        .length;
+
+    await getUserMe();
+    const afterFirst = calls();
+    await getUserMe();
+    expect(calls()).toBe(afterFirst);
+
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    await getUserMe();
+
+    expect(calls()).toBeGreaterThan(afterFirst);
+  });
+
   it("leaves the session alone on a transient failure", () => {
     respondWith(503);
     return getUserMe().then((result) => {
