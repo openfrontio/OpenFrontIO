@@ -259,28 +259,63 @@ export class CosmeticPreviewModal extends LitElement {
                               role="separator"
                             ></div>`
                           : nothing}
-                        <button
-                          type="button"
-                          title=${label}
-                          aria-label=${label}
-                          class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 overflow-hidden transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
-                            ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-900 border-white"
-                            : ""}"
-                          @click=${() =>
-                            this.selectPalette(
-                              p.primaryColor,
-                              p.secondaryColor,
-                            )}
-                        >
-                          <div
-                            class="w-full h-full"
-                            style=${isDefault
-                              ? "background: linear-gradient(135deg, #2962ff 0 50%, #1d4ed8 50% 100%);"
-                              : isTeam
-                                ? `background-color: ${p.primaryColor};`
-                                : `background-image: linear-gradient(135deg, ${p.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${p.secondaryColor} calc(50% + 0.5px) 100%);`}
-                          ></div>
-                        </button>
+                        ${this.resolved?.type === "skin" && isDefault
+                          ? html`
+                              <button
+                                type="button"
+                                title=${translateText(
+                                  "territory_patterns.pattern.default",
+                                )}
+                                aria-label=${translateText(
+                                  "territory_patterns.pattern.default",
+                                )}
+                                class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
+                                  ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-900 border-white bg-white/25 text-white shadow-sm"
+                                  : "border-white/30 bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"}"
+                                @click=${() =>
+                                  this.selectPalette(
+                                    p.primaryColor,
+                                    p.secondaryColor,
+                                  )}
+                              >
+                                <svg
+                                  class="w-3.5 h-3.5"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2.5"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                >
+                                  <path
+                                    d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                                  />
+                                  <path d="M3 3v5h5" />
+                                </svg>
+                              </button>
+                            `
+                          : html`
+                              <button
+                                type="button"
+                                title=${label}
+                                aria-label=${label}
+                                class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 overflow-hidden transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
+                                  ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-900 border-white"
+                                  : ""}"
+                                @click=${() =>
+                                  this.selectPalette(
+                                    p.primaryColor,
+                                    p.secondaryColor,
+                                  )}
+                              >
+                                <div
+                                  class="w-full h-full"
+                                  style=${isTeam
+                                    ? `background-color: ${p.primaryColor};`
+                                    : `background-image: linear-gradient(135deg, ${p.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${p.secondaryColor} calc(50% + 0.5px) 100%);`}
+                                ></div>
+                              </button>
+                            `}
                       `;
                     })}
                   </div>

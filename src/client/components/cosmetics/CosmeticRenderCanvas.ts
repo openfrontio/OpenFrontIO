@@ -85,12 +85,8 @@ export class CosmeticRenderCanvas extends LitElement {
     if (changedProps.has("resolved") && this.renderer) {
       this.applyCosmetic();
     }
-    if (
-      changedProps.has("customColors") &&
-      this.customColors &&
-      this.renderer
-    ) {
-      this.renderer.setPreviewColors(this.customColors);
+    if (changedProps.has("customColors") && this.renderer) {
+      this.renderer.setPreviewColors(this.customColors ?? []);
     }
     if (changedProps.has("salvoEnabled") && this.renderer) {
       this.renderer.setSalvoMode(this.salvoEnabled);
