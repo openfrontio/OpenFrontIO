@@ -5,7 +5,7 @@
 import type { Config } from "../../../core/configuration/Config";
 import { Camera } from "../gl/Camera";
 import { initGL } from "../gl/initGL";
-import { FxPass } from "../gl/passes/fx-pass";
+import { calculateExplosionDurationMs, FxPass } from "../gl/passes/fx-pass";
 import { SpiralRibbonPass } from "../gl/passes/SpiralRibbonPass";
 import { StructurePass } from "../gl/passes/StructurePass";
 import { TerrainPass } from "../gl/passes/TerrainPass";
@@ -105,6 +105,9 @@ export class CosmeticPreviewRenderer {
   private trailTex: WebGLTexture;
   private liveTrailData = new Uint16Array(PREVIEW_MAP_DIM * PREVIEW_MAP_DIM);
   private lastActiveTrailIndices: number[] = [];
+  private effectBuffer = new Float32Array(
+    getPaletteSize() * MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS * 4,
+  );
 
   private terrainPass: TerrainPass;
   private skinPass: PreviewSkinPass;
@@ -160,11 +163,12 @@ export class CosmeticPreviewRenderer {
       mapWidth: PREVIEW_MAP_DIM,
       mapHeight: PREVIEW_MAP_DIM,
       unitTypes: ALL_MOBILE_UNIT_TYPES,
+      players: [],
     } as unknown as RendererConfig;
 
-    const mockConfig: Config = {
+    const mockConfig = {
       msPerTick: () => 100,
-    } as unknown as Config;
+    } as Config;
 
     this.unitPass = new UnitPass(
       this.gl,
@@ -180,6 +184,7 @@ export class CosmeticPreviewRenderer {
       mapWidth: PREVIEW_MAP_DIM,
       mapHeight: PREVIEW_MAP_DIM,
       unitTypes: ALL_STRUCTURE_TYPES,
+      players: [],
     } as unknown as RendererConfig;
 
     this.structurePass = new StructurePass(
@@ -212,7 +217,16 @@ export class CosmeticPreviewRenderer {
 
     this.ticker = new PreviewAnimationTicker({ mode: "SKIN" });
 
-    this.applyCameraPreset("CONTINENTAL_ARCHIPELAGO");
+    this.applyCameraPreset("SKIN");
+  }
+
+  private toRgb01(
+    colors?: readonly string[],
+  ): readonly (readonly [number, number, number])[] {
+    return (colors ?? []).map((hex) => {
+      const rgb = hexToRgb(hex) ?? [255, 255, 255];
+      return [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255] as const;
+    });
   }
 
   setCosmetic(config: CosmeticPreviewConfig): void {
@@ -237,15 +251,16 @@ export class CosmeticPreviewRenderer {
       );
     }
 
-    this.applyCameraPreset(this.currentPreset);
+    this.applyCameraPreset(config.mode);
 
-    const rgbColors = (config.effectColors ?? []).map((hex) => {
-      const rgb = hexToRgb(hex) ?? [255, 255, 255];
-      return [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255] as const;
-    });
+    const rgbColors = this.toRgb01(config.effectColors);
 
     if (config.mode === "SKIN") {
       if (config.skinUrl) {
+        this.skinPass.setPrimaryColor(
+          rgbColors.length > 0 ? rgbColors[0] : [0.2, 0.6, 0.95],
+          rgbColors.length > 0,
+        );
         this.skinPass.setSkinUrl(config.skinUrl);
       } else if (config.patternData) {
         this.skinPass.setPattern(config.patternData, rgbColors);
@@ -255,18 +270,9 @@ export class CosmeticPreviewRenderer {
     }
     this.structurePass.setHighlightOwner(config.mode === "BUILDING" ? 1 : 0);
 
-    let explosionDurationSec: number | undefined;
-    if (config.explosionParams) {
-      const widthPx = config.explosionParams.maxRadius * 2;
-      const durMs = Math.min(
-        Math.max(
-          (widthPx / Math.max(config.explosionParams.speed, 0.001)) * 1000,
-          100,
-        ),
-        15_000,
-      );
-      explosionDurationSec = durMs / 1000;
-    }
+    const explosionDurationSec = config.explosionParams
+      ? calculateExplosionDurationMs(config.explosionParams, 1500) / 1000
+      : undefined;
 
     this.ticker = new PreviewAnimationTicker({
       mode: config.mode,
@@ -275,7 +281,8 @@ export class CosmeticPreviewRenderer {
       explosionDurationSec,
       salvoMode: config.salvoMode,
       spiralParams:
-        config.mode === "NUKE_MISSILE_TRAIL" &&
+        (config.mode === "NUKE_MISSILE_TRAIL" ||
+          config.mode === "MIRV_CLUSTER") &&
         config.spiralRadius !== undefined
           ? {
               radius: config.spiralRadius ?? 3,
@@ -296,25 +303,13 @@ export class CosmeticPreviewRenderer {
   }
 
   resetCamera(): void {
-    const preset = this.resolveTerrainPreset(this.currentMode);
-    this.applyCameraPreset(preset);
+    this.applyCameraPreset(this.currentMode);
   }
 
   setPreviewColors(colors: readonly string[]): void {
     if (!this.currentConfig) return;
     this.currentConfig = { ...this.currentConfig, effectColors: colors };
-    const rgbColors = colors.map((hex) => {
-      const rgb = hexToRgb(hex) ?? [255, 255, 255];
-      return [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255] as const;
-    });
-    if (this.currentConfig.mode === "SKIN") {
-      if (this.currentConfig.patternData) {
-        this.skinPass.setPattern(this.currentConfig.patternData, rgbColors);
-      } else {
-        this.skinPass.setPatternColors(rgbColors);
-      }
-    }
-    this.updateEffectTexture(this.currentConfig);
+    this.setCosmetic(this.currentConfig);
   }
 
   setSalvoMode(enabled: boolean): void {
@@ -351,7 +346,7 @@ export class CosmeticPreviewRenderer {
       this.camera.resize(cssW, cssH);
       if (!this.initialized) {
         this.initialized = true;
-        this.applyCameraPreset(this.currentPreset);
+        this.applyCameraPreset(this.currentMode);
       }
     }
 
@@ -476,21 +471,27 @@ export class CosmeticPreviewRenderer {
     }
   }
 
-  private applyCameraPreset(preset: PreviewTerrainPreset): void {
+  private applyCameraPreset(mode: CosmeticPreviewMode): void {
     const center = PREVIEW_MAP_DIM / 2;
-    if (preset === "OPEN_OCEAN") {
-      this.camera.setCameraState(center, center, 4.4);
-    } else if (preset === "COASTAL_BASEPLATE") {
-      this.camera.setCameraState(center, center, 2.4);
-    } else if (
-      this.currentMode === "NUKE_MISSILE_TRAIL" ||
-      this.currentMode === "NUKE_EXPLOSION" ||
-      this.currentMode === "MIRV_CLUSTER"
-    ) {
-      this.camera.setCameraState(center, center, 1.35);
-    } else {
-      this.camera.setCameraState(center, center, 1.0);
+    let zoom: number;
+    switch (mode) {
+      case "WARSHIP_BOAT_TRAIL":
+        zoom = 4.4;
+        break;
+      case "BUILDING":
+        zoom = 2.4;
+        break;
+      case "NUKE_MISSILE_TRAIL":
+      case "NUKE_EXPLOSION":
+      case "MIRV_CLUSTER":
+        zoom = 1.35;
+        break;
+      case "SKIN":
+      default:
+        zoom = 1.0;
+        break;
     }
+    this.camera.setCameraState(center, center, zoom);
   }
 
   private createPaletteTexture(): WebGLTexture {
@@ -538,12 +539,10 @@ export class CosmeticPreviewRenderer {
   private updateEffectTexture(config: CosmeticPreviewConfig): void {
     const width = getPaletteSize();
     const height = MAX_TRAIL_COLORS * EFFECT_PALETTE_BLOCKS;
-    const data = new Float32Array(width * height * 4);
+    this.effectBuffer.fill(0);
+    const data = this.effectBuffer;
 
-    const colors = (config.effectColors ?? []).map((hex) => {
-      const rgb = hexToRgb(hex) ?? [255, 255, 255];
-      return [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255] as const;
-    });
+    const colors = this.toRgb01(config.effectColors);
 
     const ownerID = 1;
     const speed = config.movementSpeed ?? 20.0;

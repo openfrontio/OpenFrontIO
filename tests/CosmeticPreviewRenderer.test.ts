@@ -100,10 +100,8 @@ describe("PreviewAnimationTicker", () => {
     });
     // Mid flight warheads phase (simulate t = 2.6s)
     const warheadSnapshot = ticker.sample(performance.now() + 2600);
-    if (warheadSnapshot.units.length > 0) {
-      expect(warheadSnapshot.units.length).toBe(8);
-      expect(warheadSnapshot.units[0].unitType).toBe("MIRV Warhead");
-    }
+    expect(warheadSnapshot.units.length).toBe(8);
+    expect(warheadSnapshot.units[0].unitType).toBe("MIRV Warhead");
 
     // Detonation phase (simulate t = 4.5s)
     const detSnapshot = ticker.sample(performance.now() + 4500);

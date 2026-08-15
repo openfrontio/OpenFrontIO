@@ -1,3 +1,4 @@
+import { colord } from "colord";
 import { html, LitElement, nothing, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ColorPalette, Pattern } from "../../core/CosmeticSchemas";
@@ -12,6 +13,16 @@ import {
   cosmeticRarityLabel,
 } from "./CosmeticPresentation";
 import "./cosmetics/CosmeticRenderCanvas";
+
+export const TEAM_COLORS = [
+  { name: "Red", hex: "#eb3333" },
+  { name: "Blue", hex: "#2962ff" },
+  { name: "Teal", hex: "#2bd4bd" },
+  { name: "Purple", hex: "#9234ea" },
+  { name: "Yellow", hex: "#e7b008" },
+  { name: "Orange", hex: "#f97415" },
+  { name: "Green", hex: "#41be52" },
+];
 
 /**
  * CosmeticPreviewModal — fullscreen interactive preview dialog for store cosmetics.
@@ -47,36 +58,69 @@ export class CosmeticPreviewModal extends LitElement {
   }
 
   private getAvailablePalettes(): ColorPalette[] {
-    if (!this.resolved || this.resolved.type !== "pattern") return [];
-    const pattern = this.resolved.cosmetic as Pattern | null;
-    if (!pattern) return [];
-    const catalog = getCachedCosmetics();
-    const palettes: ColorPalette[] = [];
-    const seen = new Set<string>();
+    if (!this.resolved) return [];
 
-    if (this.resolved.colorPalette) {
-      palettes.push(this.resolved.colorPalette);
-      seen.add(this.resolved.colorPalette.name);
+    if (this.resolved.type === "skin") {
+      return [
+        {
+          name: "Default",
+          primaryColor: "default",
+          secondaryColor: "default",
+        },
+        ...TEAM_COLORS.map((tc) => ({
+          name: tc.name,
+          primaryColor: tc.hex,
+          secondaryColor: tc.hex,
+        })),
+      ];
     }
 
-    if (pattern.colorPalettes && catalog?.colorPalettes) {
-      for (const cp of pattern.colorPalettes) {
-        if (cp.isArchived) continue;
-        if (seen.has(cp.name)) continue;
-        const pal = catalog.colorPalettes[cp.name];
-        if (pal) {
-          palettes.push(pal);
-          seen.add(cp.name);
+    if (this.resolved.type === "pattern") {
+      const pattern = this.resolved.cosmetic as Pattern | null;
+      const catalog = getCachedCosmetics();
+      const palettes: ColorPalette[] = [];
+      const seen = new Set<string>();
+
+      if (this.resolved.colorPalette) {
+        palettes.push(this.resolved.colorPalette);
+        seen.add(this.resolved.colorPalette.name);
+      }
+
+      if (pattern?.colorPalettes && catalog?.colorPalettes) {
+        for (const cp of pattern.colorPalettes) {
+          if (cp.isArchived) continue;
+          if (seen.has(cp.name)) continue;
+          const pal = catalog.colorPalettes[cp.name];
+          if (pal) {
+            palettes.push(pal);
+            seen.add(cp.name);
+          }
         }
       }
+
+      // Add the 7 team colors for pattern skins
+      for (const tc of TEAM_COLORS) {
+        const secondary = colord(tc.hex).darken(0.125).toHex();
+        palettes.push({
+          name: tc.name,
+          primaryColor: tc.hex,
+          secondaryColor: secondary,
+        });
+      }
+
+      return palettes;
     }
-    return palettes;
+
+    return [];
   }
 
   updated(changedProps: PropertyValues) {
     super.updated(changedProps);
     if (changedProps.has("resolved") && this.resolved) {
-      if (this.resolved.colorPalette) {
+      if (this.resolved.type === "skin") {
+        this.selectedPrimary = "default";
+        this.selectedSecondary = "default";
+      } else if (this.resolved.colorPalette) {
         this.selectedPrimary = this.resolved.colorPalette.primaryColor;
         this.selectedSecondary = this.resolved.colorPalette.secondaryColor;
       } else {
@@ -116,6 +160,8 @@ export class CosmeticPreviewModal extends LitElement {
     const name = cosmeticDisplayName(this.resolved);
     const rarityLabel = cosmeticRarityLabel(this.resolved);
     const palettes = this.getAvailablePalettes();
+    const artist = (this.resolved.cosmetic as { artist?: string } | null)
+      ?.artist;
 
     return html`<div
       data-cosmetic-preview-modal
@@ -138,6 +184,12 @@ export class CosmeticPreviewModal extends LitElement {
             >
               ${rarityLabel}
             </span>
+            ${artist
+              ? html`<span class="text-xs text-white/60">
+                  ${translateText("cosmetics.artist_label")}
+                  <span class="text-white/90 font-medium">${artist}</span>
+                </span>`
+              : nothing}
           </div>
           <button
             type="button"
@@ -154,15 +206,18 @@ export class CosmeticPreviewModal extends LitElement {
         <div class="flex-1 p-4 bg-zinc-950/60 min-h-0">
           <cosmetic-render-canvas
             .resolved=${this.resolved}
-            .customColors=${this.resolved.type === "skin" ||
-            this.resolved.type === "pattern"
-              ? [this.selectedPrimary, this.selectedSecondary]
-              : null}
+            .customColors=${this.resolved.type === "skin"
+              ? this.selectedPrimary === "default"
+                ? null
+                : [this.selectedPrimary]
+              : this.resolved.type === "pattern"
+                ? [this.selectedPrimary, this.selectedSecondary]
+                : null}
             class="block h-full w-full"
           ></cosmetic-render-canvas>
         </div>
 
-        <!-- Skin / Pattern Color Customizer (Only Palettes Specified in JSON) -->
+        <!-- Skin / Pattern Color Customizer (Only Palettes Specified in JSON + Team Colors for Skins) -->
         ${palettes.length > 1
           ? html`
               <div
@@ -175,15 +230,35 @@ export class CosmeticPreviewModal extends LitElement {
                   <div
                     class="flex items-center gap-2.5 p-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-w-[380px] sm:max-w-none"
                   >
-                    ${palettes.map((p) => {
-                      const label = translateCosmetic(
-                        "territory_patterns.color_palette",
-                        p.name,
+                    ${palettes.map((p, idx) => {
+                      const isDefault = p.name === "Default";
+                      const isTeam = TEAM_COLORS.some(
+                        (tc) => tc.name === p.name,
                       );
+                      const isFirstTeam =
+                        isTeam &&
+                        idx > 0 &&
+                        !TEAM_COLORS.some(
+                          (tc) => tc.name === palettes[idx - 1].name,
+                        );
+                      const label = isDefault
+                        ? translateText("territory_patterns.pattern.default")
+                        : isTeam
+                          ? translateText(`team_colors.${p.name.toLowerCase()}`)
+                          : translateCosmetic(
+                              "territory_patterns.color_palette",
+                              p.name,
+                            );
                       const isSelected =
                         this.selectedPrimary === p.primaryColor &&
                         this.selectedSecondary === p.secondaryColor;
                       return html`
+                        ${isFirstTeam
+                          ? html`<div
+                              class="h-5 w-px bg-white/20 mx-0.5 shrink-0"
+                              role="separator"
+                            ></div>`
+                          : nothing}
                         <button
                           type="button"
                           title=${label}
@@ -199,7 +274,11 @@ export class CosmeticPreviewModal extends LitElement {
                         >
                           <div
                             class="w-full h-full"
-                            style="background-image: linear-gradient(135deg, ${p.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${p.secondaryColor} calc(50% + 0.5px) 100%);"
+                            style=${isDefault
+                              ? "background: linear-gradient(135deg, #2962ff 0 50%, #1d4ed8 50% 100%);"
+                              : isTeam
+                                ? `background-color: ${p.primaryColor};`
+                                : `background-image: linear-gradient(135deg, ${p.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${p.secondaryColor} calc(50% + 0.5px) 100%);`}
                           ></div>
                         </button>
                       `;

@@ -5,6 +5,10 @@
 import { base64url } from "jose";
 import { PatternDecoder } from "../../../../core/PatternDecoder";
 import { createMapQuad, createProgram } from "../../gl/utils/GlUtils";
+import {
+  PREVIEW_ISLAND_RADIUS,
+  PREVIEW_ISLAND_WOBBLE,
+} from "../PreviewMapGenerator";
 
 const vertSrc = `#version 300 es
 layout(location = 0) in vec2 aPos;
@@ -12,11 +16,9 @@ layout(location = 0) in vec2 aPos;
 uniform mat3 uCamera;
 uniform vec2 uMapSize;
 
-out vec2 vUv;
 out vec2 vWorldPos;
 
 void main() {
-  vUv = aPos;
   vWorldPos = aPos * uMapSize;
   vec3 clip = uCamera * vec3(vWorldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
@@ -26,14 +28,13 @@ void main() {
 const fragSrc = `#version 300 es
 precision highp float;
 
-in vec2 vUv;
 in vec2 vWorldPos;
 
 uniform sampler2D uSkinTex;
 uniform int uHasSkin;
 uniform int uIsPattern;
+uniform int uIsTeamMode;
 uniform vec3 uPrimaryColor;
-uniform vec3 uSecondaryColor;
 uniform vec2 uCenter;
 uniform float uRadius;
 uniform vec2 uPatternTileSize;
@@ -52,7 +53,7 @@ void main() {
   
   // Coastline mask matching the procedural archipelago
   float angle = atan(d.y, d.x);
-  float wobble = sin(angle * 4.0) * 5.0 + cos(angle * 6.0) * 3.0;
+  float wobble = sin(angle * ${PREVIEW_ISLAND_WOBBLE.freq1.toFixed(1)}) * ${PREVIEW_ISLAND_WOBBLE.amp1.toFixed(1)} + cos(angle * ${PREVIEW_ISLAND_WOBBLE.freq2.toFixed(1)}) * ${PREVIEW_ISLAND_WOBBLE.amp2.toFixed(1)};
   float effectiveR = uRadius + wobble;
   
   if (dist > effectiveR) {
@@ -78,7 +79,8 @@ void main() {
       vec2 skinUV = (vWorldPos - uCenter) / stampSize + vec2(0.5);
       if (skinUV.x >= 0.0 && skinUV.x <= 1.0 && skinUV.y >= 0.0 && skinUV.y <= 1.0) {
         vec4 tex = texture(uSkinTex, skinUV);
-        vec3 col = mix(uPrimaryColor, tex.rgb, tex.a);
+        vec3 skinCol = (uIsTeamMode == 1) ? uPrimaryColor * tex.rgb : tex.rgb;
+        vec3 col = mix(uPrimaryColor, skinCol, tex.a);
         col = applySaturation(col, 0.85);
         fragColor = vec4(col, 0.60 * borderAlpha);
       } else {
@@ -101,8 +103,8 @@ export class PreviewSkinPass {
   private uSkinTex: WebGLUniformLocation;
   private uHasSkin: WebGLUniformLocation;
   private uIsPattern: WebGLUniformLocation;
+  private uIsTeamMode: WebGLUniformLocation;
   private uPrimaryColor: WebGLUniformLocation;
-  private uSecondaryColor: WebGLUniformLocation;
   private uCenter: WebGLUniformLocation;
   private uRadius: WebGLUniformLocation;
   private uPatternTileSize: WebGLUniformLocation;
@@ -111,10 +113,12 @@ export class PreviewSkinPass {
   private skinTexture: WebGLTexture | null = null;
   private hasSkin = false;
   private isPattern = false;
+  private isTeamMode = false;
+  private isDisposed = false;
+  private loadToken = 0;
   private patternTileSize: [number, number] = [32, 32];
   private skinStampSize = 260.0;
   private primaryColor: [number, number, number] = [0.2, 0.6, 0.95];
-  private secondaryColor: [number, number, number] = [0.1, 0.35, 0.7];
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -129,11 +133,8 @@ export class PreviewSkinPass {
     this.uSkinTex = gl.getUniformLocation(this.program, "uSkinTex")!;
     this.uHasSkin = gl.getUniformLocation(this.program, "uHasSkin")!;
     this.uIsPattern = gl.getUniformLocation(this.program, "uIsPattern")!;
+    this.uIsTeamMode = gl.getUniformLocation(this.program, "uIsTeamMode")!;
     this.uPrimaryColor = gl.getUniformLocation(this.program, "uPrimaryColor")!;
-    this.uSecondaryColor = gl.getUniformLocation(
-      this.program,
-      "uSecondaryColor",
-    )!;
     this.uCenter = gl.getUniformLocation(this.program, "uCenter")!;
     this.uRadius = gl.getUniformLocation(this.program, "uRadius")!;
     this.uPatternTileSize = gl.getUniformLocation(
@@ -147,6 +148,8 @@ export class PreviewSkinPass {
   }
 
   setSkinUrl(url?: string): void {
+    if (this.isDisposed) return;
+    const token = ++this.loadToken;
     if (!url) {
       this.hasSkin = false;
       this.isPattern = false;
@@ -155,6 +158,7 @@ export class PreviewSkinPass {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      if (this.isDisposed || this.loadToken !== token) return;
       const gl = this.gl;
       this.skinTexture ??= gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, this.skinTexture);
@@ -167,6 +171,11 @@ export class PreviewSkinPass {
       this.hasSkin = true;
       this.isPattern = false;
     };
+    img.onerror = () => {
+      if (this.isDisposed || this.loadToken !== token) return;
+      this.hasSkin = false;
+      this.isPattern = false;
+    };
     img.src = url;
   }
 
@@ -174,6 +183,8 @@ export class PreviewSkinPass {
     patternData: string,
     colors?: readonly (readonly [number, number, number])[],
   ): void {
+    if (this.isDisposed) return;
+    this.loadToken++;
     try {
       const decoder = new PatternDecoder(
         {
@@ -241,22 +252,24 @@ export class PreviewSkinPass {
     }
   }
 
+  setPrimaryColor(
+    color?: readonly [number, number, number],
+    isTeamMode = false,
+  ): void {
+    if (color) {
+      this.primaryColor = [color[0], color[1], color[2]];
+    }
+    this.isTeamMode = isTeamMode;
+  }
+
   setPatternColors(
     colors?: readonly (readonly [number, number, number])[],
   ): void {
     this.hasSkin = false;
     this.isPattern = false;
+    this.isTeamMode = false;
     if (colors && colors.length > 0) {
       this.primaryColor = [colors[0][0], colors[0][1], colors[0][2]];
-      if (colors.length > 1) {
-        this.secondaryColor = [colors[1][0], colors[1][1], colors[1][2]];
-      } else {
-        this.secondaryColor = [
-          this.primaryColor[0] * 0.7,
-          this.primaryColor[1] * 0.7,
-          this.primaryColor[2] * 0.7,
-        ];
-      }
     }
   }
 
@@ -266,14 +279,14 @@ export class PreviewSkinPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform2f(this.uCenter, this.mapW / 2, this.mapH / 2);
-    gl.uniform1f(this.uRadius, 215);
+    gl.uniform1f(this.uRadius, PREVIEW_ISLAND_RADIUS);
     gl.uniform2fv(this.uPatternTileSize, this.patternTileSize);
     gl.uniform1f(this.uSkinStampSize, this.skinStampSize);
 
     gl.uniform1i(this.uHasSkin, this.hasSkin ? 1 : 0);
     gl.uniform1i(this.uIsPattern, this.isPattern ? 1 : 0);
+    gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
     gl.uniform3fv(this.uPrimaryColor, this.primaryColor);
-    gl.uniform3fv(this.uSecondaryColor, this.secondaryColor);
 
     if (this.hasSkin && this.skinTexture) {
       gl.activeTexture(gl.TEXTURE0);
@@ -286,11 +299,16 @@ export class PreviewSkinPass {
   }
 
   dispose(): void {
+    this.isDisposed = true;
+    this.loadToken++;
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
     if (this.skinTexture) {
       gl.deleteTexture(this.skinTexture);
+      this.skinTexture = null;
     }
+    this.hasSkin = false;
+    this.isPattern = false;
   }
 }
