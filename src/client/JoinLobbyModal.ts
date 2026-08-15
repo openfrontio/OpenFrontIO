@@ -301,6 +301,25 @@ export class JoinLobbyModal extends BaseModal {
     const settings = c ? this.notableSettings(c, null) : [];
     const disabledUnitCount = c?.disabledUnits?.length ?? 0;
     const enabled = translateText("common.enabled");
+    // A featured lobby names itself; the map drops to the subtitle so nothing
+    // is lost. Interpolated by lit as TEXT, never markup — emoji render because
+    // they are ordinary codepoints, and the accent comes from a closed set so a
+    // label can never restyle the rest of the list.
+    const featuredLabel = lobby.featured ? lobby.label : undefined;
+    const accentClass =
+      featuredLabel === undefined
+        ? "text-white"
+        : {
+            gold: "text-amber-300",
+            blue: "text-sky-300",
+            green: "text-emerald-300",
+            red: "text-rose-300",
+          }[lobby.accent ?? "gold"];
+    const subtitle = c ? this.modeSubtitle(c) : "";
+    // The map name only moves down here when a label has taken the title line.
+    const subtitleLine = featuredLabel
+      ? [mapName, subtitle].filter(Boolean).join(" · ")
+      : subtitle;
     return html`
       <button
         type="button"
@@ -316,10 +335,10 @@ export class JoinLobbyModal extends BaseModal {
           }}
         />
         <div class="flex flex-col flex-1 min-w-0">
-          <span class="text-sm font-bold text-white truncate">${mapName}</span>
-          <span class="text-xs text-white/60"
-            >${c ? this.modeSubtitle(c) : ""}</span
+          <span class="text-sm font-bold truncate ${accentClass}"
+            >${featuredLabel ?? mapName}</span
           >
+          <span class="text-xs text-white/60">${subtitleLine}</span>
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {

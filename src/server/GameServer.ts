@@ -12,6 +12,7 @@ import {
   ClientMessageSchema,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
+  FEATURED_LOBBY_AUTO_START_MS,
   GameConfig,
   GameID,
   GameInfo,
@@ -20,6 +21,7 @@ import {
   HOSTED_LOBBY_AUTO_START_MS,
   Intent,
   LiveStats,
+  LobbyAccent,
   PlayerLiveStats,
   PlayerRecord,
   PublicGameType,
@@ -34,7 +36,11 @@ import {
   Tribe,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord, simpleHash } from "../core/Util";
+import {
+  createPartialGameRecord,
+  sanitizeLobbyLabel,
+  simpleHash,
+} from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
@@ -171,6 +177,14 @@ export class GameServer {
   // When the lobby was listed; drives the auto-start deadline. Cleared on
   // delist, so relisting starts a fresh deadline.
   private listedAt?: number;
+
+  // Featured lobbies: a label shown instead of the map name, an accent for the
+  // row, and a longer auto-start deadline. Set once at create_game by an
+  // authenticated admin bot; deliberately unreachable from update_game_config,
+  // like `listed` itself.
+  private label?: string;
+  private accent?: LobbyAccent;
+  private featured = false;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -1632,6 +1646,9 @@ export class GameServer {
       publicGameType: this.publicGameType,
       listed: this.isPublic() ? undefined : this.listed,
       autoStartAt: this.autoStartAt(),
+      label: this.label,
+      accent: this.accent,
+      featured: this.featured ? true : undefined,
     };
   }
 
@@ -1672,9 +1689,34 @@ export class GameServer {
   // Deadline after which a listed lobby starts automatically, so hosts
   // can't sit on a public listing indefinitely.
   public autoStartAt(): number | undefined {
-    return this.listed && this.listedAt !== undefined
-      ? this.listedAt + HOSTED_LOBBY_AUTO_START_MS
-      : undefined;
+    if (!this.listed || this.listedAt === undefined) return undefined;
+    return (
+      this.listedAt +
+      (this.featured
+        ? FEATURED_LOBBY_AUTO_START_MS
+        : HOSTED_LOBBY_AUTO_START_MS)
+    );
+  }
+
+  public isFeatured(): boolean {
+    return this.featured;
+  }
+
+  public lobbyLabel(): string | undefined {
+    return this.label;
+  }
+
+  public lobbyAccent(): LobbyAccent | undefined {
+    return this.accent;
+  }
+
+  // Only create_game calls this. A label is sanitised at the boundary so no
+  // unsanitised text can exist on a GameServer at all.
+  public setFeatured(opts: { label?: string; accent?: LobbyAccent }): void {
+    this.featured = true;
+    const label = opts.label ? sanitizeLobbyLabel(opts.label) : "";
+    this.label = label.length > 0 ? label : undefined;
+    this.accent = opts.accent;
   }
 
   // Called from GameManager's tick while in the Lobby phase: once the

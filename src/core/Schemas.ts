@@ -23,7 +23,7 @@ import {
   UnitType,
 } from "./game/Game";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { flattenedEmojiTable } from "./Util";
+import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
 export type GameID = string;
 export type ClientID = string;
@@ -185,6 +185,28 @@ export const MAX_HOSTED_LOBBIES = 10;
 // deadline; relisting starts a fresh one.
 export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 
+// Featured lobbies get a longer window. A scheduled event announced ahead of
+// time needs the listing to still be up when its audience arrives, and unlike a
+// subscriber sitting on a listing the host is an authenticated admin bot. Only
+// create_game can set it, so the ordinary deadline still governs every
+// player-hosted lobby.
+export const FEATURED_LOBBY_AUTO_START_MS = 10 * 60 * 1000;
+
+// Labels are capped by CODE POINT, matching sanitizeLobbyLabel. z.string().max()
+// counts UTF-16 code units, so it would reject a legal 48-emoji label (96 units)
+// before the sanitiser ever saw it.
+export const LobbyLabelSchema = z
+  .string()
+  .refine((v) => Array.from(v).length <= LOBBY_LABEL_MAX, {
+    message: `label must be at most ${LOBBY_LABEL_MAX} characters`,
+  });
+
+// Accent applied to a featured lobby's row. A closed set, not free-form CSS:
+// arbitrary styling in a shared list lets one lobby make every other row
+// unreadable.
+export const LobbyAccentSchema = z.enum(["gold", "blue", "green", "red"]);
+export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
+
 export const UsernameSchema = z
   .string()
   .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
@@ -223,6 +245,11 @@ export const GameInfoSchema = z.object({
   // Listed lobbies only: server timestamp when the lobby starts
   // automatically (hosts can't sit on a public listing indefinitely).
   autoStartAt: z.number().optional(),
+  // Featured lobbies only (admin bot). Echoed back so the creating bot can
+  // confirm the request took effect, the same way it checks `listed`.
+  label: LobbyLabelSchema.optional(),
+  accent: LobbyAccentSchema.optional(),
+  featured: z.boolean().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -235,6 +262,11 @@ export const PublicGameInfoSchema = z.object({
   startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
+  // Featured lobbies only. Both optional so a client on an older build simply
+  // renders the map name as it does today.
+  label: LobbyLabelSchema.optional(),
+  accent: LobbyAccentSchema.optional(),
+  featured: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({
