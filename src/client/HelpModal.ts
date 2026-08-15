@@ -944,7 +944,7 @@ export class HelpModal extends BaseModal {
                 <tbody class="text-white/80">
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_city")}
+                      ${translateText("unit_type.city")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -960,7 +960,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_defense")}
+                      ${translateText("unit_type.defense_post")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -976,7 +976,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_port")}
+                      ${translateText("unit_type.port")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -992,7 +992,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_factory")}
+                      ${translateText("unit_type.factory")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -1008,7 +1008,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_warship")}
+                      ${translateText("unit_type.warship")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -1024,7 +1024,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_silo")}
+                      ${translateText("unit_type.missile_silo")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -1040,7 +1040,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_sam")}
+                      ${translateText("unit_type.sam_launcher")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -1056,7 +1056,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_atom")}
+                      ${translateText("unit_type.atom_bomb")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -1072,7 +1072,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_hydrogen")}
+                      ${translateText("unit_type.hydrogen_bomb")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
@@ -1088,7 +1088,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="bg-white/5 hover:bg-white/10 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5 font-medium">
-                      ${translateText("help_modal.build_mirv")}
+                      ${translateText("unit_type.mirv")}
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
