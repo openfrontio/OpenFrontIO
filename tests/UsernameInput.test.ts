@@ -349,6 +349,38 @@ describe("UsernameInput clan tag picker", () => {
     expect(el.textContent).toContain("OpenFront Official");
   });
 
+  it("leaves the selected tag playable when the refresh fails", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+    await el.updateComplete;
+    (
+      el.querySelector("#clan-tag-menu .max-h-56 button") as HTMLElement
+    ).click();
+    await settle();
+    await el.updateComplete;
+    expect(el.canPlay()).toBe(true);
+
+    // Past the legitimate check that selecting the clan just ran.
+    checkClanTagOwnership.mockClear();
+    // The ownership check reads getUserMe itself, so against a cached false it
+    // would take the player for a member of nothing and reject their own clan.
+    getUserMe.mockResolvedValue(false);
+    checkClanTagOwnership.mockResolvedValue({
+      tag: null,
+      error: "username.tag_not_member",
+    });
+    q(el, "#clan-tag-button")!.click();
+    await settle();
+    await settle();
+    await el.updateComplete;
+
+    expect(checkClanTagOwnership).not.toHaveBeenCalledWith("OF");
+    expect(el.canPlay()).toBe(true);
+    expect(el.getClanTag()).toBe("OF");
+  });
+
   it("ignores an overlapping refresh that settles late", async () => {
     const el = await mount();
     await signIn(el, premiumUser([{ tag: "OLD", name: "Old Clan" }]));

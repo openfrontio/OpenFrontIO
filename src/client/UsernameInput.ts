@@ -133,29 +133,37 @@ export class UsernameInput extends LitElement {
   };
 
   private refreshMembership(opts: { fresh?: boolean } = {}) {
-    void this.refreshUserMe(opts).then(() => {
-      // The "not a member" error links into the clan modal, so joining is the
-      // usual way out of it — but the error and clanCheck both stick until
-      // the check re-runs.
-      if (this.clanTag) this.startClanCheck();
+    void this.refreshUserMe(opts).then((refreshed) => {
+      // Only worth re-running against membership we actually have. The check
+      // reads getUserMe itself, so after an inconclusive refresh it sees the
+      // cached false, takes the player for a member of nothing, and reports
+      // their own clan as "not a member" — disabling play until some later
+      // invalidation happens to succeed.
+      //
+      // Re-run when it is conclusive: the "not a member" error links into the
+      // clan modal, so joining is the usual way out of it, and both the error
+      // and clanCheck stick until the check runs again.
+      if (refreshed && this.clanTag) this.startClanCheck();
     });
   }
 
-  private refreshUserMe(opts: { fresh?: boolean } = {}): Promise<void> {
+  private refreshUserMe(opts: { fresh?: boolean } = {}): Promise<boolean> {
     // Membership also changes server-side (kicked, or a request approved)
     // without invalidating this tab's cache, so a plain refresh would re-read
     // the page-load snapshot.
     if (opts.fresh) invalidateUserMe();
     const gen = ++this.userMeGen;
     return getUserMe().then((me) => {
-      if (gen !== this.userMeGen) return;
+      // Superseded: a newer refresh is in flight and will do this itself.
+      if (gen !== this.userMeGen) return false;
       // `false` here is a transient failure — a network error or non-200,
       // cached either way — so keep the snapshot rather than silently
       // dropping the player to their free-form name. An expired session is
-      // not this: getUserMe dispatches userMeResponse when it logs out.
-      if (me === false) return;
+      // not this: clearing the session announces itself (see Auth).
+      if (me === false) return false;
       this.userMe = me;
       this.applyVerifiedPreference();
+      return true;
     });
   }
 
