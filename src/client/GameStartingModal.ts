@@ -27,7 +27,7 @@ export class GameStartingModal extends LitElement {
         <div
           class="text-base font-medium tracking-wider uppercase text-white/40 mb-3"
         >
-          © OpenFront and Contributors
+          ${translateText("main.copyright")}
         </div>
         <a
           href="https://github.com/openfrontio/OpenFrontIO/blob/main/CREDITS.md"
