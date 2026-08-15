@@ -191,17 +191,10 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         },
       });
       if (response.status === 401) {
+        // Clearing the session announces itself (see clearLocalSession), so
+        // consumers holding account state don't mistake this for the
+        // transient failure the `false` below also represents.
         await logOut();
-        // Announce it: consumers that hold account state can't otherwise tell
-        // this apart from a transient failure, since both resolve to false.
-        // Same event Main dispatches once auth resolves.
-        document.dispatchEvent(
-          new CustomEvent("userMeResponse", {
-            detail: false,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
         return false;
       }
       if (response.status !== 200) return false;

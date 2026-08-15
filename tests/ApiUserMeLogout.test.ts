@@ -50,32 +50,23 @@ describe("getUserMe on an expired session", () => {
     ClientEnv.reset();
   });
 
-  it("announces the logout so account state can be cleared", async () => {
+  it("logs out on a 401, which is what announces the sign-out", () => {
     // getUserMe resolves false for a 401 and for a transient failure alike,
     // and caches either, so consumers holding account state cannot tell them
-    // apart. Only the 401 is a real sign-out, so only it is announced.
-    const seen: (unknown | false)[] = [];
-    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
-    document.addEventListener("userMeResponse", listener);
-
+    // apart from the return value. Clearing the session is the signal — see
+    // Auth.clearLocalSession, which every logout path goes through.
     respondWith(401);
-    await expect(getUserMe()).resolves.toBe(false);
-
-    document.removeEventListener("userMeResponse", listener);
-    expect(logOut).toHaveBeenCalled();
-    expect(seen).toEqual([false]);
+    return getUserMe().then((result) => {
+      expect(result).toBe(false);
+      expect(logOut).toHaveBeenCalled();
+    });
   });
 
-  it("stays quiet on a transient failure", async () => {
-    const seen: unknown[] = [];
-    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
-    document.addEventListener("userMeResponse", listener);
-
+  it("leaves the session alone on a transient failure", () => {
     respondWith(503);
-    await expect(getUserMe()).resolves.toBe(false);
-
-    document.removeEventListener("userMeResponse", listener);
-    expect(logOut).not.toHaveBeenCalled();
-    expect(seen).toEqual([]);
+    return getUserMe().then((result) => {
+      expect(result).toBe(false);
+      expect(logOut).not.toHaveBeenCalled();
+    });
   });
 });
