@@ -61,6 +61,12 @@ export interface RenderSettings {
   };
   terrain: {
     /**
+     * Map background color as a "#rrggbb" hex string — the clear color drawn
+     * outside the map quad. Impassable terrain is baked to the same color so
+     * the map keeps its non-rectangular silhouette.
+     */
+    backgroundColor: string;
+    /**
      * Base (shallowest) color of deep water as a "#rrggbb" hex string. The
      * per-depth brightness gradient is preserved relative to this color.
      */

@@ -647,6 +647,8 @@
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",
     "advanced_label": "Advanced settings",
+    "background_color_desc": "Color of the area outside the map and impassable terrain.",
+    "background_color_label": "Background color",
     "black": "Black",
     "classic_icons_desc": "Lighter outline with near-black interior",
     "classic_icons_label": "Classic icons",
