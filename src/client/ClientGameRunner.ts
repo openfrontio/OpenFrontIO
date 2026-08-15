@@ -129,11 +129,16 @@ export function joinLobby(
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
+  let gameCreation: Promise<ClientGameRunner> | null = null;
+  let stopped = false;
 
   const onconnect = async () => {
+    if (stopped) return;
+
     // Drop the tag if the ownership check failed; the server re-checks anyway.
     if (lobbyConfig.clanTagCheck !== undefined) {
       lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
+      if (stopped) return;
     }
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
@@ -142,6 +147,8 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    if (stopped) return;
+
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
       clientID = message.myClientID;
@@ -171,7 +178,13 @@ export function joinLobby(
       resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
-      createClientGame(
+      // A duplicate/replayed start message must not create a second WebGL
+      // renderer while the first one is still being constructed.
+      if (stopped || currentGameRunner !== null || gameCreation !== null) {
+        return;
+      }
+
+      gameCreation = createClientGame(
         lobbyConfig,
         clientID,
         eventBus,
@@ -179,15 +192,40 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
-      )
+      );
+
+      gameCreation
         .then((r) => {
+          gameCreation = null;
+
+          // The user may have left while createClientGame() was awaiting map,
+          // worker or atlas setup. Never start that orphaned game.
+          if (stopped) {
+            r.stop();
+            return;
+          }
+
           currentGameRunner = r;
-          r.start();
+          try {
+            r.start();
+          } catch (err) {
+            currentGameRunner = null;
+            r.stop();
+            throw err;
+          }
         })
         .catch((e) => {
-          console.error("error creating client game", e);
-
+          gameCreation = null;
           currentGameRunner = null;
+
+          // Leaving a lobby intentionally can race an in-flight game creation.
+          // createClientGame() already cleaned its partial resources, so do not
+          // surface a stale error/gate after the lobby is gone.
+          if (stopped) {
+            return;
+          }
+
+          console.error("error creating client game", e);
 
           const startingModal = document.querySelector(
             "game-starting-modal",
@@ -276,11 +314,19 @@ export function joinLobby(
         console.log("Player is active, prevent leaving game");
         return false;
       }
+      if (stopped) {
+        return true;
+      }
+
+      stopped = true;
       console.log("leaving game");
+
       if (currentGameRunner) {
         currentGameRunner.stop();
         currentGameRunner = null;
       } else {
+        // Also covers an in-flight createClientGame(). Its promise continuation
+        // checks `stopped` and disposes the runner immediately if it completes.
         transport.leaveGame();
       }
       return true;
@@ -449,7 +495,7 @@ function mountWebGLFrameLoop(
   // animated chevron pass at the target tile. The renderer needs the target's
   // tile x/y and the warship's owner smallID (so the chevrons use the right
   // color).
-  eventBus.on(MoveWarshipIntentEvent, (e) => {
+  const onMoveWarshipIntent = (e: MoveWarshipIntentEvent): void => {
     const tile = e.tile;
     const tx = gameView.x(tile);
     const ty = gameView.y(tile);
@@ -457,7 +503,8 @@ function mountWebGLFrameLoop(
     const firstUnit = gameView.unit(e.unitIds[0]);
     if (firstUnit === undefined) return;
     view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
-  });
+  };
+  eventBus.on(MoveWarshipIntentEvent, onMoveWarshipIntent);
 
   // Self-driving RAF: syncCamera reads the latest camera state from
   // TransformHandler, pushes it to WebGL, and synchronously invokes the
@@ -480,6 +527,8 @@ function mountWebGLFrameLoop(
       rafId = null;
     }
     resizeObs.disconnect();
+    eventBus.off(MoveWarshipIntentEvent, onMoveWarshipIntent);
+    cachedWebGLFrameCallback.current = null;
   };
 
   const builder = new WebGLFrameBuilder(view);
@@ -549,34 +598,101 @@ async function createClientGame(
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
-  await worker.initialize();
-  await atlasDataLoad;
-  const gameView = new GameView(
-    worker,
-    config,
-    gameMap,
-    clientID,
-    lobbyConfig.playerName,
-    lobbyConfig.playerClanTag,
-    lobbyConfig.gameStartInfo.gameID,
-    lobbyConfig.gameStartInfo.players,
-  );
 
-  // Transparent fullscreen overlay used purely as the pointer-event /
-  // bounding-rect target for InputHandler + TransformHandler. The actual
-  // map drawing happens on the WebGL canvas created in createWebGLView.
-  const inputOverlay = document.createElement("div");
-  inputOverlay.id = "game-input-overlay";
-  inputOverlay.style.position = "fixed";
-  inputOverlay.style.left = "0";
-  inputOverlay.style.top = "0";
-  inputOverlay.style.width = "100%";
-  inputOverlay.style.height = "100%";
-  inputOverlay.style.touchAction = "none";
-  document.body.appendChild(inputOverlay);
+  let inputOverlay: HTMLDivElement | null = null;
+  let soundManager: SoundManager | null = null;
+  let view: MapRenderer | null = null;
+  let glCanvas: HTMLCanvasElement | null = null;
+  let cachedWebGLFrameCallback:
+    | { current: FrameRequestCallback | null }
+    | null = null;
+  let graphicsListenerAbort: AbortController | null = null;
+  let stopFrameLoop: (() => void) | null = null;
+  let webglBuilder: WebGLFrameBuilder | null = null;
+  let debugGui: { open(): void; destroy(): void } | null = null;
+  let debugGuiLoading = false;
+  let debugGuiDisposed = false;
+  let onToggleRenderDebugGui: (() => void) | null = null;
+  let rendererDisposed = false;
 
-  const soundManager = new SoundManager(eventBus, userSettings);
+  // This disposer is deliberately available before WebGL creation completes.
+  // Any failure after one resource is allocated can therefore unwind everything
+  // that was successfully created up to that point.
+  const disposeRenderer = (): void => {
+    if (rendererDisposed) return;
+    rendererDisposed = true;
+    debugGuiDisposed = true;
+
+    graphicsListenerAbort?.abort();
+
+    if (onToggleRenderDebugGui !== null) {
+      eventBus.off(ToggleRenderDebugGuiEvent, onToggleRenderDebugGui);
+      onToggleRenderDebugGui = null;
+    }
+
+    if (debugGui !== null) {
+      try {
+        debugGui.destroy();
+      } catch (err) {
+        console.error("Failed to destroy render debug GUI", err);
+      }
+      debugGui = null;
+    }
+
+    try {
+      stopFrameLoop?.();
+    } catch (err) {
+      console.error("Failed to stop WebGL frame loop", err);
+    }
+    stopFrameLoop = null;
+    if (cachedWebGLFrameCallback !== null) {
+      cachedWebGLFrameCallback.current = null;
+    }
+
+    try {
+      view?.dispose();
+    } catch (err) {
+      console.error("Failed to dispose WebGL renderer", err);
+    } finally {
+      const debugWindow = window as unknown as { __webglView?: unknown };
+      if (debugWindow.__webglView === view) {
+        debugWindow.__webglView = undefined;
+      }
+      glCanvas?.remove();
+      inputOverlay?.remove();
+    }
+  };
+
   try {
+    await worker.initialize();
+    await atlasDataLoad;
+
+    const gameView = new GameView(
+      worker,
+      config,
+      gameMap,
+      clientID,
+      lobbyConfig.playerName,
+      lobbyConfig.playerClanTag,
+      lobbyConfig.gameStartInfo.gameID,
+      lobbyConfig.gameStartInfo.players,
+    );
+
+    // Transparent fullscreen overlay used purely as the pointer-event /
+    // bounding-rect target for InputHandler + TransformHandler. The actual
+    // map drawing happens on the WebGL canvas created in createWebGLView.
+    inputOverlay = document.createElement("div");
+    inputOverlay.id = "game-input-overlay";
+    inputOverlay.style.position = "fixed";
+    inputOverlay.style.left = "0";
+    inputOverlay.style.top = "0";
+    inputOverlay.style.width = "100%";
+    inputOverlay.style.height = "100%";
+    inputOverlay.style.touchAction = "none";
+    document.body.appendChild(inputOverlay);
+
+    soundManager = new SoundManager(eventBus, userSettings);
+
     // Resolve render settings (defaults + user overrides) up front so the
     // renderer is built with the final values — no construct-with-defaults,
     // re-apply-overrides dance, and texture-baking passes (terrain) get the
@@ -587,13 +703,16 @@ async function createClientGame(
       return settings;
     };
 
-    const { view, glCanvas, cachedWebGLFrameCallback } = createWebGLView(
+    const webglView = createWebGLView(
       gameMap,
       config,
       resolveRenderSettings(),
     );
+    view = webglView.view;
+    glCanvas = webglView.glCanvas;
+    cachedWebGLFrameCallback = webglView.cachedWebGLFrameCallback;
 
-    const graphicsListenerAbort = new AbortController();
+    graphicsListenerAbort = new AbortController();
 
     view.setShowPatterns(userSettings.territoryPatterns());
 
@@ -609,7 +728,7 @@ async function createClientGame(
 
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
-      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
+      (e) => view?.setShowPatterns((e as CustomEvent<string>).detail === "true"),
       { signal: graphicsListenerAbort.signal },
     );
 
@@ -617,18 +736,20 @@ async function createClientGame(
     // so they switch live, like the leaderboard.
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.anonymousNames`,
-      () => webglBuilder.refreshNames(gameView),
+      () => webglBuilder?.refreshNames(gameView),
       { signal: graphicsListenerAbort.signal },
     );
 
     // Re-resolve settings and copy them onto the renderer's live object in
     // place (passes hold a reference to it, so they pick the change up).
     const regenerateRenderSettings = (): void => {
+      if (view === null) return;
       deepAssign(view.getSettings(), resolveRenderSettings());
     };
     // Rebuild the GPU-derived graphics state that the per-frame passes don't
     // pick up from the live settings object on their own.
     const refreshDerivedGraphics = (): void => {
+      if (view === null) return;
       // Terrain is baked into a GPU texture rather than read per-frame, so a
       // terrain-color override (e.g. ocean) needs an explicit texture rebuild.
       view.rebuildTerrain();
@@ -636,7 +757,7 @@ async function createClientGame(
       // so re-theme existing players and re-upload the palette to recolor their
       // territory fills/borders live.
       gameView.refreshPlayerColors();
-      webglBuilder.refreshPalette(gameView);
+      webglBuilder?.refreshPalette(gameView);
     };
     // Re-apply render settings, then re-theme and recolor players, on a
     // graphics-override change (covers a theme switch such as colorblind mode).
@@ -654,20 +775,26 @@ async function createClientGame(
     );
 
     // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
-    let debugGui: { open(): void; destroy(): void } | null = null;
-    let debugGuiLoading = false;
-    eventBus.on(ToggleRenderDebugGuiEvent, () => {
+    onToggleRenderDebugGui = () => {
+      if (debugGuiDisposed) return;
+
       if (debugGui === null) {
         if (debugGuiLoading) return;
         debugGuiLoading = true;
         import("./render/gl/debug/index")
           .then(({ createDebugGui }) => {
+            if (debugGuiDisposed || view === null) return;
             debugGui = createDebugGui(
               view.getSettings(),
               resolveRenderSettings,
               refreshDerivedGraphics,
             );
             debugGui.open();
+          })
+          .catch((err) => {
+            if (!debugGuiDisposed) {
+              console.error("Failed to load render debug GUI", err);
+            }
           })
           .finally(() => {
             debugGuiLoading = false;
@@ -676,7 +803,8 @@ async function createClientGame(
         debugGui.destroy();
         debugGui = null;
       }
-    });
+    };
+    eventBus.on(ToggleRenderDebugGuiEvent, onToggleRenderDebugGui);
 
     const gameRenderer = createRenderer(
       inputOverlay,
@@ -687,7 +815,7 @@ async function createClientGame(
       mapLayerController,
     );
 
-    const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
+    const mountedWebGL = mountWebGLFrameLoop(
       gameMap,
       view,
       glCanvas,
@@ -696,20 +824,8 @@ async function createClientGame(
       gameView,
       eventBus,
     );
-
-    // Releases all WebGL/DOM resources this game created. Without it, stopping
-    // a game (e.g. joining another without a page reload) leaks the WebGL
-    // context, canvas and input overlay — a few games and mobile browsers hit
-    // their WebGL context limit. Idempotent: stop() may be called more than once.
-    let rendererDisposed = false;
-    const disposeRenderer = (): void => {
-      if (rendererDisposed) return;
-      rendererDisposed = true;
-      stopFrameLoop();
-      view.dispose();
-      glCanvas.remove();
-      inputOverlay.remove();
-    };
+    webglBuilder = mountedWebGL.builder;
+    stopFrameLoop = mountedWebGL.stopFrameLoop;
 
     console.log(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -731,7 +847,12 @@ async function createClientGame(
       disposeRenderer,
     );
   } catch (err) {
-    soundManager.dispose();
+    // If worker initialization failed first, atlas loading may still be in flight.
+    // Observe a later rejection so it cannot become an unhandled promise.
+    void atlasDataLoad.catch(() => undefined);
+    disposeRenderer();
+    soundManager?.dispose();
+    worker.cleanup();
     throw err;
   }
 }
@@ -739,16 +860,38 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private stopped = false;
 
   private turnsSeen = 0;
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
-  private connectionCheckInterval: NodeJS.Timeout | null = null;
-  private goToPlayerTimeout: NodeJS.Timeout | null = null;
+  private connectionCheckStartTimeout: ReturnType<typeof setTimeout> | null = null;
+  private connectionCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private goToPlayerTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+
+  // EventBus.off() requires the exact callback object that was passed to on().
+  // Keep stable references for the lifetime of this runner instead of binding
+  // fresh functions in start(), which cannot be unsubscribed later.
+  private readonly onMouseUpEvent = (event: MouseUpEvent): void =>
+    this.inputEvent(event);
+  private readonly onMouseMoveEvent = (event: MouseMoveEvent): void =>
+    this.onMouseMove(event);
+  private readonly onAutoUpgradeEvent = (event: AutoUpgradeEvent): void =>
+    this.autoUpgradeEvent(event);
+  private readonly onBoatAttackEvent = (): void =>
+    this.doBoatAttackUnderCursor();
+  private readonly onGroundAttackEvent = (): void =>
+    this.doGroundAttackUnderCursor();
+  private readonly onRetaliateAttackEvent = (): void =>
+    this.doRetaliateAttackMostRecent();
+  private readonly onRequestAllianceEvent = (): void =>
+    this.doRequestAllianceUnderCursor();
+  private readonly onBreakAllianceEvent = (): void =>
+    this.doBreakAllianceUnderCursor();
 
   constructor(
     private lobby: LobbyConfig,
@@ -816,45 +959,38 @@ export class ClientGameRunner {
   }
 
   public start() {
+    if (this.stopped || this.isActive) return;
+
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
-    setTimeout(() => {
+    this.connectionCheckStartTimeout = setTimeout(() => {
+      this.connectionCheckStartTimeout = null;
+      if (!this.isActive || this.stopped) return;
+
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
         1000,
       );
     }, 20000);
 
-    this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
-    this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
-    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
-    this.eventBus.on(
-      DoBoatAttackEvent,
-      this.doBoatAttackUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoGroundAttackEvent,
-      this.doGroundAttackUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoRetaliateAttackEvent,
-      this.doRetaliateAttackMostRecent.bind(this),
-    );
-    this.eventBus.on(
-      DoRequestAllianceEvent,
-      this.doRequestAllianceUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoBreakAllianceEvent,
-      this.doBreakAllianceUnderCursor.bind(this),
-    );
+    this.eventBus.on(MouseUpEvent, this.onMouseUpEvent);
+    this.eventBus.on(MouseMoveEvent, this.onMouseMoveEvent);
+    this.eventBus.on(AutoUpgradeEvent, this.onAutoUpgradeEvent);
+    this.eventBus.on(DoBoatAttackEvent, this.onBoatAttackEvent);
+    this.eventBus.on(DoGroundAttackEvent, this.onGroundAttackEvent);
+    this.eventBus.on(DoRetaliateAttackEvent, this.onRetaliateAttackEvent);
+    this.eventBus.on(DoRequestAllianceEvent, this.onRequestAllianceEvent);
+    this.eventBus.on(DoBreakAllianceEvent, this.onBreakAllianceEvent);
 
-    this.renderer.initialize();
-    this.input.initialize();
-    this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
+    try {
+      this.renderer.initialize();
+      this.input.initialize();
+      this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
+        if (!this.isActive || this.stopped) return;
+
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
       }
@@ -890,14 +1026,16 @@ export class ClientGameRunner {
       }
     });
 
-    const onconnect = () => {
-      console.log("Connected to game server!");
+      const onconnect = () => {
+        if (!this.isActive || this.stopped) return;
+        console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);
     };
 
     let hasGoneToPlayer = false;
-    const onmessage = (message: ServerMessage) => {
-      this.lastMessageTime = Date.now();
+      const onmessage = (message: ServerMessage) => {
+        if (!this.isActive || this.stopped) return;
+        this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
 
@@ -1018,29 +1156,51 @@ export class ClientGameRunner {
         }
       }
     };
-    this.transport.updateCallback(onconnect, onmessage);
-    console.log("sending join game");
-    // Rejoin game from the start so we don't miss any turns.
-    this.transport.rejoinGame(0);
+      this.transport.updateCallback(onconnect, onmessage);
+      console.log("sending join game");
+      // Rejoin game from the start so we don't miss any turns.
+      this.transport.rejoinGame(0);
+    } catch (err) {
+      this.stop();
+      throw err;
+    }
   }
 
   public stop() {
-    this.soundManager.dispose();
-    this.graphicsListenerAbort?.abort();
-    this.disposeRenderer?.();
-    if (!this.isActive) return;
+    if (this.stopped) return;
 
+    this.stopped = true;
     this.isActive = false;
-    this.worker.cleanup();
-    this.transport.leaveGame();
-    if (this.connectionCheckInterval) {
+
+    if (this.connectionCheckStartTimeout !== null) {
+      clearTimeout(this.connectionCheckStartTimeout);
+      this.connectionCheckStartTimeout = null;
+    }
+    if (this.connectionCheckInterval !== null) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
-    if (this.goToPlayerTimeout) {
+    if (this.goToPlayerTimeout !== null) {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
     }
+
+    this.eventBus.off(MouseUpEvent, this.onMouseUpEvent);
+    this.eventBus.off(MouseMoveEvent, this.onMouseMoveEvent);
+    this.eventBus.off(AutoUpgradeEvent, this.onAutoUpgradeEvent);
+    this.eventBus.off(DoBoatAttackEvent, this.onBoatAttackEvent);
+    this.eventBus.off(DoGroundAttackEvent, this.onGroundAttackEvent);
+    this.eventBus.off(DoRetaliateAttackEvent, this.onRetaliateAttackEvent);
+    this.eventBus.off(DoRequestAllianceEvent, this.onRequestAllianceEvent);
+    this.eventBus.off(DoBreakAllianceEvent, this.onBreakAllianceEvent);
+
+    // Tear down CPU/event resources before dropping the WebGL context.
+    this.input.destroy();
+    this.worker.cleanup();
+    this.transport.leaveGame();
+    this.soundManager.dispose();
+    this.graphicsListenerAbort?.abort();
+    this.disposeRenderer?.();
   }
 
   private inputEvent(event: MouseUpEvent) {
@@ -1388,7 +1548,7 @@ export class ClientGameRunner {
   }
 
   private onConnectionCheck() {
-    if (this.transport.isLocal) {
+    if (!this.isActive || this.stopped || this.transport.isLocal) {
       return;
     }
     const now = Date.now();
