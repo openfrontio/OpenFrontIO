@@ -10,6 +10,7 @@ import {
   cosmeticSelectionLabel,
 } from "./CosmeticPresentation";
 import "./CosmeticPreview";
+import "./CosmeticPreviewBubble";
 
 const COSMETIC_CARD_STYLE_ID = "cosmetic-card-styles";
 if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
@@ -490,7 +491,10 @@ export class CosmeticCard extends LitElement {
               .usdValue=${usdValue}
               .perks=${this.subscriptionPerks()}
               .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
-            ></cosmetic-info>`
+            ></cosmetic-info>
+            <cosmetic-preview-bubble
+              .resolved=${active}
+            ></cosmetic-preview-bubble>`
           : nothing}
       </div>
       ${this.renderSwatches()}

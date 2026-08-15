@@ -178,10 +178,18 @@ export class FxShockwavePass {
     // or an empty burst.
     let cell = 0;
     if (params?.type === "sparkles") {
-      const density = Math.min(Math.max(params.density, 2), 5000);
+      const rawDensity = params.density ?? 50;
+      const density = Math.min(
+        Math.max(Number.isFinite(rawDensity) ? rawDensity : 50, 2),
+        5000,
+      );
       cell = Math.sqrt((2 * Math.PI) / 3 / density);
     } else if (params?.type === "embers") {
-      const density = Math.min(Math.max(params.density, 2), 5000);
+      const rawDensity = params.density ?? 50;
+      const density = Math.min(
+        Math.max(Number.isFinite(rawDensity) ? rawDensity : 50, 2),
+        5000,
+      );
       // Embers reuse `cell` as the keep-fraction: the shader lights up that
       // share of grid cells, so a higher density gives a denser scatter.
       cell = Math.min(Math.max(density / 500, 0.04), 0.6);
@@ -206,7 +214,7 @@ export class FxShockwavePass {
       colors: params?.colors ?? [DEFAULT_NUKE_EXPLOSION_COLOR],
       speed,
       transitionSpeed: params?.transitionSpeed ?? 0,
-      thickness: params?.thickness ?? 0,
+      thickness: params?.thickness ?? (fx.shockwaveRingWidth || 4.0),
       cell,
     });
   }

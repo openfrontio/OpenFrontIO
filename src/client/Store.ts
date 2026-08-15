@@ -6,6 +6,7 @@ import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
+import "./components/CosmeticPreviewModal";
 import "./components/CurrencyDisplay";
 import "./components/CustomCurrencyCard";
 import "./components/EffectsGrid";
@@ -55,6 +56,7 @@ export class StoreModal extends BaseModal {
   private userMeResponse: UserMeResponse | false = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   private inspected: ResolvedCosmetic | null = null;
+  private previewingCosmetic: ResolvedCosmetic | null = null;
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
   /** The bundle whose contents dialog is open, if any. */
   private openedPack: ResolvedCosmetic | null = null;
@@ -85,6 +87,11 @@ export class StoreModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
+    this.addEventListener("open-cosmetic-preview", (event: Event) => {
+      const customEvent = event as CustomEvent<ResolvedCosmetic>;
+      this.previewingCosmetic = customEvent.detail;
+      this.requestUpdate();
+    });
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {
       this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));
@@ -560,7 +567,16 @@ export class StoreModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
-    return this.renderHeader();
+    return html`${this.renderHeader()}
+    ${this.previewingCosmetic
+      ? html`<cosmetic-preview-modal
+          .resolved=${this.previewingCosmetic}
+          @close-preview=${() => {
+            this.previewingCosmetic = null;
+            this.requestUpdate();
+          }}
+        ></cosmetic-preview-modal>`
+      : ""}`;
   }
 
   protected renderBody(key: string): TemplateResult {
