@@ -1,9 +1,7 @@
 /**
- * buildTerrainRowSpans groups terrain-changed tile refs into one span per map
- * row (min..max x) so the renderer uploads a few hundred row rects instead of
- * one 1×1 texel per changed tile. Bytes come from the provided lookup for
- * EVERY tile in the span — including unchanged gap tiles, which must carry
- * their current value.
+ * buildTerrainRowSpans groups terrain-changed tile refs into bounded-overdraw
+ * rectangles so the renderer uploads a handful of regions instead of one per
+ * tile or row. Bytes include unchanged gap tiles at their current value.
  */
 
 import { describe, expect, it } from "vitest";
@@ -46,18 +44,27 @@ describe("buildTerrainRowSpans", () => {
     expect([...bytes]).toEqual([0, 37, 38]);
   });
 
-  it("covers a blob the way a nuke crater changes tiles", () => {
+  it("merges a compact multi-row blob into one rectangle", () => {
     // 3×3 blob centered at (5,5): every span is exactly the blob's row.
     const refs: number[] = [];
     for (let y = 4; y <= 6; y++) {
       for (let x = 4; x <= 6; x++) refs.push(y * MAP_W + x);
     }
     const { rects, bytes } = buildTerrainRowSpans(refs, MAP_W, byteAt);
-    expect(rects).toEqual([
-      { x: 4, y: 4, w: 3, h: 1 },
-      { x: 4, y: 5, w: 3, h: 1 },
-      { x: 4, y: 6, w: 3, h: 1 },
-    ]);
+    expect(rects).toEqual([{ x: 4, y: 4, w: 3, h: 3 }]);
     expect([...bytes]).toEqual([44, 45, 46, 54, 55, 56, 64, 65, 66]);
+  });
+
+  it("does not merge adjacent sparse rows when overdraw is excessive", () => {
+    const wideMap = 10_000;
+    const { rects } = buildTerrainRowSpans(
+      [wideMap, wideMap * 3 - 1],
+      wideMap,
+      byteAt,
+    );
+    expect(rects).toEqual([
+      { x: 0, y: 1, w: 1, h: 1 },
+      { x: wideMap - 1, y: 2, w: 1, h: 1 },
+    ]);
   });
 });

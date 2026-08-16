@@ -5,13 +5,19 @@ export interface TerrainRowSpansResult {
   bytes: Uint8Array;
 }
 
+const MAX_MERGE_OVERDRAW_RATIO = 1.5;
+const MAX_MERGE_EXTRA_TEXELS = 4096;
+
+interface PendingRect extends TerrainRect {
+  sourceArea: number;
+}
+
 /**
- * Group terrain-changed tile refs into one span per map row (min..max x),
- * reading the CURRENT terrain byte for every tile in each span. A massive
- * water nuke changes tens of thousands of tiles in one tick; uploading them
- * as individual 1×1 texSubImage2D calls costs hundreds of ms of driver time,
- * while a few hundred row spans upload in ~1ms. Unchanged tiles inside a span
- * re-upload their current byte — harmless.
+ * Group terrain-changed tile refs into row spans, then merge adjacent spans
+ * into rectangles when the extra unchanged texels stay bounded. A massive
+ * water nuke changes tens of thousands of tiles in one tick; reducing hundreds
+ * of texSubImage2D calls to a handful is much cheaper than uploading each row.
+ * Unchanged tiles inside a rectangle re-upload their current byte — harmless.
  *
  * Spans are returned in ascending row order; `bytes` holds each span's data
  * concatenated in that order.
@@ -35,23 +41,54 @@ export function buildTerrainRowSpans(
   }
 
   const ys = [...rows.keys()].sort((a, b) => a - b);
-  let total = 0;
+  const pendingRects: PendingRect[] = [];
   for (const y of ys) {
     const row = rows.get(y)!;
-    total += row.max - row.min + 1;
+    const rowWidth = row.max - row.min + 1;
+    const previous = pendingRects[pendingRects.length - 1];
+    if (previous && previous.y + previous.h === y) {
+      const minX = Math.min(previous.x, row.min);
+      const maxX = Math.max(previous.x + previous.w - 1, row.max);
+      const mergedArea = (maxX - minX + 1) * (previous.h + 1);
+      const sourceArea = previous.sourceArea + rowWidth;
+      const extraTexels = mergedArea - sourceArea;
+      if (
+        mergedArea <= sourceArea * MAX_MERGE_OVERDRAW_RATIO ||
+        extraTexels <= MAX_MERGE_EXTRA_TEXELS
+      ) {
+        previous.x = minX;
+        previous.w = maxX - minX + 1;
+        previous.h++;
+        previous.sourceArea = sourceArea;
+        continue;
+      }
+    }
+    pendingRects.push({
+      x: row.min,
+      y,
+      w: rowWidth,
+      h: 1,
+      sourceArea: rowWidth,
+    });
+  }
+
+  let total = 0;
+  for (const rect of pendingRects) {
+    total += rect.w * rect.h;
   }
 
   const bytes = new Uint8Array(total);
-  const rects: TerrainRect[] = new Array(ys.length);
+  const rects: TerrainRect[] = new Array(pendingRects.length);
   let offset = 0;
-  for (let i = 0; i < ys.length; i++) {
-    const y = ys[i];
-    const { min, max } = rows.get(y)!;
-    const rowStart = y * mapW;
-    for (let x = min; x <= max; x++) {
-      bytes[offset++] = terrainByteAt(rowStart + x);
+  for (let i = 0; i < pendingRects.length; i++) {
+    const { x, y, w, h } = pendingRects[i];
+    for (let dy = 0; dy < h; dy++) {
+      const rowStart = (y + dy) * mapW;
+      for (let dx = 0; dx < w; dx++) {
+        bytes[offset++] = terrainByteAt(rowStart + x + dx);
+      }
     }
-    rects[i] = { x: min, y, w: max - min + 1, h: 1 };
+    rects[i] = { x, y, w, h };
   }
   return { rects, bytes };
 }
