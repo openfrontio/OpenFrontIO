@@ -31,6 +31,18 @@ export class HomepagePromos extends LitElement {
 
   private bottomRailActive: boolean = false;
 
+  // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
+  // #pw-oop-flex element that ramp.js nests inside a #pw-oop-flex_container
+  // <body> child and docks fixed at the viewport top (#adBanner is an older
+  // Playwire container that idles parked offscreen at 10x10/bottom:-100px —
+  // watched as a fallback). Measure the docked banner and expose
+  // --top-ad-height on <html> so the sticky nav and page content shift below
+  // it (consumed in index.html / PlayPage).
+  private topAdEl: HTMLElement | null = null;
+  private topAdResize: ResizeObserver | null = null;
+  private topAdStyle: MutationObserver | null = null;
+  private topAdMutation: MutationObserver | null = null;
+
   private leftAdType: string = "standard_iab_left2";
   private rightAdType: string = "standard_iab_rght1";
   private leftContainerId: string = "gutter-ad-container-left";
@@ -45,6 +57,14 @@ export class HomepagePromos extends LitElement {
     document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
+    this.topAdMutation = new MutationObserver(() => this.syncTopAd());
+    // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
+    // so watching body's direct children alone misses it.
+    this.topAdMutation.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+    this.syncTopAd();
   }
 
   disconnectedCallback() {
@@ -52,6 +72,61 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("userMeResponse", this.onUserMeResponse);
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
+    this.topAdMutation?.disconnect();
+    this.topAdStyle?.disconnect();
+    this.topAdResize?.disconnect();
+    document.documentElement.style.removeProperty("--top-ad-height");
+  }
+
+  private syncTopAd(): void {
+    const el =
+      document.getElementById("pw-oop-flex") ??
+      document.getElementById("adBanner");
+    if (el !== this.topAdEl) {
+      this.topAdResize?.disconnect();
+      this.topAdResize = null;
+      this.topAdStyle?.disconnect();
+      this.topAdStyle = null;
+      this.topAdEl = el;
+      if (el) {
+        this.topAdResize = new ResizeObserver(() => this.updateTopAdHeight());
+        this.topAdResize.observe(el);
+        // Playwire repositions the container via inline styles (parked
+        // offscreen <-> docked at top), which a ResizeObserver alone misses.
+        this.topAdStyle = new MutationObserver(() => this.updateTopAdHeight());
+        this.topAdStyle.observe(el, {
+          attributes: true,
+          attributeFilter: ["style", "class"],
+        });
+      }
+    }
+    this.updateTopAdHeight();
+  }
+
+  private updateTopAdHeight(): void {
+    let height = 0;
+    if (this.topAdEl) {
+      const rect = this.topAdEl.getBoundingClientRect();
+      const style = getComputedStyle(this.topAdEl);
+      // Only make room while the banner is actually docked at the viewport
+      // top — not while parked offscreen or collapsed.
+      const dockedTop =
+        style.position === "fixed" &&
+        style.display !== "none" &&
+        rect.height >= 30 &&
+        rect.top < window.innerHeight / 4;
+      if (dockedTop) {
+        height = Math.ceil(Math.max(0, rect.bottom));
+      }
+    }
+    if (height > 0) {
+      document.documentElement.style.setProperty(
+        "--top-ad-height",
+        `${height}px`,
+      );
+    } else {
+      document.documentElement.style.removeProperty("--top-ad-height");
+    }
   }
 
   public show(): void {

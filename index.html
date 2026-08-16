@@ -33,6 +33,16 @@
         z-index: 150 !important;
       }
 
+      /* Playwire flex leaderboard (header ad): Playwire inlines
+         z-index 2147483647 on it — cap it below modals and the mobile drawer,
+         like the bottom rail. The sticky nav and page content shift below it
+         via --top-ad-height, measured by HomepagePromos, so it never covers
+         the menu bar. */
+      #pw-oop-flex,
+      #adBanner.leaderboard_ad {
+        z-index: 150 !important;
+      }
+
       /* Google Funding Choices CCPA link override */
       .fc-dns-link,
       .fc-ccpa-root,
@@ -197,10 +207,13 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 min-w-0 relative transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 min-w-0 relative pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
-      <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls) -->
-      <desktop-nav-bar class="sticky top-0 z-[60]"></desktop-nav-bar>
+      <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
+           offset below the header ad when one is showing) -->
+      <desktop-nav-bar
+        class="sticky top-[var(--top-ad-height,0px)] z-[60]"
+      ></desktop-nav-bar>
 
       <div
         id="turnstile-container"
