@@ -37,7 +37,6 @@ import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
@@ -48,6 +47,19 @@ const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
 const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
+
+// The unit chips rendered under the player name. The name column is sized to
+// this row, so getNameFontSize() counts the enabled entries here to work out
+// how much room the name actually has.
+const UNIT_CHIPS: readonly (readonly [UnitType, string])[] = [
+  [UnitType.City, cityIcon],
+  [UnitType.Factory, factoryIcon],
+  [UnitType.Port, portIcon],
+  [UnitType.MissileSilo, missileSiloIcon],
+  [UnitType.SAMLauncher, samLauncherIcon],
+  [UnitType.Warship, warshipIcon],
+];
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -266,6 +278,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     hasBetrayal: boolean;
     hasAlliance: boolean;
     hasTeam: boolean;
+    unitChipCount: number;
   }): { fontSize: string; isAllianceWrapped: boolean } {
     const {
       nameLength,
@@ -274,11 +287,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       hasBetrayal,
       hasAlliance,
       hasTeam,
+      unitChipCount,
     } = params;
 
     // Approximate char-widths each element occupies at --text-lg.
+    // playerType allows for the surrounding parentheses.
     const DESKTOP_PRESSURE = {
-      playerType: 3.5,
+      playerType: 4.8,
       perIcon: 2.0,
       icon: 0.5,
       flag: 3.5,
@@ -289,7 +304,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     } as const;
 
     const MOBILE_PRESSURE = {
-      playerType: 3.5,
+      playerType: 5.2,
       perIcon: 2.2,
       icon: 0.5,
       flag: 4.2,
@@ -312,25 +327,18 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       (hasBetrayal ? PRESSURE.betrayal : 0) +
       (hasTeam ? PRESSURE.team : 0);
 
-    let capacity: number;
-
-    if (width < 640) {
-      // Below 640px, overlay 100% viewport width.
-      // space grows dynamically with width
-      capacity = 28.1 + (Math.max(360, width) - 360) * 0.119;
-    } else if (width < 768) {
-      // 640px - 767px: sm:w-[500px], troop col w-28
-      // space = 376px / 8.4px = 44.8 chars.
-      capacity = 44.8;
-    } else if (width < 1024) {
-      // 768px - 1023px: sm:w-[500px],  troop col md:w-36
-      // space = 344px / 8.4px = 41.0 chars.
-      capacity = 41.0;
-    } else {
-      // >= 1024px: sm:w-[500px], font-size text-lg (18px, 10.8px/char).
-      // space = 336px / 10.8px = 31.1 chars.
-      capacity = 31.1;
-    }
+    // The name sits directly above the unit-chip row and shares its width, so
+    // capacity follows the chips rather than the viewport. Chips are w-9 with
+    // gap-0.5 below lg, and w-12 with gap-1 from lg up; the name is text-sm
+    // (14px, 8.4px/char) below lg and text-lg (18px, 10.8px/char) from lg up.
+    const chipWidth = isDesktop ? 48 : 36;
+    const chipGap = isDesktop ? 4 : 2;
+    const charWidth = isDesktop ? 10.8 : 8.4;
+    const chipRowWidth =
+      unitChipCount > 0
+        ? unitChipCount * chipWidth + (unitChipCount - 1) * chipGap
+        : 0;
+    const capacity = chipRowWidth / charWidth;
 
     let isAllianceWrapped = false;
     let alliancePressure = hasAlliance ? PRESSURE.alliance : 0;
@@ -378,7 +386,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         playerType = translateText("player_type.player");
         break;
     }
+    // Parenthesised so the type reads as an aside next to the player name.
+    const playerTypeLabel = playerType === "" ? "" : `(${playerType})`;
     const playerTeam = getTranslatedPlayerTeamLabel(player.team());
+
+    const unitChipCount = UNIT_CHIPS.filter(
+      ([type]) => !this.game.config().isUnitDisabled(type),
+    ).length;
 
     const { fontSize, isAllianceWrapped } = this.getNameFontSize({
       nameLength: player.displayName().length,
@@ -387,6 +401,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       hasBetrayal: traitorTicks > 0,
       hasAlliance: isAllied ?? false,
       hasTeam: playerTeam !== "" && player.type() !== PlayerType.Bot,
+      unitChipCount,
     });
 
     if (isAllied) {
@@ -440,46 +455,49 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     return html`
       <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
-        <!-- Left: Gold & Troop bar -->
-        <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
+        <!-- Left: Gold, outgoing attack & Troop bar -->
+        <div class="flex flex-col gap-1 flex-1 min-w-0">
           <div class="flex items-center gap-1">
             <div
-              class="flex items-center justify-center px-1 py-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
+              class="flex flex-1 min-w-0 overflow-hidden items-center justify-center px-0.5 lg:px-1 py-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
               translate="no"
             >
-              <img src=${goldCoinIcon} width="13" height="13" />
-              <span class="px-0.5">${renderNumber(player.gold())}</span>
+              <img
+                src=${goldCoinIcon}
+                width="13"
+                height="13"
+                class="shrink-0"
+              />
+              <span class="px-0.5 truncate"
+                >${renderNumber(player.gold())}</span
+              >
             </div>
             <div
-              class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
+              class="flex flex-1 min-w-0 overflow-hidden items-center justify-center px-0.5 lg:px-1 py-0.5 border rounded-md font-bold text-sm lg:gap-1 ${attackingTroops >
               0
-                ? "text-aquarius"
-                : "text-white/40"} drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+                ? "border-aquarius text-aquarius"
+                : "border-gray-500 text-white/40"}"
               translate="no"
             >
-              <span class="flex items-center gap-px leading-none text-xs"
-                ><img
-                  class="w-2.5 h-2.5 inline-block ${attackingTroops > 0
-                    ? ""
-                    : "brightness-0 invert opacity-40"}"
-                  src=${attackingTroops > 0 ? soldierIconAquarius : soldierIcon}
-                  alt=""
-                  aria-hidden="true"
-                />↑</span
-              >
-              <span class="tabular-nums leading-none text-sm mt-0.5"
+              <img
+                src=${swordIcon}
+                width="13"
+                height="13"
+                alt=""
+                aria-hidden="true"
+                class="shrink-0 ${attackingTroops > 0 ? "" : "opacity-40"}"
+              />
+              <span class="px-0.5 truncate tabular-nums"
                 >${renderTroops(attackingTroops)}</span
               >
             </div>
           </div>
-          <div class="w-28 md:w-36" translate="no">
+          <div class="w-full" translate="no">
             ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
           </div>
         </div>
         <!-- Right: Player identity + Units below -->
-        <div
-          class="flex flex-col justify-between self-stretch w-[100%] flex-grow-1"
-        >
+        <div class="flex flex-col justify-between self-stretch shrink-0">
           <div
             class="flex items-center gap-1 lg:gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
               isFriendly ?? false,
@@ -500,9 +518,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             </div>
             ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
-              ? html`<div class="flex flex-col leading-tight">
+              ? html`<div class="flex flex-col leading-tight shrink-0">
                   <span class="text-gray-400 text-xs font-normal"
-                    >${playerType}</span
+                    >${playerTypeLabel}</span
                   >
                   <span class="text-xs font-normal text-gray-400"
                     >[<span
@@ -514,27 +532,16 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                     >]</span
                   >
                 </div>`
-              : html`<span class="text-gray-400 text-xs font-normal"
-                  >${playerType}</span
+              : html`<span class="text-gray-400 text-xs font-normal shrink-0"
+                  >${playerTypeLabel}</span
                 >`}
             ${this.renderPlayerNameIcons(playerIcons)} ${betrayalHtml ?? ""}
             ${allianceHtml ?? ""}
           </div>
           <div class="flex gap-0.5 lg:gap-1 items-center mt-0.5">
-            ${this.displayUnitCount(player, UnitType.City, cityIcon)}
-            ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
-            ${this.displayUnitCount(player, UnitType.Port, portIcon)}
-            ${this.displayUnitCount(
-              player,
-              UnitType.MissileSilo,
-              missileSiloIcon,
+            ${UNIT_CHIPS.map(([type, icon]) =>
+              this.displayUnitCount(player, type, icon),
             )}
-            ${this.displayUnitCount(
-              player,
-              UnitType.SAMLauncher,
-              samLauncherIcon,
-            )}
-            ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
           </div>
         </div>
       </div>
