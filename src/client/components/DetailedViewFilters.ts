@@ -271,7 +271,7 @@ export function filterAndSortLobbies(
 
 // ---- Saved filter profiles ----
 
-export const FILTER_PROFILES_KEY = "more-games-filter-profiles";
+export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";
 export const MAX_FILTER_PROFILES = 20;
 export const MAX_PROFILE_NAME_LENGTH = 32;
 

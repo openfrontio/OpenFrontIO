@@ -82,10 +82,10 @@ import {
 } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
+import "./components/DetailedViewModal";
 import "./components/Footer";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
-import "./components/MoreGamesModal";
 import "./components/PlayPage";
 import "./components/RankedModal";
 import "./components/baseComponents/Button";
@@ -244,9 +244,9 @@ class Client {
       tag: "ranked-modal",
       pageId: "page-ranked",
     });
-    modalRouter.register("more-games", {
-      tag: "more-games-modal",
-      pageId: "page-more-games",
+    modalRouter.register("detailed-view", {
+      tag: "detailed-view-modal",
+      pageId: "page-detailed-view",
     });
     modalRouter.register("troubleshooting", {
       tag: "troubleshooting-modal",

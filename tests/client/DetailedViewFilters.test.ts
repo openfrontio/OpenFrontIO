@@ -11,7 +11,7 @@ import {
   MAX_FILTER_PROFILES,
   normalizeFilters,
   saveFilterProfile,
-} from "../../src/client/components/MoreGamesFilters";
+} from "../../src/client/components/DetailedViewFilters";
 import {
   Duos,
   GameMapType,
