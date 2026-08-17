@@ -56,6 +56,26 @@ describe("ClientMsgRateLimiter", () => {
     });
   });
 
+  describe("rejoin messages", () => {
+    it("allows a few rejoins then limits", () => {
+      const limiter = new ClientMsgRateLimiter();
+      for (let i = 0; i < 5; i++) {
+        expect(limiter.check(CLIENT_A, "rejoin", SMALL)).toBe("ok");
+      }
+      expect(limiter.check(CLIENT_A, "rejoin", SMALL)).toBe("limit");
+    });
+
+    it("rejoin limit is per client and independent of intents", () => {
+      const limiter = new ClientMsgRateLimiter();
+      for (let i = 0; i < 5; i++) {
+        limiter.check(CLIENT_A, "rejoin", SMALL);
+      }
+      expect(limiter.check(CLIENT_A, "rejoin", SMALL)).toBe("limit");
+      expect(limiter.check(CLIENT_A, "intent", SMALL)).toBe("ok");
+      expect(limiter.check(CLIENT_B, "rejoin", SMALL)).toBe("ok");
+    });
+  });
+
   describe("total bytes limit", () => {
     it("kicks when cumulative bytes reach 5MB", () => {
       const limiter = new ClientMsgRateLimiter();
