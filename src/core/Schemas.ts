@@ -239,6 +239,10 @@ const ClientInfoSchema = z.object({
   // lobby list). Never set on anonymized entries — the badge vouches for
   // the exact display name.
   verified: z.boolean().optional(),
+  // Server-pinned team slot for matchmade team games, so the lobby's team
+  // preview can honour the pins instead of re-deriving teams that the server
+  // will overrule at start. Absent when the game isn't matchmade.
+  teamIndex: z.number().int().nonnegative().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -325,6 +329,8 @@ export interface ClientInfo {
   // Plays under their server-validated account name (blue check). Never set
   // on anonymized entries.
   verified?: boolean;
+  // Server-pinned team slot for matchmade team games; absent when not matchmade.
+  teamIndex?: number;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
