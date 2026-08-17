@@ -29,11 +29,7 @@ import {
 } from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import {
-  composeVersionDisplay,
-  desktopVersion,
-  isDesktopShell,
-} from "./DesktopShell";
+import { isDesktopShell } from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
@@ -284,15 +280,13 @@ class Client {
     if (versionElements.length === 0) {
       console.warn("Game version element not found");
     } else {
+      // Game version only, so a player's version reads the same across web and
+      // Steam. The full string, shell version included, is in page-footer.
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-      const label = composeVersionDisplay(
-        displayVersion,
-        await desktopVersion(),
-      );
       versionElements.forEach((el) => {
         (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
-        el.textContent = label;
+        el.textContent = displayVersion;
       });
     }
 
