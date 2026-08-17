@@ -1309,7 +1309,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Luna,
     translationKey: "map.luna",
     categories: ["cosmic"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 2,
     specialTeamCount: 2,
   },
   {
