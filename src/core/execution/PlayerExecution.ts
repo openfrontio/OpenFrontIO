@@ -273,6 +273,16 @@ export class PlayerExecution implements Execution {
       return;
     }
 
+    // The checks above only ever looked at this one cluster of border tiles,
+    // but the fill below hands over the whole territory the cluster sits on.
+    // Those are different sets: every hole in a territory — an enemy enclave,
+    // a nuke crater — gives it another border cluster, so a cluster that
+    // passes can be wrapped around a hole in the middle of a wide open
+    // empire. Verify the land actually changing hands is sealed in.
+    if (!this.isEnclosed(firstTile)) {
+      return;
+    }
+
     const tiles = this.floodFillWithGen(
       this.bumpGeneration(),
       this.traversalState().visited,
@@ -288,6 +298,55 @@ export class PlayerExecution implements Execution {
     for (const tile of tiles) {
       capturing.conquer(tile);
     }
+  }
+
+  /**
+   * Whether the player's territory reachable from `start` is walled in by
+   * other players: walking from it through our own tiles and any unclaimed
+   * land can never reach water or the edge of the map, so the only way out
+   * is across someone else's territory.
+   *
+   * Unclaimed land is walked through rather than treated as a way out — a
+   * crater inside our own land is a hole, not an exit — but water and the
+   * map edge end it, matching what the cluster checks already require of the
+   * tiles they inspect.
+   */
+  private isEnclosed(start: TileRef): boolean {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    const state = this.traversalState();
+    const gen = bumpTraversalGeneration(state);
+    const visited = state.visited;
+    const stack = state.stack;
+    stack.length = 0;
+    visited[start] = gen;
+    stack.push(start);
+
+    while (stack.length > 0) {
+      const tile = stack.pop()!;
+      if (map.isOnEdgeOfMap(tile)) {
+        return false;
+      }
+      const numNeighbors = map.neighbors4(tile, this.nbuf);
+      for (let i = 0; i < numNeighbors; i++) {
+        const n = this.nbuf[i];
+        if (visited[n] === gen) {
+          continue;
+        }
+        const ownerId = map.ownerID(n);
+        if (ownerId !== 0 && ownerId !== mySmallID) {
+          // Someone else's tile — part of the wall, so stop here.
+          continue;
+        }
+        if (ownerId === 0 && !map.isLand(n)) {
+          // Open water is a way out.
+          return false;
+        }
+        visited[n] = gen;
+        stack.push(n);
+      }
+    }
+    return true;
   }
 
   private getCapturingPlayer(cluster: readonly TileRef[]): Player | null {
