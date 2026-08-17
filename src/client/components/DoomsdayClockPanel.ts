@@ -47,8 +47,7 @@ export class DoomsdayClockPanel extends LitElement {
   // The player's "side" (matching the sim): themselves in FFA, their whole team
   // otherwise. The sim judges a side on its combined territory against the same
   // bar as a solo player, so the HUD only needs the tile sum.
-  // A side is one player in FFA and a whole team otherwise — the same split the
-  // sim uses, and what decides which level ladder the bar climbs.
+  // A side is one player in FFA and a whole team otherwise — same split as the sim.
   private isTeamGame(): boolean {
     return this.game.config().gameConfig().gameMode !== GameMode.FFA;
   }

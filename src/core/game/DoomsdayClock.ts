@@ -12,11 +12,10 @@
  */
 
 export type DoomsdayClockSpeed = "slow" | "normal" | "fast" | "veryfast";
-/** Speed sets the PACE; whether sides can hold more than one player sets the
- *  BAR. Passed together because both call sites already resolve both. */
+/** Speed sets the pace; team mode sets the bar. */
 export interface DoomsdayClockProfile {
   speed: DoomsdayClockSpeed;
-  /** True when a side is a TEAM rather than one player — see LEVELS_TEAM. */
+  /** True when a side is a team rather than one player — see LEVELS_TEAM. */
   teamGame?: boolean;
 }
 
@@ -53,22 +52,12 @@ interface WaveSchedule {
 // a higher one climbs past the leader's own share. Steps stay small because half
 // the players alive at the end hold under 0.4% of the map.
 const LEVELS = [200, 400, 700, 1100, 1700, 2500, 3500]; // 2/4/7/11/17/25/35%
-// TEAM modes climb the same ladder with the rungs raised. The bar is one share
-// per SIDE regardless of headcount — deliberately, since elimination happens at
-// side granularity — but that makes the same percentage mean different things: a
-// duo sitting on 2% combined is two players averaging 1% each, against a solo
-// FFA player holding the whole 2%. The FFA levels track the ofstats territory
-// median for ONE player, so applied to a team they under-ask by roughly the
-// team's size.
-//
-// Only the rungs move. Grace, ramp and pause timings are the speed's job, so the
-// final bar still lands exactly where the chosen speed puts it — no team game
-// reaches its endgame sooner than an FFA one on the same preset.
-//
-// The ceiling is deliberately unchanged. 35% already sits well above the 21.6%
-// the runner-up has ever held at game end, so it narrows the field without
-// climbing past the leader's own share; raising it would start dooming whoever
-// is winning, which inverts what the clock is for.
+// TEAM modes climb the same ladder with the rungs raised. A side survives while
+// either member does, so equal pressure collapses the field more slowly —
+// measured, team games plateau at four sides where FFA keeps shedding. Only the
+// rungs move; grace and ramp timings are the speed's job. The ceiling is
+// unchanged: 35% is already above any runner-up share observed at game end, and
+// raising it would start dooming the leader.
 const LEVELS_TEAM = [300, 600, 1000, 1500, 2100, 2800, 3500]; // 3/6/10/15/21/28/35%
 const SCHEDULES: Record<DoomsdayClockSpeed, WaveSchedule> = {
   // grace 10:00, then seven 168s ramps + 54s pauses -> 35% at 35:00.
