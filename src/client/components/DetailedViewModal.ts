@@ -67,6 +67,8 @@ const CHIP_BASE =
 const CHIP_ON = "bg-malibu-blue text-white border-malibu-blue";
 const CHIP_OFF =
   "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white";
+const PANE_HEADING =
+  "block text-sm font-bold uppercase tracking-widest text-white";
 const SECTION_LABEL =
   "block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5";
 const FIELD_CLASS =
@@ -256,7 +258,7 @@ export class DetailedViewModal extends BaseModal {
     const placeholders = Math.max(0, PANE_SLOTS - bucketTotal);
     return html`
       <section class="flex flex-col gap-2 min-w-0">
-        <h3 class="${SECTION_LABEL} mb-0">
+        <h3 class="${PANE_HEADING}">
           ${this.paneHeading(name, lobbies.length)}
         </h3>
         <div class="flex flex-col gap-4">
@@ -307,7 +309,7 @@ export class DetailedViewModal extends BaseModal {
     if (lobbies.length === 0) return nothing;
     return html`
       <section class="flex flex-col gap-2">
-        <h3 class="${SECTION_LABEL} mb-0">
+        <h3 class="${PANE_HEADING}">
           ${this.paneHeading(
             translateText("detailed_view.pane_hosted"),
             lobbies.length,
