@@ -1,5 +1,6 @@
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
 import { JoinLobbyModal } from "../JoinLobbyModal";
@@ -38,6 +39,19 @@ import { styledSelect } from "./ui/StyledSelect";
 
 /** The three scheduled buckets, in the order their panes are laid out. */
 const SCHEDULED_PANES = ["ffa", "team", "special"] as const;
+
+/**
+ * Lobbies the master keeps queued per scheduled bucket (the active one plus
+ * the next). Panes always render this many slots so the layout holds its
+ * height while a started lobby is replaced.
+ */
+const PANE_SLOTS = 2;
+
+/** Slot height; cards and the spawning placeholder both fill it exactly. */
+const SLOT_CLASS = "h-40";
+
+/** How long a card takes to slide into a freed slot. */
+const SLIDE_MS = 220;
 
 type BoundKey =
   | "minJoined"
@@ -123,6 +137,46 @@ export class DetailedViewModal extends BaseModal {
     super.disconnectedCallback();
   }
 
+  // ---- Slot animation ----
+  //
+  // When the lobby at the top of a pane starts, the one queued behind it takes
+  // its slot. Lit reuses the keyed DOM node, so the move is instant; these two
+  // hooks replay it as a slide (FLIP): record each slot's position before the
+  // render, then animate from the old position to the new one after it.
+
+  private slotTops = new Map<string, number>();
+
+  private slotElements(): HTMLElement[] {
+    return Array.from(this.querySelectorAll<HTMLElement>("[data-lobby-slot]"));
+  }
+
+  protected override willUpdate(): void {
+    super.willUpdate();
+    this.slotTops = new Map(
+      this.slotElements().map((el) => [
+        el.dataset.lobbySlot ?? "",
+        el.getBoundingClientRect().top,
+      ]),
+    );
+  }
+
+  protected updated(): void {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    for (const el of this.slotElements()) {
+      const previousTop = this.slotTops.get(el.dataset.lobbySlot ?? "");
+      if (previousTop === undefined) continue;
+      const delta = previousTop - el.getBoundingClientRect().top;
+      // Sub-pixel shifts are layout noise, not a slot change.
+      if (Math.abs(delta) < 1) continue;
+      el.style.transition = "none";
+      el.style.transform = `translateY(${delta}px)`;
+      requestAnimationFrame(() => {
+        el.style.transition = `transform ${SLIDE_MS}ms ease-out`;
+        el.style.transform = "";
+      });
+    }
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -149,10 +203,9 @@ export class DetailedViewModal extends BaseModal {
       return this.renderLoadingSpinner();
     }
 
-    const shown = filterAndSortLobbies(
-      flattenLobbies(this.lobbies.games),
-      this.filters,
-      (lobby) => this.mapNameOf(lobby),
+    const all = flattenLobbies(this.lobbies.games);
+    const shown = filterAndSortLobbies(all, this.filters, (lobby) =>
+      this.mapNameOf(lobby),
     );
 
     return html`
@@ -169,6 +222,7 @@ export class DetailedViewModal extends BaseModal {
                   this.renderPane(
                     translateText(`detailed_view.pane_${type}`),
                     shown.filter((lobby) => lobby.publicGameType === type),
+                    all.filter((lobby) => lobby.publicGameType === type).length,
                   ),
                 )}
               </div>
@@ -187,20 +241,61 @@ export class DetailedViewModal extends BaseModal {
     return translateText("detailed_view.pane_heading", { name, count });
   }
 
-  private renderPane(name: string, lobbies: PublicGameInfo[]) {
+  /**
+   * A pane always fills PANE_SLOTS, so its height never changes as lobbies
+   * come and go: the queued lobby slides up into the started one's slot and a
+   * "spawning" placeholder holds the slot until the master creates its
+   * replacement. `bucketTotal` is the unfiltered count, so hiding a lobby with
+   * a filter shows one fewer card rather than a placeholder that lies.
+   */
+  private renderPane(
+    name: string,
+    lobbies: PublicGameInfo[],
+    bucketTotal: number,
+  ) {
+    const placeholders = Math.max(0, PANE_SLOTS - bucketTotal);
     return html`
       <section class="flex flex-col gap-2 min-w-0">
         <h3 class="${SECTION_LABEL} mb-0">
           ${this.paneHeading(name, lobbies.length)}
         </h3>
-        ${lobbies.length === 0
-          ? html`<p
-              class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
-            >
-              ${translateText("detailed_view.pane_empty")}
-            </p>`
-          : lobbies.map((lobby) => this.renderCard(lobby))}
+        <div class="flex flex-col gap-4">
+          ${lobbies.length === 0 && placeholders === 0
+            ? html`<p
+                class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
+              >
+                ${translateText("detailed_view.pane_empty")}
+              </p>`
+            : nothing}
+          ${repeat(
+            lobbies,
+            (lobby) => lobby.gameID,
+            (lobby) =>
+              html`<div class="${SLOT_CLASS}" data-lobby-slot=${lobby.gameID}>
+                ${this.renderCard(lobby)}
+              </div>`,
+          )}
+          ${Array.from({ length: placeholders }, () =>
+            this.renderSpawningSlot(),
+          )}
+        </div>
       </section>
+    `;
+  }
+
+  /** Placeholder for a lobby the master hasn't created yet. */
+  private renderSpawningSlot() {
+    return html`
+      <div
+        class="${SLOT_CLASS} flex flex-col items-center justify-center gap-3 rounded-2xl bg-surface border border-white/10"
+      >
+        <span
+          class="w-8 h-8 border-[3px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+        ></span>
+        <span class="text-xs uppercase tracking-widest text-white/50">
+          ${translateText("detailed_view.spawning")}
+        </span>
+      </div>
     `;
   }
 
@@ -219,7 +314,14 @@ export class DetailedViewModal extends BaseModal {
           )}
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          ${lobbies.map((lobby) => this.renderCard(lobby))}
+          ${repeat(
+            lobbies,
+            (lobby) => lobby.gameID,
+            (lobby) =>
+              html`<div class="${SLOT_CLASS}" data-lobby-slot=${lobby.gameID}>
+                ${this.renderCard(lobby)}
+              </div>`,
+          )}
         </div>
       </section>
     `;
@@ -235,7 +337,7 @@ export class DetailedViewModal extends BaseModal {
       subtitle: getGameModeLabel(config),
       timeDisplay: this.timeDisplay(lobby),
       timeDisplayUppercase: lobby.startsAt === undefined,
-      heightClass: "h-40",
+      heightClass: "h-full",
       onClick: () => this.join(lobby),
     });
   }

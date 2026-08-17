@@ -84,6 +84,14 @@ export function lobbyCard({
     ? [mapName, subtitle].filter(Boolean).join(" · ")
     : subtitle;
 
+  // Hosted lobbies don't always advertise a cap; showing "3/" reads as a
+  // missing number, so drop the separator when there's nothing to divide by.
+  const capacity = lobby.gameConfig?.maxPlayers;
+  const playerCount =
+    capacity === undefined
+      ? String(lobby.numClients)
+      : `${lobby.numClients}/${capacity}`;
+
   const modifierLabels = getModifierLabels(
     lobby.gameConfig?.publicGameModifiers,
     lobby.gameConfig?.doomsdayClock?.speed,
@@ -150,7 +158,7 @@ export function lobbyCard({
         <span
           class="absolute bottom-full right-2 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded"
         >
-          ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
+          ${playerCount}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-4 w-4 inline-block"
