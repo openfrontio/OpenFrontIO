@@ -827,9 +827,14 @@ class Client {
         console.log(`reopening host lobby ${lobbyId}`);
         return;
       }
+      // ?spectate is the watch-only form of the same lobby link, so a cast or
+      // an archive can hand out a URL that never takes a player slot.
+      const spectate = new URLSearchParams(window.location.search).has(
+        "spectate",
+      );
       window.showPage?.("page-join-lobby");
-      this.joinModal.open({ lobbyId });
-      console.log(`joining lobby ${lobbyId}`);
+      this.joinModal.open({ lobbyId, spectate });
+      console.log(`${spectate ? "spectating" : "joining"} lobby ${lobbyId}`);
       return;
     }
     if (modalRouter.routeFromHash()) {

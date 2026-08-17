@@ -457,16 +457,22 @@ export class JoinLobbyModal extends BaseModal {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
       if (!lobbyInfo) {
-        this.handleUrlJoin(lobbyId);
+        this.handleUrlJoin(lobbyId, args?.spectate === true);
       }
     }
   }
 
-  private async handleUrlJoin(lobbyId: string): Promise<void> {
+  private async handleUrlJoin(
+    lobbyId: string,
+    spectator = false,
+  ): Promise<void> {
     try {
-      const gameExists = await this.checkActiveLobby(lobbyId);
+      const gameExists = await this.checkActiveLobby(lobbyId, spectator);
       if (gameExists) return;
 
+      // A finished game has no lobby to spectate, so both link forms fall
+      // through to the same archive: the play link and the spectate link
+      // become the same replay once the game is over.
       // Active lobby not found, check if it's an archived game
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
