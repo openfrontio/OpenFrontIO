@@ -633,10 +633,16 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
     // Only the rungs move; grace and wave timings belong to the speed preset.
     const team = { speed: "normal" as const, teamGame: true };
     expect(doomsdayClockRequiredTiles(team, land, 600)).toBe(0); // grace unchanged
-    const ffa = doomsdayClockWaveState({ speed: "normal" }, 700);
-    const t = doomsdayClockWaveState(team, 700);
+    // Sampled inside a PAUSE, not the first ramp: during the opening ramp both
+    // profiles report growing with 0s to go, so the comparison would hold even
+    // if the team schedule had been shifted. The targets confirm the two are on
+    // different ladders at the same instant.
+    const ffa = doomsdayClockWaveState({ speed: "normal" }, 1000);
+    const t = doomsdayClockWaveState(team, 1000);
     expect(t.secondsToNextGrowth).toBe(ffa.secondsToNextGrowth);
     expect(t.growing).toBe(ffa.growing);
+    expect(ffa.targetPercent).toBe(7);
+    expect(t.targetPercent).toBe(10);
   });
 
   it("treats an omitted teamGame as FFA", () => {
