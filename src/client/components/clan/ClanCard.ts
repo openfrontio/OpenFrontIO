@@ -2,9 +2,8 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { ClanInfo } from "../../ClanApi";
 import { translateText } from "../../Utils";
-import "../CapIcon";
-import "../PlutoniumIcon";
-import { formatClanBalance, translateClanRole } from "./ClanShared";
+import "../CurrencyDisplay";
+import { translateClanRole } from "./ClanShared";
 
 @customElement("clan-card")
 export class ClanCard extends LitElement {
@@ -61,34 +60,6 @@ export class ClanCard extends LitElement {
     >`;
   }
 
-  // Balances ride along on the clan payload, so this costs no extra request.
-  // Each side is dropped independently when the API didn't report it.
-  private renderBalances() {
-    const hard = formatClanBalance(this.clan.hardBalance);
-    const soft = formatClanBalance(this.clan.softBalance);
-    if (hard === null && soft === null) return "";
-    return html`
-      ${hard === null
-        ? ""
-        : html`<span
-            class="flex items-center gap-1"
-            title=${translateText("cosmetics.hard")}
-          >
-            <plutonium-icon .size=${12}></plutonium-icon>
-            <span class="text-green-400/70">${hard}</span>
-          </span>`}
-      ${soft === null
-        ? ""
-        : html`<span
-            class="flex items-center gap-1"
-            title=${translateText("cosmetics.soft")}
-          >
-            <cap-icon .size=${14}></cap-icon>
-            <span class="text-amber-600/80">${soft}</span>
-          </span>`}
-    `;
-  }
-
   render() {
     const clan = this.clan;
     return html`
@@ -116,7 +87,13 @@ export class ClanCard extends LitElement {
                   count: clan.memberCount ?? 0,
                 })}</span
               >
-              ${this.renderBalances()}
+              <!-- Balances ride along on the clan payload — no extra request.
+                   Renders nothing when the API reported neither. -->
+              <currency-display
+                compact
+                .hard=${clan.hardBalance ?? null}
+                .soft=${clan.softBalance ?? null}
+              ></currency-display>
             </div>
           </div>
           ${this.renderBadge()}

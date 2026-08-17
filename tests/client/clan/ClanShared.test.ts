@@ -8,7 +8,6 @@ import type {
 import {
   filterMembersBySearch,
   filterRequestsBySearch,
-  formatClanBalance,
   renderMemberStats,
 } from "../../../src/client/components/clan/ClanShared";
 
@@ -22,42 +21,6 @@ const requests: ClanJoinRequest[] = [
   { publicId: "Dave111", createdAt: "2024-04-01T00:00:00Z" },
   { publicId: "Eve222", createdAt: "2024-05-01T00:00:00Z" },
 ];
-
-describe("formatClanBalance", () => {
-  it("formats a zero balance rather than dropping it", () => {
-    expect(formatClanBalance("0")).toBe("0");
-  });
-
-  it("groups thousands", () => {
-    expect(formatClanBalance("1000")).toBe((1000).toLocaleString());
-  });
-
-  it("formats a value past Number.MAX_SAFE_INTEGER without losing precision", () => {
-    // 9007199254740993 is not representable as a double; via Number() this
-    // would come back as ...992.
-    expect(formatClanBalance("9007199254740993")).toBe(
-      BigInt("9007199254740993").toLocaleString(),
-    );
-    expect(formatClanBalance("9007199254740993")).not.toBe(
-      formatClanBalance("9007199254740992"),
-    );
-  });
-
-  it("returns null for an absent balance so callers can hide the widget", () => {
-    // null is what GET /public/clan/:clanTag serves for an unregistered tag.
-    expect(formatClanBalance(null)).toBeNull();
-    expect(formatClanBalance(undefined)).toBeNull();
-  });
-
-  it("returns null for an empty string instead of BigInt's 0n", () => {
-    expect(formatClanBalance("")).toBeNull();
-  });
-
-  it("returns null for an unparseable value", () => {
-    expect(formatClanBalance("1.5")).toBeNull();
-    expect(formatClanBalance("abc")).toBeNull();
-  });
-});
 
 describe("filterMembersBySearch", () => {
   it("returns all members when search is empty", () => {

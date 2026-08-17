@@ -16,11 +16,11 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
+import { formatCurrencyAmount } from "../CurrencyDisplay";
 import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
-  formatClanBalance,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -597,8 +597,8 @@ export class ClanDetailView extends LitElement {
   // Each is dropped when the API didn't report it (rather than shown as 0), so
   // the grid falls back to the original two tiles.
   private renderStatTiles(clan: ClanInfo) {
-    const hard = formatClanBalance(clan.hardBalance);
-    const soft = formatClanBalance(clan.softBalance);
+    const hard = formatCurrencyAmount(clan.hardBalance);
+    const soft = formatCurrencyAmount(clan.softBalance);
     return html`
       ${renderStat(
         translateText("clan_modal.members"),

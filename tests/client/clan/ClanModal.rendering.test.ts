@@ -276,16 +276,25 @@ describe("ClanModal — rendering", () => {
   // ── 3b. Clan currency balances (infra#518) ──────────────────────────────
 
   describe("clan balances", () => {
-    it("renders both balances on the clan card, thousands-grouped", async () => {
-      setState(
-        modal,
-        "myClans" as keyof ClanModal,
-        [makeClan({ softBalance: "1000", hardBalance: "25" })] as never,
-      );
+    // The card nests <currency-display>, which has its own update cycle;
+    // waitForSubComponent only awaits one level down, so drain the nested one
+    // too or the assertions race an empty element.
+    const showMyClan = async (clan: ReturnType<typeof makeClan>) => {
+      setState(modal, "myClans" as keyof ClanModal, [clan] as never);
       (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
         new Map();
       setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
-      await modal.updateComplete;
+      await waitForSubComponent(modal, "clan-card");
+      const display = modal.querySelector("currency-display");
+      if (display && "updateComplete" in display) {
+        await (display as HTMLElement & { updateComplete: Promise<boolean> })
+          .updateComplete;
+      }
+      return display;
+    };
+
+    it("renders both balances on the clan card, thousands-grouped", async () => {
+      await showMyClan(makeClan({ softBalance: "1000", hardBalance: "25" }));
 
       const text = modal.textContent ?? "";
       expect(text).toContain((1000).toLocaleString());
@@ -293,15 +302,7 @@ describe("ClanModal — rendering", () => {
     });
 
     it("renders a zero balance rather than hiding it", async () => {
-      setState(
-        modal,
-        "myClans" as keyof ClanModal,
-        [makeClan({ softBalance: "0", hardBalance: "0" })] as never,
-      );
-      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
-        new Map();
-      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
-      await modal.updateComplete;
+      await showMyClan(makeClan({ softBalance: "0", hardBalance: "0" }));
 
       expect(modal.querySelectorAll("cap-icon").length).toBeGreaterThan(0);
       expect(modal.querySelectorAll("plutonium-icon").length).toBeGreaterThan(
@@ -310,12 +311,11 @@ describe("ClanModal — rendering", () => {
     });
 
     it("omits the balance widgets entirely when the API reports none", async () => {
-      setState(modal, "myClans" as keyof ClanModal, [makeClan()] as never);
-      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
-        new Map();
-      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
-      await modal.updateComplete;
+      // Assert the element is present but empty, so this can't pass merely
+      // because the card hadn't rendered yet.
+      const display = await showMyClan(makeClan());
 
+      expect(display).toBeTruthy();
       expect(modal.querySelector("cap-icon")).toBeNull();
       expect(modal.querySelector("plutonium-icon")).toBeNull();
       expect(modal.textContent).not.toContain("undefined");
