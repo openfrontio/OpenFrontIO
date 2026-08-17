@@ -137,6 +137,30 @@ describe("Water Nukes", () => {
       expect(navGame.waterGraphVersion()).toBeGreaterThan(versionBefore);
     });
 
+    test("water graph rebuild waits until the tick after terrain conversion", async () => {
+      const navGame = await setup(
+        "plains",
+        { waterNukes: true, disableNavMesh: false },
+        [],
+      );
+
+      // Make the rebuild interval already elapsed, matching a nuke during an
+      // established game. Convert a complete minimap cell so the graph dirties.
+      for (let i = 0; i < 21; i++) navGame.executeNextTick();
+      for (let y = 50; y < 52; y++) {
+        for (let x = 50; x < 52; x++) {
+          navGame.queueWaterConversion(navGame.ref(x, y));
+        }
+      }
+
+      const versionBefore = navGame.waterGraphVersion();
+      navGame.executeNextTick();
+      expect(navGame.waterGraphVersion()).toBe(versionBefore);
+
+      navGame.executeNextTick();
+      expect(navGame.waterGraphVersion()).toBe(versionBefore + 1);
+    });
+
     test("minimap tiles get correct magnitude after water nuke", async () => {
       const navGame = await setup(
         "plains",

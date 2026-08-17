@@ -94,6 +94,7 @@ export class WaterManager {
    */
   tick(currentTick: number): TileRef[] {
     const changedTiles: TileRef[] = [];
+    let convertedThisTick = false;
 
     if (this._pendingWaterTiles.size > 0) {
       const converted: TileRef[] = [];
@@ -113,6 +114,7 @@ export class WaterManager {
       }
       this._pendingWaterTiles.clear();
       if (converted.length > 0) {
+        convertedThisTick = true;
         this.finalizeWaterChanges(converted, changedTiles);
       }
     }
@@ -121,6 +123,10 @@ export class WaterManager {
     if (
       this._waterGraphDirty &&
       !this.disableNavMesh &&
+      // Keep terrain fixup and graph rebuilding out of the same tick. The
+      // graph is already allowed to remain stale between throttled rebuilds,
+      // and a one-tick delay avoids combining both water-nuke CPU spikes.
+      !convertedThisTick &&
       currentTick - this._waterGraphLastRebuildTick >=
         WATER_GRAPH_REBUILD_INTERVAL
     ) {
