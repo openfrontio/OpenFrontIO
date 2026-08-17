@@ -5,6 +5,7 @@ import {
   FILTER_PROFILES_KEY,
   filterAndSortLobbies,
   flattenLobbies,
+  hasFilterProfile,
   loadFilterProfiles,
   lobbyFacts,
   LobbyFilters,
@@ -312,6 +313,29 @@ describe("filter profiles", () => {
   it("survives unparseable storage", () => {
     localStorage.setItem(FILTER_PROFILES_KEY, "{not json");
     expect(loadFilterProfiles()).toEqual({});
+  });
+
+  it("treats a profile named __proto__ as an ordinary name", () => {
+    const saved = saveFilterProfile("__proto__", filters({ hideEmpty: true }));
+    expect(Object.keys(saved)).toEqual(["__proto__"]);
+    expect(saved["__proto__"].hideEmpty).toBe(true);
+    // Nothing leaked onto Object.prototype, and the round trip survives.
+    expect(({} as Record<string, unknown>).hideEmpty).toBeUndefined();
+
+    const reloaded = loadFilterProfiles();
+    expect(hasFilterProfile(reloaded, "__proto__")).toBe(true);
+    expect(reloaded["__proto__"].hideEmpty).toBe(true);
+
+    expect(Object.keys(deleteFilterProfile("__proto__"))).toEqual([]);
+    expect(loadFilterProfiles()["__proto__"]).toBeUndefined();
+  });
+
+  it("does not mistake inherited Object members for saved profiles", () => {
+    const profiles = loadFilterProfiles();
+    expect(hasFilterProfile(profiles, "toString")).toBe(false);
+    expect(profiles["toString"]).toBeUndefined();
+    // Deleting a name nobody saved is a no-op, not a write.
+    expect(Object.keys(deleteFilterProfile("toString"))).toEqual([]);
   });
 
   it("caps the number of stored profiles but still overwrites existing ones", () => {

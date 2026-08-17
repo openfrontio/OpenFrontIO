@@ -8,7 +8,7 @@ import {
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
 
 /**
- * Filtering, sorting and saved-profile logic for the "More Games" lobby
+ * Filtering, sorting and saved-profile logic for the Detailed View lobby
  * browser. Kept free of Lit and of translation lookups so it can be unit
  * tested directly; the component passes in a map-name resolver for the
  * alphabetical sort.
@@ -313,20 +313,38 @@ export function normalizeFilters(raw: unknown): LobbyFilters {
   };
 }
 
+/**
+ * Profiles are keyed by a user-typed name, so the record is prototype-less:
+ * on a plain object `profiles["__proto__"] = …` sets the prototype instead of
+ * storing the profile, and `"toString" in profiles` is true for a name nobody
+ * saved.
+ */
+function emptyProfiles(): Record<string, LobbyFilters> {
+  return Object.create(null) as Record<string, LobbyFilters>;
+}
+
+/** Own-property check, so inherited names aren't mistaken for saved profiles. */
+export function hasFilterProfile(
+  profiles: Record<string, LobbyFilters>,
+  name: string,
+): boolean {
+  return Object.prototype.hasOwnProperty.call(profiles, name);
+}
+
 export function loadFilterProfiles(): Record<string, LobbyFilters> {
   let parsed: unknown;
   try {
     const stored = localStorage.getItem(FILTER_PROFILES_KEY);
-    if (stored === null) return {};
+    if (stored === null) return emptyProfiles();
     parsed = JSON.parse(stored);
   } catch (error) {
     console.warn("Failed to read saved lobby filter profiles", error);
-    return {};
+    return emptyProfiles();
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    return {};
+    return emptyProfiles();
   }
-  const profiles: Record<string, LobbyFilters> = {};
+  const profiles = emptyProfiles();
   for (const [name, value] of Object.entries(parsed)) {
     profiles[name] = normalizeFilters(value);
   }
@@ -353,7 +371,7 @@ export function saveFilterProfile(
   const profiles = loadFilterProfiles();
   if (trimmed === "") return profiles;
   if (
-    !(trimmed in profiles) &&
+    !hasFilterProfile(profiles, trimmed) &&
     Object.keys(profiles).length >= MAX_FILTER_PROFILES
   ) {
     return profiles;
@@ -367,7 +385,7 @@ export function deleteFilterProfile(
   name: string,
 ): Record<string, LobbyFilters> {
   const profiles = loadFilterProfiles();
-  if (!(name in profiles)) return profiles;
+  if (!hasFilterProfile(profiles, name)) return profiles;
   delete profiles[name];
   persistProfiles(profiles);
   return profiles;

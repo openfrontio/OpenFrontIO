@@ -14,12 +14,14 @@ import {
   renderDuration,
   translateText,
 } from "../Utils";
+import "./baseComponents/Button";
 import { BaseModal } from "./BaseModal";
 import {
   DEFAULT_FILTERS,
   deleteFilterProfile,
   filterAndSortLobbies,
   flattenLobbies,
+  hasFilterProfile,
   loadFilterProfiles,
   LOBBY_MODES,
   LOBBY_SOURCES,
@@ -29,12 +31,13 @@ import {
   NAMED_TEAM_CONFIGS,
   NUMERIC_TEAM_CONFIGS,
   saveFilterProfile,
-  SORT_KEYS,
-  SortKey,
 } from "./DetailedViewFilters";
 import { lobbyCard, mapAspectRatios } from "./LobbyCard";
 import { modalHeader } from "./ui/ModalHeader";
 import { styledSelect } from "./ui/StyledSelect";
+
+/** The three scheduled buckets, in the order their panes are laid out. */
+const SCHEDULED_PANES = ["ffa", "team", "special"] as const;
 
 type BoundKey =
   | "minJoined"
@@ -125,10 +128,19 @@ export class DetailedViewModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const count = this.activeFilterCount();
     return modalHeader({
       title: translateText("detailed_view.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
+      rightContent: html`<o-button
+        variant=${this.showFilters ? "primary" : "secondary"}
+        size="sm"
+        title=${count > 0
+          ? translateText("detailed_view.filters_with_count", { count })
+          : translateText("detailed_view.filters")}
+        @click=${() => (this.showFilters = !this.showFilters)}
+      ></o-button>`,
     });
   }
 
@@ -144,40 +156,68 @@ export class DetailedViewModal extends BaseModal {
 
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <span class="text-xs text-white/50 uppercase tracking-wider">
-            ${translateText("detailed_view.showing", {
-              shown: String(shown.length),
-              total: String(all.length),
-            })}
-          </span>
-          <div class="flex items-center gap-2">
-            ${this.renderSortSelect()}
-            <button
-              @click=${() => (this.showFilters = !this.showFilters)}
-              class="${BUTTON_CLASS} ${this.showFilters
-                ? "bg-malibu-blue/20 border-malibu-blue/50 text-white"
-                : ""}"
-              aria-expanded=${this.showFilters ? "true" : "false"}
-            >
-              ${translateText(
-                "detailed_view.filters",
-              )}${this.activeFilterCount() > 0
-                ? ` (${this.activeFilterCount()})`
-                : ""}
-            </button>
-          </div>
-        </div>
+        <span class="text-xs text-white/50 uppercase tracking-wider">
+          ${translateText("detailed_view.showing", {
+            shown: String(shown.length),
+            total: String(all.length),
+          })}
+        </span>
 
         ${this.showFilters ? this.renderFilterPanel() : nothing}
         ${shown.length === 0
           ? html`<p class="py-12 text-center text-sm text-white/50">
               ${translateText("detailed_view.no_lobbies")}
             </p>`
-          : html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              ${shown.map((lobby) => this.renderCard(lobby))}
-            </div>`}
+          : html`
+              <!-- One pane per scheduled bucket, cards stacked within it. -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+                ${SCHEDULED_PANES.map((type) =>
+                  this.renderPane(
+                    translateText(`detailed_view.pane_${type}`),
+                    shown.filter((lobby) => lobby.publicGameType === type),
+                  ),
+                )}
+              </div>
+              ${this.renderHostedPane(
+                shown.filter((lobby) => lobby.publicGameType === "hosted"),
+              )}
+            `}
       </div>
+    `;
+  }
+
+  // ---- Lobby panes ----
+
+  private renderPane(title: string, lobbies: PublicGameInfo[]) {
+    return html`
+      <section class="flex flex-col gap-2 min-w-0">
+        <h3 class="${SECTION_LABEL} mb-0">${title} (${lobbies.length})</h3>
+        ${lobbies.length === 0
+          ? html`<p
+              class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
+            >
+              ${translateText("detailed_view.pane_empty")}
+            </p>`
+          : lobbies.map((lobby) => this.renderCard(lobby))}
+      </section>
+    `;
+  }
+
+  /**
+   * Subscriber-hosted lobbies don't belong to any scheduled bucket, so they get
+   * their own row below the three panes — and only when some exist.
+   */
+  private renderHostedPane(lobbies: PublicGameInfo[]) {
+    if (lobbies.length === 0) return nothing;
+    return html`
+      <section class="flex flex-col gap-2">
+        <h3 class="${SECTION_LABEL} mb-0">
+          ${translateText("detailed_view.pane_hosted")} (${lobbies.length})
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          ${lobbies.map((lobby) => this.renderCard(lobby))}
+        </div>
+      </section>
     `;
   }
 
@@ -191,7 +231,7 @@ export class DetailedViewModal extends BaseModal {
       subtitle: getGameModeLabel(config),
       timeDisplay: this.timeDisplay(lobby),
       timeDisplayUppercase: lobby.startsAt === undefined,
-      heightClass: "h-44",
+      heightClass: "h-40",
       onClick: () => this.join(lobby),
     });
   }
@@ -219,18 +259,6 @@ export class DetailedViewModal extends BaseModal {
   }
 
   // ---- Filter panel ----
-
-  private renderSortSelect() {
-    return styledSelect({
-      options: SORT_KEYS.map((key) => ({
-        value: key,
-        label: translateText(`detailed_view.sort_${key}`),
-      })),
-      value: this.filters.sort,
-      onChange: (value) => this.patchFilters({ sort: value as SortKey }),
-      ariaLabel: translateText("detailed_view.sort"),
-    });
-  }
 
   private renderFilterPanel() {
     return html`
@@ -470,9 +498,11 @@ export class DetailedViewModal extends BaseModal {
       this.patchFilters({ [key]: null } as Partial<LobbyFilters>);
       return;
     }
-    const parsed = Number.parseInt(raw, 10);
+    // Number() (not parseInt) so "12abc" is rejected outright rather than
+    // silently read as 12; fractions floor, matching normalizeFilters.
+    const parsed = Number(raw);
     this.patchFilters({
-      [key]: Number.isFinite(parsed) && parsed >= 0 ? parsed : null,
+      [key]: Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null,
     } as Partial<LobbyFilters>);
   }
 
@@ -484,7 +514,9 @@ export class DetailedViewModal extends BaseModal {
   private applyProfile(name: string) {
     this.selectedProfile = name;
     if (name === "") return;
-    const profile = this.profiles[name];
+    const profile = hasFilterProfile(this.profiles, name)
+      ? this.profiles[name]
+      : undefined;
     if (profile) {
       this.filters = { ...profile };
       this.profileName = name;
@@ -495,7 +527,9 @@ export class DetailedViewModal extends BaseModal {
     const name = this.profileName.trim();
     if (name === "") return;
     this.profiles = saveFilterProfile(name, this.filters);
-    this.selectedProfile = name in this.profiles ? name : this.selectedProfile;
+    this.selectedProfile = hasFilterProfile(this.profiles, name)
+      ? name
+      : this.selectedProfile;
   }
 
   private deleteProfile() {
