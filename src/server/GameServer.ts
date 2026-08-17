@@ -754,9 +754,12 @@ export class GameServer {
       return "not_allowlisted";
     }
 
+    // Spectators take no slot: they never spawn, so a full lobby is still
+    // watchable and a caster can never displace a player.
     if (
+      !client.spectator &&
       this.gameConfig.maxPlayers &&
-      this.activeClients.length >= this.gameConfig.maxPlayers
+      this.playerCount() >= this.gameConfig.maxPlayers
     ) {
       this.log.warn(`cannot add client, game full`, {
         clientID: client.clientID,
@@ -832,7 +835,7 @@ export class GameServer {
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
-    if (this.activeClients.length >= (this.gameConfig.maxPlayers ?? Infinity)) {
+    if (this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)) {
       this.hasReachedMaxPlayerCount = true;
     }
 
@@ -1309,15 +1312,17 @@ export class GameServer {
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
       config,
-      players: this.activeClients.map((c) => ({
-        username: c.username,
-        clanTag: c.clanTag ?? null,
-        clientID: c.clientID,
-        cosmetics: c.cosmetics,
-        isLobbyCreator: this.lobbyCreatorID === c.clientID,
-        friends: friendsFor(c),
-        teamIndex: this.matchmakingTeamIndex(c),
-      })),
+      players: this.activeClients
+        .filter((c) => !c.spectator)
+        .map((c) => ({
+          username: c.username,
+          clanTag: c.clanTag ?? null,
+          clientID: c.clientID,
+          cosmetics: c.cosmetics,
+          isLobbyCreator: this.lobbyCreatorID === c.clientID,
+          friends: friendsFor(c),
+          teamIndex: this.matchmakingTeamIndex(c),
+        })),
       tribes: this.tribes,
     });
     if (!result.success) {
@@ -1357,6 +1362,12 @@ export class GameServer {
       });
       this.sendStartGameMsg(c.ws, 0);
     });
+  }
+
+  // Connected clients who will actually play. Spectators are excluded
+  // everywhere a "player" is meant: the lobby cap, and gameStartInfo.
+  private playerCount(): number {
+    return this.activeClients.filter((c) => !c.spectator).length;
   }
 
   // Resolves a client to its matchmade team slot (index into

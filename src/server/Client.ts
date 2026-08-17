@@ -23,5 +23,6 @@ export class Client {
     public readonly cosmetics: PlayerCosmetics | undefined,
     public readonly publicId: string | undefined,
     public readonly friends: string[],
+    public readonly spectator: boolean = false,
   ) {}
 }

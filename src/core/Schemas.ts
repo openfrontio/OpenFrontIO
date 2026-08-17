@@ -945,6 +945,9 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  // Watch without playing: no spawn, no team, no lobby slot. Allowed to join
+  // after the game has started, which a player is not.
+  spectator: z.boolean().optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
