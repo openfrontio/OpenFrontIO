@@ -94,4 +94,25 @@ describe("PortExecution", () => {
 
     expect(ports.length).toBe(1);
   });
+
+  test("shouldSpawnTradeShip recomputes spawn rate per level with updated rejection count", () => {
+    player.conquer(game.ref(7, 10));
+    const port = player.buildUnit(UnitType.Port, game.ref(7, 10), {});
+    port.increaseLevel(); // level 2
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    const rejections: number[] = [];
+    game.config().tradeShipSpawnRate = (r) => (rejections.push(r), 1000000);
+    expect(execution.shouldSpawnTradeShip()).toBe(false);
+    expect(rejections).toEqual([0, 1]);
+
+    game.config().tradeShipSpawnRate = (r) => (rejections.push(r), 1);
+    expect(execution.shouldSpawnTradeShip()).toBe(true);
+    expect(rejections).toEqual([0, 1, 2]);
+
+    game.config().tradeShipSpawnRate = (r) => (rejections.push(r), 1000000);
+    expect(execution.shouldSpawnTradeShip()).toBe(false);
+    expect(rejections).toEqual([0, 1, 2, 0, 1]);
+  });
 });
