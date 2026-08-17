@@ -276,15 +276,15 @@ describe("ClanModal — rendering", () => {
   // ── 3b. Clan currency balances (infra#518) ──────────────────────────────
 
   describe("clan balances", () => {
-    // The card nests <currency-display>, which has its own update cycle;
-    // waitForSubComponent only awaits one level down, so drain the nested one
-    // too or the assertions race an empty element.
-    const showMyClan = async (clan: ReturnType<typeof makeClan>) => {
-      setState(modal, "myClans" as keyof ClanModal, [clan] as never);
-      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
-        new Map();
-      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
-      await waitForSubComponent(modal, "clan-card");
+    // The balances live in the detail header, which nests <currency-display> —
+    // its own update cycle, one level below what waitForSubComponent drains,
+    // so await it too or the assertions race an empty element.
+    const openDetail = async (clan: ReturnType<typeof makeClan>) => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(clan);
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
       const display = modal.querySelector("currency-display");
       if (display && "updateComplete" in display) {
         await (display as HTMLElement & { updateComplete: Promise<boolean> })
@@ -293,27 +293,29 @@ describe("ClanModal — rendering", () => {
       return display;
     };
 
-    it("renders both balances on the clan card, thousands-grouped", async () => {
-      await showMyClan(makeClan({ softBalance: "1000", hardBalance: "25" }));
+    it("shows both balances in the clan header, thousands-grouped", async () => {
+      const display = await openDetail(
+        makeClan({ softBalance: "1000", hardBalance: "25" }),
+      );
 
-      const text = modal.textContent ?? "";
+      const text = display?.textContent ?? "";
       expect(text).toContain((1000).toLocaleString());
       expect(text).toContain("25");
     });
 
-    it("renders a zero balance rather than hiding it", async () => {
-      await showMyClan(makeClan({ softBalance: "0", hardBalance: "0" }));
-
-      expect(modal.querySelectorAll("cap-icon").length).toBeGreaterThan(0);
-      expect(modal.querySelectorAll("plutonium-icon").length).toBeGreaterThan(
-        0,
+    it("shows a zero balance rather than hiding it", async () => {
+      const display = await openDetail(
+        makeClan({ softBalance: "0", hardBalance: "0" }),
       );
+
+      expect(display?.querySelector("cap-icon")).toBeTruthy();
+      expect(display?.querySelector("plutonium-icon")).toBeTruthy();
     });
 
     it("omits the balance widgets entirely when the API reports none", async () => {
       // Assert the element is present but empty, so this can't pass merely
-      // because the card hadn't rendered yet.
-      const display = await showMyClan(makeClan());
+      // because the header hadn't rendered yet.
+      const display = await openDetail(makeClan());
 
       expect(display).toBeTruthy();
       expect(modal.querySelector("cap-icon")).toBeNull();
@@ -321,35 +323,20 @@ describe("ClanModal — rendering", () => {
       expect(modal.textContent).not.toContain("undefined");
     });
 
-    it("adds balance stat tiles to the detail view", async () => {
-      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
-      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        makeClan({ softBalance: "150", hardBalance: "25" }),
-      );
-      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
-      setState(modal, "view" as keyof ClanModal, "detail" as never);
-      await waitForSubComponent(modal, "clan-detail-view");
+    it("keeps the tag pill alongside the balances", async () => {
+      await openDetail(makeClan({ softBalance: "150", hardBalance: "25" }));
 
-      const text = modal.textContent ?? "";
-      // translateText is mocked to echo the key.
-      expect(text).toContain("cosmetics.hard");
-      expect(text).toContain("cosmetics.soft");
-      expect(text).toContain("150");
-      expect(text).toContain("25");
+      expect(modal.textContent).toContain("[TST]");
     });
 
-    it("keeps the detail view at two stat tiles when balances are absent", async () => {
-      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
-      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        makeClan(),
-      );
-      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
-      setState(modal, "view" as keyof ClanModal, "detail" as never);
-      await waitForSubComponent(modal, "clan-detail-view");
+    it("leaves the clan list cards and detail stat tiles balance-free", async () => {
+      await openDetail(makeClan({ softBalance: "150", hardBalance: "25" }));
 
-      const text = modal.textContent ?? "";
-      expect(text).not.toContain("cosmetics.hard");
-      expect(text).not.toContain("cosmetics.soft");
+      // translateText is mocked to echo the key, so a stat tile labelled with
+      // a currency would surface its key here.
+      const detail = modal.querySelector("clan-detail-view");
+      expect(detail?.textContent).not.toContain("cosmetics.hard");
+      expect(detail?.textContent).not.toContain("cosmetics.soft");
     });
   });
 

@@ -35,11 +35,6 @@ export class CurrencyDisplay extends LitElement {
   @property({ attribute: false })
   soft: number | string | null = null;
 
-  // Dimmer and smaller, for sitting inside a metadata row rather than
-  // standing alone as a wallet header.
-  @property({ type: Boolean })
-  compact = false;
-
   createRenderRoot() {
     return this;
   }
@@ -49,27 +44,16 @@ export class CurrencyDisplay extends LitElement {
     const soft = formatCurrencyAmount(this.soft);
     if (hard === null && soft === null) return html``;
 
-    const compact = this.compact;
-    const row = compact
-      ? "flex items-center gap-3 text-xs"
-      : "flex gap-3 justify-center";
-    const hardText = compact
-      ? "text-xs text-green-400/70"
-      : "text-sm font-bold text-green-400";
-    const softText = compact
-      ? "text-xs text-amber-600/80"
-      : "text-sm font-bold text-amber-700";
-
     return html`
-      <div class="${row}">
+      <div class="flex gap-3 justify-center">
         ${hard === null
           ? ""
           : html`<div
               class="flex items-center gap-1.5"
               title=${translateText("cosmetics.hard")}
             >
-              <plutonium-icon .size=${compact ? 12 : 16}></plutonium-icon>
-              <span class="${hardText}">${hard}</span>
+              <plutonium-icon .size=${16}></plutonium-icon>
+              <span class="text-sm font-bold text-green-400">${hard}</span>
             </div>`}
         ${soft === null
           ? ""
@@ -77,11 +61,8 @@ export class CurrencyDisplay extends LitElement {
               class="flex items-center gap-1.5"
               title=${translateText("cosmetics.soft")}
             >
-              <cap-icon
-                .size=${compact ? 14 : 20}
-                style=${compact ? "" : "margin-top:3px"}
-              ></cap-icon>
-              <span class="${softText}">${soft}</span>
+              <cap-icon .size=${20} style="margin-top:3px"></cap-icon>
+              <span class="text-sm font-bold text-amber-700">${soft}</span>
             </div>`}
       </div>
     `;

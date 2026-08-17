@@ -133,8 +133,6 @@ export class PlayerProfileModal extends BaseModal {
                 description: "",
                 isOpen: false,
                 memberCount: clan.memberCount,
-                softBalance: clan.softBalance,
-                hardBalance: clan.hardBalance,
               }}
               .clanRole=${clan.role}
               @clan-select=${(e: CustomEvent<{ tag: string }>) =>

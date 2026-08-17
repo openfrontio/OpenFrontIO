@@ -2,7 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { ClanInfo } from "../../ClanApi";
 import { translateText } from "../../Utils";
-import "../CurrencyDisplay";
 import { translateClanRole } from "./ClanShared";
 
 @customElement("clan-card")
@@ -79,21 +78,12 @@ export class ClanCard extends LitElement {
             <span class="text-white font-bold truncate block"
               >${clan.name}</span
             >
-            <div
-              class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-white/40"
-            >
+            <div class="flex items-center gap-4 mt-1 text-xs text-white/40">
               <span
                 >${translateText("clan_modal.member_count", {
                   count: clan.memberCount ?? 0,
                 })}</span
               >
-              <!-- Balances ride along on the clan payload — no extra request.
-                   Renders nothing when the API reported neither. -->
-              <currency-display
-                compact
-                .hard=${clan.hardBalance ?? null}
-                .soft=${clan.softBalance ?? null}
-              ></currency-display>
             </div>
           </div>
           ${this.renderBadge()}
