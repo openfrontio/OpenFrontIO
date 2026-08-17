@@ -68,7 +68,7 @@ describe("admin bot create_game team pinning", () => {
       ["pubA", "pubB"],
       ["pubC", "pubD"],
     ];
-    handler({ body: { ...TEAM, teams } }, res);
+    handler({ body: { ...TEAM, playerTeams: 2, teams } }, res);
     expect(res.statusCode).toBe(200);
     expect(created.teams).toEqual(teams);
   });
@@ -77,7 +77,10 @@ describe("admin bot create_game team pinning", () => {
     // Same rule as `listed`: not a GameConfig field, so update_game_config can
     // never set it after the lobby exists.
     const { handler, created } = captureCreateHandler();
-    handler({ body: { ...TEAM, teams: [["pubA", "pubB"]] } }, mockRes());
+    handler(
+      { body: { ...TEAM, playerTeams: 2, teams: [["pubA", "pubB"]] } },
+      mockRes(),
+    );
     expect(created.config).not.toHaveProperty("teams");
     expect(created.config).not.toHaveProperty("matchmakingTeams");
   });
@@ -151,13 +154,15 @@ describe("admin bot create_game team pinning", () => {
     },
   );
 
-  it("still pins when playerTeams is omitted", () => {
-    // Unchanged behaviour: no declared count, nothing to contradict.
+  it("refuses pins with no team count at all", () => {
+    // An omitted playerTeams resolves to 0 teams, which throws "Too few teams"
+    // at start — so the pins could never land and the lobby could never run.
     const { handler, created } = captureCreateHandler();
     const res = mockRes();
     handler({ body: { ...TEAM, teams: [["a"], ["b"]] } }, res);
-    expect(res.statusCode).toBe(200);
-    expect(created.teams).toHaveLength(2);
+    expect(res.statusCode).toBe(400);
+    expect(String(res.body.error)).toContain("numeric playerTeams");
+    expect(created.teams).toBeUndefined();
   });
 
   it("rejects a malformed teams payload", () => {

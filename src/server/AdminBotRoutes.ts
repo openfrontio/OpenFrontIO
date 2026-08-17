@@ -166,15 +166,19 @@ export function registerAdminBotRoutes(opts: {
       // rather than accept a request whose outcome depends on attendance.
       const playerTeams = config.playerTeams;
       if (teams.length > 0) {
-        if (typeof playerTeams === "number") {
-          if (teams.length > playerTeams) {
-            return res.status(400).json({
-              error: `playerTeams (${playerTeams}) is fewer than the ${teams.length} teams being pinned`,
-            });
-          }
-        } else if (playerTeams !== undefined) {
+        // Omitted resolves to 0 teams, which throws "Too few teams" at start, so
+        // there is no slot for a pin either way. Duos/Trios/Quads resolve to
+        // ceil(players / size) at START, from whoever actually turned up, and
+        // that can land below the number of teams being pinned — there is no
+        // count to validate against now, so the request cannot be honoured.
+        if (typeof playerTeams !== "number") {
           return res.status(400).json({
-            error: `teams require a numeric playerTeams, got ${playerTeams}`,
+            error: `teams require a numeric playerTeams, got ${playerTeams ?? "none"}`,
+          });
+        }
+        if (teams.length > playerTeams) {
+          return res.status(400).json({
+            error: `playerTeams (${playerTeams}) is fewer than the ${teams.length} teams being pinned`,
           });
         }
       }
