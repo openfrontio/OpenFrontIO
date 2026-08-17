@@ -152,6 +152,7 @@ declare global {
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
+    "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
     "game-starting": CustomEvent;
     "update-game-config": CustomEvent;
@@ -493,21 +494,46 @@ class Client {
       }
     };
 
+    // A profile request issued before a logout can still be in flight when the
+    // session goes, and its 200 was fetched with a JWT that was valid at the
+    // time. Applying it afterwards would put the expired account back in the
+    // nav and re-disable ads, so a response is only applied while the session
+    // it was fetched under is still current.
+    let authGeneration = 0;
+    const applyUserMe =
+      (generation: number) => (userMeResponse: UserMeResponse | false) => {
+        if (generation !== authGeneration) return;
+        void onUserMe(userMeResponse);
+      };
+
+    // A session dropped in the background — an expired refresh token, a 401 on
+    // any endpoint — clears itself deep inside Auth, where none of the above
+    // is reachable. Routing it through onUserMe means the nav button, its
+    // cached profile and window.adsEnabled all follow, rather than only the
+    // components listening for userMeResponse.
+    document.addEventListener("session-cleared", () => {
+      authGeneration++;
+      void onUserMe(false);
+    });
+
     if ((await userAuth()) === false) {
       // Not logged in
       onUserMe(false);
     } else {
       // JWT appears to be valid
       // TODO: Add caching
-      getUserMe().then(onUserMe);
+      getUserMe().then(applyUserMe(authGeneration));
     }
 
     // Re-run auth when the player signs into CrazyGames mid-session. Logout
     // reloads the page, so only login needs handling here.
     crazyGamesSDK.addAuthListener(() => {
       invalidateUserMe();
+      const generation = authGeneration;
       reauthAfterCrazyGamesChange().then((result) =>
-        result === false ? onUserMe(false) : getUserMe().then(onUserMe),
+        result === false
+          ? applyUserMe(generation)(false)
+          : getUserMe().then(applyUserMe(generation)),
       );
     });
 

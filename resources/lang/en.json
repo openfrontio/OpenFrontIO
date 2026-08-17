@@ -1846,6 +1846,12 @@
   },
   "username": {
     "account_invalid_chars": "Username can only contain letters, numbers, underscores, hyphens, and single spaces between words.",
+    "clan_browse": "Browse clans",
+    "clan_clear": "No tag",
+    "clan_custom": "Other tag",
+    "clan_label": "Clan tag",
+    "clan_none_joined": "You haven't joined a clan yet.",
+    "clan_your_clans": "Your clans",
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "not_string": "Username must be a string.",
@@ -1856,11 +1862,14 @@
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "too_long": "Username must not exceed {max} characters.",
     "too_short": "Username must be at least {min} characters long.",
+    "verified_active_hint": "You are playing under your verified account name.",
     "verified_heading": "Verified name",
     "verified_player": "Verified player",
     "verified_sub_required": "You need an active subscription to play under your verified name.",
     "verified_sub_required_confirm": "View store",
-    "verified_toggle": "Verified"
+    "verified_use": "Use verified",
+    "verified_use_custom": "Switch back to a custom name",
+    "verified_use_hint": "Play under your verified account name"
   },
   "win_modal": {
     "died": "You died",
