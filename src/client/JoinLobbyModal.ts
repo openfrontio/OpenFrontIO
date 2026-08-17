@@ -76,13 +76,12 @@ export class JoinLobbyModal extends BaseModal {
     return this.gameConfig?.gameType === GameType.Private;
   }
 
-  // The lobby list carries players only, so not being in it IS being a
-  // spectator. Derived rather than stored so a switch the server refused (lobby
-  // full, game already started) shows the real state instead of what was asked.
+  // Read off the server's own view of us, so a switch it refused (lobby full,
+  // game already started) shows the real state instead of what was asked for.
   private get isSpectating(): boolean {
     return (
-      this.currentClientID !== "" &&
-      !this.players.some((p) => p.clientID === this.currentClientID)
+      this.players.find((p) => p.clientID === this.currentClientID)
+        ?.spectator === true
     );
   }
 

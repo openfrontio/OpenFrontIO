@@ -1686,35 +1686,36 @@ export class GameServer {
     const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
-      // Players only. A spectator listed here would appear in the lobby roster
-      // as someone about to play, and be counted in the browser's player count.
-      clients: this.activeClients
-        .filter((c) => !c.spectator)
-        .map((c) => {
-          if (!this.seesReal(viewer, c.clientID)) {
-            return {
-              username: this.anonName(viewer, c.clientID),
-              clanTag: null,
-              clientID: c.clientID,
-            };
-          }
-          // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
-          // teammate's clanTag and friends would hand out more than the identity
-          // needed to coordinate: `friends` in particular names a THIRD party —
-          // the viewer would learn their teammate is friends with a specific
-          // still-anonymized opponent, which the host never granted. The wider
-          // reveals (self, or host-granted nameReveals) keep the full payload.
-          const teammateOnly =
-            this.gameConfig.anonymizeNames &&
-            !this.seesRealBeyondTeam(viewer, c.clientID);
+      // Everyone connected, spectators included and flagged. They are not in the
+      // simulation, but the lobby is the same view for them as for a player —
+      // filtering them out here emptied the roster of a lobby they were alone in.
+      clients: this.activeClients.map((c) => {
+        if (!this.seesReal(viewer, c.clientID)) {
           return {
-            username: c.username,
-            clanTag: teammateOnly || hideClanTags ? null : (c.clanTag ?? null),
+            username: this.anonName(viewer, c.clientID),
+            clanTag: null,
             clientID: c.clientID,
-            friends: teammateOnly ? undefined : friendsFor(c),
-            verified: c.cosmetics?.verified,
+            spectator: c.spectator || undefined,
           };
-        }),
+        }
+        // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
+        // teammate's clanTag and friends would hand out more than the identity
+        // needed to coordinate: `friends` in particular names a THIRD party —
+        // the viewer would learn their teammate is friends with a specific
+        // still-anonymized opponent, which the host never granted. The wider
+        // reveals (self, or host-granted nameReveals) keep the full payload.
+        const teammateOnly =
+          this.gameConfig.anonymizeNames &&
+          !this.seesRealBeyondTeam(viewer, c.clientID);
+        return {
+          username: c.username,
+          clanTag: teammateOnly || hideClanTags ? null : (c.clanTag ?? null),
+          clientID: c.clientID,
+          friends: teammateOnly ? undefined : friendsFor(c),
+          verified: c.cosmetics?.verified,
+          spectator: c.spectator || undefined,
+        };
+      }),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,

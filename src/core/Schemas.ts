@@ -241,6 +241,9 @@ const ClientInfoSchema = z.object({
   // lobby list). Never set on anonymized entries — the badge vouches for
   // the exact display name.
   verified: z.boolean().optional(),
+  // Watching rather than playing. Listed like anyone else — a spectator sees the
+  // lobby exactly as a player does — but not in the simulation.
+  spectator: z.boolean().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -327,6 +330,9 @@ export interface ClientInfo {
   // Plays under their server-validated account name (blue check). Never set
   // on anonymized entries.
   verified?: boolean;
+  // Watching rather than playing — listed like anyone else, but not in the
+  // simulation.
+  spectator?: boolean;
 }
 export enum LogSeverity {
   Debug = "DEBUG",

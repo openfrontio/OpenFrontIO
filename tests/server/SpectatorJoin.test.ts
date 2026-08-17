@@ -236,9 +236,9 @@ describe("GameServer - spectators", () => {
       game.joinClient(c);
       setSpectator(game, c, false);
       expect(c.spectator).toBe(false);
-      expect(game.gameInfo().clients?.map((x: any) => x.clientID)).toEqual([
-        "cast",
-      ]);
+      expect(
+        game.gameInfo().clients?.find((x) => x.clientID === "cast")?.spectator,
+      ).toBeUndefined();
     });
 
     it("a player can drop back to watching, freeing the seat", () => {
@@ -269,13 +269,17 @@ describe("GameServer - spectators", () => {
       expect(c.spectator).toBe(true);
     });
 
-    it("keeps spectators out of the lobby roster", () => {
+    it("shows a spectator the same lobby a player sees", () => {
+      // Filtering spectators out of the roster emptied the list for anyone
+      // watching a lobby they were alone in. They are listed and flagged
+      // instead: the lobby view does not change for them.
       const game = makeGame();
       game.joinClient(makeClient("p1"));
       game.joinClient(makeClient("cast", true));
-      expect(game.gameInfo().clients?.map((c: any) => c.clientID)).toEqual([
-        "p1",
-      ]);
+      const seen = game.gameInfo("cast").clients ?? [];
+      expect(seen.map((c) => c.clientID)).toEqual(["p1", "cast"]);
+      expect(seen.find((c) => c.clientID === "p1")?.spectator).toBeUndefined();
+      expect(seen.find((c) => c.clientID === "cast")?.spectator).toBe(true);
     });
   });
 
