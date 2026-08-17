@@ -33,6 +33,24 @@ export function translateClanRole(role: string): string {
   return translateText(`clan_modal.role_${role}`);
 }
 
+// Clan balances arrive as decimal bigint strings (see ClanInfoSchema), so parse
+// with BigInt rather than Number — these are int64 and a Number round-trip
+// silently loses precision past 2^53. Returns null when the value is absent
+// (an API deploy predating the field, or an unregistered tag on the public
+// stats endpoint) or unparseable, so callers hide the widget instead of
+// rendering a balance the server never reported. Note BigInt("") is 0n, hence
+// the falsy guard rather than a null check.
+export function formatClanBalance(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    return BigInt(value).toLocaleString();
+  } catch {
+    return null;
+  }
+}
+
 export function renderRoleIcon(role: string): TemplateResult {
   if (role === "leader") {
     return html`<span class="text-sm">👑</span>`;

@@ -273,6 +273,86 @@ describe("ClanModal — rendering", () => {
     });
   });
 
+  // ── 3b. Clan currency balances (infra#518) ──────────────────────────────
+
+  describe("clan balances", () => {
+    it("renders both balances on the clan card, thousands-grouped", async () => {
+      setState(
+        modal,
+        "myClans" as keyof ClanModal,
+        [makeClan({ softBalance: "1000", hardBalance: "25" })] as never,
+      );
+      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
+        new Map();
+      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
+      await modal.updateComplete;
+
+      const text = modal.textContent ?? "";
+      expect(text).toContain((1000).toLocaleString());
+      expect(text).toContain("25");
+    });
+
+    it("renders a zero balance rather than hiding it", async () => {
+      setState(
+        modal,
+        "myClans" as keyof ClanModal,
+        [makeClan({ softBalance: "0", hardBalance: "0" })] as never,
+      );
+      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
+        new Map();
+      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
+      await modal.updateComplete;
+
+      expect(modal.querySelectorAll("cap-icon").length).toBeGreaterThan(0);
+      expect(modal.querySelectorAll("plutonium-icon").length).toBeGreaterThan(
+        0,
+      );
+    });
+
+    it("omits the balance widgets entirely when the API reports none", async () => {
+      setState(modal, "myClans" as keyof ClanModal, [makeClan()] as never);
+      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
+        new Map();
+      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
+      await modal.updateComplete;
+
+      expect(modal.querySelector("cap-icon")).toBeNull();
+      expect(modal.querySelector("plutonium-icon")).toBeNull();
+      expect(modal.textContent).not.toContain("undefined");
+    });
+
+    it("adds balance stat tiles to the detail view", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ softBalance: "150", hardBalance: "25" }),
+      );
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      const text = modal.textContent ?? "";
+      // translateText is mocked to echo the key.
+      expect(text).toContain("cosmetics.hard");
+      expect(text).toContain("cosmetics.soft");
+      expect(text).toContain("150");
+      expect(text).toContain("25");
+    });
+
+    it("keeps the detail view at two stat tiles when balances are absent", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan(),
+      );
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      const text = modal.textContent ?? "";
+      expect(text).not.toContain("cosmetics.hard");
+      expect(text).not.toContain("cosmetics.soft");
+    });
+  });
+
   // ── 4. Toggle switch ARIA attributes ───────────────────────────────────
 
   describe("Open/Closed toggle ARIA attributes in manage view", () => {

@@ -20,6 +20,7 @@ import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
+  formatClanBalance,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -591,7 +592,13 @@ export class ClanDetailView extends LitElement {
     `;
   }
 
+  // The balance tiles are the clan's treasury, not the viewer's own currency,
+  // and they are public — every logged-in viewer sees them, member or not.
+  // Each is dropped when the API didn't report it (rather than shown as 0), so
+  // the grid falls back to the original two tiles.
   private renderStatTiles(clan: ClanInfo) {
+    const hard = formatClanBalance(clan.hardBalance);
+    const soft = formatClanBalance(clan.softBalance);
     return html`
       ${renderStat(
         translateText("clan_modal.members"),
@@ -603,6 +610,8 @@ export class ClanDetailView extends LitElement {
           ? translateText("clan_modal.open")
           : translateText("clan_modal.invite_only"),
       )}
+      ${hard === null ? "" : renderStat(translateText("cosmetics.hard"), hard)}
+      ${soft === null ? "" : renderStat(translateText("cosmetics.soft"), soft)}
     `;
   }
 

@@ -2,7 +2,9 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { ClanInfo } from "../../ClanApi";
 import { translateText } from "../../Utils";
-import { translateClanRole } from "./ClanShared";
+import "../CapIcon";
+import "../PlutoniumIcon";
+import { formatClanBalance, translateClanRole } from "./ClanShared";
 
 @customElement("clan-card")
 export class ClanCard extends LitElement {
@@ -59,6 +61,34 @@ export class ClanCard extends LitElement {
     >`;
   }
 
+  // Balances ride along on the clan payload, so this costs no extra request.
+  // Each side is dropped independently when the API didn't report it.
+  private renderBalances() {
+    const hard = formatClanBalance(this.clan.hardBalance);
+    const soft = formatClanBalance(this.clan.softBalance);
+    if (hard === null && soft === null) return "";
+    return html`
+      ${hard === null
+        ? ""
+        : html`<span
+            class="flex items-center gap-1"
+            title=${translateText("cosmetics.hard")}
+          >
+            <plutonium-icon .size=${12}></plutonium-icon>
+            <span class="text-green-400/70">${hard}</span>
+          </span>`}
+      ${soft === null
+        ? ""
+        : html`<span
+            class="flex items-center gap-1"
+            title=${translateText("cosmetics.soft")}
+          >
+            <cap-icon .size=${14}></cap-icon>
+            <span class="text-amber-600/80">${soft}</span>
+          </span>`}
+    `;
+  }
+
   render() {
     const clan = this.clan;
     return html`
@@ -78,12 +108,15 @@ export class ClanCard extends LitElement {
             <span class="text-white font-bold truncate block"
               >${clan.name}</span
             >
-            <div class="flex items-center gap-4 mt-1 text-xs text-white/40">
+            <div
+              class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-white/40"
+            >
               <span
                 >${translateText("clan_modal.member_count", {
                   count: clan.memberCount ?? 0,
                 })}</span
               >
+              ${this.renderBalances()}
             </div>
           </div>
           ${this.renderBadge()}
