@@ -758,6 +758,15 @@ export class GameServer {
       return "not_allowlisted";
     }
 
+    // The player list is frozen at start, so anyone arriving after it cannot be
+    // in the simulation whatever they asked for. They used to be admitted as a
+    // player anyway: sent a start message, absent from gameStartInfo, unable to
+    // spawn. Watching is what actually happens to them, so it is what they join
+    // as.
+    if (this._hasStarted) {
+      client.spectator = true;
+    }
+
     // Spectators take no slot: they never spawn, so a full lobby is still
     // watchable and a caster can never displace a player.
     if (
@@ -827,8 +836,10 @@ export class GameServer {
     this.admittedPersistentIds.add(client.persistentID);
     this.activeClients.push(client);
     client.lastPing = Date.now();
-    this.markClientDisconnected(client.clientID, false);
+    // Registered before the first markClientDisconnected: that call consults the
+    // registry to tell a spectator from a player.
     this.allClients.set(client.clientID, client);
+    this.markClientDisconnected(client.clientID, false);
     this.emitTelemetry("player_joined", {
       identity: this.identityFor(client),
       joinedAt: Date.now(),
@@ -1386,6 +1397,17 @@ export class GameServer {
     return this.activeClients.filter((c) => !c.spectator).length;
   }
 
+  // The electorate for the winner and live-stats votes. Spectators run the
+  // simulation but may not vote, so counting them would raise the bar for a
+  // majority without anyone able to meet it: five spectators watching four
+  // players make a strict majority of nine unreachable, and the game would
+  // never reach consensus, never archive, and never be scored.
+  private votingUniqueIPs(): number {
+    return new Set(
+      this.activeClients.filter((c) => !c.spectator).map((c) => c.ip),
+    ).size;
+  }
+
   // Resolves a client to its matchmade team slot (index into
   // matchmakingTeams), or undefined when the game isn't matchmade / the
   // client isn't in the assignment.
@@ -1686,7 +1708,11 @@ export class GameServer {
   private buildFriendsLookup(): (client: Client) => ClientID[] | undefined {
     const publicIdToClientID = new Map<string, ClientID>();
     for (const c of this.activeClients) {
-      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
+      // Spectators are not in the simulation, and friends feed team assignment —
+      // a player befriending a caster would be teamed with a clientID that never
+      // spawns.
+      if (c.publicId && !c.spectator)
+        publicIdToClientID.set(c.publicId, c.clientID);
     }
     return (client: Client) => {
       const friendClientIDs = client.friends
@@ -1868,6 +1894,11 @@ export class GameServer {
 
   private markClientDisconnected(clientID: string, isDisconnected: boolean) {
     this.clientsDisconnectedStatus.set(clientID, isDisconnected);
+    // Connection status is tracked for every client, but only a player's reaches
+    // the simulation: a spectator has no entry in gameStartInfo.players, so an
+    // intent naming them refers to nobody — and it is kept in the archived turn
+    // log, where readers take mark_disconnected as a player having dropped.
+    if (this.allClients.get(clientID)?.spectator) return;
     this.addIntent({
       type: "mark_disconnected",
       clientID: clientID,
@@ -2040,7 +2071,7 @@ export class GameServer {
     // Add client vote. A cancelled match ends with winner omitted;
     // JSON.stringify(undefined) is not a string, so key those votes as "null".
     const winnerKey = JSON.stringify(clientMsg.winner ?? null);
-    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip)).size;
+    const activeUniqueIPs = this.votingUniqueIPs();
     const votes = this.winnerVotes.add(winnerKey, clientMsg, client.ip);
 
     this.log.info(
@@ -2099,7 +2130,7 @@ export class GameServer {
     }
     entry.voters.add(client.clientID);
 
-    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip)).size;
+    const activeUniqueIPs = this.votingUniqueIPs();
     entry.round.add(JSON.stringify(stats), stats, client.ip);
     const result = entry.round.result(activeUniqueIPs);
     if (result === null) {

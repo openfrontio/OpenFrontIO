@@ -33,29 +33,38 @@ function makeMockWs() {
   };
 }
 
-function makeClient(id: string, spectator = false): Client {
+function makeClient(
+  id: string,
+  spectator = false,
+  friends: string[] = [],
+): Client {
   return new Client(
     id,
     `${id}-pid`,
     null,
     null,
     undefined,
-    "127.0.0.1",
+    // Distinct per client: the winner vote is weighted by unique IP, so a shared
+    // one would collapse every electorate to a single voter.
+    `10.0.0.${ipOctet++}`,
     id,
     null,
     makeMockWs() as any,
     undefined,
     `${id}-pub`,
-    [],
+    friends,
     spectator,
   );
 }
+
+let ipOctet = 1;
 
 describe("GameServer - spectators", () => {
   let logger: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
+    ipOctet = 1;
     logger = {
       child: vi.fn().mockReturnThis(),
       info: vi.fn(),
@@ -151,6 +160,70 @@ describe("GameServer - spectators", () => {
       intent: { type: "spawn" },
     });
     expect(handleIntent).toHaveBeenCalled();
+  });
+
+  it("joining after the start makes you a spectator, not a seatless player", () => {
+    // The player list is frozen at start; a late joiner used to be admitted as a
+    // player who could never spawn.
+    const game = makeGame();
+    (game as any)._hasStarted = true;
+    const late = makeClient("late");
+    expect(game.joinClient(late)).toBe("joined");
+    expect(late.spectator).toBe(true);
+  });
+
+  it("does not put a spectator's disconnect into the turn log", () => {
+    // mark_disconnected names a player in gameStartInfo; for a spectator it
+    // refers to nobody, and it is kept in the archived record where readers take
+    // it as a player having dropped.
+    const game = makeGame();
+    const spectator = makeClient("cast", true);
+    game.joinClient(spectator);
+    game.joinClient(makeClient("p1"));
+    (game as any).markClientDisconnected("cast", true);
+    (game as any).markClientDisconnected("p1", true);
+    const marked = (game as any).intents
+      .filter((i: any) => i.type === "mark_disconnected")
+      .map((i: any) => i.clientID);
+    expect(marked).not.toContain("cast");
+    expect(marked).toContain("p1");
+  });
+
+  it("keeps a spectator out of a player's friends list", () => {
+    // friends feed team assignment, so a befriended spectator would put a
+    // clientID that never spawns onto someone's team.
+    const game = makeGame();
+    const spectator = makeClient("cast", true);
+    game.joinClient(spectator);
+    const player = makeClient("p1", false, ["cast-pub", "p2-pub"]);
+    game.joinClient(player);
+    game.joinClient(makeClient("p2"));
+    const friendsFor = (game as any).buildFriendsLookup();
+    expect(friendsFor(player)).toEqual(["p2"]);
+  });
+
+  it("does not make the winner vote unreachable", () => {
+    // The vote needs a strict majority of the electorate's IPs. Counting
+    // spectators in that total but barring them from voting means four players
+    // watched by five spectators can never reach consensus — so the game never
+    // archives and never gets scored.
+    const game = makeGame();
+    const players = ["p1", "p2", "p3", "p4"].map((id) => makeClient(id));
+    for (const p of players) game.joinClient(p);
+    for (const id of ["c1", "c2", "c3", "c4", "c5"]) {
+      game.joinClient(makeClient(id, true));
+    }
+    // Archiving is a separate concern and needs a started game; the quorum is
+    // what's under test.
+    vi.spyOn(game as any, "archiveGame").mockImplementation(() => {});
+    for (const p of players) {
+      (game as any).handleWinner(p, {
+        type: "winner",
+        winner: ["player", "p1"],
+        allPlayersStats: {},
+      });
+    }
+    expect((game as any).winner).not.toBeNull();
   });
 
   it("may join after the game has started", () => {

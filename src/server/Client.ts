@@ -23,6 +23,8 @@ export class Client {
     public readonly cosmetics: PlayerCosmetics | undefined,
     public readonly publicId: string | undefined,
     public readonly friends: string[],
-    public readonly spectator: boolean = false,
+    // Set once at join, and again by GameServer when someone arrives after the
+    // game has started — the player list is already frozen, so they can only watch.
+    public spectator: boolean = false,
   ) {}
 }
