@@ -47,11 +47,16 @@ export class DoomsdayClockPanel extends LitElement {
   // The player's "side" (matching the sim): themselves in FFA, their whole team
   // otherwise. The sim judges a side on its combined territory against the same
   // bar as a solo player, so the HUD only needs the tile sum.
+  // A side is one player in FFA and a whole team otherwise — the same split the
+  // sim uses, and what decides which level ladder the bar climbs.
+  private isTeamGame(): boolean {
+    return this.game.config().gameConfig().gameMode !== GameMode.FFA;
+  }
+
   private sideTiles(me: ReturnType<GameView["myPlayer"]>): number {
     if (!me) return 0;
-    const ffa = this.game.config().gameConfig().gameMode === GameMode.FFA;
     const myTeam = me.team();
-    if (ffa || myTeam === null) return me.numTilesOwned();
+    if (!this.isTeamGame() || myTeam === null) return me.numTilesOwned();
     return this.game
       .playerViews()
       .filter(
@@ -91,8 +96,15 @@ export class DoomsdayClockPanel extends LitElement {
     const yourTiles = this.sideTiles(me);
     // Same bar for every side, solo or team (same as the sim) — so the zone
     // readout is one universal, monotonic number for every player.
-    const requiredTiles = doomsdayClockRequiredTiles(sd.speed, land, elapsed);
-    const wave = doomsdayClockWaveState(sd.speed, elapsed);
+    const requiredTiles = doomsdayClockRequiredTiles(
+      { ...sd, teamGame: this.isTeamGame() },
+      land,
+      elapsed,
+    );
+    const wave = doomsdayClockWaveState(
+      { ...sd, teamGame: this.isTeamGame() },
+      elapsed,
+    );
     // Match the sim: no land -> no bar, no percentages (avoid div-by-zero / >100%).
     const requiredPct = land > 0 ? (requiredTiles / land) * 100 : 0;
     const yourPct = land > 0 ? (yourTiles / land) * 100 : 0;
