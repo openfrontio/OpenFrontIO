@@ -712,10 +712,15 @@ export class RadialMenu implements Controller {
 
           if (this.params && d.data.cooldown?.(this.params)) {
             const cooldown = Math.ceil(d.data.cooldown?.(this.params));
+
             content
               .append("text")
               .attr("class", `cooldown-text`)
-              .text(String(cooldown))
+              .text(
+                translateText("events_display.alliance_cooldown_text", {
+                  amount: cooldown,
+                }),
+              )
               .attr("fill", "white")
               .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
               .attr("font-size", "20px")
@@ -1208,9 +1213,14 @@ export class RadialMenu implements Controller {
               );
             }
 
-            // Update image opacity
+            // Update image opacity and position
             const imageElement = icon.select("image");
             if (!imageElement.empty()) {
+              const height = parseFloat(imageElement.attr("height") ?? "0");
+              const cy = parseFloat(icon.attr("data-cy") ?? "0");
+
+              imageElement.attr("y", isAllianceCooldown ? 42 : cy - height / 2);
+
               imageElement.attr(
                 "opacity",
                 isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1,
@@ -1218,19 +1228,44 @@ export class RadialMenu implements Controller {
             }
 
             // Update cooldown text if applicable
-            const cooldownElement = icon.select(".cooldown-text");
-            if (this.params && !cooldownElement.empty() && item.cooldown) {
+            if (this.params && item.cooldown) {
               const cooldown = Math.ceil(item.cooldown(this.params));
+              let cooldownText = icon.select<SVGTextElement>(".cooldown-text");
+
               if (cooldown <= 0) {
-                cooldownElement.remove();
+                cooldownText.remove();
               } else {
-                cooldownElement.text(cooldown);
+                if (cooldownText.empty()) {
+                  const cx = parseFloat(icon.attr("data-cx") ?? "0");
+                  const cy = parseFloat(icon.attr("data-cy") ?? "0");
+
+                  cooldownText = icon
+                    .append("text")
+                    .attr("class", "cooldown-text")
+                    .attr("fill", "white")
+                    .attr("font-size", "20px")
+                    .attr("font-weight", "bold")
+                    .attr("text-anchor", "middle")
+                    .attr("x", cx)
+                    .attr("y", cy + this.config.iconSize / 2 + 7);
+                }
+
+                cooldownText
+                  .text(
+                    translateText("events_display.alliance_cooldown_text", {
+                      amount: cooldown,
+                    }),
+                  )
+                  .attr(
+                    "opacity",
+                    isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1,
+                  );
               }
             }
-          }
 
-          // Update timer gradient
-          this.maybeUpdateTimerGradient(item, color, opacity);
+            // Update timer gradient
+            this.maybeUpdateTimerGradient(item, color, opacity);
+          }
         }
       }
     });
@@ -1353,6 +1388,11 @@ export class RadialMenu implements Controller {
     icon?: string,
     update?: boolean,
   ): void {
+    const generation =
+      Number(content.getAttribute("data-render-generation") ?? "0") + 1;
+
+    content.setAttribute("data-render-generation", generation.toString());
+
     if (update) {
       while (content.firstChild) content.removeChild(content.firstChild);
     }
@@ -1366,6 +1406,12 @@ export class RadialMenu implements Controller {
     const iconUrl = icon ?? "";
 
     getSvgAspectRatio(iconUrl).then((ratio) => {
+      if (
+        Number(content.getAttribute("data-render-gneration")) !== generation
+      ) {
+        return;
+      }
+
       const width = smallSize * (ratio ?? 1);
       const gap = 2;
       const totalWidth = width * 2 + gap;

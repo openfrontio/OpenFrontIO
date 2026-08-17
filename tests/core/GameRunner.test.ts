@@ -1,8 +1,8 @@
+import { Executor } from "../../src/core/execution/ExecutionManager";
 import { NationExecution } from "../../src/core/execution/NationExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Executor } from "../../src/core/execution/ExecutionManager";
-import { GameRunner } from "../../src/core/GameRunner";
 import { Cell, Nation, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import { GameRunner } from "../../src/core/GameRunner";
 import { GameConfig, GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 import { executeTicks } from "../util/utils";
@@ -124,9 +124,12 @@ describe("GameRunner playerActions interaction payload", () => {
       () => {},
     );
 
+    const request = player.createAllianceRequest(other);
+    expect(request).not.toBeNull();
+    request!.reject();
     const expected = player.allianceRequestCooldownRemaining(other);
+    expect(expected).toBeGreaterThan(0);
     const actions = runner.playerActions(player.id(), 50, 50);
-
     expect(actions.interaction).toBeDefined();
     expect(actions.interaction?.allianceRequestCooldownRemaining).toBe(
       expected,
