@@ -135,7 +135,13 @@ export class MasterLobbyService {
     for (const type of Object.keys(result) as PublicGameType[]) {
       result[type].sort((a, b) => {
         if (a.startsAt === undefined && b.startsAt === undefined) {
-          // Sort by game id for stability.
+          // Queue order: oldest first, so a lobby moves up a place each time
+          // the one in front of it starts, and a newly created lobby joins the
+          // back instead of landing in the middle. Game id only breaks ties
+          // for lobbies from a build that didn't report createdAt.
+          if (a.createdAt !== b.createdAt) {
+            return (a.createdAt ?? 0) - (b.createdAt ?? 0);
+          }
           return a.gameID > b.gameID ? 1 : -1;
         }
         // If a lobby has startsAt set, we assume it's the active one.

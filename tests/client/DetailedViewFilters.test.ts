@@ -202,6 +202,24 @@ describe("filterAndSortLobbies", () => {
     expect(sorted.map((l) => l.gameID)).toEqual(["team1", "hosted1", "ffa1"]);
   });
 
+  it("keeps the server's queue order for lobbies with no countdown", () => {
+    // Ids are deliberately out of alphabetical order: the queue is whatever
+    // order the server sent, not something the client re-derives.
+    const queued = ["zulu", "alpha", "mike"].map((gameID) =>
+      lobby({ gameID, startsAt: undefined }),
+    );
+    const sorted = filterAndSortLobbies(
+      [ffa, ...queued],
+      filters({ sort: "starts_soonest" }),
+    );
+    expect(sorted.map((l) => l.gameID)).toEqual([
+      "ffa1",
+      "zulu",
+      "alpha",
+      "mike",
+    ]);
+  });
+
   it("filters by mode", () => {
     expect(
       filterAndSortLobbies(all, filters({ modes: ["teams"] })).map(

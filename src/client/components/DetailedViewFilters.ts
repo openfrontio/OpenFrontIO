@@ -255,8 +255,11 @@ function compare(
       break;
     }
   }
-  // Stable tie-break so rows don't shuffle between socket updates.
-  return a.gameID < b.gameID ? -1 : a.gameID > b.gameID ? 1 : 0;
+  // Ties keep the order the server sent, which is the master's queue order
+  // (oldest lobby first). Array.prototype.sort is stable, so returning 0 is
+  // enough — comparing gameIDs here would scramble the queue, since ids are
+  // random and every new lobby would land in an arbitrary place.
+  return 0;
 }
 
 export function filterAndSortLobbies(
