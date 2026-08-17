@@ -1078,6 +1078,7 @@ export class GameServer {
     this.activeClients = this.activeClients.filter(
       (c) => c.clientID !== client.clientID,
     );
+    this.checkWinnerAfterElectorateShrink();
 
     // hasStarted() includes prestart: during the lobby -> game transition
     // clients reconnect, and a host socket closing then must not tear the
@@ -1576,7 +1577,13 @@ export class GameServer {
         alive.push(client);
       }
     }
+    // On an abrupt network drop the ws 'close' event can lag far behind this
+    // ping prune, so re-check the winner vote here too.
+    const pruned = alive.length < this.activeClients.length;
     this.activeClients = alive;
+    if (pruned) {
+      this.checkWinnerAfterElectorateShrink();
+    }
     if (now > this.createdAt + this.maxGameDuration) {
       this.log.warn("game past max duration", {
         gameID: this.id,
@@ -2035,6 +2042,29 @@ export class GameServer {
       {
         winnerKey,
       },
+    );
+    this.archiveGame();
+  }
+
+  // Votes are otherwise only tallied when one arrives (handleWinner), so a
+  // vote stuck short of a majority would never resolve once the rest of the
+  // electorate is gone. In a 1v1 the loser often disconnects within a second
+  // of being eliminated — before their own client simulates the win tick and
+  // votes — leaving the winner's vote wedged at 1 of 2 and the game archived
+  // winnerless (e.g. game s5bcKtj8). Re-tally whenever the electorate
+  // shrinks, counting only votes from still-active IPs (see resultAmong).
+  private checkWinnerAfterElectorateShrink() {
+    if (this.winner !== null || this._hasEnded) {
+      return;
+    }
+    const activeIPs = new Set(this.activeClients.map((c) => c.ip));
+    const result = this.winnerVotes.resultAmong(activeIPs);
+    if (result === null) {
+      return;
+    }
+    this.winner = result.value;
+    this.log.info(
+      `Winner determined by ${result.votes}/${activeIPs.size} active IPs after electorate shrank`,
     );
     this.archiveGame();
   }
