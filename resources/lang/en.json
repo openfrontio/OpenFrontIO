@@ -1430,6 +1430,7 @@
     "open_lobbies": "Open Lobbies",
     "pvp_immunity": "PVP immunity duration",
     "spectate": "Spectate",
+    "spectating": "Spectating! Loading the game...",
     "starting_gold": "Starting Gold",
     "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."

@@ -88,6 +88,10 @@ const KICK_REASON_ADMIN = "kick_reason.admin";
 const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_MATCH_CANCELLED = "kick_reason.match_cancelled";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
+
+// Messages that speak for a player in the simulation, so a spectator may not send
+// them. Everything else (ping, hash, rejoin) is connection housekeeping.
+const SPECTATOR_BLOCKED_MESSAGES = new Set(["intent", "winner", "live_stats"]);
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
 // Whether the host-only cheat block actually grants anything: mere presence
@@ -993,6 +997,18 @@ export class GameServer {
           });
           return;
         }
+        // A spectator is not in the simulation, so none of what it sends can be
+        // game state. Without this, claiming to spectate is a way past the lobby
+        // cap and into the intent stream.
+        if (
+          client.spectator &&
+          SPECTATOR_BLOCKED_MESSAGES.has(clientMsg.type)
+        ) {
+          this.log.warn(`dropping ${clientMsg.type} from spectator`, {
+            clientID: client.clientID,
+          });
+          return;
+        }
         switch (clientMsg.type) {
           case "rejoin": {
             // Client is already connected, no auth required, send start game message if game has started
@@ -1135,12 +1151,12 @@ export class GameServer {
       return false;
     }
     const expected = this.gameConfig.maxPlayers;
-    if (expected === undefined || this.activeClients.length >= expected) {
+    if (expected === undefined || this.playerCount() >= expected) {
       return false;
     }
     this.log.info("cancelling matchmade game, missing players at deadline", {
       gameID: this.id,
-      connected: this.activeClients.length,
+      connected: this.playerCount(),
       expected,
     });
     for (const c of [...this.activeClients]) {

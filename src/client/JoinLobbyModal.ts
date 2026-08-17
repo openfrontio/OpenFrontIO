@@ -1137,7 +1137,15 @@ export class JoinLobbyModal extends BaseModal {
     }
 
     if (gameInfo.exists) {
-      this.showMessage(translateText("private_lobby.joined_waiting"));
+      // A spectator can enter a game that is already running, so the usual
+      // "waiting for host to start" is wrong for them.
+      this.showMessage(
+        translateText(
+          spectator
+            ? "private_lobby.spectating"
+            : "private_lobby.joined_waiting",
+        ),
+      );
 
       // Use the clientID that was already set by startTrackingLobby in open()
       this.dispatchEvent(
