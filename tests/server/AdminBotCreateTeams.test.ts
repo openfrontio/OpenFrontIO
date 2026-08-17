@@ -122,7 +122,7 @@ describe("admin bot create_game team pinning", () => {
       res,
     );
     expect(res.statusCode).toBe(400);
-    expect(String(res.body.error)).toContain("playerTeams");
+    expect(res.body.error).toBe("teams_exceed_player_teams");
     expect(created.teams).toBeUndefined();
   });
 
@@ -149,7 +149,7 @@ describe("admin bot create_game team pinning", () => {
         res,
       );
       expect(res.statusCode).toBe(400);
-      expect(String(res.body.error)).toContain("numeric playerTeams");
+      expect(res.body.error).toBe("teams_require_numeric_player_teams");
       expect(created.teams).toBeUndefined();
     },
   );
@@ -161,7 +161,7 @@ describe("admin bot create_game team pinning", () => {
     const res = mockRes();
     handler({ body: { ...TEAM, teams: [["a"], ["b"]] } }, res);
     expect(res.statusCode).toBe(400);
-    expect(String(res.body.error)).toContain("numeric playerTeams");
+    expect(res.body.error).toBe("teams_require_numeric_player_teams");
     expect(created.teams).toBeUndefined();
   });
 

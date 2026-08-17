@@ -171,14 +171,18 @@ export function registerAdminBotRoutes(opts: {
         // ceil(players / size) at START, from whoever actually turned up, and
         // that can land below the number of teams being pinned — there is no
         // count to validate against now, so the request cannot be honoured.
+        // Stable codes, like the listing/featured refusals above: the caller is
+        // a bot, and these are not presentation strings.
         if (typeof playerTeams !== "number") {
-          return res.status(400).json({
-            error: `teams require a numeric playerTeams, got ${playerTeams ?? "none"}`,
-          });
+          return res
+            .status(400)
+            .json({ error: "teams_require_numeric_player_teams" });
         }
         if (teams.length > playerTeams) {
           return res.status(400).json({
-            error: `playerTeams (${playerTeams}) is fewer than the ${teams.length} teams being pinned`,
+            error: "teams_exceed_player_teams",
+            playerTeams,
+            teams: teams.length,
           });
         }
       }
