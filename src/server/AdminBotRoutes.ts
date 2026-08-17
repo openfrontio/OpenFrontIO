@@ -154,25 +154,12 @@ export function registerAdminBotRoutes(opts: {
           seen.add(publicId);
         }
       }
-      // The lobby must have a slot for every pinned team. A pin is an index into
-      // the game's team list, so one past the end resolves to no team at all and
-      // the player is quietly treated as unpinned — the single worst outcome,
-      // because a partly-pinned lobby looks correct to everyone who reads it.
-      //
-      // Duos/Trios/Quads resolve their team count from the player count at START
-      // (ceil(players / size)), which is not known now and can land below the
-      // number of teams being pinned when fewer players turn up than were
-      // seeded. There is no count to validate against, so refuse the pairing
-      // rather than accept a request whose outcome depends on attendance.
+      // A pin is an index into the team list, so one past the end resolves to
+      // no team and the player is silently unpinned. Duos/Trios/Quads resolve
+      // their count at START from who turned up, and omitting it resolves to 0
+      // (GameImpl throws "Too few teams"), so neither can be checked here.
       const playerTeams = config.playerTeams;
       if (teams.length > 0) {
-        // Omitted resolves to 0 teams, which throws "Too few teams" at start, so
-        // there is no slot for a pin either way. Duos/Trios/Quads resolve to
-        // ceil(players / size) at START, from whoever actually turned up, and
-        // that can land below the number of teams being pinned — there is no
-        // count to validate against now, so the request cannot be honoured.
-        // Stable codes, like the listing/featured refusals above: the caller is
-        // a bot, and these are not presentation strings.
         if (typeof playerTeams !== "number") {
           return res
             .status(400)
