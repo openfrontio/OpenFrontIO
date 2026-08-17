@@ -1359,6 +1359,60 @@ export class GameServer {
     });
   }
 
+  // Pin a publicId to a team slot after the lobby exists.
+  //
+  // Pins are otherwise fixed at create, which makes them unusable for any lobby
+  // that grows: everyone who arrives later is left to the balancer, and in a
+  // team game that means partners split across opposing sides. Nothing has to be
+  // recomputed to support this — matchmakingTeamIndex resolves against the array
+  // live, and it is only read when gameStartInfo is built at START, so an
+  // amendment any time before then is picked up on its own.
+  //
+  // Refused once the game has started: the stamped teams are already in
+  // gameStartInfo and every client has them, so a late write would change
+  // nothing and report success for work that did not happen.
+  public addMatchmakingPin(
+    publicId: string,
+    teamIndex: number,
+  ):
+    | { ok: true; teams: string[][] }
+    | { ok: false; status: number; error: string } {
+    if (this.matchmakingTeams === undefined) {
+      return { ok: false, status: 400, error: "game has no matchmade teams" };
+    }
+    if (this.hasStarted()) {
+      return { ok: false, status: 409, error: "game already started" };
+    }
+    if (
+      !Number.isInteger(teamIndex) ||
+      teamIndex < 0 ||
+      teamIndex >= this.matchmakingTeams.length
+    ) {
+      return {
+        ok: false,
+        status: 400,
+        error: `teamIndex ${teamIndex} outside 0..${this.matchmakingTeams.length - 1}`,
+      };
+    }
+    const existing = this.matchmakingTeams.findIndex((team) =>
+      team.includes(publicId),
+    );
+    // Already where it was asked to go: report success rather than an error, so
+    // a caller retrying after a dropped response converges instead of failing.
+    if (existing === teamIndex) {
+      return { ok: true, teams: this.matchmakingTeams };
+    }
+    if (existing !== -1) {
+      return {
+        ok: false,
+        status: 409,
+        error: `${publicId} is already pinned to team ${existing}`,
+      };
+    }
+    this.matchmakingTeams[teamIndex].push(publicId);
+    return { ok: true, teams: this.matchmakingTeams };
+  }
+
   // Resolves a client to its matchmade team slot (index into
   // matchmakingTeams), or undefined when the game isn't matchmade / the
   // client isn't in the assignment.
