@@ -256,8 +256,8 @@ export class DetailedViewModal extends BaseModal {
   }
 
   /**
-   * A single bucket's tab: the same slots as its pane in the overview, laid
-   * out across the full width instead of one narrow column.
+   * A single bucket's tab: the same slots as its pane in the overview, two
+   * across instead of the one narrow column it gets there.
    */
   private renderTypeTab(lobbies: PublicGameInfo[], bucketTotal: number) {
     const placeholders = Math.max(0, PANE_SLOTS - bucketTotal);
@@ -267,7 +267,7 @@ export class DetailedViewModal extends BaseModal {
       </p>`;
     }
     return html`
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${this.renderSlots(lobbies, placeholders)}
       </div>
     `;
