@@ -334,6 +334,8 @@ export class ClanModal extends BaseModal {
           description: "",
           isOpen: false,
           memberCount: c.memberCount,
+          softBalance: c.softBalance,
+          hardBalance: c.hardBalance,
         });
       }
       this.myClanRoles = roles;

@@ -95,4 +95,13 @@ describe("currency-display", () => {
     expect(el.querySelector("cap-icon")).toBeTruthy();
     expect(el.textContent).toContain("0");
   });
+
+  it("uses smaller icons in compact mode", async () => {
+    const full = await renderDisplay({ hard: 5, soft: 5, compact: false });
+    const compact = await renderDisplay({ hard: 5, soft: 5, compact: true });
+    const size = (el: CurrencyDisplay) =>
+      (el.querySelector("plutonium-icon") as HTMLElement & { size: number })
+        .size;
+    expect(size(compact)).toBeLessThan(size(full));
+  });
 });

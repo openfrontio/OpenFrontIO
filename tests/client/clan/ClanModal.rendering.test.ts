@@ -329,14 +329,75 @@ describe("ClanModal — rendering", () => {
       expect(modal.textContent).toContain("[TST]");
     });
 
-    it("leaves the clan list cards and detail stat tiles balance-free", async () => {
+    it("keeps the balances out of the detail stat tiles", async () => {
+      // The header already carries them on this screen; a tile would repeat
+      // it. translateText is mocked to echo the key, so a currency-labelled
+      // tile would surface its key here.
       await openDetail(makeClan({ softBalance: "150", hardBalance: "25" }));
 
-      // translateText is mocked to echo the key, so a stat tile labelled with
-      // a currency would surface its key here.
       const detail = modal.querySelector("clan-detail-view");
       expect(detail?.textContent).not.toContain("cosmetics.hard");
       expect(detail?.textContent).not.toContain("cosmetics.soft");
+    });
+
+    // The list cards show balances too, so a clan's treasury is visible while
+    // browsing without opening it.
+    const showMyClan = async (clan: ReturnType<typeof makeClan>) => {
+      setState(modal, "myClans" as keyof ClanModal, [clan] as never);
+      (modal as unknown as { myClanRoles: Map<string, string> }).myClanRoles =
+        new Map();
+      setState(modal, "activeTab" as keyof ClanModal, "my-clans" as never);
+      await waitForSubComponent(modal, "clan-card");
+      const display = modal.querySelector("currency-display");
+      if (display && "updateComplete" in display) {
+        await (display as HTMLElement & { updateComplete: Promise<boolean> })
+          .updateComplete;
+      }
+      return display;
+    };
+
+    it("shows both balances on the clan card, thousands-grouped", async () => {
+      const display = await showMyClan(
+        makeClan({ softBalance: "1000", hardBalance: "25" }),
+      );
+
+      const text = display?.textContent ?? "";
+      expect(text).toContain((1000).toLocaleString());
+      expect(text).toContain("25");
+    });
+
+    it("shows a zero balance on the clan card rather than hiding it", async () => {
+      const display = await showMyClan(
+        makeClan({ softBalance: "0", hardBalance: "0" }),
+      );
+
+      expect(display?.querySelector("cap-icon")).toBeTruthy();
+      expect(display?.querySelector("plutonium-icon")).toBeTruthy();
+    });
+
+    it("omits the card balance widgets when the API reports none", async () => {
+      const display = await showMyClan(makeClan());
+
+      expect(display).toBeTruthy();
+      expect(modal.querySelector("cap-icon")).toBeNull();
+      expect(modal.querySelector("plutonium-icon")).toBeNull();
+      expect(modal.textContent).not.toContain("undefined");
+    });
+
+    it("uses the compact card variant, not the header size", async () => {
+      const card = await showMyClan(makeClan({ hardBalance: "25" }));
+      const cardSize = (
+        card?.querySelector("plutonium-icon") as HTMLElement & { size: number }
+      ).size;
+
+      const header = await openDetail(makeClan({ hardBalance: "25" }));
+      const headerSize = (
+        header?.querySelector("plutonium-icon") as HTMLElement & {
+          size: number;
+        }
+      ).size;
+
+      expect(cardSize).toBeLessThan(headerSize);
     });
   });
 
