@@ -343,7 +343,31 @@ export class GameServer {
       if (id === target) break;
       slot++;
     }
-    return anonWordName(slot, viewer ? simpleHash(viewer) : 0);
+    return anonWordName(slot, this.anonOffsetSeed(viewer));
+  }
+
+  // What rotates the animal assignment, so different viewers see different fake
+  // names for the same player — the anti-teaming point of anonymization.
+  //
+  // For a matchmade TEAM the seed is the team, not the viewer. Teammates already
+  // see each other's real names (sameMatchmadeTeam), but every OTHER player was
+  // still named per viewer, so two people on the same team saw the same opponent
+  // under different names and could not call a target between them. A team that
+  // cannot agree on who to attack is not really a team, in any size — duos,
+  // trios, quads or a numeric split.
+  //
+  // Sharing one mapping inside a team costs nothing the team did not already
+  // have: they are permitted to coordinate, and it is the same information each
+  // of them could read out loud. Everyone outside the team keeps their own
+  // rotation, so nothing is shared across the boundary that matters.
+  private anonOffsetSeed(viewer: ClientID | undefined): number {
+    if (viewer === undefined) return 0;
+    const client = this.allClients.get(viewer);
+    const team =
+      client === undefined ? undefined : this.matchmakingTeamIndex(client);
+    return team === undefined
+      ? simpleHash(viewer)
+      : simpleHash(`${this.id}:team:${team}`);
   }
 
   // Whether `viewer` should see `target`'s real identity: when names aren't
