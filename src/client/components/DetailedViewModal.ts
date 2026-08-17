@@ -149,20 +149,14 @@ export class DetailedViewModal extends BaseModal {
       return this.renderLoadingSpinner();
     }
 
-    const all = flattenLobbies(this.lobbies.games);
-    const shown = filterAndSortLobbies(all, this.filters, (lobby) =>
-      this.mapNameOf(lobby),
+    const shown = filterAndSortLobbies(
+      flattenLobbies(this.lobbies.games),
+      this.filters,
+      (lobby) => this.mapNameOf(lobby),
     );
 
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
-        <span class="text-xs text-white/50 uppercase tracking-wider">
-          ${translateText("detailed_view.showing", {
-            shown: String(shown.length),
-            total: String(all.length),
-          })}
-        </span>
-
         ${this.showFilters ? this.renderFilterPanel() : nothing}
         ${shown.length === 0
           ? html`<p class="py-12 text-center text-sm text-white/50">
@@ -188,10 +182,17 @@ export class DetailedViewModal extends BaseModal {
 
   // ---- Lobby panes ----
 
-  private renderPane(title: string, lobbies: PublicGameInfo[]) {
+  /** Pane heading and its count as one message, so translators own the format. */
+  private paneHeading(name: string, count: number): string {
+    return translateText("detailed_view.pane_heading", { name, count });
+  }
+
+  private renderPane(name: string, lobbies: PublicGameInfo[]) {
     return html`
       <section class="flex flex-col gap-2 min-w-0">
-        <h3 class="${SECTION_LABEL} mb-0">${title} (${lobbies.length})</h3>
+        <h3 class="${SECTION_LABEL} mb-0">
+          ${this.paneHeading(name, lobbies.length)}
+        </h3>
         ${lobbies.length === 0
           ? html`<p
               class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
@@ -212,7 +213,10 @@ export class DetailedViewModal extends BaseModal {
     return html`
       <section class="flex flex-col gap-2">
         <h3 class="${SECTION_LABEL} mb-0">
-          ${translateText("detailed_view.pane_hosted")} (${lobbies.length})
+          ${this.paneHeading(
+            translateText("detailed_view.pane_hosted"),
+            lobbies.length,
+          )}
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           ${lobbies.map((lobby) => this.renderCard(lobby))}
