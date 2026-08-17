@@ -240,14 +240,8 @@ export function registerAdminBotRoutes(opts: {
   });
 
   // Send an intent. Honors the lobby-management intents; everything else 400.
-  // Pin a player to a team after the lobby was created. Team pins are otherwise
-  // fixed at create_game, which makes them useless for a lobby that fills up
-  // over time — every late joiner is left to the balancer, and in a team game
-  // that splits partners onto opposing sides.
-  //
-  // Returns the resulting team list so the caller can assert what landed rather
-  // than assume it: a half-pinned lobby looks correct from the outside, so
-  // "success" alone is not enough to act on.
+  // Returns the resulting team list so the caller can assert what landed: a
+  // half-pinned lobby looks correct from the outside.
   app.post("/api/adminbot/game/:id/pin", requireAdminBotKey, (req, res) => {
     const id = req.params.id as string;
     if (!ownsGame(id, res)) return;

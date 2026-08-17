@@ -1359,18 +1359,10 @@ export class GameServer {
     });
   }
 
-  // Pin a publicId to a team slot after the lobby exists.
-  //
-  // Pins are otherwise fixed at create, which makes them unusable for any lobby
-  // that grows: everyone who arrives later is left to the balancer, and in a
-  // team game that means partners split across opposing sides. Nothing has to be
-  // recomputed to support this — matchmakingTeamIndex resolves against the array
-  // live, and it is only read when gameStartInfo is built at START, so an
-  // amendment any time before then is picked up on its own.
-  //
-  // Refused once the game has started: the stamped teams are already in
-  // gameStartInfo and every client has them, so a late write would change
-  // nothing and report success for work that did not happen.
+  // Pin a publicId to a team slot after the lobby exists, so a lobby that fills
+  // over time can still seat late joiners with their partners.
+  // matchmakingTeamIndex resolves against this array live and is only read when
+  // gameStartInfo is built at start, so nothing needs recomputing.
   public addMatchmakingPin(
     publicId: string,
     teamIndex: number,
@@ -1393,8 +1385,7 @@ export class GameServer {
     const existing = this.matchmakingTeams.findIndex((team) =>
       team.includes(publicId),
     );
-    // Already where it was asked to go: report success rather than an error, so
-    // a caller retrying after a dropped response converges instead of failing.
+    // Idempotent, so a caller retrying after a dropped response converges.
     if (existing === teamIndex) {
       return { ok: true, teams: this.matchmakingTeams };
     }
