@@ -109,6 +109,57 @@ describe("admin bot create_game team pinning", () => {
     expect(created.teams).toBeUndefined();
   });
 
+  it("refuses more pinned teams than the lobby has slots", () => {
+    // A pin is an index into the team list, so one past the end resolves to no
+    // team and the player is silently unpinned.
+    const { handler, created } = captureCreateHandler();
+    const res = mockRes();
+    handler(
+      { body: { ...TEAM, playerTeams: 2, teams: [["a"], ["b"], ["c"]] } },
+      res,
+    );
+    expect(res.statusCode).toBe(400);
+    expect(String(res.body.error)).toContain("playerTeams");
+    expect(created.teams).toBeUndefined();
+  });
+
+  it("accepts exactly as many teams as there are slots", () => {
+    const { handler, created } = captureCreateHandler();
+    const res = mockRes();
+    handler(
+      { body: { ...TEAM, playerTeams: 3, teams: [["a"], ["b"], ["c"]] } },
+      res,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(created.teams).toHaveLength(3);
+  });
+
+  it.each(["Duos", "Trios", "Quads"])(
+    "refuses pins alongside %s, whose team count depends on attendance",
+    (mode) => {
+      // Duos/Trios/Quads resolve to ceil(players / size) at START, which can land
+      // below the number of teams pinned if fewer players turn up than seeded.
+      const { handler, created } = captureCreateHandler();
+      const res = mockRes();
+      handler(
+        { body: { ...TEAM, playerTeams: mode, teams: [["a"], ["b"]] } },
+        res,
+      );
+      expect(res.statusCode).toBe(400);
+      expect(String(res.body.error)).toContain("numeric playerTeams");
+      expect(created.teams).toBeUndefined();
+    },
+  );
+
+  it("still pins when playerTeams is omitted", () => {
+    // Unchanged behaviour: no declared count, nothing to contradict.
+    const { handler, created } = captureCreateHandler();
+    const res = mockRes();
+    handler({ body: { ...TEAM, teams: [["a"], ["b"]] } }, res);
+    expect(res.statusCode).toBe(200);
+    expect(created.teams).toHaveLength(2);
+  });
+
   it("rejects a malformed teams payload", () => {
     const { handler } = captureCreateHandler();
     const res = mockRes();

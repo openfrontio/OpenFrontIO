@@ -154,6 +154,30 @@ export function registerAdminBotRoutes(opts: {
           seen.add(publicId);
         }
       }
+      // The lobby must have a slot for every pinned team. A pin is an index into
+      // the game's team list, so one past the end resolves to no team at all and
+      // the player is quietly treated as unpinned — the single worst outcome,
+      // because a partly-pinned lobby looks correct to everyone who reads it.
+      //
+      // Duos/Trios/Quads resolve their team count from the player count at START
+      // (ceil(players / size)), which is not known now and can land below the
+      // number of teams being pinned when fewer players turn up than were
+      // seeded. There is no count to validate against, so refuse the pairing
+      // rather than accept a request whose outcome depends on attendance.
+      const playerTeams = config.playerTeams;
+      if (teams.length > 0) {
+        if (typeof playerTeams === "number") {
+          if (teams.length > playerTeams) {
+            return res.status(400).json({
+              error: `playerTeams (${playerTeams}) is fewer than the ${teams.length} teams being pinned`,
+            });
+          }
+        } else if (playerTeams !== undefined) {
+          return res.status(400).json({
+            error: `teams require a numeric playerTeams, got ${playerTeams}`,
+          });
+        }
+      }
     }
     // Private only: reject Public and Singleplayer. An omitted gameType defaults
     // to Private in createGame, so it's allowed through.
