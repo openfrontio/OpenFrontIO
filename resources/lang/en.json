@@ -1429,6 +1429,7 @@
     "not_found": "Lobby not found. Please check the ID and try again.",
     "open_lobbies": "Open Lobbies",
     "pvp_immunity": "PVP immunity duration",
+    "spectate": "Spectate",
     "starting_gold": "Starting Gold",
     "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."

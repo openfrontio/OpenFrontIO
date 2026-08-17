@@ -429,6 +429,7 @@ export class Transport {
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
+      spectator: this.lobbyConfig.spectator,
     } satisfies ClientJoinMessage);
   }
 

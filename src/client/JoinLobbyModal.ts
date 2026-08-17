@@ -253,6 +253,12 @@ export class JoinLobbyModal extends BaseModal {
               width="block"
               submit
             ></o-button>
+            <o-button
+              variant="ghost"
+              title=${translateText("private_lobby.spectate")}
+              width="block"
+              @click=${this.spectateLobbyFromInput}
+            ></o-button>
           </div>
         </form>
         ${this.renderHostedLobbies()}
@@ -1040,8 +1046,16 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private async joinLobbyFromInput(e: SubmitEvent): Promise<void> {
+  private joinLobbyFromInput(e: SubmitEvent): Promise<void> {
     e.preventDefault();
+    return this.enterLobbyFromInput(false);
+  }
+
+  private spectateLobbyFromInput(): Promise<void> {
+    return this.enterLobbyFromInput(true);
+  }
+
+  private async enterLobbyFromInput(spectator: boolean): Promise<void> {
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
       this.showMessage(translateText("private_lobby.not_found"), "red");
@@ -1055,7 +1069,7 @@ export class JoinLobbyModal extends BaseModal {
     this.startTrackingLobby(lobbyId);
 
     try {
-      const gameExists = await this.checkActiveLobby(lobbyId);
+      const gameExists = await this.checkActiveLobby(lobbyId, spectator);
       if (gameExists) return;
 
       switch (await this.checkArchivedGame(lobbyId)) {
@@ -1095,7 +1109,10 @@ export class JoinLobbyModal extends BaseModal {
     );
   }
 
-  private async checkActiveLobby(lobbyId: string): Promise<boolean> {
+  private async checkActiveLobby(
+    lobbyId: string,
+    spectator = false,
+  ): Promise<boolean> {
     const url = `/${ClientEnv.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
@@ -1128,6 +1145,7 @@ export class JoinLobbyModal extends BaseModal {
           detail: {
             gameID: lobbyId,
             source: "private",
+            spectator,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

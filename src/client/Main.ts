@@ -168,6 +168,8 @@ export interface JoinLobbyEvent {
   gameRecord?: GameRecord;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
   publicLobbyInfo?: GameInfo | PublicGameInfo;
+  // Watch without playing.
+  spectator?: boolean;
 }
 
 class Client {
@@ -918,6 +920,7 @@ class Client {
           ? toWireGameStartInfo(lobby.gameRecord.info)
           : undefined),
       gameRecord: lobby.gameRecord,
+      spectator: lobby.spectator,
     });
 
     if (this.mostRecentJoinEvent !== event.timeStamp) {
