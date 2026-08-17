@@ -47,6 +47,9 @@ const SCHEDULED_PANES = ["ffa", "team", "special"] as const;
  */
 const PANE_SLOTS = 6;
 
+/** Tab key for the overview: every bucket at once, as three panes. */
+const ALL_TAB = "all";
+
 /** Slot height; cards and the spawning placeholder both fill it exactly. */
 const SLOT_CLASS = "h-40";
 
@@ -112,6 +115,20 @@ export class DetailedViewModal extends BaseModal {
   constructor() {
     super();
     this.id = "page-detailed-view";
+    // Open on the overview rather than the first tab in the strip.
+    this.activeTab = ALL_TAB;
+  }
+
+  protected override modalConfig() {
+    return {
+      tabs: [
+        ...SCHEDULED_PANES.map((type) => ({
+          key: type,
+          label: translateText(`detailed_view.pane_${type}`),
+        })),
+        { key: ALL_TAB, label: translateText("detailed_view.tab_all") },
+      ],
+    };
   }
 
   protected override onOpen(): void {
@@ -200,7 +217,7 @@ export class DetailedViewModal extends BaseModal {
     });
   }
 
-  protected renderBody(): TemplateResult {
+  protected renderBody(tab: string): TemplateResult {
     if (this.lobbies === null) {
       return this.renderLoadingSpinner();
     }
@@ -209,6 +226,8 @@ export class DetailedViewModal extends BaseModal {
     const shown = filterAndSortLobbies(all, this.filters, (lobby) =>
       this.mapNameOf(lobby),
     );
+    const ofType = (lobbies: PublicGameInfo[], type: string) =>
+      lobbies.filter((lobby) => lobby.publicGameType === type);
 
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
@@ -217,21 +236,39 @@ export class DetailedViewModal extends BaseModal {
           ? html`<p class="py-12 text-center text-sm text-white/50">
               ${translateText("detailed_view.no_lobbies")}
             </p>`
-          : html`
-              <!-- One pane per scheduled bucket, cards stacked within it. -->
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                ${SCHEDULED_PANES.map((type) =>
-                  this.renderPane(
-                    translateText(`detailed_view.pane_${type}`),
-                    shown.filter((lobby) => lobby.publicGameType === type),
-                    all.filter((lobby) => lobby.publicGameType === type).length,
-                  ),
-                )}
-              </div>
-              ${this.renderHostedPane(
-                shown.filter((lobby) => lobby.publicGameType === "hosted"),
-              )}
-            `}
+          : tab === ALL_TAB
+            ? html`
+                <!-- One pane per scheduled bucket, cards stacked within it. -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+                  ${SCHEDULED_PANES.map((type) =>
+                    this.renderPane(
+                      translateText(`detailed_view.pane_${type}`),
+                      ofType(shown, type),
+                      ofType(all, type).length,
+                    ),
+                  )}
+                </div>
+                ${this.renderHostedPane(ofType(shown, "hosted"))}
+              `
+            : this.renderTypeTab(ofType(shown, tab), ofType(all, tab).length)}
+      </div>
+    `;
+  }
+
+  /**
+   * A single bucket's tab: the same slots as its pane in the overview, laid
+   * out across the full width instead of one narrow column.
+   */
+  private renderTypeTab(lobbies: PublicGameInfo[], bucketTotal: number) {
+    const placeholders = Math.max(0, PANE_SLOTS - bucketTotal);
+    if (lobbies.length === 0 && placeholders === 0) {
+      return html`<p class="py-12 text-center text-sm text-white/50">
+        ${translateText("detailed_view.pane_empty")}
+      </p>`;
+    }
+    return html`
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        ${this.renderSlots(lobbies, placeholders)}
       </div>
     `;
   }
@@ -269,19 +306,24 @@ export class DetailedViewModal extends BaseModal {
                 ${translateText("detailed_view.pane_empty")}
               </p>`
             : nothing}
-          ${repeat(
-            lobbies,
-            (lobby) => lobby.gameID,
-            (lobby) =>
-              html`<div class="${SLOT_CLASS}" data-lobby-slot=${lobby.gameID}>
-                ${this.renderCard(lobby)}
-              </div>`,
-          )}
-          ${Array.from({ length: placeholders }, () =>
-            this.renderSpawningSlot(),
-          )}
+          ${this.renderSlots(lobbies, placeholders)}
         </div>
       </section>
+    `;
+  }
+
+  /** Keyed lobby slots, then placeholders for the lobbies still to come. */
+  private renderSlots(lobbies: PublicGameInfo[], placeholders: number) {
+    return html`
+      ${repeat(
+        lobbies,
+        (lobby) => lobby.gameID,
+        (lobby) =>
+          html`<div class="${SLOT_CLASS}" data-lobby-slot=${lobby.gameID}>
+            ${this.renderCard(lobby)}
+          </div>`,
+      )}
+      ${Array.from({ length: placeholders }, () => this.renderSpawningSlot())}
     `;
   }
 
@@ -316,14 +358,7 @@ export class DetailedViewModal extends BaseModal {
           )}
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          ${repeat(
-            lobbies,
-            (lobby) => lobby.gameID,
-            (lobby) =>
-              html`<div class="${SLOT_CLASS}" data-lobby-slot=${lobby.gameID}>
-                ${this.renderCard(lobby)}
-              </div>`,
-          )}
+          ${this.renderSlots(lobbies, 0)}
         </div>
       </section>
     `;
