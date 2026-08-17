@@ -102,7 +102,8 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientSpectateMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -138,6 +139,7 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientSpectateMessage = z.infer<typeof ClientSpectateMessageSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -957,6 +959,14 @@ export const ClientRejoinMessageSchema = z.object({
   token: TokenSchema,
 });
 
+// Switch between playing and watching from the lobby screen. Lobby-phase only:
+// once the game starts the player list is frozen, so the server refuses to turn
+// a spectator back into a player.
+export const ClientSpectateMessageSchema = z.object({
+  type: z.literal("spectate"),
+  spectator: z.boolean(),
+});
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientSendLiveStatsSchema,
@@ -966,6 +976,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientSpectateMessageSchema,
 ]);
 
 //

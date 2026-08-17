@@ -1055,6 +1055,10 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
             break;
           }
+          case "spectate": {
+            this.setSpectator(client, clientMsg.spectator);
+            break;
+          }
           case "winner": {
             this.handleWinner(client, clientMsg);
             break;
@@ -1397,6 +1401,25 @@ export class GameServer {
     return this.activeClients.filter((c) => !c.spectator).length;
   }
 
+  // Switch a client between playing and watching from the lobby screen.
+  //
+  // Only before the start: gameStartInfo.players is frozen there, so becoming a
+  // player afterwards would put someone in the lobby list who can never spawn —
+  // the thing the late-join rule exists to prevent. Taking a seat also has to
+  // respect the cap, or the toggle would be a way past it.
+  private setSpectator(client: Client, spectator: boolean): void {
+    if (client.spectator === spectator) return;
+    if (!spectator) {
+      if (this._hasStarted || this._hasEnded) return;
+      const max = this.gameConfig.maxPlayers;
+      if (max !== undefined && this.playerCount() >= max) return;
+    }
+    client.spectator = spectator;
+    // The lobby list is derived from this flag, so everyone's view of who is
+    // playing has to be refreshed rather than waiting out the next tick.
+    this.broadcastLobbyInfo();
+  }
+
   // The electorate for the winner and live-stats votes. Spectators run the
   // simulation but may not vote, so counting them would raise the bar for a
   // majority without anyone able to meet it: five spectators watching four
@@ -1663,31 +1686,35 @@ export class GameServer {
     const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
-      clients: this.activeClients.map((c) => {
-        if (!this.seesReal(viewer, c.clientID)) {
+      // Players only. A spectator listed here would appear in the lobby roster
+      // as someone about to play, and be counted in the browser's player count.
+      clients: this.activeClients
+        .filter((c) => !c.spectator)
+        .map((c) => {
+          if (!this.seesReal(viewer, c.clientID)) {
+            return {
+              username: this.anonName(viewer, c.clientID),
+              clanTag: null,
+              clientID: c.clientID,
+            };
+          }
+          // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
+          // teammate's clanTag and friends would hand out more than the identity
+          // needed to coordinate: `friends` in particular names a THIRD party —
+          // the viewer would learn their teammate is friends with a specific
+          // still-anonymized opponent, which the host never granted. The wider
+          // reveals (self, or host-granted nameReveals) keep the full payload.
+          const teammateOnly =
+            this.gameConfig.anonymizeNames &&
+            !this.seesRealBeyondTeam(viewer, c.clientID);
           return {
-            username: this.anonName(viewer, c.clientID),
-            clanTag: null,
+            username: c.username,
+            clanTag: teammateOnly || hideClanTags ? null : (c.clanTag ?? null),
             clientID: c.clientID,
+            friends: teammateOnly ? undefined : friendsFor(c),
+            verified: c.cosmetics?.verified,
           };
-        }
-        // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
-        // teammate's clanTag and friends would hand out more than the identity
-        // needed to coordinate: `friends` in particular names a THIRD party —
-        // the viewer would learn their teammate is friends with a specific
-        // still-anonymized opponent, which the host never granted. The wider
-        // reveals (self, or host-granted nameReveals) keep the full payload.
-        const teammateOnly =
-          this.gameConfig.anonymizeNames &&
-          !this.seesRealBeyondTeam(viewer, c.clientID);
-        return {
-          username: c.username,
-          clanTag: teammateOnly || hideClanTags ? null : (c.clanTag ?? null),
-          clientID: c.clientID,
-          friends: teammateOnly ? undefined : friendsFor(c),
-          verified: c.cosmetics?.verified,
-        };
-      }),
+        }),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,

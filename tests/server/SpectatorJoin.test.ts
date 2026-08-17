@@ -226,6 +226,59 @@ describe("GameServer - spectators", () => {
     expect((game as any).winner).not.toBeNull();
   });
 
+  describe("switching between playing and watching", () => {
+    const setSpectator = (game: GameServer, c: Client, spectator: boolean) =>
+      (game as any).setSpectator(c, spectator);
+
+    it("a spectator can take a free seat before the start", () => {
+      const game = makeGame(2);
+      const c = makeClient("cast", true);
+      game.joinClient(c);
+      setSpectator(game, c, false);
+      expect(c.spectator).toBe(false);
+      expect(game.gameInfo().clients?.map((x: any) => x.clientID)).toEqual([
+        "cast",
+      ]);
+    });
+
+    it("a player can drop back to watching, freeing the seat", () => {
+      const game = makeGame(1);
+      const p = makeClient("p1");
+      game.joinClient(p);
+      expect(game.joinClient(makeClient("p2"))).toBe("rejected");
+      setSpectator(game, p, true);
+      expect(game.joinClient(makeClient("p2"))).toBe("joined");
+    });
+
+    it("cannot take a seat that would exceed the cap", () => {
+      const game = makeGame(1);
+      game.joinClient(makeClient("p1"));
+      const c = makeClient("cast", true);
+      game.joinClient(c);
+      setSpectator(game, c, false);
+      expect(c.spectator).toBe(true);
+    });
+
+    it("cannot become a player once the game has started", () => {
+      // gameStartInfo.players is frozen, so a new player could never spawn.
+      const game = makeGame();
+      const c = makeClient("cast", true);
+      game.joinClient(c);
+      (game as any)._hasStarted = true;
+      setSpectator(game, c, false);
+      expect(c.spectator).toBe(true);
+    });
+
+    it("keeps spectators out of the lobby roster", () => {
+      const game = makeGame();
+      game.joinClient(makeClient("p1"));
+      game.joinClient(makeClient("cast", true));
+      expect(game.gameInfo().clients?.map((c: any) => c.clientID)).toEqual([
+        "p1",
+      ]);
+    });
+  });
+
   it("may join after the game has started", () => {
     // A caster arriving mid-game is the normal case; a late player already
     // gets the same treatment, so this only has to keep working.

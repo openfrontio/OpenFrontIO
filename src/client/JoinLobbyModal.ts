@@ -32,6 +32,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { SendSpectateEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
 import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
@@ -75,6 +76,20 @@ export class JoinLobbyModal extends BaseModal {
     return this.gameConfig?.gameType === GameType.Private;
   }
 
+  // The lobby list carries players only, so not being in it IS being a
+  // spectator. Derived rather than stored so a switch the server refused (lobby
+  // full, game already started) shows the real state instead of what was asked.
+  private get isSpectating(): boolean {
+    return (
+      this.currentClientID !== "" &&
+      !this.players.some((p) => p.clientID === this.currentClientID)
+    );
+  }
+
+  private setSpectating(spectator: boolean) {
+    this.eventBus?.emit(new SendSpectateEvent(spectator));
+  }
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     this.currentClientID = event.myClientID;
@@ -105,6 +120,36 @@ export class JoinLobbyModal extends BaseModal {
           ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
           : undefined,
     });
+  }
+
+  // Play/Spectate switch. Hidden once the game is running: the player list is
+  // frozen at start, so the server would refuse to seat anyone new and the
+  // control would do nothing.
+  private renderSpectateToggle() {
+    if (this.isConnecting || this.lobbyStartAt === null) return html``;
+    const spectating = this.isSpectating;
+    const cls = (on: boolean) =>
+      `px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest transition ${
+        on ? "bg-white text-black" : "text-white/60 hover:text-white"
+      }`;
+    return html`
+      <div class="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+        <button
+          class=${cls(!spectating)}
+          ?disabled=${!spectating}
+          @click=${() => this.setSpectating(false)}
+        >
+          ${translateText("private_lobby.play")}
+        </button>
+        <button
+          class=${cls(spectating)}
+          ?disabled=${spectating}
+          @click=${() => this.setSpectating(true)}
+        >
+          ${translateText("private_lobby.spectate")}
+        </button>
+      </div>
+    `;
   }
 
   protected renderBody() {
@@ -189,6 +234,7 @@ export class JoinLobbyModal extends BaseModal {
                 >
                 <span class="text-sm font-bold text-white">${statusLabel}</span>
               </div>
+              ${this.renderSpectateToggle()}
               ${maxPlayers > 0
                 ? html`
                     <div
