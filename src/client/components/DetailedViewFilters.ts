@@ -8,31 +8,13 @@ import {
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
 
 /**
- * Filtering, sorting and saved-profile logic for the Detailed View lobby
+ * Filtering, ordering and saved-profile logic for the Detailed View lobby
  * browser. Kept free of Lit and of translation lookups so it can be unit
- * tested directly; the component passes in a map-name resolver for the
- * alphabetical sort.
+ * tested directly.
  */
 
 export type LobbyModeFilter = "ffa" | "teams" | "hvn";
 export type LobbySourceFilter = "public" | "hosted";
-
-export type SortKey =
-  | "starts_soonest"
-  | "players_desc"
-  | "players_asc"
-  | "capacity_desc"
-  | "capacity_asc"
-  | "map_asc";
-
-export const SORT_KEYS: SortKey[] = [
-  "starts_soonest",
-  "players_desc",
-  "players_asc",
-  "capacity_desc",
-  "capacity_asc",
-  "map_asc",
-];
 
 export const LOBBY_MODES: LobbyModeFilter[] = ["ffa", "teams", "hvn"];
 export const LOBBY_SOURCES: LobbySourceFilter[] = ["public", "hosted"];
@@ -61,7 +43,6 @@ export interface LobbyFilters {
   maxCapacity: number | null;
   minTeamSize: number | null;
   maxTeamSize: number | null;
-  sort: SortKey;
 }
 
 export const DEFAULT_FILTERS: LobbyFilters = {
@@ -75,7 +56,6 @@ export const DEFAULT_FILTERS: LobbyFilters = {
   maxCapacity: null,
   minTeamSize: null,
   maxTeamSize: null,
-  sort: "starts_soonest",
 };
 
 /** Everything the browser derives from a lobby to filter, sort and display it. */
@@ -211,65 +191,28 @@ export function matchesFilters(
   return true;
 }
 
-/** Sort comparator. `mapName` resolves the display name for the map sort. */
-function compare(
-  a: PublicGameInfo,
-  b: PublicGameInfo,
-  sort: SortKey,
-  mapName: (lobby: PublicGameInfo) => string,
-): number {
-  const factsA = lobbyFacts(a);
-  const factsB = lobbyFacts(b);
-
-  switch (sort) {
-    case "starts_soonest": {
-      // Lobbies without a countdown (hosted, or the next one queued behind the
-      // active lobby) sort last — they have no known start time.
-      if (a.startsAt === undefined && b.startsAt === undefined) break;
-      if (a.startsAt === undefined) return 1;
-      if (b.startsAt === undefined) return -1;
-      if (a.startsAt !== b.startsAt) return a.startsAt - b.startsAt;
-      break;
-    }
-    case "players_desc":
-      if (factsA.joined !== factsB.joined) return factsB.joined - factsA.joined;
-      break;
-    case "players_asc":
-      if (factsA.joined !== factsB.joined) return factsA.joined - factsB.joined;
-      break;
-    case "capacity_desc":
-    case "capacity_asc": {
-      const capA = factsA.capacity;
-      const capB = factsB.capacity;
-      if (capA === null && capB === null) break;
-      if (capA === null) return 1;
-      if (capB === null) return -1;
-      if (capA !== capB) {
-        return sort === "capacity_desc" ? capB - capA : capA - capB;
-      }
-      break;
-    }
-    case "map_asc": {
-      const cmp = mapName(a).localeCompare(mapName(b));
-      if (cmp !== 0) return cmp;
-      break;
-    }
-  }
-  // Ties keep the order the server sent, which is the master's queue order
-  // (oldest lobby first). Array.prototype.sort is stable, so returning 0 is
-  // enough — comparing gameIDs here would scramble the queue, since ids are
-  // random and every new lobby would land in an arbitrary place.
-  return 0;
+/**
+ * Lobby order: soonest countdown first, then the lobbies still queued behind
+ * it. Ties keep the order the server sent, which is the master's queue order
+ * (oldest first) — Array.prototype.sort is stable, so returning 0 is enough.
+ * Comparing gameIDs here would scramble the queue, since ids are random.
+ */
+function compare(a: PublicGameInfo, b: PublicGameInfo): number {
+  // A lobby without a countdown hasn't reached the front of its queue yet
+  // (or is hosted, and starts when its host says so), so it sorts last.
+  if (a.startsAt === undefined && b.startsAt === undefined) return 0;
+  if (a.startsAt === undefined) return 1;
+  if (b.startsAt === undefined) return -1;
+  return a.startsAt - b.startsAt;
 }
 
 export function filterAndSortLobbies(
   lobbies: PublicGameInfo[],
   filters: LobbyFilters,
-  mapName: (lobby: PublicGameInfo) => string = () => "",
 ): PublicGameInfo[] {
   return lobbies
     .filter((lobby) => matchesFilters(lobby, filters))
-    .sort((a, b) => compare(a, b, filters.sort, mapName));
+    .sort(compare);
 }
 
 // ---- Saved filter profiles ----
@@ -298,9 +241,6 @@ function toBound(value: unknown): number | null {
 export function normalizeFilters(raw: unknown): LobbyFilters {
   if (typeof raw !== "object" || raw === null) return { ...DEFAULT_FILTERS };
   const input = raw as Record<string, unknown>;
-  const sort = SORT_KEYS.includes(input.sort as SortKey)
-    ? (input.sort as SortKey)
-    : DEFAULT_FILTERS.sort;
   return {
     modes: toStringArray(input.modes, LOBBY_MODES) as LobbyModeFilter[],
     sources: toStringArray(input.sources, LOBBY_SOURCES) as LobbySourceFilter[],
@@ -312,7 +252,6 @@ export function normalizeFilters(raw: unknown): LobbyFilters {
     maxCapacity: toBound(input.maxCapacity),
     minTeamSize: toBound(input.minTeamSize),
     maxTeamSize: toBound(input.maxTeamSize),
-    sort,
   };
 }
 

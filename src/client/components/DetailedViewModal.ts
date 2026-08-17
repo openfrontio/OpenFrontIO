@@ -10,7 +10,6 @@ import { UsernameInput } from "../UsernameInput";
 import {
   calculateServerTimeOffset,
   getGameModeLabel,
-  getMapName,
   getSecondsUntilServerTimestamp,
   renderDuration,
   translateText,
@@ -223,9 +222,7 @@ export class DetailedViewModal extends BaseModal {
     }
 
     const all = flattenLobbies(this.lobbies.games);
-    const shown = filterAndSortLobbies(all, this.filters, (lobby) =>
-      this.mapNameOf(lobby),
-    );
+    const shown = filterAndSortLobbies(all, this.filters);
     const ofType = (lobbies: PublicGameInfo[], type: string) =>
       lobbies.filter((lobby) => lobby.publicGameType === type);
 
@@ -395,10 +392,6 @@ export class DetailedViewModal extends BaseModal {
     return seconds > 0
       ? renderDuration(seconds)
       : translateText("public_lobby.starting_game");
-  }
-
-  private mapNameOf(lobby: PublicGameInfo): string {
-    return getMapName(lobby.gameConfig?.gameMap) ?? "";
   }
 
   // ---- Filter panel ----

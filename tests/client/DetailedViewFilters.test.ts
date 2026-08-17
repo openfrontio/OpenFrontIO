@@ -159,47 +159,9 @@ describe("filterAndSortLobbies", () => {
     expect(filterAndSortLobbies(all, filters())).toHaveLength(3);
   });
 
-  it("sorts by soonest start, with startless lobbies last", () => {
-    const sorted = filterAndSortLobbies(
-      all,
-      filters({ sort: "starts_soonest" }),
-    );
+  it("orders by soonest countdown, with startless lobbies last", () => {
+    const sorted = filterAndSortLobbies(all, filters());
     expect(sorted.map((l) => l.gameID)).toEqual(["team1", "ffa1", "hosted1"]);
-  });
-
-  it("sorts by player count in both directions", () => {
-    expect(
-      filterAndSortLobbies(all, filters({ sort: "players_desc" })).map(
-        (l) => l.gameID,
-      ),
-    ).toEqual(["ffa1", "hosted1", "team1"]);
-    expect(
-      filterAndSortLobbies(all, filters({ sort: "players_asc" })).map(
-        (l) => l.gameID,
-      ),
-    ).toEqual(["team1", "hosted1", "ffa1"]);
-  });
-
-  it("sorts by capacity", () => {
-    expect(
-      filterAndSortLobbies(all, filters({ sort: "capacity_desc" })).map(
-        (l) => l.gameID,
-      ),
-    ).toEqual(["ffa1", "team1", "hosted1"]);
-  });
-
-  it("sorts by map name using the supplied resolver", () => {
-    const names: Record<string, string> = {
-      ffa1: "Zanzibar",
-      team1: "Africa",
-      hosted1: "Mena",
-    };
-    const sorted = filterAndSortLobbies(
-      all,
-      filters({ sort: "map_asc" }),
-      (l) => names[l.gameID],
-    );
-    expect(sorted.map((l) => l.gameID)).toEqual(["team1", "hosted1", "ffa1"]);
   });
 
   it("keeps the server's queue order for lobbies with no countdown", () => {
@@ -208,10 +170,7 @@ describe("filterAndSortLobbies", () => {
     const queued = ["zulu", "alpha", "mike"].map((gameID) =>
       lobby({ gameID, startsAt: undefined }),
     );
-    const sorted = filterAndSortLobbies(
-      [ffa, ...queued],
-      filters({ sort: "starts_soonest" }),
-    );
+    const sorted = filterAndSortLobbies([ffa, ...queued], filters());
     expect(sorted.map((l) => l.gameID)).toEqual([
       "ffa1",
       "zulu",
@@ -299,7 +258,9 @@ describe("normalizeFilters", () => {
     expect(normalized.hideEmpty).toBe(false);
     expect(normalized.minJoined).toBeNull();
     expect(normalized.maxJoined).toBe(12);
-    expect(normalized.sort).toBe(DEFAULT_FILTERS.sort);
+    // A stored profile from an older build can carry fields the filter set no
+    // longer has; they're dropped rather than copied through.
+    expect("sort" in normalized).toBe(false);
   });
 });
 
@@ -323,7 +284,7 @@ describe("filter profiles", () => {
   it("normalizes profiles read back from storage", () => {
     localStorage.setItem(
       FILTER_PROFILES_KEY,
-      JSON.stringify({ broken: { modes: ["nope"], sort: 42 } }),
+      JSON.stringify({ broken: { modes: ["nope"], hideEmpty: "nope" } }),
     );
     expect(loadFilterProfiles().broken).toEqual(DEFAULT_FILTERS);
   });
