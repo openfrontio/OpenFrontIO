@@ -24,6 +24,13 @@ export interface MasterLobbyServiceOptions {
   log: typeof logger;
 }
 
+/**
+ * Lobbies the master keeps open per scheduled type: the one counting down
+ * plus the queue behind it. The whole queue is advertised, so the Detailed
+ * View can show what's coming, not just the lobby about to start.
+ */
+export const QUEUED_LOBBIES_PER_TYPE = 6;
+
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
@@ -238,8 +245,8 @@ export class MasterLobbyService {
     for (const type of SCHEDULED_PUBLIC_GAME_TYPES) {
       const lobbies = lobbiesByType[type];
 
-      // Always ensure the next lobby has a timer, even if we already have 2+
-      // lobbies. This prevents a race where two lobbies are created before
+      // Always ensure the next lobby has a timer, even if the queue is
+      // already full. This prevents a race where two lobbies are created before
       // either receives a startsAt (IPC round-trip delay), leaving both stuck
       // without a countdown.
       const nextLobby = lobbies[0];
@@ -251,7 +258,7 @@ export class MasterLobbyService {
         });
       }
 
-      if (lobbies.length >= 2) {
+      if (lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
         continue;
       }
 

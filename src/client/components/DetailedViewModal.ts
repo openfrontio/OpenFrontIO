@@ -41,11 +41,11 @@ import { styledSelect } from "./ui/StyledSelect";
 const SCHEDULED_PANES = ["ffa", "team", "special"] as const;
 
 /**
- * Lobbies the master keeps queued per scheduled bucket (the active one plus
- * the next). Panes always render this many slots so the layout holds its
- * height while a started lobby is replaced.
+ * Slots a pane always renders, matching QUEUED_LOBBIES_PER_TYPE on the master:
+ * the lobby counting down plus the queue behind it. Holding the slot count
+ * fixed keeps the pane's height steady while a started lobby is replaced.
  */
-const PANE_SLOTS = 2;
+const PANE_SLOTS = 6;
 
 /** Slot height; cards and the spawning placeholder both fill it exactly. */
 const SLOT_CLASS = "h-40";
