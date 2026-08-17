@@ -1378,21 +1378,17 @@ export class GameServer {
     | { ok: true; teams: string[][] }
     | { ok: false; status: number; error: string } {
     if (this.matchmakingTeams === undefined) {
-      return { ok: false, status: 400, error: "game has no matchmade teams" };
+      return { ok: false, status: 400, error: "game_not_matchmade" };
     }
     if (this.hasStarted()) {
-      return { ok: false, status: 409, error: "game already started" };
+      return { ok: false, status: 409, error: "game_already_started" };
     }
     if (
       !Number.isInteger(teamIndex) ||
       teamIndex < 0 ||
       teamIndex >= this.matchmakingTeams.length
     ) {
-      return {
-        ok: false,
-        status: 400,
-        error: `teamIndex ${teamIndex} outside 0..${this.matchmakingTeams.length - 1}`,
-      };
+      return { ok: false, status: 400, error: "team_index_out_of_range" };
     }
     const existing = this.matchmakingTeams.findIndex((team) =>
       team.includes(publicId),
@@ -1403,11 +1399,7 @@ export class GameServer {
       return { ok: true, teams: this.matchmakingTeams };
     }
     if (existing !== -1) {
-      return {
-        ok: false,
-        status: 409,
-        error: `${publicId} is already pinned to team ${existing}`,
-      };
+      return { ok: false, status: 409, error: "player_already_pinned" };
     }
     this.matchmakingTeams[teamIndex].push(publicId);
     return { ok: true, teams: this.matchmakingTeams };

@@ -58,7 +58,7 @@ describe("GameServer.addMatchmakingPin", () => {
     const game = makeGame([["a"], ["b"]]);
     const result = game.addMatchmakingPin("a", 1);
     expect(result).toMatchObject({ ok: false, status: 409 });
-    expect(String((result as any).error)).toContain("already pinned to team 0");
+    expect((result as any).error).toBe("player_already_pinned");
   });
 
   it("refuses a team index outside the list", () => {
