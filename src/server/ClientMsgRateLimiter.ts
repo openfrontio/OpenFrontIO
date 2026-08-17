@@ -4,12 +4,18 @@ import { ClientID } from "../core/Schemas";
 const INTENTS_PER_SECOND = 10;
 const INTENTS_PER_MINUTE = 150;
 const MAX_INTENT_SIZE = 2000;
+// A rejoin makes the server serialize and send the turn history since
+// `lastTurn`, which is the full game so far when lastTurn is 0. A real client
+// only sends one per (re)connect, so anything beyond a handful per minute is
+// abuse.
+const REJOINS_PER_MINUTE = 5;
 const TOTAL_BYTES = 5 * 1024 * 1024; // 5MB per client
 export type RateLimitResult = "ok" | "limit" | "kick";
 
 interface ClientBucket {
   perSecond: RateLimiter;
   perMinute: RateLimiter;
+  rejoinPerMinute: RateLimiter;
   totalBytes: number;
 }
 
@@ -37,6 +43,10 @@ export class ClientMsgRateLimiter {
       ) {
         return "limit";
       }
+    } else if (type === "rejoin") {
+      if (!bucket.rejoinPerMinute.tryRemoveTokens(1)) {
+        return "limit";
+      }
     }
 
     return "ok";
@@ -54,6 +64,10 @@ export class ClientMsgRateLimiter {
       }),
       perMinute: new RateLimiter({
         tokensPerInterval: INTENTS_PER_MINUTE,
+        interval: "minute",
+      }),
+      rejoinPerMinute: new RateLimiter({
+        tokensPerInterval: REJOINS_PER_MINUTE,
         interval: "minute",
       }),
       totalBytes: 0,
