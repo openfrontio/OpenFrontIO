@@ -98,6 +98,16 @@ describe("GameServer - spectators", () => {
     expect(info.players.map((p: any) => p.clientID)).toEqual(["p1"]);
   });
 
+  it("still has to be on the allowlist when the lobby sets one", () => {
+    // Taking no slot must not become a way around the allowlist.
+    const game = new GameServer("g1", logger, Date.now(), {
+      gameType: GameType.Private,
+      allowedPublicIds: ["p1-pub"],
+    } as any);
+    expect(game.joinClient(makeClient("cast", true))).toBe("not_allowlisted");
+    expect(game.joinClient(makeClient("p1", true))).toBe("joined");
+  });
+
   it("may join after the game has started", () => {
     // A caster arriving mid-game is the normal case; a late player already
     // gets the same treatment, so this only has to keep working.
