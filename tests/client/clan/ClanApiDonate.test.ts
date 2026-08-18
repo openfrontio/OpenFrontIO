@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../src/client/Api", () => ({
   getApiBase: vi.fn(() => "http://localhost:3000"),
@@ -25,10 +25,6 @@ const mockFetch = (impl: (...args: unknown[]) => unknown) => {
 beforeEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 describe("donateToClan", () => {
@@ -94,39 +90,13 @@ describe("donateToClan", () => {
     });
   });
 
-  it("retries a dead network with the same idempotency key, then succeeds", async () => {
-    vi.useFakeTimers();
-    let calls = 0;
-    const fetchMock = mockFetch(() => {
-      calls++;
-      if (calls < 3) throw new TypeError("Failed to fetch");
-      return res(201, {});
-    });
-    const pending = donateToClan("TST", "soft", "42", "same-key-1");
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(await pending).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    const bodies = fetchMock.mock.calls.map(
-      (c) => (c[1] as RequestInit).body as string,
-    );
-    expect(new Set(bodies).size).toBe(1);
-    expect(bodies[0]).toContain('"idempotencyKey":"same-key-1"');
-  });
-
-  it("gives up with the network key after the retries are exhausted", async () => {
-    vi.useFakeTimers();
+  it("reports a network failure after a single attempt (no auto-retry)", async () => {
     const fetchMock = mockFetch(() => {
       throw new TypeError("Failed to fetch");
     });
-    const pending = donateToClan("TST", "soft", "42", "same-key-1");
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(await pending).toEqual({ error: "clan_modal.error_network" });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  it("does not retry a real error response", async () => {
-    const fetchMock = mockFetch(() => res(403, {}));
-    await donateToClan("TST", "soft", "1", "k".repeat(8));
+    expect(await donateToClan("TST", "soft", "42", "same-key-1")).toEqual({
+      error: "clan_modal.error_network",
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

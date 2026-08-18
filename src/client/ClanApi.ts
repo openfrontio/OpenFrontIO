@@ -615,20 +615,16 @@ export async function fetchClanGames(
 
 export type ClanCurrencyType = "soft" | "hard";
 
-const DONATE_MAX_ATTEMPTS = 3;
-const DONATE_RETRY_BASE_MS = 500;
-
 /**
  * Moves currency from the caller's own wallet into the clan treasury. One-way
  * and final: the API never credits a clan balance back to a player.
  *
  * `amount` is a decimal integer string — balances are int64 server-side and a
- * JSON number would silently lose precision past 2^53. `idempotencyKey` must
- * be stable for the whole donation attempt: a request that died with no
- * response may still have gone through, and replaying the same key returns
- * the original 201 without moving more currency. Network failures are
- * therefore retried here with the same key before giving up; only a real
- * response is surfaced to the player.
+ * JSON number would silently lose precision past 2^53. A network failure just
+ * reports itself; the player retries by clicking Donate again. That retry is
+ * safe even if the dead request actually went through, because the dialog
+ * reuses the same `idempotencyKey` for its whole lifetime and the server
+ * replays the original 201 without moving more currency.
  */
 export async function donateToClan(
   tag: string,
@@ -636,34 +632,28 @@ export async function donateToClan(
   amount: string,
   idempotencyKey: string,
 ): Promise<true | { error: string }> {
-  for (let attempt = 1; ; attempt++) {
-    let res: Response;
-    try {
-      res = await clanFetch(`/clans/${encodeURIComponent(tag)}/donate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currencyType, amount, idempotencyKey }),
-      });
-    } catch {
-      if (attempt >= DONATE_MAX_ATTEMPTS) {
-        return { error: "clan_modal.error_network" };
-      }
-      await new Promise((r) => setTimeout(r, DONATE_RETRY_BASE_MS * attempt));
-      continue;
-    }
-    // 201 for a fresh donation and for an idempotent replay alike.
-    if (res.ok) return true;
-    if (res.status === 401) return { error: "clan_modal.sign_in_for_clans" };
-    if (res.status === 403) return { error: "clan_modal.donate_not_member" };
-    if (res.status === 400) {
-      const body = await res.json().catch(() => ({}));
-      const msg = (body as { message?: string }).message ?? "";
-      if (msg === "Insufficient balance") {
-        return { error: "clan_modal.donate_insufficient" };
-      }
-    }
-    return { error: "clan_modal.error_failed" };
+  let res: Response;
+  try {
+    res = await clanFetch(`/clans/${encodeURIComponent(tag)}/donate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currencyType, amount, idempotencyKey }),
+    });
+  } catch {
+    return { error: "clan_modal.error_network" };
   }
+  // 201 for a fresh donation and for an idempotent replay alike.
+  if (res.ok) return true;
+  if (res.status === 401) return { error: "clan_modal.sign_in_for_clans" };
+  if (res.status === 403) return { error: "clan_modal.donate_not_member" };
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({}));
+    const msg = (body as { message?: string }).message ?? "";
+    if (msg === "Insufficient balance") {
+      return { error: "clan_modal.donate_insufficient" };
+    }
+  }
+  return { error: "clan_modal.error_failed" };
 }
 
 export async function fetchClanBans(
