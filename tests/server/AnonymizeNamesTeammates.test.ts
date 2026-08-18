@@ -77,6 +77,40 @@ const byId = (info: any, id: string) =>
 const player = (info: any, id: string) =>
   info.players.find((p: any) => p.clientID === id);
 
+describe("lobby info carries the pinned team slot", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("sends each client its pinned team index", () => {
+    // Without this the lobby preview cannot see the pins at all, so it
+    // re-derives teams the server will overrule at start — showing partners
+    // apart, or everyone alone.
+    const info = makeGame(TEAMS).gameInfo("alice");
+    expect(byId(info, "alice").teamIndex).toBe(0);
+    expect(byId(info, "bob").teamIndex).toBe(0);
+    expect(byId(info, "carol").teamIndex).toBe(1);
+    expect(byId(info, "dave").teamIndex).toBe(1);
+  });
+
+  it("sends it on anonymized entries too — the grouping is not the identity", () => {
+    // carol/dave are hidden from alice, but their pairing is what the preview
+    // must render; the names stay fake.
+    const info = makeGame(TEAMS).gameInfo("alice");
+    expect(REAL).not.toContain(byId(info, "carol").username);
+    expect(byId(info, "carol").teamIndex).toBe(1);
+  });
+
+  it("omits it entirely when the game is not matchmade", () => {
+    const info = makeGame().gameInfo("alice");
+    for (const id of ["alice", "bob", "carol", "dave"]) {
+      expect(byId(info, id).teamIndex).toBeUndefined();
+    }
+  });
+});
+
 describe("anonymizeNames: pinned teammates see each other (lobby)", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => {

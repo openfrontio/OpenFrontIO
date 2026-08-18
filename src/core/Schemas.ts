@@ -232,6 +232,10 @@ const ClientInfoSchema = z.object({
   // Watching rather than playing. Listed like anyone else — a spectator sees the
   // lobby exactly as a player does — but not in the simulation.
   spectator: z.boolean().optional(),
+  // Server-pinned team slot for matchmade team games, so the lobby's team
+  // preview can honour the pins instead of re-deriving teams that the server
+  // will overrule at start. Absent when the game isn't matchmade.
+  teamIndex: z.number().int().nonnegative().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -321,6 +325,8 @@ export interface ClientInfo {
   // Watching rather than playing — listed like anyone else, but not in the
   // simulation.
   spectator?: boolean;
+  // Server-pinned team slot for matchmade team games; absent when not matchmade.
+  teamIndex?: number;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
