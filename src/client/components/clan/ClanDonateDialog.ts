@@ -166,6 +166,14 @@ export class ClanDonateDialog extends LitElement {
     const balance = this.balances
       ? formatCurrencyAmount(this.balances[type])
       : null;
+    // Selection is signaled three ways — a currency-colored fill+ring, a
+    // checkmark badge, and full-strength text — so it reads at a glance and
+    // doesn't rely on color alone. Green for plutonium and amber for caps,
+    // matching each currency's icon.
+    const selectedClasses =
+      type === "hard"
+        ? "bg-green-500/15 border-green-400/70 ring-2 ring-green-400/40 text-white"
+        : "bg-amber-500/15 border-amber-400/70 ring-2 ring-amber-400/40 text-white";
     return html`
       <button
         type="button"
@@ -174,10 +182,34 @@ export class ClanDonateDialog extends LitElement {
         data-currency=${type}
         ?disabled=${this.submitting}
         @click=${() => this.selectCurrency(type)}
-        class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${selected
-          ? "bg-white/10 border-white/40 text-white"
-          : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"} disabled:opacity-50 disabled:pointer-events-none"
+        class="relative flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${selected
+          ? selectedClasses
+          : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white"} disabled:opacity-50 disabled:pointer-events-none"
       >
+        ${selected
+          ? html`<span
+              data-check
+              class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full ${type ===
+              "hard"
+                ? "bg-green-400"
+                : "bg-amber-400"} text-black flex items-center justify-center"
+            >
+              <svg
+                class="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </span>`
+          : ""}
         <span
           class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
         >

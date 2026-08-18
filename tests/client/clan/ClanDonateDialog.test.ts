@@ -87,6 +87,16 @@ describe("clan-donate-dialog", () => {
     );
   });
 
+  it("marks the selected currency with a checkmark badge that follows selection", async () => {
+    expect(currencyButton("soft").querySelector("[data-check]")).toBeTruthy();
+    expect(currencyButton("hard").querySelector("[data-check]")).toBeNull();
+
+    currencyButton("hard").click();
+    await flush(dialog);
+    expect(currencyButton("soft").querySelector("[data-check]")).toBeNull();
+    expect(currencyButton("hard").querySelector("[data-check]")).toBeTruthy();
+  });
+
   it("adds the stronger warning when hard currency is selected", async () => {
     currencyButton("hard").click();
     await flush(dialog);
