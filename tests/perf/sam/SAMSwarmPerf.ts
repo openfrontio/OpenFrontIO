@@ -10,30 +10,17 @@
  * Usage:
  *   npx tsx tests/perf/sam/SAMSwarmPerf.ts [--ticks 1000] [--sams 100] [--missiles 25]
  */
-import fs from "fs";
 import path from "path";
 import { performance } from "perf_hooks";
 import { fileURLToPath } from "url";
-import { Config } from "../../../src/core/configuration/Config";
 import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
 import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
   PlayerInfo,
   PlayerType,
   Unit,
   UnitType,
 } from "../../../src/core/game/Game";
-import { createGame } from "../../../src/core/game/GameImpl";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import { GameConfig } from "../../../src/core/Schemas";
+import { setup } from "../../util/Setup";
 import { GcTracker, summarizeGcEvents } from "../fullgame/GcProfiler";
 import {
   CpuProfiler,
@@ -90,44 +77,17 @@ async function runBenchmark(): Promise<void> {
 
   console.debug = () => {}; // silence per-tick debug logging
 
-  // Load big_plains map
-  const mapPath = path.join(__dirname, "../../testdata/maps/big_plains");
-  const mapBin = fs.readFileSync(path.join(mapPath, "map.bin"));
-  const map4xBin = fs.readFileSync(path.join(mapPath, "map4x.bin"));
-  const manifest = JSON.parse(
-    fs.readFileSync(path.join(mapPath, "manifest.json"), "utf8"),
-  ) as MapManifest;
-
-  const gameMap = await genTerrainFromBin(manifest.map, mapBin);
-  const miniMap = await genTerrainFromBin(manifest.map4x, map4xBin);
-
-  const gameConfig: GameConfig = {
-    gameMap: GameMapType.World,
-    gameMapSize: GameMapSize.Normal,
-    gameMode: GameMode.FFA,
-    gameType: GameType.Singleplayer,
-    difficulty: Difficulty.Medium,
-    nations: "default",
-    donateGold: false,
-    donateTroops: false,
-    bots: 0,
-    infiniteGold: true,
-    infiniteTroops: false,
-    instantBuild: true,
-    randomSpawn: false,
-  };
-
-  const config = new Config(gameConfig, new UserSettings(), false);
   const defenderInfo = new PlayerInfo("def", PlayerType.Human, null, "def");
   const attackerInfo = new PlayerInfo("atk", PlayerType.Human, null, "atk");
-  const game = createGame(
+
+  const game = await setup(
+    "big_plains",
+    {
+      infiniteGold: true,
+      instantBuild: true,
+    },
     [defenderInfo, attackerInfo],
-    [],
-    gameMap,
-    miniMap,
-    config,
   );
-  game.endSpawnPhase();
 
   const defender = game.player("def")!;
   const attacker = game.player("atk")!;
