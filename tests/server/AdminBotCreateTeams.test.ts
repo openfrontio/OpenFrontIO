@@ -28,7 +28,11 @@ function captureCreateHandler() {
     ) {
       created.config = config;
       created.teams = matchmakingTeams;
-      return { setListed: vi.fn(), gameInfo: () => ({ gameID: "x" }) };
+      return {
+        markBotHosted: vi.fn(),
+        setListed: vi.fn(),
+        gameInfo: () => ({ gameID: "x" }),
+      };
     },
   };
   const log: any = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
