@@ -82,7 +82,7 @@ import {
 } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
-import "./components/DetailedViewModal";
+import "./components/DetailedGameViewModal";
 import "./components/Footer";
 import "./components/MainLayout";
 import "./components/MobileNavBar";

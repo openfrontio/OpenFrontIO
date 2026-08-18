@@ -31,7 +31,7 @@ import {
   NAMED_TEAM_CONFIGS,
   NUMERIC_TEAM_CONFIGS,
   saveFilterProfile,
-} from "./DetailedViewFilters";
+} from "./DetailedGameViewFilters";
 import { lobbyCard, mapAspectRatios } from "./LobbyCard";
 import { modalHeader } from "./ui/ModalHeader";
 import { styledSelect } from "./ui/StyledSelect";
@@ -88,7 +88,7 @@ const BUTTON_CLASS =
  * profiles.
  */
 @customElement("detailed-view-modal")
-export class DetailedViewModal extends BaseModal {
+export class DetailedGameViewModal extends BaseModal {
   protected routerName = "detailed-view";
 
   @state() private lobbies: PublicGames | null = null;

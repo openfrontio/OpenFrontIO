@@ -12,7 +12,7 @@ import {
   MAX_FILTER_PROFILES,
   normalizeFilters,
   saveFilterProfile,
-} from "../../src/client/components/DetailedViewFilters";
+} from "../../src/client/components/DetailedGameViewFilters";
 import {
   Duos,
   GameMapType,
