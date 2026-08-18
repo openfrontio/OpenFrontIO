@@ -17,11 +17,7 @@ function captureCreateHandler(game: { setListed: (v: boolean) => void }) {
   const gm: any = {
     createGame(_id: string, config: Record<string, unknown>) {
       created.config = config;
-      return {
-        markBotHosted: vi.fn(),
-        ...game,
-        gameInfo: () => ({ gameID: "x" }),
-      };
+      return { ...game, gameInfo: () => ({ gameID: "x" }) };
     },
   };
   const log: any = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };

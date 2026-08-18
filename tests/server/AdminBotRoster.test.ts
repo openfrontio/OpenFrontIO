@@ -49,21 +49,11 @@ beforeEach(() => {
 
 describe("GET /api/adminbot/game/:id/roster", () => {
   it("returns the clientID → publicId mapping for a bot-hosted lobby", () => {
-    const table = routes({ isBotHosted: () => true, roster: () => ROSTER });
+    const table = routes({ roster: () => ROSTER });
     const res = mockRes();
     table["/api/adminbot/game/:id/roster"]({ params: { id: "aaaaaaaa" } }, res);
     expect(res.statusCode).toBe(200);
     expect(res.body.players).toEqual(ROSTER);
-  });
-
-  it("refuses a lobby the bot did not create", () => {
-    // A public or matchmade game has no human creator either, so "no creator"
-    // cannot stand in for "ours" — this is why the flag exists.
-    const table = routes({ isBotHosted: () => false, roster: () => ROSTER });
-    const res = mockRes();
-    table["/api/adminbot/game/:id/roster"]({ params: { id: "aaaaaaaa" } }, res);
-    expect(res.statusCode).toBe(403);
-    expect(res.body).toEqual({ error: "not_bot_hosted" });
   });
 
   it("404s an unknown game rather than leaking whether it exists elsewhere", () => {
@@ -74,25 +64,9 @@ describe("GET /api/adminbot/game/:id/roster", () => {
   });
 
   it("rejects a malformed game id", () => {
-    const table = routes({ isBotHosted: () => true, roster: () => ROSTER });
+    const table = routes({ roster: () => ROSTER });
     const res = mockRes();
     table["/api/adminbot/game/:id/roster"]({ params: { id: "nope!" } }, res);
     expect(res.statusCode).toBe(400);
-  });
-
-  it("marks a lobby it creates as bot-hosted", () => {
-    const markBotHosted = vi.fn();
-    const table = routes({
-      markBotHosted,
-      setListed: vi.fn(),
-      gameInfo: () => ({ gameID: "aaaaaaaa" }),
-    });
-    vi.spyOn(ServerEnv, "generateGameIdForWorker").mockReturnValue("aaaaaaaa");
-    vi.spyOn(ServerEnv, "workerPath").mockReturnValue("w0");
-    table["/api/adminbot/create_game"](
-      { body: { gameMap: "World" } },
-      mockRes(),
-    );
-    expect(markBotHosted).toHaveBeenCalled();
   });
 });

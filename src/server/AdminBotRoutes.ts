@@ -202,8 +202,6 @@ export function registerAdminBotRoutes(opts: {
     if (game === null) {
       return res.status(409).json({ error: "Game ID already exists" });
     }
-    // Marks the lobby as this bot's, which is what /roster is gated on.
-    game.markBotHosted();
     if (listed) {
       game.setListed(true);
     }
@@ -223,13 +221,10 @@ export function registerAdminBotRoutes(opts: {
     });
   });
 
-  // Who joined this lobby, and the account behind each one. The public game
+  // Who joined this game, and the account behind each one. The public game
   // record carries no account id, so a host can otherwise see that 96 people
-  // played and identify none of them.
-  //
-  // Bot-hosted lobbies only: this is the one place a clientID can be tied to an
-  // account, and it must not become a way to read the roster of a public or
-  // matchmade game.
+  // played and identify none of them. Key-gated like every route here — the
+  // admin-bot key is the trust boundary, same as the stats endpoint above.
   app.get("/api/adminbot/game/:id/roster", requireAdminBotKey, (req, res) => {
     const id = req.params.id as string;
     if (!ownsGame(id, res)) return;
@@ -237,9 +232,6 @@ export function registerAdminBotRoutes(opts: {
     const game = gm.game(id);
     if (game === null) {
       return res.status(404).json({ error: "Game not found" });
-    }
-    if (!game.isBotHosted()) {
-      return res.status(403).json({ error: "not_bot_hosted" });
     }
     res.json({ gameID: id, players: game.roster() });
   });

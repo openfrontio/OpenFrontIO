@@ -1684,16 +1684,6 @@ export class GameServer {
     return this.listed;
   }
 
-  // Set once, by the admin-bot create_game route. A lobby with no human creator
-  // is NOT proof of this: public lobbies and matchmade games have none either.
-  private botHosted = false;
-  public markBotHosted(): void {
-    this.botHosted = true;
-  }
-  public isBotHosted(): boolean {
-    return this.botHosted;
-  }
-
   /** Who joined, and the account behind each one.
    *
    *  The public game record is PII-stripped, so a clientID can only be tied back
