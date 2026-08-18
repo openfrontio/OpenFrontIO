@@ -32,4 +32,13 @@ describe("NukeTrajectory thresholds", () => {
     expect(data.p0x).toBe(100);
     expect(data.p3x).toBe(800);
   });
+
+  test("intercepts nuke when targetable range begins inside SAM radius", () => {
+    const cp = horizontalCp(100, 800);
+    const thBase = computeTrajectoryThresholds(cp, 100, 500, 800, 500, []);
+    const th = computeTrajectoryThresholds(cp, 100, 500, 800, 500, [
+      { x: cp.p2x, y: cp.p2y, rangeSq: 200 * 200 },
+    ]);
+    expect(th.tSamIntercept).toBeCloseTo(thBase.tUntargetableEnd, 2);
+  });
 });

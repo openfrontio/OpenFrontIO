@@ -201,12 +201,12 @@ export function computeTrajectoryThresholds(
   if (sams.length > 0) {
     for (let i = 1; i <= THRESHOLD_SAMPLES; i++) {
       const t = i * dt;
+      const tPrev = t - dt;
 
-      // Skip untargetable segment
       if (
         tUntargetableStart >= 0 &&
-        t >= tUntargetableStart &&
-        t <= tUntargetableEnd
+        t > tUntargetableStart &&
+        t < tUntargetableEnd
       ) {
         continue;
       }
@@ -214,14 +214,30 @@ export function computeTrajectoryThresholds(
       const x = bezier(t, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
       const y = bezier(t, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
 
-      for (const sam of sams) {
-        if (distSq(x, y, sam.x, sam.y) <= sam.rangeSq) {
+      for (let s = 0; s < sams.length; s++) {
+        if (distSq(x, y, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
+          if (
+            tUntargetableEnd >= 0 &&
+            tPrev < tUntargetableEnd &&
+            t >= tUntargetableEnd
+          ) {
+            const xe = bezier(tUntargetableEnd, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
+            const ye = bezier(tUntargetableEnd, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
+            if (distSq(xe, ye, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
+              tSamIntercept = tUntargetableEnd;
+              break;
+            }
+          }
+          const lo =
+            tUntargetableEnd >= 0 && tPrev < tUntargetableEnd
+              ? tUntargetableEnd
+              : tPrev;
           tSamIntercept = refineCrossing(
             cp,
-            sam.x,
-            sam.y,
-            sam.rangeSq,
-            t - dt,
+            sams[s].x,
+            sams[s].y,
+            sams[s].rangeSq,
+            lo,
             t,
             false,
           );
