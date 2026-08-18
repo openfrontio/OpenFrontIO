@@ -3,13 +3,12 @@
  *
  * Stresses the SAM predictive targeting system (Behavior B), dynamic range calculation,
  * and zero-allocation swarm caching under extreme saturation:
- *   - 50 SAM launchers with continuous upgrade transitions
- *   - 300+ simultaneous in-flight missiles (Atom Bombs, Hydrogen Bombs, MIRVs)
+ *   - Defaults: 100 SAMs, 1000 ticks, 25 missiles/tick (25,000 total missiles)
  *   - Reports matching FullGamePerf: Per-tick wall time (mean/p50/p95/p99/max, slowest ticks),
  *     Time by Execution class table, and GC pause statistics.
  *
  * Usage:
- *   npx tsx tests/perf/sam/SAMSwarmPerf.ts [--ticks 200] [--sams 50] [--missiles 10]
+ *   npx tsx tests/perf/sam/SAMSwarmPerf.ts [--ticks 1000] [--sams 100] [--missiles 25]
  */
 import fs from "fs";
 import path from "path";

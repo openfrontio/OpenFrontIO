@@ -25,6 +25,7 @@ import vertSrc from "../shaders/sam-radius/sam-radius.vert.glsl?raw";
 
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-9;
+const TICK_INTERVAL_MS = 100;
 
 // Per-instance: x, y, radius, r, g, b, alpha, arcStart, arcEnd, spin
 const FLOATS_PER_INSTANCE = 10;
@@ -175,6 +176,7 @@ export class SAMRadiusPass {
   private lastGeometryTime = 0;
   private static readonly GEOMETRY_REFRESH_INTERVAL_MS = 50; // 20Hz refresh rate
   private dirtyGroups: Set<number> = new Set();
+  private readonly colorScratch: number[] = [0, 0, 0];
 
   // Owner-color mode fields
   private paletteData: Float32Array | null = null;
@@ -285,13 +287,15 @@ export class SAMRadiusPass {
     if (tick === this.currentTick) return;
     this.currentTick = tick;
     this.lastTickTime = performance.now();
-    this.rebuild();
+    if (this.hasUpgradingSAM) {
+      this.rebuild();
+    }
   }
 
   private getContinuousTick(): number {
     const subTick = Math.min(
-      1.0,
-      Math.max(0, (performance.now() - this.lastTickTime) / 100),
+      1,
+      Math.max(0, (performance.now() - this.lastTickTime) / TICK_INTERVAL_MS),
     );
     return this.currentTick + subTick;
   }
@@ -329,11 +333,10 @@ export class SAMRadiusPass {
   private getSAMColor(ownerID: number, isFriendly: boolean): number[] {
     if (this.colorMode === "owner" && this.paletteData) {
       const off = ownerID * 4;
-      return [
-        this.paletteData[off],
-        this.paletteData[off + 1],
-        this.paletteData[off + 2],
-      ];
+      this.colorScratch[0] = this.paletteData[off];
+      this.colorScratch[1] = this.paletteData[off + 1];
+      this.colorScratch[2] = this.paletteData[off + 2];
+      return this.colorScratch;
     }
     return ownerID === this.localPlayerID
       ? COLOR_SELF

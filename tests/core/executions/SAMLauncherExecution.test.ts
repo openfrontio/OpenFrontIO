@@ -621,4 +621,22 @@ describe("SAM", () => {
     expect(nuke.wasDestroyedByEnemy()).toBeTruthy();
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
   });
+
+  it("SAM range resets to base level range when level is decreased", () => {
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    sam.setUnderConstruction(false);
+
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(20);
+
+    // Upgrade to level 2
+    sam.increaseLevel();
+    executeTicks(game, 10);
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBeGreaterThan(
+      20,
+    );
+
+    // Demote back to level 1
+    sam.decreaseLevel();
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(20);
+  });
 });
