@@ -1642,6 +1642,7 @@ export class GameServer {
             username: this.anonName(viewer, c.clientID),
             clanTag: null,
             clientID: c.clientID,
+            teamIndex: this.matchmakingTeamIndex(c),
           };
         }
         // A TEAMMATE reveal is deliberately narrower than the others. Seeing a
@@ -1659,6 +1660,7 @@ export class GameServer {
           clientID: c.clientID,
           friends: teammateOnly ? undefined : friendsFor(c),
           verified: c.cosmetics?.verified,
+          teamIndex: this.matchmakingTeamIndex(c),
         };
       }),
       lobbyCreatorClientID: this.lobbyCreatorID,
