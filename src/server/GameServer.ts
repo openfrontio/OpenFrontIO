@@ -758,11 +758,9 @@ export class GameServer {
       return "not_allowlisted";
     }
 
-    // The player list is frozen at start, so anyone arriving after it cannot be
-    // in the simulation whatever they asked for. They used to be admitted as a
-    // player anyway: sent a start message, absent from gameStartInfo, unable to
-    // spawn. Watching is what actually happens to them, so it is what they join
-    // as.
+    // gameStartInfo.players is frozen at start, so a late arrival could never
+    // spawn. They used to join as a player anyway; watching is what actually
+    // happened to them, so it is what they join as.
     if (this._hasStarted) {
       client.spectator = true;
     }
@@ -1401,12 +1399,9 @@ export class GameServer {
     return this.activeClients.filter((c) => !c.spectator).length;
   }
 
-  // Switch a client between playing and watching from the lobby screen.
-  //
-  // Only before the start: gameStartInfo.players is frozen there, so becoming a
-  // player afterwards would put someone in the lobby list who can never spawn —
-  // the thing the late-join rule exists to prevent. Taking a seat also has to
-  // respect the cap, or the toggle would be a way past it.
+  // Switch a client between playing and watching from the lobby screen. Seating
+  // is refused once the game has started (the player list is frozen) or when the
+  // lobby is full, or the toggle would be a way past the cap.
   private setSpectator(client: Client, spectator: boolean): void {
     if (client.spectator === spectator) return;
     if (!spectator) {
