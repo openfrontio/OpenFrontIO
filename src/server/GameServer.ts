@@ -1439,6 +1439,43 @@ export class GameServer {
     ).size;
   }
 
+  // Pin a publicId to a team slot after the lobby exists, so a lobby that fills
+  // over time can still seat late joiners with their partners.
+  // matchmakingTeamIndex resolves against this array live and is only read when
+  // gameStartInfo is built at start, so nothing needs recomputing.
+  public addMatchmakingPin(
+    publicId: string,
+    teamIndex: number,
+  ):
+    | { ok: true; teams: string[][] }
+    | { ok: false; status: number; error: string } {
+    if (this.matchmakingTeams === undefined) {
+      return { ok: false, status: 400, error: "game_not_matchmade" };
+    }
+    if (this.hasStarted()) {
+      return { ok: false, status: 409, error: "game_already_started" };
+    }
+    if (
+      !Number.isInteger(teamIndex) ||
+      teamIndex < 0 ||
+      teamIndex >= this.matchmakingTeams.length
+    ) {
+      return { ok: false, status: 400, error: "team_index_out_of_range" };
+    }
+    const existing = this.matchmakingTeams.findIndex((team) =>
+      team.includes(publicId),
+    );
+    // Idempotent, so a caller retrying after a dropped response converges.
+    if (existing === teamIndex) {
+      return { ok: true, teams: this.matchmakingTeams };
+    }
+    if (existing !== -1) {
+      return { ok: false, status: 409, error: "player_already_pinned" };
+    }
+    this.matchmakingTeams[teamIndex].push(publicId);
+    return { ok: true, teams: this.matchmakingTeams };
+  }
+
   // Resolves a client to its matchmade team slot (index into
   // matchmakingTeams), or undefined when the game isn't matchmade / the
   // client isn't in the assignment.
