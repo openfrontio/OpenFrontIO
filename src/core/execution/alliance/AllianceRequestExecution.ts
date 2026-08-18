@@ -92,28 +92,48 @@ export class AllianceRequestExecution implements Execution {
     const players = [this.requestor, recipient];
 
     for (const launcher of players) {
-      for (const unit of launcher.units(
+      const other = launcher === this.requestor ? recipient : this.requestor;
+
+      for (const unit of launcher.units([
         UnitType.AtomBomb,
         UnitType.HydrogenBomb,
-      )) {
+        UnitType.MIRV,
+        UnitType.MIRVWarhead,
+      ])) {
         if (!unit.isActive() || unit.reachedTarget()) continue;
 
         const targetTile = unit.targetTile();
         if (!targetTile) continue;
 
-        const other = launcher === this.requestor ? recipient : this.requestor;
-        const magnitude = this.mg.config().nukeMagnitudes(unit.type());
         if (
-          !wouldNukeBreakAlliance({
-            game: this.mg,
-            targetTile,
-            magnitude,
-            allySmallIds: new Set([other.smallID()]),
-            threshold: this.mg.config().nukeAllianceBreakThreshold(),
-          })
+          unit.type() === UnitType.MIRV ||
+          unit.type() === UnitType.MIRVWarhead
         ) {
-          continue;
+          // A MIRV (and each individual warhead it separates into) breaks an
+          // alliance unconditionally when aimed at a current ally - see the
+          // "Betrayal on launch" check in MirvExecution.init() - unlike
+          // AtomBomb/HydrogenBomb, which only break above a tile-count
+          // threshold. An in-flight MIRV has to be cancelled on acceptance
+          // by that same unconditional rule: otherwise it keeps flying,
+          // separates into hundreds of warheads, and devastates the player
+          // you just allied with, with no alliance-break or relation
+          // penalty since MIRVWarhead impacts don't run that check either.
+          if (this.mg.owner(targetTile) !== other) continue;
+        } else {
+          const magnitude = this.mg.config().nukeMagnitudes(unit.type());
+          if (
+            !wouldNukeBreakAlliance({
+              game: this.mg,
+              targetTile,
+              magnitude,
+              allySmallIds: new Set([other.smallID()]),
+              threshold: this.mg.config().nukeAllianceBreakThreshold(),
+            })
+          ) {
+            continue;
+          }
         }
+
         unit.delete(false);
         neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
       }
