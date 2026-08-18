@@ -127,7 +127,11 @@ export class DoomsdayClockExecution implements Execution {
 
     const land = mg.numLandTiles() - mg.numTilesWithFallout();
     // One bar for every side this tick (solo or team — headcount never scales it).
-    const required = doomsdayClockRequiredTiles(cfg.speed, land, elapsed);
+    const required = doomsdayClockRequiredTiles(
+      { ...cfg, teamGame: !ffa },
+      land,
+      elapsed,
+    );
 
     // The leading side (the crown holder in FFA, the top team otherwise) is
     // never doomed. Doomsday Clock culls the challengers toward the leader, so the
