@@ -516,6 +516,20 @@ export class ClanModal extends BaseModal {
           this.openPlayerProfile(e.detail.publicId)}
         @navigate-manage=${() => (this.view = "manage")}
         @navigate-requests=${() => (this.view = "requests")}
+        @clan-donated=${(e: CustomEvent<{ clan: ClanInfo }>) => {
+          // Fresh detail after a donation: the header treasury and the My
+          // Clans card both show balances, so both pick up the new figures.
+          this.selectedClan = e.detail.clan;
+          this.myClans = this.myClans.map((c) =>
+            c.tag === e.detail.clan.tag
+              ? {
+                  ...c,
+                  softBalance: e.detail.clan.softBalance,
+                  hardBalance: e.detail.clan.hardBalance,
+                }
+              : c,
+          );
+        }}
         @clan-joined=${(e: CustomEvent<{ tag: string }>) => {
           this.myClanRoles = new Map([
             ...this.myClanRoles,
