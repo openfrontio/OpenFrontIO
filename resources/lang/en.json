@@ -1474,6 +1474,8 @@
   "radial_menu": {
     "delete_unit_description": "Click to delete the nearest unit",
     "delete_unit_title": "Delete Unit",
+    "target_description": "Mark this nation as a target, calling on your allies to attack it",
+    "target_title": "Request Allies to Attack",
     "upgrade_x": "Upgrade x{amount}"
   },
   "relation": {

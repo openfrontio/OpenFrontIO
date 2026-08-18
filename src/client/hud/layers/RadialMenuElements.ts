@@ -165,7 +165,6 @@ const infoChatElement: MenuElement = {
       })),
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTargetElement: MenuElement = {
   id: "ally_target",
   name: "target",
@@ -175,6 +174,16 @@ const allyTargetElement: MenuElement = {
   },
   color: COLORS.target,
   icon: targetIcon,
+  tooltipKeys: [
+    {
+      key: "radial_menu.target_title",
+      className: "title",
+    },
+    {
+      key: "radial_menu.target_description",
+      className: "description",
+    },
+  ],
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleTargetPlayer(params.selected!.id());
     params.closeMenu();
@@ -810,6 +819,7 @@ export const rootMenuElement: MenuElement = {
             showDonateInsteadOfAttack
               ? donateGoldRadialElement
               : attackMenuElement,
+            ...(!isAllied ? [allyTargetElement] : []),
           ]),
     ];
 
