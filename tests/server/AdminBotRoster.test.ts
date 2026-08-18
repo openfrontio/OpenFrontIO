@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GameType } from "../../src/core/game/Game";
 import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
+import { Client } from "../../src/server/Client";
+import { GameServer } from "../../src/server/GameServer";
 import { ServerEnv } from "../../src/server/ServerEnv";
 
 // The roster endpoint is the ONE place a per-game clientID can be tied back to an
@@ -68,5 +71,71 @@ describe("GET /api/adminbot/game/:id/roster", () => {
     const res = mockRes();
     table["/api/adminbot/game/:id/roster"]({ params: { id: "nope!" } }, res);
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("GameServer.roster() — the real projection", () => {
+  // The route tests above stub roster(); this one drives the real thing on a
+  // real GameServer, because the projection's value is its SEMANTICS: it reads
+  // allClients, so a player who joined and then disconnected still appears in
+  // the mapping the host has to reconcile against the game record.
+  function makeMockWs() {
+    return {
+      on: () => {},
+      removeAllListeners: () => {},
+      send: vi.fn(),
+      close: vi.fn(),
+      readyState: 1,
+    };
+  }
+  function makeClient(id: string, publicId?: string): Client {
+    return new Client(
+      id,
+      `${id}-pid`,
+      null,
+      null,
+      undefined,
+      `10.1.0.${ipOctet++}`,
+      id,
+      null,
+      makeMockWs() as any,
+      undefined,
+      publicId,
+      [],
+    );
+  }
+  let ipOctet = 1;
+  const logger: any = {
+    child: vi.fn().mockReturnThis(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+
+  it("maps every joiner — including one who already disconnected", () => {
+    vi.useFakeTimers();
+    try {
+      const game = new GameServer("g1", logger, Date.now(), {
+        gameType: GameType.Private,
+      } as any);
+      const stays = makeClient("c1", "pub1");
+      const leaves = makeClient("c2", "pub2");
+      const anon = makeClient("c3"); // no account — publicId stays undefined
+      expect(game.joinClient(stays)).toBe("joined");
+      expect(game.joinClient(leaves)).toBe("joined");
+      expect(game.joinClient(anon)).toBe("joined");
+
+      (game as any).handleClientDisconnect(leaves);
+
+      const players = game.roster();
+      expect(players).toEqual([
+        { clientID: "c1", publicId: "pub1", username: "c1" },
+        { clientID: "c2", publicId: "pub2", username: "c2" },
+        { clientID: "c3", publicId: undefined, username: "c3" },
+      ]);
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 });
