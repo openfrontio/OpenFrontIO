@@ -744,14 +744,7 @@ export class GameServer {
     // OFM: if an allowlist is set, only those publicIds may join. Re-checked on
     // every join attempt. Admins/root bypass it so moderation can reach any
     // private lobby; a kick still applies (checked above).
-    const allowedPublicIds = this.gameConfig.allowedPublicIds;
-    if (
-      allowedPublicIds !== undefined &&
-      allowedPublicIds.length > 0 &&
-      !isAdminRole(client.role) &&
-      (client.publicId === undefined ||
-        !allowedPublicIds.includes(client.publicId))
-    ) {
+    if (!this.passesAllowlist(client)) {
       this.log.warn("client not on allowlist, rejecting", {
         clientID: client.clientID,
       });
@@ -1399,13 +1392,27 @@ export class GameServer {
     return this.activeClients.filter((c) => !c.spectator).length;
   }
 
+  // ONE definition of who the allowlist admits, shared by every path that can
+  // put someone in (or seat someone into) this game — joinClient and the lobby
+  // Play/Spectate toggle. Admins bypass it so moderation can reach any lobby.
+  private passesAllowlist(client: Client): boolean {
+    const allowed = this.gameConfig.allowedPublicIds;
+    if (allowed === undefined || allowed.length === 0) return true;
+    if (isAdminRole(client.role)) return true;
+    return client.publicId !== undefined && allowed.includes(client.publicId);
+  }
+
   // Switch a client between playing and watching from the lobby screen. Seating
-  // is refused once the game has started (the player list is frozen) or when the
-  // lobby is full, or the toggle would be a way past the cap.
+  // is refused once the game has started (the player list is frozen), when the
+  // lobby is full, or when the allowlist does not name them — the toggle must
+  // not be a way past either. The allowlist can gain entries AFTER people are in
+  // the lobby (update_game_config replaces it), so someone admitted before it
+  // was set is not proof they may hold a seat now.
   private setSpectator(client: Client, spectator: boolean): void {
     if (client.spectator === spectator) return;
     if (!spectator) {
       if (this._hasStarted || this._hasEnded) return;
+      if (!this.passesAllowlist(client)) return;
       const max = this.gameConfig.maxPlayers;
       if (max !== undefined && this.playerCount() >= max) return;
     }

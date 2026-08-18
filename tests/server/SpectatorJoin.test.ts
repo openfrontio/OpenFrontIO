@@ -259,6 +259,32 @@ describe("GameServer - spectators", () => {
       expect(c.spectator).toBe(true);
     });
 
+    it("cannot take a seat the allowlist does not name them for", () => {
+      // The allowlist can gain entries AFTER someone is already in the lobby
+      // (update_game_config replaces it), so being inside is not proof of a
+      // seat. Without this, the toggle is a way past the allowlist the moment
+      // anything admits a non-listed spectator.
+      const game = new GameServer("g1", logger, Date.now(), {
+        gameType: GameType.Private,
+        allowedPublicIds: ["p1-pub"],
+      } as any);
+      const listed = makeClient("p1", true);
+      const unlisted = makeClient("cast", true);
+      // Admit both while... the unlisted one cannot join an allowlisted lobby
+      // today, so simulate the post-join list change: join first, then set it.
+      const open = new GameServer("g2", logger, Date.now(), {
+        gameType: GameType.Private,
+      } as any);
+      open.joinClient(unlisted);
+      (open as any).gameConfig.allowedPublicIds = ["someone-else-pub"];
+      setSpectator(open, unlisted, false);
+      expect(unlisted.spectator).toBe(true);
+
+      game.joinClient(listed);
+      setSpectator(game, listed, false);
+      expect(listed.spectator).toBe(false);
+    });
+
     it("cannot become a player once the game has started", () => {
       // gameStartInfo.players is frozen, so a new player could never spawn.
       const game = makeGame();
