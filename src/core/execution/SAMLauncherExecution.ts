@@ -1,4 +1,3 @@
-import { UnitView } from "src/client/view";
 import { Execution, Game, isUnit, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -146,11 +145,16 @@ class SAMTargetingSystem {
     };
   }
 
-  private isTargetableNearbyUnit({ unit }: { unit: Unit | UnitView }): boolean {
+  private isTargetableNearbyUnit = ({
+    unit,
+  }: {
+    unit: unknown;
+    distSquared: number;
+  }): boolean => {
     return this.isValidNukeTarget(unit);
-  }
+  };
 
-  private isValidNukeTarget(unit: Unit | UnitView): boolean {
+  private isValidNukeTarget(unit: unknown): boolean {
     if (
       !isUnit(unit) ||
       unit.targetedBySAM() ||

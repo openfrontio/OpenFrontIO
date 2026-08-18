@@ -725,6 +725,9 @@ export class UnitImpl implements Unit {
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.pop();
     }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = undefined;
+    }
     if (this._level <= 0) {
       this.delete(true, destroyer);
       return;

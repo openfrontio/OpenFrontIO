@@ -102,9 +102,7 @@ function applyUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.hasTrainStation = u.hasTrainStation;
   target.trainType = trainTypeToNum(u.trainType);
   target.loaded = u.loaded ?? null;
-  if (u.samUpgrade !== undefined) {
-    target.samUpgrade = u.samUpgrade;
-  }
+  target.samUpgrade = u.samUpgrade;
 }
 
 export class UnitView {
