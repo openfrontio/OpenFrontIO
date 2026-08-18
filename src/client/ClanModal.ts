@@ -17,6 +17,7 @@ import type { ClanRole } from "./components/clan/ClanShared";
 import "./components/clan/ClanTransferView";
 import "./components/ConfirmDialog";
 import "./components/CopyButton";
+import "./components/CurrencyDisplay";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { modalRouter } from "./ModalRouter";
 import type { ProfileOrigin } from "./PlayerProfileModal";
@@ -166,6 +167,20 @@ export class ClanModal extends BaseModal {
     >`;
   }
 
+  // The clan treasury, sitting in the header the way the store shows the
+  // player's own wallet. These are the clan's balances, not the viewer's, and
+  // they are public — every viewer sees them, member or not. Renders nothing
+  // when the API reported neither balance.
+  private clanBalances(clan: ClanInfo) {
+    return html`<div class="flex items-center gap-3">
+      <currency-display
+        .hard=${clan.hardBalance ?? null}
+        .soft=${clan.softBalance ?? null}
+      ></currency-display>
+      ${this.tagPill(clan.tag)}
+    </div>`;
+  }
+
   // Every exit from the clan detail calls this first: when a profile opened the
   // clan, Back belongs to that profile, not this modal's list. False = no
   // profile origin, so the caller does its normal list navigation.
@@ -240,7 +255,7 @@ export class ClanModal extends BaseModal {
         this.setActiveTab(this.previousListTab);
       },
       ariaLabel,
-      rightContent: clan ? this.tagPill(clan.tag) : undefined,
+      rightContent: clan ? this.clanBalances(clan) : undefined,
     });
   }
 
@@ -319,6 +334,8 @@ export class ClanModal extends BaseModal {
           description: "",
           isOpen: false,
           memberCount: c.memberCount,
+          softBalance: c.softBalance,
+          hardBalance: c.hardBalance,
         });
       }
       this.myClanRoles = roles;
