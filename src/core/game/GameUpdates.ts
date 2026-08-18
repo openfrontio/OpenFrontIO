@@ -200,6 +200,12 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  samUpgrade?: {
+    startTick: number;
+    startRange: number;
+    targetLevel: number;
+    duration: number;
+  };
 }
 
 export interface AttackUpdate {

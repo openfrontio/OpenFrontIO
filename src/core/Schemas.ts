@@ -95,6 +95,17 @@ export type ToggleGameStartTimer = z.infer<
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
 
+export const UnitUpdateSchema = z.object({
+  samUpgrade: z
+    .object({
+      startTick: z.number(),
+      startRange: z.number(),
+      targetLevel: z.number(),
+      duration: z.number(),
+    })
+    .optional(),
+});
+
 export type ClientMessage =
   | ClientSendWinnerMessage
   | ClientSendLiveStatsMessage

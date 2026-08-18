@@ -26,8 +26,8 @@ import vertSrc from "../shaders/sam-radius/sam-radius.vert.glsl?raw";
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-9;
 
-// Per-instance: x, y, radius, r, g, b, arcStart, arcEnd
-const FLOATS_PER_INSTANCE = 8;
+// Per-instance: x, y, radius, r, g, b, alpha, arcStart, arcEnd, spin
+const FLOATS_PER_INSTANCE = 10;
 
 // Relationship colors
 const COLOR_SELF = [0, 1, 0]; // green
@@ -38,11 +38,19 @@ interface SAMCircle {
   x: number;
   y: number;
   radius: number;
-  color: number[];
+  r: number;
+  g: number;
+  b: number;
+  alpha: number;
   group: number; // alliance group: 0 = friendly, 1 = enemy
+  spin: number; // 1.0 = spinning, 0.0 = static
 }
 
 type Interval = [number, number];
+
+function compareIntervalStart(a: Interval, b: Interval): number {
+  return a[0] - b[0];
+}
 
 // ---------------------------------------------------------------------------
 // Circle union geometry
@@ -69,7 +77,7 @@ function mergeIntervals(intervals: Interval[]): Interval[] {
       flat.push([ns, ne]);
     }
   }
-  flat.sort((a, b) => a[0] - b[0]);
+  flat.sort(compareIntervalStart);
 
   const merged: Interval[] = [];
   let cur: Interval = [flat[0][0], flat[0][1]];
@@ -90,42 +98,39 @@ function mergeIntervals(intervals: Interval[]): Interval[] {
 function computeUncoveredArcs(a: SAMCircle, circles: SAMCircle[]): Interval[] {
   const covered: Interval[] = [];
 
-  for (const b of circles) {
+  for (let i = 0; i < circles.length; i++) {
+    const b = circles[i];
     if (a === b) continue;
-    if (a.group !== b.group) continue;
 
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const d = Math.hypot(dx, dy);
+    const dSq = dx * dx + dy * dy;
+    if (dSq <= EPS) continue;
 
-    // a fully inside b → no visible arcs
-    if (d + a.radius <= b.radius + EPS) return [];
+    // 1. Fast Enclosure Check (if a is engulfed inside b -> emit 0 quads)
+    const diff = b.radius - a.radius;
+    if (diff >= 0 && dSq <= diff * diff + EPS) return [];
 
-    // No overlap
-    if (d >= a.radius + b.radius - EPS) continue;
+    // 2. Fast Disjoint Check (90%+ of circle pairs rejected with 0 sqrt/trig)
+    const maxDist = a.radius + b.radius;
+    if (dSq >= maxDist * maxDist - EPS) continue;
 
-    // Coincident centers
-    if (d <= EPS) {
-      if (b.radius >= a.radius) return [];
-      continue;
-    }
-
-    // Angular span on a covered by b (law of cosines)
+    // 3. Exact arc angle calculation only on intersecting circles
+    const d = Math.sqrt(dSq);
     const cosPhi =
-      (a.radius * a.radius + d * d - b.radius * b.radius) / (2 * a.radius * d);
+      (a.radius * a.radius + dSq - b.radius * b.radius) / (2 * a.radius * d);
     const phi = Math.acos(Math.max(-1, Math.min(1, cosPhi)));
     const theta = Math.atan2(dy, dx);
     covered.push([theta - phi, theta + phi]);
   }
 
   const merged = mergeIntervals(covered);
-
-  // Subtract covered from [0, 2π)
   if (merged.length === 0) return [[0, TWO_PI]];
 
   const uncovered: Interval[] = [];
   let cursor = 0;
-  for (const [s, e] of merged) {
+  for (let i = 0; i < merged.length; i++) {
+    const [s, e] = merged[i];
     if (s > cursor + EPS) uncovered.push([cursor, s]);
     cursor = Math.max(cursor, e);
   }
@@ -163,6 +168,13 @@ export class SAMRadiusPass {
 
   private localPlayerID = 0;
   private allies = new Set<number>();
+  private currentTick = 0;
+  private lastTickTime: number = performance.now();
+  private hasUpgradingSAM: boolean = false;
+  private groupBuckets: SAMCircle[][] = [];
+  private lastGeometryTime = 0;
+  private static readonly GEOMETRY_REFRESH_INTERVAL_MS = 50; // 20Hz refresh rate
+  private dirtyGroups: Set<number> = new Set();
 
   // Owner-color mode fields
   private paletteData: Float32Array | null = null;
@@ -229,14 +241,14 @@ export class SAMRadiusPass {
     gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 0);
     gl.vertexAttribDivisor(1, 1);
 
-    // Attribute 2: per-instance vec3 (r, g, b)
+    // Attribute 2: per-instance vec4 (r, g, b, alpha)
     gl.enableVertexAttribArray(2);
-    gl.vertexAttribPointer(2, 3, gl.FLOAT, false, stride, 12);
+    gl.vertexAttribPointer(2, 4, gl.FLOAT, false, stride, 12);
     gl.vertexAttribDivisor(2, 1);
 
-    // Attribute 3: per-instance vec2 (arcStart, arcEnd)
+    // Attribute 3: per-instance vec3 (arcStart, arcEnd, spin)
     gl.enableVertexAttribArray(3);
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, stride, 24);
+    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, stride, 28);
     gl.vertexAttribDivisor(3, 1);
 
     gl.bindVertexArray(null);
@@ -269,83 +281,236 @@ export class SAMRadiusPass {
     this.allianceClusters = clusters;
   }
 
+  setTick(tick: number): void {
+    if (tick === this.currentTick) return;
+    this.currentTick = tick;
+    this.lastTickTime = performance.now();
+    this.rebuild();
+  }
+
+  private getContinuousTick(): number {
+    const subTick = Math.min(
+      1.0,
+      Math.max(0, (performance.now() - this.lastTickTime) / 100),
+    );
+    return this.currentTick + subTick;
+  }
+
   private rebuild(): void {
     if (this.lastStructures) this.updateStructures(this.lastStructures);
   }
 
   /** Call with current structures to update SAM positions/radii/colors. */
-  updateStructures(structures: Map<number, UnitState>): void {
+  updateStructures(
+    structures: Map<number, UnitState>,
+    currentTick?: number,
+  ): void {
+    if (currentTick !== undefined) {
+      this.currentTick = currentTick;
+      this.lastTickTime = performance.now();
+    }
+    this.lastGeometryTime = performance.now();
     this.lastStructures = structures;
-    const w = this.mapW;
-    const ownerMode = this.colorMode === "owner";
+    const circles = this.collectSAMCircles(
+      structures,
+      this.getContinuousTick(),
+    );
+    this.uploadInstances(circles);
+  }
 
-    // 1. Collect SAM circles
+  private getSAMBaseGroup(u: UnitState, isFriendly: boolean): number {
+    return this.colorMode === "owner"
+      ? (this.allianceClusters.get(u.ownerID) ?? u.ownerID)
+      : isFriendly
+        ? 0
+        : 1;
+  }
+
+  private getSAMColor(ownerID: number, isFriendly: boolean): number[] {
+    if (this.colorMode === "owner" && this.paletteData) {
+      const off = ownerID * 4;
+      return [
+        this.paletteData[off],
+        this.paletteData[off + 1],
+        this.paletteData[off + 2],
+      ];
+    }
+    return ownerID === this.localPlayerID
+      ? COLOR_SELF
+      : this.allies.has(ownerID)
+        ? COLOR_ALLY
+        : COLOR_ENEMY;
+  }
+
+  private collectSAMCircles(
+    structures: Map<number, UnitState>,
+    continuousTick: number,
+  ): SAMCircle[] {
     const circles: SAMCircle[] = [];
-    for (const u of structures.values()) {
-      if (u.unitType !== UT_SAM_LAUNCHER) continue;
-      if (!u.isActive) continue;
+    const w = this.mapW;
+    this.dirtyGroups.clear();
 
+    for (const u of structures.values()) {
+      if (u.unitType !== UT_SAM_LAUNCHER || !u.isActive) continue;
+      const isFriendly =
+        u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
+      const bg = this.getSAMBaseGroup(u, isFriendly);
+      const up = u.samUpgrade;
+      if (
+        up &&
+        continuousTick - up.startTick >= 0 &&
+        continuousTick - up.startTick < (up.duration ?? 45)
+      ) {
+        this.dirtyGroups.add(bg);
+      }
+    }
+    this.hasUpgradingSAM = this.dirtyGroups.size > 0;
+
+    for (const u of structures.values()) {
+      if (u.unitType !== UT_SAM_LAUNCHER || !u.isActive) continue;
+      const isFriendly =
+        u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
+      const bg = this.getSAMBaseGroup(u, isFriendly);
+      const color = this.getSAMColor(u.ownerID, isFriendly);
       const x = u.pos % w;
       const y = (u.pos - x) / w;
+      this.pushSAMCircles(
+        circles,
+        u,
+        x,
+        y,
+        color,
+        bg,
+        continuousTick,
+        isFriendly,
+        this.dirtyGroups.has(bg),
+      );
+    }
+    return circles;
+  }
 
-      let color: number[];
-      let group: number;
+  private pushSAMCircles(
+    circles: SAMCircle[],
+    u: UnitState,
+    x: number,
+    y: number,
+    color: number[],
+    baseGroup: number,
+    continuousTick: number,
+    isFriendly: boolean,
+    isGroupUpgrading: boolean,
+  ): void {
+    const up = u.samUpgrade;
+    const duration = up?.duration ?? 45;
+    const elapsed = up ? continuousTick - up.startTick : Infinity;
+    const activeGroup = baseGroup * 2;
+    const previewGroup = baseGroup * 2 + 1;
 
-      if (ownerMode && this.paletteData) {
-        // Owner-colored: palette color, alliance-cluster-based merging
-        const off = u.ownerID * 4;
-        color = [
-          this.paletteData[off],
-          this.paletteData[off + 1],
-          this.paletteData[off + 2],
-        ];
-        group = this.allianceClusters.get(u.ownerID) ?? u.ownerID;
-      } else {
-        // Perspective: self/ally/enemy colors, binary group
-        const isFriendly =
-          u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
-        color =
-          u.ownerID === this.localPlayerID
-            ? COLOR_SELF
-            : this.allies.has(u.ownerID)
-              ? COLOR_ALLY
-              : COLOR_ENEMY;
-        group = isFriendly ? 0 : 1;
-      }
+    if (up && elapsed >= 0 && elapsed < duration) {
+      const progress = Math.max(0, Math.min(1, elapsed / duration));
+      const targetRadius = samRange(up.targetLevel);
+      const currentRadius =
+        up.startRange + (targetRadius - up.startRange) * progress;
 
+      // Layer 0: Active operating radius
+      circles.push({
+        x,
+        y,
+        radius: currentRadius,
+        r: color[0],
+        g: color[1],
+        b: color[2],
+        alpha: isFriendly ? 1.0 : 0.35,
+        group: activeGroup,
+        spin: isFriendly ? 1.0 : 0.0,
+      });
+      // Layer 1: Target preview network
+      circles.push({
+        x,
+        y,
+        radius: targetRadius,
+        r: color[0],
+        g: color[1],
+        b: color[2],
+        alpha: isFriendly ? 0.35 : 1.0,
+        group: previewGroup,
+        spin: isFriendly ? 0.0 : 1.0,
+      });
+    } else {
+      // Layer 0: Active operating radius
       circles.push({
         x,
         y,
         radius: samRange(u.level),
-        color,
-        group,
+        r: color[0],
+        g: color[1],
+        b: color[2],
+        alpha: 1.0,
+        group: activeGroup,
+        spin: 1.0,
       });
+      // Layer 1: Connected static SAM preview network
+      if (isGroupUpgrading) {
+        circles.push({
+          x,
+          y,
+          radius: samRange(u.level),
+          r: color[0],
+          g: color[1],
+          b: color[2],
+          alpha: isFriendly ? 0.35 : 1.0,
+          group: previewGroup,
+          spin: isFriendly ? 0.0 : 1.0,
+        });
+      }
+    }
+  }
+
+  private uploadInstances(circles: SAMCircle[]): void {
+    for (let i = 0; i < this.groupBuckets.length; i++) {
+      const bucket = this.groupBuckets[i];
+      if (bucket) bucket.length = 0;
     }
 
-    // 2. Compute circle unions → uncovered arcs per circle
+    for (let i = 0; i < circles.length; i++) {
+      const c = circles[i];
+      let bucket = this.groupBuckets[c.group];
+      if (!bucket) {
+        bucket = [];
+        this.groupBuckets[c.group] = bucket;
+      }
+      bucket.push(c);
+    }
+
     let count = 0;
-    for (const c of circles) {
-      const arcs = computeUncoveredArcs(c, circles);
+    for (let g = 0; g < this.groupBuckets.length; g++) {
+      const groupCircles = this.groupBuckets[g];
+      if (!groupCircles || groupCircles.length === 0) continue;
 
-      for (const [arcStart, arcEnd] of arcs) {
-        this.instanceBuf.ensureCapacity(count + 1);
-
-        const off = count * FLOATS_PER_INSTANCE;
-        const data = this.instanceBuf.float32;
-        data[off + 0] = c.x;
-        data[off + 1] = c.y;
-        data[off + 2] = c.radius;
-        data[off + 3] = c.color[0];
-        data[off + 4] = c.color[1];
-        data[off + 5] = c.color[2];
-        data[off + 6] = arcStart;
-        data[off + 7] = arcEnd;
-        count++;
+      for (let i = 0; i < groupCircles.length; i++) {
+        const c = groupCircles[i];
+        const arcs = computeUncoveredArcs(c, groupCircles);
+        for (let j = 0; j < arcs.length; j++) {
+          const [arcStart, arcEnd] = arcs[j];
+          this.instanceBuf.ensureCapacity(count + 1);
+          const off = count * FLOATS_PER_INSTANCE;
+          const data = this.instanceBuf.float32;
+          data[off + 0] = c.x;
+          data[off + 1] = c.y;
+          data[off + 2] = c.radius;
+          data[off + 3] = c.r;
+          data[off + 4] = c.g;
+          data[off + 5] = c.b;
+          data[off + 6] = c.alpha;
+          data[off + 7] = arcStart;
+          data[off + 8] = arcEnd;
+          data[off + 9] = c.spin;
+          count++;
+        }
       }
     }
 
     this.instanceCount = count;
-
     if (count > 0) {
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf.buffer);
@@ -367,10 +532,24 @@ export class SAMRadiusPass {
   draw(cameraMatrix: Float32Array): void {
     if (!this.visible || this.instanceCount === 0) return;
 
+    const now = performance.now();
+    if (
+      this.hasUpgradingSAM &&
+      this.lastStructures &&
+      now - this.lastGeometryTime >= SAMRadiusPass.GEOMETRY_REFRESH_INTERVAL_MS
+    ) {
+      this.lastGeometryTime = now;
+      const circles = this.collectSAMCircles(
+        this.lastStructures,
+        this.getContinuousTick(),
+      );
+      this.uploadInstances(circles);
+    }
+
     const gl = this.gl;
     const time = (performance.now() - this.startTime) / 1000;
-
     const s = this.settings.samRadius;
+
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uTime, time);
