@@ -136,16 +136,17 @@ export class WorkerLobbyService {
     // never be advertised, and the master rejects entries without one.
     const publicLobbies = this.gm
       .publicLobbies()
-      .map((g) => g.gameInfo())
-      .filter((gi) => gi.publicGameType !== undefined)
-      .map((gi) => {
+      .map((g) => ({ game: g, info: g.gameInfo() }))
+      .filter(({ info }) => info.publicGameType !== undefined)
+      .map(({ game, info }) => {
         return {
-          gameID: gi.gameID,
-          numClients: gi.clients?.length ?? 0,
-          startsAt: gi.startsAt,
-          gameConfig: gi.gameConfig,
-          publicGameType: gi.publicGameType!,
-        } satisfies PublicGameInfo;
+          gameID: info.gameID,
+          numClients: info.clients?.length ?? 0,
+          startsAt: info.startsAt,
+          gameConfig: info.gameConfig,
+          publicGameType: info.publicGameType!,
+          createdAt: game.createdAt,
+        } satisfies InternalGameInfo;
       });
     // Subscriber-listed private lobbies. creatorID (a hash of the creator's
     // persistentID) rides along for the one-listed-lobby-per-creator check;
@@ -160,6 +161,7 @@ export class WorkerLobbyService {
         gameConfig: gi.gameConfig && publicLobbyGameConfig(gi.gameConfig),
         publicGameType: "hosted",
         creatorID: g.hashedCreatorID(),
+        createdAt: g.createdAt,
         // Already sanitised on the way in (GameServer.setFeatured), so nothing
         // unsanitised can reach a browser even if another producer appears.
         label: g.lobbyLabel(),
@@ -217,7 +219,8 @@ export class WorkerLobbyService {
     return broadcast.length + localExtra;
   }
 
-  // Strips worker/master-internal fields (creatorID) before lobby info is
+  // Strips worker/master-internal fields (creatorID, createdAt) before lobby
+  // info is
   // sent to browser clients, converting InternalGameInfo to the
   // browser-facing PublicGameInfo.
   private sanitizeGames(
@@ -229,7 +232,11 @@ export class WorkerLobbyService {
       InternalGameInfo[],
     ][]) {
       sanitized[type] = list.map(
-        ({ creatorID: _creatorID, ...rest }): PublicGameInfo => rest,
+        ({
+          creatorID: _creatorID,
+          createdAt: _createdAt,
+          ...rest
+        }): PublicGameInfo => rest,
       );
     }
     return sanitized;

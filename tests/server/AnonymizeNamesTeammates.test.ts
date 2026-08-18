@@ -77,6 +77,89 @@ const byId = (info: any, id: string) =>
 const player = (info: any, id: string) =>
   info.players.find((p: any) => p.clientID === id);
 
+describe("lobby info carries the pinned team slot", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("sends each client its pinned team index", () => {
+    // Without this the lobby preview cannot see the pins at all, so it
+    // re-derives teams the server will overrule at start — showing partners
+    // apart, or everyone alone.
+    const info = makeGame(TEAMS).gameInfo("alice");
+    expect(byId(info, "alice").teamIndex).toBe(0);
+    expect(byId(info, "bob").teamIndex).toBe(0);
+    expect(byId(info, "carol").teamIndex).toBe(1);
+    expect(byId(info, "dave").teamIndex).toBe(1);
+  });
+
+  it("sends it on anonymized entries too — the grouping is not the identity", () => {
+    // carol/dave are hidden from alice, but their pairing is what the preview
+    // must render; the names stay fake.
+    const info = makeGame(TEAMS).gameInfo("alice");
+    expect(REAL).not.toContain(byId(info, "carol").username);
+    expect(byId(info, "carol").teamIndex).toBe(1);
+  });
+
+  it("omits it entirely when the game is not matchmade", () => {
+    const info = makeGame().gameInfo("alice");
+    for (const id of ["alice", "bob", "carol", "dave"]) {
+      expect(byId(info, id).teamIndex).toBeUndefined();
+    }
+  });
+});
+
+describe("anonymizeNames: a team shares one view of everyone else", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("gives teammates the SAME fake name for a given opponent", () => {
+    // The point of the team: they can call a target. Seeding the rotation per
+    // viewer meant alice and bob saw the same opponent under different names,
+    // so neither could tell the other who to attack.
+    const game = makeGame(TEAMS);
+    const alice = game.gameInfo("alice");
+    const bob = game.gameInfo("bob");
+    for (const opponent of ["carol", "dave"]) {
+      expect(byId(alice, opponent).username).toBe(byId(bob, opponent).username);
+      expect(REAL).not.toContain(byId(alice, opponent).username);
+    }
+  });
+
+  it("still shows the OTHER team a different set of names", () => {
+    // Anti-teaming holds across the boundary: sharing inside a team must not
+    // become one mapping for the whole lobby.
+    //
+    // dave gets a team of his own so BOTH viewers anonymize him. Against the
+    // two-team fixture carol would be his teammate and see his real name, and
+    // the comparison would pass even if every team shared one seed.
+    const game = makeGame([
+      ["alice-pub", "bob-pub"],
+      ["carol-pub"],
+      ["dave-pub"],
+    ]);
+    const alice = game.gameInfo("alice");
+    const carol = game.gameInfo("carol");
+    expect(REAL).not.toContain(byId(alice, "dave").username);
+    expect(REAL).not.toContain(byId(carol, "dave").username);
+    expect(byId(alice, "dave").username).not.toBe(byId(carol, "dave").username);
+  });
+
+  it("keeps per-viewer names when the game is not matchmade", () => {
+    // No pins, no teams — nothing to share a seed with, so the original
+    // per-viewer rotation is unchanged.
+    const game = makeGame();
+    const alice = game.gameInfo("alice");
+    const bob = game.gameInfo("bob");
+    expect(byId(alice, "dave").username).not.toBe(byId(bob, "dave").username);
+  });
+});
+
 describe("anonymizeNames: pinned teammates see each other (lobby)", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => {

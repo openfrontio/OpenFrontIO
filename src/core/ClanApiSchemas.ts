@@ -42,6 +42,14 @@ export const ClanInfoSchema = z.object({
   isOpen: z.boolean(),
   createdAt: z.iso.datetime().optional(),
   memberCount: z.number().optional(),
+  // Clan currency, public info (no membership gate). Decimal bigint strings
+  // ("0" when empty, never a number) — they are int64 server-side and can
+  // exceed Number.MAX_SAFE_INTEGER, so compare and sum with BigInt, never
+  // Number. Optional because not every ClanInfo source carries them (the PATCH
+  // response, an API deploy predating the field) — absent means "unknown",
+  // which the UI hides rather than rendering as zero.
+  softBalance: z.string().optional(),
+  hardBalance: z.string().optional(),
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
 
