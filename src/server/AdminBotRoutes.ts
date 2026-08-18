@@ -154,6 +154,25 @@ export function registerAdminBotRoutes(opts: {
           seen.add(publicId);
         }
       }
+      // A pin is an index into the team list, so one past the end resolves to
+      // no team and the player is silently unpinned. Duos/Trios/Quads resolve
+      // their count at START from who turned up, and omitting it resolves to 0
+      // (GameImpl throws "Too few teams"), so neither can be checked here.
+      const playerTeams = config.playerTeams;
+      if (teams.length > 0) {
+        if (typeof playerTeams !== "number") {
+          return res
+            .status(400)
+            .json({ error: "teams_require_numeric_player_teams" });
+        }
+        if (teams.length > playerTeams) {
+          return res.status(400).json({
+            error: "teams_exceed_player_teams",
+            playerTeams,
+            teams: teams.length,
+          });
+        }
+      }
     }
     // Private only: reject Public and Singleplayer. An omitted gameType defaults
     // to Private in createGame, so it's allowed through.
