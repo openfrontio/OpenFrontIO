@@ -353,7 +353,22 @@ export class GameServer {
       if (id === target) break;
       slot++;
     }
-    return anonWordName(slot, viewer ? simpleHash(viewer) : 0);
+    return anonWordName(slot, this.anonOffsetSeed(viewer));
+  }
+
+  // Rotates the animal assignment so viewers see different fake names for the
+  // same player. Seeded by TEAM for a matchmade viewer: teammates already see
+  // each other's real names, but were still shown different fake names for the
+  // same opponent, so they could not call a target. Everyone outside the team
+  // keeps their own rotation, so anti-teaming holds across the boundary.
+  private anonOffsetSeed(viewer: ClientID | undefined): number {
+    if (viewer === undefined) return 0;
+    const client = this.allClients.get(viewer);
+    const team =
+      client === undefined ? undefined : this.matchmakingTeamIndex(client);
+    return team === undefined
+      ? simpleHash(viewer)
+      : simpleHash(`${this.id}:team:${team}`);
   }
 
   // Whether `viewer` should see `target`'s real identity: when names aren't
