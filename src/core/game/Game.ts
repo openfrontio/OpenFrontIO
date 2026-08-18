@@ -51,6 +51,12 @@ export type NukeState = {
   waitTicks: number;
 };
 
+export interface SamLauncherState {
+  upgradeStartTick: number | null;
+  startRange: number;
+  targetLevel: number;
+}
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -535,6 +541,7 @@ export interface Unit {
   reloadMissile(): void;
   isInCooldown(): boolean;
   missileTimerQueue(): number[];
+  samLauncherState(): SamLauncherState | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships

@@ -1,3 +1,4 @@
+import { UnitView } from "src/client/view";
 import { Execution, Game, isUnit, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -6,6 +7,7 @@ import { SAMMissileExecution } from "./SAMMissileExecution";
 type Target = {
   unit: Unit;
   tile: TileRef;
+  score?: number;
 };
 
 type InterceptionTile = {
@@ -13,14 +15,19 @@ type InterceptionTile = {
   tick: number;
 };
 
+type CachedInterception = {
+  tick: number; // >= 0: scheduled launch tick, -1: unreachable at current upgrade, -2: permanently out of reach
+  tile: TileRef;
+  minDistSq: number;
+  lastSeenTick: number;
+};
+
 /**
  * Smart SAM targeting system preshoting nukes so its range is strictly enforced
  */
 class SAMTargetingSystem {
-  // Interception tiles are computed a single time, but it may not be reachable yet.
-  // Store the result so it can be intercepted at the proper time, rather than recomputing each tick.
-  // Null interception tile means there are no interception tiles in range. Store it to avoid recomputing.
-  private readonly precomputedNukes: Map<number, InterceptionTile | null> =
+  // Cached interception states indexed by nuke ID to avoid per-tick recomputation.
+  private readonly precomputedNukes: Map<number, CachedInterception> =
     new Map();
   private readonly missileSpeed: number;
 
@@ -29,37 +36,21 @@ class SAMTargetingSystem {
     private readonly sam: Unit,
   ) {
     this.missileSpeed = this.mg.config().defaultSamMissileSpeed();
+    this.isTargetableNearbyUnit = this.isTargetableNearbyUnit.bind(this);
   }
 
-  updateUnreachableNukes(nearbyUnits: { unit: Unit; distSquared: number }[]) {
-    if (this.precomputedNukes.size === 0) {
-      return;
-    }
-
-    // Avoid per-tick allocations for the common case where only a few nukes are tracked.
-    if (this.precomputedNukes.size <= 16) {
-      for (const nukeId of this.precomputedNukes.keys()) {
-        let found = false;
-        for (const u of nearbyUnits) {
-          if (u.unit.id() === nukeId) {
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          this.precomputedNukes.delete(nukeId);
-        }
+  onLevelUp(): void {
+    for (const [id, cached] of this.precomputedNukes) {
+      if (cached.tick === -1) {
+        this.precomputedNukes.delete(id);
       }
-      return;
     }
+  }
 
-    const nearbyUnitSet = new Set<number>();
-    for (const u of nearbyUnits) {
-      nearbyUnitSet.add(u.unit.id());
-    }
-    for (const nukeId of this.precomputedNukes.keys()) {
-      if (!nearbyUnitSet.has(nukeId)) {
-        this.precomputedNukes.delete(nukeId);
+  updateUnreachableNukes(currentTick: number): void {
+    for (const [id, cached] of this.precomputedNukes) {
+      if (cached.lastSeenTick !== currentTick) {
+        this.precomputedNukes.delete(id);
       }
     }
   }
@@ -70,56 +61,109 @@ class SAMTargetingSystem {
     );
   }
 
+  private checkDetonationInterception(
+    unit: Unit,
+    samTile: TileRef,
+    ticks: number,
+  ): InterceptionTile | undefined {
+    const trajectory = unit.trajectory();
+    const maxIdx = trajectory.length - 2;
+    const finalTile = trajectory[trajectory.length - 1];
+    if (!finalTile?.targetable) return undefined;
+
+    const curIdx = unit.trajectoryIndex();
+    const waitTicks = unit.nukeState().waitTicks ?? 0;
+    const expTicks = trajectory.length - 1 - curIdx + waitTicks;
+    const range = this.mg.config().dynamicSamRange(this.sam, ticks + expTicks);
+    if (this.mg.euclideanDistSquared(samTile, finalTile.tile) > range * range) {
+      return undefined;
+    }
+    const flightTile = trajectory[maxIdx];
+    if (!flightTile?.targetable) return undefined;
+
+    const nukeTicks = maxIdx - curIdx + waitTicks;
+    const samTicks = this.tickToReach(samTile, flightTile.tile);
+    const tickBeforeShooting = nukeTicks - samTicks;
+    return tickBeforeShooting >= 0
+      ? { tick: tickBeforeShooting, tile: flightTile.tile }
+      : undefined;
+  }
+
   private computeInterceptionTile(
     unit: Unit,
     samTile: TileRef,
-    rangeSquared: number,
-  ): InterceptionTile | undefined {
+    ticks: number,
+  ): CachedInterception {
     const trajectory = unit.trajectory();
-    const currentIndex = unit.trajectoryIndex();
+    const curIdx = unit.trajectoryIndex();
     const waitTicks = unit.nukeState().waitTicks ?? 0;
-    // NukeExecution happens before SAMMissileExecution. It cannot intercept the final tick.
-    const maxInterceptionIndex = trajectory.length - 2;
-    for (let i = currentIndex; i <= maxInterceptionIndex; i++) {
-      const trajectoryTile = trajectory[i];
+    const maxIdx = trajectory.length - 2;
+    const maxSamRangeSq = this.mg.config().maxSamRange() ** 2;
+    let minDistSq = Infinity;
+    let closestTile = samTile;
+    let incSteps = 0;
+    let lastDistSq = -1;
+
+    for (let i = curIdx; i <= maxIdx; i++) {
+      const tile = trajectory[i];
+      const distSq = this.mg.euclideanDistSquared(samTile, tile.tile);
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
+        closestTile = tile.tile;
+      }
+      incSteps = lastDistSq !== -1 && distSq > lastDistSq ? incSteps + 1 : 0;
+      lastDistSq = distSq;
+
+      const nukeTicks = i - curIdx + waitTicks;
+      const samTicks = this.tickToReach(samTile, tile.tile);
+      const allowed = this.mg
+        .config()
+        .dynamicSamRange(this.sam, ticks + nukeTicks);
       if (
-        trajectoryTile.targetable &&
-        this.mg.euclideanDistSquared(samTile, trajectoryTile.tile) <=
-          rangeSquared
+        tile.targetable &&
+        distSq <= allowed * allowed &&
+        nukeTicks >= samTicks
       ) {
-        const nukeTickToReach = i - currentIndex + waitTicks;
-        const samTickToReach = this.tickToReach(samTile, trajectoryTile.tile);
-        const tickBeforeShooting = nukeTickToReach - samTickToReach;
-        if (tickBeforeShooting >= 0) {
-          return { tick: tickBeforeShooting, tile: trajectoryTile.tile };
-        }
+        return {
+          tick: nukeTicks - samTicks,
+          tile: tile.tile,
+          minDistSq,
+          lastSeenTick: ticks,
+        };
       }
+      if (incSteps > 3 && distSq > maxSamRangeSq) break;
     }
 
-    // No interception found; check if detonation tile inside SAM range
-    const finalExplosionTile = trajectory[trajectory.length - 1];
+    const det = this.checkDetonationInterception(unit, samTile, ticks);
+    if (det) {
+      return { tick: det.tick, tile: det.tile, minDistSq, lastSeenTick: ticks };
+    }
+    return {
+      tick: minDistSq > maxSamRangeSq ? -2 : -1,
+      tile: closestTile,
+      minDistSq,
+      lastSeenTick: ticks,
+    };
+  }
+
+  private isTargetableNearbyUnit({ unit }: { unit: Unit | UnitView }): boolean {
+    return this.isValidNukeTarget(unit);
+  }
+
+  private isValidNukeTarget(unit: Unit | UnitView): boolean {
     if (
-      finalExplosionTile &&
-      finalExplosionTile.targetable &&
-      this.mg.euclideanDistSquared(samTile, finalExplosionTile.tile) <=
-        rangeSquared
+      !isUnit(unit) ||
+      unit.targetedBySAM() ||
+      unit.owner() === this.sam.owner()
     ) {
-      const targetInFlightTile = trajectory[maxInterceptionIndex];
-      if (targetInFlightTile && targetInFlightTile.targetable) {
-        const nukeTickToReach = maxInterceptionIndex - currentIndex + waitTicks;
-        const samTickToReach = this.tickToReach(
-          samTile,
-          targetInFlightTile.tile,
-        );
-        const tickBeforeShooting = nukeTickToReach - samTickToReach;
-        // can we shoot the nuke the tick before it explodes?
-        if (tickBeforeShooting >= 0) {
-          return { tick: tickBeforeShooting, tile: targetInFlightTile.tile };
-        }
-      }
+      return false;
     }
-
-    return undefined;
+    const samOwner = this.sam.owner();
+    const nukeOwner = unit.owner();
+    if (samOwner.isFriendly(nukeOwner)) {
+      return this.mg.getWinner() !== null && samOwner.isOnSameTeam(nukeOwner);
+    }
+    return true;
   }
 
   private computeTargetScore(target: Target): number {
@@ -156,99 +200,57 @@ class SAMTargetingSystem {
   private sortTargets(targets: Target[]): Target[] {
     if (targets.length <= 1) return targets;
 
-    // Create a map for quick look-up time.
-    const scores = new Map<Target, number>();
     for (const target of targets) {
-      scores.set(target, this.computeTargetScore(target));
+      target.score = this.computeTargetScore(target);
     }
 
     // Sort by score, js' Timsort guarantees O(n log n)
-    return targets.sort((a, b) => scores.get(b)! - scores.get(a)!);
+    return targets.sort((a, b) => b.score! - a.score!);
   }
 
   public getValidTargets(ticks: number): Target[] {
     const samTile = this.sam.tile();
-    const range = this.mg.config().samRange(this.sam.level());
-    const rangeSquared = range * range;
-
-    // Look beyond the SAM range so it can preshot nukes.
-    // Every missile should be spotted in time to allow it to be shot down at maxSamRange
-    // Times 3 is barely not enough for a MIRV warhead (speed 22 vs SAM 12)
     const detectionRange = this.mg.config().maxSamRange() * 4;
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
       [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRVWarhead],
-      ({ unit }) => {
-        if (!isUnit(unit) || unit.targetedBySAM()) return false;
-        if (unit.owner() === this.sam.owner()) return false;
-
-        const samOwner = this.sam.owner();
-        const nukeOwner = unit.owner();
-
-        // After game-over in team games, SAMs also target teammate nukes (aftergame fun)
-        if (samOwner.isFriendly(nukeOwner)) {
-          return (
-            this.mg.getWinner() !== null && samOwner.isOnSameTeam(nukeOwner)
-          );
-        }
-
-        return true;
-      },
+      this.isTargetableNearbyUnit,
     );
-
-    // Clear unreachable nukes that went out of range
-    this.updateUnreachableNukes(nukes);
 
     const targets: Target[] = [];
     for (const nuke of nukes) {
-      const nukeId = nuke.unit.id();
-      const cached = this.precomputedNukes.get(nukeId);
+      const id = nuke.unit.id();
+      const cached = this.precomputedNukes.get(id);
       if (cached !== undefined) {
-        if (cached === null) {
-          // Already computed as unreachable, skip
-          continue;
-        }
+        cached.lastSeenTick = ticks;
+
+        if (cached.tick === -2 || cached.tick === -1) continue;
+
         if (cached.tick === ticks || cached.tick === ticks + 1) {
-          // Time to shoot!
           targets.push({ tile: cached.tile, unit: nuke.unit });
-          this.precomputedNukes.delete(nukeId);
+          this.precomputedNukes.delete(id);
           continue;
         }
-        if (cached.tick > ticks) {
-          // Not due yet, skip for now.
-          continue;
-        }
-        // Missed the planned tick (e.g was on cooldown), recompute a new interception tile if possible
-        this.precomputedNukes.delete(nukeId);
+
+        if (cached.tick > ticks) continue;
+
+        this.precomputedNukes.delete(id);
       }
-      const interceptionTile = this.computeInterceptionTile(
-        nuke.unit,
-        samTile,
-        rangeSquared,
-      );
-      if (interceptionTile !== undefined) {
-        if (interceptionTile.tick <= 1) {
-          // Shoot instantly
-          targets.push({
-            unit: nuke.unit,
-            tile: interceptionTile.tile,
-          });
-        } else {
-          // Nuke will be reachable but not yet. Store the result.
-          this.precomputedNukes.set(nukeId, {
-            tick: interceptionTile.tick + ticks,
-            tile: interceptionTile.tile,
-          });
-        }
+
+      const res = this.computeInterceptionTile(nuke.unit, samTile, ticks);
+      if (res.tick >= 0 && res.tick <= 1) {
+        targets.push({ unit: nuke.unit, tile: res.tile });
       } else {
-        // Store unreachable nukes in order to prevent useless interception computation
-        this.precomputedNukes.set(nukeId, null);
+        this.precomputedNukes.set(id, {
+          tick: res.tick >= 0 ? res.tick + ticks : res.tick,
+          tile: res.tile,
+          minDistSq: res.minDistSq,
+          lastSeenTick: ticks,
+        });
       }
     }
-
-    // This function can easily find further use later to prioritize nukes
-    // So we can start checking for nukes across multiple ticks
+    this.updateUnreachableNukes(ticks);
     return this.sortTargets(targets);
   }
 }
@@ -260,6 +262,7 @@ export class SAMLauncherExecution implements Execution {
   private targetingSystem: SAMTargetingSystem;
 
   private pseudoRandom: PseudoRandom | undefined;
+  private lastLevel: number = 1;
 
   constructor(
     private player: Player,
@@ -292,6 +295,11 @@ export class SAMLauncherExecution implements Execution {
       this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
     }
     this.targetingSystem ??= new SAMTargetingSystem(this.mg, this.sam);
+
+    if (this.lastLevel !== this.sam.level()) {
+      this.lastLevel = this.sam.level();
+      this.targetingSystem.onLevelUp();
+    }
 
     if (this.sam.isUnderConstruction()) {
       return;
