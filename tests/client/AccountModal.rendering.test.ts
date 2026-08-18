@@ -104,6 +104,13 @@ describe("AccountModal — rendering", () => {
     await modal.updateComplete;
   }
 
+  // onOpen kicks off getUserMe(); let the microtasks settle before asserting on
+  // the rendered output.
+  async function flushOpen(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await modal.updateComplete;
+  }
+
   it("shows the Steam account (no link/login CTAs) for a Steam-primary user", async () => {
     const userMe = makeUserMe({
       steam: {
@@ -237,5 +244,42 @@ describe("AccountModal — rendering", () => {
 
       expect(findLinkGateButton()).toBeUndefined();
     });
+  });
+  // The duplicate-account rejection: the auth callback bounced us back with
+  // `login=email_exists` rather than creating a second account, and the user
+  // needs to be told why nothing happened and what to do instead.
+  it("shows the duplicate-account error after a rejected sign-in", async () => {
+    modal.open({ login: "email_exists" });
+    await flushOpen();
+
+    // Logged out, so the login options screen is what renders.
+    const text = modal.textContent ?? "";
+    expect(text).toContain("main.login_google");
+    expect(text).toContain("account_modal.login_email_exists");
+  });
+
+  it("shows no login error on an ordinary open", async () => {
+    modal.open();
+    await flushOpen();
+
+    const text = modal.textContent ?? "";
+    expect(text).toContain("main.login_google");
+    expect(text).not.toContain("account_modal.login_email_exists");
+  });
+
+  it("drops the error when the modal is reopened", async () => {
+    modal.open({ login: "email_exists" });
+    await flushOpen();
+    expect(modal.textContent ?? "").toContain(
+      "account_modal.login_email_exists",
+    );
+
+    modal.close();
+    modal.open();
+    await flushOpen();
+
+    expect(modal.textContent ?? "").not.toContain(
+      "account_modal.login_email_exists",
+    );
   });
 });

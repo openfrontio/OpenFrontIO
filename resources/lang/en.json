@@ -41,6 +41,7 @@
     "linked_account": "Logged in as {account_name}",
     "linked_to_google": "Linked to Google",
     "linked_to_google_email": "Linked to Google ({email})",
+    "login_email_exists": "You already have an account with this email. Sign in to it, then link this account in settings.",
     "manage_subscription": "Manage",
     "marketing_desc": "Occasional news, events, and game updates. Unsubscribe anytime.",
     "marketing_no_email": "Link an email to your account to subscribe to updates.",
