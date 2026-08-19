@@ -241,7 +241,7 @@ export class FriendsList extends LitElement {
       case "bad_request":
         return "friends.error_bad_request";
       default:
-        return "friends.error_generic";
+        return "common.error_generic";
     }
   }
 

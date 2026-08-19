@@ -402,6 +402,7 @@
     "cap_tooltip": "Recipient’s remaining capacity",
     "click_to_copy": "Click to copy",
     "close": "Close",
+    "collapse_all": "Collapse all",
     "confirm": "Confirm",
     "copied": "Copied!",
     "copy": "Copy",
@@ -410,6 +411,10 @@
     "duration_minute_short": "min",
     "duration_second_short": "s",
     "enabled": "Enabled",
+    "error_generic": "Something went wrong. Please try again.",
+    "expand_all": "Expand all",
+    "failed_copy": "Failed to copy",
+    "loading": "Loading...",
     "map_default": "Map default",
     "month_apr": "April",
     "month_aug": "August",
@@ -428,6 +433,7 @@
     "paste": "Paste",
     "preset_max": "Max",
     "send": "Send",
+    "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Keep",
     "target_dead": "Target eliminated",
     "target_dead_note": "You can't send resources to an eliminated player."
@@ -551,7 +557,6 @@
     "copy_clipboard": "Copy to clipboard",
     "crashed": "Game crashed!",
     "desync_notice": "You are desynced from other players. What you see might differ from other players.",
-    "failed_copy": "Failed to copy",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "spawn_failed": {
       "description": "Automatic spawn selection failed. You can't play this game.",
@@ -614,7 +619,6 @@
     "deny": "Deny",
     "error_bad_request": "Invalid request",
     "error_conflict": "Already friends or request already sent",
-    "error_generic": "Something went wrong. Please try again.",
     "error_not_found": "Player not found",
     "friend_removed": "Friend removed",
     "friends_since": "Friends since {date}",
@@ -1209,12 +1213,9 @@
     "world": "World"
   },
   "map_component": {
-    "collapse_all": "Collapse all",
     "error": "Error",
-    "expand_all": "Expand all",
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
-    "loading": "Loading...",
     "no_results": "No maps found",
     "search_maps": "Search maps...",
     "search_results": "Search Results",
@@ -1518,7 +1519,6 @@
   "send_gold_modal": {
     "aria_slider": "Amount slider",
     "available_tooltip": "Your current available gold",
-    "slider_tooltip": "{percent}% • {amount}",
     "title_with_name": "Send Gold to {name}"
   },
   "send_troops_modal": {

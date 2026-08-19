@@ -581,9 +581,7 @@ export class ClanDetailView extends LitElement {
   private renderMembersList() {
     const filtered = filterMembersBySearch(this.members, this.memberSearch);
     const toggleLabel = translateText(
-      this.allStatsExpanded
-        ? "map_component.collapse_all"
-        : "map_component.expand_all",
+      this.allStatsExpanded ? "common.collapse_all" : "common.expand_all",
     );
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">

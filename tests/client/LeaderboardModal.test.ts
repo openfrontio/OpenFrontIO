@@ -30,7 +30,7 @@ vi.mock("../../src/client/Utils", () => ({
       "leaderboard_modal.ratio": "Ratio",
       "leaderboard_modal.elo": "Elo",
       "leaderboard_modal.player": "Player",
-      "map_component.loading": "Loading",
+      "common.loading": "Loading",
       "leaderboard_modal.try_again": "Try Again",
       "leaderboard_modal.no_data_yet": "No data yet",
       "leaderboard_modal.no_stats": "No stats",

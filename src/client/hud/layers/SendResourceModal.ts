@@ -226,7 +226,7 @@ export class SendResourceModal extends LitElement {
     // Troops and gold share one tooltip format: the amount is already
     // rendered with its own unit before it reaches here.
     sliderTooltip: (percent: number, amountStr: string) =>
-      translateText("send_gold_modal.slider_tooltip", {
+      translateText("common.slider_tooltip", {
         percent,
         amount: amountStr,
       }),
