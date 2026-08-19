@@ -256,6 +256,15 @@ function loadoutMenu(modal: InventoryModal): LitElement {
   return modal.querySelector("inventory-loadout-menu") as LitElement;
 }
 
+async function expandLoadouts(modal: InventoryModal) {
+  const menu = loadoutMenu(modal);
+  const toggle = menu.querySelector<HTMLButtonElement>(
+    "[data-loadout-toggle]",
+  )!;
+  if (toggle.getAttribute("aria-expanded") === "false") toggle.click();
+  await menu.updateComplete;
+}
+
 function loadoutSelect(modal: InventoryModal): HTMLSelectElement {
   return loadoutMenu(modal).querySelector("select") as HTMLSelectElement;
 }
@@ -902,6 +911,7 @@ describe("InventoryModal", () => {
   }, 30_000);
   it("saves the equipped cosmetics as a named loadout and re-equips it", async () => {
     await showTab(modal, "skins");
+    await expandLoadouts(modal);
     await activateCard(modal, "skin:owned_skin");
     await showTab(modal, "flags");
     await activateCard(modal, "flag:owned_flag");
@@ -952,6 +962,7 @@ describe("InventoryModal", () => {
 
   it("lists saved loadouts in the dropdown and deletes the selected one", async () => {
     await showTab(modal, "crowns");
+    await expandLoadouts(modal);
     await activateCard(modal, "crown:owned_crown");
     await saveLoadoutAs(modal, "crowned");
     await showTab(modal, "flags");
@@ -981,6 +992,7 @@ describe("InventoryModal", () => {
 
   it("disables Unequip all with nothing equipped and reports the loadout limit", async () => {
     await showTab(modal, "skins");
+    await expandLoadouts(modal);
     const unequipAll = () =>
       loadoutMenu(modal).querySelector<HTMLButtonElement>(
         "[data-inventory-unequip-all]",
@@ -1008,5 +1020,31 @@ describe("InventoryModal", () => {
     } finally {
       window.removeEventListener("show-message", onMessage);
     }
+  }, 30_000);
+  it("keeps the loadout controls folded away until the toggle is used", async () => {
+    await showTab(modal, "skins");
+    const menu = loadoutMenu(modal);
+    const toggle = () =>
+      menu.querySelector<HTMLButtonElement>("[data-loadout-toggle]")!;
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(menu.querySelector("[data-loadout-controls]")).toBeNull();
+
+    await expandLoadouts(modal);
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    const controls = menu.querySelector<HTMLElement>(
+      "[data-loadout-controls]",
+    )!;
+    expect(controls).toBeTruthy();
+    expect(toggle().getAttribute("aria-controls")).toBe(controls.id);
+
+    // Switching categories leaves the panel open.
+    await showTab(modal, "crowns");
+    expect(
+      loadoutMenu(modal).querySelector("[data-loadout-controls]"),
+    ).toBeTruthy();
+
+    toggle().click();
+    await menu.updateComplete;
+    expect(menu.querySelector("[data-loadout-controls]")).toBeNull();
   }, 30_000);
 });

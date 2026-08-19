@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 import { styledSelect } from "./ui/StyledSelect";
@@ -33,6 +33,9 @@ export class InventoryLoadoutMenu extends LitElement {
   /** The name typed for the next save; empty means "overwrite the selection". */
   @state() private draftName = "";
 
+  /** The controls stay folded away until asked for — they're a power tool. */
+  @state() private expanded = false;
+
   createRenderRoot() {
     return this;
   }
@@ -51,14 +54,52 @@ export class InventoryLoadoutMenu extends LitElement {
   }
 
   render() {
+    return html`<section
+      data-inventory-loadout-menu
+      aria-label=${translateText("inventory.loadout_presets")}
+      class="px-3 pt-3"
+    >
+      <div class="flex justify-center">
+        <button
+          type="button"
+          data-loadout-toggle
+          aria-expanded=${this.expanded ? "true" : "false"}
+          aria-controls="inventory-loadout-controls"
+          class="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-white/10"
+          @click=${() => {
+            this.expanded = !this.expanded;
+          }}
+        >
+          ${translateText("inventory.loadout_presets")}
+          <svg
+            class="h-3.5 w-3.5 transition-transform ${this.expanded
+              ? "rotate-180"
+              : ""}"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
+      ${this.expanded ? this.renderControls() : nothing}
+    </section>`;
+  }
+
+  private renderControls() {
     const options = [
       { value: "", label: translateText("inventory.loadout_none") },
       ...this.names.map((name) => ({ value: name, label: name })),
     ];
-    return html`<section
-      data-inventory-loadout-menu
-      aria-label=${translateText("inventory.loadout_presets")}
-      class="flex flex-wrap items-center justify-center gap-2 px-3 pt-3"
+    return html`<div
+      id="inventory-loadout-controls"
+      data-loadout-controls
+      class="mt-2 flex flex-wrap items-center justify-center gap-2"
     >
       ${styledSelect({
         options,
@@ -114,6 +155,6 @@ export class InventoryLoadoutMenu extends LitElement {
       >
         ${translateText("inventory.unequip_all")}
       </button>
-    </section>`;
+    </div>`;
   }
 }
