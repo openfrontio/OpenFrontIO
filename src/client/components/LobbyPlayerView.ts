@@ -116,31 +116,41 @@ export class LobbyTeamView extends LitElement {
 
   // Watchers, in their own bubble under the players box — they hold no seat, so
   // mixing them into the lists above would show them as people about to play.
+  // Mirrors the players section: the count header sits ABOVE the box (same
+  // classes as the "N players" header) and the box reuses .players-list, which
+  // is what centers the tags.
   private renderSpectators() {
     const spectators = this.spectators;
     if (spectators.length === 0) return html``;
     return html`
-      <div class="mt-3 rounded-lg border border-white/10 bg-white/5 p-2">
+      <div class="mt-4">
         <div
-          class="text-xs font-bold text-white/40 uppercase tracking-widest mb-2"
+          class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4"
         >
-          ${spectators.length} ${translateText("host_modal.spectators")}
+          ${spectators.length}
+          ${spectators.length === 1
+            ? translateText("host_modal.spectator")
+            : translateText("host_modal.spectators")}
         </div>
-        ${repeat(
-          spectators,
-          (c) => c.clientID ?? c.username,
-          (client) =>
-            html`<span
-              class="player-tag ${this.isCurrentPlayer(client)
-                ? "current-player"
-                : ""}"
-            >
-              <span class="text-white"
-                >${this.getClientDisplayName(client)}
-                ${this.renderVerifiedBadge(client)}</span
+        <div
+          class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
+        >
+          ${repeat(
+            spectators,
+            (c) => c.clientID ?? c.username,
+            (client) =>
+              html`<span
+                class="player-tag ${this.isCurrentPlayer(client)
+                  ? "current-player"
+                  : ""}"
               >
-            </span>`,
-        )}
+                <span class="text-white"
+                  >${this.getClientDisplayName(client)}
+                  ${this.renderVerifiedBadge(client)}</span
+                >
+              </span>`,
+          )}
+        </div>
       </div>
     `;
   }

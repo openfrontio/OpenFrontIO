@@ -926,6 +926,7 @@
     "player_whitelist_placeholder": "comma separated",
     "players": "Players",
     "remove_player": "Remove {username}",
+    "spectator": "Spectator",
     "spectators": "Spectators",
     "start_delay": "Start delay (Seconds)",
     "starting_in": "Starting in {time}. Click to cancel",
