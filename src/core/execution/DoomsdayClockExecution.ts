@@ -346,12 +346,9 @@ export class DoomsdayClockExecution implements Execution {
     const tiles = player.tiles();
     if (!tiles.has(tile)) return false;
     player.relinquish(tile);
-    // Rotted ground is WASTELAND, not a prize. Plain relinquish leaves neutral
-    // land, and the biggest adjacent side is best placed to absorb it — so the
-    // clock that exists to pressure the doomed was quietly feeding the leader.
-    // Fallout already has exactly the wanted semantics: passive expansion skips
-    // it, bots avoid it, and conquering it carries the fallout penalty. Order
-    // matters: setFallout throws while the tile has an owner.
+    // Wasteland, not a prize: plain relinquish left neutral land the biggest
+    // neighbour absorbed for free — rot was feeding the one side it never
+    // presses. Must run after relinquish: setFallout throws on owned tiles.
     mg.setFallout(tile, true);
     // Stamp it so the client can paint the red "Decaying" skull off authoritative
     // state instead of re-deriving the (knife-edge) troops-vs-floor test.
