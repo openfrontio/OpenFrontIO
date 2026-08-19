@@ -227,7 +227,7 @@ describe("SteamLinkModal", () => {
       );
     });
     // Not the generic bucket — a specific reason was rendered instead.
-    expect(modal.textContent).not.toContain("steam_link_modal.reason_failed");
+    expect(modal.textContent).not.toContain("friends.error_generic");
   });
 
   it("falls back to a generic message for an unrecognised refusal reason", async () => {
@@ -249,7 +249,7 @@ describe("SteamLinkModal", () => {
 
     await vi.waitFor(async () => {
       await modal.updateComplete;
-      expect(modal.textContent).toContain("steam_link_modal.reason_failed");
+      expect(modal.textContent).toContain("friends.error_generic");
     });
   });
 
@@ -454,7 +454,7 @@ describe("SteamLinkModal", () => {
       });
       expect(confirmButton()).toBeNull();
       expect(codeInput()?.value).toBe("ABCDEFGH");
-      expect(modal.textContent).toContain("steam_link_modal.reason_failed");
+      expect(modal.textContent).toContain("friends.error_generic");
 
       // Correct one character and resubmit — proceeds as a fresh attempt,
       // not stuck showing the previous refusal.
@@ -468,7 +468,7 @@ describe("SteamLinkModal", () => {
       });
       // The stale failure from the first attempt must not resurface on this
       // fresh ready state before Confirm has even been clicked again.
-      expect(modal.textContent).not.toContain("steam_link_modal.reason_failed");
+      expect(modal.textContent).not.toContain("friends.error_generic");
 
       confirmButton()?.click();
       await vi.waitFor(async () => {
@@ -551,7 +551,7 @@ describe("SteamLinkModal", () => {
           "steam_link_modal.reason_rate_limited",
         );
       });
-      expect(modal.textContent).not.toContain("steam_link_modal.reason_failed");
+      expect(modal.textContent).not.toContain("friends.error_generic");
     });
   });
 });

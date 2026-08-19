@@ -242,7 +242,7 @@ export class HelpModal extends BaseModal {
                       ${this.renderKey(keybinds.toggleView)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_alt_view")}
+                      ${translateText("user_setting.toggle_view_desc")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
@@ -329,7 +329,7 @@ export class HelpModal extends BaseModal {
                       ${this.renderKey(keybinds.centerCamera)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_center")}
+                      ${translateText("user_setting.center_camera_desc")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">

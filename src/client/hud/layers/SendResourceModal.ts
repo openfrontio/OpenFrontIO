@@ -213,7 +213,7 @@ export class SendResourceModal extends LitElement {
         ? translateText("send_troops_modal.aria_slider")
         : translateText("send_gold_modal.aria_slider"),
 
-    summarySend: () => translateText("common.summary_send"),
+    summarySend: () => translateText("common.send"),
     summaryKeep: () => translateText("common.summary_keep"),
 
     closeLabel: () => translateText("common.close"),
@@ -223,16 +223,13 @@ export class SendResourceModal extends LitElement {
     cap: () => translateText("common.cap_label"),
     capTooltip: () => translateText("common.cap_tooltip"),
 
+    // Troops and gold share one tooltip format: the amount is already
+    // rendered with its own unit before it reaches here.
     sliderTooltip: (percent: number, amountStr: string) =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.slider_tooltip", {
-            percent,
-            amount: amountStr,
-          })
-        : translateText("send_gold_modal.slider_tooltip", {
-            percent,
-            amount: amountStr,
-          }),
+      translateText("send_gold_modal.slider_tooltip", {
+        percent,
+        amount: amountStr,
+      }),
 
     capacityNote: (amountStr: string) =>
       translateText("send_troops_modal.capacity_note", { amount: amountStr }),

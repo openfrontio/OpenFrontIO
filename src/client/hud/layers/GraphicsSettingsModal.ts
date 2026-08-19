@@ -855,9 +855,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
           </div>
         </div>
         <div class="text-sm text-slate-400">
-          ${this.copiedJson
-            ? translateText("graphics_setting.copy_json_copied")
-            : ""}
+          ${this.copiedJson ? translateText("common.copied") : ""}
         </div>
       </button>
 
