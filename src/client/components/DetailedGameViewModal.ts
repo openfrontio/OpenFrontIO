@@ -82,7 +82,7 @@ const BUTTON_CLASS =
   "hover:text-white transition-colors";
 
 /**
- * The full lobby browser behind the homepage "More Games" button: every lobby
+ * The full lobby browser behind each homepage lobby card's expand control: every lobby
  * the server advertises (not just the one card per bucket the homepage shows),
  * rendered as the same map cards, with filtering, sorting and saved filter
  * profiles.
