@@ -43,6 +43,19 @@
         z-index: 150 !important;
       }
 
+      /* The flex unit's inline (expanded) state renders into
+         #pw-oop-flex_container, a direct <body> child. Body is a flex row,
+         which squeezed it to width 0 — the unit could never show its
+         expanded state or sense scrolling, so it latched permanently into
+         the docked leaderboard. Give it its own full-width line at the top
+         of the page (body wraps; the content area follows on the next
+         line), so it expands at the top and docks once scrolled past. */
+      #pw-oop-flex_container {
+        order: -1;
+        flex-basis: 100%;
+        width: 100%;
+      }
+
       /* Google Funding Choices CCPA link override */
       .fc-dns-link,
       .fc-ccpa-root,
@@ -168,7 +181,7 @@
   </head>
 
   <body
-    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
@@ -207,7 +220,7 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 min-w-0 relative pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh relative pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
            offset below the header ad when one is showing) -->
