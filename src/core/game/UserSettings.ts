@@ -72,6 +72,8 @@ export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
 export const EFFECTS_KEY = "settings.effects";
 /** Saved cosmetic loadouts — see {@link CosmeticLoadout}. */
 export const LOADOUTS_KEY = "settings.cosmeticLoadouts";
+/** The loadout slot equip changes are written back into, if any. */
+export const ACTIVE_LOADOUT_KEY = "settings.activeLoadout";
 // Keep the existing storage key so the rename does not reset saved columns.
 export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
 export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
@@ -91,6 +93,7 @@ const PER_PLAYER_KEYS: readonly string[] = [
   CROWN_KEY,
   EFFECTS_KEY,
   LOADOUTS_KEY,
+  ACTIVE_LOADOUT_KEY,
 ];
 
 /**
@@ -110,6 +113,11 @@ export interface CosmeticLoadout {
 
 /** Loadouts live in localStorage, so the list is bounded. */
 export const MAX_LOADOUTS = 10;
+
+/** Slots are numbered rather than named: "01", "02", … */
+export function loadoutSlotName(slot: number): string {
+  return slot.toString().padStart(2, "0");
+}
 
 function parseLoadout(value: unknown): CosmeticLoadout | null {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -144,6 +152,8 @@ export class UserSettings {
   private static cache = new Map<string, string | null>();
   /** publicId of the logged-in player, or null when logged out. */
   private static playerId: string | null = null;
+  /** Set while applyLoadout writes, to stop the mirror writing back. */
+  private static applyingLoadout = false;
 
   /**
    * Sets which player's cosmetic selections are active. Called with the
@@ -419,6 +429,7 @@ export class UserSettings {
     } else {
       this.setCached(PATTERN_KEY, value);
     }
+    this.syncActiveLoadout();
   }
 
   /** Returns the bare skin name (no `skin:` prefix), or null if a pattern (or nothing) is selected. */
@@ -446,6 +457,7 @@ export class UserSettings {
     } else {
       this.setCached(CROWN_KEY, name);
     }
+    this.syncActiveLoadout();
   }
 
   getFlag(): string | null {
@@ -465,11 +477,13 @@ export class UserSettings {
       this.clearFlag(true);
     } else {
       this.setCached(FLAG_KEY, flag);
+      this.syncActiveLoadout();
     }
   }
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
+    this.syncActiveLoadout();
   }
 
   /**
@@ -498,14 +512,14 @@ export class UserSettings {
     const map = this.getSelectedEffects();
     if (name === undefined) delete map[slot];
     else map[slot] = name;
-    if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
-    else this.setString(EFFECTS_KEY, JSON.stringify(map));
+    this.setSelectedEffects(map);
   }
 
   /** Replaces every effect slot at once, e.g. when applying a loadout. */
   setSelectedEffects(effects: Record<string, string>): void {
     if (Object.keys(effects).length === 0) this.removeCached(EFFECTS_KEY);
     else this.setString(EFFECTS_KEY, JSON.stringify(effects));
+    this.syncActiveLoadout();
   }
 
   /**
@@ -563,26 +577,76 @@ export class UserSettings {
     return loadout;
   }
 
+  /**
+   * Adds a loadout in the lowest free slot number, holding whatever is
+   * equipped now, and makes it active. Returns null at MAX_LOADOUTS.
+   */
+  addLoadout(): CosmeticLoadout | null {
+    const taken = new Set(this.getLoadouts().map((loadout) => loadout.name));
+    for (let slot = 1; slot <= MAX_LOADOUTS; slot++) {
+      const name = loadoutSlotName(slot);
+      if (taken.has(name)) continue;
+      const loadout = this.saveLoadout(name);
+      if (loadout !== null) this.setActiveLoadout(name);
+      return loadout;
+    }
+    return null;
+  }
+
   deleteLoadout(name: string): void {
     const loadouts = this.getLoadouts();
     const remaining = loadouts.filter((loadout) => loadout.name !== name);
     if (remaining.length === loadouts.length) return;
     this.setLoadouts(remaining);
+    if (this.getActiveLoadout() === name) this.setActiveLoadout(null);
   }
 
   /**
-   * Equips every slot of the named loadout, clearing slots it left empty.
-   * Returns false when no such loadout exists.
+   * Equips every slot of the named loadout, clearing slots it left empty, and
+   * makes it the active one. Returns false when no such loadout exists.
    */
   applyLoadout(name: string): boolean {
     const loadout = this.getLoadout(name);
     if (loadout === null) return false;
-    this.setSelectedPatternName(loadout.pattern ?? undefined);
-    if (loadout.flag === null) this.clearFlag(true);
-    else this.setFlag(loadout.flag);
-    this.setSelectedCrownName(loadout.crown ?? undefined);
-    this.setSelectedEffects(loadout.effects);
+    // The writes below would otherwise each mirror straight back into the
+    // loadout being read from.
+    UserSettings.applyingLoadout = true;
+    try {
+      this.setSelectedPatternName(loadout.pattern ?? undefined);
+      if (loadout.flag === null) this.clearFlag(true);
+      else this.setFlag(loadout.flag);
+      this.setSelectedCrownName(loadout.crown ?? undefined);
+      this.setSelectedEffects(loadout.effects);
+    } finally {
+      UserSettings.applyingLoadout = false;
+    }
+    this.setActiveLoadout(name);
     return true;
+  }
+
+  /** The loadout equip changes are mirrored into, or null when none is. */
+  getActiveLoadout(): string | null {
+    const name = this.getCached(ACTIVE_LOADOUT_KEY);
+    if (name === null) return null;
+    // A loadout deleted in another tab leaves the pointer dangling.
+    return this.getLoadout(name) === null ? null : name;
+  }
+
+  setActiveLoadout(name: string | null): void {
+    if (name === null) this.removeCached(ACTIVE_LOADOUT_KEY);
+    else this.setCached(ACTIVE_LOADOUT_KEY, name);
+  }
+
+  /**
+   * Mirrors the equipped cosmetics into the active loadout, so the slot always
+   * shows what's being worn. A no-op when no slot is active, or while a
+   * loadout is being applied.
+   */
+  private syncActiveLoadout(): void {
+    if (UserSettings.applyingLoadout) return;
+    const active = this.getActiveLoadout();
+    if (active === null) return;
+    this.saveLoadout(active);
   }
 
   /** Clears every equip slot. Saved loadouts are left alone. */

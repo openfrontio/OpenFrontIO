@@ -256,36 +256,35 @@ function loadoutMenu(modal: InventoryModal): LitElement {
   return modal.querySelector("inventory-loadout-menu") as LitElement;
 }
 
-async function expandLoadouts(modal: InventoryModal) {
-  const menu = loadoutMenu(modal);
-  const toggle = menu.querySelector<HTMLButtonElement>(
-    "[data-loadout-toggle]",
-  )!;
-  if (toggle.getAttribute("aria-expanded") === "false") toggle.click();
-  await menu.updateComplete;
+function loadoutSlots(modal: InventoryModal): string[] {
+  return [
+    ...loadoutMenu(modal).querySelectorAll<HTMLButtonElement>(
+      "[data-loadout-slot]",
+    ),
+  ].map((slot) => slot.dataset.loadoutSlot!);
 }
 
-function loadoutSelect(modal: InventoryModal): HTMLSelectElement {
-  return loadoutMenu(modal).querySelector("select") as HTMLSelectElement;
-}
-
-async function saveLoadoutAs(modal: InventoryModal, name: string) {
-  const menu = loadoutMenu(modal);
-  const input = menu.querySelector<HTMLInputElement>("[data-loadout-name]")!;
-  input.value = name;
-  input.dispatchEvent(new Event("input"));
-  await menu.updateComplete;
-  menu.querySelector<HTMLButtonElement>("[data-loadout-save]")!.click();
-  await modal.updateComplete;
-  await menu.updateComplete;
-}
-
-async function applyLoadout(modal: InventoryModal, name: string) {
-  const select = loadoutSelect(modal);
-  select.value = name;
-  select.dispatchEvent(new Event("change"));
+async function addLoadoutSlot(modal: InventoryModal) {
+  loadoutMenu(modal)
+    .querySelector<HTMLButtonElement>("[data-loadout-add]")!
+    .click();
   await modal.updateComplete;
   await loadoutMenu(modal).updateComplete;
+}
+
+async function selectLoadoutSlot(modal: InventoryModal, name: string) {
+  loadoutMenu(modal)
+    .querySelector<HTMLButtonElement>(`[data-loadout-slot="${name}"]`)!
+    .click();
+  await modal.updateComplete;
+  await loadoutMenu(modal).updateComplete;
+}
+
+function activeSlot(modal: InventoryModal): string | null {
+  const active = loadoutMenu(modal).querySelector<HTMLButtonElement>(
+    '[data-loadout-slot][aria-pressed="true"]',
+  );
+  return active?.dataset.loadoutSlot ?? null;
 }
 
 describe("InventoryModal", () => {
@@ -315,15 +314,11 @@ describe("InventoryModal", () => {
       "inventory.unequipped_all": "Unequipped everything",
       "inventory.loadout_applied": "Equipped loadout {name}",
       "inventory.loadout_deleted": "Deleted loadout {name}",
-      "inventory.loadout_delete": "Delete",
       "inventory.loadout_limit": "You can save up to {count} loadouts.",
-      "inventory.loadout_name": "Loadout name",
-      "inventory.loadout_none": "Choose a loadout…",
-      "inventory.loadout_presets": "Saved loadouts",
-      "inventory.loadout_save": "Save",
+      "inventory.loadout_presets": "Loadouts",
       "inventory.loadout_saved": "Saved loadout {name}",
-      "inventory.loadout_select": "Load a saved loadout",
-      "inventory.loadout_save_over": "Overwrite {name}",
+      "inventory.loadout_add": "New loadout",
+      "inventory.loadout_slot": "Loadout {name}",
       "inventory.loadout_delete_target": "Delete {name}",
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
@@ -911,194 +906,117 @@ describe("InventoryModal", () => {
     expect(card(modal, "country:us")).toBeDefined();
     expect(modal.querySelector('[data-inventory-empty="flags"]')).toBeNull();
   }, 30_000);
-  it("saves the equipped cosmetics as a named loadout and re-equips it", async () => {
-    await showTab(modal, "skins");
-    await expandLoadouts(modal);
-    await activateCard(modal, "skin:owned_skin");
-    await showTab(modal, "flags");
-    await activateCard(modal, "flag:owned_flag");
-    await showTab(modal, "crowns");
-    await activateCard(modal, "crown:owned_crown");
-    new UserSettings().setSelectedEffectName(
-      "transportShipTrail",
-      "owned_wake",
-    );
-    await showTab(modal, "skins");
-    const messages: string[] = [];
-    const onMessage = (event: Event) =>
-      messages.push((event as CustomEvent).detail.message);
-    window.addEventListener("show-message", onMessage);
-    try {
-      await saveLoadoutAs(modal, "  parade  ");
-      expect(messages[messages.length - 1]).toBe("Saved loadout parade");
-    } finally {
-      window.removeEventListener("show-message", onMessage);
-    }
-    expect(new UserSettings().getLoadouts().map((entry) => entry.name)).toEqual(
-      ["parade"],
-    );
-    // The dropdown reflects the loadout that matches what's equipped.
-    expect(loadoutSelect(modal).value).toBe("parade");
 
-    loadoutMenu(modal)
-      .querySelector<HTMLButtonElement>("[data-inventory-unequip-all]")!
-      .click();
-    await modal.updateComplete;
-    await loadoutMenu(modal).updateComplete;
+  it("adds numbered loadout slots that mirror what's equipped", async () => {
+    await showTab(modal, "crowns");
+    expect(loadoutSlots(modal)).toEqual([]);
+    await activateCard(modal, "crown:owned_crown");
+
+    await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toEqual(["01"]);
+    expect(activeSlot(modal)).toBe("01");
     const settings = new UserSettings();
-    expect(settings.getSelectedSkinName()).toBeNull();
-    expect(settings.getFlag()).toBeNull();
-    expect(settings.getSelectedCrownName()).toBeNull();
-    expect(settings.getSelectedEffects()).toEqual({});
-    expect(loadoutSelect(modal).value).toBe("");
+    expect(settings.getLoadout("01")?.crown).toBe("owned_crown");
 
-    await applyLoadout(modal, "parade");
-    expect(settings.getSelectedSkinName()).toBe("owned_skin");
-    expect(settings.getFlag()).toBe("flag:owned_flag");
-    expect(settings.getSelectedCrownName()).toBe("owned_crown");
-    expect(settings.getSelectedEffects()).toEqual({
-      transportShipTrail: "owned_wake",
-    });
-    expect(loadoutSelect(modal).value).toBe("parade");
-  }, 30_000);
-
-  it("lists saved loadouts in the dropdown and deletes the selected one", async () => {
-    await showTab(modal, "crowns");
-    await expandLoadouts(modal);
-    await activateCard(modal, "crown:owned_crown");
-    await saveLoadoutAs(modal, "crowned");
+    // No Save step: equipping writes straight into the active slot.
     await showTab(modal, "flags");
     await activateCard(modal, "flag:owned_flag");
-    await saveLoadoutAs(modal, "flagged");
-
-    expect(
-      [...loadoutSelect(modal).options].map((option) => option.value),
-    ).toEqual(["", "crowned", "flagged"]);
-    expect(loadoutSelect(modal).value).toBe("flagged");
-
-    loadoutMenu(modal)
-      .querySelector<HTMLButtonElement>("[data-loadout-delete]")!
-      .click();
-    await modal.updateComplete;
-    await loadoutMenu(modal).updateComplete;
-    expect(new UserSettings().getLoadouts().map((entry) => entry.name)).toEqual(
-      ["crowned"],
-    );
-    // Deleting a loadout leaves the equipped cosmetics alone.
-    expect(new UserSettings().getFlag()).toBe("flag:owned_flag");
-    const menu = loadoutMenu(modal);
-    expect(
-      menu.querySelector<HTMLButtonElement>("[data-loadout-delete]")!.disabled,
-    ).toBe(true);
+    expect(settings.getLoadout("01")).toMatchObject({
+      crown: "owned_crown",
+      flag: "flag:owned_flag",
+    });
   }, 30_000);
 
-  it("disables Unequip all with nothing equipped and reports the loadout limit", async () => {
+  it("switches between slots, equipping each one's set", async () => {
+    await showTab(modal, "crowns");
+    await activateCard(modal, "crown:owned_crown");
+    await addLoadoutSlot(modal);
+
+    await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toEqual(["01", "02"]);
+    expect(activeSlot(modal)).toBe("02");
     await showTab(modal, "skins");
-    await expandLoadouts(modal);
+    await activateCard(modal, "skin:owned_skin");
+    await showTab(modal, "crowns");
+    modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!.click();
+    await modal.updateComplete;
+
+    const settings = new UserSettings();
+    expect(settings.getLoadout("02")).toMatchObject({
+      pattern: "skin:owned_skin",
+      crown: null,
+    });
+
+    await selectLoadoutSlot(modal, "01");
+    expect(activeSlot(modal)).toBe("01");
+    expect(settings.getSelectedCrownName()).toBe("owned_crown");
+    expect(settings.getSelectedSkinName()).toBeNull();
+    // Selecting 01 must not have leaked the swap into 02.
+    expect(settings.getLoadout("02")?.pattern).toBe("skin:owned_skin");
+
+    await selectLoadoutSlot(modal, "02");
+    expect(settings.getSelectedSkinName()).toBe("owned_skin");
+    expect(settings.getSelectedCrownName()).toBeNull();
+    expect(settings.getLoadout("01")?.crown).toBe("owned_crown");
+  }, 30_000);
+
+  it("deletes only the active slot, through the button it carries", async () => {
+    await showTab(modal, "crowns");
+    await addLoadoutSlot(modal);
+    await addLoadoutSlot(modal);
+    const menu = loadoutMenu(modal);
+    // Inactive slots carry no delete button.
+    expect(menu.querySelectorAll("[data-loadout-delete]")).toHaveLength(1);
+    const remove = menu.querySelector<HTMLButtonElement>(
+      '[data-loadout-delete="02"]',
+    )!;
+    expect(remove.getAttribute("aria-label")).toBe("Delete 02");
+
+    remove.click();
+    await modal.updateComplete;
+    await menu.updateComplete;
+    expect(loadoutSlots(modal)).toEqual(["01"]);
+    expect(activeSlot(modal)).toBeNull();
+    expect(new UserSettings().getActiveLoadout()).toBeNull();
+    // A freed number is reused rather than skipped.
+    await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toEqual(["01", "02"]);
+  }, 30_000);
+
+  it("clears every category through Unequip all", async () => {
+    await showTab(modal, "skins");
     const unequipAll = () =>
       loadoutMenu(modal).querySelector<HTMLButtonElement>(
         "[data-inventory-unequip-all]",
       )!;
     expect(unequipAll().disabled).toBe(true);
     await activateCard(modal, "skin:owned_skin");
+    await showTab(modal, "crowns");
+    await activateCard(modal, "crown:owned_crown");
+    new UserSettings().setSelectedEffectName(
+      "transportShipTrail",
+      "owned_wake",
+    );
     await loadoutMenu(modal).updateComplete;
     expect(unequipAll().disabled).toBe(false);
 
-    const messages: string[] = [];
-    const onMessage = (event: Event) =>
-      messages.push((event as CustomEvent).detail.message);
-    window.addEventListener("show-message", onMessage);
-    try {
-      for (let i = 0; i < MAX_LOADOUTS; i++) {
-        await saveLoadoutAs(modal, `loadout-${i}`);
-      }
-      const lastMessage = () => messages[messages.length - 1];
-      expect(lastMessage()).toBe(`Saved loadout loadout-${MAX_LOADOUTS - 1}`);
-      await saveLoadoutAs(modal, "one-too-many");
-      expect(lastMessage()).toBe(
-        `You can save up to ${MAX_LOADOUTS} loadouts.`,
-      );
-      expect(new UserSettings().getLoadouts()).toHaveLength(MAX_LOADOUTS);
-    } finally {
-      window.removeEventListener("show-message", onMessage);
-    }
-  }, 30_000);
-  it("keeps the loadout controls folded away until the toggle is used", async () => {
-    await showTab(modal, "skins");
-    const menu = loadoutMenu(modal);
-    const toggle = () =>
-      menu.querySelector<HTMLButtonElement>("[data-loadout-toggle]")!;
-    expect(toggle().getAttribute("aria-expanded")).toBe("false");
-    expect(menu.querySelector("[data-loadout-controls]")).toBeNull();
-
-    await expandLoadouts(modal);
-    expect(toggle().getAttribute("aria-expanded")).toBe("true");
-    const controls = menu.querySelector<HTMLElement>(
-      "[data-loadout-controls]",
-    )!;
-    expect(controls).toBeTruthy();
-    expect(toggle().getAttribute("aria-controls")).toBe(controls.id);
-
-    // Switching categories leaves the panel open.
-    await showTab(modal, "crowns");
-    expect(
-      loadoutMenu(modal).querySelector("[data-loadout-controls]"),
-    ).toBeTruthy();
-
-    toggle().click();
-    await menu.updateComplete;
-    expect(menu.querySelector("[data-loadout-controls]")).toBeNull();
-  }, 30_000);
-  it("saves a tweak back over the loadout it started from", async () => {
-    await showTab(modal, "crowns");
-    await expandLoadouts(modal);
-    await activateCard(modal, "crown:owned_crown");
-    await saveLoadoutAs(modal, "parade");
-
-    // Changing one slot stops the dropdown matching, but Save and Delete
-    // still act on the loadout that was equipped as a set.
-    await showTab(modal, "flags");
-    await activateCard(modal, "flag:owned_flag");
-    await loadoutMenu(modal).updateComplete;
-    expect(loadoutSelect(modal).value).toBe("");
-    const save = loadoutMenu(modal).querySelector<HTMLButtonElement>(
-      "[data-loadout-save]",
-    )!;
-    expect(save.disabled).toBe(false);
-    expect(save.getAttribute("aria-label")).toBe("Overwrite parade");
-
-    save.click();
+    unequipAll().click();
     await modal.updateComplete;
     await loadoutMenu(modal).updateComplete;
     const settings = new UserSettings();
-    expect(settings.getLoadouts()).toHaveLength(1);
-    expect(settings.getLoadout("parade")).toMatchObject({
-      crown: "owned_crown",
-      flag: "flag:owned_flag",
-    });
-    expect(loadoutSelect(modal).value).toBe("parade");
+    expect(settings.getSelectedSkinName()).toBeNull();
+    expect(settings.getSelectedCrownName()).toBeNull();
+    expect(settings.getSelectedEffects()).toEqual({});
+    expect(unequipAll().disabled).toBe(true);
+  }, 30_000);
 
-    // The same target drives Delete, and goes away with it.
-    await showTab(modal, "crowns");
-    const unequip = () =>
-      modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!;
-    unequip().click();
-    await modal.updateComplete;
-    const remove = () =>
-      loadoutMenu(modal).querySelector<HTMLButtonElement>(
-        "[data-loadout-delete]",
-      )!;
-    await loadoutMenu(modal).updateComplete;
-    expect(remove().getAttribute("aria-label")).toBe("Delete parade");
-    remove().click();
-    await modal.updateComplete;
-    await loadoutMenu(modal).updateComplete;
-    expect(settings.getLoadouts()).toEqual([]);
-    expect(remove().disabled).toBe(true);
+  it("stops offering new slots at the cap", async () => {
+    await showTab(modal, "skins");
+    for (let i = 0; i < MAX_LOADOUTS; i++) await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toHaveLength(MAX_LOADOUTS);
     expect(
-      loadoutMenu(modal).querySelector<HTMLButtonElement>(
-        "[data-loadout-save]",
-      )!.disabled,
+      loadoutMenu(modal).querySelector<HTMLButtonElement>("[data-loadout-add]")!
+        .disabled,
     ).toBe(true);
   }, 30_000);
 });

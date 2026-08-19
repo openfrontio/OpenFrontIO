@@ -11,7 +11,6 @@ import {
   isNukeExplosionEffect,
   Skin,
 } from "../core/CosmeticSchemas";
-import type { CosmeticLoadout } from "../core/game/UserSettings";
 import {
   CROWN_KEY,
   EFFECTS_KEY,
@@ -377,27 +376,12 @@ export class InventoryModal extends BaseModal {
     ];
   }
 
-  private sameLoadout(a: CosmeticLoadout, b: CosmeticLoadout): boolean {
-    const slots = ["pattern", "flag", "crown"] as const;
-    if (slots.some((slot) => a[slot] !== b[slot])) return false;
-    const aEffects = Object.entries(a.effects).sort();
-    const bEffects = Object.entries(b.effects).sort();
-    return JSON.stringify(aEffects) === JSON.stringify(bEffects);
-  }
-
-  /**
-   * The saved loadout matching what's equipped right now, if any. Derived
-   * rather than remembered so equipping a single item on its own drops the
-   * selection instead of leaving the dropdown lying about the current set.
-   */
-  private selectedLoadoutName(): string {
-    const current = this.userSettings.captureLoadout("");
-    const match = this.userSettings
+  /** Slot buttons read as a numbered row, so keep them in slot order. */
+  private loadoutNames(): string[] {
+    return this.userSettings
       .getLoadouts()
-      .find((loadout) =>
-        this.sameLoadout(loadout, { ...current, name: loadout.name }),
-      );
-    return match?.name ?? "";
+      .map((loadout) => loadout.name)
+      .sort();
   }
 
   private hasEquippedCosmetic(): boolean {
@@ -411,35 +395,37 @@ export class InventoryModal extends BaseModal {
   }
 
   private renderLoadoutMenu(): TemplateResult {
+    const names = this.loadoutNames();
     return html`<inventory-loadout-menu
-      .names=${this.userSettings.getLoadouts().map((loadout) => loadout.name)}
-      .selected=${this.selectedLoadoutName()}
+      .names=${names}
+      .active=${this.userSettings.getActiveLoadout() ?? ""}
+      .canAdd=${names.length < MAX_LOADOUTS}
       .canUnequip=${this.hasEquippedCosmetic()}
-      .onApply=${(name: string) => this.applyLoadout(name)}
-      .onSave=${(name: string) => this.saveLoadout(name)}
+      .onSelect=${(name: string) => this.applyLoadout(name)}
+      .onAdd=${() => this.addLoadout()}
       .onDelete=${(name: string) => this.deleteLoadout(name)}
       .onUnequipAll=${() => this.unequipAll()}
     ></inventory-loadout-menu>`;
   }
 
   private applyLoadout(name: string) {
+    // Re-selecting the active slot would only re-equip what's already worn.
+    if (this.userSettings.getActiveLoadout() === name) return;
     if (!this.userSettings.applyLoadout(name)) return;
     this.showMessage(translateText("inventory.loadout_applied", { name }));
     this.updateFromSettings();
   }
 
-  private saveLoadout(name: string) {
-    if (name.trim() === "") return;
-    const saved = this.userSettings.saveLoadout(name);
-    if (saved === null) {
-      // The only other reason a save is refused is the stored-loadout cap.
+  private addLoadout() {
+    const added = this.userSettings.addLoadout();
+    if (added === null) {
       this.showMessage(
         translateText("inventory.loadout_limit", { count: MAX_LOADOUTS }),
       );
       return;
     }
     this.showMessage(
-      translateText("inventory.loadout_saved", { name: saved.name }),
+      translateText("inventory.loadout_saved", { name: added.name }),
     );
     this.updateFromSettings();
   }
