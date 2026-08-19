@@ -211,23 +211,28 @@ export function computeTrajectoryThresholds(
         continue;
       }
 
+      // Check exact boundary when crossing into the targetable terminal phase
+      if (
+        tUntargetableEnd >= 0 &&
+        tPrev < tUntargetableEnd &&
+        t >= tUntargetableEnd
+      ) {
+        const xe = bezier(tUntargetableEnd, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
+        const ye = bezier(tUntargetableEnd, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
+        for (let s = 0; s < sams.length; s++) {
+          if (distSq(xe, ye, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
+            tSamIntercept = tUntargetableEnd;
+            break;
+          }
+        }
+        if (tSamIntercept < 1.0) break;
+      }
+
       const x = bezier(t, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
       const y = bezier(t, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
 
       for (let s = 0; s < sams.length; s++) {
         if (distSq(x, y, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
-          if (
-            tUntargetableEnd >= 0 &&
-            tPrev < tUntargetableEnd &&
-            t >= tUntargetableEnd
-          ) {
-            const xe = bezier(tUntargetableEnd, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
-            const ye = bezier(tUntargetableEnd, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
-            if (distSq(xe, ye, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
-              tSamIntercept = tUntargetableEnd;
-              break;
-            }
-          }
           const lo =
             tUntargetableEnd >= 0 && tPrev < tUntargetableEnd
               ? tUntargetableEnd
