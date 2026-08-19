@@ -195,6 +195,12 @@ class FakeGame {
   now = 0;
   gameMode: GameMode = GameMode.FFA;
   winnerPlayer: FakePlayer | null = null;
+  // Rot marks what it consumes as wasteland; recorded so tests can assert on it.
+  falloutTiles = new Set<TileRef>();
+  setFallout(tile: TileRef, value: boolean): void {
+    if (value) this.falloutTiles.add(tile);
+    else this.falloutTiles.delete(tile);
+  }
   constructor(
     public land: number,
     public sd: SDConfig,
@@ -236,7 +242,9 @@ class FakeGame {
     return out;
   }
   numTilesWithFallout(): number {
-    return 0;
+    // Kept in sync with setFallout: the execution subtracts this from land when
+    // sizing the bar and the rot quota, so a stale 0 would diverge from prod.
+    return this.falloutTiles.size;
   }
   config() {
     return {
@@ -1378,6 +1386,11 @@ describe("DoomsdayClockExecution (territory rot, real simulation)", () => {
     // leader gained nothing (relinquish takes no conqueror: no kill, no gold).
     for (const tile of held) expect(game.owner(tile).isPlayer()).toBe(false);
     expect(big.numTilesOwned()).toBe(bigTilesBefore);
+    // …and it is WASTELAND, not a prize: every rotted tile carries fallout, so
+    // passive expansion skips it and taking it costs the fallout penalty —
+    // without this, rot converts the doomed into free land for whoever is
+    // biggest next door, and the clock feeds the exact player it never presses.
+    for (const tile of held) expect(game.hasFallout(tile)).toBe(true);
   }, 30_000);
 });
 
