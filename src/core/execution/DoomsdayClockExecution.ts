@@ -341,6 +341,10 @@ export class DoomsdayClockExecution implements Execution {
     const tiles = player.tiles();
     if (!tiles.has(tile)) return false;
     player.relinquish(tile);
+    // Wasteland, not a prize: plain relinquish left neutral land the biggest
+    // neighbour absorbed for free — rot was feeding the one side it never
+    // presses. Must run after relinquish: setFallout throws on owned tiles.
+    mg.setFallout(tile, true);
     // Stamp it so the client can paint the red "Decaying" skull off authoritative
     // state instead of re-deriving the (knife-edge) troops-vs-floor test.
     player.markRotted();
