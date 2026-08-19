@@ -323,6 +323,8 @@ describe("InventoryModal", () => {
       "inventory.loadout_save": "Save",
       "inventory.loadout_saved": "Saved loadout {name}",
       "inventory.loadout_select": "Load a saved loadout",
+      "inventory.loadout_save_over": "Overwrite {name}",
+      "inventory.loadout_delete_target": "Delete {name}",
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
       "main.store": "Store",
@@ -1046,5 +1048,57 @@ describe("InventoryModal", () => {
     toggle().click();
     await menu.updateComplete;
     expect(menu.querySelector("[data-loadout-controls]")).toBeNull();
+  }, 30_000);
+  it("saves a tweak back over the loadout it started from", async () => {
+    await showTab(modal, "crowns");
+    await expandLoadouts(modal);
+    await activateCard(modal, "crown:owned_crown");
+    await saveLoadoutAs(modal, "parade");
+
+    // Changing one slot stops the dropdown matching, but Save and Delete
+    // still act on the loadout that was equipped as a set.
+    await showTab(modal, "flags");
+    await activateCard(modal, "flag:owned_flag");
+    await loadoutMenu(modal).updateComplete;
+    expect(loadoutSelect(modal).value).toBe("");
+    const save = loadoutMenu(modal).querySelector<HTMLButtonElement>(
+      "[data-loadout-save]",
+    )!;
+    expect(save.disabled).toBe(false);
+    expect(save.getAttribute("aria-label")).toBe("Overwrite parade");
+
+    save.click();
+    await modal.updateComplete;
+    await loadoutMenu(modal).updateComplete;
+    const settings = new UserSettings();
+    expect(settings.getLoadouts()).toHaveLength(1);
+    expect(settings.getLoadout("parade")).toMatchObject({
+      crown: "owned_crown",
+      flag: "flag:owned_flag",
+    });
+    expect(loadoutSelect(modal).value).toBe("parade");
+
+    // The same target drives Delete, and goes away with it.
+    await showTab(modal, "crowns");
+    const unequip = () =>
+      modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!;
+    unequip().click();
+    await modal.updateComplete;
+    const remove = () =>
+      loadoutMenu(modal).querySelector<HTMLButtonElement>(
+        "[data-loadout-delete]",
+      )!;
+    await loadoutMenu(modal).updateComplete;
+    expect(remove().getAttribute("aria-label")).toBe("Delete parade");
+    remove().click();
+    await modal.updateComplete;
+    await loadoutMenu(modal).updateComplete;
+    expect(settings.getLoadouts()).toEqual([]);
+    expect(remove().disabled).toBe(true);
+    expect(
+      loadoutMenu(modal).querySelector<HTMLButtonElement>(
+        "[data-loadout-save]",
+      )!.disabled,
+    ).toBe(true);
   }, 30_000);
 });
