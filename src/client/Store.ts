@@ -283,7 +283,14 @@ export class StoreModal extends BaseModal {
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
-    const product = isPurchasable ? (priced?.product ?? null) : null;
+    // Only packs and subscriptions still check out in USD; cosmetics are
+    // currency-only (their catalog product is always null now, but a cached
+    // cosmetics.json may still carry one — never render a dollar button).
+    const product =
+      isPurchasable &&
+      (resolved.type === "pack" || resolved.type === "subscription")
+        ? (priced?.product ?? null)
+        : null;
     const priceHard = isPurchasable ? priced?.priceHard : undefined;
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
