@@ -221,6 +221,21 @@ export function registerAdminBotRoutes(opts: {
     });
   });
 
+  // Who joined this game, and the account behind each one. The public game
+  // record carries no account id, so a host can otherwise see that 96 people
+  // played and identify none of them. Key-gated like every route here — the
+  // admin-bot key is the trust boundary, same as the stats endpoint above.
+  app.get("/api/adminbot/game/:id/roster", requireAdminBotKey, (req, res) => {
+    const id = req.params.id as string;
+    if (!ownsGame(id, res)) return;
+
+    const game = gm.game(id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    res.json({ gameID: id, players: game.roster() });
+  });
+
   // Read what's happening in a running game. The sim runs on the clients, so
   // this returns the latest live stats snapshot a majority of them agreed on
   // (liveStats is null until the first consensus is reached).
