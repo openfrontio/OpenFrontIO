@@ -59,7 +59,7 @@ export class InventoryLoadoutMenu extends LitElement {
       aria-label=${translateText("inventory.loadout_presets")}
       class="px-3 pt-3"
     >
-      <div class="flex justify-center">
+      <div class="flex justify-start">
         <button
           type="button"
           data-loadout-toggle
@@ -99,7 +99,7 @@ export class InventoryLoadoutMenu extends LitElement {
     return html`<div
       id="inventory-loadout-controls"
       data-loadout-controls
-      class="mt-2 flex flex-wrap items-center justify-center gap-2"
+      class="mt-2 flex flex-wrap items-center justify-start gap-2"
     >
       ${styledSelect({
         options,
