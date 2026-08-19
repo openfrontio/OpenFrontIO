@@ -16,6 +16,7 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
+import "./ClanDonateDialog";
 import {
   type ClanRole,
   defaultOrderForSort,
@@ -68,6 +69,7 @@ export class ClanDetailView extends LitElement {
   @state() private allStatsExpanded = false;
   @state() private membersLoadInFlight = false;
   @state() private memberSearch = "";
+  @state() private donateOpen = false;
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private memberLoadSeq = 0;
   private asyncGeneration = 0;
@@ -357,6 +359,43 @@ export class ClanDetailView extends LitElement {
     }
   }
 
+  // The dialog already moved the currency; this refreshes what the page shows.
+  // The clan's balances come from a fresh detail fetch (the 201 carries neither
+  // side's resulting balance) and the player's wallet from a re-fetched
+  // /users/@me — both are floating; the toast is the acknowledgement.
+  private async handleDonated(
+    e: CustomEvent<{ currencyType: "soft" | "hard"; amount: string }>,
+  ) {
+    this.donateOpen = false;
+    const clan = this.selectedClan;
+    if (!clan) return;
+    const { currencyType, amount } = e.detail;
+    showToast(
+      translateText("clan_modal.donate_success", {
+        amount: BigInt(amount).toLocaleString(),
+        currency: translateText(
+          currencyType === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+        ),
+        tag: clan.tag,
+      }),
+      "green",
+    );
+    invalidateUserMe();
+    const gen = this.asyncGeneration;
+    const detail = await fetchClanDetail(clan.tag);
+    if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
+      return;
+    }
+    this.selectedClan = detail;
+    this.dispatchEvent(
+      new CustomEvent("clan-donated", {
+        detail: { clan: detail },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   private onSearchInput(e: Event) {
     const search = (e.target as HTMLInputElement).value.trim();
     if (search === this.memberSearch) return;
@@ -421,6 +460,15 @@ export class ClanDetailView extends LitElement {
           clan,
         )}
       </div>
+      ${this.donateOpen && isMember
+        ? html`<clan-donate-dialog
+            .clanTag=${clan.tag}
+            @donated=${(
+              e: CustomEvent<{ currencyType: "soft" | "hard"; amount: string }>,
+            ) => void this.handleDonated(e)}
+            @cancel=${() => (this.donateOpen = false)}
+          ></clan-donate-dialog>`
+        : ""}
     `;
 
     if (clan.discordUrl) {
@@ -762,6 +810,16 @@ export class ClanDetailView extends LitElement {
           class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.request_invite")}
+        </button>
+      `);
+    }
+    if (isMember) {
+      buttons.push(html`
+        <button
+          @click=${() => (this.donateOpen = true)}
+          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
+        >
+          ${translateText("clan_modal.donate")}
         </button>
       `);
     }
