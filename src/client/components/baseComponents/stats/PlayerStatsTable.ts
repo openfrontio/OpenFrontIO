@@ -29,6 +29,32 @@ const buildingUnits = (
   Object.keys(BUILDING_ORDER) as (keyof typeof BUILDING_ORDER)[]
 ).sort((left, right) => BUILDING_ORDER[left] - BUILDING_ORDER[right]);
 
+// Stat rows are keyed by the wire abbreviation, but the names themselves are
+// the same ones the build menu and the disabled-units list show, so they read
+// from `unit_type.*` rather than a parallel copy. Trade ships, transports and
+// MIRV warheads are stats-only rows and keep their own keys. `satisfies` fails
+// compilation if a new stat unit lands without a label.
+const UNIT_LABEL_KEYS = {
+  city: "unit_type.city",
+  defp: "unit_type.defense_post",
+  fact: "unit_type.factory",
+  port: "unit_type.port",
+  saml: "unit_type.sam_launcher",
+  silo: "unit_type.missile_silo",
+  wshp: "unit_type.warship",
+  abomb: "unit_type.atom_bomb",
+  hbomb: "unit_type.hydrogen_bomb",
+  mirv: "unit_type.mirv",
+  mirvw: "player_stats_table.unit.mirvw",
+  trade: "player_stats_table.unit.trade",
+  trans: "player_stats_table.unit.trans",
+} as const satisfies Record<
+  | (typeof otherUnits)[number]
+  | (typeof boatUnits)[number]
+  | (typeof bombUnits)[number],
+  string
+>;
+
 type StatsRow = {
   /** Row label. Omitted when a section holds a single unnamed row. */
   label?: string;
@@ -138,7 +164,7 @@ export class PlayerStatsTable extends LitElement {
           "player_stats_table.building_stats",
           UNIT_COLUMNS,
           buildingUnits.map((key) => ({
-            label: `player_stats_table.unit.${key}`,
+            label: UNIT_LABEL_KEYS[key],
             values: slots(stats?.units?.[key], 4),
           })),
           "player_stats_table.building",
@@ -155,7 +181,7 @@ export class PlayerStatsTable extends LitElement {
             "player_stats_table.destroyed",
           ],
           boatUnits.map((key) => ({
-            label: `player_stats_table.unit.${key}`,
+            label: UNIT_LABEL_KEYS[key],
             values: slots(stats?.boats?.[key], 4),
           })),
           "player_stats_table.ship_type",
@@ -171,7 +197,7 @@ export class PlayerStatsTable extends LitElement {
             "player_stats_table.intercepted",
           ],
           bombUnits.map((key) => ({
-            label: `player_stats_table.unit.${key}`,
+            label: UNIT_LABEL_KEYS[key],
             values: slots(stats?.bombs?.[key], 3),
           })),
           "player_stats_table.weapon",

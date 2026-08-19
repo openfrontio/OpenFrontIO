@@ -41,7 +41,7 @@ const REASON_KEYS: Record<string, string> = {
   expired: "steam_link_modal.reason_expired",
   rate_limited: "steam_link_modal.reason_rate_limited",
 };
-const DEFAULT_REASON_KEY = "steam_link_modal.reason_failed";
+const DEFAULT_REASON_KEY = "common.error_generic";
 
 // "rate_limited" is the one reason whose message takes a parameter
 // (Retry-After's seconds, when the server sent one) — every other reason is

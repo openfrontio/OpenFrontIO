@@ -43,7 +43,7 @@ export class TokenLoginModal extends BaseModal {
   }
 
   private loggingIn() {
-    const loggingText = translateText("token_login_modal.logging_in");
+    const loggingText = translateText("token_login_modal.title");
     return html`
       <div class="flex items-center gap-4">
         <div

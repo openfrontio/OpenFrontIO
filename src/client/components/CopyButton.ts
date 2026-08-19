@@ -90,7 +90,7 @@ export class CopyButton extends LitElement {
       await copyToClipboard(text);
       showToast(translateText("common.copied"), "green");
     } catch {
-      showToast(translateText("error_modal.failed_copy"), "red");
+      showToast(translateText("common.failed_copy"), "red");
     }
   }
 

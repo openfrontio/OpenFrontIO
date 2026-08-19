@@ -285,7 +285,7 @@ export class NavAccountMenu extends LitElement {
       await copyToClipboard(playerProfileUrl(publicId));
       showToast(translateText("common.copied"), "green");
     } catch {
-      showToast(translateText("error_modal.failed_copy"), "red");
+      showToast(translateText("common.failed_copy"), "red");
     }
   }
 

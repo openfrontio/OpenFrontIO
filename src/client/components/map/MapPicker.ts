@@ -209,8 +209,8 @@ export class MapPicker extends LitElement {
         type="button"
         aria-expanded=${anyExpanded}
         title=${anyExpanded
-          ? translateText("map_component.collapse_all")
-          : translateText("map_component.expand_all")}
+          ? translateText("common.collapse_all")
+          : translateText("common.expand_all")}
         @click=${() => this.toggleExpandAll()}
         class="h-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white/60 hover:text-white transition-all active:scale-95"
       >
@@ -226,8 +226,8 @@ export class MapPicker extends LitElement {
         </svg>
         <span class="hidden sm:inline">
           ${anyExpanded
-            ? translateText("map_component.collapse_all")
-            : translateText("map_component.expand_all")}
+            ? translateText("common.collapse_all")
+            : translateText("common.expand_all")}
         </span>
       </button>
     </div>`;

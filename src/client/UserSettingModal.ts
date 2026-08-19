@@ -418,7 +418,7 @@ export class UserSettingModal extends BaseModal {
 
       <setting-keybind
         action="resetGfx"
-        label=${translateText("user_setting.reset_gfx")}
+        label=${translateText("help_modal.action_reset_gfx")}
         description=${translateText("user_setting.reset_gfx_desc")}
         .defaultKey=${this.defaultKeybinds.resetGfx}
         .value=${this.getKeyValue("resetGfx")}

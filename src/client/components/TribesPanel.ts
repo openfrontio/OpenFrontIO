@@ -160,13 +160,13 @@ export class TribesPanel extends LitElement {
         text:
           secs && secs > 0
             ? translateText("store.tribe_rate_limited", { seconds: secs })
-            : translateText("store.tribe_purchase_failed"),
+            : translateText("store.purchase_failed"),
       };
       return;
     }
     // "invalid" carries the server's player-facing reason (bad name,
     // disallowed, or insufficient balance); fall back to a generic message.
-    let text = translateText("store.tribe_purchase_failed");
+    let text = translateText("store.purchase_failed");
     if (result.code === "invalid" && result.message) {
       text = result.message;
     }
