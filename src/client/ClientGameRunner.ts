@@ -146,6 +146,21 @@ export function joinLobby(
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
+      // Preload the map while still in the lobby so game start can reuse the
+      // cached result instead of blocking on the download in the short
+      // prestart->start window. loadTerrainMap is lazy and cached, so this is
+      // cheap and the host changing the map mid-lobby triggers a reload here
+      // (lobby_info is re-broadcast every second); doctrine/prestart still
+      // re-validates the authoritative map before the game actually starts.
+      const preloadMap = message.lobby.gameConfig;
+      if (preloadMap !== undefined) {
+        terrainLoad = loadTerrainMap(
+          preloadMap.gameMap,
+          preloadMap.gameMapSize,
+          terrainMapFileLoader,
+          false, // Layer images loaded off the critical path after game start.
+        );
+      }
       return;
     }
     if (message.type === "prestart") {
