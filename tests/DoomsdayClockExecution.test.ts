@@ -242,7 +242,9 @@ class FakeGame {
     return out;
   }
   numTilesWithFallout(): number {
-    return 0;
+    // Kept in sync with setFallout: the execution subtracts this from land when
+    // sizing the bar and the rot quota, so a stale 0 would diverge from prod.
+    return this.falloutTiles.size;
   }
   config() {
     return {
