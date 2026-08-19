@@ -101,7 +101,7 @@
       "name": "Tay Ninh"
     }
   ],
-  "categories": ["new", "countries", "asia"],
+  "categories": ["countries", "asia"],
   "id": "Vietnam",
   "map": {
     "height": 3560,

@@ -2,7 +2,7 @@
   "id": "ClearwaterLakes",
   "name": "Clearwater Lakes",
   "translation_key": "map.clearwaterlakes",
-  "categories": ["new", "north_america"],
+  "categories": ["north_america"],
   "multiplayer_frequency": 3,
   "nations": [
     {

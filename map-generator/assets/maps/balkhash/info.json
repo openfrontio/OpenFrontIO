@@ -2,7 +2,7 @@
   "id": "Balkhash",
   "name": "Balkhash",
   "translation_key": "map.balkhash",
-  "categories": ["new", "asia"],
+  "categories": ["asia"],
   "multiplayer_frequency": 4,
   "nations": [
     {

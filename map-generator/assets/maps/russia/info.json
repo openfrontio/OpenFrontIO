@@ -2,7 +2,7 @@
   "id": "Russia",
   "name": "Russia",
   "translation_key": "map.russia",
-  "categories": ["europe", "asia", "new", "countries"],
+  "categories": ["europe", "asia", "countries"],
   "multiplayer_frequency": 8,
   "nations": [
     {
