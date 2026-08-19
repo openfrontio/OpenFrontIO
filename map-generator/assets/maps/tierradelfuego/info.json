@@ -2,7 +2,7 @@
   "id": "TierraDelFuego",
   "name": "Tierra Del Fuego",
   "translation_key": "map.tierradelfuego",
-  "categories": ["south_america", "new"],
+  "categories": ["south_america"],
   "multiplayer_frequency": 5,
   "nations": [
     {

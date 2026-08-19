@@ -2,7 +2,7 @@
   "id": "UnitedStates",
   "name": "United States",
   "translation_key": "map.unitedstates",
-  "categories": ["north_america", "new", "countries"],
+  "categories": ["north_america", "countries"],
   "multiplayer_frequency": 9,
   "nations": [
     {
