@@ -32,4 +32,21 @@ describe("NukeTrajectory thresholds", () => {
     expect(data.p0x).toBe(100);
     expect(data.p3x).toBe(800);
   });
+
+  test("intercepts nuke when SAM covers tUntargetableEnd but excludes next sample", () => {
+    const cp = horizontalCp(100, 800);
+    const thBase = computeTrajectoryThresholds(cp, 100, 500, 800, 500, []);
+    const t = thBase.tUntargetableEnd,
+      T = 1 - t;
+    const x =
+      T * (T * (T * cp.p0x + 3 * t * cp.p1x) + 3 * t * t * cp.p2x) +
+      t * t * t * cp.p3x;
+    const y =
+      T * (T * (T * cp.p0y + 3 * t * cp.p1y) + 3 * t * t * cp.p2y) +
+      t * t * t * cp.p3y;
+    const th = computeTrajectoryThresholds(cp, 100, 500, 800, 500, [
+      { x, y, rangeSq: 25 },
+    ]);
+    expect(th.tSamIntercept).toBe(t);
+  });
 });
