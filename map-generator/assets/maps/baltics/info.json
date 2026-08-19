@@ -2,7 +2,7 @@
   "id": "Baltics",
   "name": "Baltics",
   "translation_key": "map.baltics",
-  "categories": ["europe", "new"],
+  "categories": ["europe"],
   "multiplayer_frequency": 5,
   "nations": [
     {

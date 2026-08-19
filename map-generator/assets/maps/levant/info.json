@@ -2,7 +2,7 @@
   "id": "Levant",
   "name": "Levant",
   "translation_key": "map.levant",
-  "categories": ["asia", "new"],
+  "categories": ["asia"],
   "multiplayer_frequency": 5,
   "nations": [
     {

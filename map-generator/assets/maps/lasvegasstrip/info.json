@@ -2,7 +2,7 @@
   "id": "LasVegasStrip",
   "name": "Las Vegas Strip",
   "translation_key": "map.lasvegasstrip",
-  "categories": ["north_america", "new"],
+  "categories": ["north_america"],
   "multiplayer_frequency": 3,
   "nations": [
     {

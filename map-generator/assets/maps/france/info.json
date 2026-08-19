@@ -2,7 +2,7 @@
   "id": "France",
   "name": "France",
   "translation_key": "map.france",
-  "categories": ["new", "europe", "countries"],
+  "categories": ["europe", "countries"],
   "multiplayer_frequency": 8,
   "nations": [
     {

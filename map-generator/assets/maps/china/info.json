@@ -2,7 +2,7 @@
   "id": "China",
   "name": "China",
   "translation_key": "map.china",
-  "categories": ["asia", "countries", "new"],
+  "categories": ["asia", "countries"],
   "multiplayer_frequency": 8,
   "nations": [
     {
