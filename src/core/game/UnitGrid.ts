@@ -10,6 +10,14 @@ export type UnitPredicate = (value: {
 export class UnitGrid {
   private grid: Map<UnitType, Set<Unit | UnitView>>[][];
   private readonly cellSize = 100;
+  /**
+   * Loose per-type unit counts. Decrements are gated on Set.delete()
+   * returning true, so counts can only overestimate (never underestimate)
+   * the true population — a count of 0 is always a trustworthy "no units of
+   * this type anywhere", letting nearbyUnits() bail out instantly for types
+   * that don't exist in the game (e.g. defense posts in bot games).
+   */
+  private unitCounts = new Map<UnitType, number>();
 
   constructor(private gm: GameMap) {
     this.grid = Array(Math.ceil(gm.height() / this.cellSize))
@@ -32,15 +40,14 @@ export class UnitGrid {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
-      const unitSet = this.grid[gridY][gridX].get(unit.type());
+      const type = unit.type();
+      const unitSet = this.grid[gridY][gridX].get(type);
       if (unitSet !== undefined) {
         unitSet.add(unit);
       } else {
-        this.grid[gridY][gridX].set(
-          unit.type(),
-          new Set<Unit | UnitView>([unit]),
-        );
+        this.grid[gridY][gridX].set(type, new Set<Unit | UnitView>([unit]));
       }
+      this.unitCounts.set(type, (this.unitCounts.get(type) ?? 0) + 1);
     }
   }
 
@@ -54,9 +61,10 @@ export class UnitGrid {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
-      const unitSet = this.grid[gridY][gridX].get(unit.type());
-      if (unitSet !== undefined) {
-        unitSet.delete(unit);
+      const type = unit.type();
+      const unitSet = this.grid[gridY][gridX].get(type);
+      if (unitSet !== undefined && unitSet.delete(unit)) {
+        this.unitCounts.set(type, (this.unitCounts.get(type) ?? 1) - 1);
       }
     }
   }
@@ -139,13 +147,45 @@ export class UnitGrid {
     predicate?: UnitPredicate,
     includeUnderConstruction: boolean = false,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
-    const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const gm = this.gm;
     const x = gm.x(tile);
     const y = gm.y(tile);
-    const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
-      tile,
-      searchRange,
+
+    // No units of the requested type(s) anywhere → nothing can be nearby.
+    if (Array.isArray(types)) {
+      let any = false;
+      for (let i = 0; i < types.length; i++) {
+        if ((this.unitCounts.get(types[i]) ?? 0) > 0) {
+          any = true;
+          break;
+        }
+      }
+      if (!any) return [];
+    } else if ((this.unitCounts.get(types as UnitType) ?? 0) === 0) {
+      return [];
+    }
+
+    const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
+    // Range bounds computed inline (getCellsInRange would allocate a bounds
+    // object per call — this runs once per conquered tile in attackLogic).
+    const cellSize = this.cellSize;
+    const gridX = Math.floor(x / cellSize);
+    const gridY = Math.floor(y / cellSize);
+    const startGridX = Math.max(
+      0,
+      gridX - Math.ceil((searchRange - (x % cellSize)) / cellSize),
+    );
+    const endGridX = Math.min(
+      this.grid[0].length - 1,
+      gridX + Math.ceil((searchRange - (cellSize - (x % cellSize))) / cellSize),
+    );
+    const startGridY = Math.max(
+      0,
+      gridY - Math.ceil((searchRange - (y % cellSize)) / cellSize),
+    );
+    const endGridY = Math.min(
+      this.grid.length - 1,
+      gridY + Math.ceil((searchRange - (cellSize - (y % cellSize))) / cellSize),
     );
     const rangeSquared = searchRange * searchRange;
 

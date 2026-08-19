@@ -198,6 +198,11 @@ function createGlStub() {
     },
     updateRelations: noop("updateRelations"),
     setSAMAllianceClusters: noop("setSAMAllianceClusters"),
+    updateSmallPlayerGlow: noop("updateSmallPlayerGlow"),
+    updateSpiralRibbons: noop("updateSpiralRibbons"),
+    markLayerTilesDestroyed: noop("markLayerTilesDestroyed"),
+    refreshNames: noop("refreshNames"),
+    updateEffectPalette: noop("updateEffectPalette"),
   };
   return {
     view,

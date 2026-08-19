@@ -1,4 +1,5 @@
 import { renderTroops } from "../../client/Utils";
+import { AttackLogicResult } from "../configuration/Config";
 import {
   Attack,
   Difficulty,
@@ -37,6 +38,12 @@ export class AttackExecution implements Execution {
   // Reusable neighbor buffers to avoid closures/allocation in hot loops.
   private nbuf: TileRef[] = [0, 0, 0, 0];
   private nbuf2: TileRef[] = [0, 0, 0, 0];
+  // Reused by Config.attackLogic (one conquest per call).
+  private attackLogicResult: AttackLogicResult = {
+    attackerTroopLoss: 0,
+    defenderTroopLoss: 0,
+    tilesPerTickUsed: 0,
+  };
 
   constructor(
     private startTroops: number | null = null,
@@ -187,6 +194,9 @@ export class AttackExecution implements Execution {
     }
 
     this.toConquer.clear();
+    // Every border tile can enqueue up to 4 neighbors — size the heap once
+    // instead of letting enqueue double it repeatedly for large empires.
+    this.toConquer.reserve(this._owner.borderTiles().size * 4);
     this.attack.clearBorder();
     for (const tile of this._owner.borderTiles()) {
       this.addNeighbors(tile);
@@ -303,7 +313,10 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.addNeighbors(tileToConquer);
-      const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
+      // Out-param result: attackLogic runs once per conquered tile and the
+      // result object is reused instead of allocating per tile.
+      const logicResult = this.attackLogicResult;
+      this.mg
         .config()
         .attackLogic(
           this.mg,
@@ -311,12 +324,13 @@ export class AttackExecution implements Execution {
           this._owner,
           this.target,
           tileToConquer,
+          logicResult,
         );
-      numTilesPerTick -= tilesPerTickUsed;
-      troopCount -= attackerTroopLoss;
+      numTilesPerTick -= logicResult.tilesPerTickUsed;
+      troopCount -= logicResult.attackerTroopLoss;
       this.attack.setTroops(troopCount);
       if (targetPlayer) {
-        targetPlayer.removeTroops(defenderTroopLoss);
+        targetPlayer.removeTroops(logicResult.defenderTroopLoss);
       }
       this._owner.conquer(tileToConquer);
       this.handleDeadDefender();

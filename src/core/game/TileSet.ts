@@ -78,38 +78,64 @@ export class TileSet implements ReadonlyTileSet {
   }
 
   add(value: TileRef): this {
-    if (this.has(value)) return this;
+    // Single probe pass: scan for an existing entry while remembering the
+    // first DELETED slot for insertion. Previously this did two full probes
+    // per add (one inside has(), one for insertion).
+    let table = this.table;
+    let mask = table.length - 1;
+    let slot = TileSet.hash(value) & mask;
+    let firstDeleted = -1;
+    for (;;) {
+      const di = table[slot];
+      if (di === EMPTY) break;
+      if (di === DELETED) {
+        if (firstDeleted === -1) firstDeleted = slot;
+      } else if (this.dense[di] === value) {
+        return this;
+      }
+      slot = (slot + 1) & mask;
+    }
+    if (firstDeleted !== -1) slot = firstDeleted;
 
+    let reProbe = false;
     if (this.denseLen === this.dense.length) {
       // Prefer reclaiming tombstones over growing, unless an iterator is
       // live (compaction shifts positions).
       if (this.iterDepth === 0 && this.denseLen - this.size_ >= this.size_) {
-        this.compact(this.dense.length);
+        this.compact(this.dense.length); // rehashes → probe slot is stale
+        reProbe = true;
       } else {
         const grown = new Uint32Array(this.dense.length * 2);
         grown.set(this.dense);
         this.dense = grown;
       }
     }
-    // Keep the table under ~75% occupied so probe chains stay short and
-    // always hit an EMPTY slot.
-    if ((this.tableUsed + 1) * 4 > this.table.length * 3) {
+    // Keep the table under ~60% occupied so probe chains stay short and
+    // always hit an EMPTY slot. (Lower than the typical 75%: TileSet
+    // membership probes dominate the conquest hot path, and the extra
+    // Int32Array capacity is ~4 bytes per dense entry.)
+    if ((this.tableUsed + 1) * 5 > this.table.length * 3) {
       this.rehash(
-        this.size_ * 4 > this.table.length
+        this.size_ * 5 > this.table.length * 3
           ? this.table.length * 2
           : this.table.length, // mostly DELETED markers — same size, cleaned
       );
+      reProbe = true;
+    }
+    if (reProbe) {
+      // Re-probe on the fresh table (no DELETED markers remain after a
+      // rehash, so insertion goes to the first EMPTY slot).
+      table = this.table;
+      mask = table.length - 1;
+      slot = TileSet.hash(value) & mask;
+      while (table[slot] !== EMPTY) {
+        slot = (slot + 1) & mask;
+      }
     }
 
     const di = this.denseLen++;
     this.dense[di] = value;
     this.size_++;
-    const table = this.table;
-    const mask = table.length - 1;
-    let slot = TileSet.hash(value) & mask;
-    while (table[slot] >= 0) {
-      slot = (slot + 1) & mask;
-    }
     if (table[slot] === EMPTY) this.tableUsed++;
     table[slot] = di;
     return this;
@@ -165,20 +191,54 @@ export class TileSet implements ReadonlyTileSet {
     }
   }
 
-  *values(): IterableIterator<TileRef> {
-    this.iterDepth++;
-    try {
-      for (let i = 0; i < this.denseLen; i++) {
-        const v = this.dense[i];
-        if (v !== TOMBSTONE) yield v;
-      }
-    } finally {
-      this.iterDepth--;
-    }
+  values(): IterableIterator<TileRef> {
+    return this.iteratorFrom(0);
   }
 
   [Symbol.iterator](): IterableIterator<TileRef> {
-    return this.values();
+    return this.iteratorFrom(0);
+  }
+
+  /**
+   * Closure-based iterator. Generator `values()` allocates an
+   * iterator-result object per element when consumed by Array.from/spread/
+   * for..of; the closure form is inlinable and its per-element result
+   * objects are escape-analyzed away in hot loops.
+   */
+  private iteratorFrom(index: number): IterableIterator<TileRef> {
+    let i = index;
+    let released = false;
+    this.iterDepth++;
+    const release = () => {
+      if (!released) {
+        released = true;
+        this.iterDepth--;
+      }
+    };
+    const iter: IterableIterator<TileRef> = {
+      next: () => {
+        // Re-read dense/denseLen every step like the generator did:
+        // appends during iteration are visited, tombstoned slots skipped.
+        const dense = this.dense;
+        const len = this.denseLen;
+        while (i < len) {
+          const v = dense[i++];
+          if (v !== TOMBSTONE) return { value: v, done: false };
+        }
+        release();
+        return { value: undefined, done: true };
+      },
+      return: () => {
+        release();
+        return { value: undefined, done: true };
+      },
+      throw: (e?: unknown) => {
+        release();
+        throw e;
+      },
+      [Symbol.iterator]: () => iter,
+    };
+    return iter;
   }
 
   /** Rewrites dense storage without tombstones, preserving insertion order. */

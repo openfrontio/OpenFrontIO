@@ -132,6 +132,13 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
 };
 
+/** Mutable result carrier for Config.attackLogic (one conquest per call). */
+export interface AttackLogicResult {
+  attackerTroopLoss: number;
+  defenderTroopLoss: number;
+  tilesPerTickUsed: number;
+}
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -647,17 +654,19 @@ export class Config {
     return this.bots();
   }
 
+  /**
+   * Mutable result carrier for attackLogic(). attackLogic runs once per
+   * conquered tile, so callers own a reusable result object and the method
+   * writes into it instead of allocating a fresh object per tile.
+   */
   attackLogic(
     gm: Game,
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
-  ): {
-    attackerTroopLoss: number;
-    defenderTroopLoss: number;
-    tilesPerTickUsed: number;
-  } {
+    out: AttackLogicResult,
+  ): void {
     let mag;
     let speed;
     const type = gm.terrainType(tileToConquer);
@@ -714,10 +723,12 @@ export class Config {
     }
 
     if (defender.isPlayer()) {
+      const defenderTroops = defender.troops(); // Number(bigint) — once
+      const defenderTiles = defender.numTilesOwned();
       const defenseSig =
         1 -
         sigmoid(
-          defender.numTilesOwned(),
+          defenderTiles,
           DEFENSE_DEBUFF_DECAY_RATE,
           DEFENSE_DEBUFF_MIDPOINT,
         );
@@ -725,19 +736,21 @@ export class Config {
       const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
       const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
 
+      const attackerTiles = attacker.numTilesOwned();
       let largeAttackBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
+      if (attackerTiles > 100_000) {
+        largeAttackBonus = Math.sqrt(100_000 / attackerTiles) ** 0.7;
       }
       let largeAttackerSpeedBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
+      if (attackerTiles > 100_000) {
+        largeAttackerSpeedBonus = (100_000 / attackerTiles) ** 0.6;
       }
 
-      const defenderTroopLoss = defender.troops() / defender.numTilesOwned();
-      const traitorMod = defender.isTraitor() ? this.traitorDefenseDebuff() : 1;
+      const defenderTroopLoss = defenderTroops / defenderTiles;
+      const defenderIsTraitor = defender.isTraitor();
+      const traitorMod = defenderIsTraitor ? this.traitorDefenseDebuff() : 1;
       const currentAttackerLoss =
-        within(defender.troops() / attackTroops, 0.6, 2) *
+        within(defenderTroops / attackTroops, 0.6, 2) *
         mag *
         0.8 *
         largeDefenderAttackDebuff *
@@ -745,30 +758,23 @@ export class Config {
         traitorMod;
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
-      const attackerTroopLoss =
-        0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
-
-      return {
-        attackerTroopLoss,
-        defenderTroopLoss,
-        tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
-          speed *
-          largeDefenderSpeedDebuff *
-          largeAttackerSpeedBonus *
-          (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
-      };
+      out.attackerTroopLoss = 0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
+      out.defenderTroopLoss = defenderTroopLoss;
+      out.tilesPerTickUsed =
+        within(defenderTroops / (5 * attackTroops), 0.2, 1.5) *
+        speed *
+        largeDefenderSpeedDebuff *
+        largeAttackerSpeedBonus *
+        (defenderIsTraitor ? this.traitorSpeedDebuff() : 1);
     } else {
-      return {
-        attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
-        defenderTroopLoss: 0,
-        tilesPerTickUsed: within(
-          (2000 * Math.max(10, speed)) / attackTroops,
-          5,
-          100,
-        ),
-      };
+      out.attackerTroopLoss =
+        attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5;
+      out.defenderTroopLoss = 0;
+      out.tilesPerTickUsed = within(
+        (2000 * Math.max(10, speed)) / attackTroops,
+        5,
+        100,
+      );
     }
   }
 
@@ -839,16 +845,20 @@ export class Config {
   }
 
   maxTroops(player: Player | PlayerView): number {
+    // Single pass over the player's cities instead of filter().map().reduce()
+    // (three arrays + closures per call — this runs for every player every
+    // tick via troopIncreaseRate).
+    let cityLevels = 0;
+    for (const city of player.units(UnitType.City)) {
+      if (!city.isUnderConstruction()) {
+        cityLevels += city.level();
+      }
+    }
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player
-            .units(UnitType.City)
-            .filter((u) => !u.isUnderConstruction())
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+          cityLevels * this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;

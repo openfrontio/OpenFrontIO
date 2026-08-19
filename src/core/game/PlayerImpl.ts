@@ -109,6 +109,8 @@ export class PlayerImpl implements Player {
 
   private _gold: bigint;
   private _troops: bigint;
+  /** Number view of _troops, kept in sync by every mutation site. */
+  private _troopsNum: number;
 
   markedTraitorTick = -1;
   markedDoomsdayClockTick = -1;
@@ -117,6 +119,12 @@ export class PlayerImpl implements Player {
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
+
+  /** nearby() result cache, validated against the game's owner version. */
+  private nearbyCache: {
+    version: number;
+    result: (Player | TerraNullius)[];
+  } | null = null;
 
   public _borderTiles = new TileSet();
 
@@ -162,6 +170,7 @@ export class PlayerImpl implements Player {
     private readonly _team: Team | null,
   ) {
     this._troops = toInt(startTroops);
+    this._troopsNum = Number(this._troops);
     this._gold = mg.config().startingGold(playerInfo);
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
@@ -502,6 +511,16 @@ export class PlayerImpl implements Player {
   }
 
   nearby(): (Player | TerraNullius)[] {
+    // The result depends only on tile ownership (and static terrain), so it
+    // is stable until the next ownership change. AI code calls nearby()
+    // several times per tick for the same player; keying the cache on the
+    // game's owner version makes every call after the first free.
+    const version = this.mg.ownerVersion();
+    const cached = this.nearbyCache;
+    if (cached !== null && cached.version === version) {
+      return cached.result;
+    }
+
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
     const smallID = this.smallID();
@@ -524,7 +543,69 @@ export class PlayerImpl implements Player {
     for (const n of this.shoreReachableNeighbors()) {
       ns.add(n);
     }
-    return Array.from(ns);
+    const result = Array.from(ns);
+    this.nearbyCache = { version, result };
+    return result;
+  }
+
+  /**
+   * Early-exit equivalent of nearby().some((n) => !n.isPlayer()): true iff
+   * some border-adjacent tile (direct neighbor or shore-reachable across a
+   * small river) is unowned. playerBySmallID(0) is the terra nullius, so
+   * "not a player" is exactly ownerID === 0. Runs the same scans as nearby()
+   * but returns the moment an unowned tile is found.
+   */
+  public bordersUnownedLand(): boolean {
+    const map = this.mg.map();
+
+    // Direct neighbors of every border tile (same filter as nearby()).
+    for (const border of this.borderTiles()) {
+      const numNeighbors = map.neighbors4(border, NEIGHBOR_SCRATCH);
+      for (let i = 0; i < numNeighbors; i++) {
+        const neighbor = NEIGHBOR_SCRATCH[i];
+        if (!map.isLand(neighbor) || map.isImpassable(neighbor)) {
+          continue;
+        }
+        if (!map.hasOwner(neighbor) && map.hasFallout(neighbor)) {
+          continue;
+        }
+        if (map.ownerID(neighbor) === 0) {
+          return true;
+        }
+      }
+    }
+
+    // Shore sampling, mirroring shoreReachableNeighbors() (every 10th shore
+    // tile, 5 tiles into water in each cardinal direction).
+    let shoreIdx = 0;
+    for (const border of this.borderTiles()) {
+      if (!map.isShore(border)) continue;
+      if (shoreIdx++ % 10 !== 0) continue;
+
+      const bx = map.x(border);
+      const by = map.y(border);
+      for (let d = 0; d < 4; d++) {
+        const dx = SHORE_DIRECTIONS_DX[d];
+        const dy = SHORE_DIRECTIONS_DY[d];
+        const x1 = bx + dx;
+        const y1 = by + dy;
+        if (!map.isValidCoord(x1, y1) || !map.isWater(map.ref(x1, y1)))
+          continue;
+
+        const nx = bx + dx * 5;
+        const ny = by + dy * 5;
+        if (!map.isValidCoord(nx, ny)) continue;
+        const tile = map.ref(nx, ny);
+        if (!map.isLand(tile)) continue;
+        if (map.isImpassable(tile)) continue;
+        if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
+        if (map.ownerID(tile) === 0) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   // Samples every 10th border tile for shore tiles, checks the tile 5 steps
@@ -577,6 +658,7 @@ export class PlayerImpl implements Player {
   }
   setTroops(troops: number) {
     this._troops = toInt(troops);
+    this._troopsNum = Number(this._troops);
   }
   conquer(tile: TileRef) {
     this.mg.conquer(this, tile);
@@ -1202,7 +1284,11 @@ export class PlayerImpl implements Player {
   }
 
   troops(): number {
-    return Number(this._troops);
+    // Cached Number view — troops() is called millions of times per game
+    // (troopIncreaseRate per player per tick, attackLogic per conquest).
+    // All mutations funnel through the constructor/setTroops/addTroops/
+    // removeTroops, which keep the cache in sync.
+    return this._troopsNum;
   }
 
   addTroops(troops: number): void {
@@ -1211,6 +1297,7 @@ export class PlayerImpl implements Player {
       return;
     }
     this._troops += toInt(troops);
+    this._troopsNum = Number(this._troops);
   }
   removeTroops(troops: number): number {
     if (troops <= 0) {
@@ -1218,6 +1305,7 @@ export class PlayerImpl implements Player {
     }
     const toRemove = minInt(this._troops, toInt(troops));
     this._troops -= toRemove;
+    this._troopsNum = Number(this._troops);
     return Number(toRemove);
   }
 

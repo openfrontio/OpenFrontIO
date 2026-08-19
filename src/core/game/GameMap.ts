@@ -51,6 +51,11 @@ export interface GameMap {
     ref: TileRef,
     callback: (neighbor: TileRef) => void,
   ): void;
+  // Writes the 8 neighbors (cardinals + diagonals) of ref into out in the
+  // same dx-major order as forEachNeighborWithDiag and returns the count.
+  // out must have length >= 8; reuse it across calls to avoid allocation in
+  // hot loops.
+  neighbors8(ref: TileRef, out: TileRef[]): number;
   isWater(ref: TileRef): boolean;
   isShore(ref: TileRef): boolean;
   cost(ref: TileRef): number;
@@ -401,6 +406,28 @@ export class GameMapImpl implements GameMap {
     if (ref < (this.height_ - 1) * w) out[n++] = ref + w;
     if (x !== 0) out[n++] = ref - 1;
     if (x !== w - 1) out[n++] = ref + 1;
+    return n;
+  }
+
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    const w = this.width_;
+    const x = ref % w;
+    const hasN = ref >= w;
+    const hasS = ref < (this.height_ - 1) * w;
+    let n = 0;
+
+    if (x !== 0) {
+      if (hasN) out[n++] = ref - 1 - w;
+      out[n++] = ref - 1;
+      if (hasS) out[n++] = ref - 1 + w;
+    }
+    if (hasN) out[n++] = ref - w;
+    if (hasS) out[n++] = ref + w;
+    if (x !== w - 1) {
+      if (hasN) out[n++] = ref + 1 - w;
+      out[n++] = ref + 1;
+      if (hasS) out[n++] = ref + 1 + w;
+    }
     return n;
   }
 

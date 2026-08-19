@@ -1,4 +1,8 @@
-import { Config, NukeMagnitude } from "../../src/core/configuration/Config";
+import {
+  AttackLogicResult,
+  Config,
+  NukeMagnitude,
+} from "../../src/core/configuration/Config";
 import {
   Game,
   Player,
@@ -82,12 +86,11 @@ export class TestConfig extends Config {
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
-  ): {
-    attackerTroopLoss: number;
-    defenderTroopLoss: number;
-    tilesPerTickUsed: number;
-  } {
-    return { attackerTroopLoss: 1, defenderTroopLoss: 1, tilesPerTickUsed: 1 };
+    out: AttackLogicResult,
+  ): void {
+    out.attackerTroopLoss = 1;
+    out.defenderTroopLoss = 1;
+    out.tilesPerTickUsed = 1;
   }
 
   attackTilesPerTick(
@@ -106,18 +109,16 @@ export class UseRealAttackLogic extends TestConfig {
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
-  ): {
-    attackerTroopLoss: number;
-    defenderTroopLoss: number;
-    tilesPerTickUsed: number;
-  } {
-    return Config.prototype.attackLogic.call(
+    out: AttackLogicResult,
+  ): void {
+    Config.prototype.attackLogic.call(
       this,
       gm,
       attackTroops,
       attacker,
       defender,
       tileToConquer,
+      out,
     );
   }
 }

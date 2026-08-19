@@ -650,6 +650,13 @@ export interface Player {
 
   // Relations & Diplomacy
   nearby(): (Player | TerraNullius)[];
+  /**
+   * True iff any tile adjacent to this player's border (including
+   * shore-reachable tiles across small rivers) is unowned. Equivalent to
+   * nearby().some((n) => !n.isPlayer()) but exits as soon as one is found,
+   * so per-tick bot checks don't pay for the full border scan.
+   */
+  bordersUnownedLand(): boolean;
   sharesBorderWith(other: Player | TerraNullius): boolean;
   relation(other: Player): Relation;
   allRelationsSorted(): { player: Player; relation: Relation }[];
@@ -753,6 +760,10 @@ export interface Game extends GameMap {
     tile: TileRef,
     callback: (neighbor: TileRef) => void,
   ): void;
+  // Writes the 8 neighbors (cardinals + diagonals) of ref into out in the
+  // same dx-major order as forEachNeighborWithDiag and returns the count.
+  // out must have length >= 8; reuse it across calls in hot loops.
+  neighbors8(ref: TileRef, out: TileRef[]): number;
 
   // Player Management
   player(id: PlayerID): Player;

@@ -8,6 +8,7 @@ import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   BuildableUnit,
+  Cell,
   Game,
   GameType,
   GameUpdates,
@@ -98,6 +99,34 @@ export class GameRunner {
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
 
+  /**
+   * Cache of the last computed per-player name placement, keyed by the
+   * inputs placeName/placeSpawnName actually depend on (territory changes,
+   * bounding-box identity, fallout count, display name). The periodic
+   * full-player recompute pass only does real work for players whose inputs
+   * changed — for everyone else the previous result is byte-identical, so
+   * the cached value is reused.
+   *
+   * placeName uses player.largestClusterBoundingBox when set: the box is a
+   * fresh object each recompute, so comparing it by reference captures
+   * bounding-box updates even when the box lags the tile change that caused
+   * them (box recomputation is throttled by PlayerExecution). When the box
+   * is null/undefined placeName derives everything from borderTiles, which
+   * only change with tile ownership — covered by tileChange.
+   */
+  private namePlacementCache = new Map<
+    PlayerID,
+    {
+      mode: "spawn" | "territory";
+      spawnTile: TileRef | undefined;
+      tileChange: number;
+      bbox: { min: Cell; max: Cell } | null;
+      fallout: number;
+      displayName: string;
+      data: NameViewData;
+    }
+  >();
+
   constructor(
     public game: Game,
     private execManager: Executor,
@@ -182,7 +211,30 @@ export class GameRunner {
           continue;
         }
         if (p.spawnTile() === undefined) continue;
-        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+        const displayName = p.displayName();
+        const spawnTile = p.spawnTile();
+        const cached = this.namePlacementCache.get(p.id());
+        let data: NameViewData;
+        if (
+          cached !== undefined &&
+          cached.mode === "spawn" &&
+          cached.spawnTile === spawnTile &&
+          cached.displayName === displayName
+        ) {
+          data = cached.data;
+        } else {
+          data = placeSpawnName(this.game, p);
+          this.namePlacementCache.set(p.id(), {
+            mode: "spawn",
+            spawnTile,
+            tileChange: p.lastTileChange(),
+            bbox: p.largestClusterBoundingBox ?? null,
+            fallout: this.game.numTilesWithFallout(),
+            displayName,
+            data,
+          });
+        }
+        this.playerViewData[p.id()] = data;
         viewDataChanged = true;
       }
     }
@@ -193,8 +245,34 @@ export class GameRunner {
       this.game.ticks() < 3 ||
       this.game.ticks() % 30 === 0
     ) {
+      const fallout = this.game.numTilesWithFallout();
       for (const p of this.game.players()) {
-        this.playerViewData[p.id()] = placeName(this.game, p);
+        const displayName = p.displayName();
+        const bbox = p.largestClusterBoundingBox ?? null;
+        const cached = this.namePlacementCache.get(p.id());
+        let data: NameViewData;
+        if (
+          cached !== undefined &&
+          cached.mode === "territory" &&
+          cached.tileChange === p.lastTileChange() &&
+          cached.bbox === bbox &&
+          cached.fallout === fallout &&
+          cached.displayName === displayName
+        ) {
+          data = cached.data;
+        } else {
+          data = placeName(this.game, p);
+          this.namePlacementCache.set(p.id(), {
+            mode: "territory",
+            spawnTile: p.spawnTile(),
+            tileChange: p.lastTileChange(),
+            bbox,
+            fallout,
+            displayName,
+            data,
+          });
+        }
+        this.playerViewData[p.id()] = data;
       }
       viewDataChanged = true;
     }

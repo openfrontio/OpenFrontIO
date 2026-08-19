@@ -1261,6 +1261,10 @@ export class GameView implements GameMap {
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }
+
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors8(ref, out);
+  }
   forEachNeighborWithDiag(
     ref: TileRef,
     callback: (neighbor: TileRef) => void,

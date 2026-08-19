@@ -14,6 +14,8 @@ const REFINE_MAX_SEARCH_AREA = 100 * 100;
 
 export class SpatialQuery {
   private boundedAStar: AStarWaterBounded | null = null;
+  /** Reusable 4-neighbor buffer for bfsNearest. */
+  private neighborBuf: TileRef[] = [0, 0, 0, 0];
 
   constructor(private game: Game) {}
 
@@ -48,6 +50,11 @@ export class SpatialQuery {
     const stack = scratch.stack;
     stack.length = 0;
 
+    // Hoisted once per query: manhattanDist() re-derives x/y of `from` for
+    // every neighbor visited.
+    const fx = map.x(from);
+    const fy = map.y(from);
+
     // Strict < keeps the first candidate at the minimum distance, so the
     // winner depends only on the deterministic traversal order (LIFO with
     // neighbors visited in the shared N, S, W, E order).
@@ -58,7 +65,7 @@ export class SpatialQuery {
       visited[t] = gen;
       stack.push(t);
       if (predicate(t)) {
-        const dist = map.manhattanDist(from, t);
+        const dist = Math.abs(map.x(t) - fx) + Math.abs(map.y(t) - fy);
         if (dist < bestDist) {
           best = t;
           bestDist = dist;
@@ -69,14 +76,24 @@ export class SpatialQuery {
     if (maxDist >= 0) {
       mark(from);
     }
-    const visit = (n: TileRef) => {
-      if (visited[n] !== gen && map.manhattanDist(from, n) <= maxDist) {
-        mark(n);
-      }
-    };
+    const nbuf = this.neighborBuf;
     while (stack.length > 0) {
       const curr = stack.pop()!;
-      map.forEachNeighbor(curr, visit);
+      // Buffer-based neighbors instead of a per-call visit closure and
+      // per-neighbor callback invocation.
+      const numNeighbors = map.neighbors4(curr, nbuf);
+      for (let i = 0; i < numNeighbors; i++) {
+        const n = nbuf[i];
+        if (visited[n] !== gen) {
+          let dx = map.x(n) - fx;
+          let dy = map.y(n) - fy;
+          if (dx < 0) dx = -dx;
+          if (dy < 0) dy = -dy;
+          if (dx + dy <= maxDist) {
+            mark(n);
+          }
+        }
+      }
     }
 
     return best;

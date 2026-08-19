@@ -1,4 +1,4 @@
-﻿import { Execution, Game, Player, Structures } from "../game/Game";
+import { Execution, Game, Player, Structures } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
@@ -113,7 +113,10 @@ export class TribeExecution implements Execution {
     }
 
     if (this.neighborsTerraNullius) {
-      if (this.tribe.nearby().some((n) => !n.isPlayer())) {
+      // Early-exit scan: nearby().some(...) paid for the full border scan of
+      // every tribe every tick; this returns as soon as an unowned tile is
+      // found adjacent to the border.
+      if (this.tribe.bordersUnownedLand()) {
         if (this.attackBehavior.sendAttack(this.mg.terraNullius())) return;
       } else {
         this.neighborsTerraNullius = false;

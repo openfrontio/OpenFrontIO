@@ -21,6 +21,22 @@ export class FlatBinaryHeap {
     this.len = 0;
   }
 
+  /**
+   * Grow the backing arrays so at least `n` elements fit without further
+   * reallocation. Callers that know the workload size (e.g. an attack's
+   * border tile count) avoid repeated doubling + copying during enqueue.
+   */
+  reserve(n: number): void {
+    if (n > this.pri.length) {
+      let cap = this.pri.length;
+      while (cap < n) cap <<= 1;
+      const newPri = new Float32Array(cap);
+      newPri.set(this.pri);
+      this.pri = newPri;
+      this.tiles.length = cap;
+    }
+  }
+
   /** current heap size */
   size(): number {
     return this.len;

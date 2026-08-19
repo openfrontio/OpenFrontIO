@@ -5,7 +5,6 @@ import { PlayerImpl } from "./PlayerImpl";
 
 export class AttackImpl implements Attack {
   private _isActive = true;
-  private _borderSize = 0;
   public _retreating = false;
   public _retreated = false;
 
@@ -75,32 +74,28 @@ export class AttackImpl implements Attack {
   }
 
   borderSize(): number {
-    return this._borderSize;
+    return this._border.size;
   }
 
   clearBorder(): void {
-    this._borderSize = 0;
     this._border.clear();
   }
 
   addBorderTile(tile: TileRef): void {
-    if (!this._border.has(tile)) {
-      this._borderSize += 1;
-      this._border.add(tile);
-    }
+    // Set.add is idempotent — the size bookkeeping this replaced tracked
+    // exactly Set.size, and the has() pre-check doubled the probe cost of
+    // every border mutation (one probe per conquered tile and per neighbor).
+    this._border.add(tile);
   }
 
   removeBorderTile(tile: TileRef): void {
-    if (this._border.has(tile)) {
-      this._borderSize -= 1;
-      this._border.delete(tile);
-    }
+    this._border.delete(tile);
   }
 
   // Returns the top 2 clustered positions of the attack's border.
   // If the second cluster is too small, only returns the largest one.
   clusteredPositions(): TileRef[] {
-    if (this._borderSize === 0) {
+    if (this._border.size === 0) {
       const tile = this.sourceTile();
       return tile !== null ? [tile] : [];
     }

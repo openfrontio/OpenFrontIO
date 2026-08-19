@@ -80,6 +80,11 @@ export class GameImpl implements Game {
 
   private unInitExecs: Execution[] = [];
 
+  // Scratch buffers for executeNextTick's inited/unInited split, reused every
+  // tick so the tick loop allocates nothing for execution bookkeeping.
+  private tickInitedExecs: Execution[] = [];
+  private tickUnInitedExecs: Execution[] = [];
+
   _players: Map<PlayerID, PlayerImpl> = new Map<PlayerID, PlayerImpl>();
   _playersBySmallID: Player[] = [];
 
@@ -110,6 +115,17 @@ export class GameImpl implements Game {
 
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
+
+  /**
+   * Bumped on every tile ownership change (conquer/relinquish). Owner-
+   * dependent cached lookups (e.g. PlayerImpl.nearby) can validate their
+   * cache against this instead of recomputing.
+   */
+  private _ownerVersion = 0;
+
+  public ownerVersion(): number {
+    return this._ownerVersion;
+  }
 
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
@@ -495,16 +511,30 @@ export class GameImpl implements Game {
         e.tick(this._ticks);
       }
     });
-    const inited: Execution[] = [];
-    const unInited: Execution[] = [];
-    this.unInitExecs.forEach((e) => {
+    // Reused across ticks — avoids allocating two arrays per tick while
+    // pending executions are split into inited/unInited.
+    const inited = this.tickInitedExecs;
+    const unInited = this.tickUnInitedExecs;
+    inited.length = 0;
+    if (unInited !== this.unInitExecs) {
+      unInited.length = 0;
+    }
+    const pending = this.unInitExecs;
+    const pendingLen = pending.length;
+    for (let i = 0; i < pendingLen; i++) {
+      const e = pending[i];
       if (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) {
         e.init(this, this._ticks);
         inited.push(e);
       } else {
         unInited.push(e);
       }
-    });
+    }
+    if (unInited === pending) {
+      // pending === unInited: the still-pending entries were appended after
+      // the stale originals — drop the front section in place.
+      unInited.splice(0, pendingLen);
+    }
 
     this.removeInactiveExecutions();
 
@@ -746,6 +776,10 @@ export class GameImpl implements Game {
     this._map.forEachNeighborWithDiag(tile, callback);
   }
 
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors8(ref, out);
+  }
+
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
@@ -760,6 +794,7 @@ export class GameImpl implements Game {
       previousOwner._borderTiles.delete(tile);
     }
     this._map.setOwnerID(tile, owner.smallID());
+    this._ownerVersion++;
     owner._tiles.add(tile);
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
@@ -781,6 +816,7 @@ export class GameImpl implements Game {
     previousOwner._borderTiles.delete(tile);
 
     this._map.setOwnerID(tile, 0);
+    this._ownerVersion++;
     this.updateBorders(tile);
     this.recordTileUpdate(tile);
   }

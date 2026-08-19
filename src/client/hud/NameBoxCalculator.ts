@@ -93,12 +93,25 @@ export function placeName(game: Game, player: Player): NameViewData {
   };
 }
 
+/**
+ * Flat, x-major occupancy grid of a player's territory (1 = name can sit
+ * here: owned tile, shore, shallow ocean, or fallout). A single Uint8Array
+ * replaces the previous boolean[][] (one allocation per row + one boxed
+ * boolean per cell), and coordinates are computed with plain arithmetic
+ * instead of allocating a Cell per grid cell.
+ */
+export interface NameGrid {
+  grid: Uint8Array;
+  width: number;
+  height: number;
+}
+
 export function createGrid(
   game: Game,
   player: Player,
   boundingBox: { min: Point; max: Point },
   scalingFactor: number,
-): boolean[][] {
+): NameGrid {
   const scaledBoundingBox: { min: Point; max: Point } = {
     min: {
       x: Math.floor(boundingBox.min.x / scalingFactor),
@@ -112,40 +125,55 @@ export function createGrid(
 
   const width = scaledBoundingBox.max.x - scaledBoundingBox.min.x + 1;
   const height = scaledBoundingBox.max.y - scaledBoundingBox.min.y + 1;
-  const grid: boolean[][] = Array(width)
-    .fill(null)
-    .map(() => Array(height).fill(false));
+  const grid = new Uint8Array(width * height);
+  const mapWidth = game.width();
+  const mapHeight = game.height();
 
-  for (let x = scaledBoundingBox.min.x; x <= scaledBoundingBox.max.x; x++) {
-    for (let y = scaledBoundingBox.min.y; y <= scaledBoundingBox.max.y; y++) {
-      const cell = new Cell(x * scalingFactor, y * scalingFactor);
-      if (game.isOnMap(cell)) {
-        const tile = game.ref(cell.x, cell.y);
-        grid[x - scaledBoundingBox.min.x][y - scaledBoundingBox.min.y] =
+  let idx = 0;
+  for (let gx = scaledBoundingBox.min.x; gx <= scaledBoundingBox.max.x; gx++) {
+    const px = gx * scalingFactor;
+    for (
+      let gy = scaledBoundingBox.min.y;
+      gy <= scaledBoundingBox.max.y;
+      gy++
+    ) {
+      const py = gy * scalingFactor;
+      if (px >= 0 && px < mapWidth && py >= 0 && py < mapHeight) {
+        const tile = game.ref(px, py);
+        if (
           game.isShore(tile) ||
           (game.isOcean(tile) && game.magnitude(tile) < 10) ||
           game.owner(tile) === player ||
-          game.hasFallout(tile);
+          game.hasFallout(tile)
+        ) {
+          grid[idx] = 1;
+        }
       }
+      idx++;
     }
   }
 
-  return grid;
+  return { grid, width, height };
 }
 
-export function findLargestInscribedRectangle(grid: boolean[][]): Rectangle {
-  const rows = grid[0].length;
-  const cols = grid.length;
+export function findLargestInscribedRectangle(grid: NameGrid): Rectangle {
+  const data = grid.grid;
+  const rows = grid.height;
+  const cols = grid.width;
   const heights: number[] = new Array(cols).fill(0);
   let largestRect: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
 
   for (let row = 0; row < rows; row++) {
+    // Column-major scan with an incrementing pointer into the flat grid
+    // (x-major layout: index = col * rows + row).
+    let p = row;
     for (let col = 0; col < cols; col++) {
-      if (grid[col][row]) {
+      if (data[p] !== 0) {
         heights[col]++;
       } else {
         heights[col] = 0;
       }
+      p += rows;
     }
 
     const rectForRow = largestRectangleInHistogram(heights);

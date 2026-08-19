@@ -16,6 +16,12 @@ import {
 } from "../game/TileTraversalScratch";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
+/** A border cluster stored in PlayerExecution.clusterBuf as [start, start+len). */
+interface ClusterSpan {
+  start: number;
+  len: number;
+}
+
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
 
@@ -27,6 +33,11 @@ export class PlayerExecution implements Execution {
   private active = true;
   // Reusable neighbor buffer to avoid closures/allocation in cluster checks.
   private nbuf: TileRef[] = [0, 0, 0, 0];
+  // 8-neighbor buffer for flood fills (diagonals included).
+  private nbuf8: TileRef[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  // Shared backing store for border clusters, with per-cluster spans.
+  private clusterBuf: TileRef[] = [];
+  private clusterSpans: ClusterSpan[] = [];
 
   constructor(private player: Player) {}
 
@@ -124,7 +135,8 @@ export class PlayerExecution implements Execution {
   }
 
   private removeClusters() {
-    const clusters = this.calculateClusters();
+    this.calculateClusters();
+    const clusters = this.clusterSpans;
 
     if (clusters.length === 0) {
       this.player.largestClusterBoundingBox = null;
@@ -133,9 +145,9 @@ export class PlayerExecution implements Execution {
 
     // Find the largest cluster with a single linear scan (O(n)).
     let largestIndex = 0;
-    let largestSize = clusters[0].length;
+    let largestSize = clusters[0].len;
     for (let i = 1; i < clusters.length; i++) {
-      const size = clusters[i].length;
+      const size = clusters[i].len;
       if (size > largestSize) {
         largestSize = size;
         largestIndex = i;
@@ -145,7 +157,12 @@ export class PlayerExecution implements Execution {
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
-    const largestClusterBox = calculateBoundingBox(this.mg, largestCluster);
+    const largestClusterBox = calculateBoundingBox(
+      this.mg,
+      this.clusterBuf,
+      largestCluster.start,
+      largestCluster.len,
+    );
     this.player.largestClusterBoundingBox = largestClusterBox;
     const surroundedBy = this.surroundedBySamePlayer(
       largestCluster,
@@ -166,7 +183,7 @@ export class PlayerExecution implements Execution {
   }
 
   private surroundedBySamePlayer(
-    cluster: readonly TileRef[],
+    cluster: ClusterSpan,
     clusterBox: { min: Cell; max: Cell },
   ): false | Player {
     const enemies = new Set<number>();
@@ -178,7 +195,9 @@ export class PlayerExecution implements Execution {
 
     const map = this.map;
     const mySmallID = this.player.smallID();
-    for (const tile of cluster) {
+    const buf = this.clusterBuf;
+    for (let k = cluster.start; k < cluster.start + cluster.len; k++) {
+      const tile = buf[k];
       if (map.isOceanShore(tile) || map.isOnEdgeOfMap(tile)) {
         return false;
       }
@@ -219,7 +238,7 @@ export class PlayerExecution implements Execution {
     return false;
   }
 
-  private isSurrounded(cluster: readonly TileRef[]): boolean {
+  private isSurrounded(cluster: ClusterSpan): boolean {
     let hasEnemy = false;
     let minX = Infinity,
       minY = Infinity,
@@ -227,7 +246,9 @@ export class PlayerExecution implements Execution {
       maxY = -Infinity;
     const map = this.map;
     const mySmallID = this.player.smallID();
-    for (const tr of cluster) {
+    const buf = this.clusterBuf;
+    for (let k = cluster.start; k < cluster.start + cluster.len; k++) {
+      const tr = buf[k];
       if (map.isShore(tr) || map.isOnEdgeOfMap(tr)) {
         return false;
       }
@@ -249,26 +270,43 @@ export class PlayerExecution implements Execution {
     if (!hasEnemy) {
       return false;
     }
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
+    const clusterBox = calculateBoundingBox(
+      this.mg,
+      this.clusterBuf,
+      cluster.start,
+      cluster.len,
+    );
     const enemyBox = { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
     return inscribed(enemyBox, clusterBox);
   }
 
-  private removeCluster(cluster: readonly TileRef[]) {
-    for (const t of cluster) {
-      if (this.mg?.ownerID(t) !== this.player?.smallID()) {
+  /**
+   * removeClusters() passes spans into the shared clusterBuf; the
+   * TileRef[] overload is kept for tests that drive this internal API
+   * directly (AnnexationRequiresEnclosure.test.ts).
+   */
+  private removeCluster(cluster: ClusterSpan | readonly TileRef[]) {
+    const isSpan = !Array.isArray(cluster);
+    const buf = isSpan ? this.clusterBuf : cluster;
+    const start = isSpan ? (cluster as ClusterSpan).start : 0;
+    const end = isSpan ? start + (cluster as ClusterSpan).len : cluster.length;
+    for (let k = start; k < end; k++) {
+      if (this.mg?.ownerID(buf[k]) !== this.player?.smallID()) {
         // Other removeCluster operations could change tile owners,
         // so double check.
         return;
       }
     }
 
-    const capturing = this.getCapturingPlayer(cluster);
+    const capturing = this.getCapturingPlayer(buf, start, end);
     if (capturing === null) {
       return;
     }
 
-    const firstTile = cluster[0];
+    if (end <= start) {
+      return;
+    }
+    const firstTile = buf[start];
     if (firstTile === undefined) {
       return;
     }
@@ -287,7 +325,7 @@ export class PlayerExecution implements Execution {
       this.bumpGeneration(),
       this.traversalState().visited,
       [firstTile],
-      (tile, cb) => this.mg.forEachNeighbor(tile, cb),
+      (tile, out) => this.map.neighbors4(tile, out),
       (tile) => this.mg.ownerID(tile) === this.player.smallID(),
     );
 
@@ -349,11 +387,16 @@ export class PlayerExecution implements Execution {
     return true;
   }
 
-  private getCapturingPlayer(cluster: readonly TileRef[]): Player | null {
+  private getCapturingPlayer(
+    buf: readonly TileRef[],
+    start: number,
+    end: number,
+  ): Player | null {
     const neighbors = new Map<Player, number>();
     const map = this.map;
     const mySmallID = this.player.smallID();
-    for (const t of cluster) {
+    for (let k = start; k < end; k++) {
+      const t = buf[k];
       const numNeighbors = map.neighbors4(t, this.nbuf);
       for (let i = 0; i < numNeighbors; i++) {
         const ownerId = map.ownerID(this.nbuf[i]);
@@ -394,34 +437,59 @@ export class PlayerExecution implements Execution {
     return getMode(neighbors);
   }
 
-  private calculateClusters(): TileRef[][] {
+  /**
+   * Floods all border clusters and stores them as spans into the shared
+   * clusterBuf, replacing per-cluster TileRef[] allocations (the previous
+   * floodFillWithGen result arrays) with a single reused buffer. Called from
+   * removeClusters, which consumes the spans synchronously.
+   */
+  private calculateClusters(): void {
     const borderTiles = this.player.borderTiles();
-    if (borderTiles.size === 0) return [];
+    this.clusterSpans.length = 0;
+    if (borderTiles.size === 0) {
+      this.clusterBuf.length = 0;
+      return;
+    }
 
     const state = this.traversalState();
     const currentGen = this.bumpGeneration();
     const visited = state.visited;
+    const stack = state.stack;
 
-    const clusters: TileRef[][] = [];
+    const buf = this.clusterBuf;
+    let used = 0;
+    const out = this.nbuf8;
 
     // Set.forEach instead of for..of: iterating a large Set allocates an
     // iterator-result object per element, and border sets can be huge.
-    const neighborFn = (tile: TileRef, cb: (neighbor: TileRef) => void) =>
-      this.mg.forEachNeighborWithDiag(tile, cb);
-    const includeFn = (tile: TileRef) => borderTiles.has(tile);
     borderTiles.forEach((startTile) => {
       if (visited[startTile] === currentGen) return;
 
-      const cluster = this.floodFillWithGen(
-        currentGen,
-        visited,
-        [startTile],
-        neighborFn,
-        includeFn,
-      );
-      clusters.push(cluster);
+      const start = used;
+      // Inline flood fill (same DFS order as floodFillWithGen: LIFO stack,
+      // dx-major neighbors via neighbors8).
+      visited[startTile] = currentGen;
+      buf[used++] = startTile;
+      stack.length = 0;
+      stack.push(startTile);
+      while (stack.length > 0) {
+        const tile = stack.pop()!;
+        const numNeighbors = this.map.neighbors8(tile, out);
+        for (let i = 0; i < numNeighbors; i++) {
+          const neighbor = out[i];
+          if (visited[neighbor] === currentGen) {
+            continue;
+          }
+          if (!borderTiles.has(neighbor)) {
+            continue;
+          }
+          visited[neighbor] = currentGen;
+          buf[used++] = neighbor;
+          stack.push(neighbor);
+        }
+      }
+      this.clusterSpans.push({ start, len: used - start });
     });
-    return clusters;
   }
 
   owner(): Player {
@@ -447,7 +515,7 @@ export class PlayerExecution implements Execution {
     currentGen: number,
     visited: Uint32Array,
     startTiles: TileRef[],
-    neighborFn: (tile: TileRef, callback: (neighbor: TileRef) => void) => void,
+    neighborFn: (tile: TileRef, out: TileRef[]) => number,
     includeFn: (tile: TileRef) => boolean,
   ): TileRef[] {
     // The visited generation array already deduplicates, so the result can be
@@ -465,21 +533,25 @@ export class PlayerExecution implements Execution {
       stack.push(start);
     }
 
-    const visit = (neighbor: TileRef) => {
-      if (visited[neighbor] === currentGen) {
-        return;
-      }
-      if (!includeFn(neighbor)) {
-        return;
-      }
-      visited[neighbor] = currentGen;
-      result.push(neighbor);
-      stack.push(neighbor);
-    };
-
+    // Neighbors are written into a reusable buffer instead of being pushed
+    // through a per-neighbor callback closure (forEachNeighbor*), which was
+    // the hottest per-tile cost in cluster recomputation.
+    const out = this.nbuf8;
     while (stack.length > 0) {
       const tile = stack.pop()!;
-      neighborFn(tile, visit);
+      const numNeighbors = neighborFn(tile, out);
+      for (let i = 0; i < numNeighbors; i++) {
+        const neighbor = out[i];
+        if (visited[neighbor] === currentGen) {
+          continue;
+        }
+        if (!includeFn(neighbor)) {
+          continue;
+        }
+        visited[neighbor] = currentGen;
+        result.push(neighbor);
+        stack.push(neighbor);
+      }
     }
 
     return result;
