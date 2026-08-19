@@ -37,6 +37,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import "./components/UsernamePanel";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
+import { consumeLoginResult, LoginResult } from "./LoginResult";
 import { playerProfileUrl } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
@@ -50,6 +51,9 @@ export class AccountModal extends BaseModal {
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
   @state() private consentBusy: boolean = false;
+  // One-shot outcome of a rejected sign-in, read from the `login=` router
+  // arg on open. Reassigned on every open, so reopening clears it.
+  @state() private loginError: LoginResult | undefined;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -666,6 +670,32 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  // Shown when a sign-in was rejected because the provider's verified email
+  // already belongs to an account. We deliberately don't name which provider
+  // that account uses — the visitor has only proven control of the email.
+  private renderLoginError(): TemplateResult {
+    if (this.loginError === undefined) return html``;
+    return html`
+      <div
+        class="mb-6 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
+      >
+        <span class="text-red-400 text-lg leading-none" aria-hidden="true">
+          &#9888;
+        </span>
+        <p class="flex-1 text-sm text-red-200">
+          ${translateText("account_modal.login_email_exists")}
+        </p>
+        <button
+          class="text-red-200/60 hover:text-red-200 text-lg leading-none"
+          aria-label=${translateText("common.close")}
+          @click=${() => (this.loginError = undefined)}
+        >
+          &times;
+        </button>
+      </div>
+    `;
+  }
+
   private renderLoginOptions() {
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
@@ -696,6 +726,8 @@ export class AccountModal extends BaseModal {
             </p>
             ${this.renderCurrency()}
           </div>
+
+          ${this.renderLoginError()}
 
           <div class="space-y-6">
             <!-- Discord Login Button -->
@@ -853,6 +885,7 @@ export class AccountModal extends BaseModal {
   protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
     this.handleLinkResult(args);
+    this.loginError = consumeLoginResult(args);
 
     this.refreshCrazyGamesUser();
 
