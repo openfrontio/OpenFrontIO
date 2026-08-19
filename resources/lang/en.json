@@ -926,6 +926,7 @@
     "player_whitelist_placeholder": "comma separated",
     "players": "Players",
     "remove_player": "Remove {username}",
+    "spectators": "Spectators",
     "start_delay": "Start delay (Seconds)",
     "starting_in": "Starting in {time}. Click to cancel",
     "subscription_required_body": "You must be subscribed to make your lobby public.",

@@ -176,7 +176,8 @@ export class JoinLobbyModal extends BaseModal {
             })
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
-    const playerCount = this.players?.length ?? 0;
+    // Seats, not connections: spectators are in the roster but hold none.
+    const playerCount = this.players?.filter((p) => !p.spectator).length ?? 0;
     const hostClientID = this.isPrivateLobby()
       ? (this.lobbyCreatorClientID ?? "")
       : "";
