@@ -1738,6 +1738,27 @@ export class GameServer {
     return this.listed;
   }
 
+  /** Who joined, and the account behind each one.
+   *
+   *  The public game record is PII-stripped, so a clientID can only be tied back
+   *  to an account by whoever ran the lobby. Without this a host can see that 96
+   *  people played and identify none of them. Restricted to lobbies the admin bot
+   *  created — never a public or matchmade game.
+   *
+   *  allClients, not activeClients: someone who joined and left still appears in
+   *  the record the host has to reconcile against. */
+  public roster(): {
+    clientID: ClientID;
+    publicId: string | undefined;
+    username: string;
+  }[] {
+    return [...this.allClients.values()].map((c) => ({
+      clientID: c.clientID,
+      publicId: c.publicId,
+      username: c.username,
+    }));
+  }
+
   public setListed(listed: boolean): void {
     if (this.listed === listed) {
       // Duplicate toggles must not extend the auto-start deadline.
