@@ -154,6 +154,25 @@ export function registerAdminBotRoutes(opts: {
           seen.add(publicId);
         }
       }
+      // A pin is an index into the team list, so one past the end resolves to
+      // no team and the player is silently unpinned. Duos/Trios/Quads resolve
+      // their count at START from who turned up, and omitting it resolves to 0
+      // (GameImpl throws "Too few teams"), so neither can be checked here.
+      const playerTeams = config.playerTeams;
+      if (teams.length > 0) {
+        if (typeof playerTeams !== "number") {
+          return res
+            .status(400)
+            .json({ error: "teams_require_numeric_player_teams" });
+        }
+        if (teams.length > playerTeams) {
+          return res.status(400).json({
+            error: "teams_exceed_player_teams",
+            playerTeams,
+            teams: teams.length,
+          });
+        }
+      }
     }
     // Private only: reject Public and Singleplayer. An omitted gameType defaults
     // to Private in createGame, so it's allowed through.
@@ -255,6 +274,39 @@ export function registerAdminBotRoutes(opts: {
   });
 
   // Send an intent. Honors the lobby-management intents; everything else 400.
+  // Returns the resulting team list so the caller can assert what landed: a
+  // half-pinned lobby looks correct from the outside.
+  app.post("/api/adminbot/game/:id/pin", requireAdminBotKey, (req, res) => {
+    const id = req.params.id as string;
+    if (!ownsGame(id, res)) return;
+
+    const parsed = z
+      .object({
+        publicId: z.string().min(1),
+        teamIndex: z.number().int().nonnegative(),
+      })
+      .safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    }
+    const game = gm.game(id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+
+    const result = game.addMatchmakingPin(
+      parsed.data.publicId,
+      parsed.data.teamIndex,
+    );
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    log.info(`admin bot pinned a player on game ${id}`, {
+      teamIndex: parsed.data.teamIndex,
+    });
+    res.json({ teams: result.teams });
+  });
+
   app.post("/api/adminbot/game/:id/intent", requireAdminBotKey, (req, res) => {
     const id = req.params.id as string;
     if (!ownsGame(id, res)) return;

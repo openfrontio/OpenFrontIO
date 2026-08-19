@@ -68,7 +68,7 @@ describe("admin bot create_game team pinning", () => {
       ["pubA", "pubB"],
       ["pubC", "pubD"],
     ];
-    handler({ body: { ...TEAM, teams } }, res);
+    handler({ body: { ...TEAM, playerTeams: 2, teams } }, res);
     expect(res.statusCode).toBe(200);
     expect(created.teams).toEqual(teams);
   });
@@ -77,7 +77,10 @@ describe("admin bot create_game team pinning", () => {
     // Same rule as `listed`: not a GameConfig field, so update_game_config can
     // never set it after the lobby exists.
     const { handler, created } = captureCreateHandler();
-    handler({ body: { ...TEAM, teams: [["pubA", "pubB"]] } }, mockRes());
+    handler(
+      { body: { ...TEAM, playerTeams: 2, teams: [["pubA", "pubB"]] } },
+      mockRes(),
+    );
     expect(created.config).not.toHaveProperty("teams");
     expect(created.config).not.toHaveProperty("matchmakingTeams");
   });
@@ -106,6 +109,59 @@ describe("admin bot create_game team pinning", () => {
     handler({ body: { ...TEAM, teams: [["pubA", "pubB"], ["pubA"]] } }, res);
     expect(res.statusCode).toBe(400);
     expect(String(res.body.error)).toContain("pubA");
+    expect(created.teams).toBeUndefined();
+  });
+
+  it("refuses more pinned teams than the lobby has slots", () => {
+    // A pin is an index into the team list, so one past the end resolves to no
+    // team and the player is silently unpinned.
+    const { handler, created } = captureCreateHandler();
+    const res = mockRes();
+    handler(
+      { body: { ...TEAM, playerTeams: 2, teams: [["a"], ["b"], ["c"]] } },
+      res,
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("teams_exceed_player_teams");
+    expect(created.teams).toBeUndefined();
+  });
+
+  it("accepts exactly as many teams as there are slots", () => {
+    const { handler, created } = captureCreateHandler();
+    const res = mockRes();
+    handler(
+      { body: { ...TEAM, playerTeams: 3, teams: [["a"], ["b"], ["c"]] } },
+      res,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(created.teams).toHaveLength(3);
+  });
+
+  it.each(["Duos", "Trios", "Quads"])(
+    "refuses pins alongside %s, whose team count depends on attendance",
+    (mode) => {
+      // Duos/Trios/Quads resolve to ceil(players / size) at START, which can land
+      // below the number of teams pinned if fewer players turn up than seeded.
+      const { handler, created } = captureCreateHandler();
+      const res = mockRes();
+      handler(
+        { body: { ...TEAM, playerTeams: mode, teams: [["a"], ["b"]] } },
+        res,
+      );
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe("teams_require_numeric_player_teams");
+      expect(created.teams).toBeUndefined();
+    },
+  );
+
+  it("refuses pins with no team count at all", () => {
+    // An omitted playerTeams resolves to 0 teams, which throws "Too few teams"
+    // at start — so the pins could never land and the lobby could never run.
+    const { handler, created } = captureCreateHandler();
+    const res = mockRes();
+    handler({ body: { ...TEAM, teams: [["a"], ["b"]] } }, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("teams_require_numeric_player_teams");
     expect(created.teams).toBeUndefined();
   });
 
