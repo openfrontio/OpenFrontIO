@@ -140,6 +140,36 @@ export function joinLobby(
     transport.joinGame();
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
+  // Key of the map currently represented by terrainLoad, so repeated
+  // lobby_info/prestart requests for the same map reuse the in-flight load
+  // instead of starting a duplicate one (loadTerrainMap only caches once the
+  // async work has completed).
+  let terrainLoadKey: string | null = null;
+  const requestTerrainLoad = (
+    map: Parameters<typeof loadTerrainMap>[0],
+    mapSize: Parameters<typeof loadTerrainMap>[1],
+  ): Promise<TerrainMapData> => {
+    const key = `${map}:${mapSize}`;
+    if (terrainLoad !== null && terrainLoadKey === key) {
+      return terrainLoad;
+    }
+    const load = loadTerrainMap(
+      map,
+      mapSize,
+      terrainMapFileLoader,
+      false, // Layer images loaded off the critical path after game start.
+    );
+    terrainLoad = load;
+    terrainLoadKey = key;
+    void load.catch(() => {
+      // Clear a failed load so the authoritative start gate can retry.
+      if (terrainLoad === load) {
+        terrainLoad = null;
+        terrainLoadKey = null;
+      }
+    });
+    return load;
+  };
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "lobby_info") {
@@ -148,18 +178,13 @@ export function joinLobby(
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
-      // prestart->start window. loadTerrainMap is lazy and cached, so this is
-      // cheap and the host changing the map mid-lobby triggers a reload here
-      // (lobby_info is re-broadcast every second); doctrine/prestart still
-      // re-validates the authoritative map before the game actually starts.
+      // prestart->start window. requestTerrainLoad deduplicates in-flight
+      // loads (lobby_info is re-broadcast every second) and, when the host
+      // changes the map mid-lobby, a different key starts a fresh load.
+      // doctrine/prestart still re-validates the authoritative map.
       const preloadMap = message.lobby.gameConfig;
       if (preloadMap !== undefined) {
-        terrainLoad = loadTerrainMap(
-          preloadMap.gameMap,
-          preloadMap.gameMapSize,
-          terrainMapFileLoader,
-          false, // Layer images loaded off the critical path after game start.
-        );
+        requestTerrainLoad(preloadMap.gameMap, preloadMap.gameMapSize);
       }
       return;
     }
@@ -167,12 +192,7 @@ export function joinLobby(
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
       );
-      terrainLoad = loadTerrainMap(
-        message.gameMap,
-        message.gameMapSize,
-        terrainMapFileLoader,
-        false, // Layer images loaded off the critical path after game start.
-      );
+      requestTerrainLoad(message.gameMap, message.gameMapSize);
       resolvePrestart();
     }
     if (message.type === "start") {
