@@ -11,10 +11,12 @@ import {
   isNukeExplosionEffect,
   Skin,
 } from "../core/CosmeticSchemas";
+import type { CosmeticLoadout } from "../core/game/UserSettings";
 import {
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
+  MAX_LOADOUTS,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -35,6 +37,7 @@ import type {
   InventoryCategory,
   InventoryLoadoutEntry,
 } from "./components/InventoryLoadoutBar";
+import "./components/InventoryLoadoutMenu";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
@@ -374,6 +377,85 @@ export class InventoryModal extends BaseModal {
     ];
   }
 
+  private sameLoadout(a: CosmeticLoadout, b: CosmeticLoadout): boolean {
+    const slots = ["pattern", "flag", "crown"] as const;
+    if (slots.some((slot) => a[slot] !== b[slot])) return false;
+    const aEffects = Object.entries(a.effects).sort();
+    const bEffects = Object.entries(b.effects).sort();
+    return JSON.stringify(aEffects) === JSON.stringify(bEffects);
+  }
+
+  /**
+   * The saved loadout matching what's equipped right now, if any. Derived
+   * rather than remembered so equipping a single item on its own drops the
+   * selection instead of leaving the dropdown lying about the current set.
+   */
+  private selectedLoadoutName(): string {
+    const current = this.userSettings.captureLoadout("");
+    const match = this.userSettings
+      .getLoadouts()
+      .find((loadout) =>
+        this.sameLoadout(loadout, { ...current, name: loadout.name }),
+      );
+    return match?.name ?? "";
+  }
+
+  private hasEquippedCosmetic(): boolean {
+    const current = this.userSettings.captureLoadout("");
+    return (
+      current.pattern !== null ||
+      current.flag !== null ||
+      current.crown !== null ||
+      Object.keys(current.effects).length > 0
+    );
+  }
+
+  private renderLoadoutMenu(): TemplateResult {
+    return html`<inventory-loadout-menu
+      .names=${this.userSettings.getLoadouts().map((loadout) => loadout.name)}
+      .selected=${this.selectedLoadoutName()}
+      .canUnequip=${this.hasEquippedCosmetic()}
+      .onApply=${(name: string) => this.applyLoadout(name)}
+      .onSave=${(name: string) => this.saveLoadout(name)}
+      .onDelete=${(name: string) => this.deleteLoadout(name)}
+      .onUnequipAll=${() => this.unequipAll()}
+    ></inventory-loadout-menu>`;
+  }
+
+  private applyLoadout(name: string) {
+    if (!this.userSettings.applyLoadout(name)) return;
+    this.showMessage(translateText("inventory.loadout_applied", { name }));
+    this.updateFromSettings();
+  }
+
+  private saveLoadout(name: string) {
+    if (name.trim() === "") return;
+    const saved = this.userSettings.saveLoadout(name);
+    if (saved === null) {
+      // The only other reason a save is refused is the stored-loadout cap.
+      this.showMessage(
+        translateText("inventory.loadout_limit", { count: MAX_LOADOUTS }),
+      );
+      return;
+    }
+    this.showMessage(
+      translateText("inventory.loadout_saved", { name: saved.name }),
+    );
+    this.updateFromSettings();
+  }
+
+  private deleteLoadout(name: string) {
+    this.userSettings.deleteLoadout(name);
+    this.showMessage(translateText("inventory.loadout_deleted", { name }));
+    this.updateFromSettings();
+  }
+
+  private unequipAll() {
+    this.userSettings.unequipAll();
+    this.showMessage(translateText("inventory.unequipped_all"));
+    this.updateFromSettings();
+  }
+
   private renderEmptyState(category: "skins" | "crowns") {
     return html`<p
       data-inventory-empty=${category}
@@ -628,6 +710,7 @@ export class InventoryModal extends BaseModal {
     }
     const category = tab as InventoryCategory;
     return html`
+      ${this.renderLoadoutMenu()}
       <inventory-loadout-bar
         .entries=${this.loadoutEntries()}
         .activeCategory=${category}
@@ -707,14 +790,17 @@ export class InventoryModal extends BaseModal {
   }
 
   private showSelectedPopup(resolved: ResolvedCosmetic) {
+    this.showMessage(
+      translateText("inventory.selected_cosmetic", {
+        name: cosmeticSelectionLabel(resolved),
+      }),
+    );
+  }
+
+  private showMessage(message: string) {
     window.dispatchEvent(
       new CustomEvent("show-message", {
-        detail: {
-          message: translateText("inventory.selected_cosmetic", {
-            name: cosmeticSelectionLabel(resolved),
-          }),
-          duration: 2000,
-        },
+        detail: { message, duration: 2000 },
       }),
     );
   }

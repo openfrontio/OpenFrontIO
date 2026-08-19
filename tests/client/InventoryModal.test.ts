@@ -20,6 +20,8 @@ import {
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
+  LOADOUTS_KEY,
+  MAX_LOADOUTS,
   PATTERN_KEY,
   UserSettings,
 } from "../../src/core/game/UserSettings";
@@ -250,6 +252,33 @@ async function showTab(
   if (effects) await (effects as LitElement).updateComplete;
 }
 
+function loadoutMenu(modal: InventoryModal): LitElement {
+  return modal.querySelector("inventory-loadout-menu") as LitElement;
+}
+
+function loadoutSelect(modal: InventoryModal): HTMLSelectElement {
+  return loadoutMenu(modal).querySelector("select") as HTMLSelectElement;
+}
+
+async function saveLoadoutAs(modal: InventoryModal, name: string) {
+  const menu = loadoutMenu(modal);
+  const input = menu.querySelector<HTMLInputElement>("[data-loadout-name]")!;
+  input.value = name;
+  input.dispatchEvent(new Event("input"));
+  await menu.updateComplete;
+  menu.querySelector<HTMLButtonElement>("[data-loadout-save]")!.click();
+  await modal.updateComplete;
+  await menu.updateComplete;
+}
+
+async function applyLoadout(modal: InventoryModal, name: string) {
+  const select = loadoutSelect(modal);
+  select.value = name;
+  select.dispatchEvent(new Event("change"));
+  await modal.updateComplete;
+  await loadoutMenu(modal).updateComplete;
+}
+
 describe("InventoryModal", () => {
   let modal: InventoryModal;
   let languageFixture: HTMLElement;
@@ -263,6 +292,7 @@ describe("InventoryModal", () => {
     settings.removeCached(FLAG_KEY);
     settings.removeCached(CROWN_KEY);
     settings.removeCached(EFFECTS_KEY);
+    settings.removeCached(LOADOUTS_KEY);
     languageFixture = document.createElement("lang-selector");
     const translations = {
       "inventory.equipped": "Equipped",
@@ -272,6 +302,18 @@ describe("InventoryModal", () => {
       "inventory.selected_cosmetic": "Selected {name}",
       "inventory.selected_cosmetic_variant": "{name} ({variant})",
       "inventory.unequip": "Unequip",
+      "inventory.unequip_all": "Unequip all",
+      "inventory.unequipped_all": "Unequipped everything",
+      "inventory.loadout_applied": "Equipped loadout {name}",
+      "inventory.loadout_deleted": "Deleted loadout {name}",
+      "inventory.loadout_delete": "Delete",
+      "inventory.loadout_limit": "You can save up to {count} loadouts.",
+      "inventory.loadout_name": "Loadout name",
+      "inventory.loadout_none": "Choose a loadout…",
+      "inventory.loadout_presets": "Saved loadouts",
+      "inventory.loadout_save": "Save",
+      "inventory.loadout_saved": "Saved loadout {name}",
+      "inventory.loadout_select": "Load a saved loadout",
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
       "main.store": "Store",
@@ -857,5 +899,114 @@ describe("InventoryModal", () => {
     await showTab(modal, "flags");
     expect(card(modal, "country:us")).toBeDefined();
     expect(modal.querySelector('[data-inventory-empty="flags"]')).toBeNull();
+  }, 30_000);
+  it("saves the equipped cosmetics as a named loadout and re-equips it", async () => {
+    await showTab(modal, "skins");
+    await activateCard(modal, "skin:owned_skin");
+    await showTab(modal, "flags");
+    await activateCard(modal, "flag:owned_flag");
+    await showTab(modal, "crowns");
+    await activateCard(modal, "crown:owned_crown");
+    new UserSettings().setSelectedEffectName(
+      "transportShipTrail",
+      "owned_wake",
+    );
+    await showTab(modal, "skins");
+    const messages: string[] = [];
+    const onMessage = (event: Event) =>
+      messages.push((event as CustomEvent).detail.message);
+    window.addEventListener("show-message", onMessage);
+    try {
+      await saveLoadoutAs(modal, "  parade  ");
+      expect(messages[messages.length - 1]).toBe("Saved loadout parade");
+    } finally {
+      window.removeEventListener("show-message", onMessage);
+    }
+    expect(new UserSettings().getLoadouts().map((entry) => entry.name)).toEqual(
+      ["parade"],
+    );
+    // The dropdown reflects the loadout that matches what's equipped.
+    expect(loadoutSelect(modal).value).toBe("parade");
+
+    loadoutMenu(modal)
+      .querySelector<HTMLButtonElement>("[data-inventory-unequip-all]")!
+      .click();
+    await modal.updateComplete;
+    await loadoutMenu(modal).updateComplete;
+    const settings = new UserSettings();
+    expect(settings.getSelectedSkinName()).toBeNull();
+    expect(settings.getFlag()).toBeNull();
+    expect(settings.getSelectedCrownName()).toBeNull();
+    expect(settings.getSelectedEffects()).toEqual({});
+    expect(loadoutSelect(modal).value).toBe("");
+
+    await applyLoadout(modal, "parade");
+    expect(settings.getSelectedSkinName()).toBe("owned_skin");
+    expect(settings.getFlag()).toBe("flag:owned_flag");
+    expect(settings.getSelectedCrownName()).toBe("owned_crown");
+    expect(settings.getSelectedEffects()).toEqual({
+      transportShipTrail: "owned_wake",
+    });
+    expect(loadoutSelect(modal).value).toBe("parade");
+  }, 30_000);
+
+  it("lists saved loadouts in the dropdown and deletes the selected one", async () => {
+    await showTab(modal, "crowns");
+    await activateCard(modal, "crown:owned_crown");
+    await saveLoadoutAs(modal, "crowned");
+    await showTab(modal, "flags");
+    await activateCard(modal, "flag:owned_flag");
+    await saveLoadoutAs(modal, "flagged");
+
+    expect(
+      [...loadoutSelect(modal).options].map((option) => option.value),
+    ).toEqual(["", "crowned", "flagged"]);
+    expect(loadoutSelect(modal).value).toBe("flagged");
+
+    loadoutMenu(modal)
+      .querySelector<HTMLButtonElement>("[data-loadout-delete]")!
+      .click();
+    await modal.updateComplete;
+    await loadoutMenu(modal).updateComplete;
+    expect(new UserSettings().getLoadouts().map((entry) => entry.name)).toEqual(
+      ["crowned"],
+    );
+    // Deleting a loadout leaves the equipped cosmetics alone.
+    expect(new UserSettings().getFlag()).toBe("flag:owned_flag");
+    const menu = loadoutMenu(modal);
+    expect(
+      menu.querySelector<HTMLButtonElement>("[data-loadout-delete]")!.disabled,
+    ).toBe(true);
+  }, 30_000);
+
+  it("disables Unequip all with nothing equipped and reports the loadout limit", async () => {
+    await showTab(modal, "skins");
+    const unequipAll = () =>
+      loadoutMenu(modal).querySelector<HTMLButtonElement>(
+        "[data-inventory-unequip-all]",
+      )!;
+    expect(unequipAll().disabled).toBe(true);
+    await activateCard(modal, "skin:owned_skin");
+    await loadoutMenu(modal).updateComplete;
+    expect(unequipAll().disabled).toBe(false);
+
+    const messages: string[] = [];
+    const onMessage = (event: Event) =>
+      messages.push((event as CustomEvent).detail.message);
+    window.addEventListener("show-message", onMessage);
+    try {
+      for (let i = 0; i < MAX_LOADOUTS; i++) {
+        await saveLoadoutAs(modal, `loadout-${i}`);
+      }
+      const lastMessage = () => messages[messages.length - 1];
+      expect(lastMessage()).toBe(`Saved loadout loadout-${MAX_LOADOUTS - 1}`);
+      await saveLoadoutAs(modal, "one-too-many");
+      expect(lastMessage()).toBe(
+        `You can save up to ${MAX_LOADOUTS} loadouts.`,
+      );
+      expect(new UserSettings().getLoadouts()).toHaveLength(MAX_LOADOUTS);
+    } finally {
+      window.removeEventListener("show-message", onMessage);
+    }
   }, 30_000);
 });

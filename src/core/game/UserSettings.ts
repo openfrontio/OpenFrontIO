@@ -70,6 +70,8 @@ export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
 export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
 export const EFFECTS_KEY = "settings.effects";
+/** Saved cosmetic loadouts — see {@link CosmeticLoadout}. */
+export const LOADOUTS_KEY = "settings.cosmeticLoadouts";
 // Keep the existing storage key so the rename does not reset saved columns.
 export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
 export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
@@ -88,7 +90,55 @@ const PER_PLAYER_KEYS: readonly string[] = [
   FLAG_KEY,
   CROWN_KEY,
   EFFECTS_KEY,
+  LOADOUTS_KEY,
 ];
+
+/**
+ * A named snapshot of every equip slot, so a player can switch their whole
+ * cosmetic set in one action. Values are the raw stored forms of the slots:
+ * `pattern` is a PATTERN_KEY value (`"pattern:<name>[:<palette>]"` or
+ * `"skin:<name>"`), `flag` a FLAG_KEY value, `crown` a crown name, and
+ * `effects` the EFFECTS_KEY slot map. `null` means the slot is unequipped.
+ */
+export interface CosmeticLoadout {
+  name: string;
+  pattern: string | null;
+  flag: string | null;
+  crown: string | null;
+  effects: Record<string, string>;
+}
+
+/** Loadouts live in localStorage, so the list is bounded. */
+export const MAX_LOADOUTS = 10;
+
+function parseLoadout(value: unknown): CosmeticLoadout | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const entry = value as Record<string, unknown>;
+  if (typeof entry.name !== "string" || entry.name === "") return null;
+  const slot = (key: string): string | null =>
+    typeof entry[key] === "string" ? (entry[key] as string) : null;
+  const effects: Record<string, string> = {};
+  if (
+    entry.effects !== null &&
+    typeof entry.effects === "object" &&
+    !Array.isArray(entry.effects)
+  ) {
+    for (const [key, name] of Object.entries(
+      entry.effects as Record<string, unknown>,
+    )) {
+      if (typeof name === "string") effects[key] = name;
+    }
+  }
+  return {
+    name: entry.name,
+    pattern: slot("pattern"),
+    flag: slot("flag"),
+    crown: slot("crown"),
+    effects,
+  };
+}
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -450,6 +500,102 @@ export class UserSettings {
     else map[slot] = name;
     if (Object.keys(map).length === 0) this.removeCached(EFFECTS_KEY);
     else this.setString(EFFECTS_KEY, JSON.stringify(map));
+  }
+
+  /** Replaces every effect slot at once, e.g. when applying a loadout. */
+  setSelectedEffects(effects: Record<string, string>): void {
+    if (Object.keys(effects).length === 0) this.removeCached(EFFECTS_KEY);
+    else this.setString(EFFECTS_KEY, JSON.stringify(effects));
+  }
+
+  /**
+   * Saved loadouts, oldest first. Corrupt storage and malformed entries are
+   * dropped rather than thrown, matching the getSelectedEffects pattern.
+   */
+  getLoadouts(): CosmeticLoadout[] {
+    const raw = this.getString(LOADOUTS_KEY, "");
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map(parseLoadout)
+        .filter((loadout): loadout is CosmeticLoadout => loadout !== null)
+        .slice(0, MAX_LOADOUTS);
+    } catch {
+      return [];
+    }
+  }
+
+  getLoadout(name: string): CosmeticLoadout | null {
+    return this.getLoadouts().find((loadout) => loadout.name === name) ?? null;
+  }
+
+  /** The currently equipped cosmetics, as a loadout under the given name. */
+  captureLoadout(name: string): CosmeticLoadout {
+    return {
+      name,
+      pattern: this.getCached(PATTERN_KEY),
+      flag: this.getCached(FLAG_KEY),
+      crown: this.getCached(CROWN_KEY),
+      effects: this.getSelectedEffects(),
+    };
+  }
+
+  /**
+   * Stores the currently equipped cosmetics under `name`, replacing a loadout
+   * of the same name in place. Returns null when the name is blank, or when a
+   * new loadout would exceed MAX_LOADOUTS.
+   */
+  saveLoadout(name: string): CosmeticLoadout | null {
+    const trimmed = name.trim();
+    if (trimmed === "") return null;
+    const loadouts = this.getLoadouts();
+    const loadout = this.captureLoadout(trimmed);
+    const existing = loadouts.findIndex((entry) => entry.name === trimmed);
+    if (existing >= 0) {
+      loadouts[existing] = loadout;
+    } else {
+      if (loadouts.length >= MAX_LOADOUTS) return null;
+      loadouts.push(loadout);
+    }
+    this.setLoadouts(loadouts);
+    return loadout;
+  }
+
+  deleteLoadout(name: string): void {
+    const loadouts = this.getLoadouts();
+    const remaining = loadouts.filter((loadout) => loadout.name !== name);
+    if (remaining.length === loadouts.length) return;
+    this.setLoadouts(remaining);
+  }
+
+  /**
+   * Equips every slot of the named loadout, clearing slots it left empty.
+   * Returns false when no such loadout exists.
+   */
+  applyLoadout(name: string): boolean {
+    const loadout = this.getLoadout(name);
+    if (loadout === null) return false;
+    this.setSelectedPatternName(loadout.pattern ?? undefined);
+    if (loadout.flag === null) this.clearFlag(true);
+    else this.setFlag(loadout.flag);
+    this.setSelectedCrownName(loadout.crown ?? undefined);
+    this.setSelectedEffects(loadout.effects);
+    return true;
+  }
+
+  /** Clears every equip slot. Saved loadouts are left alone. */
+  unequipAll(): void {
+    this.setSelectedPatternName(undefined);
+    this.clearFlag(true);
+    this.setSelectedCrownName(undefined);
+    this.setSelectedEffects({});
+  }
+
+  private setLoadouts(loadouts: readonly CosmeticLoadout[]): void {
+    if (loadouts.length === 0) this.removeCached(LOADOUTS_KEY);
+    else this.setString(LOADOUTS_KEY, JSON.stringify(loadouts));
   }
 
   // Invalid/corrupt storage, unknown ids, or an empty result fall back to

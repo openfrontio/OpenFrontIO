@@ -2,6 +2,8 @@ import {
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
+  LOADOUTS_KEY,
+  MAX_LOADOUTS,
   PATTERN_KEY,
   PLAYER_STATS_COLUMNS_KEY,
   TEAM_STATS_COLUMNS_KEY,
@@ -71,6 +73,167 @@ describe("UserSettings effect selection", () => {
     s.setSelectedEffectName("atom", undefined);
     expect(s.getSelectedEffectName("atom")).toBeNull();
     expect(s.getSelectedEffectName("hydro")).toBe("hydro_boom");
+  });
+});
+
+describe("UserSettings cosmetic loadouts", () => {
+  beforeEach(resetUserSettingsState);
+
+  function equipSample(s: UserSettings) {
+    s.setSelectedPatternName("pattern:stripes:red");
+    s.setFlag("flag:owned_flag");
+    s.setSelectedCrownName("owned_crown");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+  }
+
+  it("saves the equipped cosmetics under a name", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    expect(s.saveLoadout("main")).toEqual({
+      name: "main",
+      pattern: "pattern:stripes:red",
+      flag: "flag:owned_flag",
+      crown: "owned_crown",
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual(["main"]);
+  });
+
+  it("trims the name and rejects a blank one", () => {
+    const s = new UserSettings();
+    expect(s.saveLoadout("  main  ")?.name).toBe("main");
+    expect(s.saveLoadout("   ")).toBeNull();
+    expect(s.getLoadouts()).toHaveLength(1);
+  });
+
+  it("saving an existing name replaces it in place", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    s.saveLoadout("second");
+    s.setSelectedCrownName("other_crown");
+    s.saveLoadout("main");
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual([
+      "main",
+      "second",
+    ]);
+    expect(s.getLoadout("main")?.crown).toBe("other_crown");
+  });
+
+  it("refuses to save more than MAX_LOADOUTS", () => {
+    const s = new UserSettings();
+    for (let i = 0; i < MAX_LOADOUTS; i++) s.saveLoadout(`loadout-${i}`);
+    expect(s.saveLoadout("one-too-many")).toBeNull();
+    expect(s.getLoadouts()).toHaveLength(MAX_LOADOUTS);
+  });
+
+  it("applies every slot and clears the ones the loadout left empty", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    s.unequipAll();
+    s.saveLoadout("bare");
+
+    expect(s.applyLoadout("main")).toBe(true);
+    expect(s.getSelectedSkinName()).toBeNull();
+    expect(localStorage.getItem(PATTERN_KEY)).toBe("pattern:stripes:red");
+    expect(s.getFlag()).toBe("flag:owned_flag");
+    expect(s.getSelectedCrownName()).toBe("owned_crown");
+    expect(s.getSelectedEffects()).toEqual({ transportShipTrail: "spectrum" });
+
+    expect(s.applyLoadout("bare")).toBe(true);
+    expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+    expect(s.getFlag()).toBeNull();
+    expect(s.getSelectedCrownName()).toBeNull();
+    expect(s.getSelectedEffects()).toEqual({});
+  });
+
+  it("applying an unknown loadout changes nothing", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    expect(s.applyLoadout("missing")).toBe(false);
+    expect(s.getSelectedCrownName()).toBe("owned_crown");
+  });
+
+  it("deletes a loadout without touching the equipped cosmetics", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    s.deleteLoadout("main");
+    expect(s.getLoadouts()).toEqual([]);
+    expect(localStorage.getItem(LOADOUTS_KEY)).toBeNull();
+    expect(s.getSelectedCrownName()).toBe("owned_crown");
+  });
+
+  it("unequipAll clears every slot but keeps saved loadouts", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    s.unequipAll();
+    expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+    expect(s.getFlag()).toBeNull();
+    expect(s.getSelectedCrownName()).toBeNull();
+    expect(s.getSelectedEffects()).toEqual({});
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual(["main"]);
+  });
+
+  it("emits change events for each slot when applying a loadout", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    const seen: string[] = [];
+    const keys = [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY];
+    const listeners = keys.map((key) => {
+      const listener = () => seen.push(key);
+      window.addEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
+        listener,
+      );
+      return { key, listener };
+    });
+    s.applyLoadout("main");
+    for (const { key, listener } of listeners) {
+      window.removeEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
+        listener,
+      );
+    }
+    expect(new Set(seen)).toEqual(new Set(keys));
+  });
+
+  it("drops malformed entries and corrupt storage", () => {
+    localStorage.setItem(LOADOUTS_KEY, "not json");
+    expect(new UserSettings().getLoadouts()).toEqual([]);
+    resetUserSettingsState();
+    localStorage.setItem(
+      LOADOUTS_KEY,
+      JSON.stringify([
+        { name: "ok", pattern: "pattern:stripes", effects: { a: "b", c: 3 } },
+        { pattern: "pattern:stripes" },
+        "nope",
+      ]),
+    );
+    expect(new UserSettings().getLoadouts()).toEqual([
+      {
+        name: "ok",
+        pattern: "pattern:stripes",
+        flag: null,
+        crown: null,
+        effects: { a: "b" },
+      },
+    ]);
+  });
+
+  it("scopes loadouts to the logged-in player", () => {
+    const s = new UserSettings();
+    s.setSelectedCrownName("owned_crown");
+    UserSettings.setPlayerId("player-1");
+    s.saveLoadout("main");
+    expect(localStorage.getItem(`${LOADOUTS_KEY}:player-1`)).not.toBeNull();
+    UserSettings.setPlayerId("player-2");
+    expect(s.getLoadouts()).toEqual([]);
+    UserSettings.setPlayerId("player-1");
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual(["main"]);
   });
 });
 
