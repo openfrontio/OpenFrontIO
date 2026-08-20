@@ -1,113 +1,113 @@
 {
   "categories": ["north_america"],
-  "id": "Capecod",
+  "id": "CapeCod",
   "map": {
-    "height": 1200,
-    "num_land_tiles": 626877,
-    "width": 1500
+    "height": 1180,
+    "num_land_tiles": 582033,
+    "width": 1440
   },
   "map16x": {
-    "height": 300,
-    "num_land_tiles": 36643,
-    "width": 375
+    "height": 295,
+    "num_land_tiles": 33915,
+    "width": 360
   },
   "map4x": {
-    "height": 600,
-    "num_land_tiles": 151882,
-    "width": 750
+    "height": 590,
+    "num_land_tiles": 140842,
+    "width": 720
   },
   "multiplayer_frequency": 4,
-  "name": "Capecod",
+  "name": "Cape Cod",
   "nations": [
     {
-      "coordinates": [440, 162],
+      "coordinates": [380, 162],
       "flag": "us",
       "name": "Plymouth"
     },
     {
-      "coordinates": [316, 527],
-      "flag": "us",
-      "name": "New Bedford"
-    },
-    {
-      "coordinates": [514, 722],
+      "coordinates": [454, 722],
       "flag": "us",
       "name": "Falmouth"
     },
     {
-      "coordinates": [499, 944],
+      "coordinates": [439, 944],
       "flag": "us",
       "name": "Martha's Vineyard"
     },
     {
-      "coordinates": [1311, 1103],
+      "coordinates": [1251, 1103],
       "flag": "us",
       "name": "Nantucket"
     },
     {
-      "coordinates": [1104, 32],
+      "coordinates": [1044, 32],
       "flag": "us",
       "name": "Provincetown"
     },
     {
-      "coordinates": [174, 147],
+      "coordinates": [114, 147],
       "flag": "us",
       "name": "Bridgewater"
     },
     {
-      "coordinates": [90, 44],
+      "coordinates": [30, 44],
       "flag": "us",
       "name": "Brockton"
     },
     {
-      "coordinates": [459, 431],
+      "coordinates": [399, 431],
       "flag": "us",
       "name": "Wareham"
     },
     {
-      "coordinates": [569, 503],
+      "coordinates": [509, 503],
       "flag": "us",
       "name": "Bourne"
     },
     {
-      "coordinates": [689, 451],
+      "coordinates": [629, 451],
       "flag": "us",
       "name": "Sandwich"
     },
     {
-      "coordinates": [717, 606],
+      "coordinates": [657, 606],
       "flag": "us",
       "name": "Mashpee"
     },
     {
-      "coordinates": [968, 563],
+      "coordinates": [908, 563],
       "flag": "us",
       "name": "Barnstable"
     },
     {
-      "coordinates": [1099, 480],
+      "coordinates": [1039, 480],
       "flag": "us",
       "name": "Dennis"
     },
     {
-      "coordinates": [1422, 545],
+      "coordinates": [1362, 545],
       "flag": "us",
       "name": "Chatham"
     },
     {
-      "coordinates": [1412, 345],
+      "coordinates": [1352, 345],
       "flag": "us",
       "name": "Orleans"
     },
     {
-      "coordinates": [1413, 245],
+      "coordinates": [1353, 245],
       "flag": "us",
       "name": "Eastham"
     },
     {
-      "coordinates": [1343, 154],
+      "coordinates": [1283, 154],
       "flag": "us",
       "name": "Wellfleet"
+    },
+    {
+      "coordinates": [39, 614],
+      "flag": "us",
+      "name": "New Bedford"
     }
   ],
   "translation_key": "map.capecod"

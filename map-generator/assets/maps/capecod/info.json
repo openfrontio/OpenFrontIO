@@ -1,98 +1,98 @@
 {
-  "id": "Capecod",
-  "name": "Capecod",
+  "id": "CapeCod",
+  "name": "Cape Cod",
   "translation_key": "map.capecod",
   "categories": ["north_america"],
   "multiplayer_frequency": 4,
   "nations": [
     {
-      "coordinates": [440, 162],
+      "coordinates": [380, 162],
       "name": "Plymouth",
       "flag": "us"
     },
     {
-      "coordinates": [316, 527],
-      "name": "New Bedford",
-      "flag": "us"
-    },
-    {
-      "coordinates": [514, 722],
+      "coordinates": [454, 722],
       "name": "Falmouth",
       "flag": "us"
     },
     {
-      "coordinates": [499, 944],
+      "coordinates": [439, 944],
       "name": "Martha's Vineyard",
       "flag": "us"
     },
     {
-      "coordinates": [1311, 1103],
+      "coordinates": [1251, 1103],
       "name": "Nantucket",
       "flag": "us"
     },
     {
-      "coordinates": [1104, 32],
+      "coordinates": [1044, 32],
       "name": "Provincetown",
       "flag": "us"
     },
     {
-      "coordinates": [174, 147],
+      "coordinates": [114, 147],
       "name": "Bridgewater",
       "flag": "us"
     },
     {
-      "coordinates": [90, 44],
+      "coordinates": [30, 44],
       "name": "Brockton",
       "flag": "us"
     },
     {
-      "coordinates": [459, 431],
+      "coordinates": [399, 431],
       "name": "Wareham",
       "flag": "us"
     },
     {
-      "coordinates": [569, 503],
+      "coordinates": [509, 503],
       "name": "Bourne",
       "flag": "us"
     },
     {
-      "coordinates": [689, 451],
+      "coordinates": [629, 451],
       "name": "Sandwich",
       "flag": "us"
     },
     {
-      "coordinates": [717, 606],
+      "coordinates": [657, 606],
       "name": "Mashpee",
       "flag": "us"
     },
     {
-      "coordinates": [968, 563],
+      "coordinates": [908, 563],
       "name": "Barnstable",
       "flag": "us"
     },
     {
-      "coordinates": [1099, 480],
+      "coordinates": [1039, 480],
       "name": "Dennis",
       "flag": "us"
     },
     {
-      "coordinates": [1422, 545],
+      "coordinates": [1362, 545],
       "name": "Chatham",
       "flag": "us"
     },
     {
-      "coordinates": [1412, 345],
+      "coordinates": [1352, 345],
       "name": "Orleans",
       "flag": "us"
     },
     {
-      "coordinates": [1413, 245],
+      "coordinates": [1353, 245],
       "name": "Eastham",
       "flag": "us"
     },
     {
-      "coordinates": [1343, 154],
+      "coordinates": [1283, 154],
       "name": "Wellfleet",
+      "flag": "us"
+    },
+    {
+      "coordinates": [39, 614],
+      "name": "New Bedford",
       "flag": "us"
     }
   ]
