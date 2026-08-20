@@ -182,9 +182,9 @@ export function joinLobby(
       // loads (lobby_info is re-broadcast every second) and, when the host
       // changes the map mid-lobby, a different key starts a fresh load.
       // doctrine/prestart still re-validates the authoritative map.
-      const preloadMap = message.lobby.gameConfig;
-      if (preloadMap !== undefined) {
-        requestTerrainLoad(preloadMap.gameMap, preloadMap.gameMapSize);
+      const gameConfig = message.lobby.gameConfig;
+      if (gameConfig !== undefined) {
+        requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
       }
       return;
     }
