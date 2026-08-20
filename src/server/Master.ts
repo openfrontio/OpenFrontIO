@@ -6,6 +6,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
+import { getDescriptor } from "./DesktopRelease";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
@@ -41,6 +42,41 @@ app.use(async (req, res, next) => {
     }
   } else {
     next();
+  }
+});
+
+// Desktop (Steam) shell release descriptor. See openfront-desktop's
+// docs/superpowers/specs/2026-08-20-runtime-asset-updating-design.md.
+//
+// version.json is polled once a minute by every running desktop client, so it
+// is deliberately tiny and separately cacheable; release.json is fetched only
+// when that pointer changes. Both must be reachable without a bot challenge --
+// see OPE-192.
+const staticDir = path.join(__dirname, "../../static");
+const descriptorOpts = () => ({
+  clientVersion: ServerEnv.gitCommit(),
+  cdnBase: ServerEnv.cdnBase(),
+});
+
+app.get("/desktop/version.json", async (_req, res) => {
+  try {
+    const d = await getDescriptor(staticDir, descriptorOpts());
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=30");
+    res.json({ clientVersion: d.clientVersion, coreVersion: d.coreVersion });
+  } catch (error) {
+    log.error("Error building desktop version pointer:", error);
+    res.status(500).json({ error: "unavailable" });
+  }
+});
+
+app.get("/desktop/release.json", async (_req, res) => {
+  try {
+    const d = await getDescriptor(staticDir, descriptorOpts());
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=30");
+    res.json(d);
+  } catch (error) {
+    log.error("Error building desktop release descriptor:", error);
+    res.status(500).json({ error: "unavailable" });
   }
 });
 
