@@ -1445,9 +1445,9 @@ function showErrorModal(
   button.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(content);
-      button.textContent = translateText("error_modal.copied");
+      button.textContent = translateText("common.copied");
     } catch {
-      button.textContent = translateText("error_modal.failed_copy");
+      button.textContent = translateText("common.failed_copy");
     }
   });
 

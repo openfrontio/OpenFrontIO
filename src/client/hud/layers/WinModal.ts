@@ -199,12 +199,10 @@ export class WinModal extends LitElement implements Controller {
                 .interactive=${false}
               ></cosmetic-card>
               <purchase-button
-                .product=${resolved.cosmetic?.product ?? null}
                 .priceHard=${resolved.cosmetic?.priceHard ?? null}
                 .priceSoft=${resolved.cosmetic?.priceSoft ?? null}
                 .rarity=${resolved.cosmetic?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
-                .onPurchaseDollar=${() => purchaseCosmetic(resolved, "dollar")}
                 .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
                 .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}
               ></purchase-button>

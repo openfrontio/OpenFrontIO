@@ -119,7 +119,7 @@ export class ClanModal extends BaseModal {
               },
               {
                 key: "members",
-                label: translateText("clan_modal.tab_members"),
+                label: translateText("clan_modal.members"),
               },
               {
                 key: "game-history",

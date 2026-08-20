@@ -61,14 +61,14 @@ export class TribeStatsView extends LitElement {
       </div>
       <div
         class="bg-surface rounded-lg border border-white/10 px-3 py-2 flex flex-col"
-        title=${translateText("store.tribe_stats_reach_tooltip", {
+        title=${translateText("leaderboard_modal.tribes_reach_value_tooltip", {
           count: figures.playerReach.toLocaleString(),
         })}
       >
         <span
           class="text-[11px] font-bold uppercase tracking-wider text-white/40"
         >
-          ${translateText("store.tribe_stats_reach")}
+          ${translateText("leaderboard_modal.tribes_reach")}
         </span>
         <span class="font-mono text-lg text-white">
           ${figures.playerReach.toLocaleString()}

@@ -138,7 +138,7 @@ export class MapDisplay extends LitElement {
           ? html`<div
               class="w-full aspect-[2/1] text-white/40 transition-transform duration-200 rounded-lg bg-black/20 text-xs font-bold uppercase tracking-wider flex items-center justify-center animate-pulse"
             >
-              ${translateText("map_component.loading")}
+              ${translateText("common.loading")}
             </div>`
           : this.mapWebpPath
             ? html`<div

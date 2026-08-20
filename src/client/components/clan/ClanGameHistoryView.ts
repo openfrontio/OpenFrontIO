@@ -40,8 +40,8 @@ const FILTER_TABS: { key: FilterKey; labelKey: string }[] = [
   { key: "all", labelKey: "clan_modal.history_filter_all" },
   { key: "ffa", labelKey: "clan_modal.history_type_ffa" },
   { key: "team", labelKey: "clan_modal.history_type_team" },
-  { key: "hvn", labelKey: "clan_modal.history_filter_hvn" },
-  { key: "ranked", labelKey: "clan_modal.history_filter_ranked" },
+  { key: "hvn", labelKey: "clan_modal.stats_hvn" },
+  { key: "ranked", labelKey: "clan_modal.stats_ranked" },
 ];
 
 // Cache survives a tab switch within the modal: keep the full
@@ -228,7 +228,7 @@ export class ClanGameHistoryView extends LitElement {
       await void copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
-      showToast(translateText("error_modal.failed_copy"), "red");
+      showToast(translateText("common.failed_copy"), "red");
     }
   }
 

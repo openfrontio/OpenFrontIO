@@ -222,13 +222,13 @@ export function getActiveModifiers(
   }
   if (modifiers.isWaterNukes) {
     result.push({
-      labelKey: "public_game_modifier.water_nukes_label",
+      labelKey: "game_settings.water_nukes",
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
   if (modifiers.isDoomsdayClock) {
     const info: ModifierInfo = {
-      labelKey: "public_game_modifier.doomsday_clock_label",
+      labelKey: "game_settings.doomsday_clock",
       badgeKey: "public_game_modifier.doomsday_clock",
     };
     // Name the preset when we know it; older payloads / non-rotation lobbies

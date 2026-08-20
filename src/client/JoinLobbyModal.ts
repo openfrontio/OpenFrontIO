@@ -732,12 +732,12 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.waterNukes)
       items.push({
-        label: translateText("public_game_modifier.water_nukes_label"),
+        label: translateText("game_settings.water_nukes"),
         value: enabled,
       });
     if (c.doomsdayClock?.enabled)
       items.push({
-        label: translateText("public_game_modifier.doomsday_clock_label"),
+        label: translateText("game_settings.doomsday_clock"),
         value: translateText(
           `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
         ),
