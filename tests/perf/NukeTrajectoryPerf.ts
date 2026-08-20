@@ -37,7 +37,12 @@ const mySiloTile = giantMapGame.ref(25, 2);
 myPlayer.buildUnit(UnitType.MissileSilo, mySiloTile, {});
 
 // Populate mixed units (Factories, Cities, Silos, SAMs) across the map
-const unitTypes = [UnitType.MissileSilo, UnitType.Factory, UnitType.SAMLauncher, UnitType.City];
+const unitTypes = [
+  UnitType.MissileSilo,
+  UnitType.Factory,
+  UnitType.SAMLauncher,
+  UnitType.City,
+];
 let unitCount = 0;
 
 for (let x = 50; x < 3500; x += 150) {
@@ -48,7 +53,8 @@ for (let x = 50; x < 3500; x += 150) {
       const isMine = unitCount % 2 === 0;
       const type = unitTypes[unitCount % unitTypes.length];
       const player = isMine ? myPlayer : enemyPlayer;
-      const forceSam = x >= 400 && x <= 1100 && !isMine ? UnitType.SAMLauncher : type;
+      const forceSam =
+        x >= 400 && x <= 1100 && !isMine ? UnitType.SAMLauncher : type;
       player.buildUnit(forceSam, tile, {});
       unitCount++;
     }
@@ -80,7 +86,7 @@ const giantSams = Array.from({ length: 100 }, (_, k) => ({
 function startNukeTrajectoryRender() {
   const extractedSams: { x: number; y: number; r: number }[] = [];
   const mapWidth = giantMapGame.map().width();
-  
+
   for (const u of giantMapGame.units()) {
     if (
       u.type() === UnitType.SAMLauncher &&
@@ -138,18 +144,21 @@ new Benchmark.Suite()
   .add("In-Game Phase 1: Start Render (Find Silo + Extract SAMs)", () => {
     startNukeTrajectoryRender();
   })
-  .add("In-Game Phase 2: Live Cursor Move (60 FPS per-frame trajectory update)", () => {
-    const mouse = getSimulatedMousePos();
-    buildNukeTrajectory(
-      inGameStaticTrajectory.srcX,
-      inGameStaticTrajectory.srcY,
-      mouse.x,
-      mouse.y,
-      mapH,
-      inGameStaticTrajectory.directionUp,
-      inGameStaticTrajectory.sams,
-    );
-  })
+  .add(
+    "In-Game Phase 2: Live Cursor Move (60 FPS per-frame trajectory update)",
+    () => {
+      const mouse = getSimulatedMousePos();
+      buildNukeTrajectory(
+        inGameStaticTrajectory.srcX,
+        inGameStaticTrajectory.srcY,
+        mouse.x,
+        mouse.y,
+        mapH,
+        inGameStaticTrajectory.directionUp,
+        inGameStaticTrajectory.sams,
+      );
+    },
+  )
   .on("cycle", (event: any) => {
     results.push(String(event.target));
   })
