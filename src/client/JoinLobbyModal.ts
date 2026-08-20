@@ -674,6 +674,11 @@ export class JoinLobbyModal extends BaseModal {
           `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
         ),
       });
+    if (c.overtime?.enabled)
+      items.push({
+        label: translateText("overtime.title"),
+        value: renderDuration((c.overtime.startMinutes ?? 30) * 60),
+      });
     if (c.anonymizeNames)
       items.push({
         label: translateText("host_modal.anonymous_players"),

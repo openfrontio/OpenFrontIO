@@ -490,6 +490,9 @@ export class GameServer {
     if (gameConfig.doomsdayClock !== undefined) {
       this.gameConfig.doomsdayClock = gameConfig.doomsdayClock;
     }
+    if (gameConfig.overtime !== undefined) {
+      this.gameConfig.overtime = gameConfig.overtime;
+    }
     if (gameConfig.anonymizeNames !== undefined) {
       this.gameConfig.anonymizeNames = gameConfig.anonymizeNames;
     }

@@ -556,6 +556,82 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
   });
 });
 
+describe("WinCheckExecution - Overtime", () => {
+  test("win threshold decays after the start minute", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+    const config = game.config();
+    expect(config.percentageTilesOwnedToWin(0)).toBe(80);
+    // Unchanged up to and including the start minute.
+    expect(config.percentageTilesOwnedToWin(60)).toBe(80);
+    // 2%/min -> 1% per 30 seconds.
+    expect(config.percentageTilesOwnedToWin(90)).toBe(79);
+    expect(config.percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+    // No floor: clamps at 0 so the leader always qualifies eventually.
+    expect(config.percentageTilesOwnedToWin(60 + 41 * 60)).toBe(0);
+  });
+
+  test("threshold never decays when the mode is off", async () => {
+    const game = await setup("big_plains", { gameMode: GameMode.FFA });
+    expect(game.config().percentageTilesOwnedToWin(10_000)).toBe(80);
+  });
+
+  test("team games decay from the 95% base", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.Team,
+      playerTeams: 2,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(95);
+    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(85);
+  });
+
+  test("leader wins once the shrinking bar drops below their share", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+
+    // 79% of the land: under the 80% base, so no win until the bar shrinks.
+    const nationInfo = new PlayerInfo(
+      "TestNation",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    game.addPlayer(nationInfo);
+    const nation = game.player("nation_id");
+    const totalLand = game.numLandTiles();
+    const targetTiles = Math.floor(totalLand * 0.79);
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= targetTiles) return;
+      if (!game.map().isLand(tile)) return;
+      nation.conquer(tile);
+      assigned++;
+    });
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+
+    // Two game-minutes in, the bar is 78% — below the nation's 79%.
+    while (game.elapsedGameSeconds() < 120) {
+      game.executeNextTick();
+    }
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).toHaveBeenCalledWith(nation, expect.anything());
+    expect(winCheck.isActive()).toBe(false);
+  });
+});
+
 describe("WinCheckExecution - 2v2 Ranked Team Elimination", () => {
   async function setup2v2(rankedType?: RankedType) {
     const game = await setup(

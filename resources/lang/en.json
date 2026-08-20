@@ -693,6 +693,7 @@
     "mins_placeholder": "Mins",
     "nations": "Nations: ",
     "options": "Options",
+    "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
     "start": "Start Game",
     "starting_gold": "Starting Gold (Millions)",
@@ -1294,6 +1295,11 @@
     "tournament": "TOURNAMENT",
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
+  },
+  "overtime": {
+    "started": "Overtime! The territory needed to win is now dropping.",
+    "title": "Overtime",
+    "to_win": "Hold > {pct}% to win"
   },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",

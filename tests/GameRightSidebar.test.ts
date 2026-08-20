@@ -41,6 +41,7 @@ function createSidebar(overrides: Partial<TimerState> = {}) {
   const game = {
     config: () => ({
       doomsdayClockConfig: () => undefined,
+      overtimeConfig: () => ({ enabled: false, startMinutes: 30 }),
       gameConfig: () => ({
         gameType: GameType.Public,
         maxTimerValue: state.maxTimerValue,
