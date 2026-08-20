@@ -10,6 +10,60 @@ const log = logger.child({ comp: "desktop-release" });
 // a Steam update, so a careless bump strands every installed client.
 const MIN_SHELL_VERSION = "0.1.0";
 
+// ---------------------------------------------------------------------------
+// Mirror of the desktop shell's safeOverlayPath / safeManifestTarget.
+//
+// SOURCE OF TRUTH: openfront-desktop's src/main/update/descriptor.ts. The two
+// repositories cannot import from each other, so this is duplicated on purpose
+// -- the same arrangement as multiplayerAllowed in src/client/DesktopShell.ts.
+// If the shell's rules change, change these to match.
+//
+// This exists because the shell's parseDescriptor THROWS on the first value it
+// refuses and aborts the parse of the entire descriptor. That is not a degraded
+// asset; it is every Steam client landing in `failed` on every launch. A
+// prefix-only check here would be weaker than the rule it is meant to
+// anticipate: parseDescriptor also rejects "%", "?", "#", backslashes, NUL,
+// UNC paths, drive letters and traversal segments, and it validates the assets
+// map's KEYS as well as its urls. Catching all of that at build time is the
+// entire point of asserting here at all.
+const ALLOWED_ROOTS = ["assets/", "_assets/"];
+
+function shellWouldRefuse(value: string): boolean {
+  if (typeof value !== "string" || value === "") return true;
+  // NUL, written as an escape rather than a raw byte: 171 real flag
+  // filenames contain a literal SPACE, which the shell accepts, and an
+  // embedded NUL renders as one in most editors. A raw NUL here would also
+  // make git treat this file as binary.
+  if (value.includes("\u0000")) return true;
+  if (value.includes("%")) return true;
+  if (value.includes("\\")) return true;
+  if (value.includes("?") || value.includes("#")) return true;
+  if (value.startsWith("//")) return true;
+  if (/^[a-zA-Z]:/.test(value)) return true;
+
+  const rel = value.startsWith("/") ? value.slice(1) : value;
+  if (rel === "") return true;
+  if (rel.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) {
+    return true;
+  }
+  return !ALLOWED_ROOTS.some((root) => rel.startsWith(root));
+}
+
+// asset-manifest.json holds percent-ENCODED hrefs where asset-hashes.json holds
+// literal paths -- 171 flag filenames in the current build contain a space,
+// carried here as %20. The shell decodes before applying its rules, so this
+// must too, or every one of those would look like a violation.
+function shellWouldRefuseManifestValue(value: string): boolean {
+  if (typeof value !== "string" || value === "") return true;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    return true;
+  }
+  return shellWouldRefuse(decoded);
+}
+
 export interface ReleaseAsset {
   url: string;
   sha256: string;
@@ -82,16 +136,16 @@ export async function buildDescriptor(
   const assets: Record<string, ReleaseAsset> = {};
   for (const [rel, h] of Object.entries(hashes)) {
     const url = `/${rel}`;
-    // Fail the BUILD rather than every client. The shell's parseDescriptor
-    // rejects the entire descriptor on the first url outside these roots, so
-    // one bad entry here is a 100% runtime failure for every Steam player.
-    // Must match ALLOWED_ROOTS in the shell's src/main/update/descriptor.ts and
-    // the allowlist in scripts/buildAssetHashes.ts.
-    if (!url.startsWith("/assets/") && !url.startsWith("/_assets/")) {
+    // Fail the BUILD rather than every client. Both the KEY and the URL are
+    // checked, because parseDescriptor validates both.
+    if (shellWouldRefuse(rel) || shellWouldRefuse(url)) {
       throw new Error(
-        `asset-hashes.json contains "${rel}", which is outside /assets/ and ` +
-          `/_assets/ — the desktop shell rejects the whole descriptor on it. ` +
-          `Fix hashDirectory in scripts/buildAssetHashes.ts.`,
+        `asset-hashes.json contains "${rel}", which the desktop shell's ` +
+          `safeOverlayPath refuses — it must be under assets/ or _assets/ and ` +
+          `free of "%", "?", "#", backslashes, NUL and traversal segments. ` +
+          `The shell rejects the WHOLE descriptor on it, so every Steam client ` +
+          `would fail to update. Fix hashDirectory in ` +
+          `scripts/buildAssetHashes.ts.`,
       );
     }
     assets[rel] = { url, sha256: h.sha256, bytes: h.bytes };
@@ -102,6 +156,18 @@ export async function buildDescriptor(
     throw new Error(
       "asset-manifest.json is empty — the desktop client resolves every asset name through it",
     );
+  }
+  for (const [name, target] of Object.entries(assetManifest)) {
+    // Values only. The keys are semantic names the client looks up by, never
+    // paths, and the shell does not constrain them beyond being strings.
+    if (shellWouldRefuseManifestValue(target)) {
+      throw new Error(
+        `asset-manifest.json maps "${name}" to "${target}", which the desktop ` +
+          `shell's safeManifestTarget refuses once decoded. The shell rejects ` +
+          `the WHOLE descriptor on it, so every Steam client would fail to ` +
+          `update.`,
+      );
+    }
   }
 
   if (opts.cdnBase === "") {

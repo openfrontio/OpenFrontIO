@@ -95,6 +95,87 @@ describe("buildDescriptor", () => {
     ).rejects.toThrow(/LICENSE/);
   });
 
+  // The prefix alone is not the shell's rule. parseDescriptor runs the full
+  // safeOverlayPath over both the KEY and the url, so a filename containing any
+  // of these would pass a prefix-only guard here and then abort the parse of
+  // the whole descriptor for 100% of clients -- the same class of bug as the
+  // root-file case above, just latent until someone adds such a filename.
+  it.each([
+    ["a percent sign", "_assets/images/50%25-off.deadbeef.png"],
+    ["a backslash", "_assets/images\\evil.deadbeef.png"],
+    ["a query string", "assets/index.js?v=2"],
+    ["a fragment", "assets/index.js#frag"],
+    ["a traversal segment", "assets/../../etc/passwd"],
+    ["a NUL byte", "assets/index\u0000.js"],
+  ])("throws when an asset key contains %s", async (_label, key) => {
+    await fs.writeFile(
+      path.join(dir, "asset-hashes.json"),
+      JSON.stringify({
+        "assets/index-xyz.js": { sha256: "e".repeat(64), bytes: 34 },
+        [key]: { sha256: "d".repeat(64), bytes: 11 },
+      }),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+      }),
+    ).rejects.toThrow(/safeOverlayPath/);
+  });
+
+  // Nothing checked these at build time at all before.
+  it.each([
+    ["escapes the overlay", "/../../etc/passwd"],
+    ["is outside the allowed roots", "/etc/passwd"],
+    ["hides traversal behind encoding", "/assets/..%2f..%2fescape"],
+    ["is malformed encoding", "/assets/a%zz.js"],
+  ])("throws when a manifest value %s", async (_label, target) => {
+    await fs.writeFile(
+      path.join(dir, "asset-manifest.json"),
+      JSON.stringify({ "images/a.png": target }),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+      }),
+    ).rejects.toThrow(/safeManifestTarget/);
+  });
+
+  // The guard must not be so strict it rejects what the real build emits.
+  it("accepts the real build's shapes: a literal space in a key, %20 in a manifest value", async () => {
+    await fs.writeFile(
+      path.join(dir, "asset-hashes.json"),
+      JSON.stringify({
+        "_assets/flags/1_East Anglia.719bac9ef408.svg": {
+          sha256: "f".repeat(64),
+          bytes: 12,
+        },
+      }),
+    );
+    await fs.writeFile(
+      path.join(dir, "asset-manifest.json"),
+      JSON.stringify({
+        "flags/1_East Anglia.svg":
+          "/_assets/flags/1_East%20Anglia.719bac9ef408.svg",
+      }),
+    );
+
+    const d = await buildDescriptor(dir, {
+      clientVersion: "sha-1",
+      cdnBase: "https://cdn.example",
+    });
+
+    expect(d.assets["_assets/flags/1_East Anglia.719bac9ef408.svg"].url).toBe(
+      "/_assets/flags/1_East Anglia.719bac9ef408.svg",
+    );
+    expect(d.assetManifest["flags/1_East Anglia.svg"]).toBe(
+      "/_assets/flags/1_East%20Anglia.719bac9ef408.svg",
+    );
+  });
+
   // The descriptor's `assets` map is keyed by EMITTED PATH; asset-manifest.json
   // maps SEMANTIC NAME -> hashed url. Deriving one from the other leaves every
   // _assets/** lookup missing, so the two must both travel.
