@@ -104,28 +104,40 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
  * and only a Steam depot push fixes it, so gating there would lock a paying
  * player out for hours with no action available.
  *
- * `failed` gates ONLY on a network error, because that is the only failure
- * Retry can actually resolve. A `refused` (our own Cloudflare WAF answering
- * 403), a `parse` (a malformed descriptor) and a `verify` (CDN bytes that do
- * not match the descriptor's hash) are all deterministic and entirely
- * server-side: pressing Retry re-runs the identical failure, so gating there
- * is punishment without recourse, exactly like `blocked`. Offering a Retry
- * button next to a lockout that Retry provably cannot lift is the worst of
- * both.
+ * `failed` is not one case but four, and the remedy rule splits them:
+ *
+ *   - `network` -- transient. Retry may genuinely work. GATE.
+ *   - `verify`  -- the CDN's bytes did not match the descriptor's sha256:
+ *                  either corruption at an edge or something worse. Retry is a
+ *                  real remedy, AND we know for certain a newer version exists,
+ *                  because we successfully parsed the descriptor naming it. A
+ *                  client sitting on a known-stale version with a working
+ *                  remedy is the strongest case for gating there is. GATE.
+ *   - `refused` -- our OWN Cloudflare WAF answering 403 (OPE-192).
+ *   - `parse`   -- a descriptor from our own server that we could not read.
+ *
+ * The last two are deterministic and entirely server-side: no player-side
+ * action changes the outcome, so Retry re-runs the identical failure. Gating
+ * them locks the player out while showing a button that provably cannot help,
+ * which is the same punishment-without-recourse `blocked` avoids. DO NOT GATE.
  *
  * Takes the whole state rather than the bare status because the error kind is
  * load-bearing in that decision.
  *
  * This duplicates multiplayerAllowed in openfront-desktop's
  * src/main/update/state.ts. The two repositories cannot import from each other;
- * if you change one, change the other.
+ * if you change one, change the other. Both are covered by tests asserting all
+ * four error kinds.
  */
 export function multiplayerAllowed(state: DesktopUpdateState): boolean {
   const { status } = state;
   if (status === "current" || status === "checking" || status === "blocked") {
     return true;
   }
-  if (status === "failed") return state.error?.kind !== "network";
+  if (status === "failed") {
+    const kind = state.error?.kind;
+    return kind !== "network" && kind !== "verify";
+  }
   // downloading (wait) and staged (reload) both have a real remedy.
   return false;
 }

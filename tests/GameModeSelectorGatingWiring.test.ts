@@ -153,6 +153,38 @@ describe("the multiplayer gate at its real call sites", () => {
     expect(hostOpen).not.toHaveBeenCalled();
   });
 
+  it("does refuse on a hash-verification failure, which Retry can also fix", async () => {
+    // Newly gating: the descriptor parsed, so we KNOW a newer version exists,
+    // and the CDN bytes not matching it is something Retry can genuinely
+    // resolve. Asserted here and not only against the pure predicate, so the
+    // real call sites are covered for this kind too.
+    await setUpdateState({
+      status: "failed",
+      bytes: 0,
+      total: 0,
+      error: { kind: "verify", message: "sha256 mismatch" },
+    });
+
+    clickEveryButton();
+
+    expect(joinOpen).not.toHaveBeenCalled();
+    expect(hostOpen).not.toHaveBeenCalled();
+  });
+
+  it("does not refuse on a malformed descriptor, which Retry cannot fix", async () => {
+    await setUpdateState({
+      status: "failed",
+      bytes: 0,
+      total: 0,
+      error: { kind: "parse", message: "unsupported schemaVersion" },
+    });
+
+    clickEveryButton();
+
+    expect(joinOpen).toHaveBeenCalled();
+    expect(hostOpen).toHaveBeenCalled();
+  });
+
   it("never gates the single-player card", async () => {
     const solo = vi.fn();
     (

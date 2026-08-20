@@ -45,21 +45,31 @@ describe("multiplayerAllowed", () => {
     expect(multiplayerAllowed(st("staged"))).toBe(false);
   });
 
-  it("gates a failed check only when retrying could work", () => {
+  // All four kinds asserted explicitly. A test covering only one gating kind
+  // and one non-gating kind would not catch a future edit that collapsed the
+  // distinction between them.
+  it("gates a failed check when Retry is a real remedy", () => {
+    // Transient; retrying may genuinely work.
     expect(
       multiplayerAllowed(st("failed", { kind: "network", message: "offline" })),
     ).toBe(false);
+    // The CDN's bytes did not match the descriptor. Retry is a remedy, and we
+    // KNOW a newer version exists because the descriptor naming it parsed --
+    // a known-stale client with a working remedy is the strongest gating case.
+    expect(
+      multiplayerAllowed(st("failed", { kind: "verify", message: "bad sha" })),
+    ).toBe(false);
   });
 
-  it("does not gate failures Retry provably cannot fix", () => {
+  it("does not gate failures no player-side action can change", () => {
+    // Our own WAF answering 403, and our own descriptor we could not read.
+    // Both deterministic and server-side: Retry re-runs the identical failure,
+    // so gating is punishment without recourse -- exactly like `blocked`.
     expect(
       multiplayerAllowed(st("failed", { kind: "refused", message: "403" })),
     ).toBe(true);
     expect(
       multiplayerAllowed(st("failed", { kind: "parse", message: "bad json" })),
-    ).toBe(true);
-    expect(
-      multiplayerAllowed(st("failed", { kind: "verify", message: "bad sha" })),
     ).toBe(true);
   });
 });

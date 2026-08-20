@@ -31,30 +31,22 @@ describe("shouldBlockMultiplayerAction", () => {
     ).toBe(false);
   });
 
-  it("blocks a failed check only when Retry has something to retry", () => {
-    expect(
-      shouldBlockMultiplayerAction({
-        status: "failed",
-        bytes: 0,
-        total: 0,
-        error: { kind: "network", message: "offline" },
-      }),
-    ).toBe(true);
-    expect(
-      shouldBlockMultiplayerAction({
-        status: "failed",
-        bytes: 0,
-        total: 0,
-        error: { kind: "refused", message: "403" },
-      }),
-    ).toBe(false);
-    expect(
-      shouldBlockMultiplayerAction({
-        status: "failed",
-        bytes: 0,
-        total: 0,
-        error: { kind: "parse", message: "bad json" },
-      }),
-    ).toBe(false);
+  // All four kinds asserted explicitly at the call site's own predicate, so a
+  // future edit collapsing the gating/non-gating split fails here too.
+  const failed = (kind: string) => ({
+    status: "failed" as const,
+    bytes: 0,
+    total: 0,
+    error: { kind, message: kind },
+  });
+
+  it("blocks a failed check when Retry is a real remedy", () => {
+    expect(shouldBlockMultiplayerAction(failed("network"))).toBe(true);
+    expect(shouldBlockMultiplayerAction(failed("verify"))).toBe(true);
+  });
+
+  it("does not block failures no player-side action can change", () => {
+    expect(shouldBlockMultiplayerAction(failed("refused"))).toBe(false);
+    expect(shouldBlockMultiplayerAction(failed("parse"))).toBe(false);
   });
 });
