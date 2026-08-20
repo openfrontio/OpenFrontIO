@@ -448,6 +448,14 @@
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
   },
+  "desktop_update": {
+    "blocked": "A Steam update is required for the latest version",
+    "downloading": "Downloading update…",
+    "failed": "Couldn't download the update",
+    "ready": "Update ready",
+    "reload": "Reload",
+    "retry": "Retry"
+  },
   "difficulty": {
     "difficulty": "Nation difficulty",
     "easy": "Easy",

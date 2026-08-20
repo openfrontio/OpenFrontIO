@@ -388,6 +388,12 @@
          component is position:fixed and self-manages visibility (pauses in-game). -->
     <featured-stream></featured-stream>
 
+    <!-- Steam shell runtime-update bar. A direct <body> child, like
+         featured-stream above, so it is not inside the home container -- but
+         unlike it, deliberately hidden in-game (see the component's comment).
+         Renders nothing outside the desktop shell. -->
+    <desktop-update-bar></desktop-update-bar>
+
     <!-- Scripts -->
     <script>
       // Remove preload class after everything is loaded
