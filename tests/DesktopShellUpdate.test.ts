@@ -61,6 +61,14 @@ describe("multiplayerAllowed", () => {
     ).toBe(false);
   });
 
+  // error is optional on DesktopUpdateState. When it is absent, `kind` reads
+  // `undefined`, which matches neither "network" nor "verify" and so returns
+  // true -- deliberately: an unclassified failure should not lock a player
+  // out. Pinned explicitly so a later edit can't flip that default silently.
+  it("does not gate a failed state with no error object", () => {
+    expect(multiplayerAllowed(st("failed"))).toBe(true);
+  });
+
   it("does not gate failures no player-side action can change", () => {
     // Our own WAF answering 403, and our own descriptor we could not read.
     // Both deterministic and server-side: Retry re-runs the identical failure,
