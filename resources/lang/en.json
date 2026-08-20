@@ -450,7 +450,7 @@
   },
   "desktop_update": {
     "blocked": "A Steam update is required for the latest version",
-    "downloading": "Downloading update…",
+    "downloading": "Downloading update… {percent}%",
     "failed": "Couldn't download the update",
     "ready": "Update ready",
     "reload": "Reload",

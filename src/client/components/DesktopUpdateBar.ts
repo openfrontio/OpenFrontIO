@@ -1,7 +1,10 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { createRef, ref, type Ref } from "lit/directives/ref.js";
 import { desktopUpdate, type DesktopUpdateState } from "../DesktopShell";
 import { translateText } from "../Utils";
+
+const WIGGLE_CLASS = "animate-bounce";
 
 /**
  * Bottom-of-screen progress/action bar for the Steam shell's runtime updates,
@@ -24,9 +27,17 @@ export class DesktopUpdateBar extends LitElement {
   }
 
   @state() private updateState: DesktopUpdateState | null = null;
-  @state() private wiggling = false;
 
   private unsubscribe: (() => void) | null = null;
+
+  // The bar's own element, so wiggle() can restart the animation with a real
+  // synchronous class removal + reflow + re-add. Routing that through a Lit
+  // @state does NOT work: Lit batches writes into one microtask render and
+  // keeps only the first oldValue of a batch, so false-then-true in a single
+  // tick nets to no change and lit-html's dirty check skips the DOM write --
+  // silently breaking the repeat-click case this exists for.
+  private readonly barRef: Ref<HTMLElement> = createRef();
+  private wiggleTimer: number | undefined;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -46,15 +57,21 @@ export class DesktopUpdateBar extends LitElement {
     super.disconnectedCallback();
     this.unsubscribe?.();
     this.unsubscribe = null;
+    window.clearTimeout(this.wiggleTimer);
   }
 
   /** Draws attention when the player tries to do something the update gates. */
   wiggle(): void {
-    this.wiggling = false;
-    // Force a reflow so re-triggering the animation restarts it.
-    void this.offsetWidth;
-    this.wiggling = true;
-    setTimeout(() => (this.wiggling = false), 600);
+    const el = this.barRef.value;
+    if (el === undefined) return;
+    el.classList.remove(WIGGLE_CLASS);
+    // A real reflow, between a real removal and a real re-add.
+    void el.offsetWidth;
+    el.classList.add(WIGGLE_CLASS);
+    window.clearTimeout(this.wiggleTimer);
+    this.wiggleTimer = window.setTimeout(() => {
+      this.barRef.value?.classList.remove(WIGGLE_CLASS);
+    }, 600);
   }
 
   private percent(): number {
@@ -70,10 +87,10 @@ export class DesktopUpdateBar extends LitElement {
 
     return html`
       <div
+        ${ref(this.barRef)}
         class="fixed bottom-0 left-0 w-full z-[300] in-[.in-game]:hidden
                bg-gray-900/95 backdrop-blur-sm border-t border-white/10
-               px-4 py-3 flex items-center gap-4 text-white
-               ${this.wiggling ? "animate-bounce" : ""}"
+               px-4 py-3 flex items-center gap-4 text-white"
         role="status"
         aria-live="polite"
       >
@@ -98,7 +115,9 @@ export class DesktopUpdateBar extends LitElement {
   private label(s: DesktopUpdateState) {
     switch (s.status) {
       case "downloading":
-        return `${translateText("desktop_update.downloading")} ${this.percent()}%`;
+        return translateText("desktop_update.downloading", {
+          percent: this.percent(),
+        });
       case "staged":
         return translateText("desktop_update.ready");
       case "failed":
@@ -117,7 +136,11 @@ export class DesktopUpdateBar extends LitElement {
       return html`<button
         class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
                text-sm font-medium uppercase tracking-wider"
-        @click=${() => void bridge.apply()}
+        @click=${() => {
+          bridge.apply().catch((err: unknown) => {
+            console.error("desktop-update-bar: apply failed", err);
+          });
+        }}
       >
         ${translateText("desktop_update.reload")}
       </button>`;
@@ -126,7 +149,11 @@ export class DesktopUpdateBar extends LitElement {
       return html`<button
         class="shrink-0 px-4 py-2 rounded-md bg-surface hover:brightness-110
                text-sm font-medium uppercase tracking-wider"
-        @click=${() => void bridge.retry()}
+        @click=${() => {
+          bridge.retry().catch((err: unknown) => {
+            console.error("desktop-update-bar: retry failed", err);
+          });
+        }}
       >
         ${translateText("desktop_update.retry")}
       </button>`;
