@@ -3,12 +3,24 @@ import { translateText } from "../../client/Utils";
 import { ClanTagSchema, UsernameSchema } from "../Schemas";
 
 export const MIN_USERNAME_LENGTH = 3;
-export const MAX_USERNAME_LENGTH = 27;
+// Matches MAX_ACCOUNT_USERNAME_LENGTH so a free-form name can't outgrow the
+// verified name it sits beside. Enforced here rather than in UsernameSchema,
+// which has to stay wide enough to read the names already written into
+// archived game records. A stored name from before the cap is trimmed to fit
+// rather than rejected (see clampUsername in UsernameInput).
+export const MAX_USERNAME_LENGTH = 20;
 export const MIN_CLAN_TAG_LENGTH = 2;
 export const MAX_CLAN_TAG_LENGTH = 5;
 
 export const MIN_ACCOUNT_USERNAME_LENGTH = 3;
 export const MAX_ACCOUNT_USERNAME_LENGTH = 20;
+
+// Characters a player may type for themselves. Narrower than UsernameSchema,
+// which additionally carries hyphens so that account names — issued under the
+// separate AccountUsernameSchema rules — stay representable on the wire.
+// Widening the wire schema for those must not quietly widen this form, whose
+// error message names exactly these characters.
+const FREE_FORM_USERNAME_PATTERN = /^[a-zA-Z0-9_ üÜ.]+$/u;
 
 // Mirrors the API's account-username rules (infra src/api/lib/Usernames.ts)
 // for instant form feedback; profanity and uniqueness stay server-side. No
@@ -26,6 +38,14 @@ export function validateUsername(username: string): {
   isValid: boolean;
   error?: string;
 } {
+  // Checked ahead of the schema, which stays wide enough for archived records.
+  if (typeof username === "string" && username.length > MAX_USERNAME_LENGTH) {
+    return {
+      isValid: false,
+      error: translateText("username.too_long", { max: MAX_USERNAME_LENGTH }),
+    };
+  }
+
   const parsed = UsernameSchema.safeParse(username);
 
   if (!parsed.success) {
@@ -57,6 +77,12 @@ export function validateUsername(username: string): {
     else {
       return { isValid: false, error: translateText("username.invalid_chars") };
     }
+  }
+
+  // The schema's own charset is deliberately wider (see the pattern above), so
+  // the form's rule is applied separately rather than inherited from it.
+  if (!FREE_FORM_USERNAME_PATTERN.test(username)) {
+    return { isValid: false, error: translateText("username.invalid_chars") };
   }
 
   // All checks passed

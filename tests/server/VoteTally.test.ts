@@ -52,3 +52,32 @@ describe("VoteRound", () => {
     expect(round.result(1)).toEqual({ value: "a", votes: 1 });
   });
 });
+
+describe("VoteRound.resultAmong", () => {
+  it("resolves once the remaining electorate unanimously backs a candidate", () => {
+    const round = new VoteRound<string>();
+    round.add("a", "a", "1.1.1.1");
+    // Both electors still active: 1 of 2 is not a strict majority.
+    expect(round.resultAmong(new Set(["1.1.1.1", "2.2.2.2"]))).toBeNull();
+    // The non-voting elector departed: 1 of 1 resolves.
+    expect(round.resultAmong(new Set(["1.1.1.1"]))).toEqual({
+      value: "a",
+      votes: 1,
+    });
+  });
+
+  it("ignores votes cast from departed IPs", () => {
+    const round = new VoteRound<string>();
+    round.add("a", "a", "1.1.1.1");
+    // The voter departed: their vote must not count against the remaining
+    // 1-IP electorate, or a player could vote for themselves and disconnect
+    // to claim the win (#4136).
+    expect(round.resultAmong(new Set(["2.2.2.2"]))).toBeNull();
+  });
+
+  it("returns null for an empty electorate", () => {
+    const round = new VoteRound<string>();
+    round.add("a", "a", "1.1.1.1");
+    expect(round.resultAmong(new Set())).toBeNull();
+  });
+});

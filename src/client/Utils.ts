@@ -119,7 +119,7 @@ function getTeamSize(
 }
 
 export interface ModifierInfo {
-  /** Translation key for detailed label (e.g. "host_modal.random_spawn") */
+  /** Translation key for detailed label (e.g. "game_settings.random_spawn") */
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
@@ -142,13 +142,13 @@ export function getActiveModifiers(
   const result: ModifierInfo[] = [];
   if (modifiers.isRandomSpawn) {
     result.push({
-      labelKey: "host_modal.random_spawn",
+      labelKey: "game_settings.random_spawn",
       badgeKey: "public_game_modifier.random_spawn",
     });
   }
   if (modifiers.isCompact) {
     result.push({
-      labelKey: "host_modal.compact_map",
+      labelKey: "game_settings.compact_map",
       badgeKey: "public_game_modifier.compact_map",
     });
   }
@@ -180,7 +180,7 @@ export function getActiveModifiers(
   }
   if (modifiers.goldMultiplier) {
     result.push({
-      labelKey: "host_modal.gold_multiplier",
+      labelKey: "game_settings.gold_multiplier",
       badgeKey: "public_game_modifier.gold_multiplier",
       badgeParams: {
         amount: modifiers.goldMultiplier,
@@ -222,13 +222,13 @@ export function getActiveModifiers(
   }
   if (modifiers.isWaterNukes) {
     result.push({
-      labelKey: "public_game_modifier.water_nukes_label",
+      labelKey: "game_settings.water_nukes",
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
   if (modifiers.isDoomsdayClock) {
     const info: ModifierInfo = {
-      labelKey: "public_game_modifier.doomsday_clock_label",
+      labelKey: "game_settings.doomsday_clock",
       badgeKey: "public_game_modifier.doomsday_clock",
     };
     // Name the preset when we know it; older payloads / non-rotation lobbies
@@ -297,6 +297,7 @@ export async function copyToClipboard(
     }
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
+    throw err;
   }
 }
 

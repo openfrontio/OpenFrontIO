@@ -16,6 +16,7 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
+import "./ClanDonateDialog";
 import {
   type ClanRole,
   defaultOrderForSort,
@@ -67,8 +68,10 @@ export class ClanDetailView extends LitElement {
   @state() private actionPending = false;
   @state() private allStatsExpanded = false;
   @state() private membersLoadInFlight = false;
-  private memberSearch = "";
+  @state() private memberSearch = "";
+  @state() private donateOpen = false;
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private memberLoadSeq = 0;
   private asyncGeneration = 0;
 
   connectedCallback() {
@@ -109,6 +112,7 @@ export class ClanDetailView extends LitElement {
 
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
+    this.memberLoadSeq++;
     super.disconnectedCallback();
   }
 
@@ -122,6 +126,7 @@ export class ClanDetailView extends LitElement {
 
   private async loadDetail() {
     const gen = ++this.asyncGeneration;
+    this.memberLoadSeq++;
     this.loading = true;
     this.myRole = null;
     this.pendingRequestCount = 0;
@@ -237,25 +242,36 @@ export class ClanDetailView extends LitElement {
     }
   }
 
-  private async loadMemberPage(page: number) {
+  private async loadMemberPage(page: number, search = this.memberSearch) {
     if (!this.selectedClan) return;
-    const res = await fetchClanMembers(
-      this.selectedClan.tag,
-      page,
-      this.membersPerPage,
-      this.memberSort,
-      this.memberOrder,
-    );
+    const seq = ++this.memberLoadSeq;
+    const res = search
+      ? await fetchClanMembers(
+          this.selectedClan.tag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+          search,
+        )
+      : await fetchClanMembers(
+          this.selectedClan.tag,
+          page,
+          this.membersPerPage,
+          this.memberSort,
+          this.memberOrder,
+        );
+    if (seq !== this.memberLoadSeq || search !== this.memberSearch) return;
     if (!res) return;
     if (res.results.length === 0 && page > 1) {
-      await this.loadMemberPage(1);
+      await this.loadMemberPage(1, search);
       return;
     }
     this.members = res.results;
     this.membersTotal = res.total;
     this.memberPage = page;
     this.pendingRequestCount = res.pendingRequests ?? 0;
-    if (this.selectedClan.memberCount !== res.total) {
+    if (!search && this.selectedClan.memberCount !== res.total) {
       this.selectedClan = { ...this.selectedClan, memberCount: res.total };
     }
   }
@@ -343,12 +359,51 @@ export class ClanDetailView extends LitElement {
     }
   }
 
+  // The dialog already moved the currency; this refreshes what the page shows.
+  // The clan's balances come from a fresh detail fetch (the 201 carries neither
+  // side's resulting balance) and the player's wallet from a re-fetched
+  // /users/@me — both are floating; the toast is the acknowledgement.
+  private async handleDonated(
+    e: CustomEvent<{ currencyType: "soft" | "hard"; amount: string }>,
+  ) {
+    this.donateOpen = false;
+    const clan = this.selectedClan;
+    if (!clan) return;
+    const { currencyType, amount } = e.detail;
+    showToast(
+      translateText("clan_modal.donate_success", {
+        amount: BigInt(amount).toLocaleString(),
+        currency: translateText(
+          currencyType === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+        ),
+        tag: clan.tag,
+      }),
+      "green",
+    );
+    invalidateUserMe();
+    const gen = this.asyncGeneration;
+    const detail = await fetchClanDetail(clan.tag);
+    if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
+      return;
+    }
+    this.selectedClan = detail;
+    this.dispatchEvent(
+      new CustomEvent("clan-donated", {
+        detail: { clan: detail },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   private onSearchInput(e: Event) {
-    const val = (e.target as HTMLInputElement).value;
+    const search = (e.target as HTMLInputElement).value.trim();
+    if (search === this.memberSearch) return;
+    this.memberSearch = search;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberSearchDebounce = setTimeout(() => {
-      this.memberSearch = val;
-      this.requestUpdate();
+      this.memberSearchDebounce = null;
+      void this.loadMemberPage(1, search);
     }, 200);
   }
 
@@ -405,6 +460,15 @@ export class ClanDetailView extends LitElement {
           clan,
         )}
       </div>
+      ${this.donateOpen && isMember
+        ? html`<clan-donate-dialog
+            .clanTag=${clan.tag}
+            @donated=${(
+              e: CustomEvent<{ currencyType: "soft" | "hard"; amount: string }>,
+            ) => void this.handleDonated(e)}
+            @cancel=${() => (this.donateOpen = false)}
+          ></clan-donate-dialog>`
+        : ""}
     `;
 
     if (clan.discordUrl) {
@@ -517,9 +581,7 @@ export class ClanDetailView extends LitElement {
   private renderMembersList() {
     const filtered = filterMembersBySearch(this.members, this.memberSearch);
     const toggleLabel = translateText(
-      this.allStatsExpanded
-        ? "clan_modal.stats_collapse_all"
-        : "clan_modal.stats_expand_all",
+      this.allStatsExpanded ? "common.collapse_all" : "common.expand_all",
     );
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
@@ -539,6 +601,7 @@ export class ClanDetailView extends LitElement {
         </div>
         ${renderMemberSearchInput(
           (e: Event) => this.onSearchInput(e),
+          this.memberSearch,
           undefined,
           renderMemberSortControl(
             this.memberSort,
@@ -745,6 +808,16 @@ export class ClanDetailView extends LitElement {
           class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.request_invite")}
+        </button>
+      `);
+    }
+    if (isMember) {
+      buttons.push(html`
+        <button
+          @click=${() => (this.donateOpen = true)}
+          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
+        >
+          ${translateText("clan_modal.donate")}
         </button>
       `);
     }

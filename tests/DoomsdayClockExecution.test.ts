@@ -194,11 +194,24 @@ class FakePlayer {
 class FakeGame {
   now = 0;
   gameMode: GameMode = GameMode.FFA;
+  winnerPlayer: FakePlayer | null = null;
+  // Rot marks what it consumes as wasteland; recorded so tests can assert on it.
+  falloutTiles = new Set<TileRef>();
+  setFallout(tile: TileRef, value: boolean): void {
+    if (value) this.falloutTiles.add(tile);
+    else this.falloutTiles.delete(tile);
+  }
   constructor(
     public land: number,
     public sd: SDConfig,
     public ps: FakePlayer[],
   ) {}
+  getWinner(): FakePlayer | null {
+    return this.winnerPlayer;
+  }
+  winner(): FakePlayer | null {
+    return this.winnerPlayer;
+  }
   ticks(): number {
     return this.now;
   }
@@ -229,7 +242,9 @@ class FakeGame {
     return out;
   }
   numTilesWithFallout(): number {
-    return 0;
+    // Kept in sync with setFallout: the execution subtracts this from land when
+    // sizing the bar and the rot quota, so a stale 0 would diverge from prod.
+    return this.falloutTiles.size;
   }
   config() {
     return {
@@ -362,6 +377,18 @@ describe("DoomsdayClockExecution (logic)", () => {
     runAt(exec, game, WAVE_TICK + 30);
     expect(a.troops()).toBe(1000); // never drained
     expect(b.troops()).toBeLessThan(1000); // bled
+  });
+
+  it("halts execution and clears doomsday clock flags once a game winner is set", () => {
+    const { game, a, b } = twoPlayerGame(150, 100);
+    const exec = makeExec(game);
+    runAt(exec, game, WAVE_TICK);
+    expect(b.inDoomsdayClock()).toBe(true);
+
+    game.winnerPlayer = a;
+    runAt(exec, game, WAVE_TICK + 10);
+    expect(a.inDoomsdayClock()).toBe(false);
+    expect(b.inDoomsdayClock()).toBe(false);
   });
 
   it("applies to nations like players and excludes map bots", () => {
@@ -598,15 +625,59 @@ describe("DoomsdayClockExecution (teams)", () => {
 describe("doomsdayClockRequiredTiles (ramping waves)", () => {
   const land = 10000;
 
+  it("a TEAM game climbs higher rungs to the same ceiling", () => {
+    // The bar is one share per SIDE regardless of headcount, so the same
+    // percentage asks less of a team than of a solo player: a duo on 2%
+    // combined is two players averaging 1% each.
+    const ffa = { speed: "normal" as const };
+    const team = { speed: "normal" as const, teamGame: true };
+    expect(doomsdayClockRequiredTiles(team, land, 768)).toBe(300); // 3%, was 2%
+    expect(doomsdayClockRequiredTiles(ffa, land, 768)).toBe(200);
+    expect(doomsdayClockRequiredTiles(team, land, 9999)).toBe(3500); // same ceiling
+    expect(doomsdayClockRequiredTiles(ffa, land, 9999)).toBe(3500);
+  });
+
+  it("does not make a team game reach its endgame any sooner", () => {
+    // Only the rungs move; grace and wave timings belong to the speed preset.
+    const team = { speed: "normal" as const, teamGame: true };
+    expect(doomsdayClockRequiredTiles(team, land, 600)).toBe(0); // grace unchanged
+    // Sampled inside a PAUSE, not the first ramp: during the opening ramp both
+    // profiles report growing with 0s to go, so the comparison would hold even
+    // if the team schedule had been shifted. The targets confirm the two are on
+    // different ladders at the same instant.
+    const ffa = doomsdayClockWaveState({ speed: "normal" }, 1000);
+    const t = doomsdayClockWaveState(team, 1000);
+    expect(t.secondsToNextGrowth).toBe(ffa.secondsToNextGrowth);
+    expect(t.growing).toBe(ffa.growing);
+    expect(ffa.targetPercent).toBe(7);
+    expect(t.targetPercent).toBe(10);
+  });
+
+  it("treats an omitted teamGame as FFA", () => {
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 768)).toBe(
+      200,
+    );
+  });
+
   it("is 0 through the grace, ramps linearly, then holds during the pause", () => {
     // normal: grace 600s, then a 168s ramp 0->2%, then a 54s hold, ...
-    expect(doomsdayClockRequiredTiles("normal", land, 300)).toBe(0); // in the grace
-    expect(doomsdayClockRequiredTiles("normal", land, 600)).toBe(0); // grace ends
-    expect(doomsdayClockRequiredTiles("normal", land, 684)).toBe(100); // halfway up -> 1%
-    expect(doomsdayClockRequiredTiles("normal", land, 768)).toBe(200); // ramp done -> 2%
-    expect(doomsdayClockRequiredTiles("normal", land, 800)).toBe(200); // pause holds 2%
-    expect(doomsdayClockRequiredTiles("normal", land, 822)).toBe(200); // next ramp starts at 2%
-    expect(doomsdayClockRequiredTiles("normal", land, 9999)).toBe(3500); // final 35%
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 300)).toBe(0); // in the grace
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 600)).toBe(0); // grace ends
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 684)).toBe(
+      100,
+    ); // halfway up -> 1%
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 768)).toBe(
+      200,
+    ); // ramp done -> 2%
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 800)).toBe(
+      200,
+    ); // pause holds 2%
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 822)).toBe(
+      200,
+    ); // next ramp starts at 2%
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 9999)).toBe(
+      3500,
+    ); // final 35%
   });
 
   it("tops out at 35% exactly on each preset's cap", () => {
@@ -614,13 +685,25 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
     // endgame to act. 35% -- not the old 55% -- because no runner-up in 85
     // tournament games ever held more than 21.6%, so a higher ceiling only ever
     // climbed past the leader's own share.
-    expect(doomsdayClockRequiredTiles("normal", land, 1878)).toBe(2500); // 25% wave
-    expect(doomsdayClockRequiredTiles("normal", land, 2100)).toBe(3500); // 35% @ 35:00
-    expect(doomsdayClockRequiredTiles("fast", land, 1500)).toBe(3500); // 35% @ 25:00
-    expect(doomsdayClockRequiredTiles("veryfast", land, 900)).toBe(3500); // 35% @ 15:00
-    expect(doomsdayClockRequiredTiles("slow", land, 2700)).toBe(3500); // 35% @ 45:00
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 1878)).toBe(
+      2500,
+    ); // 25% wave
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, land, 2100)).toBe(
+      3500,
+    ); // 35% @ 35:00
+    expect(doomsdayClockRequiredTiles({ speed: "fast" }, land, 1500)).toBe(
+      3500,
+    ); // 35% @ 25:00
+    expect(doomsdayClockRequiredTiles({ speed: "veryfast" }, land, 900)).toBe(
+      3500,
+    ); // 35% @ 15:00
+    expect(doomsdayClockRequiredTiles({ speed: "slow" }, land, 2700)).toBe(
+      3500,
+    ); // 35% @ 45:00
     // And never beyond it, however long the game runs.
-    expect(doomsdayClockRequiredTiles("fast", land, 5000)).toBe(3500);
+    expect(doomsdayClockRequiredTiles({ speed: "fast" }, land, 5000)).toBe(
+      3500,
+    );
   });
 
   it("steps gently and never jumps more than 10 points at once", () => {
@@ -640,17 +723,17 @@ describe("doomsdayClockRequiredTiles (ramping waves)", () => {
   it("never decreases, and is zero for no land", () => {
     let prev = 0;
     for (let t = 0; t <= 2400; t += 5) {
-      const r = doomsdayClockRequiredTiles("normal", land, t);
+      const r = doomsdayClockRequiredTiles({ speed: "normal" }, land, t);
       expect(r).toBeGreaterThanOrEqual(prev);
       prev = r;
     }
-    expect(doomsdayClockRequiredTiles("normal", 0, 1800)).toBe(0);
+    expect(doomsdayClockRequiredTiles({ speed: "normal" }, 0, 1800)).toBe(0);
   });
 });
 
 describe("doomsdayClockWaveState", () => {
   it("reports the live share and target while ramping", () => {
-    const s = doomsdayClockWaveState("normal", 684); // mid the first ramp (0->2%)
+    const s = doomsdayClockWaveState({ speed: "normal" }, 684); // mid the first ramp (0->2%)
     expect(s.currentPercent).toBe(1);
     expect(s.targetPercent).toBe(2);
     expect(s.growing).toBe(true);
@@ -660,7 +743,7 @@ describe("doomsdayClockWaveState", () => {
   });
 
   it("counts down to the next ramp during a pause", () => {
-    const s = doomsdayClockWaveState("normal", 800); // in the first pause (768-822)
+    const s = doomsdayClockWaveState({ speed: "normal" }, 800); // in the first pause (768-822)
     expect(s.growing).toBe(false);
     expect(s.currentPercent).toBe(2); // held at the level just reached
     expect(s.targetPercent).toBe(4); // next ramp climbs to 4%
@@ -669,7 +752,7 @@ describe("doomsdayClockWaveState", () => {
   });
 
   it("counts down through the grace", () => {
-    const s = doomsdayClockWaveState("normal", 200);
+    const s = doomsdayClockWaveState({ speed: "normal" }, 200);
     expect(s.currentPercent).toBe(0);
     expect(s.targetPercent).toBe(2);
     expect(s.secondsToNextGrowth).toBe(400); // first ramp at 600
@@ -677,13 +760,19 @@ describe("doomsdayClockWaveState", () => {
 
   it("flags the 10s window (5s each side) around a ramp starting", () => {
     // veryfast first ramp starts at 600s.
-    expect(doomsdayClockWaveState("veryfast", 596).waveFlash).toBe(true); // 4s before
-    expect(doomsdayClockWaveState("veryfast", 604).waveFlash).toBe(true); // 4s after
-    expect(doomsdayClockWaveState("veryfast", 620).waveFlash).toBe(false); // mid-ramp
+    expect(doomsdayClockWaveState({ speed: "veryfast" }, 596).waveFlash).toBe(
+      true,
+    ); // 4s before
+    expect(doomsdayClockWaveState({ speed: "veryfast" }, 604).waveFlash).toBe(
+      true,
+    ); // 4s after
+    expect(doomsdayClockWaveState({ speed: "veryfast" }, 620).waveFlash).toBe(
+      false,
+    ); // mid-ramp
   });
 
   it("marks done after the last ramp", () => {
-    const s = doomsdayClockWaveState("veryfast", 1100); // past the final ramp (@900) = 35%
+    const s = doomsdayClockWaveState({ speed: "veryfast" }, 1100); // past the final ramp (@900) = 35%
     expect(s.done).toBe(true);
     expect(s.currentPercent).toBe(35);
     expect(s.secondsToNextGrowth).toBe(0);
@@ -792,7 +881,7 @@ describe("DoomsdayClockExecution (integration)", () => {
     const small = game.player("small");
     // Size the slices to the bar at the point we stop.
     const bar = doomsdayClockRequiredTiles(
-      "veryfast",
+      { speed: "veryfast" },
       game.numLandTiles(),
       TICKS / 10,
     );
@@ -1297,6 +1386,11 @@ describe("DoomsdayClockExecution (territory rot, real simulation)", () => {
     // leader gained nothing (relinquish takes no conqueror: no kill, no gold).
     for (const tile of held) expect(game.owner(tile).isPlayer()).toBe(false);
     expect(big.numTilesOwned()).toBe(bigTilesBefore);
+    // …and it is WASTELAND, not a prize: every rotted tile carries fallout, so
+    // passive expansion skips it and taking it costs the fallout penalty —
+    // without this, rot converts the doomed into free land for whoever is
+    // biggest next door, and the clock feeds the exact player it never presses.
+    for (const tile of held) expect(game.hasFallout(tile)).toBe(true);
   }, 30_000);
 });
 

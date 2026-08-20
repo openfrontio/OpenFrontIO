@@ -79,11 +79,13 @@ describe("Spawn execution", () => {
     game.executeNextTick();
     game.executeNextTick();
 
-    // Should spawn fewer than requested when map is too small
+    // Should spawn fewer than requested when map is too small.
+    // Player 1 spawns with relaxed minDistance after 750 retries,
+    // but players 2-4 still fail (no unowned land tiles left).
     expect(
       game.allPlayers().filter((player) => player.spawnTile() !== undefined)
         .length,
-    ).toBe(1);
+    ).toBe(2);
   });
 
   test("Spawn on specific tile", async () => {

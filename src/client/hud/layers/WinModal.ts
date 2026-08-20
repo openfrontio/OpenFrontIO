@@ -10,7 +10,9 @@ import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { getUserMe } from "../../Api";
-import "../../components/CosmeticButton";
+import "../../components/CosmeticCard";
+import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
 import {
@@ -190,11 +192,21 @@ export class WinModal extends LitElement implements Controller {
     this.patternContent = html`
       <div class="flex gap-4 flex-nowrap justify-start items-start">
         ${selected.map(
-          (r) => html`
-            <cosmetic-button
-              .resolved=${r}
-              .onPurchase=${purchaseCosmetic}
-            ></cosmetic-button>
+          (resolved) => html`
+            <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
+              <cosmetic-card
+                .resolved=${resolved}
+                .interactive=${false}
+              ></cosmetic-card>
+              <purchase-button
+                .priceHard=${resolved.cosmetic?.priceHard ?? null}
+                .priceSoft=${resolved.cosmetic?.priceSoft ?? null}
+                .rarity=${resolved.cosmetic?.rarity ?? "common"}
+                .itemName=${cosmeticSelectionLabel(resolved)}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}
+              ></purchase-button>
+            </div>
           `,
         )}
       </div>
@@ -320,6 +332,7 @@ export class WinModal extends LitElement implements Controller {
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
+        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         this._title = translateText("win_modal.nation_won", {
           nation: wu.winner[1],
         });

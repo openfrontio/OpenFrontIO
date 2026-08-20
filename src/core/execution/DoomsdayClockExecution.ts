@@ -117,16 +117,21 @@ export class DoomsdayClockExecution implements Execution {
     const ffa = mg.config().gameConfig().gameMode === GameMode.FFA;
     const sides = this.sides(contenders, ffa);
 
-    // A winner is already inevitable (one side left): idle. Before the first
-    // wave the bar is 0, so nobody is flagged anyway.
-    if (sides.length < 2) {
+    // Winner is already set/inevitable (one side left): idle.
+    // Before the first wave the bar is 0, nobody is flagged anyway.
+    if (mg.getWinner() !== null || sides.length < 2) {
       for (const p of contenders) p.clearDoomsdayClock();
+      this.active = false;
       return;
     }
 
     const land = mg.numLandTiles() - mg.numTilesWithFallout();
     // One bar for every side this tick (solo or team — headcount never scales it).
-    const required = doomsdayClockRequiredTiles(cfg.speed, land, elapsed);
+    const required = doomsdayClockRequiredTiles(
+      { ...cfg, teamGame: !ffa },
+      land,
+      elapsed,
+    );
 
     // The leading side (the crown holder in FFA, the top team otherwise) is
     // never doomed. Doomsday Clock culls the challengers toward the leader, so the
@@ -341,6 +346,10 @@ export class DoomsdayClockExecution implements Execution {
     const tiles = player.tiles();
     if (!tiles.has(tile)) return false;
     player.relinquish(tile);
+    // Wasteland, not a prize: plain relinquish left neutral land the biggest
+    // neighbour absorbed for free — rot was feeding the one side it never
+    // presses. Must run after relinquish: setFallout throws on owned tiles.
+    mg.setFallout(tile, true);
     // Stamp it so the client can paint the red "Decaying" skull off authoritative
     // state instead of re-deriving the (knife-edge) troops-vs-floor test.
     player.markRotted();

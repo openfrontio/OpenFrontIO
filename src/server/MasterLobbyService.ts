@@ -24,6 +24,13 @@ export interface MasterLobbyServiceOptions {
   log: typeof logger;
 }
 
+/**
+ * Lobbies the master keeps open per scheduled type: the one counting down
+ * plus the queue behind it. The whole queue is advertised, so the Detailed
+ * View can show what's coming, not just the lobby about to start.
+ */
+export const QUEUED_LOBBIES_PER_TYPE = 6;
+
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
@@ -128,7 +135,13 @@ export class MasterLobbyService {
     for (const type of Object.keys(result) as PublicGameType[]) {
       result[type].sort((a, b) => {
         if (a.startsAt === undefined && b.startsAt === undefined) {
-          // Sort by game id for stability.
+          // Queue order: oldest first, so a lobby moves up a place each time
+          // the one in front of it starts, and a newly created lobby joins the
+          // back instead of landing in the middle. Game id only breaks ties
+          // for lobbies from a build that didn't report createdAt.
+          if (a.createdAt !== b.createdAt) {
+            return (a.createdAt ?? 0) - (b.createdAt ?? 0);
+          }
           return a.gameID > b.gameID ? 1 : -1;
         }
         // If a lobby has startsAt set, we assume it's the active one.
@@ -156,6 +169,19 @@ export class MasterLobbyService {
       seenCreators.add(lobby.creatorID);
       return true;
     });
+
+    // Featured lobbies keep their place when the list overflows. They are
+    // announced events with a published start time, and delisting is permanent
+    // — the worker clears listedAt, so an event lobby that loses the cap never
+    // comes back and its audience arrives to nothing. Only an admin bot can set
+    // featured, and the per-creator dedup above already caps each host at one
+    // listing, so this cannot be used to crowd the list. Stable within each
+    // group: the sort above still decides order among featured and among the
+    // rest.
+    result.hosted = [
+      ...result.hosted.filter((l) => l.featured),
+      ...result.hosted.filter((l) => !l.featured),
+    ];
 
     // Cluster-wide cap to prevent listing spam. Workers reject listings past
     // the cap too, but their view lags by a broadcast round-trip; overflow
@@ -225,8 +251,8 @@ export class MasterLobbyService {
     for (const type of SCHEDULED_PUBLIC_GAME_TYPES) {
       const lobbies = lobbiesByType[type];
 
-      // Always ensure the next lobby has a timer, even if we already have 2+
-      // lobbies. This prevents a race where two lobbies are created before
+      // Always ensure the next lobby has a timer, even if the queue is
+      // already full. This prevents a race where two lobbies are created before
       // either receives a startsAt (IPC round-trip delay), leaving both stuck
       // without a countdown.
       const nextLobby = lobbies[0];
@@ -238,7 +264,7 @@ export class MasterLobbyService {
         });
       }
 
-      if (lobbies.length >= 2) {
+      if (lobbies.length >= QUEUED_LOBBIES_PER_TYPE) {
         continue;
       }
 

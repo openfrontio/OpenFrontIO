@@ -23,7 +23,7 @@ import {
   UnitType,
 } from "./game/Game";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { flattenedEmojiTable } from "./Util";
+import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
 export type GameID = string;
 export type ClientID = string;
@@ -185,9 +185,43 @@ export const MAX_HOSTED_LOBBIES = 10;
 // deadline; relisting starts a fresh one.
 export const HOSTED_LOBBY_AUTO_START_MS = 5 * 60 * 1000;
 
+// Featured lobbies get a longer window. A scheduled event announced ahead of
+// time needs the listing to still be up when its audience arrives, and unlike a
+// subscriber sitting on a listing the host is an authenticated admin bot. Only
+// create_game can set it, so the ordinary deadline still governs every
+// player-hosted lobby.
+export const FEATURED_LOBBY_AUTO_START_MS = 10 * 60 * 1000;
+
+// Labels are capped by CODE POINT, matching sanitizeLobbyLabel. z.string().max()
+// counts UTF-16 code units, so it would reject a legal 48-emoji label (96 units)
+// before the sanitiser ever saw it.
+export const LobbyLabelSchema = z
+  .string()
+  .refine((v) => Array.from(v).length <= LOBBY_LABEL_MAX, {
+    message: `label must be at most ${LOBBY_LABEL_MAX} characters`,
+  });
+
+// Accent applied to a featured lobby's row. A closed set, not free-form CSS:
+// arbitrary styling in a shared list lets one lobby make every other row
+// unreadable.
+export const LobbyAccentSchema = z.enum(["gold", "blue", "green", "red"]);
+export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
+
+// Deliberately looser than MAX_USERNAME_LENGTH, which caps what the form will
+// accept at 20. This schema also reads data at rest: it backs PlayerSchema,
+// so every archived GameRecord embeds names written under the rules of its
+// era. Lowering the bound doesn't rewrite those records — it makes them
+// unparseable, which dead-ends replay links (JoinLobbyModal parses before the
+// gitCommit check, so a failure never reaches the versioned-shell fallback)
+// and share previews (GamePreviewBuilder). Widen freely; never narrow.
+//
+// The charset accepts everything AccountUsernameSchema can produce, hyphens
+// included, so a verified account name is always representable on the wire —
+// verified play skips free-form validation, so an unrepresentable name would
+// reach the server and be closed with 1002.
 export const UsernameSchema = z
   .string()
-  .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
+  .regex(/^(?=.*\S)[a-zA-Z0-9_\- üÜ.]+$/u)
   .min(3)
   .max(27);
 
@@ -205,6 +239,10 @@ const ClientInfoSchema = z.object({
   // lobby list). Never set on anonymized entries — the badge vouches for
   // the exact display name.
   verified: z.boolean().optional(),
+  // Server-pinned team slot for matchmade team games, so the lobby's team
+  // preview can honour the pins instead of re-deriving teams that the server
+  // will overrule at start. Absent when the game isn't matchmade.
+  teamIndex: z.number().int().nonnegative().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -223,6 +261,11 @@ export const GameInfoSchema = z.object({
   // Listed lobbies only: server timestamp when the lobby starts
   // automatically (hosts can't sit on a public listing indefinitely).
   autoStartAt: z.number().optional(),
+  // Featured lobbies only (admin bot). Echoed back so the creating bot can
+  // confirm the request took effect, the same way it checks `listed`.
+  label: LobbyLabelSchema.optional(),
+  accent: LobbyAccentSchema.optional(),
+  featured: z.boolean().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -235,6 +278,11 @@ export const PublicGameInfoSchema = z.object({
   startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
+  // Featured lobbies only. Both optional so a client on an older build simply
+  // renders the map name as it does today.
+  label: LobbyLabelSchema.optional(),
+  accent: LobbyAccentSchema.optional(),
+  featured: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -281,6 +329,8 @@ export interface ClientInfo {
   // Plays under their server-validated account name (blue check). Never set
   // on anonymized entries.
   verified?: boolean;
+  // Server-pinned team slot for matchmade team games; absent when not matchmade.
+  teamIndex?: number;
 }
 export enum LogSeverity {
   Debug = "DEBUG",

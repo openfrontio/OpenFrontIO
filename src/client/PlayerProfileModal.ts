@@ -16,15 +16,13 @@ import "./components/PlayerName";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
+import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { translateText } from "./Utils";
+
+export { playerProfileUrl };
 
 /** Where a profile was opened from, i.e. where its Back button leads. */
 export type ProfileOrigin = "clan" | "leaderboard" | "account";
-
-/** Build a shareable profile URL for a publicId. */
-export function playerProfileUrl(publicId: string): string {
-  return `${window.location.origin}${window.location.pathname}#modal=profile&publicID=${encodeURIComponent(publicId)}`;
-}
 
 @customElement("player-profile-modal")
 export class PlayerProfileModal extends BaseModal {
@@ -135,6 +133,8 @@ export class PlayerProfileModal extends BaseModal {
                 description: "",
                 isOpen: false,
                 memberCount: clan.memberCount,
+                softBalance: clan.softBalance,
+                hardBalance: clan.hardBalance,
               }}
               .clanRole=${clan.role}
               @clan-select=${(e: CustomEvent<{ tag: string }>) =>

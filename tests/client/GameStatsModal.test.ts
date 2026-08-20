@@ -12,10 +12,12 @@ import {
 const copyToClipboardMock = vi.hoisted(() =>
   vi.fn(async (_text: string, onSuccess?: () => void) => onSuccess?.()),
 );
+const showToastMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   copyToClipboard: copyToClipboardMock,
+  showToast: showToastMock,
 }));
 
 vi.mock("../../src/client/components/baseComponents/stats/GameInfoView", () => {
@@ -106,14 +108,11 @@ describe("public game stats route", () => {
     );
     copyActions[0].click();
     await vi.waitFor(() =>
-      expect(copyToClipboardMock).toHaveBeenCalledWith(
-        "public-game",
-        expect.any(Function),
-        expect.any(Function),
-      ),
+      expect(copyToClipboardMock).toHaveBeenCalledWith("public-game"),
     );
     await copyButton.updateComplete;
-    expect(copyButton.textContent).toContain("common.copied");
+    expect(copyButton.textContent).toContain("public-game");
+    expect(showToastMock).toHaveBeenCalledWith("common.copied", "green");
 
     expect(document.querySelector("account-modal")).toBeNull();
     expect(window.location.hash).toBe("#modal=stats&gameID=public-game");

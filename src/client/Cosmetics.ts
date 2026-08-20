@@ -10,7 +10,6 @@ import {
   Flag,
   Pack,
   Pattern,
-  Product,
   Skin,
   Subscription,
 } from "../core/CosmeticSchemas";
@@ -77,6 +76,29 @@ export interface InsufficientCurrency {
 
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
 export type PurchaseResult = InsufficientCurrency | void;
+
+export interface CosmeticPurchaseReturnActions {
+  strip(): void;
+  alertAndStrip(message: string): void;
+  openTokenLogin(token: string): void;
+  refreshStore(): void;
+}
+
+export function completeCosmeticPurchaseReturn(
+  cosmeticName: string,
+  loginToken: string | null,
+  actions: CosmeticPurchaseReturnActions,
+): void {
+  if (loginToken) {
+    actions.strip();
+    actions.openTokenLogin(loginToken);
+    return;
+  }
+  actions.alertAndStrip(
+    translateText("store.purchase_success", { name: cosmeticName }),
+  );
+  actions.refreshStore();
+}
 
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
@@ -186,6 +208,16 @@ export async function purchaseCosmetic(
     } else {
       itemName = translateCosmetic("territory_patterns.pattern", c.name);
     }
+    // Every palette of a pattern shares one name, so say which colour is short.
+    if (resolved.colorPalette !== null) {
+      itemName = translateText("inventory.selected_cosmetic_variant", {
+        name: itemName,
+        variant: translateCosmetic(
+          "territory_patterns.color_palette",
+          resolved.colorPalette.name,
+        ),
+      });
+    }
     return {
       currency: currencyName,
       shortfall: price - balance,
@@ -230,7 +262,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
-  __cosmetics = (async () => {
+  const request = (async () => {
     try {
       const response = await fetch(`${getApiBase()}/cosmetics.json`);
       if (!response.ok) {
@@ -243,9 +275,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         return null;
       }
       const patternKeys = Object.keys(result.data.patterns).sort();
-      const hashInput = patternKeys
-        .map((k) => k + (result.data.patterns[k].product ? "sale" : ""))
-        .join(",");
+      const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
       __cosmeticsCache = result.data;
       return result.data;
@@ -254,7 +284,13 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       return null;
     }
   })();
-  return __cosmetics;
+  __cosmetics = request;
+  void request.then((result) => {
+    if (result === null && __cosmetics === request) {
+      __cosmetics = null;
+    }
+  });
+  return request;
 }
 
 export async function resolveFlagUrl(
@@ -282,7 +318,6 @@ export function cosmeticRelationship(
   opts: {
     wildcardFlare: string;
     requiredFlare: string;
-    product: Product | null;
     priceSoft?: number;
     priceHard?: number;
     affiliateCode: string | null;
@@ -305,16 +340,12 @@ export function cosmeticRelationship(
     return "blocked";
   }
 
-  // Purchasable if any purchase method is available
+  // Cosmetics are sold for currency only (USD checkout was removed).
   if (opts.priceSoft !== undefined || opts.priceHard !== undefined) {
     return "purchasable";
   }
 
-  if (opts.product === null) {
-    return "blocked";
-  }
-
-  return "purchasable";
+  return "blocked";
 }
 
 export function patternRelationship(
@@ -353,7 +384,6 @@ export function patternRelationship(
     {
       wildcardFlare: "pattern:*",
       requiredFlare: `pattern:${pattern.name}:${colorPalette.name}`,
-      product: pattern.product,
       priceSoft: pattern.priceSoft,
       priceHard: pattern.priceHard,
       affiliateCode,
@@ -372,7 +402,6 @@ export function flagRelationship(
     {
       wildcardFlare: "flag:*",
       requiredFlare: `flag:${flag.name}`,
-      product: flag.product,
       priceSoft: flag.priceSoft,
       priceHard: flag.priceHard,
       affiliateCode,
@@ -391,7 +420,6 @@ export function crownRelationship(
     {
       wildcardFlare: "crown:*",
       requiredFlare: `crown:${crown.name}`,
-      product: crown.product,
       priceSoft: crown.priceSoft,
       priceHard: crown.priceHard,
       affiliateCode,
@@ -410,7 +438,6 @@ export function skinRelationship(
     {
       wildcardFlare: "skin:*",
       requiredFlare: `skin:${skin.name}`,
-      product: skin.product,
       priceSoft: skin.priceSoft,
       priceHard: skin.priceHard,
       affiliateCode,
@@ -429,7 +456,6 @@ export function effectRelationship(
     {
       wildcardFlare: "effect:*",
       requiredFlare: `effect:${effect.name}`,
-      product: effect.product,
       priceSoft: effect.priceSoft,
       priceHard: effect.priceHard,
       affiliateCode,
@@ -636,6 +662,10 @@ export function resolvedToPlayerPattern(
 
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
+  // Resolve the profile first: getUserMe activates the per-player cosmetics
+  // scope (UserSettings.setPlayerId), which must happen before selections are
+  // read below.
+  await getUserMe();
   const cosmetics = await fetchCosmetics();
   let pattern: PlayerPattern | null =
     userSettings.getSelectedPatternName(cosmetics);

@@ -3,14 +3,44 @@ import {
   AbstractGraphBuilder,
 } from "../pathfinding/algorithms/AbstractGraph";
 import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHierarchical";
+import { BFSGrid } from "../pathfinding/algorithms/BFS.Grid";
+import { ConnectedComponents } from "../pathfinding/algorithms/ConnectedComponents";
 import { PathFinder } from "../pathfinding/types";
+import { DebugSpan } from "../utilities/DebugSpan";
 import { GameMap, TileRef } from "./GameMap";
 
 const WATER_GRAPH_REBUILD_INTERVAL = 20;
 
+// Max BFS hops from a coastline that can affect a magnitude value:
+// magnitude = ceil(dist / 2) capped at 31, so 62 hops.
+const MAX_MAG_DIST = 62;
+
+// Direct terrain-byte masks, mirroring GameMapImpl's private constants
+// (bit 7 = land, low 5 bits = magnitude, magnitude 31 on land = impassable).
+// The magnitude BFS reads terrain bytes directly because method calls
+// dominate its cost on large maps (same precedent as
+// ConnectedComponents.premarkLandTilesDirect).
+const TERRAIN_LAND_MASK = 0x80;
+const TERRAIN_MAG_MASK = 0x1f;
+const IMPASSABLE_MAG = 31;
+
+interface CraterBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
 export class WaterManager {
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
+  // Persistent minimap water components, updated incrementally as nukes
+  // convert land→water (components only grow/merge, never split), so
+  // graph rebuilds skip the full-minimap flood fill.
+  private _miniWaterCC: ConnectedComponents | null = null;
+  // Reusable minimap-sized BFS scratch for graph rebuilds (~20MB on
+  // large maps — allocated once instead of per rebuild).
+  private _builderBFS: BFSGrid | null = null;
   private _waterGraphVersion: number = 0;
   private _waterGraphDirty: boolean = false;
   private _waterGraphLastRebuildTick: number = 0;
@@ -23,13 +53,28 @@ export class WaterManager {
   private _waterStampArr: Uint16Array | null = null;
   private _waterStamp: number = 0;
 
+  // Separate stamp arrays for minimap magnitude BFS (runs after full-map BFS)
+  private _miniDistArr: Uint16Array | null = null;
+  private _miniStampArr: Uint16Array | null = null;
+  private _miniStamp: number = 0;
+
   constructor(
     private map: GameMap,
     private miniMap: GameMap,
     private disableNavMesh: boolean,
   ) {
     if (!disableNavMesh) {
-      const graphBuilder = new AbstractGraphBuilder(miniMap);
+      this._miniWaterCC = new ConnectedComponents(miniMap);
+      this._miniWaterCC.initialize();
+      this._builderBFS = new BFSGrid(miniMap.width() * miniMap.height());
+      const graphBuilder = new AbstractGraphBuilder(
+        miniMap,
+        AbstractGraphBuilder.CLUSTER_SIZE,
+        undefined,
+        undefined,
+        this._miniWaterCC,
+        this._builderBFS,
+      );
       this._miniWaterGraph = graphBuilder.build();
       this._miniWaterHPA = new AStarWaterHierarchical(
         miniMap,
@@ -49,6 +94,7 @@ export class WaterManager {
    */
   tick(currentTick: number): TileRef[] {
     const changedTiles: TileRef[] = [];
+    let convertedThisTick = false;
 
     if (this._pendingWaterTiles.size > 0) {
       const converted: TileRef[] = [];
@@ -68,6 +114,7 @@ export class WaterManager {
       }
       this._pendingWaterTiles.clear();
       if (converted.length > 0) {
+        convertedThisTick = true;
         this.finalizeWaterChanges(converted, changedTiles);
       }
     }
@@ -76,24 +123,39 @@ export class WaterManager {
     if (
       this._waterGraphDirty &&
       !this.disableNavMesh &&
+      // Keep terrain fixup and graph rebuilding out of the same tick. The
+      // graph is already allowed to remain stale between throttled rebuilds,
+      // and a one-tick delay avoids combining both water-nuke CPU spikes.
+      !convertedThisTick &&
       currentTick - this._waterGraphLastRebuildTick >=
         WATER_GRAPH_REBUILD_INTERVAL
     ) {
       this._waterGraphDirty = false;
       this._waterGraphLastRebuildTick = currentTick;
+      DebugSpan.start("WaterManager:rebuildWaterGraph");
       const graphBuilder = new AbstractGraphBuilder(
         this.miniMap,
         AbstractGraphBuilder.CLUSTER_SIZE,
         this._miniWaterGraph ?? undefined,
         this._dirtyMiniTiles.size > 0 ? this._dirtyMiniTiles : undefined,
+        this._miniWaterCC ?? undefined,
+        this._builderBFS ?? undefined,
       );
       this._miniWaterGraph = graphBuilder.build();
       this._dirtyMiniTiles.clear();
-      this._miniWaterHPA = new AStarWaterHierarchical(
-        this.miniMap,
-        this._miniWaterGraph,
-        { cachePaths: true },
-      );
+      DebugSpan.start("hpa");
+      if (this._miniWaterHPA) {
+        // Reuse map-sized scratch buffers; only swap the graph
+        this._miniWaterHPA.setGraph(this._miniWaterGraph);
+      } else {
+        this._miniWaterHPA = new AStarWaterHierarchical(
+          this.miniMap,
+          this._miniWaterGraph,
+          { cachePaths: true },
+        );
+      }
+      DebugSpan.end("hpa");
+      DebugSpan.end("WaterManager:rebuildWaterGraph");
       this._waterGraphVersion++;
     }
 
@@ -204,6 +266,7 @@ export class WaterManager {
     const converted = new Set<TileRef>(convertedTiles);
     if (converted.size === 0) return;
 
+    DebugSpan.start("WaterManager:finalizeWaterChanges");
     const map = this.map;
     const w = map.width();
     const totalTiles = w * map.height();
@@ -231,6 +294,7 @@ export class WaterManager {
     const nb: TileRef[] = new Array(8);
 
     // ── 1. Propagate ocean bit ─────────────────────────────────────
+    DebugSpan.start("ocean");
     const oceanQueue: TileRef[] = [];
     for (const tile of converted) {
       const end = pushNeighbors(tile, nb, 0);
@@ -256,141 +320,56 @@ export class WaterManager {
     }
 
     // ── 2. Recompute magnitude via BFS from remaining land outward ─
+    DebugSpan.end("ocean");
+    DebugSpan.start("magnitude");
     if (!this._waterDistArr || this._waterDistArr.length !== totalTiles) {
       this._waterDistArr = new Uint16Array(totalTiles);
       this._waterStampArr = new Uint16Array(totalTiles);
       this._waterStamp = 0;
     }
-    this._waterStamp++;
-    if (this._waterStamp >= 0xffff) {
-      this._waterStampArr!.fill(0);
-      this._waterStamp = 1;
-    }
-    const stamp = this._waterStamp;
-    const stampArr = this._waterStampArr!;
-    const distArr = this._waterDistArr;
-
-    const magQueue: TileRef[] = [];
-    const h = map.height();
-
     // Magnitude BFS: recompute ceil(manhattan_dist_to_nearest_coast / 2)
     // for tiles affected by the nuke.
     //
-    // Dirty box (±MAX_MAG_DIST from crater bounds): the region where
-    // magnitudes may have changed.  Only tiles here get updated.
-    //
-    // Seed box (±2*MAX_MAG_DIST from crater bounds): coastlines here are
-    // seeded for BFS.  This ensures that every coastline that could be
-    // nearest to a dirty-box tile is included (a dirty-box tile is at most
-    // MAX_MAG_DIST from the crater, and the nearest coast is at most
-    // MAX_MAG_DIST from the tile, so the coast is at most 2*MAX_MAG_DIST
-    // from the crater).
-    //
-    // The BFS runs WITHOUT convergence inside the seed box so that
-    // wavefronts from distant coastlines correctly reach the dirty box.
-    // BFS is clipped at the seed box boundary for performance.
-    const MAX_MAG_DIST = 62; // magnitude 31 ≈ 62 tile hops from coast
-    let cMinX = w,
-      cMaxX = 0,
-      cMinY = h,
-      cMaxY = 0;
-    for (const tile of converted) {
-      const tx = tile % w;
-      const ty = (tile - tx) / w;
-      if (tx < cMinX) cMinX = tx;
-      if (tx > cMaxX) cMaxX = tx;
-      if (ty < cMinY) cMinY = ty;
-      if (ty > cMaxY) cMaxY = ty;
-    }
-    // Dirty box: tiles whose magnitude may need updating.
-    const dMinX = Math.max(0, cMinX - MAX_MAG_DIST);
-    const dMaxX = Math.min(w - 1, cMaxX + MAX_MAG_DIST);
-    const dMinY = Math.max(0, cMinY - MAX_MAG_DIST);
-    const dMaxY = Math.min(h - 1, cMaxY + MAX_MAG_DIST);
-    // Seed box: coastlines here are seeded; BFS is clipped here.
-    const sMinX = Math.max(0, cMinX - MAX_MAG_DIST * 2);
-    const sMaxX = Math.min(w - 1, cMaxX + MAX_MAG_DIST * 2);
-    const sMinY = Math.max(0, cMinY - MAX_MAG_DIST * 2);
-    const sMaxY = Math.min(h - 1, cMaxY + MAX_MAG_DIST * 2);
-
-    // Seed from coastline water tiles inside the seed box.
-    // Impassable terrain is void (like the map edge), so water tiles
-    // adjacent only to impassable terrain are NOT coastline — they should
-    // be uniformly deep with no depth gradient.
-    for (let by = sMinY; by <= sMaxY; by++) {
-      const rowStart = by * w;
-      for (let bx = sMinX; bx <= sMaxX; bx++) {
-        const tile = (rowStart + bx) as TileRef;
-        if (!map.isWater(tile) || stampArr[tile] === stamp) continue;
-        const end = pushNeighbors(tile, nb, 0);
-        for (let i = 0; i < end; i++) {
-          if (map.isLand(nb[i]) && !map.isImpassable(nb[i])) {
-            stampArr[tile] = stamp;
-            distArr[tile] = 0;
-            magQueue.push(tile);
-            break;
-          }
-        }
-      }
+    // Converted tiles are first grouped into spatially separate craters so
+    // that simultaneous distant nukes (barrages, MIRVs) each get a small
+    // local BFS instead of one bounding box spanning most of the map.
+    const groups = this.computeCraterGroups(converted, w, MAX_MAG_DIST);
+    for (const g of groups) {
+      this.recomputeMagnitudesInBox(
+        map,
+        g,
+        this._waterStampArr!,
+        this._waterDistArr,
+        this.bumpFullMapStamp(),
+        true, // impassable terrain is void, not coastline
+        changed,
+      );
     }
 
-    // BFS outward through water, clipped to seed box.
-    // No convergence — every reachable tile inside the seed box is visited
-    // to ensure correct shortest distances reach the dirty box.
-    // Only DIRTY BOX tiles get their magnitude updated.
-    let magHead = 0;
-    while (magHead < magQueue.length) {
-      const tile = magQueue[magHead++];
-      const dist = distArr[tile];
-      const nextDist = dist + 1;
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        const n = nb[i];
-        if (!map.isWater(n) || stampArr[n] === stamp) continue;
-        // Clip to seed box
-        const nx = n % w;
-        const ny = (n - nx) / w;
-        if (nx < sMinX || nx > sMaxX || ny < sMinY || ny > sMaxY) continue;
-        stampArr[n] = stamp;
-        distArr[n] = nextDist;
-        magQueue.push(n);
-      }
-    }
-
-    // Update magnitudes only for dirty-box tiles.
-    for (let dy = dMinY; dy <= dMaxY; dy++) {
-      const rowStart = dy * w;
-      for (let dx = dMinX; dx <= dMaxX; dx++) {
-        const tile = (rowStart + dx) as TileRef;
-        if (!map.isWater(tile)) continue;
-        const oldMag = map.magnitude(tile);
-        let newMag: number;
-        if (stampArr[tile] === stamp) {
-          // Reached by BFS — compute magnitude from distance
-          newMag = Math.min(Math.ceil(distArr[tile] / 2), 31);
-        } else {
-          // Unreached: nearest coast is >MAX_MAG_DIST away → magnitude 31
-          newMag = 31;
-        }
-        if (oldMag !== newMag) {
-          map.setMagnitude(tile, newMag);
-          changed.add(tile);
-        }
-      }
-    }
-
+    DebugSpan.end("magnitude");
+    DebugSpan.start("shoreline");
     // ── 3. Fix shoreline bits ──────────────────────────────────────
     // Only converted tiles changed terrain type (land→water), so only
     // they and their 2-ring neighborhood can have shoreline bit changes.
-    const tilesToCheck = new Set<TileRef>();
+    // Dedup via the reusable stamp array (cheaper than a Set for large
+    // craters).
+    const shoreStamp = this.bumpFullMapStamp();
+    const shoreStampArr = this._waterStampArr!;
+    const tilesToCheck: TileRef[] = [];
+    const pushToCheck = (tile: TileRef): void => {
+      if (shoreStampArr[tile] !== shoreStamp) {
+        shoreStampArr[tile] = shoreStamp;
+        tilesToCheck.push(tile);
+      }
+    };
     for (const tile of converted) {
-      tilesToCheck.add(tile);
+      pushToCheck(tile);
       const end = pushNeighbors(tile, nb, 0);
       for (let i = 0; i < end; i++) {
-        tilesToCheck.add(nb[i]);
+        pushToCheck(nb[i]);
         const end2 = pushNeighbors(nb[i], nb, end);
         for (let j = end; j < end2; j++) {
-          tilesToCheck.add(nb[j]);
+          pushToCheck(nb[j]);
         }
       }
     }
@@ -430,6 +409,8 @@ export class WaterManager {
     }
 
     // ── 4. Update minimap terrain ──────────────────────────────────
+    DebugSpan.end("shoreline");
+    DebugSpan.start("minimap");
     const miniTilesToCheck = new Set<TileRef>();
     const convertedMiniTiles = new Set<TileRef>();
     for (const tile of converted) {
@@ -461,17 +442,393 @@ export class WaterManager {
       }
     }
 
+    DebugSpan.end("minimap");
+    DebugSpan.start("miniMagnitude");
+    // ── 4b. Fix minimap ocean + magnitude for converted tiles ────
+    // setWater() zeros the terrain byte (magnitude = 0, ocean = 0).
+    // This makes the pathfinder treat nuked water as "too close to
+    // shore" (3× cost penalty via getMagnitudePenalty) and prevents
+    // LOS smoothing through the crater.  Propagate ocean bits from
+    // existing neighbours and recompute minimap magnitudes via BFS
+    // from all coastlines (including the new crater edges).
+    if (convertedMiniTiles.size > 0) {
+      const miniW = this.miniMap.width();
+      const miniH = this.miniMap.height();
+
+      // Allocation-free cardinal-neighbor helper for all minimap BFSes.
+      // Writes up to 4 neighbors into `out` and returns the count.
+      const pushMiniNeighbors = (tile: TileRef, out: TileRef[]): number => {
+        const x = tile % miniW;
+        const y = (tile - x) / miniW;
+        let count = 0;
+        if (y > 0) out[count++] = (tile - miniW) as TileRef;
+        if (y < miniH - 1) out[count++] = (tile + miniW) as TileRef;
+        if (x > 0) out[count++] = (tile - 1) as TileRef;
+        if (x < miniW - 1) out[count++] = (tile + 1) as TileRef;
+        return count;
+      };
+
+      const miniNb: TileRef[] = new Array(4);
+
+      // 4b-i. Propagate ocean bit to converted minimap tiles.
+      // Uses BFS so that chains of converted tiles that connect to
+      // the ocean all get marked, even if only the first tile in the
+      // chain touches existing ocean.
+      const miniOceanQueue: TileRef[] = [];
+      for (const mt of convertedMiniTiles) {
+        const nc = pushMiniNeighbors(mt, miniNb);
+        let nearOcean = false;
+        for (let i = 0; i < nc; i++) {
+          if (this.miniMap.isOcean(miniNb[i])) {
+            nearOcean = true;
+            break;
+          }
+        }
+        if (nearOcean) {
+          this.miniMap.setOcean(mt);
+          miniOceanQueue.push(mt);
+        }
+      }
+      let moHead = 0;
+      while (moHead < miniOceanQueue.length) {
+        const tile = miniOceanQueue[moHead++];
+        const nc = pushMiniNeighbors(tile, miniNb);
+        for (let i = 0; i < nc; i++) {
+          const n = miniNb[i];
+          if (this.miniMap.isWater(n) && !this.miniMap.isOcean(n)) {
+            this.miniMap.setOcean(n);
+            miniOceanQueue.push(n);
+          }
+        }
+      }
+
+      // 4b-ii. Recompute minimap magnitude via BFS from coastlines.
+      //
+      // The previous approach (sampling full-map magnitudes) was wrong:
+      // existing minimap water tiles at the edge of the crater retain
+      // stale pre-computed magnitudes from the terrain file.  When a
+      // nuke creates a new coastline nearby, these tiles should have
+      // LOWER magnitude (closer to the new coast).  Only a BFS on the
+      // minimap can correctly recompute them.
+      //
+      // Mirrors the full-map magnitude BFS (step 2) but runs on the
+      // minimap.  Uses separate stamp/dist arrays to avoid conflicts.
+      // Note: unlike the full map, ANY land tile counts as coastline.
+      const miniTotal = miniW * miniH;
+      if (!this._miniDistArr || this._miniDistArr.length !== miniTotal) {
+        this._miniDistArr = new Uint16Array(miniTotal);
+        this._miniStampArr = new Uint16Array(miniTotal);
+        this._miniStamp = 0;
+      }
+      const miniGroups = this.computeCraterGroups(
+        convertedMiniTiles,
+        miniW,
+        MAX_MAG_DIST,
+      );
+      for (const g of miniGroups) {
+        this.recomputeMagnitudesInBox(
+          this.miniMap,
+          g,
+          this._miniStampArr!,
+          this._miniDistArr,
+          this.bumpMiniStamp(),
+          false,
+          null,
+        );
+      }
+    }
+
+    DebugSpan.end("miniMagnitude");
+
     // ── 5. Mark water graph dirty (rebuilt lazily, throttled) ─────
     if (convertedMiniTiles.size > 0) {
+      // Fold the new water tiles into the persistent component labeling
+      this._miniWaterCC?.addWaterTiles(convertedMiniTiles);
       this._waterGraphDirty = true;
       for (const mt of convertedMiniTiles) {
         this._dirtyMiniTiles.add(mt);
       }
     }
+    DebugSpan.end("WaterManager:finalizeWaterChanges");
 
     // Drain changed set into output array
     for (const tile of changed) {
       changedTiles.push(tile);
+    }
+  }
+
+  private bumpFullMapStamp(): number {
+    this._waterStamp++;
+    if (this._waterStamp >= 0xffff) {
+      this._waterStampArr!.fill(0);
+      this._waterStamp = 1;
+    }
+    return this._waterStamp;
+  }
+
+  private bumpMiniStamp(): number {
+    this._miniStamp++;
+    if (this._miniStamp >= 0xffff) {
+      this._miniStampArr!.fill(0);
+      this._miniStamp = 1;
+    }
+    return this._miniStamp;
+  }
+
+  /**
+   * Group converted tiles into spatially separate crater clusters.
+   *
+   * Tiles are bucketed into coarse cells of maxMagDist, adjacent occupied
+   * cells are unioned into groups, and groups are then merged whenever
+   * merging shrinks the total BFS work (union box area smaller than the
+   * separate box areas combined).  Far-apart simultaneous nukes therefore
+   * keep small independent BFS boxes, while dense clusters collapse into
+   * one box instead of overlapping duplicates.
+   *
+   * Correctness does not depend on the grouping: each group's BFS seeds
+   * every coastline inside its own seed box, so overlapping boxes only
+   * duplicate work, never change results.
+   */
+  private computeCraterGroups(
+    converted: Set<TileRef>,
+    w: number,
+    maxMagDist: number,
+  ): CraterBounds[] {
+    const cellSize = maxMagDist;
+    const cellsX = Math.ceil(w / cellSize);
+
+    // Bucket tiles into coarse cells, tracking per-cell crater bounds
+    const cells = new Map<number, CraterBounds>();
+    for (const tile of converted) {
+      const tx = tile % w;
+      const ty = (tile - tx) / w;
+      const key =
+        Math.floor(ty / cellSize) * cellsX + Math.floor(tx / cellSize);
+      const b = cells.get(key);
+      if (b === undefined) {
+        cells.set(key, { minX: tx, maxX: tx, minY: ty, maxY: ty });
+      } else {
+        if (tx < b.minX) b.minX = tx;
+        if (tx > b.maxX) b.maxX = tx;
+        if (ty < b.minY) b.minY = ty;
+        if (ty > b.maxY) b.maxY = ty;
+      }
+    }
+
+    // Union-find over occupied cells; adjacent cells (8-neighborhood)
+    // belong to the same crater cluster.
+    const parent = new Map<number, number>();
+    for (const key of cells.keys()) parent.set(key, key);
+    const find = (k: number): number => {
+      let root = k;
+      while (parent.get(root)! !== root) root = parent.get(root)!;
+      let cur = k;
+      while (parent.get(cur)! !== root) {
+        const next = parent.get(cur)!;
+        parent.set(cur, root);
+        cur = next;
+      }
+      return root;
+    };
+    for (const key of cells.keys()) {
+      const cx = key % cellsX;
+      const cy = (key - cx) / cellsX;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx < 0 || nx >= cellsX || ny < 0) continue;
+          const nk = ny * cellsX + nx;
+          if (!cells.has(nk)) continue;
+          const ra = find(key);
+          const rb = find(nk);
+          if (ra !== rb) parent.set(Math.max(ra, rb), Math.min(ra, rb));
+        }
+      }
+    }
+
+    // Merge cell bounds per root (Map iteration order is deterministic)
+    const byRoot = new Map<number, CraterBounds>();
+    for (const [key, b] of cells) {
+      const root = find(key);
+      const g = byRoot.get(root);
+      if (g === undefined) {
+        byRoot.set(root, { ...b });
+      } else {
+        if (b.minX < g.minX) g.minX = b.minX;
+        if (b.maxX > g.maxX) g.maxX = b.maxX;
+        if (b.minY < g.minY) g.minY = b.minY;
+        if (b.maxY > g.maxY) g.maxY = b.maxY;
+      }
+    }
+    const groups = [...byRoot.values()];
+
+    // Greedily merge groups when the merged seed box is cheaper to
+    // process than the two separate (possibly overlapping) seed boxes.
+    const pad = 4 * maxMagDist; // seed box adds 2*maxMagDist on each side
+    const boxArea = (g: CraterBounds): number =>
+      (g.maxX - g.minX + pad) * (g.maxY - g.minY + pad);
+    let merged = true;
+    while (merged) {
+      merged = false;
+      for (let i = 0; i < groups.length && !merged; i++) {
+        for (let j = i + 1; j < groups.length; j++) {
+          const a = groups[i];
+          const b = groups[j];
+          const union: CraterBounds = {
+            minX: Math.min(a.minX, b.minX),
+            maxX: Math.max(a.maxX, b.maxX),
+            minY: Math.min(a.minY, b.minY),
+            maxY: Math.max(a.maxY, b.maxY),
+          };
+          if (boxArea(union) < boxArea(a) + boxArea(b)) {
+            groups[i] = union;
+            groups.splice(j, 1);
+            merged = true;
+            break;
+          }
+        }
+      }
+    }
+    return groups;
+  }
+
+  /**
+   * Recompute water magnitudes (ceil(dist_to_nearest_coast / 2), capped
+   * at 31) for all water tiles within MAX_MAG_DIST of the crater bounds.
+   *
+   * Dirty box (±MAX_MAG_DIST from crater bounds): the region where
+   * magnitudes may have changed.  Only tiles here get updated.
+   *
+   * Seed box (±2*MAX_MAG_DIST from crater bounds): coastlines here are
+   * seeded for BFS.  This ensures that every coastline that could be
+   * nearest to a dirty-box tile is included (a dirty-box tile is at most
+   * MAX_MAG_DIST from the crater, and the nearest coast is at most
+   * MAX_MAG_DIST from the tile, so the coast is at most 2*MAX_MAG_DIST
+   * from the crater).  The BFS runs WITHOUT convergence inside the seed
+   * box so that wavefronts from distant coastlines correctly reach the
+   * dirty box, and is clipped at the seed box boundary for performance.
+   *
+   * Reads terrain bytes directly — these loops dominate finalize cost on
+   * large maps.
+   *
+   * @param passableCoastOnly When true, impassable terrain is void (like
+   *   the map edge), so water tiles adjacent only to impassable terrain
+   *   are NOT coastline — they stay uniformly deep with no gradient.
+   *   (Used on the full map; the minimap counts any land as coastline.)
+   * @param changed When set, tiles whose magnitude changed are recorded
+   *   for client updates.
+   */
+  private recomputeMagnitudesInBox(
+    map: GameMap,
+    bounds: CraterBounds,
+    stampArr: Uint16Array,
+    distArr: Uint16Array,
+    stamp: number,
+    passableCoastOnly: boolean,
+    changed: Set<TileRef> | null,
+  ): void {
+    const w = map.width();
+    const h = map.height();
+    // Direct terrain access, same precedent as ConnectedComponents
+    const terrain = (map as unknown as { terrain: Uint8Array }).terrain;
+
+    // Dirty box: tiles whose magnitude may need updating.
+    const dMinX = Math.max(0, bounds.minX - MAX_MAG_DIST);
+    const dMaxX = Math.min(w - 1, bounds.maxX + MAX_MAG_DIST);
+    const dMinY = Math.max(0, bounds.minY - MAX_MAG_DIST);
+    const dMaxY = Math.min(h - 1, bounds.maxY + MAX_MAG_DIST);
+    // Seed box: coastlines here are seeded; BFS is clipped here.
+    const sMinX = Math.max(0, bounds.minX - MAX_MAG_DIST * 2);
+    const sMaxX = Math.min(w - 1, bounds.maxX + MAX_MAG_DIST * 2);
+    const sMinY = Math.max(0, bounds.minY - MAX_MAG_DIST * 2);
+    const sMaxY = Math.min(h - 1, bounds.maxY + MAX_MAG_DIST * 2);
+
+    const isCoastByte = (b: number): boolean =>
+      (b & TERRAIN_LAND_MASK) !== 0 &&
+      (!passableCoastOnly || (b & TERRAIN_MAG_MASK) !== IMPASSABLE_MAG);
+
+    // Seed from coastline water tiles inside the seed box.
+    const queue: TileRef[] = [];
+    for (let y = sMinY; y <= sMaxY; y++) {
+      const rowStart = y * w;
+      for (let x = sMinX; x <= sMaxX; x++) {
+        const tile = (rowStart + x) as TileRef;
+        if ((terrain[tile] & TERRAIN_LAND_MASK) !== 0) continue;
+        if (stampArr[tile] === stamp) continue;
+        const isCoast =
+          (y > 0 && isCoastByte(terrain[tile - w])) ||
+          (y < h - 1 && isCoastByte(terrain[tile + w])) ||
+          (x > 0 && isCoastByte(terrain[tile - 1])) ||
+          (x < w - 1 && isCoastByte(terrain[tile + 1]));
+        if (isCoast) {
+          stampArr[tile] = stamp;
+          distArr[tile] = 0;
+          queue.push(tile);
+        }
+      }
+    }
+
+    // BFS outward through water, clipped to the seed box.
+    let head = 0;
+    while (head < queue.length) {
+      const tile = queue[head++];
+      const nextDist = distArr[tile] + 1;
+      const x = tile % w;
+      const y = (tile - x) / w;
+      if (y > sMinY) {
+        const n = tile - w;
+        if ((terrain[n] & TERRAIN_LAND_MASK) === 0 && stampArr[n] !== stamp) {
+          stampArr[n] = stamp;
+          distArr[n] = nextDist;
+          queue.push(n as TileRef);
+        }
+      }
+      if (y < sMaxY) {
+        const n = tile + w;
+        if ((terrain[n] & TERRAIN_LAND_MASK) === 0 && stampArr[n] !== stamp) {
+          stampArr[n] = stamp;
+          distArr[n] = nextDist;
+          queue.push(n as TileRef);
+        }
+      }
+      if (x > sMinX) {
+        const n = tile - 1;
+        if ((terrain[n] & TERRAIN_LAND_MASK) === 0 && stampArr[n] !== stamp) {
+          stampArr[n] = stamp;
+          distArr[n] = nextDist;
+          queue.push(n as TileRef);
+        }
+      }
+      if (x < sMaxX) {
+        const n = tile + 1;
+        if ((terrain[n] & TERRAIN_LAND_MASK) === 0 && stampArr[n] !== stamp) {
+          stampArr[n] = stamp;
+          distArr[n] = nextDist;
+          queue.push(n as TileRef);
+        }
+      }
+    }
+
+    // Update magnitudes only for dirty-box tiles.
+    for (let y = dMinY; y <= dMaxY; y++) {
+      const rowStart = y * w;
+      for (let x = dMinX; x <= dMaxX; x++) {
+        const tile = (rowStart + x) as TileRef;
+        const b = terrain[tile];
+        if ((b & TERRAIN_LAND_MASK) !== 0) continue;
+        // Reached by BFS → magnitude from distance; unreached → nearest
+        // coast is >MAX_MAG_DIST away → deep water (31).
+        const newMag =
+          stampArr[tile] === stamp
+            ? Math.min(Math.ceil(distArr[tile] / 2), 31)
+            : 31;
+        if ((b & TERRAIN_MAG_MASK) !== newMag) {
+          map.setMagnitude(tile, newMag);
+          changed?.add(tile);
+        }
+      }
     }
   }
 }

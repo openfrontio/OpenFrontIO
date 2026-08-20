@@ -104,6 +104,13 @@ describe("AccountModal — rendering", () => {
     await modal.updateComplete;
   }
 
+  // onOpen kicks off getUserMe(); let the microtasks settle before asserting on
+  // the rendered output.
+  async function flushOpen(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await modal.updateComplete;
+  }
+
   it("shows the Steam account (no link/login CTAs) for a Steam-primary user", async () => {
     const userMe = makeUserMe({
       steam: {
@@ -127,9 +134,10 @@ describe("AccountModal — rendering", () => {
     // No Google-link CTA either — Steam is primary in v1, no linking UI.
     expect(text).not.toContain("account_modal.link_google");
 
-    // Currency + logout ARE rendered for the Steam branch of renderLoggedInAs().
+    // Currency IS rendered for the Steam branch of renderLoggedInAs(); logging
+    // out moved to the nav profile menu, so no log-out control here.
     expect(modal.querySelector("currency-display")).toBeTruthy();
-    expect(text).toContain("account_modal.log_out");
+    expect(text).not.toContain("nav_account_menu.log_out");
   });
 
   // The complement of the test above, and it earns its keep twice over:
@@ -162,7 +170,8 @@ describe("AccountModal — rendering", () => {
 
     // Still a logged-in view, not the login-options screen.
     expect(modal.querySelector("currency-display")).toBeTruthy();
-    expect(text).toContain("account_modal.log_out");
+    // Logging out lives in the nav profile menu now.
+    expect(text).not.toContain("nav_account_menu.log_out");
   });
 
   // Desktop re-entry to the account-linking gate. The Electron preload exposes
@@ -235,5 +244,42 @@ describe("AccountModal — rendering", () => {
 
       expect(findLinkGateButton()).toBeUndefined();
     });
+  });
+  // The duplicate-account rejection: the auth callback bounced us back with
+  // `login=email_exists` rather than creating a second account, and the user
+  // needs to be told why nothing happened and what to do instead.
+  it("shows the duplicate-account error after a rejected sign-in", async () => {
+    modal.open({ login: "email_exists" });
+    await flushOpen();
+
+    // Logged out, so the login options screen is what renders.
+    const text = modal.textContent ?? "";
+    expect(text).toContain("main.login_google");
+    expect(text).toContain("account_modal.login_email_exists");
+  });
+
+  it("shows no login error on an ordinary open", async () => {
+    modal.open();
+    await flushOpen();
+
+    const text = modal.textContent ?? "";
+    expect(text).toContain("main.login_google");
+    expect(text).not.toContain("account_modal.login_email_exists");
+  });
+
+  it("drops the error when the modal is reopened", async () => {
+    modal.open({ login: "email_exists" });
+    await flushOpen();
+    expect(modal.textContent ?? "").toContain(
+      "account_modal.login_email_exists",
+    );
+
+    modal.close();
+    modal.open();
+    await flushOpen();
+
+    expect(modal.textContent ?? "").not.toContain(
+      "account_modal.login_email_exists",
+    );
   });
 });

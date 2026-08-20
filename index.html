@@ -53,6 +53,13 @@
         min-height: 100%;
         min-height: -webkit-fill-available;
       }
+
+      /* Disable iOS double-tap "smart zoom" on the page; the game has its
+         own map zoom. Panning/scrolling stays allowed. See issue #4609. */
+      html,
+      body {
+        touch-action: manipulation;
+      }
     </style>
 
     <!-- SEO -->
@@ -288,21 +295,21 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></language-modal>
-        <flag-input-modal
-          id="flag-input-modal"
+        <inventory-modal
+          id="page-inventory"
           inline
           class="hidden w-full h-full page-content relative z-50"
-        ></flag-input-modal>
-        <cosmetics-modal
-          id="cosmetics-modal"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></cosmetics-modal>
+        ></inventory-modal>
         <ranked-modal
           id="page-ranked"
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></ranked-modal>
+        <detailed-view-modal
+          id="page-detailed-view"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></detailed-view-modal>
       </main-layout>
 
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
@@ -311,6 +318,10 @@
 
       <!-- Global Modals -->
       <steam-link-modal></steam-link-modal>
+      <!-- Opened from the nav profile menu (#modal=...) -->
+      <account-settings-modal></account-settings-modal>
+      <change-username-modal></change-username-modal>
+      <subscription-modal></subscription-modal>
     </div>
 
     <!-- Game components -->

@@ -223,6 +223,10 @@ export const UserMeResponseSchema = z.object({
           role: z.enum(["leader", "officer", "member"]),
           joinedAt: z.iso.datetime(),
           memberCount: z.number().int().min(1),
+          // Clan currency — see ClanInfoSchema in ClanApiSchemas.ts for the
+          // format. Decimal bigint strings; optional for older responses.
+          softBalance: z.string().optional(),
+          hardBalance: z.string().optional(),
         }),
       )
       .optional(),
@@ -513,6 +517,10 @@ export const PlayerProfileSchema = z.object({
         role: z.enum(["leader", "officer", "member"]),
         joinedAt: z.iso.datetime(),
         memberCount: z.number().int().min(1),
+        // Clan currency — see ClanInfoSchema in ClanApiSchemas.ts for the
+        // format. Decimal bigint strings; optional for older responses.
+        softBalance: z.string().optional(),
+        hardBalance: z.string().optional(),
       }),
     )
     .optional(),

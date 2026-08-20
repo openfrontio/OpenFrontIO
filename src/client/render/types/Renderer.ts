@@ -98,6 +98,7 @@ export interface UnitState {
   reachedTarget: boolean;
   retreating: boolean;
   targetable: boolean;
+  waitTicks: number;
   markedForDeletion: number | false; // -1 -> false, else tick
   health: number | null;
   underConstruction: boolean;
@@ -252,6 +253,19 @@ export interface NukeTrajectoryData {
   tUntargetableEnd: number;
   /** t-value (0..1) of first SAM intercept point. 1.0 = no intercept. */
   tSamIntercept: number;
+}
+
+/**
+ * A rectangular region of terrain texels to re-upload, with its bytes stored
+ * row-major in a shared buffer (rects are concatenated in array order).
+ * Water-nuke deltas use one-row rects (h = 1); a full re-upload (context
+ * restore) is a single map-sized rect.
+ */
+export interface TerrainRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 /** Input data for attack ring visualization. */

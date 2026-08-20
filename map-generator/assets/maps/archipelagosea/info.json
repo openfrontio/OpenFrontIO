@@ -4,7 +4,7 @@
   "display_name": "Archipelago Sea",
   "translation_key": "map.archipelagosea",
   "categories": ["europe"],
-  "multiplayer_frequency": 3,
+  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [145, 767],

@@ -2,7 +2,7 @@
   "id": "GulfOfGuinea",
   "name": "Gulf Of Guinea",
   "translation_key": "map.gulfofguinea",
-  "categories": ["africa", "new"],
+  "categories": ["africa"],
   "multiplayer_frequency": 5,
   "nations": [
     {

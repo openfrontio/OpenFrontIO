@@ -112,7 +112,7 @@ describe("renderMemberStats", () => {
     const host = await renderTo(renderMemberStats(stats));
     const text = host.textContent ?? "";
     expect(text).toContain("clan_modal.stats_total");
-    expect(text).not.toContain("clan_modal.stats_ffa");
+    expect(text).not.toContain("clan_modal.history_type_ffa");
     expect(text).not.toContain("clan_modal.stats_team");
     expect(text).not.toContain("clan_modal.stats_hvn");
     expect(text).not.toContain("clan_modal.stats_ranked");
@@ -152,7 +152,7 @@ describe("renderMemberStats", () => {
     await expandTotal(host);
     const text = host.textContent ?? "";
     expect(text).toContain("clan_modal.stats_total");
-    expect(text).toContain("clan_modal.stats_ffa");
+    expect(text).toContain("clan_modal.history_type_ffa");
     expect(text).toContain("clan_modal.stats_team");
     expect(text).toContain("clan_modal.stats_hvn");
     expect(text).toContain("clan_modal.stats_ranked");
@@ -169,10 +169,10 @@ describe("renderMemberStats", () => {
     teamButton!.click();
     await new Promise((r) => setTimeout(r, 0));
     const text = host.textContent ?? "";
-    expect(text).toContain("clan_modal.stats_duos");
-    expect(text).toContain("clan_modal.stats_trios");
+    expect(text).toContain("clan_modal.history_type_duos");
+    expect(text).toContain("clan_modal.history_type_trios");
     // Buckets with no games are hidden.
-    expect(text).not.toContain("clan_modal.stats_quads");
+    expect(text).not.toContain("clan_modal.history_type_quads");
   });
 
   it("does not render an expandable button for ranked when no breakdown has games", async () => {

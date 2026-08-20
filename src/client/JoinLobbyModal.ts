@@ -33,6 +33,7 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { normaliseMapKey } from "./Utils";
+import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
@@ -301,6 +302,25 @@ export class JoinLobbyModal extends BaseModal {
     const settings = c ? this.notableSettings(c, null) : [];
     const disabledUnitCount = c?.disabledUnits?.length ?? 0;
     const enabled = translateText("common.enabled");
+    // A featured lobby names itself; the map drops to the subtitle so nothing
+    // is lost. Interpolated by lit as TEXT, never markup — emoji render because
+    // they are ordinary codepoints, and the accent comes from a closed set so a
+    // label can never restyle the rest of the list.
+    const featuredLabel = lobby.featured ? lobby.label : undefined;
+    const accentClass =
+      featuredLabel === undefined
+        ? "text-white"
+        : {
+            gold: "text-amber-300",
+            blue: "text-sky-300",
+            green: "text-emerald-300",
+            red: "text-rose-300",
+          }[lobby.accent ?? "gold"];
+    const subtitle = c ? this.modeSubtitle(c) : "";
+    // The map name only moves down here when a label has taken the title line.
+    const subtitleLine = featuredLabel
+      ? [mapName, subtitle].filter(Boolean).join(" · ")
+      : subtitle;
     return html`
       <button
         type="button"
@@ -316,14 +336,14 @@ export class JoinLobbyModal extends BaseModal {
           }}
         />
         <div class="flex flex-col flex-1 min-w-0">
-          <span class="text-sm font-bold text-white truncate">${mapName}</span>
-          <span class="text-xs text-white/60"
-            >${c ? this.modeSubtitle(c) : ""}</span
+          <span class="text-sm font-bold truncate ${accentClass}"
+            >${featuredLabel ?? mapName}</span
           >
+          <span class="text-xs text-white/60">${subtitleLine}</span>
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
-                  // Some labels (e.g. host_modal.bots) already end with ": ".
+                  // Some labels (e.g. game_settings.bots) already end with ": ".
                   const label = s.label.replace(/[:\s]+$/, "");
                   return html`<span
                     class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
@@ -399,6 +419,9 @@ export class JoinLobbyModal extends BaseModal {
       // Active lobby not found, check if it's an archived game
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
+          return;
+        case "redirected":
+          // Navigating to the versioned replay shell; leave state as-is.
           return;
         case "not_found":
           this.resetTrackingState();
@@ -582,22 +605,22 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.infiniteTroops)
       items.push({
-        label: translateText("host_modal.infinite_troops"),
+        label: translateText("game_settings.infinite_troops"),
         value: enabled,
       });
     if (c.infiniteGold)
       items.push({
-        label: translateText("host_modal.infinite_gold"),
+        label: translateText("game_settings.infinite_gold"),
         value: enabled,
       });
     if (c.instantBuild)
       items.push({
-        label: translateText("host_modal.instant_build"),
+        label: translateText("game_settings.instant_build"),
         value: enabled,
       });
     if (c.randomSpawn)
       items.push({
-        label: translateText("host_modal.random_spawn"),
+        label: translateText("game_settings.random_spawn"),
         value: enabled,
       });
     if (c.maxTimerValue)
@@ -621,7 +644,7 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.goldMultiplier)
       items.push({
-        label: translateText("host_modal.gold_multiplier"),
+        label: translateText("game_settings.gold_multiplier"),
         value: `x${c.goldMultiplier}`,
       });
     if (c.customAllianceDuration === 0 || c.disableAlliances)
@@ -641,12 +664,12 @@ export class JoinLobbyModal extends BaseModal {
       });
     if (c.waterNukes)
       items.push({
-        label: translateText("public_game_modifier.water_nukes_label"),
+        label: translateText("game_settings.water_nukes"),
         value: enabled,
       });
     if (c.doomsdayClock?.enabled)
       items.push({
-        label: translateText("public_game_modifier.doomsday_clock_label"),
+        label: translateText("game_settings.doomsday_clock"),
         value: translateText(
           `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
         ),
@@ -670,14 +693,14 @@ export class JoinLobbyModal extends BaseModal {
       c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
     if (isCompact)
       items.push({
-        label: translateText("host_modal.compact_map"),
+        label: translateText("game_settings.compact_map"),
         value: enabled,
       });
     {
       const defaultBots = isCompact ? 100 : 400;
       if (c.bots !== defaultBots)
         items.push({
-          label: translateText("host_modal.bots"),
+          label: translateText("game_settings.bots"),
           value: String(c.bots),
         });
     }
@@ -687,13 +710,13 @@ export class JoinLobbyModal extends BaseModal {
         : nationCount;
       if (typeof c.nations === "number" && c.nations !== defaultNations)
         items.push({
-          label: translateText("host_modal.nations"),
+          label: translateText("game_settings.nations"),
           value: String(c.nations),
         });
     }
     if (c.nations === "disabled" && !(c.gameType === GameType.Public && isTeam))
       items.push({
-        label: translateText("host_modal.nations"),
+        label: translateText("game_settings.nations"),
         value: disabled,
       });
     return items;
@@ -806,7 +829,7 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.infinite_gold")}
+          ${translateText("game_settings.infinite_gold")}
         </span>`,
       );
     if (hc.infiniteTroops)
@@ -814,7 +837,7 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.infinite_troops")}
+          ${translateText("game_settings.infinite_troops")}
         </span>`,
       );
     if (hc.goldMultiplier)
@@ -822,7 +845,8 @@ export class JoinLobbyModal extends BaseModal {
         html`<span
           class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
         >
-          ${translateText("host_modal.gold_multiplier")}: x${hc.goldMultiplier}
+          ${translateText("game_settings.gold_multiplier")}:
+          x${hc.goldMultiplier}
         </span>`,
       );
     if (hc.startingGold)
@@ -1037,6 +1061,9 @@ export class JoinLobbyModal extends BaseModal {
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
           return;
+        case "redirected":
+          // Navigating to the versioned replay shell; leave state as-is.
+          return;
         case "not_found":
           this.resetTrackingState();
           this.showMessage(translateText("private_lobby.not_found"), "red");
@@ -1117,7 +1144,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private async checkArchivedGame(
     lobbyId: string,
-  ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
+  ): Promise<
+    "success" | "redirected" | "not_found" | "version_mismatch" | "error"
+  > {
     const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
       method: "GET",
       headers: {
@@ -1145,6 +1174,9 @@ export class JoinLobbyModal extends BaseModal {
         `Git commit hash mismatch for game ${safeLobbyId}`,
         archiveData.details,
       );
+      if (await this.redirectToVersionedShell(lobbyId)) {
+        return "redirected";
+      }
       return "version_mismatch";
     }
 
@@ -1163,5 +1195,34 @@ export class JoinLobbyModal extends BaseModal {
       }),
     );
     return "success";
+  }
+
+  // The record was produced by a different build. replay.<domain>/<gameId>
+  // serves the matching versioned shell (uploaded by update.sh on every
+  // deploy); if it exists, navigate there and let that build replay the game
+  // (#4934). The probe requires text/html so a misrouted host that answers
+  // 200 with something else can't strand the player on a broken page.
+  private async redirectToVersionedShell(lobbyId: string): Promise<boolean> {
+    if (isReplayShellHost(window.location.hostname)) {
+      return false;
+    }
+    const url = versionedReplayUrl(ClientEnv.jwtAudience(), lobbyId);
+    if (url === null) {
+      return false;
+    }
+    try {
+      const probe = await fetch(url, { method: "HEAD" });
+      if (!probe.ok) {
+        return false;
+      }
+      const contentType = probe.headers.get("content-type") ?? "";
+      if (!contentType.includes("text/html")) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    window.location.href = url;
+    return true;
   }
 }

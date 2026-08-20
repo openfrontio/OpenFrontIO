@@ -19,11 +19,16 @@ export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
 export type MasterMessage = z.infer<typeof MasterMessageSchema>;
 
 // Master/worker-internal lobby info: PublicGameInfo plus the hashed creator
-// ID (hosted lobbies only) used for the one-listed-lobby-per-creator check.
+// ID (hosted lobbies only) used for the one-listed-lobby-per-creator check,
+// and the lobby's creation time (used for queue order).
 // Never sent to browsers — WorkerLobbyService.sanitizeGames converts to plain
 // PublicGameInfo before anything reaches a client.
 export const InternalGameInfoSchema = PublicGameInfoSchema.extend({
   creatorID: z.string().optional(),
+  // When the worker created the lobby. The master orders the queue behind the
+  // counting-down lobby by this, so lobbies advance one place as the front one
+  // starts instead of shuffling when a new one spawns.
+  createdAt: z.number().optional(),
 });
 
 export const InternalPublicGamesSchema = z.object({
