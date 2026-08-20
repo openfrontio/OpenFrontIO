@@ -1,6 +1,9 @@
 import { createHash } from "crypto";
 import fs from "fs/promises";
 import path from "path";
+import { logger } from "./Logger";
+
+const log = logger.child({ comp: "desktop-release" });
 
 // Bump ONLY when a client genuinely cannot run on an older desktop shell.
 // A shell below this refuses to stage the update and tells the player to take
@@ -62,6 +65,12 @@ export async function buildDescriptor(
   const assets: Record<string, ReleaseAsset> = {};
   for (const [rel, h] of Object.entries(hashes)) {
     assets[rel] = { url: `/${rel}`, sha256: h.sha256, bytes: h.bytes };
+  }
+
+  if (opts.cdnBase === "") {
+    log.warn(
+      "CDN_BASE is unset — desktop release assets will be served from the app's own origin instead of a CDN",
+    );
   }
 
   return {
