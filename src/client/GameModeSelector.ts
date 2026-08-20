@@ -11,6 +11,7 @@ import {
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import "./components/IOSAddToHomeScreenBanner";
+import { multiplayerAllowed, type DesktopUpdateState } from "./DesktopShell";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -29,11 +30,24 @@ import {
 
 const CARD_BG = "bg-surface";
 
+/**
+ * Whether a multiplayer entry point should refuse to act. Exported for tests
+ * and kept free of component state so the rule is checkable in isolation.
+ * A null state means no desktop shell (the web build), so nothing is gated.
+ */
+export function shouldBlockMultiplayerAction(
+  state: DesktopUpdateState | null,
+): boolean {
+  if (state === null) return false;
+  return !multiplayerAllowed(state.status);
+}
+
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   @state() private mapAspectRatios: Map<GameMapType, number> = new Map();
   @state() private inputValid: boolean = true;
+  @state() private desktopUpdateState: DesktopUpdateState | null = null;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -61,6 +75,10 @@ export class GameModeSelector extends LitElement {
       "username-validity-change",
       this.handleValidityChange,
     );
+    document.addEventListener(
+      "desktop-update-state",
+      this.onDesktopUpdateState,
+    );
     // Pick up the current value in case username-input validated before us.
     const usernameInput = document.querySelector(
       "username-input",
@@ -76,11 +94,19 @@ export class GameModeSelector extends LitElement {
       "username-validity-change",
       this.handleValidityChange,
     );
+    document.removeEventListener(
+      "desktop-update-state",
+      this.onDesktopUpdateState,
+    );
     super.disconnectedCallback();
   }
 
   private handleValidityChange = (e: Event) => {
     this.inputValid = (e as CustomEvent).detail?.isValid ?? true;
+  };
+
+  private onDesktopUpdateState = (e: Event) => {
+    this.desktopUpdateState = (e as CustomEvent<DesktopUpdateState>).detail;
   };
 
   public stop() {
@@ -143,17 +169,22 @@ export class GameModeSelector extends LitElement {
             translateText("main.create"),
             this.openHostLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            undefined,
+            true,
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            undefined,
+            true,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
             this.hostedLobbyCount(),
+            true,
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
@@ -224,17 +255,22 @@ export class GameModeSelector extends LitElement {
             translateText("main.create"),
             this.openHostLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            undefined,
+            true,
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
+            undefined,
+            true,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
             "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
             this.hostedLobbyCount(),
+            true,
           )}
         </div>
       </div>
@@ -245,7 +281,32 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
   }
 
+  /**
+   * Refuses the action and draws attention to the update bar. Returns true when
+   * the caller should stop.
+   *
+   * Deliberately NOT implemented with the `disabled` attribute the way
+   * renderSmallActionCard handles invalid input: a disabled control (and
+   * `pointer-events-none` alongside it) swallows the click, leaving nothing to
+   * trigger the wiggle. The button stays clickable and merely stops being
+   * actionable.
+   */
+  private blockedByUpdate(): boolean {
+    if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
+    // Optional-call the method rather than dispatching an event: the bar is a
+    // sibling custom element that may not have upgraded yet, and `?.wiggle?.()`
+    // degrades to a silent no-op in that case instead of firing an event with
+    // no listener.
+    (
+      document.querySelector("desktop-update-bar") as
+        | (HTMLElement & { wiggle?: () => void })
+        | null
+    )?.wiggle?.();
+    return true;
+  }
+
   private openRankedMenu = () => {
+    if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
     window.showPage?.("page-ranked");
   };
@@ -258,11 +319,13 @@ export class GameModeSelector extends LitElement {
   };
 
   private openHostLobby = () => {
+    if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
     (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
   };
 
   private openJoinLobby = () => {
+    if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
@@ -278,15 +341,24 @@ export class GameModeSelector extends LitElement {
     onClick: () => void,
     bgClass: string = CARD_BG,
     badge?: number,
+    // Only the three multiplayer action cards (create/ranked/join) pass this;
+    // the solo card is never gated (see openSinglePlayerModal) and must never
+    // show as disabled here.
+    gated: boolean = false,
   ) {
+    const blocked =
+      gated && shouldBlockMultiplayerAction(this.desktopUpdateState);
     return html`
       <button
         @click=${onClick}
         ?disabled=${!this.inputValid}
+        aria-disabled=${blocked}
         class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
           .inputValid
           ? "opacity-50 cursor-not-allowed pointer-events-none"
-          : ""}"
+          : blocked
+            ? "opacity-50 cursor-not-allowed"
+            : ""}"
       >
         ${title}
         ${badge
@@ -336,14 +408,19 @@ export class GameModeSelector extends LitElement {
       modifierLabels.sort((a, b) => a.length - b.length);
     }
 
+    const blocked = shouldBlockMultiplayerAction(this.desktopUpdateState);
+
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
         ?disabled=${!this.inputValid}
+        aria-disabled=${blocked}
         class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${!this
           .inputValid
           ? "opacity-50 cursor-not-allowed pointer-events-none"
-          : ""}"
+          : blocked
+            ? "opacity-50 cursor-not-allowed"
+            : ""}"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div
@@ -420,6 +497,7 @@ export class GameModeSelector extends LitElement {
   }
 
   private validateAndJoin(lobby: PublicGameInfo) {
+    if (this.blockedByUpdate()) return;
     if (!this.validateUsername()) return;
 
     this.dispatchEvent(
