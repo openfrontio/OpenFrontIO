@@ -55,3 +55,59 @@ export function composeVersionDisplay(
   const withV = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
   return `${gameVersion} (Steam ${withV})`;
 }
+
+export type DesktopUpdateStatus =
+  | "checking"
+  | "current"
+  | "downloading"
+  | "staged"
+  | "blocked"
+  | "failed";
+
+export interface DesktopUpdateState {
+  status: DesktopUpdateStatus;
+  bytes: number;
+  total: number;
+  error?: { kind: string; message: string };
+}
+
+export interface DesktopUpdateBridge {
+  subscribe: (cb: (state: DesktopUpdateState) => void) => () => void;
+  apply: () => Promise<void>;
+  retry: () => Promise<void>;
+  setInGame?: (inGame: boolean) => Promise<void>;
+}
+
+// Narrowed locally rather than re-declaring the global -- see the note on
+// VersionBridge above for why (TS2717).
+type UpdateBridgeHolder = { update?: DesktopUpdateBridge };
+
+/**
+ * The shell's runtime-update bridge, or null when it is unavailable -- on the
+ * web, and on any desktop shell older than the one that introduced it.
+ *
+ * Returning null rather than throwing is the contract: the shell ships in the
+ * Steam depot and updates on Steam's schedule, while this client updates at
+ * runtime, so a client newer than its shell is an ordinary situation and must
+ * degrade rather than break.
+ */
+export function desktopUpdate(): DesktopUpdateBridge | null {
+  const desktop = window.openfrontDesktop as UpdateBridgeHolder | undefined;
+  return desktop?.update ?? null;
+}
+
+/**
+ * Whether multiplayer should be available in a given update state.
+ *
+ * Gate when the player has a remedy, not merely when there is a problem:
+ * downloading -> wait, staged -> reload, failed -> retry. `blocked` means the
+ * shell is too old and only a Steam depot push fixes it, so gating there would
+ * lock a paying player out for hours with no action available.
+ *
+ * This duplicates multiplayerAllowed in openfront-desktop's
+ * src/main/update/state.ts. The two repositories cannot import from each other;
+ * if you change one, change the other.
+ */
+export function multiplayerAllowed(status: DesktopUpdateStatus): boolean {
+  return status === "current" || status === "checking" || status === "blocked";
+}
