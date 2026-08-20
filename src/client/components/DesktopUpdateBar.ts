@@ -7,8 +7,9 @@ import { translateText } from "../Utils";
 const WIGGLE_CLASS = "animate-bounce";
 
 /**
- * Bottom-of-screen progress/action bar for the Steam shell's runtime updates,
- * in the style of Garry's Mod's workshop download bar.
+ * Bottom-of-screen progress/action bar for the Steam shell's runtime updates:
+ * download progress while an update is fetching, and a reload action once one
+ * is ready to apply.
  *
  * Mounted in index.html as a direct <body> child with `in-[.in-game]:hidden`,
  * so "we do not update mid-game" is a property of the markup rather than of
