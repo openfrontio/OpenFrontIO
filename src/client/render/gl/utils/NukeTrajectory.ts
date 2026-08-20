@@ -11,7 +11,7 @@ import type { NukeTrajectoryData } from "../../types";
 const PARABOLA_MIN_HEIGHT = 50;
 const TARGETABLE_RANGE = 150;
 const TARGETABLE_RANGE_SQ = TARGETABLE_RANGE * TARGETABLE_RANGE;
-const THRESHOLD_SAMPLES = 64;
+const THRESHOLD_SAMPLES = 32;
 
 // SAM range formula: 150 - 480 / (level + 5)
 const MAX_SAM_RANGE = 150;
@@ -25,7 +25,7 @@ export function samRange(level: number): number {
 export interface SAMInfo {
   x: number;
   y: number;
-  rangeSq: number;
+  r: number;
 }
 
 /** Cubic Bezier evaluation at parameter t. */
@@ -93,18 +93,43 @@ export function computeNukeControlPoints(
   };
 }
 
-/** Binary-search for the exact t where distSq to (cx,cy) crosses rangeSq. */
+/**
+ * Minimum squared distance from a point (px, py) to line segment (x0, y0) -> (x1, y1).
+ * Prevents skipping SAM circles on tangent crossings between discrete sample steps.
+ */
+function segmentDistSq(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  px: number,
+  py: number,
+): number {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const dxP = px - x0;
+  const dyP = py - y0;
+  const dSrcSq = dxP * dxP + dyP * dyP;
+  const dot = dxP * dx + dyP * dy;
+  
+  if (dot <= 0) return dSrcSq;
+  
+  const l2 = dx * dx + dy * dy;
+  if (dot >= l2) return dSrcSq + l2 - 2 * dot;
+  
+  return dSrcSq - (dot * dot) / l2;
+}
+
+/** Binary-search for the exact parameter t where the trajectory enters/exits rangeSq. */
 function refineCrossing(
-  cp: {
-    p0x: number;
-    p0y: number;
-    p1x: number;
-    p1y: number;
-    p2x: number;
-    p2y: number;
-    p3x: number;
-    p3y: number;
-  },
+  polyAx: number,
+  polyBx: number,
+  polyCx: number,
+  polyDx: number,
+  polyAy: number,
+  polyBy: number,
+  polyCy: number,
+  polyDy: number,
   cx: number,
   cy: number,
   rangeSq: number,
@@ -112,13 +137,28 @@ function refineCrossing(
   tHi: number,
   exitingRange: boolean,
 ): number {
+  let cachedLoX =
+    (((polyAx * tLo + polyBx) * tLo + polyCx) * tLo + polyDx + 0.5) | 0;
+  let cachedLoY =
+    (((polyAy * tLo + polyBy) * tLo + polyCy) * tLo + polyDy + 0.5) | 0;
+
   for (let i = 0; i < 10; i++) {
     const tMid = (tLo + tHi) * 0.5;
-    const x = bezier(tMid, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
-    const y = bezier(tMid, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
-    const inside = distSq(x, y, cx, cy) <= rangeSq;
-    if (exitingRange ? inside : !inside) tLo = tMid;
-    else tHi = tMid;
+
+    const xMid =
+      (((polyAx * tMid + polyBx) * tMid + polyCx) * tMid + polyDx + 0.5) | 0;
+    const yMid =
+      (((polyAy * tMid + polyBy) * tMid + polyCy) * tMid + polyDy + 0.5) | 0;
+
+    const leftInside =
+      segmentDistSq(cachedLoX, cachedLoY, xMid, yMid, cx, cy) <= rangeSq;
+    if (exitingRange ? !leftInside : leftInside) {
+      tHi = tMid;
+    } else {
+      tLo = tMid;
+      cachedLoX = xMid;
+      cachedLoY = yMid;
+    }
   }
   return (tLo + tHi) * 0.5;
 }
@@ -154,103 +194,167 @@ export function computeTrajectoryThresholds(
   let tUntargetableStart = -1;
   let tUntargetableEnd = -1;
   let tSamIntercept = 1.0;
+  let tSamPaddedIntercept = 1.0;
 
   const dt = 1.0 / THRESHOLD_SAMPLES;
 
-  // Pass 1: find untargetable zone boundaries
+  const polyCx = 3 * (cp.p1x - cp.p0x);
+  const polyBx = 3 * (cp.p2x - 2 * cp.p1x + cp.p0x);
+  const polyAx = dstX - 3 * cp.p2x + 3 * cp.p1x - cp.p0x;
+  const polyDx = cp.p0x;
+
+  const polyCy = 3 * (cp.p1y - cp.p0y);
+  const polyBy = 3 * (cp.p2y - 2 * cp.p1y + cp.p0y);
+  const polyAy = dstY - 3 * cp.p2y + 3 * cp.p1y - cp.p0y;
+  const polyDy = cp.p0y;
+
+  const srcDstDx = dstX - srcX;
+  const srcDstDy = dstY - srcY;
+  const srcDstDistSq = srcDstDx * srcDstDx + srcDstDy * srcDstDy;
+  
+  const hasUntargetable = srcDstDistSq > 4 * TARGETABLE_RANGE_SQ;
+  const samLen = sams.length;
+
+  let prevX = (cp.p0x + 0.5) | 0;
+  let prevY = (cp.p0y + 0.5) | 0;
+
   for (let i = 1; i <= THRESHOLD_SAMPLES; i++) {
     const t = i * dt;
-    const x = bezier(t, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
-    const y = bezier(t, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
+    const tPrev = t - dt;
+    const x = (((polyAx * t + polyBx) * t + polyCx) * t + polyDx + 0.5) | 0;
+    const y = (((polyAy * t + polyBy) * t + polyCy) * t + polyDy + 0.5) | 0;
 
-    if (tUntargetableStart < 0) {
-      // Looking for first point outside source range
-      if (distSq(x, y, srcX, srcY) > TARGETABLE_RANGE_SQ) {
-        if (distSq(x, y, dstX, dstY) < TARGETABLE_RANGE_SQ) {
-          // Overlapping source & target range — no untargetable zone
-          break;
-        }
-        tUntargetableStart = refineCrossing(
-          cp,
-          srcX,
-          srcY,
-          TARGETABLE_RANGE_SQ,
-          t - dt,
-          t,
-          true,
-        );
-      }
-    } else {
-      // Looking for first point inside target range
-      if (distSq(x, y, dstX, dstY) < TARGETABLE_RANGE_SQ) {
-        tUntargetableEnd = refineCrossing(
-          cp,
-          dstX,
-          dstY,
-          TARGETABLE_RANGE_SQ,
-          t - dt,
-          t,
-          false,
-        );
-        break;
-      }
-    }
-  }
+    let isUntargetableZone = false;
 
-  // Pass 2: find SAM intercept (skip untargetable zone)
-  if (sams.length > 0) {
-    for (let i = 1; i <= THRESHOLD_SAMPLES; i++) {
-      const t = i * dt;
-      const tPrev = t - dt;
-
-      if (
-        tUntargetableStart >= 0 &&
-        t > tUntargetableStart &&
-        t < tUntargetableEnd
-      ) {
-        continue;
-      }
-
-      // Check exact boundary when crossing into the targetable terminal phase
-      if (
-        tUntargetableEnd >= 0 &&
-        tPrev < tUntargetableEnd &&
-        t >= tUntargetableEnd
-      ) {
-        const xe = bezier(tUntargetableEnd, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
-        const ye = bezier(tUntargetableEnd, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
-        for (let s = 0; s < sams.length; s++) {
-          if (distSq(xe, ye, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
-            tSamIntercept = tUntargetableEnd;
-            break;
+    if (hasUntargetable) {
+      if (tUntargetableStart < 0) {
+        // Looking for first point outside source range
+        const dxSrc = x - srcX;
+        const dySrc = y - srcY;
+        if (dxSrc * dxSrc + dySrc * dySrc > TARGETABLE_RANGE_SQ) {
+          const dxDst = x - dstX;
+          const dyDst = y - dstY;
+          if (dxDst * dxDst + dyDst * dyDst >= TARGETABLE_RANGE_SQ) {
+            tUntargetableStart = refineCrossing(
+              polyAx, polyBx, polyCx, polyDx, polyAy, polyBy, polyCy, polyDy,
+              srcX, srcY, TARGETABLE_RANGE_SQ, tPrev, t, true
+            );
+            isUntargetableZone = true;
           }
         }
-        if (tSamIntercept < 1.0) break;
-      }
-
-      const x = bezier(t, cp.p0x, cp.p1x, cp.p2x, cp.p3x);
-      const y = bezier(t, cp.p0y, cp.p1y, cp.p2y, cp.p3y);
-
-      for (let s = 0; s < sams.length; s++) {
-        if (distSq(x, y, sams[s].x, sams[s].y) <= sams[s].rangeSq) {
-          const lo =
-            tUntargetableEnd >= 0 && tPrev < tUntargetableEnd
-              ? tUntargetableEnd
-              : tPrev;
-          tSamIntercept = refineCrossing(
-            cp,
-            sams[s].x,
-            sams[s].y,
-            sams[s].rangeSq,
-            lo,
-            t,
-            false,
+      } else if (tUntargetableEnd < 0) {
+        // Looking for first point inside target range
+        const dxDst = x - dstX;
+        const dyDst = y - dstY;
+        if (dxDst * dxDst + dyDst * dyDst < TARGETABLE_RANGE_SQ) {
+          tUntargetableEnd = refineCrossing(
+            polyAx, polyBx, polyCx, polyDx, polyAy, polyBy, polyCy, polyDy,
+            dstX, dstY, TARGETABLE_RANGE_SQ, tPrev, t, false
           );
+        } else {
+          isUntargetableZone = true;
+        }
+      }
+    }
+
+    // Check exact boundary when crossing into the targetable terminal phase
+    if (
+      tUntargetableEnd >= 0 &&
+      tPrev < tUntargetableEnd &&
+      t >= tUntargetableEnd &&
+      samLen > 0
+    ) {
+      const xe =
+        (((polyAx * tUntargetableEnd + polyBx) * tUntargetableEnd + polyCx) *
+          tUntargetableEnd +
+          polyDx +
+          0.5) |
+        0;
+      const ye =
+        (((polyAy * tUntargetableEnd + polyBy) * tUntargetableEnd + polyCy) *
+          tUntargetableEnd +
+          polyDy +
+          0.5) |
+        0;
+      for (let s = 0; s < samLen; s++) {
+        const sam = sams[s];
+        const dx = xe - sam.x;
+        const dy = ye - sam.y;
+        if (dx * dx + dy * dy <= sam.r * sam.r) {
+          tSamIntercept = tUntargetableEnd;
           break;
         }
       }
       if (tSamIntercept < 1.0) break;
     }
+
+    if (!isUntargetableZone && samLen > 0) {
+      const segDx = x - prevX;
+      const segDy = y - prevY;
+      const l2 = segDx * segDx + segDy * segDy;
+      const invL2 = l2 === 0 ? 0 : 1.0 / l2;
+
+      for (let s = 0; s < samLen; s++) {
+        const sam = sams[s];
+
+        // Fast proximity rejection
+        const dxSam = sam.x - prevX;
+        const dySam = sam.y - prevY;
+        const dSrcSq = dxSam * dxSam + dySam * dySam;
+        if (dSrcSq > 62500) {
+          continue;
+        }
+
+        let dSq: number;
+        const dot = dxSam * segDx + dySam * segDy;
+        
+        if (dot <= 0) {
+          dSq = dSrcSq;
+        } else if (dot >= l2) {
+          dSq = dSrcSq + l2 - 2 * dot;
+        } else {
+          dSq = dSrcSq - dot * dot * invL2;
+        }
+
+        const rangeSq = sam.r * sam.r;
+        if (dSq <= rangeSq) {
+          const lo =
+            tUntargetableEnd >= 0 && tPrev < tUntargetableEnd
+              ? tUntargetableEnd
+              : tPrev;
+          // Direct hit: exact boundary intersection (r)
+          tSamIntercept = refineCrossing(
+            polyAx, polyBx, polyCx, polyDx, polyAy, polyBy, polyCy, polyDy,
+            sam.x, sam.y, rangeSq, lo, t, false
+          );
+          break;
+        } else {
+          // Glancing blow: record padded intercept (r + 0.5) as fallback for edge-case skimming
+          const paddedRangeSq = (sam.r + 0.5) * (sam.r + 0.5);
+          if (dSq <= paddedRangeSq) {
+            if (tSamPaddedIntercept === 1.0) {
+              const lo =
+                tUntargetableEnd >= 0 && tPrev < tUntargetableEnd
+                  ? tUntargetableEnd
+                  : tPrev;
+              tSamPaddedIntercept = refineCrossing(
+                polyAx, polyBx, polyCx, polyDx, polyAy, polyBy, polyCy, polyDy,
+                sam.x, sam.y, paddedRangeSq, lo, t, false
+              );
+            }
+          }
+        }
+      }
+      if (tSamIntercept < 1.0) break;
+    }
+
+    prevX = x;
+    prevY = y;
+  }
+
+  // Fallback to padded intercept ONLY if no direct hit occurred along the trajectory
+  if (tSamIntercept === 1.0 && tSamPaddedIntercept < 1.0) {
+    tSamIntercept = tSamPaddedIntercept;
   }
 
   return { tUntargetableStart, tUntargetableEnd, tSamIntercept };
@@ -258,7 +362,8 @@ export function computeTrajectoryThresholds(
 
 /**
  * Build complete NukeTrajectoryData from source/target positions.
- * Convenience function combining control point + threshold computation.
+ * Uses smooth render control points for continuous 60fps GPU mouse tracking,
+ * combined with discrete tile control points for Core simulation threshold accuracy.
  */
 export function buildNukeTrajectory(
   srcX: number,
@@ -269,7 +374,7 @@ export function buildNukeTrajectory(
   directionUp: boolean,
   sams: readonly SAMInfo[],
 ): NukeTrajectoryData {
-  const cp = computeNukeControlPoints(
+  const cpRender = computeNukeControlPoints(
     srcX,
     srcY,
     dstX,
@@ -277,6 +382,17 @@ export function buildNukeTrajectory(
     mapH,
     directionUp,
   );
-  const th = computeTrajectoryThresholds(cp, srcX, srcY, dstX, dstY, sams);
-  return { ...cp, ...th };
+
+  const targetX = Math.round(dstX);
+  const targetY = Math.round(dstY);
+
+  const th = computeTrajectoryThresholds(
+    cpRender,
+    srcX,
+    srcY,
+    targetX,
+    targetY,
+    sams,
+  );
+  return { ...cpRender, ...th };
 }

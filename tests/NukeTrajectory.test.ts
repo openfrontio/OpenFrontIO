@@ -45,8 +45,58 @@ describe("NukeTrajectory thresholds", () => {
       T * (T * (T * cp.p0y + 3 * t * cp.p1y) + 3 * t * t * cp.p2y) +
       t * t * t * cp.p3y;
     const th = computeTrajectoryThresholds(cp, 100, 500, 800, 500, [
-      { x, y, rangeSq: 25 },
+      { x, y, r: 5 },
     ]);
     expect(th.tSamIntercept).toBe(t);
+  });
+
+  test("detects SAM intercept along trajectory", () => {
+    const cp = horizontalCp(100, 800);
+    const sam = { x: 750, y: 500, r: 50 };
+    const th = computeTrajectoryThresholds(cp, 100, 500, 800, 500, [sam]);
+    expect(th.tSamIntercept).toBeLessThan(1.0);
+  });
+
+  test("validates 32 samples with 0.5 offset across all tangent cells and safe cells", () => {
+    const srcX = 1249;
+    const srcY = 108;
+    const samX = 984;
+    const samY = 380;
+    const r = 150 - 480 / 11 + 0.5; // Level 6 SAM + 0.5 buffer
+    const sams = [{ x: samX, y: samY, r }];
+
+    // Tangent cells crossing into SAM range
+    const tangentCells = [
+      { dstX: 859, dstY: 397 },
+      { dstX: 864, dstY: 385 },
+      { dstX: 860, dstY: 395 },
+      { dstX: 862, dstY: 390 },
+      { dstX: 863, dstY: 387 },
+    ];
+
+    for (const cell of tangentCells) {
+      const traj = buildNukeTrajectory(
+        srcX,
+        srcY,
+        cell.dstX,
+        cell.dstY,
+        1000,
+        true,
+        sams,
+      );
+      expect(traj.tSamIntercept).toBeLessThan(1.0);
+    }
+
+    // Safe cell passing outside SAM range
+    const safeTraj = buildNukeTrajectory(
+      srcX,
+      srcY,
+      865,
+      380,
+      1000,
+      true,
+      sams,
+    );
+    expect(safeTraj.tSamIntercept).toBe(1.0);
   });
 });
