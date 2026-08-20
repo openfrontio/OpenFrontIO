@@ -544,25 +544,6 @@ export async function startWorker() {
           }
         }
 
-        // Try to reconnect an existing client (e.g., page refresh) with the
-        // screened identity — before the game starts, a refresh under a new
-        // name updates the displayed identity like a fresh join would. When
-        // the verify was skipped, no identity update is passed: the stored
-        // identity was screened at admission and must not be clobbered by
-        // the coarser local fallback.
-        // If successful, skip the rest of the join authorization.
-        if (
-          gm.rejoinClient(
-            ws,
-            persistentId,
-            clientMsg.gameID,
-            0,
-            verifySkipped ? undefined : { username, clanTag },
-          )
-        ) {
-          return;
-        }
-
         let flares: string[] | undefined;
         let publicId: string | undefined;
         let friends: string[] = [];
@@ -572,13 +553,18 @@ export async function startWorker() {
           | undefined;
 
         const allowedFlares = ServerEnv.allowedFlares();
-        if (claims === null) {
-          if (allowedFlares !== undefined) {
-            log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
-            return;
+        // Fetch the account (flares, friends, clan memberships) and run the
+        // allowed-flares gate. Closes the socket and returns false when the
+        // join must not proceed.
+        const loadAccount = async (): Promise<boolean> => {
+          if (claims === null) {
+            if (allowedFlares !== undefined) {
+              log.warn("Unauthorized: Anonymous user attempted to join game");
+              ws.close(1002, "Unauthorized");
+              return false;
+            }
+            return true;
           }
-        } else {
           // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token);
           if (result.type === "error") {
@@ -587,7 +573,7 @@ export async function startWorker() {
               gameID: clientMsg.gameID,
             });
             ws.close(1002, "Unauthorized: user me fetch failed");
-            return;
+            return false;
           }
           flares = result.response.player.flares;
           publicId = result.response.player.publicId;
@@ -604,14 +590,34 @@ export async function startWorker() {
                 "Forbidden: player without an allowed flare attempted to join game",
               );
               ws.close(1002, "Forbidden");
-              return;
+              return false;
             }
           }
+          return true;
+        };
+
+        // A skipped verify carries no identity update — the stored identity
+        // was screened at admission and must not be clobbered by the coarser
+        // local fallback — so the reconnect completes with zero API calls,
+        // keeping mass reconnects at game start off the API.
+        if (
+          verifySkipped &&
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0)
+        ) {
+          return;
+        }
+
+        if (!(await loadAccount())) {
+          return;
         }
 
         // Enforce clan tag ownership: a player can wear a tag only if they're
         // a member; a real clan they're not in (or an unverifiable tag) is
         // dropped to prevent impersonation. Fictional tags pass through.
+        // SECURITY: this must run BEFORE the identity-updating rejoin below —
+        // join_verify only censors (it has no membership data), so passing
+        // its tag through unresolved would let a pre-start refresh re-apply
+        // a reserved tag that was dropped at admission.
         const resolution = privilegeRefresher
           .get()
           .resolveClanTag(clanTag, ownedClanTags);
@@ -622,7 +628,21 @@ export async function startWorker() {
             clanTag,
           });
         }
-        const resolvedClanTag = resolution.tag;
+        clanTag = resolution.tag;
+
+        // Try to reconnect an existing client (e.g., page refresh) with the
+        // screened, ownership-resolved identity — before the game starts, a
+        // refresh under a new name updates the displayed identity like a
+        // fresh join would. If successful, skip the rest of the join
+        // authorization.
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username,
+            clanTag,
+          })
+        ) {
+          return;
+        }
 
         const cosmeticResult = privilegeRefresher
           .get()
@@ -661,7 +681,7 @@ export async function startWorker() {
           flares,
           ip,
           username,
-          resolvedClanTag,
+          clanTag,
           ws,
           cosmeticResult.cosmetics,
           publicId,
