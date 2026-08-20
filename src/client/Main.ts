@@ -29,6 +29,7 @@ import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
   composeVersionDisplay,
+  desktopUpdate,
   desktopVersion,
   isDesktopShell,
 } from "./DesktopShell";
@@ -170,6 +171,32 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
 }
 
+/**
+ * The single point where "a match is running" is published.
+ *
+ * Two consumers, and they must never disagree:
+ *   - the `.in-game` body class, which the client's own markup keys off to hide
+ *     the footer, the nav bars and the desktop update snackbar;
+ *   - the Electron shell's updater, which pauses asset downloads and version
+ *     polling in-game so a cache-bust cannot saturate a player's connection
+ *     mid-match.
+ *
+ * Every add/remove of that class goes through here. Setting the class without
+ * telling the shell leaves the updater's pause dead; telling the shell without
+ * setting the class leaves downloads paused at a menu forever.
+ *
+ * `setInGame` is optional by the shell contract (the web build has no bridge at
+ * all, and a Steam shell older than the updater has no such method), and the
+ * IPC round trip is fire-and-forget: a rejection must never surface as an
+ * unhandled rejection in the client.
+ */
+function setInGameSignal(inGame: boolean): void {
+  document.body.classList.toggle("in-game", inGame);
+  void desktopUpdate()
+    ?.setInGame?.(inGame)
+    ?.catch(() => {});
+}
+
 class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
   private eventBus: EventBus = new EventBus();
@@ -309,6 +336,13 @@ class Client {
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.lobbyHandle !== null) {
+        // Leaving a game by navigating away (the popstate path's
+        // `window.location.href = "/"`, or a desktop renderer reload) tears the
+        // page down without ever running handleLeaveLobby, so nothing else
+        // clears the in-game signal. The body class dies with the document, but
+        // the shell's updater lives in the main process and would stay paused
+        // forever -- no downloads, no polling -- for the rest of the session.
+        setInGameSignal(false);
         this.lobbyHandle.stop(true);
         await crazyGamesSDK.gameplayStop();
       }
@@ -893,7 +927,7 @@ class Client {
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
       this.lobbyHandle.stop(true);
-      document.body.classList.remove("in-game");
+      setInGameSignal(false);
     }
     if (lobby.source === "public") {
       this.joinModal?.open({
@@ -1021,7 +1055,7 @@ class Client {
       }
       crazyGamesSDK.loadingStop();
       crazyGamesSDK.gameplayStart();
-      document.body.classList.add("in-game");
+      setInGameSignal(true);
 
       // Ensure there's a homepage entry in history before adding the lobby entry
       if (window.location.hash === "" || window.location.hash === "#") {
@@ -1068,7 +1102,7 @@ class Client {
       console.warn("Failed to restore URL on leave:", e);
     }
 
-    document.body.classList.remove("in-game");
+    setInGameSignal(false);
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();

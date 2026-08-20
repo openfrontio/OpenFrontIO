@@ -7,10 +7,32 @@ export interface AssetHash {
   bytes: number;
 }
 
-// index.html is an EJS template rendered per-request, not an immutable asset;
-// asset-manifest.json is superseded by the descriptor. Neither is fetched by
-// the desktop overlay, so neither belongs in the hash map.
-const EXCLUDED_ROOT_FILES = new Set(["index.html", "asset-manifest.json"]);
+// A POSITIVE allowlist, not an exclusion list, and it MUST stay identical to
+// ALLOWED_ROOTS in the desktop shell's src/main/update/descriptor.ts.
+//
+// The shell's parseDescriptor runs safeOverlayPath over every asset url and
+// THROWS on the first one outside these two roots, aborting the parse of the
+// whole descriptor -- so a single stray entry does not degrade one asset, it
+// takes every desktop client to the `failed` state on every launch.
+//
+// static/ is not only hashed content. The build copies a handful of root files
+// through unhashed (LICENSE, ads.txt, privacy-policy.html, robots.txt,
+// terms-of-service.html, version.txt), plus index.html (an EJS template
+// rendered per-request, not an immutable asset) and asset-manifest.json. An
+// exclusion list has to enumerate all of those correctly forever; an allowlist
+// only has to name the two roots the overlay can actually serve.
+//
+// Note asset-manifest.json is NOT "superseded by the descriptor": the
+// descriptor carries the download SET (keyed by emitted path), while
+// asset-manifest.json carries the semantic MAPPING the client resolves names
+// through (semantic name -> hashed url). The descriptor carries it as its own
+// top-level `assetManifest` field -- see buildDescriptor in
+// src/server/DesktopRelease.ts -- rather than as a hashed asset.
+const ALLOWED_ROOTS = ["assets/", "_assets/"];
+
+function isOverlayServable(rel: string): boolean {
+  return ALLOWED_ROOTS.some((root) => rel.startsWith(root));
+}
 
 async function walk(root: string, rel = ""): Promise<string[]> {
   const entries = await fs.readdir(path.join(root, rel), {
@@ -34,7 +56,7 @@ export async function hashDirectory(
   const files = await walk(dir);
   const out: Record<string, AssetHash> = {};
   for (const rel of files.sort()) {
-    if (EXCLUDED_ROOT_FILES.has(rel)) continue;
+    if (!isOverlayServable(rel)) continue;
     const content = await fs.readFile(path.join(dir, rel));
     out[rel] = {
       sha256: createHash("sha256").update(content).digest("hex"),

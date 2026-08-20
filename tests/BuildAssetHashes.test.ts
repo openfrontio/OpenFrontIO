@@ -33,6 +33,45 @@ describe("hashDirectory", () => {
     expect(result["index.html"]).toBeUndefined();
     expect(result["asset-manifest.json"]).toBeUndefined();
   });
+
+  // The real static/ carries these alongside the hashed roots. Emitting them
+  // would give the descriptor a url of "/LICENSE", which the desktop shell's
+  // safeOverlayPath rejects -- and it throws on the first offender, so the
+  // whole descriptor fails to parse and every Steam client lands in `failed`.
+  it("excludes unhashed root files copied through the build, such as LICENSE", async () => {
+    await fs.mkdir(path.join(dir, "assets"), { recursive: true });
+    await fs.writeFile(path.join(dir, "assets", "index-abc.js"), "hello");
+    for (const name of [
+      "LICENSE",
+      "ads.txt",
+      "privacy-policy.html",
+      "robots.txt",
+      "terms-of-service.html",
+      "version.txt",
+    ]) {
+      await fs.writeFile(path.join(dir, name), name);
+    }
+
+    const result = await hashDirectory(dir);
+
+    expect(Object.keys(result)).toEqual(["assets/index-abc.js"]);
+  });
+
+  it("emits only paths under assets/ or _assets/", async () => {
+    await fs.mkdir(path.join(dir, "_assets", "maps"), { recursive: true });
+    await fs.mkdir(path.join(dir, "assets"), { recursive: true });
+    await fs.mkdir(path.join(dir, "other"), { recursive: true });
+    await fs.writeFile(path.join(dir, "_assets", "maps", "a.bin"), "a");
+    await fs.writeFile(path.join(dir, "assets", "b.js"), "b");
+    await fs.writeFile(path.join(dir, "other", "c.txt"), "c");
+
+    const result = await hashDirectory(dir);
+
+    expect(Object.keys(result).sort()).toEqual([
+      "_assets/maps/a.bin",
+      "assets/b.js",
+    ]);
+  });
 });
 
 describe("hashSourceTree", () => {

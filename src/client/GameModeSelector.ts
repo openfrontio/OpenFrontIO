@@ -39,7 +39,7 @@ export function shouldBlockMultiplayerAction(
   state: DesktopUpdateState | null,
 ): boolean {
   if (state === null) return false;
-  return !multiplayerAllowed(state.status);
+  return !multiplayerAllowed(state);
 }
 
 @customElement("game-mode-selector")

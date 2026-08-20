@@ -74,6 +74,51 @@ describe("buildDescriptor", () => {
     expect(d.coreVersion).toBe("abc123");
   });
 
+  // A build-time failure beats 100% of clients failing at runtime: the shell's
+  // parseDescriptor aborts the WHOLE descriptor on the first url outside
+  // /assets/ and /_assets/, so a stray hash entry is not a degraded asset, it
+  // is every Steam player stuck in `failed`.
+  it("throws when a hash entry is outside the allowed roots, naming the offender", async () => {
+    await fs.writeFile(
+      path.join(dir, "asset-hashes.json"),
+      JSON.stringify({
+        "assets/index-xyz.js": { sha256: "e".repeat(64), bytes: 34 },
+        LICENSE: { sha256: "d".repeat(64), bytes: 11 },
+      }),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+      }),
+    ).rejects.toThrow(/LICENSE/);
+  });
+
+  // The descriptor's `assets` map is keyed by EMITTED PATH; asset-manifest.json
+  // maps SEMANTIC NAME -> hashed url. Deriving one from the other leaves every
+  // _assets/** lookup missing, so the two must both travel.
+  it("carries asset-manifest.json verbatim as the semantic mapping", async () => {
+    const d = await buildDescriptor(dir, {
+      clientVersion: "sha-1",
+      cdnBase: "https://cdn.example",
+    });
+
+    expect(d.assetManifest).toEqual({
+      "images/a.png": "/_assets/images/a.deadbeef.png",
+    });
+    // Distinct key-spaces: the semantic name is not an assets key.
+    expect(d.assets["images/a.png"]).toBeUndefined();
+  });
+
+  it("throws rather than serving a descriptor whose asset manifest is empty", async () => {
+    await fs.writeFile(path.join(dir, "asset-manifest.json"), "{}");
+
+    await expect(
+      buildDescriptor(dir, { clientVersion: "s", cdnBase: "https://c" }),
+    ).rejects.toThrow(/asset-manifest\.json/);
+  });
+
   it("throws rather than serving a descriptor with no assets", async () => {
     await fs.writeFile(path.join(dir, "asset-hashes.json"), "{}");
 

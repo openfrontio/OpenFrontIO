@@ -23,7 +23,23 @@ export interface ReleaseDescriptor {
   minShellVersion: string;
   cdnBase: string;
   template: { html: string; sha256: string };
+  /**
+   * The download set, keyed by emitted path
+   * ("_assets/atlases/emoji-atlas.eb6eeb4f.png").
+   */
   assets: Record<string, ReleaseAsset>;
+  /**
+   * static/asset-manifest.json verbatim: the SEMANTIC mapping
+   * ("atlases/emoji-atlas.png" -> "/_assets/atlases/emoji-atlas.eb6eeb4f.png")
+   * the client resolves asset names through at runtime.
+   *
+   * A separate field from `assets` because the two key-spaces are different and
+   * overlap in only a handful of entries -- the Vite `assets/**` outputs, where
+   * the semantic name happens to equal the emitted path. Deriving one from the
+   * other yields a manifest whose `_assets/**` lookups all miss, and a client
+   * that boots but cannot start a game.
+   */
+  assetManifest: Record<string, string>;
 }
 
 export interface VersionPointer {
@@ -46,10 +62,11 @@ export async function buildDescriptor(
   staticDir: string,
   opts: BuildOpts,
 ): Promise<ReleaseDescriptor> {
-  const [html, hashesRaw, coreRaw] = await Promise.all([
+  const [html, hashesRaw, coreRaw, manifestRaw] = await Promise.all([
     fs.readFile(path.join(staticDir, "index.html"), "utf-8"),
     fs.readFile(path.join(staticDir, "asset-hashes.json"), "utf-8"),
     fs.readFile(path.join(staticDir, "core-version.txt"), "utf-8"),
+    fs.readFile(path.join(staticDir, "asset-manifest.json"), "utf-8"),
   ]);
 
   const hashes = JSON.parse(hashesRaw) as Record<
@@ -64,7 +81,27 @@ export async function buildDescriptor(
 
   const assets: Record<string, ReleaseAsset> = {};
   for (const [rel, h] of Object.entries(hashes)) {
-    assets[rel] = { url: `/${rel}`, sha256: h.sha256, bytes: h.bytes };
+    const url = `/${rel}`;
+    // Fail the BUILD rather than every client. The shell's parseDescriptor
+    // rejects the entire descriptor on the first url outside these roots, so
+    // one bad entry here is a 100% runtime failure for every Steam player.
+    // Must match ALLOWED_ROOTS in the shell's src/main/update/descriptor.ts and
+    // the allowlist in scripts/buildAssetHashes.ts.
+    if (!url.startsWith("/assets/") && !url.startsWith("/_assets/")) {
+      throw new Error(
+        `asset-hashes.json contains "${rel}", which is outside /assets/ and ` +
+          `/_assets/ — the desktop shell rejects the whole descriptor on it. ` +
+          `Fix hashDirectory in scripts/buildAssetHashes.ts.`,
+      );
+    }
+    assets[rel] = { url, sha256: h.sha256, bytes: h.bytes };
+  }
+
+  const assetManifest = JSON.parse(manifestRaw) as Record<string, string>;
+  if (Object.keys(assetManifest).length === 0) {
+    throw new Error(
+      "asset-manifest.json is empty — the desktop client resolves every asset name through it",
+    );
   }
 
   if (opts.cdnBase === "") {
@@ -84,6 +121,7 @@ export async function buildDescriptor(
       sha256: createHash("sha256").update(html).digest("hex"),
     },
     assets,
+    assetManifest,
   };
 }
 

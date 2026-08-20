@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { desktopUpdate, multiplayerAllowed } from "../src/client/DesktopShell";
+import {
+  desktopUpdate,
+  multiplayerAllowed,
+  type DesktopUpdateState,
+  type DesktopUpdateStatus,
+} from "../src/client/DesktopShell";
 
 afterEach(() => {
   delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
@@ -27,12 +32,34 @@ describe("desktopUpdate", () => {
 });
 
 describe("multiplayerAllowed", () => {
+  const st = (
+    status: DesktopUpdateStatus,
+    error?: { kind: string; message: string },
+  ): DesktopUpdateState => ({ status, bytes: 0, total: 0, error });
+
   it("gates only the states the player can act on", () => {
-    expect(multiplayerAllowed("current")).toBe(true);
-    expect(multiplayerAllowed("checking")).toBe(true);
-    expect(multiplayerAllowed("blocked")).toBe(true);
-    expect(multiplayerAllowed("downloading")).toBe(false);
-    expect(multiplayerAllowed("staged")).toBe(false);
-    expect(multiplayerAllowed("failed")).toBe(false);
+    expect(multiplayerAllowed(st("current"))).toBe(true);
+    expect(multiplayerAllowed(st("checking"))).toBe(true);
+    expect(multiplayerAllowed(st("blocked"))).toBe(true);
+    expect(multiplayerAllowed(st("downloading"))).toBe(false);
+    expect(multiplayerAllowed(st("staged"))).toBe(false);
+  });
+
+  it("gates a failed check only when retrying could work", () => {
+    expect(
+      multiplayerAllowed(st("failed", { kind: "network", message: "offline" })),
+    ).toBe(false);
+  });
+
+  it("does not gate failures Retry provably cannot fix", () => {
+    expect(
+      multiplayerAllowed(st("failed", { kind: "refused", message: "403" })),
+    ).toBe(true);
+    expect(
+      multiplayerAllowed(st("failed", { kind: "parse", message: "bad json" })),
+    ).toBe(true);
+    expect(
+      multiplayerAllowed(st("failed", { kind: "verify", message: "bad sha" })),
+    ).toBe(true);
   });
 });

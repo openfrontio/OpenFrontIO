@@ -30,4 +30,31 @@ describe("shouldBlockMultiplayerAction", () => {
       shouldBlockMultiplayerAction({ status: "blocked", bytes: 0, total: 0 }),
     ).toBe(false);
   });
+
+  it("blocks a failed check only when Retry has something to retry", () => {
+    expect(
+      shouldBlockMultiplayerAction({
+        status: "failed",
+        bytes: 0,
+        total: 0,
+        error: { kind: "network", message: "offline" },
+      }),
+    ).toBe(true);
+    expect(
+      shouldBlockMultiplayerAction({
+        status: "failed",
+        bytes: 0,
+        total: 0,
+        error: { kind: "refused", message: "403" },
+      }),
+    ).toBe(false);
+    expect(
+      shouldBlockMultiplayerAction({
+        status: "failed",
+        bytes: 0,
+        total: 0,
+        error: { kind: "parse", message: "bad json" },
+      }),
+    ).toBe(false);
+  });
 });

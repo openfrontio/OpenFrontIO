@@ -100,14 +100,32 @@ export function desktopUpdate(): DesktopUpdateBridge | null {
  * Whether multiplayer should be available in a given update state.
  *
  * Gate when the player has a remedy, not merely when there is a problem:
- * downloading -> wait, staged -> reload, failed -> retry. `blocked` means the
- * shell is too old and only a Steam depot push fixes it, so gating there would
- * lock a paying player out for hours with no action available.
+ * downloading -> wait, staged -> reload. `blocked` means the shell is too old
+ * and only a Steam depot push fixes it, so gating there would lock a paying
+ * player out for hours with no action available.
+ *
+ * `failed` gates ONLY on a network error, because that is the only failure
+ * Retry can actually resolve. A `refused` (our own Cloudflare WAF answering
+ * 403), a `parse` (a malformed descriptor) and a `verify` (CDN bytes that do
+ * not match the descriptor's hash) are all deterministic and entirely
+ * server-side: pressing Retry re-runs the identical failure, so gating there
+ * is punishment without recourse, exactly like `blocked`. Offering a Retry
+ * button next to a lockout that Retry provably cannot lift is the worst of
+ * both.
+ *
+ * Takes the whole state rather than the bare status because the error kind is
+ * load-bearing in that decision.
  *
  * This duplicates multiplayerAllowed in openfront-desktop's
  * src/main/update/state.ts. The two repositories cannot import from each other;
  * if you change one, change the other.
  */
-export function multiplayerAllowed(status: DesktopUpdateStatus): boolean {
-  return status === "current" || status === "checking" || status === "blocked";
+export function multiplayerAllowed(state: DesktopUpdateState): boolean {
+  const { status } = state;
+  if (status === "current" || status === "checking" || status === "blocked") {
+    return true;
+  }
+  if (status === "failed") return state.error?.kind !== "network";
+  // downloading (wait) and staged (reload) both have a real remedy.
+  return false;
 }
