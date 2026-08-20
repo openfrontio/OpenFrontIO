@@ -1,13 +1,12 @@
-import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { LitElement } from "lit";
+import { customElement } from "lit/decorators.js";
 import { adGatekeeper } from "./AdGatekeeper";
 
 // ─── Gutter Ads ──────────────────────────────────────────────────────────────
 
 @customElement("homepage-promos")
 export class HomepagePromos extends LitElement {
-  @state() private isVisible: boolean = false;
-  @state() private adLoaded: boolean = false;
+  private adLoaded: boolean = false;
   private cornerAdLoaded: boolean = false;
   private cornerAdDestroyed: boolean = false;
 
@@ -42,11 +41,6 @@ export class HomepagePromos extends LitElement {
   private topAdResize: ResizeObserver | null = null;
   private topAdStyle: MutationObserver | null = null;
   private topAdMutation: MutationObserver | null = null;
-
-  private leftAdType: string = "standard_iab_left2";
-  private rightAdType: string = "standard_iab_rght1";
-  private leftContainerId: string = "gutter-ad-container-left";
-  private rightContainerId: string = "gutter-ad-container-right";
 
   createRenderRoot() {
     return this;
@@ -130,23 +124,19 @@ export class HomepagePromos extends LitElement {
   }
 
   public show(): void {
-    this.isVisible = true;
-    this.requestUpdate();
-    this.updateComplete.then(() => {
-      this.loadGutterAds();
-    });
+    this.loadGutterAds();
   }
 
   public close(): void {
-    this.isVisible = false;
     this.adLoaded = false;
     try {
-      // Destroy gutter ads; bottom_rail persists into spawn phase.
-      window.ramp.destroyUnits(this.leftAdType);
-      window.ramp.destroyUnits(this.rightAdType);
-      console.log("successfully destroyed gutter ads");
+      // Destroy gutter rails; bottom_rail persists into spawn phase. Rails are
+      // no-selector units, registered under pw-oop- ids (see destroyBottomRail).
+      window.ramp.destroyUnits("pw-oop-left_rail");
+      window.ramp.destroyUnits("pw-oop-right_rail");
+      console.log("successfully destroyed gutter rails");
     } catch (e) {
-      console.error("error destroying gutter ads", e);
+      console.error("error destroying gutter rails", e);
     }
     // Adblock-detected users get NO in-game ads (the AdGatekeeper latch is
     // permanent, surviving the blocker being disabled), so the corner video
@@ -195,15 +185,7 @@ export class HomepagePromos extends LitElement {
   }
 
   private loadGutterAds(): void {
-    console.log("loading ramp gutter ads");
-    const leftContainer = this.querySelector(`#${this.leftContainerId}`);
-    const rightContainer = this.querySelector(`#${this.rightContainerId}`);
-
-    if (!leftContainer || !rightContainer) {
-      console.warn("Ad containers not found in DOM");
-      return;
-    }
-
+    console.log("loading ramp gutter rails");
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
       return;
@@ -218,17 +200,17 @@ export class HomepagePromos extends LitElement {
       window.ramp.que.push(() => {
         try {
           window.ramp.spaAddAds([
-            { type: this.leftAdType, selectorId: this.leftContainerId },
-            { type: this.rightAdType, selectorId: this.rightContainerId },
+            { type: "left_rail" },
+            { type: "right_rail" },
           ]);
           this.adLoaded = true;
-          console.log("Gutter ads loaded:", this.leftAdType, this.rightAdType);
+          console.log("Gutter rails loaded");
         } catch (e) {
           console.log(e);
         }
       });
     } catch (error) {
-      console.error("Failed to load gutter ads:", error);
+      console.error("Failed to load gutter rails:", error);
     }
   }
 
@@ -282,35 +264,5 @@ export class HomepagePromos extends LitElement {
     } catch (e) {
       console.error("Error destroying corner_ad_video:", e);
     }
-  }
-
-  render() {
-    if (!this.isVisible) {
-      return html``;
-    }
-
-    return html`
-      <!-- Left Gutter Ad -->
-      <div
-        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center xl:[--half-content:10.5cm] 2xl:[--half-content:12.5cm]"
-        style="left: calc(50% - var(--half-content) - 208px); top: calc(50% + 10px);"
-      >
-        <div
-          id="${this.leftContainerId}"
-          class="w-full h-full flex items-center justify-center p-2"
-        ></div>
-      </div>
-
-      <!-- Right Gutter Ad -->
-      <div
-        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center xl:[--half-content:10.5cm] 2xl:[--half-content:12.5cm]"
-        style="left: calc(50% + var(--half-content) + 48px); top: calc(50% + 10px);"
-      >
-        <div
-          id="${this.rightContainerId}"
-          class="w-full h-full flex items-center justify-center p-2"
-        ></div>
-      </div>
-    `;
   }
 }
