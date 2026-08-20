@@ -133,7 +133,7 @@ describe("GameServer - spectators", () => {
     expect((game as any).cancelShortHandedMatch()).toBe(true);
   });
 
-  it.each(["intent", "winner", "live_stats"])(
+  it.each(["intent", "winner", "live_stats", "hash"])(
     "drops a %s sent by a spectator",
     async (type) => {
       // Taking no slot must not buy a way into the intent stream.
@@ -145,8 +145,19 @@ describe("GameServer - spectators", () => {
       };
       const spectator = makeClient("cast", true);
       game.joinClient(spectator);
-      await (spectator.ws as any).emit({ type, intent: { type: "spawn" } });
-      expect(spies[type as keyof typeof spies]).not.toHaveBeenCalled();
+      await (spectator.ws as any).emit({
+        type,
+        intent: { type: "spawn" },
+        turnNumber: 1,
+        hash: 42,
+      });
+      if (type === "hash") {
+        // hash has no handler spy — it writes client.hashes, which feeds the
+        // desync agreement a spectator must not vote in.
+        expect(spectator.hashes.size).toBe(0);
+      } else {
+        expect(spies[type as keyof typeof spies]).not.toHaveBeenCalled();
+      }
     },
   );
 

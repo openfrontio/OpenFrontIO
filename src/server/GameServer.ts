@@ -89,9 +89,15 @@ const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_MATCH_CANCELLED = "kick_reason.match_cancelled";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 
-// Messages that speak for a player in the simulation, so a spectator may not send
-// them. Everything else (ping, hash, rejoin) is connection housekeeping.
-const SPECTATOR_BLOCKED_MESSAGES = new Set(["intent", "winner", "live_stats"]);
+// Messages that speak for a player in the simulation, so a spectator may not
+// send them — including hash, which feeds desync agreement. Ping and rejoin
+// remain connection housekeeping.
+const SPECTATOR_BLOCKED_MESSAGES = new Set([
+  "intent",
+  "winner",
+  "live_stats",
+  "hash",
+]);
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
 // Whether the host-only cheat block actually grants anything: mere presence

@@ -125,7 +125,11 @@ export class JoinLobbyModal extends BaseModal {
   // frozen at start, so the server would refuse to seat anyone new and the
   // control would do nothing.
   private renderSpectateToggle() {
-    if (this.isConnecting || this.lobbyStartAt === null) return html``;
+    // Any joined lobby can be spectated — a host-started private lobby has no
+    // scheduled start (lobbyStartAt null), and gating on it hid the toggle in
+    // exactly the lobbies it exists for. The server still refuses seating after
+    // start, so no client-side start check is needed here.
+    if (this.isConnecting) return html``;
     const spectating = this.isSpectating;
     const cls = (on: boolean) =>
       `px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest transition ${
@@ -294,17 +298,23 @@ export class JoinLobbyModal extends BaseModal {
                 @click=${this.pasteFromClipboard}
               ></o-button>
             </div>
-            <o-button
-              title=${translateText("private_lobby.join_lobby")}
-              width="block"
-              submit
-            ></o-button>
-            <o-button
-              variant="ghost"
-              title=${translateText("private_lobby.spectate")}
-              width="block"
-              @click=${this.spectateLobbyFromInput}
-            ></o-button>
+            <div class="flex gap-2">
+              <div class="flex-[2]">
+                <o-button
+                  title=${translateText("private_lobby.join_lobby")}
+                  width="block"
+                  submit
+                ></o-button>
+              </div>
+              <div class="flex-1">
+                <o-button
+                  variant="ghost"
+                  title=${translateText("private_lobby.spectate")}
+                  width="block"
+                  @click=${this.spectateLobbyFromInput}
+                ></o-button>
+              </div>
+            </div>
           </div>
         </form>
         ${this.renderHostedLobbies()}
