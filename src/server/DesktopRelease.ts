@@ -28,6 +28,16 @@ const MIN_SHELL_VERSION = "0.1.0";
 // entire point of asserting here at all.
 const ALLOWED_ROOTS = ["assets/", "_assets/"];
 
+// Same mirror-of-the-shell rationale as ALLOWED_ROOTS above: parseDescriptor
+// in openfront-desktop's src/main/update/descriptor.ts requires `sha256` to be
+// 64 lowercase hex characters and `bytes` a non-negative integer, and throws
+// on the first entry that isn't -- aborting the parse of the WHOLE descriptor.
+// asset-hashes.json is generated, not hand-written, but a bug in
+// scripts/buildAssetHashes.ts (or a corrupted build artifact) would otherwise
+// pass straight through this file and only surface once every Steam client
+// fails to update.
+const SHA256 = /^[0-9a-f]{64}$/;
+
 function shellWouldRefuse(value: string): boolean {
   if (typeof value !== "string" || value === "") return true;
   // NUL, written as an escape rather than a raw byte: 171 real flag
@@ -146,6 +156,30 @@ export async function buildDescriptor(
           `The shell rejects the WHOLE descriptor on it, so every Steam client ` +
           `would fail to update. Fix hashDirectory in ` +
           `scripts/buildAssetHashes.ts.`,
+      );
+    }
+    // sha256/bytes are taken from a generated file and used as-is elsewhere,
+    // so a malformed entry here would otherwise reach parseDescriptor
+    // untouched -- same build-time-vs-runtime tradeoff as the path check
+    // above.
+    if (typeof h.sha256 !== "string" || !SHA256.test(h.sha256)) {
+      throw new Error(
+        `asset-hashes.json["${rel}"].sha256 is not 64 lowercase hex ` +
+          `characters, which the desktop shell's parseDescriptor requires. ` +
+          `The shell rejects the WHOLE descriptor on it, so every Steam ` +
+          `client would fail to update.`,
+      );
+    }
+    if (
+      typeof h.bytes !== "number" ||
+      !Number.isInteger(h.bytes) ||
+      h.bytes < 0
+    ) {
+      throw new Error(
+        `asset-hashes.json["${rel}"].bytes is not a non-negative integer, ` +
+          `which the desktop shell's parseDescriptor requires. The shell ` +
+          `rejects the WHOLE descriptor on it, so every Steam client would ` +
+          `fail to update.`,
       );
     }
     assets[rel] = { url, sha256: h.sha256, bytes: h.bytes };

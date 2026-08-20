@@ -124,6 +124,52 @@ describe("buildDescriptor", () => {
     ).rejects.toThrow(/safeOverlayPath/);
   });
 
+  // sha256/bytes come from a generated file and were previously cast without
+  // being checked, so a malformed entry passed the build and only surfaced
+  // once the shell's parseDescriptor rejected the WHOLE descriptor at
+  // runtime -- the same failure class as the path checks above.
+  it.each([
+    ["missing", undefined],
+    ["too short", "e".repeat(63)],
+    ["uppercase", "E".repeat(64)],
+    ["not hex", "g".repeat(64)],
+  ])("throws when an asset hash's sha256 is %s", async (_label, sha256) => {
+    await fs.writeFile(
+      path.join(dir, "asset-hashes.json"),
+      JSON.stringify({
+        "assets/index-xyz.js": { sha256, bytes: 34 },
+      }),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+      }),
+    ).rejects.toThrow(/sha256/);
+  });
+
+  it.each([
+    ["a string", "34"],
+    ["negative", -1],
+    ["non-integer", 1.5],
+    ["missing", undefined],
+  ])("throws when an asset hash's bytes is %s", async (_label, bytes) => {
+    await fs.writeFile(
+      path.join(dir, "asset-hashes.json"),
+      JSON.stringify({
+        "assets/index-xyz.js": { sha256: "e".repeat(64), bytes },
+      }),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+      }),
+    ).rejects.toThrow(/bytes/);
+  });
+
   // Nothing checked these at build time at all before.
   it.each([
     ["escapes the overlay", "/../../etc/passwd"],
