@@ -158,6 +158,20 @@ export async function buildDescriptor(
           `scripts/buildAssetHashes.ts.`,
       );
     }
+    // Check the entry is an object before reading its fields. JSON null is
+    // typeof "object", so `h.sha256` on one throws a bare TypeError naming
+    // nothing -- losing the key and the reason, which is the whole point of
+    // failing here rather than in every client.
+    // Check the entry is an object before reading its fields. JSON null is
+    // typeof "object", so `h.sha256` on one throws a bare TypeError naming
+    // nothing -- losing the key and the reason, which is the whole point of
+    // failing here rather than in every client.
+    if (typeof h !== "object" || h === null || Array.isArray(h)) {
+      throw new Error(
+        `asset-hashes.json["${rel}"] is not an object. Expected ` +
+          `{ sha256, bytes } from scripts/buildAssetHashes.ts.`,
+      );
+    }
     // sha256/bytes are taken from a generated file and used as-is elsewhere,
     // so a malformed entry here would otherwise reach parseDescriptor
     // untouched -- same build-time-vs-runtime tradeoff as the path check

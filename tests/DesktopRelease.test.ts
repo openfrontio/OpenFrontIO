@@ -246,6 +246,20 @@ describe("buildDescriptor", () => {
     ).rejects.toThrow(/asset-manifest\.json/);
   });
 
+  it("names the key when a hash entry is not an object", async () => {
+    // JSON null is typeof "object", so reading .sha256 off it throws a bare
+    // TypeError naming nothing -- losing the key and the reason, which is the
+    // whole point of failing at build time rather than in every client.
+    await fs.writeFile(
+      path.join(dir, "asset-hashes.json"),
+      JSON.stringify({ "assets/index-xyz.js": null }),
+    );
+
+    await expect(
+      buildDescriptor(dir, { clientVersion: "s", cdnBase: "https://c" }),
+    ).rejects.toThrow(/assets\/index-xyz\.js.*is not an object/);
+  });
+
   it("throws rather than serving a descriptor with no assets", async () => {
     await fs.writeFile(path.join(dir, "asset-hashes.json"), "{}");
 
