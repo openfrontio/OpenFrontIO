@@ -4,7 +4,7 @@ import { EventBus, GameEvent } from "../../../core/EventBus";
 import { Controller } from "../../Controller";
 import { CloseViewEvent } from "../../InputHandler";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
-import { getSvgAspectRatio, translateText } from "../../Utils";
+import { getSvgAspectRatio, renderDuration, translateText } from "../../Utils";
 import {
   CenterButtonElement,
   COLORS,
@@ -716,11 +716,7 @@ export class RadialMenu implements Controller {
             content
               .append("text")
               .attr("class", `cooldown-text`)
-              .text(
-                translateText("events_display.alliance_cooldown_text", {
-                  amount: cooldown,
-                }),
-              )
+              .text(renderDuration(cooldown))
               .attr("fill", "white")
               .attr("opacity", isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1)
               .attr("font-size", "20px")
@@ -1251,11 +1247,7 @@ export class RadialMenu implements Controller {
                 }
 
                 cooldownText
-                  .text(
-                    translateText("events_display.alliance_cooldown_text", {
-                      amount: cooldown,
-                    }),
-                  )
+                  .text(renderDuration(cooldown))
                   .attr(
                     "opacity",
                     isAllianceCooldown ? 0.82 : disabled ? 0.5 : 1,
