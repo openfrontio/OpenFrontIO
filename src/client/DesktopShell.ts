@@ -92,6 +92,7 @@ type UpdateBridgeHolder = { update?: DesktopUpdateBridge };
  * degrade rather than break.
  */
 export function desktopUpdate(): DesktopUpdateBridge | null {
+  if (typeof window === "undefined") return null;
   const desktop = window.openfrontDesktop as UpdateBridgeHolder | undefined;
   return desktop?.update ?? null;
 }
