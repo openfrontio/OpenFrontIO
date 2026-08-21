@@ -184,6 +184,13 @@ export function joinLobby(
       if (terrainLoad === load) {
         terrainLoad = null;
       }
+      // If this map is the one the debounce points at, reset its streak so a
+      // persistent failure doesn't re-trigger (and warn-spam) on every
+      // subsequent lobby_info broadcast; a transient blip just re-accumulates.
+      if (pendingPreloadKey === key) {
+        pendingPreloadKey = null;
+        pendingPreloadStreak = 0;
+      }
       console.warn(
         `lobby: terrain preload failed for "${key}"; will retry at game start`,
         e,
