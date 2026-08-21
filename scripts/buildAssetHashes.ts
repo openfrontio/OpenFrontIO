@@ -73,8 +73,16 @@ export async function hashSourceTree(dir: string): Promise<string> {
   const files = (await walk(dir)).sort();
   const hash = createHash("sha256");
   for (const rel of files) {
-    hash.update(rel);
-    hash.update(await fs.readFile(path.join(dir, rel)));
+    const relBytes = Buffer.from(rel, "utf8");
+    const content = await fs.readFile(path.join(dir, rel));
+    // Length-prefix both fields. Feeding path and content in unseparated makes
+    // the encoding ambiguous: a file "a" holding "bc" hashes identically to a
+    // file "ab" holding "c", so a rename that shifts bytes across the boundary
+    // would leave coreVersion unchanged -- the one thing it exists to detect.
+    hash.update(`${relBytes.length}:`);
+    hash.update(relBytes);
+    hash.update(`${content.length}:`);
+    hash.update(content);
   }
   return hash.digest("hex");
 }

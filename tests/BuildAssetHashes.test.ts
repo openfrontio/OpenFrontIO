@@ -84,6 +84,20 @@ describe("hashSourceTree", () => {
     expect(await hashSourceTree(dir)).not.toBe(first);
   });
 
+  it("distinguishes a path/content split that concatenation would collide", async () => {
+    // "a" holding "bc" and "ab" holding "c" produce the same byte stream when
+    // path and content are fed in unseparated. Length-prefixing keeps them
+    // distinct, so a rename that shifts bytes across the boundary still moves
+    // the hash.
+    await fs.writeFile(path.join(dir, "a"), "bc");
+    const first = await hashSourceTree(dir);
+
+    const other = await fs.mkdtemp(path.join(os.tmpdir(), "hashes-"));
+    await fs.writeFile(path.join(other, "ab"), "c");
+
+    expect(await hashSourceTree(other)).not.toBe(first);
+  });
+
   it("does not depend on directory read order", async () => {
     await fs.writeFile(path.join(dir, "z.ts"), "z");
     await fs.writeFile(path.join(dir, "a.ts"), "a");
