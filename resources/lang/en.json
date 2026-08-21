@@ -701,6 +701,7 @@
     "mins_placeholder": "Mins",
     "nations": "Nations: ",
     "options": "Options",
+    "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
     "start": "Start Game",
     "starting_gold": "Starting Gold (Millions)",
@@ -935,6 +936,8 @@
     "player_whitelist_placeholder": "comma separated",
     "players": "Players",
     "remove_player": "Remove {username}",
+    "spectator": "Spectator",
+    "spectators": "Spectators",
     "start_delay": "Start delay (Seconds)",
     "starting_in": "Starting in {time}. Click to cancel",
     "subscription_required_body": "You must be subscribed to make your lobby public.",
@@ -956,7 +959,15 @@
     "load_failed": "Couldn't load your inventory. Please reload and try again.",
     "loading": "Loading inventory…",
     "loadout": "Your loadout",
+    "loadout_add": "New loadout",
+    "loadout_applied": "Equipped loadout {name}",
     "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "Delete {name}",
+    "loadout_deleted": "Deleted loadout {name}",
+    "loadout_limit": "You can save up to {count} loadouts.",
+    "loadout_presets": "Loadouts",
+    "loadout_saved": "Saved loadout {name}",
+    "loadout_slot": "Loadout {name}",
     "no_owned_crowns": "You don't own any crowns yet.",
     "no_owned_effects_of_type": "You don't own any {type} effects yet.",
     "no_owned_skins": "You don't own any skins yet.",
@@ -965,7 +976,9 @@
     "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Effects equipped: {count}",
     "title": "Inventory",
-    "unequip": "Unequip"
+    "unequip": "Unequip",
+    "unequip_all": "Unequip all",
+    "unequipped_all": "Unequipped everything"
   },
   "ios_banner": {
     "got_it": "Got it",
@@ -1303,6 +1316,11 @@
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
   },
+  "overtime": {
+    "started": "Overtime! The territory needed to win is now dropping.",
+    "title": "Overtime",
+    "to_win": "Hold > {pct}% to win"
+  },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",
     "collapse": "Collapse",
@@ -1461,7 +1479,10 @@
     "no_open_lobbies": "No open lobbies right now",
     "not_found": "Lobby not found. Please check the ID and try again.",
     "open_lobbies": "Open Lobbies",
+    "play": "Play",
     "pvp_immunity": "PVP immunity duration",
+    "spectate": "Spectate",
+    "spectating": "Spectating! Loading the game...",
     "starting_gold": "Starting Gold",
     "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."

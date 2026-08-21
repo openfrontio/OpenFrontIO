@@ -20,6 +20,8 @@ import {
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
+  LOADOUTS_KEY,
+  MAX_LOADOUTS,
   PATTERN_KEY,
   UserSettings,
 } from "../../src/core/game/UserSettings";
@@ -250,6 +252,41 @@ async function showTab(
   if (effects) await (effects as LitElement).updateComplete;
 }
 
+function loadoutMenu(modal: InventoryModal): LitElement {
+  return modal.querySelector("inventory-loadout-menu") as LitElement;
+}
+
+function loadoutSlots(modal: InventoryModal): string[] {
+  return [
+    ...loadoutMenu(modal).querySelectorAll<HTMLButtonElement>(
+      "[data-loadout-slot]",
+    ),
+  ].map((slot) => slot.dataset.loadoutSlot!);
+}
+
+async function addLoadoutSlot(modal: InventoryModal) {
+  loadoutMenu(modal)
+    .querySelector<HTMLButtonElement>("[data-loadout-add]")!
+    .click();
+  await modal.updateComplete;
+  await loadoutMenu(modal).updateComplete;
+}
+
+async function selectLoadoutSlot(modal: InventoryModal, name: string) {
+  loadoutMenu(modal)
+    .querySelector<HTMLButtonElement>(`[data-loadout-slot="${name}"]`)!
+    .click();
+  await modal.updateComplete;
+  await loadoutMenu(modal).updateComplete;
+}
+
+function activeSlot(modal: InventoryModal): string | null {
+  const active = loadoutMenu(modal).querySelector<HTMLButtonElement>(
+    '[data-loadout-slot][aria-pressed="true"]',
+  );
+  return active?.dataset.loadoutSlot ?? null;
+}
+
 describe("InventoryModal", () => {
   let modal: InventoryModal;
   let languageFixture: HTMLElement;
@@ -263,6 +300,7 @@ describe("InventoryModal", () => {
     settings.removeCached(FLAG_KEY);
     settings.removeCached(CROWN_KEY);
     settings.removeCached(EFFECTS_KEY);
+    settings.removeCached(LOADOUTS_KEY);
     languageFixture = document.createElement("lang-selector");
     const translations = {
       "inventory.equipped": "Equipped",
@@ -272,6 +310,16 @@ describe("InventoryModal", () => {
       "inventory.selected_cosmetic": "Selected {name}",
       "inventory.selected_cosmetic_variant": "{name} ({variant})",
       "inventory.unequip": "Unequip",
+      "inventory.unequip_all": "Unequip all",
+      "inventory.unequipped_all": "Unequipped everything",
+      "inventory.loadout_applied": "Equipped loadout {name}",
+      "inventory.loadout_deleted": "Deleted loadout {name}",
+      "inventory.loadout_limit": "You can save up to {count} loadouts.",
+      "inventory.loadout_presets": "Loadouts",
+      "inventory.loadout_saved": "Saved loadout {name}",
+      "inventory.loadout_add": "New loadout",
+      "inventory.loadout_slot": "Loadout {name}",
+      "inventory.loadout_delete_target": "Delete {name}",
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
       "main.store": "Store",
@@ -857,5 +905,118 @@ describe("InventoryModal", () => {
     await showTab(modal, "flags");
     expect(card(modal, "country:us")).toBeDefined();
     expect(modal.querySelector('[data-inventory-empty="flags"]')).toBeNull();
+  }, 30_000);
+
+  it("adds numbered loadout slots that mirror what's equipped", async () => {
+    await showTab(modal, "crowns");
+    expect(loadoutSlots(modal)).toEqual([]);
+    await activateCard(modal, "crown:owned_crown");
+
+    await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toEqual(["01"]);
+    expect(activeSlot(modal)).toBe("01");
+    const settings = new UserSettings();
+    expect(settings.getLoadout("01")?.crown).toBe("owned_crown");
+
+    // No Save step: equipping writes straight into the active slot.
+    await showTab(modal, "flags");
+    await activateCard(modal, "flag:owned_flag");
+    expect(settings.getLoadout("01")).toMatchObject({
+      crown: "owned_crown",
+      flag: "flag:owned_flag",
+    });
+  }, 30_000);
+
+  it("switches between slots, equipping each one's set", async () => {
+    await showTab(modal, "crowns");
+    await activateCard(modal, "crown:owned_crown");
+    await addLoadoutSlot(modal);
+
+    await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toEqual(["01", "02"]);
+    expect(activeSlot(modal)).toBe("02");
+    await showTab(modal, "skins");
+    await activateCard(modal, "skin:owned_skin");
+    await showTab(modal, "crowns");
+    modal.querySelector<HTMLButtonElement>("[data-inventory-unequip]")!.click();
+    await modal.updateComplete;
+
+    const settings = new UserSettings();
+    expect(settings.getLoadout("02")).toMatchObject({
+      pattern: "skin:owned_skin",
+      crown: null,
+    });
+
+    await selectLoadoutSlot(modal, "01");
+    expect(activeSlot(modal)).toBe("01");
+    expect(settings.getSelectedCrownName()).toBe("owned_crown");
+    expect(settings.getSelectedSkinName()).toBeNull();
+    // Selecting 01 must not have leaked the swap into 02.
+    expect(settings.getLoadout("02")?.pattern).toBe("skin:owned_skin");
+
+    await selectLoadoutSlot(modal, "02");
+    expect(settings.getSelectedSkinName()).toBe("owned_skin");
+    expect(settings.getSelectedCrownName()).toBeNull();
+    expect(settings.getLoadout("01")?.crown).toBe("owned_crown");
+  }, 30_000);
+
+  it("deletes only the active slot, through the button it carries", async () => {
+    await showTab(modal, "crowns");
+    await addLoadoutSlot(modal);
+    await addLoadoutSlot(modal);
+    const menu = loadoutMenu(modal);
+    // Inactive slots carry no delete button.
+    expect(menu.querySelectorAll("[data-loadout-delete]")).toHaveLength(1);
+    const remove = menu.querySelector<HTMLButtonElement>(
+      '[data-loadout-delete="02"]',
+    )!;
+    expect(remove.getAttribute("aria-label")).toBe("Delete 02");
+
+    remove.click();
+    await modal.updateComplete;
+    await menu.updateComplete;
+    expect(loadoutSlots(modal)).toEqual(["01"]);
+    expect(activeSlot(modal)).toBeNull();
+    expect(new UserSettings().getActiveLoadout()).toBeNull();
+    // A freed number is reused rather than skipped.
+    await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toEqual(["01", "02"]);
+  }, 30_000);
+
+  it("clears every category through Unequip all", async () => {
+    await showTab(modal, "skins");
+    const unequipAll = () =>
+      loadoutMenu(modal).querySelector<HTMLButtonElement>(
+        "[data-inventory-unequip-all]",
+      )!;
+    expect(unequipAll().disabled).toBe(true);
+    await activateCard(modal, "skin:owned_skin");
+    await showTab(modal, "crowns");
+    await activateCard(modal, "crown:owned_crown");
+    new UserSettings().setSelectedEffectName(
+      "transportShipTrail",
+      "owned_wake",
+    );
+    await loadoutMenu(modal).updateComplete;
+    expect(unequipAll().disabled).toBe(false);
+
+    unequipAll().click();
+    await modal.updateComplete;
+    await loadoutMenu(modal).updateComplete;
+    const settings = new UserSettings();
+    expect(settings.getSelectedSkinName()).toBeNull();
+    expect(settings.getSelectedCrownName()).toBeNull();
+    expect(settings.getSelectedEffects()).toEqual({});
+    expect(unequipAll().disabled).toBe(true);
+  }, 30_000);
+
+  it("stops offering new slots at the cap", async () => {
+    await showTab(modal, "skins");
+    for (let i = 0; i < MAX_LOADOUTS; i++) await addLoadoutSlot(modal);
+    expect(loadoutSlots(modal)).toHaveLength(MAX_LOADOUTS);
+    expect(
+      loadoutMenu(modal).querySelector<HTMLButtonElement>("[data-loadout-add]")!
+        .disabled,
+    ).toBe(true);
   }, 30_000);
 });

@@ -102,7 +102,8 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientSpectateMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -138,6 +139,7 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientSpectateMessage = z.infer<typeof ClientSpectateMessageSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -239,6 +241,9 @@ const ClientInfoSchema = z.object({
   // lobby list). Never set on anonymized entries — the badge vouches for
   // the exact display name.
   verified: z.boolean().optional(),
+  // Watching rather than playing. Listed like anyone else — a spectator sees the
+  // lobby exactly as a player does — but not in the simulation.
+  spectator: z.boolean().optional(),
   // Server-pinned team slot for matchmade team games, so the lobby's team
   // preview can honour the pins instead of re-deriving teams that the server
   // will overrule at start. Absent when the game isn't matchmade.
@@ -329,6 +334,9 @@ export interface ClientInfo {
   // Plays under their server-validated account name (blue check). Never set
   // on anonymized entries.
   verified?: boolean;
+  // Watching rather than playing — listed like anyone else, but not in the
+  // simulation.
+  spectator?: boolean;
   // Server-pinned team slot for matchmade team games; absent when not matchmade.
   teamIndex?: number;
 }
@@ -363,6 +371,16 @@ export const DoomsdayClockConfigSchema = z.object({
   speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
 });
 
+// Overtime (anti-stalemate). After startMinutes of game time the tile share
+// required to win drops steadily from the base (80% FFA / 95% team) at a fixed
+// rate (see OVERTIME_DEFAULTS in Config.ts), so the leading side eventually
+// crosses the shrinking bar and a stalled game is guaranteed to end. Only
+// `enabled` and `startMinutes` are wire-configurable.
+export const OvertimeConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  startMinutes: z.number().int().min(1).max(120).optional(),
+});
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -373,6 +391,7 @@ export const GameConfigSchema = z.object({
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   doomsdayClock: DoomsdayClockConfigSchema.optional(),
+  overtime: OvertimeConfigSchema.optional(),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean().optional(),
@@ -951,6 +970,8 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  // Watch without playing: no spawn, no team, no lobby slot.
+  spectator: z.boolean().optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -959,6 +980,14 @@ export const ClientRejoinMessageSchema = z.object({
   // Note: clientID is NOT sent - server looks it up from persistentID in token
   lastTurn: z.number(),
   token: TokenSchema,
+});
+
+// Switch between playing and watching from the lobby screen. Lobby-phase only:
+// once the game starts the player list is frozen, so the server refuses to turn
+// a spectator back into a player.
+export const ClientSpectateMessageSchema = z.object({
+  type: z.literal("spectate"),
+  spectator: z.boolean(),
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
@@ -970,6 +999,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientSpectateMessageSchema,
 ]);
 
 //

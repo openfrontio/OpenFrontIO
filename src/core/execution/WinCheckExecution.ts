@@ -108,7 +108,7 @@ export class WinCheckExecution implements Execution {
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     if (
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
-        this.mg.config().percentageTilesOwnedToWin() ||
+        this.mg.config().percentageTilesOwnedToWin(timeElapsed) ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
       timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
@@ -166,7 +166,7 @@ export class WinCheckExecution implements Execution {
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     const percentage = (max[1] / numTilesWithoutFallout) * 100;
     if (
-      percentage > this.mg.config().percentageTilesOwnedToWin() ||
+      percentage > this.mg.config().percentageTilesOwnedToWin(timeElapsed) ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
       timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS

@@ -666,6 +666,7 @@ export async function startWorker() {
           cosmeticResult.cosmetics,
           publicId,
           friends,
+          clientMsg.spectator === true,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

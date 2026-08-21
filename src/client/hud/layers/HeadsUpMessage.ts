@@ -29,7 +29,12 @@ export class HeadsUpMessage extends LitElement implements Controller {
   private isCatchingUp = false;
   private catchingUpTicks = 0;
 
+  @state()
+  private isOvertimeNotice = false;
+
   private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
+  // How long the overtime announcement banner stays up after the start minute.
+  private static readonly OVERTIME_NOTICE_SECONDS = 5;
 
   @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
@@ -116,11 +121,25 @@ export class HeadsUpMessage extends LitElement implements Controller {
     this.isCatchingUp =
       this.catchingUpTicks >= HeadsUpMessage.CATCHING_UP_SHOW_THRESHOLD;
 
+    // Announce overtime in this banner (not the toast: the toast slot sits
+    // behind the z-[1001] player info overlay). Window-based rather than a
+    // fired-once flag, so a late joiner or replay seek doesn't get a stale
+    // announcement long after the start minute.
+    const overtime = this.game.config().overtimeConfig();
+    const overtimeStart = overtime.startMinutes * 60;
+    const elapsed = this.game.elapsedGameSeconds();
+    this.isOvertimeNotice =
+      overtime.enabled &&
+      !this.game.inSpawnPhase() &&
+      elapsed >= overtimeStart &&
+      elapsed < overtimeStart + HeadsUpMessage.OVERTIME_NOTICE_SECONDS;
+
     this.isVisible =
       this.game.inSpawnPhase() ||
       this.isPaused ||
       this.isImmunityActive ||
-      this.isCatchingUp;
+      this.isCatchingUp ||
+      this.isOvertimeNotice;
     this.requestUpdate();
   }
 
@@ -139,6 +158,9 @@ export class HeadsUpMessage extends LitElement implements Controller {
       return translateText("heads_up_message.pvp_immunity_active", {
         seconds: Math.round(this.game.config().spawnImmunityDuration() / 10),
       });
+    }
+    if (this.isOvertimeNotice) {
+      return translateText("overtime.started");
     }
     return this.game.config().isRandomSpawn()
       ? translateText("heads_up_message.random_spawn")

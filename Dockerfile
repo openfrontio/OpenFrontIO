@@ -18,6 +18,7 @@ COPY index.html ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
+COPY zbin ./zbin
 # build-prod runs scripts/buildAssetHashes.ts after vite, to emit
 # static/asset-hashes.json and static/core-version.txt for the desktop
 # release descriptor. Without this the image build fails at that step with
@@ -77,6 +78,7 @@ COPY resources ./resources
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
 COPY src ./src
+COPY zbin ./zbin
 
 
 ARG GIT_COMMIT=unknown

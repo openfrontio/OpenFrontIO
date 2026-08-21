@@ -100,6 +100,8 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // Watch without playing.
+  spectator?: boolean;
 }
 
 export interface JoinLobbyResult {
