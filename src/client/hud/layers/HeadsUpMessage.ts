@@ -34,7 +34,7 @@ export class HeadsUpMessage extends LitElement implements Controller {
 
   private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
   // How long the overtime announcement banner stays up after the start minute.
-  private static readonly OVERTIME_NOTICE_SECONDS = 10;
+  private static readonly OVERTIME_NOTICE_SECONDS = 5;
 
   @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
