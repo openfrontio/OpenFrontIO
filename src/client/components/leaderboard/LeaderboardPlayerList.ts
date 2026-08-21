@@ -413,7 +413,7 @@ export class LeaderboardPlayerList extends LitElement {
             class="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mr-2"
           ></div>
           <span class="text-[10px] font-bold uppercase tracking-widest">
-            ${translateText("leaderboard_modal.loading")}
+            ${translateText("common.loading")}
           </span>
         </div>
       `;
@@ -444,7 +444,7 @@ export class LeaderboardPlayerList extends LitElement {
           class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-6"
         ></div>
         <p class="text-blue-200/80 text-sm font-bold tracking-widest uppercase">
-          ${translateText("leaderboard_modal.loading")}
+          ${translateText("common.loading")}
         </p>
       </div>
     `;

@@ -22,11 +22,11 @@ const LEVEL_LEFT_PAD: Record<0 | 1 | 2, string> = {
 function labelForSubKey(key: SubKey): string {
   switch (key) {
     case "duos":
-      return translateText("clan_modal.stats_duos");
+      return translateText("clan_modal.history_type_duos");
     case "trios":
-      return translateText("clan_modal.stats_trios");
+      return translateText("clan_modal.history_type_trios");
     case "quads":
-      return translateText("clan_modal.stats_quads");
+      return translateText("clan_modal.history_type_quads");
     case "1v1":
       return translateText("clan_modal.stats_1v1");
     default:
@@ -152,7 +152,7 @@ export class ClanStatsBreakdown extends LitElement {
         ${this.expandedTotal
           ? html`
               ${this.renderRow(
-                translateText("clan_modal.stats_ffa"),
+                translateText("clan_modal.history_type_ffa"),
                 this.stats.ffa,
                 1,
               )}

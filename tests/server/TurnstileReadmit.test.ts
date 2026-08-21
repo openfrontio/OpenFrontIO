@@ -19,6 +19,7 @@ vi.mock("../../src/core/Schemas", async () => {
 import { GameType } from "../../src/core/game/Game";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { testGameConfig } from "../util/Wire";
 
 // Stateful mock that records listeners so a test can fire the "close" event,
 // exercising GameServer's real ws.on("close") handler.
@@ -81,9 +82,12 @@ describe("GameServer - wasAdmitted (Turnstile re-admission)", () => {
   });
 
   function makeGame() {
-    return new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
+    return new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      testGameConfig({ gameType: GameType.Private }),
+    );
   }
 
   it("reports unknown players as not admitted", () => {

@@ -194,11 +194,6 @@ const affiliatePattern: ResolvedCosmetic = {
   cosmetic: {
     ...pattern,
     affiliateCode: "creator",
-    product: {
-      productId: "affiliate-pattern",
-      priceId: "affiliate-pattern-price",
-      price: "$3",
-    },
   } as never,
   key: "pattern:affiliate:red",
 };
@@ -650,7 +645,7 @@ describe("StoreModal cosmetic browser", () => {
       modal.querySelector(`[data-cosmetic-key="${affiliatePattern.key}"]`),
     ).toBeTruthy();
 
-    await purchaseButton(modal, affiliatePattern.key).onPurchaseDollar!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "dollar");
+    await purchaseButton(modal, affiliatePattern.key).onPurchaseHard!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
   });
 });

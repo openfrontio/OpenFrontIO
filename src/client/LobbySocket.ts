@@ -1,5 +1,6 @@
 import { ClientEnv } from "src/client/ClientEnv";
-import { PublicGames, PublicLobbyMessageSchema } from "../core/Schemas";
+import { PublicGames } from "../core/Schemas";
+import { decodeLobbyMessage } from "../core/ZbinWire";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
@@ -63,6 +64,8 @@ export class PublicLobbySocket {
       const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies`;
 
       this.ws = new WebSocket(wsUrl);
+      // Frames are zbin payloads; without this they would arrive as Blobs.
+      this.ws.binaryType = "arraybuffer";
       this.wsAttemptCounted = false;
 
       this.ws.addEventListener("open", () => this.handleOpen());
@@ -85,8 +88,8 @@ export class PublicLobbySocket {
 
   private handleMessage(event: MessageEvent) {
     try {
-      const message = PublicLobbyMessageSchema.parse(
-        JSON.parse(event.data as string),
+      const message = decodeLobbyMessage(
+        new Uint8Array(event.data as ArrayBuffer),
       );
       if (message.type === "full") {
         this.lastFull = {

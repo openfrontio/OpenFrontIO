@@ -2,7 +2,7 @@
   "name": "openfront-client",
   "scripts": {
     "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
-    "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\"",
+    "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\" && tsx scripts/buildAssetHashes.ts",
     "start:client": "vite",
     "start:server": "tsx src/server/Server.ts",
     "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION ADMIN_BOT_API_KEY=WARNING_DEV_ADMIN_BOT_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",

@@ -150,13 +150,9 @@ describe("PlayerStatsTable", () => {
     const table = await renderTable(stats);
 
     expect(
-      columnsOf(
-        table,
-        "player_stats_table.building_stats",
-        "player_stats_table.unit.city",
-      ),
+      columnsOf(table, "player_stats_table.building_stats", "unit_type.city"),
     ).toEqual({
-      "player_stats_table.building": "player_stats_table.unit.city",
+      "player_stats_table.building": "unit_type.city",
       "player_stats_table.built": "91",
       "player_stats_table.destroyed": "92",
       "player_stats_table.captured": "93",
@@ -174,9 +170,7 @@ describe("PlayerStatsTable", () => {
     expect(buildings, "buildings table should exist").toBeDefined();
     // The six structures, with the warship row moved to its own section.
     expect(buildings?.querySelectorAll("tbody tr")).toHaveLength(6);
-    expect(buildings?.textContent).not.toContain(
-      "player_stats_table.unit.wshp",
-    );
+    expect(buildings?.textContent).not.toContain("unit_type.warship");
 
     expect(columnsOf(table, "player_stats_table.warship_stats")).toEqual({
       "player_stats_table.built": "151",
@@ -190,13 +184,9 @@ describe("PlayerStatsTable", () => {
     const table = await renderTable(stats);
 
     expect(
-      columnsOf(
-        table,
-        "player_stats_table.nuke_stats",
-        "player_stats_table.unit.abomb",
-      ),
+      columnsOf(table, "player_stats_table.nuke_stats", "unit_type.atom_bomb"),
     ).toEqual({
-      "player_stats_table.weapon": "player_stats_table.unit.abomb",
+      "player_stats_table.weapon": "unit_type.atom_bomb",
       "player_stats_table.launched": "41",
       "player_stats_table.landed": "42",
       "player_stats_table.intercepted": "43",
