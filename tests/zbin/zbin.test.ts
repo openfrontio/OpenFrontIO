@@ -462,9 +462,15 @@ describe("edge cases", () => {
 
   it("round-trips NaN and infinities through zb.float", () => {
     const S = zb.object({ f: zb.float() });
-    expect(S.decodeBytes(S.serialize({ f: Infinity })).f).toBe(Infinity);
-    expect(S.decodeBytes(S.serialize({ f: -Infinity })).f).toBe(-Infinity);
-    expect(Number.isNaN(S.decodeBytes(S.serialize({ f: NaN })).f)).toBe(true);
+    expect(S.decodeBytesUnvalidated(S.serialize({ f: Infinity })).f).toBe(
+      Infinity,
+    );
+    expect(S.decodeBytesUnvalidated(S.serialize({ f: -Infinity })).f).toBe(
+      -Infinity,
+    );
+    expect(
+      Number.isNaN(S.decodeBytesUnvalidated(S.serialize({ f: NaN })).f),
+    ).toBe(true);
   });
 
   it("supports multi-value z.literal as an implicit enum", () => {

@@ -5,20 +5,25 @@
 // share (e.g. the player roster in the game-start message) — there is no
 // on-wire learning. Values missing from a table are encoded inline via an
 // escape byte, so an unmapped value is always correct, just not compact.
+//
+// Tables are seeded from runtime data, so "both peers run the same commit"
+// does NOT guarantee they agree. Two tables of equal length in different
+// orders decode every index to the wrong value with no error, so peers should
+// compare `fingerprint(name)` out-of-band before relying on a table.
 
 // Index 255 is the inline-escape marker, so tables hold at most 255 entries
 // (indexes 0..254).
 export const ESCAPE_BYTE = 0xff;
 export const MAX_MAPPING_SIZE = 255;
 
-interface Table {
+export interface ZbTable {
   max: number;
   toIndex: Map<string, number>;
   values: string[];
 }
 
 export class ZbContext {
-  private tables = new Map<string, Table>();
+  private tables = new Map<string, ZbTable>();
 
   // Declare a dictionary. `max` caps how many values get indexes; further
   // assigns are ignored (those values encode inline).
@@ -55,6 +60,16 @@ export class ZbContext {
     return this;
   }
 
+  hasMapping(name: string): boolean {
+    return this.tables.has(name);
+  }
+
+  // Direct table handle so hot-path codecs can resolve the name once per
+  // context instead of once per encoded value.
+  tableFor(name: string): ZbTable | undefined {
+    return this.tables.get(name);
+  }
+
   // Encoder lookup. Undefined when the value (or the whole table) is unmapped,
   // in which case the value is encoded inline.
   indexOf(name: string, value: string): number | undefined {
@@ -71,7 +86,23 @@ export class ZbContext {
     return this.table(name).values.length;
   }
 
-  private table(name: string): Table {
+  // Order-sensitive digest of a table's contents (FNV-1a). Peers that exchange
+  // this and compare it turn an otherwise-silent ordering mismatch into a
+  // detectable one.
+  fingerprint(name: string): number {
+    let h = 0x811c9dc5;
+    for (const v of this.table(name).values) {
+      for (let i = 0; i < v.length; i++) {
+        h ^= v.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+      }
+      h ^= 0xff; // value separator, so ["ab","c"] and ["a","bc"] differ
+      h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+  }
+
+  private table(name: string): ZbTable {
     const t = this.tables.get(name);
     if (t === undefined) throw new Error(`zbin mapping "${name}" not declared`);
     return t;

@@ -18,6 +18,7 @@ COPY index.html ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
+COPY zbin ./zbin
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
@@ -71,6 +72,7 @@ COPY resources ./resources
 RUN rm -rf ./resources/maps
 COPY tsconfig.json ./
 COPY src ./src
+COPY zbin ./zbin
 
 
 ARG GIT_COMMIT=unknown

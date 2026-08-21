@@ -247,7 +247,7 @@ describe("robustness at the protocol level", () => {
     });
     expect(() => strict.parseBytes(bytes)).toThrow(z.ZodError);
     // decodeBytes (trusted path) skips validation by design.
-    expect(strict.decodeBytes(bytes)).toEqual({
+    expect(strict.decodeBytesUnvalidated(bytes)).toEqual({
       body: { type: "emoji_only", emoji: 9999 },
     });
   });
