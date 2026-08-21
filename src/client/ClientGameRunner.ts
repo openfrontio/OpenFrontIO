@@ -139,12 +139,23 @@ export function joinLobby(
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     transport.joinGame();
   };
+  // Only begin a terrain preload once the same map has been stable across
+  // this many consecutive lobby_info broadcasts (one per second). A host
+  // clicking through map selections changes the config every broadcast, so
+  // debouncing avoids downloading (and permanently caching) a map that was
+  // only shown transiently.
+  const MAP_PRELOAD_DEBOUNCE_STREAK = 3;
   let terrainLoad: Promise<TerrainMapData> | null = null;
   // Key of the map currently represented by terrainLoad, so repeated
   // lobby_info/prestart requests for the same map reuse the in-flight load
   // instead of starting a duplicate one (loadTerrainMap only caches once the
   // async work has completed).
   let terrainLoadKey: string | null = null;
+  // Map key (map:mapSize) most recently seen in lobby_info and how many
+  // consecutive broadcasts it has held. The preload is only triggered once
+  // the streak reaches the debounce threshold.
+  let pendingPreloadKey: string | null = null;
+  let pendingPreloadStreak = 0;
   const requestTerrainLoad = (
     map: Parameters<typeof loadTerrainMap>[0],
     mapSize: Parameters<typeof loadTerrainMap>[1],
@@ -161,12 +172,16 @@ export function joinLobby(
     );
     terrainLoad = load;
     terrainLoadKey = key;
-    void load.catch(() => {
+    void load.catch((e) => {
       // Clear a failed load so the authoritative start gate can retry.
       if (terrainLoad === load) {
         terrainLoad = null;
         terrainLoadKey = null;
       }
+      console.warn(
+        `lobby: terrain preload failed for "${key}"; will retry at game start`,
+        e,
+      );
     });
     return load;
   };
@@ -178,13 +193,24 @@ export function joinLobby(
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
-      // prestart->start window. requestTerrainLoad deduplicates in-flight
-      // loads (lobby_info is re-broadcast every second) and, when the host
-      // changes the map mid-lobby, a different key starts a fresh load.
-      // doctrine/prestart still re-validates the authoritative map.
+      // prestart->start window. The preload is debounced: it only fires once
+      // the same map has held across several broadcasts, so a host clicking
+      // through map selections doesn't trigger a download (which would be
+      // permanently cached) for each transient pick. requestTerrainLoad
+      // deduplicates in-flight loads, and prestart still re-validates the
+      // authoritative map.
       const gameConfig = message.lobby.gameConfig;
       if (gameConfig !== undefined) {
-        requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
+        const key = `${gameConfig.gameMap}:${gameConfig.gameMapSize}`;
+        if (pendingPreloadKey === key) {
+          pendingPreloadStreak++;
+        } else {
+          pendingPreloadKey = key;
+          pendingPreloadStreak = 1;
+        }
+        if (pendingPreloadStreak >= MAP_PRELOAD_DEBOUNCE_STREAK) {
+          requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
+        }
       }
       return;
     }
