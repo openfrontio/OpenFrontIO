@@ -45,6 +45,10 @@ function makeUnit(
     trainType: null,
     loaded: null,
     constructionStartTick: null,
+    samUpgradeStartTick: null,
+    samUpgradeStartRange: null,
+    samUpgradeTargetLevel: null,
+    samUpgradeDuration: null,
   };
 }
 

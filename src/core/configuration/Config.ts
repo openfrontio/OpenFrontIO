@@ -1006,7 +1006,7 @@ export class Config {
 
   dynamicSamRange(sam: Unit, currentTick: number): number {
     const state = sam.samLauncherState();
-    if (state === undefined || state.upgradeStartTick === null) {
+    if (state === undefined || state.upgradeStartTick === undefined) {
       return this.samRange(sam.level());
     }
     const duration = this.samUpgradeDuration();
