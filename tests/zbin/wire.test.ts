@@ -387,6 +387,35 @@ describe("zbin wire: server messages", () => {
     );
   });
 
+  it("handles a 1000-client roster without losing the dictionary", () => {
+    // Big events exceed the old one-byte table; indexes are varints now, so
+    // every roster entry stays mapped (1 byte for the first 127, 2 after).
+    const roster = Array.from({ length: 1000 }, (_, i) => ({
+      clientID: `c${String(i).padStart(7, "0")}`,
+    }));
+    const sctx = createGameWireContext(roster);
+    const cctx = createGameWireContext(roster);
+    const turnOf = (clientID: string): ServerMessage => ({
+      type: "turn",
+      turn: {
+        turnNumber: 1,
+        intents: [{ type: "targetPlayer", clientID, target: clientID }],
+      },
+    });
+    const early = encodeServerMessage(turnOf(roster[50].clientID), sctx);
+    const late = encodeServerMessage(turnOf(roster[999].clientID), sctx);
+    // Two mapped ids in the intent: 1 byte each early, 2 bytes each late.
+    expect(late.length).toBe(early.length + 2);
+    for (const p of [roster[0], roster[126], roster[127], roster[999]]) {
+      expect(
+        decodeServerMessage(
+          encodeServerMessage(turnOf(p.clientID), sctx),
+          cctx,
+        ),
+      ).toEqual(turnOf(p.clientID));
+    }
+  });
+
   it("fails loudly when the peers seeded different rosters", () => {
     const sctx = createGameWireContext(PLAYERS);
     const cctx = createGameWireContext(PLAYERS.slice(0, 1));

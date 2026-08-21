@@ -96,12 +96,12 @@ describe("golden wire vectors", () => {
     expect(hex(S.serialize({ s: "🎉" }))).toBe("04f09f8e89");
   });
 
-  it("mapped ids are one byte, with an escape for strangers", () => {
+  it("mapped ids are varint(index+1), with varint 0 escaping inline", () => {
     const S = zb.object({ id: zb.mapped("ids") });
     const ctx = zb.context().mapping("ids").assignAll("ids", ["aa", "bb"]);
-    expect(hex(S.serialize({ id: "aa" }, ctx))).toBe("00");
-    expect(hex(S.serialize({ id: "bb" }, ctx))).toBe("01");
-    expect(hex(S.serialize({ id: "zz" }, ctx))).toBe("ff027a7a");
+    expect(hex(S.serialize({ id: "aa" }, ctx))).toBe("01");
+    expect(hex(S.serialize({ id: "bb" }, ctx))).toBe("02");
+    expect(hex(S.serialize({ id: "zz" }, ctx))).toBe("00027a7a");
   });
 
   it("zb.stamped writes tag, then extras, then variant fields", () => {

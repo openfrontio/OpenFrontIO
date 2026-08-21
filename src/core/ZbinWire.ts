@@ -30,16 +30,16 @@ import {
   ServerMessageSchema,
 } from "./Schemas";
 
-// One byte per id needs the table to stay under the escape byte; a game holds
-// far fewer players than this.
-const MAX_MAPPED_CLIENTS = 250;
-
+// Indexes are varints: the first 127 roster entries cost one byte per id,
+// the rest two. Large events (1000+ clients) fit comfortably; if a roster
+// ever exceeds the table cap, assign() ignores the overflow identically on
+// both sides and those ids ride the inline escape path — bigger, never wrong.
 export function createGameWireContext(
   players: ReadonlyArray<{ clientID: string }>,
 ): ZbContext {
   const ctx = new ZbContext();
-  ctx.mapping(CLIENT_ID_MAPPING, { max: MAX_MAPPED_CLIENTS });
-  for (const p of players.slice(0, MAX_MAPPED_CLIENTS)) {
+  ctx.mapping(CLIENT_ID_MAPPING);
+  for (const p of players) {
     ctx.assign(CLIENT_ID_MAPPING, p.clientID);
   }
   return ctx;
