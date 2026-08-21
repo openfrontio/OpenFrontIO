@@ -648,8 +648,9 @@ export class Config {
       return base;
     }
     // Whole seconds only: elapsedGameSeconds is ticks/10 and can carry a
-    // fractional part. Integer seconds into one multiply-then-divide keeps the
-    // result bit-identical on every client (same rule as the doomsday clock).
+    // fractional part. The bar moves in WHOLE percentage points (one step
+    // every 60/dropPercentPerMinute seconds), so the HUD shows exactly the
+    // integer the sim checks — and integer math is trivially deterministic.
     const secondsPastStart =
       Math.floor(elapsedGameSeconds) - sd.startMinutes * 60;
     if (secondsPastStart <= 0) {
@@ -657,7 +658,7 @@ export class Config {
     }
     return Math.max(
       0,
-      base - (secondsPastStart * sd.dropPercentPerMinute) / 60,
+      base - Math.floor((secondsPastStart * sd.dropPercentPerMinute) / 60),
     );
   }
   armyLimitWarningThreshold(): number {

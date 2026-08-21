@@ -61,7 +61,6 @@ export class GameRightSidebar extends LitElement implements Controller {
   private isLobbyCreator = false;
   private isPrivateLobby = false;
   private hasShownOneMinuteWarning = false;
-  private hasShownOvertimeStarted = false;
   // Guards the in-game "New lobby" button so a double click doesn't fire twice
   // before we navigate to the successor lobby.
   private newLobbyRequested = false;
@@ -86,7 +85,6 @@ export class GameRightSidebar extends LitElement implements Controller {
       this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
     this.hasShownOneMinuteWarning = false;
-    this.hasShownOvertimeStarted = false;
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -168,8 +166,6 @@ export class GameRightSidebar extends LitElement implements Controller {
       return;
     }
 
-    this.maybeShowOvertimeStarted(elapsedSeconds);
-
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
@@ -177,25 +173,6 @@ export class GameRightSidebar extends LitElement implements Controller {
     } else {
       this.timer = elapsedSeconds;
     }
-  }
-
-  // Same delegation as the one-minute warning: the heads-up toast layer owns
-  // the dismissal timer. Fires once, when the overtime start minute passes
-  // and the win threshold begins to drop (the panel below shows it live).
-  private maybeShowOvertimeStarted(elapsedSeconds: number): void {
-    if (this.hasShownOvertimeStarted) {
-      return;
-    }
-    const sd = this.game.config().overtimeConfig();
-    if (!sd.enabled || elapsedSeconds < sd.startMinutes * 60) {
-      return;
-    }
-    this.hasShownOvertimeStarted = true;
-    showToast(
-      translateText("overtime.started"),
-      "red",
-      ONE_MINUTE_WARNING_DURATION_MS,
-    );
   }
 
   // Handing the notice to the heads-up toast layer means that layer owns the

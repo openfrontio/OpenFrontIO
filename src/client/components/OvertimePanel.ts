@@ -61,9 +61,13 @@ export class OvertimePanel extends LitElement {
     const live = !!me && me.isAlive();
     const land = this.game.numLandTiles() - this.game.numTilesWithFallout();
     const myTeam = me?.team() ?? null;
-    // The exact bar the sim checks — one shared formula, never re-derived here.
+    // The exact bar the sim checks — one shared formula, never re-derived
+    // here. Always a whole percentage (see Config.percentageTilesOwnedToWin).
     const requiredPct = this.game.config().percentageTilesOwnedToWin(elapsed);
     const yourPct = land > 0 ? (this.sideTiles(me) / land) * 100 : 0;
+    // Whole percentages only in the readout; floored, so we never overstate
+    // your share against the "hold more than X%" bar.
+    const yourPctShown = Math.floor(yourPct);
 
     const panel =
       "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white text-sm";
@@ -75,9 +79,7 @@ export class OvertimePanel extends LitElement {
             ${translateText("overtime.title")}
           </span>
           <span class="text-orange-300 font-bold">
-            ${translateText("overtime.to_win", {
-              pct: requiredPct.toFixed(1),
-            })}
+            ${translateText("overtime.to_win", { pct: requiredPct })}
           </span>
         </div>
         <div class="relative h-2.5 w-52 overflow-hidden rounded bg-gray-600/60">
@@ -97,10 +99,10 @@ export class OvertimePanel extends LitElement {
               ${myTeam !== null
                 ? translateText("doomsday_clock.your_team", {
                     team: this.teamDisplayName(myTeam),
-                    pct: yourPct.toFixed(1),
+                    pct: yourPctShown,
                   })
                 : translateText("doomsday_clock.you", {
-                    pct: yourPct.toFixed(1),
+                    pct: yourPctShown,
                   })}
             </div>`
           : ""}

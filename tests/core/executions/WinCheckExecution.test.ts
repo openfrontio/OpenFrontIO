@@ -566,8 +566,10 @@ describe("WinCheckExecution - Overtime", () => {
     expect(config.percentageTilesOwnedToWin(0)).toBe(80);
     // Unchanged up to and including the start minute.
     expect(config.percentageTilesOwnedToWin(60)).toBe(80);
-    // 2%/min -> 1% per 30 seconds.
+    // Whole percentage points only: 2%/min -> one 1% step every 30 seconds.
+    expect(config.percentageTilesOwnedToWin(89)).toBe(80);
     expect(config.percentageTilesOwnedToWin(90)).toBe(79);
+    expect(config.percentageTilesOwnedToWin(119)).toBe(79);
     expect(config.percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
     // No floor: clamps at 0 so the leader always qualifies eventually.
     expect(config.percentageTilesOwnedToWin(60 + 41 * 60)).toBe(0);
