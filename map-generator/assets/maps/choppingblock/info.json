@@ -3,7 +3,7 @@
   "name": "Chopping Block",
   "translation_key": "map.choppingblock",
   "categories": ["arcade"],
-  "multiplayer_frequency": 5,
+  "multiplayer_frequency": 0,
   "special_team_count": 4,
   "nations": [
     {
