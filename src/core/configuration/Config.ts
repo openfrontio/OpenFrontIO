@@ -1009,7 +1009,7 @@ export class Config {
     if (state === undefined || state.upgradeStartTick === undefined) {
       return this.samRange(sam.level());
     }
-    const duration = this.samUpgradeDuration();
+    const duration = state.duration ?? this.samUpgradeDuration();
     const elapsed = currentTick - state.upgradeStartTick;
     if (elapsed >= duration) {
       return this.samRange(state.targetLevel);
