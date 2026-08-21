@@ -307,33 +307,31 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
   });
 
   test("accepting alliance after child warheads are queued cancels queued executions and prevents warheads", () => {
-    const mirvExec = new MirvExecution(player1, game.ref(5, 5));
-    game.addExecution(mirvExec);
+    // Pre-stage an incoming alliance request from player2 to player1
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick();
 
+    // Launch MIRV from player1 targeted at player2
+    game.addExecution(new MirvExecution(player1, game.ref(5, 5)));
     game.executeNextTick(); // init
     game.executeNextTick(); // spawn MIRV
 
     expect(game.units(UnitType.MIRV)).toHaveLength(1);
 
-    // Advance 2 ticks into flight so remainingTicks <= 10, ensuring
-    // spawnWarheadsWithWait() has queued child executions while the parent
-    // MIRV is still in flight and no warhead units have spawned yet (due to waitTicks).
-    for (let i = 0; i < 2; i++) {
-      game.executeNextTick();
-    }
+    // Advance 1 tick into the window where spawnWarheadsWithWait() has queued
+    // child executions but no warhead units exist yet.
+    game.executeNextTick();
     expect(game.units(UnitType.MIRV)).toHaveLength(1);
     expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
 
-    // Accept alliance while children are queued in executions
+    // Accept alliance in a single tick (matching pending incoming request)
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
-    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
     expect(player2.isAlliedWith(player1)).toBe(true);
     expect(game.units(UnitType.MIRV)).toHaveLength(0);
 
-    // Tick through the rest of the game: no queued child execution should spawn warheads
+    // Tick through the rest of the game: warhead.cancel() ensures no child executions spawn warheads
     for (let i = 0; i < 40; i++) {
       game.executeNextTick();
     }
