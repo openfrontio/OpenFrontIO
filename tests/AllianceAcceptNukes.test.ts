@@ -305,4 +305,30 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     expect(game.units(UnitType.MIRV)).toHaveLength(0);
     expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
   });
+
+  test("accepting alliance after child warheads are queued cancels queued executions and prevents warheads", () => {
+    game.addExecution(new MirvExecution(player1, game.ref(5, 5)));
+
+    game.executeNextTick(); // init
+    game.executeNextTick(); // spawn MIRV
+
+    expect(game.units(UnitType.MIRV)).toHaveLength(1);
+
+    // Form alliance after warheads have been queued (or right as MIRV flies)
+    // Accept alliance
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick();
+
+    expect(player2.isAlliedWith(player1)).toBe(true);
+    expect(game.units(UnitType.MIRV)).toHaveLength(0);
+
+    // Tick through the rest of the game: no queued child execution should spawn warheads
+    for (let i = 0; i < 40; i++) {
+      game.executeNextTick();
+    }
+    expect(game.units(UnitType.MIRV)).toHaveLength(0);
+    expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
+  });
 });

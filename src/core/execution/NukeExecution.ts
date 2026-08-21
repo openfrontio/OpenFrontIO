@@ -507,6 +507,13 @@ export class NukeExecution implements Execution {
     }
   }
 
+  cancel(): void {
+    this.active = false;
+    if (this.nuke !== null && this.nuke.isActive()) {
+      this.nuke.delete(false);
+    }
+  }
+
   owner(): Player {
     return this.player;
   }

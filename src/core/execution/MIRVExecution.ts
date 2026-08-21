@@ -45,6 +45,7 @@ export class MirvExecution implements Execution {
 
   private stagedTargets: TileRef[] = [];
   private warheadsSpawned = false;
+  private warheadExecutions: NukeExecution[] = [];
 
   constructor(
     private player: Player,
@@ -128,6 +129,10 @@ export class MirvExecution implements Execution {
     // make the MIRV inactive if it was destroyed or cancelled externally
     if (this.nuke !== null && !this.nuke.isActive()) {
       this.active = false;
+      for (const warhead of this.warheadExecutions) {
+        warhead.cancel();
+      }
+      this.warheadExecutions = [];
       return;
     }
 
@@ -193,17 +198,17 @@ export class MirvExecution implements Execution {
       else if (i < 140) speedOffset = 1;
       else if (i < 210) speedOffset = 2;
       else if (i < 280) speedOffset = 3;
-      this.mg.addExecution(
-        new NukeExecution(
-          UnitType.MIRVWarhead,
-          this.player,
-          dst,
-          this.separateDst,
-          // order of extra speed assign does not matter, they all spawn at once.
-          warheadSpeed + speedOffset,
-          waitBase + this.random.nextInt(0, 15),
-        ),
+      const execution = new NukeExecution(
+        UnitType.MIRVWarhead,
+        this.player,
+        dst,
+        this.separateDst,
+        // order of extra speed assign does not matter, they all spawn at once.
+        warheadSpeed + speedOffset,
+        waitBase + this.random.nextInt(0, 15),
       );
+      this.warheadExecutions.push(execution);
+      this.mg.addExecution(execution);
     }
   }
 
