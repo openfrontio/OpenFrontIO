@@ -7,7 +7,7 @@ export {
   ZbDecodeError,
   ZbEncodeError,
 } from "./bytes";
-export { ESCAPE_BYTE, MAX_MAPPING_SIZE, ZbContext } from "./context";
+export { MAX_MAPPING_SIZE, ZbContext } from "./context";
 export type { ZbTable } from "./context";
 export * as zb from "./zb";
 export type { Codec, ZbMethods, ZbSchema } from "./zb";

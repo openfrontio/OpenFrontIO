@@ -10,13 +10,14 @@ import { z } from "zod";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
-  ClientMessageSchema,
+  ClientMessage,
   ID,
   MAX_HOSTED_LOBBIES,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
+import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
@@ -374,27 +375,30 @@ export async function startWorker() {
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
-    ws.on("message", async (message: string) => {
+    ws.on("message", async (message: Buffer) => {
       const ip = getClientIp(req);
 
       try {
-        // Parse and handle client messages
-        const parsed = ClientMessageSchema.safeParse(
-          JSON.parse(message.toString()),
-        );
-        if (!parsed.success) {
-          const error = z.prettifyError(parsed.error);
-          log.warn("Error parsing client message", error);
+        // Every frame is zbin (see ZbinWire.ts). Nothing before join carries a
+        // dictionary-mapped id, so this decodes without a context.
+        let clientMsg: ClientMessage;
+        try {
+          clientMsg = decodeClientMessage(message, undefined);
+        } catch (e) {
+          const error = String(e);
+          log.warn("Error decoding client message", error);
           ws.send(
-            JSON.stringify({
-              type: "error",
-              error: error.toString(),
-            } satisfies ServerErrorMessage),
+            encodeServerMessage(
+              {
+                type: "error",
+                error,
+              } satisfies ServerErrorMessage,
+              undefined,
+            ),
           );
           ws.close(1002, "ClientJoinMessageSchema");
           return;
         }
-        const clientMsg = parsed.data;
 
         if (clientMsg.type === "ping") {
           // Ignore ping

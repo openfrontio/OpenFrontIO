@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zb, ZbEncodeError } from "../../zbin";
 import { UnitType } from "./game/Game";
 
 export const bombUnits = ["abomb", "hbomb", "mirv", "mirvw"] as const;
@@ -93,12 +94,30 @@ export const OTHER_INDEX_CAPTURE = 2; // Structures captured
 export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by others
 export const OTHER_INDEX_UPGRADE = 4; // Structures upgraded
 
-export const BigIntStringSchema = z.preprocess((val) => {
-  if (val === null) return 0n;
-  if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
-  if (typeof val === "bigint") return val;
-  return val;
-}, z.bigint());
+// Stats are bigints in the engine but ride HTTP/JSON as decimal strings (see
+// `replacer`), so the schema accepts either. On the binary wire they encode as
+// a bigint varint; the codec applies the same coercion as the preprocess so
+// both in-memory shapes serialize identically.
+export const BigIntStringSchema = zb.custom(
+  z.preprocess((val) => {
+    if (val === null) return 0n;
+    if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
+    if (typeof val === "bigint") return val;
+    return val;
+  }, z.bigint()),
+  {
+    enc: (w, v) => w.bigint(toBigInt(v)),
+    dec: (r) => r.bigint(),
+    minBytes: 1,
+  },
+);
+
+function toBigInt(v: unknown): bigint {
+  if (typeof v === "bigint") return v;
+  if (v === null || v === undefined) return 0n;
+  if (typeof v === "string" && /^-?\d+$/.test(v)) return BigInt(v);
+  throw new ZbEncodeError(`not a bigint-valued stat: ${String(v)}`);
+}
 
 const AtLeastOneNumberSchema = BigIntStringSchema.array().min(1);
 export type AtLeastOneNumber = z.infer<typeof AtLeastOneNumberSchema>;
@@ -112,7 +131,7 @@ export const PlayerStatsSchema = z
     // non-client, e.g. a bot/nation) and finishing place at elimination. Both
     // first-write-wins. Surfaced live on the PlayerUpdate (not just at game end).
     killedBy: z.string().nullable().optional(),
-    deathPosition: z.number().optional(),
+    deathPosition: zb.uint().optional(),
     // Tiles owned at game end, for OFM standings (set on setWinner).
     finalTiles: BigIntStringSchema.optional(),
     // Humans this player eliminated (victim clientID + tick), for OFM kill scoring.

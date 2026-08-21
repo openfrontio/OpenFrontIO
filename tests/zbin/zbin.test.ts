@@ -520,23 +520,26 @@ describe("edge cases", () => {
 });
 
 describe("context contract", () => {
-  it("handles a full 255-entry table and escapes the 256th value", () => {
+  it("handles a full table, varint growth, and escapes the overflow value", () => {
     const S = zb.object({ id: zb.mapped("m") });
     const values = Array.from(
-      { length: 256 },
+      { length: 301 },
       (_, i) => `v${String(i).padStart(6, "0")}`,
     );
     const ctx = zb.context();
-    ctx.mapping("m"); // default max = 255
-    for (let i = 0; i < 255; i++) expect(ctx.assign("m", values[i])).toBe(i);
-    expect(ctx.assign("m", values[255])).toBe(-1); // full -> unmapped
-    // Boundary index 254 encodes as one byte; overflow value goes inline.
-    expect(S.serialize({ id: values[254] }, ctx).length).toBe(1);
-    expect(S.serialize({ id: values[255] }, ctx).length).toBeGreaterThan(1);
+    ctx.mapping("m", { max: 300 });
+    for (let i = 0; i < 300; i++) expect(ctx.assign("m", values[i])).toBe(i);
+    expect(ctx.assign("m", values[300])).toBe(-1); // full -> unmapped
+    // varint(index+1): index 126 is the last one-byte id, 127+ cost two;
+    // the overflow value goes inline via the escape.
+    expect(S.serialize({ id: values[126] }, ctx).length).toBe(1);
+    expect(S.serialize({ id: values[127] }, ctx).length).toBe(2);
+    expect(S.serialize({ id: values[299] }, ctx).length).toBe(2);
+    expect(S.serialize({ id: values[300] }, ctx).length).toBeGreaterThan(2);
     const rctx = zb.context();
-    rctx.mapping("m");
+    rctx.mapping("m", { max: 300 });
     rctx.assignAll("m", values);
-    for (const id of [values[0], values[254], values[255]]) {
+    for (const id of [values[0], values[126], values[127], values[300]]) {
       expect(S.parseBytes(S.serialize({ id }, ctx), rctx)).toEqual({ id });
     }
   });
@@ -544,7 +547,7 @@ describe("context contract", () => {
   it("rejects invalid mapping declarations", () => {
     const ctx = zb.context();
     expect(() => ctx.mapping("m", { max: 0 })).toThrow(RangeError);
-    expect(() => ctx.mapping("m", { max: 256 })).toThrow(RangeError);
+    expect(() => ctx.mapping("m", { max: 65536 })).toThrow(RangeError);
     expect(() => ctx.mapping("m", { max: 1.5 })).toThrow(RangeError);
     ctx.mapping("m", { max: 10 });
     expect(() => ctx.mapping("m", { max: 10 })).toThrow(/already declared/);

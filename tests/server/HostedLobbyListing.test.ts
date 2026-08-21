@@ -29,6 +29,7 @@ import {
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { ServerEnv } from "../../src/server/ServerEnv";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
+import { decodeSentLobbyMessage, testGameConfig } from "../util/Wire";
 
 vi.mock("../../src/server/Logger", () => ({
   logger: {
@@ -63,7 +64,7 @@ function makeGame(
     id,
     mockLogger,
     Date.now(),
-    { gameType: GameType.Private, ...config } as any,
+    testGameConfig({ gameType: GameType.Private, ...config }),
     creatorPersistentID,
   );
 }
@@ -174,7 +175,7 @@ describe("GameManager.listedLobbies", () => {
     const gm = new GameManager(mockLogger);
     const pub = gm.createGame(
       "g-public",
-      { gameType: GameType.Public } as any,
+      testGameConfig({ gameType: GameType.Public }),
       undefined,
     )!;
     pub.setListed(true);
@@ -742,7 +743,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
   }
 
   function sentPayloads(ws: { send: ReturnType<typeof vi.fn> }): any[] {
-    return ws.send.mock.calls.map((c) => JSON.parse(c[0]));
+    return ws.send.mock.calls.map((c) => decodeSentLobbyMessage(c[0]));
   }
 
   it("reports listed lobbies to master as hosted, with creatorID and without host-only config", () => {
@@ -775,7 +776,10 @@ describe("WorkerLobbyService hosted lobbies", () => {
       "ranked-g1",
       mockLogger,
       Date.now(),
-      { gameType: GameType.Public, allowedPublicIds: ["p1", "p2"] } as any,
+      testGameConfig({
+        gameType: GameType.Public,
+        allowedPublicIds: ["p1", "p2"],
+      }),
       undefined,
       Date.now() + 7000,
       undefined, // matchmaking games are created without a publicGameType
