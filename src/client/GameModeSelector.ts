@@ -10,6 +10,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import type { BaseModal } from "./components/BaseModal";
 import "./components/IOSAddToHomeScreenBanner";
 import { lobbyCard, mapAspectRatios } from "./components/LobbyCard";
 import { HostLobbyModal } from "./HostLobbyModal";
@@ -25,7 +26,15 @@ import {
   translateText,
 } from "./Utils";
 
+/**
+ * The scheduled lobby buckets the homepage shows one card each for. The keys
+ * double as the lobby browser's tab keys, so a card can open its own tab.
+ */
+type LobbyBucket = "ffa" | "team" | "special";
+
 const CARD_BG = "bg-surface";
+const SECONDARY_CARD_BG =
+  "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:shadow-[var(--shadow-action-card-hover)]";
 
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
@@ -109,41 +118,6 @@ export class GameModeSelector extends LitElement {
 
     return html`
       <div class="flex flex-col gap-4 w-full px-4 sm:px-0 mx-auto pb-4 sm:pb-0">
-        <!-- Solo + detailed view: mobile only, top. The lobby browser is one
-             column wide, matching Join Lobby below it. -->
-        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
-          <div class="col-span-2">
-            ${this.renderSmallActionCard(
-              translateText("main.solo"),
-              this.openSinglePlayerModal,
-              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
-            )}
-          </div>
-          ${this.renderSmallActionCard(
-            translateText("main.detailed_view"),
-            this.openDetailedView,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-        </div>
-        <!-- Create/ranked/join: mobile only, below solo -->
-        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.join"),
-            this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            this.hostedLobbyCount(),
-          )}
-        </div>
         <!-- iOS Add to Home Screen banner -->
         <ios-add-to-home-screen-banner
           class="no-crazygames"
@@ -164,7 +138,7 @@ export class GameModeSelector extends LitElement {
               <!-- Left col: main card (desktop only) -->
               ${ffa
                 ? html`<div class="hidden sm:block">
-                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa), "ffa")}
                   </div>`
                 : nothing}
 
@@ -177,7 +151,11 @@ export class GameModeSelector extends LitElement {
                   : nothing}
                 ${teams
                   ? html`<div class="flex-1 min-h-0">
-                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                      ${this.renderLobbyCard(
+                        teams,
+                        this.getLobbyTitle(teams),
+                        "team",
+                      )}
                     </div>`
                   : nothing}
               </div>
@@ -188,57 +166,56 @@ export class GameModeSelector extends LitElement {
               </div>
               <div class="sm:hidden">
                 ${ffa
-                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa), "ffa")
                   : nothing}
               </div>
               <div class="sm:hidden">
                 ${teams
-                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+                  ? this.renderLobbyCard(
+                      teams,
+                      this.getLobbyTitle(teams),
+                      "team",
+                    )
                   : nothing}
               </div>
             </div>`}
 
-        <!-- Solo + detailed view, desktop only. Solo spans two columns; the
-             lobby browser is one, the same width as Join Lobby below it. -->
-        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
-          <div class="col-span-2">
+        <!-- Solo takes a full row as the primary call to action, with Create,
+             Ranked and Join below it. The block keeps its old placement: above
+             the lobby grid on mobile, below it on desktop. -->
+        <div class="flex flex-col gap-4 order-first sm:order-none">
+          <div class="h-14">
             ${this.renderSmallActionCard(
               translateText("main.solo"),
               this.openSinglePlayerModal,
-              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
+              "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80",
             )}
           </div>
-          ${this.renderSmallActionCard(
-            translateText("main.detailed_view"),
-            this.openDetailedView,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-        </div>
-        <!-- Bottom row: create + ranked + join (desktop only) -->
-        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.join"),
-            this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
-            this.hostedLobbyCount(),
-          )}
+          <div class="grid grid-cols-3 gap-4 h-14">
+            ${this.renderSmallActionCard(
+              translateText("main.create"),
+              this.openHostLobby,
+              SECONDARY_CARD_BG,
+            )}
+            ${this.renderSmallActionCard(
+              translateText("mode_selector.ranked_title"),
+              this.openRankedMenu,
+              SECONDARY_CARD_BG,
+            )}
+            ${this.renderSmallActionCard(
+              translateText("main.join"),
+              this.openJoinLobby,
+              SECONDARY_CARD_BG,
+              this.hostedLobbyCount(),
+            )}
+          </div>
         </div>
       </div>
     `;
   }
 
   private renderSpecialLobbyCard(lobby: PublicGameInfo) {
-    return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
+    return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby), "special");
   }
 
   private openRankedMenu = () => {
@@ -246,9 +223,18 @@ export class GameModeSelector extends LitElement {
     window.showPage?.("page-ranked");
   };
 
-  private openDetailedView = () => {
+  // Opens the lobby browser on the tab matching the card that was expanded, so
+  // expanding the teams card lands on teams rather than the overview.
+  private openDetailedView = (tab?: LobbyBucket) => {
     if (!this.validateUsername()) return;
-    window.showPage?.("page-detailed-view");
+    const modal = document.querySelector(
+      "detailed-view-modal",
+    ) as BaseModal | null;
+    if (modal === null) {
+      window.showPage?.("page-detailed-view");
+      return;
+    }
+    modal.open(tab === undefined ? undefined : { tab });
   };
 
   private openSinglePlayerModal = () => {
@@ -303,6 +289,7 @@ export class GameModeSelector extends LitElement {
   private renderLobbyCard(
     lobby: PublicGameInfo,
     titleContent: string | TemplateResult,
+    bucket: LobbyBucket,
   ) {
     const timeRemaining = lobby.startsAt
       ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
@@ -326,6 +313,8 @@ export class GameModeSelector extends LitElement {
       timeDisplayUppercase,
       disabled: !this.inputValid,
       onClick: () => this.validateAndJoin(lobby),
+      onExpand: () => this.openDetailedView(bucket),
+      expandLabel: translateText("main.detailed_view"),
     });
   }
 
