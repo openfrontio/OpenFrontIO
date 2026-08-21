@@ -113,9 +113,9 @@ export interface UnitState {
   loaded: boolean | null;
   constructionStartTick: number | null;
   samUpgradeStartTick: number | null;
-  samUpgradeStartRange: number;
-  samUpgradeTargetLevel: number;
-  samUpgradeDuration: number;
+  samUpgradeStartRange: number | null;
+  samUpgradeTargetLevel: number | null;
+  samUpgradeDuration: number | null;
 }
 
 /** Minimal dead-unit data needed by the FX pass. */

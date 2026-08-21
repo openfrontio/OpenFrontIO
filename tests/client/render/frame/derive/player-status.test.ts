@@ -78,6 +78,10 @@ function unit(overrides: Partial<UnitState> = {}): UnitState {
     trainType: null,
     loaded: null,
     constructionStartTick: null,
+    samUpgradeStartTick: null,
+    samUpgradeStartRange: null,
+    samUpgradeTargetLevel: null,
+    samUpgradeDuration: null,
     ...overrides,
   };
 }

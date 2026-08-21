@@ -51,12 +51,12 @@ export type NukeState = {
   waitTicks: number;
 };
 
-export interface SamLauncherState {
-  upgradeStartTick: number | null;
+export type SamLauncherState = {
+  upgradeStartTick?: number;
   startRange: number;
   targetLevel: number;
-  duration?: number;
-}
+  duration: number;
+};
 
 export const AllPlayers = "AllPlayers" as const;
 

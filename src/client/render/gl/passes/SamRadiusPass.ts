@@ -333,10 +333,12 @@ export class SAMRadiusPass {
   private getSAMColor(ownerID: number, isFriendly: boolean): number[] {
     if (this.colorMode === "owner" && this.paletteData) {
       const off = ownerID * 4;
-      this.colorScratch[0] = this.paletteData[off];
-      this.colorScratch[1] = this.paletteData[off + 1];
-      this.colorScratch[2] = this.paletteData[off + 2];
-      return this.colorScratch;
+      if (off + 2 < this.paletteData.length) {
+        this.colorScratch[0] = this.paletteData[off];
+        this.colorScratch[1] = this.paletteData[off + 1];
+        this.colorScratch[2] = this.paletteData[off + 2];
+        return this.colorScratch;
+      }
     }
     return ownerID === this.localPlayerID
       ? COLOR_SELF
@@ -359,10 +361,11 @@ export class SAMRadiusPass {
         u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
       const bg = this.getSAMBaseGroup(u, isFriendly);
       const startTick = u.samUpgradeStartTick;
+      const duration = u.samUpgradeDuration ?? 0;
       if (
         startTick !== null &&
         continuousTick >= startTick &&
-        continuousTick - startTick < u.samUpgradeDuration
+        continuousTick - startTick < duration
       ) {
         this.dirtyGroups.add(bg);
       }
@@ -404,7 +407,7 @@ export class SAMRadiusPass {
     isGroupUpgrading: boolean,
   ): void {
     const startTick = u.samUpgradeStartTick;
-    const duration = u.samUpgradeDuration;
+    const duration = u.samUpgradeDuration ?? 0;
     const activeGroup = baseGroup * 2;
     const previewGroup = baseGroup * 2 + 1;
 
@@ -415,10 +418,9 @@ export class SAMRadiusPass {
     ) {
       const elapsed = continuousTick - startTick;
       const progress = Math.max(0, Math.min(1, elapsed / duration));
-      const targetRadius = samRange(u.samUpgradeTargetLevel);
-      const currentRadius =
-        u.samUpgradeStartRange +
-        (targetRadius - u.samUpgradeStartRange) * progress;
+      const targetRadius = samRange(u.samUpgradeTargetLevel ?? 0);
+      const startRange = u.samUpgradeStartRange ?? 0;
+      const currentRadius = startRange + (targetRadius - startRange) * progress;
 
       // Layer 0: Active operating radius
       circles.push({

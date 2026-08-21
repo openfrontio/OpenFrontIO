@@ -1,7 +1,7 @@
 /**
- * SAM Radius WebGL Render Pass Performance & Geometry Benchmark.
+ * SAM Radius Main-Thread CPU Geometry & Buffer Packing Benchmark.
  *
- * Runs via Vitest (with full Vite GLSL/?raw asset loaders & WebGL shaders):
+ * Measures CPU overhead on the main JavaScript thread before WebGL draw:
  *   - Tests 100 SAM launchers in heavy overlapping cluster formation
  *   - Continuous sub-tick range interpolation at 60 / 144 FPS
  *   - 2D Circle Union Geometry (computeUncoveredArcs, angular interval merge)
@@ -118,7 +118,6 @@ function createMockSAMStructures(
     const ownerID = i < samCount / 2 ? 1 : 2;
 
     const isUpgrading = i % 3 === 0;
-    const startTick = isUpgrading ? (i * 7) % 50 : 0;
     const level = 1 + (i % 4);
 
     const state: UnitState = {
@@ -146,10 +145,10 @@ function createMockSAMStructures(
       hasTrainStation: false,
       trainType: 0,
       loaded: null,
-      samUpgradeStartTick: isUpgrading ? startTick : null,
-      samUpgradeStartRange: isUpgrading ? 70 + (level - 1) * 16 : 0,
-      samUpgradeTargetLevel: isUpgrading ? level + 1 : 0,
-      samUpgradeDuration: isUpgrading ? 45 : 0,
+      samUpgradeStartTick: isUpgrading ? (i * 7) % 50 : null,
+      samUpgradeStartRange: isUpgrading ? 70 + (level - 1) * 16 : null,
+      samUpgradeTargetLevel: isUpgrading ? level + 1 : null,
+      samUpgradeDuration: isUpgrading ? 45 : null,
     };
 
     structures.set(state.id, state);
@@ -190,6 +189,7 @@ describe("SAMRadiusPass WebGL Performance", () => {
     let gcTracker: GcTracker | null = null;
     try {
       gcTracker = new GcTracker();
+      gcTracker.start();
     } catch {
       // GC observer fallback
     }

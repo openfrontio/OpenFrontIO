@@ -81,9 +81,9 @@ export class UnitImpl implements Unit {
     }
     if (this._type === UnitType.SAMLauncher) {
       this._samLauncherState = {
-        upgradeStartTick: null,
         startRange: this.mg.config().samRange(1),
         targetLevel: 1,
+        duration: this.mg.config().samUpgradeDuration(),
       };
     }
     if ("patrolTile" in params) {
@@ -178,7 +178,7 @@ export class UnitImpl implements Unit {
     };
     if (
       this._samLauncherState &&
-      this._samLauncherState.upgradeStartTick !== null
+      this._samLauncherState.upgradeStartTick !== undefined
     ) {
       update.samUpgrade = this._samLauncherState;
     }
