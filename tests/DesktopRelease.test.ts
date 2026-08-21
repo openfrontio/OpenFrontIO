@@ -45,6 +45,7 @@ describe("buildDescriptor", () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",
       cdnBase: "https://cdn.example",
+      requireCdnBase: false,
     });
 
     expect(d.template.html).toBe("<html><%- cdnBase %></html>");
@@ -55,6 +56,7 @@ describe("buildDescriptor", () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",
       cdnBase: "https://cdn.example",
+      requireCdnBase: false,
     });
 
     expect(d.assets["assets/index-xyz.js"]).toEqual({
@@ -69,6 +71,7 @@ describe("buildDescriptor", () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",
       cdnBase: "https://cdn.example",
+      requireCdnBase: false,
     });
 
     expect(d.coreVersion).toBe("abc123");
@@ -91,6 +94,7 @@ describe("buildDescriptor", () => {
       buildDescriptor(dir, {
         clientVersion: "sha-1",
         cdnBase: "https://cdn.example",
+        requireCdnBase: false,
       }),
     ).rejects.toThrow(/LICENSE/);
   });
@@ -120,6 +124,7 @@ describe("buildDescriptor", () => {
       buildDescriptor(dir, {
         clientVersion: "sha-1",
         cdnBase: "https://cdn.example",
+        requireCdnBase: false,
       }),
     ).rejects.toThrow(/safeOverlayPath/);
   });
@@ -145,6 +150,7 @@ describe("buildDescriptor", () => {
       buildDescriptor(dir, {
         clientVersion: "sha-1",
         cdnBase: "https://cdn.example",
+        requireCdnBase: false,
       }),
     ).rejects.toThrow(/sha256/);
   });
@@ -166,6 +172,7 @@ describe("buildDescriptor", () => {
       buildDescriptor(dir, {
         clientVersion: "sha-1",
         cdnBase: "https://cdn.example",
+        requireCdnBase: false,
       }),
     ).rejects.toThrow(/bytes/);
   });
@@ -186,6 +193,7 @@ describe("buildDescriptor", () => {
       buildDescriptor(dir, {
         clientVersion: "sha-1",
         cdnBase: "https://cdn.example",
+        requireCdnBase: false,
       }),
     ).rejects.toThrow(/safeManifestTarget/);
   });
@@ -212,6 +220,7 @@ describe("buildDescriptor", () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",
       cdnBase: "https://cdn.example",
+      requireCdnBase: false,
     });
 
     expect(d.assets["_assets/flags/1_East Anglia.719bac9ef408.svg"].url).toBe(
@@ -229,6 +238,7 @@ describe("buildDescriptor", () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",
       cdnBase: "https://cdn.example",
+      requireCdnBase: false,
     });
 
     expect(d.assetManifest).toEqual({
@@ -242,7 +252,11 @@ describe("buildDescriptor", () => {
     await fs.writeFile(path.join(dir, "asset-manifest.json"), "{}");
 
     await expect(
-      buildDescriptor(dir, { clientVersion: "s", cdnBase: "https://c" }),
+      buildDescriptor(dir, {
+        clientVersion: "s",
+        cdnBase: "https://c",
+        requireCdnBase: false,
+      }),
     ).rejects.toThrow(/asset-manifest\.json/);
   });
 
@@ -256,7 +270,11 @@ describe("buildDescriptor", () => {
     );
 
     await expect(
-      buildDescriptor(dir, { clientVersion: "s", cdnBase: "https://c" }),
+      buildDescriptor(dir, {
+        clientVersion: "s",
+        cdnBase: "https://c",
+        requireCdnBase: false,
+      }),
     ).rejects.toThrow(/assets\/index-xyz\.js.*is not an object/);
   });
 
@@ -264,14 +282,52 @@ describe("buildDescriptor", () => {
     await fs.writeFile(path.join(dir, "asset-hashes.json"), "{}");
 
     await expect(
-      buildDescriptor(dir, { clientVersion: "s", cdnBase: "https://c" }),
+      buildDescriptor(dir, {
+        clientVersion: "s",
+        cdnBase: "https://c",
+        requireCdnBase: false,
+      }),
     ).rejects.toThrow(/asset-hashes\.json/);
   });
 
-  it("warns but does not throw when cdnBase is empty, and still returns a valid descriptor", async () => {
+  it("throws on an empty cdnBase when one is required (production)", async () => {
+    // Without a CDN the descriptor would send every Steam client to the app
+    // server for ~570MB of assets, which risks web players too.
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "",
+        requireCdnBase: true,
+      }),
+    ).rejects.toThrow(/CDN_BASE is unset/);
+  });
+
+  it("names the manifest target when it has no entry in asset-hashes.json", async () => {
+    // A manifest target the download set never lists is fetched by the client
+    // but never downloaded or hash-verified -- it 404s at runtime.
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(dir, "asset-manifest.json"), "utf8"),
+    );
+    manifest["ghost/thing.png"] = "/_assets/ghost/thing.deadbeef.png";
+    await fs.writeFile(
+      path.join(dir, "asset-manifest.json"),
+      JSON.stringify(manifest),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+        requireCdnBase: false,
+      }),
+    ).rejects.toThrow(/ghost\/thing\.deadbeef\.png/);
+  });
+
+  it("warns but does not throw when cdnBase is empty and not required", async () => {
     const d = await buildDescriptor(dir, {
       clientVersion: "sha-1",
       cdnBase: "",
+      requireCdnBase: false,
     });
 
     expect(d.cdnBase).toBe("");
@@ -283,7 +339,11 @@ describe("buildDescriptor", () => {
 
 describe("getDescriptor", () => {
   it("memoises: repeat calls with the same arguments do not rebuild", async () => {
-    const opts = { clientVersion: "sha-1", cdnBase: "https://cdn.example" };
+    const opts = {
+      clientVersion: "sha-1",
+      cdnBase: "https://cdn.example",
+      requireCdnBase: false,
+    };
 
     const d1 = await getDescriptor(dir, opts);
     const d2 = await getDescriptor(dir, opts);
@@ -296,7 +356,11 @@ describe("getDescriptor", () => {
     const goodHashes = await fs.readFile(hashesPath, "utf-8");
     await fs.rm(hashesPath);
 
-    const opts = { clientVersion: "sha-1", cdnBase: "https://cdn.example" };
+    const opts = {
+      clientVersion: "sha-1",
+      cdnBase: "https://cdn.example",
+      requireCdnBase: false,
+    };
 
     await expect(getDescriptor(dir, opts)).rejects.toThrow();
 

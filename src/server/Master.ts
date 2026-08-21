@@ -56,6 +56,10 @@ const staticDir = path.join(__dirname, "../../static");
 const descriptorOpts = () => ({
   clientVersion: ServerEnv.gitCommit(),
   cdnBase: ServerEnv.cdnBase(),
+  // Production must have a CDN: without one this descriptor would point every
+  // Steam client at this app server for ~570MB of assets. Dev and preprod have
+  // no CDN, and same-origin is what the web client already does there.
+  requireCdnBase: ServerEnv.env() === GameEnv.Prod,
 });
 
 app.get("/desktop/version.json", async (_req, res) => {

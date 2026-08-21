@@ -114,6 +114,16 @@ export interface VersionPointer {
 interface BuildOpts {
   clientVersion: string;
   cdnBase: string;
+  /**
+   * Refuse to build a descriptor with an empty cdnBase. True in production,
+   * where an unset CDN_BASE would tell every Steam client to pull ~570MB of
+   * assets from this app server -- contradicting the architecture (the game
+   * server serves index.html and the WebSocket; everything else comes from the
+   * CDN bucket) and risking the app server for web players too, not just Steam
+   * ones. False elsewhere, where there is genuinely no CDN and same-origin is
+   * how the web client already behaves.
+   */
+  requireCdnBase: boolean;
 }
 
 let cached: Promise<ReleaseDescriptor> | null = null;
@@ -216,11 +226,41 @@ export async function buildDescriptor(
           `update.`,
       );
     }
+    // Every manifest target must also be in the download set. The manifest is
+    // what the client resolves a semantic name through; `assets` is what it
+    // actually fetches and hash-verifies. A target with no `assets` entry is
+    // never downloaded, so the client resolves the name to a path that is not
+    // in the overlay and 404s at runtime -- with no hash, it could not have
+    // verified it either.
+    let emitted: string;
+    try {
+      emitted = decodeURIComponent(target).replace(/^\/+/, "");
+    } catch {
+      throw new Error(
+        `asset-manifest.json maps "${name}" to "${target}", which is not ` +
+          `decodable as a URI component.`,
+      );
+    }
+    if (!Object.prototype.hasOwnProperty.call(assets, emitted)) {
+      throw new Error(
+        `asset-manifest.json maps "${name}" to "${target}", but ` +
+          `asset-hashes.json has no entry for "${emitted}". The client would ` +
+          `resolve that name to a file it never downloaded and cannot verify.`,
+      );
+    }
   }
 
   if (opts.cdnBase === "") {
+    if (opts.requireCdnBase) {
+      throw new Error(
+        "CDN_BASE is unset. This descriptor would tell every Steam client to " +
+          "fetch release assets from this app server instead of the CDN, " +
+          "which the architecture forbids and which risks the app server for " +
+          "web players as well. Set CDN_BASE for this environment.",
+      );
+    }
     log.warn(
-      "CDN_BASE is unset — desktop release assets will be served from the app's own origin instead of a CDN",
+      "CDN_BASE is unset — desktop release assets will be served from the app's own origin instead of a CDN. Expected outside production, where there is no CDN.",
     );
   }
 
