@@ -243,13 +243,11 @@ export function getDescriptor(
   staticDir: string,
   opts: BuildOpts,
 ): Promise<ReleaseDescriptor> {
-  if (cached === null) {
-    cached = buildDescriptor(staticDir, opts).catch((err: unknown) => {
-      // Do not cache a failure: a transient read error would otherwise poison
-      // the endpoint for the life of the process.
-      cached = null;
-      throw err;
-    });
-  }
+  cached ??= buildDescriptor(staticDir, opts).catch((err: unknown) => {
+    // Do not cache a failure: a transient read error would otherwise poison
+    // the endpoint for the life of the process.
+    cached = null;
+    throw err;
+  });
   return cached;
 }
