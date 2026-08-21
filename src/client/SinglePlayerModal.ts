@@ -756,6 +756,9 @@ export class SinglePlayerModal extends BaseModal {
       max: 120,
       stripPattern: /[e+-]/gi,
     });
+    if (value === undefined) {
+      return;
+    }
     this.overtimeStartMinutes = value;
   };
 
