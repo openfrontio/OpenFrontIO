@@ -5,6 +5,7 @@ import {
   PublicGames,
   PublicGameType,
 } from "../src/core/Schemas";
+import { lobbyFrame } from "./util/Wire";
 
 function lobby(
   gameID: string,
@@ -18,7 +19,7 @@ function fullMessage(
   serverTime: number,
   games: Partial<Record<PublicGameType, PublicGameInfo[]>>,
 ) {
-  return JSON.stringify({
+  return lobbyFrame({
     type: "full",
     serverTime,
     games: { ffa: [], team: [], special: [], ...games },
@@ -26,13 +27,19 @@ function fullMessage(
 }
 
 function countsMessage(serverTime: number, counts: Record<string, number>) {
-  return JSON.stringify({ type: "counts", serverTime, counts });
+  return lobbyFrame({ type: "counts", serverTime, counts });
 }
 
 function makeSocket() {
   const callback = vi.fn<(g: PublicGames) => void>();
   const socket = new PublicLobbySocket(callback);
-  const dispatch = (data: string) => {
+  const dispatch = (frame: Uint8Array) => {
+    // The real socket is in arraybuffer mode, so handleMessage sees an
+    // ArrayBuffer, not a Uint8Array.
+    const data = frame.buffer.slice(
+      frame.byteOffset,
+      frame.byteOffset + frame.byteLength,
+    );
     (socket as any).handleMessage({ data } as MessageEvent);
   };
   return { socket, callback, dispatch };
@@ -112,15 +119,16 @@ describe("PublicLobbySocket.handleMessage", () => {
     expect(arg.serverTime).toBe(2000);
   });
 
-  it("does not call the callback on malformed JSON", () => {
+  it("does not call the callback on a corrupt frame", () => {
     const { callback, dispatch } = makeSocket();
-    dispatch("not json");
+    dispatch(new Uint8Array([0xff, 0xff, 0xff]));
     expect(callback).not.toHaveBeenCalled();
   });
 
-  it("does not call the callback on schema-invalid messages", () => {
+  it("does not call the callback on a truncated frame", () => {
     const { callback, dispatch } = makeSocket();
-    dispatch(JSON.stringify({ type: "bogus", serverTime: 1 }));
+    const frame = countsMessage(1, { g1: 2 });
+    dispatch(frame.subarray(0, frame.length - 1));
     expect(callback).not.toHaveBeenCalled();
   });
 

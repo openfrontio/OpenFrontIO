@@ -10,15 +10,13 @@ vi.mock("../../src/core/Schemas", async () => {
     ServerPrestartMessageSchema: {
       safeParse: (data: any) => ({ success: true, data: data }),
     },
-    ClientMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data: data }),
-    },
   };
 });
 
 import { GameType } from "../../src/core/game/Game";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { clientFrame, testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
   const handlers: Record<string, (...args: any[]) => any> = {};
@@ -80,7 +78,7 @@ describe("GameServer - kick_player authorization", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      { gameType: GameType.Private } as any,
+      testGameConfig({ gameType: GameType.Private }),
       creatorPersistentID,
     );
   }
@@ -91,7 +89,7 @@ describe("GameServer - kick_player authorization", () => {
   ) {
     await ws.trigger(
       "message",
-      JSON.stringify({
+      clientFrame({
         type: "intent",
         intent: { type: "kick_player", targetClientID: target },
       }),
@@ -103,19 +101,19 @@ describe("GameServer - kick_player authorization", () => {
     const kickSpy = vi.spyOn(game, "kickClient");
 
     const { client: creator, ws: creatorWs } = makeClient(
-      "creator-cid",
+      "creator1",
       "creator-pid",
     );
-    const { client: target } = makeClient("target-cid", "target-pid");
+    const { client: target } = makeClient("target01", "target-pid");
 
     game.joinClient(creator);
     game.joinClient(target);
 
-    await sendKickMessage(creatorWs, "target-cid");
+    await sendKickMessage(creatorWs, "target01");
 
     expect(kickSpy).toHaveBeenCalledOnce();
     expect(kickSpy).toHaveBeenCalledWith(
-      "target-cid",
+      "target01",
       "kick_reason.lobby_creator",
     );
   });
@@ -125,34 +123,34 @@ describe("GameServer - kick_player authorization", () => {
     const kickSpy = vi.spyOn(game, "kickClient");
 
     const { client: admin, ws: adminWs } = makeClient(
-      "admin-cid",
+      "admin001",
       "admin-pid",
       "admin",
     );
-    const { client: target } = makeClient("target-cid", "target-pid");
+    const { client: target } = makeClient("target01", "target-pid");
 
     game.joinClient(admin);
     game.joinClient(target);
 
-    await sendKickMessage(adminWs, "target-cid");
+    await sendKickMessage(adminWs, "target01");
 
     expect(kickSpy).toHaveBeenCalledOnce();
-    expect(kickSpy).toHaveBeenCalledWith("target-cid", "kick_reason.admin");
+    expect(kickSpy).toHaveBeenCalledWith("target01", "kick_reason.admin");
   });
 
   it("non-creator non-admin cannot kick", async () => {
     const game = makeGame("creator-pid");
     const kickSpy = vi.spyOn(game, "kickClient");
 
-    const { client: creator } = makeClient("creator-cid", "creator-pid");
-    const { client: rando, ws: randoWs } = makeClient("rando-cid", "rando-pid");
-    const { client: target } = makeClient("target-cid", "target-pid");
+    const { client: creator } = makeClient("creator1", "creator-pid");
+    const { client: rando, ws: randoWs } = makeClient("rando001", "rando-pid");
+    const { client: target } = makeClient("target01", "target-pid");
 
     game.joinClient(creator);
     game.joinClient(rando);
     game.joinClient(target);
 
-    await sendKickMessage(randoWs, "target-cid");
+    await sendKickMessage(randoWs, "target01");
 
     expect(kickSpy).not.toHaveBeenCalled();
   });
@@ -162,12 +160,12 @@ describe("GameServer - kick_player authorization", () => {
     const kickSpy = vi.spyOn(game, "kickClient");
 
     const { client: creator, ws: creatorWs } = makeClient(
-      "creator-cid",
+      "creator1",
       "creator-pid",
     );
     game.joinClient(creator);
 
-    await sendKickMessage(creatorWs, "creator-cid");
+    await sendKickMessage(creatorWs, "creator1");
 
     expect(kickSpy).not.toHaveBeenCalled();
   });

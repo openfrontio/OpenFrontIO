@@ -6,6 +6,7 @@ import {
   PublicGames,
   PublicLobbyMessage,
 } from "../core/Schemas";
+import { encodeLobbyMessage } from "../core/ZbinWire";
 import { GameManager } from "./GameManager";
 import {
   InternalGameInfo,
@@ -264,12 +265,13 @@ export class WorkerLobbyService {
       // would only see counts-only deltas (which it can't apply without a
       // base) until the next structural change.
       if (this.lastPublicGames !== null) {
-        const fullJson = JSON.stringify({
-          type: "full",
-          serverTime: this.lastPublicGames.serverTime,
-          games: this.sanitizeGames(this.lastPublicGames.games),
-        } satisfies PublicLobbyMessage);
-        ws.send(fullJson);
+        ws.send(
+          encodeLobbyMessage({
+            type: "full",
+            serverTime: this.lastPublicGames.serverTime,
+            games: this.sanitizeGames(this.lastPublicGames.games),
+          } satisfies PublicLobbyMessage),
+        );
       }
       ws.on("message", () => {
         ws.terminate();
@@ -334,12 +336,12 @@ export class WorkerLobbyService {
         counts,
       };
     }
-    const json = JSON.stringify(payload);
+    const frame = encodeLobbyMessage(payload);
 
     const clientsToRemove: WebSocket[] = [];
     this.lobbyClients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(json);
+        client.send(frame);
       } else {
         clientsToRemove.push(client);
       }

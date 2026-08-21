@@ -88,7 +88,7 @@ const effectCatalog = {
         ...common,
         name: "locked_hydro",
         effectType: "nukeExplosion",
-        product: { priceId: "locked-hydro" },
+        priceHard: 100,
         attributes: {
           type: "shockwave",
           nukeType: "hydro",
@@ -103,7 +103,7 @@ const effectCatalog = {
         ...common,
         name: "locked_hydro_alt",
         effectType: "nukeExplosion",
-        product: { priceId: "locked-hydro-alt" },
+        priceHard: 100,
         attributes: {
           type: "shockwave",
           nukeType: "hydro",

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType, RankedType } from "../../src/core/game/Game";
 import { Client } from "../../src/server/Client";
 import { GamePhase, GameServer } from "../../src/server/GameServer";
+import { sentServerMessages, testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
   return {
@@ -55,7 +56,7 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      { gameType: GameType.Public, rankedType, maxPlayers } as any,
+      testGameConfig({ gameType: GameType.Public, rankedType, maxPlayers }),
       undefined,
       Date.now() + 15000,
     );
@@ -73,12 +74,10 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
     expect(game.cancelShortHandedMatch()).toBe(true);
 
     for (const c of clients) {
-      expect(c.ws.send).toHaveBeenCalledWith(
-        JSON.stringify({
-          type: "error",
-          error: "kick_reason.match_cancelled",
-        }),
-      );
+      expect(sentServerMessages(c.ws as any)).toContainEqual({
+        type: "error",
+        error: "kick_reason.match_cancelled",
+      });
       expect(c.ws.close).toHaveBeenCalled();
     }
     expect(game.phase()).toBe(GamePhase.Finished);
@@ -106,11 +105,19 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      { gameType: GameType.Public, rankedType: "3v3", maxPlayers: 6 } as any,
+      testGameConfig({
+        gameType: GameType.Public,
+        rankedType: RankedType.TwoVTwo,
+        maxPlayers: 6,
+      }),
       undefined,
       Date.now() + 15000,
     );
     expect(game.joinClient(makeClient("c1", "p1"))).toBe("joined");
+    // Swapped in after the join: an unknown ranked type can never reach a real
+    // server (CreateGameInput validates it, and the binary wire only encodes
+    // declared enum members), so this pokes the guard directly.
+    (game as any).gameConfig.rankedType = "3v3";
 
     expect(game.cancelShortHandedMatch()).toBe(false);
   });
@@ -120,7 +127,7 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      { gameType: GameType.Public, maxPlayers: 4 } as any,
+      testGameConfig({ gameType: GameType.Public, maxPlayers: 4 }),
       undefined,
       Date.now() + 15000,
     );

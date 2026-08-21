@@ -1,5 +1,6 @@
 import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
+import { zb } from "../../zbin";
 import {
   ColorPaletteSchema,
   CosmeticNameSchema,
@@ -102,7 +103,8 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientSpectateMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -138,6 +140,7 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientSpectateMessage = z.infer<typeof ClientSpectateMessageSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -239,18 +242,21 @@ const ClientInfoSchema = z.object({
   // lobby list). Never set on anonymized entries — the badge vouches for
   // the exact display name.
   verified: z.boolean().optional(),
+  // Watching rather than playing. Listed like anyone else — a spectator sees the
+  // lobby exactly as a player does — but not in the simulation.
+  spectator: z.boolean().optional(),
   // Server-pinned team slot for matchmade team games, so the lobby's team
   // preview can honour the pins instead of re-deriving teams that the server
   // will overrule at start. Absent when the game isn't matchmade.
-  teamIndex: z.number().int().nonnegative().optional(),
+  teamIndex: zb.uint().optional(),
 });
 
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
   lobbyCreatorClientID: z.string().optional(),
-  startsAt: z.number().optional(),
-  serverTime: z.number(),
+  startsAt: zb.uint().optional(),
+  serverTime: zb.uint(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
   // Private lobbies only: whether the lobby is publicly listed. Server-owned
@@ -260,7 +266,7 @@ export const GameInfoSchema = z.object({
   listed: z.boolean().optional(),
   // Listed lobbies only: server timestamp when the lobby starts
   // automatically (hosts can't sit on a public listing indefinitely).
-  autoStartAt: z.number().optional(),
+  autoStartAt: zb.uint().optional(),
   // Featured lobbies only (admin bot). Echoed back so the creating bot can
   // confirm the request took effect, the same way it checks `listed`.
   label: LobbyLabelSchema.optional(),
@@ -274,8 +280,8 @@ export const GameInfoSchema = z.object({
 // carry them by construction.
 export const PublicGameInfoSchema = z.object({
   gameID: z.string(),
-  numClients: z.number(),
-  startsAt: z.number().optional(),
+  numClients: zb.uint(),
+  startsAt: zb.uint().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
   // Featured lobbies only. Both optional so a client on an older build simply
@@ -286,7 +292,7 @@ export const PublicGameInfoSchema = z.object({
 });
 
 export const PublicGamesSchema = z.object({
-  serverTime: z.number(),
+  serverTime: zb.uint(),
   // partialRecord: every consumer already treats buckets as optional, and it
   // lets clients tolerate servers that don't send every lobby type.
   games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
@@ -297,17 +303,17 @@ export const PublicGamesSchema = z.object({
 // per-lobby player counts, which change far more often than the rest.
 export const PublicLobbyFullSchema = z.object({
   type: z.literal("full"),
-  serverTime: z.number(),
+  serverTime: zb.uint(),
   games: z.partialRecord(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 export const PublicLobbyCountsSchema = z.object({
   type: z.literal("counts"),
-  serverTime: z.number(),
-  counts: z.record(z.string(), z.number()),
+  serverTime: zb.uint(),
+  counts: z.record(z.string(), zb.uint()),
 });
 
-export const PublicLobbyMessageSchema = z.discriminatedUnion("type", [
+export const PublicLobbyMessageSchema = zb.discriminatedUnion("type", [
   PublicLobbyFullSchema,
   PublicLobbyCountsSchema,
 ]);
@@ -329,6 +335,9 @@ export interface ClientInfo {
   // Plays under their server-validated account name (blue check). Never set
   // on anonymized entries.
   verified?: boolean;
+  // Watching rather than playing — listed like anyone else, but not in the
+  // simulation.
+  spectator?: boolean;
   // Server-pinned team slot for matchmade team games; absent when not matchmade.
   teamIndex?: number;
 }
@@ -344,13 +353,27 @@ export enum LogSeverity {
 // Utility types
 //
 
-const TeamCountConfigSchema = z.union([
-  z.number(),
-  z.literal(Duos),
-  z.literal(Trios),
-  z.literal(Quads),
-  z.literal(HumansVsNations),
-]);
+// select: encoding an untagged union without one costs a zod safeParse per
+// rejected candidate (~10 µs each) — real money on schemas embedded in every
+// GameConfig on the wire. The candidate ORDER is the wire layout; only the
+// picking got cheaper.
+const TEAM_COUNT_PRESETS = [Duos, Trios, Quads, HumansVsNations] as const;
+const TeamCountConfigSchema = zb.union(
+  [
+    zb.uint(),
+    z.literal(Duos),
+    z.literal(Trios),
+    z.literal(Quads),
+    z.literal(HumansVsNations),
+  ],
+  {
+    select: (v) =>
+      typeof v === "number"
+        ? 0
+        : TEAM_COUNT_PRESETS.indexOf(v as (typeof TEAM_COUNT_PRESETS)[number]) +
+          1,
+  },
+);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 // Doomsday Clock (anti-stall). Below a rising share of the map a player (or, in
@@ -363,6 +386,16 @@ export const DoomsdayClockConfigSchema = z.object({
   speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
 });
 
+// Overtime (anti-stalemate). After startMinutes of game time the tile share
+// required to win drops steadily from the base (80% FFA / 95% team) at a fixed
+// rate (see OVERTIME_DEFAULTS in Config.ts), so the leading side eventually
+// crosses the shrinking bar and a stalled game is guaranteed to end. Only
+// `enabled` and `startMinutes` are wire-configurable.
+export const OvertimeConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  startMinutes: zb.uint({ min: 1, max: 120 }).optional(),
+});
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -373,14 +406,15 @@ export const GameConfigSchema = z.object({
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   doomsdayClock: DoomsdayClockConfigSchema.optional(),
+  overtime: OvertimeConfigSchema.optional(),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean().optional(),
       isRandomSpawn: z.boolean().optional(),
       isCrowded: z.boolean().optional(),
       isHardNations: z.boolean().optional(),
-      startingGold: z.number().int().min(0).optional(),
-      goldMultiplier: z.number().min(0.1).max(1000).optional(),
+      startingGold: zb.uint().optional(),
+      goldMultiplier: zb.float({ min: 0.1, max: 1000 }).optional(),
       isAlliancesDisabled: z.boolean().optional(),
       isPortsDisabled: z.boolean().optional(),
       isNukesDisabled: z.boolean().optional(),
@@ -390,13 +424,13 @@ export const GameConfigSchema = z.object({
       isDoomsdayClock: z.boolean().optional(),
     })
     .optional(),
-  nations: z
-    .number()
-    .int()
-    .min(1)
-    .max(400)
-    .or(z.enum(["default", "disabled"])),
-  bots: z.number().int().min(0).max(400),
+  nations: zb.union(
+    [zb.uint({ min: 1, max: 400 }), z.enum(["default", "disabled"])],
+    {
+      select: (v) => (typeof v === "number" ? 0 : 1),
+    },
+  ),
+  bots: zb.uint({ max: 400 }),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
@@ -416,29 +450,23 @@ export const GameConfigSchema = z.object({
   nameRevealPublicIds: z.string().array().max(200).optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
-  maxPlayers: z.number().optional(),
+  maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),
-  maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
-  customAllianceDuration: z.number().int().min(0).max(15).nullable().optional(), // In minutes; 0 disables alliances
-  startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
-  spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
+  maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
+  customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
+  startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
+  spawnImmunityDuration: zb.uint().nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
-  startingGold: z.number().int().min(0).max(1000000000).nullable().optional(),
+  goldMultiplier: zb.float({ min: 0.1, max: 1000 }).nullable().optional(),
+  startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
   hostCheats: z
     .object({
       infiniteGold: z.boolean().optional(),
       infiniteTroops: z.boolean().optional(),
-      goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
-      startingGold: z
-        .number()
-        .int()
-        .min(0)
-        .max(1000000000)
-        .nullable()
-        .optional(),
+      goldMultiplier: zb.float({ min: 0.1, max: 1000 }).nullable().optional(),
+      startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
     })
     .optional(),
 });
@@ -465,10 +493,7 @@ const TokenSchema = z
     },
   );
 
-const EmojiSchema = z
-  .number()
-  .nonnegative()
-  .max(flattenedEmojiTable.length - 1);
+const EmojiSchema = zb.uint({ max: flattenedEmojiTable.length - 1 });
 
 export const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
 
@@ -476,6 +501,13 @@ export const isValidGameID = (value: string): boolean =>
   GAME_ID_REGEX.test(value);
 
 export const ID = z.string().regex(GAME_ID_REGEX);
+
+// zbin dictionary for player clientIDs (see ZbinWire.ts): both peers seed it
+// from GameStartInfo.players, so an in-game player id costs one byte on the
+// binary wire. Validates exactly like ID; ids outside the roster (e.g.
+// ADMIN_BOT_CLIENT_ID) encode inline via the escape byte.
+export const CLIENT_ID_MAPPING = "clientId";
+const MappedID = zb.mapped(CLIENT_ID_MAPPING, { regex: GAME_ID_REGEX });
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
@@ -491,59 +523,61 @@ export const QuickChatKeySchema = z.enum(
 
 export const AllianceExtensionIntentSchema = z.object({
   type: z.literal("allianceExtension"),
-  recipient: ID,
+  recipient: MappedID,
 });
 
 export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
-  targetID: ID.nullable(),
-  troops: z.number().nonnegative().nullable(),
+  targetID: MappedID.nullable(),
+  troops: zb.float({ min: 0 }).nullable(),
 });
 
 export const SpawnIntentSchema = z.object({
   type: z.literal("spawn"),
   // A TileRef indexes the typed-array terrain buffers, so it must be a
   // non-negative integer. Fractional refs silently corrupt those lookups.
-  tile: z.number().int().nonnegative(),
+  tile: zb.uint(),
 });
 
 export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
-  // Not .int(): troops are fractional throughout the sim (attackRatio *
+  // Not an int: troops are fractional throughout the sim (attackRatio *
   // troops(), combat attrition), and the client sends the raw float.
-  troops: z.number().nonnegative(),
-  dst: z.number().int().nonnegative(),
+  troops: zb.float({ min: 0 }),
+  dst: zb.uint(),
 });
 
 export const AllianceRequestIntentSchema = z.object({
   type: z.literal("allianceRequest"),
-  recipient: ID,
+  recipient: MappedID,
 });
 
 export const AllianceRejectIntentSchema = z.object({
   type: z.literal("allianceReject"),
-  requestor: ID,
+  requestor: MappedID,
 });
 
 export const BreakAllianceIntentSchema = z.object({
   type: z.literal("breakAlliance"),
-  recipient: ID,
+  recipient: MappedID,
 });
 
 export const TargetPlayerIntentSchema = z.object({
   type: z.literal("targetPlayer"),
-  target: ID,
+  target: MappedID,
 });
 
 export const EmojiIntentSchema = z.object({
   type: z.literal("emoji"),
-  recipient: z.union([ID, z.literal(AllPlayers)]),
+  recipient: zb.union([MappedID, z.literal(AllPlayers)], {
+    select: (v) => (v === AllPlayers ? 1 : 0),
+  }),
   emoji: EmojiSchema,
 });
 
 export const EmbargoIntentSchema = z.object({
   type: z.literal("embargo"),
-  targetID: ID,
+  targetID: MappedID,
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
@@ -554,29 +588,29 @@ export const EmbargoAllIntentSchema = z.object({
 
 export const DonateGoldIntentSchema = z.object({
   type: z.literal("donate_gold"),
-  recipient: ID,
-  gold: z.number().nonnegative().nullable(),
+  recipient: MappedID,
+  gold: zb.float({ min: 0 }).nullable(),
 });
 
 export const DonateTroopIntentSchema = z.object({
   type: z.literal("donate_troops"),
-  recipient: ID,
-  troops: z.number().nonnegative().nullable(),
+  recipient: MappedID,
+  troops: zb.float({ min: 0 }).nullable(),
 });
 
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  tile: z.number().int().nonnegative(),
+  tile: zb.uint(),
   rocketDirectionUp: z.boolean().optional(),
-  amount: z.number().int().min(1).max(MAX_UPGRADE_AMOUNT).optional(),
+  amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
-  unitId: z.number().int().nonnegative(),
-  amount: z.number().int().min(1).max(MAX_UPGRADE_AMOUNT).optional(),
+  unitId: zb.uint(),
+  amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
 });
 
 export const CancelAttackIntentSchema = z.object({
@@ -586,30 +620,33 @@ export const CancelAttackIntentSchema = z.object({
 
 export const CancelBoatIntentSchema = z.object({
   type: z.literal("cancel_boat"),
-  unitID: z.number().int().nonnegative(),
+  unitID: zb.uint(),
 });
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
-  unitIds: z.array(z.number().int()).nonempty(),
-  tile: z.number().int().nonnegative(),
+  unitIds: z.array(zb.int()).nonempty(),
+  tile: zb.uint(),
 });
 
 export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),
-  unitId: z.number().int().nonnegative(),
+  unitId: zb.uint(),
 });
 
 export const QuickChatIntentSchema = z.object({
   type: z.literal("quick_chat"),
-  recipient: ID,
+  recipient: MappedID,
   quickChatKey: QuickChatKeySchema,
-  target: ID.optional(),
+  target: MappedID.optional(),
 });
 
+// Server-internal (rejected from clients). The player being marked is the
+// intent's own sender, so the target rides the stamped `clientID` that
+// StampedIntentSchema adds to every intent — declaring it here too would
+// write the same key twice on the binary wire.
 export const MarkDisconnectedIntentSchema = z.object({
   type: z.literal("mark_disconnected"),
-  clientID: ID,
   isDisconnected: z.boolean(),
 });
 
@@ -618,8 +655,8 @@ export const KickPlayerIntentSchema = z.object({
   // Either a live clientID (lobby / in-game kick) OR an account publicID, for
   // callers that identify a player by account rather than per-session clientID;
   // the server resolves the publicID to the live clientID. Exactly one is set.
-  targetClientID: ID.optional(),
-  targetPublicID: ID.optional(),
+  targetClientID: MappedID.optional(),
+  targetPublicID: MappedID.optional(),
 });
 
 export const TogglePauseIntentSchema = z.object({
@@ -629,7 +666,9 @@ export const TogglePauseIntentSchema = z.object({
 
 export const UpdateGameConfigIntentSchema = z.object({
   type: z.literal("update_game_config"),
-  config: GameConfigSchema.partial(),
+  // zb.json: too rare and too config-shaped to deserve a binary layout —
+  // rides the binary wire as length-prefixed JSON.
+  config: zb.json(GameConfigSchema.partial()),
 });
 
 export const ToggleGameStartTimerIntentSchema = z.object({
@@ -665,7 +704,9 @@ export const IntentSchema = z.discriminatedUnion("type", [
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
-export const StampedIntentSchema = IntentSchema.and(z.object({ clientID: ID }));
+export const StampedIntentSchema = zb.stamped(IntentSchema, {
+  clientID: MappedID,
+});
 export type StampedIntent = Intent & { clientID: ClientID };
 
 // Placeholder clientID stamped onto admin-bot intents (HTTP admin API). The bot
@@ -679,10 +720,10 @@ export const ADMIN_BOT_CLIENT_ID: ClientID = "ADMINBOT";
 //
 
 export const TurnSchema = z.object({
-  turnNumber: z.number(),
+  turnNumber: zb.uint(),
   intents: StampedIntentSchema.array(),
   // The hash of the game state at the end of the turn.
-  hash: z.number().nullable().optional(),
+  hash: zb.float().nullable().optional(),
 });
 
 export const FlagName = z
@@ -772,7 +813,7 @@ export const PlayerSchema = z.object({
   // Server-stamped team slot for matchmade team games (index into the
   // game's team list). Feeds deterministic team assignment, so it must be
   // identical for every client (like clanTag/friends).
-  teamIndex: z.number().int().nonnegative().optional(),
+  teamIndex: zb.uint().optional(),
 });
 
 // A purchased bot tribe name in use this game (active names are globally
@@ -788,14 +829,16 @@ export type Tribe = z.infer<typeof TribeSchema>;
 
 export const GameStartInfoSchema = z.object({
   gameID: ID,
-  lobbyCreatedAt: z.number(),
-  visibleAt: z.number().optional(),
+  lobbyCreatedAt: zb.uint(),
+  visibleAt: zb.uint().optional(),
   listed: z.boolean().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
   // Purchased bot tribe names in use this game (public games only). Rides
   // the analytics record to infra at game end for owner appearance stats.
-  tribes: z.array(TribeSchema).max(100).optional(),
+  // zb.json: TribeSchema is `.loose()`, and a positional binary layout would
+  // silently drop the passthrough keys that looseness exists to preserve.
+  tribes: z.array(zb.json(TribeSchema)).max(100).optional(),
 });
 
 export const WinnerSchema = z
@@ -831,7 +874,7 @@ export const ServerStartGameMessageSchema = z.object({
   // Turns the client missed if they are late to the game.
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
-  lobbyCreatedAt: z.number(),
+  lobbyCreatedAt: zb.uint(),
   // The clientID assigned to this connection by the server.
   // Absent for replays where the viewer has no player identity.
   myClientID: ID.optional(),
@@ -839,11 +882,13 @@ export const ServerStartGameMessageSchema = z.object({
 
 export const ServerDesyncSchema = z.object({
   type: z.literal("desync"),
-  turn: z.number(),
-  correctHash: z.number().nullable(),
-  clientsWithCorrectHash: z.number(),
-  totalActiveClients: z.number(),
-  yourHash: z.number().optional(),
+  turn: zb.uint(),
+  // Hashes are fractional (PlayerImpl.hash multiplies by troops), so they
+  // ride as bit-exact float64 rather than a varint.
+  correctHash: zb.float().nullable(),
+  clientsWithCorrectHash: zb.uint(),
+  totalActiveClients: zb.uint(),
+  yourHash: zb.float().optional(),
 });
 
 export const ServerErrorSchema = z.object({
@@ -867,7 +912,7 @@ export const ServerNewLobbyMessageSchema = z.object({
   gameID: ID,
 });
 
-export const ServerMessageSchema = z.discriminatedUnion("type", [
+export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
@@ -893,24 +938,24 @@ export const ClientSendWinnerSchema = z.object({
 // be agreed on by majority vote. gold is a decimal string because it is a
 // bigint in the engine.
 export const PlayerLiveStatsSchema = z.object({
-  clientID: ID,
-  tilesOwned: z.number().int().nonnegative(),
-  troops: z.number(),
+  clientID: MappedID,
+  tilesOwned: zb.uint(),
+  troops: zb.float(),
   gold: z.string(),
   isAlive: z.boolean(),
   team: z.string().nullable(),
   // OFM live standings: the eliminator's clientID and the finishing place at
   // elimination, both null while the player is still alive. Deterministic sim
   // values, so clients agree on them for the majority vote.
-  killedBy: ID.nullable(),
-  deathPosition: z.number().int().positive().nullable(),
+  killedBy: MappedID.nullable(),
+  deathPosition: zb.uint({ min: 1 }).nullable(),
 });
 
 // A full live snapshot of a running game at a given turn. Reported by clients
 // (which run the sim) so the server can answer "what's happening" queries for
 // the admin bot.
 export const LiveStatsSchema = z.object({
-  turn: z.number().int().nonnegative(),
+  turn: zb.uint(),
   players: PlayerLiveStatsSchema.array(),
 });
 
@@ -921,8 +966,8 @@ export const ClientSendLiveStatsSchema = z.object({
 
 export const ClientHashSchema = z.object({
   type: z.literal("hash"),
-  hash: z.number(),
-  turnNumber: z.number(),
+  hash: zb.float(),
+  turnNumber: zb.uint(),
 });
 
 export const ClientLogMessageSchema = z.object({
@@ -951,17 +996,27 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  // Watch without playing: no spawn, no team, no lobby slot.
+  spectator: z.boolean().optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
   type: z.literal("rejoin"),
   gameID: ID,
   // Note: clientID is NOT sent - server looks it up from persistentID in token
-  lastTurn: z.number(),
+  lastTurn: zb.uint(),
   token: TokenSchema,
 });
 
-export const ClientMessageSchema = z.discriminatedUnion("type", [
+// Switch between playing and watching from the lobby screen. Lobby-phase only:
+// once the game starts the player list is frozen, so the server refuses to turn
+// a spectator back into a player.
+export const ClientSpectateMessageSchema = z.object({
+  type: z.literal("spectate"),
+  spectator: z.boolean(),
+});
+
+export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientSendLiveStatsSchema,
   ClientPingMessageSchema,
@@ -970,6 +1025,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientSpectateMessageSchema,
 ]);
 
 //

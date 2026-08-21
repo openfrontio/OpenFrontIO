@@ -2,6 +2,7 @@ import { GameType } from "../../src/core/game/Game";
 import { UsernameSchema } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
   return {
@@ -56,13 +57,13 @@ function makeGame(
     "g1",
     logger,
     Date.now(),
-    {
+    testGameConfig({
       gameType: GameType.Private,
       anonymizeNames,
       disableClanTags,
       nameReveals,
       nameRevealPublicIds,
-    } as any,
+    }),
     "creator-pid",
   );
   [

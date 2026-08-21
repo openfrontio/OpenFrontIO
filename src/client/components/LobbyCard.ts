@@ -55,6 +55,14 @@ export interface LobbyCardOptions {
   timeDisplayUppercase?: boolean;
   onClick: () => void;
   disabled?: boolean;
+  /**
+   * Gated rather than disabled: the card dims and reports `aria-disabled`, but
+   * stays clickable, so `onClick` still runs and can refuse the action itself
+   * (the desktop update bar's attention animation is triggered from there).
+   * `disabled` would swallow the click -- it also sets pointer-events-none --
+   * leaving a gated card that looks broken instead of explaining itself.
+   */
+  blocked?: boolean;
   /** Card height; defaults to the homepage's fill-the-grid-cell sizing. */
   heightClass?: string;
 }
@@ -66,6 +74,7 @@ export function lobbyCard({
   timeDisplayUppercase = false,
   onClick,
   disabled = false,
+  blocked = false,
   heightClass = "h-44 sm:h-full",
 }: LobbyCardOptions): TemplateResult {
   const mapType = lobby.gameConfig!.gameMap as GameMapType;
@@ -105,9 +114,12 @@ export function lobbyCard({
     <button
       @click=${onClick}
       ?disabled=${disabled}
+      aria-disabled=${blocked}
       class="group relative w-full ${heightClass} text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${disabled
         ? "opacity-50 cursor-not-allowed pointer-events-none"
-        : ""}"
+        : blocked
+          ? "opacity-50 cursor-not-allowed"
+          : ""}"
     >
       <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
       <div

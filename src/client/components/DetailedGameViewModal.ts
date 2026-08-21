@@ -3,6 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { GameMapType } from "../../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../../core/Schemas";
+import { type DesktopUpdateState } from "../DesktopShell";
+import { shouldBlockMultiplayerAction } from "../GameModeSelector";
 import { JoinLobbyModal } from "../JoinLobbyModal";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
@@ -97,6 +99,7 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private profiles: Record<string, LobbyFilters> = {};
   @state() private selectedProfile = "";
   @state() private profileName = "";
+  @state() private desktopUpdateState: DesktopUpdateState | null = null;
 
   private serverTimeOffset = 0;
   private countdownTimer: number | null = null;
@@ -150,10 +153,26 @@ export class DetailedGameViewModal extends BaseModal {
     }
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "desktop-update-state",
+      this.onDesktopUpdateState,
+    );
+  }
+
   disconnectedCallback() {
+    document.removeEventListener(
+      "desktop-update-state",
+      this.onDesktopUpdateState,
+    );
     this.onClose();
     super.disconnectedCallback();
   }
+
+  private onDesktopUpdateState = (e: Event) => {
+    this.desktopUpdateState = (e as CustomEvent<DesktopUpdateState>).detail;
+  };
 
   // ---- Slot animation ----
   //
@@ -372,6 +391,10 @@ export class DetailedGameViewModal extends BaseModal {
       timeDisplay: this.timeDisplay(lobby),
       timeDisplayUppercase: lobby.startsAt === undefined,
       heightClass: "h-full",
+      // Gated, not disabled: `disabled` also sets pointer-events-none and would
+      // swallow the click that's supposed to make the update bar wiggle. join()
+      // does the actual refusing.
+      blocked: shouldBlockMultiplayerAction(this.desktopUpdateState),
       onClick: () => this.join(lobby),
     });
   }
@@ -683,8 +706,31 @@ export class DetailedGameViewModal extends BaseModal {
     return usernameInput ? usernameInput.canPlay() : true;
   }
 
+  /**
+   * Refuses the action and draws attention to the update bar. Returns true
+   * when the caller should stop.
+   *
+   * Mirrors GameModeSelector's blockedByUpdate() (deliberately not shared: it
+   * touches this component's own state field) -- see that file for why this
+   * nudges the bar instead of relying on `disabled`, which would swallow the
+   * click.
+   */
+  private blockedByUpdate(): boolean {
+    if (!shouldBlockMultiplayerAction(this.desktopUpdateState)) return false;
+    (
+      document.querySelector("desktop-update-bar") as
+        | (HTMLElement & { wiggle?: () => void })
+        | null
+    )?.wiggle?.();
+    return true;
+  }
+
   private join(lobby: PublicGameInfo) {
     if (!this.canPlay()) return;
+    // Checked -- and the bar nudged -- before close(): a blocked attempt must
+    // leave the modal open and tell the player why, not vanish silently. This
+    // sits above the hosted/public branch below so both paths are covered.
+    if (this.blockedByUpdate()) return;
     this.close();
 
     // Hosted lobbies are private games a subscriber listed publicly: joining

@@ -179,7 +179,7 @@ export class AccountSettingsPanel extends LitElement {
           <o-button
             variant="danger"
             size="sm"
-            translationKey="account_modal.delete_account_button"
+            translationKey="account_modal.delete_account_title"
             .disable=${this.deleteBusy}
             @click=${() => {
               this.deleteDialogOpen = true;
