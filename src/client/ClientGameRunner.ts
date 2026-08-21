@@ -145,12 +145,14 @@ export function joinLobby(
   // debouncing avoids downloading (and permanently caching) a map that was
   // only shown transiently.
   const MAP_PRELOAD_DEBOUNCE_STREAK = 3;
+  // In-flight terrain loads keyed by `map:mapSize`, so re-requesting a map
+  // that began loading earlier (even after another map superseded it) reuses
+  // the original promise instead of starting a duplicate download/parse while
+  // the first one is still running.
+  const terrainLoads = new Map<string, Promise<TerrainMapData>>();
+  // The load the authoritative start gate consumes (createClientGame) — always
+  // the most recent request; dedup makes it the map that actually starts.
   let terrainLoad: Promise<TerrainMapData> | null = null;
-  // Key of the map currently represented by terrainLoad, so repeated
-  // lobby_info/prestart requests for the same map reuse the in-flight load
-  // instead of starting a duplicate one (loadTerrainMap only caches once the
-  // async work has completed).
-  let terrainLoadKey: string | null = null;
   // Map key (map:mapSize) most recently seen in lobby_info and how many
   // consecutive broadcasts it has held. The preload is only triggered once
   // the streak reaches the debounce threshold.
@@ -161,8 +163,10 @@ export function joinLobby(
     mapSize: Parameters<typeof loadTerrainMap>[1],
   ): Promise<TerrainMapData> => {
     const key = `${map}:${mapSize}`;
-    if (terrainLoad !== null && terrainLoadKey === key) {
-      return terrainLoad;
+    const existing = terrainLoads.get(key);
+    if (existing !== undefined) {
+      terrainLoad = existing;
+      return existing;
     }
     const load = loadTerrainMap(
       map,
@@ -170,13 +174,15 @@ export function joinLobby(
       terrainMapFileLoader,
       false, // Layer images loaded off the critical path after game start.
     );
+    terrainLoads.set(key, load);
     terrainLoad = load;
-    terrainLoadKey = key;
     void load.catch((e) => {
       // Clear a failed load so the authoritative start gate can retry.
+      if (terrainLoads.get(key) === load) {
+        terrainLoads.delete(key);
+      }
       if (terrainLoad === load) {
         terrainLoad = null;
-        terrainLoadKey = null;
       }
       console.warn(
         `lobby: terrain preload failed for "${key}"; will retry at game start`,
@@ -200,7 +206,12 @@ export function joinLobby(
       // deduplicates in-flight loads, and prestart still re-validates the
       // authoritative map.
       const gameConfig = message.lobby.gameConfig;
-      if (gameConfig !== undefined) {
+      if (gameConfig === undefined) {
+        // No config in this broadcast — reset the debounce so a stale key /
+        // streak can't prematurely trigger a preload on a later matching one.
+        pendingPreloadKey = null;
+        pendingPreloadStreak = 0;
+      } else {
         const key = `${gameConfig.gameMap}:${gameConfig.gameMapSize}`;
         if (pendingPreloadKey === key) {
           pendingPreloadStreak++;
