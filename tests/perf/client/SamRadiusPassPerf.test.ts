@@ -146,14 +146,10 @@ function createMockSAMStructures(
       hasTrainStation: false,
       trainType: 0,
       loaded: null,
-      samUpgrade: isUpgrading
-        ? {
-            startTick,
-            startRange: 70 + (level - 1) * 16,
-            targetLevel: level + 1,
-            duration: 45,
-          }
-        : undefined,
+      samUpgradeStartTick: isUpgrading ? startTick : null,
+      samUpgradeStartRange: isUpgrading ? 70 + (level - 1) * 16 : 0,
+      samUpgradeTargetLevel: isUpgrading ? level + 1 : 0,
+      samUpgradeDuration: isUpgrading ? 45 : 0,
     };
 
     structures.set(state.id, state);

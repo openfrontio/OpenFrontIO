@@ -1,4 +1,3 @@
-import type { SamUpgradeUpdate } from "../../../core/Schemas";
 import type { TileRef } from "../../../core/game/GameMap";
 
 /** TrainType enum — numeric values matching UnitState.trainType. */
@@ -113,7 +112,10 @@ export interface UnitState {
   trainType: number | null; // 0=Engine, 1=TailEngine, 2=Carriage
   loaded: boolean | null;
   constructionStartTick: number | null;
-  samUpgrade?: SamUpgradeUpdate;
+  samUpgradeStartTick: number | null;
+  samUpgradeStartRange: number;
+  samUpgradeTargetLevel: number;
+  samUpgradeDuration: number;
 }
 
 /** Minimal dead-unit data needed by the FX pass. */

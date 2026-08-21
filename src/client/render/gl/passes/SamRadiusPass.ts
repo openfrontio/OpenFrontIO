@@ -358,11 +358,11 @@ export class SAMRadiusPass {
       const isFriendly =
         u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
       const bg = this.getSAMBaseGroup(u, isFriendly);
-      const up = u.samUpgrade;
+      const startTick = u.samUpgradeStartTick;
       if (
-        up &&
-        continuousTick - up.startTick >= 0 &&
-        continuousTick - up.startTick < (up.duration ?? 45)
+        startTick !== null &&
+        continuousTick >= startTick &&
+        continuousTick - startTick < u.samUpgradeDuration
       ) {
         this.dirtyGroups.add(bg);
       }
@@ -403,17 +403,22 @@ export class SAMRadiusPass {
     isFriendly: boolean,
     isGroupUpgrading: boolean,
   ): void {
-    const up = u.samUpgrade;
-    const duration = up?.duration ?? 45;
-    const elapsed = up ? continuousTick - up.startTick : Infinity;
+    const startTick = u.samUpgradeStartTick;
+    const duration = u.samUpgradeDuration;
     const activeGroup = baseGroup * 2;
     const previewGroup = baseGroup * 2 + 1;
 
-    if (up && elapsed >= 0 && elapsed < duration) {
+    if (
+      startTick !== null &&
+      continuousTick >= startTick &&
+      continuousTick - startTick < duration
+    ) {
+      const elapsed = continuousTick - startTick;
       const progress = Math.max(0, Math.min(1, elapsed / duration));
-      const targetRadius = samRange(up.targetLevel);
+      const targetRadius = samRange(u.samUpgradeTargetLevel);
       const currentRadius =
-        up.startRange + (targetRadius - up.startRange) * progress;
+        u.samUpgradeStartRange +
+        (targetRadius - u.samUpgradeStartRange) * progress;
 
       // Layer 0: Active operating radius
       circles.push({
