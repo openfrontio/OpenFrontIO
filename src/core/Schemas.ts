@@ -353,13 +353,27 @@ export enum LogSeverity {
 // Utility types
 //
 
-const TeamCountConfigSchema = z.union([
-  zb.uint(),
-  z.literal(Duos),
-  z.literal(Trios),
-  z.literal(Quads),
-  z.literal(HumansVsNations),
-]);
+// select: encoding an untagged union without one costs a zod safeParse per
+// rejected candidate (~10 µs each) — real money on schemas embedded in every
+// GameConfig on the wire. The candidate ORDER is the wire layout; only the
+// picking got cheaper.
+const TEAM_COUNT_PRESETS = [Duos, Trios, Quads, HumansVsNations] as const;
+const TeamCountConfigSchema = zb.union(
+  [
+    zb.uint(),
+    z.literal(Duos),
+    z.literal(Trios),
+    z.literal(Quads),
+    z.literal(HumansVsNations),
+  ],
+  {
+    select: (v) =>
+      typeof v === "number"
+        ? 0
+        : TEAM_COUNT_PRESETS.indexOf(v as (typeof TEAM_COUNT_PRESETS)[number]) +
+          1,
+  },
+);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 // Doomsday Clock (anti-stall). Below a rising share of the map a player (or, in
@@ -410,7 +424,12 @@ export const GameConfigSchema = z.object({
       isDoomsdayClock: z.boolean().optional(),
     })
     .optional(),
-  nations: zb.uint({ min: 1, max: 400 }).or(z.enum(["default", "disabled"])),
+  nations: zb.union(
+    [zb.uint({ min: 1, max: 400 }), z.enum(["default", "disabled"])],
+    {
+      select: (v) => (typeof v === "number" ? 0 : 1),
+    },
+  ),
   bots: zb.uint({ max: 400 }),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
@@ -550,7 +569,9 @@ export const TargetPlayerIntentSchema = z.object({
 
 export const EmojiIntentSchema = z.object({
   type: z.literal("emoji"),
-  recipient: z.union([MappedID, z.literal(AllPlayers)]),
+  recipient: zb.union([MappedID, z.literal(AllPlayers)], {
+    select: (v) => (v === AllPlayers ? 1 : 0),
+  }),
   emoji: EmojiSchema,
 });
 
