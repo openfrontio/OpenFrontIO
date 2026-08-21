@@ -171,6 +171,13 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     // Without the fix this MIRV keeps flying, separates into ~350
     // MIRVWarheads, and devastates the player you just allied with.
     expect(game.units(UnitType.MIRV)).toHaveLength(0);
+
+    // Ticking past separation must not throw (UnitImpl double delete) and must not spawn warheads
+    for (let i = 0; i < 30; i++) {
+      game.executeNextTick();
+    }
+    expect(game.units(UnitType.MIRV)).toHaveLength(0);
+    expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
   });
 
   test("accepting alliance destroys an in-flight MIRV warhead between the newly allied players", () => {
@@ -205,6 +212,97 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     // A MIRVWarhead never runs maybeBreakAlliances() on impact (MIRVs only
     // break alliance at launch), so a warhead that's already separated has
     // to be caught here too, or it silently lands on the new ally.
+    expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
+
+    for (let i = 0; i < 15; i++) {
+      game.executeNextTick();
+    }
+    expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
+  });
+
+  test("cancelling separated MIRVWarheads counts the salvo as 1 strike in notification message", () => {
+    player2.conquer(game.ref(5, 6));
+    game.addExecution(
+      new NukeExecution(
+        UnitType.MIRVWarhead,
+        player1,
+        game.ref(5, 5),
+        game.ref(0, 0),
+        -1,
+        5,
+      ),
+    );
+    game.addExecution(
+      new NukeExecution(
+        UnitType.MIRVWarhead,
+        player1,
+        game.ref(5, 6),
+        game.ref(0, 0),
+        -1,
+        5,
+      ),
+    );
+
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(game.units(UnitType.MIRVWarhead)).toHaveLength(2);
+
+    const messages: any[] = [];
+    const origDisplay = game.displayMessage.bind(game);
+    game.displayMessage = (
+      msg: any,
+      type: any,
+      recipient: any,
+      sound: any,
+      params: any,
+    ) => {
+      messages.push({ msg, recipient, params });
+      return origDisplay(msg, type, recipient, sound, params);
+    };
+
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick();
+
+    expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
+    const cancelMsg = messages.find(
+      (m) => m.msg === "events_display.alliance_nukes_destroyed_outgoing",
+    );
+    expect(cancelMsg).toBeDefined();
+    expect(cancelMsg.params.count).toBe(1);
+  });
+
+  test("accepting alliance destroys in-flight MIRV even if the targeted tile changed hands before acceptance", () => {
+    player2.conquer(game.ref(5, 6));
+    game.addExecution(new MirvExecution(player1, game.ref(5, 5)));
+
+    game.executeNextTick(); // init: targetPlayer is player2
+    game.executeNextTick(); // spawn MIRV
+
+    expect(game.units(UnitType.MIRV)).toHaveLength(1);
+
+    // Target tile (5, 5) changes hands to a third player mid-flight
+    player3.conquer(game.ref(5, 5));
+    expect(game.owner(game.ref(5, 5))).toBe(player3);
+    expect(player2.isAlive()).toBe(true);
+
+    // Alliance formed between player1 and player2
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick();
+
+    expect(player2.isAlliedWith(player1)).toBe(true);
+
+    // Because targetPlayer was captured at launch as player2, the MIRV must still be cancelled
+    expect(game.units(UnitType.MIRV)).toHaveLength(0);
+
+    for (let i = 0; i < 30; i++) {
+      game.executeNextTick();
+    }
+    expect(game.units(UnitType.MIRV)).toHaveLength(0);
     expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
   });
 });

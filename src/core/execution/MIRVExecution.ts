@@ -87,6 +87,7 @@ export class MirvExecution implements Execution {
       this.spawnTile = spawn;
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
+        targetPlayer: this.targetPlayer,
       });
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
       const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
@@ -122,6 +123,12 @@ export class MirvExecution implements Execution {
       if (silo) {
         silo.launch();
       }
+    }
+
+    // make the MIRV inactive if it was destroyed or cancelled externally
+    if (this.nuke !== null && !this.nuke.isActive()) {
+      this.active = false;
+      return;
     }
 
     const remainingTicks = this.fullPath.length - this.pathIndex;

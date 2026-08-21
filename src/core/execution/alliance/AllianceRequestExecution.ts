@@ -88,6 +88,7 @@ export class AllianceRequestExecution implements Execution {
 
   cancelNukesBetweenAlliedPlayers(recipient: Player): void {
     const neutralized = new Map<Player, number>();
+    const cancelledWarheadLaunchers = new Set<Player>();
 
     const players = [this.requestor, recipient];
 
@@ -103,23 +104,20 @@ export class AllianceRequestExecution implements Execution {
         if (!unit.isActive() || unit.reachedTarget()) continue;
 
         const targetTile = unit.targetTile();
-        if (!targetTile) continue;
 
-        if (
-          unit.type() === UnitType.MIRV ||
-          unit.type() === UnitType.MIRVWarhead
-        ) {
-          // A MIRV (and each individual warhead it separates into) breaks an
-          // alliance unconditionally when aimed at a current ally - see the
-          // "Betrayal on launch" check in MirvExecution.init() - unlike
-          // AtomBomb/HydrogenBomb, which only break above a tile-count
-          // threshold. An in-flight MIRV has to be cancelled on acceptance
-          // by that same unconditional rule: otherwise it keeps flying,
-          // separates into hundreds of warheads, and devastates the player
-          // you just allied with, with no alliance-break or relation
-          // penalty since MIRVWarhead impacts don't run that check either.
-          if (this.mg.owner(targetTile) !== other) continue;
+        if (unit.type() === UnitType.MIRV) {
+          // Compare against the captured target player at launch rather than
+          // the tile's current owner, so tile ownership changes mid-flight
+          // (e.g. from third-party conquest or fallout) don't skip cancellation
+          // while the MIRV continues seeking the newly allied player's tiles.
+          const target =
+            unit.targetPlayer() ??
+            (targetTile ? this.mg.owner(targetTile) : null);
+          if (target !== other) continue;
+        } else if (unit.type() === UnitType.MIRVWarhead) {
+          if (!targetTile || this.mg.owner(targetTile) !== other) continue;
         } else {
+          if (!targetTile) continue;
           const magnitude = this.mg.config().nukeMagnitudes(unit.type());
           if (
             !wouldNukeBreakAlliance({
@@ -135,8 +133,16 @@ export class AllianceRequestExecution implements Execution {
         }
 
         unit.delete(false);
-        neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
+        if (unit.type() === UnitType.MIRVWarhead) {
+          cancelledWarheadLaunchers.add(launcher);
+        } else {
+          neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
+        }
       }
+    }
+
+    for (const launcher of cancelledWarheadLaunchers) {
+      neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
     }
 
     for (const [launcher, count] of neutralized) {

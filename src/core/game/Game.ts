@@ -281,6 +281,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRV]: {
     targetTile?: number;
+    targetPlayer?: Player | TerraNullius;
   };
 
   [UnitType.MIRVWarhead]: {
@@ -488,6 +489,7 @@ export interface Unit {
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;
+  targetPlayer(): Player | TerraNullius | undefined;
   setTrajectoryIndex(i: number): void;
   trajectoryIndex(): number;
   trajectory(): TrajectoryTile[];
