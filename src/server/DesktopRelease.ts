@@ -132,6 +132,20 @@ export function clearDesktopReleaseCache(): void {
   cached = null;
 }
 
+/**
+ * A parsed JSON value that is genuinely a string-keyed mapping. `as` is a cast,
+ * not a check: an array survives it, and `Object.entries` on one yields index
+ * keys ("0", "1"), which then flow into the descriptor as if they were real
+ * names. The client resolves assets by semantic name, so every lookup would
+ * miss -- silently, and only once a player applied the update.
+ */
+function asMapping(value: unknown, file: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${file} must contain a JSON object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
 export async function buildDescriptor(
   staticDir: string,
   opts: BuildOpts,
@@ -143,10 +157,10 @@ export async function buildDescriptor(
     fs.readFile(path.join(staticDir, "asset-manifest.json"), "utf-8"),
   ]);
 
-  const hashes = JSON.parse(hashesRaw) as Record<
-    string,
-    { sha256: string; bytes: number }
-  >;
+  const hashes = asMapping(
+    JSON.parse(hashesRaw),
+    "asset-hashes.json",
+  ) as Record<string, { sha256: string; bytes: number }>;
   if (Object.keys(hashes).length === 0) {
     throw new Error(
       "asset-hashes.json is empty — did scripts/buildAssetHashes.ts run after the Vite build?",
@@ -209,7 +223,10 @@ export async function buildDescriptor(
     assets[rel] = { url, sha256: h.sha256, bytes: h.bytes };
   }
 
-  const assetManifest = JSON.parse(manifestRaw) as Record<string, string>;
+  const assetManifest = asMapping(
+    JSON.parse(manifestRaw),
+    "asset-manifest.json",
+  ) as Record<string, string>;
   if (Object.keys(assetManifest).length === 0) {
     throw new Error(
       "asset-manifest.json is empty — the desktop client resolves every asset name through it",

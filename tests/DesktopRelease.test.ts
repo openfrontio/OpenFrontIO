@@ -278,6 +278,27 @@ describe("buildDescriptor", () => {
     ).rejects.toThrow(/assets\/index-xyz\.js.*is not an object/);
   });
 
+  it.each([
+    ["asset-hashes.json", "asset-hashes.json"],
+    ["asset-manifest.json", "asset-manifest.json"],
+  ])("rejects %s when it is an array rather than an object", async (file) => {
+    // `as Record<...>` is a cast, not a check. An array survives it, and
+    // Object.entries on one yields index keys that flow into the descriptor as
+    // if they were asset names.
+    await fs.writeFile(
+      path.join(dir, file),
+      JSON.stringify(["/_assets/images/a.deadbeef.png"]),
+    );
+
+    await expect(
+      buildDescriptor(dir, {
+        clientVersion: "sha-1",
+        cdnBase: "https://cdn.example",
+        requireCdnBase: false,
+      }),
+    ).rejects.toThrow(/must contain a JSON object/);
+  });
+
   it("throws rather than serving a descriptor with no assets", async () => {
     await fs.writeFile(path.join(dir, "asset-hashes.json"), "{}");
 
