@@ -15,6 +15,7 @@ import {
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
+  MAX_LOADOUTS,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -35,6 +36,7 @@ import type {
   InventoryCategory,
   InventoryLoadoutEntry,
 } from "./components/InventoryLoadoutBar";
+import "./components/InventoryLoadoutMenu";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
@@ -374,6 +376,72 @@ export class InventoryModal extends BaseModal {
     ];
   }
 
+  /** Slot buttons read as a numbered row, so keep them in slot order. */
+  private loadoutNames(): string[] {
+    return this.userSettings
+      .getLoadouts()
+      .map((loadout) => loadout.name)
+      .sort();
+  }
+
+  private hasEquippedCosmetic(): boolean {
+    const current = this.userSettings.captureLoadout("");
+    return (
+      current.pattern !== null ||
+      current.flag !== null ||
+      current.crown !== null ||
+      Object.keys(current.effects).length > 0
+    );
+  }
+
+  private renderLoadoutMenu(): TemplateResult {
+    const names = this.loadoutNames();
+    return html`<inventory-loadout-menu
+      .names=${names}
+      .active=${this.userSettings.getActiveLoadout() ?? ""}
+      .canAdd=${names.length < MAX_LOADOUTS}
+      .canUnequip=${this.hasEquippedCosmetic()}
+      .onSelect=${(name: string) => this.applyLoadout(name)}
+      .onAdd=${() => this.addLoadout()}
+      .onDelete=${(name: string) => this.deleteLoadout(name)}
+      .onUnequipAll=${() => this.unequipAll()}
+    ></inventory-loadout-menu>`;
+  }
+
+  private applyLoadout(name: string) {
+    // Re-selecting the active slot would only re-equip what's already worn.
+    if (this.userSettings.getActiveLoadout() === name) return;
+    if (!this.userSettings.applyLoadout(name)) return;
+    this.showMessage(translateText("inventory.loadout_applied", { name }));
+    this.updateFromSettings();
+  }
+
+  private addLoadout() {
+    const added = this.userSettings.addLoadout();
+    if (added === null) {
+      this.showMessage(
+        translateText("inventory.loadout_limit", { count: MAX_LOADOUTS }),
+      );
+      return;
+    }
+    this.showMessage(
+      translateText("inventory.loadout_saved", { name: added.name }),
+    );
+    this.updateFromSettings();
+  }
+
+  private deleteLoadout(name: string) {
+    this.userSettings.deleteLoadout(name);
+    this.showMessage(translateText("inventory.loadout_deleted", { name }));
+    this.updateFromSettings();
+  }
+
+  private unequipAll() {
+    this.userSettings.unequipAll();
+    this.showMessage(translateText("inventory.unequipped_all"));
+    this.updateFromSettings();
+  }
+
   private renderEmptyState(category: "skins" | "crowns") {
     return html`<p
       data-inventory-empty=${category}
@@ -628,6 +696,7 @@ export class InventoryModal extends BaseModal {
     }
     const category = tab as InventoryCategory;
     return html`
+      ${this.renderLoadoutMenu()}
       <inventory-loadout-bar
         .entries=${this.loadoutEntries()}
         .activeCategory=${category}
@@ -707,14 +776,17 @@ export class InventoryModal extends BaseModal {
   }
 
   private showSelectedPopup(resolved: ResolvedCosmetic) {
+    this.showMessage(
+      translateText("inventory.selected_cosmetic", {
+        name: cosmeticSelectionLabel(resolved),
+      }),
+    );
+  }
+
+  private showMessage(message: string) {
     window.dispatchEvent(
       new CustomEvent("show-message", {
-        detail: {
-          message: translateText("inventory.selected_cosmetic", {
-            name: cosmeticSelectionLabel(resolved),
-          }),
-          duration: 2000,
-        },
+        detail: { message, duration: 2000 },
       }),
     );
   }

@@ -1,7 +1,10 @@
 import {
+  ACTIVE_LOADOUT_KEY,
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
+  LOADOUTS_KEY,
+  MAX_LOADOUTS,
   PATTERN_KEY,
   PLAYER_STATS_COLUMNS_KEY,
   TEAM_STATS_COLUMNS_KEY,
@@ -71,6 +74,242 @@ describe("UserSettings effect selection", () => {
     s.setSelectedEffectName("atom", undefined);
     expect(s.getSelectedEffectName("atom")).toBeNull();
     expect(s.getSelectedEffectName("hydro")).toBe("hydro_boom");
+  });
+});
+
+describe("UserSettings cosmetic loadouts", () => {
+  beforeEach(resetUserSettingsState);
+
+  function equipSample(s: UserSettings) {
+    s.setSelectedPatternName("pattern:stripes:red");
+    s.setFlag("flag:owned_flag");
+    s.setSelectedCrownName("owned_crown");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+  }
+
+  it("saves the equipped cosmetics under a name", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    expect(s.saveLoadout("main")).toEqual({
+      name: "main",
+      pattern: "pattern:stripes:red",
+      flag: "flag:owned_flag",
+      crown: "owned_crown",
+      effects: { transportShipTrail: "spectrum" },
+    });
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual(["main"]);
+  });
+
+  it("trims the name and rejects a blank one", () => {
+    const s = new UserSettings();
+    expect(s.saveLoadout("  main  ")?.name).toBe("main");
+    expect(s.saveLoadout("   ")).toBeNull();
+    expect(s.getLoadouts()).toHaveLength(1);
+  });
+
+  it("saving an existing name replaces it in place", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    s.saveLoadout("second");
+    s.setSelectedCrownName("other_crown");
+    s.saveLoadout("main");
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual([
+      "main",
+      "second",
+    ]);
+    expect(s.getLoadout("main")?.crown).toBe("other_crown");
+  });
+
+  it("adds numbered slots, filling the lowest free number", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    expect(s.addLoadout()?.name).toBe("01");
+    expect(s.addLoadout()?.name).toBe("02");
+    expect(s.addLoadout()?.name).toBe("03");
+    s.deleteLoadout("02");
+    expect(s.addLoadout()?.name).toBe("02");
+    expect(
+      s
+        .getLoadouts()
+        .map((loadout) => loadout.name)
+        .sort(),
+    ).toEqual(["01", "02", "03"]);
+  });
+
+  it("a new slot holds what's equipped and becomes active", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    const added = s.addLoadout()!;
+    expect(added.crown).toBe("owned_crown");
+    expect(s.getActiveLoadout()).toBe("01");
+  });
+
+  it("refuses to add more than MAX_LOADOUTS", () => {
+    const s = new UserSettings();
+    for (let i = 0; i < MAX_LOADOUTS; i++)
+      expect(s.addLoadout()).not.toBeNull();
+    expect(s.addLoadout()).toBeNull();
+    expect(s.getLoadouts()).toHaveLength(MAX_LOADOUTS);
+  });
+
+  it("mirrors later equip changes into the active slot", () => {
+    const s = new UserSettings();
+    s.addLoadout();
+    s.setSelectedCrownName("owned_crown");
+    expect(s.getLoadout("01")?.crown).toBe("owned_crown");
+    s.setFlag("flag:owned_flag");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+    expect(s.getLoadout("01")).toMatchObject({
+      crown: "owned_crown",
+      flag: "flag:owned_flag",
+      effects: { transportShipTrail: "spectrum" },
+    });
+    s.clearFlag(true);
+    expect(s.getLoadout("01")?.flag).toBeNull();
+  });
+
+  it("leaves saved slots alone when none is active", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.addLoadout();
+    s.setActiveLoadout(null);
+    s.setSelectedCrownName("other_crown");
+    expect(s.getLoadout("01")?.crown).toBe("owned_crown");
+  });
+
+  it("applying a slot equips it without mirroring back into it", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.addLoadout(); // 01 holds the sample
+    // Step off 01 first: while it is active it mirrors the undressing below.
+    s.setActiveLoadout(null);
+    s.unequipAll();
+    s.addLoadout(); // 02 holds nothing
+
+    expect(s.applyLoadout("01")).toBe(true);
+    expect(s.getActiveLoadout()).toBe("01");
+    expect(localStorage.getItem(PATTERN_KEY)).toBe("pattern:stripes:red");
+    expect(s.getFlag()).toBe("flag:owned_flag");
+    expect(s.getSelectedCrownName()).toBe("owned_crown");
+    expect(s.getSelectedEffects()).toEqual({ transportShipTrail: "spectrum" });
+    // 02 was active while 01 was applied; it must not have absorbed the change.
+    expect(s.getLoadout("02")).toMatchObject({ crown: null, flag: null });
+
+    expect(s.applyLoadout("02")).toBe(true);
+    expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+    expect(s.getFlag()).toBeNull();
+    expect(s.getSelectedCrownName()).toBeNull();
+    expect(s.getSelectedEffects()).toEqual({});
+    expect(s.getLoadout("01")?.crown).toBe("owned_crown");
+  });
+
+  it("applying an unknown loadout changes nothing", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    expect(s.applyLoadout("missing")).toBe(false);
+    expect(s.getSelectedCrownName()).toBe("owned_crown");
+    expect(s.getActiveLoadout()).toBeNull();
+  });
+
+  it("deletes a slot, clearing the active pointer with it", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.addLoadout();
+    s.deleteLoadout("01");
+    expect(s.getLoadouts()).toEqual([]);
+    expect(localStorage.getItem(LOADOUTS_KEY)).toBeNull();
+    expect(s.getActiveLoadout()).toBeNull();
+    // Deleting a slot does not undress the player.
+    expect(s.getSelectedCrownName()).toBe("owned_crown");
+  });
+
+  it("ignores an active pointer to a loadout that no longer exists", () => {
+    const s = new UserSettings();
+    s.addLoadout();
+    localStorage.setItem(ACTIVE_LOADOUT_KEY, "07");
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.delete(ACTIVE_LOADOUT_KEY);
+    expect(s.getActiveLoadout()).toBeNull();
+    s.setSelectedCrownName("owned_crown");
+    expect(s.getLoadout("01")?.crown).toBeNull();
+  });
+
+  it("unequipAll clears every slot and empties the active loadout with it", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.addLoadout();
+    s.unequipAll();
+    expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+    expect(s.getFlag()).toBeNull();
+    expect(s.getSelectedCrownName()).toBeNull();
+    expect(s.getSelectedEffects()).toEqual({});
+    expect(s.getLoadout("01")).toMatchObject({
+      pattern: null,
+      flag: null,
+      crown: null,
+      effects: {},
+    });
+  });
+
+  it("emits change events for each slot when applying a loadout", () => {
+    const s = new UserSettings();
+    equipSample(s);
+    s.saveLoadout("main");
+    const seen: string[] = [];
+    const keys = [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY];
+    const listeners = keys.map((key) => {
+      const listener = () => seen.push(key);
+      window.addEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
+        listener,
+      );
+      return { key, listener };
+    });
+    s.applyLoadout("main");
+    for (const { key, listener } of listeners) {
+      window.removeEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
+        listener,
+      );
+    }
+    expect(new Set(seen)).toEqual(new Set(keys));
+  });
+
+  it("drops malformed entries and corrupt storage", () => {
+    localStorage.setItem(LOADOUTS_KEY, "not json");
+    expect(new UserSettings().getLoadouts()).toEqual([]);
+    resetUserSettingsState();
+    localStorage.setItem(
+      LOADOUTS_KEY,
+      JSON.stringify([
+        { name: "ok", pattern: "pattern:stripes", effects: { a: "b", c: 3 } },
+        { pattern: "pattern:stripes" },
+        "nope",
+      ]),
+    );
+    expect(new UserSettings().getLoadouts()).toEqual([
+      {
+        name: "ok",
+        pattern: "pattern:stripes",
+        flag: null,
+        crown: null,
+        effects: { a: "b" },
+      },
+    ]);
+  });
+
+  it("scopes loadouts to the logged-in player", () => {
+    const s = new UserSettings();
+    s.setSelectedCrownName("owned_crown");
+    UserSettings.setPlayerId("player-1");
+    s.saveLoadout("main");
+    expect(localStorage.getItem(`${LOADOUTS_KEY}:player-1`)).not.toBeNull();
+    UserSettings.setPlayerId("player-2");
+    expect(s.getLoadouts()).toEqual([]);
+    UserSettings.setPlayerId("player-1");
+    expect(s.getLoadouts().map((loadout) => loadout.name)).toEqual(["main"]);
   });
 });
 

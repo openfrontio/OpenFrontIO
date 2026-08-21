@@ -948,7 +948,15 @@
     "load_failed": "Couldn't load your inventory. Please reload and try again.",
     "loading": "Loading inventory…",
     "loadout": "Your loadout",
+    "loadout_add": "New loadout",
+    "loadout_applied": "Equipped loadout {name}",
     "loadout_category_label": "{category}: {summary}",
+    "loadout_delete_target": "Delete {name}",
+    "loadout_deleted": "Deleted loadout {name}",
+    "loadout_limit": "You can save up to {count} loadouts.",
+    "loadout_presets": "Loadouts",
+    "loadout_saved": "Saved loadout {name}",
+    "loadout_slot": "Loadout {name}",
     "no_owned_crowns": "You don't own any crowns yet.",
     "no_owned_effects_of_type": "You don't own any {type} effects yet.",
     "no_owned_skins": "You don't own any skins yet.",
@@ -957,7 +965,9 @@
     "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Effects equipped: {count}",
     "title": "Inventory",
-    "unequip": "Unequip"
+    "unequip": "Unequip",
+    "unequip_all": "Unequip all",
+    "unequipped_all": "Unequipped everything"
   },
   "ios_banner": {
     "got_it": "Got it",
