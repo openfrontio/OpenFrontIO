@@ -126,21 +126,27 @@ describe("Donate gold to an ally", () => {
   });
 
   it("Gold should default to 1/3 when null is passed", async () => {
-    const game = await setup("ocean_and_land", { infiniteGold: false, donateGold: true });
+    const game = await setup("ocean_and_land", {
+      infiniteGold: false,
+      donateGold: true,
+    });
     const dInfo = new PlayerInfo("d", PlayerType.Human, null, "d_id");
     const rInfo = new PlayerInfo("r", PlayerType.Human, null, "r_id");
     game.addPlayer(dInfo);
     game.addPlayer(rInfo);
-    const donor = game.player(dInfo.id), recipient = game.player(rInfo.id);
+    const donor = game.player(dInfo.id),
+      recipient = game.player(rInfo.id);
     game.addExecution(
       new SpawnExecution("g", dInfo, game.ref(0, 10)),
       new SpawnExecution("g", rInfo, game.ref(0, 15)),
     );
     donor.createAllianceRequest(recipient)?.accept();
     game.executeNextTick();
+    const donation = new DonateGoldExecution(donor, rInfo.id, null);
     donor.addGold(9000n);
-    const goldBefore = donor.gold(), recBefore = recipient.gold();
-    game.addExecution(new DonateGoldExecution(donor, rInfo.id, null));
+    const goldBefore = donor.gold(),
+      recBefore = recipient.gold();
+    game.addExecution(donation);
     game.executeNextTick();
     game.executeNextTick();
     expect(recipient.gold() >= recBefore + goldBefore / 3n).toBe(true);
