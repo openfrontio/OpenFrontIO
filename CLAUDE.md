@@ -45,6 +45,8 @@ The game simulation runs **on each client**, not the server. The server only rel
 6. Core sends **GameUpdates** back to client → client renders
 
 Intents and all wire messages are Zod-validated schemas defined in `src/core/Schemas.ts`.
+Every WebSocket frame is a compact binary encoding of those schemas
+(`src/core/ZbinWire.ts`, library docs in `zbin/README.md`). HTTP stays JSON.
 
 ### CDN / Static Assets
 

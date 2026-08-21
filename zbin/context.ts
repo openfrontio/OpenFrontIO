@@ -1,5 +1,5 @@
 // zbin serialization context: named dictionaries that map frequently repeated
-// strings (e.g. player ids) to single-byte indexes on the wire.
+// strings (e.g. player ids) to small varint indexes on the wire.
 //
 // Sync model: both peers must build identical tables from data they already
 // share (e.g. the player roster in the game-start message) — there is no
@@ -11,10 +11,10 @@
 // orders decode every index to the wrong value with no error, so peers should
 // compare `fingerprint(name)` out-of-band before relying on a table.
 
-// Index 255 is the inline-escape marker, so tables hold at most 255 entries
-// (indexes 0..254).
-export const ESCAPE_BYTE = 0xff;
-export const MAX_MAPPING_SIZE = 255;
+// On the wire an index rides as varint(index + 1); varint 0 is the
+// inline-escape marker. Indexes 0..126 cost one byte, 127..16382 cost two.
+// The size cap is not a wire constant — it just bounds table memory.
+export const MAX_MAPPING_SIZE = 65535;
 
 export interface ZbTable {
   max: number;

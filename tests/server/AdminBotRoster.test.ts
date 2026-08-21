@@ -4,6 +4,7 @@ import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
 import { ServerEnv } from "../../src/server/ServerEnv";
+import { testGameConfig } from "../util/Wire";
 
 // The roster endpoint is the ONE place a per-game clientID can be tied back to an
 // account: the public record is PII-stripped, so without it a host sees that 96
@@ -115,9 +116,12 @@ describe("GameServer.roster() — the real projection", () => {
   it("maps every joiner — including one who already disconnected", () => {
     vi.useFakeTimers();
     try {
-      const game = new GameServer("g1", logger, Date.now(), {
-        gameType: GameType.Private,
-      } as any);
+      const game = new GameServer(
+        "g1",
+        logger,
+        Date.now(),
+        testGameConfig({ gameType: GameType.Private }),
+      );
       const stays = makeClient("c1", "pub1");
       const leaves = makeClient("c2", "pub2");
       const anon = makeClient("c3"); // no account — publicId stays undefined

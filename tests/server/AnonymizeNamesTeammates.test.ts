@@ -1,6 +1,7 @@
 import { GameType } from "../../src/core/game/Game";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
   return {
@@ -52,7 +53,7 @@ function makeGame(matchmakingTeams?: string[][]) {
     "g1",
     logger,
     Date.now(),
-    { gameType: GameType.Private, anonymizeNames: true } as any,
+    testGameConfig({ gameType: GameType.Private, anonymizeNames: true }),
     "creator-pid",
     undefined,
     undefined,

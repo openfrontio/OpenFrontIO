@@ -33,7 +33,7 @@ import {
   ZbDecodeError,
   ZbEncodeError,
 } from "./bytes";
-import { ESCAPE_BYTE, ZbContext, type ZbTable } from "./context";
+import { ZbContext, type ZbTable } from "./context";
 
 export {
   ByteReader,
@@ -44,7 +44,7 @@ export {
   ZbDecodeError,
   ZbEncodeError,
 } from "./bytes";
-export { ESCAPE_BYTE, MAX_MAPPING_SIZE, ZbContext } from "./context";
+export { MAX_MAPPING_SIZE, ZbContext } from "./context";
 export { bigint_ as bigint };
 
 export interface Codec<T = any> {
@@ -203,20 +203,21 @@ function mappedCodec(name: string): Codec<string> {
           `zb.mapped("${name}"): no such mapping declared on this context`,
         );
       }
+      // varint(index + 1); varint 0 escapes to an inline string.
       const idx = tableFor(ctx)?.toIndex.get(v);
-      if (idx !== undefined && idx < ESCAPE_BYTE) {
-        w.u8(idx);
+      if (idx !== undefined) {
+        w.uint(idx + 1);
       } else {
-        w.u8(ESCAPE_BYTE);
+        w.u8(0);
         w.str(v);
       }
     },
     dec: (r, ctx) => {
-      const b = r.u8();
-      if (b === ESCAPE_BYTE) return r.str();
-      const value = tableFor(ctx)?.values[b];
+      const n = r.uint();
+      if (n === 0) return r.str();
+      const value = tableFor(ctx)?.values[n - 1];
       if (value === undefined) {
-        throw new ZbDecodeError(`unknown "${name}" dictionary index ${b}`);
+        throw new ZbDecodeError(`unknown "${name}" dictionary index ${n - 1}`);
       }
       return value;
     },

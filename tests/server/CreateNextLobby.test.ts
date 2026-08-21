@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/Game";
+import { ServerNewLobbyMessage } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { sentServerMessages, testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
   const handlers: Record<string, (...args: any[]) => any> = {};
@@ -42,12 +44,12 @@ function makeClient(
 // The successor id the broadcast should carry (8-char id shape).
 const SUCCESSOR_ID = "SUCCES01";
 
-function newLobbyBroadcasts(ws: ReturnType<typeof makeMockWs>): string[] {
-  return ws.send.mock.calls
-    .map((c: any[]) => c[0])
-    .filter(
-      (m: unknown) => typeof m === "string" && m.includes('"type":"new_lobby"'),
-    );
+function newLobbyBroadcasts(
+  ws: ReturnType<typeof makeMockWs>,
+): ServerNewLobbyMessage[] {
+  return sentServerMessages(ws).filter(
+    (m): m is ServerNewLobbyMessage => m.type === "new_lobby",
+  );
 }
 
 // The worker's create_game?previous= flow calls setSuccessorLobby on the
@@ -76,7 +78,7 @@ describe("GameServer - successor lobby", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      { gameType: GameType.Private } as any,
+      testGameConfig({ gameType: GameType.Private }),
       creatorPersistentID,
     );
   }
@@ -95,7 +97,7 @@ describe("GameServer - successor lobby", () => {
 
     expect(newLobbyBroadcasts(creatorWs)).toHaveLength(1);
     expect(newLobbyBroadcasts(otherWs)).toHaveLength(1);
-    expect(newLobbyBroadcasts(otherWs)[0]).toContain(SUCCESSOR_ID);
+    expect(newLobbyBroadcasts(otherWs)[0].gameID).toBe(SUCCESSOR_ID);
   });
 
   it("remembers the successor id so repeat requests can reuse it", () => {

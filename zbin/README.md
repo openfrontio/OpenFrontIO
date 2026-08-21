@@ -60,15 +60,15 @@ records/partialRecords, tuples (incl. `.rest`), discriminated and untagged
 unions, `z.lazy`, and `optional`/`nullable`/`default` wrappers. Only genuinely
 ambiguous or exotic spots need an explicit builder:
 
-| Builder                     | Why                                                            | Wire encoding                            |
-| --------------------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| `zb.uint()` / `zb.int()`    | JSON can't say int vs float                                    | LEB128 / zigzag varint                   |
-| `zb.float()`                | ″                                                              | float64 LE (bit-exact)                   |
-| `zb.string(opts)`           | to attach `min`/`max`/`regex` safely                           | varint length + UTF-8                    |
-| `zb.mapped(name)`           | dictionary compression                                         | 1 byte via context, escape + inline else |
-| `zb.json(schema)`           | cold, complex subtrees                                         | varint length + JSON                     |
-| `zb.stamped(union, extras)` | intersections over a discriminated union can't be introspected | tag + extras + variant                   |
-| `zb.custom(schema, codec)`  | full control                                                   | yours                                    |
+| Builder                     | Why                                                            | Wire encoding                               |
+| --------------------------- | -------------------------------------------------------------- | ------------------------------------------- |
+| `zb.uint()` / `zb.int()`    | JSON can't say int vs float                                    | LEB128 / zigzag varint                      |
+| `zb.float()`                | ″                                                              | float64 LE (bit-exact)                      |
+| `zb.string(opts)`           | to attach `min`/`max`/`regex` safely                           | varint length + UTF-8                       |
+| `zb.mapped(name)`           | dictionary compression                                         | 1-2 byte varint index, escape + inline else |
+| `zb.json(schema)`           | cold, complex subtrees                                         | varint length + JSON                        |
+| `zb.stamped(union, extras)` | intersections over a discriminated union can't be introspected | tag + extras + variant                      |
+| `zb.custom(schema, codec)`  | full control                                                   | yours                                       |
 
 `zb.bigint()`, `zb.literal`, and `zb.enum` are plain aliases kept for symmetry —
 the underlying zod types auto-derive, so `z.bigint()` etc. work identically.
@@ -80,7 +80,7 @@ Chaining zod methods clones the schema, and the clone has no codec:
 ```ts
 zb.uint({ max: 400 }); // correct
 zb.uint().max(400); // throws: "plain z.number() is ambiguous on the wire"
-zb.mapped("cid").min(1); // SILENT: falls back to plain strings, 1 byte -> 9
+zb.mapped("cid").min(1); // SILENT: falls back to plain strings, ~1 byte -> 9
 zb.mapped("cid").describe("…"); // SILENT: same
 ```
 
@@ -155,7 +155,7 @@ and nesting past the depth limit.
 | `zb.bigint` width            | 1024 bits (`MAX_BIGINT_BITS`) |
 | Decoded elements per message | 2^20 (`MAX_DECODE_ITEMS`)     |
 | Nesting depth                | 64 (`MAX_DECODE_DEPTH`)       |
-| Mapping table entries        | 255 (`MAX_MAPPING_SIZE`)      |
+| Mapping table entries        | 65,535 (`MAX_MAPPING_SIZE`)   |
 
 The element budget is per message and shared across every collection in it.
 It exists because elements can encode to zero bytes (single-value literals,
@@ -166,13 +166,14 @@ bound on its own — without it, four bytes could drive 16M allocations.
 
 ```ts
 const ctx = zb.context();
-ctx.mapping("clientId", { max: 125 });
+ctx.mapping("clientId");
 ctx.assign("clientId", "aB3dEf7h"); // → index 0
 ctx.assignAll("clientId", roster); // or seed in bulk
 ```
 
-A `zb.mapped("clientId")` field encodes as one byte when the value is in the
-table, or an escape byte plus the inline string when it isn't. There is no
+A `zb.mapped("clientId")` field encodes as `varint(index + 1)` when the value
+is in the table — one byte for the first 127 entries, two up to 16k — or as
+varint 0 plus the inline string when it isn't. There is no
 on-wire learning: both peers must build identical tables from shared data
 (assign order is part of the wire contract). This keeps decoding stateless per
 message — no stream-position coupling, nothing to break on reconnect.
