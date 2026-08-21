@@ -331,10 +331,15 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     expect(player2.isAlliedWith(player1)).toBe(true);
     expect(game.units(UnitType.MIRV)).toHaveLength(0);
 
-    // Tick through the rest of the game: warhead.cancel() ensures no child executions spawn warheads
+    // Tick through the rest of the game: verify no child execution ever spawns a warhead on any tick
+    let sawWarhead = false;
     for (let i = 0; i < 40; i++) {
       game.executeNextTick();
+      if (game.units(UnitType.MIRVWarhead).length > 0) {
+        sawWarhead = true;
+      }
     }
+    expect(sawWarhead).toBe(false);
     expect(game.units(UnitType.MIRV)).toHaveLength(0);
     expect(game.units(UnitType.MIRVWarhead)).toHaveLength(0);
   });
