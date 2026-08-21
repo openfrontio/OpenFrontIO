@@ -44,6 +44,16 @@ export class LobbyTeamView extends LitElement {
     return themeProvider.current();
   }
   @state() private showTeamColors: boolean = false;
+
+  // Spectators are in the lobby roster (flagged) but hold no seat and never
+  // reach the simulation — so the count header, the team preview and both
+  // player lists show PLAYERS only, and spectators get their own bubble below.
+  private get activePlayers(): ClientInfo[] {
+    return this.clients.filter((c) => !c.spectator);
+  }
+  private get spectators(): ClientInfo[] {
+    return this.clients.filter((c) => c.spectator === true);
+  }
   private userSettings: UserSettings = new UserSettings();
 
   /**
@@ -53,7 +63,7 @@ export class LobbyTeamView extends LitElement {
    */
   private get effectiveNationCount(): number {
     if (this.isPublicGame && this.teamCount === HumansVsNations) {
-      return this.clients.length;
+      return this.activePlayers.length;
     }
     return this.nationCount;
   }
@@ -81,8 +91,8 @@ export class LobbyTeamView extends LitElement {
           <div
             class="text-xs font-bold text-white/40 uppercase tracking-widest"
           >
-            ${this.clients.length}
-            ${this.clients.length === 1
+            ${this.activePlayers.length}
+            ${this.activePlayers.length === 1
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
@@ -98,6 +108,48 @@ export class LobbyTeamView extends LitElement {
           ${this.gameMode === GameMode.Team
             ? this.renderTeamMode()
             : this.renderFreeForAll()}
+        </div>
+        ${this.renderSpectators()}
+      </div>
+    `;
+  }
+
+  // Watchers, in their own bubble under the players box — they hold no seat, so
+  // mixing them into the lists above would show them as people about to play.
+  // Mirrors the players section: the count header sits ABOVE the box (same
+  // classes as the "N players" header) and the box reuses .players-list, which
+  // is what centers the tags.
+  private renderSpectators() {
+    const spectators = this.spectators;
+    if (spectators.length === 0) return html``;
+    return html`
+      <div class="mt-4">
+        <div
+          class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4"
+        >
+          ${spectators.length}
+          ${spectators.length === 1
+            ? translateText("host_modal.spectator")
+            : translateText("host_modal.spectators")}
+        </div>
+        <div
+          class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
+        >
+          ${repeat(
+            spectators,
+            (c) => c.clientID ?? c.username,
+            (client) =>
+              html`<span
+                class="player-tag ${this.isCurrentPlayer(client)
+                  ? "current-player"
+                  : ""}"
+              >
+                <span class="text-white"
+                  >${this.getClientDisplayName(client)}
+                  ${this.renderVerifiedBadge(client)}</span
+                >
+              </span>`,
+          )}
         </div>
       </div>
     `;
@@ -124,7 +176,7 @@ export class LobbyTeamView extends LitElement {
           ${translateText("host_modal.players")}
         </div>
         ${repeat(
-          this.clients,
+          this.activePlayers,
           (c) => c.clientID ?? c.username,
           (client) => {
             const displayName = this.getClientDisplayName(client);
@@ -187,7 +239,7 @@ export class LobbyTeamView extends LitElement {
 
   private renderFreeForAll() {
     return html`${repeat(
-      this.clients,
+      this.activePlayers,
       (c) => c.clientID ?? c.username,
       (client) => {
         const displayName = this.getClientDisplayName(client);
@@ -300,7 +352,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length + this.effectiveNationCount;
+    const playerCount = this.activePlayers.length + this.effectiveNationCount;
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -349,15 +401,15 @@ export class LobbyTeamView extends LitElement {
 
     // HumansVsNations: show all clients under Humans initially
     if (this.teamCount === HumansVsNations) {
-      this.teamMaxSize = this.clients.length;
+      this.teamMaxSize = this.activePlayers.length;
       this.teamPreview = [
-        { team: ColoredTeams.Humans, players: [...this.clients] },
+        { team: ColoredTeams.Humans, players: [...this.activePlayers] },
         { team: ColoredTeams.Nations, players: [] },
       ];
       return;
     }
 
-    const players = this.clients.map(
+    const players = this.activePlayers.map(
       (c) =>
         new PlayerInfo(
           c.username,
