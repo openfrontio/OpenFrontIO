@@ -20,6 +20,7 @@ import {
   ClientRejoinMessage,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
+  ClientSpectateMessage,
   GameConfig,
   Intent,
   LiveStats,
@@ -193,6 +194,11 @@ export class SendToggleGameStartTimer implements GameEvent {
   constructor() {}
 }
 
+// Switch between playing and watching from the lobby screen.
+export class SendSpectateEvent implements GameEvent {
+  constructor(public readonly spectator: boolean) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -286,6 +292,12 @@ export class Transport {
 
     this.eventBus.on(SendToggleGameStartTimer, (e) =>
       this.onSendToggleGameStartTimer(e),
+    );
+    this.eventBus.on(SendSpectateEvent, (e) =>
+      this.sendMsg({
+        type: "spectate",
+        spectator: e.spectator,
+      } satisfies ClientSpectateMessage),
     );
   }
 
@@ -429,6 +441,7 @@ export class Transport {
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
+      spectator: this.lobbyConfig.spectator,
     } satisfies ClientJoinMessage);
   }
 
