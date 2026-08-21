@@ -141,25 +141,104 @@ export function joinLobby(
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     transport.joinGame();
   };
+  // Only begin a terrain preload once the same map has been stable across
+  // this many consecutive lobby_info broadcasts (one per second). A host
+  // clicking through map selections changes the config every broadcast, so
+  // debouncing avoids downloading (and permanently caching) a map that was
+  // only shown transiently.
+  const MAP_PRELOAD_DEBOUNCE_STREAK = 3;
+  // In-flight terrain loads keyed by `map:mapSize`, so re-requesting a map
+  // that began loading earlier (even after another map superseded it) reuses
+  // the original promise instead of starting a duplicate download/parse while
+  // the first one is still running.
+  const terrainLoads = new Map<string, Promise<TerrainMapData>>();
+  // The load the authoritative start gate consumes (createClientGame) — always
+  // the most recent request; dedup makes it the map that actually starts.
   let terrainLoad: Promise<TerrainMapData> | null = null;
+  // Map key (map:mapSize) most recently seen in lobby_info and how many
+  // consecutive broadcasts it has held. The preload is only triggered once
+  // the streak reaches the debounce threshold.
+  let pendingPreloadKey: string | null = null;
+  let pendingPreloadStreak = 0;
+  const requestTerrainLoad = (
+    map: Parameters<typeof loadTerrainMap>[0],
+    mapSize: Parameters<typeof loadTerrainMap>[1],
+  ): Promise<TerrainMapData> => {
+    const key = `${map}:${mapSize}`;
+    const existing = terrainLoads.get(key);
+    if (existing !== undefined) {
+      terrainLoad = existing;
+      return existing;
+    }
+    const load = loadTerrainMap(
+      map,
+      mapSize,
+      terrainMapFileLoader,
+      false, // Layer images loaded off the critical path after game start.
+    );
+    terrainLoads.set(key, load);
+    terrainLoad = load;
+    void load.catch((e) => {
+      // Clear a failed load so the authoritative start gate can retry.
+      if (terrainLoads.get(key) === load) {
+        terrainLoads.delete(key);
+      }
+      if (terrainLoad === load) {
+        terrainLoad = null;
+      }
+      // If this map is the one the debounce points at, reset its streak so a
+      // persistent failure doesn't re-trigger (and warn-spam) on every
+      // subsequent lobby_info broadcast; a transient blip just re-accumulates.
+      if (pendingPreloadKey === key) {
+        pendingPreloadKey = null;
+        pendingPreloadStreak = 0;
+      }
+      console.warn(
+        `lobby: terrain preload failed for "${key}"; will retry at game start`,
+        e,
+      );
+    });
+    return load;
+  };
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
+      // Preload the map while still in the lobby so game start can reuse the
+      // cached result instead of blocking on the download in the short
+      // prestart->start window. The preload is debounced: it only fires once
+      // the same map has held across several broadcasts, so a host clicking
+      // through map selections doesn't trigger a download (which would be
+      // permanently cached) for each transient pick. requestTerrainLoad
+      // deduplicates in-flight loads, and prestart still re-validates the
+      // authoritative map.
+      const gameConfig = message.lobby.gameConfig;
+      if (gameConfig === undefined) {
+        // No config in this broadcast — reset the debounce so a stale key /
+        // streak can't prematurely trigger a preload on a later matching one.
+        pendingPreloadKey = null;
+        pendingPreloadStreak = 0;
+      } else {
+        const key = `${gameConfig.gameMap}:${gameConfig.gameMapSize}`;
+        if (pendingPreloadKey === key) {
+          pendingPreloadStreak++;
+        } else {
+          pendingPreloadKey = key;
+          pendingPreloadStreak = 1;
+        }
+        if (pendingPreloadStreak >= MAP_PRELOAD_DEBOUNCE_STREAK) {
+          requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
+        }
+      }
       return;
     }
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
       );
-      terrainLoad = loadTerrainMap(
-        message.gameMap,
-        message.gameMapSize,
-        terrainMapFileLoader,
-        false, // Layer images loaded off the critical path after game start.
-      );
+      requestTerrainLoad(message.gameMap, message.gameMapSize);
       resolvePrestart();
     }
     if (message.type === "start") {
