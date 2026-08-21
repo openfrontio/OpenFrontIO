@@ -853,6 +853,7 @@
     "nations": "Nations: ",
     "nations_disabled": "Disabled",
     "options_title": "Options",
+    "overtime": "Overtime after (minutes)",
     "player": "Player",
     "player_immunity_duration": "PVP immunity duration (minutes)",
     "player_whitelist": "Player Whitelist (public IDs)",
@@ -1203,6 +1204,11 @@
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
   },
+  "overtime": {
+    "started": "Overtime! The territory needed to win is now dropping.",
+    "title": "Overtime",
+    "to_win": "Hold > {pct}% to win"
+  },
   "performance_overlay": {
     "avg_60s": "Avg (60s):",
     "collapse": "Collapse",
@@ -1477,6 +1483,7 @@
     "nations_disabled": "Disabled",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "options_title": "Options",
+    "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
     "sign_in_for_achievements": "Sign in for achievements",
     "start": "Start Game",

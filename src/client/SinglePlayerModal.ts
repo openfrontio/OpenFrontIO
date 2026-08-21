@@ -65,6 +65,8 @@ const DEFAULT_OPTIONS = {
   waterNukes: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
+  overtime: false,
+  overtimeStartMinutes: undefined as number | undefined,
 } as const;
 
 // A map earns achievements only if it has nations to conquer — the same rule
@@ -153,6 +155,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
+  @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
+  @state() private overtimeStartMinutes: number | undefined =
+    DEFAULT_OPTIONS.overtimeStartMinutes;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -398,6 +403,21 @@ export class SinglePlayerModal extends BaseModal {
         .onInput=${this.handleCustomAllianceMinutesInput}
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
       ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.overtime"}
+        .checked=${this.overtime}
+        .inputMin=${1}
+        .inputMax=${120}
+        .inputStep=${1}
+        .inputValue=${this.overtimeStartMinutes}
+        .inputAriaLabel=${translateText("single_modal.overtime")}
+        .inputPlaceholder=${translateText("single_modal.mins_placeholder")}
+        .defaultInputValue=${30}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleOvertimeToggle}
+        .onInput=${this.handleOvertimeMinutesInput}
+        .onKeyDown=${this.handleOvertimeMinutesKeyDown}
+      ></toggle-input-card>`,
     ];
 
     return html`
@@ -532,6 +552,7 @@ export class SinglePlayerModal extends BaseModal {
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
         this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
+      this.overtime !== DEFAULT_OPTIONS.overtime ||
       this.disabledUnits.length > 0
     );
   }
@@ -563,6 +584,8 @@ export class SinglePlayerModal extends BaseModal {
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
+    this.overtime = DEFAULT_OPTIONS.overtime;
+    this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
 
   protected onOpen(): void {
@@ -716,6 +739,31 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.customAlliances = checked;
     this.customAllianceMinutes = toOptionalNumber(value);
+  };
+
+  private handleOvertimeToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.overtime = checked;
+    this.overtimeStartMinutes = toOptionalNumber(value);
+  };
+
+  private handleOvertimeMinutesKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
+
+  private handleOvertimeMinutesInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 1,
+      max: 120,
+      stripPattern: /[e+-]/gi,
+    });
+    if (value === undefined) {
+      return;
+    }
+    this.overtimeStartMinutes = value;
   };
 
   private handleCustomAllianceMinutesKeyDown = (e: KeyboardEvent) => {
@@ -894,6 +942,14 @@ export class SinglePlayerModal extends BaseModal {
                     doomsdayClock: {
                       enabled: true,
                       speed: this.doomsdayClockSpeed,
+                    },
+                  }
+                : {}),
+              ...(this.overtime
+                ? {
+                    overtime: {
+                      enabled: true,
+                      startMinutes: this.overtimeStartMinutes ?? 30,
                     },
                   }
                 : {}),

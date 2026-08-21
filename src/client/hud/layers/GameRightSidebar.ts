@@ -6,6 +6,7 @@ import { GameType } from "../../../core/game/Game";
 import { createNextLobby } from "../../Api";
 import { ClientEnv } from "../../ClientEnv";
 import "../../components/DoomsdayClockPanel";
+import "../../components/OvertimePanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
@@ -318,6 +319,11 @@ export class GameRightSidebar extends LitElement implements Controller {
         .hasWinner=${this.hasWinner}
         .refreshKey=${this.timer}
       ></doomsday-clock-panel>
+      <overtime-panel
+        .game=${this.game}
+        .hasWinner=${this.hasWinner}
+        .refreshKey=${this.timer}
+      ></overtime-panel>
     `;
   }
 

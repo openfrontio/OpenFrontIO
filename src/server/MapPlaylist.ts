@@ -183,6 +183,9 @@ export class MapPlaylist {
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
       disableClanTags: mode === GameMode.FFA ? true : undefined,
+      // Public lobbies are untimed, so overtime (the win threshold sinking
+      // after 30 minutes) is on by default as the anti-stalemate backstop.
+      overtime: { enabled: true },
     } satisfies GameConfig;
   }
 
@@ -398,6 +401,9 @@ export class MapPlaylist {
       disabledUnits,
       waterNukes: isWaterNukes ? true : undefined,
       disableClanTags: mode === GameMode.FFA ? true : undefined,
+      // Untimed like the standard rotation: overtime on by default (the
+      // doomsday-clock presets keep it too — it's a harmless backstop there).
+      overtime: { enabled: true },
     } satisfies GameConfig;
   }
 
