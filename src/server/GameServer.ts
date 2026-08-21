@@ -11,6 +11,7 @@ import { GameMode, GameType, RankedType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessage,
+  ClientMessageSchema,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   FEATURED_LOBBY_AUTO_START_MS,
@@ -44,7 +45,7 @@ import {
 } from "../core/Util";
 import {
   createGameWireContext,
-  decodeClientMessage,
+  decodeClientMessageUnvalidated,
   encodeServerMessage,
 } from "../core/ZbinWire";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -950,24 +951,45 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: Buffer) => {
       try {
-        let clientMsg: ClientMessage;
+        // Decode and validate in two steps (instead of one parseBytes) so a
+        // message that is structurally sound but fails validation — the
+        // signature of a buggy or cheating client — can still be attributed
+        // to its intent in telemetry, exactly like the JSON path did.
+        let raw: ClientMessage;
         try {
-          // A Buffer is a Uint8Array and zbin honours its byteOffset. Decoding
-          // runs full zod validation, so this is exactly as strict as the JSON
-          // path it replaced.
-          clientMsg = decodeClientMessage(message, this.zbinCtx);
+          // A Buffer is a Uint8Array and zbin honours its byteOffset.
+          raw = decodeClientMessageUnvalidated(message, this.zbinCtx);
         } catch (e) {
-          const reasonDetail = String(e);
-          // No intent_observed telemetry here: a frame that fails to decode
-          // has no readable type, so it can't be attributed to an intent the
-          // way a schema-invalid JSON message could.
+          // Corrupt bytes: no readable type, nothing to attribute.
           this.log.warn(`Failed to decode client message, kicking`, {
+            clientID: client.clientID,
+            error: String(e),
+          });
+          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+          return;
+        }
+        const parsed = ClientMessageSchema.safeParse(raw);
+        if (!parsed.success) {
+          const reasonDetail = z.prettifyError(parsed.error);
+          if (raw.type === "intent") {
+            this.emitIntentObserved(
+              client,
+              raw.intent,
+              typeof raw.intent?.type === "string" ? raw.intent.type : null,
+              "rejected",
+              this.turns.length,
+              KICK_REASON_INVALID_MESSAGE,
+              reasonDetail,
+            );
+          }
+          this.log.warn(`Failed to parse client message, kicking`, {
             clientID: client.clientID,
             error: reasonDetail,
           });
           this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
         }
+        const clientMsg = parsed.data;
         const bytes = message.length;
         const rateResult = this.intentRateLimiter.check(
           client.clientID,

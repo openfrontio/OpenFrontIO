@@ -79,6 +79,18 @@ export function decodeClientMessage(
   return ClientMessageSchema.parseBytes(bytes, ctx);
 }
 
+// Structural decode only, NO zod validation — throws ZbDecodeError on corrupt
+// bytes but happily returns schema-violating values (out-of-range numbers,
+// regex-breaking strings). For callers that validate separately because they
+// want the raw value when validation fails (GameServer's rejected-intent
+// telemetry); everyone else uses decodeClientMessage.
+export function decodeClientMessageUnvalidated(
+  bytes: Uint8Array,
+  ctx: ZbContext | undefined,
+): ClientMessage {
+  return ClientMessageSchema.decodeBytesUnvalidated(bytes, ctx);
+}
+
 // The lobby list socket is broadcast-only and carries no player ids, so it
 // needs no dictionary context.
 export function encodeLobbyMessage(

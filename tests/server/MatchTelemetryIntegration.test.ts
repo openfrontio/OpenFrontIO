@@ -219,11 +219,11 @@ describe("GameServer match telemetry", () => {
     expect((game as any).intents).toEqual(intentsBefore);
   });
 
-  it("kicks on a schema-invalid intent without attributing it to an intent", async () => {
-    // The frame decodes structurally (the recipient is a plain string on the
-    // wire) but fails zod validation, so the server kicks. It emits no
-    // intent_observed: a rejected frame has no trustworthy intent to report,
-    // and the raw bytes are not a JSON object it could echo back.
+  it("captures the raw intent from a schema-invalid intent message", async () => {
+    // The frame decodes structurally (the target is a plain string on the
+    // wire) but fails zod validation — the signature of a buggy or cheating
+    // client, which is exactly what this telemetry exists to observe. The
+    // rejected intent is attributed with its raw payload before the kick.
     const game = makeGame();
     const { client, ws } = makeClient();
     game.joinClient(client);
@@ -235,6 +235,28 @@ describe("GameServer match telemetry", () => {
         intent: { type: "targetPlayer", target: "not a client id" },
       }),
     );
+    const observed = telemetry.events.find(
+      (event) => event.type === "intent_observed",
+    );
+    expect(observed).toMatchObject({
+      payload: {
+        outcome: "rejected",
+        reasonCode: "kick_reason.invalid_message",
+        intentType: "targetPlayer",
+        intent: { type: "targetPlayer", target: "not a client id" },
+      },
+    });
+    expect(ws.close).toHaveBeenCalled();
+  });
+
+  it("emits nothing for a structurally corrupt frame", async () => {
+    // Garbage bytes decode to no readable type, so there is no intent to
+    // attribute — the client is just kicked.
+    const game = makeGame();
+    const { client, ws } = makeClient();
+    game.joinClient(client);
+    telemetry.events.length = 0;
+    await ws.trigger("message", Buffer.from([0xff, 0xff, 0xff, 0xff]));
     expect(
       telemetry.events.filter((event) => event.type === "intent_observed"),
     ).toHaveLength(0);
