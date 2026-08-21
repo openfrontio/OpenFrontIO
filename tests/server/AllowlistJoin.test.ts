@@ -19,6 +19,7 @@ vi.mock("../../src/core/Schemas", async () => {
 import { GameType } from "../../src/core/game/Game";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
   return {
@@ -72,10 +73,15 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
   });
 
   function makeGame(allowedPublicIds?: string[]) {
-    return new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-      ...(allowedPublicIds ? { allowedPublicIds } : {}),
-    } as any);
+    return new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Private,
+        ...(allowedPublicIds ? { allowedPublicIds } : {}),
+      }),
+    );
   }
 
   it("admits only listed publicIds and rejects others", () => {
@@ -149,11 +155,16 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
   });
 
   it("keeps publicId lists out of the start info (wire + archived record)", () => {
-    const game = new GameServer("test-game", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-      allowedPublicIds: ["pub-ok"],
-      nameRevealPublicIds: ["pub-reveal"],
-    } as any);
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Private,
+        allowedPublicIds: ["pub-ok"],
+        nameRevealPublicIds: ["pub-reveal"],
+      }),
+    );
     expect(game.joinClient(makeClient("c1", "p1", "pub-ok"))).toBe("joined");
     game.start();
 

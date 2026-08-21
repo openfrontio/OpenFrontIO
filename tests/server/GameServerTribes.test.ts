@@ -20,6 +20,7 @@ vi.mock("../../src/server/CustomTribes", () => ({
 import { GameType } from "../../src/core/game/Game";
 import { fetchCustomTribes } from "../../src/server/CustomTribes";
 import { GameServer } from "../../src/server/GameServer";
+import { testGameConfig } from "../util/Wire";
 
 function fakeClient(clientID: string, publicId?: string) {
   return {
@@ -63,13 +64,16 @@ describe("GameServer custom tribes", () => {
   });
 
   function makeGame(config: Record<string, unknown> = {}) {
-    return new GameServer("testgame", mockLogger, Date.now(), {
-      gameType: GameType.Public,
-      gameMap: "plains",
-      gameMapSize: 100,
-      bots: 400,
-      ...config,
-    } as any);
+    return new GameServer(
+      "testgame",
+      mockLogger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Public,
+        bots: 400,
+        ...config,
+      }),
+    );
   }
 
   it("fetches the pool at prestart and embeds the tribes in the start info", async () => {

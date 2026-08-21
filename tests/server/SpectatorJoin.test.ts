@@ -10,26 +10,25 @@ vi.mock("../../src/core/Schemas", async () => {
     ServerPrestartMessageSchema: {
       safeParse: (data: any) => ({ success: true, data }),
     },
-    ClientMessageSchema: {
-      safeParse: (data: any) => ({ success: true, data }),
-    },
   };
 });
 
 import { GameType, RankedType } from "../../src/core/game/Game";
+import { ClientMessage } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
+import { clientFrame, testGameConfig } from "../util/Wire";
 
 function makeMockWs() {
-  const handlers = new Map<string, (msg: string) => void>();
+  const handlers = new Map<string, (msg: Buffer) => void>();
   return {
-    on: (event: string, fn: (msg: string) => void) => handlers.set(event, fn),
+    on: (event: string, fn: (msg: Buffer) => void) => handlers.set(event, fn),
     removeAllListeners: () => handlers.clear(),
     send: vi.fn(),
     close: vi.fn(),
     readyState: 1,
     /** Drive the socket the way a connected client would. */
-    emit: (msg: unknown) => handlers.get("message")?.(JSON.stringify(msg)),
+    emit: (msg: ClientMessage) => handlers.get("message")?.(clientFrame(msg)),
   };
 }
 
@@ -78,10 +77,12 @@ describe("GameServer - spectators", () => {
   });
 
   const makeGame = (maxPlayers?: number) =>
-    new GameServer("g1", logger, Date.now(), {
-      gameType: GameType.Private,
-      maxPlayers,
-    } as any);
+    new GameServer(
+      "g1",
+      logger,
+      Date.now(),
+      testGameConfig({ gameType: GameType.Private, maxPlayers }),
+    );
 
   it("takes no lobby slot, so a full game is still watchable", () => {
     const game = makeGame(2);
@@ -112,10 +113,15 @@ describe("GameServer - spectators", () => {
 
   it("still has to be on the allowlist when the lobby sets one", () => {
     // Taking no slot must not become a way around the allowlist.
-    const game = new GameServer("g1", logger, Date.now(), {
-      gameType: GameType.Private,
-      allowedPublicIds: ["p1-pub"],
-    } as any);
+    const game = new GameServer(
+      "g1",
+      logger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Private,
+        allowedPublicIds: ["p1-pub"],
+      }),
+    );
     expect(game.joinClient(makeClient("cast", true))).toBe("not_allowlisted");
     expect(game.joinClient(makeClient("p1", true))).toBe("joined");
   });
@@ -123,11 +129,16 @@ describe("GameServer - spectators", () => {
   it("does not keep a ranked match alive on its own", () => {
     // 1v1 with one player and one spectator is a one-player game, so the
     // short-handed cancel has to see through the spectator.
-    const game = new GameServer("g1", logger, Date.now(), {
-      gameType: GameType.Private,
-      maxPlayers: 2,
-      rankedType: RankedType.OneVOne,
-    } as any);
+    const game = new GameServer(
+      "g1",
+      logger,
+      Date.now(),
+      testGameConfig({
+        gameType: GameType.Private,
+        maxPlayers: 2,
+        rankedType: RankedType.OneVOne,
+      }),
+    );
     game.joinClient(makeClient("p1"));
     game.joinClient(makeClient("cast", true));
     expect((game as any).cancelShortHandedMatch()).toBe(true);
@@ -145,12 +156,13 @@ describe("GameServer - spectators", () => {
       };
       const spectator = makeClient("cast", true);
       game.joinClient(spectator);
-      await (spectator.ws as any).emit({
-        type,
-        intent: { type: "spawn" },
-        turnNumber: 1,
-        hash: 42,
-      });
+      const byType: Record<string, ClientMessage> = {
+        intent: { type: "intent", intent: { type: "spawn", tile: 1 } },
+        winner: { type: "winner", winner: undefined, allPlayersStats: {} },
+        live_stats: { type: "live_stats", stats: { turn: 1, players: [] } },
+        hash: { type: "hash", hash: 42, turnNumber: 1 },
+      };
+      await (spectator.ws as any).emit(byType[type]);
       if (type === "hash") {
         // hash has no handler spy — it writes client.hashes, which feeds the
         // desync agreement a spectator must not vote in.
@@ -168,7 +180,7 @@ describe("GameServer - spectators", () => {
     game.joinClient(player);
     await (player.ws as any).emit({
       type: "intent",
-      intent: { type: "spawn" },
+      intent: { type: "spawn", tile: 1 },
     });
     expect(handleIntent).toHaveBeenCalled();
   });
@@ -275,17 +287,25 @@ describe("GameServer - spectators", () => {
       // (update_game_config replaces it), so being inside is not proof of a
       // seat. Without this, the toggle is a way past the allowlist the moment
       // anything admits a non-listed spectator.
-      const game = new GameServer("g1", logger, Date.now(), {
-        gameType: GameType.Private,
-        allowedPublicIds: ["p1-pub"],
-      } as any);
+      const game = new GameServer(
+        "g1",
+        logger,
+        Date.now(),
+        testGameConfig({
+          gameType: GameType.Private,
+          allowedPublicIds: ["p1-pub"],
+        }),
+      );
       const listed = makeClient("p1", true);
       const unlisted = makeClient("cast", true);
       // Admit both while... the unlisted one cannot join an allowlisted lobby
       // today, so simulate the post-join list change: join first, then set it.
-      const open = new GameServer("g2", logger, Date.now(), {
-        gameType: GameType.Private,
-      } as any);
+      const open = new GameServer(
+        "g2",
+        logger,
+        Date.now(),
+        testGameConfig({ gameType: GameType.Private }),
+      );
       open.joinClient(unlisted);
       (open as any).gameConfig.allowedPublicIds = ["someone-else-pub"];
       setSpectator(open, unlisted, false);

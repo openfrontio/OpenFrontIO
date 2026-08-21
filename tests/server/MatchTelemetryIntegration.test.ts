@@ -20,6 +20,7 @@ import type {
   MatchTelemetryEmitter,
   MatchTelemetryEvent,
 } from "../../src/server/telemetry/MatchTelemetry";
+import { clientFrame, testGameConfig } from "../util/Wire";
 
 class RecordingEmitter implements MatchTelemetryEmitter {
   events: MatchTelemetryEvent[] = [];
@@ -150,7 +151,7 @@ describe("GameServer match telemetry", () => {
     game.joinClient(client);
     await ws.trigger(
       "message",
-      JSON.stringify({ type: "intent", intent: { type: "spawn", tile: 1 } }),
+      clientFrame({ type: "intent", intent: { type: "spawn", tile: 1 } }),
     );
     const observed = telemetry.events.find(
       (event) => event.type === "intent_observed",
@@ -179,7 +180,7 @@ describe("GameServer match telemetry", () => {
     const intentsBefore = [...(game as any).intents];
     await ws.trigger(
       "message",
-      JSON.stringify({ type: "intent", intent: { type: "spawn", tile: 1 } }),
+      clientFrame({ type: "intent", intent: { type: "spawn", tile: 1 } }),
     );
     expect(
       telemetry.events.find((event) => event.type === "intent_observed"),
@@ -201,7 +202,7 @@ describe("GameServer match telemetry", () => {
     const intentsBefore = [...(game as any).intents];
     await ws.trigger(
       "message",
-      JSON.stringify({
+      clientFrame({
         type: "intent",
         intent: { type: "kick_player", targetClientID: "targetAB" },
       }),
@@ -218,39 +219,25 @@ describe("GameServer match telemetry", () => {
     expect((game as any).intents).toEqual(intentsBefore);
   });
 
-  it("captures only the raw intent property from a schema-invalid intent envelope", async () => {
+  it("kicks on a schema-invalid intent without attributing it to an intent", async () => {
+    // The frame decodes structurally (the recipient is a plain string on the
+    // wire) but fails zod validation, so the server kicks. It emits no
+    // intent_observed: a rejected frame has no trustworthy intent to report,
+    // and the raw bytes are not a JSON object it could echo back.
     const game = makeGame();
     const { client, ws } = makeClient();
     game.joinClient(client);
-    const authCanary = "schema-invalid-auth-canary-7f3d91";
+    telemetry.events.length = 0;
     await ws.trigger(
       "message",
-      JSON.stringify({
+      clientFrame({
         type: "intent",
-        intent: { type: "spawn", tile: "invalid", extra: "raw" },
-        token: authCanary,
+        intent: { type: "targetPlayer", target: "not a client id" },
       }),
     );
-    const observed = telemetry.events.find(
-      (event) => event.type === "intent_observed",
-    );
-    expect(observed?.type).toBe("intent_observed");
-    if (observed?.type !== "intent_observed") {
-      throw new Error("expected intent_observed telemetry");
-    }
-    expect(observed).toMatchObject({
-      payload: {
-        outcome: "rejected",
-        reasonCode: "kick_reason.invalid_message",
-        intentType: "spawn",
-      },
-    });
-    expect(observed.payload.intent).toEqual({
-      type: "spawn",
-      tile: "invalid",
-      extra: "raw",
-    });
-    expect(JSON.stringify(observed)).not.toContain(authCanary);
+    expect(
+      telemetry.events.filter((event) => event.type === "intent_observed"),
+    ).toHaveLength(0);
     expect(ws.close).toHaveBeenCalled();
   });
 
@@ -261,7 +248,12 @@ describe("GameServer match telemetry", () => {
     telemetry.events.length = 0;
     await ws.trigger(
       "message",
-      JSON.stringify({ type: "rejoin", token: "secret" }),
+      clientFrame({
+        type: "rejoin",
+        gameID: "not a game id",
+        lastTurn: 0,
+        token: "secret",
+      }),
     );
     expect(
       telemetry.events.filter((event) => event.type === "intent_observed"),
@@ -288,7 +280,7 @@ describe("GameServer match telemetry", () => {
       ]);
       await ws.trigger(
         "message",
-        JSON.stringify({ type: "intent", intent: { type: "spawn", tile: 1 } }),
+        clientFrame({ type: "intent", intent: { type: "spawn", tile: 1 } }),
       );
       const observed = telemetry.events.find(
         (event) => event.type === "intent_observed",
@@ -335,7 +327,7 @@ describe("GameServer match telemetry", () => {
     ]);
     await ws.trigger(
       "message",
-      JSON.stringify({ type: "intent", intent: { type: "spawn", tile: 1 } }),
+      clientFrame({ type: "intent", intent: { type: "spawn", tile: 1 } }),
     );
     (game as any).endTurn();
     const intentIndex = telemetry.events.findIndex(
@@ -359,9 +351,10 @@ describe("GameServer match telemetry", () => {
 
   it("GameManager forwards the worker emitter and build hash to each game", () => {
     const manager = new GameManager(log, telemetry, "build-hash");
-    const game = manager.createGame("managerMatch", {
-      gameType: GameType.Private,
-    } as any);
+    const game = manager.createGame(
+      "managerMatch",
+      testGameConfig({ gameType: GameType.Private }),
+    );
     expect(game).not.toBeNull();
     expect(
       telemetry.events.find((event) => event.type === "match_opened"),
