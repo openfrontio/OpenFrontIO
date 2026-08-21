@@ -61,6 +61,7 @@ The game server only serves `index.html` and the WebSocket. All other assets (JS
 | `src/server/Master.ts`      | Lobby and game registry                |
 | `tests/util/Setup.ts`       | Test helper — creates test games       |
 | `docs/Architecture.md`      | Architecture overview                  |
+| `zbin/README.md`            | Binary wire format for zod schemas     |
 | `docs/Auth.md`              | JWT/auth flow                          |
 | `docs/API.md`               | Public API endpoints                   |
 | `vite.config.ts`            | Build config, CDN handling             |
