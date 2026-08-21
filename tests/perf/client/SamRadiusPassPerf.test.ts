@@ -14,7 +14,7 @@
 import "./Shims"; // Browser-global shims for client code
 
 import { performance } from "perf_hooks";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { SAMRadiusPass } from "../../../src/client/render/gl/passes/SamRadiusPass";
 import { createRenderSettings } from "../../../src/client/render/gl/RenderSettings";
 import { UnitState } from "../../../src/client/render/types/Renderer";
@@ -211,7 +211,8 @@ describe("SAMRadiusPass WebGL Performance", () => {
     }
 
     const totalWallMs = performance.now() - wallStart;
-    const summary = frameStats.summarize(BUDGET_60FPS_MS);
+    const summary = frameStats.summarize(1.0); // 1.0ms frame slice budget
+    const over1ms = summary.overBudget;
     const gcEvents = gcTracker ? await gcTracker.stop() : [];
 
     // ── Print Performance Report ──
@@ -238,9 +239,7 @@ describe("SAMRadiusPass WebGL Performance", () => {
     console.log(
       `144 FPS Frame Budget (6.9ms):  ${((summary.meanMs / BUDGET_144FPS_MS) * 100).toFixed(2)}% consumed`,
     );
-    console.log(
-      `Frames Exceeding 1.0ms:        ${summary.slowest.filter((s) => s.ms > 1.0).length} / ${FRAMES}`,
-    );
+    console.log(`Frames Exceeding 1.0ms:        ${over1ms} / ${FRAMES}`);
     console.log(
       `Slowest frames: ` +
         summary.slowest
@@ -274,5 +273,8 @@ describe("SAMRadiusPass WebGL Performance", () => {
       );
     }
     console.log("=".repeat(72) + "\n");
+
+    expect(summary.meanMs).toBeLessThan(1.0);
+    expect(over1ms).toBeLessThan(FRAMES * 0.05);
   });
 });

@@ -162,6 +162,10 @@ export class UnitImpl implements Unit {
           : undefined,
       nukeState:
         this._nukeState !== undefined ? { ...this._nukeState } : undefined,
+      samUpgrade:
+        this._samLauncherState?.upgradeStartTick !== undefined
+          ? { ...this._samLauncherState }
+          : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -176,12 +180,6 @@ export class UnitImpl implements Unit {
       trainType: this._trainType,
       loaded: this._loaded,
     };
-    if (
-      this._samLauncherState &&
-      this._samLauncherState.upgradeStartTick !== undefined
-    ) {
-      update.samUpgrade = this._samLauncherState;
-    }
     return update;
   }
 
