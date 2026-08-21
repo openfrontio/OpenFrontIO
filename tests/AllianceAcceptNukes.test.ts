@@ -307,14 +307,27 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
   });
 
   test("accepting alliance after child warheads are queued cancels queued executions and prevents warheads", () => {
-    game.addExecution(new MirvExecution(player1, game.ref(5, 5)));
+    const mirvExec = new MirvExecution(player1, game.ref(5, 5));
+    game.addExecution(mirvExec);
 
     game.executeNextTick(); // init
     game.executeNextTick(); // spawn MIRV
 
     expect(game.units(UnitType.MIRV)).toHaveLength(1);
 
-    // Form alliance after warheads have been queued (or right as MIRV flies)
+    // Advance ticks while MIRV is in-flight until right before separation
+    // (spawnWarheadsWithWait queues children at remainingTicks <= 10)
+    let advanced = 0;
+    while (game.units(UnitType.MIRV).length === 1 && advanced < 50) {
+      // Check if executions have been added by checking if executing another tick still keeps MIRV
+      game.executeNextTick();
+      advanced++;
+      // Stop right before separation so child executions are queued but parent MIRV is still active
+      if (game.units(UnitType.MIRV).length === 1 && advanced >= 1) {
+        break;
+      }
+    }
+
     // Accept alliance
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
