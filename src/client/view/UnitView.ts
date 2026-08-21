@@ -72,7 +72,10 @@ function unitStateFromUpdate(u: UnitUpdate): UnitState {
     trainType: trainTypeToNum(u.trainType),
     loaded: u.loaded ?? null,
     constructionStartTick: null, // GameView fills in createdAt when underConstruction
-    samUpgrade: u.samUpgrade,
+    samUpgradeStartTick: u.samUpgrade?.upgradeStartTick ?? null,
+    samUpgradeStartRange: u.samUpgrade?.startRange ?? 0,
+    samUpgradeTargetLevel: u.samUpgrade?.targetLevel ?? 0,
+    samUpgradeDuration: u.samUpgrade?.duration ?? 0,
   };
 }
 
@@ -102,7 +105,10 @@ function applyUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.hasTrainStation = u.hasTrainStation;
   target.trainType = trainTypeToNum(u.trainType);
   target.loaded = u.loaded ?? null;
-  target.samUpgrade = u.samUpgrade;
+  target.samUpgradeStartTick = u.samUpgrade?.upgradeStartTick ?? null;
+  target.samUpgradeStartRange = u.samUpgrade?.startRange ?? 0;
+  target.samUpgradeTargetLevel = u.samUpgrade?.targetLevel ?? 0;
+  target.samUpgradeDuration = u.samUpgrade?.duration ?? 0;
 }
 
 export class UnitView {

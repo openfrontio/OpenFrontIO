@@ -180,12 +180,7 @@ export class UnitImpl implements Unit {
       this._samLauncherState &&
       this._samLauncherState.upgradeStartTick !== null
     ) {
-      update.samUpgrade = {
-        startTick: this._samLauncherState.upgradeStartTick,
-        startRange: this._samLauncherState.startRange,
-        targetLevel: this._samLauncherState.targetLevel,
-        duration: this.mg.config().samUpgradeDuration(),
-      };
+      update.samUpgrade = this._samLauncherState;
     }
     return update;
   }
@@ -711,6 +706,7 @@ export class UnitImpl implements Unit {
         upgradeStartTick: currentTick,
         startRange: currentRange,
         targetLevel: this._level + 1,
+        duration: this.mg.config().samUpgradeDuration(),
       };
     }
     this._level++;

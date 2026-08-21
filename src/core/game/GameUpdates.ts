@@ -1,9 +1,4 @@
-import {
-  AllPlayersStats,
-  ClientID,
-  SamUpgradeUpdate,
-  Winner,
-} from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
@@ -13,6 +8,7 @@ import {
   NukeState,
   PlayerID,
   PlayerType,
+  SamLauncherState,
   Team,
   Tick,
   TrainType,
@@ -205,7 +201,7 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
-  samUpgrade?: SamUpgradeUpdate;
+  samUpgrade?: SamLauncherState;
 }
 
 export interface AttackUpdate {
