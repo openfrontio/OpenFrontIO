@@ -35,12 +35,14 @@ export class HomepagePromos extends LitElement {
   // <body> child and docks fixed at the viewport top (#adBanner is an older
   // Playwire container that idles parked offscreen at 10x10/bottom:-100px —
   // watched as a fallback). Measure the docked banner and expose
-  // --top-ad-height on <html> so the sticky nav and page content shift below
-  // it (consumed in index.html / PlayPage).
+  // --top-ad-height on <html> so the fixed/sticky bars shift below it, and
+  // --top-ad-pad so page content shifts below it when no inline slot reserves
+  // the space (consumed in index.html / PlayPage).
   private topAdEl: HTMLElement | null = null;
   private topAdResize: ResizeObserver | null = null;
   private topAdStyle: MutationObserver | null = null;
   private topAdMutation: MutationObserver | null = null;
+  private reservedFlexHeight: number = 0;
 
   createRenderRoot() {
     return this;
@@ -70,6 +72,10 @@ export class HomepagePromos extends LitElement {
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
     document.documentElement.style.removeProperty("--top-ad-height");
+    document.documentElement.style.removeProperty("--top-ad-pad");
+    document
+      .getElementById("pw-oop-flex_container")
+      ?.style.removeProperty("min-height");
   }
 
   private syncTopAd(): void {
@@ -98,28 +104,62 @@ export class HomepagePromos extends LitElement {
   }
 
   private updateTopAdHeight(): void {
-    let height = 0;
+    let dockedHeight = 0;
+    let inlineHeight = 0;
+    let unitVisible = false;
     if (this.topAdEl) {
       const rect = this.topAdEl.getBoundingClientRect();
       const style = getComputedStyle(this.topAdEl);
-      // Only make room while the banner is actually docked at the viewport
-      // top — not while parked offscreen or collapsed.
-      const dockedTop =
-        style.position === "fixed" &&
-        style.display !== "none" &&
-        rect.height >= 30 &&
-        rect.top < window.innerHeight / 4;
-      if (dockedTop) {
-        height = Math.ceil(Math.max(0, rect.bottom));
+      unitVisible = style.display !== "none" && rect.height >= 30;
+      if (unitVisible && style.position === "fixed") {
+        // Only make room while the banner is actually docked at the viewport
+        // top — not while parked offscreen.
+        if (rect.top < window.innerHeight / 4) {
+          dockedHeight = Math.ceil(Math.max(0, rect.bottom));
+        }
+      } else if (unitVisible) {
+        inlineHeight = Math.ceil(rect.height);
       }
     }
-    if (height > 0) {
-      document.documentElement.style.setProperty(
-        "--top-ad-height",
-        `${height}px`,
-      );
+
+    // The flex unit swaps between an inline expanded state (in the document
+    // flow inside #pw-oop-flex_container) and a smaller fixed leaderboard once
+    // scrolled past. Docking empties the container, which would yank the whole
+    // page up by the expanded height mid-scroll — so once the unit has shown
+    // inline, lock the container to that height for as long as the unit lives.
+    // Dock/undock then never changes the document height, and the reserved
+    // slot is refilled whenever Playwire re-expands the unit at the top.
+    const container = document.getElementById("pw-oop-flex_container");
+    if (container && this.topAdEl?.id === "pw-oop-flex") {
+      if (!unitVisible) {
+        this.reservedFlexHeight = 0;
+      } else if (inlineHeight > this.reservedFlexHeight) {
+        this.reservedFlexHeight = inlineHeight;
+      }
+      if (this.reservedFlexHeight > 0) {
+        container.style.minHeight = `${this.reservedFlexHeight}px`;
+      } else {
+        container.style.removeProperty("min-height");
+      }
     } else {
-      document.documentElement.style.removeProperty("--top-ad-height");
+      this.reservedFlexHeight = 0;
+      container?.style.removeProperty("min-height");
+    }
+
+    // --top-ad-height offsets the fixed/sticky bars (viewport-level, never
+    // shifts the document). --top-ad-pad pushes the page content down and is
+    // only needed when the docked banner has no reserved inline slot backing
+    // it (e.g. the legacy #adBanner container, which is fixed from the start).
+    const pad = this.reservedFlexHeight > 0 ? 0 : dockedHeight;
+    this.setHtmlVar("--top-ad-height", dockedHeight);
+    this.setHtmlVar("--top-ad-pad", pad);
+  }
+
+  private setHtmlVar(name: string, px: number): void {
+    if (px > 0) {
+      document.documentElement.style.setProperty(name, `${px}px`);
+    } else {
+      document.documentElement.style.removeProperty(name);
     }
   }
 
